@@ -91,10 +91,10 @@ def create_unified_task(task_data, commit=True):
                 name, type, priority, status, deadline, end_date, alarm_time,
                 recurrence, template_id, target_date, cycle_type,
                 period_start, period_end, bg_color, icon, description, memo,
-                location, assignee, all_day, gcal_event_id, gcal_dirty,
+                location, assignee, all_day, calendar_id, gcal_event_id, gcal_dirty,
                 gcal_last_synced_at, gcal_remote_updated_at, gcal_sync_error,
                 updated_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             task_data['name'],
             task_data.get('type', 'schedule'),
@@ -116,6 +116,7 @@ def create_unified_task(task_data, commit=True):
             task_data.get('location'),
             task_data.get('assignee'),
             task_data.get('all_day', 0),
+            task_data.get('calendar_id'),
             task_data.get('gcal_event_id'),
             int(bool(gcal_dirty)),
             gcal_last_synced_at,
