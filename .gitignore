@@ -1,0 +1,19 @@
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environment
+.venv/
+
+# Build artifacts
+build/
+dist/
+
+# Temporary folders
+tmp/
+_restore_tmp/
+
+# Local tool metadata
+.agents/
+.claude/
