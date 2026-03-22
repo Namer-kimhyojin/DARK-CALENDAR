@@ -1159,6 +1159,16 @@ class UnifiedTaskDialog(BaseTaskDialog):
                         item.setEnabled(False)
                 if cal["id"] == default_id:
                     default_index = i
+
+            # 캘린더가 한 개도 없으면 기본 로컬 캘린더를 자동 생성 후 추가
+            if self.calendar_combo.count() == 0:
+                from calendar_app.infrastructure.db.calendar_repo import upsert_calendar
+                upsert_calendar(
+                    "local::기본", "local", "기본",
+                    color="#3c8cff", is_default=True, is_active=True, is_visible=True,
+                )
+                self.calendar_combo.addItem("📁 기본", "local::기본")
+                default_index = 0
         except Exception:
             self.calendar_combo.addItem("📁 기본", None)
 
