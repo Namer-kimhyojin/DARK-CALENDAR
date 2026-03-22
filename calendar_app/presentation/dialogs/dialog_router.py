@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Dialog-related action handlers mixin."""
 
 import logging
@@ -7,7 +7,12 @@ import time
 
 from PyQt6.QtWidgets import QMessageBox
 from calendar_app.app_metadata import APP_AUTHOR, APP_EMAIL, APP_NAME, APP_VERSION
-from calendar_app.infrastructure.i18n import i18n, t
+from calendar_app.infrastructure.i18n import (
+    get_locale_display_name,
+    i18n,
+    list_available_locale_codes,
+    t,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -200,9 +205,23 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     # Schedule / Task dialogs
     # ------------------------------------------------------------------
-    def open_task_dialog(self, initial_date=None, task_type=None, end_date=None):
+    def open_task_dialog(self, initial_date=None, task_type=None, end_date=None, initial_time=None, **kwargs):
+        # ClickableCell.doubleClicked emits (QDate, target_time) as a tuple;
+        # handle_cell_shift_click calls open_task_dialog(start_d, None, end_d) positionally.
+        if isinstance(initial_date, tuple):
+            pack = initial_date
+            initial_date = pack[0] if len(pack) > 0 else None
+            if initial_time is None and len(pack) > 1:
+                initial_time = pack[1]
         from calendar_app.presentation.dialogs.task_dialog_unified import UnifiedTaskDialog
-        dlg = UnifiedTaskDialog(self, initial_date=initial_date, task_type=task_type, end_date=end_date)
+        dlg = UnifiedTaskDialog(
+            self,
+            initial_date=initial_date,
+            initial_time=initial_time,
+            task_type=task_type,
+            end_date=end_date,
+            **kwargs
+        )
         if dlg.exec():
             self.schedule_panel_refresh(left=True, center=True)
 
@@ -239,25 +258,25 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     # Work management (tabbed) dialogs
     # ------------------------------------------------------------------
-    def open_work_management_dialog(self, start_tab="schedule"):
+    def open_work_management_dialog(self, checked=False, start_tab="schedule"):
         from calendar_app.presentation.dialogs.management_dialogs import WorkManagementTabbedDialog
         dlg = WorkManagementTabbedDialog(self, start_tab=start_tab)
         dlg.exec()
         self.schedule_panel_refresh(left=True, center=True, right=True)
 
-    def open_task_management_dialog(self):
+    def open_task_management_dialog(self, checked=False):
         from calendar_app.presentation.dialogs.management_dialogs import TaskManagementDialog
         dlg = TaskManagementDialog(self)
         dlg.exec()
         self.schedule_panel_refresh(left=True, center=True)
 
-    def open_directive_management_dialog(self):
+    def open_directive_management_dialog(self, checked=False):
         from calendar_app.presentation.dialogs.management_dialogs import DirectiveManagementDialog
         dlg = DirectiveManagementDialog(self)
         dlg.exec()
         self.schedule_panel_refresh(right=True)
 
-    def open_routine_management_dialog(self):
+    def open_routine_management_dialog(self, checked=False):
         from calendar_app.presentation.dialogs.management_dialogs import RoutineManagementDialog
         dlg = RoutineManagementDialog(self)
         dlg.exec()
@@ -266,13 +285,20 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     # Register dialogs
     # ------------------------------------------------------------------
-    def open_directive_dialog(self, task_id=None):
+    def open_directive_dialog(self, checked=False, task_id=None):
+        from calendar_app.presentation.dialogs.directive_dialog import DirectiveDialog
+        # triggered passes checked=False as first arg if no other args bound.
+        # If called with task_id positionally, task_id is the first arg.
+        if isinstance(checked, int) and not isinstance(checked, bool):
+             # Likely called as open_directive_dialog(task_id)
+             task_id = checked
+        
         from calendar_app.presentation.dialogs.directive_dialog import DirectiveDialog
         dlg = DirectiveDialog(self, task_id=task_id)
         if dlg.exec():
             self.schedule_panel_refresh(right=True)
 
-    def open_routine_add_dialog(self):
+    def open_routine_add_dialog(self, checked=False):
         from calendar_app.presentation.dialogs.task_dialog_unified import UnifiedTaskDialog
         dlg = UnifiedTaskDialog(self, task_type="routine")
         if dlg.exec():
@@ -281,12 +307,12 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     # Checklist / Focus log
     # ------------------------------------------------------------------
-    def open_checklist_manager(self):
+    def open_checklist_manager(self, checked=False):
         from calendar_app.presentation.dialogs.checklist_manager_dialog_advanced import ChecklistManagerDialog
         dlg = ChecklistManagerDialog(self)
         dlg.exec()
 
-    def open_focus_log_dialog(self):
+    def open_focus_log_dialog(self, checked=False):
         try:
             from calendar_app.presentation.dialogs.focus_task_selector import FocusTaskSelectorDialog
             dlg = FocusTaskSelectorDialog(self)
@@ -297,20 +323,20 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     # Help / Info
     # ------------------------------------------------------------------
-    def show_shortcut_guide(self):
+    def show_shortcut_guide(self, checked=False):
         from PyQt6.QtCore import Qt
-        title = t("dialog.shortcut_guide.title") or _default_shortcut_guide_title()
-        content = t("dialog.shortcut_guide.content") or _default_shortcut_guide_content()
+        title = t("shortcut.title") or _default_shortcut_guide_title()
+        content = t("shortcut.content") or _default_shortcut_guide_content()
         msg = QMessageBox(self)
         msg.setWindowTitle(title)
         msg.setText(content)
         msg.setTextFormat(Qt.TextFormat.RichText)
         msg.exec()
 
-    def show_calendar_help(self):
+    def show_calendar_help(self, checked=False):
         from PyQt6.QtCore import Qt
-        title = t("dialog.calendar_help.title") or _default_calendar_help_title()
-        content = t("dialog.calendar_help.content") or _default_calendar_help_content()
+        title = t("help.title") or _default_calendar_help_title()
+        content = t("help.content") or _default_calendar_help_content()
         msg = QMessageBox(self)
         msg.setWindowTitle(title)
         msg.setText(content)
@@ -320,37 +346,25 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     # Language settings (tray shortcut)
     # ------------------------------------------------------------------
-    def open_language_settings_dialog(self):
-        import json
-        import os
+    def open_language_settings_dialog(self, checked=False):
         from PyQt6.QtWidgets import QInputDialog
-        locales_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.dirname(os.path.dirname(__file__))))), "locales")
         lang_names = []
         lang_codes = []
-        if os.path.exists(locales_dir):
-            filenames = sorted(f for f in os.listdir(locales_dir) if f.endswith(".json"))
-            all_codes = {f[:-5] for f in filenames}
-            for filename in filenames:
-                code = filename[:-5]
-                if code == "zh" and ("zh-CN" in all_codes or "zh-TW" in all_codes):
-                    continue
-                try:
-                    with open(os.path.join(locales_dir, filename), "r", encoding="utf-8", errors="replace") as f:
-                        data = json.load(f)
-                    name = data.get("meta", {}).get("language_name", code)
-                except Exception:
-                    name = code
-                lang_names.append(name)
-                lang_codes.append(code)
+        lang_codes_all = sorted(list_available_locale_codes())
+        lang_set = set(lang_codes_all)
+        for code in lang_codes_all:
+            if code == "zh" and ("zh-CN" in lang_set or "zh-TW" in lang_set):
+                continue
+            lang_names.append(get_locale_display_name(code))
+            lang_codes.append(code)
         if not lang_codes:
             return
         current = self.settings.value("language", "ko")
         current_idx = lang_codes.index(current) if current in lang_codes else 0
         chosen, ok = QInputDialog.getItem(
             self,
-            t("menu.language", "언어"),
-            t("dialog.language.prompt", "언어를 선택하세요:"),
+            t("menu.language", "Language"),
+            t("dialog.language.prompt", "Select a language:"),
             lang_names,
             current_idx,
             False,

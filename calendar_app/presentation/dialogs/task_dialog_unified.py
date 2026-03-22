@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Unified task/schedule creation and modification dialog."""
 
 from PyQt6.QtWidgets import (
@@ -24,9 +24,6 @@ from calendar_app.presentation.dialogs.routine_recurrence_wizard import (
 )
 from calendar_app.presentation.dialogs.task_dialog_base import BaseTaskDialog
 
-
-from calendar_app.infrastructure.i18n import t
-
 class UnifiedTaskDialog(BaseTaskDialog):
     """일정과 일반업무를 통합한 등록/수정 다이얼로그"""
 
@@ -48,27 +45,38 @@ class UnifiedTaskDialog(BaseTaskDialog):
                 return
             task_type = self.task_data['type']
 
-        self.initial_date = initial_date or QDate.currentDate()
-        
+        # task_type이 None일 경우 기본값 'schedule' 할당
+        if task_type is None:
+            task_type = 'schedule'
+
+        # 시작일 처리 (문자열 또는 QDate 대응)
+        if isinstance(initial_date, str):
+            self.initial_date = QDate.fromString(initial_date, Qt.DateFormat.ISODate)
+        elif isinstance(initial_date, QDate):
+            self.initial_date = initial_date
+        else:
+            self.initial_date = QDate.currentDate()
         # 기본값 설정: 일정(09:00-18:00), 일반업무(12:00)
-        if initial_time:
+        if isinstance(initial_time, str):
+            self.initial_time = QTime.fromString(initial_time, Qt.DateFormat.ISODate)
+        elif isinstance(initial_time, QTime):
             self.initial_time = initial_time
         else:
             self.initial_time = QTime(9, 0) if task_type == 'schedule' else QTime(12, 0)
-            
         self.preset_end_date = end_date
-        if end_time:
+        if isinstance(end_time, str):
+            self.preset_end_time = QTime.fromString(end_time, Qt.DateFormat.ISODate)
+        elif isinstance(end_time, QTime):
             self.preset_end_time = end_time
         else:
             self.preset_end_time = QTime(18, 0) if task_type == 'schedule' else None
-            
         self.task_type = task_type
         self.template_id = template_id
         self._saved_task_id = None
         self._init_common_state()
 
-        if initial_time and end_time:
-            self._auto_end_duration_mins = max(15, initial_time.secsTo(end_time) // 60)
+        if initial_time and end_time and self.preset_end_time:
+            self._auto_end_duration_mins = max(15, self.initial_time.secsTo(self.preset_end_time) // 60)
 
         if self._is_modify:
             title = t("dialog.task.mod_routine") if task_type == 'routine' else t("dialog.task.mod_schedule")
