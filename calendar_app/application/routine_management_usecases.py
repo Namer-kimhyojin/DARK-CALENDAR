@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Application usecases for routine management dialog."""
 
 from __future__ import annotations

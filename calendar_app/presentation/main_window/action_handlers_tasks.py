@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """Task event interaction handlers mixin."""
 
 from PyQt6.QtCore import Qt
