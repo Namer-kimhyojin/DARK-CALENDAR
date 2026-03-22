@@ -206,6 +206,21 @@ class DialogActionsMixin:
     # Schedule / Task dialogs
     # ------------------------------------------------------------------
     def open_task_dialog(self, initial_date=None, task_type=None, end_date=None, initial_time=None, **kwargs):
+        end_time = kwargs.pop("end_time", None)
+
+        # Legacy convenience: open existing task from callers that pass task_id only.
+        if (
+            isinstance(initial_date, int)
+            and task_type is None
+            and end_date is None
+            and initial_time is None
+            and end_time is None
+            and not kwargs
+        ):
+            if hasattr(self, "open_modify_task_dialog"):
+                self.open_modify_task_dialog(initial_date)
+            return
+
         # ClickableCell.doubleClicked emits (QDate, target_time) as a tuple;
         # handle_cell_shift_click calls open_task_dialog(start_d, None, end_d) positionally.
         if isinstance(initial_date, tuple):
@@ -213,6 +228,22 @@ class DialogActionsMixin:
             initial_date = pack[0] if len(pack) > 0 else None
             if initial_time is None and len(pack) > 1:
                 initial_time = pack[1]
+
+        # Legacy positional API compatibility:
+        # open_task_dialog(start_date, start_time, end_date, end_time)
+        try:
+            from PyQt6.QtCore import QDate, QTime
+            if isinstance(task_type, QTime) and (end_date is None or isinstance(end_date, QDate)):
+                if end_time is None and isinstance(initial_time, QTime):
+                    end_time = initial_time
+                initial_time = task_type
+                task_type = None
+        except Exception:
+            pass
+
+        if end_time is not None:
+            kwargs["end_time"] = end_time
+
         from calendar_app.presentation.dialogs.task_dialog_unified import UnifiedTaskDialog
         dlg = UnifiedTaskDialog(
             self,
@@ -314,8 +345,10 @@ class DialogActionsMixin:
 
     def open_focus_log_dialog(self, checked=False):
         try:
+            from PyQt6.QtCore import QDate
             from calendar_app.presentation.dialogs.focus_task_selector import FocusTaskSelectorDialog
-            dlg = FocusTaskSelectorDialog(self)
+            current_date = getattr(self, "current_date", None) or QDate.currentDate()
+            dlg = FocusTaskSelectorDialog(current_date, self)
             dlg.exec()
         except Exception:
             logger.exception("open_focus_log_dialog failed")
