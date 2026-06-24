@@ -6,27 +6,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 IGNORE_PARTS = {".venv", "__pycache__"}
 
-# Root-level one-off scripts excluded from policy (TASKS.md §2-1 cleanup pending).
-# These are not tracked by git and will be deleted when cleanup is confirmed.
-_ROOT_SCRIPT_EXCLUSIONS = {
-    "apply_style_fix.py",
-    "apply_widget_text_translations.py",
-    "apply_widget_translations.py",
-    "debug_launch.py",
-    "inspect_shp.py",
-    "testgis.py",
-    "BUILD_PATCH.py",
-    "backup_dist.py",
-    "build_store.py",
-}
-
 
 def _iter_project_py_files():
     for path in ROOT.rglob("*.py"):
         if any(part in IGNORE_PARTS for part in path.parts):
-            continue
-        # Skip root-level temporary scripts pending cleanup
-        if path.parent == ROOT and path.name in _ROOT_SCRIPT_EXCLUSIONS:
             continue
         yield path
 

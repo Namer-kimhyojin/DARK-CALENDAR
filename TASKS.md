@@ -52,12 +52,12 @@
 ## 2. 코드 정리 (Code Cleanup)
 
 ### 2-1. 루트 일회성 스크립트 정리
-- [ ] 적용 완료된 `fix_*.py`, `patch_*.py`, `check_*.py`, `debug_*.py` 등 삭제
-  - `.gitignore`에 이미 등록되어 git 추적에서는 제외됨
-  - 물리적 파일 삭제는 별도 확인 후 진행
+- [x] 적용 완료된 `check_*.py`, `debug_*.py`, `tmp_*.py`, `apply_*.py` 등 82개 파일 삭제
+  - GIS 데이터 (`DAM_DAN.*`), 지도 HTML (`Pohang_*.html`), 테스트 출력 파일도 제거
+  - `tests/test_encoding_policy.py`의 `_ROOT_SCRIPT_EXCLUSIONS` 제거 (파일 삭제 완료)
 
 ### 2-2. `scripts/` 정리
-- [ ] `scripts/tmp_patch_*.py`, `scripts/inject_*.py` 등 일회성 스크립트 제거
+- [x] `scripts/tmp_patch_*.py`, `scripts/inject_*.py`, `scripts/*_fix_*.py` 등 10개 일회성 스크립트 제거
 
 ---
 
