@@ -313,6 +313,7 @@
     "text_color_reset": "↩️ Reset Text Colors",
     "widgets": "🧩 Widgets",
     "widget_clock": "Digital Clock",
+    "widget_weather": "Weather",
     "overlay_clock": "Overlay Clock",
     "overlay_clock_toggle": "Show/Hide Overlay Clock",
     "overlay_clock_panel_toggle": "Show/Hide Clock Panel",

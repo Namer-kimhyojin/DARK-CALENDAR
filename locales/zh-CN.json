@@ -210,6 +210,7 @@
     "countdown_d_days": "D-{days} remaining ({target})",
     "countdown_done": "倒计时完成",
     "widget_clock": "数字时钟",
+    "widget_weather": "天气",
     "widget_countdown": "倒计时",
     "widget_date_card": "日期卡片",
     "widget_dday": "诺曼底登陆日",

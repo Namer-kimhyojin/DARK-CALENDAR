@@ -210,6 +210,7 @@
     "countdown_d_days": "D-{days} remaining ({target})",
     "countdown_done": "倒數計時完成",
     "widget_clock": "數位時鐘",
+    "widget_weather": "天氣",
     "widget_countdown": "倒數計時",
     "widget_date_card": "日期卡片",
     "widget_dday": "諾曼地登陸日",

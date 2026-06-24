@@ -210,6 +210,7 @@
     "countdown_d_days": "D-{days} remaining ({target})",
     "countdown_done": "カウントダウン完了",
     "widget_clock": "デジタル時計",
+    "widget_weather": "🌤️ お天気",
     "widget_countdown": "カウントダウン",
     "widget_date_card": "日付カード",
     "widget_dday": "Dデイ",

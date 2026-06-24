@@ -207,6 +207,7 @@
     "countdown_d_days": "D-{days} remaining ({target})",
     "countdown_done": "Aftellen voltooid",
     "widget_clock": "Digitale klok",
+    "widget_weather": "Weer",
     "widget_countdown": "Aftelling",
     "widget_date_card": "Datumkaart",
     "widget_dday": "D-dag",

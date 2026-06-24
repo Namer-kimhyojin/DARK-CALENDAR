@@ -207,6 +207,7 @@
     "countdown_d_days": "D-{days} المتبقي ({target})",
     "countdown_done": "اكتمل العد التنازلي",
     "widget_clock": "ساعة رقمية",
+    "widget_weather": "معلومات الطقس",
     "widget_countdown": "عد تنازلي",
     "widget_date_card": "بطاقة التاريخ",
     "widget_dday": "يوم النصر",

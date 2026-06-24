@@ -207,6 +207,7 @@
     "countdown_d_days": "D-{days} remaining ({target})",
     "countdown_done": "Hitung mundur Selesai",
     "widget_clock": "Jam Digital",
+    "widget_weather": "Cuaca",
     "widget_countdown": "Hitung Mundur",
     "widget_date_card": "Kartu Tanggal",
     "widget_dday": "Hari-H",

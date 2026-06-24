@@ -207,6 +207,7 @@
     "countdown_d_days": "D-{days} remaining ({target})",
     "countdown_done": "Geri Sayım Tamamlandı",
     "widget_clock": "Dijital Saat",
+    "widget_weather": "Hava Durumu",
     "widget_countdown": "Geri Sayım",
     "widget_date_card": "Tarih Kartı",
     "widget_dday": "D-Günü",

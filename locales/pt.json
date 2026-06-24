@@ -210,6 +210,7 @@
     "countdown_d_days": "D-{days} remaining ({target})",
     "countdown_done": "Contagem regressiva concluída",
     "widget_clock": "Relógio digital",
+    "widget_weather": "Clima",
     "widget_countdown": "Contagem regressiva",
     "widget_date_card": "Cartão de data",
     "widget_dday": "Dia D",

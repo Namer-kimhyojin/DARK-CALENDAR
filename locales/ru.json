@@ -210,6 +210,7 @@
     "countdown_d_days": "D-{days} remaining ({target})",
     "countdown_done": "Обратный отсчет завершен",
     "widget_clock": "Цифровые часы",
+    "widget_weather": "Погода",
     "widget_countdown": "Обратный отсчёт",
     "widget_date_card": "Карточка даты",
     "widget_dday": "День Д",

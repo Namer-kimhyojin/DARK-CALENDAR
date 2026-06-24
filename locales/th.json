@@ -207,6 +207,7 @@
     "countdown_d_days": "เหลือเวลาอีก D-{days} ({target})",
     "countdown_done": "นับถอยหลังเสร็จสิ้น",
     "widget_clock": "นาฬิกาดิจิทัล",
+    "widget_weather": "สภาพอากาศ",
     "widget_countdown": "นับถอยหลัง",
     "widget_date_card": "การ์ดวันที่",
     "widget_dday": "ดีเดย์",

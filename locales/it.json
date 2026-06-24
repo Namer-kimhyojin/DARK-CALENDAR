@@ -207,6 +207,7 @@
     "countdown_d_days": "D-{days} remaining ({target})",
     "countdown_done": "Conto alla rovescia completato",
     "widget_clock": "Orologio digitale",
+    "widget_weather": "Meteo",
     "widget_countdown": "Conto alla rovescia",
     "widget_date_card": "Scheda data",
     "widget_dday": "D-day",

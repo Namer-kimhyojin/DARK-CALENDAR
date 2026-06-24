@@ -210,6 +210,7 @@
     "countdown_d_days": "D-{days} verbleibend ({target})",
     "countdown_done": "Countdown abgeschlossen",
     "widget_clock": "Digitaluhr",
+    "widget_weather": "Wetter",
     "widget_countdown": "Countdown",
     "widget_date_card": "Datumskarte",
     "widget_dday": "D-Day",

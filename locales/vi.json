@@ -207,6 +207,7 @@
     "countdown_d_days": "D-{days} remaining ({target})",
     "countdown_done": "Đếm ngược hoàn tất",
     "widget_clock": "Đồng hồ số",
+    "widget_weather": "Thời tiết",
     "widget_countdown": "Đếm ngược",
     "widget_date_card": "Thẻ ngày",
     "widget_dday": "Ngày D",

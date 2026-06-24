@@ -210,6 +210,7 @@
     "countdown_d_days": "D-{days} remaining ({target})",
     "countdown_done": "Compte à rebours terminé",
     "widget_clock": "Horloge numérique",
+    "widget_weather": "Météo",
     "widget_countdown": "Compte à rebours",
     "widget_date_card": "Carte de date",
     "widget_dday": "Jour J",
