@@ -1,12 +1,13 @@
-# -*- coding: utf-8 -*-
 import json
 import logging
+from pathlib import Path
 import re
 import shutil
-from pathlib import Path
+
 from PyQt6.QtCore import QSettings
-from calendar_app.shared.encoding_utils import read_text_with_legacy_fallback
+
 from calendar_app.app_paths import get_app_data_dir
+from calendar_app.shared.encoding_utils import read_text_with_legacy_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,12 @@ def _read_locale_dict(path: Path, lang_hint: str = "") -> dict:
     try:
         decoded = read_text_with_legacy_fallback(path)
         if decoded.encoding != "utf-8":
-            logger.warning("i18n: locale %s loaded using legacy encoding %s (%s)", lang_hint or path.stem, decoded.encoding, path)
+            logger.warning(
+                "i18n: locale %s loaded using legacy encoding %s (%s)",
+                lang_hint or path.stem,
+                decoded.encoding,
+                path,
+            )
         data = json.loads(decoded.text)
         if isinstance(data, dict):
             return data
@@ -138,6 +144,7 @@ def validate_user_locale_file(lang_code: str) -> tuple[bool, str]:
             return False, f"Missing top-level keys vs bundled locale: {', '.join(missing_top[:10])}"
     return True, f"Validation passed: {path}"
 
+
 class I18nManager:
     _instance = None
     _SUSPICIOUS_QMARK_RE = re.compile(r"\?{2,}\s*[\w\u3131-\uD79D\uFF41-\uFF5A\u4E00-\u9FFF]")
@@ -152,13 +159,13 @@ class I18nManager:
         "zh-hant": "zh-TW",
         "jp": "ja",
     }
-    
+
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(I18nManager, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance._load_translations()
         return cls._instance
-    
+
     def _load_translations(self):
         settings = QSettings("kimhyojin", "Dark Calendar")
         available = list_available_locale_codes()
@@ -182,28 +189,40 @@ class I18nManager:
             if base in available:
                 return base
             return None
-        
+
         # 1. Try to get saved language from settings
         saved_lang = canonicalize(settings.value("language"))
-        
+
         if saved_lang:
             self.lang = saved_lang
         else:
             # 2. First run: detect from system locale
             from PyQt6.QtCore import QLocale
-            system_locale = QLocale.system().name() # e.g. "ko_KR", "en_US"
+
+            system_locale = QLocale.system().name()  # e.g. "ko_KR", "en_US"
             detected = canonicalize(system_locale)
-            self.lang = detected or "en" # Fallback to English
-            
+            self.lang = detected or "en"  # Fallback to English
+
             # Save the detected language so it's consistent on next run
             settings.setValue("language", self.lang)
             settings.sync()
-        
+
         path = resolve_locale_file_path(self.lang, prefer_user=True)
-        fallback_path = resolve_locale_file_path("en", prefer_user=False) or resolve_locale_file_path("en", prefer_user=True)
+        bundled_same_path = resolve_locale_file_path(self.lang, prefer_user=False)
+        fallback_path = resolve_locale_file_path(
+            "en", prefer_user=False
+        ) or resolve_locale_file_path("en", prefer_user=True)
 
         self.translations = self._load_locale_json(str(path) if path else "", self.lang)
-        self.fallback_translations = self._load_locale_json(str(fallback_path) if fallback_path else "", "en")
+        # Bundled locale as intermediate fallback: fills gaps when user locale file is
+        # outdated (e.g. missing emoji or new keys added since it was seeded).
+        if bundled_same_path and bundled_same_path != path:
+            self.bundled_translations = self._load_locale_json(str(bundled_same_path), self.lang)
+        else:
+            self.bundled_translations = {}
+        self.fallback_translations = self._load_locale_json(
+            str(fallback_path) if fallback_path else "", "en"
+        )
 
         self._warn_if_broken_locale(self.lang, self.translations)
         if self.lang != "en":
@@ -223,27 +242,30 @@ class I18nManager:
     def _apply_qt_locale(lang: str):
         """Set Qt's default locale to match the UI language."""
         from PyQt6.QtCore import QLocale
+
         _LANG_TO_LOCALE = {
-            "ko":    QLocale(QLocale.Language.Korean,     QLocale.Country.SouthKorea),
-            "ja":    QLocale(QLocale.Language.Japanese,   QLocale.Country.Japan),
-            "zh-CN": QLocale(QLocale.Language.Chinese,    QLocale.Country.China),
-            "zh-TW": QLocale(QLocale.Language.Chinese,    QLocale.Country.Taiwan),
-            "zh":    QLocale(QLocale.Language.Chinese,    QLocale.Country.China),
-            "de":    QLocale(QLocale.Language.German,     QLocale.Country.Germany),
-            "es":    QLocale(QLocale.Language.Spanish,    QLocale.Country.Spain),
-            "fr":    QLocale(QLocale.Language.French,     QLocale.Country.France),
-            "hi":    QLocale(QLocale.Language.Hindi,      QLocale.Country.India),
-            "id":    QLocale(QLocale.Language.Indonesian, QLocale.Country.Indonesia),
-            "it":    QLocale(QLocale.Language.Italian,    QLocale.Country.Italy),
-            "nl":    QLocale(QLocale.Language.Dutch,      QLocale.Country.Netherlands),
-            "pt":    QLocale(QLocale.Language.Portuguese, QLocale.Country.Brazil),
-            "ru":    QLocale(QLocale.Language.Russian,    QLocale.Country.Russia),
-            "th":    QLocale(QLocale.Language.Thai,       QLocale.Country.Thailand),
-            "tr":    QLocale(QLocale.Language.Turkish,    QLocale.Country.Turkey),
-            "vi":    QLocale(QLocale.Language.Vietnamese, QLocale.Country.Vietnam),
-            "ar":    QLocale(QLocale.Language.Arabic,     QLocale.Country.SaudiArabia),
+            "ko": QLocale(QLocale.Language.Korean, QLocale.Country.SouthKorea),
+            "ja": QLocale(QLocale.Language.Japanese, QLocale.Country.Japan),
+            "zh-CN": QLocale(QLocale.Language.Chinese, QLocale.Country.China),
+            "zh-TW": QLocale(QLocale.Language.Chinese, QLocale.Country.Taiwan),
+            "zh": QLocale(QLocale.Language.Chinese, QLocale.Country.China),
+            "de": QLocale(QLocale.Language.German, QLocale.Country.Germany),
+            "es": QLocale(QLocale.Language.Spanish, QLocale.Country.Spain),
+            "fr": QLocale(QLocale.Language.French, QLocale.Country.France),
+            "hi": QLocale(QLocale.Language.Hindi, QLocale.Country.India),
+            "id": QLocale(QLocale.Language.Indonesian, QLocale.Country.Indonesia),
+            "it": QLocale(QLocale.Language.Italian, QLocale.Country.Italy),
+            "nl": QLocale(QLocale.Language.Dutch, QLocale.Country.Netherlands),
+            "pt": QLocale(QLocale.Language.Portuguese, QLocale.Country.Brazil),
+            "ru": QLocale(QLocale.Language.Russian, QLocale.Country.Russia),
+            "th": QLocale(QLocale.Language.Thai, QLocale.Country.Thailand),
+            "tr": QLocale(QLocale.Language.Turkish, QLocale.Country.Turkey),
+            "vi": QLocale(QLocale.Language.Vietnamese, QLocale.Country.Vietnam),
+            "ar": QLocale(QLocale.Language.Arabic, QLocale.Country.SaudiArabia),
         }
-        locale = _LANG_TO_LOCALE.get(lang, QLocale(QLocale.Language.English, QLocale.Country.UnitedStates))
+        locale = _LANG_TO_LOCALE.get(
+            lang, QLocale(QLocale.Language.English, QLocale.Country.UnitedStates)
+        )
         QLocale.setDefault(locale)
 
     def _resolve(self, dotted_key):
@@ -286,13 +308,13 @@ class I18nManager:
     def _resolve_alias(self, key):
         # Legacy keys used in some dialogs
         if key.startswith("dialog.shortcut."):
-            return self._resolve("shortcut." + key[len("dialog.shortcut."):])
+            return self._resolve("shortcut." + key[len("dialog.shortcut.") :])
         if key.startswith("dialog.help."):
-            return self._resolve("help." + key[len("dialog.help."):])
+            return self._resolve("help." + key[len("dialog.help.") :])
         if key == "recurrence.finish":
             return self._resolve("recurrence.btn_finish")
         if key.startswith("common."):
-            suffix = key[len("common."):]
+            suffix = key[len("common.") :]
             for prefix in ("dialog.common.", "panel.common."):
                 value = self._resolve(prefix + suffix)
                 if value is not None:
@@ -314,9 +336,7 @@ class I18nManager:
             return True
         if value.count("?") >= 3:
             return True
-        if I18nManager._SUSPICIOUS_QMARK_RE.search(value):
-            return True
-        return False
+        return bool(I18nManager._SUSPICIOUS_QMARK_RE.search(value))
 
     def _collect_broken_keys(self, data, prefix=""):
         broken = []
@@ -347,11 +367,17 @@ class I18nManager:
         if data is None:
             data = self._resolve_alias(key)
         if data is None or self._looks_broken_text(data):
+            # Try bundled locale before English fallback: recovers keys missing from
+            # stale user locale files (e.g. emoji added after file was seeded).
+            data = self._resolve_from(getattr(self, "bundled_translations", {}), key)
+        if data is None or self._looks_broken_text(data):
             data = self._resolve_from(getattr(self, "fallback_translations", {}), key)
         if (data is None or self._looks_broken_text(data)) and key.startswith("common."):
-            suffix = key[len("common."):]
+            suffix = key[len("common.") :]
             for prefix in ("dialog.common.", "panel.common."):
-                data = self._resolve_from(getattr(self, "fallback_translations", {}), prefix + suffix)
+                data = self._resolve_from(
+                    getattr(self, "fallback_translations", {}), prefix + suffix
+                )
                 if data is not None and not self._looks_broken_text(data):
                     break
         if self._looks_broken_text(data):
@@ -366,8 +392,10 @@ class I18nManager:
                 pass
         return data
 
+
 # Global access
 i18n = I18nManager()
+
 
 def t(key, default=None, **kwargs):
     return i18n.get(key, default, **kwargs)
