@@ -172,7 +172,9 @@ def setup_top_bar(self, _size, _theme, _ta):
     _search_bg_focus = "rgba(255,255,255,20)"
     self.search_edit = QLineEdit()
     self.search_edit.setPlaceholderText(t("topbar.search_placeholder", "Search schedule..."))
-    self.search_edit.addAction(_ic(ICON.SEARCH), QLineEdit.ActionPosition.LeadingPosition)
+    self.search_edit.addAction(
+        _ic(ICON.SEARCH, color=_tb_text2), QLineEdit.ActionPosition.LeadingPosition
+    )
     self.search_edit.setFixedWidth(160)
     self.search_edit.setStyleSheet(
         f"""

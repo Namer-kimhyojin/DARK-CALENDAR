@@ -1548,7 +1548,7 @@ def render_calendar(app):
     view_btn_label = display_name_map.get(view_mode, view_mode)
 
     view_btn = QPushButton(f"  {view_btn_label}")
-    view_btn.setIcon(_ic(ICON.VIEW_CALENDAR))
+    view_btn.setIcon(_ic(ICON.VIEW_CALENDAR, color=_icon_color))
     view_btn.setStyleSheet(menu_btn_style)
     view_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
