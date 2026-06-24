@@ -36,7 +36,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     _tb_pal = _topbar_palette(self.settings)
     _tb_text = _tb_pal["text_primary"]
     _tb_text2 = _tb_pal["text_secondary"]
-    self._tb_icon_color = _tb_text2
+    self._tb_icon_color = _tb_text  # text_primary is always a hex string; text_secondary is rgba (invalid for qtawesome)
     self._tb_icon_active_color = _theme
     _vline_color = "rgba(255,255,255,20)"
     _hover_bg_weak = "rgba(255,255,255,30)"
@@ -133,7 +133,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.lock_btn.setCheckable(True)
     self.lock_btn.setChecked(is_locked)
     self.lock_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    _lock_icon_color = _theme if is_locked else _tb_text2
+    _lock_icon_color = _theme if is_locked else _tb_text
     self.lock_btn.setIcon(_ic(ICON.LOCK if is_locked else ICON.UNLOCK, color=_lock_icon_color))
     self.lock_btn.setIconSize(QSize(16, 16))
     self.lock_btn.setToolTip(t("topbar.lock_on_hint") if is_locked else t("topbar.lock_off_hint"))
@@ -155,7 +155,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.magnet_btn.setCheckable(True)
     self.magnet_btn.setChecked(is_magnet)
     self.magnet_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    self.magnet_btn.setIcon(_ic(ICON.MAGNET if is_magnet else ICON.MAGNET_OFF, color=_tb_text2))
+    self.magnet_btn.setIcon(_ic(ICON.MAGNET if is_magnet else ICON.MAGNET_OFF, color=_tb_text))
     self.magnet_btn.setIconSize(QSize(16, 16))
     self.magnet_btn.setToolTip(
         t("topbar.magnet_on_hint") if is_magnet else t("topbar.magnet_off_hint")
@@ -173,7 +173,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.search_edit = QLineEdit()
     self.search_edit.setPlaceholderText(t("topbar.search_placeholder", "Search schedule..."))
     self.search_edit.addAction(
-        _ic(ICON.SEARCH, color=_tb_text2), QLineEdit.ActionPosition.LeadingPosition
+        _ic(ICON.SEARCH, color=_tb_text), QLineEdit.ActionPosition.LeadingPosition
     )
     self.search_edit.setFixedWidth(160)
     self.search_edit.setStyleSheet(
@@ -192,7 +192,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     top_bar.addSpacing(4)
 
     self.widget_mode_btn = QToolButton()
-    self.widget_mode_btn.setIcon(_ic(ICON.WIDGET_MGR, color=_tb_text2))
+    self.widget_mode_btn.setIcon(_ic(ICON.WIDGET_MGR, color=_tb_text))
     self.widget_mode_btn.setIconSize(QSize(16, 16))
     self.widget_mode_btn.setToolTip(t("topbar.widget_mode_hint", "위젯 전용 모드 열기"))
     self.widget_mode_btn.setCursor(Qt.CursorShape.PointingHandCursor)

@@ -6,6 +6,7 @@ from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key
 from calendar_app.presentation.main_window.top_menus.common import format_top_menu_button_text
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
+from calendar_app.shared.icon_map import strip_leading_emoji as _se
 
 
 def _toggle_dock(app, dock_attr: str, visible: bool) -> None:
@@ -139,13 +140,13 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
 
     self.refresh_layout_preset_labels = _refresh_layout_preset_labels
 
-    act_tv = self.display_menu.addAction(t("menu.toggle_view"), self.toggle_view_mode)
+    act_tv = self.display_menu.addAction(_se(t("menu.toggle_view")), self.toggle_view_mode)
     act_tv.setIcon(_ic(ICON.VIEW_CALENDAR))
 
-    self.panel_menu = self.display_menu.addMenu(t("menu.panel_settings"))
+    self.panel_menu = self.display_menu.addMenu(_se(t("menu.panel_settings")))
     self.panel_menu.setIcon(_ic(ICON.DISPLAY_STYLE))
 
-    self.act_today = self.panel_menu.addAction(t("menu.panel_today"))
+    self.act_today = self.panel_menu.addAction(_se(t("menu.panel_today")))
     self.act_today.setIcon(_ic(ICON.STATUS_TODAY))
     self.act_today.setCheckable(True)
 
@@ -153,7 +154,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
         lambda *args: _toggle_dock(self, "left_dock", self.act_today.isChecked())
     )
 
-    self.act_calendar = self.panel_menu.addAction(t("menu.panel_calendar"))
+    self.act_calendar = self.panel_menu.addAction(_se(t("menu.panel_calendar")))
     self.act_calendar.setIcon(_ic(ICON.VIEW_CALENDAR))
     self.act_calendar.setCheckable(True)
 
@@ -161,7 +162,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
         lambda *args: _toggle_dock(self, "center_dock", self.act_calendar.isChecked())
     )
 
-    self.act_routine = self.panel_menu.addAction(t("menu.panel_routine"))
+    self.act_routine = self.panel_menu.addAction(_se(t("menu.panel_routine")))
     self.act_routine.setIcon(_ic(ICON.ROUTINE))
     self.act_routine.setCheckable(True)
 
@@ -169,7 +170,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
         lambda *args: _toggle_dock(self, "routine_dock", self.act_routine.isChecked())
     )
 
-    self.act_directive = self.panel_menu.addAction(t("menu.panel_directive"))
+    self.act_directive = self.panel_menu.addAction(_se(t("menu.panel_directive")))
     self.act_directive.setIcon(_ic(ICON.DIRECTIVE))
     self.act_directive.setCheckable(True)
 
@@ -179,7 +180,9 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
 
     self.display_menu.addSeparator()
 
-    self.act_topbar = self.display_menu.addAction(f"{t('menu.hide_topbar')}\t{get_key('topbar')}")
+    self.act_topbar = self.display_menu.addAction(
+        f"{_se(t('menu.hide_topbar'))}\t{get_key('topbar')}"
+    )
     self.act_topbar.setIcon(_ic(ICON.HIDE))
     self.act_topbar.setCheckable(True)
 
@@ -188,7 +191,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     self.act_topbar.triggered.connect(self.toggle_top_bar)
 
     self.act_calendar_toolbar = self.display_menu.addAction(
-        f"{t('menu.hide_calendar_toolbar')}\t{get_key('cal_toolbar')}"
+        f"{_se(t('menu.hide_calendar_toolbar'))}\t{get_key('cal_toolbar')}"
     )
     self.act_calendar_toolbar.setIcon(_ic(ICON.SCREEN_MGMT))
     self.act_calendar_toolbar.setCheckable(True)
@@ -198,30 +201,30 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     self.act_calendar_toolbar.triggered.connect(self.set_calendar_toolbar_visible)
 
     act_fs = self.display_menu.addAction(
-        f"{t('menu.fullscreen')}\t{get_key('fullscreen')}", self.toggle_fullscreen
+        f"{_se(t('menu.fullscreen'))}\t{get_key('fullscreen')}", self.toggle_fullscreen
     )
     act_fs.setIcon(_ic(ICON.FULLSCREEN))
 
     act_fm = self.display_menu.addAction(
-        f"{t('menu.focus_mode')}\t{get_key('focus_mode')}", self.toggle_focus_mode
+        f"{_se(t('menu.focus_mode'))}\t{get_key('focus_mode')}", self.toggle_focus_mode
     )
     act_fm.setIcon(_ic(ICON.POMODORO))
 
     act_wm = self.display_menu.addAction(
-        f"{t('menu.widget_mode_toggle', '위젯 전용 모드')}\t{get_key('widget_mode', 'F12')}",
+        f"{_se(t('menu.widget_mode_toggle', '위젯 전용 모드'))}\t{get_key('widget_mode', 'F12')}",
         self.toggle_widget_mode_panel,
     )
     act_wm.setIcon(_ic(ICON.WIDGET_MGR))
 
     self.instant_away_act = self.display_menu.addAction(
-        t("menu.instant_away"), lambda: self.toggle_idle_lock(True, manual=True)
+        _se(t("menu.instant_away")), lambda: self.toggle_idle_lock(True, manual=True)
     )
     self.instant_away_act.setIcon(_ic(ICON.LOCK))
 
     self.display_menu.addSeparator()
 
     self.calendar_visibility_menu = self.display_menu.addMenu(
-        t("menu.calendar_visibility", "캘린더 표시")
+        _se(t("menu.calendar_visibility", "캘린더 표시"))
     )
     self.calendar_visibility_menu.setIcon(_ic(ICON.VIEW_CALENDAR))
     self.calendar_visibility_menu.aboutToShow.connect(
@@ -230,7 +233,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
 
     self.display_menu.addSeparator()
 
-    self.theme_mode_menu = self.display_menu.addMenu(t("menu.theme_mode", "테마 모드"))
+    self.theme_mode_menu = self.display_menu.addMenu(_se(t("menu.theme_mode", "테마 모드")))
     self.theme_mode_menu.setIcon(_ic(ICON.COLOR_PICKER))
 
     current_mode = self.settings.value("text_theme", "dark")
@@ -254,7 +257,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     act_auto.setChecked(current_mode == "auto")
 
     act_theme = self.display_menu.addAction(
-        t("menu.ui_theme_open", "UI 테마 상세 설정..."),
+        _se(t("menu.ui_theme_open", "UI 테마 상세 설정...")),
         self.open_panel_background_color_dialog,
     )
     act_theme.setIcon(_ic(ICON.COLOR_PICKER))
@@ -266,7 +269,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
         apply_layout_preset,
     )
 
-    layout_menu = self.display_menu.addMenu(t("menu.layout_presets"))
+    layout_menu = self.display_menu.addMenu(_se(t("menu.layout_presets")))
     layout_menu.setIcon(_ic(ICON.DISPLAY_STYLE))
 
     layout_menu.setStyleSheet(menu_style)

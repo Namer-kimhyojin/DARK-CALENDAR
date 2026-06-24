@@ -26,6 +26,24 @@ TODO (Phase 2+):
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
+
+# Matches one or more leading emoji/symbol characters followed by optional whitespace.
+# Covers: supplementary-plane emoji (U+10000+), Misc Symbols (U+2600-26FF),
+# Dingbats (U+2700-27BF), Misc Symbols Extended (U+2B00-2BFF),
+# Variation Selectors (U+FE00-FE0F), and ZWJ (U+200D).
+# Used to strip duplicate emoji from menu text when qtawesome icons are also set.
+_LEADING_EMOJI_RE = re.compile(
+    r"^(?:[\U00010000-\U0010FFFF]|‍|[☀-➿]|[⬀-⯿]|[︀-️])+"
+    r"\s*",
+    re.UNICODE,
+)
+
+
+def strip_leading_emoji(text: str) -> str:
+    """Remove leading emoji/symbol prefix and surrounding whitespace from menu label text."""
+    return _LEADING_EMOJI_RE.sub("", str(text)).lstrip()
+
 
 # ---------------------------------------------------------------------------
 # 아이콘 키 상수
