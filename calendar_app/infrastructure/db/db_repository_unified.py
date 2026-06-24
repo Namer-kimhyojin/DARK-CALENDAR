@@ -1,13 +1,11 @@
-import sqlite3
-import os
+from datetime import UTC, datetime, timedelta
 import json
-from datetime import datetime, timedelta, timezone
-from calendar_app.app_paths import DB_PATH
 
-from calendar_app.infrastructure.db.database_unified import db_manager, logger
-from calendar_app.infrastructure.db.period_utils import calculate_period_bounds as _calculate_period_bounds
 from calendar_app.domain.routine_cycle import cycle_display_name
-
+from calendar_app.infrastructure.db.database_unified import db_manager, logger
+from calendar_app.infrastructure.db.period_utils import (
+    calculate_period_bounds as _calculate_period_bounds,
+)
 
 _GCAL_META_ONLY_FIELDS = {
     "gcal_event_id",
@@ -18,34 +16,44 @@ _GCAL_META_ONLY_FIELDS = {
     "updated_at",
 }
 
+_schema_cache: dict[str, set] = {}
+
 
 def _now_local_str():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _now_utc_iso():
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
 
 def get_connection():
     """Singleton 데이터베이스 관리자를 통해 연결을 획득합니다."""
     return db_manager.get_connection()
 
 
-def _table_columns(cur, table_name):
-    cur.execute(f"PRAGMA table_info({table_name})")
-    return {row[1] for row in cur.fetchall()}
+def _table_columns(cur, table_name: str) -> set:
+    if table_name not in _schema_cache:
+        cur.execute(f"PRAGMA table_info({table_name})")
+        _schema_cache[table_name] = {row[1] for row in cur.fetchall()}
+    return _schema_cache[table_name]
+
 
 # ==================== 일반업무 유형별 기간 계산 ====================
+
 
 def calculate_period_bounds(target_date_str, cycle_type):
     """Backward-compatible proxy to period_utils.calculate_period_bounds."""
     return _calculate_period_bounds(target_date_str, cycle_type)
 
+
 def get_cycle_type_display_name(cycle_type):
     """Returns the localized display name of the routine type."""
     return cycle_display_name(cycle_type, scope="recurrence")
 
+
 # ==================== CRUD: Create ====================
+
 
 def create_unified_task(task_data, commit=True):
     """
@@ -70,9 +78,9 @@ def create_unified_task(task_data, commit=True):
     # 일반업무인 경우 period_start, period_end 자동 계산
     period_start = None
     period_end = None
-    if task_data.get('type') == 'routine':
-        target_date = task_data.get('target_date') or task_data.get('deadline')
-        cycle_type = task_data.get('cycle_type', 'monthly')
+    if task_data.get("type") == "routine":
+        target_date = task_data.get("target_date") or task_data.get("deadline")
+        cycle_type = task_data.get("cycle_type", "monthly")
         if target_date:
             period_start, period_end = calculate_period_bounds(target_date, cycle_type)
 
@@ -82,11 +90,14 @@ def create_unified_task(task_data, commit=True):
         gcal_dirty = task_data.get("gcal_dirty")
         if gcal_dirty is None:
             gcal_dirty = 0 if has_gcal_id else 1
-        gcal_last_synced_at = task_data.get("gcal_last_synced_at") or (created_at if has_gcal_id else None)
+        gcal_last_synced_at = task_data.get("gcal_last_synced_at") or (
+            created_at if has_gcal_id else None
+        )
         gcal_remote_updated_at = task_data.get("gcal_remote_updated_at")
         gcal_sync_error = task_data.get("gcal_sync_error")
 
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO unified_task (
                 name, type, priority, status, deadline, end_date, alarm_time,
                 recurrence, template_id, target_date, cycle_type,
@@ -95,42 +106,49 @@ def create_unified_task(task_data, commit=True):
                 gcal_last_synced_at, gcal_remote_updated_at, gcal_sync_error,
                 updated_at, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            task_data['name'],
-            task_data.get('type', 'schedule'),
-            task_data.get('priority', 'normal'),
-            task_data.get('status', 'in_progress'),
-            task_data.get('deadline'),
-            task_data.get('end_date'),
-            task_data.get('alarm_time'),
-            task_data.get('recurrence'),
-            task_data.get('template_id'),
-            task_data.get('target_date'),
-            task_data.get('cycle_type'),
-            period_start,
-            period_end,
-            task_data.get('bg_color'),
-            task_data.get('icon'),
-            task_data.get('description'),
-            task_data.get('memo'),
-            task_data.get('location'),
-            task_data.get('assignee'),
-            task_data.get('all_day', 0),
-            task_data.get('calendar_id'),
-            task_data.get('gcal_event_id'),
-            int(bool(gcal_dirty)),
-            gcal_last_synced_at,
-            gcal_remote_updated_at,
-            gcal_sync_error,
-            created_at,
-            created_at,
-        ))
+        """,
+            (
+                task_data["name"],
+                task_data.get("type", "schedule"),
+                task_data.get("priority", "normal"),
+                task_data.get("status", "in_progress"),
+                task_data.get("deadline"),
+                task_data.get("end_date"),
+                task_data.get("alarm_time"),
+                task_data.get("recurrence"),
+                task_data.get("template_id"),
+                task_data.get("target_date"),
+                task_data.get("cycle_type"),
+                period_start,
+                period_end,
+                task_data.get("bg_color"),
+                task_data.get("icon"),
+                task_data.get("description"),
+                task_data.get("memo"),
+                task_data.get("location"),
+                task_data.get("assignee"),
+                task_data.get("all_day", 0),
+                task_data.get("calendar_id"),
+                task_data.get("gcal_event_id"),
+                int(bool(gcal_dirty)),
+                gcal_last_synced_at,
+                gcal_remote_updated_at,
+                gcal_sync_error,
+                created_at,
+                created_at,
+            ),
+        )
 
         task_id = cur.lastrowid
         unified_cols = _table_columns(cur, "unified_task")
         extra_sets = []
         extra_params = []
-        for col in ("gcal_source_calendar_id", "gcal_source_summary", "gcal_target_calendar_id", "gcal_sync_mode"):
+        for col in (
+            "gcal_source_calendar_id",
+            "gcal_source_summary",
+            "gcal_target_calendar_id",
+            "gcal_sync_mode",
+        ):
             if col in unified_cols and col in task_data:
                 extra_sets.append(f"{col}=?")
                 extra_params.append(task_data.get(col))
@@ -152,7 +170,9 @@ def create_unified_task(task_data, commit=True):
             conn.rollback()
         return None
 
+
 # ==================== CRUD: Read ====================
+
 
 def get_unified_task(task_id):
     """특정 task 조회 (dict 형태 반환)"""
@@ -233,6 +253,7 @@ def detach_all_gcal_links(mark_dirty=True):
         conn.rollback()
         return 0
 
+
 def get_tasks_by_type(task_type, date_filter=None, status_filter=None):
     """
     타입별 task 조회 (schedule 또는 routine)
@@ -247,7 +268,7 @@ def get_tasks_by_type(task_type, date_filter=None, status_filter=None):
     params = [task_type]
 
     if date_filter:
-        if task_type == 'routine':
+        if task_type == "routine":
             query += " AND date(target_date) = date(?)"
         else:
             query += " AND date(deadline) = date(?)"
@@ -263,6 +284,7 @@ def get_tasks_by_type(task_type, date_filter=None, status_filter=None):
     rows = cur.fetchall()
     return [dict(row) for row in rows]
 
+
 def get_routines_by_period(cycle_type, period_start, period_end=None):
     """
     특정 기간의 일반업무 조회
@@ -275,17 +297,21 @@ def get_routines_by_period(cycle_type, period_start, period_end=None):
         period_end = period_start
 
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         SELECT * FROM unified_task
         WHERE type='routine'
           AND cycle_type=?
           AND period_start <= ?
           AND period_end >= ?
         ORDER BY target_date ASC
-    """, (cycle_type, period_end, period_start))
+    """,
+        (cycle_type, period_end, period_start),
+    )
 
     rows = cur.fetchall()
     return [dict(row) for row in rows]
+
 
 def get_all_routines_grouped_by_cycle():
     """
@@ -303,23 +329,19 @@ def get_all_routines_grouped_by_cycle():
     """)
 
     rows = cur.fetchall()
-    grouped = {
-        'weekly': [],
-        'monthly': [],
-        'quarterly': [],
-        'half_yearly': [],
-        'yearly': []
-    }
+    grouped = {"weekly": [], "monthly": [], "quarterly": [], "half_yearly": [], "yearly": []}
 
     for row in rows:
         task = dict(row)
-        cycle = task.get('cycle_type', 'monthly')
+        cycle = task.get("cycle_type", "monthly")
         if cycle in grouped:
             grouped[cycle].append(task)
 
     return grouped
 
+
 # ==================== CRUD: Update ====================
+
 
 def update_unified_task(task_id, updates, mark_gcal_dirty=None):
     """
@@ -332,15 +354,15 @@ def update_unified_task(task_id, updates, mark_gcal_dirty=None):
     cur = conn.cursor()
 
     # period_start, period_end 재계산 필요 여부 확인
-    if 'target_date' in updates or 'cycle_type' in updates:
+    if "target_date" in updates or "cycle_type" in updates:
         cur.execute("SELECT target_date, cycle_type FROM unified_task WHERE id=?", (task_id,))
         row = cur.fetchone()
         if row:
-            target_date = updates.get('target_date', row['target_date'])
-            cycle_type = updates.get('cycle_type', row['cycle_type'])
+            target_date = updates.get("target_date", row["target_date"])
+            cycle_type = updates.get("cycle_type", row["cycle_type"])
             period_start, period_end = calculate_period_bounds(target_date, cycle_type)
-            updates['period_start'] = period_start
-            updates['period_end'] = period_end
+            updates["period_start"] = period_start
+            updates["period_end"] = period_end
 
     updates = dict(updates or {})
     updates["updated_at"] = _now_local_str()
@@ -352,7 +374,7 @@ def update_unified_task(task_id, updates, mark_gcal_dirty=None):
         updates["gcal_dirty"] = 1 if mark_gcal_dirty else 0
 
     # 동적 UPDATE 쿼리 생성
-    set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
+    set_clause = ", ".join([f"{k}=?" for k in updates])
     values = list(updates.values()) + [task_id]
 
     try:
@@ -364,6 +386,7 @@ def update_unified_task(task_id, updates, mark_gcal_dirty=None):
         conn.rollback()
         return False
 
+
 def mark_routine_completed(task_id):
     """일반업무 완료 처리"""
     conn = get_connection()
@@ -371,20 +394,24 @@ def mark_routine_completed(task_id):
         return False
 
     cur = conn.cursor()
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     try:
-        cur.execute("""
+        cur.execute(
+            """
             UPDATE unified_task
             SET is_completed=1, completed_at=?, status='done'
             WHERE id=? AND type='routine'
-        """, (now, task_id))
+        """,
+            (now, task_id),
+        )
         conn.commit()
         return True
     except Exception as e:
         logger.error(f"Error marking routine completed: {e}")
         conn.rollback()
         return False
+
 
 def mark_routine_incomplete(task_id):
     """일반업무 미완료 처리"""
@@ -395,11 +422,14 @@ def mark_routine_incomplete(task_id):
     cur = conn.cursor()
 
     try:
-        cur.execute("""
+        cur.execute(
+            """
             UPDATE unified_task
             SET is_completed=0, completed_at=NULL, status='in_progress'
             WHERE id=? AND type='routine'
-        """, (task_id,))
+        """,
+            (task_id,),
+        )
         conn.commit()
         return True
     except Exception as e:
@@ -407,7 +437,9 @@ def mark_routine_incomplete(task_id):
         conn.rollback()
         return False
 
+
 # ==================== CRUD: Delete ====================
+
 
 def delete_unified_task(task_id):
     """
@@ -440,9 +472,29 @@ def _load_archive_snapshot(snapshot_json):
         return {}
 
 
+def _serialize_snapshot_json(snapshot):
+    if snapshot is None:
+        return None
+    if isinstance(snapshot, str):
+        text = snapshot.strip()
+        return text or None
+    try:
+        return json.dumps(snapshot, ensure_ascii=False, default=str)
+    except Exception:
+        try:
+            return json.dumps(str(snapshot), ensure_ascii=False)
+        except Exception:
+            return None
+
+
 def _archive_calendar_id_from_task(task: dict | None):
     task = task or {}
-    return str(task.get("gcal_source_calendar_id") or task.get("gcal_target_calendar_id") or "").strip() or None
+    return (
+        str(
+            task.get("gcal_source_calendar_id") or task.get("gcal_target_calendar_id") or ""
+        ).strip()
+        or None
+    )
 
 
 def move_task_to_trash(task_id, reason="manual_trash"):
@@ -485,7 +537,9 @@ def list_task_trash(task_type=None):
                     "assignee": task.get("assignee") or "",
                     "priority": task.get("priority") or "normal",
                     "status": task.get("status") or "pending",
-                    "gcal_event_id": task.get("gcal_event_id") or archive_row.get("gcal_event_id") or "",
+                    "gcal_event_id": task.get("gcal_event_id")
+                    or archive_row.get("gcal_event_id")
+                    or "",
                     "gcal_calendar_id": _archive_calendar_id_from_task(task),
                     "archived_at": archive_row.get("archived_at"),
                     "archived_reason": archive_row.get("archived_reason") or "",
@@ -510,7 +564,11 @@ def restore_task_from_trash(archive_id):
         archive_row = dict(row)
         snapshot = _load_archive_snapshot(archive_row.get("snapshot_json"))
         task = snapshot.get("task") if isinstance(snapshot.get("task"), dict) else {}
-        checklist_items = snapshot.get("checklist_items") if isinstance(snapshot.get("checklist_items"), list) else []
+        checklist_items = (
+            snapshot.get("checklist_items")
+            if isinstance(snapshot.get("checklist_items"), list)
+            else []
+        )
 
         task_data = {
             "name": task.get("name") or archive_row.get("name") or "Untitled",
@@ -546,7 +604,12 @@ def restore_task_from_trash(archive_id):
         unified_cols = _table_columns(cur, "unified_task")
         extra_cols = []
         extra_values = []
-        for col in ("gcal_source_calendar_id", "gcal_source_summary", "gcal_target_calendar_id", "gcal_sync_mode"):
+        for col in (
+            "gcal_source_calendar_id",
+            "gcal_source_summary",
+            "gcal_target_calendar_id",
+            "gcal_sync_mode",
+        ):
             if col in unified_cols:
                 extra_cols.append(f"{col}=?")
                 extra_values.append(task.get(col))
@@ -597,7 +660,10 @@ def purge_task_trash(archive_id):
         return None
     try:
         cur = conn.cursor()
-        cur.execute("SELECT gcal_event_id, snapshot_json FROM gcal_deleted_task_archive WHERE id=?", (archive_id,))
+        cur.execute(
+            "SELECT gcal_event_id, snapshot_json FROM gcal_deleted_task_archive WHERE id=?",
+            (archive_id,),
+        )
         row = cur.fetchone()
         if not row:
             return None
@@ -615,6 +681,25 @@ def purge_task_trash(archive_id):
         logger.error(f"Error purging task trash item: {e}")
         conn.rollback()
         return None
+
+
+def purge_task_trash_older_than(cutoff_datetime):
+    conn = get_connection()
+    if not conn:
+        return 0
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "DELETE FROM gcal_deleted_task_archive WHERE datetime(archived_at) < datetime(?)",
+            (cutoff_datetime,),
+        )
+        deleted = int(cur.rowcount or 0)
+        conn.commit()
+        return deleted
+    except Exception as e:
+        logger.error(f"Error purging old task trash items: {e}")
+        conn.rollback()
+        return 0
 
 
 def is_gcal_event_in_task_trash(gcal_event_id, gcal_calendar_id=None):
@@ -646,6 +731,52 @@ def is_gcal_event_in_task_trash(gcal_event_id, gcal_calendar_id=None):
     except Exception as e:
         logger.error(f"Error checking gcal event in task trash: {e}")
         return False
+
+
+def purge_gcal_event_manual_trash(gcal_event_id, gcal_calendar_id=None):
+    event_id = str(gcal_event_id or "").strip()
+    if not event_id:
+        return 0
+    conn = get_connection()
+    if not conn:
+        return 0
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, snapshot_json FROM gcal_deleted_task_archive WHERE gcal_event_id=?",
+            (event_id,),
+        )
+        rows = cur.fetchall()
+        if not rows:
+            return 0
+
+        target_calendar_id = str(gcal_calendar_id or "").strip()
+        purge_ids = []
+        for raw in rows:
+            row = dict(raw)
+            if not target_calendar_id:
+                purge_ids.append(row["id"])
+                continue
+            snapshot = _load_archive_snapshot(row.get("snapshot_json"))
+            task = snapshot.get("task") if isinstance(snapshot.get("task"), dict) else {}
+            if _archive_calendar_id_from_task(task) == target_calendar_id:
+                purge_ids.append(row["id"])
+
+        if not purge_ids:
+            return 0
+
+        placeholders = ",".join("?" for _ in purge_ids)
+        cur.execute(
+            f"DELETE FROM gcal_deleted_task_archive WHERE id IN ({placeholders})",
+            tuple(purge_ids),
+        )
+        deleted = int(cur.rowcount or 0)
+        conn.commit()
+        return deleted
+    except Exception as e:
+        logger.error(f"Error purging manual Google trash rows: {e}")
+        conn.rollback()
+        return 0
 
 
 def archive_gcal_deleted_task(local_task_id, gcal_event_id=None, reason="remote_deleted"):
@@ -714,7 +845,9 @@ def list_gcal_subscriptions(include_inactive=True):
         params = ()
         if not include_inactive:
             query += " WHERE is_active=1"
-        query += " ORDER BY is_primary DESC, is_active DESC, lower(COALESCE(summary, calendar_id)) ASC"
+        query += (
+            " ORDER BY is_primary DESC, is_active DESC, lower(COALESCE(summary, calendar_id)) ASC"
+        )
         cur.execute(query, params)
         return [dict(row) for row in cur.fetchall()]
     except Exception as e:
@@ -818,76 +951,318 @@ def delete_gcal_subscription(calendar_id):
         conn.rollback()
         return False
 
+
 # ==================== 구글 캘린더 삭제 큐 관리 ====================
 
-def queue_gcal_delete(gcal_event_id, gcal_calendar_id=None, local_task_id=None):
-    if not gcal_event_id: return False
+
+def queue_gcal_sync_conflict(
+    local_task_id,
+    gcal_event_id,
+    gcal_calendar_id=None,
+    conflict_kind="remote_overwrite",
+    local_snapshot=None,
+    remote_snapshot=None,
+    local_snapshot_json=None,
+    remote_snapshot_json=None,
+):
     conn = get_connection()
-    if not conn: return False
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        local_snapshot_json = _serialize_snapshot_json(
+            local_snapshot if local_snapshot_json is None else local_snapshot_json
+        )
+        remote_snapshot_json = _serialize_snapshot_json(
+            remote_snapshot if remote_snapshot_json is None else remote_snapshot_json
+        )
+        normalized_calendar_id = str(gcal_calendar_id or "").strip() or None
+        normalized_conflict_kind = (
+            str(conflict_kind or "remote_overwrite").strip() or "remote_overwrite"
+        )
+        created_at = _now_local_str()
+
+        cur.execute(
+            """
+            SELECT id
+            FROM gcal_sync_conflict_queue
+            WHERE COALESCE(is_resolved, 0) = 0
+              AND COALESCE(local_task_id, 0) = COALESCE(?, 0)
+              AND COALESCE(gcal_event_id, '') = COALESCE(?, '')
+              AND COALESCE(gcal_calendar_id, '') = COALESCE(?, '')
+              AND COALESCE(conflict_kind, 'remote_overwrite') = ?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (local_task_id, gcal_event_id, normalized_calendar_id, normalized_conflict_kind),
+        )
+        existing = cur.fetchone()
+
+        if existing:
+            cur.execute(
+                """
+                UPDATE gcal_sync_conflict_queue
+                SET local_snapshot_json=?,
+                    remote_snapshot_json=?,
+                    created_at=?
+                WHERE id=?
+                """,
+                (local_snapshot_json, remote_snapshot_json, created_at, existing["id"]),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO gcal_sync_conflict_queue (
+                    local_task_id, gcal_event_id, gcal_calendar_id, conflict_kind,
+                    local_snapshot_json, remote_snapshot_json, is_resolved, resolution, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, 0, NULL, ?)
+                """,
+                (
+                    local_task_id,
+                    gcal_event_id,
+                    normalized_calendar_id,
+                    normalized_conflict_kind,
+                    local_snapshot_json,
+                    remote_snapshot_json,
+                    created_at,
+                ),
+            )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error queueing Google sync conflict: {e}")
+        conn.rollback()
+        return False
+
+
+def list_gcal_sync_conflicts(include_resolved=False, only_unresolved=None, limit=None):
+    if only_unresolved is not None:
+        include_resolved = not bool(only_unresolved)
+    conn = get_connection()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        query = "SELECT * FROM gcal_sync_conflict_queue"
+        if not include_resolved:
+            query += " WHERE COALESCE(is_resolved, 0) = 0"
+        query += " ORDER BY id ASC"
+        if limit and str(limit).isdigit():
+            query += f" LIMIT {limit}"
+        cur.execute(query)
+        return [dict(row) for row in cur.fetchall()]
+    except Exception as e:
+        logger.error(f"Error listing Google sync conflicts: {e}")
+        return []
+
+
+def mark_gcal_sync_conflict_resolved(conflict_id, resolution):
+    conn = get_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE gcal_sync_conflict_queue
+            SET is_resolved=1,
+                resolution=?,
+                resolved_at=?
+            WHERE id=?
+            """,
+            (resolution or "resolved", _now_local_str(), conflict_id),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    except Exception as e:
+        logger.error(f"Error resolving Google sync conflict: {e}")
+        conn.rollback()
+        return False
+
+
+def queue_gcal_delete(gcal_event_id, gcal_calendar_id=None, local_task_id=None):
+    if not gcal_event_id:
+        return False
+    conn = get_connection()
+    if not conn:
+        return False
     try:
         cur = conn.cursor()
         queue_cols = _table_columns(cur, "gcal_delete_queue")
+        has_calendar_col = "gcal_calendar_id" in queue_cols
+        has_retry_col = "next_retry_at" in queue_cols
+
         normalized_calendar_id = str(gcal_calendar_id or "").strip() or None
         if not normalized_calendar_id and local_task_id:
             try:
-                cur.execute("SELECT gcal_source_calendar_id, gcal_target_calendar_id FROM unified_task WHERE id=?", (local_task_id,))
+                cur.execute(
+                    "SELECT gcal_source_calendar_id, gcal_target_calendar_id "
+                    "FROM unified_task WHERE id=?",
+                    (local_task_id,),
+                )
                 row = cur.fetchone()
-                if row: normalized_calendar_id = str(row["gcal_source_calendar_id"] or row["gcal_target_calendar_id"] or "").strip() or None
-            except Exception: pass
-        has_calendar_col = "gcal_calendar_id" in queue_cols
-        cur.execute(f"SELECT id FROM gcal_delete_queue WHERE gcal_event_id=? {'AND COALESCE(trim(gcal_calendar_id), "") = COALESCE(trim(?), "")' if has_calendar_col else ''} LIMIT 1", (str(gcal_event_id), normalized_calendar_id) if has_calendar_col else (str(gcal_event_id),))
-        existing = cur.fetchone()
-        if existing:
-            cur.execute("UPDATE gcal_delete_queue SET local_task_id=COALESCE(?, local_task_id) WHERE id=?", (local_task_id, existing["id"]))
-            conn.commit(); return True
-        if "next_retry_at" in queue_cols:
-            if has_calendar_col:
-                cur.execute("INSERT INTO gcal_delete_queue (gcal_event_id, gcal_calendar_id, local_task_id, next_retry_at) VALUES (?, ?, ?, datetime('now', 'localtime'))", (str(gcal_event_id), normalized_calendar_id, local_task_id))
-            else:
-                cur.execute("INSERT INTO gcal_delete_queue (gcal_event_id, local_task_id, next_retry_at) VALUES (?, ?, datetime('now', 'localtime'))", (str(gcal_event_id), local_task_id))
+                if row:
+                    normalized_calendar_id = (
+                        str(
+                            row["gcal_source_calendar_id"] or row["gcal_target_calendar_id"] or ""
+                        ).strip()
+                        or None
+                    )
+            except Exception:
+                pass
+
+        if has_calendar_col:
+            cur.execute(
+                "SELECT id FROM gcal_delete_queue "
+                "WHERE gcal_event_id=? "
+                "AND COALESCE(trim(gcal_calendar_id), '') = COALESCE(trim(?), '') "
+                "LIMIT 1",
+                (str(gcal_event_id), normalized_calendar_id),
+            )
         else:
-            if has_calendar_col:
-                cur.execute("INSERT INTO gcal_delete_queue (gcal_event_id, gcal_calendar_id, local_task_id) VALUES (?, ?, ?)", (str(gcal_event_id), normalized_calendar_id, local_task_id))
-            else:
-                cur.execute("INSERT INTO gcal_delete_queue (gcal_event_id, local_task_id) VALUES (?, ?)", (str(gcal_event_id), local_task_id))
-        conn.commit(); return True
-    except Exception: return False
+            cur.execute(
+                "SELECT id FROM gcal_delete_queue WHERE gcal_event_id=? LIMIT 1",
+                (str(gcal_event_id),),
+            )
+        existing = cur.fetchone()
+
+        if existing:
+            cur.execute(
+                "UPDATE gcal_delete_queue SET local_task_id=COALESCE(?, local_task_id) WHERE id=?",
+                (local_task_id, existing["id"]),
+            )
+            conn.commit()
+            return True
+
+        if has_retry_col and has_calendar_col:
+            cur.execute(
+                "INSERT INTO gcal_delete_queue (gcal_event_id, gcal_calendar_id, local_task_id, next_retry_at) "
+                "VALUES (?, ?, ?, datetime('now', 'localtime'))",
+                (str(gcal_event_id), normalized_calendar_id, local_task_id),
+            )
+        elif has_retry_col:
+            cur.execute(
+                "INSERT INTO gcal_delete_queue (gcal_event_id, local_task_id, next_retry_at) "
+                "VALUES (?, ?, datetime('now', 'localtime'))",
+                (str(gcal_event_id), local_task_id),
+            )
+        elif has_calendar_col:
+            cur.execute(
+                "INSERT INTO gcal_delete_queue (gcal_event_id, gcal_calendar_id, local_task_id) "
+                "VALUES (?, ?, ?)",
+                (str(gcal_event_id), normalized_calendar_id, local_task_id),
+            )
+        else:
+            cur.execute(
+                "INSERT INTO gcal_delete_queue (gcal_event_id, local_task_id) VALUES (?, ?)",
+                (str(gcal_event_id), local_task_id),
+            )
+        conn.commit()
+        return True
+    except Exception:
+        return False
+
+
+def is_gcal_delete_queued(gcal_event_id, gcal_calendar_id=None):
+    event_id = str(gcal_event_id or "").strip()
+    if not event_id:
+        return False
+    conn = get_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        queue_cols = _table_columns(cur, "gcal_delete_queue")
+        if "gcal_calendar_id" in queue_cols:
+            cur.execute(
+                """
+                SELECT 1
+                FROM gcal_delete_queue
+                WHERE gcal_event_id=?
+                  AND COALESCE(trim(gcal_calendar_id), '') = COALESCE(trim(?), '')
+                LIMIT 1
+                """,
+                (event_id, gcal_calendar_id),
+            )
+        else:
+            cur.execute(
+                "SELECT 1 FROM gcal_delete_queue WHERE gcal_event_id=? LIMIT 1", (event_id,)
+            )
+        return cur.fetchone() is not None
+    except Exception as e:
+        logger.error(f"Error checking Google delete queue: {e}")
+        return False
+
 
 def get_gcal_delete_queue():
     conn = get_connection()
-    if not conn: return []
+    if not conn:
+        return []
     try:
-        cur = conn.cursor(); cur.execute("SELECT * FROM gcal_delete_queue ORDER BY id ASC")
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM gcal_delete_queue ORDER BY id ASC")
         return [dict(row) for row in cur.fetchall()]
-    except Exception: return []
+    except Exception:
+        return []
+
 
 def get_gcal_delete_queue_ready(max_retry_count=5):
     conn = get_connection()
-    if not conn: return []
+    if not conn:
+        return []
     try:
-        cur = conn.cursor(); queue_cols = _table_columns(cur, "gcal_delete_queue")
+        cur = conn.cursor()
+        queue_cols = _table_columns(cur, "gcal_delete_queue")
         if "next_retry_at" in queue_cols:
-            cur.execute("SELECT * FROM gcal_delete_queue WHERE retry_count < ? AND (next_retry_at IS NULL OR datetime(next_retry_at) <= datetime('now', 'localtime')) ORDER BY id ASC", (max_retry_count,))
+            cur.execute(
+                "SELECT * FROM gcal_delete_queue WHERE retry_count < ? AND (next_retry_at IS NULL OR datetime(next_retry_at) <= datetime('now', 'localtime')) ORDER BY id ASC",
+                (max_retry_count,),
+            )
         else:
-            cur.execute("SELECT * FROM gcal_delete_queue WHERE retry_count < ? ORDER BY id ASC", (max_retry_count,))
+            cur.execute(
+                "SELECT * FROM gcal_delete_queue WHERE retry_count < ? ORDER BY id ASC",
+                (max_retry_count,),
+            )
         return [dict(row) for row in cur.fetchall()]
-    except Exception: return []
+    except Exception:
+        return []
+
 
 def mark_gcal_delete_done(queue_id):
-    conn = get_connection(); cur = conn.cursor()
+    conn = get_connection()
+    if not conn:
+        return False
+    cur = conn.cursor()
     cur.execute("DELETE FROM gcal_delete_queue WHERE id=?", (queue_id,))
-    conn.commit(); return True
+    conn.commit()
+    return True
+
 
 def mark_gcal_delete_failed(queue_id, error_message):
-    conn = get_connection(); cur = conn.cursor()
+    conn = get_connection()
+    if not conn:
+        return False
+    cur = conn.cursor()
     queue_cols = _table_columns(cur, "gcal_delete_queue")
     if "next_retry_at" in queue_cols:
-        cur.execute("UPDATE gcal_delete_queue SET retry_count=retry_count+1, last_error=?, next_retry_at=datetime('now', 'localtime', '+5 minutes') WHERE id=?", (str(error_message)[:500], queue_id))
-    else: cur.execute("UPDATE gcal_delete_queue SET retry_count=retry_count+1, last_error=? WHERE id=?", (str(error_message)[:500], queue_id))
-    conn.commit(); return True
+        cur.execute(
+            "UPDATE gcal_delete_queue SET retry_count=retry_count+1, last_error=?, "
+            "next_retry_at=datetime('now', 'localtime', '+5 minutes') WHERE id=?",
+            (str(error_message)[:500], queue_id),
+        )
+    else:
+        cur.execute(
+            "UPDATE gcal_delete_queue SET retry_count=retry_count+1, last_error=? WHERE id=?",
+            (str(error_message)[:500], queue_id),
+        )
+    conn.commit()
+    return True
+
 
 def clear_gcal_delete_queue_error(queue_id):
     conn = get_connection()
+    if not conn:
+        return False
     cur = conn.cursor()
     queue_cols = _table_columns(cur, "gcal_delete_queue")
     if "next_retry_at" in queue_cols:
@@ -905,15 +1280,23 @@ def clear_gcal_delete_queue_error(queue_id):
     conn.commit()
     return True
 
+
 def force_remove_gcal_delete_queue(queue_id):
     return mark_gcal_delete_done(queue_id)
 
+
 def clear_gcal_delete_queue():
-    conn = get_connection(); cur = conn.cursor()
+    conn = get_connection()
+    if not conn:
+        return False
+    cur = conn.cursor()
     cur.execute("DELETE FROM gcal_delete_queue")
-    conn.commit(); return True
+    conn.commit()
+    return True
+
 
 # ==================== 체크리스트 관리 ====================
+
 
 def add_checklist_item(owner_id, item_text, item_order=0, display_type=None):
     """
@@ -931,14 +1314,17 @@ def add_checklist_item(owner_id, item_text, item_order=0, display_type=None):
     if not row:
         return None
 
-    owner_type = row['type']
+    owner_type = row["type"]
 
     try:
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO task_checklist_link
             (owner_type, owner_id, item_text, item_order, display_type)
             VALUES (?, ?, ?, ?, ?)
-        """, (owner_type, owner_id, item_text, item_order, display_type))
+        """,
+            (owner_type, owner_id, item_text, item_order, display_type),
+        )
 
         link_id = cur.lastrowid
         conn.commit()
@@ -947,6 +1333,7 @@ def add_checklist_item(owner_id, item_text, item_order=0, display_type=None):
         logger.error(f"Error adding checklist item: {e}")
         conn.rollback()
         return None
+
 
 def toggle_checklist_item(link_id):
     """체크리스트 항목 완료/미완료 토글"""
@@ -957,7 +1344,8 @@ def toggle_checklist_item(link_id):
     cur = conn.cursor()
 
     try:
-        cur.execute("""
+        cur.execute(
+            """
             UPDATE task_checklist_link
             SET is_completed = 1 - is_completed,
                 completed_at = CASE
@@ -965,7 +1353,9 @@ def toggle_checklist_item(link_id):
                     ELSE NULL
                 END
             WHERE id=?
-        """, (link_id,))
+        """,
+            (link_id,),
+        )
 
         conn.commit()
         return True
@@ -973,6 +1363,7 @@ def toggle_checklist_item(link_id):
         logger.error(f"Error toggling checklist item: {e}")
         conn.rollback()
         return False
+
 
 def get_task_checklist_items(owner_id):
     """
@@ -983,48 +1374,60 @@ def get_task_checklist_items(owner_id):
         return []
 
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         SELECT id, item_text, item_order, is_completed, completed_at, display_type
         FROM task_checklist_link
         WHERE owner_id=?
         ORDER BY item_order
-    """, (owner_id,))
+    """,
+        (owner_id,),
+    )
 
     rows = cur.fetchall()
     return [dict(row) for row in rows]
 
+
 def get_task_checklist_items_for_owners(owner_ids):
     if not owner_ids:
         return {}
-    
+
     conn = get_connection()
     if not conn:
         return {}
-    
-    placeholders = ', '.join('?' for _ in owner_ids)
+
+    placeholders = ", ".join("?" for _ in owner_ids)
     cur = conn.cursor()
-    cur.execute(f"""
+    cur.execute(
+        f"""
         SELECT id, owner_id, item_text, item_order, is_completed, completed_at, display_type
         FROM task_checklist_link
         WHERE owner_id IN ({placeholders})
         ORDER BY owner_id, item_order
-    """, owner_ids)
-    
+    """,
+        owner_ids,
+    )
+
     rows = cur.fetchall()
     from collections import defaultdict
+
     result = defaultdict(list)
     for row in rows:
-        result[row['owner_id']].append(dict(row))
+        result[row["owner_id"]].append(dict(row))
     return result
+
 
 def set_task_checklist_display_type(owner_id, display_type):
     conn = get_connection()
     if not conn:
         return False
-    
+
     cur = conn.cursor()
     try:
-        cur.execute("UPDATE task_checklist_link SET display_type=? WHERE owner_id=?", (display_type, owner_id))
+        cur.execute(
+            "UPDATE task_checklist_link SET display_type=? WHERE owner_id=?",
+            (display_type, owner_id),
+        )
         conn.commit()
         return True
     except Exception as e:
@@ -1032,60 +1435,67 @@ def set_task_checklist_display_type(owner_id, display_type):
         conn.rollback()
         return False
 
+
 def get_task_checklist_progress(task_id):
     conn = get_connection()
     if not conn:
-        return {'total': 0, 'completed': 0}
+        return {"total": 0, "completed": 0}
 
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         SELECT
             COUNT(*) as total,
             SUM(CASE WHEN is_completed=1 THEN 1 ELSE 0 END) as completed
         FROM task_checklist_link
         WHERE owner_id=?
-    """, (task_id,))
+    """,
+        (task_id,),
+    )
 
     row = cur.fetchone()
-    return {
-        'total': row['total'] or 0,
-        'completed': row['completed'] or 0
-    }
+    return {"total": row["total"] or 0, "completed": row["completed"] or 0}
+
 
 def get_template_checklist_progress(template_id, target_date):
     conn = get_connection()
     if not conn:
-        return {'total': 0, 'completed': 0}
+        return {"total": 0, "completed": 0}
 
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         SELECT id FROM unified_task
         WHERE type='routine'
           AND template_id=?
           AND date(target_date)=date(?)
-    """, (template_id, target_date))
+    """,
+        (template_id, target_date),
+    )
 
-    task_ids = [row['id'] for row in cur.fetchall()]
+    task_ids = [row["id"] for row in cur.fetchall()]
 
     if not task_ids:
-        return {'total': 0, 'completed': 0}
+        return {"total": 0, "completed": 0}
 
-    placeholders = ','.join('?' * len(task_ids))
-    cur.execute(f"""
+    placeholders = ",".join("?" * len(task_ids))
+    cur.execute(
+        f"""
         SELECT
             COUNT(*) as total,
             SUM(CASE WHEN is_completed=1 THEN 1 ELSE 0 END) as completed
         FROM task_checklist_link
         WHERE owner_id IN ({placeholders})
-    """, task_ids)
+    """,
+        task_ids,
+    )
 
     row = cur.fetchone()
-    return {
-        'total': row['total'] or 0,
-        'completed': row['completed'] or 0
-    }
+    return {"total": row["total"] or 0, "completed": row["completed"] or 0}
+
 
 # ==================== 템플릿 관리 ====================
+
 
 def get_routine_templates(active_only=True):
     conn = get_connection()
@@ -1101,6 +1511,7 @@ def get_routine_templates(active_only=True):
     rows = cur.fetchall()
     return [dict(row) for row in rows]
 
+
 def get_routine_template(template_id):
     conn = get_connection()
     if not conn:
@@ -1111,7 +1522,9 @@ def get_routine_template(template_id):
     row = cur.fetchone()
     return dict(row) if row else None
 
+
 # ==================== 검색 및 통계 ====================
+
 
 def search_unified_tasks(keyword, task_type=None):
     conn = get_connection()
@@ -1120,7 +1533,7 @@ def search_unified_tasks(keyword, task_type=None):
 
     cur = conn.cursor()
     query = "SELECT * FROM unified_task WHERE (name LIKE ? OR description LIKE ? OR memo LIKE ?)"
-    params = [f'%{keyword}%', f'%{keyword}%', f'%{keyword}%']
+    params = [f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"]
 
     if task_type:
         query += " AND type=?"
@@ -1131,60 +1544,88 @@ def search_unified_tasks(keyword, task_type=None):
     rows = cur.fetchall()
     return [dict(row) for row in rows]
 
-def get_all_tasks_by_date(date_str):
+
+def get_all_tasks_by_date(date_str, hide_gcal_items=False):
     conn = get_connection()
     if not conn:
         return []
 
     cur = conn.cursor()
     # 일정도 포함하도록 type='schedule' 필터 유지
-    cur.execute("""
-        SELECT * FROM unified_task
-        WHERE date(deadline) = date(?) OR date(target_date) = date(?)
-        ORDER BY priority ASC, deadline ASC
-    """, (date_str, date_str))
+    filters = [
+        "(date(t.deadline) = date(?) OR date(t.target_date) = date(?))",
+        "(c.is_visible IS NULL OR c.is_visible = 1)",
+    ]
+    params = [date_str, date_str]
+    if hide_gcal_items:
+        filters.append("(c.type IS NULL OR c.type != 'gcal')")
+    query = f"""
+        SELECT t.*
+        FROM unified_task t
+        LEFT JOIN calendar c ON t.calendar_id = c.id
+        WHERE {" AND ".join(filters)}
+        ORDER BY t.priority ASC, t.deadline ASC
+    """
+    cur.execute(query, tuple(params))
     rows = cur.fetchall()
     return [dict(row) for row in rows]
 
-def get_all_tasks_by_date_with_progress(date_str):
-    tasks = get_all_tasks_by_date(date_str)
+
+def get_all_tasks_by_date_with_progress(date_str, hide_gcal_items=False):
+    tasks = get_all_tasks_by_date(date_str, hide_gcal_items=hide_gcal_items)
     for t in tasks:
-        t['progress'] = get_task_checklist_progress(t['id'])
+        t["progress"] = get_task_checklist_progress(t["id"])
     return tasks
+
 
 def get_tasks_by_type_with_progress(task_type, date_filter=None, status_filter=None):
     tasks = get_tasks_by_type(task_type, date_filter, status_filter)
     for t in tasks:
-        t['progress'] = get_task_checklist_progress(t['id'])
+        t["progress"] = get_task_checklist_progress(t["id"])
     return tasks
 
-def get_schedule_tasks_overlapping_range_with_progress(start_date_str, end_date_str):
+
+def get_schedule_tasks_overlapping_range_with_progress(
+    start_date_str,
+    end_date_str,
+    hide_gcal_items=False,
+):
     conn = get_connection()
     if not conn:
         return []
-    
+
     cur = conn.cursor()
-    cur.execute("""
+    filters = [
+        "t.type='schedule'",
+        "(c.is_visible IS NULL OR c.is_visible = 1)",
+        "date(t.deadline) <= date(?)",
+        "date(ifnull(t.end_date, t.deadline)) >= date(?)",
+    ]
+    params = [end_date_str, start_date_str]
+    if hide_gcal_items:
+        filters.append("(c.type IS NULL OR c.type != 'gcal')")
+    query = f"""
         SELECT t.* FROM unified_task t
         LEFT JOIN calendar c ON t.calendar_id = c.id
-        WHERE t.type='schedule' AND (c.is_visible IS NULL OR c.is_visible = 1)
-          AND date(t.deadline) <= date(?)
-          AND date(ifnull(t.end_date, t.deadline)) >= date(?)
+        WHERE {" AND ".join(filters)}
         ORDER BY t.deadline ASC
-    """, (end_date_str, start_date_str))
+    """
+    cur.execute(query, tuple(params))
     rows = cur.fetchall()
     tasks = [dict(row) for row in rows]
     for t in tasks:
-        t['progress'] = get_task_checklist_progress(t['id'])
+        t["progress"] = get_task_checklist_progress(t["id"])
     return tasks
+
 
 def get_routine_completion_stats(cycle_type, start_date, end_date):
     conn = get_connection()
     if not conn:
-        return {'total': 0, 'completed': 0, 'completion_rate': 0.0}
+        return {"total": 0, "completed": 0, "completion_rate": 0.0}
 
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         SELECT
             COUNT(*) as total,
             SUM(CASE WHEN is_completed=1 THEN 1 ELSE 0 END) as completed
@@ -1192,20 +1633,20 @@ def get_routine_completion_stats(cycle_type, start_date, end_date):
         WHERE type='routine'
           AND cycle_type=?
           AND date(target_date) BETWEEN date(?) AND date(?)
-    """, (cycle_type, start_date, end_date))
+    """,
+        (cycle_type, start_date, end_date),
+    )
 
     row = cur.fetchone()
-    total = row['total'] or 0
-    completed = row['completed'] or 0
+    total = row["total"] or 0
+    completed = row["completed"] or 0
     rate = (completed / total * 100) if total > 0 else 0.0
 
-    return {
-        'total': total,
-        'completed': completed,
-        'completion_rate': round(rate, 1)
-    }
+    return {"total": total, "completed": completed, "completion_rate": round(rate, 1)}
+
 
 # ==================== 기타 헬퍼 ====================
+
 
 def update_unified_task_duration(task_id, minutes):
     conn = get_connection()
@@ -1215,10 +1656,10 @@ def update_unified_task_duration(task_id, minutes):
         cur = conn.cursor()
         cur.execute("SELECT deadline FROM unified_task WHERE id=?", (task_id,))
         row = cur.fetchone()
-        if row and row['deadline']:
-            start_dt = datetime.strptime(row['deadline'][:16], '%Y-%m-%d %H:%M')
+        if row and row["deadline"]:
+            start_dt = datetime.strptime(row["deadline"][:16], "%Y-%m-%d %H:%M")
             end_dt = start_dt + timedelta(minutes=minutes)
-            end_str = end_dt.strftime('%Y-%m-%d %H:%M')
+            end_str = end_dt.strftime("%Y-%m-%d %H:%M")
             cur.execute(
                 "UPDATE unified_task SET end_date=?, updated_at=?, gcal_dirty=1 WHERE id=?",
                 (end_str, _now_local_str(), task_id),
@@ -1372,6 +1813,26 @@ def count_gcal_delete_queue_errors():
         return 0
 
 
+def count_gcal_sync_conflicts():
+    conn = get_connection()
+    if not conn:
+        return 0
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT COUNT(*) AS cnt
+            FROM gcal_sync_conflict_queue
+            WHERE resolved_at IS NULL
+            """
+        )
+        row = cur.fetchone()
+        return int((row["cnt"] if row else 0) or 0)
+    except Exception as e:
+        logger.error(f"Error counting Google sync conflicts: {e}")
+        return 0
+
+
 def get_unified_task_gcal_errors():
     conn = get_connection()
     if not conn:
@@ -1391,19 +1852,25 @@ def get_unified_task_gcal_errors():
         logger.error(f"Error loading unified task sync failures: {e}")
         return []
 
+
 def delete_all_tasks_by_date(date_str):
     conn = get_connection()
     if not conn:
         return False
     try:
         cur = conn.cursor()
-        cur.execute("DELETE FROM unified_task WHERE date(deadline) = date(?) AND type='schedule'", (date_str,))
+        cur.execute(
+            "DELETE FROM unified_task WHERE date(deadline) = date(?) AND type='schedule'",
+            (date_str,),
+        )
         conn.commit()
         return True
     except Exception:
         return False
 
+
 # ==================== 지시사항 관련 (필요시) ====================
+
 
 def get_directives_by_date(date_str):
     conn = get_connection()
@@ -1414,7 +1881,34 @@ def get_directives_by_date(date_str):
     rows = cur.fetchall()
     return [dict(row) for row in rows]
 
+
 # ==================== 알람 관련 (Fired Alarms Persistence) ====================
+
+
+def cleanup_fired_alarms(days: int = 90) -> int:
+    """Delete stale fired alarm rows to keep restart dedupe state small."""
+    conn = get_connection()
+    if not conn:
+        return 0
+    try:
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info(fired_alarms)")
+        columns = {row[1] for row in cur.fetchall()}
+        if "fired_at" not in columns:
+            return 0
+        cutoff = datetime.now() - timedelta(days=max(int(days or 0), 0))
+        cur.execute(
+            "DELETE FROM fired_alarms WHERE datetime(fired_at) < datetime(?)",
+            (cutoff.strftime("%Y-%m-%d %H:%M:%S"),),
+        )
+        deleted = cur.rowcount or 0
+        conn.commit()
+        return int(deleted)
+    except Exception as e:
+        logger.error(f"Error cleaning up fired alarms: {e}")
+        conn.rollback()
+        return 0
+
 
 def record_fired_alarm(task_id: int, offset_mins: int) -> bool:
     """Record that an alarm has fired to prevent duplicates on restart."""
@@ -1425,7 +1919,7 @@ def record_fired_alarm(task_id: int, offset_mins: int) -> bool:
         cur = conn.cursor()
         cur.execute(
             "INSERT OR IGNORE INTO fired_alarms (task_id, offset_mins) VALUES (?, ?)",
-            (task_id, offset_mins)
+            (task_id, offset_mins),
         )
         conn.commit()
         return True
@@ -1433,6 +1927,7 @@ def record_fired_alarm(task_id: int, offset_mins: int) -> bool:
         logger.error(f"Error recording fired alarm: {e}")
         conn.rollback()
         return False
+
 
 def get_fired_alarms() -> list[dict]:
     """Return all persistently recorded fired alarms."""
@@ -1446,6 +1941,7 @@ def get_fired_alarms() -> list[dict]:
     except Exception as e:
         logger.error(f"Error loading fired alarms: {e}")
         return []
+
 
 def delete_fired_alarms_for_task(task_id: int) -> bool:
     """Delete all fired alarm records for a specific task (e.g. when completed)."""

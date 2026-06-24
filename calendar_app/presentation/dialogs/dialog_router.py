@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """Dialog-related action handlers mixin."""
 
 import logging
-import re
 import time
 
 from PyQt6.QtWidgets import QMessageBox
+
 from calendar_app.app_metadata import APP_AUTHOR, APP_EMAIL, APP_NAME, APP_VERSION
 from calendar_app.infrastructure.i18n import (
     get_locale_display_name,
@@ -13,7 +12,6 @@ from calendar_app.infrastructure.i18n import (
     list_available_locale_codes,
     t,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +79,7 @@ def _default_shortcut_guide_title() -> str:
 
 def _default_shortcut_guide_content() -> str:
     lang = _current_lang().lower()
-    
+
     # Common Content Generator to avoid redundancy
     def get_footer(v_label="버전", a_label="제작"):
         return f"""
@@ -205,7 +203,9 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     # Schedule / Task dialogs
     # ------------------------------------------------------------------
-    def open_task_dialog(self, initial_date=None, task_type=None, end_date=None, initial_time=None, **kwargs):
+    def open_task_dialog(
+        self, initial_date=None, task_type=None, end_date=None, initial_time=None, **kwargs
+    ):
         end_time = kwargs.pop("end_time", None)
 
         # Legacy convenience: open existing task from callers that pass task_id only.
@@ -233,6 +233,7 @@ class DialogActionsMixin:
         # open_task_dialog(start_date, start_time, end_date, end_time)
         try:
             from PyQt6.QtCore import QDate, QTime
+
             if isinstance(task_type, QTime) and (end_date is None or isinstance(end_date, QDate)):
                 if end_time is None and isinstance(initial_time, QTime):
                     end_time = initial_time
@@ -245,20 +246,24 @@ class DialogActionsMixin:
             kwargs["end_time"] = end_time
 
         from calendar_app.presentation.dialogs.task_dialog_unified import UnifiedTaskDialog
+
         dlg = UnifiedTaskDialog(
             self,
             initial_date=initial_date,
             initial_time=initial_time,
             task_type=task_type,
             end_date=end_date,
-            **kwargs
+            **kwargs,
         )
         if dlg.exec():
             self.schedule_panel_refresh(left=True, center=True)
 
     def open_modify_task_dialog(self, task_id, tab_index=0):
         from PyQt6.QtWidgets import QDialog
-        from calendar_app.presentation.dialogs.modify_task_dialog_unified import UnifiedModifyTaskDialog
+
+        from calendar_app.presentation.dialogs.modify_task_dialog_unified import (
+            UnifiedModifyTaskDialog,
+        )
 
         if not self._acquire_dialog_guard(f"open_modify_task_dialog:{task_id}"):
             return
@@ -273,14 +278,19 @@ class DialogActionsMixin:
                     from calendar_app.infrastructure.db import task_repo as _task_repo
                     from calendar_app.infrastructure.google_sync.helpers import sync_task_to_google
                     from calendar_app.shared.background_worker import DbTaskWorker
+
                     task = _task_repo.get_unified_task(task_id)
                     if task:
-                        worker = DbTaskWorker(lambda t=task: sync_task_to_google(self, t, create_if_missing=True))
+                        worker = DbTaskWorker(
+                            lambda t=task: sync_task_to_google(self, t, create_if_missing=True)
+                        )
                         if not hasattr(self, "_bg_workers"):
                             self._bg_workers = []
                         self._bg_workers.append(worker)
                         worker.task_done.connect(
-                            lambda _w=worker: self._bg_workers.remove(_w) if _w in self._bg_workers else None
+                            lambda _w=worker: self._bg_workers.remove(_w)
+                            if _w in self._bg_workers
+                            else None
                         )
                         worker.start()
         except Exception:
@@ -291,24 +301,28 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     def open_work_management_dialog(self, checked=False, start_tab="schedule"):
         from calendar_app.presentation.dialogs.management_dialogs import WorkManagementTabbedDialog
+
         dlg = WorkManagementTabbedDialog(self, start_tab=start_tab)
         dlg.exec()
         self.schedule_panel_refresh(left=True, center=True, right=True)
 
     def open_task_management_dialog(self, checked=False):
         from calendar_app.presentation.dialogs.management_dialogs import TaskManagementDialog
+
         dlg = TaskManagementDialog(self)
         dlg.exec()
         self.schedule_panel_refresh(left=True, center=True)
 
     def open_directive_management_dialog(self, checked=False):
         from calendar_app.presentation.dialogs.management_dialogs import DirectiveManagementDialog
+
         dlg = DirectiveManagementDialog(self)
         dlg.exec()
         self.schedule_panel_refresh(right=True)
 
     def open_routine_management_dialog(self, checked=False):
         from calendar_app.presentation.dialogs.management_dialogs import RoutineManagementDialog
+
         dlg = RoutineManagementDialog(self)
         dlg.exec()
         self.schedule_panel_refresh(right=True)
@@ -318,19 +332,20 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     def open_directive_dialog(self, checked=False, task_id=None):
         from calendar_app.presentation.dialogs.directive_dialog import DirectiveDialog
+
         # triggered passes checked=False as first arg if no other args bound.
         # If called with task_id positionally, task_id is the first arg.
         if isinstance(checked, int) and not isinstance(checked, bool):
-             # Likely called as open_directive_dialog(task_id)
-             task_id = checked
-        
-        from calendar_app.presentation.dialogs.directive_dialog import DirectiveDialog
+            # Likely called as open_directive_dialog(task_id)
+            task_id = checked
+
         dlg = DirectiveDialog(self, task_id=task_id)
         if dlg.exec():
             self.schedule_panel_refresh(right=True)
 
     def open_routine_add_dialog(self, checked=False):
         from calendar_app.presentation.dialogs.task_dialog_unified import UnifiedTaskDialog
+
         dlg = UnifiedTaskDialog(self, task_type="routine")
         if dlg.exec():
             self.schedule_panel_refresh(right=True)
@@ -339,14 +354,21 @@ class DialogActionsMixin:
     # Checklist / Focus log
     # ------------------------------------------------------------------
     def open_checklist_manager(self, checked=False):
-        from calendar_app.presentation.dialogs.checklist_manager_dialog_advanced import ChecklistManagerDialog
+        from calendar_app.presentation.dialogs.checklist_manager_dialog_advanced import (
+            ChecklistManagerDialog,
+        )
+
         dlg = ChecklistManagerDialog(self)
         dlg.exec()
 
     def open_focus_log_dialog(self, checked=False):
         try:
             from PyQt6.QtCore import QDate
-            from calendar_app.presentation.dialogs.focus_task_selector import FocusTaskSelectorDialog
+
+            from calendar_app.presentation.dialogs.focus_task_selector import (
+                FocusTaskSelectorDialog,
+            )
+
             current_date = getattr(self, "current_date", None) or QDate.currentDate()
             dlg = FocusTaskSelectorDialog(current_date, self)
             dlg.exec()
@@ -358,6 +380,7 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     def show_shortcut_guide(self, checked=False):
         from PyQt6.QtCore import Qt
+
         title = t("shortcut.title") or _default_shortcut_guide_title()
         content = t("shortcut.content") or _default_shortcut_guide_content()
         msg = QMessageBox(self)
@@ -368,6 +391,7 @@ class DialogActionsMixin:
 
     def show_calendar_help(self, checked=False):
         from PyQt6.QtCore import Qt
+
         title = t("help.title") or _default_calendar_help_title()
         content = t("help.content") or _default_calendar_help_content()
         msg = QMessageBox(self)
@@ -381,6 +405,7 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     def open_language_settings_dialog(self, checked=False):
         from PyQt6.QtWidgets import QInputDialog
+
         lang_names = []
         lang_codes = []
         lang_codes_all = sorted(list_available_locale_codes())
@@ -405,3 +430,13 @@ class DialogActionsMixin:
         if ok and chosen:
             idx = lang_names.index(chosen)
             self.set_language(lang_codes[idx])
+
+    def open_pomodoro_settings_dialog(self, checked=False):
+        """Open the Pomodoro/Focus timer settings dialog."""
+        from calendar_app.presentation.dialogs.pomodoro_settings_dialog import (
+            PomodoroSettingsDialog,
+        )
+
+        dlg = PomodoroSettingsDialog(self)
+        if dlg.exec() and hasattr(self, "refresh_focus_timer_settings"):
+            self.refresh_focus_timer_settings()
