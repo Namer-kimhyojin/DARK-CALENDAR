@@ -34,7 +34,8 @@
     "checklist_manager": "📋 Checklist Manager",
     "routine_manager": "⚙️ Routine Manager",
     "google_issues": "⚠️ Fix Sync Issues",
-    "presets": "🛠️ Manage Layout Presets"
+    "presets": "🛠️ Manage Layout Presets",
+    "focus_timer_settings": "Pomodoro Settings..."
   },
   "gcal": {
     "sync_disabled": "谷歌同步已停用",
@@ -138,7 +139,43 @@
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Please go to 'Settings > Calendar & Sync > Authenticate' and log in again.",
       "rate_limit": "📍 [STATUS] Too many sync requests sent to Google servers in a short time.\n⏳ [ACTION] The app will automatically retry after a short wait period.\n✅ [OUTCOME] This usually resolves itself after a few minutes.",
       "generic": "📍 [DETAILS]\n{error}\n\n❓ [HOW TO FIX] Please check your internet connection and click 'Retry'.\nIf the issue persists, use 'Force Ignore' to remove it from the sync queue."
-    }
+    },
+    "setup_needed_msg": "Google Calendar sync is not set up yet.\nGo to System > Calendar Integration Settings to configure.",
+    "setup_disabled_guide": "Google Calendar sync is not enabled yet.\nGo to System > Calendar Integration Settings to enable.",
+    "auto_healed_title": "Auto Sync Fix",
+    "auto_healed_msg": "{count} problematic event(s) were automatically fixed and synced to your calendar.",
+    "issues_keep_local": "Keep Local",
+    "issues_keep_local_done": "Local version kept. Google will be overwritten on next sync.",
+    "issues_keep_local_tooltip": "Keep local changes and overwrite Google.",
+    "issues_use_remote": "Use Google Version",
+    "issues_use_remote_done": "Local data will be overwritten with the Google version.",
+    "issues_use_remote_tooltip": "Overwrite local data with the Google Calendar version.",
+    "issues_select_hint": "Select an item to see details about this issue and what the system did.",
+    "issues_type_conflict": "Sync Conflict",
+    "diff": {
+      "empty": "(empty)",
+      "field_name": "Title",
+      "field_desc": "Description",
+      "field_start": "Start",
+      "field_end": "End",
+      "field_location": "Location",
+      "local_title": "Local Version",
+      "remote_title": "Google Version"
+    },
+    "recurring": {
+      "scope_dialog_title": "Edit Recurring Event",
+      "scope_dialog_title_delete": "Delete Recurring Event",
+      "scope_info": "This is a recurring event. Choose the scope of changes.",
+      "edit_single": "This event only",
+      "edit_following": "This and following events",
+      "edit_all": "All events",
+      "delete_single": "This event only",
+      "delete_following": "This and following events",
+      "delete_all": "All events"
+    },
+    "issues_clear_tooltip": "Removes only this error indicator from the list. If the underlying issue persists, it may reappear.",
+    "issues_force_ignore_tooltip": "Stops Google sync for this event and keeps it as local-only.",
+    "issues_retry_tooltip": "Manually retry syncing this event right now."
   },
   "menu": {
     "register": "➕ 註冊",
@@ -247,7 +284,26 @@
     "countdown_time_label": "時間：",
     "overlay_countdown_reset_pos": "重置倒數位置",
     "work_management": "📁 All Work Management",
-    "gcal_submenu": "🔵 Calendar & Sync"
+    "gcal_submenu": "🔵 Calendar & Sync",
+    "calendar_visibility": "顯示/隱藏行事曆",
+    "calendar_manage": "Manage Calendars...",
+    "calendar_load_error": "Failed to load calendars",
+    "no_calendars": "No calendars",
+    "theme_mode": "🎨 外觀主題",
+    "ui_theme_open": "🎨 UI Theme Settings...",
+    "widget_mode_toggle": "🪟 小工具模式",
+    "locale_tools": "🌐 Locale File Tools",
+    "locale_open_folder": "📂 Open User Locale Folder",
+    "locale_open_current": "📄 Open Current Language File",
+    "locale_validate_current": "✔ Validate Current Language File",
+    "locale_reset_current": "↩ Reset Current Language Override",
+    "locale_edit_hint": "Restart the app after editing to apply changes.",
+    "locale_open_fail": "Could not open locale folder.",
+    "locale_open_file_fail": "Could not open current language file.",
+    "locale_reset_confirm": "Delete the user locale override for the current language?",
+    "locale_reset_done": "Override file deleted. Restarting app.",
+    "locale_reset_no_file": "No user override file to delete.",
+    "focus_timer_settings": "🍅 Pomodoro Settings"
   },
   "topbar": {
     "sync_checking": "檢查 Google 日曆同步狀態",
@@ -379,7 +435,10 @@
     "opt_month": "包含月份標籤",
     "opt_weekday": "包括工作日標籤",
     "year_suffix": "年",
-    "month_suffix": "月"
+    "month_suffix": "月",
+    "opt_weekend_hidden": "{label} ({count} hidden)",
+    "opt_weekend_hidden_hint": "{count} weekend event(s) are hidden. Enable weekend view to show them.",
+    "options_with_hidden": "{label} ({count})"
   },
   "dialog": {
     "tabs": {
@@ -464,7 +523,13 @@
       "location_placeholder": "e.g., Conference Room",
       "memo_section": "Detailed Memo",
       "memo_placeholder_detail": "Free to leave work preparation, meeting items, follow-up work, etc. #tags allowed",
-      "tag_hint": "💡 Direct hashtag input allows for efficient search. (e.g., #urgent #report #contract)"
+      "tag_hint": "💡 Direct hashtag input allows for efficient search. (e.g., #urgent #report #contract)",
+      "calendar": "Calendar",
+      "calendar_read_only": "Read-only calendar",
+      "color_tag": "Color Tag",
+      "save_alarm_default": "Save as default alarm",
+      "alarm_default_saved": "Default alarm saved.",
+      "untitled": "Untitled"
     },
     "recurrence": {
       "header": "執行模式",
@@ -547,7 +612,8 @@
       "close": "關閉",
       "confirm": "確認",
       "edit": "編輯",
-      "today": "今天"
+      "today": "今天",
+      "apply": "Apply"
     },
     "directive": {
       "title_edit": "指令詳情",
@@ -607,7 +673,8 @@
       "tab_routine": "⭐ Routines",
       "tab_directive": "📋 Directives",
       "calendar_all": "All Calendars",
-      "calendar_local": "Local"
+      "calendar_local": "Local",
+      "header_calendar": "Calendar"
     },
     "font": {
       "title": "字體設定",
@@ -715,6 +782,163 @@
       "select_warn_copy": "Please select a task to duplicate.",
       "done_copy": "Task duplicated. (ID: {id})",
       "fail_copy": "Failed to duplicate task."
+    },
+    "language": {
+      "prompt": "Select a language:"
+    },
+    "theme": {
+      "title": "UI 主題",
+      "tab": {
+        "background": "Background",
+        "text": "Text",
+        "accent": "Accent",
+        "font": "Font"
+      },
+      "bg": {
+        "subtitle": "Choose a preset palette or pick a custom background color.",
+        "auto_apply_text": "Auto-apply recommended text colors when selecting a preset",
+        "auto_apply_text_tip": "When enabled, text colors are automatically adjusted to match the selected preset.",
+        "custom_picker_title": "Choose Background Color"
+      },
+      "preset": {
+        "filter_label": "Preset Type"
+      },
+      "custom_color": "Custom Color",
+      "opacity": "Opacity",
+      "opacity_bg": "Background:",
+      "opacity_border": "Border:",
+      "opacity_text": "Text:",
+      "text": {
+        "subtitle": "Set text colors by role.",
+        "primary": "Primary",
+        "secondary": "Secondary",
+        "muted": "Muted",
+        "faint": "Faint",
+        "input_bg": "Input Background",
+        "hint_short": "Primary: main text / Secondary: supporting / Muted: meta / Faint: hint",
+        "apply_recommended": "Apply recommended text colors",
+        "apply_recommended_tip": "Auto-apply text colors suited to the background preset.",
+        "apply_recommended_for_preset": "Apply recommended text colors for this preset",
+        "apply_recommended_disabled": "Recommended text colors are available when a preset is selected.",
+        "reset_all": "↩ Reset All Text Colors"
+      },
+      "accent": {
+        "subtitle": "Set the UI accent color.",
+        "hint_short": "Accent color is used for buttons/links. Adjusted automatically when selecting a background preset.",
+        "custom_picker_title": "Choose Accent Color"
+      },
+      "font": {
+        "subtitle": "Set the app-wide UI font.",
+        "family": "Family:",
+        "size": "Size:",
+        "preview_sample": "ABC abc 123  Today's tasks at a glance."
+      },
+      "preview": {
+        "title": "Preview",
+        "app_name": "Dark Calendar",
+        "item_today": "Today's Task",
+        "item_deadline": "Project Deadline",
+        "input_hint": "Enter content..."
+      },
+      "advanced": "Advanced Tokens",
+      "advanced_tip": "Edit detailed color tokens",
+      "color_picker_title": "Pick Color",
+      "reset_icon": "↩",
+      "tooltip": {
+        "current_color": "Current background color",
+        "current_accent": "Current accent color",
+        "pick_color": "Pick color",
+        "reset_default": "Reset to default"
+      }
+    },
+    "token_editor": {
+      "title": "Dialog UI Token Settings",
+      "desc": "Adjust common dialog color/size/spacing tokens. Button styles are included; live preview is on the right.",
+      "tab_color": "Color Tokens",
+      "tab_metric": "Size/Spacing Tokens",
+      "header_token": "Token",
+      "header_value": "Value",
+      "header_preview": "Preview",
+      "pick": "Pick",
+      "pick_title": "Pick Color",
+      "preset_color": "Color Preset:",
+      "preset_color_mode": "Theme Mode:",
+      "mode_all": "All",
+      "mode_dark": "Dark",
+      "mode_light": "Light",
+      "apply_color_preset": "Apply Preset",
+      "preset_metric": "Preset",
+      "apply_metric_preset": "Apply",
+      "reset_one": "Default",
+      "reset_all": "Restore All Defaults",
+      "preset_applied": "Applied preset: {name}",
+      "metric_preset_applied": "Applied metric preset: {name}",
+      "apply_done": "Dialog token changes are ready to apply.",
+      "saved_toast": "Dialog UI tokens saved. Full effect after restart.",
+      "reset_done": "All dialog tokens were reset to defaults.",
+      "invalid_title": "Input Error",
+      "invalid_msg": "Invalid color format. Use hex or rgba(r,g,b,a) or transparent.",
+      "invalid_short": "One or more color values are invalid.",
+      "export_success": "UI tokens exported successfully.",
+      "export_failed": "Failed to export UI tokens: {error}",
+      "import_success": "UI tokens imported successfully. Preview updated.",
+      "import_failed": "Could not load JSON: {error}",
+      "preview_title": "Live Preview",
+      "preview_dialog_title": "Sample Dialog Title",
+      "preview_dialog_subtitle": "Check button types, input fields, and list styles at a glance.",
+      "preview": {
+        "tab_buttons": "Buttons",
+        "tab_form": "Form",
+        "tab_list": "List",
+        "btn_primary": "Primary",
+        "btn_secondary": "Secondary",
+        "btn_ghost": "Ghost",
+        "btn_danger": "Danger",
+        "btn_success": "Success",
+        "btn_disabled": "Disabled",
+        "btn_default": "Default",
+        "title_label": "Title",
+        "title_value": "New Task",
+        "memo_label": "Memo",
+        "memo_value": "Memo preview",
+        "repeat": "Repeat",
+        "status_label": "Status",
+        "status_pending": "Pending",
+        "status_in_progress": "In Progress",
+        "status_done": "Done",
+        "header_type": "Type",
+        "header_desc": "Description",
+        "header_status": "Status",
+        "row1_type": "Task",
+        "row1_desc": "UI Review",
+        "row2_type": "Meeting",
+        "row2_desc": "Weekly Report",
+        "list_a": "Item A",
+        "list_b": "Item B",
+        "list_c": "Item C",
+        "urgent": "Urgent Event",
+        "tool_a": "Tool A",
+        "tool_b": "Tool B",
+        "tool_disabled": "Tool Disabled"
+      }
+    },
+    "pomodoro_settings": {
+      "title": "Pomodoro Settings",
+      "group_timers": "Timer Settings",
+      "mode_label": "Timer Mode",
+      "mode_pomodoro": "Pomodoro",
+      "mode_stopwatch": "Stopwatch",
+      "focus_minutes": "Focus Time",
+      "short_break_minutes": "Short Break",
+      "long_break_minutes": "Long Break",
+      "long_break_every": "Long Break Every",
+      "minutes_suffix": " min",
+      "cycle_suffix": " sessions",
+      "group_behavior": "Auto Advance",
+      "auto_start_break": "Automatically start break after focus",
+      "auto_start_focus": "Automatically start focus after break",
+      "set_goal": "Goal Sessions",
+      "goal_suffix": " sessions"
     }
   },
   "system_msg": {
@@ -737,7 +961,8 @@
     "silver": "銀灰",
     "dark_mode": "深色模式",
     "light_mode": "淺色模式",
-    "custom_mode": "自訂"
+    "custom_mode": "自訂",
+    "system_default": "系統預設"
   },
   "layout": {
     "p1": "預設1",
@@ -782,7 +1007,9 @@
   },
   "lock": {
     "on_hint": "鎖定模式啟動（輸入停用）",
-    "off_hint": "桌面鎖（已發布）"
+    "off_hint": "桌面鎖（已發布）",
+    "overlay_unlock": "Unlock",
+    "overlay_unlock_hint": "Unlock fixed mode. (Ctrl+Shift+L)"
   },
   "autostart": {
     "enabled": "啟用",
@@ -851,11 +1078,12 @@
     "color_clear": "清除",
     "view_checklist": "查看清單",
     "clear_alarm": "清除警報",
-    "group_cycle": "💠 Group by Cycle"
+    "group_cycle": "💠 Group by Cycle",
+    "create_dday_widget": "Create D-Day Widget"
   },
   "shortcut": {
-    "title": "航空日曆快速指南",
-    "content": "<h3>捷徑指南</h3><hr><b>[日程管理]</b><br>• <b>Ctrl + N</b>：新增行程<br>• <b>Ctrl + R</b>：註冊程式<br>• <b>Ctrl + D</b>：註冊指令<br> L</b>：桌面鎖定模式<br><br><b>[螢幕操作]</b><br>• <b>Ctrl + B</b>：顯示/隱藏頂欄<br>• <b>Ctrl + M</b>：切換磁鐵模式<br>• <b>Ctrl + F</b>：切換模式<br> <b>F11</b>：切換全螢幕<br>• <b>Ctrl + Alt + R</b>：每週例行儀表板<br><br><b>[版面預設]</b><br>• <b>Ctrl + Shift + 1</b>：完全停靠佈局<br>• <b>Ctrl + Shift + 2</bft>以中心佈局為中心的佈局：Svva + Shib>C. 3</b>：以任務為中心的佈局<br>• <b>Ctrl + Shift + 4</b>：選項卡分割佈局<br>• <b>Ctrl + Shift + 5</b>：完全分離佈局<br>• <b>Ctrl + Shift + S</b>：儲存當前佈局<br><br><b>[左/右</b>：上一個/下一個日期<br>• <b>Ctrl + T</b>：跳到今天<br>• <b>刪除</b>：刪除選定的日程<br>• <b>刪除</b>（日期）：刪除該日期的所有日程<br>• <b>Esc</b>：Voliv><b>divb< style=\"color:#888; font-size:11px;\"><b>空中日曆</b><br>版本： {APP_VERSION}<br>作者：{APP_AUTHOR} ({APP_EMAIL})</div>"
+    "title": "Dark Calendar 快捷鍵指南",
+    "content": "<h3>快捷鍵指南</h3><hr><b>[行程管理]</b><br>• <b>Ctrl + N</b>: 新增行程<br>• <b>Ctrl + R</b>: 登錄例行事項<br>• <b>Ctrl + G</b>: 登錄指示事項<br>• <b>Ctrl + L</b>: 管理清單範本<br>• <b>Ctrl + Shift + L</b>: 桌面鎖定模式<br><br><b>[畫面操作]</b><br>• <b>Ctrl + Shift + B</b>: 顯示/隱藏頂端列<br>• <b>Ctrl + M</b>: 切換磁吸模式<br>• <b>Ctrl + F</b>: 切換專注模式<br>• <b>F11</b>: 切換全螢幕<br>• <b>Ctrl + Alt + R</b>: 例行事項管理員<br><br><b>[版面預設]</b><br>• <b>Ctrl + Shift + 1</b>: 完全停靠版面<br>• <b>Ctrl + Shift + 2</b>: 行事曆聚焦版面<br>• <b>Ctrl + Shift + 3</b>: 任務聚焦版面<br>• <b>Ctrl + Shift + 4</b>: 分頁標籤版面<br>• <b>Ctrl + Shift + 5</b>: 完全分離版面<br>• <b>Ctrl + Shift + S</b>: 儲存目前版面<br><br><b>[導覽]</b><br>• <b>Ctrl + Left/Right</b>: 上一個/下一個日期<br>• <b>Ctrl + T</b>: 跳至今天<br>• <b>Delete</b>: 刪除選取的行程<br>• <b>Esc</b>: 清除選取<br>• <b>F1</b>: 開啟快捷鍵指南<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>版本: {APP_VERSION}<br>作者: {APP_AUTHOR} ({APP_EMAIL})</div>"
   },
   "help": {
     "title": "如何使用日曆",
@@ -906,7 +1134,8 @@
     "tip_test": "使用目前設定預覽離開螢幕",
     "btn_default": "預設",
     "err_pw_required": "使用密碼解鎖時必須輸入密碼。",
-    "pick_bg_title": "選擇背景圖片"
+    "pick_bg_title": "選擇背景圖片",
+    "label_opacity": "Background Opacity"
   },
   "recurrence": {
     "title": "重複設定",
@@ -945,7 +1174,8 @@
     "quarter_3": "本季第 3 個月",
     "no_auto": "單一任務不會自動產生。",
     "cant_calc": "計算失敗。",
-    "finish": "結束"
+    "finish": "結束",
+    "next_occurrence_prefix": "Next:"
   },
   "checklist_mgr": {
     "title": "清單管理",
@@ -1033,14 +1263,60 @@
     "no": "否",
     "ok": "確定",
     "today": "今天",
-    "confirm": "確認"
+    "confirm": "確認",
+    "apply": "套用",
+    "copy": "Copy",
+    "day": "Day",
+    "month": "Month",
+    "success": "Done",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday",
+    "no_deadline": "No deadline",
+    "assignee": "[A]",
+    "location": "[L]",
+    "memo": "📝"
   },
   "focus": {
     "title": "專注模式（番茄計時器）",
     "current_task": "目前重點關注：\n\n{task_name}",
     "exit_hint": "再按 [Ctrl+Space] 可停止焦點模式並儲存日誌。",
     "toast_title": "對焦模式結束",
-    "toast_msg": "停止計時器並將 {minutes}m {seconds}s 記錄到工作歷史記錄。"
+    "toast_msg": "停止計時器並將 {minutes}m {seconds}s 記錄到工作歷史記錄。",
+    "exit": "退出專注模式",
+    "exit_hint_pomodoro": "Stop Focus Mode with [Ctrl+Space / Ctrl+F].",
+    "pause": "Pause",
+    "resume": "Resume",
+    "skip_break": "Skip Break",
+    "skip_focus": "Skip Focus",
+    "start_long_break": "Start Long Break",
+    "return_to_main": "Return to Calendar",
+    "view_logs": "View Focus Logs",
+    "phase_focus": "專注",
+    "phase_short_break": "短暫休息",
+    "phase_long_break": "長時間休息",
+    "phase_paused": "{phase} (Paused)",
+    "phase_with_cycle": "{phase} {current}/{total}",
+    "phase_focus_title": "Focus Time",
+    "phase_short_break_title": "Short Break",
+    "phase_long_break_title": "Long Break",
+    "phase_focus_msg": "Stay productive!",
+    "phase_short_break_msg": "Take a breather.",
+    "phase_long_break_msg": "Well deserved rest.",
+    "stat_today_total": "Today",
+    "stat_month_total": "This Month",
+    "stat_current_set": "This Set:",
+    "duration_hours_minutes": "{hours}h {minutes}m",
+    "duration_minutes": "{minutes}m",
+    "duration_minutes_seconds": "{minutes}m {seconds}s",
+    "duration_seconds": "{seconds}s",
+    "pomodoro_summary": "Completed: {sessions} sessions | Focus: {minutes}m",
+    "session_summary": "{sessions} sessions / {duration}",
+    "session_saved_title": "Focus session saved",
+    "session_saved_msg": "Saved {minutes}m {seconds}s for current task.",
+    "congrats_title": "Task Completed!",
+    "congrats_msg": "Great focus. Your productivity is rising.",
+    "error_title": "Unable to start",
+    "error_no_task": "No task was selected for Focus Mode."
   },
   "eod": {
     "title": "日終總結報告 (EOD)",
@@ -1067,7 +1343,14 @@
     "deleted_task": "已刪除的任務",
     "duration": "{minutes}m {seconds}s",
     "no_tasks": "沒有任務與此過濾器匹配。",
-    "filter_today_directives": "今日截止 + 指令"
+    "filter_today_directives": "今日截止 + 指令",
+    "tab_settings": "Settings",
+    "settings_hint": "You can change Focus mode type and Pomodoro behavior here.",
+    "settings_saved": "Saved. New values will be used next time Focus Mode starts.",
+    "log_summary": "Today: {today_sessions} sessions ({today_time}) | This month: {month_sessions} sessions ({month_time})",
+    "delete_confirm_title": "Delete Record",
+    "delete_confirm_msg": "Delete this focus record?",
+    "delete_no_selection": "Please select an item to delete."
   },
   "tooltip": {
     "label_time": "時間",
@@ -1075,7 +1358,9 @@
     "label_location": "地點",
     "label_assignee": "負責人",
     "label_description": "說明",
-    "all_day": "All day"
+    "all_day": "All day",
+    "label_calendar": "Calendar",
+    "label_source": "Source"
   },
   "widget_manager": {
     "title": "小工具管理員",
@@ -1109,7 +1394,17 @@
     "desc": "一目了然地管理桌面上的所有小部件。",
     "confirm_delete": "您確定要刪除此小工具嗎？",
     "unnamed": "沒有名稱的小部件",
-    "col_status": "情況"
+    "col_status": "情況",
+    "list_heading": "Widget List",
+    "btn_add": "+ Add",
+    "btn_show_all": "Show All",
+    "btn_hide_all": "Hide All",
+    "btn_settings": "Settings",
+    "new_widget": "New Widget",
+    "tip_center": "Center on screen",
+    "tip_reset": "Reset position",
+    "tip_delete": "Delete",
+    "footer_hint": "Click name to edit  ·  Settings button for widget options"
   },
   "widget": {
     "menu": {
@@ -1131,7 +1426,8 @@
       "time_format_hm": "時:分 (HH:mm)",
       "time_format_hms": "時:分:秒 (HH:mm:ss)",
       "opacity_settings": "透明度...",
-      "reset_colors": "重置顏色"
+      "reset_colors": "重置顏色",
+      "overall_opacity": "Overall Opacity"
     },
     "clock": {
       "clear_template": "清空",
@@ -1192,7 +1488,8 @@
     "color": {
       "background": "背景顏色",
       "border": "邊框顏色",
-      "text": "文字顏色"
+      "text": "文字顏色",
+      "pick": "Pick Color"
     },
     "common": {
       "clear_template": "🗑  清空",
@@ -1223,7 +1520,19 @@
       "grammar_line_height": "Line height: {lh=2.0} / {line=1.4} / {line_height=40pt}",
       "grammar_newline": "New line: use Enter or \\n inside the template",
       "grammar_conditional": "Conditional block: {if task_count > 0}...{else}...{/if}",
-      "grammar_align": "Line alignment: {align=left} / {align=center} / {align=right}"
+      "grammar_align": "Line alignment: {align=left} / {align=center} / {align=right}",
+      "tab_appearance": "Appearance",
+      "section_colors": "Colors",
+      "section_font": "Font",
+      "section_transparency": "Transparency",
+      "bg_color": "Background:",
+      "bg_opacity": "Background:",
+      "border_color": "Border:",
+      "border_opacity": "Border:",
+      "text_color": "Text:",
+      "text_opacity": "Text:",
+      "font_family": "Family:",
+      "font_size": "Size:"
     },
     "countdown": {
       "clear_target": "✖ 清除目標",
@@ -1255,7 +1564,13 @@
       "template_hint": "Variables:  {remaining}  {target:%Y-%m-%d %H:%M}  {days}  {hours}  {minutes}  {seconds}\nStyle:  {remaining|size=36|bold|color=#ff4da6}   |italic   |size=N\nLeave empty to use the basic mode.",
       "time_label": "時間:",
       "set_target": "🎯 設定目標...",
-      "target_label": "目標:"
+      "target_label": "目標:",
+      "title": "Countdown",
+      "date": "Target Date:",
+      "time": "Target Time:",
+      "end_of_day": "End of Day (18:00)",
+      "tomorrow": "Tomorrow",
+      "quick_presets": "Quick Target Selection"
     },
     "datecard": {
       "clear_template": "清空",
@@ -1321,7 +1636,13 @@
       "preview_empty": "<span style='color:#8090b0;font-size:10pt;'>Basic mode - no template</span>",
       "edit_template": "✏️ 進階: 編輯模板...",
       "mode_template": "✅ 模板模式",
-      "mode_basic": "基本模式"
+      "mode_basic": "基本模式",
+      "default_name": "D-Day",
+      "target_date": "Target Date:",
+      "toast_title": "D-Day Widget",
+      "toast_created": "Created a D-Day widget for ",
+      "toast_no_date": "This schedule does not have a valid date.",
+      "toast_task_missing": "Could not find the selected schedule."
     },
     "font_picker": {
       "size": "大小:",
@@ -1377,7 +1698,11 @@
         "round": "Round - Circular Feel",
         "ticker": "Ticker - Narrow Horizontal Strip"
       },
-      "template_hint": "Variables:  {elapsed}  {elapsed_ms}  {running}\nStyle:  {elapsed|size=36|bold|color=#ff4da6}   |italic   |size=N\nLeave empty to use the basic mode."
+      "template_hint": "Variables:  {elapsed}  {elapsed_ms}  {running}\nStyle:  {elapsed|size=36|bold|color=#ff4da6}   |italic   |size=N\nLeave empty to use the basic mode.",
+      "title": "Stopwatch",
+      "short_title": "SW",
+      "status_run": "Running",
+      "status_stop": "Stopped"
     },
     "text": {
       "style": {
@@ -1392,6 +1717,18 @@
         "borderless": "無邊框-純文字",
         "sticky": "黏滯便箋樣式"
       }
+    },
+    "weather": {
+      "settings": "Weather Settings...",
+      "settings_title": "Weather Settings",
+      "location": "Location:",
+      "location_placeholder": "Seoul",
+      "unit": "Unit:",
+      "unit_c": "Celsius (°C)",
+      "unit_f": "Fahrenheit (°F)",
+      "refresh_interval": "Refresh:",
+      "refresh_min": "min",
+      "template_hint": "Variables: {city} {temp} {unit} {desc} {icon}"
     }
   },
   "alarm_popup": {
@@ -1591,7 +1928,63 @@
     "reset_confirm": "刪除已儲存的 Google 同步憑證和令牌資訊？",
     "reset_done_title": "重置完成",
     "reset_done_body": "Google 同步憑證已刪除。",
-    "timezone_search_placeholder": "城市名稱搜尋（例如首爾）..."
+    "timezone_search_placeholder": "城市名稱搜尋（例如首爾）...",
+    "calendar_list_title": "My Calendars",
+    "calendar_desc": "Add and manage calendars for saving events. Click the color dot to change color.",
+    "add_local": "+ 本機",
+    "add_local_title": "Add Local Calendar",
+    "add_ics": "+ ICS",
+    "add_ics_title": "Add ICS URL Subscription",
+    "add_ics_desc": "Enter an ICS URL to import external calendar events in read-only mode.",
+    "refresh_cal_list": "Refresh Calendar List",
+    "badge_default": "Default Calendar",
+    "set_default": "Set as Default",
+    "col_edit": "Edit",
+    "col_delete": "Delete",
+    "col_visible_tip": "Show/Hide",
+    "cal_list_empty": "No calendars. Use the button above to add one.",
+    "cal_list_empty_sub": "No ICS subscriptions.\nUse the button above to add an ICS URL.",
+    "cal_name_prompt": "Calendar name:",
+    "cal_name_required": "Please enter a calendar name.",
+    "cal_color_prompt": "Color",
+    "color_pick_title": "Click to pick a color",
+    "color_swatch_tip": "Change color",
+    "edit_calendar_title": "Edit Calendar",
+    "edit_gcal_name_notice": "Google Calendar names are managed by Google.",
+    "edit_gcal_name_tooltip": "Google Calendar names can only be changed in Google.",
+    "delete_confirm": "Are you sure you want to delete this calendar?",
+    "default_set_failed": "Failed to set default calendar.",
+    "default_set_error": "Error setting default calendar:\n{error}",
+    "not_authenticated": "Available after Google authentication.",
+    "go_to_auth": "Go to Authentication Settings",
+    "import_done": "Imported {count} calendar(s).",
+    "hide_completed": "Hide completed events in Google Calendar",
+    "hide_completed_help": "Events marked as done are automatically hidden in Google Calendar.",
+    "nav_subscription": "Subscriptions",
+    "subscription_list_title": "ICS Subscriptions",
+    "subscription_desc": "Subscribe to external calendars (iCal/ICS URL) in read-only mode.",
+    "ics_url_label": "ICS URL",
+    "ics_url_placeholder": "https://calendar.example.com/feed.ics",
+    "ics_url_hint": "Supports http:// or webcal:// format.",
+    "ics_url_required": "Please enter an ICS URL.",
+    "ics_name_placeholder": "e.g. Company schedule, Holidays",
+    "ics_add_btn": "Add Subscription",
+    "ics_no_subscriptions": "No ICS subscriptions.",
+    "ics_last_synced": "Last synced",
+    "ics_never_synced": "Never synced",
+    "ics_refresh": "Refresh Now",
+    "refresh_all_ics": "Refresh All",
+    "ics_refresh_ok": "Sync complete: {count} events updated",
+    "ics_refresh_all_ok": "Refreshed {count} calendar(s)!",
+    "ics_refresh_partial": "Some subscriptions failed to refresh:\n",
+    "ics_fetch_ok": "Fetch complete",
+    "ics_fetch_err": "Failed to fetch ICS events:\n{err}",
+    "refresh_cooldown": "Please wait. ({sec}s remaining)",
+    "test_access_ok_list": "Account access confirmed ({count} calendar(s): {names}…)",
+    "test_access_cal_not_found": "Account access OK ({count} calendars) — Selected calendar ID not found. Please refresh the list.",
+    "type_local": "Local",
+    "type_gcal": "Google Calendar",
+    "type_ics": "ICS Subscription"
   },
   "color": {
     "red": "Red",
@@ -1637,5 +2030,96 @@
     "fri": "五",
     "sat": "六",
     "sun": "日"
+  },
+  "widget_mode": {
+    "title": "Widget Mode",
+    "desc": "Open only the widgets you need.",
+    "back_to_main": "返回行事曆",
+    "close": "Close Widget",
+    "panel_title": "Schedule · Work",
+    "schedule_title": "Schedule",
+    "schedule_type": "Schedule",
+    "task_type": "Work",
+    "routine_short": "Routine",
+    "focus_list": "Focus List",
+    "filter_all": "All",
+    "filter_schedule": "Schedule",
+    "filter_work": "Work",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday",
+    "all_day": "All Day",
+    "untitled": "Untitled",
+    "add_short": "New Event",
+    "action_add_schedule": "Add Schedule",
+    "quick_add_submit": "Add",
+    "quick_hint": "Selected day schedule and work",
+    "quick_hint_actions": "Tap a card for quick actions",
+    "header_caption": "Selected day agenda and work",
+    "hero_eyebrow": "Focus Widget",
+    "item_count_chip": "{count} items",
+    "filtered_count_chip": "{count}/{total}",
+    "section_today": "Today",
+    "section_routine_today": "Routine",
+    "section_directive_today": "Directives",
+    "empty_panel": "此日期沒有項目。",
+    "empty_schedule_filter": "No schedules for this date.",
+    "empty_work_filter": "No work for this date.",
+    "month_prev": "Previous Month",
+    "month_next": "Next Month",
+    "open_schedule": "Open schedule widget",
+    "open_work": "Open work widget",
+    "open_all": "Open both widgets",
+    "menu_exit": "Exit widget mode",
+    "menu_always_top": "Always on top",
+    "menu_reserve_space": "Reserve screen space",
+    "menu_realign": "Realign widgets",
+    "menu_refresh": "Refresh",
+    "menu_individual_opacity": "Opacity",
+    "menu_priority": "Priority",
+    "menu_edit_task": "Edit / Open",
+    "menu_delete_task": "Delete",
+    "menu_complete_task": "Mark Complete",
+    "menu_edit_directive": "Edit / Open",
+    "menu_delete_directive": "Delete",
+    "menu_complete_directive": "Mark Complete",
+    "priority_urgent": "Urgent",
+    "priority_high": "High",
+    "priority_normal": "Normal",
+    "priority_low": "Low",
+    "style_menu": "Style",
+    "style_color": "Color",
+    "style_color_custom": "Custom...",
+    "style_panel_theme": "Panel Theme",
+    "style_size": "Size",
+    "theme_dark": "🌙 Dark (for dark backgrounds)",
+    "theme_light": "☀ Light (for bright backgrounds)",
+    "color_picker": "Pick Widget Accent Color",
+    "memo_popup_title": "Memo",
+    "toast_always_top_on": "Always-on-top enabled.",
+    "toast_always_top_off": "Always-on-top disabled.",
+    "widget_hint_empty": "No items for the selected date.",
+    "widget_hint_actions": "Tap a day to refocus"
+  },
+  "palette": {
+    "placeholder": "搜尋命令或輸入+新建...",
+    "no_selection": "Press Enter to open the selected result",
+    "nlp_preview": "New: [{title}] - {date} {time}",
+    "task_registered": "Registered: {title}",
+    "sync_google": "Sync: Update Google Calendar now",
+    "theme_dark": "Theme: Change to Dark Mode",
+    "theme_light": "Theme: Change to Light Mode",
+    "exit_app": "App: Exit"
+  },
+  "splash": {
+    "initializing_db": "正在初始化資料庫...",
+    "loading_font": "Loading fonts...",
+    "loading_labels": "Loading labels...",
+    "migrating_data": "Migrating data...",
+    "starting_ui": "Starting UI...",
+    "ready": "準備就緒！"
+  },
+  "drag": {
+    "hint_copy": "Ctrl: Copy  /  Default: Move"
   }
 }

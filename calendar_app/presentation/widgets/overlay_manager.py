@@ -26,11 +26,12 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import threading
 from typing import TYPE_CHECKING
 import weakref
 
 from PyQt6.QtCore import QPoint
-from PyQt6.QtWidgets import QInputDialog, QMenu
+from PyQt6.QtWidgets import QInputDialog, QMenu, QMessageBox
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.widgets.overlay_base import _overlay_menu_style
@@ -128,6 +129,7 @@ class OverlayWidgetManager:
         self._meta: dict[str, dict] = {}
         # counters per type for id generation
         self._counters: dict[str, int] = {}
+        self._id_lock = threading.Lock()
         self._listeners: list = []
 
     # ------------------------------------------------------------------
@@ -139,12 +141,13 @@ class OverlayWidgetManager:
 
     def _gen_id(self, widget_type: str) -> str:
         """Generate a unique id for a new instance of widget_type."""
-        used = {m["_id"] for m in self._meta.values()} if self._meta else set()
-        n = self._counters.get(widget_type, 0)
-        while f"{widget_type}_{n}" in used:
-            n += 1
-        self._counters[widget_type] = n + 1
-        return f"{widget_type}_{n}"
+        with self._id_lock:
+            used = {m["_id"] for m in self._meta.values()} if self._meta else set()
+            n = self._counters.get(widget_type, 0)
+            while f"{widget_type}_{n}" in used:
+                n += 1
+            self._counters[widget_type] = n + 1
+            return f"{widget_type}_{n}"
 
     def _settings_prefix(self, inst_id: str) -> str:
         return f"oi_{inst_id}"
@@ -221,6 +224,10 @@ class OverlayWidgetManager:
         widget._overlay_manager_sync = lambda iid=inst_id, _r=_mgr_ref: (
             m := _r()
         ) and m._sync_widget_enabled(iid)
+        widget._overlay_manager_remove = lambda iid=inst_id, _r=_mgr_ref: (
+            m := _r()
+        ) and m._ui_remove_with_confirm(iid, parent_widget=None)
+        widget._overlay_inst_id = inst_id
         widget.restore_position(self._default_offset_for_type(widget_type, idx))
         widget.apply_initial_settings()
 
@@ -263,6 +270,67 @@ class OverlayWidgetManager:
             self._meta[inst_id]["enabled"] = False
         self._save()
         self._notify_listeners()
+
+    def show_all(self):
+        """Show every registered instance."""
+        for iid in list(self._meta):
+            self.show_instance(iid)
+
+    def hide_all(self):
+        """Hide every registered instance."""
+        for iid in list(self._meta):
+            self.hide_instance(iid)
+
+    def remove_all(self):
+        """Permanently destroy every instance (no confirmation)."""
+        for iid in list(self._meta):
+            self.remove_instance(iid)
+
+    @staticmethod
+    def _make_topmost_msgbox(parent_widget=None) -> QMessageBox:
+        """QMessageBox that always appears above overlay widgets."""
+        from PyQt6.QtCore import Qt as _Qt
+
+        box = QMessageBox(parent_widget)
+        box.setWindowFlag(_Qt.WindowType.WindowStaysOnTopHint, True)
+        return box
+
+    def _ui_remove_with_confirm(self, inst_id: str, parent_widget=None):
+        """Show confirmation dialog then remove. Safe to call from widget context menu."""
+        meta = self._meta.get(inst_id)
+        name = meta["name"] if meta else inst_id
+        box = self._make_topmost_msgbox(parent_widget)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setWindowTitle(t("widget_manager.confirm_delete_title", "위젯 삭제"))
+        box.setText(
+            t("widget_manager.confirm_delete_msg", "'{name}' 위젯을 삭제할까요?", name=name)
+        )
+        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        if box.exec() == QMessageBox.StandardButton.Yes:
+            self.remove_instance(inst_id)
+            self._rebuild_widgets_menu()
+
+    def _ui_remove_all_with_confirm(self, parent_widget=None):
+        """Show confirmation then destroy all instances."""
+        count = len(self._meta)
+        if count == 0:
+            return
+        box = self._make_topmost_msgbox(parent_widget)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle(t("widget_manager.confirm_delete_all_title", "전체 위젯 삭제"))
+        box.setText(
+            t(
+                "widget_manager.confirm_delete_all_msg",
+                "위젯 {count}개를 모두 삭제할까요? 되돌릴 수 없습니다.",
+                count=count,
+            )
+        )
+        box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        box.setDefaultButton(QMessageBox.StandardButton.No)
+        if box.exec() == QMessageBox.StandardButton.Yes:
+            self.remove_all()
+            self._rebuild_widgets_menu()
 
     def toggle_instance(self, inst_id: str):
         widget = self._widgets.get(inst_id)
@@ -390,16 +458,54 @@ class OverlayWidgetManager:
             lambda: self._open_manager_dialog(),
         )
         act_mgr.setIcon(_ic(ICON.WIDGET_MGR))
-        if parent_menu.actions():
-            parent_menu.actions()[-1].setEnabled(not locked)
-        parent_menu.addSeparator()
+        act_mgr.setEnabled(not locked)
 
-        # ── Add new instance section ──────────────────────────────────
+        # ── 기존 인스턴스 목록 ────────────────────────────────────────
+        instances = self.all_instances()
+        if instances:
+            parent_menu.addSeparator()
+            for iid, name, wtype, widget in instances:
+                info = _WIDGET_TYPES.get(wtype, {})
+                display = name or _se(widget_type_label(wtype))
+                act_inst = parent_menu.addAction(display)
+                if "icon" in info:
+                    act_inst.setIcon(_ic(info["icon"]))
+                act_inst.setCheckable(True)
+                act_inst.setChecked(widget.is_enabled())
+                act_inst.setEnabled(not locked)
+                act_inst.triggered.connect(lambda checked, iid=iid: self.toggle_instance(iid))
+
+        # ── 전체 제어 ─────────────────────────────────────────────────
+        any_instances = bool(instances)
+        parent_menu.addSeparator()
+        act_show_all = parent_menu.addAction(
+            _se(t("widget_manager.menu_show_all", "모두 표시")),
+            self.show_all,
+        )
+        act_show_all.setIcon(_ic(ICON.SHOW))
+        act_show_all.setEnabled(not locked and any_instances)
+
+        act_hide_all = parent_menu.addAction(
+            _se(t("widget_manager.menu_hide_all", "모두 숨김")),
+            self.hide_all,
+        )
+        act_hide_all.setIcon(_ic(ICON.HIDE))
+        act_hide_all.setEnabled(not locked and any_instances)
+
+        act_del_all = parent_menu.addAction(
+            _se(t("widget_manager.menu_delete_all", "모두 삭제...")),
+            lambda: self._ui_remove_all_with_confirm(),
+        )
+        act_del_all.setIcon(_ic(ICON.DELETE))
+        act_del_all.setEnabled(not locked and any_instances)
+
+        # ── 위젯 추가 ─────────────────────────────────────────────────
+        parent_menu.addSeparator()
         for wtype, info in _WIDGET_TYPES.items():
             type_label = _se(widget_type_label(wtype))
             act = parent_menu.addAction(
-                t("widget_manager.add_widget_menu", "＋ Add {label}", label=type_label),
-                lambda *_, t=wtype: self._ui_add_instance(t),
+                t("widget_manager.add_widget_menu", "{label} 추가", label=type_label),
+                lambda *_, wt=wtype: self._ui_add_instance(wt),
             )
             if "icon" in info:
                 act.setIcon(_ic(info["icon"]))
@@ -478,7 +584,11 @@ class OverlayWidgetManager:
 
     def restore_all(self):
         """Restore all instances from QSettings at startup."""
-        raw = self._settings().value(_SETTINGS_KEY, "[]")
+        raw = self._settings().value(_SETTINGS_KEY, None)
+        # _had_saved_instances=True 이면 key가 존재 → 사용자가 의도적으로 비운 것
+        self._had_saved_instances = raw is not None
+        if raw is None:
+            return  # 진짜 첫 실행 — 키가 없음
         try:
             items: list[dict] = json.loads(str(raw))
         except Exception:
@@ -524,6 +634,12 @@ class OverlayWidgetManager:
     def save_all(self):
         """Explicit save (call at shutdown)."""
         self._save()
+
+    def set_all_interaction_locked(self, locked: bool):
+        """고정 모드 시 모든 위젯의 드래그/리사이즈를 잠금/해제."""
+        for widget in self._widgets.values():
+            if hasattr(widget, "set_interaction_locked"):
+                widget.set_interaction_locked(locked)
 
     def add_listener(self, callback):
         if callback not in self._listeners:

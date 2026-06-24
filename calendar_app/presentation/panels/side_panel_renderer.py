@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QProgressBar,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -28,6 +29,9 @@ from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.presentation.widgets.ui_components import install_hover_info
 from calendar_app.shared.color_utils import derive_text_palette, parse_hex_color, rgba_from_qcolor
+from calendar_app.shared.icon_map import ICON
+from calendar_app.shared.icon_map import icon as _ic
+from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.qt_helpers import find_parent_dock
 from calendar_app.shared.search_utils import clean_display_text as _tooltip_text_without_tags
 from calendar_app.shared.search_utils import matches_search_query
@@ -577,40 +581,25 @@ def _normalized_directive_status(status):
     return _normalize_task_status(status)
 
 
-def _build_process_checklist_items(app, steps):
-    items = []
+def _build_checklist_items(app, steps):
+    """Return (display_type, items).
+
+    items = [(raw_text, is_completed, handler)] — 번호 prefix는 붙이지 않는다.
+    목록형/프로세스형 구분은 렌더러(create_task_box)가 인디케이터로 표현한다.
+    """
     if not steps:
-        return items
-
-    first_incomplete_idx = next((i for i, s in enumerate(steps) if s["is_completed"] == 0), None)
-
-    def _click_handler(step_id):
-        return lambda *args, sid=step_id: app.toggle_checklist_item(sid)
-
-    if first_incomplete_idx is None:
-        visible_indices = [len(steps) - 1]
-        if len(steps) > 1:
-            visible_indices.insert(0, len(steps) - 2)
-    elif first_incomplete_idx == 0:
-        visible_indices = [0]
-        if len(steps) > 1:
-            visible_indices.append(1)
-    else:
-        visible_indices = [first_incomplete_idx - 1, first_incomplete_idx]
-
-    for idx in visible_indices[:2]:
-        step = steps[idx]
-        suffix = ""
-
+        return ("list", [])
+    display_type = steps[0].get("display_type", "list")
+    items = []
+    for step in steps:
         items.append(
             (
-                f"{idx + 1}. {step['item_text']}{suffix}",
+                step["item_text"],
                 step["is_completed"],
-                _click_handler(step["id"]),
+                lambda *args, sid=step["id"]: app.toggle_checklist_item(sid),
             )
         )
-
-    return items
+    return (display_type, items)
 
 
 class DockTitleBar(QWidget):
@@ -852,7 +841,7 @@ def _build_left_panel_mode_switch(app, mode):
     return container
 
 
-def show_side_panel_context_menu(app, widget, pos, tid, task_name):
+def show_side_panel_context_menu(app, widget, pos, tid, task_name, is_routine=False):
     from PyQt6.QtWidgets import QMenu
 
     task_sel = getattr(app, "selected_task_ids", set())
@@ -869,34 +858,48 @@ def show_side_panel_context_menu(app, widget, pos, tid, task_name):
     menu = QMenu(widget)
     menu.setStyleSheet(menu_style)
 
-    act_edit = menu.addAction(t("dialog.common.modify"))
+    act_edit = menu.addAction(_se(t("dialog.common.modify")))
+    act_edit.setIcon(_ic(ICON.EDIT))
     del_label = (
         t("dialog.common.delete_n", n=sel_count) if sel_count > 1 else t("dialog.common.delete")
     )
     act_delete = menu.addAction(del_label)
+    act_delete.setIcon(_ic(ICON.DELETE))
+
+    # 체크리스트는 일반업무(routine)에만 존재
+    act_checklist = None
+    if is_routine:
+        act_checklist = menu.addAction(_se(t("context_menu.view_checklist", "체크리스트 보기")))
+        act_checklist.setIcon(_ic(ICON.CHECKLIST))
     menu.addSeparator()
 
-    priority_menu = menu.addMenu(t("menu.priority_change"))
+    priority_menu = menu.addMenu(_se(t("menu.priority_change")))
+    priority_menu.setIcon(_ic(ICON.SORT_BY_PRIORITY))
     priority_menu.setStyleSheet(menu_style)
     priority_map = {}
     for label, value in PRIORITY_MENU_ITEMS:
-        priority_map[priority_menu.addAction(label)] = value
+        priority_map[priority_menu.addAction(_se(label))] = value
 
-    status_menu = menu.addMenu(t("menu.status_change"))
+    status_menu = menu.addMenu(_se(t("menu.status_change")))
+    status_menu.setIcon(_ic(ICON.STATUS_IN_PROGRESS))
     status_menu.setStyleSheet(menu_style)
     action_map = {}
     for label, value in STATUS_MENU_ITEMS:
-        action_map[status_menu.addAction(label)] = value
+        action_map[status_menu.addAction(_se(label))] = value
     menu.addSeparator()
 
-    color_menu = menu.addMenu(t("menu.color_tag_settings"))
+    color_menu = menu.addMenu(_se(t("menu.color_tag_settings")))
+    color_menu.setIcon(_ic(ICON.COLOR_PICKER))
     color_menu.setStyleSheet(menu_style)
-    act_color_auto = color_menu.addAction(t("menu.color_auto"))
-    act_color_change = color_menu.addAction(t("dialog.common.modify"))
-    act_color_clear = color_menu.addAction(t("menu.color_clear"))
+    act_color_auto = color_menu.addAction(_se(t("menu.color_auto")))
+    act_color_change = color_menu.addAction(_se(t("dialog.common.modify")))
+    act_color_clear = color_menu.addAction(_se(t("menu.color_clear")))
 
     action = menu.exec(widget.mapToGlobal(pos))
-    if action == act_edit:
+    if act_checklist is not None and action == act_checklist:
+        if hasattr(app, "handle_checklist_requested"):
+            app.handle_checklist_requested(tid)
+    elif action == act_edit:
         if hasattr(app, "open_modify_task_dialog"):
             app.open_modify_task_dialog(tid)
     elif action == act_delete:
@@ -931,31 +934,36 @@ def show_directive_context_menu(app, widget, pos, did, task_name):
     menu = QMenu(widget)
     menu.setStyleSheet(menu_style)
 
-    act_edit = menu.addAction(t("dialog.common.modify"))
+    act_edit = menu.addAction(_se(t("dialog.common.modify")))
+    act_edit.setIcon(_ic(ICON.EDIT))
     del_label = (
         t("dialog.common.delete_n", n=sel_count) if sel_count > 1 else t("dialog.common.delete")
     )
     act_delete = menu.addAction(del_label)
+    act_delete.setIcon(_ic(ICON.DELETE))
     menu.addSeparator()
 
-    priority_menu = menu.addMenu(t("menu.priority_change"))
+    priority_menu = menu.addMenu(_se(t("menu.priority_change")))
+    priority_menu.setIcon(_ic(ICON.SORT_BY_PRIORITY))
     priority_menu.setStyleSheet(menu_style)
     priority_map = {}
     for label, value in PRIORITY_MENU_ITEMS:
-        priority_map[priority_menu.addAction(label)] = value
+        priority_map[priority_menu.addAction(_se(label))] = value
 
-    status_menu = menu.addMenu(t("menu.status_change"))
+    status_menu = menu.addMenu(_se(t("menu.status_change")))
+    status_menu.setIcon(_ic(ICON.STATUS_IN_PROGRESS))
     status_menu.setStyleSheet(menu_style)
     action_map = {}
     for label, value in STATUS_MENU_ITEMS:
-        action_map[status_menu.addAction(label)] = value
+        action_map[status_menu.addAction(_se(label))] = value
     menu.addSeparator()
 
-    color_menu = menu.addMenu(t("menu.color_tag_settings"))
+    color_menu = menu.addMenu(_se(t("menu.color_tag_settings")))
+    color_menu.setIcon(_ic(ICON.COLOR_PICKER))
     color_menu.setStyleSheet(menu_style)
-    act_color_auto = color_menu.addAction(t("menu.color_auto"))
-    act_color_change = color_menu.addAction(t("dialog.common.modify"))
-    act_color_clear = color_menu.addAction(t("menu.color_clear"))
+    act_color_auto = color_menu.addAction(_se(t("menu.color_auto")))
+    act_color_change = color_menu.addAction(_se(t("dialog.common.modify")))
+    act_color_clear = color_menu.addAction(_se(t("menu.color_clear")))
 
     action = menu.exec(widget.mapToGlobal(pos))
     if action == act_edit:
@@ -987,6 +995,7 @@ def create_task_box(
     is_directive=False,
     tooltip_title=None,
     bg_color=None,
+    checklist_display_type="list",
 ):
     """Create a task item box used in side panels."""
     _tc = get_theme_color()
@@ -1003,7 +1012,7 @@ def create_task_box(
     _apply_panel_item_style(container, is_selected, bg_color)
 
     box_layout = QVBoxLayout(container)
-    box_layout.setContentsMargins(4, 1, 5, 1)
+    box_layout.setContentsMargins(4, 2, 5, 2)
     box_layout.setSpacing(0)
 
     top_layout = QHBoxLayout()
@@ -1037,9 +1046,11 @@ def create_task_box(
             )
         else:
             title_btn.customContextMenuRequested.connect(
-                lambda pos, w=title_btn, id_=tid, name=title_text: show_side_panel_context_menu(
-                    app, w, pos, id_, name
-                )
+                lambda pos,
+                w=title_btn,
+                id_=tid,
+                name=title_text,
+                rt=is_routine: show_side_panel_context_menu(app, w, pos, id_, name, is_routine=rt)
             )
 
     title_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -1072,78 +1083,222 @@ def create_task_box(
 
     top_layout.addWidget(title_btn)
 
-    checklist_container = QWidget()
+    checklist_container = QFrame()
+    checklist_container.setObjectName("ChecklistContainer")
     chk_layout = QVBoxLayout(checklist_container)
-    chk_layout.setContentsMargins(4, 0, 0, 0)
+    chk_layout.setContentsMargins(8, 2, 4, 6)
     chk_layout.setSpacing(2)
 
     if checklist_items:
-        toggle_btn = QPushButton(">")
-        toggle_btn.setFixedSize(20, 20)
-        toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        toggle_btn.setToolTip(t("panel.checklist_tooltip"))
-        _toggle_txt = _panel_text_muted()
-        _toggle_hover_bg = "rgba(255,255,255,0.05)"
-        toggle_btn.setStyleSheet(f"""
-            QPushButton {{ color: {_toggle_txt}; background: transparent; border: none; font-size: {_fpt(-1)}; }}
-            QPushButton:hover {{ color: {_tc}; background: {_toggle_hover_bg}; border-radius: {inline_hover_radius}px; }}
-        """)
-        top_layout.addWidget(toggle_btn)
+        total_cnt = len(checklist_items)
+        done_cnt = sum(1 for _, sis_c, _ in checklist_items if sis_c)
+        is_process = checklist_display_type == "process"
 
         exp_tids = getattr(app, "expanded_tids", set())
         app.expanded_tids = exp_tids
+        is_initially_visible = (tid is not None) and (is_routine or (tid in app.expanded_tids))
 
-        is_initially_visible = (tid is not None) and (tid in app.expanded_tids)
+        _tc_hex = get_theme_color()
+
+        def _toggle_label(visible, d=done_cnt, tot=total_cnt):
+            arr = "▾" if visible else "▸"
+            return f"{arr}  {d}/{tot}"
+
+        # ── Toggle button — quiet text style (테두리/배경 없음) ───────────
+        toggle_btn = QPushButton(_toggle_label(is_initially_visible))
+        toggle_btn.setFixedHeight(16)
+        toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        toggle_btn.setToolTip(t("panel.checklist_tooltip"))
+        _pill_txt = _panel_text_muted()
+        toggle_btn.setStyleSheet(f"""
+            QPushButton {{
+                color: {_pill_txt};
+                background: transparent;
+                border: none;
+                font-size: {_fpt(-2)};
+                padding: 0 4px;
+                font-weight: 600;
+            }}
+            QPushButton:hover {{ color: {_tc_hex}; }}
+        """)
+        top_layout.addWidget(toggle_btn)
+
+        # ── Progress bar — slim & subtle ──────────────────────────────────
+        prog_bar = QProgressBar()
+        prog_bar.setRange(0, max(total_cnt, 1))
+        prog_bar.setValue(done_cnt)
+        prog_bar.setFixedHeight(2)
+        prog_bar.setTextVisible(False)
+        prog_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background: rgba(255,255,255,0.08);
+                border: none;
+                border-radius: 1px;
+                margin: 2px 0px 5px 0px;
+            }}
+            QProgressBar::chunk {{
+                background: {_tc_hex};
+                border-radius: 1px;
+            }}
+        """)
+        chk_layout.addWidget(prog_bar)
+
+        # ── Item rows ─────────────────────────────────────────────────────
+        # 목록형(list): 작은 사각 체크박스 / 프로세스형(process): 원형 번호 단계
+        _chk_done_txt = _panel_text_faint()
+        _chk_pend_txt = _panel_text_muted()
+
+        for idx, (stext, sis_c, chandler) in enumerate(checklist_items):
+            clickable = callable(chandler)
+            _locked = False
+            if is_process and clickable:
+                if not sis_c:
+                    # 완료 청루: 이전 항목이 모두 완료되어야 함
+                    _locked = not all(checklist_items[i][1] for i in range(idx))
+                else:
+                    # 취소: 이후 항목이 모두 미완료여야 함
+                    _locked = not all(
+                        not checklist_items[i][1] for i in range(idx + 1, len(checklist_items))
+                    )
+                if _locked:
+                    clickable = False
+
+            item_w = QWidget()
+            item_w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+            item_w.setStyleSheet("background: transparent;")
+            item_w.setFixedHeight(18)
+            item_l = QHBoxLayout(item_w)
+            item_l.setContentsMargins(0, 0, 2, 0)
+            item_l.setSpacing(4)
+
+            ind = QPushButton()
+            ind.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            if is_process:
+                # 원형 번호 인디케이터 (단계 순서 표현)
+                ind.setFixedSize(14, 14)
+                if sis_c:
+                    ind.setText("✓")
+                    ind.setStyleSheet(f"""
+                        QPushButton {{
+                            background: {_tc_hex};
+                            border: none; border-radius: 7px;
+                            color: #ffffff; font-size: 7px; font-weight: 800; padding: 0;
+                        }}
+                    """)
+                else:
+                    ind.setText(str(idx + 1))
+                    if _locked:
+                        ind.setStyleSheet("""
+                            QPushButton {
+                                background: transparent;
+                                border: 1px solid rgba(255,255,255,0.08);
+                                border-radius: 7px;
+                                color: rgba(255,255,255,0.18); font-size: 7px; font-weight: 600; padding: 0;
+                            }
+                        """)
+                    else:
+                        ind.setStyleSheet(f"""
+                            QPushButton {{
+                                background: {_tc_rgba(18)};
+                                border: 1px solid {_tc_rgba(80)};
+                                border-radius: 7px;
+                                color: {_chk_pend_txt}; font-size: 7px; font-weight: 700; padding: 0;
+                            }}
+                            QPushButton:hover {{ background: {_tc_rgba(38)}; border-color: {_tc_hex}; color: {_tc_hex}; }}
+                        """)
+            else:
+                # 사각 체크박스 (체크 항목)
+                ind.setFixedSize(12, 12)
+                if sis_c:
+                    ind.setText("✓")
+                    ind.setStyleSheet(f"""
+                        QPushButton {{
+                            background: {_tc_hex};
+                            border: none; border-radius: 2px;
+                            color: #ffffff; font-size: 7px; font-weight: 800; padding: 0;
+                        }}
+                    """)
+                else:
+                    ind.setText("")
+                    ind.setStyleSheet(f"""
+                        QPushButton {{
+                            background: transparent;
+                            border: 1px solid {_tc_rgba(60)};
+                            border-radius: 2px;
+                            color: transparent; padding: 0;
+                        }}
+                        QPushButton:hover {{ border-color: {_tc_hex}; background: {_tc_rgba(25)}; }}
+                    """)
+            if clickable:
+                ind.setCursor(Qt.CursorShape.PointingHandCursor)
+                ind.clicked.connect(chandler)
+
+            # Text label
+            text_lbl = QLabel(stext)
+            text_lbl.setWordWrap(False)
+            text_lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+            if sis_c:
+                text_lbl.setStyleSheet(
+                    f"color: {_chk_done_txt}; font-size: {_fpt(-1)};"
+                    " text-decoration: line-through; background: transparent;"
+                )
+            else:
+                _txt_clr = "rgba(255,255,255,0.22)" if _locked else _chk_pend_txt
+                text_lbl.setStyleSheet(
+                    f"color: {_txt_clr}; font-size: {_fpt(-1)}; background: transparent;"
+                )
+            if clickable:
+                text_lbl.setCursor(Qt.CursorShape.PointingHandCursor)
+
+            item_l.addWidget(ind, 0, Qt.AlignmentFlag.AlignVCenter)
+            item_l.addWidget(text_lbl, 1)
+
+            # Whole row clickable (text area → same handler)
+            if clickable:
+                item_w.setCursor(Qt.CursorShape.PointingHandCursor)
+
+                def _make_handler(h, iw):
+                    def _press(ev):
+                        if ev.button() == Qt.MouseButton.LeftButton:
+                            h()
+                        # don't block right-click
+
+                    iw.mousePressEvent = _press
+
+                _make_handler(chandler, item_w)
+
+            chk_layout.addWidget(item_w)
+
+        # ── Container — 무테두리/무배경, 패널과 자연스럽게 어울림 ──────────
+        checklist_container.setStyleSheet(f"""
+            QFrame#ChecklistContainer {{
+                background: {_tc_rgba(8)};
+                border: none;
+                border-left: 2px solid {_tc_rgba(55)};
+                border-radius: 0px 3px 3px 0px;
+                margin-left: 6px;
+            }}
+        """)
         checklist_container.setVisible(is_initially_visible)
-        toggle_btn.setText("v" if is_initially_visible else ">")
 
         def toggle_checklist(
-            checked=False, c_widget=checklist_container, t_btn=toggle_btn, t_id=tid
+            checked=False,
+            c_widget=checklist_container,
+            t_btn=toggle_btn,
+            t_id=tid,
+            lbl_fn=_toggle_label,
         ):
             new_visible = not c_widget.isVisible()
             c_widget.setVisible(new_visible)
-            t_btn.setText("v" if new_visible else ">")
+            t_btn.setText(lbl_fn(new_visible))
             if new_visible:
                 if t_id is not None:
                     app.expanded_tids.add(t_id)
             else:
-                if t_id is not None and t_id in app.expanded_tids:
-                    app.expanded_tids.remove(t_id)
+                if t_id is not None:
+                    app.expanded_tids.discard(t_id)
 
         toggle_btn.clicked.connect(toggle_checklist)
-
-        for stext, sis_c, chandler in checklist_items:
-            mark = "[v]" if sis_c else "[ ]"
-            item_btn = QPushButton(f"  {mark} {stext}")
-            clickable = callable(chandler)
-            item_btn.setCursor(
-                Qt.CursorShape.PointingHandCursor if clickable else Qt.CursorShape.ArrowCursor
-            )
-            _chk_txt = _panel_text_muted()
-            _chk_hover_txt = _panel_text_secondary()
-            _chk_hover_bg = "rgba(255,255,255,0.05)"
-            _chk_dis = _panel_text_faint()
-            if clickable:
-                item_btn.setStyleSheet(f"""
-                    QPushButton {{
-                        color: {_chk_txt}; text-align: left; padding: 2px 4px; border: none;
-                        background: transparent; font-size: {_fpt(-1)};
-                    }}
-                    QPushButton:hover {{ color: {_chk_hover_txt}; background: {_chk_hover_bg}; border-radius: {inline_hover_radius}px; }}
-                """)
-                item_btn.clicked.connect(chandler)
-            else:
-                item_btn.setEnabled(False)
-                item_btn.setStyleSheet(f"""
-                    QPushButton {{
-                        color: {_chk_dis}; text-align: left; padding: 2px 4px; border: none;
-                        background: transparent; font-size: {_fpt(-1)};
-                    }}
-                    QPushButton:disabled {{
-                        color: {_chk_dis}; background: transparent;
-                    }}
-                """)
-            chk_layout.addWidget(item_btn)
 
     box_layout.addLayout(top_layout)
     if checklist_items:
@@ -1265,20 +1420,7 @@ def load_left_panel(app):
             info_items.append(("[M]", _memo_html))
 
         steps = checklist_map.get(t_id, [])
-        checklist_items = []
-        if steps:
-            display_type = steps[0].get("display_type", "list")
-            if display_type == "process":
-                checklist_items = _build_process_checklist_items(app, steps)
-            else:
-                for i, step in enumerate(steps):
-                    checklist_items.append(
-                        (
-                            f"{i + 1}. {step['item_text']}",
-                            step["is_completed"],
-                            lambda *args, sid=step["id"]: app.toggle_checklist_item(sid),
-                        )
-                    )
+        checklist_display_type, checklist_items = _build_checklist_items(app, steps)
 
         if left_group_by_date and date_label != current_group_label:
             current_group_label = date_label
@@ -1293,6 +1435,7 @@ def load_left_panel(app):
             tid=t_id,
             tooltip_title=tooltip_title,
             bg_color=task.get("bg_color") or _calendar_color_for_task(task),
+            checklist_display_type=checklist_display_type,
         )
         today_items.append(task_box)
 
@@ -1489,12 +1632,6 @@ def load_right_panel(app):
         if not matches_search_query(search_query, rname, location, assignee, memo):
             continue
 
-        total = r.get("checklist_total", 0) or 0
-        comp = r.get("checklist_completed", 0) or 0
-        pct_text = ""
-        if total > 0:
-            pct_text = f" ({comp}/{total})"
-
         priority = r.get("priority", "normal")
         icon = priority_icon(priority)
 
@@ -1512,12 +1649,19 @@ def load_right_panel(app):
             except Exception:
                 pass
 
-        main_title = f"{icon} {cycle_lab} {rname}{deadline_suffix}{pct_text}"
+        _cycle_type_str = str(r.get("cycle_type") or "").lower()
+        _cycle_prefix = "" if _cycle_type_str == "single" else f"{cycle_lab} "
+        main_title = f"{icon} {_cycle_prefix}{rname}{deadline_suffix}"
 
         def main_handler(checked=False, _rid=rid):
             app.open_modify_task_dialog(_rid)
 
         info_items = []
+        tags_val = r.get("tags") or ""
+        if tags_val:
+            tag_list = [tg.strip() for tg in tags_val.split(",") if tg.strip()]
+            if tag_list:
+                info_items.append(("🏷", " · ".join(tag_list)))
         clean_location = _tooltip_text_without_tags(location)
         if clean_location:
             info_items.append((t("common.location", "[L]"), clean_location))
@@ -1533,20 +1677,7 @@ def load_right_panel(app):
             info_items.append((t("common.memo", "📝"), _memo_html))
 
         steps = routine_checklist_map.get(rid, [])
-        checklist_items = []
-        if steps:
-            display_type = steps[0].get("display_type", "list")
-            if display_type == "process":
-                checklist_items = _build_process_checklist_items(app, steps)
-            else:
-                for i, step in enumerate(steps):
-                    checklist_items.append(
-                        (
-                            f"{i + 1}. {step['item_text']}",
-                            step["is_completed"],
-                            lambda *args, sid=step["id"]: app.toggle_checklist_item(sid),
-                        )
-                    )
+        checklist_display_type, checklist_items = _build_checklist_items(app, steps)
 
         routine_tooltip_title = _tooltip_text_without_tags(main_title) or main_title
 
@@ -1580,6 +1711,7 @@ def load_right_panel(app):
             is_routine=True,
             tooltip_title=routine_tooltip_title,
             bg_color=r.get("bg_color") or _calendar_color_for_task(r),
+            checklist_display_type=checklist_display_type,
         )
         routine_items.append(task_box)
 

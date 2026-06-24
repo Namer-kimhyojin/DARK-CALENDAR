@@ -399,6 +399,118 @@ python scripts/run_encoding_guard.py   # pre-commit 체크와 동일
 
 ---
 
+## 모달 다이얼로그 구현 표준
+
+신규 다이얼로그 작성 시 아래 규칙을 반드시 준수해야 사용자에게 일관된 모달 UX를 제공할 수 있습니다.
+
+### 진입 파일 (필수 import)
+
+```python
+from calendar_app.presentation.dialogs.dialog_styles import (
+    apply_common_dialog_style,
+    build_dialog_footer,
+)
+from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
+from calendar_app.infrastructure.i18n import t
+from calendar_app.shared.icon_map import strip_leading_emoji as _se
+```
+
+### 클래스 구조
+
+```python
+class MyDialog(QDialog):
+    def __init__(self, parent=None, theme_color=None):
+        super().__init__(parent)
+        apply_dialog_title(self, t("dialog.my_title", "제목"))  # 창 타이틀 설정
+        apply_common_dialog_style(self, minimum_width=480, theme_color=theme_color)
+        self._build_ui()
+
+    def _build_ui(self):
+        root = QVBoxLayout(self)
+        root.setContentsMargins(14, 10, 14, 10)
+        root.setSpacing(8)
+
+        # ... 콘텐츠 위젯 추가 ...
+
+        # 구분선
+        sep = QFrame(); sep.setFrameShape(QFrame.Shape.HLine)
+        root.addWidget(sep)
+
+        # 푸터 (OK / 취소)
+        footer_layout, self.ok_btn, self.cancel_btn = build_dialog_footer(
+            t("btn.ok", "확인"), t("btn.cancel", "취소")
+        )
+        root.addLayout(footer_layout)
+        self.ok_btn.clicked.connect(self.accept)
+        self.cancel_btn.clicked.connect(self.reject)
+```
+
+### 핵심 규칙
+
+| 항목 | 규칙 |
+|------|------|
+| **기반 클래스** | `QDialog` (단순) 또는 `BaseTaskDialog(QDialog)` (태스크 관련) |
+| **타이틀** | `apply_dialog_title(self, _se(t("dialog.key", "한글")))` — 이모지 제거 후 설정 |
+| **스타일** | `apply_common_dialog_style()` 반드시 호출 — 직접 `setStyleSheet()` 금지 |
+| **레이아웃** | 루트 `QVBoxLayout`, `setContentsMargins(14, 10, 14, 10)` |
+| **구분선** | `QFrame(Shape.HLine)` — 콘텐츠 영역과 푸터 사이에 배치 |
+| **푸터 버튼** | `build_dialog_footer()` 사용 — 직접 QPushButton 배치 금지 |
+| **버튼 objectName** | 확인=`"primary_btn"`, 취소=`"ghost_btn"`, 파괴적 작업=`"DangerBtn"` |
+| **모달 실행** | `dialog.exec()` (블로킹) — `show()` 쓰면 모달 아님 |
+| **최소 너비** | 단순 확인: 360px / 폼 입력: 480px / 복잡 설정: 600px 이상 |
+| **탭 위젯** | 탭 스타일은 `FIXED_DIALOG_STYLE`에 내장 — 별도 스타일 추가 금지 |
+| **아이콘** | `icon(ICON.xxx, color=text_primary_hex)` — `text_secondary` 금지 |
+| **i18n** | 모든 레이블 텍스트 `t()` + `_se()` 조합 사용 |
+| **크기 고정** | 내용 고정 시 `self.setFixedSize(w, h)` / 리사이즈 허용 시 `self.resize(w, h)` |
+
+### 버튼 역할별 objectName
+
+```python
+# 스타일시트에서 자동으로 primary_btn → 파란색, ghost_btn → 회색, DangerBtn → 빨간색 적용
+footer_layout, ok_btn, cancel_btn = build_dialog_footer(
+    ok_label=t("btn.save", "저장"),         # objectName="primary_btn"
+    cancel_label=t("btn.cancel", "취소"),   # objectName="ghost_btn"
+)
+
+# 파괴적 작업 (삭제 등) — 별도 버튼으로 추가
+del_btn = QPushButton(t("btn.delete", "삭제"))
+del_btn.setObjectName("DangerBtn")
+```
+
+### 다이얼로그 크기 기준
+
+- **확인/알림** (단순 메시지): `minimum_width=360`
+- **폼 입력** (텍스트 필드 1~5개): `minimum_width=480`
+- **설정 패널** (탭 포함 또는 복잡): `minimum_width=600`
+- **전체 설정** (gcal_settings_dialog 수준 5탭+): `minimum_width=720`
+
+### 자주 쓰는 패턴
+
+```python
+# 입력 받는 필드
+from PyQt6.QtWidgets import QLineEdit, QLabel, QFormLayout
+form = QFormLayout()
+form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+form.addRow(QLabel(t("field.name", "이름")), QLineEdit())
+root.addLayout(form)
+
+# 섹션 헤더 (그룹 구분)
+header = QLabel(t("section.advanced", "고급 설정"))
+header.setObjectName("section_header")  # FIXED_DIALOG_STYLE에 스타일 정의됨
+root.addWidget(header)
+```
+
+### 절대 하지 말 것 (모달)
+
+- `QDialog` 대신 `QWidget`으로 구현 — 모달 동작 불가
+- `apply_common_dialog_style()` 생략 — 다크 테마 불일치
+- `build_dialog_footer()` 대신 버튼 직접 생성 — 버튼 스타일 불일치
+- `show()` + `raise_()` 조합으로 모달 흉내 — 실제 블로킹 아님
+- `setStyleSheet()` 로 스타일 덮어쓰기 — 테마 전환 시 깨짐
+- 버튼 `objectName` 임의 지정 — 스타일시트 규칙 미적용
+
+---
+
 ## 진행 중 작업
 
 → 현재 작업 상태 및 미완료 항목은 **[TASKS.md](TASKS.md)** 참조

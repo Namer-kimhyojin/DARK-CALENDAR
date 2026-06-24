@@ -1,25 +1,53 @@
-# -*- coding: utf-8 -*-
-from PyQt6.QtWidgets import (QPushButton, QMenu, QFrame, QWidget, QVBoxLayout,
-                             QHBoxLayout, QLabel, QLineEdit, QComboBox,
-                             QDateTimeEdit, QMessageBox, QApplication,
-                             QCheckBox, QSpacerItem, QSizePolicy, QGraphicsDropShadowEffect,
-                             QGraphicsOpacityEffect)
-from PyQt6.QtGui import QAction, QDrag, QCursor, QColor, QPixmap, QIcon, QPainter, QPen, QBrush
-from PyQt6.QtCore import Qt, pyqtSignal, QMimeData, QByteArray, QDataStream, QIODevice, QPropertyAnimation, QEasingCurve, QRect, QDateTime, QTime, QObject, QPoint, QEvent, QTimer, QParallelAnimationGroup, QSettings
-import sys
 import logging
+import sys
+
+from PyQt6.QtCore import (
+    QDataStream,
+    QEasingCurve,
+    QEvent,
+    QIODevice,
+    QObject,
+    QParallelAnimationGroup,
+    QPoint,
+    QPropertyAnimation,
+    QRect,
+    QSettings,
+    Qt,
+    QTime,
+    QTimer,
+    pyqtSignal,
+)
+from PyQt6.QtGui import QBrush, QColor, QCursor, QIcon, QPainter, QPen, QPixmap
+from PyQt6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QFrame,
+    QGraphicsDropShadowEffect,
+    QGraphicsOpacityEffect,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMenu,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
+from calendar_app.domain.task_constants import PRIORITY_MENU_ITEMS, STATUS_MENU_ITEMS
+from calendar_app.infrastructure.db import checklist_repo, task_repo
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation import drag_drop_manager as ddm
-from calendar_app.infrastructure.db import checklist_repo, task_repo
-from calendar_app.domain.task_constants import PRIORITY_MENU_ITEMS, STATUS_MENU_ITEMS
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
-from calendar_app.shared.search_utils import strip_hashtags
 from calendar_app.shared.color_utils import derive_ui_palette
+from calendar_app.shared.icon_map import ICON
+from calendar_app.shared.icon_map import icon as _ic
+from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.qt_helpers import apply_hover_state
+from calendar_app.shared.search_utils import strip_hashtags
 from calendar_app.shared.theme_settings import (
     get_opacity_factor,
-    get_theme_palette_inputs,
     get_theme_color,
+    get_theme_palette_inputs,
 )
 
 logger = logging.getLogger(__name__)
@@ -28,6 +56,7 @@ _ICON_TIME = "[T]"
 _ICON_LOCATION = "[L]"
 _ICON_ASSIGNEE = "[A]"
 _ICON_DESC = "[M]"
+
 
 def _set_hover_state(widget, hovered: bool):
     apply_hover_state(widget, hovered)
@@ -54,8 +83,10 @@ class _ChecklistTextLabel(QLabel):
 
 class _ElidingLabel(QLabel):
     """?띿뒪?멸? 湲몃㈃ ?ㅻⅨ履쎌쓣 '...'?쇰줈 ?섎씪???쒖떆?섎뒗 QLabel."""
+
     def paintEvent(self, _event):
         from PyQt6.QtGui import QPainter
+
         p = QPainter(self)
         fm = self.fontMetrics()
         elided = fm.elidedText(self.text(), Qt.TextElideMode.ElideRight, self.width())
@@ -168,6 +199,7 @@ class HoverInfoPopup(QFrame):
 
     def _apply_theme_style(self):
         from PyQt6.QtCore import QSettings
+
         s = QSettings("kimhyojin", "Dark Calendar")
         theme = get_theme_color(s)
         text_theme = s.value("text_theme", "dark")
@@ -221,28 +253,28 @@ class HoverInfoPopup(QFrame):
         self._apply_theme_style()
         self._anchor = anchor
         self._anchor_mode = str(anchor.property("_hover_info_mode") or "side")
-        
+
         # 1. ??용뮞????쇱젟 ?袁⑸퓠 ?λ뜃由??怨밴묶 ?類ｋ궖
         self.content_label.setText("")
         self.content_label.setMaximumWidth(280)
         self.content_label.setText(html)
-        
+
         # 2. ??由??④쑴沅?揶쏅벡????낅쑓??꾨뱜 (?귐딇뒄 ??용뮞?紐껊뮉 筌왖?怨뺣쭆 ?④쑴沅??獄쏆뮇源??????됱벉)
         self.content_label.updateGeometry()
         self.content_label.adjustSize()
-        
+
         # 3. ?뚢뫂???瑗?獄??袁⑷퍥 ??밸씜 筌???由?鈺곌퀣??
         self.card.updateGeometry()
         self.card.adjustSize()
-        
+
         # ??밸씜 ??덈즲???癒?퍥??筌왖??살컭?紐꺿봺 揶쏄퉮??(餓κ쑴堉??뺣뮉 ??덉삂??癰귣똻???띾┛ ?袁る맙)
         self.setMinimumSize(0, 0)
         self.adjustSize()
-        
+
         # 4. ?袁⑺뒄 ?④쑴沅?獄???뽯뻻
         self._anchor_side = self._resolve_side(anchor)
         self.move(self._compute_position(anchor, self._anchor_side, self._anchor_mode))
-        
+
         if not self.isVisible():
             self.show()
         self.raise_()
@@ -288,7 +320,11 @@ class HoverInfoPopup(QFrame):
     def _resolve_side(self, anchor):
         global_top_left = anchor.mapToGlobal(QPoint(0, 0))
         screen = anchor.screen()
-        available = screen.availableGeometry() if screen else QApplication.primaryScreen().availableGeometry()
+        available = (
+            screen.availableGeometry()
+            if screen
+            else QApplication.primaryScreen().availableGeometry()
+        )
         right_x = global_top_left.x() + anchor.width() + 12
         if right_x + self.width() <= available.right() - 8:
             return "right"
@@ -297,7 +333,11 @@ class HoverInfoPopup(QFrame):
     def _compute_position(self, anchor, side=None, mode="side"):
         global_top_left = anchor.mapToGlobal(QPoint(0, 0))
         screen = anchor.screen()
-        available = screen.availableGeometry() if screen else QApplication.primaryScreen().availableGeometry()
+        available = (
+            screen.availableGeometry()
+            if screen
+            else QApplication.primaryScreen().availableGeometry()
+        )
 
         if mode == "inline_center":
             # Keep popover near the multiday bar center for contextual readability.
@@ -341,7 +381,7 @@ class HoverInfoEventFilter(QObject):
 
     def eventFilter(self, watched, event):
         popup = get_hover_info_popup()
-        
+
         if event.type() == QEvent.Type.Enter:
             html = watched.property("_hover_info_html")
             if html:
@@ -352,19 +392,24 @@ class HoverInfoEventFilter(QObject):
                     popup.show_for(watched, html)
                 else:
                     self._delay_timer.start()
-                
+
         elif event.type() in (QEvent.Type.MouseMove, QEvent.Type.Move, QEvent.Type.Resize):
             if popup.isVisible() and popup._anchor is watched:
                 popup.refresh_position(watched)
-                
-        elif event.type() in (QEvent.Type.Leave, QEvent.Type.Hide, QEvent.Type.FocusOut, QEvent.Type.WindowDeactivate):
+
+        elif event.type() in (
+            QEvent.Type.Leave,
+            QEvent.Type.Hide,
+            QEvent.Type.FocusOut,
+            QEvent.Type.WindowDeactivate,
+        ):
             self._delay_timer.stop()
             self._current_watched = None
             popup.hide_for(watched)
-            
+
         elif event.type() == QEvent.Type.ToolTip:
             return True
-            
+
         return super().eventFilter(watched, event)
 
     def _do_show_popup(self):
@@ -399,7 +444,6 @@ def install_hover_info(widget, html, mode="side"):
         widget.setProperty("_hover_info_installed", True)
 
 
-
 # ---------------------------------------------------------------------------
 # _DetailExpandOverlay - floating panel so grid rows are never resized.
 # ---------------------------------------------------------------------------
@@ -415,17 +459,17 @@ class _DetailExpandOverlay(QFrame):
         lyt = QVBoxLayout(self)
         lyt.setContentsMargins(0, 0, 0, 0)
         lyt.setSpacing(0)
-        self.setStyleSheet(
-            "QFrame#detailExpandOverlay { background: transparent; border: none; }"
-        )
+        self.setStyleSheet("QFrame#detailExpandOverlay { background: transparent; border: none; }")
         self.hide()
         from PyQt6.QtWidgets import QApplication as _QApp
+
         _QApp.instance().applicationStateChanged.connect(self._on_app_state_changed)
         _QApp.instance().installEventFilter(self)
 
     def _on_app_state_changed(self, state):
         """Hide detail overlay when the application loses focus."""
         from PyQt6.QtCore import Qt as _Qt
+
         if state != _Qt.ApplicationState.ApplicationActive and self.isVisible():
             owner = self._owner
             if owner is None:
@@ -482,19 +526,24 @@ class _DetailExpandOverlay(QFrame):
     def eventFilter(self, obj, event):
         """Close overlay on any click outside the overlay and its owner."""
         from PyQt6.QtCore import QEvent as _QEvent
-        if (event.type() == _QEvent.Type.MouseButtonPress
-                and self.isVisible() and self._owner is not None):
+
+        if (
+            event.type() == _QEvent.Type.MouseButtonPress
+            and self.isVisible()
+            and self._owner is not None
+        ):
             try:
                 pos = event.globalPosition().toPoint()
             except AttributeError:
-                from PyQt6.QtCore import QPoint as _QPoint2
                 pos = event.globalPos()
             # Click inside overlay itself - keep open
             if self.geometry().contains(pos):
                 return super().eventFilter(obj, event)
             # Click inside owner button - let it handle toggle
             try:
-                from PyQt6.QtCore import QRect as _QRect, QPoint as _QPoint
+                from PyQt6.QtCore import QPoint as _QPoint
+                from PyQt6.QtCore import QRect as _QRect
+
                 tl = self._owner.mapToGlobal(_QPoint(0, 0))
                 owner_rect = _QRect(tl, self._owner.size())
                 if owner_rect.contains(pos):
@@ -601,9 +650,9 @@ class DraggableTaskButton(QFrame):
     colorClearRequested = pyqtSignal(int)
     checklistRequested = pyqtSignal(int)
     alarmClearRequested = pyqtSignal(int)
-    taskResized = pyqtSignal(int, int) # (task_id, new_duration_minutes)
+    taskResized = pyqtSignal(int, int)  # (task_id, new_duration_minutes)
     taskRenameRequested = pyqtSignal(int, str)
-    
+
     moved = pyqtSignal(int, object, object)
     resized = pyqtSignal(int, int)
 
@@ -621,18 +670,18 @@ class DraggableTaskButton(QFrame):
         self._single_click_timer = QTimer(self)
         self._single_click_timer.setSingleShot(True)
         self._single_click_timer.timeout.connect(self._flush_single_click_toggle)
-        
+
         self.setMouseTracking(True)
         self.setAcceptDrops(True)
         self.setProperty("selected", False)
         self.setProperty("hovered", False)
         self.setProperty("expanded", False)
-        
+
         # Outer layout
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
-        
+
         # 1. Title Bar (The original button look)
         self.title_bar = QFrame()
         self.title_bar.setObjectName("taskTitleBar")
@@ -640,22 +689,22 @@ class DraggableTaskButton(QFrame):
         self.title_layout = QHBoxLayout(self.title_bar)
         self.title_layout.setContentsMargins(8, 0, 8, 0)
         self.title_layout.setSpacing(6)
-        
+
         self.title_label = _ElidingLabel(text)
         self.title_label.setWordWrap(False)
         self.title_label.setMinimumWidth(0)
         self.title_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self._apply_title_label_style()
         self.title_layout.addWidget(self.title_label)
-        
+
         self.rename_edit = _InlineRenameEdit()
         self.rename_edit.hide()
         self.title_layout.addWidget(self.rename_edit)
         self.rename_edit.returnPressed.connect(self._commit_inline_rename)
         self.rename_edit.canceled.connect(self._cancel_inline_rename)
-        
+
         self.main_layout.addWidget(self.title_bar)
-        
+
         # 2. Detail Card (The "new block" below)
         self.detail_container = QFrame()
         self.detail_container.setObjectName("taskDetailCard")
@@ -675,43 +724,43 @@ class DraggableTaskButton(QFrame):
         self.detail_layout.setSpacing(8)
         self.detail_container.setVisible(False)
         self.detail_container.setMaximumHeight(0)
-        
+
         self.info_widget = QWidget()
         self.info_layout = QVBoxLayout(self.info_widget)
         self.info_layout.setContentsMargins(0, 0, 0, 0)
         self.info_layout.setSpacing(4)
         self.detail_layout.addWidget(self.info_widget)
-        
+
         self.checklist_widget = QWidget()
         self.checklist_layout = QVBoxLayout(self.checklist_widget)
         self.checklist_layout.setContentsMargins(0, 0, 0, 0)
         self.checklist_layout.setSpacing(2)
         self.detail_layout.addWidget(self.checklist_widget)
-        
+
         # detail_container is a free child (not in main_layout) so grid rows
         # are never resized by expansion; overlay manages its geometry.
-        
+
         # Opacity effect
         self._info_opacity_fx = QGraphicsOpacityEffect(self.detail_container)
         self._info_opacity_fx.setOpacity(0.0)
         self.detail_container.setGraphicsEffect(self._info_opacity_fx)
-        
+
         # Animations
         self._height_anim = QPropertyAnimation(self.detail_container, b"maximumHeight", self)
         self._height_anim.setDuration(220)
         self._height_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-        
+
         self._fade_anim = QPropertyAnimation(self._info_opacity_fx, b"opacity", self)
         self._fade_anim.setDuration(180)
-        
+
         self._detail_anim_group = QParallelAnimationGroup(self)
         self._detail_anim_group.addAnimation(self._height_anim)
         # _fade_anim runs independently (not inside the anim group)
         self._fade_anim.finished.connect(self._on_detail_animation_finished)
-        
+
         self._detail_anim_expanding = False
         self._detail_anim_collapsing = False
-        
+
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
     def _parent_cell(self):
@@ -722,7 +771,7 @@ class DraggableTaskButton(QFrame):
             if isinstance(p, ClickableCell):
                 return p
             p = p.parentWidget()
-                
+
         # 2. Check siblings in Week Widget (new Matrix layout)
         # Walk up to find the Week Widget (the one with the QGridLayout)
         curr = self.parentWidget()
@@ -732,19 +781,25 @@ class DraggableTaskButton(QFrame):
                 week_widget = curr
                 break
             # Fallback heuristic: check if layout is QGridLayout with nhi亦쇨콓 columns
-            if curr.layout() and hasattr(curr.layout(), "columnCount") and curr.layout().columnCount() >= 5:
+            if (
+                curr.layout()
+                and hasattr(curr.layout(), "columnCount")
+                and curr.layout().columnCount() >= 5
+            ):
                 week_widget = curr
                 break
             curr = curr.parentWidget()
-            
+
         if week_widget:
             lp = week_widget.mapFromGlobal(QCursor.pos())
             # Search for direct ClickableCell children that contain the point
             # Note: ClickableCell is the background, so it spans the whole column
-            for cell in week_widget.findChildren(ClickableCell, options=Qt.FindChildOption.FindDirectChildrenOnly):
+            for cell in week_widget.findChildren(
+                ClickableCell, options=Qt.FindChildOption.FindDirectChildrenOnly
+            ):
                 if cell.geometry().contains(lp):
                     return cell
-            
+
         return None
 
     def _apply_title_label_style(self):
@@ -884,7 +939,6 @@ class DraggableTaskButton(QFrame):
         self._apply_tag_frame_style()
 
     def _apply_tag_frame_style(self):
-        from PyQt6.QtCore import QSettings
         from PyQt6.QtGui import QColor
 
         shape = get_ui_shape_tokens()
@@ -919,7 +973,7 @@ class DraggableTaskButton(QFrame):
                 base_bg = f"rgba({tag_color_obj.red()}, {tag_color_obj.green()}, {tag_color_obj.blue()}, 0.12)"
                 hover_bg = f"rgba({tag_color_obj.red()}, {tag_color_obj.green()}, {tag_color_obj.blue()}, 0.17)"
                 range_hover_bg = f"rgba({tag_color_obj.red()}, {tag_color_obj.green()}, {tag_color_obj.blue()}, 0.22)"
-                selected_bg = f"rgba({(theme_obj.red()+tag_color_obj.red())//2}, {(theme_obj.green()+tag_color_obj.green())//2}, {(theme_obj.blue()+tag_color_obj.blue())//2}, 45)"
+                selected_bg = f"rgba({(theme_obj.red() + tag_color_obj.red()) // 2}, {(theme_obj.green() + tag_color_obj.green()) // 2}, {(theme_obj.blue() + tag_color_obj.blue()) // 2}, 45)"
             else:
                 tag_line = self._tag_color
                 base_bg = "rgba(255, 255, 255, 0.03)"
@@ -931,8 +985,8 @@ class DraggableTaskButton(QFrame):
         left_border_width = l_width if not hide_tag_strip else "1px"
 
         self.setStyleSheet(f"""
-            DraggableTaskButton {{ 
-                background: transparent; border: none; border-radius: {task_outer_radius}px; padding: 0; 
+            DraggableTaskButton {{
+                background: transparent; border: none; border-radius: {task_outer_radius}px; padding: 0;
             }}
             QFrame#taskTitleBar {{
                 background: {base_bg};
@@ -962,15 +1016,14 @@ class DraggableTaskButton(QFrame):
             }}
         """)
 
-
     def _render_checklist_items(self):
         items = checklist_repo.get_task_checklist_items(self.task_id)
         if not items:
             return False
 
-        self._checklist_display_type = items[0].get('display_type', 'list')
-        if self._checklist_display_type == 'process':
-            first_incomplete = next((item for item in items if item['is_completed'] == 0), None)
+        self._checklist_display_type = items[0].get("display_type", "list")
+        if self._checklist_display_type == "process":
+            first_incomplete = next((item for item in items if item["is_completed"] == 0), None)
             items = [first_incomplete] if first_incomplete else []
 
         while self.checklist_layout.count():
@@ -982,8 +1035,10 @@ class DraggableTaskButton(QFrame):
             return False
 
         for item in items:
-            row = WrappedChecklistRow(item['item_text'], item['is_completed'] == 1)
-            row.toggled.connect(lambda checked, iid=item['id']: self._handle_item_toggled(iid, checked))
+            row = WrappedChecklistRow(item["item_text"], item["is_completed"] == 1)
+            row.toggled.connect(
+                lambda checked, iid=item["id"]: self._handle_item_toggled(iid, checked)
+            )
             self.checklist_layout.addWidget(row)
 
         self.checklist_layout.setSpacing(6)
@@ -992,15 +1047,17 @@ class DraggableTaskButton(QFrame):
 
     def _render_info_items(self):
         task = task_repo.get_unified_task(self.task_id)
-        if not task: return False
+        if not task:
+            return False
         s = QSettings("kimhyojin", "Dark Calendar")
         text_theme, panel_base, opacity_factor = get_theme_palette_inputs(s)
         text_pal = derive_ui_palette(text_theme, panel_base, opacity_factor)
-        
+
         while self.info_layout.count():
             child = self.info_layout.takeAt(0)
-            if child.widget(): child.widget().deleteLater()
-            
+            if child.widget():
+                child.widget().deleteLater()
+
         def _clean_text(value):
             if value is None:
                 return ""
@@ -1014,49 +1071,61 @@ class DraggableTaskButton(QFrame):
             llbl = QLabel(label)
             llbl.setFixedWidth(70)
             llbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-            llbl.setStyleSheet(f"background:transparent; color: {text_pal['text_secondary']}; font-size: 9pt;")
+            llbl.setStyleSheet(
+                f"background:transparent; color: {text_pal['text_secondary']}; font-size: 9pt;"
+            )
             tlbl = QLabel()
             if rich:
                 from PyQt6.QtCore import Qt as _Qt
+
                 tlbl.setTextFormat(_Qt.TextFormat.RichText)
             tlbl.setText(text)
-            tlbl.setStyleSheet(f"background:transparent; color: {text_pal['text_primary']}; font-size: 9pt;")
+            tlbl.setStyleSheet(
+                f"background:transparent; color: {text_pal['text_primary']}; font-size: 9pt;"
+            )
             tlbl.setWordWrap(True)
             row.addWidget(llbl, 0, Qt.AlignmentFlag.AlignTop)
             row.addWidget(tlbl, 1)
             self.info_layout.addLayout(row)
 
         # Time range
-        _deadline_str = str(task['deadline']) if task.get('deadline') else ""
+        _deadline_str = str(task["deadline"]) if task.get("deadline") else ""
         _deadline_parts = _deadline_str.split()
-        _is_all_day = bool(task.get('all_day')) or len(_deadline_parts) <= 1
+        _is_all_day = bool(task.get("all_day")) or len(_deadline_parts) <= 1
         if _is_all_day:
-            start = t('tooltip.all_day', 'All day')
+            start = t("tooltip.all_day", "All day")
         else:
             start = _deadline_parts[1][:5]
-        end = str(task.get('end_date', '')).split()[1][:5] if task.get('end_date') and not _is_all_day else ""
+        end = (
+            str(task.get("end_date", "")).split()[1][:5]
+            if task.get("end_date") and not _is_all_day
+            else ""
+        )
         if end:
             _add_info(f"{_ICON_TIME} {t('tooltip.label_time', 'Time')}", f"{start} - {end}")
         else:
             _add_info(f"{_ICON_TIME} {t('tooltip.label_time', 'Time')}", start)
-        
-        location = task.get('location')
+
+        location = task.get("location")
         clean_location = _clean_text(location)
-        if clean_location and clean_location not in ['None', 'none', '-']:
+        if clean_location and clean_location not in ["None", "none", "-"]:
             _add_info(f"{_ICON_LOCATION} {t('tooltip.label_location', 'Location')}", clean_location)
 
-        assignee = task.get('assignee')
+        assignee = task.get("assignee")
         clean_assignee = _clean_text(assignee)
-        if clean_assignee and clean_assignee not in ['None', 'none', '-']:
+        if clean_assignee and clean_assignee not in ["None", "none", "-"]:
             _add_info(f"{_ICON_ASSIGNEE} {t('tooltip.label_assignee', 'Assignee')}", clean_assignee)
 
-        memo = task.get('memo') or task.get('description')
+        memo = task.get("memo") or task.get("description")
         clean_memo = _clean_text(memo)
-        if clean_memo and clean_memo not in ['None', 'none', '-']:
+        if clean_memo and clean_memo not in ["None", "none", "-"]:
             import html as _html_mod
-            _lined = _html_mod.escape(clean_memo).replace('\n', '<br>')
-            _add_info(f"{_ICON_DESC} {t('tooltip.label_description', 'Description')}", _lined, rich=True)
-        
+
+            _lined = _html_mod.escape(clean_memo).replace("\n", "<br>")
+            _add_info(
+                f"{_ICON_DESC} {t('tooltip.label_description', 'Description')}", _lined, rich=True
+            )
+
         return self.info_layout.count() > 0
 
     def _collapsed_detail_height(self):
@@ -1079,7 +1148,6 @@ class DraggableTaskButton(QFrame):
             ov._reposition()
         self._detail_anim_expanding = False
         self._detail_anim_collapsing = False
-
 
     def _animate_detail(self, expand):
         ov = get_detail_overlay()
@@ -1114,8 +1182,6 @@ class DraggableTaskButton(QFrame):
             self._fade_anim.setEndValue(0.0)
             self._fade_anim.start()
 
-
-
     def toggle_expand(self):
         """Toggle detail expansion showing both info and checklist."""
         if self._expanded:
@@ -1130,19 +1196,18 @@ class DraggableTaskButton(QFrame):
         self.style().polish(self)
         self._apply_tag_frame_style()
 
-
     def _handle_item_toggled(self, item_id, checked):
         """????? ?? ?? ??"""
         checklist_repo.toggle_checklist_item(item_id)
 
         progress = checklist_repo.get_task_checklist_progress(self.task_id)
-        if progress['total'] > 0:
-            base_title = self.raw_text.split(' (')[0]
+        if progress["total"] > 0:
+            base_title = self.raw_text.split(" (")[0]
             new_title = f"{base_title} ({progress['completed']}/{progress['total']})"
             self.title_label.setText(new_title)
             self.raw_text = new_title
 
-        if getattr(self, '_checklist_display_type', 'list') == 'process':
+        if getattr(self, "_checklist_display_type", "list") == "process":
             if not self._render_checklist_items():
                 self._expanded = False
                 self.checklist_widget.setVisible(False)
@@ -1156,6 +1221,7 @@ class DraggableTaskButton(QFrame):
             target_h = self._expanded_detail_height()
             self.info_widget.setMaximumHeight(target_h)
             self.updateGeometry()
+
     def contextMenuEvent(self, event):
         from PyQt6.QtCore import QSettings
         from PyQt6.QtGui import QColor
@@ -1174,6 +1240,7 @@ class DraggableTaskButton(QFrame):
         menu_bg = f"rgba({base.red()},{base.green()},{base.blue()},{max(210, int(242 * opacity))})"
 
         from calendar_app.shared.color_utils import derive_text_palette
+
         text_theme = s.value("text_theme", "dark")
         text_pal = derive_text_palette(text_theme, theme)
         menu_color = text_pal["text_primary"]
@@ -1197,34 +1264,51 @@ class DraggableTaskButton(QFrame):
         menu = QMenu(self)
         menu.setStyleSheet(menu_style)
 
-        edit_act = menu.addAction(t("context_menu.edit_schedule"))
-        del_act = menu.addAction(t("context_menu.delete_schedule"))
+        edit_act = menu.addAction(_se(t("context_menu.edit_schedule")))
+        edit_act.setIcon(_ic(ICON.EDIT))
+        del_act = menu.addAction(_se(t("context_menu.delete_schedule")))
+        del_act.setIcon(_ic(ICON.DELETE))
         menu.addSeparator()
 
-        priority_menu = menu.addMenu(t("context_menu.priority_change"))
+        priority_menu = menu.addMenu(_se(t("context_menu.priority_change")))
+        priority_menu.setIcon(_ic(ICON.SORT_BY_PRIORITY))
         priority_menu.setStyleSheet(menu_style)
         prio_action_map = {}
         for label, value in PRIORITY_MENU_ITEMS:
-            prio_action_map[priority_menu.addAction(label)] = value
+            prio_action_map[priority_menu.addAction(_se(label))] = value
 
-        status_menu = menu.addMenu(t("context_menu.status_change"))
+        status_menu = menu.addMenu(_se(t("context_menu.status_change")))
+        status_menu.setIcon(_ic(ICON.STATUS_IN_PROGRESS))
         status_menu.setStyleSheet(menu_style)
         stat_action_map = {}
         for label, value in STATUS_MENU_ITEMS:
-            stat_action_map[status_menu.addAction(label)] = value
+            stat_action_map[status_menu.addAction(_se(label))] = value
 
-        color_menu = menu.addMenu(t("context_menu.color_tag"))
-        color_menu.setStyleSheet(menu_style + """
+        color_menu = menu.addMenu(_se(t("context_menu.color_tag")))
+        color_menu.setIcon(_ic(ICON.COLOR_PICKER))
+        color_menu.setStyleSheet(
+            menu_style
+            + """
             QMenu::item { padding: 5px 12px 5px 8px; }
-        """)
+        """
+        )
 
         # ?? ?꾩옱 ?쒖뒪???됱긽 ?쎄린 ??????????????????????????????????????
         from calendar_app.infrastructure.db import task_repo as _tr
         from calendar_app.shared.google_color_palette import get_google_event_palette as _gpal
+
         _LOCAL_NAMES = {
-            "1": t("color.lavender", "Lavender"), "2": t("color.sage", "Sage"), "3": t("color.grape", "Grape"), "4": t("color.flamingo", "Flamingo"),
-            "5": t("color.banana", "Banana"), "6": t("color.tangerine", "Tangerine"), "7": t("color.peacock", "Peacock"), "8": t("color.graphite", "Graphite"),
-            "9": t("color.blueberry", "Blueberry"), "10": t("color.basil", "Basil"), "11": t("color.tomato", "Tomato"),
+            "1": t("color.lavender", "Lavender"),
+            "2": t("color.sage", "Sage"),
+            "3": t("color.grape", "Grape"),
+            "4": t("color.flamingo", "Flamingo"),
+            "5": t("color.banana", "Banana"),
+            "6": t("color.tangerine", "Tangerine"),
+            "7": t("color.peacock", "Peacock"),
+            "8": t("color.graphite", "Graphite"),
+            "9": t("color.blueberry", "Blueberry"),
+            "10": t("color.basil", "Basil"),
+            "11": t("color.tomato", "Tomato"),
         }
         _cur_task = _tr.get_unified_task(self.task_id)
         _cur_color = (_cur_task.get("bg_color") or "").lower().strip() if _cur_task else ""
@@ -1238,13 +1322,22 @@ class DraggableTaskButton(QFrame):
             p.setBrush(QBrush(QColor(hex_color)))
             p.drawEllipse(1, 1, size - 2, size - 2)
             if checked:
-                p.setPen(QPen(QColor("#ffffff"), 2.0, Qt.PenStyle.SolidLine,
-                              Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+                p.setPen(
+                    QPen(
+                        QColor("#ffffff"),
+                        2.0,
+                        Qt.PenStyle.SolidLine,
+                        Qt.PenCapStyle.RoundCap,
+                        Qt.PenJoinStyle.RoundJoin,
+                    )
+                )
                 cx, cy, r = size / 2, size / 2, (size - 2) / 2
-                p.drawLine(int(cx - r * 0.45), int(cy + 0.05),
-                           int(cx - r * 0.05), int(cy + r * 0.45))
-                p.drawLine(int(cx - r * 0.05), int(cy + r * 0.45),
-                           int(cx + r * 0.5), int(cy - r * 0.4))
+                p.drawLine(
+                    int(cx - r * 0.45), int(cy + 0.05), int(cx - r * 0.05), int(cy + r * 0.45)
+                )
+                p.drawLine(
+                    int(cx - r * 0.05), int(cy + r * 0.45), int(cx + r * 0.5), int(cy - r * 0.4)
+                )
             p.end()
             return QIcon(px)
 
@@ -1256,13 +1349,14 @@ class DraggableTaskButton(QFrame):
             color_action_map[act] = entry["hex"]
 
         color_menu.addSeparator()
-        color_auto_act = color_menu.addAction(t("context_menu.color_auto"))
-        color_clear_act = color_menu.addAction(t("context_menu.color_clear"))
+        color_auto_act = color_menu.addAction(_se(t("context_menu.color_auto")))
+        color_clear_act = color_menu.addAction(_se(t("context_menu.color_clear")))
 
         menu.addSeparator()
-        dday_widget_act = menu.addAction(t("context_menu.create_dday_widget", "D-day ?꾩젽"))
-        chk_act = menu.addAction(t("context_menu.view_checklist"))
-        alarm_clear_act = menu.addAction(t("context_menu.clear_alarm"))
+        dday_widget_act = menu.addAction(_se(t("context_menu.create_dday_widget", "D-day")))
+        dday_widget_act.setIcon(_ic(ICON.WIDGET_DDAY))
+        alarm_clear_act = menu.addAction(_se(t("context_menu.clear_alarm")))
+        alarm_clear_act.setIcon(_ic(ICON.ALARM))
 
         action = menu.exec(event.globalPos())
 
@@ -1277,8 +1371,8 @@ class DraggableTaskButton(QFrame):
         elif action in color_action_map:
             chosen_hex = color_action_map[action]
             from calendar_app.infrastructure.db import task_repo as _tr2
+
             _tr2.update_unified_task(self.task_id, {"bg_color": chosen_hex})
-            from calendar_app.presentation.main_window import action_handlers_tasks as _aht
             # 遺紐??깆뿉 패널 媛깆떊 ?붿껌
             p = self.parent()
             while p and not hasattr(p, "_refresh_all_panels"):
@@ -1286,8 +1380,10 @@ class DraggableTaskButton(QFrame):
             if p:
                 p._refresh_all_panels()
                 p.wake_gcal_sync() if hasattr(p, "wake_gcal_sync") else None
-                from calendar_app.infrastructure.google_sync.helpers import sync_task_to_google
                 import threading
+
+                from calendar_app.infrastructure.google_sync.helpers import sync_task_to_google
+
                 task_full = _tr2.get_unified_task(self.task_id)
                 if task_full:
                     threading.Thread(
@@ -1299,8 +1395,6 @@ class DraggableTaskButton(QFrame):
                 p = p.parent()
             if p:
                 p.create_dday_widget_for_task(self.task_id)
-        elif action == chk_act:
-            self.checklistRequested.emit(self.task_id)
         elif action == alarm_clear_act:
             self.alarmClearRequested.emit(self.task_id)
         elif action in stat_action_map:
@@ -1309,9 +1403,10 @@ class DraggableTaskButton(QFrame):
         elif action in prio_action_map:
             new_prio = prio_action_map[action]
             from calendar_app.domain.task_constants import priority_icon
+
             new_ic = priority_icon(new_prio)
             # Apply UI update immediately for responsiveness
-            parts = self.raw_text.split(' ', 1)
+            parts = self.raw_text.split(" ", 1)
             if len(parts) > 1:
                 self.raw_text = f"{new_ic} {parts[1]}"
                 self.title_label.setText(self.raw_text)
@@ -1387,9 +1482,13 @@ class DraggableTaskButton(QFrame):
                     try:
                         ddm.start_task_drag(self, event, self.task_id)
                     except RuntimeError:
-                        logger.debug("Drag aborted for deleted task widget task_id=%s", self.task_id)
+                        logger.debug(
+                            "Drag aborted for deleted task widget task_id=%s", self.task_id
+                        )
                     except Exception:
-                        logger.exception("Unhandled error while starting drag for task_id=%s", self.task_id)
+                        logger.exception(
+                            "Unhandled error while starting drag for task_id=%s", self.task_id
+                        )
                     self.drag_start_pos = None
                     self._drag_selection_snapshot = []
         except Exception:
@@ -1422,7 +1521,9 @@ class DraggableTaskButton(QFrame):
                     event.button() == Qt.MouseButton.LeftButton
                     and not (event.modifiers() & Qt.KeyboardModifier.ControlModifier)
                     and not getattr(self, "_is_double_click", False)
-                    and self.title_bar.geometry().contains(getattr(self, "clicked_pos", QPoint(-1, -1)))
+                    and self.title_bar.geometry().contains(
+                        getattr(self, "clicked_pos", QPoint(-1, -1))
+                    )
                 ):
                     self._pending_expand_toggle = True
                     interval = 250
@@ -1433,9 +1534,11 @@ class DraggableTaskButton(QFrame):
 
         self._defer_ctrl_toggle = False
         self._drag_selection_snapshot = []
+
     def event(self, event):
         # Block default tooltip event and use custom immediate tooltip
         from PyQt6.QtCore import QEvent
+
         if event.type() in (QEvent.Type.ToolTip, QEvent.Type.WhatsThis):
             event.accept()
             return True
@@ -1458,11 +1561,14 @@ class DraggableTaskButton(QFrame):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         super().leaveEvent(event)
 
+
 class ClickableCell(QFrame):
     doubleClicked = pyqtSignal(object)
     shiftClicked = pyqtSignal(object)
     clicked = pyqtSignal(object)
-    taskDropped = pyqtSignal(object, object, object, str) # task_id(int or list), date, time, action
+    taskDropped = pyqtSignal(
+        object, object, object, str
+    )  # task_id(int or list), date, time, action
 
     def __init__(self, target_date, target_time=None, parent=None):
         super().__init__(parent)
@@ -1484,7 +1590,6 @@ class ClickableCell(QFrame):
         self._drag_pulse_timer.timeout.connect(self._toggle_drag_pulse)
         self._cached_drag_count = None
         self._cached_drag_span_days = None
-
 
     def _flush_single_click(self):
         if self._pending_click_pack is not None:
@@ -1511,7 +1616,9 @@ class ClickableCell(QFrame):
         super().leaveEvent(event)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and isinstance(self.parent(), TimeGridContainer):
+        if event.button() == Qt.MouseButton.LeftButton and isinstance(
+            self.parent(), TimeGridContainer
+        ):
             self.parent().start_selection(self.mapToParent(event.pos()))
 
         super().mousePressEvent(event)
@@ -1578,7 +1685,11 @@ class ClickableCell(QFrame):
             self._drag_pulse_timer.start()
 
     def _update_drag_batch(self, mime_data):
-        count = self._cached_drag_count if self._cached_drag_count is not None else self._extract_drag_count(mime_data)
+        count = (
+            self._cached_drag_count
+            if self._cached_drag_count is not None
+            else self._extract_drag_count(mime_data)
+        )
         is_batch = count > 1
         if self.property("drag_batch") != is_batch:
             self.setProperty("drag_batch", is_batch)
@@ -1622,11 +1733,7 @@ class ClickableCell(QFrame):
             else self._extract_drag_span_days(mime_data)
         )
         date_map = getattr(app, "_calendar_cells_by_date", None)
-        if (
-            span_days <= 1
-            or date_map is None
-            or not hasattr(self.target_date, "toString")
-        ):
+        if span_days <= 1 or date_map is None or not hasattr(self.target_date, "toString"):
             self._clear_drag_range_preview_for_app(app)
             return
 
@@ -1691,6 +1798,7 @@ class ClickableCell(QFrame):
     def dragLeaveEvent(self, event):
         self._reset_drag_style()
         super().dragLeaveEvent(event)
+
     def dragMoveEvent(self, event):
         if event.mimeData().hasFormat("application/x-task-item"):
             self._update_drag_batch(event.mimeData())
@@ -1728,10 +1836,15 @@ class ClickableCell(QFrame):
         except Exception:
             logger.exception(
                 "Unhandled error in ClickableCell.dropEvent target_date=%s target_time=%s",
-                self.target_date.toString("yyyy-MM-dd") if hasattr(self.target_date, "toString") else self.target_date,
-                self.target_time.toString("HH:mm") if hasattr(self.target_time, "toString") and self.target_time else self.target_time,
+                self.target_date.toString("yyyy-MM-dd")
+                if hasattr(self.target_date, "toString")
+                else self.target_date,
+                self.target_time.toString("HH:mm")
+                if hasattr(self.target_time, "toString") and self.target_time
+                else self.target_time,
             )
             event.ignore()
+
 
 class SelectionOverlay(QFrame):
     def __init__(self, parent=None):
@@ -1742,8 +1855,10 @@ class SelectionOverlay(QFrame):
         theme = get_theme_color()
         self.setStyleSheet(f"background: {theme}33; border: 1px solid {theme}; border-radius: 0px;")
 
+
 class TimeGridContainer(QWidget):
     taskDropped = pyqtSignal(object, object, object, str)
+
     def __init__(self, target_date, parent=None):
         super().__init__(parent)
         self.target_date = target_date
@@ -1764,7 +1879,9 @@ class TimeGridContainer(QWidget):
         except Exception:
             logger.exception(
                 "Unhandled error in TimeGridContainer.mouseMoveEvent target_date=%s selecting=%s select_start_y=%s",
-                self.target_date.toString("yyyy-MM-dd") if hasattr(self.target_date, "toString") else self.target_date,
+                self.target_date.toString("yyyy-MM-dd")
+                if hasattr(self.target_date, "toString")
+                else self.target_date,
                 self.selecting,
                 getattr(self, "select_start_y", None),
             )
@@ -1777,27 +1894,27 @@ class TimeGridContainer(QWidget):
             self.overlay.hide()
             y1 = self.overlay.y()
             y2 = y1 + self.overlay.height()
-            
+
             # ??蹂?뜟 ??ｌ뫒亦?(48px = 1??蹂?뜟)
             t1_total = (y1 / 48.0) * 60.0
             t2_total = (y2 / 48.0) * 60.0
-            
+
             # Round to nearest 15-minute unit
             s1 = round(t1_total / 15.0) * 15
             s2 = max(s1 + 15, round(t2_total / 15.0) * 15)
-            
-            st = QTime(min(23, int(s1/60)), int(s1%60))
-            et = QTime(min(23, int(s2/60)), int(s2%60))
-            
+
+            st = QTime(min(23, int(s1 / 60)), int(s1 % 60))
+            et = QTime(min(23, int(s2 / 60)), int(s2 % 60))
+
             # Open create dialog on main window (with period support)
             app = self.window()
             if hasattr(app, "open_task_dialog"):
                 # start_date, start_time, end_date, end_time
                 # API: open_task_dialog(self, start_date=None, start_time=None, end_date=None, end_time=None)
                 app.open_task_dialog(self.target_date, st, self.target_date, et)
-            
+
         super().mouseReleaseEvent(event)
-        
+
     def dropEvent(self, event):
         try:
             y = event.position().y()
@@ -1826,8 +1943,9 @@ class TimeGridContainer(QWidget):
         except Exception:
             logger.exception(
                 "Unhandled error in TimeGridContainer.dropEvent target_date=%s drop_y=%s",
-                self.target_date.toString("yyyy-MM-dd") if hasattr(self.target_date, "toString") else self.target_date,
+                self.target_date.toString("yyyy-MM-dd")
+                if hasattr(self.target_date, "toString")
+                else self.target_date,
                 event.position().y() if hasattr(event, "position") else None,
             )
             event.ignore()
-

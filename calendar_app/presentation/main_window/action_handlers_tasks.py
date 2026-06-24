@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """Task event interaction handlers mixin."""
+
+import logging
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMessageBox
-from calendar_app.infrastructure.i18n import t
-import logging
 
 from calendar_app.application import task_delete_usecases, task_usecases
 from calendar_app.infrastructure.db import checklist_repo as db_checklist
@@ -13,8 +12,9 @@ from calendar_app.infrastructure.db import legacy_task_repo as db_legacy_task
 from calendar_app.infrastructure.db import search_repo as db_search
 from calendar_app.infrastructure.db import task_repo as db_task
 from calendar_app.infrastructure.google_sync.helpers import sync_task_to_google
-from calendar_app.presentation.widgets.ui_components import DraggableTaskButton
+from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.color_swatch_widget import ColorSwatchPopup
+from calendar_app.presentation.widgets.ui_components import DraggableTaskButton
 
 logger = logging.getLogger(__name__)
 
@@ -22,14 +22,19 @@ logger = logging.getLogger(__name__)
 class TaskActionsMixin:
     def _run_worker(self, worker, on_finished=None):
         """DbTaskWorker를 _bg_workers 리스트에 등록하고 시작."""
-        from calendar_app.shared.background_worker import DbTaskWorker  # noqa: F401 (import for type reference)
+        from calendar_app.shared.background_worker import (
+            DbTaskWorker,  # noqa: F401 (import for type reference)
+        )
+
         if not hasattr(self, "_bg_workers"):
             self._bg_workers = []
         self._bg_workers.append(worker)
         if on_finished:
             worker.task_done.connect(on_finished)
         # deleteLater는 DbTaskWorker.__init__에서 QThread.finished에 이미 연결됨
-        worker.task_done.connect(lambda: self._bg_workers.remove(worker) if worker in self._bg_workers else None)
+        worker.task_done.connect(
+            lambda: self._bg_workers.remove(worker) if worker in self._bg_workers else None
+        )
         worker.start()
 
     def _select_google_palette_color(self, current_color=None):
@@ -43,11 +48,14 @@ class TaskActionsMixin:
         if not hasattr(self, "selection_status_lbl"):
             return
 
-        count = (
-            (len(self.selected_task_ids) if hasattr(self, "selected_task_ids") else 0)
-            + (len(self.selected_directive_ids) if hasattr(self, "selected_directive_ids") else 0)
+        count = (len(self.selected_task_ids) if hasattr(self, "selected_task_ids") else 0) + (
+            len(self.selected_directive_ids) if hasattr(self, "selected_directive_ids") else 0
         )
-        theme = self.settings.value("theme_color", "#4da6ff") if hasattr(self, "settings") else "#4da6ff"
+        theme = (
+            self.settings.value("theme_color", "#4da6ff")
+            if hasattr(self, "settings")
+            else "#4da6ff"
+        )
 
         def hex_to_rgba(hex_color, alpha):
             hex_color = hex_color.lstrip("#")
@@ -85,9 +93,14 @@ class TaskActionsMixin:
         self.selection_status_lbl.setStyleSheet(style)
 
     def handle_task_added(self, task_data):
-        if task_data and self.settings.value("gcal_enabled", "true") == "true":
+        # routine(일반업무)는 GCal 동기화 대상 아님 — schedule만 push
+        _is_schedule = (task_data or {}).get("type", "schedule") != "routine"
+        if task_data and _is_schedule and self.settings.value("gcal_enabled", "true") == "true":
             from calendar_app.shared.background_worker import DbTaskWorker
-            worker = DbTaskWorker(lambda t=task_data: sync_task_to_google(self, t, create_if_missing=True))
+
+            worker = DbTaskWorker(
+                lambda t=task_data: sync_task_to_google(self, t, create_if_missing=True)
+            )
             self._run_worker(worker)
         self.schedule_panel_refresh(left=True, center=True, right=True)
 
@@ -128,7 +141,10 @@ class TaskActionsMixin:
         for btn in self.findChildren(DraggableTaskButton):
             btn.set_selected(btn.task_id in self.selected_task_ids)
         try:
-            from calendar_app.presentation.panels.side_panel_renderer import _refresh_panel_selection_visuals
+            from calendar_app.presentation.panels.side_panel_renderer import (
+                _refresh_panel_selection_visuals,
+            )
+
             _refresh_panel_selection_visuals(self)
         except Exception:
             logger.exception("패널 선택 시각 갱신 실패")
@@ -161,20 +177,24 @@ class TaskActionsMixin:
 
         try:
             # handle_task_drop returns (changed_count, copied_ids)
-            changed, copied_ids = ddm.handle_task_drop(self, task_id_list, target_date, target_time, action)
+            changed, copied_ids = ddm.handle_task_drop(
+                self, task_id_list, target_date, target_time, action
+            )
 
             # If gcal is enabled, push the changes (updates for move, creates for copy)
             if changed > 0 and self.settings.value("gcal_enabled", "true") == "true":
-                from calendar_app.shared.background_worker import DbTaskWorker
                 from calendar_app.infrastructure.db import task_repo as _task_repo
+                from calendar_app.shared.background_worker import DbTaskWorker
 
                 # Determine which IDs to push to Google Calendar
                 # If action is copy, we push the newly created copied_ids
                 # If action is move, we push the original task_id_list
-                push_ids = copied_ids if action == "copy" else [int(x) for x in (task_id_list or []) if x]
+                push_ids = (
+                    copied_ids if action == "copy" else [int(x) for x in (task_id_list or []) if x]
+                )
 
-                def _push_all_to_gcal(ids_to_sync=list(push_ids)):
-                    for tid in ids_to_sync:
+                def _push_all_to_gcal(ids_to_sync=None):
+                    for tid in ids_to_sync if ids_to_sync is not None else list(push_ids):
                         # Re-read task from DB to get the latest updated/copied data (e.g. new deadline)
                         task = _task_repo.get_unified_task(tid)
                         if task:
@@ -215,7 +235,9 @@ class TaskActionsMixin:
         task = task_usecases.rename_task(db_task, task_id, new_name)
         if task:
             if self.settings.value("gcal_enabled", "true") == "true":
-                worker = DbTaskWorker(lambda: sync_task_to_google(self, task, create_if_missing=True))
+                worker = DbTaskWorker(
+                    lambda: sync_task_to_google(self, task, create_if_missing=True)
+                )
                 self._run_worker(worker)
 
             self.wake_gcal_sync()
@@ -225,8 +247,12 @@ class TaskActionsMixin:
         """Apply auto color tags to the current mixed selection."""
         from PyQt6.QtCore import QSettings
 
-        task_ids = sorted(int(v) for v in getattr(self, "selected_task_ids", set()) if str(v).isdigit())
-        directive_ids = sorted(int(v) for v in getattr(self, "selected_directive_ids", set()) if str(v).isdigit())
+        task_ids = sorted(
+            int(v) for v in getattr(self, "selected_task_ids", set()) if str(v).isdigit()
+        )
+        directive_ids = sorted(
+            int(v) for v in getattr(self, "selected_directive_ids", set()) if str(v).isdigit()
+        )
         total_targets = len(task_ids) + len(directive_ids)
         if total_targets <= 0:
             return False
@@ -236,11 +262,13 @@ class TaskActionsMixin:
         changed_task = False
         changed_directive = False
 
-        for task_id, color_hex in zip(task_ids, auto_colors[:len(task_ids)]):
+        for task_id, color_hex in zip(task_ids, auto_colors[: len(task_ids)], strict=False):
             if task_usecases.update_task_bg_color(db_task, task_id, color_hex):
                 changed_task = True
 
-        for directive_id, color_hex in zip(directive_ids, auto_colors[len(task_ids):]):
+        for directive_id, color_hex in zip(
+            directive_ids, auto_colors[len(task_ids) :], strict=False
+        ):
             if task_usecases.update_directive_bg_color(db_directive, directive_id, color_hex):
                 changed_directive = True
 
@@ -263,7 +291,11 @@ class TaskActionsMixin:
         from PyQt6.QtCore import QSettings
 
         selected = getattr(self, "selected_task_ids", set())
-        if task_id in selected and len(selected) > 1 and not getattr(self, "selected_directive_ids", set()):
+        if (
+            task_id in selected
+            and len(selected) > 1
+            and not getattr(self, "selected_directive_ids", set())
+        ):
             self.auto_assign_color_tags_to_selection()
             return
 
@@ -295,7 +327,11 @@ class TaskActionsMixin:
         from PyQt6.QtCore import QSettings
 
         selected = getattr(self, "selected_directive_ids", set())
-        if directive_id in selected and len(selected) > 1 and not getattr(self, "selected_task_ids", set()):
+        if (
+            directive_id in selected
+            and len(selected) > 1
+            and not getattr(self, "selected_task_ids", set())
+        ):
             self.auto_assign_color_tags_to_selection()
             return
 
@@ -306,7 +342,9 @@ class TaskActionsMixin:
                 self.mark_panel_dirty(right=True)
                 self.schedule_panel_refresh(right=True)
         except Exception:
-            logger.exception("Error auto-assigning directive color tag for directive_id=%s", directive_id)
+            logger.exception(
+                "Error auto-assigning directive color tag for directive_id=%s", directive_id
+            )
 
     def handle_directive_color_clear_requested(self, directive_id):
         """지시/협조사항 색상 태그 제거."""
@@ -352,12 +390,16 @@ class TaskActionsMixin:
         from calendar_app.shared.background_worker import DbTaskWorker
 
         def run_delete():
-            from calendar_app.infrastructure.google_sync.helpers import queue_task_delete_from_google
+            from calendar_app.infrastructure.google_sync.helpers import (
+                queue_task_delete_from_google,
+            )
 
             return task_delete_usecases.delete_tasks_with_google_queue(
                 db_task,
                 target_ids,
-                queue_delete_fn=lambda event_id, local_task_id, gcal_calendar_id: queue_task_delete_from_google(
+                queue_delete_fn=lambda event_id,
+                local_task_id,
+                gcal_calendar_id: queue_task_delete_from_google(
                     self,
                     event_id,
                     local_task_id=local_task_id,
@@ -371,22 +413,35 @@ class TaskActionsMixin:
                 self.update_task_selection_status()
                 self._refresh_all_panels()
                 self.wake_gcal_sync()
-                self.show_toast(t("dialog.common.delete_done"), t("dialog.common.delete_toast_n", n=result))
+                self.show_toast(
+                    t("dialog.common.delete_done"), t("dialog.common.delete_toast_n", n=result)
+                )
+            elif not success:
+                logger.error("Task delete worker failed: %s", result)
+                if hasattr(self, "show_toast"):
+                    self.show_toast(
+                        t("dialog.task.save_failed", "실패"),
+                        t("dialog.common.delete_error", "삭제 중 오류가 발생했습니다."),
+                    )
 
         worker = DbTaskWorker(run_delete)
         self._run_worker(worker, on_delete_finished)
 
     def delete_selected_directives(self):
         """선택된 지시/협조사항 삭제 (Del 키 및 우클릭 메뉴에서 호출)."""
-        if hasattr(self, '_is_text_input_focused') and self._is_text_input_focused():
+        if hasattr(self, "_is_text_input_focused") and self._is_text_input_focused():
             return
-        selected = getattr(self, 'selected_directive_ids', set())
+        selected = getattr(self, "selected_directive_ids", set())
         if not selected:
             return
 
         ids = list(selected)
         count = len(ids)
-        msg = t("dialog.common.delete_n_confirm", n=count) if count > 1 else t("dialog.common.delete_confirm")
+        msg = (
+            t("dialog.common.delete_n_confirm", n=count)
+            if count > 1
+            else t("dialog.common.delete_confirm")
+        )
 
         reply = QMessageBox.question(
             self,
@@ -402,19 +457,24 @@ class TaskActionsMixin:
         if deleted:
             self.selected_directive_ids.clear()
             try:
-                from calendar_app.presentation.panels.side_panel_renderer import _refresh_panel_selection_visuals
+                from calendar_app.presentation.panels.side_panel_renderer import (
+                    _refresh_panel_selection_visuals,
+                )
+
                 _refresh_panel_selection_visuals(self)
             except Exception:
                 logger.exception("지시사항 삭제 후 패널 선택 시각 갱신 실패")
             self.update_task_selection_status()
             self._refresh_all_panels()
-            if hasattr(self, 'show_toast'):
+            if hasattr(self, "show_toast"):
                 toast_title = t("dialog.common.delete_done", "삭제 완료")
-                toast_msg = t("dialog.common.delete_toast_n", "{n}개가 삭제되었습니다.").replace("{n}", str(deleted))
+                toast_msg = t("dialog.common.delete_toast_n", "{n}개가 삭제되었습니다.").replace(
+                    "{n}", str(deleted)
+                )
                 self.show_toast(toast_title, toast_msg)
 
     def _delete_selected_directives_without_prompt(self):
-        selected = getattr(self, 'selected_directive_ids', set())
+        selected = getattr(self, "selected_directive_ids", set())
         ids = [int(v) for v in selected]
         if not ids:
             return 0
@@ -423,7 +483,10 @@ class TaskActionsMixin:
         if deleted:
             self.selected_directive_ids.clear()
             try:
-                from calendar_app.presentation.panels.side_panel_renderer import _refresh_panel_selection_visuals
+                from calendar_app.presentation.panels.side_panel_renderer import (
+                    _refresh_panel_selection_visuals,
+                )
+
                 _refresh_panel_selection_visuals(self)
             except Exception:
                 logger.exception("지시사항 일괄 삭제 후 패널 선택 시각 갱신 실패")
@@ -440,7 +503,11 @@ class TaskActionsMixin:
         if total_count <= 0:
             return
 
-        msg = t("dialog.common.delete_n_confirm", n=total_count) if total_count > 1 else t("dialog.common.delete_confirm")
+        msg = (
+            t("dialog.common.delete_n_confirm", n=total_count)
+            if total_count > 1
+            else t("dialog.common.delete_confirm")
+        )
         msg += "\n" + t("dialog.common.delete_sub_msg")
         reply = QMessageBox.question(
             self,
@@ -452,22 +519,31 @@ class TaskActionsMixin:
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        deleted_directives = self._delete_selected_directives_without_prompt() if directive_ids else 0
+        deleted_directives = (
+            self._delete_selected_directives_without_prompt() if directive_ids else 0
+        )
         if not task_ids:
             self._refresh_all_panels()
             if deleted_directives > 0 and hasattr(self, "show_toast"):
-                self.show_toast(t("dialog.common.delete_done"), t("dialog.common.delete_toast_n", n=deleted_directives))
+                self.show_toast(
+                    t("dialog.common.delete_done"),
+                    t("dialog.common.delete_toast_n", n=deleted_directives),
+                )
             return
 
         from calendar_app.shared.background_worker import DbTaskWorker
 
         def run_delete():
-            from calendar_app.infrastructure.google_sync.helpers import queue_task_delete_from_google
+            from calendar_app.infrastructure.google_sync.helpers import (
+                queue_task_delete_from_google,
+            )
 
             return task_delete_usecases.delete_tasks_with_google_queue(
                 db_task,
                 task_ids,
-                queue_delete_fn=lambda event_id, local_task_id, gcal_calendar_id: queue_task_delete_from_google(
+                queue_delete_fn=lambda event_id,
+                local_task_id,
+                gcal_calendar_id: queue_task_delete_from_google(
                     self,
                     event_id,
                     local_task_id=local_task_id,
@@ -483,7 +559,10 @@ class TaskActionsMixin:
                 self.wake_gcal_sync()
                 deleted_total = int(result or 0) + deleted_directives
                 if deleted_total > 0 and hasattr(self, "show_toast"):
-                    self.show_toast(t("dialog.common.delete_done"), t("dialog.common.delete_toast_n", n=deleted_total))
+                    self.show_toast(
+                        t("dialog.common.delete_done"),
+                        t("dialog.common.delete_toast_n", n=deleted_total),
+                    )
 
         worker = DbTaskWorker(run_delete)
         self._run_worker(worker, on_delete_finished)
@@ -515,7 +594,11 @@ class TaskActionsMixin:
 
     def delete_all_tasks_on_date(self, target_date):
         """Delete all tasks on selected date."""
-        date_str = target_date.toString("yyyy-MM-dd") if hasattr(target_date, "toString") else str(target_date)
+        date_str = (
+            target_date.toString("yyyy-MM-dd")
+            if hasattr(target_date, "toString")
+            else str(target_date)
+        )
 
         tasks = task_usecases.get_tasks_for_date(db_search, date_str)
         if not tasks:
@@ -523,8 +606,12 @@ class TaskActionsMixin:
 
         count = len(tasks)
         msg = (
-            t("dialog.common.delete_all_date_msg", "<b>{date}</b>의 일정 <b>{count}개</b>를 모두 삭제하시겠습니까?<br>관련된 체크리스트도 함께 삭제됩니다.")
-            .replace("{date}", date_str).replace("{count}", str(count))
+            t(
+                "dialog.common.delete_all_date_msg",
+                "<b>{date}</b>의 일정 <b>{count}개</b>를 모두 삭제하시겠습니까?<br>관련된 체크리스트도 함께 삭제됩니다.",
+            )
+            .replace("{date}", date_str)
+            .replace("{count}", str(count))
         )
         reply = QMessageBox.question(
             self,
@@ -540,13 +627,17 @@ class TaskActionsMixin:
         from calendar_app.shared.background_worker import DbTaskWorker
 
         def run_delete():
-            from calendar_app.infrastructure.google_sync.helpers import queue_task_delete_from_google
+            from calendar_app.infrastructure.google_sync.helpers import (
+                queue_task_delete_from_google,
+            )
 
             return task_delete_usecases.delete_tasks_on_date_with_google_queue(
                 db_search,
                 db_task,
                 date_str,
-                queue_delete_fn=lambda event_id, local_task_id, gcal_calendar_id: queue_task_delete_from_google(
+                queue_delete_fn=lambda event_id,
+                local_task_id,
+                gcal_calendar_id: queue_task_delete_from_google(
                     self,
                     event_id,
                     local_task_id=local_task_id,
@@ -560,7 +651,9 @@ class TaskActionsMixin:
                 self.update_task_selection_status()
                 self._refresh_all_panels()
                 self.wake_gcal_sync()
-                self.show_toast(t("dialog.common.delete_done"), t("dialog.common.delete_toast_n", n=result))
+                self.show_toast(
+                    t("dialog.common.delete_done"), t("dialog.common.delete_toast_n", n=result)
+                )
 
         worker = DbTaskWorker(run_delete)
         self._run_worker(worker, on_finished)
@@ -603,7 +696,7 @@ class TaskActionsMixin:
         if not task_row:
             return
 
-        from PyQt6.QtCore import QDate, QTime, QDateTime
+        from PyQt6.QtCore import QDate, QDateTime, QTime
 
         # Parse start/end datetime
         start_raw = str(task_row.get("_start_raw") or task_row.get("deadline") or "").strip()
@@ -617,10 +710,10 @@ class TaskActionsMixin:
 
         if start_raw:
             # Try full datetime first
-            dt = QDateTime.fromString(start_raw[:19].replace('T', ' '), "yyyy-MM-dd HH:mm:ss")
+            dt = QDateTime.fromString(start_raw[:19].replace("T", " "), "yyyy-MM-dd HH:mm:ss")
             if not dt.isValid():
-                dt = QDateTime.fromString(start_raw[:16].replace('T', ' '), "yyyy-MM-dd HH:mm")
-            
+                dt = QDateTime.fromString(start_raw[:16].replace("T", " "), "yyyy-MM-dd HH:mm")
+
             if dt.isValid():
                 start_d = dt.date()
                 start_t = dt.time()
@@ -630,10 +723,10 @@ class TaskActionsMixin:
                     start_d = d
 
         if end_raw:
-            dt = QDateTime.fromString(end_raw[:19].replace('T', ' '), "yyyy-MM-dd HH:mm:ss")
+            dt = QDateTime.fromString(end_raw[:19].replace("T", " "), "yyyy-MM-dd HH:mm:ss")
             if not dt.isValid():
-                dt = QDateTime.fromString(end_raw[:16].replace('T', ' '), "yyyy-MM-dd HH:mm")
-            
+                dt = QDateTime.fromString(end_raw[:16].replace("T", " "), "yyyy-MM-dd HH:mm")
+
             if dt.isValid():
                 end_d = dt.date()
                 end_t = dt.time()
@@ -656,5 +749,5 @@ class TaskActionsMixin:
                 initial_time=start_t,
                 end_date=end_d,
                 end_time=end_t,
-                prefill_dict=prefill
+                prefill_dict=prefill,
             )

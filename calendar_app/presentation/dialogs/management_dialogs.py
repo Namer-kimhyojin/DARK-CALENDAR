@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
 import logging
-
-from calendar_app.infrastructure.i18n import t
 
 from PyQt6.QtCore import QModelIndex, QSortFilterProxyModel, Qt, QTimer
 from PyQt6.QtGui import QAction, QColor, QStandardItem, QStandardItemModel
@@ -9,29 +6,24 @@ from PyQt6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
     QDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMenu,
     QMessageBox,
     QPushButton,
-    QTabWidget,
     QTableView,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from calendar_app.application import directive_management_usecases
-from calendar_app.application import routine_management_usecases
-from calendar_app.application import task_delete_usecases
-from calendar_app.application import task_management_usecases
-from calendar_app.infrastructure.db import directive_repo, search_repo, task_repo
-from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
-from calendar_app.presentation.dialogs.dialog_styles import apply_common_dialog_style, get_dialog_theme_tokens
-from calendar_app.infrastructure.google_sync.helpers import (
-    queue_task_delete_from_google,
-    queue_task_sync_to_google,
-    resolve_app_context,
+from calendar_app.application import (
+    directive_management_usecases,
+    routine_management_usecases,
+    task_delete_usecases,
+    task_management_usecases,
 )
 from calendar_app.domain.task_constants import (
     PRIORITY_MENU_ITEMS,
@@ -39,6 +31,18 @@ from calendar_app.domain.task_constants import (
     STATUS_MENU_ITEMS,
 )
 from calendar_app.domain.task_status_view import normalize_status as _normalize_status
+from calendar_app.infrastructure.db import directive_repo, search_repo, task_repo
+from calendar_app.infrastructure.google_sync.helpers import (
+    queue_task_delete_from_google,
+    queue_task_sync_to_google,
+    resolve_app_context,
+)
+from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
+from calendar_app.presentation.dialogs.dialog_styles import (
+    apply_common_dialog_style,
+    get_dialog_theme_tokens,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +80,7 @@ def _status_background(status):
 # ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 # Proxy model
 # ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
+
 
 class MultiColumnFilterProxyModel(QSortFilterProxyModel):
     def __init__(self, parent=None):
@@ -117,7 +122,7 @@ class MultiColumnFilterProxyModel(QSortFilterProxyModel):
             if (idx.data() or "") != self._status_text:
                 return False
 
-        # 嶺?瑗????熬곥굤??        if self._calendar_column >= 0 and self._calendar_text:
+            # 嶺?瑗????熬곥굤??        if self._calendar_column >= 0 and self._calendar_text:
             idx = self.sourceModel().index(source_row, self._calendar_column, source_parent)
             if (idx.data() or "") != self._calendar_text:
                 return False
@@ -136,6 +141,7 @@ class MultiColumnFilterProxyModel(QSortFilterProxyModel):
 # ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 # Base dialog
 # ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
+
 
 class BaseManagementDialog(QDialog):
     title = ""
@@ -220,9 +226,13 @@ class BaseManagementDialog(QDialog):
             self.table.hideColumn(0)
 
     def _build_buttons(self, layout):
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        layout.addWidget(sep)
+
         btn_layout = QHBoxLayout()
         self.refresh_btn = QPushButton(t("dialog.common.refresh"))
-        self.refresh_btn.setObjectName("SecondaryBtn")
+        self.refresh_btn.setObjectName("ghost_btn")
         self.refresh_btn.clicked.connect(self.load_data)
         btn_layout.addWidget(self.refresh_btn)
 
@@ -250,7 +260,9 @@ class BaseManagementDialog(QDialog):
         self.bulk_priority_btn = QPushButton(t("dialog.common.bulk_priority"))
         self.bulk_priority_btn.setObjectName("SecondaryBtn")
         self.bulk_priority_btn.clicked.connect(
-            lambda: self.bulk_priority_update(_priority_value_from_label(self.bulk_priority_combo.currentText()))
+            lambda: self.bulk_priority_update(
+                _priority_value_from_label(self.bulk_priority_combo.currentText())
+            )
         )
 
         self.bulk_status_combo = QComboBox()
@@ -260,7 +272,9 @@ class BaseManagementDialog(QDialog):
         self.bulk_status_btn = QPushButton(t("dialog.common.bulk_status"))
         self.bulk_status_btn.setObjectName("SecondaryBtn")
         self.bulk_status_btn.clicked.connect(
-            lambda: self.bulk_status_update(_status_value_from_label(self.bulk_status_combo.currentText()))
+            lambda: self.bulk_status_update(
+                _status_value_from_label(self.bulk_status_combo.currentText())
+            )
         )
 
         return [
@@ -409,7 +423,9 @@ class BaseManagementDialog(QDialog):
         try:
             task_delete_usecases.queue_google_deletes_for_refs(
                 gcal_refs,
-                queue_delete_fn=lambda event_id, local_task_id, gcal_calendar_id: queue_task_delete_from_google(
+                queue_delete_fn=lambda event_id,
+                local_task_id,
+                gcal_calendar_id: queue_task_delete_from_google(
                     self,
                     event_id,
                     local_task_id=local_task_id,
@@ -446,7 +462,9 @@ class BaseManagementDialog(QDialog):
     def _open_unified_task_modify_dialog(self, row_id):
         if self._trash_mode:
             return
-        from calendar_app.presentation.dialogs.modify_task_dialog_unified import UnifiedModifyTaskDialog
+        from calendar_app.presentation.dialogs.modify_task_dialog_unified import (
+            UnifiedModifyTaskDialog,
+        )
 
         dlg = UnifiedModifyTaskDialog(int(row_id), self)
         if dlg.exec():
@@ -555,19 +573,26 @@ class BaseManagementDialog(QDialog):
 # DirectiveManagementDialog
 # ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
+
 class DirectiveManagementDialog(BaseManagementDialog):
     @property
-    def title(self): return t("dialog.management.directive_title")
+    def title(self):
+        return t("dialog.management.directive_title")
+
     @property
-    def header_text(self): return t("dialog.management.directive_header")
+    def header_text(self):
+        return t("dialog.management.directive_header")
+
     @property
-    def headers(self): return [
-        t("dialog.management.header_content"),
-        t("dialog.management.header_receiver"),
-        t("dialog.management.header_priority"),
-        t("dialog.management.header_deadline"),
-        t("dialog.management.header_status")
-    ]
+    def headers(self):
+        return [
+            t("dialog.management.header_content"),
+            t("dialog.management.header_receiver"),
+            t("dialog.management.header_priority"),
+            t("dialog.management.header_deadline"),
+            t("dialog.management.header_status"),
+        ]
+
     status_column = 4
     search_columns = [0, 1]
 
@@ -617,7 +642,6 @@ class DirectiveManagementDialog(BaseManagementDialog):
             ],
         )
 
-
     def toggle_trash_mode(self):
         self._trash_mode = not self._trash_mode
         self._sync_trash_mode_ui()
@@ -661,6 +685,7 @@ class DirectiveManagementDialog(BaseManagementDialog):
 
     def add_new(self):
         from calendar_app.presentation.dialogs.directive_dialog import DirectiveDialog
+
         dlg = DirectiveDialog(self)
         if dlg.exec():
             self.load_data()
@@ -669,6 +694,7 @@ class DirectiveManagementDialog(BaseManagementDialog):
         if self._trash_mode:
             return
         from calendar_app.presentation.dialogs.directive_dialog import DirectiveDialog
+
         dlg = DirectiveDialog(self, task_id=row_id)
         if dlg.exec():
             self.load_data()
@@ -705,7 +731,6 @@ class DirectiveManagementDialog(BaseManagementDialog):
             return
         self._open_trash_context_menu(pos)
 
-
     def restore_selected(self):
         if not self._trash_mode:
             return
@@ -716,7 +741,6 @@ class DirectiveManagementDialog(BaseManagementDialog):
             return
         directive_management_usecases.restore_selected_from_trash(directive_repo, ids)
         self.load_data()
-
 
     def delete_selected(self):
         ids = self._selected_ids()
@@ -732,37 +756,45 @@ class DirectiveManagementDialog(BaseManagementDialog):
 
         if not self._confirm_move_to_trash():
             return
-        directive_management_usecases.move_selected_to_trash(directive_repo, ids, reason="manual_trash_directive")
+        directive_management_usecases.move_selected_to_trash(
+            directive_repo, ids, reason="manual_trash_directive"
+        )
         self.load_data()
-
 
 
 # ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 # TaskManagementDialog  ??嶺?瑗?????롫맩???熬곥굤???怨뺣뼺?
 # ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
+
 class TaskManagementDialog(BaseManagementDialog):
     @property
-    def title(self): return t("dialog.management.schedule_title")
+    def title(self):
+        return t("dialog.management.schedule_title")
+
     @property
-    def header_text(self): return t("dialog.management.schedule_header")
+    def header_text(self):
+        return t("dialog.management.schedule_header")
+
     @property
-    def headers(self): return [
-        t("dialog.management.header_id", "ID"),                          # col 0 (hidden)
-        t("dialog.management.header_calendar", "Calendar"),               # col 1
-        t("dialog.management.header_name"),                               # col 2
-        t("dialog.management.header_deadline"),                           # col 3
-        t("dialog.management.header_location"),                           # col 4
-        t("dialog.management.header_assignee"),                           # col 5
-        t("dialog.management.header_priority"),                           # col 6
-        t("dialog.management.header_status"),                             # col 7
-    ]
+    def headers(self):
+        return [
+            t("dialog.management.header_id", "ID"),  # col 0 (hidden)
+            t("dialog.management.header_calendar", "Calendar"),  # col 1
+            t("dialog.management.header_name"),  # col 2
+            t("dialog.management.header_deadline"),  # col 3
+            t("dialog.management.header_location"),  # col 4
+            t("dialog.management.header_assignee"),  # col 5
+            t("dialog.management.header_priority"),  # col 6
+            t("dialog.management.header_status"),  # col 7
+        ]
+
     status_column = 7
     search_columns = [2, 4, 5]  # name, location, assignee
     _calendar_col = 1
 
     def __init__(self, parent=None):
-        self._calendar_map = {}   # str(id) ??name
+        self._calendar_map = {}  # str(id) ??name
         self._trash_mode = False
         self._normal_edit_triggers = (
             QAbstractItemView.EditTrigger.EditKeyPressed
@@ -780,6 +812,7 @@ class TaskManagementDialog(BaseManagementDialog):
         """DB?????嶺?瑗???嶺뚮ㅄ維뽨빳??????꽑 ?熬곥굤???袁좊걞??⑥낯筌먦끇裕??嶺??????덈펲."""
         try:
             from calendar_app.infrastructure.db.calendar_repo import list_calendars
+
             calendars = list_calendars(include_inactive=True)
         except Exception:
             calendars = []
@@ -833,7 +866,6 @@ class TaskManagementDialog(BaseManagementDialog):
             reset_combos=[self.calendar_filter],
         )
 
-
     def toggle_trash_mode(self):
         self._trash_mode = not self._trash_mode
         self._sync_trash_mode_ui()
@@ -850,7 +882,7 @@ class TaskManagementDialog(BaseManagementDialog):
             rows = search_repo.get_tasks_by_type("schedule")
             payloads = task_management_usecases.build_table_payload(rows)
             editable_columns = {2, 3, 4, 5}
-        for row, payload in zip(rows, payloads):
+        for row, payload in zip(rows, payloads, strict=False):
             cells_orig = payload["cells"]  # [name, deadline, location, assignee, priority, status]
             cal_name = self._calendar_name_for(row)
             full_cells = [
@@ -881,18 +913,18 @@ class TaskManagementDialog(BaseManagementDialog):
             inline_update_fn=task_management_usecases.inline_update_task,
         )
 
-
     def add_new(self):
-        self._open_unified_task_create_dialog(task_type="schedule", post_success=self._populate_calendar_filter)
-
+        self._open_unified_task_create_dialog(
+            task_type="schedule", post_success=self._populate_calendar_filter
+        )
 
     def edit_by_id(self, row_id):
         self._open_unified_task_modify_dialog(row_id)
 
-
     def bulk_status_update(self, new_status):
-        self._bulk_task_status_update(new_status, bulk_update_fn=task_management_usecases.bulk_update_status)
-
+        self._bulk_task_status_update(
+            new_status, bulk_update_fn=task_management_usecases.bulk_update_status
+        )
 
     def bulk_priority_update(self, new_priority):
         self._bulk_task_priority_update(
@@ -900,18 +932,14 @@ class TaskManagementDialog(BaseManagementDialog):
             bulk_update_fn=task_management_usecases.bulk_update_priority,
         )
 
-
     def open_context_menu(self, pos):
         if not self._trash_mode:
             super().open_context_menu(pos)
             return
         self._open_trash_context_menu(pos)
 
-
     def restore_selected(self):
         self._restore_selected_task_rows()
-
-
 
     def delete_selected(self):
         self._delete_selected_task_rows(
@@ -920,27 +948,32 @@ class TaskManagementDialog(BaseManagementDialog):
         )
 
 
-
-
 # ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 # RoutineManagementDialog
 # ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
+
 class RoutineManagementDialog(BaseManagementDialog):
     @property
-    def title(self): return t("dialog.management.routine_title")
+    def title(self):
+        return t("dialog.management.routine_title")
+
     @property
-    def header_text(self): return t("dialog.management.routine_header")
+    def header_text(self):
+        return t("dialog.management.routine_header")
+
     @property
-    def headers(self): return [
-        t("dialog.management.header_work_name"),
-        t("dialog.management.header_cycle"),
-        t("dialog.management.header_location"),
-        t("dialog.management.header_assignee"),
-        t("dialog.management.header_priority"),
-        t("dialog.management.header_deadline"),
-        t("dialog.management.header_status")
-    ]
+    def headers(self):
+        return [
+            t("dialog.management.header_work_name"),
+            t("dialog.management.header_cycle"),
+            t("dialog.management.header_location"),
+            t("dialog.management.header_assignee"),
+            t("dialog.management.header_priority"),
+            t("dialog.management.header_deadline"),
+            t("dialog.management.header_status"),
+        ]
+
     status_column = 6
     search_columns = [0, 2, 3]
 
@@ -985,7 +1018,6 @@ class RoutineManagementDialog(BaseManagementDialog):
                 self.bulk_status_btn,
             ],
         )
-
 
     def toggle_trash_mode(self):
         self._trash_mode = not self._trash_mode
@@ -1033,18 +1065,16 @@ class RoutineManagementDialog(BaseManagementDialog):
             inline_update_fn=routine_management_usecases.inline_update_task,
         )
 
-
     def add_new(self):
         self._open_unified_task_create_dialog(task_type="routine")
-
 
     def edit_by_id(self, row_id):
         self._open_unified_task_modify_dialog(row_id)
 
-
     def bulk_status_update(self, new_status):
-        self._bulk_task_status_update(new_status, bulk_update_fn=routine_management_usecases.bulk_update_status)
-
+        self._bulk_task_status_update(
+            new_status, bulk_update_fn=routine_management_usecases.bulk_update_status
+        )
 
     def bulk_priority_update(self, new_priority):
         self._bulk_task_priority_update(
@@ -1052,26 +1082,20 @@ class RoutineManagementDialog(BaseManagementDialog):
             bulk_update_fn=routine_management_usecases.bulk_update_priority,
         )
 
-
     def open_context_menu(self, pos):
         if not self._trash_mode:
             super().open_context_menu(pos)
             return
         self._open_trash_context_menu(pos)
 
-
     def restore_selected(self):
         self._restore_selected_task_rows()
-
-
 
     def delete_selected(self):
         self._delete_selected_task_rows(
             trash_reason="manual_trash_routine",
             purge_log_message="Failed to queue Google delete for purged routine task",
         )
-
-
 
 
 class WorkManagementTabbedDialog(QDialog):
@@ -1093,7 +1117,11 @@ class WorkManagementTabbedDialog(QDialog):
         self._tab_defs = [
             ("schedule", t("dialog.management.tab_schedule", "일정 관리"), TaskManagementDialog),
             ("routine", t("dialog.management.tab_routine", "⭐ 일반업무"), RoutineManagementDialog),
-            ("directive", t("dialog.management.tab_directive", "📋 지시/협조사항"), DirectiveManagementDialog),
+            (
+                "directive",
+                t("dialog.management.tab_directive", "📋 지시/협조사항"),
+                DirectiveManagementDialog,
+            ),
         ]
         self._tab_hosts = []
         self._tab_instances = {}

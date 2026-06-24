@@ -147,6 +147,16 @@ class WindowShellActionsMixin:
         self._apply_lock_mode_ui(is_checked)
         self._apply_lock_mode_to_docks(is_checked)
         self._update_lock_overlay_geometry()
+
+        # 타이틀바 숨김/표시
+        top_bar_frame = getattr(self, "top_bar_frame", None)
+        if top_bar_frame is not None:
+            top_bar_frame.setVisible(not is_checked)
+
+        # 오버레이 위젯 드래그/리사이즈 잠금
+        if hasattr(self, "overlay_manager"):
+            self.overlay_manager.set_all_interaction_locked(is_checked)
+
         self.schedule_panel_refresh(center=True)
 
     def _apply_lock_mode_ui(self, locked: bool):

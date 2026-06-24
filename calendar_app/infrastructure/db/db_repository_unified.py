@@ -104,8 +104,8 @@ def create_unified_task(task_data, commit=True):
                 period_start, period_end, bg_color, icon, description, memo,
                 location, assignee, all_day, calendar_id, gcal_event_id, gcal_dirty,
                 gcal_last_synced_at, gcal_remote_updated_at, gcal_sync_error,
-                updated_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                updated_at, created_at, tags
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 task_data["name"],
@@ -136,6 +136,7 @@ def create_unified_task(task_data, commit=True):
                 gcal_sync_error,
                 created_at,
                 created_at,
+                task_data.get("tags"),
             ),
         )
 
@@ -206,6 +207,7 @@ def get_google_sync_tasks():
             FROM unified_task
             WHERE deadline IS NOT NULL
               AND trim(deadline) != ''
+              AND type != 'routine'
               AND COALESCE(gcal_dirty, CASE WHEN gcal_event_id IS NULL OR trim(gcal_event_id) = '' THEN 1 ELSE 0 END) = 1
               {sync_mode_filter}
             ORDER BY id ASC
@@ -218,6 +220,7 @@ def get_google_sync_tasks():
             FROM unified_task
             WHERE deadline IS NOT NULL
               AND trim(deadline) != ''
+              AND type != 'routine'
               {sync_mode_filter}
             ORDER BY id ASC
             """
@@ -353,11 +356,11 @@ def update_unified_task(task_id, updates, mark_gcal_dirty=None):
 
     cur = conn.cursor()
 
-    # period_start, period_end 재계산 필요 여부 확인
+    # period_start, period_end 재계산 필요 여부 확인 (routine 타입만)
     if "target_date" in updates or "cycle_type" in updates:
-        cur.execute("SELECT target_date, cycle_type FROM unified_task WHERE id=?", (task_id,))
+        cur.execute("SELECT target_date, cycle_type, type FROM unified_task WHERE id=?", (task_id,))
         row = cur.fetchone()
-        if row:
+        if row and row["type"] == "routine":
             target_date = updates.get("target_date", row["target_date"])
             cycle_type = updates.get("cycle_type", row["cycle_type"])
             period_start, period_end = calculate_period_bounds(target_date, cycle_type)
@@ -1571,17 +1574,59 @@ def get_all_tasks_by_date(date_str, hide_gcal_items=False):
     return [dict(row) for row in rows]
 
 
+def _apply_checklist_progress(task_dict):
+    prog = get_task_checklist_progress(task_dict["id"])
+    task_dict["progress"] = prog
+    task_dict["checklist_total"] = prog["total"]
+    task_dict["checklist_completed"] = prog["completed"]
+
+
+def get_checklist_progress_for_owners(owner_ids):
+    """여러 task의 체크리스트 진행률을 단일 쿼리로 조회 (N+1 방지)."""
+    ids = [oid for oid in (owner_ids or []) if oid is not None]
+    if not ids:
+        return {}
+    conn = get_connection()
+    if not conn:
+        return {}
+    cur = conn.cursor()
+    placeholders = ",".join("?" * len(ids))
+    cur.execute(
+        f"""
+        SELECT owner_id,
+            COUNT(*) as total,
+            SUM(CASE WHEN is_completed=1 THEN 1 ELSE 0 END) as completed
+        FROM task_checklist_link
+        WHERE owner_id IN ({placeholders})
+        GROUP BY owner_id
+        """,
+        tuple(ids),
+    )
+    result = {}
+    for row in cur.fetchall():
+        result[row["owner_id"]] = {"total": row["total"] or 0, "completed": row["completed"] or 0}
+    return result
+
+
+def _apply_checklist_progress_batch(tasks):
+    """task 목록에 진행률을 배치로 주입 (개별 쿼리 없음)."""
+    prog_map = get_checklist_progress_for_owners([t["id"] for t in tasks])
+    for t in tasks:
+        prog = prog_map.get(t["id"]) or {"total": 0, "completed": 0}
+        t["progress"] = prog
+        t["checklist_total"] = prog["total"]
+        t["checklist_completed"] = prog["completed"]
+
+
 def get_all_tasks_by_date_with_progress(date_str, hide_gcal_items=False):
     tasks = get_all_tasks_by_date(date_str, hide_gcal_items=hide_gcal_items)
-    for t in tasks:
-        t["progress"] = get_task_checklist_progress(t["id"])
+    _apply_checklist_progress_batch(tasks)
     return tasks
 
 
 def get_tasks_by_type_with_progress(task_type, date_filter=None, status_filter=None):
     tasks = get_tasks_by_type(task_type, date_filter, status_filter)
-    for t in tasks:
-        t["progress"] = get_task_checklist_progress(t["id"])
+    _apply_checklist_progress_batch(tasks)
     return tasks
 
 
@@ -1613,8 +1658,7 @@ def get_schedule_tasks_overlapping_range_with_progress(
     cur.execute(query, tuple(params))
     rows = cur.fetchall()
     tasks = [dict(row) for row in rows]
-    for t in tasks:
-        t["progress"] = get_task_checklist_progress(t["id"])
+    _apply_checklist_progress_batch(tasks)
     return tasks
 
 
@@ -1845,6 +1889,7 @@ def get_unified_task_gcal_errors():
             FROM unified_task
             WHERE gcal_sync_error IS NOT NULL
               AND trim(gcal_sync_error) != ''
+              AND type != 'routine'
             """
         )
         return [dict(row) for row in cur.fetchall()]

@@ -255,44 +255,55 @@ class DialogActionsMixin:
             end_date=end_date,
             **kwargs,
         )
-        if dlg.exec():
-            self.schedule_panel_refresh(left=True, center=True)
+        dlg.task_added.connect(self.handle_task_added)
+        dlg.exec()
 
     def open_modify_task_dialog(self, task_id, tab_index=0):
         from PyQt6.QtWidgets import QDialog
-
-        from calendar_app.presentation.dialogs.modify_task_dialog_unified import (
-            UnifiedModifyTaskDialog,
-        )
 
         if not self._acquire_dialog_guard(f"open_modify_task_dialog:{task_id}"):
             return
 
         try:
+            from calendar_app.infrastructure.db import task_repo as _task_repo
+
+            task_data = _task_repo.get_unified_task(task_id)
+            task_type = (task_data or {}).get("type", "schedule")
+
+            # 일정/일반업무 모두 UnifiedTaskDialog modify 모드 사용 — 등록 창과 구성 통일
+            from calendar_app.presentation.dialogs.modify_task_dialog_unified import (
+                UnifiedModifyTaskDialog,
+            )
+
             dlg = UnifiedModifyTaskDialog(task_id, self)
+
             if hasattr(dlg, "tabs") and tab_index > 0:
                 dlg.tabs.setCurrentIndex(tab_index)
-            if dlg.exec() == QDialog.DialogCode.Accepted:
-                self._refresh_all_panels()
-                if self.settings.value("gcal_enabled", "true") == "true":
-                    from calendar_app.infrastructure.db import task_repo as _task_repo
-                    from calendar_app.infrastructure.google_sync.helpers import sync_task_to_google
-                    from calendar_app.shared.background_worker import DbTaskWorker
 
-                    task = _task_repo.get_unified_task(task_id)
-                    if task:
-                        worker = DbTaskWorker(
-                            lambda t=task: sync_task_to_google(self, t, create_if_missing=True)
-                        )
-                        if not hasattr(self, "_bg_workers"):
-                            self._bg_workers = []
-                        self._bg_workers.append(worker)
-                        worker.task_done.connect(
-                            lambda _w=worker: self._bg_workers.remove(_w)
-                            if _w in self._bg_workers
-                            else None
-                        )
-                        worker.start()
+            result = dlg.exec()
+            self._refresh_all_panels()
+            if (
+                result == QDialog.DialogCode.Accepted
+                and task_type != "routine"
+                and self.settings.value("gcal_enabled", "true") == "true"
+            ):
+                from calendar_app.infrastructure.google_sync.helpers import sync_task_to_google
+                from calendar_app.shared.background_worker import DbTaskWorker
+
+                task = _task_repo.get_unified_task(task_id)
+                if task:
+                    worker = DbTaskWorker(
+                        lambda tc=task: sync_task_to_google(self, tc, create_if_missing=True)
+                    )
+                    if not hasattr(self, "_bg_workers"):
+                        self._bg_workers = []
+                    self._bg_workers.append(worker)
+                    worker.task_done.connect(
+                        lambda _w=worker: self._bg_workers.remove(_w)
+                        if _w in self._bg_workers
+                        else None
+                    )
+                    worker.start()
         except Exception:
             logger.exception("open_modify_task_dialog failed for task_id=%s", task_id)
 
@@ -383,6 +394,13 @@ class DialogActionsMixin:
 
         title = t("shortcut.title") or _default_shortcut_guide_title()
         content = t("shortcut.content") or _default_shortcut_guide_content()
+        content = (
+            content.replace("{APP_VERSION}", APP_VERSION)
+            .replace("{APP_AUTHOR}", APP_AUTHOR)
+            .replace("{APP_EMAIL}", APP_EMAIL)
+            .replace("Air Calendar", APP_NAME)
+        )
+        title = title.replace("Air Calendar", APP_NAME)
         msg = QMessageBox(self)
         msg.setWindowTitle(title)
         msg.setText(content)

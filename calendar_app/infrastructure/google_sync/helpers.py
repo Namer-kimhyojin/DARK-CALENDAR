@@ -138,6 +138,9 @@ def sync_task_to_google(
         return SyncTaskResult(event_id=existing_id, success=False, error_kind="auth_required")
 
     task_data = task_data or {}
+    if str(task_data.get("type") or "").strip() == "routine":
+        existing_id = str(task_data.get("gcal_event_id") or "").strip() or None
+        return SyncTaskResult(event_id=existing_id, success=True, error_kind="skipped_routine")
     existing_id = str(task_data.get("gcal_event_id") or "").strip() or None
     local_id = task_data.get("id")
     fresh = None
