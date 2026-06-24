@@ -241,18 +241,21 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     act_dark = self.theme_mode_menu.addAction(
         t("theme.dark_mode", "다크 모드"), lambda: self.change_text_theme("dark")
     )
+    act_dark.setIcon(_ic(ICON.THEME_DARK))
     act_dark.setCheckable(True)
     act_dark.setChecked(current_mode == "dark")
 
     act_light = self.theme_mode_menu.addAction(
         t("theme.light_mode", "라이트 모드"), lambda: self.change_text_theme("light")
     )
+    act_light.setIcon(_ic(ICON.THEME_LIGHT))
     act_light.setCheckable(True)
     act_light.setChecked(current_mode == "light")
 
     act_auto = self.theme_mode_menu.addAction(
         t("theme.system_default", "시스템 기본"), self.set_system_default_theme
     )
+    act_auto.setIcon(_ic(ICON.THEME_AUTO))
     act_auto.setCheckable(True)
     act_auto.setChecked(current_mode == "auto")
 
@@ -285,23 +288,27 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
 
     layout_menu.addSeparator()
 
-    self.preset_load_menu = layout_menu.addMenu(t("menu.load_preset"))
+    self.preset_load_menu = layout_menu.addMenu(_se(t("menu.load_preset")))
+    self.preset_load_menu.setIcon(_ic(ICON.PRESET_LOAD))
 
     self.preset_load_menu.aboutToShow.connect(self.preset_manager.update_load_menu)
 
     layout_menu.addSeparator()
 
     self.preset_save_menu = layout_menu.addMenu(
-        f"{t('menu.save_layout')}\t{get_key('save_layout')}"
+        f"{_se(t('menu.save_layout'))}\t{get_key('save_layout')}"
     )
+    self.preset_save_menu.setIcon(_ic(ICON.SAVE))
 
     self.preset_save_menu.aboutToShow.connect(self.preset_manager.update_save_menu)
 
-    self.preset_rename_menu = layout_menu.addMenu(t("menu.rename_preset"))
+    self.preset_rename_menu = layout_menu.addMenu(_se(t("menu.rename_preset")))
+    self.preset_rename_menu.setIcon(_ic(ICON.EDIT))
 
     self.preset_rename_menu.aboutToShow.connect(self.preset_manager.update_rename_menu)
 
-    self.preset_delete_menu = layout_menu.addMenu(t("menu.delete_preset"))
+    self.preset_delete_menu = layout_menu.addMenu(_se(t("menu.delete_preset")))
+    self.preset_delete_menu.setIcon(_ic(ICON.DELETE))
 
     self.preset_delete_menu.aboutToShow.connect(self.preset_manager.update_delete_menu)
 

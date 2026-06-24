@@ -29,12 +29,12 @@ from dataclasses import dataclass
 import re
 
 # Matches one or more leading emoji/symbol characters followed by optional whitespace.
-# Covers: supplementary-plane emoji (U+10000+), Misc Symbols (U+2600-26FF),
-# Dingbats (U+2700-27BF), Misc Symbols Extended (U+2B00-2BFF),
-# Variation Selectors (U+FE00-FE0F), and ZWJ (U+200D).
+# Covers: supplementary-plane emoji (U+10000+), Misc Technical+Symbols+Dingbats
+# (U+2300-27BF, includes ⌨ U+2328 and ⏱ U+23F1), Misc Symbols Extended
+# (U+2B00-2BFF), Variation Selectors (U+FE00-FE0F), and ZWJ (U+200D).
 # Used to strip duplicate emoji from menu text when qtawesome icons are also set.
 _LEADING_EMOJI_RE = re.compile(
-    r"^(?:[\U00010000-\U0010FFFF]|‍|[☀-➿]|[⬀-⯿]|[︀-️])+"
+    r"^(?:[\U00010000-\U0010FFFF]|‍|[⌀-➿]|[⬀-⯿]|[︀-️])+"
     r"\s*",
     re.UNICODE,
 )
@@ -186,6 +186,9 @@ class _IconKeys:
     WIDGET_TEXT: str = "widget_text"
     FOLDER: str = "folder"
     AUTOSTART: str = "autostart"
+    THEME_DARK: str = "theme_dark"
+    THEME_LIGHT: str = "theme_light"
+    THEME_AUTO: str = "theme_auto"
     # ── 기타 공통 아이콘 ──────────────────────────────────────────────────
     CALENDAR: str = "calendar"
     GLOBE: str = "globe"
@@ -327,6 +330,9 @@ ICON_MAPPING: dict[str, tuple[str, str, str]] = {
     ICON.WIDGET_TEXT: ("mdi6.text-box-outline", "", "텍스트 위젯"),
     ICON.FOLDER: ("fa6s.folder-open", "", "폴더 열기"),
     ICON.AUTOSTART: ("fa6s.rocket", "", "윈도우 시작 시 자동 실행"),
+    ICON.THEME_DARK: ("fa6s.moon", "", "다크 모드"),
+    ICON.THEME_LIGHT: ("fa6s.sun", "", "라이트 모드"),
+    ICON.THEME_AUTO: ("fa6s.desktop", "", "시스템 기본 테마"),
     ICON.VALIDATE: ("fa6s.file-shield", "", "검증"),
     # ── 기타 공통 ───────────────────────────────────────────────────────────
     ICON.CALENDAR: ("fa6s.calendar", "", "일반 달력"),
