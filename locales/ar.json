@@ -264,7 +264,11 @@
     "hide_toast_msg": "اضغط Ctrl+B للإظهار.",
     "opacity_tooltip": "ضبط عتامة التراكب",
     "sync_label": "Sync",
-    "sync_btn": "Go"
+    "sync_btn": "Go",
+    "magnet_mode": "Magnet:",
+    "magnet_on_hint": "Magnet mode ON — click to disable (Ctrl+M)",
+    "magnet_off_hint": "Magnet mode OFF — click to enable (Ctrl+M)",
+    "widget_mode_hint": "Open widget-only mode"
   },
   "panel": {
     "today_schedule": "جدول اليوم",
@@ -500,7 +504,8 @@
       "items_added": "تمت إضافة عناصر قائمة التحقق.",
       "required": "[الطلب]",
       "description": "وصف",
-      "guide": "مرشد"
+      "guide": "مرشد",
+      "type_label": "Item Type:"
     },
     "common": {
       "save": "حفظ",
@@ -785,7 +790,8 @@
     "col_task": "مهمة",
     "col_duration": "مدة",
     "deleted_task": "المهمة المحذوفة",
-    "no_tasks": "لا توجد مهام تتطابق مع عامل التصفية هذا."
+    "no_tasks": "لا توجد مهام تتطابق مع عامل التصفية هذا.",
+    "filter_today_directives": "Today's Deadlines + Directives"
   },
   "common": {
     "save": "حفظ",
@@ -798,7 +804,8 @@
     "notification": "تنبيه",
     "no_title": "(بدون عنوان)",
     "selection_required": "الاختيار مطلوب",
-    "today": "اليوم"
+    "today": "اليوم",
+    "confirm": "Confirm"
   },
   "system_msg": {
     "lang_saved_title": "تم حفظ اللغة",
@@ -1602,5 +1609,17 @@
     "label_updated": "Updated",
     "label_event_id": "Event ID",
     "action_copy": "Copy to My Schedule"
+  },
+  "management": {
+    "header_id": "ID"
+  },
+  "weekday": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
   }
 }

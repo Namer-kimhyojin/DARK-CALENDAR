@@ -759,7 +759,11 @@
     "hide_hint": "Hide Top Bar (Ctrl+B to restore)",
     "hide_toast_title": "Top Bar Hidden",
     "hide_toast_msg": "Press Ctrl+B to show again.",
-    "opacity_tooltip": "Adjust Overlay Opacity"
+    "opacity_tooltip": "Adjust Overlay Opacity",
+    "magnet_mode": "Magnet:",
+    "magnet_on_hint": "Magnet mode ON — click to disable (Ctrl+M)",
+    "magnet_off_hint": "Magnet mode OFF — click to enable (Ctrl+M)",
+    "widget_mode_hint": "Open widget-only mode"
   },
   "panel": {
     "today_schedule": "Today's Schedule",
@@ -995,7 +999,8 @@
       "items_added": "checklist items added.",
       "required": "[Req]",
       "description": "Desc",
-      "guide": "Guide"
+      "guide": "Guide",
+      "type_label": "Item Type:"
     },
     "common": {
       "save": "Save",
@@ -1505,7 +1510,8 @@
     "notification": "Notification",
     "no_title": "(No Title)",
     "selection_required": "Selection Required",
-    "today": "Today"
+    "today": "Today",
+    "confirm": "Confirm"
   },
   "focus": {
     "title": "Focus Mode (Pomodoro Timer)",
@@ -1538,7 +1544,8 @@
     "col_duration": "Duration",
     "deleted_task": "Deleted task",
     "duration": "{minutes}m {seconds}s",
-    "no_tasks": "No tasks match this filter."
+    "no_tasks": "No tasks match this filter.",
+    "filter_today_directives": "Today's Deadlines + Directives"
   },
   "color": {
     "red": "Red",
@@ -1601,5 +1608,17 @@
     "label_updated": "Updated",
     "label_event_id": "Event ID",
     "action_copy": "Copy to My Schedule"
+  },
+  "management": {
+    "header_id": "ID"
+  },
+  "weekday": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
   }
 }

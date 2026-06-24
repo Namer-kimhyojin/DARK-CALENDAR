@@ -267,7 +267,10 @@
     "focus_mode": "集中",
     "magnet_mode": "マグネット",
     "sync_label": "接続",
-    "sync_btn": "同期"
+    "sync_btn": "同期",
+    "magnet_on_hint": "マグネットモード ON — クリックして解除 (Ctrl+M)",
+    "magnet_off_hint": "マグネットモード OFF — クリックして有効化 (Ctrl+M)",
+    "widget_mode_hint": "ウィジェット専用モードを開く"
   },
   "panel": {
     "today_schedule": "今日のスケジュール",
@@ -531,7 +534,8 @@
       "items_added": "チェックリスト項目が追加されました。",
       "required": "[必須]",
       "description": "説明",
-      "guide": "ガイド"
+      "guide": "ガイド",
+      "type_label": "項目種別:"
     },
     "common": {
       "save": "保存",
@@ -1047,7 +1051,8 @@
     "yes": "はい",
     "no": "いいえ",
     "ok": "OK",
-    "today": "今日"
+    "today": "今日",
+    "confirm": "確認"
   },
   "focus": {
     "title": "フォーカスモード（ポモドーロタイマー）",
@@ -1080,7 +1085,8 @@
     "col_duration": "間隔",
     "deleted_task": "削除されたタスク",
     "duration": "{minutes}m {seconds}s",
-    "no_tasks": "このフィルターに一致するタスクはありません。"
+    "no_tasks": "このフィルターに一致するタスクはありません。",
+    "filter_today_directives": "今日の締切 + 業務指示"
   },
   "color": {
     "red": "レッド",
@@ -1638,5 +1644,17 @@
     "label_updated": "Updated",
     "label_event_id": "Event ID",
     "action_copy": "Copy to My Schedule"
+  },
+  "management": {
+    "header_id": "ID"
+  },
+  "weekday": {
+    "mon": "月",
+    "tue": "火",
+    "wed": "水",
+    "thu": "木",
+    "fri": "金",
+    "sat": "土",
+    "sun": "日"
   }
 }

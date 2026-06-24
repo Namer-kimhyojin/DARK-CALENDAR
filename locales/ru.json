@@ -264,7 +264,11 @@
     "hide_toast_msg": "Нажмите Ctrl+B, чтобы показать.",
     "opacity_tooltip": "Настроить Прозрачность",
     "sync_label": "Sync",
-    "sync_btn": "Go"
+    "sync_btn": "Go",
+    "magnet_mode": "Magnet:",
+    "magnet_on_hint": "Magnet mode ON — click to disable (Ctrl+M)",
+    "magnet_off_hint": "Magnet mode OFF — click to enable (Ctrl+M)",
+    "widget_mode_hint": "Open widget-only mode"
   },
   "panel": {
     "today_schedule": "Планы на Сегодня",
@@ -500,7 +504,8 @@
       "type_list": "List Type",
       "type_process": "Process Type",
       "apply_template_title": "Apply Template",
-      "apply_template_msg": "Apply selected template?\nExisting items will be kept."
+      "apply_template_msg": "Apply selected template?\nExisting items will be kept.",
+      "type_label": "Item Type:"
     },
     "common": {
       "save": "Сохранить",
@@ -1011,7 +1016,8 @@
     "notification": "Уведомление",
     "no_title": "(Без названия)",
     "selection_required": "Выберите элемент",
-    "today": "Today"
+    "today": "Today",
+    "confirm": "Confirm"
   },
   "focus": {
     "title": "Режим Фокуса",
@@ -1044,7 +1050,8 @@
     "filter_incomplete": "Incomplete",
     "col_datetime": "Date/Time",
     "col_task": "Task",
-    "col_duration": "Duration"
+    "col_duration": "Duration",
+    "filter_today_directives": "Today's Deadlines + Directives"
   },
   "color": {
     "red": "Красный",
@@ -1602,5 +1609,17 @@
     "label_updated": "Updated",
     "label_event_id": "Event ID",
     "action_copy": "Copy to My Schedule"
+  },
+  "management": {
+    "header_id": "ID"
+  },
+  "weekday": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
   }
 }

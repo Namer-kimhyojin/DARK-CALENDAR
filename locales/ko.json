@@ -763,7 +763,11 @@
     "hide_hint": "상단 바 숨기기 (Ctrl+B 로 되살리기)",
     "hide_toast_title": "상단 바 숨김",
     "hide_toast_msg": "Ctrl+B 를 누르면 다시 표시됩니다.",
-    "opacity_tooltip": "오버레이 투명도 조절"
+    "opacity_tooltip": "오버레이 투명도 조절",
+    "magnet_mode": "자석 모드:",
+    "magnet_on_hint": "자석 모드 활성화됨 — 클릭하여 해제 (Ctrl+M)",
+    "magnet_off_hint": "자석 모드 해제됨 — 클릭하여 활성화 (Ctrl+M)",
+    "widget_mode_hint": "위젯 전용 모드 열기"
   },
   "panel": {
     "today_schedule": "오늘 일정",
@@ -999,7 +1003,8 @@
       "items_added": "개의 체크리스트 항목을 추가했습니다.",
       "required": "[필수]",
       "description": "설명",
-      "guide": "안내"
+      "guide": "안내",
+      "type_label": "항목 유형:"
     },
     "common": {
       "save": "저장",
@@ -1509,7 +1514,8 @@
     "notification": "알림",
     "no_title": "(제목 없음)",
     "selection_required": "선택 필요",
-    "today": "오늘"
+    "today": "오늘",
+    "confirm": "확인"
   },
   "focus": {
     "title": "집중 모드 (Pomodoro Timer)",
@@ -1542,7 +1548,8 @@
     "col_duration": "집중 시간",
     "deleted_task": "삭제된 작업",
     "duration": "{minutes}분 {seconds}초",
-    "no_tasks": "조건에 맞는 작업이 없습니다."
+    "no_tasks": "조건에 맞는 작업이 없습니다.",
+    "filter_today_directives": "오늘 마감 + 업무지시"
   },
   "color": {
     "red": "빨강",
@@ -1607,5 +1614,17 @@
     "test_task_loc": "연지곤지 2층 세미나실",
     "sync_issue": "동기화 이슈",
     "sync_error_details": "동기화 중 오류가 발생했습니다: {error}"
+  },
+  "management": {
+    "header_id": "ID"
+  },
+  "weekday": {
+    "mon": "월",
+    "tue": "화",
+    "wed": "수",
+    "thu": "목",
+    "fri": "금",
+    "sat": "토",
+    "sun": "일"
   }
 }

@@ -267,7 +267,10 @@
     "focus_mode": "專注",
     "magnet_mode": "吸附",
     "sync_label": "Sync",
-    "sync_btn": "Go"
+    "sync_btn": "Go",
+    "magnet_on_hint": "磁吸模式已開啟 — 點擊關閉 (Ctrl+M)",
+    "magnet_off_hint": "磁吸模式已關閉 — 點擊開啟 (Ctrl+M)",
+    "widget_mode_hint": "開啟小工具專屬模式"
   },
   "panel": {
     "today_schedule": "今天的日程",
@@ -511,7 +514,8 @@
       "type_list": "List Type",
       "type_process": "Process Type",
       "apply_template_title": "Apply Template",
-      "apply_template_msg": "Apply selected template?\nExisting items will be kept."
+      "apply_template_msg": "Apply selected template?\nExisting items will be kept.",
+      "type_label": "項目類型:"
     },
     "common": {
       "save": "儲存",
@@ -1027,7 +1031,8 @@
     "yes": "是",
     "no": "否",
     "ok": "確定",
-    "today": "今天"
+    "today": "今天",
+    "confirm": "確認"
   },
   "focus": {
     "title": "專注模式（番茄計時器）",
@@ -1060,7 +1065,8 @@
     "col_duration": "期間",
     "deleted_task": "已刪除的任務",
     "duration": "{minutes}m {seconds}s",
-    "no_tasks": "沒有任務與此過濾器匹配。"
+    "no_tasks": "沒有任務與此過濾器匹配。",
+    "filter_today_directives": "今日截止 + 指令"
   },
   "tooltip": {
     "label_time": "時間",
@@ -1618,5 +1624,17 @@
     "label_updated": "Updated",
     "label_event_id": "Event ID",
     "action_copy": "Copy to My Schedule"
+  },
+  "management": {
+    "header_id": "ID"
+  },
+  "weekday": {
+    "mon": "一",
+    "tue": "二",
+    "wed": "三",
+    "thu": "四",
+    "fri": "五",
+    "sat": "六",
+    "sun": "日"
   }
 }

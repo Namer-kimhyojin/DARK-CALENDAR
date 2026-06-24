@@ -264,7 +264,11 @@
     "hide_toast_msg": "Prima Ctrl+B para mostrar novamente.",
     "opacity_tooltip": "Ajustar Opacidade",
     "sync_label": "Sync",
-    "sync_btn": "Go"
+    "sync_btn": "Go",
+    "magnet_mode": "Magnet:",
+    "magnet_on_hint": "Magnet mode ON — click to disable (Ctrl+M)",
+    "magnet_off_hint": "Magnet mode OFF — click to enable (Ctrl+M)",
+    "widget_mode_hint": "Open widget-only mode"
   },
   "panel": {
     "today_schedule": "Agenda de Hoje",
@@ -509,7 +513,8 @@
       "type_list": "List Type",
       "type_process": "Process Type",
       "apply_template_title": "Apply Template",
-      "apply_template_msg": "Apply selected template?\nExisting items will be kept."
+      "apply_template_msg": "Apply selected template?\nExisting items will be kept.",
+      "type_label": "Item Type:"
     },
     "common": {
       "save": "Guardar",
@@ -1020,7 +1025,8 @@
     "no_title": "(Sem Título)",
     "notification": "Notification",
     "selection_required": "Selection Required",
-    "today": "Today"
+    "today": "Today",
+    "confirm": "Confirm"
   },
   "focus": {
     "title": "Modo Foco",
@@ -1053,7 +1059,8 @@
     "filter_incomplete": "Incomplete",
     "col_datetime": "Date/Time",
     "col_task": "Task",
-    "col_duration": "Duration"
+    "col_duration": "Duration",
+    "filter_today_directives": "Today's Deadlines + Directives"
   },
   "tooltip": {
     "label_time": "Hora",
@@ -1611,5 +1618,17 @@
     "label_updated": "Updated",
     "label_event_id": "Event ID",
     "action_copy": "Copy to My Schedule"
+  },
+  "management": {
+    "header_id": "ID"
+  },
+  "weekday": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
   }
 }

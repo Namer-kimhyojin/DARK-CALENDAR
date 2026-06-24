@@ -264,7 +264,11 @@
     "hide_toast_msg": "Tekan Ctrl+B untuk tampilkan.",
     "opacity_tooltip": "Adjust Overlay Opacity",
     "sync_label": "Sync",
-    "sync_btn": "Go"
+    "sync_btn": "Go",
+    "magnet_mode": "Magnet:",
+    "magnet_on_hint": "Magnet mode ON — click to disable (Ctrl+M)",
+    "magnet_off_hint": "Magnet mode OFF — click to enable (Ctrl+M)",
+    "widget_mode_hint": "Open widget-only mode"
   },
   "panel": {
     "today_schedule": "Jadwal Hari Ini",
@@ -500,7 +504,8 @@
       "items_added": "checklist items added.",
       "required": "[Req]",
       "description": "Desc",
-      "guide": "Guide"
+      "guide": "Guide",
+      "type_label": "Item Type:"
     },
     "common": {
       "save": "Simpan",
@@ -785,7 +790,8 @@
     "col_task": "Task",
     "col_duration": "Duration",
     "deleted_task": "Deleted task",
-    "no_tasks": "No tasks match this filter."
+    "no_tasks": "No tasks match this filter.",
+    "filter_today_directives": "Today's Deadlines + Directives"
   },
   "common": {
     "save": "Simpan",
@@ -798,7 +804,8 @@
     "notification": "Pemberitahuan",
     "no_title": "(Tanpa Judul)",
     "selection_required": "Selection Required",
-    "today": "Today"
+    "today": "Today",
+    "confirm": "Confirm"
   },
   "system_msg": {
     "lang_saved_title": "Bahasa Disimpan",
@@ -1602,5 +1609,17 @@
     "label_updated": "Updated",
     "label_event_id": "Event ID",
     "action_copy": "Copy to My Schedule"
+  },
+  "management": {
+    "header_id": "ID"
+  },
+  "weekday": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
   }
 }
