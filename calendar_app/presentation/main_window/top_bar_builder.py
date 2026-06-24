@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QDate, Qt
+from PyQt6.QtCore import QDate, QSize, Qt
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QToolButton
 
 from calendar_app.infrastructure.i18n import t
@@ -37,6 +37,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     _tb_text = _tb_pal["text_primary"]
     _tb_text2 = _tb_pal["text_secondary"]
     self._tb_icon_color = _tb_text2
+    self._tb_icon_active_color = _theme
     _vline_color = "rgba(255,255,255,20)"
     _hover_bg_weak = "rgba(255,255,255,30)"
     _hover_bg_mid = "rgba(255,255,255,50)"
@@ -60,6 +61,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.sync_action_btn.setAutoRaise(True)
     self.sync_action_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     self.sync_action_btn.setIcon(_ic(ICON.SYNC, color=_theme))
+    self.sync_action_btn.setIconSize(QSize(18, 18))
     self.sync_action_btn.setToolTip(t("topbar.sync_now"))
     self.sync_action_btn.setStyleSheet(
         f"""
@@ -98,9 +100,26 @@ def setup_top_bar(self, _size, _theme, _ta):
 
     # Unified style for mode toggle buttons
     _btn_style = f"""
-        QPushButton {{ color: {_tb_text2}; background: transparent; border: none; font-size: {icon_btn_pt}pt; padding: 0; }}
-        QPushButton:hover {{ background: {_hover_bg_weak}; border-radius: 4px; }}
-        QPushButton:checked {{ color: {_theme}; }}
+        QPushButton {{
+            color: {_tb_text2};
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            font-size: {icon_btn_pt}pt;
+            padding: 0;
+        }}
+        QPushButton:hover {{
+            background: {_hover_bg_weak};
+        }}
+        QPushButton:checked {{
+            color: {_theme};
+            background: {_ta(25)};
+            border: none;
+        }}
+        QPushButton:pressed {{
+            background: {_ta(40)};
+            border: none;
+        }}
     """
 
     # -- Lock Mode Group --
@@ -114,9 +133,11 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.lock_btn.setCheckable(True)
     self.lock_btn.setChecked(is_locked)
     self.lock_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    self.lock_btn.setIcon(_ic(ICON.LOCK if is_locked else ICON.UNLOCK, color=_tb_text2))
+    _lock_icon_color = _theme if is_locked else _tb_text2
+    self.lock_btn.setIcon(_ic(ICON.LOCK if is_locked else ICON.UNLOCK, color=_lock_icon_color))
+    self.lock_btn.setIconSize(QSize(16, 16))
     self.lock_btn.setToolTip(t("topbar.lock_on_hint") if is_locked else t("topbar.lock_off_hint"))
-    self.lock_btn.setFixedSize(24, 24)
+    self.lock_btn.setFixedSize(26, 26)
     self.lock_btn.setStyleSheet(_btn_style)
     self.lock_btn.clicked.connect(self.toggle_lock_mode)
     top_bar.addWidget(self.lock_btn, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -135,10 +156,11 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.magnet_btn.setChecked(is_magnet)
     self.magnet_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     self.magnet_btn.setIcon(_ic(ICON.MAGNET if is_magnet else ICON.MAGNET_OFF, color=_tb_text2))
+    self.magnet_btn.setIconSize(QSize(16, 16))
     self.magnet_btn.setToolTip(
         t("topbar.magnet_on_hint") if is_magnet else t("topbar.magnet_off_hint")
     )
-    self.magnet_btn.setFixedSize(24, 24)
+    self.magnet_btn.setFixedSize(26, 26)
     self.magnet_btn.setStyleSheet(_btn_style)
     self.magnet_btn.clicked.connect(self.toggle_magnet_mode)
     top_bar.addWidget(self.magnet_btn, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -169,9 +191,10 @@ def setup_top_bar(self, _size, _theme, _ta):
 
     self.widget_mode_btn = QToolButton()
     self.widget_mode_btn.setIcon(_ic(ICON.WIDGET_MGR, color=_tb_text2))
+    self.widget_mode_btn.setIconSize(QSize(16, 16))
     self.widget_mode_btn.setToolTip(t("topbar.widget_mode_hint", "위젯 전용 모드 열기"))
     self.widget_mode_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    self.widget_mode_btn.setFixedSize(24, 24)
+    self.widget_mode_btn.setFixedSize(26, 26)
     self.widget_mode_btn.setStyleSheet(
         f"""
         QToolButton {{

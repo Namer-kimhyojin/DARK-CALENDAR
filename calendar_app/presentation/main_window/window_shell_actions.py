@@ -111,9 +111,10 @@ class WindowShellActionsMixin:
             self.settings.setValue("lock_enabled", is_checked)
 
         _ic_color = getattr(self, "_tb_icon_color", "#aab0ba")
+        _ic_active = getattr(self, "_tb_icon_active_color", "#4a9eff")
         if is_checked:
             self.lock_btn.setText("")
-            self.lock_btn.setIcon(_ic(ICON.LOCK, color=_ic_color))
+            self.lock_btn.setIcon(_ic(ICON.LOCK, color=_ic_active))
             self.lock_btn.setToolTip(t("lock.on_hint"))
             self.lock_overlay.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
             overlay_btn = self._ensure_lock_overlay_toggle_button()

@@ -2,7 +2,7 @@ import datetime
 import html as _html_mod
 import logging
 
-from PyQt6.QtCore import QDate, QPoint, Qt
+from PyQt6.QtCore import QDate, QPoint, QSize, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor, QIcon, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -1514,12 +1514,14 @@ def render_calendar(app):
 
     prev_btn = QPushButton()
     prev_btn.setIcon(_ic(ICON.NAV_PREV, color=_icon_color))
+    prev_btn.setIconSize(QSize(14, 14))
     prev_btn.setStyleSheet(nav_btn_style)
     prev_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     prev_btn.clicked.connect(app.prev_day)
 
     next_btn = QPushButton()
     next_btn.setIcon(_ic(ICON.NAV_NEXT, color=_icon_color))
+    next_btn.setIconSize(QSize(14, 14))
     next_btn.setStyleSheet(nav_btn_style)
     next_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     next_btn.clicked.connect(app.next_day)
@@ -1688,6 +1690,7 @@ def render_calendar(app):
 
     add_btn = QPushButton()
     add_btn.setIcon(_ic(ICON.ADD, color=_icon_color))
+    add_btn.setIconSize(QSize(15, 15))
     add_btn.setToolTip(t("calendar.add_hint"))
     add_btn.setStyleSheet(icon_btn_style)
     add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1695,6 +1698,7 @@ def render_calendar(app):
 
     sync_btn = QPushButton()
     sync_btn.setIcon(_ic(ICON.SYNC, color=_icon_color))
+    sync_btn.setIconSize(QSize(15, 15))
     sync_btn.setToolTip(t("calendar.sync_hint"))
     sync_btn.setStyleSheet(icon_btn_style)
     sync_btn.setCursor(Qt.CursorShape.PointingHandCursor)
