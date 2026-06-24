@@ -1465,6 +1465,7 @@ def render_calendar(app):
     tokens = _ui_tokens(getattr(app, "settings", None))
     shape = _shape_tokens(getattr(app, "settings", None))
     toolbar_styles = _calendar_toolbar_style_bundle(tokens=tokens, shape=shape)
+    _icon_color = tokens.get("text_primary", "#f4f7fb")
 
     frame = _CalendarSurfaceFrame(app)
     frame.setObjectName("calendar_surface")
@@ -1512,13 +1513,13 @@ def render_calendar(app):
     today_btn.clicked.connect(app.jump_to_today)
 
     prev_btn = QPushButton()
-    prev_btn.setIcon(_ic(ICON.NAV_PREV))
+    prev_btn.setIcon(_ic(ICON.NAV_PREV, color=_icon_color))
     prev_btn.setStyleSheet(nav_btn_style)
     prev_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     prev_btn.clicked.connect(app.prev_day)
 
     next_btn = QPushButton()
-    next_btn.setIcon(_ic(ICON.NAV_NEXT))
+    next_btn.setIcon(_ic(ICON.NAV_NEXT, color=_icon_color))
     next_btn.setStyleSheet(nav_btn_style)
     next_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     next_btn.clicked.connect(app.next_day)
@@ -1686,14 +1687,14 @@ def render_calendar(app):
     opt_btn.setMenu(opt_menu)
 
     add_btn = QPushButton()
-    add_btn.setIcon(_ic(ICON.ADD))
+    add_btn.setIcon(_ic(ICON.ADD, color=_icon_color))
     add_btn.setToolTip(t("calendar.add_hint"))
     add_btn.setStyleSheet(icon_btn_style)
     add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     add_btn.clicked.connect(app.open_task_dialog)
 
     sync_btn = QPushButton()
-    sync_btn.setIcon(_ic(ICON.SYNC))
+    sync_btn.setIcon(_ic(ICON.SYNC, color=_icon_color))
     sync_btn.setToolTip(t("calendar.sync_hint"))
     sync_btn.setStyleSheet(icon_btn_style)
     sync_btn.setCursor(Qt.CursorShape.PointingHandCursor)
