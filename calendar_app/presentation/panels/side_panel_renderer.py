@@ -1,24 +1,44 @@
-# -*- coding: utf-8 -*-
-from PyQt6.QtWidgets import (QVBoxLayout, QHBoxLayout, QFrame, QLabel, QPushButton, QWidget, QScrollArea, QSizePolicy, QDockWidget, QApplication)
-from PyQt6.QtCore import Qt, QDate, QPoint, QObject, QEvent, QTimer, QLocale
-from PyQt6.QtGui import QMouseEvent, QColor
 import logging
-from calendar_app.infrastructure.db import directive_repo
-from calendar_app.infrastructure.db import checklist_repo, search_repo
-from calendar_app.presentation.widgets.ui_components import install_hover_info
-from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
-from calendar_app.domain.task_constants import priority_icon, status_icon, PRIORITY_MENU_ITEMS, STATUS_MENU_ITEMS
+
+from PyQt6.QtCore import QDate, QEvent, QLocale, QObject, Qt, QTimer
+from PyQt6.QtGui import QColor, QMouseEvent
+from PyQt6.QtWidgets import (
+    QApplication,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
 from calendar_app.domain.routine_cycle import cycle_display_name, cycle_order_value
+from calendar_app.domain.task_constants import (
+    PRIORITY_MENU_ITEMS,
+    STATUS_MENU_ITEMS,
+    priority_icon,
+    status_icon,
+)
+from calendar_app.domain.task_status_view import normalize_status as _normalize_task_status
+from calendar_app.infrastructure.db import checklist_repo, directive_repo, search_repo
 from calendar_app.infrastructure.i18n import t
-from calendar_app.shared.search_utils import matches_search_query, clean_display_text as _tooltip_text_without_tags
+from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
+from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
+from calendar_app.presentation.widgets.ui_components import install_hover_info
 from calendar_app.shared.color_utils import derive_text_palette, parse_hex_color, rgba_from_qcolor
 from calendar_app.shared.qt_helpers import find_parent_dock
-from calendar_app.domain.task_status_view import normalize_status as _normalize_task_status
-from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
+from calendar_app.shared.search_utils import clean_display_text as _tooltip_text_without_tags
+from calendar_app.shared.search_utils import matches_search_query
+from calendar_app.shared.theme_settings import (
+    fpt as _fpt,
+)
 from calendar_app.shared.theme_settings import (
     get_text_theme_and_panel_base,
     get_theme_color,
-    fpt as _fpt,
+)
+from calendar_app.shared.theme_settings import (
     panel_palette as _panel_palette,
 )
 
@@ -36,7 +56,10 @@ def _calendar_color_for_task(task: dict) -> str | None:
     if _panel_calendar_cache is None:
         try:
             from calendar_app.infrastructure.db.calendar_repo import list_calendars
-            _panel_calendar_cache = {c["id"]: c.get("color") for c in list_calendars(include_inactive=True)}
+
+            _panel_calendar_cache = {
+                c["id"]: c.get("color") for c in list_calendars(include_inactive=True)
+            }
         except Exception:
             _panel_calendar_cache = {}
     cal_id = task.get("calendar_id")
@@ -56,6 +79,7 @@ def invalidate_panel_calendar_cache():
 
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
+
 
 class _PanelItemFilter(QObject):
     """Separate single-click selection from double-click open behavior."""
@@ -89,21 +113,23 @@ class _PanelItemFilter(QObject):
                 self._single_click_timer.start(interval)
                 # Keep press events flowing so Qt can still detect true double-clicks.
                 return False
-        elif event.type() == QEvent.Type.MouseButtonDblClick:
-            if event.button() == Qt.MouseButton.LeftButton:
-                self._single_click_timer.stop()
-                self._pending_single_click = False
-                if self._main_handler:
-                    self._main_handler()
-                return True
+        elif (
+            event.type() == QEvent.Type.MouseButtonDblClick
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+            self._single_click_timer.stop()
+            self._pending_single_click = False
+            if self._main_handler:
+                self._main_handler()
+            return True
         return False
 
 
 def _handle_panel_item_click(app, tid, is_directive, ctrl):
     """Update task or directive selection state from panel item clicks."""
-    if not hasattr(app, 'selected_task_ids'):
+    if not hasattr(app, "selected_task_ids"):
         app.selected_task_ids = set()
-    if not hasattr(app, 'selected_directive_ids'):
+    if not hasattr(app, "selected_directive_ids"):
         app.selected_directive_ids = set()
 
     selected = app.selected_directive_ids if is_directive else app.selected_task_ids
@@ -119,7 +145,7 @@ def _handle_panel_item_click(app, tid, is_directive, ctrl):
         selected.add(tid)
 
     _refresh_panel_selection_visuals(app)
-    if hasattr(app, 'update_task_selection_status'):
+    if hasattr(app, "update_task_selection_status"):
         app.update_task_selection_status()
 
 
@@ -190,39 +216,39 @@ def _apply_panel_item_style(container, selected, bg_color):
             }}
         """)
 
+
 def _refresh_panel_selection_visuals(app):
     """Refresh selection styling for all visible panel task and directive items."""
-    task_sel = getattr(app, 'selected_task_ids', set())
-    dir_sel = getattr(app, 'selected_directive_ids', set())
-    for tid, (container, bg_color) in list(getattr(app, '_panel_task_frames', {}).items()):
-        try:
+    task_sel = getattr(app, "selected_task_ids", set())
+    dir_sel = getattr(app, "selected_directive_ids", set())
+    import contextlib
+
+    for tid, (container, bg_color) in list(getattr(app, "_panel_task_frames", {}).items()):
+        with contextlib.suppress(RuntimeError):
             _apply_panel_item_style(container, tid in task_sel, bg_color)
-        except RuntimeError:
-            pass  # widget was already deleted
-    for did, (container, bg_color) in list(getattr(app, '_panel_directive_frames', {}).items()):
-        try:
+    for did, (container, bg_color) in list(getattr(app, "_panel_directive_frames", {}).items()):
+        with contextlib.suppress(RuntimeError):
             _apply_panel_item_style(container, did in dir_sel, bg_color)
-        except RuntimeError:
-            pass
 
 
 def clear_panel_selections(app):
     """Clear panel selections and return whether any selection actually changed."""
-    changed = bool(getattr(app, 'selected_task_ids', None)) or bool(getattr(app, 'selected_directive_ids', None))
-    if hasattr(app, 'selected_task_ids'):
+    changed = bool(getattr(app, "selected_task_ids", None)) or bool(
+        getattr(app, "selected_directive_ids", None)
+    )
+    if hasattr(app, "selected_task_ids"):
         app.selected_task_ids.clear()
-    if hasattr(app, 'selected_directive_ids'):
+    if hasattr(app, "selected_directive_ids"):
         app.selected_directive_ids.clear()
     if changed:
         _refresh_panel_selection_visuals(app)
-        if hasattr(app, 'update_task_selection_status'):
+        if hasattr(app, "update_task_selection_status"):
             app.update_task_selection_status()
     return changed
 
 
-
 def _tc_rgba(alpha_0_to_255: int) -> str:
-    """테마 컬러에吏?뺣맂 ?щ챸?꾨? 적용된rgba 문자열을 생성합니다."""
+    """테마 컬러에 알파값을 적용한 rgba 문자열을 반환합니다."""
     c = QColor(get_theme_color())
     if not c.isValid():
         c = QColor("#4da6ff")
@@ -262,12 +288,12 @@ def _panel_text_secondary() -> str:
 
 
 def _panel_text_muted() -> str:
-    """패널 ?쏀븳 蹂댁“ 텍스트 색"""
+    """패널 흐릿한 보조 텍스트 색"""
     return _panel_text_palette()["text_muted"]
 
 
 def _panel_text_faint() -> str:
-    """패널 媛???낆? 텍스트/비활성 텍스트 색"""
+    """패널 가장 희미한 텍스트/비활성 텍스트 색"""
     return _panel_text_palette()["text_faint"]
 
 
@@ -350,6 +376,7 @@ def _toolbar_button_style():
 
 def _panel_menu_style():
     from PyQt6.QtCore import QSettings
+
     s = QSettings("kimhyojin", "Dark Calendar")
     base = QColor(str(s.value("panel_base_color", "#1c1c1c")))
     if not base.isValid():
@@ -431,8 +458,7 @@ def _directive_group_header(receiver_name):
     line = QFrame()
     line.setFrameShape(QFrame.Shape.HLine)
     line.setStyleSheet(
-        f"background-color: {_tc_rgba(55)}; "
-        "border: none; min-height: 1px; max-height: 1px;"
+        f"background-color: {_tc_rgba(55)}; border: none; min-height: 1px; max-height: 1px;"
     )
     row.addWidget(line, 1)
 
@@ -468,8 +494,7 @@ def _deadline_group_header(deadline_text):
     line = QFrame()
     line.setFrameShape(QFrame.Shape.HLine)
     line.setStyleSheet(
-        f"background-color: {_tc_rgba(55)}; "
-        "border: none; min-height: 1px; max-height: 1px;"
+        f"background-color: {_tc_rgba(55)}; border: none; min-height: 1px; max-height: 1px;"
     )
     row.addWidget(line, 1)
 
@@ -505,8 +530,7 @@ def _schedule_group_header(label_text, icon="📅"):
     line = QFrame()
     line.setFrameShape(QFrame.Shape.HLine)
     line.setStyleSheet(
-        f"background-color: {_tc_rgba(55)}; "
-        "border: none; min-height: 1px; max-height: 1px;"
+        f"background-color: {_tc_rgba(55)}; border: none; min-height: 1px; max-height: 1px;"
     )
     row.addWidget(line, 1)
 
@@ -542,8 +566,7 @@ def _routine_group_header(label_text, icon="🔄"):
     line = QFrame()
     line.setFrameShape(QFrame.Shape.HLine)
     line.setStyleSheet(
-        f"background-color: {_tc_rgba(55)}; "
-        "border: none; min-height: 1px; max-height: 1px;"
+        f"background-color: {_tc_rgba(55)}; border: none; min-height: 1px; max-height: 1px;"
     )
     row.addWidget(line, 1)
 
@@ -559,7 +582,7 @@ def _build_process_checklist_items(app, steps):
     if not steps:
         return items
 
-    first_incomplete_idx = next((i for i, s in enumerate(steps) if s['is_completed'] == 0), None)
+    first_incomplete_idx = next((i for i, s in enumerate(steps) if s["is_completed"] == 0), None)
 
     def _click_handler(step_id):
         return lambda *args, sid=step_id: app.toggle_checklist_item(sid)
@@ -577,16 +600,15 @@ def _build_process_checklist_items(app, steps):
 
     for idx in visible_indices[:2]:
         step = steps[idx]
-        is_current = (first_incomplete_idx is not None and idx == first_incomplete_idx)
-        is_previous_done = (first_incomplete_idx is not None and idx == first_incomplete_idx - 1)
-        prefix = ""
         suffix = ""
-        
-        items.append((
-            f"{idx + 1}. {step['item_text']}{suffix}",
-            step['is_completed'],
-            _click_handler(step['id']),
-        ))
+
+        items.append(
+            (
+                f"{idx + 1}. {step['item_text']}{suffix}",
+                step["is_completed"],
+                _click_handler(step["id"]),
+            )
+        )
 
     return items
 
@@ -594,7 +616,15 @@ def _build_process_checklist_items(app, steps):
 class DockTitleBar(QWidget):
     """Panel title bar with draggable dock behavior."""
 
-    def __init__(self, title_text, title_style=None, add_handler=None, manage_handler=None, icon_text="*", trailing_widget=None):
+    def __init__(
+        self,
+        title_text,
+        title_style=None,
+        add_handler=None,
+        manage_handler=None,
+        icon_text="*",
+        trailing_widget=None,
+    ):
         super().__init__()
         self._dock_ref = None
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -607,7 +637,9 @@ class DockTitleBar(QWidget):
         layout.setSpacing(6)
 
         icon = QLabel(icon_text)
-        icon.setStyleSheet(f"color: {get_theme_color()}; font-size: {_fpt(-2)}; background: transparent; border: none;")
+        icon.setStyleSheet(
+            f"color: {get_theme_color()}; font-size: {_fpt(-2)}; background: transparent; border: none;"
+        )
         layout.addWidget(icon)
 
         title = QLabel(title_text)
@@ -637,6 +669,7 @@ class DockTitleBar(QWidget):
             manage_btn.setStyleSheet(icon_btn_style)
             manage_btn.clicked.connect(manage_handler)
             layout.addWidget(manage_btn)
+
     def _dock(self):
         return find_parent_dock(self, self._dock_ref)
 
@@ -664,32 +697,50 @@ class DockTitleBar(QWidget):
             # Explicitly toggle floating so double-click works even when tabified.
             dock.setFloating(not dock.isFloating())
 
-def create_panel(app, title_text, items, hotkey_hint=None, add_handler=None, manage_handler=None, title_style=None, trailing_widget=None):
+
+def create_panel(
+    app,
+    title_text,
+    items,
+    hotkey_hint=None,
+    add_handler=None,
+    manage_handler=None,
+    title_style=None,
+    trailing_widget=None,
+):
     icon_map = {
         t("panel.today_schedule", "Today's Schedule"): "📅",
         t("panel.this_week_schedule", "이번 주 일정"): "📅",
         t("panel.routine", "Routine Tasks"): "🔁",
-        t("panel.directive", "Directions"): "📣"
+        t("panel.directive", "Directions"): "📣",
     }
-    title_bar = DockTitleBar(title_text, title_style=title_style,
-                             add_handler=add_handler, manage_handler=manage_handler,
-                             icon_text=icon_map.get(title_text, "*"),
-                             trailing_widget=trailing_widget)
+    title_bar = DockTitleBar(
+        title_text,
+        title_style=title_style,
+        add_handler=add_handler,
+        manage_handler=manage_handler,
+        icon_text=icon_map.get(title_text, "*"),
+        trailing_widget=trailing_widget,
+    )
 
     frame = QFrame()
     frame.setObjectName("panel_surface")
     frame.setStyleSheet(_panel_surface_style())
 
     if add_handler:
+
         def dbl_click(_event):
             add_handler()
+
         frame.mouseDoubleClickEvent = dbl_click
 
     layout = QVBoxLayout()
     layout.setContentsMargins(8, 8, 8, 8)
     layout.setSpacing(7)
-    
-    search_query = getattr(app, "search_edit", None).text() if getattr(app, "search_edit", None) else ""
+
+    search_query = (
+        getattr(app, "search_edit", None).text() if getattr(app, "search_edit", None) else ""
+    )
     for item in items:
         if isinstance(item, QWidget):
             layout.addWidget(item)
@@ -699,7 +750,7 @@ def create_panel(app, title_text, items, hotkey_hint=None, add_handler=None, man
             text, handler = item
             if not matches_search_query(search_query, text):
                 continue
-            
+
             btn = QPushButton(text)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             _btn_txt = _panel_text_color()
@@ -719,13 +770,15 @@ def create_panel(app, title_text, items, hotkey_hint=None, add_handler=None, man
         else:
             lbl = QLabel(str(item))
             _empty_txt = _panel_text_faint()
-            lbl.setStyleSheet(f"color: {_empty_txt}; padding: 6px 8px; font-size: {_fpt(-1)}; font-style: italic;")
+            lbl.setStyleSheet(
+                f"color: {_empty_txt}; padding: 6px 8px; font-size: {_fpt(-1)}; font-style: italic;"
+            )
             lbl.setWordWrap(True)
             layout.addWidget(lbl)
-    
+
     layout.addStretch(1)
     frame.setLayout(layout)
-    
+
     scroll = QScrollArea()
     scroll.setWidgetResizable(True)
     scroll.setFrameShape(QScrollArea.Shape.NoFrame)
@@ -784,7 +837,7 @@ def _build_left_panel_mode_switch(app, mode):
                 border-radius: {switch_radius}px;
                 padding: 0 8px;
                 font-size: {_fpt(-2)};
-                font-weight: {'700' if is_active else '500'};
+                font-weight: {"700" if is_active else "500"};
             }}
             QPushButton:hover {{
                 border: 1px solid {active_border};
@@ -798,25 +851,28 @@ def _build_left_panel_mode_switch(app, mode):
     layout.addWidget(_make_btn(t("panel.this_week", "This Week"), "week"))
     return container
 
+
 def show_side_panel_context_menu(app, widget, pos, tid, task_name):
     from PyQt6.QtWidgets import QMenu
 
-    task_sel = getattr(app, 'selected_task_ids', set())
+    task_sel = getattr(app, "selected_task_ids", set())
     if tid not in task_sel:
         task_sel.clear()
-        getattr(app, 'selected_directive_ids', set()).clear()
+        getattr(app, "selected_directive_ids", set()).clear()
         task_sel.add(tid)
         _refresh_panel_selection_visuals(app)
-        if hasattr(app, 'update_task_selection_status'):
+        if hasattr(app, "update_task_selection_status"):
             app.update_task_selection_status()
-    sel_count = len(getattr(app, 'selected_task_ids', set()))
+    sel_count = len(getattr(app, "selected_task_ids", set()))
 
     menu_style = _panel_menu_style()
     menu = QMenu(widget)
     menu.setStyleSheet(menu_style)
 
     act_edit = menu.addAction(t("dialog.common.modify"))
-    del_label = t("dialog.common.delete_n", n=sel_count) if sel_count > 1 else t("dialog.common.delete")
+    del_label = (
+        t("dialog.common.delete_n", n=sel_count) if sel_count > 1 else t("dialog.common.delete")
+    )
     act_delete = menu.addAction(del_label)
     menu.addSeparator()
 
@@ -841,42 +897,44 @@ def show_side_panel_context_menu(app, widget, pos, tid, task_name):
 
     action = menu.exec(widget.mapToGlobal(pos))
     if action == act_edit:
-        if hasattr(app, 'open_modify_task_dialog'):
+        if hasattr(app, "open_modify_task_dialog"):
             app.open_modify_task_dialog(tid)
     elif action == act_delete:
-        if hasattr(app, 'handle_task_deleted'):
+        if hasattr(app, "handle_task_deleted"):
             app.handle_task_deleted(tid)
-    elif action in priority_map and hasattr(app, 'handle_task_priority_changed'):
+    elif action in priority_map and hasattr(app, "handle_task_priority_changed"):
         app.handle_task_priority_changed(tid, priority_map[action])
     elif action in action_map:
         app.handle_task_status_changed(tid, action_map[action])
-    elif action == act_color_auto and hasattr(app, 'handle_color_auto_assign_requested'):
+    elif action == act_color_auto and hasattr(app, "handle_color_auto_assign_requested"):
         app.handle_color_auto_assign_requested(tid)
-    elif action == act_color_change and hasattr(app, 'handle_color_change_requested'):
+    elif action == act_color_change and hasattr(app, "handle_color_change_requested"):
         app.handle_color_change_requested(tid)
-    elif action == act_color_clear and hasattr(app, 'handle_color_clear_requested'):
+    elif action == act_color_clear and hasattr(app, "handle_color_clear_requested"):
         app.handle_color_clear_requested(tid)
 
 
 def show_directive_context_menu(app, widget, pos, did, task_name):
     from PyQt6.QtWidgets import QMenu
 
-    dir_sel = getattr(app, 'selected_directive_ids', set())
+    dir_sel = getattr(app, "selected_directive_ids", set())
     if did not in dir_sel:
         dir_sel.clear()
-        getattr(app, 'selected_task_ids', set()).clear()
+        getattr(app, "selected_task_ids", set()).clear()
         dir_sel.add(did)
         _refresh_panel_selection_visuals(app)
-        if hasattr(app, 'update_task_selection_status'):
+        if hasattr(app, "update_task_selection_status"):
             app.update_task_selection_status()
-    sel_count = len(getattr(app, 'selected_directive_ids', set()))
+    sel_count = len(getattr(app, "selected_directive_ids", set()))
 
     menu_style = _panel_menu_style()
     menu = QMenu(widget)
     menu.setStyleSheet(menu_style)
 
     act_edit = menu.addAction(t("dialog.common.modify"))
-    del_label = t("dialog.common.delete_n", n=sel_count) if sel_count > 1 else t("dialog.common.delete")
+    del_label = (
+        t("dialog.common.delete_n", n=sel_count) if sel_count > 1 else t("dialog.common.delete")
+    )
     act_delete = menu.addAction(del_label)
     menu.addSeparator()
 
@@ -901,31 +959,46 @@ def show_directive_context_menu(app, widget, pos, did, task_name):
 
     action = menu.exec(widget.mapToGlobal(pos))
     if action == act_edit:
-        if hasattr(app, 'open_directive_dialog'):
+        if hasattr(app, "open_directive_dialog"):
             app.open_directive_dialog(did)
     elif action == act_delete:
-        if hasattr(app, 'delete_selected_directives'):
+        if hasattr(app, "delete_selected_directives"):
             app.delete_selected_directives()
-    elif action in priority_map and hasattr(app, 'handle_directive_priority_changed'):
+    elif action in priority_map and hasattr(app, "handle_directive_priority_changed"):
         app.handle_directive_priority_changed(did, priority_map[action])
-    elif action in action_map and hasattr(app, 'handle_directive_status_changed'):
+    elif action in action_map and hasattr(app, "handle_directive_status_changed"):
         app.handle_directive_status_changed(did, action_map[action])
-    elif action == act_color_auto and hasattr(app, 'handle_directive_color_auto_assign_requested'):
+    elif action == act_color_auto and hasattr(app, "handle_directive_color_auto_assign_requested"):
         app.handle_directive_color_auto_assign_requested(did)
-    elif action == act_color_change and hasattr(app, 'handle_directive_color_change_requested'):
+    elif action == act_color_change and hasattr(app, "handle_directive_color_change_requested"):
         app.handle_directive_color_change_requested(did)
-    elif action == act_color_clear and hasattr(app, 'handle_directive_color_clear_requested'):
+    elif action == act_color_clear and hasattr(app, "handle_directive_color_clear_requested"):
         app.handle_directive_color_clear_requested(did)
 
 
-def create_task_box(app, title_text, main_handler, info_items=None, checklist_items=None, tid=None, is_routine=False, is_directive=False, tooltip_title=None, bg_color=None):
+def create_task_box(
+    app,
+    title_text,
+    main_handler,
+    info_items=None,
+    checklist_items=None,
+    tid=None,
+    is_routine=False,
+    is_directive=False,
+    tooltip_title=None,
+    bg_color=None,
+):
     """Create a task item box used in side panels."""
     _tc = get_theme_color()
     container = QFrame()
 
     is_selected = False
     if tid is not None:
-        selected_set = getattr(app, 'selected_directive_ids', set()) if is_directive else getattr(app, 'selected_task_ids', set())
+        selected_set = (
+            getattr(app, "selected_directive_ids", set())
+            if is_directive
+            else getattr(app, "selected_task_ids", set())
+        )
         is_selected = tid in selected_set
     _apply_panel_item_style(container, is_selected, bg_color)
 
@@ -955,25 +1028,29 @@ def create_task_box(app, title_text, main_handler, info_items=None, checklist_it
 
     if tid is not None:
         title_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        
+
         if is_directive:
             title_btn.customContextMenuRequested.connect(
-                lambda pos, w=title_btn, id_=tid, name=title_text: 
-                    show_directive_context_menu(app, w, pos, id_, name)
+                lambda pos, w=title_btn, id_=tid, name=title_text: show_directive_context_menu(
+                    app, w, pos, id_, name
+                )
             )
         else:
             title_btn.customContextMenuRequested.connect(
-                lambda pos, w=title_btn, id_=tid, name=title_text: 
-                    show_side_panel_context_menu(app, w, pos, id_, name)
+                lambda pos, w=title_btn, id_=tid, name=title_text: show_side_panel_context_menu(
+                    app, w, pos, id_, name
+                )
             )
-        
+
     title_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     title_btn.setMinimumHeight(24)
-    
+
     heading = tooltip_title if tooltip_title else title_text
     _sep_color = _tc_rgba(115)
     _title_color = get_theme_color()
-    tooltip_lines = [f"<div style='font-size: {_fpt()};'><b style='color:{_title_color};'>{heading}</b></div>"]
+    tooltip_lines = [
+        f"<div style='font-size: {_fpt()};'><b style='color:{_title_color};'>{heading}</b></div>"
+    ]
     if info_items:
         _tip_icon_color = _panel_text_muted()
         _tip_text_color = _panel_text_secondary()
@@ -992,9 +1069,9 @@ def create_task_box(app, title_text, main_handler, info_items=None, checklist_it
 
     tooltip_html = f"<div style='text-align: left;'>{''.join(tooltip_lines)}</div>"
     install_hover_info(title_btn, tooltip_html)
-        
+
     top_layout.addWidget(title_btn)
-    
+
     checklist_container = QWidget()
     chk_layout = QVBoxLayout(checklist_container)
     chk_layout.setContentsMargins(4, 0, 0, 0)
@@ -1020,7 +1097,9 @@ def create_task_box(app, title_text, main_handler, info_items=None, checklist_it
         checklist_container.setVisible(is_initially_visible)
         toggle_btn.setText("v" if is_initially_visible else ">")
 
-        def toggle_checklist(checked=False, c_widget=checklist_container, t_btn=toggle_btn, t_id=tid):
+        def toggle_checklist(
+            checked=False, c_widget=checklist_container, t_btn=toggle_btn, t_id=tid
+        ):
             new_visible = not c_widget.isVisible()
             c_widget.setVisible(new_visible)
             t_btn.setText("v" if new_visible else ">")
@@ -1037,7 +1116,9 @@ def create_task_box(app, title_text, main_handler, info_items=None, checklist_it
             mark = "[v]" if sis_c else "[ ]"
             item_btn = QPushButton(f"  {mark} {stext}")
             clickable = callable(chandler)
-            item_btn.setCursor(Qt.CursorShape.PointingHandCursor if clickable else Qt.CursorShape.ArrowCursor)
+            item_btn.setCursor(
+                Qt.CursorShape.PointingHandCursor if clickable else Qt.CursorShape.ArrowCursor
+            )
             _chk_txt = _panel_text_muted()
             _chk_hover_txt = _panel_text_secondary()
             _chk_hover_bg = "rgba(255,255,255,0.05)"
@@ -1073,7 +1154,9 @@ def create_task_box(app, title_text, main_handler, info_items=None, checklist_it
         title_btn.installEventFilter(filter_obj)
         container.installEventFilter(filter_obj)
         title_btn._panel_filter = filter_obj
-        frames = getattr(app, '_panel_directive_frames' if is_directive else '_panel_task_frames', {})
+        frames = getattr(
+            app, "_panel_directive_frames" if is_directive else "_panel_task_frames", {}
+        )
         frames[tid] = (container, bg_color)
         if is_directive:
             app._panel_directive_frames = frames
@@ -1082,11 +1165,12 @@ def create_task_box(app, title_text, main_handler, info_items=None, checklist_it
 
     return container
 
+
 def load_left_panel(app):
     if app.left_frame.layout() is not None:
         app.clear_layout(app.left_frame.layout())
         QWidget().setLayout(app.left_frame.layout())
-        
+
     today_items = []
     panel_mode = _left_panel_mode(app)
     base_date = QDate.currentDate()
@@ -1099,31 +1183,41 @@ def load_left_panel(app):
     start_date_str = start_qdate.toString("yyyy-MM-dd")
     end_date_str = end_qdate.toString("yyyy-MM-dd")
 
-    today_str = QDate.currentDate().toString("yyyy-MM-dd")  # ?ㅻ뒛 일정 패널? ??긽 ?ㅼ젣 ?ㅻ뒛 湲곗?
-    search_query = getattr(app, "search_edit", None).text() if getattr(app, "search_edit", None) else ""
+    search_query = (
+        getattr(app, "search_edit", None).text() if getattr(app, "search_edit", None) else ""
+    )
     # Includes schedules whose period overlaps today (middle dates of multi-day schedules too).
-    rows = search_repo.get_schedule_tasks_overlapping_range_with_progress(start_date_str, end_date_str)
-    checklist_map = checklist_repo.get_task_checklist_items_for_owners([task['id'] for task in rows])
-    left_group_by_date = str(getattr(app, "left_group_by_date", app.settings.value("left_group_by_date", "false"))).lower() == "true"
+    rows = search_repo.get_schedule_tasks_overlapping_range_with_progress(
+        start_date_str, end_date_str
+    )
+    checklist_map = checklist_repo.get_task_checklist_items_for_owners(
+        [task["id"] for task in rows]
+    )
+    left_group_by_date = (
+        str(
+            getattr(app, "left_group_by_date", app.settings.value("left_group_by_date", "false"))
+        ).lower()
+        == "true"
+    )
     current_group_label = None
-    
+
     for task in rows:
-        t_id = task['id']
-        name = task['name']
-        deadline = task['deadline']
-        priority = task['priority']
-        location = task.get('location')
-        assignee = task.get('assignee')
-        memo = task.get('memo') or task.get('description')
+        t_id = task["id"]
+        name = task["name"]
+        deadline = task["deadline"]
+        priority = task["priority"]
+        location = task.get("location")
+        assignee = task.get("assignee")
+        memo = task.get("memo") or task.get("description")
 
         if not matches_search_query(search_query, name, location, assignee, memo):
             continue
-        
+
         deadline_parts = deadline.split()
         date_part = deadline_parts[0] if deadline_parts else start_date_str  # yyyy-MM-dd
         start_time = deadline_parts[1][:5] if len(deadline_parts) > 1 else "All day"
 
-        end_date_raw = task.get('end_date') or task.get('end_time', '')
+        end_date_raw = task.get("end_date") or task.get("end_time", "")
         end_parts = str(end_date_raw).split() if end_date_raw else []
         end_time = end_parts[1][:5] if len(end_parts) > 1 else ""
 
@@ -1135,14 +1229,16 @@ def load_left_panel(app):
 
         icon = priority_icon(priority)
 
-        total = task.get('checklist_total', 0) or 0
-        comp = task.get('checklist_completed', 0) or 0
+        total = task.get("checklist_total", 0) or 0
+        comp = task.get("checklist_completed", 0) or 0
         progress_suffix = ""
         if total > 0:
             progress_suffix = f" ({comp}/{total})"
 
         main_title = f"{icon} {name}{progress_suffix}"
-        main_handler = lambda checked=False, tid=t_id: app.open_modify_task_dialog(tid)
+
+        def main_handler(checked=False, _tid=t_id):
+            app.open_modify_task_dialog(_tid)
 
         tooltip_name = _tooltip_text_without_tags(name) or str(name).strip()
         tooltip_title = f"[{date_label}] {tooltip_name}"
@@ -1162,25 +1258,27 @@ def load_left_panel(app):
             info_items.append(("[A]", clean_assignee))
 
         clean_memo = _tooltip_text_without_tags(memo)
-        if clean_memo and clean_memo not in ['none', 'None', '-']:
+        if clean_memo and clean_memo not in ["none", "None", "-"]:
             import html as _html_mod
-            _memo_html = _html_mod.escape(clean_memo).replace('\n', '<br>')
+
+            _memo_html = _html_mod.escape(clean_memo).replace("\n", "<br>")
             info_items.append(("[M]", _memo_html))
 
         steps = checklist_map.get(t_id, [])
         checklist_items = []
         if steps:
-            display_type = steps[0].get('display_type', 'list')
-            if display_type == 'process':
+            display_type = steps[0].get("display_type", "list")
+            if display_type == "process":
                 checklist_items = _build_process_checklist_items(app, steps)
             else:
                 for i, step in enumerate(steps):
-                    checklist_items.append((
-                        f"{i+1}. {step['item_text']}",
-                        step['is_completed'],
-                        lambda *args, sid=step['id']: app.toggle_checklist_item(sid)
-                    ))
-
+                    checklist_items.append(
+                        (
+                            f"{i + 1}. {step['item_text']}",
+                            step["is_completed"],
+                            lambda *args, sid=step["id"]: app.toggle_checklist_item(sid),
+                        )
+                    )
 
         if left_group_by_date and date_label != current_group_label:
             current_group_label = date_label
@@ -1194,7 +1292,7 @@ def load_left_panel(app):
             checklist_items,
             tid=t_id,
             tooltip_title=tooltip_title,
-            bg_color=task.get('bg_color') or _calendar_color_for_task(task)
+            bg_color=task.get("bg_color") or _calendar_color_for_task(task),
         )
         today_items.append(task_box)
 
@@ -1204,11 +1302,19 @@ def load_left_panel(app):
         else:
             today_items = [t("panel.empty.today", "No items for today.")]
 
-    panel_title = t("panel.this_week_schedule", "This Week Schedule") if panel_mode == "week" else t("panel.today_schedule", "Today's Schedule")
-    new_panel, title_bar = create_panel(app, panel_title, today_items,
-                                        add_handler=lambda: app.open_task_dialog(),
-                                        manage_handler=lambda: app.open_work_management_dialog(start_tab="schedule"),
-                                        trailing_widget=_build_left_panel_mode_switch(app, panel_mode))
+    panel_title = (
+        t("panel.this_week_schedule", "This Week Schedule")
+        if panel_mode == "week"
+        else t("panel.today_schedule", "Today's Schedule")
+    )
+    new_panel, title_bar = create_panel(
+        app,
+        panel_title,
+        today_items,
+        add_handler=lambda: app.open_task_dialog(),
+        manage_handler=lambda: app.open_work_management_dialog(start_tab="schedule"),
+        trailing_widget=_build_left_panel_mode_switch(app, panel_mode),
+    )
     apply_dialog_title(app.left_dock, panel_title)
     app.left_dock.setTitleBarWidget(title_bar)
     title_bar.bind_dock(app.left_dock)
@@ -1217,11 +1323,12 @@ def load_left_panel(app):
     new_layout.addWidget(new_panel)
     app.left_frame.setLayout(new_layout)
 
+
 def load_right_panel(app):
     if app.routine_frame.layout() is not None:
         app.clear_layout(app.routine_frame.layout())
         QWidget().setLayout(app.routine_frame.layout())
-        
+
     if app.directive_frame.layout() is not None:
         app.clear_layout(app.directive_frame.layout())
         QWidget().setLayout(app.directive_frame.layout())
@@ -1230,9 +1337,11 @@ def load_right_panel(app):
     directive_items = []
 
     today_str = app.current_date.toString("yyyy-MM-dd")
-    search_query = getattr(app, "search_edit", None).text() if getattr(app, "search_edit", None) else ""
-    rt_today_rows = search_repo.get_tasks_by_type_with_progress('routine', today_str)
-    rt_all_rows = search_repo.get_tasks_by_type_with_progress('routine')
+    search_query = (
+        getattr(app, "search_edit", None).text() if getattr(app, "search_edit", None) else ""
+    )
+    rt_today_rows = search_repo.get_tasks_by_type_with_progress("routine", today_str)
+    rt_all_rows = search_repo.get_tasks_by_type_with_progress("routine")
 
     def _is_completed_routine(row):
         status = str(row.get("status") or "").lower()
@@ -1256,28 +1365,63 @@ def load_right_panel(app):
             seen_ids.add(rid)
             merged_rows.append(row)
 
-    routine_status_filter = str(
-        getattr(app, "routine_status_filter", app.settings.value("routine_status_filter", "all"))
-    ).lower() or "all"
-    routine_sort_mode = str(
-        getattr(app, "routine_sort_mode", app.settings.value("routine_sort_mode", "deadline"))
-    ).lower() or "deadline"
-    routine_group_by_cycle = str(getattr(app, "routine_group_by_cycle", app.settings.value("routine_group_by_cycle", "false"))).lower() == "true"
-    routine_group_by_deadline = str(getattr(app, "routine_group_by_deadline", app.settings.value("routine_group_by_deadline", "false"))).lower() == "true"
+    routine_status_filter = (
+        str(
+            getattr(
+                app, "routine_status_filter", app.settings.value("routine_status_filter", "all")
+            )
+        ).lower()
+        or "all"
+    )
+    routine_sort_mode = (
+        str(
+            getattr(app, "routine_sort_mode", app.settings.value("routine_sort_mode", "deadline"))
+        ).lower()
+        or "deadline"
+    )
+    routine_group_by_cycle = (
+        str(
+            getattr(
+                app, "routine_group_by_cycle", app.settings.value("routine_group_by_cycle", "false")
+            )
+        ).lower()
+        == "true"
+    )
+    routine_group_by_deadline = (
+        str(
+            getattr(
+                app,
+                "routine_group_by_deadline",
+                app.settings.value("routine_group_by_deadline", "false"),
+            )
+        ).lower()
+        == "true"
+    )
 
     _priority_order = {"urgent": 0, "high": 1, "normal": 2, "low": 3}
 
     def _routine_sort_key(r):
         cycle_k = cycle_order_value(r.get("cycle_type"), default=9)
-        deadline_k = str(r.get("period_end") or r.get("deadline") or r.get("target_date") or "9999-12-31")
+        deadline_k = str(
+            r.get("period_end") or r.get("deadline") or r.get("target_date") or "9999-12-31"
+        )
         if routine_group_by_cycle:
             if routine_sort_mode == "priority":
-                return (cycle_k, _priority_order.get(str(r.get("priority") or "normal").lower(), 2), deadline_k, int(r.get("id") or 0))
+                return (
+                    cycle_k,
+                    _priority_order.get(str(r.get("priority") or "normal").lower(), 2),
+                    deadline_k,
+                    int(r.get("id") or 0),
+                )
             else:
                 return (cycle_k, deadline_k, int(r.get("id") or 0))
         elif routine_group_by_deadline:
             if routine_sort_mode == "priority":
-                return (deadline_k, _priority_order.get(str(r.get("priority") or "normal").lower(), 2), int(r.get("id") or 0))
+                return (
+                    deadline_k,
+                    _priority_order.get(str(r.get("priority") or "normal").lower(), 2),
+                    int(r.get("id") or 0),
+                )
             else:
                 return (deadline_k, int(r.get("id") or 0))
         elif routine_sort_mode == "priority":
@@ -1296,7 +1440,9 @@ def load_right_panel(app):
             )
 
     rt_rows = sorted(merged_rows, key=_routine_sort_key)
-    routine_checklist_map = checklist_repo.get_task_checklist_items_for_owners([task['id'] for task in rt_rows])
+    routine_checklist_map = checklist_repo.get_task_checklist_items_for_owners(
+        [task["id"] for task in rt_rows]
+    )
 
     _cur_routine_group = None
     _cycle_label_map = {
@@ -1304,8 +1450,13 @@ def load_right_panel(app):
         for key in ("daily", "weekly", "monthly", "quarterly", "half_yearly", "yearly", "single")
     }
     _cycle_icon_map = {
-        'single': '📋', 'daily': '☀️', 'weekly': '🗓️', 'monthly': '📅',
-        'quarterly': '?뱤', 'half_yearly': '?뱢', 'yearly': '?룇',
+        "single": "📋",
+        "daily": "☀️",
+        "weekly": "🗓️",
+        "monthly": "📅",
+        "quarterly": "?뱤",
+        "half_yearly": "?뱢",
+        "yearly": "?룇",
     }
 
     for r in rt_rows:
@@ -1328,28 +1479,28 @@ def load_right_panel(app):
         else:
             if (not is_today_routine) and is_completed_r:
                 continue
-            
-        rid = r['id']
-        rname = r['name']
-        location = r.get('location')
-        assignee = r.get('assignee')
-        memo = r.get('memo') or r.get('description')
+
+        rid = r["id"]
+        rname = r["name"]
+        location = r.get("location")
+        assignee = r.get("assignee")
+        memo = r.get("memo") or r.get("description")
 
         if not matches_search_query(search_query, rname, location, assignee, memo):
             continue
-        
-        total = r.get('checklist_total', 0) or 0
-        comp = r.get('checklist_completed', 0) or 0
+
+        total = r.get("checklist_total", 0) or 0
+        comp = r.get("checklist_completed", 0) or 0
         pct_text = ""
         if total > 0:
             pct_text = f" ({comp}/{total})"
 
-        priority = r.get('priority', 'normal')
+        priority = r.get("priority", "normal")
         icon = priority_icon(priority)
 
         cycle_lab = _cycle_label_map.get(str(r.get("cycle_type") or "").lower(), "")
-        
-        period_end = r.get('period_end') or r.get('deadline')
+
+        period_end = r.get("period_end") or r.get("deadline")
         deadline_suffix = ""
         if period_end:
             try:
@@ -1358,12 +1509,14 @@ def load_right_panel(app):
                 y, m, d = date_part.split("-")
                 mm_dd = f"{int(m)}.{int(d)}"
                 deadline_suffix = f" (~{mm_dd})"
-            except:
+            except Exception:
                 pass
 
         main_title = f"{icon} {cycle_lab} {rname}{deadline_suffix}{pct_text}"
-        main_handler = lambda checked=False, tid=rid: app.open_modify_task_dialog(tid)
-        
+
+        def main_handler(checked=False, _rid=rid):
+            app.open_modify_task_dialog(_rid)
+
         info_items = []
         clean_location = _tooltip_text_without_tags(location)
         if clean_location:
@@ -1373,47 +1526,49 @@ def load_right_panel(app):
             info_items.append((t("common.assignee", "[A]"), clean_assignee))
 
         clean_memo = _tooltip_text_without_tags(memo)
-        if clean_memo and clean_memo not in ['none', 'None', '-']:
+        if clean_memo and clean_memo not in ["none", "None", "-"]:
             import html as _html_mod
-            _memo_html = _html_mod.escape(clean_memo).replace('\n', '<br>')
+
+            _memo_html = _html_mod.escape(clean_memo).replace("\n", "<br>")
             info_items.append((t("common.memo", "📝"), _memo_html))
-        
+
         steps = routine_checklist_map.get(rid, [])
         checklist_items = []
         if steps:
-            display_type = steps[0].get('display_type', 'list')
-            if display_type == 'process':
+            display_type = steps[0].get("display_type", "list")
+            if display_type == "process":
                 checklist_items = _build_process_checklist_items(app, steps)
             else:
                 for i, step in enumerate(steps):
-                    checklist_items.append((
-                        f"{i+1}. {step['item_text']}",
-                        step['is_completed'],
-                        lambda *args, sid=step['id']: app.toggle_checklist_item(sid)
-                    ))
+                    checklist_items.append(
+                        (
+                            f"{i + 1}. {step['item_text']}",
+                            step["is_completed"],
+                            lambda *args, sid=step["id"]: app.toggle_checklist_item(sid),
+                        )
+                    )
 
-            
         routine_tooltip_title = _tooltip_text_without_tags(main_title) or main_title
 
         # 洹몃９?ㅻ뜑 ?쎌엯 (二쇨린蹂??먮뒗 마감?쇰퀎)
         if routine_group_by_cycle:
-            cycle_key = str(r.get('cycle_type') or 'other').lower()
+            cycle_key = str(r.get("cycle_type") or "other").lower()
             cycle_lbl = _cycle_label_map.get(cycle_key, cycle_key.capitalize())
-            cycle_ico = _cycle_icon_map.get(cycle_key, '🔄')
+            cycle_ico = _cycle_icon_map.get(cycle_key, "🔄")
             if cycle_lbl != _cur_routine_group:
                 _cur_routine_group = cycle_lbl
                 routine_items.append(_routine_group_header(cycle_lbl, cycle_ico))
         elif routine_group_by_deadline:
-            _dl_raw = r.get('period_end') or r.get('deadline') or r.get('target_date') or ''
+            _dl_raw = r.get("period_end") or r.get("deadline") or r.get("target_date") or ""
             _dl_date = str(_dl_raw)[:10]
             try:
-                _y, _m, _d = _dl_date.split('-')
+                _y, _m, _d = _dl_date.split("-")
                 _dl_label = f"{int(_m)}.{int(_d)}"
             except Exception:
-                _dl_label = _dl_date or t('common.no_deadline', '留덇컧???놁쓬')
+                _dl_label = _dl_date or t("common.no_deadline", "留덇컧???놁쓬")
             if _dl_label != _cur_routine_group:
                 _cur_routine_group = _dl_label
-                routine_items.append(_routine_group_header(_dl_label, '📅'))
+                routine_items.append(_routine_group_header(_dl_label, "📅"))
 
         task_box = create_task_box(
             app,
@@ -1424,17 +1579,43 @@ def load_right_panel(app):
             tid=rid,
             is_routine=True,
             tooltip_title=routine_tooltip_title,
-            bg_color=r.get('bg_color') or _calendar_color_for_task(r)
+            bg_color=r.get("bg_color") or _calendar_color_for_task(r),
         )
         routine_items.append(task_box)
-    
+
     di_rows = directive_repo.get_recent_directives()
-    status_filter = str(
-        getattr(app, "directive_status_filter", app.settings.value("directive_status_filter", "all"))
-    ).lower() or "all"
-    group_by_receiver = str(getattr(app, "directive_group_by_receiver", app.settings.value("directive_group_by_receiver", "false"))).lower() == "true"
-    group_by_deadline = str(getattr(app, "directive_group_by_deadline", app.settings.value("directive_group_by_deadline", "false"))).lower() == "true"
-    sort_mode = getattr(app, "directive_sort_mode", app.settings.value("directive_sort_mode", "deadline")) or "deadline"
+    status_filter = (
+        str(
+            getattr(
+                app, "directive_status_filter", app.settings.value("directive_status_filter", "all")
+            )
+        ).lower()
+        or "all"
+    )
+    group_by_receiver = (
+        str(
+            getattr(
+                app,
+                "directive_group_by_receiver",
+                app.settings.value("directive_group_by_receiver", "false"),
+            )
+        ).lower()
+        == "true"
+    )
+    group_by_deadline = (
+        str(
+            getattr(
+                app,
+                "directive_group_by_deadline",
+                app.settings.value("directive_group_by_deadline", "false"),
+            )
+        ).lower()
+        == "true"
+    )
+    sort_mode = (
+        getattr(app, "directive_sort_mode", app.settings.value("directive_sort_mode", "deadline"))
+        or "deadline"
+    )
     today = app.current_date if hasattr(app, "current_date") else QDate.currentDate()
 
     normalized_rows = []
@@ -1448,7 +1629,7 @@ def load_right_panel(app):
             did, content, status, receiver, deadline = r
             memo = None
             bg_color = None
-        
+
         status = _normalized_directive_status(status)
         is_completed = status == "completed"
         is_in_progress = status == "in_progress"
@@ -1465,9 +1646,12 @@ def load_right_panel(app):
             continue
         # status_filter == "all": show everything
 
-        normalized_rows.append((did, content, status, receiver, deadline, memo, bg_color, is_overdue))
+        normalized_rows.append(
+            (did, content, status, receiver, deadline, memo, bg_color, is_overdue)
+        )
 
     if sort_mode == "deadline":
+
         def _directive_sort_key(row):
             deadline = row[4] or "9999-12-31"
             receiver = (row[3] or "").strip().lower()
@@ -1476,6 +1660,7 @@ def load_right_panel(app):
             if group_by_deadline:
                 return (deadline, receiver, row[0])
             return (deadline, receiver, row[0])
+
         normalized_rows.sort(key=_directive_sort_key)
 
     current_receiver = None
@@ -1492,44 +1677,48 @@ def load_right_panel(app):
                 current_receiver = receiver_label
 
         status_ic = status_icon("deferred" if is_overdue and status == "pending" else status)
-        
+
         di_info = []
         clean_receiver = _tooltip_text_without_tags(receiver)
         if clean_receiver:
             di_info.append((t("common.assignee", "[A]"), clean_receiver))
         clean_memo = _tooltip_text_without_tags(memo)
-        if clean_memo and clean_memo not in ['none', 'None', '-']:
+        if clean_memo and clean_memo not in ["none", "None", "-"]:
             import html as _html_mod
-            _memo_html = _html_mod.escape(clean_memo).replace('\n', '<br>')
+
+            _memo_html = _html_mod.escape(clean_memo).replace("\n", "<br>")
             di_info.append((t("common.memo", "📝"), _memo_html))
-            
+
         deadline_part = ""
         if deadline:
             try:
                 # deadline format: 'yyyy-MM-dd HH:mm' or 'yyyy-MM-dd'
                 parts = str(deadline).split()
                 date_str = parts[0]
-                time_str = parts[1] if len(parts) > 1 else ""
-                
+                _time_str = parts[1] if len(parts) > 1 else ""
+
                 y, m, d = date_str.split("-")
                 m = str(int(m))
                 d = str(int(d))
                 formatted_date = f"{m}.{d}"
-                
-                deadline_part = t("panel.deadline_label", "(~{deadline})").replace("{deadline}", formatted_date)
-                
+
+                deadline_part = t("panel.deadline_label", "(~{deadline})").replace(
+                    "{deadline}", formatted_date
+                )
+
                 if group_by_deadline:
                     current_group_label = f"{formatted_date}"
                     if current_group_label != current_deadline_group:
                         directive_items.append(_deadline_group_header(current_group_label))
                         current_deadline_group = current_group_label
-            except:
+            except Exception:
                 deadline_part = f" (~{str(deadline).split()[0]})"
-                
+
         display_text = f"{status_ic} {content}{deadline_part}"
-        
-        handler = lambda checked=False, d_id=did: app.open_directive_dialog(d_id)
-        
+
+        def handler(checked=False, _did=did):
+            app.open_directive_dialog(_did)
+
         directive_tooltip_title = _tooltip_text_without_tags(display_text) or display_text
         directive_items.append(
             create_task_box(
@@ -1540,25 +1729,33 @@ def load_right_panel(app):
                 tid=did,
                 is_directive=True,
                 tooltip_title=directive_tooltip_title,
-                bg_color=bg_color
+                bg_color=bg_color,
             )
         )
-        
+
     if not routine_items:
         routine_items = [t("panel.empty.routine", "No routine tasks found.")]
 
     if not directive_items:
         directive_items = [t("panel.empty.directive", "No directions found.")]
-    
-    panel_1, title_bar_1 = create_panel(app, t("panel.routine", "Routine Tasks"), routine_items,
-                                        add_handler=lambda: app.open_routine_add_dialog(),
-                                        manage_handler=lambda: app.open_work_management_dialog(start_tab="routine"))
+
+    panel_1, title_bar_1 = create_panel(
+        app,
+        t("panel.routine", "Routine Tasks"),
+        routine_items,
+        add_handler=lambda: app.open_routine_add_dialog(),
+        manage_handler=lambda: app.open_work_management_dialog(start_tab="routine"),
+    )
     app.routine_dock.setTitleBarWidget(title_bar_1)
     title_bar_1.bind_dock(app.routine_dock)
 
-    panel_2, title_bar_2 = create_panel(app, t("panel.directive", "Directions"), directive_items,
-                                        add_handler=lambda: app.open_directive_dialog(),
-                                        manage_handler=lambda: app.open_work_management_dialog(start_tab="directive"))
+    panel_2, title_bar_2 = create_panel(
+        app,
+        t("panel.directive", "Directions"),
+        directive_items,
+        add_handler=lambda: app.open_directive_dialog(),
+        manage_handler=lambda: app.open_work_management_dialog(start_tab="directive"),
+    )
     app.directive_dock.setTitleBarWidget(title_bar_2)
     title_bar_2.bind_dock(app.directive_dock)
 
@@ -1571,4 +1768,3 @@ def load_right_panel(app):
     lay2.setContentsMargins(0, 0, 0, 0)
     lay2.addWidget(panel_2)
     app.directive_frame.setLayout(lay2)
-
