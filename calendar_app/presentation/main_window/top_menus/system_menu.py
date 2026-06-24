@@ -23,7 +23,8 @@ def build_system_menu(self, top_bar, menu_btn_style="", menu_style=""):
     self.sys_menu.setStyleSheet(menu_style)
 
     # ── 윈도우 시작시 자동 실행 (최상단 고정) ──────────────────────────────────
-    self.autostart_act = QAction(t("menu.autostart"), self)
+    self.autostart_act = QAction(_se(t("menu.autostart")), self)
+    self.autostart_act.setIcon(_ic(ICON.AUTOSTART))
     self.autostart_act.setCheckable(True)
     self.autostart_act.setChecked(system_manager.is_autostart_enabled())
     self.autostart_act.triggered.connect(self.toggle_autostart)

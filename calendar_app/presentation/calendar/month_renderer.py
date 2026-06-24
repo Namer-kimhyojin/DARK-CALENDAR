@@ -26,6 +26,7 @@ from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.shared.color_utils import derive_ui_palette
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
+from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.qt_helpers import find_parent_dock
 from calendar_app.shared.search_utils import clean_calendar_description
 from calendar_app.shared.search_utils import clean_display_text as _tooltip_clean_text
@@ -1579,7 +1580,8 @@ def render_calendar(app):
         view_menu.addAction(act)
     view_btn.setMenu(view_menu)
 
-    opt_btn = QPushButton(t("calendar.options"))
+    opt_btn = QPushButton(_se(t("calendar.options")))
+    opt_btn.setIcon(_ic(ICON.SETTINGS, color=_icon_color))
     opt_btn.setStyleSheet(menu_btn_style)
     opt_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 

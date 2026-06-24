@@ -7,6 +7,7 @@ from calendar_app.presentation.theme.style_builder import _scaled_pt, apply_top_
 from calendar_app.shared.color_utils import derive_panel_palette, derive_ui_palette
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
+from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.theme_settings import get_theme_palette_inputs
 
 
@@ -171,7 +172,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     _search_bg_hover = "rgba(255,255,255,14)"
     _search_bg_focus = "rgba(255,255,255,20)"
     self.search_edit = QLineEdit()
-    self.search_edit.setPlaceholderText(t("topbar.search_placeholder", "Search schedule..."))
+    self.search_edit.setPlaceholderText(_se(t("topbar.search_placeholder", "Search schedule...")))
     self.search_edit.addAction(
         _ic(ICON.SEARCH, color=_tb_text), QLineEdit.ActionPosition.LeadingPosition
     )
