@@ -1955,11 +1955,13 @@ def render_calendar(app):
                 )
             )
             opt_btn.setText(
-                t(
-                    "calendar.options_with_hidden",
-                    "{label} ({count})",
-                    label=t("calendar.options", "Options"),
-                    count=hidden_weekend_events,
+                _se(
+                    t(
+                        "calendar.options_with_hidden",
+                        "{label} ({count})",
+                        label=_se(t("calendar.options", "Options")),
+                        count=hidden_weekend_events,
+                    )
                 )
             )
             opt_btn.setToolTip(
@@ -1971,7 +1973,7 @@ def render_calendar(app):
             )
         else:
             wknd_action.setText(t("calendar.opt_weekend"))
-            opt_btn.setText(t("calendar.options"))
+            opt_btn.setText(_se(t("calendar.options")))
             opt_btn.setToolTip("")
 
         week_count = max(1, len(weeks))
