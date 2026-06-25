@@ -9,7 +9,7 @@
   <Identity
     Name="Kimhyojin.DarkCalendar"
     Publisher="CN=D8C69F65-7BB6-4038-9AF7-23C4D0C69EC3"
-    Version="3.0.0.0" />
+    Version="3.1.0.0" />
 
   <Properties>
     <DisplayName>Dark Calendar</DisplayName>
