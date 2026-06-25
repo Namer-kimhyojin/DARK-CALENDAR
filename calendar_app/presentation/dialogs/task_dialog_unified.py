@@ -1236,9 +1236,28 @@ class UnifiedTaskDialog(BaseTaskDialog):
             updates["recurrence"] = self._build_recurrence_rule()
             updates["target_date"] = self.start_date.date().toString("yyyy-MM-dd")
 
+        # ── Calendar move 처리 ─────────────────────────────────────────────
+        # 캘린더 변경 시 Google 측에서도 이동이 일어나려면 _previous_gcal_calendar_id
+        # 를 sync 페이로드에 전달하고, 기존 gcal_source/target_calendar_id 는 비워
+        # 리졸버가 NEW calendar_id 로 매핑된 Google 캘린더를 사용하도록 한다.
+        prev_gcal_cal_id = self.task_data.get("gcal_source_calendar_id") or self.task_data.get(
+            "gcal_target_calendar_id"
+        )
+        old_local_cal = self.task_data.get("calendar_id")
+        new_local_cal = updates.get("calendar_id")
+        calendar_changed = bool(
+            old_local_cal != new_local_cal and self.task_data.get("gcal_event_id")
+        )
+
         sync_payload = dict(self.task_data)
         sync_payload.update(updates)
         sync_payload["gcal_event_id"] = self.task_data.get("gcal_event_id")
+        if calendar_changed:
+            if prev_gcal_cal_id:
+                sync_payload["_previous_gcal_calendar_id"] = prev_gcal_cal_id
+            # 리졸버가 NEW calendar_id 를 사용하도록 OLD gcal 라우팅 키 제거
+            sync_payload.pop("gcal_source_calendar_id", None)
+            sync_payload.pop("gcal_target_calendar_id", None)
         try:
             _app = self.parent()
             if _app and hasattr(_app, "gcal_sync"):

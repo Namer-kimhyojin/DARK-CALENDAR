@@ -1167,6 +1167,49 @@ class CalendarSyncService:
             print(f"GCal Delete Error: {exc}")
             return False
 
+    def move_event(
+        self,
+        event_id: str,
+        source_calendar_id: Optional[str],
+        destination_calendar_id: Optional[str],
+    ) -> bool:
+        """Move event between calendars via events.move API.
+
+        Returns True if moved or already at destination (404/410 treated as
+        already-moved). False on auth/network errors so caller can fall back to
+        create-on-new + delete-on-old.
+        """
+        if not self.is_authenticated or not self.service or not event_id:
+            return False
+        self._clear_last_error()
+        src = self._normalize_calendar_id(source_calendar_id)
+        dst = self._normalize_calendar_id(destination_calendar_id)
+        if not src or not dst:
+            self._set_last_error("move", "missing calendar id", None)
+            return False
+        if src == dst:
+            return True
+        try:
+            self._execute_request(
+                lambda: self.service.events()
+                .move(calendarId=src, eventId=event_id, destination=dst)
+                .execute()
+            )
+            return True
+        except HttpError as exc:
+            status = getattr(getattr(exc, "resp", None), "status", None)
+            if status in (404, 410):
+                # Event already gone on source; nothing to move.
+                self._set_last_error("not_found", str(exc), status)
+                return False
+            self._set_last_error("move", str(exc), status)
+            print(f"GCal Move Error: {exc}")
+            return False
+        except Exception as exc:
+            self._set_last_error("move", str(exc))
+            print(f"GCal Move Error: {exc}")
+            return False
+
     def batch_create_events(self, operations: list) -> list:
         """최대 50개의 이벤트 생성을 단일 HTTP 배치 요청으로 처리한다."""
         return self._execute_batch("insert", operations)

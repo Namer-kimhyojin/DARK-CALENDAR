@@ -217,6 +217,41 @@ def sync_task_to_google(
     )
 
     if existing_id:
+        # ── Calendar move detection ─────────────────────────────────────────
+        # 사용자가 일정 수정 다이얼로그에서 캘린더를 변경한 경우, Google API의
+        # update_event 만으로는 캘린더 간 이동이 안 된다. previous_gcal_calendar_id
+        # 가 명시되었거나 fresh DB 의 gcal_source_calendar_id 가 새 target 과 다르면
+        # events.move 를 먼저 호출한 뒤 update_event 로 메타데이터를 갱신한다.
+        try:
+            _prev_raw = (
+                task_data.get("_previous_gcal_calendar_id")
+                or (fresh or {}).get("gcal_source_calendar_id")
+                or task_data.get("gcal_source_calendar_id")
+            )
+            _prev_gcal_id = _normalize_calendar_id(_prev_raw) if _prev_raw else None
+            if _prev_gcal_id and source_calendar_id and _prev_gcal_id != source_calendar_id:
+                moved_ok = sync.move_event(existing_id, _prev_gcal_id, source_calendar_id)
+                if moved_ok:
+                    logger.info(
+                        "Moved GCal event %s from %s to %s (task %s)",
+                        existing_id,
+                        _prev_gcal_id,
+                        source_calendar_id,
+                        local_id,
+                    )
+                else:
+                    # Move failed (event not on previous calendar, or transient error).
+                    # Fall through to update_event; recovery loop or create path will handle.
+                    logger.warning(
+                        "Calendar move failed for event %s (%s -> %s); "
+                        "update_event will attempt fallback",
+                        existing_id,
+                        _prev_gcal_id,
+                        source_calendar_id,
+                    )
+        except Exception:
+            logger.exception("Calendar move detection failed; proceeding with update_event")
+
         # [2] scope=all → update the master recurring event instead of just this instance
         _update_target_id = existing_id
         if recurring_scope == "all" and local_id:
