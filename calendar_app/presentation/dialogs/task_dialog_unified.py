@@ -1243,27 +1243,81 @@ class UnifiedTaskDialog(BaseTaskDialog):
         prev_gcal_cal_id = self.task_data.get("gcal_source_calendar_id") or self.task_data.get(
             "gcal_target_calendar_id"
         )
-        old_local_cal = self.task_data.get("calendar_id")
-        new_local_cal = updates.get("calendar_id")
-        calendar_changed = bool(
-            old_local_cal != new_local_cal and self.task_data.get("gcal_event_id")
+        prev_gcal_event_id = self.task_data.get("gcal_event_id")
+        old_local_cal = str(self.task_data.get("calendar_id") or "")
+        new_local_cal = str(updates.get("calendar_id") or "")
+        calendar_changed = bool(old_local_cal != new_local_cal and prev_gcal_event_id)
+
+        # gcal → 비-gcal (local::/ics::) 이동 감지
+        moving_off_gcal = (
+            calendar_changed
+            and new_local_cal
+            and "::" in new_local_cal
+            and not new_local_cal.startswith("gcal::")
         )
 
-        sync_payload = dict(self.task_data)
-        sync_payload.update(updates)
-        sync_payload["gcal_event_id"] = self.task_data.get("gcal_event_id")
-        if calendar_changed:
-            if prev_gcal_cal_id:
-                sync_payload["_previous_gcal_calendar_id"] = prev_gcal_cal_id
-            # 리졸버가 NEW calendar_id 를 사용하도록 OLD gcal 라우팅 키 제거
-            sync_payload.pop("gcal_source_calendar_id", None)
-            sync_payload.pop("gcal_target_calendar_id", None)
-        try:
-            _app = self.parent()
-            if _app and hasattr(_app, "gcal_sync"):
-                queue_task_sync_to_google(_app, sync_payload)
-        except Exception as e:
-            print(f"GCal sync error in modify dialog: {e}")
+        if moving_off_gcal:
+            reply = QMessageBox.question(
+                self,
+                t("dialog.task.purge_gcal_title", "구글 캘린더에서 제거"),
+                t(
+                    "dialog.task.purge_gcal_confirm",
+                    "이 일정을 로컬 캘린더로 옮기면 구글 캘린더에서는 삭제됩니다.\n"
+                    "(로컬 일정으로만 유지되며 동기화되지 않습니다.)\n\n계속하시겠습니까?",
+                ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return  # abort save — keep the existing gcal binding
+
+            # Queue delete for the previous Google event
+            try:
+                from calendar_app.infrastructure.db import task_repo as _tr_purge
+
+                _tr_purge.queue_gcal_delete(
+                    prev_gcal_event_id,
+                    gcal_calendar_id=prev_gcal_cal_id,
+                    local_task_id=self.task_id,
+                )
+            except Exception as e:
+                print(f"GCal purge enqueue error: {e}")
+
+            # Clear gcal binding on the local task so future syncs ignore it
+            updates["gcal_event_id"] = None
+            updates["gcal_source_calendar_id"] = None
+            updates["gcal_target_calendar_id"] = None
+            updates["gcal_dirty"] = 0
+            updates["gcal_sync_error"] = None
+
+            # Skip the normal sync_task_to_google path — task is now local-only
+            sync_payload = None
+        else:
+            sync_payload = dict(self.task_data)
+            sync_payload.update(updates)
+            sync_payload["gcal_event_id"] = self.task_data.get("gcal_event_id")
+            if calendar_changed:
+                if prev_gcal_cal_id:
+                    sync_payload["_previous_gcal_calendar_id"] = prev_gcal_cal_id
+                # 리졸버가 NEW calendar_id 를 사용하도록 OLD gcal 라우팅 키 제거
+                sync_payload.pop("gcal_source_calendar_id", None)
+                sync_payload.pop("gcal_target_calendar_id", None)
+
+        if sync_payload is not None:
+            try:
+                _app = self.parent()
+                if _app and hasattr(_app, "gcal_sync"):
+                    queue_task_sync_to_google(_app, sync_payload)
+            except Exception as e:
+                print(f"GCal sync error in modify dialog: {e}")
+        else:
+            # Trigger sync to drain the delete-queue (Google event removal)
+            try:
+                _app = self.parent()
+                if _app and hasattr(_app, "sync_google_calendar"):
+                    _app.sync_google_calendar(silent=True)
+            except Exception as e:
+                print(f"GCal purge sync trigger error: {e}")
 
         success = task_repo.update_unified_task(self.task_id, updates)
         if success:
