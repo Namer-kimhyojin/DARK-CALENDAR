@@ -46,18 +46,24 @@ def _toggle_dock(app, dock_attr: str, visible: bool) -> None:
 
 
 def _update_calendar_visibility_menu(app, menu: "QMenu", menu_style: str) -> None:
-    """캘린더 가시성 토글 서브메뉴를 동적으로 구성합니다."""
+    """캘린더 가시성 토글 서브메뉴를 동적으로 구성합니다.
+
+    메인 캘린더 화면(옵션 메뉴)의 캘린더 표시 항목과 동일한 표현을 사용:
+    - 캘린더 type 별 아이콘(gcal/ics/local/shared) + 캘린더 색상으로 틴팅
+    - read-only 캘린더는 LOCK 아이콘 + 툴팁
+    - 비활성 캘린더 포함 표시
+    - 하단에 "캘린더 관리..." 진입점 추가
+    """
     menu.clear()
     menu.setStyleSheet(menu_style)
     try:
-        from PyQt6.QtGui import QColor, QIcon, QPixmap
-
         from calendar_app.infrastructure.db.calendar_repo import (
+            is_calendar_row_read_only,
             list_calendars,
             set_calendar_visible,
         )
 
-        calendars = list_calendars(include_inactive=False)
+        calendars = list_calendars(include_inactive=True)
     except Exception:
         menu.addAction(t("menu.calendar_load_error", "캘린더 로드 실패")).setEnabled(False)
         return
@@ -66,27 +72,61 @@ def _update_calendar_visibility_menu(app, menu: "QMenu", menu_style: str) -> Non
         menu.addAction(t("menu.no_calendars", "캘린더 없음")).setEnabled(False)
         return
 
+    _TYPE_ICON = {
+        "gcal": ICON.GCAL,
+        "ics": ICON.LINK,
+        "local": ICON.ALL_SCHEDULES,
+        "shared": ICON.ALL_SCHEDULES,
+    }
+    _READ_ONLY_ICON = ICON.LOCK
+
+    def _make_toggle(cal_id):
+        def _fn(checked):
+            try:
+                set_calendar_visible(cal_id, checked)
+                # 메인 캘린더 옵션 메뉴와 동일한 캐시 무효화 + 패널 갱신 흐름
+                from calendar_app.presentation.calendar.month_renderer import (
+                    invalidate_calendar_meta_cache,
+                )
+                from calendar_app.presentation.panels.side_panel_renderer import (
+                    invalidate_panel_calendar_cache,
+                )
+
+                invalidate_calendar_meta_cache()
+                invalidate_panel_calendar_cache()
+                if hasattr(app, "schedule_panel_refresh"):
+                    app.schedule_panel_refresh(left=True, center=True)
+            except Exception:
+                pass
+
+        return _fn
+
     for cal in calendars:
-        cal_id = cal.get("id") or ""
-        name = cal.get("name") or cal_id
-        is_visible = bool(cal.get("is_visible", 1))
-        color = cal.get("color") or "#4a9eff"
+        is_read_only = is_calendar_row_read_only(cal)
+        type_icon = (
+            _READ_ONLY_ICON
+            if is_read_only
+            else _TYPE_ICON.get(cal.get("type", "local"), ICON.ALL_SCHEDULES)
+        )
+        cal_color = cal.get("color")
+        final_icon = _ic(type_icon, color=cal_color)
 
-        # 16x16 색상 패치를 아이콘으로 사용
-        pix = QPixmap(14, 14)
-        pix.fill(QColor(color))
-        color_icon = QIcon(pix)
-
-        act = menu.addAction(color_icon, name)
+        act = menu.addAction(final_icon, cal.get("name") or cal.get("id") or "")
         act.setCheckable(True)
-        act.setChecked(is_visible)
+        act.setChecked(bool(cal.get("is_visible", 1)))
+        if is_read_only:
+            act.setToolTip(t("dialog.task.calendar_read_only", "Read-only calendar"))
+        act.triggered.connect(_make_toggle(cal.get("id") or ""))
 
-        def _on_toggle(checked, _cal_id=cal_id):
-            set_calendar_visible(_cal_id, checked)
-            if hasattr(app, "schedule_panel_refresh"):
-                app.schedule_panel_refresh(left=True, center=True)
+    menu.addSeparator()
+    manage_act = menu.addAction(t("menu.calendar_manage", "캘린더 관리..."))
+    manage_act.setIcon(_ic(ICON.CHECKLIST))
 
-        act.triggered.connect(_on_toggle)
+    def _open_manage():
+        if hasattr(app, "open_gcal_settings_dialog"):
+            app.open_gcal_settings_dialog(initial_tab="calendar")
+
+    manage_act.triggered.connect(_open_manage)
 
 
 def _refresh_display_menu_i18n(self):
