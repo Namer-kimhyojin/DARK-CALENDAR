@@ -25,7 +25,7 @@ def initialize_overlay_app(app) -> None:
     app._screen_fill_active = False
     app._last_clicked_date = None
     app.cal_show_weekends = app.settings.value("cal_show_weekends", True, type=bool)
-    app.cal_start_monday = True
+    app.cal_start_monday = app.settings.value("cal_start_monday", True, type=bool)
     app.cal_show_month = app.settings.value("cal_show_month", False, type=bool)
     app.cal_show_weekday = app.settings.value("cal_show_weekday", False, type=bool)
     app.view_mode_state = app.settings.value("view_mode_state", "monthly", type=str)

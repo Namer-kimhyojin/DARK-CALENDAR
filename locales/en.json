@@ -1042,6 +1042,8 @@
       "Sun"
     ],
     "opt_weekend": "Show Weekends",
+    "opt_week_start_monday": "Start week on Monday",
+    "opt_week_start_tooltip": "Checked: weeks start on Monday. Unchecked: weeks start on Sunday.",
     "opt_month": "Include Month label",
     "opt_weekday": "Include Weekday label",
     "opt_weekend_hidden": "{label} ({count} hidden)",

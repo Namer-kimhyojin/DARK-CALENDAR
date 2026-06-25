@@ -1600,7 +1600,21 @@ def render_calendar(app):
     show_weekday_action.setChecked(getattr(app, "cal_show_weekday", False))
     show_weekday_action.toggled.connect(app.toggle_show_weekday)
 
+    # 한 주 시작 요일 (월요일 시작 / 일요일 시작) 토글
+    start_monday_action = QAction(
+        t("calendar.opt_week_start_monday", "월요일부터 시작"), app, checkable=True
+    )
+    start_monday_action.setChecked(bool(getattr(app, "cal_start_monday", True)))
+    start_monday_action.setToolTip(
+        t(
+            "calendar.opt_week_start_tooltip",
+            "체크 시 월요일부터, 해제 시 일요일부터 한 주를 시작합니다.",
+        )
+    )
+    start_monday_action.toggled.connect(app.toggle_start_day)
+
     opt_menu.addAction(wknd_action)
+    opt_menu.addAction(start_monday_action)
     opt_menu.addSeparator()
     opt_menu.addAction(show_month_action)
     opt_menu.addAction(show_weekday_action)

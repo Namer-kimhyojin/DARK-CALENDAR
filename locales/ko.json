@@ -1043,6 +1043,8 @@
       "일"
     ],
     "opt_weekend": "주말 보기",
+    "opt_week_start_monday": "월요일부터 시작",
+    "opt_week_start_tooltip": "체크 시 월요일부터, 해제 시 일요일부터 한 주를 시작합니다.",
     "opt_month": "월 표기 포함",
     "opt_weekday": "요일 표기 포함",
     "opt_weekend_hidden": "{label} ({count}개 숨김)",
