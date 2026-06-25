@@ -1129,6 +1129,7 @@ def create_task_box(
         prog_bar.setValue(done_cnt)
         prog_bar.setFixedHeight(2)
         prog_bar.setTextVisible(False)
+        prog_bar.setToolTip(f"완료 {done_cnt}개 / 전체 {total_cnt}개")
         prog_bar.setStyleSheet(f"""
             QProgressBar {{
                 background: rgba(255,255,255,0.08);
@@ -1151,15 +1152,20 @@ def create_task_box(
         for idx, (stext, sis_c, chandler) in enumerate(checklist_items):
             clickable = callable(chandler)
             _locked = False
+            _lock_reason = ""
             if is_process and clickable:
                 if not sis_c:
                     # 완료 청루: 이전 항목이 모두 완료되어야 함
                     _locked = not all(checklist_items[i][1] for i in range(idx))
+                    if _locked:
+                        _lock_reason = "이전 단계를 먼저 완료하세요"
                 else:
                     # 취소: 이후 항목이 모두 미완료여야 함
                     _locked = not all(
                         not checklist_items[i][1] for i in range(idx + 1, len(checklist_items))
                     )
+                    if _locked:
+                        _lock_reason = "이후 단계를 먼저 취소하세요"
                 if _locked:
                     clickable = False
 
@@ -1232,6 +1238,9 @@ def create_task_box(
             if clickable:
                 ind.setCursor(Qt.CursorShape.PointingHandCursor)
                 ind.clicked.connect(chandler)
+            elif _locked:
+                ind.setCursor(Qt.CursorShape.ForbiddenCursor)
+                ind.setToolTip(_lock_reason)
 
             # Text label
             text_lbl = QLabel(stext)
@@ -1266,6 +1275,9 @@ def create_task_box(
                     iw.mousePressEvent = _press
 
                 _make_handler(chandler, item_w)
+            elif _locked:
+                item_w.setCursor(Qt.CursorShape.ForbiddenCursor)
+                item_w.setToolTip(_lock_reason)
 
             chk_layout.addWidget(item_w)
 
@@ -1280,6 +1292,19 @@ def create_task_box(
             }}
         """)
         checklist_container.setVisible(is_initially_visible)
+
+        if is_process and tid is not None:
+            checklist_container.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+
+            def _show_ctx_menu(pos, c_tid=tid):
+                from PyQt6.QtWidgets import QMenu
+
+                menu = QMenu(checklist_container)
+                reset_act = menu.addAction("↺  전체 초기화")
+                reset_act.triggered.connect(lambda: app.reset_checklist_items(c_tid))
+                menu.exec(checklist_container.mapToGlobal(pos))
+
+            checklist_container.customContextMenuRequested.connect(_show_ctx_menu)
 
         def toggle_checklist(
             checked=False,
@@ -1297,6 +1322,9 @@ def create_task_box(
             else:
                 if t_id is not None:
                     app.expanded_tids.discard(t_id)
+            import json as _json
+
+            app.settings.setValue("expanded_task_ids", _json.dumps(list(app.expanded_tids)))
 
         toggle_btn.clicked.connect(toggle_checklist)
 

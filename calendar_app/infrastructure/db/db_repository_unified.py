@@ -1368,6 +1368,25 @@ def toggle_checklist_item(link_id):
         return False
 
 
+def reset_checklist_items(owner_id):
+    """체크리스트 항목 전체 초기화 (is_completed=0, completed_at=NULL)"""
+    conn = get_connection()
+    if not conn:
+        return False
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE task_checklist_link SET is_completed=0, completed_at=NULL WHERE owner_id=?",
+            (owner_id,),
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error resetting checklist items: {e}")
+        conn.rollback()
+        return False
+
+
 def get_task_checklist_items(owner_id):
     """
     특정 task의 체크리스트 항목 조회

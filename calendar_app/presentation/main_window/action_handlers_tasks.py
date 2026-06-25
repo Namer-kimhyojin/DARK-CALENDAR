@@ -688,6 +688,10 @@ class TaskActionsMixin:
         if task_usecases.toggle_checklist_item(db_checklist, link_id):
             self._refresh_all_panels()
 
+    def reset_checklist_items(self, task_id):
+        if db_checklist.reset_checklist_items(task_id):
+            self._refresh_all_panels()
+
     def toggle_routine_step(self, step_id):
         self.toggle_checklist_item(step_id)
 
