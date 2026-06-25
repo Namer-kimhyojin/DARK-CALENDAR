@@ -1086,7 +1086,7 @@ def create_task_box(
     checklist_container = QFrame()
     checklist_container.setObjectName("ChecklistContainer")
     chk_layout = QVBoxLayout(checklist_container)
-    chk_layout.setContentsMargins(4, 1, 4, 4)
+    chk_layout.setContentsMargins(2, 1, 4, 4)
     chk_layout.setSpacing(1)
 
     if checklist_items:
@@ -1178,7 +1178,7 @@ def create_task_box(
             )
             item_w.setFixedHeight(20)
             item_l = QHBoxLayout(item_w)
-            item_l.setContentsMargins(2, 0, 2, 0)
+            item_l.setContentsMargins(0, 0, 2, 0)
             item_l.setSpacing(1)
 
             ind = QPushButton()
@@ -1257,7 +1257,7 @@ def create_task_box(
             QFrame#ChecklistContainer {
                 background: transparent;
                 border: none;
-                margin-left: 6px;
+                margin-left: 0px;
             }
         """)
         checklist_container.setVisible(is_initially_visible)
