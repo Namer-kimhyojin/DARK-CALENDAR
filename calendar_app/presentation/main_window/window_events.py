@@ -278,12 +278,45 @@ class WindowEventsMixin:
             self, "_is_shutting_down", False
         ):
             self.schedule_panel_refresh(center=True, delay_ms=16)
+        self._schedule_geometry_persist()
 
         # Keep lock overlay/background aligned with resized window.
         if hasattr(self, "lock_frame") and self.lock_frame.isVisible():
             self.lock_frame.setGeometry(0, 0, self.width(), self.height())
             if hasattr(self, "lock_bg_label"):
                 self.lock_bg_label.setGeometry(self.lock_frame.rect())
+
+    def moveEvent(self, event):
+        super().moveEvent(event)
+        self._schedule_geometry_persist()
+
+    def _schedule_geometry_persist(self):
+        """Debounced reactive save of window geometry on resize/move."""
+        if getattr(self, "_is_shutting_down", False):
+            return
+        timer = getattr(self, "_geom_persist_timer", None)
+        if timer is None:
+            from PyQt6.QtCore import QTimer
+
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.setInterval(400)
+
+            def _do_persist():
+                if getattr(self, "_is_shutting_down", False):
+                    return
+                try:
+                    from calendar_app.presentation.main_window.window_restore_helpers import (
+                        persist_dock_layout,
+                    )
+
+                    persist_dock_layout(self)
+                except Exception:
+                    pass
+
+            timer.timeout.connect(_do_persist)
+            self._geom_persist_timer = timer
+        timer.start()
 
     def paintEvent(self, event):
         from PyQt6.QtGui import QColor, QPainter

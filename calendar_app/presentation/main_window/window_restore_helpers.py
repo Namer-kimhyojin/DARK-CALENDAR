@@ -103,6 +103,10 @@ def restore_window_and_bind_menu_state(self):
         lambda _: self.act_directive.setChecked(not self.directive_dock.isHidden())
     )
 
+    # 도크 변경(이동/플로팅/리사이즈/숨김) 직후 디바운스 저장 설치 — 비정상
+    # 종료 시 직전 상태 손실 방지
+    install_dock_persist_signals(self)
+
 
 def _sync_vertical_splits(app):
     """좌/우 열의 수직 분할선을 50/50으로 동기화해 단차를 제거한다."""
@@ -137,6 +141,59 @@ def save_window_layout(self):
     with contextlib.suppress(Exception):
         if hasattr(self, "overlay_manager"):
             self.overlay_manager.save_all()
+
+
+def persist_dock_layout(self):
+    """도크 이동/플로팅/리사이즈/가시성 변경 직후 즉시 호출되는 가벼운 저장.
+
+    종료-1회 가드(_layout_saved)를 무시하고 saveGeometry+saveState 만 다시
+    써낸다. 비정상 종료 시 직전 상태 손실을 막기 위한 반응형 백업.
+    """
+    import contextlib
+
+    if getattr(self, "_is_shutting_down", False):
+        return
+    with contextlib.suppress(Exception):
+        self.settings.setValue("last_geometry", self.saveGeometry())
+    with contextlib.suppress(Exception):
+        self.settings.setValue("last_state", self.saveState())
+        self.settings.setValue("layout_version", _LAYOUT_VERSION)
+
+
+def install_dock_persist_signals(self):
+    """모든 dock의 topLevelChanged / dockLocationChanged / visibilityChanged
+    시그널을 디바운스된 persist 호출로 연결한다.
+
+    설치는 한 번만 — 중복 연결 방지 플래그(_dock_persist_installed).
+    """
+    if getattr(self, "_dock_persist_installed", False):
+        return
+    self._dock_persist_installed = True
+
+    debounce = QTimer(self)
+    debounce.setSingleShot(True)
+    debounce.setInterval(400)  # 0.4s — drag 중 spam 방지
+    debounce.timeout.connect(lambda: persist_dock_layout(self))
+    self._dock_persist_timer = debounce
+
+    def _schedule(*_args):
+        debounce.start()
+
+    docks = [
+        getattr(self, "left_dock", None),
+        getattr(self, "center_dock", None),
+        getattr(self, "routine_dock", None),
+        getattr(self, "directive_dock", None),
+    ]
+    for dock in docks:
+        if dock is None:
+            continue
+        try:
+            dock.topLevelChanged.connect(_schedule)
+            dock.dockLocationChanged.connect(_schedule)
+            dock.visibilityChanged.connect(_schedule)
+        except Exception:
+            pass
 
 
 def setup_size_grip(self):
