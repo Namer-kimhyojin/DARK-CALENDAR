@@ -176,6 +176,127 @@ def _active_sync_calendar_ids(app, bound_calendar_id):
     return calendar_ids
 
 
+def scan_orphan_remote_events(app, lookback_days: int = 180, max_per_calendar: int = 500):
+    """Find Google events that have no matching local task.
+
+    For each active sync calendar, fetch events within the last
+    ``lookback_days`` days and return those whose event ids are NOT present in
+    ``unified_task.gcal_event_id``. Returned dicts contain enough metadata for
+    a user-facing dialog to display and act on (delete from Google or ignore).
+
+    Returns a list of dicts:
+        {
+            "gcal_event_id": str,
+            "gcal_calendar_id": str,
+            "calendar_summary": str,
+            "summary": str,           # event title from Google
+            "start": str,             # ISO datetime or date
+            "end": str,
+            "html_link": str,
+        }
+    """
+    sync = getattr(app, "gcal_sync", None)
+    if not sync or not getattr(sync, "is_authenticated", False):
+        return []
+    if not is_gcal_enabled(getattr(app, "settings", None)):
+        return []
+
+    bound = _normalize_calendar_id(get_default_gcal_calendar_id())
+    calendar_ids = _active_sync_calendar_ids(app, bound)
+    if not calendar_ids:
+        return []
+
+    # Build local event id set
+    local_event_ids = set()
+    try:
+        from calendar_app.infrastructure.db.db_repository import get_connection
+
+        conn = get_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT gcal_event_id FROM unified_task "
+                "WHERE gcal_event_id IS NOT NULL AND gcal_event_id != ''"
+            )
+            for r in cur.fetchall():
+                eid = str(r["gcal_event_id"] or "").strip()
+                if eid:
+                    local_event_ids.add(eid)
+    except Exception:
+        logger.exception("scan_orphan_remote_events: failed to read local event ids")
+        return []
+
+    # Build calendar summary lookup
+    try:
+        summary_map = _build_calendar_source_summary_map()
+    except Exception:
+        summary_map = {}
+
+    today = _date.today()
+    start_str = (today - timedelta(days=lookback_days)).isoformat()
+    end_str = (today + timedelta(days=lookback_days)).isoformat()
+
+    # Also exclude event ids that are currently queued for deletion (don't
+    # re-surface things the user already chose to delete).
+    queued_ids = set()
+    try:
+        for q in task_repo.get_gcal_delete_queue():
+            qid = str(q.get("gcal_event_id") or "").strip()
+            if qid:
+                queued_ids.add(qid)
+    except Exception:
+        pass
+
+    orphans = []
+    for cal_id in calendar_ids:
+        try:
+            events = sync.fetch_events(start_str, end_str, calendar_id=cal_id)
+        except Exception:
+            logger.exception("scan_orphan_remote_events: fetch failed for %s", cal_id)
+            continue
+        if not events:
+            continue
+        cal_summary = summary_map.get(cal_id) or cal_id
+        count = 0
+        for ev in events:
+            event_id = str(getattr(ev, "id", "") or "").strip()
+            if not event_id:
+                continue
+            if event_id in local_event_ids or event_id in queued_ids:
+                continue
+            # Skip recurring instance children — their parent series id is
+            # what gets tracked locally. Recurring expansions appear as
+            # singleEvents=True with id like "<series_id>_<timestamp>".
+            # Also use recurring_event_id when present.
+            parent_id = getattr(ev, "recurring_event_id", None)
+            if parent_id and str(parent_id).strip() in local_event_ids:
+                continue
+            if "_" in event_id:
+                derived_parent = event_id.split("_", 1)[0]
+                if derived_parent in local_event_ids:
+                    continue
+            orphans.append(
+                {
+                    "gcal_event_id": event_id,
+                    "gcal_calendar_id": cal_id,
+                    "calendar_summary": cal_summary,
+                    "summary": getattr(ev, "summary", "") or "(제목 없음)",
+                    "start": getattr(ev, "start_time", "") or "",
+                    "end": getattr(ev, "end_time", "") or "",
+                }
+            )
+            count += 1
+            if count >= max_per_calendar:
+                logger.warning(
+                    "scan_orphan_remote_events: hit max_per_calendar=%d for %s",
+                    max_per_calendar,
+                    cal_id,
+                )
+                break
+
+    return orphans
+
+
 def _task_target_calendar_id(task, default_calendar_id):
     return _resolve_task_target_calendar_id(task, default_calendar_id)
 
