@@ -461,15 +461,14 @@ class OverlayWidgetManager:
         act_mgr.setEnabled(not locked)
 
         # ── 기존 인스턴스 목록 ────────────────────────────────────────
+        # 체크 가능 항목에 별도 type 아이콘을 같이 붙이면 체크 인디케이터와
+        # 위젯 아이콘이 함께 보여 중복처럼 보인다. 아이콘 생략 — 체크 인디케이터로 충분.
         instances = self.all_instances()
         if instances:
             parent_menu.addSeparator()
             for iid, name, wtype, widget in instances:
-                info = _WIDGET_TYPES.get(wtype, {})
                 display = name or _se(widget_type_label(wtype))
                 act_inst = parent_menu.addAction(display)
-                if "icon" in info:
-                    act_inst.setIcon(_ic(info["icon"]))
                 act_inst.setCheckable(True)
                 act_inst.setChecked(widget.is_enabled())
                 act_inst.setEnabled(not locked)
@@ -619,6 +618,11 @@ class OverlayWidgetManager:
                 widget._overlay_manager_sync = lambda iid=iid, _r=_mgr_ref: (
                     m := _r()
                 ) and m._sync_widget_enabled(iid)
+                # Restore the right-click delete callback so 삭제 menu always appears.
+                widget._overlay_manager_remove = lambda iid=iid, _r=_mgr_ref: (
+                    m := _r()
+                ) and m._ui_remove_with_confirm(iid, parent_widget=None)
+                widget._overlay_inst_id = iid
                 idx = self._instance_count_of(wtype)
                 widget.restore_position(self._default_offset_for_type(wtype, idx))
                 widget.apply_initial_settings()
