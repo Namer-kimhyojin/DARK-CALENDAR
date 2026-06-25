@@ -1,5 +1,5 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QAction, QDesktopServices
 from PyQt6.QtWidgets import QMenu, QToolButton
 
 from calendar_app.infrastructure.i18n import get_locale_display_name, list_available_locale_codes, t
@@ -9,6 +9,12 @@ from calendar_app.presentation.main_window.top_menus.common import format_top_me
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+
+HOMEPAGE_URL = "https://namer-kimhyojin.github.io/dark_calendar/"
+
+
+def _open_homepage():
+    QDesktopServices.openUrl(QUrl(HOMEPAGE_URL))
 
 
 def build_system_menu(self, top_bar, menu_btn_style="", menu_style=""):
@@ -103,6 +109,11 @@ def build_system_menu(self, top_bar, menu_btn_style="", menu_style=""):
         f"{_se(t('menu.shortcuts'))}\t{get_key('help')}", self.show_shortcut_guide
     )
     act_sc.setIcon(_ic(ICON.TIP))
+    act_home = self.sys_menu.addAction(
+        _se(t("menu.homepage", "홈페이지 열기")),
+        lambda: _open_homepage(),
+    )
+    act_home.setIcon(_ic(ICON.GLOBE))
     act_exit = self.sys_menu.addAction(_se(t("menu.exit")), self.request_app_exit)
     act_exit.setIcon(_ic(ICON.CLOSE))
 
