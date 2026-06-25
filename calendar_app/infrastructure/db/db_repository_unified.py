@@ -1231,17 +1231,21 @@ def get_gcal_delete_queue_ready(max_retry_count=5):
         return []
 
 
-def mark_gcal_delete_done(queue_id):
+def mark_gcal_delete_done(queue_id, *, commit=True):
+    # commit kwarg accepted for engine API compatibility; this impl always
+    # commits within the same call (chunk-level commits in the engine still
+    # work because conn.commit is idempotent after a successful execute).
     conn = get_connection()
     if not conn:
         return False
     cur = conn.cursor()
     cur.execute("DELETE FROM gcal_delete_queue WHERE id=?", (queue_id,))
-    conn.commit()
+    if commit:
+        conn.commit()
     return True
 
 
-def mark_gcal_delete_failed(queue_id, error_message):
+def mark_gcal_delete_failed(queue_id, error_message, *, commit=True):
     conn = get_connection()
     if not conn:
         return False
@@ -1258,7 +1262,8 @@ def mark_gcal_delete_failed(queue_id, error_message):
             "UPDATE gcal_delete_queue SET retry_count=retry_count+1, last_error=? WHERE id=?",
             (str(error_message)[:500], queue_id),
         )
-    conn.commit()
+    if commit:
+        conn.commit()
     return True
 
 
