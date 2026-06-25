@@ -534,8 +534,10 @@ root.addWidget(header)
   → DB 저장 시 `calendar_id=NULL`이 되어 마이그레이션 전 상태로 퇴행 (76988f5)
 
 ### GCal 동기화
-- `google_sync/engine.py`의 `_active_sync_calendar_ids` 로직을 임의로 변경하지 말 것
-  → GCal push 대상 캘린더 필터링에 직접 영향, 잘못 건드리면 전체 이벤트 중복 생성
+- (해제됨 — 2026-06-25) 캘린더 동기화 관련 수정 잠금은 더 이상 적용되지 않습니다.
+  필요 시 `google_sync/` 하위 모듈을 자유롭게 수정할 수 있습니다. 단, 변경 시 다음을
+  반드시 확인하세요: (1) push 대상 캘린더 필터링이 동작하는지, (2) 동일 이벤트가
+  중복 생성되지 않는지, (3) `gcal_delete_queue` 가 정상적으로 drain 되는지.
 
 ### 인코딩
 - `.py` 파일 저장 시 BOM(UTF-8-sig) 없이 순수 UTF-8로 저장할 것
@@ -571,7 +573,6 @@ root.addWidget(header)
 |------|------|
 | `infrastructure/db/database_unified.py` | 스키마 DDL 전체, 특히 gcal_subscription 테이블 |
 | `infrastructure/db/db_repository_unified.py` | GCal 구독 list/upsert/delete |
-| `infrastructure/google_sync/engine.py` | `_active_sync_calendar_ids`, `_push_local_changes_to_google` |
 | `presentation/dialogs/gcal_settings_dialog.py` | 5탭 GCal 설정 다이얼로그 |
 | `presentation/dialogs/task_dialog_unified.py` | UnifiedTaskDialog (create/move/copy 3가지 흐름) |
 | `presentation/dialogs/dialog_router.py` | `_DIALOG_ROUTE_MAP` + `DialogActionsMixin` |
