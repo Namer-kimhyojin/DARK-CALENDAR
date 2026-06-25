@@ -1086,8 +1086,8 @@ def create_task_box(
     checklist_container = QFrame()
     checklist_container.setObjectName("ChecklistContainer")
     chk_layout = QVBoxLayout(checklist_container)
-    chk_layout.setContentsMargins(8, 2, 4, 6)
-    chk_layout.setSpacing(2)
+    chk_layout.setContentsMargins(4, 1, 4, 4)
+    chk_layout.setSpacing(1)
 
     if checklist_items:
         total_cnt = len(checklist_items)
@@ -1147,8 +1147,8 @@ def create_task_box(
 
         # ── Item rows ─────────────────────────────────────────────────────
         # 목록형(list): 작은 사각 체크박스 / 프로세스형(process): 원형 번호 단계
-        _chk_done_txt = _panel_text_faint()
-        _chk_pend_txt = _panel_text_muted()
+        _chk_done_txt = _panel_text_muted()
+        _chk_pend_txt = _panel_text_secondary()
 
         for idx, (stext, sis_c, chandler) in enumerate(checklist_items):
             clickable = callable(chandler)
@@ -1172,11 +1172,14 @@ def create_task_box(
 
             item_w = QWidget()
             item_w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-            item_w.setStyleSheet("background: transparent;")
-            item_w.setFixedHeight(18)
+            item_w.setStyleSheet(
+                "QWidget { background: transparent; border: none; outline: none; }"
+                " QWidget:hover { background: rgba(255,255,255,0.03); border-radius: 3px; }"
+            )
+            item_w.setFixedHeight(20)
             item_l = QHBoxLayout(item_w)
-            item_l.setContentsMargins(0, 0, 2, 0)
-            item_l.setSpacing(4)
+            item_l.setContentsMargins(2, 0, 2, 0)
+            item_l.setSpacing(5)
 
             ind = QPushButton()
             ind.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -1184,24 +1187,24 @@ def create_task_box(
             # 항목별 박스/색상 태그 제거 — 번호/체크 글리프만 (무배경·무테두리·무테마색)
             _ind_style = (
                 "QPushButton {{ background: transparent; border: none;"
-                " padding: 0; font-size: 9px; color: {color}; font-weight: {weight}; }}"
+                " padding: 0; font-size: 10px; color: {color}; font-weight: {weight}; }}"
             )
             if is_process:
+                ind.setFixedSize(16, 16)
+                if sis_c:
+                    ind.setText("✓")
+                    ind.setStyleSheet(_ind_style.format(color=_chk_done_txt, weight=700))
+                else:
+                    ind.setText(str(idx + 1))
+                    _num_clr = "rgba(255,255,255,0.30)" if _locked else _chk_pend_txt
+                    ind.setStyleSheet(_ind_style.format(color=_num_clr, weight=600))
+            else:
                 ind.setFixedSize(14, 14)
                 if sis_c:
                     ind.setText("✓")
-                    ind.setStyleSheet(_ind_style.format(color=_chk_done_txt, weight=800))
+                    ind.setStyleSheet(_ind_style.format(color=_chk_done_txt, weight=700))
                 else:
-                    ind.setText(str(idx + 1))
-                    _num_clr = "rgba(255,255,255,0.18)" if _locked else _chk_pend_txt
-                    ind.setStyleSheet(_ind_style.format(color=_num_clr, weight=700))
-            else:
-                ind.setFixedSize(12, 12)
-                if sis_c:
-                    ind.setText("✓")
-                    ind.setStyleSheet(_ind_style.format(color=_chk_done_txt, weight=800))
-                else:
-                    ind.setText("·")
+                    ind.setText("–")
                     ind.setStyleSheet(_ind_style.format(color=_chk_pend_txt, weight=400))
             if clickable:
                 ind.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1217,12 +1220,12 @@ def create_task_box(
             if sis_c:
                 text_lbl.setStyleSheet(
                     f"color: {_chk_done_txt}; font-size: {_fpt(-1)};"
-                    " text-decoration: line-through; background: transparent;"
+                    " text-decoration: line-through; background: transparent; border: none;"
                 )
             else:
-                _txt_clr = "rgba(255,255,255,0.22)" if _locked else _chk_pend_txt
+                _txt_clr = "rgba(255,255,255,0.35)" if _locked else _chk_pend_txt
                 text_lbl.setStyleSheet(
-                    f"color: {_txt_clr}; font-size: {_fpt(-1)}; background: transparent;"
+                    f"color: {_txt_clr}; font-size: {_fpt(-1)}; background: transparent; border: none;"
                 )
             if clickable:
                 text_lbl.setCursor(Qt.CursorShape.PointingHandCursor)
