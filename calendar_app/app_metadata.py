@@ -1,0 +1,11 @@
+"""Application metadata used by runtime UI surfaces."""
+
+APP_NAME = "Dark Calendar"
+APP_VERSION = "3.0"
+APP_RELEASE_CHANNEL = "Stable"
+APP_RELEASE_DATE = "2026-06-25"
+APP_VERSION_LABEL = f"v{APP_VERSION}"
+APP_VERSION_DISPLAY = f"{APP_VERSION_LABEL} · {APP_RELEASE_CHANNEL}"
+APP_VERSION_DETAIL = f"{APP_VERSION_DISPLAY} · {APP_RELEASE_DATE}"
+APP_AUTHOR = "김효진"
+APP_EMAIL = "aplus.mylife@gmail.com"

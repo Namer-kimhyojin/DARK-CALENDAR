@@ -1130,6 +1130,7 @@ def create_task_box(
         prog_bar.setFixedHeight(2)
         prog_bar.setTextVisible(False)
         prog_bar.setToolTip(f"완료 {done_cnt}개 / 전체 {total_cnt}개")
+        prog_bar.setToolTip(f"완료 {done_cnt}개 / 전체 {total_cnt}개")
         prog_bar.setStyleSheet(f"""
             QProgressBar {{
                 background: rgba(255,255,255,0.08);
@@ -1179,62 +1180,29 @@ def create_task_box(
 
             ind = QPushButton()
             ind.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            ind.setFlat(True)
+            # 항목별 박스/색상 태그 제거 — 번호/체크 글리프만 (무배경·무테두리·무테마색)
+            _ind_style = (
+                "QPushButton {{ background: transparent; border: none;"
+                " padding: 0; font-size: 9px; color: {color}; font-weight: {weight}; }}"
+            )
             if is_process:
-                # 원형 번호 인디케이터 (단계 순서 표현)
                 ind.setFixedSize(14, 14)
                 if sis_c:
                     ind.setText("✓")
-                    ind.setStyleSheet(f"""
-                        QPushButton {{
-                            background: {_tc_hex};
-                            border: none; border-radius: 7px;
-                            color: #ffffff; font-size: 7px; font-weight: 800; padding: 0;
-                        }}
-                    """)
+                    ind.setStyleSheet(_ind_style.format(color=_chk_done_txt, weight=800))
                 else:
                     ind.setText(str(idx + 1))
-                    if _locked:
-                        ind.setStyleSheet("""
-                            QPushButton {
-                                background: transparent;
-                                border: 1px solid rgba(255,255,255,0.08);
-                                border-radius: 7px;
-                                color: rgba(255,255,255,0.18); font-size: 7px; font-weight: 600; padding: 0;
-                            }
-                        """)
-                    else:
-                        ind.setStyleSheet(f"""
-                            QPushButton {{
-                                background: {_tc_rgba(18)};
-                                border: 1px solid {_tc_rgba(80)};
-                                border-radius: 7px;
-                                color: {_chk_pend_txt}; font-size: 7px; font-weight: 700; padding: 0;
-                            }}
-                            QPushButton:hover {{ background: {_tc_rgba(38)}; border-color: {_tc_hex}; color: {_tc_hex}; }}
-                        """)
+                    _num_clr = "rgba(255,255,255,0.18)" if _locked else _chk_pend_txt
+                    ind.setStyleSheet(_ind_style.format(color=_num_clr, weight=700))
             else:
-                # 사각 체크박스 (체크 항목)
                 ind.setFixedSize(12, 12)
                 if sis_c:
                     ind.setText("✓")
-                    ind.setStyleSheet(f"""
-                        QPushButton {{
-                            background: {_tc_hex};
-                            border: none; border-radius: 2px;
-                            color: #ffffff; font-size: 7px; font-weight: 800; padding: 0;
-                        }}
-                    """)
+                    ind.setStyleSheet(_ind_style.format(color=_chk_done_txt, weight=800))
                 else:
-                    ind.setText("")
-                    ind.setStyleSheet(f"""
-                        QPushButton {{
-                            background: transparent;
-                            border: 1px solid {_tc_rgba(60)};
-                            border-radius: 2px;
-                            color: transparent; padding: 0;
-                        }}
-                        QPushButton:hover {{ border-color: {_tc_hex}; background: {_tc_rgba(25)}; }}
-                    """)
+                    ind.setText("·")
+                    ind.setStyleSheet(_ind_style.format(color=_chk_pend_txt, weight=400))
             if clickable:
                 ind.setCursor(Qt.CursorShape.PointingHandCursor)
                 ind.clicked.connect(chandler)
@@ -1282,14 +1250,12 @@ def create_task_box(
             chk_layout.addWidget(item_w)
 
         # ── Container — 무테두리/무배경, 패널과 자연스럽게 어울림 ──────────
-        checklist_container.setStyleSheet(f"""
-            QFrame#ChecklistContainer {{
-                background: {_tc_rgba(8)};
+        checklist_container.setStyleSheet("""
+            QFrame#ChecklistContainer {
+                background: transparent;
                 border: none;
-                border-left: 2px solid {_tc_rgba(55)};
-                border-radius: 0px 3px 3px 0px;
                 margin-left: 6px;
-            }}
+            }
         """)
         checklist_container.setVisible(is_initially_visible)
 
@@ -1350,9 +1316,7 @@ def create_task_box(
 
 
 def load_left_panel(app):
-    if app.left_frame.layout() is not None:
-        app.clear_layout(app.left_frame.layout())
-        QWidget().setLayout(app.left_frame.layout())
+    app.reset_frame(app.left_frame)
 
     today_items = []
     panel_mode = _left_panel_mode(app)
@@ -1496,13 +1460,9 @@ def load_left_panel(app):
 
 
 def load_right_panel(app):
-    if app.routine_frame.layout() is not None:
-        app.clear_layout(app.routine_frame.layout())
-        QWidget().setLayout(app.routine_frame.layout())
+    app.reset_frame(app.routine_frame)
 
-    if app.directive_frame.layout() is not None:
-        app.clear_layout(app.directive_frame.layout())
-        QWidget().setLayout(app.directive_frame.layout())
+    app.reset_frame(app.directive_frame)
 
     routine_items = []
     directive_items = []

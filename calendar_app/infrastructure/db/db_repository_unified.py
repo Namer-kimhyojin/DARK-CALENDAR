@@ -1662,8 +1662,9 @@ def get_schedule_tasks_overlapping_range_with_progress(
     filters = [
         "t.type='schedule'",
         "(c.is_visible IS NULL OR c.is_visible = 1)",
-        "date(t.deadline) <= date(?)",
-        "date(ifnull(t.end_date, t.deadline)) >= date(?)",
+        # deadline 이 NULL 인 일정은 target_date 로 대체하여 범위 비교 (NULL 비교 누락 방지)
+        "date(COALESCE(t.deadline, t.target_date)) <= date(?)",
+        "date(COALESCE(t.end_date, t.deadline, t.target_date)) >= date(?)",
     ]
     params = [end_date_str, start_date_str]
     if hide_gcal_items:
