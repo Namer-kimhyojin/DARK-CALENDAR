@@ -1190,7 +1190,7 @@ def create_task_box(
                 " padding: 0; font-size: 10px; color: {color}; font-weight: {weight}; }}"
             )
             if is_process:
-                ind.setFixedSize(8, 16)
+                ind.setFixedSize(5, 16)
                 if sis_c:
                     ind.setText("✓")
                     ind.setStyleSheet(_ind_style.format(color=_chk_done_txt, weight=700))
@@ -1199,7 +1199,7 @@ def create_task_box(
                     _num_clr = "rgba(255,255,255,0.30)" if _locked else _chk_pend_txt
                     ind.setStyleSheet(_ind_style.format(color=_num_clr, weight=600))
             else:
-                ind.setFixedSize(8, 14)
+                ind.setFixedSize(5, 14)
                 if sis_c:
                     ind.setText("✓")
                     ind.setStyleSheet(_ind_style.format(color=_chk_done_txt, weight=700))
