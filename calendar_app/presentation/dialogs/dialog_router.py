@@ -32,6 +32,23 @@ _DIALOG_ROUTE_MAP = {
 }
 
 
+def _panel_shortcut_help_html(panel_name: str) -> str:
+    from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key
+
+    quick_title = t("panel.help.quick_title", "{panel} Quick Help", panel=panel_name)
+    intro = t(
+        "panel.help.recovery_intro",
+        "If the menu bar is hidden, use these shortcuts to recover quickly.",
+    )
+    rows = [
+        (get_key("magnet_mode"), t("panel.help.magnet", "Toggle magnet mode")),
+        (get_key("topbar"), t("panel.help.topbar", "Show or hide the menu bar")),
+        (get_key("lock_mode"), t("panel.help.lock", "Toggle lock mode")),
+    ]
+    items = "".join(f"<li><b>{shortcut}</b> - {label}</li>" for shortcut, label in rows)
+    return f"<h3>{quick_title}</h3><p>{intro}</p><ul>{items}</ul>"
+
+
 def route_dialog(app, dialog_key: str, *args, **kwargs):
     """Route a dialog key to the corresponding app dialog opener method."""
     if app is None:
@@ -287,23 +304,11 @@ class DialogActionsMixin:
                 and task_type != "routine"
                 and self.settings.value("gcal_enabled", "true") == "true"
             ):
-                from calendar_app.infrastructure.google_sync.helpers import sync_task_to_google
-                from calendar_app.shared.background_worker import DbTaskWorker
+                from calendar_app.infrastructure.google_sync.push_queue import gcal_push_queue
 
                 task = _task_repo.get_unified_task(task_id)
                 if task:
-                    worker = DbTaskWorker(
-                        lambda tc=task: sync_task_to_google(self, tc, create_if_missing=True)
-                    )
-                    if not hasattr(self, "_bg_workers"):
-                        self._bg_workers = []
-                    self._bg_workers.append(worker)
-                    worker.task_done.connect(
-                        lambda _w=worker: self._bg_workers.remove(_w)
-                        if _w in self._bg_workers
-                        else None
-                    )
-                    worker.start()
+                    gcal_push_queue.enqueue(self, task, create_if_missing=True)
         except Exception:
             logger.exception("open_modify_task_dialog failed for task_id=%s", task_id)
 
@@ -412,9 +417,19 @@ class DialogActionsMixin:
 
         title = t("help.title") or _default_calendar_help_title()
         content = t("help.content") or _default_calendar_help_content()
+        content = f"{content}{_panel_shortcut_help_html(t('panel.main_calendar', 'Main Calendar'))}"
         msg = QMessageBox(self)
         msg.setWindowTitle(title)
         msg.setText(content)
+        msg.setTextFormat(Qt.TextFormat.RichText)
+        msg.exec()
+
+    def show_panel_shortcut_help(self, panel_name):
+        from PyQt6.QtCore import Qt
+
+        msg = QMessageBox(self)
+        msg.setWindowTitle(t("panel.help.title", "Panel Help"))
+        msg.setText(_panel_shortcut_help_html(str(panel_name or "")))
         msg.setTextFormat(Qt.TextFormat.RichText)
         msg.exec()
 

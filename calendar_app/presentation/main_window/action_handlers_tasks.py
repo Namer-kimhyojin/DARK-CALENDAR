@@ -11,7 +11,7 @@ from calendar_app.infrastructure.db import directive_repo as db_directive
 from calendar_app.infrastructure.db import legacy_task_repo as db_legacy_task
 from calendar_app.infrastructure.db import search_repo as db_search
 from calendar_app.infrastructure.db import task_repo as db_task
-from calendar_app.infrastructure.google_sync.helpers import sync_task_to_google
+from calendar_app.infrastructure.google_sync.push_queue import gcal_push_queue
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.color_swatch_widget import ColorSwatchPopup
 from calendar_app.presentation.widgets.ui_components import DraggableTaskButton
@@ -96,12 +96,7 @@ class TaskActionsMixin:
         # routine(일반업무)는 GCal 동기화 대상 아님 — schedule만 push
         _is_schedule = (task_data or {}).get("type", "schedule") != "routine"
         if task_data and _is_schedule and self.settings.value("gcal_enabled", "true") == "true":
-            from calendar_app.shared.background_worker import DbTaskWorker
-
-            worker = DbTaskWorker(
-                lambda t=task_data: sync_task_to_google(self, t, create_if_missing=True)
-            )
-            self._run_worker(worker)
+            gcal_push_queue.enqueue(self, task_data, create_if_missing=True)
         self.schedule_panel_refresh(left=True, center=True, right=True)
 
     def handle_task_modified(self, modified_data):
@@ -184,7 +179,6 @@ class TaskActionsMixin:
             # If gcal is enabled, push the changes (updates for move, creates for copy)
             if changed > 0 and self.settings.value("gcal_enabled", "true") == "true":
                 from calendar_app.infrastructure.db import task_repo as _task_repo
-                from calendar_app.shared.background_worker import DbTaskWorker
 
                 # Determine which IDs to push to Google Calendar
                 # If action is copy, we push the newly created copied_ids
@@ -193,17 +187,11 @@ class TaskActionsMixin:
                     copied_ids if action == "copy" else [int(x) for x in (task_id_list or []) if x]
                 )
 
-                def _push_all_to_gcal(ids_to_sync=None):
-                    for tid in ids_to_sync if ids_to_sync is not None else list(push_ids):
-                        # Re-read task from DB to get the latest updated/copied data (e.g. new deadline)
-                        task = _task_repo.get_unified_task(tid)
-                        if task:
-                            # sync_task_to_google will handle create (if new) or update (if exists)
-                            sync_task_to_google(self, task, create_if_missing=True)
-                    return True
-
-                worker = DbTaskWorker(_push_all_to_gcal)
-                self._run_worker(worker)
+                for tid in push_ids:
+                    # Re-read task from DB to get the latest updated/copied data (e.g. new deadline)
+                    task = _task_repo.get_unified_task(tid)
+                    if task:
+                        gcal_push_queue.enqueue(self, task, create_if_missing=True)
 
             # Trigger a general sync/refresh
             self.wake_gcal_sync()
@@ -230,15 +218,10 @@ class TaskActionsMixin:
         return False
 
     def handle_task_rename_requested(self, task_id, new_name):
-        from calendar_app.shared.background_worker import DbTaskWorker
-
         task = task_usecases.rename_task(db_task, task_id, new_name)
         if task:
             if self.settings.value("gcal_enabled", "true") == "true":
-                worker = DbTaskWorker(
-                    lambda: sync_task_to_google(self, task, create_if_missing=True)
-                )
-                self._run_worker(worker)
+                gcal_push_queue.enqueue(self, task, create_if_missing=True)
 
             self.wake_gcal_sync()
             self.schedule_panel_refresh(left=True, center=True, right=True)
@@ -569,12 +552,9 @@ class TaskActionsMixin:
 
     def handle_task_resized(self, task_id, minutes):
         """일정 리사이즈 후 종료 시간을 갱신."""
-        from calendar_app.shared.background_worker import DbTaskWorker
-
         task = task_usecases.resize_task_and_get_sync_payload(db_task, task_id, minutes)
         if task:
-            worker = DbTaskWorker(lambda: sync_task_to_google(self, task, create_if_missing=True))
-            self._run_worker(worker)
+            gcal_push_queue.enqueue(self, task, create_if_missing=True)
             self.wake_gcal_sync()
             self.selected_task_ids.clear()
             self.update_task_selection_status()

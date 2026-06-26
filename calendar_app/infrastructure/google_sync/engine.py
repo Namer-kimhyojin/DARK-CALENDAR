@@ -32,7 +32,10 @@ def _get_default_gcal_id(app) -> str:
     return get_default_gcal_calendar_id()
 
 
-from calendar_app.infrastructure.google_sync.helpers import sync_task_to_google  # noqa: E402
+from calendar_app.infrastructure.google_sync.helpers import (  # noqa: E402
+    delete_task_from_google,
+    sync_task_to_google,
+)
 from calendar_app.shared.datetime_utils import (  # noqa: E402
     parse_datetime_str,
     timezone_offset_for_name,
@@ -1048,7 +1051,7 @@ def _process_google_delete_queue(app):
     deleted = 0
     failed = 0
     sync = getattr(app, "gcal_sync", None)
-    if not sync or not sync.is_authenticated:
+    if not sync or not getattr(sync, "is_authenticated", True):
         return 0, 0
 
     queue_rows = task_repo.get_gcal_delete_queue_ready(max_retry_count=_GCAL_DELETE_MAX_RETRIES)
@@ -1075,24 +1078,52 @@ def _process_google_delete_queue(app):
                 }
             )
 
-        batch_results = sync.batch_delete_events(ops)
+        batch_results = None
+        if hasattr(sync, "batch_delete_events"):
+            batch_results = sync.batch_delete_events(ops)
+
         if not batch_results:
-            logger.warning("batch_delete_events failed for chunk; continuing to next chunk")
-            continue
+            logger.warning(
+                "batch_delete_events unavailable or failed for chunk; falling back to single deletes"
+            )
+            batch_results = []
+            for op in ops:
+                ok = delete_task_from_google(
+                    app,
+                    op.get("event_id"),
+                    calendar_id=op.get("calendar_id"),
+                )
+                status = getattr(sync, "last_error_status", None)
+                batch_results.append(
+                    {
+                        "local_task_id": op.get("local_task_id"),
+                        "success": bool(ok),
+                        "event_id": op.get("event_id"),
+                        "status": status,
+                        "error": getattr(sync, "last_error_message", None),
+                    }
+                )
+                if status in (401, 429):
+                    break
 
         for res in batch_results:
             qid = res.get("local_task_id")
             if res.get("success"):
-                task_repo.mark_gcal_delete_done(qid, commit=True)
+                task_repo.mark_gcal_delete_done(qid)
                 deleted += 1
             else:
                 st = res.get("status")
                 if st in (404, 409, 410):
                     # 404/410 = already deleted; 409 = event ID conflict (event doesn't exist
                     # under this ID in GCal) — all three mean nothing left to delete.
-                    task_repo.mark_gcal_delete_done(qid, commit=True)
+                    task_repo.mark_gcal_delete_done(qid)
                     deleted += 1
                 elif st == 401:
+                    task_repo.mark_gcal_delete_failed(
+                        qid,
+                        f"[auth_expired_401] {res.get('error') or 'auth expired'}",
+                    )
+                    failed += 1
                     logger.warning(
                         "Delete queue: 401 auth expired; committing current results and aborting"
                     )

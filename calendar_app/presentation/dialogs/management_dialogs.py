@@ -66,8 +66,37 @@ def _status_value_from_label(label):
     return "pending"
 
 
-def _status_background(status):
+def _management_header_style(tokens=None, metrics=None):
+    tokens = dict(tokens or get_dialog_theme_tokens())
+    metrics = dict(metrics or {})
+    return (
+        f"color: {tokens.get('accent', '#4da6ff')}; "
+        f"font-size: {int(metrics.get('title_font_pt', 16))}pt; "
+        "font-weight: 700;"
+    )
+
+
+def _token_color(value, fallback):
+    color = QColor(str(value or fallback))
+    if not color.isValid():
+        color = QColor(str(fallback))
+    return color
+
+
+def _status_background(status, tokens=None):
     status = _normalize_status(status)
+    if tokens:
+        tokens = dict(tokens)
+        if status == "completed":
+            color = _token_color(tokens.get("success_hex"), tokens.get("accent", "#4da6ff"))
+        elif status == "in_progress":
+            color = _token_color(tokens.get("accent"), "#4da6ff")
+        elif status == "pending":
+            color = _token_color(tokens.get("warning_hex"), tokens.get("accent", "#4da6ff"))
+        else:
+            color = _token_color(tokens.get("danger_hex"), tokens.get("accent", "#4da6ff"))
+        color.setAlpha(48)
+        return color
     if status == "completed":
         return QColor(18, 99, 58)
     if status == "in_progress":

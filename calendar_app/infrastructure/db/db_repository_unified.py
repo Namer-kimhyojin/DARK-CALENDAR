@@ -16,7 +16,7 @@ _GCAL_META_ONLY_FIELDS = {
     "updated_at",
 }
 
-_schema_cache: dict[str, set] = {}
+_schema_cache: dict[tuple[str, str], set] = {}
 
 
 def _now_local_str():
@@ -33,10 +33,21 @@ def get_connection():
 
 
 def _table_columns(cur, table_name: str) -> set:
-    if table_name not in _schema_cache:
+    db_path = ""
+    try:
+        cur.execute("PRAGMA database_list")
+        for row in cur.fetchall():
+            if row[1] == "main":
+                db_path = str(row[2] or "")
+                break
+    except Exception:
+        db_path = ""
+
+    cache_key = (db_path, table_name)
+    if cache_key not in _schema_cache:
         cur.execute(f"PRAGMA table_info({table_name})")
-        _schema_cache[table_name] = {row[1] for row in cur.fetchall()}
-    return _schema_cache[table_name]
+        _schema_cache[cache_key] = {row[1] for row in cur.fetchall()}
+    return _schema_cache[cache_key]
 
 
 # ==================== 일반업무 유형별 기간 계산 ====================
@@ -1632,6 +1643,82 @@ def get_checklist_progress_for_owners(owner_ids):
     return result
 
 
+def _resolved_primary_gcal_id_for_query():
+    try:
+        from PyQt6.QtCore import QSettings
+
+        from calendar_app.app_paths import APP_NAME, APP_VENDOR
+
+        settings = QSettings(APP_VENDOR, APP_NAME)
+        resolved = str(settings.value("gcal_primary_resolved_id", "") or "").strip()
+        if resolved and resolved != "primary":
+            return resolved
+    except Exception:
+        pass
+    return "primary"
+
+
+def _canonical_gcal_calendar_id_for_query(calendar_id):
+    cid = str(calendar_id or "").strip()
+    if cid.startswith("gcal::"):
+        cid = cid[len("gcal::") :]
+    if not cid:
+        cid = "primary"
+    if cid == "primary":
+        resolved = _resolved_primary_gcal_id_for_query()
+        if resolved and resolved != "primary":
+            return resolved
+    return cid
+
+
+def _gcal_row_dedupe_key(task):
+    event_id = str(task.get("gcal_event_id") or "").strip()
+    if not event_id:
+        return ("local", task.get("id"))
+    raw_calendar_id = (
+        task.get("gcal_source_calendar_id")
+        or task.get("gcal_target_calendar_id")
+        or task.get("calendar_id")
+        or "primary"
+    )
+    return ("gcal", _canonical_gcal_calendar_id_for_query(raw_calendar_id), event_id)
+
+
+def _gcal_row_priority(task):
+    source_id = str(task.get("gcal_source_calendar_id") or "").strip()
+    target_id = str(task.get("gcal_target_calendar_id") or "").strip()
+    calendar_id = str(task.get("calendar_id") or "").strip()
+    uses_primary_alias = (
+        source_id == "primary" or target_id == "primary" or calendar_id == "gcal::primary"
+    )
+    sync_mode = str(task.get("gcal_sync_mode") or "").strip()
+    try:
+        row_id = int(task.get("id") or 0)
+    except Exception:
+        row_id = 0
+    return (
+        1 if uses_primary_alias else 0,
+        0 if sync_mode == "remote_mirror" else 1,
+        -row_id,
+    )
+
+
+def _dedupe_gcal_schedule_rows(tasks):
+    deduped = {}
+    passthrough = []
+    for task in tasks:
+        if not str(task.get("gcal_event_id") or "").strip():
+            passthrough.append(task)
+            continue
+        key = _gcal_row_dedupe_key(task)
+        current = deduped.get(key)
+        if current is None or _gcal_row_priority(task) < _gcal_row_priority(current):
+            deduped[key] = task
+    result = [*passthrough, *deduped.values()]
+    result.sort(key=lambda item: (str(item.get("deadline") or ""), int(item.get("id") or 0)))
+    return result
+
+
 def _apply_checklist_progress_batch(tasks):
     """task 목록에 진행률을 배치로 주입 (개별 쿼리 없음)."""
     prog_map = get_checklist_progress_for_owners([t["id"] for t in tasks])
@@ -1665,7 +1752,11 @@ def get_schedule_tasks_overlapping_range_with_progress(
 
     cur = conn.cursor()
     filters = [
-        "t.type='schedule'",
+        "("
+        "t.type='schedule' OR "
+        "(COALESCE(t.gcal_sync_mode, '') = 'remote_mirror' "
+        "AND COALESCE(trim(t.gcal_event_id), '') != '')"
+        ")",
         "(c.is_visible IS NULL OR c.is_visible = 1)",
         # deadline 이 NULL 인 일정은 target_date 로 대체하여 범위 비교 (NULL 비교 누락 방지)
         "date(COALESCE(t.deadline, t.target_date)) <= date(?)",
@@ -1683,6 +1774,7 @@ def get_schedule_tasks_overlapping_range_with_progress(
     cur.execute(query, tuple(params))
     rows = cur.fetchall()
     tasks = [dict(row) for row in rows]
+    tasks = _dedupe_gcal_schedule_rows(tasks)
     _apply_checklist_progress_batch(tasks)
     return tasks
 

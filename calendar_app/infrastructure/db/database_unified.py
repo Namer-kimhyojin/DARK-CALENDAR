@@ -8,14 +8,21 @@ import threading
 
 from calendar_app.app_paths import DB_PATH, LOG_PATH
 
+
+def _build_logging_handlers():
+    handlers = [logging.StreamHandler()]
+    try:
+        handlers.insert(0, logging.FileHandler(LOG_PATH, encoding="utf-8", errors="strict"))
+    except OSError as exc:
+        logging.getLogger(__name__).warning("File logging disabled for %s: %s", LOG_PATH, exc)
+    return handlers
+
+
 # 로깅 설정
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.FileHandler(LOG_PATH, encoding="utf-8", errors="strict"),
-        logging.StreamHandler(),
-    ],
+    handlers=_build_logging_handlers(),
 )
 
 logger = logging.getLogger("Database")

@@ -45,6 +45,7 @@ from calendar_app.shared.theme_settings import (
 from calendar_app.shared.theme_settings import (
     panel_palette as _panel_palette,
 )
+from calendar_app.shared.ui_tokens import get_ui_tokens
 
 logger = logging.getLogger(__name__)
 _panel_calendar_cache = None  # dict | None: {calendar_id: color}
@@ -52,6 +53,13 @@ _panel_calendar_cache = None  # dict | None: {calendar_id: color}
 
 def _shape_tokens() -> dict:
     return get_ui_shape_tokens()
+
+
+def _semantic_tokens(tokens=None) -> dict:
+    merged = dict(get_ui_tokens())
+    if tokens:
+        merged.update(tokens)
+    return merged
 
 
 def _calendar_color_for_task(task: dict) -> str | None:
@@ -325,9 +333,12 @@ def _localized_weekday_short(qd: QDate) -> str:
     return day_names[qd.dayOfWeek() - 1]
 
 
-def _panel_surface_style():
+def _panel_surface_style(tokens=None, shape=None):
     pal = _panel_palette()
-    shape = _shape_tokens()
+    if tokens:
+        semantic = _semantic_tokens(tokens)
+        pal.update({"surface_bg": semantic.get("bg_main", pal["surface_bg"])})
+    shape = dict(shape or _shape_tokens())
     surface_radius = int(shape.get("panel_surface_radius", 0))
     return f"""
         QFrame#panel_surface {{
@@ -344,20 +355,25 @@ def _panel_toolbar_style():
     toolbar_radius = int(shape.get("panel_toolbar_radius", 0))
     return f"""
         QWidget#panel_toolbar {{
-            background-color: {pal["toolbar_bg"]};
+            background-color: {pal["surface_bg"]};
             border-radius: {toolbar_radius}px;
             border: none;
         }}
     """
 
 
-def _toolbar_button_style():
-    txt = _panel_text_secondary()
-    shape = _shape_tokens()
+def _panel_scroll_style():
+    return "QScrollArea { background: transparent; border: none; }"
+
+
+def _toolbar_button_style(tokens=None, shape=None):
+    tokens = _semantic_tokens(tokens) if tokens else {}
+    txt = tokens.get("text_secondary", _panel_text_secondary())
+    shape = dict(shape or _shape_tokens())
     btn_radius = int(shape.get("panel_toolbar_button_radius", 0))
-    hover_bg = "rgba(255, 255, 255, 0.08)"
-    hover_border = "rgba(255, 255, 255, 0.06)"
-    hover_txt = _panel_text_color()
+    hover_bg = tokens.get("bg_item_hover", "rgba(255, 255, 255, 0.08)")
+    hover_border = tokens.get("border", "rgba(255, 255, 255, 0.06)")
+    hover_txt = tokens.get("text_primary", _panel_text_color())
     return f"""
         QPushButton {{
             color: {txt};
@@ -378,25 +394,35 @@ def _toolbar_button_style():
     """
 
 
-def _panel_menu_style():
+def _panel_menu_style(tokens=None, shape=None):
+    tokens = _semantic_tokens(tokens) if tokens else {}
     from PyQt6.QtCore import QSettings
 
-    s = QSettings("kimhyojin", "Dark Calendar")
-    base = QColor(str(s.value("panel_base_color", "#1c1c1c")))
-    if not base.isValid():
-        base = QColor("#1c1c1c")
-    opacity_raw = s.value("last_opacity", 200, type=int)
-    if opacity_raw <= 100:
-        opacity_raw = int(opacity_raw * 255 / 100)
-    opacity = max(0.0, min(1.0, opacity_raw / 255.0))
-    menu_bg = f"rgba({base.red()}, {base.green()}, {base.blue()}, {max(210, int(242 * opacity))})"
-    menu_txt = _panel_text_secondary()
-    menu_muted = _panel_text_muted()
-    menu_disabled = _panel_text_faint()
-    menu_border = "rgba(255, 255, 255, 18)"
+    if tokens:
+        menu_bg = tokens.get("bg_alt", _panel_palette()["surface_bg"])
+        menu_txt = tokens.get("text_secondary", _panel_text_secondary())
+        menu_muted = tokens.get("text_muted", _panel_text_muted())
+        menu_disabled = tokens.get("text_faint", _panel_text_faint())
+        menu_border = tokens.get("accent_border", tokens.get("border", "rgba(255, 255, 255, 18)"))
+    else:
+        s = QSettings("kimhyojin", "Dark Calendar")
+        base = QColor(str(s.value("panel_base_color", "#1c1c1c")))
+        if not base.isValid():
+            base = QColor("#1c1c1c")
+        opacity_raw = s.value("last_opacity", 200, type=int)
+        if opacity_raw <= 100:
+            opacity_raw = int(opacity_raw * 255 / 100)
+        opacity = max(0.0, min(1.0, opacity_raw / 255.0))
+        menu_bg = (
+            f"rgba({base.red()}, {base.green()}, {base.blue()}, {max(210, int(242 * opacity))})"
+        )
+        menu_txt = _panel_text_secondary()
+        menu_muted = _panel_text_muted()
+        menu_disabled = _panel_text_faint()
+        menu_border = "rgba(255, 255, 255, 18)"
     sep_color = "rgba(255,255,255,20)"
     sel_txt = _panel_text_color()
-    shape = _shape_tokens()
+    shape = dict(shape or _shape_tokens())
     menu_radius = int(shape.get("panel_menu_radius", 0))
     menu_item_radius = int(shape.get("panel_menu_item_radius", 0))
     return f"""
@@ -611,10 +637,12 @@ class DockTitleBar(QWidget):
         title_style=None,
         add_handler=None,
         manage_handler=None,
+        help_handler=None,
         icon_text="*",
         trailing_widget=None,
     ):
         super().__init__()
+        self._help_handler = help_handler
         self._dock_ref = None
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setObjectName("panel_toolbar")
@@ -641,10 +669,22 @@ class DockTitleBar(QWidget):
         if trailing_widget is not None:
             layout.addWidget(trailing_widget)
 
-        icon_btn_style = _toolbar_button_style()
+        icon_btn_style = (
+            _toolbar_button_style()
+            + """
+            QPushButton {
+                min-width: 20px;
+                max-width: 20px;
+                min-height: 20px;
+                max-height: 20px;
+                padding: 0px;
+            }
+            """
+        )
 
         if add_handler:
             add_btn = QPushButton("+")
+            add_btn.setFixedSize(20, 20)
             add_btn.setToolTip(t("panel.toolbar.add"))
             add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             add_btn.setStyleSheet(icon_btn_style)
@@ -653,6 +693,7 @@ class DockTitleBar(QWidget):
 
         if manage_handler:
             manage_btn = QPushButton("...")
+            manage_btn.setFixedSize(20, 20)
             manage_btn.setToolTip(t("panel.toolbar.manage"))
             manage_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             manage_btn.setStyleSheet(icon_btn_style)

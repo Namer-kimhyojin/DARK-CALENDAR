@@ -102,7 +102,7 @@ def _mark_task_synced(
     try:
         from calendar_app.infrastructure.db import task_repo as _task_repo
 
-        return _task_repo.mark_unified_task_gcal_synced(
+        marked = _task_repo.mark_unified_task_gcal_synced(
             local_id,
             event_id=event_id,
             commit=commit,
@@ -110,6 +110,20 @@ def _mark_task_synced(
             source_calendar_summary=_resolve_source_summary(source_calendar_id),
             target_calendar_id=target_calendar_id,
         )
+        if marked:
+            return True
+
+        conn = _task_repo.get_connection()
+        if conn:
+            cur = conn.cursor()
+            cur.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='unified_task'")
+            if not cur.fetchone():
+                logger.warning(
+                    "Skipping local GCal sync mark for task %s because unified_task table is unavailable",
+                    local_id,
+                )
+                return True
+        return False
     except Exception:
         logger.exception("Failed to mark local task %s as Google-synced", local_id)
         return False
@@ -388,18 +402,26 @@ def sync_task_to_google(
                         )
                         return SyncTaskResult(event_id=existing_id, success=True, auto_healed=True)
             except Exception:
-                # DB re-read itself failed: skip create to avoid potential
-                # duplicate. Will be retried in the next sync cycle.
+                if not (existing_id and has_explicit_source):
+                    # DB re-read itself failed for a new/ambiguous create: skip
+                    # to avoid potential duplicates. Existing explicit-source
+                    # not_found recovery is safe to continue because create_event
+                    # uses a deterministic idempotency key below.
+                    logger.warning(
+                        "BUG-C01 guard: DB re-read failed for task %s before create; "
+                        "skipping create to avoid duplicate (will retry next cycle)",
+                        local_id,
+                    )
+                    return SyncTaskResult(
+                        event_id=None,
+                        success=False,
+                        error_kind="db_reread_failed",
+                        error_message="pre_create_db_reread_error",
+                    )
                 logger.warning(
-                    "BUG-C01 guard: DB re-read failed for task %s before create; "
-                    "skipping create to avoid duplicate (will retry next cycle)",
+                    "BUG-C01 guard: DB re-read failed for task %s during explicit "
+                    "not_found recovery; continuing with idempotent create",
                     local_id,
-                )
-                return SyncTaskResult(
-                    event_id=None,
-                    success=False,
-                    error_kind="db_reread_failed",
-                    error_message="pre_create_db_reread_error",
                 )
 
         # Build idempotency key from task identity so that GCal server rejects

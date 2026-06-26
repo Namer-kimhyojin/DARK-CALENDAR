@@ -46,6 +46,37 @@ from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
 
+_GCAL_STYLE_TEMPLATE = ""
+
+
+def _build_gcal_stylesheet(tokens=None):
+    return build_settings_dialog_stylesheet(tokens or get_dialog_theme_tokens())
+
+
+def _gcal_runtime_style_bundle(tokens=None, metrics=None):
+    return build_settings_style_bundle(
+        tokens or get_dialog_theme_tokens(),
+        metrics or get_dialog_metric_tokens(apply_overrides=True),
+    )
+
+
+def _gcal_editor_dialog_stylesheet(tokens=None, metrics=None):
+    return build_task_editor_stylesheet(
+        tokens or get_dialog_theme_tokens(),
+        metrics or get_dialog_metric_tokens(apply_overrides=True),
+    )
+
+
+def _gcal_visibility_button_style(is_visible, tokens=None):
+    tokens = dict(tokens or get_dialog_theme_tokens())
+    if is_visible:
+        return (
+            f"QPushButton {{ color: {tokens.get('accent', '')}; "
+            f"border: 1px solid {tokens.get('accent_soft_border', tokens.get('border', ''))}; }}"
+        )
+    return f"QPushButton {{ color: {tokens.get('text_muted', '')}; border: 1px solid {tokens.get('border', '')}; }}"
+
+
 _COMMON_TIMEZONES = [
     "UTC",
     "Asia/Seoul",

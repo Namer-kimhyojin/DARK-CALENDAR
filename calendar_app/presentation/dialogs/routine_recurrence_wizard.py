@@ -65,8 +65,8 @@ WIZARD_STYLE = """
 """
 
 
-def _apply_wizard_theme_tokens(css: str) -> str:
-    tokens = get_dialog_theme_tokens()
+def _apply_wizard_theme_tokens(css: str, tokens=None) -> str:
+    tokens = dict(tokens or get_dialog_theme_tokens())
     accent = tokens.get("accent", "#4da6ff")
     accent_hover = tokens.get("accent_hover", accent)
     surface_alt = tokens.get("surface_alt", "#1e1e24")
@@ -100,6 +100,14 @@ def _apply_wizard_theme_tokens(css: str) -> str:
     }
     for old, new in replacements.items():
         css = css.replace(old, new)
+    return css
+
+
+def _build_routine_wizard_stylesheet(tokens=None, metrics=None) -> str:
+    css = _apply_wizard_theme_tokens(WIZARD_STYLE, tokens=tokens)
+    metrics = dict(metrics or {})
+    group_radius = int(metrics.get("group_radius", 10))
+    css = css.replace("border-radius: 10px;", f"border-radius: {group_radius}px;")
     return css
 
 

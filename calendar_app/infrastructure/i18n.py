@@ -269,23 +269,21 @@ class I18nManager:
         QLocale.setDefault(locale)
 
     def _resolve(self, dotted_key):
-        parts = dotted_key.split(".")
-        data = self.translations
-        for part in parts:
-            if isinstance(data, dict) and part in data:
-                data = data[part]
-            else:
-                return None
-        return data
+        return self._resolve_from(self.translations, dotted_key)
 
     def _resolve_from(self, data, dotted_key):
+        if isinstance(data, dict) and dotted_key in data:
+            return data[dotted_key]
         parts = dotted_key.split(".")
         current = data
-        for part in parts:
+        for idx, part in enumerate(parts):
             if isinstance(current, dict) and part in current:
                 current = current[part]
-            else:
-                return None
+                continue
+            remaining = ".".join(parts[idx:])
+            if isinstance(current, dict) and remaining in current:
+                return current[remaining]
+            return None
         return current
 
     def _weekday_from_calendar(self, key):

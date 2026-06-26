@@ -1,14 +1,27 @@
-# -*- coding: utf-8 -*-
 """Deprecated compatibility wrapper over calendar_app.infrastructure.i18n."""
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
+from contextlib import suppress
+from importlib import import_module
 
 from PyQt6.QtCore import QSettings
 
-from calendar_app.infrastructure.i18n import i18n as _infra_i18n
-from calendar_app.infrastructure.i18n import t as _t
+try:
+    _infra_module = import_module("calendar_app.infrastructure.i18n")
+    _infra_i18n = _infra_module.i18n
+    _t = _infra_module.t
+except ModuleNotFoundError:
+    _infra_i18n = None
+
+    def _t(key: str, fallback: str | None = None, **kwargs) -> str:
+        text = str(fallback if fallback is not None else key)
+        try:
+            return text.format(**kwargs)
+        except Exception:
+            return text
+
 
 _change_listeners: list[Callable[[], None]] = []
 
@@ -16,6 +29,8 @@ _change_listeners: list[Callable[[], None]] = []
 def _reload_infra_i18n() -> None:
     """Reload infrastructure i18n manager from current settings."""
     try:
+        if _infra_i18n is None:
+            return
         _infra_i18n._load_translations()  # noqa: SLF001 - intentional compatibility bridge
     except Exception:
         pass
@@ -23,18 +38,30 @@ def _reload_infra_i18n() -> None:
 
 def _notify_change_listeners() -> None:
     for listener in list(_change_listeners):
-        try:
+        with suppress(Exception):
             listener()
+
+
+def _infra_translate(key: str, fallback: str | None = None, **kwargs) -> str:
+    """Translate through infrastructure i18n, with a local formatting fallback."""
+    try:
+        return str(_t(key, fallback if fallback is not None else key, **kwargs))
+    except Exception:
+        text = str(fallback if fallback is not None else key)
+        try:
+            return text.format(**kwargs)
         except Exception:
-            pass
+            return text
 
 
 def tr(text: str, **kwargs) -> str:
     """Compatibility translate function using infrastructure i18n."""
-    return str(_t(text, text, **kwargs))
+    return _infra_translate(text, text, **kwargs)
 
 
 def get_language() -> str:
+    if _infra_i18n is None:
+        return "en"
     return str(getattr(_infra_i18n, "lang", "en") or "en")
 
 
@@ -66,8 +93,5 @@ def add_language_change_listener(fn: Callable[[], None]) -> None:
 
 
 def remove_language_change_listener(fn: Callable[[], None]) -> None:
-    try:
+    with suppress(ValueError):
         _change_listeners.remove(fn)
-    except ValueError:
-        pass
-

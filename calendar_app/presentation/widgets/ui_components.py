@@ -49,6 +49,7 @@ from calendar_app.shared.theme_settings import (
     get_theme_color,
     get_theme_palette_inputs,
 )
+from calendar_app.shared.ui_tokens import get_ui_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,105 @@ _ICON_TIME = "[T]"
 _ICON_LOCATION = "[L]"
 _ICON_ASSIGNEE = "[A]"
 _ICON_DESC = "[M]"
+
+
+def _merged_ui_tokens(tokens=None, settings=None):
+    merged = dict(get_ui_tokens(settings=settings))
+    if tokens:
+        merged.update(tokens)
+    return merged
+
+
+def _qcolor(value, fallback="#000000"):
+    raw = str(value or "").strip()
+    if raw.lower().startswith("rgba(") or raw.lower().startswith("rgb("):
+        try:
+            parts = raw[raw.index("(") + 1 : raw.rindex(")")].split(",")
+            r, g, b = [int(float(parts[i].strip())) for i in range(3)]
+            alpha = 255
+            if len(parts) > 3:
+                alpha_raw = float(parts[3].strip())
+                alpha = int(round(alpha_raw * 255)) if alpha_raw <= 1 else int(round(alpha_raw))
+            return QColor(r, g, b, max(0, min(255, alpha)))
+        except Exception:
+            pass
+    color = QColor(raw or str(fallback))
+    if not color.isValid():
+        color = QColor(str(fallback))
+    return color
+
+
+def _contrast_pen_color(bg_color, tokens=None):
+    bg = _qcolor(bg_color)
+    palette = _merged_ui_tokens(tokens)
+    luminance = (0.299 * bg.red() + 0.587 * bg.green() + 0.114 * bg.blue()) / 255.0
+    return _qcolor(palette["bg_alt"] if luminance > 0.6 else palette["text_primary"])
+
+
+def _selection_overlay_style(tokens=None):
+    palette = _merged_ui_tokens(tokens)
+    return f"background: {palette['accent_soft']}; border: 1px solid {palette['accent_border']};"
+
+
+def _task_title_label_style(selected=False, watermark=False, tokens=None):
+    palette = _merged_ui_tokens(tokens)
+    color = palette["text_muted"] if watermark else palette["text_primary"]
+    weight = "bold" if selected else "600"
+    return f"color: {color}; font-weight: {weight}; background: transparent;"
+
+
+def _task_chip_style_bundle(color=None, tokens=None, shape=None, settings=None):
+    palette = _merged_ui_tokens(tokens, settings=settings)
+    shape = dict(shape or get_ui_shape_tokens(settings=settings))
+    return {
+        "accent": palette["accent"],
+        "base_bg": palette["bg_item"],
+        "task_outer_radius": int(shape.get("task_outer_radius", 8)),
+        "task_title_radius": int(shape.get("task_title_radius", 6)),
+        "selected_border": f"rgba({_qcolor(color or palette['accent']).red()}, {_qcolor(color or palette['accent']).green()}, {_qcolor(color or palette['accent']).blue()}, 150)",
+    }
+
+
+def _task_detail_card_style(tokens=None, shape=None):
+    palette = _merged_ui_tokens(tokens)
+    shape = dict(shape or get_ui_shape_tokens())
+    radius = int(shape.get("task_title_radius", 6))
+    return (
+        f"background-color: {palette['bg_alt']}; "
+        f"color: {palette['text_secondary']}; "
+        f"border-bottom-left-radius: {radius}px; "
+        f"border-bottom-right-radius: {radius}px;"
+    )
+
+
+def _task_context_menu_style(tokens=None, shape=None):
+    palette = _merged_ui_tokens(tokens)
+    shape = dict(shape or get_ui_shape_tokens())
+    menu_radius = int(shape.get("context_menu_radius", 8))
+    item_radius = int(shape.get("context_menu_item_radius", 5))
+    return (
+        f"QMenu {{ background-color: {palette['bg_alt']}; color: {palette['text_primary']}; "
+        f"border: 1px solid {palette['border']}; border-radius: {menu_radius}px; }}"
+        f"QMenu::item {{ border-radius: {item_radius}px; }}"
+    )
+
+
+def _checklist_row_style_bundle(tokens=None, settings=None):
+    palette = _merged_ui_tokens(tokens, settings=settings)
+    return {
+        "label": f"color: {palette['text_primary']}; background: transparent;",
+        "meta": f"color: {palette['text_muted']}; background: transparent;",
+    }
+
+
+def _hover_info_popup_stylesheet(tokens=None, shape=None, settings=None):
+    palette = _merged_ui_tokens(tokens, settings=settings)
+    shape = dict(shape or get_ui_shape_tokens(settings=settings))
+    radius = int(shape.get("tooltip_radius", 8))
+    return (
+        f"QFrame {{ background-color: {palette['bg_alt']}; color: {palette['text_primary']}; "
+        f"border: 1px solid {palette['accent_border']}; border-radius: {radius}px; }}"
+    )
 
 
 def _set_hover_state(widget, hovered: bool):
@@ -1380,15 +1480,12 @@ class DraggableTaskButton(QFrame):
             if p:
                 p._refresh_all_panels()
                 p.wake_gcal_sync() if hasattr(p, "wake_gcal_sync") else None
-                import threading
 
-                from calendar_app.infrastructure.google_sync.helpers import sync_task_to_google
+                from calendar_app.infrastructure.google_sync.push_queue import gcal_push_queue
 
                 task_full = _tr2.get_unified_task(self.task_id)
                 if task_full:
-                    threading.Thread(
-                        target=sync_task_to_google, args=(p, task_full), daemon=True
-                    ).start()
+                    gcal_push_queue.enqueue(p, task_full, create_if_missing=True)
         elif action == dday_widget_act:
             p = self.parent()
             while p and not hasattr(p, "create_dday_widget_for_task"):
