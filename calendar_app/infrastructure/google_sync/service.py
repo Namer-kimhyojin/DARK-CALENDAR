@@ -6,7 +6,6 @@ import socket
 import ssl
 import threading
 import time
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -55,33 +54,33 @@ class GoogleEvent:
 
     summary: str
 
-    description: Optional[str]
+    description: str | None
 
     start_time: str
 
     end_time: str
 
-    location: Optional[str]
+    location: str | None
 
     status: str = "confirmed"
 
-    color_id: Optional[str] = None
+    color_id: str | None = None
 
-    updated_time: Optional[str] = None
+    updated_time: str | None = None
 
-    source_calendar_id: Optional[str] = None
+    source_calendar_id: str | None = None
 
     # 반복 일정 지원 (item 2)
-    recurring_event_id: Optional[str] = None  # 부모 시리즈 ID (recurringEventId)
-    recurrence: Optional[list] = None  # ["RRULE:FREQ=WEEKLY;..."] — 마스터 이벤트에만 존재
-    original_start_time: Optional[str] = None  # 이 인스턴스의 원래 시작시각 (instance identity)
+    recurring_event_id: str | None = None  # 부모 시리즈 ID (recurringEventId)
+    recurrence: list | None = None  # ["RRULE:FREQ=WEEKLY;..."] — 마스터 이벤트에만 존재
+    original_start_time: str | None = None  # 이 인스턴스의 원래 시작시각 (instance identity)
 
     # 참석자 / 첨부파일 (item 9)
-    attendees: Optional[list] = None  # [{"email", "displayName", "responseStatus"}]
-    attachments: Optional[list] = None  # [{"fileUrl", "title", "mimeType"}]
+    attendees: list | None = None  # [{"email", "displayName", "responseStatus"}]
+    attachments: list | None = None  # [{"fileUrl", "title", "mimeType"}]
 
     # extendedProperties.private dict (item 10 — completion guard)
-    extended_properties_private: Optional[dict] = None
+    extended_properties_private: dict | None = None
 
 
 def prepare_calendar_sync_service(
@@ -170,7 +169,7 @@ class CalendarSyncService:
 
         self.last_error_message = None
 
-    def _set_last_error(self, kind: str, message: str, status: Optional[int] = None):
+    def _set_last_error(self, kind: str, message: str, status: int | None = None):
         self.last_error_kind = kind
 
         self.last_error_status = status
@@ -180,7 +179,7 @@ class CalendarSyncService:
     def _default_tz_offset(self) -> str:
         return timezone_offset_for_name(self.time_zone)
 
-    def _normalize_calendar_id(self, calendar_id: Optional[str] = None) -> str:
+    def _normalize_calendar_id(self, calendar_id: str | None = None) -> str:
         value = str(calendar_id if calendar_id is not None else self.calendar_id or "").strip()
 
         if not value:
@@ -252,7 +251,7 @@ class CalendarSyncService:
         except Exception:
             return default
 
-    def _execute_request(self, request_callable, retries: int = 2, retry_delay: float = 1.5):
+    def _execute_request(self, request_callable, retries: int = 3, retry_delay: float = 1.0):
         last_exc = None
 
         for attempt in range(retries + 1):
@@ -282,7 +281,7 @@ class CalendarSyncService:
                         pass
 
                 if is_429:
-                    wait = self._get_retry_after_secs(exc, retry_delay * (attempt + 1))
+                    wait = self._get_retry_after_secs(exc, retry_delay * (2**attempt))
                     self._last_retry_after_secs = wait
                     logger.warning(
                         "GCal 429 rate-limit (attempt %d/%d), honouring Retry-After=%.0fs",
@@ -291,9 +290,12 @@ class CalendarSyncService:
                         wait,
                     )
                 else:
-                    wait = retry_delay * (attempt + 1)
+                    import random
+
+                    # 지수 백오프: delay * (2^attempt) + jitter (0.1 ~ 1.0초)
+                    wait = retry_delay * (2**attempt) + random.uniform(0.1, 1.0)
                     logger.warning(
-                        "GCal transient error (attempt %d/%d), retrying in %.1fs: %s",
+                        "GCal transient error (attempt %d/%d), retrying in %.1fs (exponential backoff): %s",
                         attempt + 1,
                         retries,
                         wait,
@@ -494,9 +496,9 @@ class CalendarSyncService:
     def fetch_events(
         self,
         start_date_str: str,
-        end_date_str: Optional[str] = None,
-        calendar_id: Optional[str] = None,
-    ) -> Optional[list[GoogleEvent]]:
+        end_date_str: str | None = None,
+        calendar_id: str | None = None,
+    ) -> list[GoogleEvent] | None:
         if not self.is_authenticated or not self.service:
             return []
         self._clear_last_error()
@@ -508,22 +510,41 @@ class CalendarSyncService:
             time_max = f"{end_base}T23:59:59{self._tz_offset_for_value(end_base)}"
             calendar_id = self._normalize_calendar_id(calendar_id)
 
-            response = self._execute_request(
-                lambda: self.service.events()
-                .list(
-                    calendarId=calendar_id,
-                    timeMin=time_min,
-                    timeMax=time_max,
-                    maxResults=200,
-                    singleEvents=True,
-                    orderBy="startTime",
+            events: list[GoogleEvent] = []
+            page_token = None
+            max_pages = 200
+            fetched_pages = 0
+
+            while True:
+                request_params = {
+                    "calendarId": calendar_id,
+                    "timeMin": time_min,
+                    "timeMax": time_max,
+                    "maxResults": 2500,
+                    "singleEvents": True,
+                }
+                if not page_token:
+                    request_params["orderBy"] = "startTime"
+                else:
+                    request_params["pageToken"] = page_token
+
+                response = self._execute_request(
+                    lambda request_params=request_params: (
+                        self.service.events().list(**request_params).execute()
+                    )
                 )
-                .execute()
-            )
-            return [
-                self._to_google_event(item, source_calendar_id=calendar_id)
-                for item in response.get("items", [])
-            ]
+
+                events.extend(
+                    self._to_google_event(item, source_calendar_id=calendar_id)
+                    for item in response.get("items", [])
+                )
+
+                page_token = response.get("nextPageToken")
+                fetched_pages += 1
+                if not page_token or fetched_pages >= max_pages:
+                    break
+
+            return events
         except Exception as exc:
             self._set_last_error(
                 "fetch", str(exc), getattr(getattr(exc, "resp", None), "status", None)
@@ -538,9 +559,9 @@ class CalendarSyncService:
 
     def fetch_sync_events(
         self,
-        sync_token: Optional[str] = None,
-        calendar_id: Optional[str] = None,
-    ) -> tuple[Optional[list[GoogleEvent]], Optional[str], bool]:
+        sync_token: str | None = None,
+        calendar_id: str | None = None,
+    ) -> tuple[list[GoogleEvent] | None, str | None, bool]:
         if not self.is_authenticated or not self.service:
             return [], None, False
         self._clear_last_error()
@@ -580,9 +601,9 @@ class CalendarSyncService:
                         request_params["pageToken"] = page_token
 
                     response = self._execute_request(
-                        lambda request_params=request_params: self.service.events()
-                        .list(**request_params)
-                        .execute()
+                        lambda request_params=request_params: (
+                            self.service.events().list(**request_params).execute()
+                        )
                     )
                     source_calendar_id = str(
                         request_params.get("calendarId") or resolved_calendar_id or ""
@@ -694,9 +715,9 @@ class CalendarSyncService:
                     request_params["pageToken"] = page_token
 
                 response = self._execute_request(
-                    lambda request_params=request_params: self.service.calendarList()
-                    .list(**request_params)
-                    .execute()
+                    lambda request_params=request_params: (
+                        self.service.calendarList().list(**request_params).execute()
+                    )
                 )
                 for item in response.get("items", []):
                     calendars.append(
@@ -757,7 +778,7 @@ class CalendarSyncService:
             logger.warning("GCal calendar list fetch failed: %s", exc)
             return []
 
-    def subscribe_calendar(self, calendar_id: str) -> Optional[dict]:
+    def subscribe_calendar(self, calendar_id: str) -> dict | None:
         calendar_id = self._normalize_calendar_id(calendar_id)
 
         if not self.is_authenticated or not self.service or not calendar_id:
@@ -833,9 +854,7 @@ class CalendarSyncService:
 
             return False
 
-    def _to_google_event(
-        self, event: dict, source_calendar_id: Optional[str] = None
-    ) -> GoogleEvent:
+    def _to_google_event(self, event: dict, source_calendar_id: str | None = None) -> GoogleEvent:
         start = event.get("start", {}).get("dateTime", event.get("start", {}).get("date", ""))
 
         end = event.get("end", {}).get("dateTime", event.get("end", {}).get("date", ""))
@@ -875,9 +894,9 @@ class CalendarSyncService:
         location: str = "",
         color_id: str | None = None,
         all_day: bool = False,
-        calendar_id: Optional[str] = None,
-        idempotency_key: Optional[str] = None,
-    ) -> Optional[str]:
+        calendar_id: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> str | None:
         if not self.is_authenticated or not self.service:
             return None
         self._clear_last_error()
@@ -1021,7 +1040,7 @@ class CalendarSyncService:
         location: str = "",
         color_id: str | None = None,
         all_day: bool = False,
-        calendar_id: Optional[str] = None,
+        calendar_id: str | None = None,
         completed: bool = False,
         hide_completed: bool = False,
     ) -> bool:
@@ -1138,7 +1157,7 @@ class CalendarSyncService:
                 print(f"GCal Update Error: {exc}")
             return False
 
-    def delete_event(self, event_id: str, calendar_id: Optional[str] = None) -> bool:
+    def delete_event(self, event_id: str, calendar_id: str | None = None) -> bool:
         if not self.is_authenticated or not self.service or not event_id:
             return False
         self._clear_last_error()
@@ -1147,9 +1166,9 @@ class CalendarSyncService:
 
         try:
             self._execute_request(
-                lambda: self.service.events()
-                .delete(calendarId=calendar_id, eventId=event_id)
-                .execute()
+                lambda: (
+                    self.service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+                )
             )
             return True
 
@@ -1170,8 +1189,8 @@ class CalendarSyncService:
     def move_event(
         self,
         event_id: str,
-        source_calendar_id: Optional[str],
-        destination_calendar_id: Optional[str],
+        source_calendar_id: str | None,
+        destination_calendar_id: str | None,
     ) -> bool:
         """Move event between calendars via events.move API.
 
@@ -1191,9 +1210,11 @@ class CalendarSyncService:
             return True
         try:
             self._execute_request(
-                lambda: self.service.events()
-                .move(calendarId=src, eventId=event_id, destination=dst)
-                .execute()
+                lambda: (
+                    self.service.events()
+                    .move(calendarId=src, eventId=event_id, destination=dst)
+                    .execute()
+                )
             )
             return True
         except HttpError as exc:

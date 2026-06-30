@@ -1,0 +1,16 @@
+-r requirements.txt
+
+# 테스트
+pytest==9.0.2
+
+# 린터 / 포맷터
+ruff>=0.11.0
+
+# 타입 체킹 (선택적)
+mypy>=1.10.0
+
+# pre-commit 훅 관리
+pre-commit>=4.0.0
+
+# 빌드
+pyinstaller>=6.0

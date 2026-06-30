@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dark Calendar | Windows 데스크톱 캘린더</title>
+  <meta name="description" content="Dark Calendar는 패널과 위젯을 내 화면에 맞춰 배치하는 Windows 데스크톱 캘린더입니다.">
+  <meta property="og:title" content="Dark Calendar">
+  <meta property="og:description" content="캘린더를 내 화면처럼 조립하세요.">
+  <meta property="og:image" content="assets/hero_concept.png">
+  <meta name="theme-color" content="#061018">
+  <link rel="icon" href="assets/app_icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header" aria-label="상단 메뉴">
+    <a class="brand" href="#top" aria-label="Dark Calendar 홈">
+      <img src="assets/app_icon.png" alt="" class="brand-icon">
+      <span>Dark Calendar</span>
+    </a>
+    <nav class="nav-links" aria-label="홈페이지 섹션">
+      <a href="#layout-freedom">배치</a>
+      <a href="#features">기능</a>
+      <a href="#screenshots">화면</a>
+      <a href="#widgets">위젯</a>
+      <a href="#workflow">흐름</a>
+      <a href="#install">설치</a>
+    </nav>
+    <a class="header-store" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare">
+      Store에서 보기
+    </a>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-backdrop" aria-hidden="true"></div>
+      <div class="hero-content">
+        <p class="release-pill">Windows Desktop · Microsoft Store</p>
+        <h1 id="hero-title">Calendar, your way.</h1>
+        <p class="hero-lead">캘린더를 고정하고, 패널을 띄우고, 위젯을 남겨두세요.</p>
+        <p class="hero-copy">Dark Calendar는 일정 앱보다 작업 화면에 가깝습니다. 오늘 필요한 정보만 골라 내 데스크톱에 배치합니다.</p>
+        <div class="hero-actions" aria-label="주요 이동">
+          <a class="primary-button" href="#layout-freedom">배치 살펴보기</a>
+          <a class="outline-button" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare">Microsoft Store 보기</a>
+        </div>
+      </div>
+
+      <div class="product-stage" aria-label="Dark Calendar 화면 미리보기">
+        <div class="app-window">
+          <div class="app-toolbar">
+            <span>+ Register</span>
+            <span>Tasks</span>
+            <span>Screen</span>
+            <span>Widgets</span>
+            <span>Settings</span>
+          </div>
+          <div class="calendar-grid" aria-hidden="true">
+            <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+            <span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span>
+            <span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span>
+            <span>22</span><span>23</span><span class="today">30</span><span>1</span><span>2</span><span>3</span><span>4</span>
+          </div>
+          <div class="side-panel">
+            <strong>Today's Schedule</strong>
+            <small>오늘 일정과 다음 이벤트 확인</small>
+            <strong>Routines</strong>
+            <small>반복 업무와 진행 상태 관리</small>
+            <strong>Directives</strong>
+            <small>실행 항목을 일정과 분리</small>
+          </div>
+        </div>
+        <div class="widget-stack" aria-hidden="true">
+          <div class="mini-widget timer">00:00.0<small>Seconds</small></div>
+          <div class="mini-widget clock">16:40<small>2026.06.30</small></div>
+          <div class="mini-widget dday">D-Day<small>2026.06.30</small></div>
+          <div class="mini-widget weather">28.3<small>Seoul</small></div>
+        </div>
+      </div>
+
+      <div class="hero-benefits" aria-label="핵심 특징">
+        <article>
+          <span class="line-icon" aria-hidden="true">▦</span>
+          <h2>내 화면처럼</h2>
+          <p>패널을 고정하고 분리하고 저장합니다.</p>
+        </article>
+        <article>
+          <span class="line-icon" aria-hidden="true">◫</span>
+          <h2>항상 보이게</h2>
+          <p>D-Day, 시간, 날씨를 바탕화면에 둡니다.</p>
+        </article>
+        <article>
+          <span class="line-icon" aria-hidden="true">▣</span>
+          <h2>흐트러지지 않게</h2>
+          <p>잠금 모드로 배치를 지킵니다.</p>
+        </article>
+        <article>
+          <span class="line-icon" aria-hidden="true">ϟ</span>
+          <h2>더 적은 전환</h2>
+          <p>확인에서 실행까지 한 화면에 둡니다.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section layout-freedom-section" id="layout-freedom" aria-labelledby="layout-freedom-title">
+      <p class="section-kicker">Panel Freedom</p>
+      <h2 id="layout-freedom-title">하루를 보는 방식은 하나가 아닙니다.</h2>
+      <p class="section-lead">캘린더는 크게, 업무 패널은 옆에, 위젯은 바탕화면 위에. Dark Calendar는 당신의 화면 배치를 따라갑니다.</p>
+
+      <div class="layout-chip-row" aria-label="지원되는 패널 배치 방식">
+        <span>좌·우 도킹</span>
+        <span>탭 패널</span>
+        <span>플로팅 분리</span>
+        <span>5가지 프리셋</span>
+        <span>잠금 모드</span>
+      </div>
+
+      <div class="layout-mode-grid">
+        <article class="layout-mode-card">
+          <div class="layout-diagram all-docked" aria-hidden="true">
+            <span class="pane nav-pane"></span>
+            <span class="pane calendar-pane"></span>
+            <span class="pane today-pane"></span>
+            <span class="pane routine-pane"></span>
+            <span class="pane directive-pane"></span>
+          </div>
+          <strong>All Panels</strong>
+          <h3>한눈에 펼치기</h3>
+          <p>캘린더와 업무 패널을 한 화면에 모읍니다.</p>
+        </article>
+
+        <article class="layout-mode-card">
+          <div class="layout-diagram calendar-focus" aria-hidden="true">
+            <span class="pane calendar-pane"></span>
+            <span class="pane tab-pane"></span>
+            <span class="pane mini-pane"></span>
+          </div>
+          <strong>Calendar Focus</strong>
+          <h3>캘린더에 집중</h3>
+          <p>일정이 중요한 날에는 캘린더를 더 크게 봅니다.</p>
+        </article>
+
+        <article class="layout-mode-card">
+          <div class="layout-diagram work-focus" aria-hidden="true">
+            <span class="pane compact-calendar"></span>
+            <span class="pane today-pane"></span>
+            <span class="pane routine-pane"></span>
+            <span class="pane directive-pane"></span>
+          </div>
+          <strong>Work Focus</strong>
+          <h3>업무를 앞으로</h3>
+          <p>처리할 일이 많을 때는 실행 패널을 넓힙니다.</p>
+        </article>
+
+        <article class="layout-mode-card">
+          <div class="layout-diagram floating-quadrants" aria-hidden="true">
+            <span class="pane float-one"></span>
+            <span class="pane float-two"></span>
+            <span class="pane float-three"></span>
+            <span class="pane float-four"></span>
+          </div>
+          <strong>Floating Workspace</strong>
+          <h3>따로 띄우기</h3>
+          <p>보조 모니터와 세로 화면에도 자연스럽게 배치합니다.</p>
+        </article>
+      </div>
+
+      <div class="layout-detail-band">
+        <article>
+          <h3>위치가 우선순위를 만듭니다.</h3>
+          <p>자주 보는 정보는 가까이 두고, 덜 중요한 정보는 접어둡니다.</p>
+        </article>
+        <article>
+          <h3>좋은 배치는 다시 씁니다.</h3>
+          <p>업무, 회의, 집중 모드에 맞는 구성을 빠르게 되돌립니다.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section narrative-section" id="features" aria-labelledby="features-title">
+      <p class="section-kicker">Core Message</p>
+      <h2 id="features-title">필요한 것은 더 가까이. 나머지는 더 조용히.</h2>
+      <p class="section-lead">일정, 루틴, 실행 항목, 집중 도구를 한 화면에서 다룹니다. 복잡함은 줄이고 흐름은 이어갑니다.</p>
+      <div class="feature-grid feature-grid-rich">
+        <article>
+          <strong>01</strong>
+          <h3>자유로운 패널</h3>
+          <p>도킹, 탭, 플로팅으로 화면을 조립합니다.</p>
+        </article>
+        <article>
+          <strong>02</strong>
+          <h3>루틴과 실행 분리</h3>
+          <p>반복할 일과 바로 할 일을 따로 봅니다.</p>
+        </article>
+        <article>
+          <strong>03</strong>
+          <h3>집중 모드</h3>
+          <p>선택한 작업을 타이머와 함께 밀어줍니다.</p>
+        </article>
+        <article>
+          <strong>04</strong>
+          <h3>Google 연동</h3>
+          <p>외부 일정과 데스크톱 흐름을 연결합니다.</p>
+        </article>
+        <article>
+          <strong>05</strong>
+          <h3>레이아웃 프리셋</h3>
+          <p>상황에 맞는 화면으로 빠르게 전환합니다.</p>
+        </article>
+        <article>
+          <strong>06</strong>
+          <h3>잠금과 자리 비움</h3>
+          <p>정리한 화면을 안전하게 유지합니다.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section screenshot-section" id="screenshots" aria-labelledby="screenshots-title">
+      <p class="section-kicker">Screenshots</p>
+      <h2 id="screenshots-title">어떻게 보이는지 먼저 확인하세요.</h2>
+      <p class="section-lead">실제 화면은 나중에 같은 파일명으로 교체할 수 있습니다. 클릭하면 크게 볼 수 있습니다.</p>
+      <div class="screenshot-mosaic">
+        <figure class="screenshot-frame screenshot-wide">
+          <img src="assets/screenshots/main-dashboard.png" alt="Dark Calendar 메인 캘린더와 업무 패널 화면" data-screenshot>
+          <div class="screenshot-placeholder">
+            <span>Main Dashboard</span>
+            <p>main-dashboard.png</p>
+          </div>
+          <figcaption>
+            <strong>메인 대시보드</strong>
+            <span>월간 캘린더, 오늘 일정, 루틴, 디렉티브 패널이 함께 보이는 대표 화면</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-frame screenshot-wide">
+          <img src="assets/screenshots/widget-manager.png" alt="Dark Calendar 오버레이 위젯 관리 화면" data-screenshot>
+          <div class="screenshot-placeholder">
+            <span>Widget Manager</span>
+            <p>widget-manager.png</p>
+          </div>
+          <figcaption>
+            <strong>위젯 관리</strong>
+            <span>시계, D-Day, 카운트다운, 날씨, 텍스트 위젯을 배치하고 조정하는 화면</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-frame screenshot-tall">
+          <img src="assets/screenshots/focus-mode.png" alt="Dark Calendar 집중 모드 화면" data-screenshot>
+          <div class="screenshot-placeholder">
+            <span>Focus Mode</span>
+            <p>focus-mode.png</p>
+          </div>
+          <figcaption>
+            <strong>집중 모드</strong>
+            <span>선택한 작업, 타이머, 세션 상태가 강조되는 몰입 화면</span>
+          </figcaption>
+        </figure>
+        <figure class="screenshot-frame screenshot-tall">
+          <img src="assets/screenshots/calendar-sync.png" alt="Dark Calendar 캘린더 동기화 설정 화면" data-screenshot>
+          <div class="screenshot-placeholder">
+            <span>Calendar Sync</span>
+            <p>calendar-sync.png</p>
+          </div>
+          <figcaption>
+            <strong>캘린더 연동</strong>
+            <span>Microsoft Store 앱 흐름 안에서 Google Calendar 연결과 상태를 관리</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section visual-proof-section" aria-labelledby="visual-proof-title">
+      <p class="section-kicker">Visual Highlights</p>
+      <h2 id="visual-proof-title">작게 띄우고, 계속 봅니다.</h2>
+      <div class="visual-proof-grid">
+        <article>
+          <div class="proof-visual calendar-proof" aria-hidden="true">
+            <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span>
+            <strong>30</strong>
+          </div>
+          <h3>한 달과 오늘</h3>
+          <p>큰 흐름과 오늘의 일을 함께 봅니다.</p>
+        </article>
+        <article>
+          <div class="proof-visual widget-proof" aria-hidden="true">
+            <b>16:40</b>
+            <small>D-12 · Seoul 28.3°C</small>
+          </div>
+          <h3>위젯으로 고정</h3>
+          <p>시간, D-Day, 날씨를 계속 띄워둡니다.</p>
+        </article>
+        <article>
+          <div class="proof-visual focus-proof" aria-hidden="true">
+            <b>25:00</b>
+            <small>Focus Session</small>
+          </div>
+          <h3>바로 집중</h3>
+          <p>긴 업무를 작은 세션으로 나눕니다.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section split-section" id="widgets" aria-labelledby="widgets-title">
+      <div>
+        <p class="section-kicker">Widgets</p>
+        <h2 id="widgets-title">앱을 열지 않아도 보이게.</h2>
+        <p>시계, D-Day, 카운트다운, 날씨, 텍스트를 바탕화면 위에 남깁니다.</p>
+        <ul class="check-list">
+          <li>같은 위젯을 여러 개 배치</li>
+          <li>오늘 일정, D-Day, 사용자 문구 표시</li>
+          <li>재시작 후에도 배치 복원</li>
+        </ul>
+      </div>
+      <div class="widget-showcase" aria-label="위젯 예시">
+        <div>16:40<small>Clock</small></div>
+        <div>D-12<small>D-Day</small></div>
+        <div>00:25:00<small>Focus</small></div>
+        <div>28.3°C<small>Weather</small></div>
+      </div>
+    </section>
+
+    <section class="section workflow-section" id="workflow" aria-labelledby="workflow-title">
+      <p class="section-kicker">Workflow</p>
+      <h2 id="workflow-title">보고, 고르고, 집중합니다.</h2>
+      <div class="workflow-steps">
+        <article>
+          <span>1</span>
+          <h3>보기</h3>
+          <p>오늘의 큰 그림을 확인합니다.</p>
+        </article>
+        <article>
+          <span>2</span>
+          <h3>고르기</h3>
+          <p>해야 할 일을 분리합니다.</p>
+        </article>
+        <article>
+          <span>3</span>
+          <h3>집중하기</h3>
+          <p>선택한 작업을 시작합니다.</p>
+        </article>
+        <article>
+          <span>4</span>
+          <h3>남겨두기</h3>
+          <p>중요한 정보는 위젯으로 둡니다.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section detail-section" aria-labelledby="detail-title">
+      <p class="section-kicker">Details</p>
+      <h2 id="detail-title">작지만 계속 느껴지는 차이.</h2>
+      <div class="detail-columns">
+        <article>
+          <h3>덜 옮겨 다닙니다</h3>
+          <p>캘린더와 업무 흐름을 한 화면에 둡니다.</p>
+        </article>
+        <article>
+          <h3>놓치기 어렵습니다</h3>
+          <p>D-Day와 카운트다운을 늘 보이는 곳에 둡니다.</p>
+        </article>
+        <article>
+          <h3>상황에 맞게 바꿉니다</h3>
+          <p>회의, 집중, 검토에 맞춰 레이아웃을 전환합니다.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section audience-section" aria-labelledby="audience-title">
+      <p class="section-kicker">For Users</p>
+      <h2 id="audience-title">이런 분에게 잘 맞습니다.</h2>
+      <div class="audience-grid">
+        <article>
+          <span>01</span>
+          <h3>일정이 많은 사람</h3>
+          <p>회의, 마감, 반복 업무를 함께 보는 사용자</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Google Calendar 사용자</h3>
+          <p>외부 일정도 데스크톱에서 보고 싶은 사용자</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>위젯을 좋아하는 사람</h3>
+          <p>D-Day와 시계를 가까이에 두고 싶은 사용자</p>
+        </article>
+        <article>
+          <span>04</span>
+          <h3>집중 루틴이 필요한 사람</h3>
+          <p>작업을 고르고 집중 시간을 남기는 사용자</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section requirements-section" aria-labelledby="requirements-title">
+      <p class="section-kicker">Requirements</p>
+      <h2 id="requirements-title">설치는 간단하게.</h2>
+      <div class="requirements-panel">
+        <dl>
+          <div>
+            <dt>운영체제</dt>
+            <dd>Windows 데스크톱 앱입니다.</dd>
+          </div>
+          <div>
+            <dt>설치 경로</dt>
+            <dd>Microsoft Store에서 설치합니다.</dd>
+          </div>
+          <div>
+            <dt>동기화</dt>
+            <dd>Google 연동에는 계정 연결이 필요합니다.</dd>
+          </div>
+          <div>
+            <dt>로컬 사용</dt>
+            <dd>기본 기능은 로컬 중심으로 사용할 수 있습니다.</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="section install-section" id="install" aria-labelledby="install-title">
+      <p class="section-kicker">Install</p>
+      <h2 id="install-title">Microsoft Store에서 만나보세요.</h2>
+      <p>무료 설치 이벤트는 별도 팝업에서만 안내됩니다.</p>
+      <div class="support-actions">
+        <a class="outline-button" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare">Microsoft Store 페이지 열기</a>
+      </div>
+    </section>
+  </main>
+
+  <div class="screenshot-lightbox" data-screenshot-lightbox hidden>
+    <div class="screenshot-lightbox-backdrop" data-screenshot-lightbox-close aria-hidden="true"></div>
+    <section class="screenshot-lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="screenshot-lightbox-title">
+      <button class="screenshot-lightbox-close" type="button" data-screenshot-lightbox-close aria-label="스크린샷 확대 보기 닫기">×</button>
+      <img data-screenshot-lightbox-image src="" alt="">
+      <div class="screenshot-lightbox-caption">
+        <strong id="screenshot-lightbox-title" data-screenshot-lightbox-title></strong>
+        <p data-screenshot-lightbox-description></p>
+      </div>
+    </section>
+  </div>
+
+  <div class="event-modal" data-event-modal hidden>
+    <div class="event-modal-backdrop" data-event-close aria-hidden="true"></div>
+    <section class="event-modal-panel" role="dialog" aria-modal="true" aria-labelledby="event-modal-title" aria-describedby="event-modal-desc">
+      <button class="event-modal-close" type="button" data-event-close aria-label="이벤트 팝업 닫기">×</button>
+      <p class="section-kicker" data-event-label>선착순 무료 설치 이벤트</p>
+      <h2 id="event-modal-title" data-event-title>무료 설치 이벤트 진행 중</h2>
+      <p id="event-modal-desc" data-event-description>선착순 전용 링크가 열려 있습니다.</p>
+      <small data-event-note>수량 또는 기간에 따라 조기 종료될 수 있습니다.</small>
+      <label class="event-dismiss">
+        <input type="checkbox" data-event-dismiss-today>
+        <span>오늘 하루 다시 보지 않기</span>
+      </label>
+      <div class="event-modal-actions">
+        <a class="primary-button" data-config-link="freeInstallUrl" data-event-button href="http://go.microsoft.com/fwlink/?LinkId=532540&mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ">무료 설치 링크 열기</a>
+        <a class="outline-button" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare">Microsoft Store 보기</a>
+      </div>
+    </section>
+  </div>
+
+  <div class="admin-modal" data-admin-modal hidden>
+    <div class="admin-modal-backdrop" data-admin-close aria-hidden="true"></div>
+    <section class="admin-panel" role="dialog" aria-modal="true" aria-labelledby="admin-title">
+      <button class="admin-close" type="button" data-admin-close aria-label="관리자 패널 닫기">×</button>
+      <p class="section-kicker">Promotion Admin</p>
+      <h2 id="admin-title">프로모션 관리</h2>
+
+      <div class="admin-auth" data-admin-auth>
+        <label for="admin-password">관리자 비밀번호</label>
+        <div class="admin-inline">
+          <input id="admin-password" type="password" autocomplete="current-password" placeholder="비밀번호 입력">
+          <button class="outline-button" type="button" data-admin-unlock>열기</button>
+        </div>
+        <p class="admin-message" data-admin-auth-message></p>
+      </div>
+
+      <div class="admin-main" data-admin-main hidden>
+        <label for="admin-promo-url">무료 설치 프로모션 링크</label>
+        <input id="admin-promo-url" type="url" placeholder="https:// 또는 http:// 링크">
+
+        <label for="admin-store-url">Microsoft Store 링크</label>
+        <input id="admin-store-url" type="url" placeholder="https://apps.microsoft.com/...">
+
+        <label class="admin-toggle">
+          <input id="admin-promo-enabled" type="checkbox">
+          <span>이벤트 팝업 노출</span>
+        </label>
+
+        <div class="admin-actions">
+          <button class="primary-button" type="button" data-admin-save>저장</button>
+          <button class="outline-button" type="button" data-admin-preview>팝업 미리보기</button>
+          <button class="outline-button" type="button" data-admin-share>공유 링크 생성</button>
+        </div>
+
+        <div class="admin-share" data-admin-share-box hidden>
+          <strong>공유용 프로모션 URL</strong>
+          <code data-admin-share-url></code>
+          <button class="outline-button" type="button" data-admin-copy>복사</button>
+        </div>
+
+        <details class="admin-password-box">
+          <summary>관리자 비밀번호 변경</summary>
+          <label for="admin-new-password">새 비밀번호</label>
+          <div class="admin-inline">
+            <input id="admin-new-password" type="password" autocomplete="new-password" placeholder="4자 이상">
+            <button class="outline-button" type="button" data-admin-change-password>변경</button>
+          </div>
+        </details>
+
+        <p class="admin-message" data-admin-message></p>
+      </div>
+    </section>
+  </div>
+
+  <div class="admin-hint" data-admin-hint></div>
+
+  <footer class="site-footer">
+    <div class="footer-brand">
+      <img src="assets/app_icon.png" alt="" class="footer-icon">
+      <div>
+        <strong>Dark Calendar</strong>
+        <span>Desktop overlay calendar for Windows</span>
+      </div>
+    </div>
+    <nav class="footer-links" aria-label="하단 링크">
+      <a href="#layout-freedom">배치</a>
+      <a href="#features">기능</a>
+      <a href="#screenshots">화면</a>
+      <a href="#install">설치</a>
+      <a data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare">Microsoft Store</a>
+    </nav>
+    <button class="footer-copy" type="button" data-admin-trigger aria-label="관리자 모드 열기 숨김 트리거">© 2026 Kim Hyojin. All rights reserved.</button>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

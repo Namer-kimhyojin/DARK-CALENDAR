@@ -33,7 +33,10 @@
     "date_format": "dd.MM.yyyy (ddd)",
     "default_msg": "🔒 आप दूर हैं।",
     "placeholder_pw": "पासवर्ड डालें",
-    "unlock_btn": "अनलॉक"
+    "unlock_btn": "अनलॉक",
+    "secondary_screen_hint": "Secondary Lock Screen",
+    "admin_pw_placeholder": "व्यवस्थापक पासवर्ड",
+    "admin_pw_title": "व्यवस्थापक पासवर्ड दर्ज करें।"
   },
   "away_settings": {
     "btn_align_center": "Align Center",
@@ -92,7 +95,15 @@
     "selection_hint": "Ctrl+Click द्वारा चयन",
     "sync_hint": "गूगल सिंक",
     "today": "आज",
-    "weekdays": ["सोम", "मंगल", "बुध", "गुरु", "शुक्र", "शनि", "रवि"]
+    "weekdays": [
+      "सोम",
+      "मंगल",
+      "बुध",
+      "गुरु",
+      "शुक्र",
+      "शनि",
+      "रवि"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "आइटम जोड़ें",
@@ -297,7 +308,11 @@
       "title": "✅ चेकलिस्ट",
       "type_label": "Item Type:",
       "type_list": "List Type",
-      "type_process": "Process Type"
+      "type_process": "Process Type",
+      "add": "+ Add Item",
+      "add_prompt": "Item content:",
+      "add_title": "Add Item",
+      "remove": "Remove Item"
     },
     "common": {
       "add": "जोड़ें",
@@ -324,10 +339,13 @@
       "ok": "ओके",
       "refresh": "ताज़ा करें",
       "save": "सहेजें",
+      "save_continue": "Save & Continue",
       "today": "आज",
       "unspecified": "निर्दिष्ट नहीं",
       "warning": "चेतावनी",
-      "yes": "हाँ"
+      "yes": "हाँ",
+      "delete_error": "An error occurred while deleting.",
+      "loading": "Processing..."
     },
     "directive": {
       "btn_delete": "हटाएं",
@@ -426,7 +444,7 @@
       "calendar_local": "Local",
       "directive_header": "निर्देश सूची",
       "directive_title": "निर्देश प्रबंधन",
-      "header_assignee": "Assignee",
+      "header_assignee": "नियत व्यक्ति",
       "header_calendar": "Calendar",
       "header_content": "सामग्री",
       "header_cycle": "चक्र",
@@ -567,9 +585,12 @@
       "color": "रंग",
       "color_none": "कोई नहीं",
       "color_tag": "Color Tag",
+      "del_all_series": "Delete Entire Series",
       "del_confirm": "क्या आप इसे हटाना चाहते हैं?",
       "del_confirm_specific": "क्या {type} हटाएं?",
       "del_fail": "हटाना विफल।",
+      "del_only_this": "Delete This Instance",
+      "del_routine_confirm_msg": "How would you like to delete this recurring routine series?",
       "del_success": "सफलतापूर्वक हटाया गया।",
       "del_title": "हटाने की पुष्टि",
       "delete_btn": "🗑️ हटाएं",
@@ -614,12 +635,14 @@
       "routine_count_msg": "{count} routines registered.",
       "routine_end_error": "समाप्ति तिथि शुरू के बाद होनी चाहिए।",
       "routine_reg_success": "रूटीन पंजीकृत।",
+      "routine_reg_success_continue": "Routine registered. You can continue entering.",
       "save_alarm_default": "Save as default alarm",
       "save_btn": "💾 सहेजें",
       "save_done": "सहेजना पूर्ण",
       "save_error_db": "डेटाबेस विफल।",
       "save_failed": "सहेजना विफल",
       "schedule_reg_success": "शेड्यूल पंजीकृत।",
+      "schedule_reg_success_continue": "Schedule registered. You can continue entering.",
       "section_time_routine": "अवधि",
       "section_time_schedule": "समय सेटिंग्स",
       "start_day_routine": "शुरू:",
@@ -629,7 +652,18 @@
       "unit_day": "दिन",
       "unit_hour": "घंटे",
       "unit_min": "मिनट",
-      "untitled": "Untitled"
+      "untitled": "Untitled",
+      "cycle_section": "Repeat Settings",
+      "name_placeholder_routine": "Enter task name",
+      "name_section": "Task Title",
+      "purge_gcal_confirm": "Moving this event to local calendar will remove it from Google Calendar.\n(It will be kept as a local event only and will not sync.)\n\nContinue?",
+      "purge_gcal_title": "Remove from Google Calendar",
+      "routine_datetime_section": "Date & Time",
+      "tab_basic": "Basic",
+      "tab_checklist": "Checklist",
+      "tab_detail": "Details",
+      "tags_placeholder": "Comma separated (e.g. work, projectA)",
+      "tags_section": "Classification Tags"
     },
     "theme": {
       "accent": {
@@ -731,7 +765,8 @@
         "current_color": "Current background color",
         "pick_color": "Pick color",
         "reset_default": "Reset to default"
-      }
+      },
+      "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
       "apply_color_preset": "Apply Preset",
@@ -802,7 +837,19 @@
       "saved_toast": "Dialog UI tokens saved. Full effect after restart.",
       "tab_color": "Color Tokens",
       "tab_metric": "Size/Spacing Tokens",
-      "title": "Dialog UI Token Settings"
+      "title": "Dialog UI Token Settings",
+      "export_failed_title": "निर्यात विफल",
+      "export_title": "UI टोकन निर्यात करें",
+      "import_failed_title": "आयात विफल",
+      "import_title": "UI टोकन आयात करें"
+    },
+    "daily": {
+      "date_header": "आज",
+      "no_routines": "  आज कोई कार्य नहीं है।",
+      "no_schedule": "  आज कोई कार्यक्रम निर्धारित नहीं है।",
+      "routine_section": "📋 आज देय",
+      "schedule_section": "📅 आज के कार्यक्रम",
+      "title": "आज के कार्यक्रम और देय कार्य"
     }
   },
   "drag": {
@@ -906,9 +953,10 @@
       "push_failed": "Failed to push local changes to Google server.",
       "rate_limit": "Google API rate limit exceeded. Please try again later.",
       "remote_newer_than_local": "Remote data is newer than local (server version kept to prevent conflict).",
-      "unknown": "An unknown error occurred."
+      "unknown": "An unknown error occurred.",
+      "remote_orphan": "Only in Google (no local match)"
     },
-    "first_setup_msg": "Air Calendar में आपका स्वागत है!\nगूगल सिंक सेटअप करें?",
+    "first_setup_msg": "Dark Calendar में आपका स्वागत है!\nगूगल सिंक सेटअप करें?",
     "first_setup_title": "सहायक",
     "guidance": {
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Please go to 'Settings > Calendar & Sync > Authenticate' and log in again.",
@@ -916,7 +964,8 @@
       "generic": "📍 [DETAILS]\n{error}\n\n❓ [HOW TO FIX] Please check your internet connection and click 'Retry'.\nIf the issue persists, use 'Force Ignore' to remove it from the sync queue.",
       "not_found": "📍 [STATUS] This event was not found on Google Calendar (might have been deleted elsewhere).\n🛠 [ACTION] The app automatically restored it to Google or removed it locally to match current state.\n✅ [OUTCOME] Sync state restored. You can 'Clear Error' or 'Retry' to finalize.",
       "rate_limit": "📍 [STATUS] Too many sync requests sent to Google servers in a short time.\n⏳ [ACTION] The app will automatically retry after a short wait period.\n✅ [OUTCOME] This usually resolves itself after a few minutes.",
-      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again."
+      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again.",
+      "remote_orphan": "This event exists in Google Calendar but has no matching local event.<br><br><b>Cause</b>: may have been deleted locally or created directly in Google."
     },
     "issues_action_taken": "System Action",
     "issues_auto_healed": "Auto-Healed",
@@ -1023,7 +1072,20 @@
       "sync_partial": "Sync complete (partial failures: push={push}, delete={delete})",
       "sync_skipped": "समन्वयन छोड़ दिया गया",
       "sync_skipped_or_failed": "Sync failed or skipped"
-    }
+    },
+    "issues_delete_failed": "Failed to queue for deletion. Check logs.",
+    "issues_delete_queued": "Queued for deletion. Will be removed from Google after next sync.",
+    "issues_delete_remote": "Delete from Google",
+    "issues_delete_remote_confirm": "Delete this event from Google Calendar.\n\nEvent: {name}\nCalendar: {cal}\n\nThis cannot be undone. Continue?",
+    "issues_delete_remote_tooltip": "Queue selected orphan events for deletion from Google Calendar. Deleted on next sync.",
+    "issues_scan_clean": "No orphan events found. All clean.",
+    "issues_scan_found": "Found {n} orphan event(s) in Google. Review and delete from the list.",
+    "issues_scan_no_sync": "Google sync is not configured. Cannot scan.",
+    "issues_scan_orphans": "Scan Google Orphans",
+    "issues_scan_orphans_tooltip": "Find events in Google with no local match (last 6 months).",
+    "issues_scanning": "Scanning...",
+    "issues_type_orphan": "Google Orphan",
+    "setup_needed_auth_hint": "Please complete Google authentication in Calendar Integration Settings."
   },
   "gcal_settings": {
     "account_tip": "यदि कनेक्टेड खाता बदलता है, तो कैलेंडर बाइंडिंग को सुरक्षित रूप से ताज़ा करने के लिए पुन: प्रमाणीकरण की आवश्यकता हो सकती है।",
@@ -1075,6 +1137,11 @@
     "edit_gcal_name_notice": "Google Calendar names are managed by Google.",
     "edit_gcal_name_tooltip": "Google Calendar names can only be changed in Google.",
     "enable": "Google कैलेंडर समन्वयन सक्षम करें",
+    "export_diagnostics": "Export Report",
+    "export_diagnostics_failed_title": "Export Failed",
+    "export_diagnostics_save_title": "Save Diagnostics Report",
+    "export_diagnostics_success_msg": "Diagnostics report exported successfully to:\n{path}",
+    "export_diagnostics_success_title": "Export Complete",
     "go_to_auth": "Go to Authentication Settings",
     "guide_tab": "मार्गदर्शक",
     "hide_completed": "Hide completed events in Google Calendar",
@@ -1381,7 +1448,13 @@
   "palette": {
     "exit_app": "App: Exit",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Press Enter to open the selected result",
@@ -1389,7 +1462,15 @@
     "sync_google": "Sync: Update Google Calendar now",
     "task_registered": "Registered: {title}",
     "theme_dark": "Theme: Change to Dark Mode",
-    "theme_light": "Theme: Change to Light Mode"
+    "theme_light": "Theme: Change to Light Mode",
+    "title": "Command Palette",
+    "hint_command": "कमांड खोजें",
+    "hint_create": "Enter से शेड्यूल बनाएं",
+    "hint_create_confirm": "Enter से यह शेड्यूल बनाएं",
+    "hint_default": "> कमांड  + बनाएं  / खोजें",
+    "hint_record": "शेड्यूल, रूटीन और डायरेक्टिव खोजें",
+    "hint_record_jump": "Enter से आइटम खोलें। Shift+Enter से तारीख पर जाएं।",
+    "hint_run_command": "Enter से चुना हुआ कमांड चलाएं"
   },
   "panel": {
     "checklist_tooltip": "चेकलिस्ट दिखाएं/छिपाएं",
@@ -1518,11 +1599,13 @@
   },
   "splash": {
     "initializing_db": "डेटाबेस आरंभ हो रहा है...",
-    "loading_font": "Loading fonts...",
-    "loading_labels": "Loading labels...",
-    "migrating_data": "Migrating data...",
+    "loading_font": "फ़ॉन्ट लोड हो रहे हैं...",
+    "loading_labels": "लेबल लोड हो रहे हैं...",
+    "loading_ui_modules": "UI मॉड्यूल लोड हो रहे हैं...",
+    "migrating_data": "डेटा माइग्रेट हो रहा है...",
+    "preparing_runtime": "रनटाइम तैयार हो रहा है...",
     "ready": "तैयार!",
-    "starting_ui": "Starting UI..."
+    "starting_ui": "UI शुरू हो रहा है..."
   },
   "status": {
     "all_states": "सभी स्थिति",
@@ -1645,7 +1728,18 @@
   "weather": {
     "desc": {
       "clear": "Clear",
-      "storm": "Storm"
+      "storm": "Storm",
+      "cloudy": "Cloudy",
+      "fog": "Fog",
+      "rain": "Rain",
+      "showers": "Showers",
+      "snow": "Snow"
+    },
+    "error": {
+      "location_not_found": "Location not found",
+      "network": "Network error",
+      "parse_failed": "Data parse error",
+      "timeout": "Request timed out"
     }
   },
   "weekday": {
@@ -2004,44 +2098,44 @@
     "add_widget_menu": "Add {label}",
     "add_widget_title": "Add {label}",
     "btn_add": "+ Add",
-    "btn_delete_all": "Delete All...",
-    "btn_hide_all": "Hide All",
-    "btn_settings": "Settings",
-    "btn_show_all": "Show All",
+    "btn_delete_all": "सभी हटाएं...",
+    "btn_hide_all": "सभी छुपाएं",
+    "btn_settings": "सेटिंग्स",
+    "btn_show_all": "सभी दिखाएं",
     "col_actions": "Actions",
     "col_name": "Name",
-    "col_position": "Position",
+    "col_position": "स्थिति",
     "col_status": "परिस्थिति",
     "col_type": "Type",
     "col_visible": "Visible",
     "confirm_delete": "क्या आप वाकई इस विजेट को हटाना चाहते हैं?",
-    "confirm_delete_all_msg": "Permanently delete all {count} widget(s)? This cannot be undone.",
-    "confirm_delete_all_title": "Delete All Widgets",
+    "confirm_delete_all_msg": "{count} विजेट स्थायी रूप से हटाएं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+    "confirm_delete_all_title": "सभी विजेट हटाएं",
     "confirm_delete_message": "Delete '{name}'?",
-    "confirm_delete_msg": "Delete '{name}'?",
+    "confirm_delete_msg": "'{name}' हटाएं?",
     "confirm_delete_title": "Delete Widget",
     "delete": "Delete",
     "desc": "एक नज़र में अपने डेस्क पर सभी विजेट प्रबंधित करें।",
     "empty": "(No widgets)",
     "focus": "Move to center",
-    "footer_hint": "Click name to edit  ·  Settings button for widget options",
+    "footer_hint": "नाम पर क्लिक करें  ·  विजेट विकल्पों के लिए सेटिंग बटन",
     "hide_all": "Hide All",
     "hint": "Drag widgets to move them. Right-click for details.",
-    "list_heading": "Widget List",
-    "menu_delete_all": "Delete All...",
-    "menu_hide_all": "Hide All",
-    "menu_show_all": "Show All",
+    "list_heading": "विजेट सूची",
+    "menu_delete_all": "सभी हटाएं...",
+    "menu_hide_all": "सभी छुपाएं",
+    "menu_show_all": "सभी दिखाएं",
     "name_placeholder": "Name (auto if blank)",
     "new_name": "New name:",
-    "new_widget": "New Widget",
+    "new_widget": "नया विजेट",
     "open_manager": "🪟 Widget Manager...",
     "rename": "Rename...",
     "rename_title": "Rename",
     "reset_position": "Reset position",
     "show_all": "Show All",
-    "tip_center": "Center on screen",
-    "tip_delete": "Delete",
-    "tip_reset": "Reset position",
+    "tip_center": "स्क्रीन पर केंद्रित करें",
+    "tip_delete": "हटाएं",
+    "tip_reset": "स्थिति रीसेट करें",
     "title": "Widget Manager",
     "toggle_off": "बंद",
     "toggle_on": "पर",
@@ -2127,7 +2221,10 @@
     "widget_hint_empty": "No items for the selected date.",
     "work_summary": "{count} work items",
     "work_title": "Work",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "hide_calendar": "Hide Calendar",
+    "show_calendar": "Show Calendar",
+    "toggle_calendar": "Toggle Calendar"
   },
   "widget_text": {
     "align": "संरेखण",
@@ -2199,6 +2296,19 @@
     "var_time": "समय",
     "var_weekday": "वार",
     "var_weekday_short": "वार (संक्षिप्त)",
-    "word_wrap": "वर्ड रैप"
+    "word_wrap": "वर्ड रैप",
+    "group_align": "Alignment",
+    "var_align_center": "Center",
+    "var_align_left": "Left",
+    "var_align_right": "Right"
+  },
+  "btn": {
+    "cancel": "रद्द करें",
+    "confirm": "पुष्टि करें",
+    "ok": "ठीक है"
+  },
+  "app": {
+    "exit_message": "Dark Calendar बंद हो रहा है।\nप्रोग्राम ट्रे में न जाकर पूरी तरह बंद होगा।\nजारी रखें?",
+    "exit_title": "बाहर निकलें"
   }
 }

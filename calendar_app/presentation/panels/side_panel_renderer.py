@@ -1087,11 +1087,9 @@ def create_task_box(
             )
         else:
             title_btn.customContextMenuRequested.connect(
-                lambda pos,
-                w=title_btn,
-                id_=tid,
-                name=title_text,
-                rt=is_routine: show_side_panel_context_menu(app, w, pos, id_, name, is_routine=rt)
+                lambda pos, w=title_btn, id_=tid, name=title_text, rt=is_routine: (
+                    show_side_panel_context_menu(app, w, pos, id_, name, is_routine=rt)
+                )
             )
 
     title_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -1170,7 +1168,6 @@ def create_task_box(
         prog_bar.setValue(done_cnt)
         prog_bar.setFixedHeight(2)
         prog_bar.setTextVisible(False)
-        prog_bar.setToolTip(f"완료 {done_cnt}개 / 전체 {total_cnt}개")
         prog_bar.setToolTip(f"완료 {done_cnt}개 / 전체 {total_cnt}개")
         prog_bar.setStyleSheet(f"""
             QProgressBar {{
@@ -1629,9 +1626,9 @@ def load_right_panel(app):
         "daily": "☀️",
         "weekly": "🗓️",
         "monthly": "📅",
-        "quarterly": "?뱤",
-        "half_yearly": "?뱢",
-        "yearly": "?룇",
+        "quarterly": "📊",
+        "half_yearly": "◐",
+        "yearly": "🎯",
     }
 
     for r in rt_rows:
@@ -1728,7 +1725,7 @@ def load_right_panel(app):
                 _y, _m, _d = _dl_date.split("-")
                 _dl_label = f"{int(_m)}.{int(_d)}"
             except Exception:
-                _dl_label = _dl_date or t("common.no_deadline", "留덇컧???놁쓬")
+                _dl_label = _dl_date or t("common.no_deadline", "마감 없음")
             if _dl_label != _cur_routine_group:
                 _cur_routine_group = _dl_label
                 routine_items.append(_routine_group_header(_dl_label, "📅"))

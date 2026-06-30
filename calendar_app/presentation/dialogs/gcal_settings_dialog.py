@@ -1343,7 +1343,25 @@ class GCalSettingsDialog(QDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            from calendar_app.infrastructure.db.calendar_repo import delete_calendar
+            from calendar_app.infrastructure.db.calendar_repo import delete_calendar, get_calendar
+
+            # Google Calendar 원격 구독 해제
+            try:
+                cal_row = get_calendar(cal_id)
+                if cal_row and cal_row.get("type") == "gcal":
+                    gcal_cal_id = str(cal_row.get("gcal_calendar_id") or "").strip()
+                    sync = getattr(self.parent_app, "gcal_sync", None)
+                    if gcal_cal_id and sync and getattr(sync, "is_authenticated", False):
+                        from calendar_app.infrastructure.db.database_unified import (
+                            logger as db_logger,
+                        )
+
+                        db_logger.info(f"Unsubscribing remote Google calendar: {gcal_cal_id}")
+                        sync.unsubscribe_calendar(gcal_cal_id)
+            except Exception as e:
+                from calendar_app.infrastructure.db.database_unified import logger as db_logger
+
+                db_logger.error(f"Failed to unsubscribe remote calendar: {e}")
 
             delete_calendar(cal_id)
             self._refresh_calendar_table()
@@ -1544,6 +1562,12 @@ class GCalSettingsDialog(QDialog):
         self._apply_section_button_style(self.open_issues_btn, "accent")
         self.open_issues_btn.clicked.connect(self._open_sync_issues)
         action_row.addWidget(self.open_issues_btn)
+        self.export_diagnostics_btn = QPushButton(
+            t("gcal_settings.export_diagnostics", "Export Report")
+        )
+        self._apply_section_button_style(self.export_diagnostics_btn, "accent")
+        self.export_diagnostics_btn.clicked.connect(self._export_diagnostics_report)
+        action_row.addWidget(self.export_diagnostics_btn)
         self.reset_sync_state_btn = QPushButton(
             t("gcal_settings.reset_sync_state", "Reset Sync Cache")
         )
@@ -2336,6 +2360,167 @@ class GCalSettingsDialog(QDialog):
             self.calendar_choice_combo.blockSignals(True)
             self.calendar_choice_combo.setCurrentIndex(idx)
             self.calendar_choice_combo.blockSignals(False)
+
+    def _export_diagnostics_report(self):
+        try:
+            # 1. 파일 다이얼로그 띄워 저장 경로 획득
+            default_name = (
+                f"dark_calendar_sync_diagnostics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            )
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                t("gcal_settings.export_diagnostics_save_title", "동기화 진단 리포트 저장"),
+                os.path.join(os.path.expanduser("~"), default_name),
+                "Text Files (*.txt);;All Files (*)",
+            )
+            if not file_path:
+                return
+
+            # 2. 리포트 생성 시작
+            lines = []
+            lines.append("=" * 60)
+            lines.append("DARK CALENDAR - GOOGLE CALENDAR SYNC DIAGNOSTICS REPORT")
+            lines.append("=" * 60)
+            lines.append(f"Generated At: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            lines.append(f"OS Version: {os.name}")
+
+            # App version 및 metadata
+            from calendar_app.bootstrap import APP_VERSION
+
+            lines.append(f"App Version: {APP_VERSION}")
+            lines.append("-" * 60)
+
+            # QSettings 진단
+            lines.append("[QSettings GCal Values]")
+            for key in [
+                "gcal_enabled",
+                "gcal_calendar_id",
+                "gcal_bound_calendar_id",
+                "last_successful_sync",
+                "gcal_primary_resolved_id",
+            ]:
+                val = self.settings.value(key, None)
+                lines.append(f"  {key}: {val}")
+
+            # DB & Calendars 진단
+            lines.append("-" * 60)
+            lines.append("[Registered GCal Calendars]")
+            try:
+                from calendar_app.infrastructure.db.calendar_repo import list_calendars
+
+                for cal in list_calendars(include_inactive=True):
+                    if cal.get("type") == "gcal":
+                        lines.append(
+                            f"  ID: {cal.get('id')} | GCal ID: {cal.get('gcal_calendar_id')} | "
+                            f"Name: {cal.get('name')} | Active: {cal.get('is_active')} | "
+                            f"Visible: {cal.get('is_visible')} | AccessRole: {cal.get('access_role')}"
+                        )
+                        # 이 캘린더의 sync token 정보도 가져오기
+                        gcal_id = cal.get("gcal_calendar_id")
+                        if gcal_id:
+                            token = self.settings.value(f"gcal_sync_token::{gcal_id}", None)
+                            fails = self.settings.value(f"gcal_sync_token_fails::{gcal_id}", 0)
+                            lines.append(
+                                f"    - Sync Token Length: {len(str(token or ''))} chars | Fail Count: {fails}"
+                            )
+            except Exception as e:
+                lines.append(f"  Failed to load calendar table: {e}")
+
+            # DB Tasks 무결성 진단
+            lines.append("-" * 60)
+            lines.append("[DB Tasks Statistics]")
+            try:
+                from calendar_app.infrastructure.db.database_unified import db_manager
+
+                conn = db_manager.get_connection()
+                if conn:
+                    cur = conn.cursor()
+                    cur.execute("SELECT COUNT(*) FROM unified_task")
+                    total_tasks = cur.fetchone()[0]
+                    cur.execute(
+                        "SELECT COUNT(*) FROM unified_task WHERE gcal_event_id IS NOT NULL AND trim(gcal_event_id) != ''"
+                    )
+                    gcal_tasks = cur.fetchone()[0]
+                    cur.execute("SELECT COUNT(*) FROM unified_task WHERE gcal_dirty = 1")
+                    dirty_tasks = cur.fetchone()[0]
+                    cur.execute(
+                        "SELECT COUNT(*) FROM unified_task WHERE gcal_sync_error IS NOT NULL AND trim(gcal_sync_error) != ''"
+                    )
+                    error_tasks = cur.fetchone()[0]
+                    cur.execute("SELECT COUNT(*) FROM gcal_deleted_task_archive")
+                    archive_tasks = cur.fetchone()[0]
+                    cur.execute("SELECT COUNT(*) FROM gcal_delete_queue")
+                    delete_queue_tasks = cur.fetchone()[0]
+
+                    lines.append(f"  Total Unified Tasks: {total_tasks}")
+                    lines.append(f"  GCal Connected Tasks: {gcal_tasks}")
+                    lines.append(f"  GCal Pending Dirty Tasks: {dirty_tasks}")
+                    lines.append(f"  GCal Failed Tasks: {error_tasks}")
+                    lines.append(f"  Deleted Task Archive Size: {archive_tasks}")
+                    lines.append(f"  Delete Queue Size: {delete_queue_tasks}")
+
+                    # 에러 태스크 샘플링
+                    if error_tasks > 0:
+                        lines.append("  [Failed Tasks Detail (Up to 10)]")
+                        cur.execute(
+                            "SELECT id, name, gcal_sync_error, deadline FROM unified_task WHERE gcal_sync_error IS NOT NULL LIMIT 10"
+                        )
+                        for row in cur.fetchall():
+                            lines.append(
+                                f"    - Task ID {row[0]} ({row[1]}): {row[2]} (Deadline: {row[3]})"
+                            )
+            except Exception as e:
+                lines.append(f"  Failed to load database stats: {e}")
+
+            # 최근 로그 추출
+            lines.append("-" * 60)
+            lines.append("[Recent GCal Logs (Tail 150 lines)]")
+            try:
+                from calendar_app.app_paths import LOG_PATH
+
+                if os.path.exists(LOG_PATH):
+                    with open(LOG_PATH, encoding="utf-8", errors="replace") as fh:
+                        log_lines = fh.readlines()
+                    tail_lines = log_lines[-2000:]
+                    gcal_logs = [
+                        ln.strip()
+                        for ln in tail_lines
+                        if any(k in ln.lower() for k in ["gcal", "sync", "google"])
+                    ]
+                    for log in gcal_logs[-150:]:
+                        lines.append(f"  {log}")
+                else:
+                    lines.append("  No log file found.")
+            except Exception as e:
+                lines.append(f"  Failed to load logs: {e}")
+
+            lines.append("=" * 60)
+            lines.append("END OF REPORT")
+            lines.append("=" * 60)
+
+            # 파일 저장
+            with open(file_path, "w", encoding="utf-8", errors="strict") as fh:
+                fh.write("\n".join(lines))
+                fh.write("\n")
+
+            QMessageBox.information(
+                self,
+                t("gcal_settings.export_diagnostics_success_title", "Export Complete"),
+                t(
+                    "gcal_settings.export_diagnostics_success_msg",
+                    "Diagnostics report exported successfully to:\n{path}",
+                ).format(path=file_path),
+            )
+
+        except Exception as e:
+            from calendar_app.infrastructure.db.database_unified import logger as db_logger
+
+            db_logger.exception("Failed to export diagnostics report")
+            QMessageBox.critical(
+                self,
+                t("gcal_settings.export_diagnostics_failed_title", "Export Failed"),
+                f"An error occurred while generating the report:\n{e}",
+            )
 
     def _open_sync_issues(self):
         if self.parent_app and hasattr(self.parent_app, "open_gcal_sync_issues_dialog"):

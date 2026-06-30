@@ -1,5 +1,13 @@
 from PyQt6.QtCore import QDate, QSize, Qt
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QToolButton
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSizePolicy,
+    QToolButton,
+)
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.main_window.top_bar_menu_factory import build_top_left_menus
@@ -51,8 +59,10 @@ def setup_top_bar(self, _size, _theme, _ta):
 
     self.sync_status_lbl = QLabel(t("topbar.sync_label", "Sync"))
     self.sync_status_lbl.setToolTip(t("topbar.sync_checking"))
+    self.sync_status_lbl.setAccessibleName(t("topbar.sync_label", "Sync"))
+    self.sync_status_lbl.setAccessibleDescription(t("topbar.sync_checking"))
     self.sync_status_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    self.sync_status_lbl.setFixedWidth(28)
+    self.sync_status_lbl.setMinimumWidth(28)
     self.sync_status_lbl.setStyleSheet(
         f"color: {_tb_text2}; font-size: {status_pt}pt; font-weight: bold; margin-right: 4px; background: transparent; border: none;"
     )
@@ -64,6 +74,8 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.sync_action_btn.setIcon(_ic(ICON.SYNC, color=_theme))
     self.sync_action_btn.setIconSize(QSize(18, 18))
     self.sync_action_btn.setToolTip(t("topbar.sync_now"))
+    self.sync_action_btn.setAccessibleName(t("topbar.sync_now"))
+    self.sync_action_btn.setAccessibleDescription(t("topbar.sync_checking"))
     self.sync_action_btn.setStyleSheet(
         f"""
         QToolButton {{
@@ -86,6 +98,8 @@ def setup_top_bar(self, _size, _theme, _ta):
 
     self.sync_status_text_lbl = QLabel(t("topbar.sync_waiting"))
     self.sync_status_text_lbl.setToolTip(t("topbar.sync_checking"))
+    self.sync_status_text_lbl.setAccessibleName(t("topbar.sync_label", "Sync"))
+    self.sync_status_text_lbl.setAccessibleDescription(t("topbar.sync_checking"))
     self.sync_status_text_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
     self.sync_status_text_lbl.setStyleSheet(
         f"color: {_tb_text2}; font-size: {status_text_pt}pt; font-weight: bold; margin-right: 8px; background: transparent; border: none;"
@@ -138,7 +152,12 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.lock_btn.setIcon(_ic(ICON.LOCK if is_locked else ICON.UNLOCK, color=_lock_icon_color))
     self.lock_btn.setIconSize(QSize(16, 16))
     self.lock_btn.setToolTip(t("topbar.lock_on_hint") if is_locked else t("topbar.lock_off_hint"))
-    self.lock_btn.setFixedSize(26, 26)
+    self.lock_btn.setAccessibleName(t("topbar.lock_mode"))
+    self.lock_btn.setAccessibleDescription(
+        t("topbar.lock_on_hint") if is_locked else t("topbar.lock_off_hint")
+    )
+    self.lock_btn.setMinimumSize(26, 26)
+    self.lock_btn.setMaximumSize(32, 32)
     self.lock_btn.setStyleSheet(_btn_style)
     self.lock_btn.clicked.connect(self.toggle_lock_mode)
     top_bar.addWidget(self.lock_btn, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -161,7 +180,12 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.magnet_btn.setToolTip(
         t("topbar.magnet_on_hint") if is_magnet else t("topbar.magnet_off_hint")
     )
-    self.magnet_btn.setFixedSize(26, 26)
+    self.magnet_btn.setAccessibleName(t("topbar.magnet_mode"))
+    self.magnet_btn.setAccessibleDescription(
+        t("topbar.magnet_on_hint") if is_magnet else t("topbar.magnet_off_hint")
+    )
+    self.magnet_btn.setMinimumSize(26, 26)
+    self.magnet_btn.setMaximumSize(32, 32)
     self.magnet_btn.setStyleSheet(_btn_style)
     self.magnet_btn.clicked.connect(self.toggle_magnet_mode)
     top_bar.addWidget(self.magnet_btn, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -176,7 +200,10 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.search_edit.addAction(
         _ic(ICON.SEARCH, color=_tb_text), QLineEdit.ActionPosition.LeadingPosition
     )
-    self.search_edit.setFixedWidth(160)
+    self.search_edit.setAccessibleName(t("topbar.search_placeholder", "Search schedule..."))
+    self.search_edit.setMinimumWidth(140)
+    self.search_edit.setMaximumWidth(260)
+    self.search_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     self.search_edit.setStyleSheet(
         f"""
         QLineEdit {{
@@ -196,8 +223,13 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.widget_mode_btn.setIcon(_ic(ICON.WIDGET_MGR, color=_tb_text))
     self.widget_mode_btn.setIconSize(QSize(16, 16))
     self.widget_mode_btn.setToolTip(t("topbar.widget_mode_hint", "위젯 전용 모드 열기"))
+    self.widget_mode_btn.setAccessibleName(t("topbar.widget_mode_hint", "위젯 전용 모드 열기"))
+    self.widget_mode_btn.setAccessibleDescription(
+        t("topbar.widget_mode_hint", "위젯 전용 모드 열기")
+    )
     self.widget_mode_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    self.widget_mode_btn.setFixedSize(26, 26)
+    self.widget_mode_btn.setMinimumSize(26, 26)
+    self.widget_mode_btn.setMaximumSize(32, 32)
     self.widget_mode_btn.setStyleSheet(
         f"""
         QToolButton {{

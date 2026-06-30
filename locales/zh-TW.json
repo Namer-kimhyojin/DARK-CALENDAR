@@ -33,7 +33,10 @@
     "date_format": "年.月.日 (ddd)",
     "default_msg": "🔒 你走了。\n（移動滑鼠解鎖。）",
     "placeholder_pw": "輸入密碼",
-    "unlock_btn": "開鎖"
+    "unlock_btn": "開鎖",
+    "secondary_screen_hint": "Secondary Lock Screen",
+    "admin_pw_placeholder": "管理員密碼",
+    "admin_pw_title": "請輸入管理員密碼。"
   },
   "away_settings": {
     "btn_align_center": "居中對齊",
@@ -92,7 +95,15 @@
     "selection_hint": "Ctrl+點選進行多選",
     "sync_hint": "谷歌日曆同步",
     "today": "今天",
-    "weekdays": ["週一", "週二", "週三", "週四", "週五", "週六", "週日"]
+    "weekdays": [
+      "週一",
+      "週二",
+      "週三",
+      "週四",
+      "週五",
+      "週六",
+      "週日"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "新增項目",
@@ -297,7 +308,11 @@
       "title": "✅ 清單",
       "type_label": "項目類型:",
       "type_list": "List Type",
-      "type_process": "Process Type"
+      "type_process": "Process Type",
+      "add": "+ Add Item",
+      "add_prompt": "Item content:",
+      "add_title": "Add Item",
+      "remove": "Remove Item"
     },
     "common": {
       "add": "添加",
@@ -324,10 +339,13 @@
       "ok": "好的",
       "refresh": "重新整理",
       "save": "儲存",
+      "save_continue": "Save & Continue",
       "today": "今天",
       "unspecified": "未指定",
       "warning": "警告",
-      "yes": "是的"
+      "yes": "是的",
+      "delete_error": "An error occurred while deleting.",
+      "loading": "Processing..."
     },
     "directive": {
       "btn_delete": "刪除",
@@ -567,9 +585,12 @@
       "color": "顏色",
       "color_none": "沒有任何",
       "color_tag": "Color Tag",
+      "del_all_series": "Delete Entire Series",
       "del_confirm": "您確定要刪除此內容嗎？",
       "del_confirm_specific": "刪除這個{type}？\n所有相關清單項目將會被刪除。",
       "del_fail": "刪除失敗。",
+      "del_only_this": "Delete This Instance",
+      "del_routine_confirm_msg": "How would you like to delete this recurring routine series?",
       "del_success": "刪除成功。",
       "del_title": "確認刪除",
       "delete_btn": "🗑️刪除",
@@ -614,12 +635,14 @@
       "routine_count_msg": "{count} routines registered.",
       "routine_end_error": "重複結束日期必須晚於開始日期。",
       "routine_reg_success": "例程註冊成功。",
+      "routine_reg_success_continue": "Routine registered. You can continue entering.",
       "save_alarm_default": "Save as default alarm",
       "save_btn": "💾 保存",
       "save_done": "儲存完成",
       "save_error_db": "更新資料庫失敗。",
       "save_failed": "保存失敗",
       "schedule_reg_success": "日程註冊成功。",
+      "schedule_reg_success_continue": "Schedule registered. You can continue entering.",
       "section_time_routine": "執行期限",
       "section_time_schedule": "時間設定",
       "start_day_routine": "重複開始：",
@@ -629,7 +652,18 @@
       "unit_day": "d",
       "unit_hour": "小時",
       "unit_min": "米",
-      "untitled": "Untitled"
+      "untitled": "Untitled",
+      "cycle_section": "Repeat Settings",
+      "name_placeholder_routine": "Enter task name",
+      "name_section": "Task Title",
+      "purge_gcal_confirm": "Moving this event to local calendar will remove it from Google Calendar.\n(It will be kept as a local event only and will not sync.)\n\nContinue?",
+      "purge_gcal_title": "Remove from Google Calendar",
+      "routine_datetime_section": "Date & Time",
+      "tab_basic": "Basic",
+      "tab_checklist": "Checklist",
+      "tab_detail": "Details",
+      "tags_placeholder": "Comma separated (e.g. work, projectA)",
+      "tags_section": "Classification Tags"
     },
     "theme": {
       "accent": {
@@ -731,7 +765,8 @@
         "current_color": "Current background color",
         "pick_color": "Pick color",
         "reset_default": "Reset to default"
-      }
+      },
+      "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
       "apply_color_preset": "Apply Preset",
@@ -802,7 +837,19 @@
       "saved_toast": "Dialog UI tokens saved. Full effect after restart.",
       "tab_color": "Color Tokens",
       "tab_metric": "Size/Spacing Tokens",
-      "title": "Dialog UI Token Settings"
+      "title": "Dialog UI Token Settings",
+      "export_failed_title": "匯出失敗",
+      "export_title": "匯出 UI Token",
+      "import_failed_title": "匯入失敗",
+      "import_title": "匯入 UI Token"
+    },
+    "daily": {
+      "date_header": "今天",
+      "no_routines": "  今天沒有到期任務。",
+      "no_schedule": "  今天沒有安排活動。",
+      "routine_section": "📋 今日到期",
+      "schedule_section": "📅 今日活動",
+      "title": "今日活動 & 到期任務"
     }
   },
   "drag": {
@@ -906,7 +953,8 @@
       "push_failed": "Failed to push local changes to Google server.",
       "rate_limit": "Google API rate limit exceeded. Please try again later.",
       "remote_newer_than_local": "Remote data is newer than local (server version kept to prevent conflict).",
-      "unknown": "An unknown error occurred."
+      "unknown": "An unknown error occurred.",
+      "remote_orphan": "Only in Google (no local match)"
     },
     "first_setup_msg": "歡迎來到黑暗日曆！\n您想立即設定 Google 日曆同步嗎？",
     "first_setup_title": "設定助手",
@@ -916,7 +964,8 @@
       "generic": "📍 [DETAILS]\n{error}\n\n❓ [HOW TO FIX] Please check your internet connection and click 'Retry'.\nIf the issue persists, use 'Force Ignore' to remove it from the sync queue.",
       "not_found": "📍 [STATUS] This event was not found on Google Calendar (might have been deleted elsewhere).\n🛠 [ACTION] The app automatically restored it to Google or removed it locally to match current state.\n✅ [OUTCOME] Sync state restored. You can 'Clear Error' or 'Retry' to finalize.",
       "rate_limit": "📍 [STATUS] Too many sync requests sent to Google servers in a short time.\n⏳ [ACTION] The app will automatically retry after a short wait period.\n✅ [OUTCOME] This usually resolves itself after a few minutes.",
-      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again."
+      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again.",
+      "remote_orphan": "This event exists in Google Calendar but has no matching local event.<br><br><b>Cause</b>: may have been deleted locally or created directly in Google."
     },
     "issues_action_taken": "System Action",
     "issues_auto_healed": "Auto-Healed",
@@ -1023,7 +1072,20 @@
       "sync_partial": "同步完成（部分失敗：push={push}, delete={delete}）",
       "sync_skipped": "同步已跳過",
       "sync_skipped_or_failed": "同步失敗或已略過"
-    }
+    },
+    "issues_delete_failed": "Failed to queue for deletion. Check logs.",
+    "issues_delete_queued": "Queued for deletion. Will be removed from Google after next sync.",
+    "issues_delete_remote": "Delete from Google",
+    "issues_delete_remote_confirm": "Delete this event from Google Calendar.\n\nEvent: {name}\nCalendar: {cal}\n\nThis cannot be undone. Continue?",
+    "issues_delete_remote_tooltip": "Queue selected orphan events for deletion from Google Calendar. Deleted on next sync.",
+    "issues_scan_clean": "No orphan events found. All clean.",
+    "issues_scan_found": "Found {n} orphan event(s) in Google. Review and delete from the list.",
+    "issues_scan_no_sync": "Google sync is not configured. Cannot scan.",
+    "issues_scan_orphans": "Scan Google Orphans",
+    "issues_scan_orphans_tooltip": "Find events in Google with no local match (last 6 months).",
+    "issues_scanning": "Scanning...",
+    "issues_type_orphan": "Google Orphan",
+    "setup_needed_auth_hint": "Please complete Google authentication in Calendar Integration Settings."
   },
   "gcal_settings": {
     "account_tip": "如果連線的帳戶發生更改，可能需要重新進行身份驗證才能安全刷新行事曆綁定。",
@@ -1075,6 +1137,11 @@
     "edit_gcal_name_notice": "Google Calendar names are managed by Google.",
     "edit_gcal_name_tooltip": "Google Calendar names can only be changed in Google.",
     "enable": "啟用 Google 日曆同步",
+    "export_diagnostics": "Export Report",
+    "export_diagnostics_failed_title": "Export Failed",
+    "export_diagnostics_save_title": "Save Diagnostics Report",
+    "export_diagnostics_success_msg": "Diagnostics report exported successfully to:\n{path}",
+    "export_diagnostics_success_title": "Export Complete",
     "go_to_auth": "Go to Authentication Settings",
     "guide_tab": "指導",
     "hide_completed": "Hide completed events in Google Calendar",
@@ -1381,7 +1448,13 @@
   "palette": {
     "exit_app": "App: Exit",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Press Enter to open the selected result",
@@ -1389,7 +1462,15 @@
     "sync_google": "Sync: Update Google Calendar now",
     "task_registered": "Registered: {title}",
     "theme_dark": "Theme: Change to Dark Mode",
-    "theme_light": "Theme: Change to Light Mode"
+    "theme_light": "Theme: Change to Light Mode",
+    "title": "Command Palette",
+    "hint_command": "輸入以搜尋指令",
+    "hint_create": "Enter 從文字建立行程",
+    "hint_create_confirm": "Enter 建立此行程",
+    "hint_default": "> 指令  + 建立  / 搜尋",
+    "hint_record": "搜尋行程、例行和指示",
+    "hint_record_jump": "Enter 開啟項目。Shift+Enter 移至其日期。",
+    "hint_run_command": "Enter 執行選取的指令"
   },
   "panel": {
     "checklist_tooltip": "顯示/隱藏清單",
@@ -1518,11 +1599,13 @@
   },
   "splash": {
     "initializing_db": "正在初始化資料庫...",
-    "loading_font": "Loading fonts...",
-    "loading_labels": "Loading labels...",
-    "migrating_data": "Migrating data...",
+    "loading_font": "正在載入字型...",
+    "loading_labels": "正在載入標籤...",
+    "loading_ui_modules": "正在載入UI模組...",
+    "migrating_data": "正在遷移資料...",
+    "preparing_runtime": "正在準備執行環境...",
     "ready": "準備就緒！",
-    "starting_ui": "Starting UI..."
+    "starting_ui": "正在啟動介面..."
   },
   "status": {
     "all_states": "所有狀態",
@@ -1645,7 +1728,18 @@
   "weather": {
     "desc": {
       "clear": "Clear",
-      "storm": "Storm"
+      "storm": "Storm",
+      "cloudy": "Cloudy",
+      "fog": "Fog",
+      "rain": "Rain",
+      "showers": "Showers",
+      "snow": "Snow"
+    },
+    "error": {
+      "location_not_found": "Location not found",
+      "network": "Network error",
+      "parse_failed": "Data parse error",
+      "timeout": "Request timed out"
     }
   },
   "weekday": {
@@ -2004,10 +2098,10 @@
     "add_widget_menu": "新增 {label}",
     "add_widget_title": "新增 {label}",
     "btn_add": "+ Add",
-    "btn_delete_all": "Delete All...",
-    "btn_hide_all": "Hide All",
-    "btn_settings": "Settings",
-    "btn_show_all": "Show All",
+    "btn_delete_all": "刪除全部...",
+    "btn_hide_all": "隱藏全部",
+    "btn_settings": "設定",
+    "btn_show_all": "顯示全部",
     "col_actions": "操作",
     "col_name": "名稱",
     "col_position": "位置",
@@ -2015,33 +2109,33 @@
     "col_type": "類型",
     "col_visible": "顯示",
     "confirm_delete": "您確定要刪除此小工具嗎？",
-    "confirm_delete_all_msg": "Permanently delete all {count} widget(s)? This cannot be undone.",
-    "confirm_delete_all_title": "Delete All Widgets",
+    "confirm_delete_all_msg": "永久刪除 {count} 個 Widget？此操作無法復原。",
+    "confirm_delete_all_title": "刪除所有 Widget",
     "confirm_delete_message": "確定刪除 '{name}'？",
-    "confirm_delete_msg": "Delete '{name}'?",
+    "confirm_delete_msg": "刪除'{name}'？",
     "confirm_delete_title": "刪除小工具",
     "delete": "刪除",
     "desc": "一目了然地管理桌面上的所有小部件。",
     "empty": "（無小工具）",
     "focus": "移至中央",
-    "footer_hint": "Click name to edit  ·  Settings button for widget options",
+    "footer_hint": "點選名稱以編輯  ·  設定按鈕用於 Widget 選項",
     "hide_all": "全部隱藏",
     "hint": "拖曳小工具可移動位置，右鍵點擊查看詳細設定。",
-    "list_heading": "Widget List",
-    "menu_delete_all": "Delete All...",
-    "menu_hide_all": "Hide All",
-    "menu_show_all": "Show All",
+    "list_heading": "Widget 清單",
+    "menu_delete_all": "刪除全部...",
+    "menu_hide_all": "隱藏全部",
+    "menu_show_all": "顯示全部",
     "name_placeholder": "名稱（留空自動）",
     "new_name": "新名稱：",
-    "new_widget": "New Widget",
+    "new_widget": "新增 Widget",
     "open_manager": "🪟 小工具管理員...",
     "rename": "重新命名...",
     "rename_title": "重新命名",
     "reset_position": "重置位置",
     "show_all": "全部顯示",
-    "tip_center": "Center on screen",
-    "tip_delete": "Delete",
-    "tip_reset": "Reset position",
+    "tip_center": "置中顯示",
+    "tip_delete": "刪除",
+    "tip_reset": "重設位置",
     "title": "小工具管理員",
     "toggle_off": "關",
     "toggle_on": "開",
@@ -2127,7 +2221,10 @@
     "widget_hint_empty": "No items for the selected date.",
     "work_summary": "{count} work items",
     "work_title": "Work",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "hide_calendar": "Hide Calendar",
+    "show_calendar": "Show Calendar",
+    "toggle_calendar": "Toggle Calendar"
   },
   "widget_text": {
     "align": "對齊",
@@ -2199,6 +2296,19 @@
     "var_time": "時間",
     "var_weekday": "星期",
     "var_weekday_short": "星期（簡）",
-    "word_wrap": "自動換行"
+    "word_wrap": "自動換行",
+    "group_align": "Alignment",
+    "var_align_center": "Center",
+    "var_align_left": "Left",
+    "var_align_right": "Right"
+  },
+  "btn": {
+    "cancel": "取消",
+    "confirm": "確認",
+    "ok": "確定"
+  },
+  "app": {
+    "exit_message": "Dark Calendar 即將關閉。\n程式將完全結束，不會最小化到系統匣。\n繼續？",
+    "exit_title": "結束"
   }
 }

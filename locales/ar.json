@@ -33,7 +33,10 @@
     "date_format": "yyyy.MM.dd (ddd)",
     "default_msg": "🔒 أنت بعيد.\n(حرك الماوس لفتح.)",
     "placeholder_pw": "أدخل كلمة المرور",
-    "unlock_btn": "فتح"
+    "unlock_btn": "فتح",
+    "secondary_screen_hint": "Secondary Lock Screen",
+    "admin_pw_placeholder": "كلمة مرور المسؤول",
+    "admin_pw_title": "أدخل كلمة مرور المسؤول."
   },
   "away_settings": {
     "btn_align_center": "محاذاة المركز",
@@ -92,7 +95,15 @@
     "selection_hint": "Ctrl + النقر للتحديد المتعدد",
     "sync_hint": "مزامنة",
     "today": "اليوم",
-    "weekdays": ["هنأ", "ثنإ", "عبرأ", "مخأ", "مجأ", "سبأ", "حدأ"]
+    "weekdays": [
+      "هنأ",
+      "ثنإ",
+      "عبرأ",
+      "مخأ",
+      "مجأ",
+      "سبأ",
+      "حدأ"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "إضافة عنصر",
@@ -297,7 +308,11 @@
       "title": "✅ القائمة",
       "type_label": "Item Type:",
       "type_list": "نوع القائمة",
-      "type_process": "نوع العملية"
+      "type_process": "نوع العملية",
+      "add": "+ Add Item",
+      "add_prompt": "Item content:",
+      "add_title": "Add Item",
+      "remove": "Remove Item"
     },
     "common": {
       "add": "يضيف",
@@ -324,10 +339,13 @@
       "ok": "موافق",
       "refresh": "تحديث",
       "save": "حفظ",
+      "save_continue": "Save & Continue",
       "today": "اليوم",
       "unspecified": "غير محدد",
       "warning": "تحذير",
-      "yes": "نعم"
+      "yes": "نعم",
+      "delete_error": "An error occurred while deleting.",
+      "loading": "Processing..."
     },
     "directive": {
       "btn_delete": "حذف",
@@ -567,9 +585,12 @@
       "color": "اللون",
       "color_none": "لا أحد",
       "color_tag": "Color Tag",
+      "del_all_series": "Delete Entire Series",
       "del_confirm": "حذف هذا العنصر؟",
       "del_confirm_specific": "هل تريد حذف {type}؟\nستتم إزالة جميع عناصر قائمة التحقق ذات الصلة.",
       "del_fail": "فشل الحذف.",
+      "del_only_this": "Delete This Instance",
+      "del_routine_confirm_msg": "How would you like to delete this recurring routine series?",
       "del_success": "تم الحذف بنجاح.",
       "del_title": "تأكيد الحذف",
       "delete_btn": "🗑️ حذف",
@@ -614,12 +635,14 @@
       "routine_count_msg": "{count} إجراءات مسجلة.",
       "routine_end_error": "يجب أن تكون نهاية التكرار بعد تاريخ البدء.",
       "routine_reg_success": "تم تسجيل الروتين بنجاح.",
+      "routine_reg_success_continue": "Routine registered. You can continue entering.",
       "save_alarm_default": "Save as default alarm",
       "save_btn": "💾 حفظ",
       "save_done": "اكتمل الحفظ",
       "save_error_db": "فشل في تحديث قاعدة البيانات.",
       "save_failed": "فشل الحفظ",
       "schedule_reg_success": "تم تسجيل الجدول بنجاح.",
+      "schedule_reg_success_continue": "Schedule registered. You can continue entering.",
       "section_time_routine": "الفترة",
       "section_time_schedule": "إعدادات الوقت",
       "start_day_routine": "بداية التكرار:",
@@ -629,7 +652,18 @@
       "unit_day": "يوم",
       "unit_hour": "ساعة",
       "unit_min": "دقيقة",
-      "untitled": "Untitled"
+      "untitled": "Untitled",
+      "cycle_section": "Repeat Settings",
+      "name_placeholder_routine": "Enter task name",
+      "name_section": "Task Title",
+      "purge_gcal_confirm": "Moving this event to local calendar will remove it from Google Calendar.\n(It will be kept as a local event only and will not sync.)\n\nContinue?",
+      "purge_gcal_title": "Remove from Google Calendar",
+      "routine_datetime_section": "Date & Time",
+      "tab_basic": "Basic",
+      "tab_checklist": "Checklist",
+      "tab_detail": "Details",
+      "tags_placeholder": "Comma separated (e.g. work, projectA)",
+      "tags_section": "Classification Tags"
     },
     "theme": {
       "accent": {
@@ -731,7 +765,8 @@
         "current_color": "Current background color",
         "pick_color": "Pick color",
         "reset_default": "Reset to default"
-      }
+      },
+      "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
       "apply_color_preset": "Apply Preset",
@@ -802,7 +837,19 @@
       "saved_toast": "Dialog UI tokens saved. Full effect after restart.",
       "tab_color": "Color Tokens",
       "tab_metric": "Size/Spacing Tokens",
-      "title": "Dialog UI Token Settings"
+      "title": "Dialog UI Token Settings",
+      "export_failed_title": "فشل التصدير",
+      "export_title": "تصدير رموز UI",
+      "import_failed_title": "فشل الاستيراد",
+      "import_title": "استيراد رموز UI"
+    },
+    "daily": {
+      "date_header": "اليوم",
+      "no_routines": "  لا توجد مهام مستحقة اليوم.",
+      "no_schedule": "  لا توجد أحداث مجدولة اليوم.",
+      "routine_section": "📋 مستحق اليوم",
+      "schedule_section": "📅 أحداث اليوم",
+      "title": "أحداث اليوم والمهام المستحقة"
     }
   },
   "drag": {
@@ -906,9 +953,10 @@
       "push_failed": "Failed to push local changes to Google server.",
       "rate_limit": "Google API rate limit exceeded. Please try again later.",
       "remote_newer_than_local": "Remote data is newer than local (server version kept to prevent conflict).",
-      "unknown": "An unknown error occurred."
+      "unknown": "An unknown error occurred.",
+      "remote_orphan": "Only in Google (no local match)"
     },
-    "first_setup_msg": "مرحبًا بك في Air Calendar!\nهل تريد إعداد مزامنة Google Calendar الآن؟",
+    "first_setup_msg": "مرحبًا بك في Dark Calendar!\nهل تريد إعداد مزامنة Google Calendar الآن؟",
     "first_setup_title": "مساعد الإعداد",
     "guidance": {
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Please go to 'Settings > Calendar & Sync > Authenticate' and log in again.",
@@ -916,7 +964,8 @@
       "generic": "📍 [DETAILS]\n{error}\n\n❓ [HOW TO FIX] Please check your internet connection and click 'Retry'.\nIf the issue persists, use 'Force Ignore' to remove it from the sync queue.",
       "not_found": "📍 [STATUS] This event was not found on Google Calendar (might have been deleted elsewhere).\n🛠 [ACTION] The app automatically restored it to Google or removed it locally to match current state.\n✅ [OUTCOME] Sync state restored. You can 'Clear Error' or 'Retry' to finalize.",
       "rate_limit": "📍 [STATUS] Too many sync requests sent to Google servers in a short time.\n⏳ [ACTION] The app will automatically retry after a short wait period.\n✅ [OUTCOME] This usually resolves itself after a few minutes.",
-      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again."
+      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again.",
+      "remote_orphan": "This event exists in Google Calendar but has no matching local event.<br><br><b>Cause</b>: may have been deleted locally or created directly in Google."
     },
     "issues_action_taken": "System Action",
     "issues_auto_healed": "Auto-Healed",
@@ -1023,7 +1072,20 @@
       "sync_partial": "اكتملت المزامنة (إخفاقات جزئية: push={push}, delete={delete})",
       "sync_skipped": "تم تخطي المزامنة",
       "sync_skipped_or_failed": "فشلت المزامنة أو تم تخطيها"
-    }
+    },
+    "issues_delete_failed": "Failed to queue for deletion. Check logs.",
+    "issues_delete_queued": "Queued for deletion. Will be removed from Google after next sync.",
+    "issues_delete_remote": "Delete from Google",
+    "issues_delete_remote_confirm": "Delete this event from Google Calendar.\n\nEvent: {name}\nCalendar: {cal}\n\nThis cannot be undone. Continue?",
+    "issues_delete_remote_tooltip": "Queue selected orphan events for deletion from Google Calendar. Deleted on next sync.",
+    "issues_scan_clean": "No orphan events found. All clean.",
+    "issues_scan_found": "Found {n} orphan event(s) in Google. Review and delete from the list.",
+    "issues_scan_no_sync": "Google sync is not configured. Cannot scan.",
+    "issues_scan_orphans": "Scan Google Orphans",
+    "issues_scan_orphans_tooltip": "Find events in Google with no local match (last 6 months).",
+    "issues_scanning": "Scanning...",
+    "issues_type_orphan": "Google Orphan",
+    "setup_needed_auth_hint": "Please complete Google authentication in Calendar Integration Settings."
   },
   "gcal_settings": {
     "account_tip": "إذا تغير الحساب المتصل، فقد تكون إعادة المصادقة مطلوبة لتحديث روابط التقويم بأمان.",
@@ -1075,6 +1137,11 @@
     "edit_gcal_name_notice": "Google Calendar names are managed by Google.",
     "edit_gcal_name_tooltip": "Google Calendar names can only be changed in Google.",
     "enable": "تمكين مزامنة تقويم Google",
+    "export_diagnostics": "Export Report",
+    "export_diagnostics_failed_title": "Export Failed",
+    "export_diagnostics_save_title": "Save Diagnostics Report",
+    "export_diagnostics_success_msg": "Diagnostics report exported successfully to:\n{path}",
+    "export_diagnostics_success_title": "Export Complete",
     "go_to_auth": "Go to Authentication Settings",
     "guide_tab": "مرشد",
     "hide_completed": "Hide completed events in Google Calendar",
@@ -1381,7 +1448,13 @@
   "palette": {
     "exit_app": "App: Exit",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Press Enter to open the selected result",
@@ -1389,7 +1462,15 @@
     "sync_google": "Sync: Update Google Calendar now",
     "task_registered": "Registered: {title}",
     "theme_dark": "Theme: Change to Dark Mode",
-    "theme_light": "Theme: Change to Light Mode"
+    "theme_light": "Theme: Change to Light Mode",
+    "title": "Command Palette",
+    "hint_command": "اكتب للبحث في الأوامر",
+    "hint_create": "Enter لإنشاء جدول من نصك",
+    "hint_create_confirm": "Enter لإنشاء هذا الجدول",
+    "hint_default": "> الأوامر  + إنشاء  / بحث",
+    "hint_record": "ابحث في الجداول والروتين والتوجيهات",
+    "hint_record_jump": "Enter لفتح العنصر. Shift+Enter للانتقال إلى تاريخه.",
+    "hint_run_command": "Enter لتشغيل الأمر المحدد"
   },
   "panel": {
     "checklist_tooltip": "إظهار القائمة",
@@ -1518,11 +1599,13 @@
   },
   "splash": {
     "initializing_db": "تهيئة قاعدة البيانات...",
-    "loading_font": "Loading fonts...",
-    "loading_labels": "Loading labels...",
-    "migrating_data": "Migrating data...",
+    "loading_font": "جاري تحميل الخطوط...",
+    "loading_labels": "جاري تحميل التسميات...",
+    "loading_ui_modules": "جاري تحميل وحدات الواجهة...",
+    "migrating_data": "جاري ترحيل البيانات...",
+    "preparing_runtime": "جاري تحضير بيئة التشغيل...",
     "ready": "جاهز!",
-    "starting_ui": "Starting UI..."
+    "starting_ui": "جاري بدء الواجهة..."
   },
   "status": {
     "all_states": "الكل",
@@ -1645,7 +1728,18 @@
   "weather": {
     "desc": {
       "clear": "Clear",
-      "storm": "Storm"
+      "storm": "Storm",
+      "cloudy": "Cloudy",
+      "fog": "Fog",
+      "rain": "Rain",
+      "showers": "Showers",
+      "snow": "Snow"
+    },
+    "error": {
+      "location_not_found": "Location not found",
+      "network": "Network error",
+      "parse_failed": "Data parse error",
+      "timeout": "Request timed out"
     }
   },
   "weekday": {
@@ -2004,10 +2098,10 @@
     "add_widget_menu": "إضافة {label}",
     "add_widget_title": "إضافة {label}",
     "btn_add": "+ Add",
-    "btn_delete_all": "Delete All...",
-    "btn_hide_all": "Hide All",
-    "btn_settings": "Settings",
-    "btn_show_all": "Show All",
+    "btn_delete_all": "حذف الكل...",
+    "btn_hide_all": "إخفاء الكل",
+    "btn_settings": "الإعدادات",
+    "btn_show_all": "إظهار الكل",
     "col_actions": "الإجراءات",
     "col_name": "الاسم",
     "col_position": "الموضع",
@@ -2015,33 +2109,33 @@
     "col_type": "النوع",
     "col_visible": "مرئي",
     "confirm_delete": "هل أنت متأكد أنك تريد حذف هذه القطعة؟",
-    "confirm_delete_all_msg": "Permanently delete all {count} widget(s)? This cannot be undone.",
-    "confirm_delete_all_title": "Delete All Widgets",
+    "confirm_delete_all_msg": "حذف {count} أداة/أدوات نهائياً؟ لا يمكن التراجع عن هذا الإجراء.",
+    "confirm_delete_all_title": "حذف جميع الأدوات",
     "confirm_delete_message": "حذف '{name}'؟",
-    "confirm_delete_msg": "Delete '{name}'?",
+    "confirm_delete_msg": "حذف '{name}'؟",
     "confirm_delete_title": "حذف الأداة",
     "delete": "حذف",
     "desc": "إدارة كافة الأدوات على مكتبك في لمحة.",
     "empty": "(لا توجد أدوات)",
     "focus": "نقل إلى المركز",
-    "footer_hint": "Click name to edit  ·  Settings button for widget options",
+    "footer_hint": "انقر على الاسم للتعديل  ·  زر الإعدادات لخيارات الأداة",
     "hide_all": "إخفاء الكل",
     "hint": "اسحب الأدوات لتحريكها. انقر بزر الماوس الأيمن للتفاصيل.",
-    "list_heading": "Widget List",
-    "menu_delete_all": "Delete All...",
-    "menu_hide_all": "Hide All",
-    "menu_show_all": "Show All",
+    "list_heading": "قائمة الأدوات",
+    "menu_delete_all": "حذف الكل...",
+    "menu_hide_all": "إخفاء الكل",
+    "menu_show_all": "إظهار الكل",
     "name_placeholder": "الاسم (تلقائي إذا كان فارغًا)",
     "new_name": "الاسم الجديد:",
-    "new_widget": "New Widget",
+    "new_widget": "أداة جديدة",
     "open_manager": "🪟 مدير الأدوات...",
     "rename": "إعادة تسمية...",
     "rename_title": "إعادة تسمية",
     "reset_position": "إعادة تعيين الموضع",
     "show_all": "عرض الكل",
-    "tip_center": "Center on screen",
-    "tip_delete": "Delete",
-    "tip_reset": "Reset position",
+    "tip_center": "توسيط على الشاشة",
+    "tip_delete": "حذف",
+    "tip_reset": "إعادة تعيين الموضع",
     "title": "مدير الأدوات",
     "toggle_off": "إيقاف",
     "toggle_on": "تشغيل",
@@ -2127,7 +2221,10 @@
     "widget_hint_empty": "No items for the selected date.",
     "work_summary": "{count} work items",
     "work_title": "Work",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "hide_calendar": "Hide Calendar",
+    "show_calendar": "Show Calendar",
+    "toggle_calendar": "Toggle Calendar"
   },
   "widget_text": {
     "align": "تنسيق",
@@ -2199,6 +2296,19 @@
     "var_time": "وقت",
     "var_weekday": "أيام الأسبوع",
     "var_weekday_short": "أيام الأسبوع (قصيرة)",
-    "word_wrap": "التفاف الكلمة"
+    "word_wrap": "التفاف الكلمة",
+    "group_align": "Alignment",
+    "var_align_center": "Center",
+    "var_align_left": "Left",
+    "var_align_right": "Right"
+  },
+  "btn": {
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "ok": "موافق"
+  },
+  "app": {
+    "exit_message": "سيتم إغلاق Dark Calendar.\nسيتم إغلاق البرنامج نهائياً دون التصغير إلى علبة النظام.\nهل تريد المتابعة؟",
+    "exit_title": "خروج"
   }
 }

@@ -248,8 +248,8 @@ class WindowEventsMixin:
                     _t.stop()
 
         # 백그라운드 QThread 워커 종료 — msleep 중인 스레드가 이벤트 루프 소멸 후
-        # Qt 내부 시설에 접근해 SIGABRT를 일으키는 것을 방지
-        for _worker_attr in ("alarm_worker",):
+        # Qt 내부 시설에 접근해 SIGABRT를 일으키거나 프로세스가 잔류하는 것을 방지
+        for _worker_attr in ("alarm_worker", "_sync_worker", "_auth_worker"):
             _w = getattr(self, _worker_attr, None)
             if _w is not None:
                 try:
@@ -258,6 +258,20 @@ class WindowEventsMixin:
                     _w.quit()
                     _w.wait(2000)
                 except RuntimeError:
+                    pass
+
+        # _bg_workers 리스트 내 모든 워커 스레드 안전하게 종료
+        _bg_list = getattr(self, "_bg_workers", [])
+        for _w in _bg_list:
+            if _w is not None:
+                try:
+                    if hasattr(_w, "stop"):
+                        _w.stop()
+                    if hasattr(_w, "quit"):
+                        _w.quit()
+                    if hasattr(_w, "wait"):
+                        _w.wait(2000)
+                except Exception:
                     pass
 
         save_window_layout(self)

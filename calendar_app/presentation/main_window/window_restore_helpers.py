@@ -170,7 +170,10 @@ def install_dock_persist_signals(self):
         return
     self._dock_persist_installed = True
 
-    debounce = QTimer(self)
+    from PyQt6.QtCore import QObject
+
+    timer_parent = self if isinstance(self, QObject) else None
+    debounce = QTimer(timer_parent)
     debounce.setSingleShot(True)
     debounce.setInterval(400)  # 0.4s — drag 중 spam 방지
     debounce.timeout.connect(lambda: persist_dock_layout(self))

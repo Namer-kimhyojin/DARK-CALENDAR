@@ -2,6 +2,8 @@ from datetime import UTC, datetime, timedelta
 import json
 
 from calendar_app.domain.routine_cycle import cycle_display_name
+from calendar_app.domain.task_status_view import can_transition_status
+from calendar_app.domain.task_validation import normalize_task_payload
 from calendar_app.infrastructure.db.database_unified import db_manager, logger
 from calendar_app.infrastructure.db.period_utils import (
     calculate_period_bounds as _calculate_period_bounds,
@@ -80,6 +82,18 @@ def create_unified_task(task_data, commit=True):
     Returns:
         생성된 task의 ID
     """
+    task_data, issues = normalize_task_payload(task_data, is_update=False)
+    if any(issue.field == "name" and issue.code == "required" for issue in issues):
+        logger.error("Error creating unified task: task name is required")
+        return None
+    if task_data.get("status") == "completed":
+        task_data["is_completed"] = 1
+        task_data["completed_at"] = task_data.get("completed_at") or _now_local_str()
+    else:
+        task_data["is_completed"] = int(bool(task_data.get("is_completed")))
+        if not task_data["is_completed"]:
+            task_data["completed_at"] = None
+
     conn = get_connection()
     if not conn:
         return None
@@ -156,6 +170,11 @@ def create_unified_task(task_data, commit=True):
         extra_sets = []
         extra_params = []
         for col in (
+            "is_completed",
+            "completed_at",
+            "series_id",
+            "series_order",
+            "series_total",
             "gcal_source_calendar_id",
             "gcal_source_summary",
             "gcal_target_calendar_id",
@@ -194,6 +213,32 @@ def get_unified_task(task_id):
 
     cur = conn.cursor()
     cur.execute("SELECT * FROM unified_task WHERE id=?", (task_id,))
+    row = cur.fetchone()
+    return dict(row) if row else None
+
+
+def find_orphan_candidate(name, deadline_str, calendar_id=None):
+    """
+    구글 고아(Orphan) 일정의 자가 치유를 위해, 로컬에서 gcal_event_id가 아직 연동되지 않은(NULL)
+    동일 제목(name)과 시작시간(deadline)을 가진 일정을 검색합니다.
+    """
+    if not name or not deadline_str:
+        return None
+    conn = get_connection()
+    if not conn:
+        return None
+
+    cur = conn.cursor()
+    if calendar_id:
+        cur.execute(
+            "SELECT * FROM unified_task WHERE gcal_event_id IS NULL AND name = ? AND deadline = ? AND calendar_id = ? LIMIT 1",
+            (name, deadline_str, calendar_id),
+        )
+    else:
+        cur.execute(
+            "SELECT * FROM unified_task WHERE gcal_event_id IS NULL AND name = ? AND deadline = ? LIMIT 1",
+            (name, deadline_str),
+        )
     row = cur.fetchone()
     return dict(row) if row else None
 
@@ -366,6 +411,33 @@ def update_unified_task(task_id, updates, mark_gcal_dirty=None):
         return False
 
     cur = conn.cursor()
+    updates = dict(updates or {})
+    cur.execute("SELECT * FROM unified_task WHERE id=?", (task_id,))
+    existing = cur.fetchone()
+    if not existing:
+        return False
+    existing_task = dict(existing)
+
+    updates, issues = normalize_task_payload(
+        updates,
+        is_update=True,
+        existing_task=existing_task,
+    )
+    if any(issue.field == "name" and issue.code == "required" for issue in issues):
+        return False
+    if "status" in updates and not can_transition_status(
+        existing_task.get("status"), updates.get("status")
+    ):
+        return False
+    if "status" in updates:
+        if updates.get("status") == "completed":
+            updates["is_completed"] = 1
+            updates["completed_at"] = (
+                updates.get("completed_at") or existing_task.get("completed_at") or _now_local_str()
+            )
+        else:
+            updates["is_completed"] = 0
+            updates["completed_at"] = None
 
     # period_start, period_end 재계산 필요 여부 확인 (routine 타입만)
     if "target_date" in updates or "cycle_type" in updates:
@@ -393,8 +465,9 @@ def update_unified_task(task_id, updates, mark_gcal_dirty=None):
 
     try:
         cur.execute(f"UPDATE unified_task SET {set_clause} WHERE id=?", values)
+        changed = cur.rowcount > 0
         conn.commit()
-        return True
+        return changed
     except Exception as e:
         logger.error(f"Error updating unified task: {e}")
         conn.rollback()
@@ -476,6 +549,37 @@ def delete_unified_task(task_id):
         return False
 
 
+def delete_unified_tasks_by_series_id(series_id):
+    """
+    동일 series_id를 가진 모든 통합 task 및 체크리스트 관계 삭제
+    """
+    if not series_id:
+        return False
+    conn = get_connection()
+    if not conn:
+        return False
+
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM unified_task WHERE series_id = ?", (series_id,))
+        task_ids = [row[0] for row in cur.fetchall()]
+
+        if task_ids:
+            # placeholders 생성 (?, ?, ...)
+            placeholders = ",".join("?" for _ in task_ids)
+            cur.execute(
+                f"DELETE FROM task_checklist_link WHERE owner_id IN ({placeholders})", task_ids
+            )
+            cur.execute("DELETE FROM unified_task WHERE series_id = ?", (series_id,))
+            conn.commit()
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Error deleting unified tasks by series_id {series_id}: {e}")
+        conn.rollback()
+        return False
+
+
 def _load_archive_snapshot(snapshot_json):
     if not snapshot_json:
         return {}
@@ -551,6 +655,10 @@ def list_task_trash(task_type=None):
                     "assignee": task.get("assignee") or "",
                     "priority": task.get("priority") or "normal",
                     "status": task.get("status") or "pending",
+                    "cycle_type": task.get("cycle_type"),
+                    "target_date": task.get("target_date"),
+                    "is_completed": task.get("is_completed", 0),
+                    "completed_at": task.get("completed_at"),
                     "gcal_event_id": task.get("gcal_event_id")
                     or archive_row.get("gcal_event_id")
                     or "",
@@ -702,6 +810,10 @@ def purge_task_trash_older_than(cutoff_datetime):
     if not conn:
         return 0
     try:
+        if isinstance(cutoff_datetime, (int, float)):
+            cutoff_datetime = (
+                datetime.now() - timedelta(days=max(int(cutoff_datetime), 0))
+            ).strftime("%Y-%m-%d %H:%M:%S")
         cur = conn.cursor()
         cur.execute(
             "DELETE FROM gcal_deleted_task_archive WHERE datetime(archived_at) < datetime(?)",
@@ -793,7 +905,9 @@ def purge_gcal_event_manual_trash(gcal_event_id, gcal_calendar_id=None):
         return 0
 
 
-def archive_gcal_deleted_task(local_task_id, gcal_event_id=None, reason="remote_deleted"):
+def archive_gcal_deleted_task(
+    local_task_id, gcal_event_id=None, reason="remote_deleted", commit=True
+):
     conn = get_connection()
     if not conn or not local_task_id:
         return False
@@ -841,11 +955,13 @@ def archive_gcal_deleted_task(local_task_id, gcal_event_id=None, reason="remote_
         )
         cur.execute("DELETE FROM task_checklist_link WHERE owner_id=?", (local_task_id,))
         cur.execute("DELETE FROM unified_task WHERE id=?", (local_task_id,))
-        conn.commit()
+        if commit:
+            conn.commit()
         return True
     except Exception as e:
         logger.error(f"Error archiving Google-deleted task: {e}")
-        conn.rollback()
+        if commit:
+            conn.rollback()
         return False
 
 
@@ -1376,8 +1492,9 @@ def toggle_checklist_item(link_id):
             (link_id,),
         )
 
+        changed = cur.rowcount > 0
         conn.commit()
-        return True
+        return changed
     except Exception as e:
         logger.error(f"Error toggling checklist item: {e}")
         conn.rollback()
@@ -1427,14 +1544,22 @@ def get_task_checklist_items(owner_id):
 
 
 def get_task_checklist_items_for_owners(owner_ids):
-    if not owner_ids:
+    normalized_ids = []
+    seen_ids = set()
+    for owner_id in owner_ids or []:
+        if owner_id is None or owner_id in seen_ids:
+            continue
+        normalized_ids.append(owner_id)
+        seen_ids.add(owner_id)
+
+    if not normalized_ids:
         return {}
 
     conn = get_connection()
     if not conn:
         return {}
 
-    placeholders = ", ".join("?" for _ in owner_ids)
+    placeholders = ", ".join("?" for _ in normalized_ids)
     cur = conn.cursor()
     cur.execute(
         f"""
@@ -1443,7 +1568,7 @@ def get_task_checklist_items_for_owners(owner_ids):
         WHERE owner_id IN ({placeholders})
         ORDER BY owner_id, item_order
     """,
-        owner_ids,
+        tuple(normalized_ids),
     )
 
     rows = cur.fetchall()
@@ -1466,8 +1591,9 @@ def set_task_checklist_display_type(owner_id, display_type):
             "UPDATE task_checklist_link SET display_type=? WHERE owner_id=?",
             (display_type, owner_id),
         )
+        changed = cur.rowcount > 0
         conn.commit()
-        return True
+        return changed
     except Exception as e:
         logger.error(f"Error setting display type: {e}")
         conn.rollback()
@@ -1618,7 +1744,13 @@ def _apply_checklist_progress(task_dict):
 
 def get_checklist_progress_for_owners(owner_ids):
     """여러 task의 체크리스트 진행률을 단일 쿼리로 조회 (N+1 방지)."""
-    ids = [oid for oid in (owner_ids or []) if oid is not None]
+    ids = []
+    seen_ids = set()
+    for oid in owner_ids or []:
+        if oid is None or oid in seen_ids:
+            continue
+        ids.append(oid)
+        seen_ids.add(oid)
     if not ids:
         return {}
     conn = get_connection()
@@ -2018,17 +2150,40 @@ def get_unified_task_gcal_errors():
 def delete_all_tasks_by_date(date_str):
     conn = get_connection()
     if not conn:
-        return False
+        return 0
     try:
         cur = conn.cursor()
         cur.execute(
-            "DELETE FROM unified_task WHERE date(deadline) = date(?) AND type='schedule'",
-            (date_str,),
+            """
+            SELECT id
+            FROM unified_task
+            WHERE type='schedule'
+              AND (
+                date(deadline) = date(?)
+                OR (deadline IS NULL AND date(target_date) = date(?))
+              )
+            """,
+            (date_str, date_str),
         )
+        task_ids = [int(row["id"]) for row in cur.fetchall()]
+        if not task_ids:
+            return 0
+        placeholders = ",".join("?" for _ in task_ids)
+        cur.execute(
+            f"DELETE FROM task_checklist_link WHERE owner_id IN ({placeholders})",
+            tuple(task_ids),
+        )
+        cur.execute(
+            f"DELETE FROM unified_task WHERE id IN ({placeholders})",
+            tuple(task_ids),
+        )
+        deleted = int(cur.rowcount or 0)
         conn.commit()
-        return True
-    except Exception:
-        return False
+        return deleted
+    except Exception as e:
+        logger.error(f"Error deleting tasks by date: {e}")
+        conn.rollback()
+        return 0
 
 
 # ==================== 지시사항 관련 (필요시) ====================

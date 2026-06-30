@@ -225,9 +225,13 @@ class DialogActionsMixin:
     ):
         end_time = kwargs.pop("end_time", None)
 
+        if isinstance(initial_date, bool):
+            initial_date = None
+
         # Legacy convenience: open existing task from callers that pass task_id only.
         if (
             isinstance(initial_date, int)
+            and not isinstance(initial_date, bool)
             and task_type is None
             and end_date is None
             and initial_time is None
@@ -272,7 +276,8 @@ class DialogActionsMixin:
             end_date=end_date,
             **kwargs,
         )
-        dlg.task_added.connect(self.handle_task_added)
+        if hasattr(dlg, "task_added"):
+            dlg.task_added.connect(self.handle_task_added)
         dlg.exec()
 
     def open_modify_task_dialog(self, task_id, tab_index=0):
@@ -403,9 +408,7 @@ class DialogActionsMixin:
             content.replace("{APP_VERSION}", APP_VERSION)
             .replace("{APP_AUTHOR}", APP_AUTHOR)
             .replace("{APP_EMAIL}", APP_EMAIL)
-            .replace("Air Calendar", APP_NAME)
         )
-        title = title.replace("Air Calendar", APP_NAME)
         msg = QMessageBox(self)
         msg.setWindowTitle(title)
         msg.setText(content)

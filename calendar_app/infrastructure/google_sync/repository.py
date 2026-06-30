@@ -465,10 +465,17 @@ def find_unlinked_unified_task_for_gcal_payload(
         return None
 
 
-def delete_task_by_gcal_id(table, local_id):
+def delete_task_by_gcal_id(table, local_id, commit=True):
     try:
         if table == "unified_task":
-            return bool(task_repo.archive_gcal_deleted_task(local_id, reason="remote_deleted"))
+            if commit:
+                return bool(task_repo.archive_gcal_deleted_task(local_id, reason="remote_deleted"))
+            else:
+                return bool(
+                    task_repo.archive_gcal_deleted_task(
+                        local_id, reason="remote_deleted", commit=False
+                    )
+                )
         return False
     except Exception as e:
         logger.error(f"Error deleting task by gcal_id: {e}")

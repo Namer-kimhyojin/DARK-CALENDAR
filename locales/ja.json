@@ -33,7 +33,10 @@
     "date_format": "yyyy.MM.dd(ddd)",
     "default_msg": "🔒 あなたは離れています。\n(マウスを動かすとロックが解除されます。)",
     "placeholder_pw": "パスワードを入力してください",
-    "unlock_btn": "ロックを解除する"
+    "unlock_btn": "ロックを解除する",
+    "secondary_screen_hint": "Secondary Lock Screen",
+    "admin_pw_placeholder": "管理者パスワード",
+    "admin_pw_title": "管理者パスワードを入力してください。"
   },
   "away_settings": {
     "btn_align_center": "中央揃え",
@@ -92,7 +95,15 @@
     "selection_hint": "Ctrl+クリックで複数選択",
     "sync_hint": "Googleカレンダーの同期",
     "today": "今日",
-    "weekdays": ["月", "火", "水", "木", "金", "土", "日"]
+    "weekdays": [
+      "月",
+      "火",
+      "水",
+      "木",
+      "金",
+      "土",
+      "日"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "アイテムの追加",
@@ -297,7 +308,11 @@
       "title": "✅ チェックリスト",
       "type_label": "項目種別:",
       "type_list": "リスト型",
-      "type_process": "プロセス型"
+      "type_process": "プロセス型",
+      "add": "+ Add Item",
+      "add_prompt": "Item content:",
+      "add_title": "Add Item",
+      "remove": "Remove Item"
     },
     "common": {
       "add": "追加",
@@ -324,10 +339,13 @@
       "ok": "わかりました",
       "refresh": "リフレッシュ",
       "save": "保存",
+      "save_continue": "Save & Continue",
       "today": "今日",
       "unspecified": "不特定",
       "warning": "警告",
-      "yes": "はい"
+      "yes": "はい",
+      "delete_error": "An error occurred while deleting.",
+      "loading": "Processing..."
     },
     "directive": {
       "btn_delete": "消去",
@@ -567,9 +585,12 @@
       "color": "色",
       "color_none": "なし",
       "color_tag": "Color Tag",
+      "del_all_series": "Delete Entire Series",
       "del_confirm": "これを削除してもよろしいですか?",
       "del_confirm_specific": "この{type}を削除しますか?\n関連するチェックリスト項目はすべて削除されます。",
       "del_fail": "削除に失敗しました。",
+      "del_only_this": "Delete This Instance",
+      "del_routine_confirm_msg": "How would you like to delete this recurring routine series?",
       "del_success": "正常に削除されました。",
       "del_title": "削除の確認",
       "delete_btn": "🗑️削除",
@@ -614,12 +635,14 @@
       "routine_count_msg": "{count}件のルーチンが登録されました。",
       "routine_end_error": "繰り返しの終了は開始日以降である必要があります。",
       "routine_reg_success": "ルーチンが正常に登録されました。",
+      "routine_reg_success_continue": "Routine registered. You can continue entering.",
       "save_alarm_default": "Save as default alarm",
       "save_btn": "💾保存",
       "save_done": "保存完了",
       "save_error_db": "データベースの更新に失敗しました。",
       "save_failed": "保存に失敗しました",
       "schedule_reg_success": "スケジュールが正常に登録されました。",
+      "schedule_reg_success_continue": "Schedule registered. You can continue entering.",
       "section_time_routine": "実施期間",
       "section_time_schedule": "時間設定",
       "start_day_routine": "繰り返しの開始:",
@@ -629,7 +652,18 @@
       "unit_day": "d",
       "unit_hour": "時間",
       "unit_min": "分",
-      "untitled": "Untitled"
+      "untitled": "Untitled",
+      "cycle_section": "Repeat Settings",
+      "name_placeholder_routine": "Enter task name",
+      "name_section": "Task Title",
+      "purge_gcal_confirm": "Moving this event to local calendar will remove it from Google Calendar.\n(It will be kept as a local event only and will not sync.)\n\nContinue?",
+      "purge_gcal_title": "Remove from Google Calendar",
+      "routine_datetime_section": "Date & Time",
+      "tab_basic": "Basic",
+      "tab_checklist": "Checklist",
+      "tab_detail": "Details",
+      "tags_placeholder": "Comma separated (e.g. work, projectA)",
+      "tags_section": "Classification Tags"
     },
     "theme": {
       "accent": {
@@ -731,7 +765,8 @@
         "current_color": "Current background color",
         "pick_color": "Pick color",
         "reset_default": "Reset to default"
-      }
+      },
+      "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
       "apply_color_preset": "Apply Preset",
@@ -802,7 +837,19 @@
       "saved_toast": "Dialog UI tokens saved. Full effect after restart.",
       "tab_color": "Color Tokens",
       "tab_metric": "Size/Spacing Tokens",
-      "title": "Dialog UI Token Settings"
+      "title": "Dialog UI Token Settings",
+      "export_failed_title": "エクスポート失敗",
+      "export_title": "UIトークンのエクスポート",
+      "import_failed_title": "インポート失敗",
+      "import_title": "UIトークンのインポート"
+    },
+    "daily": {
+      "date_header": "今日",
+      "no_routines": "  本日期限のタスクはありません。",
+      "no_schedule": "  本日の予定はありません。",
+      "routine_section": "📋 本日期限",
+      "schedule_section": "📅 今日の予定",
+      "title": "今日の予定 & 期限のタスク"
     }
   },
   "drag": {
@@ -906,7 +953,8 @@
       "push_failed": "Failed to push local changes to Google server.",
       "rate_limit": "Google API rate limit exceeded. Please try again later.",
       "remote_newer_than_local": "Remote data is newer than local (server version kept to prevent conflict).",
-      "unknown": "An unknown error occurred."
+      "unknown": "An unknown error occurred.",
+      "remote_orphan": "Only in Google (no local match)"
     },
     "first_setup_msg": "ダークカレンダーへようこそ！\n今すぐ Google カレンダーの同期を設定しますか?",
     "first_setup_title": "セットアップアシスタント",
@@ -916,7 +964,8 @@
       "generic": "📍 [DETAILS]\n{error}\n\n❓ [HOW TO FIX] Please check your internet connection and click 'Retry'.\nIf the issue persists, use 'Force Ignore' to remove it from the sync queue.",
       "not_found": "📍 [STATUS] This event was not found on Google Calendar (might have been deleted elsewhere).\n🛠 [ACTION] The app automatically restored it to Google or removed it locally to match current state.\n✅ [OUTCOME] Sync state restored. You can 'Clear Error' or 'Retry' to finalize.",
       "rate_limit": "📍 [STATUS] Too many sync requests sent to Google servers in a short time.\n⏳ [ACTION] The app will automatically retry after a short wait period.\n✅ [OUTCOME] This usually resolves itself after a few minutes.",
-      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again."
+      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again.",
+      "remote_orphan": "This event exists in Google Calendar but has no matching local event.<br><br><b>Cause</b>: may have been deleted locally or created directly in Google."
     },
     "issues_action_taken": "System Action",
     "issues_auto_healed": "Auto-Healed",
@@ -1023,7 +1072,20 @@
       "sync_partial": "同期完了（一部失敗: push={push}, delete={delete}）",
       "sync_skipped": "同期スキップ",
       "sync_skipped_or_failed": "同期に失敗したかスキップされました"
-    }
+    },
+    "issues_delete_failed": "Failed to queue for deletion. Check logs.",
+    "issues_delete_queued": "Queued for deletion. Will be removed from Google after next sync.",
+    "issues_delete_remote": "Delete from Google",
+    "issues_delete_remote_confirm": "Delete this event from Google Calendar.\n\nEvent: {name}\nCalendar: {cal}\n\nThis cannot be undone. Continue?",
+    "issues_delete_remote_tooltip": "Queue selected orphan events for deletion from Google Calendar. Deleted on next sync.",
+    "issues_scan_clean": "No orphan events found. All clean.",
+    "issues_scan_found": "Found {n} orphan event(s) in Google. Review and delete from the list.",
+    "issues_scan_no_sync": "Google sync is not configured. Cannot scan.",
+    "issues_scan_orphans": "Scan Google Orphans",
+    "issues_scan_orphans_tooltip": "Find events in Google with no local match (last 6 months).",
+    "issues_scanning": "Scanning...",
+    "issues_type_orphan": "Google Orphan",
+    "setup_needed_auth_hint": "Please complete Google authentication in Calendar Integration Settings."
   },
   "gcal_settings": {
     "account_tip": "接続されているアカウントが変更された場合、カレンダーのバインドを安全に更新するために再認証が必要になる場合があります。",
@@ -1075,6 +1137,11 @@
     "edit_gcal_name_notice": "Google Calendar names are managed by Google.",
     "edit_gcal_name_tooltip": "Google Calendar names can only be changed in Google.",
     "enable": "Google カレンダーの同期を有​​効にする",
+    "export_diagnostics": "Export Report",
+    "export_diagnostics_failed_title": "Export Failed",
+    "export_diagnostics_save_title": "Save Diagnostics Report",
+    "export_diagnostics_success_msg": "Diagnostics report exported successfully to:\n{path}",
+    "export_diagnostics_success_title": "Export Complete",
     "go_to_auth": "Go to Authentication Settings",
     "guide_tab": "ガイド",
     "hide_completed": "Hide completed events in Google Calendar",
@@ -1381,7 +1448,13 @@
   "palette": {
     "exit_app": "App: Exit",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Press Enter to open the selected result",
@@ -1389,7 +1462,15 @@
     "sync_google": "Sync: Update Google Calendar now",
     "task_registered": "Registered: {title}",
     "theme_dark": "Theme: Change to Dark Mode",
-    "theme_light": "Theme: Change to Light Mode"
+    "theme_light": "Theme: Change to Light Mode",
+    "title": "Command Palette",
+    "hint_command": "コマンドを検索する",
+    "hint_create": "Enterでスケジュールを作成します",
+    "hint_create_confirm": "Enterでこのスケジュールを作成します",
+    "hint_default": "> コマンド  + 作成  / 検索",
+    "hint_record": "予定・ルーティン・ディレクティブを検索",
+    "hint_record_jump": "Enterで項目を開く。Shift+Enterで日付に移動。",
+    "hint_run_command": "Enterで選択したコマンドを実行します"
   },
   "panel": {
     "checklist_tooltip": "チェックリストの表示/非表示",
@@ -1518,11 +1599,13 @@
   },
   "splash": {
     "initializing_db": "データベースを初期化中...",
-    "loading_font": "Loading fonts...",
-    "loading_labels": "Loading labels...",
-    "migrating_data": "Migrating data...",
+    "loading_font": "フォントを読み込み中...",
+    "loading_labels": "ラベルを読み込み中...",
+    "loading_ui_modules": "UIモジュールを読み込み中...",
+    "migrating_data": "データを移行中...",
+    "preparing_runtime": "ランタイムを準備中...",
     "ready": "準備完了！",
-    "starting_ui": "Starting UI..."
+    "starting_ui": "UIを起動中..."
   },
   "status": {
     "all_states": "すべてのステータス",
@@ -1645,7 +1728,18 @@
   "weather": {
     "desc": {
       "clear": "Clear",
-      "storm": "Storm"
+      "storm": "Storm",
+      "cloudy": "Cloudy",
+      "fog": "Fog",
+      "rain": "Rain",
+      "showers": "Showers",
+      "snow": "Snow"
+    },
+    "error": {
+      "location_not_found": "Location not found",
+      "network": "Network error",
+      "parse_failed": "Data parse error",
+      "timeout": "Request timed out"
     }
   },
   "weekday": {
@@ -2004,10 +2098,10 @@
     "add_widget_menu": "{label} を追加",
     "add_widget_title": "{label} を追加",
     "btn_add": "+ Add",
-    "btn_delete_all": "Delete All...",
-    "btn_hide_all": "Hide All",
-    "btn_settings": "Settings",
-    "btn_show_all": "Show All",
+    "btn_delete_all": "すべて削除...",
+    "btn_hide_all": "すべて非表示",
+    "btn_settings": "設定",
+    "btn_show_all": "すべて表示",
     "col_actions": "操作",
     "col_name": "名前",
     "col_position": "位置",
@@ -2015,33 +2109,33 @@
     "col_type": "種類",
     "col_visible": "表示",
     "confirm_delete": "このウィジェットを本当に削除しますか？",
-    "confirm_delete_all_msg": "Permanently delete all {count} widget(s)? This cannot be undone.",
-    "confirm_delete_all_title": "Delete All Widgets",
+    "confirm_delete_all_msg": "{count}個のウィジェットを完全に削除しますか？この操作は元に戻せません。",
+    "confirm_delete_all_title": "すべてのウィジェットを削除",
     "confirm_delete_message": "'{name}' を削除しますか？",
-    "confirm_delete_msg": "Delete '{name}'?",
+    "confirm_delete_msg": "'{name}'を削除しますか？",
     "confirm_delete_title": "ウィジェットを削除",
     "delete": "削除",
     "desc": "デスクの上のすべてのウィジェットを一目で管理できます。",
     "empty": "（ウィジェットなし）",
     "focus": "中央へ移動",
-    "footer_hint": "Click name to edit  ·  Settings button for widget options",
+    "footer_hint": "名前をクリックして編集  ·  ウィジェットオプションは設定ボタン",
     "hide_all": "すべて非表示",
     "hint": "ドラッグで移動できます。詳細は右クリックメニューを使用してください。",
-    "list_heading": "Widget List",
-    "menu_delete_all": "Delete All...",
-    "menu_hide_all": "Hide All",
-    "menu_show_all": "Show All",
+    "list_heading": "ウィジェット一覧",
+    "menu_delete_all": "すべて削除...",
+    "menu_hide_all": "すべて非表示",
+    "menu_show_all": "すべて表示",
     "name_placeholder": "名前（空白で自動）",
     "new_name": "新しい名前:",
-    "new_widget": "New Widget",
+    "new_widget": "新しいウィジェット",
     "open_manager": "🪟 ウィジェットマネージャー...",
     "rename": "名前を変更...",
     "rename_title": "名前を変更",
     "reset_position": "位置をリセット",
     "show_all": "すべて表示",
-    "tip_center": "Center on screen",
-    "tip_delete": "Delete",
-    "tip_reset": "Reset position",
+    "tip_center": "画面中央に配置",
+    "tip_delete": "削除",
+    "tip_reset": "位置をリセット",
     "title": "ウィジェットマネージャー",
     "toggle_off": "OFF",
     "toggle_on": "ON",
@@ -2127,7 +2221,10 @@
     "widget_hint_empty": "No items for the selected date.",
     "work_summary": "{count} work items",
     "work_title": "Work",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "hide_calendar": "Hide Calendar",
+    "show_calendar": "Show Calendar",
+    "toggle_calendar": "Toggle Calendar"
   },
   "widget_text": {
     "align": "配置",
@@ -2199,6 +2296,19 @@
     "var_time": "時刻",
     "var_weekday": "曜日",
     "var_weekday_short": "曜日（略）",
-    "word_wrap": "折り返し"
+    "word_wrap": "折り返し",
+    "group_align": "Alignment",
+    "var_align_center": "Center",
+    "var_align_left": "Left",
+    "var_align_right": "Right"
+  },
+  "btn": {
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "ok": "OK"
+  },
+  "app": {
+    "exit_message": "Dark Calendarを終了します。\nトレイに最小化せず、プログラムを完全に終了します。\n続行しますか？",
+    "exit_title": "終了"
   }
 }

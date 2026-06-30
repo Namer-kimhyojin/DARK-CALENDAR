@@ -3,7 +3,7 @@
 
 ## 프로젝트 개요
 
-- **앱 이름**: Dark Calendar v2.8.3
+- **앱 이름**: Dark Calendar
 - **플랫폼**: Windows 데스크톱 앱
 - **언어/프레임워크**: Python 3.x, PyQt6 6.10.2
 - **UI 언어**: 한국어 기본, i18n 지원 (`calendar_app/infrastructure/i18n.py`)
@@ -177,14 +177,6 @@ pytest tests/test_encoding_policy.py tests/test_encoding_utils.py
 - `calendar_app/infrastructure/google_sync/repository.py`
 - `calendar_app/infrastructure/google_sync/common.py`
 - `calendar_app/infrastructure/google_sync/helpers.py`
-
-절대 주의:
-
-- `engine.py`의 `_active_sync_calendar_ids` 로직을 임의로 변경하지 않습니다.
-- `_push_local_changes_to_google` 수정 시 대상 캘린더 필터링, 중복 생성 방지, `gcal_delete_queue` drain을 확인합니다.
-- GCal 설정/구독 CRUD는 `db_repository_unified.py`와 `gcal_settings_dialog.py` 영향도까지 봅니다.
-
----
 
 ## UI / 다이얼로그 규칙
 

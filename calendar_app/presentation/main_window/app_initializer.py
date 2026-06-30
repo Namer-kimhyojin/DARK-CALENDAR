@@ -33,6 +33,7 @@ def initialize_overlay_app(app) -> None:
     app.preset_manager = PresetManager(app)
     app.selected_task_ids = set()
     app.selected_directive_ids = set()
+    app.active_editing_task_ids = set()
     app._panel_task_frames = {}
     app._panel_directive_frames = {}
     import json as _json

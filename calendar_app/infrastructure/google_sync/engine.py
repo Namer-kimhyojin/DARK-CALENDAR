@@ -300,6 +300,95 @@ def scan_orphan_remote_events(app, lookback_days: int = 180, max_per_calendar: i
     return orphans
 
 
+def auto_heal_google_orphans(app, lookback_days: int = 30) -> None:
+    """최근 30일 이내에 발생한 원격 구글 고아(Orphan) 일정들을 자동으로 탐색하고 복구하거나 원격 삭제합니다."""
+    sync = getattr(app, "gcal_sync", None)
+    if not sync or not getattr(sync, "is_authenticated", False):
+        return
+    if not is_gcal_enabled(getattr(app, "settings", None)):
+        return
+
+    logger.info("Starting background auto-healing process for Google Calendar orphans...")
+
+    try:
+        orphans = scan_orphan_remote_events(app, lookback_days=lookback_days)
+    except Exception as e:
+        logger.error(f"auto_heal_google_orphans: failed to scan orphans: {e}")
+        return
+
+    if not orphans:
+        logger.info("Auto-healing: No orphan events found.")
+        return
+
+    healed_count = 0
+    purged_count = 0
+
+    for orphan in orphans:
+        orphan_id = orphan.get("gcal_event_id")
+        cal_id = orphan.get("gcal_calendar_id")
+        summary = orphan.get("summary")
+        start_time_raw = orphan.get("start")
+
+        if not orphan_id or not cal_id:
+            continue
+
+        deadline_str = None
+        if start_time_raw:
+            clean = start_time_raw.strip()
+            if "T" in clean:
+                deadline_str = clean[:19].replace("T", " ")
+            else:
+                deadline_str = f"{clean} 00:00:00"
+
+        candidate = None
+        try:
+            candidate = task_repo.find_orphan_candidate(summary, deadline_str, cal_id)
+            if not candidate and deadline_str:
+                candidate = task_repo.find_orphan_candidate(summary, deadline_str)
+        except Exception as e:
+            logger.error(f"auto_heal_google_orphans: error finding candidate: {e}")
+            continue
+
+        if candidate:
+            local_id = candidate.get("id")
+            try:
+                success = task_repo.mark_unified_task_gcal_synced(
+                    local_id,
+                    event_id=orphan_id,
+                    source_calendar_id=cal_id,
+                    commit=True,
+                )
+                if success:
+                    healed_count += 1
+                    logger.info(
+                        "Auto-healing (Link) Success: Linked local task '%s' (id=%s) to GCal orphan event '%s'",
+                        summary,
+                        local_id,
+                        orphan_id,
+                    )
+            except Exception as e:
+                logger.error(
+                    "auto_heal_google_orphans: failed to link local task %s: %s", local_id, e
+                )
+        else:
+            try:
+                task_repo.queue_gcal_delete(orphan_id, gcal_calendar_id=cal_id)
+                purged_count += 1
+                logger.info(
+                    "Auto-healing (Purge) Queued: Queued orphan GCal event '%s' ('%s') for remote deletion",
+                    orphan_id,
+                    summary,
+                )
+            except Exception as e:
+                logger.error(f"auto_heal_google_orphans: failed to queue delete for orphan: {e}")
+
+    logger.info(
+        "Auto-healing finished. Total healed: %d, Total queued for remote purge: %d",
+        healed_count,
+        purged_count,
+    )
+
+
 def _task_target_calendar_id(task, default_calendar_id):
     return _resolve_task_target_calendar_id(task, default_calendar_id)
 
@@ -601,7 +690,7 @@ def _refresh_calendar_list_from_google(app) -> bool:
                     cal_type="gcal",
                     name=rc.get("summary") or gcal_id,
                     is_active=is_writable,
-                    is_visible=is_writable,
+                    is_visible=True,
                     gcal_calendar_id=gcal_id,
                     access_role=rc.get("accessRole") or None,
                 )
@@ -724,6 +813,12 @@ def _push_local_changes_to_google(app):
     from calendar_app.shared.google_color_palette import hex_to_color_id as _hex_to_color_id
 
     for _t in tasks:
+        _local_id = _t.get("id")
+        if _local_id and _local_id in getattr(app, "active_editing_task_ids", set()):
+            logger.info(
+                "Skipping push for task %s because it is currently being edited in UI", _local_id
+            )
+            continue
         _has_id = bool(str(_t.get("gcal_event_id") or "").strip())
         _cal_id = _task_target_calendar_id(_t, default_target_calendar_id)
         _is_writable = (
@@ -1387,10 +1482,16 @@ def sync_google_calendar(app, silent=False):
             # Incremental sync can miss pre-existing events if a sync token survives
             # across DB resets/migrations. Probe a near-term window once per day and
             # backfill remote events that are absent locally.
+            _cal_prefix = f"{_normalize_calendar_id(sync_calendar_id)}::"
+            _has_local = any(
+                isinstance(k, str) and k.startswith(_cal_prefix) for k in local_gcal_map
+            )
+            force_probe = not _has_local
+
             if (
                 not full_sync
                 and events is not None
-                and _should_run_incremental_backfill_probe(app, sync_calendar_id)
+                and (_should_run_incremental_backfill_probe(app, sync_calendar_id) or force_probe)
             ):
                 probe_start = (
                     datetime.now() - timedelta(days=_INCREMENTAL_BACKFILL_LOOKBACK_DAYS)
@@ -1479,7 +1580,9 @@ def sync_google_calendar(app, silent=False):
                                 local_task = task_repo.get_unified_task(local_id)
                                 if local_task:
                                     changed_dates.add(_date_only(local_task.get("deadline")))
-                            if gcal_db_adapter.delete_task_by_gcal_id(table, local_id):
+                            if gcal_db_adapter.delete_task_by_gcal_id(
+                                table, local_id, commit=False
+                            ):
                                 changed_any = True
                                 pull_changes += 1
                                 local_gcal_map.pop(event_key, None)
@@ -1513,6 +1616,12 @@ def sync_google_calendar(app, silent=False):
                         event, target_tz_offset=target_tz_offset
                     )
                     if not start_str:
+                        logger.warning(
+                            "BUG-D02: Skipping GCal event %s on calendar %s: failed to parse/normalize start time %r",
+                            getattr(event, "id", "unknown"),
+                            source_calendar_id,
+                            getattr(event, "start_time", "unknown"),
+                        )
                         continue
                     description = (event.description or "").strip()
                     location = (event.location or "").strip()
@@ -1529,6 +1638,14 @@ def sync_google_calendar(app, silent=False):
 
                     if local_info:
                         table, local_id = local_info
+                        if table == "unified_task" and local_id in getattr(
+                            app, "active_editing_task_ids", set()
+                        ):
+                            logger.info(
+                                "Skipping pull update for task %s because it is currently being edited in UI",
+                                local_id,
+                            )
+                            continue
                         if table == "unified_task":
                             local_task = task_repo.get_unified_task(local_id)
                             if local_task:
@@ -1605,7 +1722,7 @@ def sync_google_calendar(app, silent=False):
                                         cleared = task_repo.mark_unified_task_gcal_synced(
                                             local_id,
                                             event_id=event.id,
-                                            commit=True,
+                                            commit=False,
                                             source_calendar_id=source_calendar_id,
                                             source_calendar_summary=source_calendar_summary,
                                             target_calendar_id=source_calendar_id,
@@ -1638,7 +1755,7 @@ def sync_google_calendar(app, silent=False):
                             source_calendar_id=source_calendar_id,
                             source_calendar_summary=source_calendar_summary,
                             target_calendar_id=source_calendar_id,
-                            commit=True,
+                            commit=False,
                         )
                         if applied:
                             changed_any = True
@@ -1712,7 +1829,7 @@ def sync_google_calendar(app, silent=False):
                                 source_calendar_id=source_calendar_id,
                                 source_calendar_summary=source_calendar_summary,
                                 target_calendar_id=source_calendar_id,
-                                commit=True,
+                                commit=False,
                             )
                             if relinked:
                                 local_info = ("unified_task", relink_local_id)
@@ -1748,7 +1865,7 @@ def sync_google_calendar(app, silent=False):
                             source_calendar_id=source_calendar_id,
                             source_calendar_summary=source_calendar_summary,
                             target_calendar_id=source_calendar_id,
-                            commit=True,
+                            commit=False,
                         )
                         if inserted:
                             if isinstance(inserted, int) and inserted > 0:
@@ -1775,6 +1892,39 @@ def sync_google_calendar(app, silent=False):
                                 source_calendar_id,
                             )
 
+                if full_sync:
+                    calendar_prefix = f"{_normalize_calendar_id(sync_calendar_id)}::"
+                    missing_event_keys = [
+                        key
+                        for key in list(local_gcal_map.keys())
+                        if isinstance(key, str)
+                        and "::" in key
+                        and key.startswith(calendar_prefix)
+                        and key not in fetched_event_keys
+                    ]
+                    for missing_key in missing_event_keys:
+                        info = local_gcal_map.get(missing_key)
+                        if not info:
+                            continue
+                        table, local_id = info
+                        if table == "unified_task":
+                            local_task = task_repo.get_unified_task(local_id)
+                            if local_task:
+                                changed_dates.add(_date_only(local_task.get("deadline")))
+                        if gcal_db_adapter.delete_task_by_gcal_id(table, local_id, commit=False):
+                            changed_any = True
+                            pull_changes += 1
+                            local_gcal_map.pop(missing_key, None)
+                            calendar_committed_any = True
+                        else:
+                            calendar_apply_failures += 1
+                            pull_apply_failures += 1
+                            logger.warning(
+                                "Failed to archive/delete missing Google event key %s for local row %s",
+                                missing_key,
+                                local_id,
+                            )
+
                 # 이벤트 루프 정상 완료 후 commit
                 if calendar_committed_any and conn:
                     conn.commit()
@@ -1794,38 +1944,6 @@ def sync_google_calendar(app, silent=False):
                     "rolled back uncommitted changes",
                     sync_calendar_id,
                 )
-
-            if full_sync:
-                calendar_prefix = f"{_normalize_calendar_id(sync_calendar_id)}::"
-                missing_event_keys = [
-                    key
-                    for key in list(local_gcal_map.keys())
-                    if isinstance(key, str)
-                    and "::" in key
-                    and key.startswith(calendar_prefix)
-                    and key not in fetched_event_keys
-                ]
-                for missing_key in missing_event_keys:
-                    info = local_gcal_map.get(missing_key)
-                    if not info:
-                        continue
-                    table, local_id = info
-                    if table == "unified_task":
-                        local_task = task_repo.get_unified_task(local_id)
-                        if local_task:
-                            changed_dates.add(_date_only(local_task.get("deadline")))
-                    if gcal_db_adapter.delete_task_by_gcal_id(table, local_id):
-                        changed_any = True
-                        pull_changes += 1
-                        local_gcal_map.pop(missing_key, None)
-                    else:
-                        calendar_apply_failures += 1
-                        pull_apply_failures += 1
-                        logger.warning(
-                            "Failed to archive/delete missing Google event key %s for local row %s",
-                            missing_key,
-                            local_id,
-                        )
 
             # BUG-B04: cancelled 실패 카운터 갱신 (성공하면 리셋)
             if cancelled_fail_this_run:
@@ -1890,6 +2008,12 @@ def sync_google_calendar(app, silent=False):
             if hasattr(app, "mark_panel_dirty"):
                 app.mark_panel_dirty(left=refresh_left, center=True)
 
+        # 자동 고아 자가 치유(Auto-Healing) 기동
+        try:
+            auto_heal_google_orphans(app, lookback_days=30)
+        except Exception as _heal_exc:
+            logger.exception("Failed to run auto-heal for GCal orphans: %s", _heal_exc)
+
         if hasattr(app, "update_sync_status"):
             app.update_sync_status()
         app._last_gcal_sync_outcome = SYNC_OUTCOME_SUCCESS
@@ -1940,6 +2064,12 @@ def push_task_ids_to_google(app, task_ids):
     pushed = 0
     default_target_calendar_id = _get_default_gcal_id(app)
     for tid in resolve_drop_sync_task_ids(task_ids, copied_ids=None, action="move"):
+        if tid and tid in getattr(app, "active_editing_task_ids", set()):
+            logger.info(
+                "push_task_ids_to_google: skipping task %s because it is currently being edited in UI",
+                tid,
+            )
+            continue
         task = _task_repo.get_unified_task(tid)
         if not task:
             continue

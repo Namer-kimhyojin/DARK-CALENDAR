@@ -222,11 +222,11 @@ class OverlayWidgetManager:
         widget = self._create_widget(widget_type, inst_id)
         _mgr_ref = weakref.ref(self)
         widget._overlay_manager_sync = lambda iid=inst_id, _r=_mgr_ref: (
-            m := _r()
-        ) and m._sync_widget_enabled(iid)
+            (m := _r()) and m._sync_widget_enabled(iid)
+        )
         widget._overlay_manager_remove = lambda iid=inst_id, _r=_mgr_ref: (
-            m := _r()
-        ) and m._ui_remove_with_confirm(iid, parent_widget=None)
+            (m := _r()) and m._ui_remove_with_confirm(iid, parent_widget=None)
+        )
         widget._overlay_inst_id = inst_id
         widget.restore_position(self._default_offset_for_type(widget_type, idx))
         widget.apply_initial_settings()
@@ -467,8 +467,14 @@ class OverlayWidgetManager:
         if instances:
             parent_menu.addSeparator()
             for iid, name, wtype, widget in instances:
-                display = name or _se(widget_type_label(wtype))
+                display = _se(name) if name else _se(widget_type_label(wtype))
                 act_inst = parent_menu.addAction(display)
+
+                # Apply matching monochromatic qtawesome icon to the created widget instance
+                info = _WIDGET_TYPES.get(wtype, {})
+                if "icon" in info:
+                    act_inst.setIcon(_ic(info["icon"]))
+
                 act_inst.setCheckable(True)
                 act_inst.setChecked(widget.is_enabled())
                 act_inst.setEnabled(not locked)
@@ -616,12 +622,12 @@ class OverlayWidgetManager:
                 widget = self._create_widget(wtype, iid)
                 _mgr_ref = weakref.ref(self)
                 widget._overlay_manager_sync = lambda iid=iid, _r=_mgr_ref: (
-                    m := _r()
-                ) and m._sync_widget_enabled(iid)
+                    (m := _r()) and m._sync_widget_enabled(iid)
+                )
                 # Restore the right-click delete callback so 삭제 menu always appears.
                 widget._overlay_manager_remove = lambda iid=iid, _r=_mgr_ref: (
-                    m := _r()
-                ) and m._ui_remove_with_confirm(iid, parent_widget=None)
+                    (m := _r()) and m._ui_remove_with_confirm(iid, parent_widget=None)
+                )
                 widget._overlay_inst_id = iid
                 idx = self._instance_count_of(wtype)
                 widget.restore_position(self._default_offset_for_type(wtype, idx))

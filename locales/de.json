@@ -33,7 +33,10 @@
     "date_format": "dd.MM.yyyy (ddd)",
     "default_msg": "🔒 Abwesend.\n(Maus bewegen zum Entsperren.)",
     "placeholder_pw": "PW eingeben",
-    "unlock_btn": "Entsperren"
+    "unlock_btn": "Entsperren",
+    "secondary_screen_hint": "Secondary Lock Screen",
+    "admin_pw_placeholder": "Admin-Passwort",
+    "admin_pw_title": "Admin-Passwort eingeben."
   },
   "away_settings": {
     "btn_align_center": "Align Center",
@@ -92,7 +95,15 @@
     "selection_hint": "Strg+Click zur Auswahl",
     "sync_hint": "Google-Sync",
     "today": "Heute",
-    "weekdays": ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    "weekdays": [
+      "Mo",
+      "Di",
+      "Mi",
+      "Do",
+      "Fr",
+      "Sa",
+      "So"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Hinzufügen",
@@ -297,7 +308,11 @@
       "title": "✅ Checkliste",
       "type_label": "Item Type:",
       "type_list": "List Type",
-      "type_process": "Process Type"
+      "type_process": "Process Type",
+      "add": "+ Add Item",
+      "add_prompt": "Item content:",
+      "add_title": "Add Item",
+      "remove": "Remove Item"
     },
     "common": {
       "add": "Hinzufügen",
@@ -324,10 +339,13 @@
       "ok": "OK",
       "refresh": "Aktualisieren",
       "save": "Speichern",
+      "save_continue": "Save & Continue",
       "today": "Heute",
       "unspecified": "Undefiniert",
       "warning": "Warnung",
-      "yes": "Ja"
+      "yes": "Ja",
+      "delete_error": "An error occurred while deleting.",
+      "loading": "Processing..."
     },
     "directive": {
       "btn_delete": "Löschen",
@@ -567,9 +585,12 @@
       "color": "Farbe",
       "color_none": "Keine",
       "color_tag": "Color Tag",
+      "del_all_series": "Delete Entire Series",
       "del_confirm": "Möchten Sie das wirklich löschen?",
       "del_confirm_specific": "{type} löschen?\nAlle Checklisten werden ebenfalls entfernt.",
       "del_fail": "Löschen fehlgeschlagen.",
+      "del_only_this": "Delete This Instance",
+      "del_routine_confirm_msg": "How would you like to delete this recurring routine series?",
       "del_success": "Erfolgreich gelöscht.",
       "del_title": "Löschen bestätigen",
       "delete_btn": "🗑️ Löschen",
@@ -614,12 +635,14 @@
       "routine_count_msg": "{count} Routinen registriert.",
       "routine_end_error": "Ende muss nach dem Start liegen.",
       "routine_reg_success": "Routine registriert.",
+      "routine_reg_success_continue": "Routine registered. You can continue entering.",
       "save_alarm_default": "Save as default alarm",
       "save_btn": "💾 Speichern",
       "save_done": "Speichern fertig",
       "save_error_db": "Datenbankfehler.",
       "save_failed": "Speichern fehlgeschlagen",
       "schedule_reg_success": "Termin registriert.",
+      "schedule_reg_success_continue": "Schedule registered. You can continue entering.",
       "section_time_routine": "Zeitraum",
       "section_time_schedule": "Zeit",
       "start_day_routine": "Beginn:",
@@ -629,7 +652,18 @@
       "unit_day": "Tg",
       "unit_hour": "Std",
       "unit_min": "Min",
-      "untitled": "Untitled"
+      "untitled": "Untitled",
+      "cycle_section": "Repeat Settings",
+      "name_placeholder_routine": "Enter task name",
+      "name_section": "Task Title",
+      "purge_gcal_confirm": "Moving this event to local calendar will remove it from Google Calendar.\n(It will be kept as a local event only and will not sync.)\n\nContinue?",
+      "purge_gcal_title": "Remove from Google Calendar",
+      "routine_datetime_section": "Date & Time",
+      "tab_basic": "Basic",
+      "tab_checklist": "Checklist",
+      "tab_detail": "Details",
+      "tags_placeholder": "Comma separated (e.g. work, projectA)",
+      "tags_section": "Classification Tags"
     },
     "theme": {
       "accent": {
@@ -731,7 +765,8 @@
         "current_color": "Current background color",
         "pick_color": "Pick color",
         "reset_default": "Reset to default"
-      }
+      },
+      "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
       "apply_color_preset": "Apply Preset",
@@ -802,7 +837,19 @@
       "saved_toast": "Dialog UI tokens saved. Full effect after restart.",
       "tab_color": "Color Tokens",
       "tab_metric": "Size/Spacing Tokens",
-      "title": "Dialog UI Token Settings"
+      "title": "Dialog UI Token Settings",
+      "export_failed_title": "Export fehlgeschlagen",
+      "export_title": "UI-Token exportieren",
+      "import_failed_title": "Import fehlgeschlagen",
+      "import_title": "UI-Token importieren"
+    },
+    "daily": {
+      "date_header": "Heute",
+      "no_routines": "  Keine Aufgaben heute fällig.",
+      "no_schedule": "  Keine Ereignisse heute geplant.",
+      "routine_section": "📋 Heute fällig",
+      "schedule_section": "📅 Heutige Ereignisse",
+      "title": "Heutige Ereignisse & fällige Aufgaben"
     }
   },
   "drag": {
@@ -906,9 +953,10 @@
       "push_failed": "Failed to push local changes to Google server.",
       "rate_limit": "Google API rate limit exceeded. Please try again later.",
       "remote_newer_than_local": "Remote data is newer than local (server version kept to prevent conflict).",
-      "unknown": "An unknown error occurred."
+      "unknown": "An unknown error occurred.",
+      "remote_orphan": "Only in Google (no local match)"
     },
-    "first_setup_msg": "Willkommen bei Air Calendar!\nGoogle-Sync jetzt einrichten?",
+    "first_setup_msg": "Willkommen bei Dark Calendar!\nGoogle-Sync jetzt einrichten?",
     "first_setup_title": "Assistent",
     "guidance": {
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Please go to 'Settings > Calendar & Sync > Authenticate' and log in again.",
@@ -916,7 +964,8 @@
       "generic": "📍 [DETAILS]\n{error}\n\n❓ [HOW TO FIX] Please check your internet connection and click 'Retry'.\nIf the issue persists, use 'Force Ignore' to remove it from the sync queue.",
       "not_found": "📍 [STATUS] This event was not found on Google Calendar (might have been deleted elsewhere).\n🛠 [ACTION] The app automatically restored it to Google or removed it locally to match current state.\n✅ [OUTCOME] Sync state restored. You can 'Clear Error' or 'Retry' to finalize.",
       "rate_limit": "📍 [STATUS] Too many sync requests sent to Google servers in a short time.\n⏳ [ACTION] The app will automatically retry after a short wait period.\n✅ [OUTCOME] This usually resolves itself after a few minutes.",
-      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again."
+      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again.",
+      "remote_orphan": "This event exists in Google Calendar but has no matching local event.<br><br><b>Cause</b>: may have been deleted locally or created directly in Google."
     },
     "issues_action_taken": "System Action",
     "issues_auto_healed": "Auto-Healed",
@@ -1023,7 +1072,20 @@
       "sync_partial": "Synchronisierung abgeschlossen (teilweise Fehler: push={push}, delete={delete})",
       "sync_skipped": "Synchronisierung übersprungen",
       "sync_skipped_or_failed": "Synchronisierung fehlgeschlagen oder ?bersprungen"
-    }
+    },
+    "issues_delete_failed": "Failed to queue for deletion. Check logs.",
+    "issues_delete_queued": "Queued for deletion. Will be removed from Google after next sync.",
+    "issues_delete_remote": "Delete from Google",
+    "issues_delete_remote_confirm": "Delete this event from Google Calendar.\n\nEvent: {name}\nCalendar: {cal}\n\nThis cannot be undone. Continue?",
+    "issues_delete_remote_tooltip": "Queue selected orphan events for deletion from Google Calendar. Deleted on next sync.",
+    "issues_scan_clean": "No orphan events found. All clean.",
+    "issues_scan_found": "Found {n} orphan event(s) in Google. Review and delete from the list.",
+    "issues_scan_no_sync": "Google sync is not configured. Cannot scan.",
+    "issues_scan_orphans": "Scan Google Orphans",
+    "issues_scan_orphans_tooltip": "Find events in Google with no local match (last 6 months).",
+    "issues_scanning": "Scanning...",
+    "issues_type_orphan": "Google Orphan",
+    "setup_needed_auth_hint": "Please complete Google authentication in Calendar Integration Settings."
   },
   "gcal_settings": {
     "account_tip": "Wenn sich das verbundene Konto ändert, ist möglicherweise eine erneute Authentifizierung erforderlich, um Kalenderbindungen sicher zu aktualisieren.",
@@ -1075,6 +1137,11 @@
     "edit_gcal_name_notice": "Google Calendar names are managed by Google.",
     "edit_gcal_name_tooltip": "Google Calendar names can only be changed in Google.",
     "enable": "Aktivieren Sie die Google Kalender-Synchronisierung",
+    "export_diagnostics": "Export Report",
+    "export_diagnostics_failed_title": "Export Failed",
+    "export_diagnostics_save_title": "Save Diagnostics Report",
+    "export_diagnostics_success_msg": "Diagnostics report exported successfully to:\n{path}",
+    "export_diagnostics_success_title": "Export Complete",
     "go_to_auth": "Go to Authentication Settings",
     "guide_tab": "Führung",
     "hide_completed": "Hide completed events in Google Calendar",
@@ -1381,7 +1448,13 @@
   "palette": {
     "exit_app": "App: Exit",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Press Enter to open the selected result",
@@ -1389,7 +1462,15 @@
     "sync_google": "Sync: Update Google Calendar now",
     "task_registered": "Registered: {title}",
     "theme_dark": "Theme: Change to Dark Mode",
-    "theme_light": "Theme: Change to Light Mode"
+    "theme_light": "Theme: Change to Light Mode",
+    "title": "Command Palette",
+    "hint_command": "Befehle suchen",
+    "hint_create": "Enter erstellt einen Termin aus Ihrem Text",
+    "hint_create_confirm": "Enter erstellt diesen Termin",
+    "hint_default": "> Befehle  + Erstellen  / Suchen",
+    "hint_record": "Termine, Routinen und Direktiven suchen",
+    "hint_record_jump": "Enter öffnet den Eintrag. Shift+Enter springt zum Datum.",
+    "hint_run_command": "Enter führt den ausgewählten Befehl aus"
   },
   "panel": {
     "checklist_tooltip": "Checkliste an/aus",
@@ -1519,10 +1600,12 @@
   "splash": {
     "initializing_db": "Datenbank wird initialisiert...",
     "loading_font": "Schriftarten werden geladen...",
-    "loading_labels": "Loading labels...",
-    "migrating_data": "Migrating data...",
+    "loading_labels": "Beschriftungen werden geladen...",
+    "loading_ui_modules": "UI-Module werden geladen...",
+    "migrating_data": "Daten werden migriert...",
+    "preparing_runtime": "Laufzeitumgebung wird vorbereitet...",
     "ready": "Bereit!",
-    "starting_ui": "Starting UI..."
+    "starting_ui": "Benutzeroberfläche wird gestartet..."
   },
   "status": {
     "all_states": "Alle Status",
@@ -1645,7 +1728,18 @@
   "weather": {
     "desc": {
       "clear": "Clear",
-      "storm": "Storm"
+      "storm": "Storm",
+      "cloudy": "Cloudy",
+      "fog": "Fog",
+      "rain": "Rain",
+      "showers": "Showers",
+      "snow": "Snow"
+    },
+    "error": {
+      "location_not_found": "Location not found",
+      "network": "Network error",
+      "parse_failed": "Data parse error",
+      "timeout": "Request timed out"
     }
   },
   "weekday": {
@@ -2004,9 +2098,9 @@
     "add_widget_menu": "{label} hinzufügen",
     "add_widget_title": "{label} hinzufügen",
     "btn_add": "+ Hinzufügen",
-    "btn_delete_all": "Delete All...",
+    "btn_delete_all": "Alle löschen...",
     "btn_hide_all": "Alle ausblenden",
-    "btn_settings": "Settings",
+    "btn_settings": "Einstellungen",
     "btn_show_all": "Alle anzeigen",
     "col_actions": "Aktionen",
     "col_name": "Name",
@@ -2015,33 +2109,33 @@
     "col_type": "Typ",
     "col_visible": "Sichtbar",
     "confirm_delete": "Sind Sie sicher, dass Sie dieses Widget löschen möchten?",
-    "confirm_delete_all_msg": "Permanently delete all {count} widget(s)? This cannot be undone.",
-    "confirm_delete_all_title": "Delete All Widgets",
+    "confirm_delete_all_msg": "Alle {count} Widget(s) dauerhaft löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirm_delete_all_title": "Alle Widgets löschen",
     "confirm_delete_message": "'{name}' löschen?",
-    "confirm_delete_msg": "Delete '{name}'?",
+    "confirm_delete_msg": "'{name}' löschen?",
     "confirm_delete_title": "Widget löschen",
     "delete": "Löschen",
     "desc": "Verwalten Sie alle Widgets auf Ihrem Schreibtisch auf einen Blick.",
     "empty": "(Keine Widgets)",
     "focus": "Zur Mitte bewegen",
-    "footer_hint": "Click name to edit  ·  Settings button for widget options",
+    "footer_hint": "Namen anklicken zum Bearbeiten  ·  Einstellungsschaltfläche für Widget-Optionen",
     "hide_all": "Alle ausblenden",
     "hint": "Widgets ziehen zum Verschieben. Rechtsklick für Details.",
-    "list_heading": "Widget List",
-    "menu_delete_all": "Delete All...",
-    "menu_hide_all": "Hide All",
-    "menu_show_all": "Show All",
+    "list_heading": "Widget-Liste",
+    "menu_delete_all": "Alle löschen...",
+    "menu_hide_all": "Alle ausblenden",
+    "menu_show_all": "Alle anzeigen",
     "name_placeholder": "Name (automatisch wenn leer)",
     "new_name": "Neuer Name:",
-    "new_widget": "New Widget",
+    "new_widget": "Neues Widget",
     "open_manager": "🪟 Widget-Manager...",
     "rename": "Umbenennen...",
     "rename_title": "Umbenennen",
     "reset_position": "Position zurücksetzen",
     "show_all": "Alle anzeigen",
-    "tip_center": "Center on screen",
-    "tip_delete": "Delete",
-    "tip_reset": "Reset position",
+    "tip_center": "In der Bildschirmmitte",
+    "tip_delete": "Löschen",
+    "tip_reset": "Position zurücksetzen",
     "title": "Widget-Manager",
     "toggle_off": "AUS",
     "toggle_on": "AN",
@@ -2127,7 +2221,10 @@
     "widget_hint_empty": "No items for the selected date.",
     "work_summary": "{count} work items",
     "work_title": "Work",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "hide_calendar": "Hide Calendar",
+    "show_calendar": "Show Calendar",
+    "toggle_calendar": "Toggle Calendar"
   },
   "widget_text": {
     "align": "Ausrichtung",
@@ -2199,6 +2296,19 @@
     "var_time": "Zeit",
     "var_weekday": "Wochentag",
     "var_weekday_short": "Wochentag (kurz)",
-    "word_wrap": "Zeilenumbruch"
+    "word_wrap": "Zeilenumbruch",
+    "group_align": "Alignment",
+    "var_align_center": "Center",
+    "var_align_left": "Left",
+    "var_align_right": "Right"
+  },
+  "btn": {
+    "cancel": "Abbrechen",
+    "confirm": "Bestätigen",
+    "ok": "OK"
+  },
+  "app": {
+    "exit_message": "Dark Calendar wird beendet.\nDas Programm wird vollständig beendet, ohne in die Taskleiste minimiert zu werden.\nFortfahren?",
+    "exit_title": "Beenden"
   }
 }

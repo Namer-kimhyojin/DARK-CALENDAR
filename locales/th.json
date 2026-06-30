@@ -33,7 +33,10 @@
     "date_format": "ปปปป.MM.dd (ddd)",
     "default_msg": "🔒 You are away.\n(Move mouse to unlock.)",
     "placeholder_pw": "Enter password",
-    "unlock_btn": "Unlock"
+    "unlock_btn": "Unlock",
+    "secondary_screen_hint": "Secondary Lock Screen",
+    "admin_pw_placeholder": "รหัสผ่านผู้ดูแล",
+    "admin_pw_title": "กรอกรหัสผ่านผู้ดูแลระบบ"
   },
   "away_settings": {
     "btn_align_center": "Align Center",
@@ -92,7 +95,15 @@
     "selection_hint": "Ctrl+Click for multi-selection",
     "sync_hint": "ซิงค์ซะ",
     "today": "วันนี้",
-    "weekdays": ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."]
+    "weekdays": [
+      "จ.",
+      "อ.",
+      "พ.",
+      "พฤ.",
+      "ศ.",
+      "ส.",
+      "อา."
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "เพิ่มรายการ",
@@ -297,13 +308,17 @@
       "title": "✅ เช็คลิสต์",
       "type_label": "Item Type:",
       "type_list": "List Type",
-      "type_process": "Process Type"
+      "type_process": "Process Type",
+      "add": "+ Add Item",
+      "add_prompt": "Item content:",
+      "add_title": "Add Item",
+      "remove": "Remove Item"
     },
     "common": {
       "add": "Add",
       "apply": "Apply",
-      "bulk_priority": "Bulk Priority",
-      "bulk_status": "Bulk Status",
+      "bulk_priority": "ลำดับความสำคัญจำนวนมาก",
+      "bulk_status": "สถานะจำนวนมาก",
       "cancel": "ยกเลิก",
       "close": "Close",
       "delete": "ลบ",
@@ -324,10 +339,13 @@
       "ok": "ตกลง",
       "refresh": "รีเฟรช",
       "save": "บันทึก",
+      "save_continue": "Save & Continue",
       "today": "วันนี้",
       "unspecified": "Unspecified",
       "warning": "คำเตือน",
-      "yes": "ใช่"
+      "yes": "ใช่",
+      "delete_error": "An error occurred while deleting.",
+      "loading": "Processing..."
     },
     "directive": {
       "btn_delete": "ลบ",
@@ -415,7 +433,7 @@
     },
     "management": {
       "btn_add_directive": "Add Directive",
-      "btn_add_routine": "Add Task",
+      "btn_add_routine": "เพิ่มงาน",
       "btn_add_schedule": "Add Schedule",
       "btn_mark_done": "Mark Done",
       "btn_purge": "การลบถาวร",
@@ -426,18 +444,18 @@
       "calendar_local": "Local",
       "directive_header": "Directive List",
       "directive_title": "All Directives Management",
-      "header_assignee": "Assignee",
+      "header_assignee": "ผู้รับผิดชอบ",
       "header_calendar": "Calendar",
       "header_content": "เนื้อหา",
-      "header_cycle": "Cycle",
+      "header_cycle": "วงรอบ",
       "header_deadline": "กำหนดส่ง",
       "header_id": "บัตรประจำตัวประชาชน",
-      "header_location": "Location",
+      "header_location": "สถานที่",
       "header_name": "Name",
       "header_priority": "ลำดับ",
       "header_receiver": "Recipient",
       "header_status": "สถานะ",
-      "header_work_name": "Task Name",
+      "header_work_name": "ชื่องาน",
       "routine_header": "Total Routine List",
       "routine_title": "All Routines Management",
       "schedule_header": "Total Schedule List",
@@ -567,9 +585,12 @@
       "color": "สี",
       "color_none": "None",
       "color_tag": "Color Tag",
+      "del_all_series": "Delete Entire Series",
       "del_confirm": "ลบรายการนี้ใช่ไหม?",
       "del_confirm_specific": "Delete this {type}?\nAll related checklist items will be removed.",
       "del_fail": "Deletion failed.",
+      "del_only_this": "Delete This Instance",
+      "del_routine_confirm_msg": "How would you like to delete this recurring routine series?",
       "del_success": "Deleted successfully.",
       "del_title": "Confirm Delete",
       "delete_btn": "🗑️ ลบ",
@@ -614,12 +635,14 @@
       "routine_count_msg": "{count} routines registered.",
       "routine_end_error": "Recurrence end must be after start date.",
       "routine_reg_success": "Routine registered successfully.",
+      "routine_reg_success_continue": "Routine registered. You can continue entering.",
       "save_alarm_default": "Save as default alarm",
       "save_btn": "💾 บันทึก",
       "save_done": "Save Complete",
       "save_error_db": "Failed to update database.",
       "save_failed": "บันทึกไม่สำเร็จ",
       "schedule_reg_success": "Schedule registered successfully.",
+      "schedule_reg_success_continue": "Schedule registered. You can continue entering.",
       "section_time_routine": "ระยะเวลา",
       "section_time_schedule": "ตั้งค่าเวลา",
       "start_day_routine": "Recurrence Start:",
@@ -629,7 +652,18 @@
       "unit_day": "วัน",
       "unit_hour": "ชม.",
       "unit_min": "นาที",
-      "untitled": "Untitled"
+      "untitled": "Untitled",
+      "cycle_section": "Repeat Settings",
+      "name_placeholder_routine": "Enter task name",
+      "name_section": "Task Title",
+      "purge_gcal_confirm": "Moving this event to local calendar will remove it from Google Calendar.\n(It will be kept as a local event only and will not sync.)\n\nContinue?",
+      "purge_gcal_title": "Remove from Google Calendar",
+      "routine_datetime_section": "Date & Time",
+      "tab_basic": "Basic",
+      "tab_checklist": "Checklist",
+      "tab_detail": "Details",
+      "tags_placeholder": "Comma separated (e.g. work, projectA)",
+      "tags_section": "Classification Tags"
     },
     "theme": {
       "accent": {
@@ -731,7 +765,8 @@
         "current_color": "Current background color",
         "pick_color": "Pick color",
         "reset_default": "Reset to default"
-      }
+      },
+      "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
       "apply_color_preset": "Apply Preset",
@@ -802,7 +837,19 @@
       "saved_toast": "Dialog UI tokens saved. Full effect after restart.",
       "tab_color": "Color Tokens",
       "tab_metric": "Size/Spacing Tokens",
-      "title": "Dialog UI Token Settings"
+      "title": "Dialog UI Token Settings",
+      "export_failed_title": "ส่งออกล้มเหลว",
+      "export_title": "ส่งออก UI Tokens",
+      "import_failed_title": "นำเข้าล้มเหลว",
+      "import_title": "นำเข้า UI Tokens"
+    },
+    "daily": {
+      "date_header": "วันนี้",
+      "no_routines": "  ไม่มีงานที่ถึงกำหนดวันนี้",
+      "no_schedule": "  ไม่มีกิจกรรมที่กำหนดวันนี้",
+      "routine_section": "📋 ครบกำหนดวันนี้",
+      "schedule_section": "📅 กิจกรรมวันนี้",
+      "title": "กิจกรรมวันนี้และงานครบกำหนด"
     }
   },
   "drag": {
@@ -906,9 +953,10 @@
       "push_failed": "Failed to push local changes to Google server.",
       "rate_limit": "Google API rate limit exceeded. Please try again later.",
       "remote_newer_than_local": "Remote data is newer than local (server version kept to prevent conflict).",
-      "unknown": "An unknown error occurred."
+      "unknown": "An unknown error occurred.",
+      "remote_orphan": "Only in Google (no local match)"
     },
-    "first_setup_msg": "ยินดีต้อนรับสู่ Air Calendar!\nต้องการตั้งค่าการซิงค์ Google Calendar ตอนนี้หรือไม่?",
+    "first_setup_msg": "ยินดีต้อนรับสู่ Dark Calendar!\nต้องการตั้งค่าการซิงค์ Google Calendar ตอนนี้หรือไม่?",
     "first_setup_title": "ผู้ช่วยตั้งค่า",
     "guidance": {
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Please go to 'Settings > Calendar & Sync > Authenticate' and log in again.",
@@ -916,7 +964,8 @@
       "generic": "📍 [DETAILS]\n{error}\n\n❓ [HOW TO FIX] Please check your internet connection and click 'Retry'.\nIf the issue persists, use 'Force Ignore' to remove it from the sync queue.",
       "not_found": "📍 [STATUS] This event was not found on Google Calendar (might have been deleted elsewhere).\n🛠 [ACTION] The app automatically restored it to Google or removed it locally to match current state.\n✅ [OUTCOME] Sync state restored. You can 'Clear Error' or 'Retry' to finalize.",
       "rate_limit": "📍 [STATUS] Too many sync requests sent to Google servers in a short time.\n⏳ [ACTION] The app will automatically retry after a short wait period.\n✅ [OUTCOME] This usually resolves itself after a few minutes.",
-      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again."
+      "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again.",
+      "remote_orphan": "This event exists in Google Calendar but has no matching local event.<br><br><b>Cause</b>: may have been deleted locally or created directly in Google."
     },
     "issues_action_taken": "System Action",
     "issues_auto_healed": "Auto-Healed",
@@ -1023,7 +1072,20 @@
       "sync_partial": "ซิงค์เสร็จสิ้น (ล้มเหลวบางส่วน: push={push}, delete={delete})",
       "sync_skipped": "การซิงค์ถูกข้าม",
       "sync_skipped_or_failed": "ซิงค์ล้มเหลวหรือถูกข้าม"
-    }
+    },
+    "issues_delete_failed": "Failed to queue for deletion. Check logs.",
+    "issues_delete_queued": "Queued for deletion. Will be removed from Google after next sync.",
+    "issues_delete_remote": "Delete from Google",
+    "issues_delete_remote_confirm": "Delete this event from Google Calendar.\n\nEvent: {name}\nCalendar: {cal}\n\nThis cannot be undone. Continue?",
+    "issues_delete_remote_tooltip": "Queue selected orphan events for deletion from Google Calendar. Deleted on next sync.",
+    "issues_scan_clean": "No orphan events found. All clean.",
+    "issues_scan_found": "Found {n} orphan event(s) in Google. Review and delete from the list.",
+    "issues_scan_no_sync": "Google sync is not configured. Cannot scan.",
+    "issues_scan_orphans": "Scan Google Orphans",
+    "issues_scan_orphans_tooltip": "Find events in Google with no local match (last 6 months).",
+    "issues_scanning": "Scanning...",
+    "issues_type_orphan": "Google Orphan",
+    "setup_needed_auth_hint": "Please complete Google authentication in Calendar Integration Settings."
   },
   "gcal_settings": {
     "account_tip": "หากบัญชีที่เชื่อมต่อมีการเปลี่ยนแปลง อาจจำเป็นต้องมีการรับรองความถูกต้องอีกครั้งเพื่อรีเฟรชการผูกปฏิทินอย่างปลอดภัย",
@@ -1075,6 +1137,11 @@
     "edit_gcal_name_notice": "Google Calendar names are managed by Google.",
     "edit_gcal_name_tooltip": "Google Calendar names can only be changed in Google.",
     "enable": "เปิดใช้งานการซิงค์ Google ปฏิทิน",
+    "export_diagnostics": "Export Report",
+    "export_diagnostics_failed_title": "Export Failed",
+    "export_diagnostics_save_title": "Save Diagnostics Report",
+    "export_diagnostics_success_msg": "Diagnostics report exported successfully to:\n{path}",
+    "export_diagnostics_success_title": "Export Complete",
     "go_to_auth": "Go to Authentication Settings",
     "guide_tab": "แนะนำ",
     "hide_completed": "Hide completed events in Google Calendar",
@@ -1381,7 +1448,13 @@
   "palette": {
     "exit_app": "App: Exit",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Press Enter to open the selected result",
@@ -1389,7 +1462,15 @@
     "sync_google": "Sync: Update Google Calendar now",
     "task_registered": "Registered: {title}",
     "theme_dark": "Theme: Change to Dark Mode",
-    "theme_light": "Theme: Change to Light Mode"
+    "theme_light": "Theme: Change to Light Mode",
+    "title": "Command Palette",
+    "hint_command": "พิมพ์เพื่อค้นหาคำสั่ง",
+    "hint_create": "Enter เพื่อสร้างกำหนดการจากข้อความ",
+    "hint_create_confirm": "Enter เพื่อสร้างกำหนดการนี้",
+    "hint_default": "> คำสั่ง  + สร้าง  / ค้นหา",
+    "hint_record": "ค้นหากำหนดการ รูทีน และคำสั่ง",
+    "hint_record_jump": "Enter เปิดรายการ Shift+Enter ย้ายไปที่วันที่",
+    "hint_run_command": "Enter เรียกใช้คำสั่งที่เลือก"
   },
   "panel": {
     "checklist_tooltip": "แสดงเช็คลิสต์",
@@ -1518,11 +1599,13 @@
   },
   "splash": {
     "initializing_db": "กำลังเริ่มต้นฐานข้อมูล...",
-    "loading_font": "Loading fonts...",
-    "loading_labels": "Loading labels...",
-    "migrating_data": "Migrating data...",
+    "loading_font": "กำลังโหลดแบบอักษร...",
+    "loading_labels": "กำลังโหลดป้ายกำกับ...",
+    "loading_ui_modules": "กำลังโหลดโมดูล UI...",
+    "migrating_data": "กำลังย้ายข้อมูล...",
+    "preparing_runtime": "กำลังเตรียมสภาพแวดล้อม...",
     "ready": "พร้อมแล้ว!",
-    "starting_ui": "Starting UI..."
+    "starting_ui": "กำลังเริ่มต้น UI..."
   },
   "status": {
     "all_states": "ทั้งหมด",
@@ -1645,7 +1728,18 @@
   "weather": {
     "desc": {
       "clear": "Clear",
-      "storm": "Storm"
+      "storm": "Storm",
+      "cloudy": "Cloudy",
+      "fog": "Fog",
+      "rain": "Rain",
+      "showers": "Showers",
+      "snow": "Snow"
+    },
+    "error": {
+      "location_not_found": "Location not found",
+      "network": "Network error",
+      "parse_failed": "Data parse error",
+      "timeout": "Request timed out"
     }
   },
   "weekday": {
@@ -2004,10 +2098,10 @@
     "add_widget_menu": "เพิ่ม {label}",
     "add_widget_title": "เพิ่ม {label}",
     "btn_add": "+ Add",
-    "btn_delete_all": "Delete All...",
-    "btn_hide_all": "Hide All",
-    "btn_settings": "Settings",
-    "btn_show_all": "Show All",
+    "btn_delete_all": "ลบทั้งหมด...",
+    "btn_hide_all": "ซ่อนทั้งหมด",
+    "btn_settings": "การตั้งค่า",
+    "btn_show_all": "แสดงทั้งหมด",
     "col_actions": "การดำเนินการ",
     "col_name": "ชื่อ",
     "col_position": "ตำแหน่ง",
@@ -2015,33 +2109,33 @@
     "col_type": "ประเภท",
     "col_visible": "แสดง",
     "confirm_delete": "คุณแน่ใจหรือไม่ว่าต้องการลบวิดเจ็ตนี้",
-    "confirm_delete_all_msg": "Permanently delete all {count} widget(s)? This cannot be undone.",
-    "confirm_delete_all_title": "Delete All Widgets",
+    "confirm_delete_all_msg": "ลบ {count} widget อย่างถาวร? การกระทำนี้ไม่สามารถยกเลิกได้",
+    "confirm_delete_all_title": "ลบ Widget ทั้งหมด",
     "confirm_delete_message": "ลบ '{name}' ใช่ไหม?",
-    "confirm_delete_msg": "Delete '{name}'?",
+    "confirm_delete_msg": "ลบ '{name}'?",
     "confirm_delete_title": "ลบวิดเจ็ต",
     "delete": "ลบ",
     "desc": "จัดการวิดเจ็ตทั้งหมดบนโต๊ะของคุณได้อย่างรวดเร็ว",
     "empty": "(ไม่มีวิดเจ็ต)",
     "focus": "ย้ายไปตรงกลาง",
-    "footer_hint": "Click name to edit  ·  Settings button for widget options",
+    "footer_hint": "คลิกชื่อเพื่อแก้ไข  ·  ปุ่มตั้งค่าสำหรับตัวเลือก widget",
     "hide_all": "ซ่อนทั้งหมด",
     "hint": "ลากวิดเจ็ตเพื่อย้าย คลิกขวาสำหรับรายละเอียด",
-    "list_heading": "Widget List",
-    "menu_delete_all": "Delete All...",
-    "menu_hide_all": "Hide All",
-    "menu_show_all": "Show All",
+    "list_heading": "รายการ Widget",
+    "menu_delete_all": "ลบทั้งหมด...",
+    "menu_hide_all": "ซ่อนทั้งหมด",
+    "menu_show_all": "แสดงทั้งหมด",
     "name_placeholder": "ชื่อ (อัตโนมัติหากว่าง)",
     "new_name": "ชื่อใหม่:",
-    "new_widget": "New Widget",
+    "new_widget": "Widget ใหม่",
     "open_manager": "🪟 ตัวจัดการวิดเจ็ต...",
     "rename": "เปลี่ยนชื่อ...",
     "rename_title": "เปลี่ยนชื่อ",
     "reset_position": "รีเซ็ตตำแหน่ง",
     "show_all": "แสดงทั้งหมด",
-    "tip_center": "Center on screen",
-    "tip_delete": "Delete",
-    "tip_reset": "Reset position",
+    "tip_center": "จัดกึ่งกลางหน้าจอ",
+    "tip_delete": "ลบ",
+    "tip_reset": "รีเซ็ตตำแหน่ง",
     "title": "ตัวจัดการวิดเจ็ต",
     "toggle_off": "ปิด",
     "toggle_on": "เปิด",
@@ -2127,7 +2221,10 @@
     "widget_hint_empty": "No items for the selected date.",
     "work_summary": "{count} work items",
     "work_title": "Work",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "hide_calendar": "Hide Calendar",
+    "show_calendar": "Show Calendar",
+    "toggle_calendar": "Toggle Calendar"
   },
   "widget_text": {
     "align": "การจัดวาง",
@@ -2199,6 +2296,19 @@
     "var_time": "เวลา",
     "var_weekday": "วันในสัปดาห์",
     "var_weekday_short": "วัน (ย่อ)",
-    "word_wrap": "ตัดคำอัตโนมัติ"
+    "word_wrap": "ตัดคำอัตโนมัติ",
+    "group_align": "Alignment",
+    "var_align_center": "Center",
+    "var_align_left": "Left",
+    "var_align_right": "Right"
+  },
+  "btn": {
+    "cancel": "ยกเลิก",
+    "confirm": "ยืนยัน",
+    "ok": "ตกลง"
+  },
+  "app": {
+    "exit_message": "Dark Calendar กำลังจะปิด\nโปรแกรมจะปิดสมบูรณ์โดยไม่ย่อลงในถาดระบบ\nดำเนินการต่อ?",
+    "exit_title": "ออก"
   }
 }

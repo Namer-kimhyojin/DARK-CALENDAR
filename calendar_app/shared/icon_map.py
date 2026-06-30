@@ -156,6 +156,9 @@ class _IconKeys:
     BREAK_SHORT: str = "break_short"
     BREAK_LONG: str = "break_long"
     FOCUS_DONE: str = "focus_done"
+    PLAY: str = "play"
+    PAUSE: str = "pause"
+    FORWARD: str = "forward"
 
     # ── 문서 / 로케일 ─────────────────────────────────────────────────────
     DOCS: str = "docs"
@@ -303,6 +306,9 @@ ICON_MAPPING: dict[str, tuple[str, str, str]] = {
     ICON.BREAK_SHORT: ("fa6s.mug-hot", "", "짧은 휴식"),
     ICON.BREAK_LONG: ("fa6s.umbrella-beach", "", "긴 휴식"),
     ICON.FOCUS_DONE: ("fa6s.medal", "", "포커스 완료"),
+    ICON.PLAY: ("fa6s.play", "", "재생"),
+    ICON.PAUSE: ("fa6s.pause", "", "일시정지"),
+    ICON.FORWARD: ("fa6s.forward", "", "건너뛰기"),
     # ── 문서 / 로케일 ─────────────────────────────────────────────────────
     ICON.DOCS: ("mdi6.book-open-blank-variant", "", "공식 문서"),
     ICON.LOCALE_MGMT: ("fa6s.language", "", "로케일 파일 관리"),

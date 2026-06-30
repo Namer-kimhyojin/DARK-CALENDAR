@@ -1,16 +1,19 @@
-# -*- coding: utf-8 -*-
 """Task-oriented application usecases extracted from UI handlers."""
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import json
 import random
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
 
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QColor
+
 from calendar_app.application.common_task_ops_usecases import (
     collect_gcal_ids_for_delete as _collect_gcal_ids_for_delete,
+)
+from calendar_app.application.common_task_ops_usecases import (
     delete_tasks as _delete_tasks,
 )
 from calendar_app.shared.google_color_palette import ordered_palette_from_theme
@@ -26,7 +29,7 @@ def update_task_priority(repo, task_id: int, priority: str) -> bool:
     return bool(repo.update_unified_task(task_id, {"priority": priority}))
 
 
-def rename_task(repo, task_id: int, new_name: str) -> Optional[Dict[str, Any]]:
+def rename_task(repo, task_id: int, new_name: str) -> dict[str, Any] | None:
     """Rename task and return updated task payload when changed."""
     normalized = (new_name or "").strip()
     if not normalized:
@@ -46,7 +49,7 @@ def rename_task(repo, task_id: int, new_name: str) -> Optional[Dict[str, Any]]:
     return task
 
 
-def _build_auto_color_palette(theme_color: str) -> List[str]:
+def _build_auto_color_palette(theme_color: str) -> list[str]:
     palette = ordered_palette_from_theme(theme_color)
     if palette:
         return palette
@@ -54,14 +57,14 @@ def _build_auto_color_palette(theme_color: str) -> List[str]:
     return [c.name() if c.isValid() else "#4da6ff"]
 
 
-def _load_auto_color_history() -> List[str]:
+def _load_auto_color_history() -> list[str]:
     settings = QSettings("kimhyojin", "Dark Calendar")
     raw = settings.value("auto_color_recent_history", "[]")
     try:
         values = json.loads(str(raw))
     except Exception:
         values = []
-    cleaned: List[str] = []
+    cleaned: list[str] = []
     for value in values:
         color = QColor(str(value))
         if color.isValid():
@@ -71,7 +74,7 @@ def _load_auto_color_history() -> List[str]:
 
 def _save_auto_color_history(history: Iterable[str]) -> None:
     settings = QSettings("kimhyojin", "Dark Calendar")
-    cleaned: List[str] = []
+    cleaned: list[str] = []
     for value in history:
         color = QColor(str(value))
         if color.isValid():
@@ -79,7 +82,7 @@ def _save_auto_color_history(history: Iterable[str]) -> None:
     settings.setValue("auto_color_recent_history", json.dumps(cleaned[-36:]))
 
 
-def auto_assign_theme_colors(theme_color: str, count: int = 1) -> List[str]:
+def auto_assign_theme_colors(theme_color: str, count: int = 1) -> list[str]:
     """Return varied auto-tag colors centered on the theme color with repeat suppression."""
     count = max(1, int(count or 1))
     palette = _build_auto_color_palette(theme_color)
@@ -99,7 +102,7 @@ def auto_assign_theme_colors(theme_color: str, count: int = 1) -> List[str]:
         ),
     )
 
-    selected: List[str] = []
+    selected: list[str] = []
     while len(selected) < count:
         for color in ranked:
             if len(selected) >= count:
@@ -120,12 +123,12 @@ def auto_assign_theme_color(theme_color: str) -> str:
     return colors[0] if colors else QColor(theme_color or "#4da6ff").name()
 
 
-def update_task_bg_color(repo, task_id: int, color_hex: Optional[str]) -> bool:
+def update_task_bg_color(repo, task_id: int, color_hex: str | None) -> bool:
     """Update background color tag for unified task."""
     return bool(repo.update_unified_task(task_id, {"bg_color": color_hex}))
 
 
-def update_directive_bg_color(repo, directive_id: int, color_hex: Optional[str]) -> bool:
+def update_directive_bg_color(repo, directive_id: int, color_hex: str | None) -> bool:
     """Update directive color tag."""
     return bool(repo.update_directive_bg_color(directive_id, color_hex))
 
@@ -135,7 +138,7 @@ def clear_task_alarm(repo, task_id: int) -> bool:
     return bool(repo.update_unified_task(task_id, {"alarm_time": None}))
 
 
-def resolve_delete_target_ids(selected_task_ids: Iterable[int], clicked_task_id: int) -> List[int]:
+def resolve_delete_target_ids(selected_task_ids: Iterable[int], clicked_task_id: int) -> list[int]:
     """Resolve deletion targets from current selection and clicked task id."""
     selected = list(selected_task_ids or [])
     return selected if clicked_task_id in selected else [clicked_task_id]
@@ -146,7 +149,7 @@ def delete_tasks_by_ids(repo, task_ids: Iterable[int]) -> int:
     return _delete_tasks(repo, task_ids)
 
 
-def collect_gcal_ids_for_task_ids(repo, task_ids: Iterable[int]) -> List[str]:
+def collect_gcal_ids_for_task_ids(repo, task_ids: Iterable[int]) -> list[str]:
     """Collect linked Google event ids from task ids."""
     return list(_collect_gcal_ids_for_delete(repo, task_ids))
 
@@ -156,7 +159,7 @@ def get_tasks_for_date(repo, date_str: str):
     return repo.get_all_tasks_by_date(date_str)
 
 
-def collect_gcal_ids_from_tasks(tasks: Iterable[Dict[str, Any]]) -> List[str]:
+def collect_gcal_ids_from_tasks(tasks: Iterable[dict[str, Any]]) -> list[str]:
     """Collect linked Google event ids from task rows."""
     return [t.get("gcal_event_id") for t in tasks if t.get("gcal_event_id")]
 

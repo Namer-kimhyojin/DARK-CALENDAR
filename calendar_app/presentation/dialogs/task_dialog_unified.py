@@ -1,8 +1,9 @@
 """Unified task/schedule creation and modification dialog."""
 
 from datetime import datetime
+from uuid import uuid4
 
-from PyQt6.QtCore import QDate, Qt, QTime, pyqtSignal
+from PyQt6.QtCore import QDate, Qt, QTime, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -31,6 +32,7 @@ from calendar_app.infrastructure.google_sync.helpers import (
     queue_task_sync_to_google,
 )
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.dialogs.dialog_editor_styles import build_task_editor_stylesheet
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
@@ -109,6 +111,14 @@ class UnifiedTaskDialog(BaseTaskDialog):
                 15, self.initial_time.secsTo(self.preset_end_time) // 60
             )
 
+        if self._is_modify and self.task_id:
+            try:
+                _app = self.parent()
+                if _app and hasattr(_app, "active_editing_task_ids"):
+                    _app.active_editing_task_ids.add(self.task_id)
+            except Exception:
+                pass
+
         if self._is_modify:
             title = (
                 t("dialog.task.mod_routine")
@@ -124,7 +134,13 @@ class UnifiedTaskDialog(BaseTaskDialog):
             )
             size = (660, 540 if task_type == "routine" else 600)
         apply_dialog_title(self, title)
-        apply_common_dialog_style(self, minimum_width=640, size=size)
+        self.setObjectName("TaskEditorDialog")
+        apply_common_dialog_style(
+            self,
+            minimum_width=640,
+            size=size,
+            extra_stylesheet=build_task_editor_stylesheet(),
+        )
 
         self.init_ui()
 
@@ -140,7 +156,17 @@ class UnifiedTaskDialog(BaseTaskDialog):
         outer.setContentsMargins(14, 10, 14, 10)
         outer.setSpacing(8)
 
+        # 연속 등록 완료 등의 상태 피드백을 안내할 라벨
+        self.status_feedback_label = QLabel("")
+        self.status_feedback_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_feedback_label.setStyleSheet(
+            f"color: {self._ui_tokens().get('accent', '#3c8cff')}; font-size: 13px; font-weight: 700; padding: 6px; border-radius: 4px; background: rgba(60, 140, 255, 0.08);"
+        )
+        self.status_feedback_label.setVisible(False)
+        outer.addWidget(self.status_feedback_label)
+
         self.tabs = QTabWidget()
+        self.tabs.setObjectName("TaskEditorTabs")
         self.tabs.addTab(self._build_basic_tab(), t("dialog.tabs.basic"))
         self.tabs.addTab(self._build_additional_tab(), t("dialog.tabs.detail"))
         if self.task_type == "routine":
@@ -160,7 +186,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
         if self._is_modify:
             delete_btn = QPushButton(t("dialog.common.delete"))
-            delete_btn.setObjectName("DangerBtn")
+            delete_btn.setObjectName("danger_btn")
             delete_btn.setFixedHeight(34)
             delete_btn.setMinimumWidth(80)
             delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -172,7 +198,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
             manage_btn = QPushButton(t("dialog.checklist.manage"))
             manage_btn.setFixedWidth(80)
             manage_btn.setFixedHeight(34)
-            manage_btn.setObjectName("SecondaryBtn")
+            manage_btn.setObjectName("ghost_btn")
+            manage_btn.setProperty("accentVariant", True)
             manage_btn.setToolTip(t("menu.checklist_mgmt"))
             manage_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             manage_btn.clicked.connect(self._open_checklist_manager)
@@ -183,12 +210,13 @@ class UnifiedTaskDialog(BaseTaskDialog):
         cancel_btn = QPushButton(t("dialog.common.cancel"))
         cancel_btn.setFixedHeight(34)
         cancel_btn.setMinimumWidth(90)
-        cancel_btn.setObjectName("SecondaryBtn")
+        cancel_btn.setObjectName("ghost_btn")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel_btn.clicked.connect(self.reject)
 
         save_label = t("dialog.common.save") if self._is_modify else t("menu.register_btn")
         save_btn = QPushButton(save_label)
+        save_btn.setObjectName("primary_btn")
         save_btn.setDefault(True)
         save_btn.setFixedHeight(34)
         save_btn.setMinimumWidth(90)
@@ -197,6 +225,17 @@ class UnifiedTaskDialog(BaseTaskDialog):
         self.save_btn = save_btn
 
         btn_row.addWidget(cancel_btn)
+
+        # 신규 등록 모드일 때만 연속 등록 버튼 배치
+        if not self._is_modify:
+            save_continue_btn = QPushButton(t("dialog.common.save_continue", "연속 등록"))
+            save_continue_btn.setFixedHeight(34)
+            save_continue_btn.setMinimumWidth(90)
+            save_continue_btn.setObjectName("ghost_btn")
+            save_continue_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            save_continue_btn.clicked.connect(self.save_data_continue)
+            btn_row.addWidget(save_continue_btn)
+
         btn_row.addWidget(save_btn)
         outer.addLayout(btn_row)
 
@@ -238,6 +277,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
         title_vbox.addWidget(lbl_name)
 
         self.name_edit = EmojiLineEdit()
+        self.name_edit.setObjectName("TaskTitleEdit")
         self.name_edit.setPlaceholderText(name_hint)
         self.name_edit.setMinimumHeight(34)
         self.name_edit.setMaximumHeight(36)
@@ -276,6 +316,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
             option_row = QHBoxLayout()
             option_row.setContentsMargins(2, 0, 0, 5)
             self.all_day_check = QCheckBox(t("dialog.task.all_day"))
+            self.all_day_check.setObjectName("TaskDialogOptionCheck")
             self.all_day_check.setChecked(not self._is_modify)
             self.all_day_check.setStyleSheet(
                 f"QCheckBox {{ color: {self._ui_tokens().get('text_secondary', '#d7dbe3')}; font-weight: 700; margin-right: 15px; }}"
@@ -284,6 +325,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
             option_row.addWidget(self.all_day_check)
 
             self.auto_end_check = QCheckBox(t("dialog.task.auto_end"))
+            self.auto_end_check.setObjectName("TaskDialogOptionCheck")
             self.auto_end_check.setChecked(True)
             self.auto_end_check.setStyleSheet(
                 f"QCheckBox {{ color: {self._ui_tokens().get('text_muted', '#8c8c9a')}; font-weight: 500; }}"
@@ -395,31 +437,28 @@ class UnifiedTaskDialog(BaseTaskDialog):
             start_col.addLayout(dt_row)
             routine_dates_row.addLayout(start_col, 1)
 
-            # R: 종료 섹션 (컨테이너)
-            if not self._is_modify:
-                self.routine_end_container = QWidget()
-                end_col = QVBoxLayout(self.routine_end_container)
-                end_col.setContentsMargins(0, 0, 0, 0)
-                end_col.setSpacing(5)
+            # R: 종료 섹션 (반복 업무일 때만 표시)
+            self.routine_end_container = QWidget()
+            end_col = QVBoxLayout(self.routine_end_container)
+            end_col.setContentsMargins(0, 0, 0, 0)
+            end_col.setSpacing(5)
 
-                end_lbl = QLabel(t("dialog.task.end_day_routine"))
-                end_col.addWidget(end_lbl)
+            end_lbl = QLabel(t("dialog.task.end_day_routine"))
+            end_col.addWidget(end_lbl)
 
-                self.routine_period_end_date = QDateEdit(self.initial_date.addDays(14))
-                self.routine_period_end_date.setCalendarPopup(True)
-                self.routine_period_end_date.setDisplayFormat("yyyy-MM-dd")
-                self.routine_period_end_date.setMinimumWidth(130)
-                polish_calendar_popup(self.routine_period_end_date)
-                self._set_editor_height(self.routine_period_end_date)
+            self.routine_period_end_date = QDateEdit(self.initial_date.addDays(14))
+            self.routine_period_end_date.setCalendarPopup(True)
+            self.routine_period_end_date.setDisplayFormat("yyyy-MM-dd")
+            self.routine_period_end_date.setMinimumWidth(130)
+            polish_calendar_popup(self.routine_period_end_date)
+            self._set_editor_height(self.routine_period_end_date)
 
-                end_edit_row = QHBoxLayout()
-                end_edit_row.addWidget(self.routine_period_end_date)
-                end_edit_row.addStretch()
-                end_col.addLayout(end_edit_row)
+            end_edit_row = QHBoxLayout()
+            end_edit_row.addWidget(self.routine_period_end_date)
+            end_edit_row.addStretch()
+            end_col.addLayout(end_edit_row)
 
-                routine_dates_row.addWidget(self.routine_end_container, 1)
-            else:
-                self.routine_period_end_date = None
+            routine_dates_row.addWidget(self.routine_end_container, 1)
 
             schedule_layout.addLayout(routine_dates_row)
 
@@ -442,18 +481,14 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
         if self.task_type == "routine":
             self.start_date.dateChanged.connect(self._update_routine_mode_ui)
-            if not self._is_modify and self.routine_period_end_date is not None:
+            if self.routine_period_end_date is not None:
                 self.routine_period_end_date.dateChanged.connect(self._update_routine_preview)
         self.start_date.dateChanged.connect(self._handle_start_datetime_changed)
         self.start_time.timeChanged.connect(self._handle_start_datetime_changed)
         if self.task_type == "schedule":
             self.end_date.dateChanged.connect(self._handle_end_datetime_changed)
             self.end_time.timeChanged.connect(self._handle_end_datetime_changed)
-        if (
-            self.task_type == "routine"
-            and not self._is_modify
-            and self.routine_period_end_date is not None
-        ):
+        if self.task_type == "routine" and self.routine_period_end_date is not None:
             self.start_date.dateChanged.connect(
                 lambda d: self.routine_period_end_date.setMinimumDate(d)
             )
@@ -487,6 +522,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
         self.routine_mode_group = QButtonGroup()
         self.single_task_radio = QRadioButton(t("dialog.recurrence.single"))
         self.repeat_task_radio = QRadioButton(t("dialog.recurrence.repeat"))
+        self.single_task_radio.setObjectName("TaskDialogOptionCheck")
+        self.repeat_task_radio.setObjectName("TaskDialogOptionCheck")
         self.single_task_radio.setChecked(True)
         self.routine_mode_group.addButton(self.single_task_radio)
         self.routine_mode_group.addButton(self.repeat_task_radio)
@@ -908,8 +945,13 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
     # ── Save / Delete (dispatches to create or modify logic) ─────────────
     def save_data(self):
-        # 중복 클릭 가드: DB commit이 백그라운드 sync와 lock 경합 시 버퍼링되는
-        # 동안 큐잉된 추가 클릭이 중복 등록을 일으키는 것을 방지
+        self._save_or_create(continue_after_save=False)
+
+    def save_data_continue(self):
+        self._save_or_create(continue_after_save=True)
+
+    def _save_or_create(self, continue_after_save=False):
+        # 중복 클릭 가드
         if getattr(self, "_is_saving", False):
             return
         self._is_saving = True
@@ -919,14 +961,13 @@ class UnifiedTaskDialog(BaseTaskDialog):
             if self._is_modify:
                 self._save_changes()
             else:
-                self._create_task()
+                self._create_task(continue_after_save=continue_after_save)
         finally:
-            # accept()로 닫히지 않은 경우(검증 실패 등) 재시도 허용
             self._is_saving = False
             if hasattr(self, "save_btn"):
                 self.save_btn.setEnabled(True)
 
-    def _create_task(self):
+    def _create_task(self, continue_after_save=False):
         """Create mode: save new task(s) to DB."""
         if not self.name_edit.text().strip():
             QMessageBox.warning(self, t("dialog.task.entry_error"), t("dialog.task.name_required"))
@@ -1008,12 +1049,20 @@ class UnifiedTaskDialog(BaseTaskDialog):
                 )
                 return
 
-            for d in self._iter_routine_dates(self.start_date.date(), period_end, cycle_type):
+            repeat_dates = list(
+                self._iter_routine_dates(self.start_date.date(), period_end, cycle_type)
+            )
+            series_id = uuid4().hex
+            series_total = len(repeat_dates)
+            for idx, d in enumerate(repeat_dates, start=1):
                 target_date = d.toString("yyyy-MM-dd")
                 if self._routine_exists_for_date(task_data["name"], target_date):
                     skipped += 1
                     continue
                 item_payload = dict(task_data)
+                item_payload["series_id"] = series_id
+                item_payload["series_order"] = idx
+                item_payload["series_total"] = series_total
                 item_payload["target_date"] = target_date
                 item_payload["deadline"] = (
                     f"{target_date} {self.start_time.time().toString('HH:mm:ss')}"
@@ -1039,17 +1088,44 @@ class UnifiedTaskDialog(BaseTaskDialog):
         task_data["id"] = created_ids[0]
         self.task_added.emit(task_data)
 
-        if is_repeat_routine:
-            msg = t("dialog.task.routine_count_msg").format(count=len(created_ids))
-            QMessageBox.information(self, t("dialog.task.reg_done"), msg)
-        else:
+        if continue_after_save:
+            # 연속 등록 성공 메시지 노출
             success_msg = (
-                t("dialog.task.routine_reg_success")
+                t(
+                    "dialog.task.routine_reg_success_continue",
+                    "반복 일정이 등록되었습니다. 계속해서 입력하세요.",
+                )
                 if self.task_type == "routine"
-                else t("dialog.task.schedule_reg_success")
+                else t(
+                    "dialog.task.schedule_reg_success_continue",
+                    "일정이 등록되었습니다. 계속해서 입력하세요.",
+                )
             )
-            QMessageBox.information(self, t("dialog.task.save_done"), success_msg)
-        self.accept()
+            self.status_feedback_label.setText(success_msg)
+            self.status_feedback_label.setVisible(True)
+
+            # 2.5초 뒤 라벨 가림
+            QTimer.singleShot(2500, lambda: self.status_feedback_label.setVisible(False))
+
+            # 제목 및 추가 내용 초기화 후 포커스 이동
+            self.name_edit.clear()
+            self.name_edit.setFocus()
+            if hasattr(self, "memo_edit") and self.memo_edit:
+                self.memo_edit.clear()
+            if hasattr(self, "location_edit") and self.location_edit:
+                self.location_edit.clear()
+        else:
+            if is_repeat_routine:
+                msg = t("dialog.task.routine_count_msg").format(count=len(created_ids))
+                QMessageBox.information(self, t("dialog.task.reg_done"), msg)
+            else:
+                success_msg = (
+                    t("dialog.task.routine_reg_success")
+                    if self.task_type == "routine"
+                    else t("dialog.task.schedule_reg_success")
+                )
+                QMessageBox.information(self, t("dialog.task.save_done"), success_msg)
+            self.accept()
 
     # ── Modify mode: data loading ─────────────────────────────────────────
     def _load_data(self):
@@ -1112,6 +1188,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
                 self.task_data.get("cycle_type") or "single",
                 self.task_data.get("recurrence"),
             )
+            self._restore_routine_period_end_date()
 
         memo_text = self.task_data.get("description") or self.task_data.get("memo")
         if self.memo_edit and memo_text:
@@ -1149,6 +1226,42 @@ class UnifiedTaskDialog(BaseTaskDialog):
             self._sync_auto_end_duration_from_controls()
         self._update_duration_summary()
         self._update_alarm_summary()
+
+    def _restore_routine_period_end_date(self):
+        """수정 모드에서 반복 종료일 기본값을 기존 시리즈 기준으로 복원."""
+        if not getattr(self, "_is_modify", False):
+            return
+        if self.task_type != "routine" or self.routine_period_end_date is None:
+            return
+
+        start = self.start_date.date()
+        end = QDate(start)
+        series_id = str(self.task_data.get("series_id") or "").strip()
+        if series_id:
+            conn = common_repo.get_connection()
+            if conn:
+                try:
+                    cur = conn.cursor()
+                    cur.execute(
+                        """
+                        SELECT MAX(date(target_date)) AS max_target_date
+                        FROM unified_task
+                        WHERE type='routine' AND series_id=?
+                        """,
+                        (series_id,),
+                    )
+                    row = cur.fetchone()
+                    if row and row["max_target_date"]:
+                        parsed = QDate.fromString(str(row["max_target_date"])[:10], "yyyy-MM-dd")
+                        if parsed.isValid():
+                            end = parsed
+                except Exception:
+                    pass
+
+        if end < start:
+            end = start
+        self.routine_period_end_date.setMinimumDate(start)
+        self.routine_period_end_date.setDate(end)
 
     def _load_checklist_items(self):
         """수정 모드: DB에서 체크리스트 로드"""
@@ -1235,6 +1348,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
             updates["cycle_type"] = self._get_routine_cycle_type()
             updates["recurrence"] = self._build_recurrence_rule()
             updates["target_date"] = self.start_date.date().toString("yyyy-MM-dd")
+            if not self._prepare_repeat_routine_series_updates(updates):
+                return
 
         # ── Calendar move 처리 ─────────────────────────────────────────────
         # 캘린더 변경 시 Google 측에서도 이동이 일어나려면 _previous_gcal_calendar_id
@@ -1321,14 +1436,187 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
         success = task_repo.update_unified_task(self.task_id, updates)
         if success:
+            created_repeat_count = 0
+            if self.task_type == "routine":
+                created_repeat_count = self._create_missing_repeat_instances(updates)
             updates["id"] = self.task_id
             self.task_modified.emit(updates)
-            QMessageBox.information(self, t("dialog.task.save_done"), t("dialog.task.mod_success"))
+            message = t("dialog.task.mod_success")
+            if created_repeat_count:
+                message = (
+                    f"{message}\n"
+                    f"{t('dialog.task.routine_count_msg').format(count=created_repeat_count)}"
+                )
+            QMessageBox.information(self, t("dialog.task.save_done"), message)
             self.accept()
         else:
             QMessageBox.critical(self, t("dialog.task.save_failed"), t("dialog.task.save_error_db"))
 
+    def _is_repeat_routine_selected(self) -> bool:
+        return (
+            self.task_type == "routine"
+            and hasattr(self, "repeat_task_radio")
+            and self.repeat_task_radio.isChecked()
+            and self._get_routine_cycle_type() not in (None, "single")
+        )
+
+    def _selected_repeat_dates_or_warn(self):
+        if not self._is_repeat_routine_selected():
+            return []
+        period_end = (
+            self.routine_period_end_date.date()
+            if self.routine_period_end_date is not None
+            else self.start_date.date()
+        )
+        if period_end < self.start_date.date():
+            QMessageBox.warning(
+                self,
+                t("dialog.task.entry_error"),
+                t("dialog.task.routine_end_error"),
+            )
+            return None
+        dates = list(
+            self._iter_routine_dates(
+                self.start_date.date(),
+                period_end,
+                self._get_routine_cycle_type(),
+            )
+        )
+        if not dates:
+            QMessageBox.warning(
+                self,
+                t("dialog.task.entry_error"),
+                t("dialog.recurrence.preview_none"),
+            )
+            return None
+        return dates
+
+    def _prepare_repeat_routine_series_updates(self, updates: dict) -> bool:
+        repeat_dates = self._selected_repeat_dates_or_warn()
+        if repeat_dates is None:
+            return False
+        if not repeat_dates:
+            updates["series_id"] = None
+            updates["series_order"] = None
+            updates["series_total"] = None
+            return True
+
+        current_target = self.start_date.date().toString("yyyy-MM-dd")
+        series_id = str(self.task_data.get("series_id") or "").strip() or uuid4().hex
+        updates["series_id"] = series_id
+        updates["series_total"] = len(repeat_dates)
+        updates["series_order"] = 1
+        for idx, date in enumerate(repeat_dates, start=1):
+            if date.toString("yyyy-MM-dd") == current_target:
+                updates["series_order"] = idx
+                break
+        return True
+
+    def _copy_existing_checklist_to_task(self, task_id: int):
+        items = checklist_repo.get_task_checklist_items(self.task_id)
+        for i, item in enumerate(items):
+            link_id = checklist_repo.add_checklist_item(
+                task_id,
+                item.get("item_text") or "",
+                i,
+                display_type=item.get("display_type", self.checklist_display_type),
+            )
+            if link_id and item.get("is_completed"):
+                checklist_repo.toggle_checklist_item(link_id)
+
+    def _create_missing_repeat_instances(self, base_updates: dict) -> int:
+        repeat_dates = self._selected_repeat_dates_or_warn()
+        if not repeat_dates:
+            return 0
+
+        current_target = self.start_date.date().toString("yyyy-MM-dd")
+        series_id = base_updates.get("series_id") or self.task_data.get("series_id") or uuid4().hex
+        series_total = len(repeat_dates)
+        created = 0
+        base_payload = dict(self.task_data)
+        base_payload.update(base_updates)
+        base_payload.pop("id", None)
+        base_payload["type"] = "routine"
+        base_payload["calendar_id"] = None
+        base_payload["gcal_event_id"] = None
+        base_payload["gcal_source_calendar_id"] = None
+        base_payload["gcal_target_calendar_id"] = None
+
+        for idx, date in enumerate(repeat_dates, start=1):
+            target_date = date.toString("yyyy-MM-dd")
+            if target_date == current_target:
+                continue
+            if self._routine_exists_for_date(base_payload["name"], target_date):
+                continue
+            item_payload = dict(base_payload)
+            item_payload["series_id"] = series_id
+            item_payload["series_order"] = idx
+            item_payload["series_total"] = series_total
+            item_payload["target_date"] = target_date
+            item_payload["deadline"] = (
+                f"{target_date} {self.start_time.time().toString('HH:mm:ss')}"
+            )
+            item_payload["end_date"] = None
+            task_id = task_repo.create_unified_task(item_payload)
+            if task_id:
+                created += 1
+                self._copy_existing_checklist_to_task(task_id)
+        return created
+
     def _delete_task(self):
+        series_id = self.task_data.get("series_id") if self.task_data else None
+
+        if self.task_type == "routine" and series_id:
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Question)
+            box.setWindowTitle(t("dialog.task.del_title"))
+            box.setText(
+                t(
+                    "dialog.task.del_routine_confirm_msg",
+                    "이 반복 일정 시리즈를 어떻게 삭제하시겠습니까?",
+                )
+            )
+
+            box.addButton(
+                t("dialog.task.del_only_this", "이 일정만 삭제"), QMessageBox.ButtonRole.YesRole
+            )
+            btn_all = box.addButton(
+                t("dialog.task.del_all_series", "시리즈 전체 삭제"), QMessageBox.ButtonRole.NoRole
+            )
+            btn_cancel = box.addButton(
+                t("dialog.common.cancel", "취소"), QMessageBox.ButtonRole.RejectRole
+            )
+
+            box.exec()
+            clicked_button = box.clickedButton()
+
+            if clicked_button == btn_cancel:
+                return
+
+            if clicked_button == btn_all:
+                from calendar_app.infrastructure.db.db_repository_unified import (
+                    delete_unified_tasks_by_series_id,
+                )
+
+                success = delete_unified_tasks_by_series_id(series_id)
+                if success:
+                    self.task_deleted.emit(self.task_id)
+                    try:
+                        _app = self.parent()
+                        if _app and hasattr(_app, "schedule_panel_refresh"):
+                            _app.schedule_panel_refresh(center=True)
+                    except Exception:
+                        pass
+                    QMessageBox.information(
+                        self, t("dialog.task.del_title"), t("dialog.task.del_success")
+                    )
+                    self.accept()
+                else:
+                    QMessageBox.critical(
+                        self, t("dialog.task.save_failed"), t("dialog.task.del_fail")
+                    )
+                return
+
         type_str = t("panel.routine") if self.task_type == "routine" else t("panel.today_schedule")
         msg = t("dialog.task.del_confirm_specific").format(type=type_str)
         reply = QMessageBox.question(
@@ -1388,6 +1676,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
         cal_row.addWidget(lbl)
 
         self.calendar_combo = QComboBox()
+        self.calendar_combo.setObjectName("TaskCalendarCombo")
         self.calendar_combo.setMinimumHeight(30)
         self.calendar_combo.setMaximumHeight(32)
         tokens = self._ui_tokens()
@@ -1453,3 +1742,20 @@ class UnifiedTaskDialog(BaseTaskDialog):
         if not hasattr(self, "calendar_combo"):
             return None
         return self.calendar_combo.currentData()
+
+    def _release_edit_lock(self):
+        if self.task_id:
+            try:
+                _app = self.parent()
+                if _app and hasattr(_app, "active_editing_task_ids"):
+                    _app.active_editing_task_ids.discard(self.task_id)
+            except Exception:
+                pass
+
+    def closeEvent(self, event):
+        self._release_edit_lock()
+        super().closeEvent(event)
+
+    def done(self, result):
+        self._release_edit_lock()
+        super().done(result)

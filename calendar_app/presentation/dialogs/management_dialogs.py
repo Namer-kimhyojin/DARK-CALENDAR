@@ -287,7 +287,7 @@ class BaseManagementDialog(QDialog):
         self.bulk_priority_combo.setMinimumWidth(110)
 
         self.bulk_priority_btn = QPushButton(t("dialog.common.bulk_priority"))
-        self.bulk_priority_btn.setObjectName("SecondaryBtn")
+        self.bulk_priority_btn.setObjectName("ghost_btn")
         self.bulk_priority_btn.clicked.connect(
             lambda: self.bulk_priority_update(
                 _priority_value_from_label(self.bulk_priority_combo.currentText())
@@ -299,7 +299,7 @@ class BaseManagementDialog(QDialog):
         self.bulk_status_combo.setMinimumWidth(110)
 
         self.bulk_status_btn = QPushButton(t("dialog.common.bulk_status"))
-        self.bulk_status_btn.setObjectName("SecondaryBtn")
+        self.bulk_status_btn.setObjectName("ghost_btn")
         self.bulk_status_btn.clicked.connect(
             lambda: self.bulk_status_update(
                 _status_value_from_label(self.bulk_status_combo.currentText())
@@ -452,13 +452,13 @@ class BaseManagementDialog(QDialog):
         try:
             task_delete_usecases.queue_google_deletes_for_refs(
                 gcal_refs,
-                queue_delete_fn=lambda event_id,
-                local_task_id,
-                gcal_calendar_id: queue_task_delete_from_google(
-                    self,
-                    event_id,
-                    local_task_id=local_task_id,
-                    gcal_calendar_id=gcal_calendar_id,
+                queue_delete_fn=lambda event_id, local_task_id, gcal_calendar_id: (
+                    queue_task_delete_from_google(
+                        self,
+                        event_id,
+                        local_task_id=local_task_id,
+                        gcal_calendar_id=gcal_calendar_id,
+                    )
                 ),
             )
         except Exception:
@@ -636,24 +636,24 @@ class DirectiveManagementDialog(BaseManagementDialog):
 
     def extra_buttons(self):
         self.add_btn = QPushButton(t("dialog.management.btn_add_directive"))
-        self.add_btn.setObjectName("PrimaryBtn")
+        self.add_btn.setObjectName("primary_btn")
         self.add_btn.clicked.connect(self.add_new)
         return [self.add_btn]
 
     def tail_buttons(self):
         self.trash_toggle_btn = QPushButton(t("dialog.management.btn_toggle_trash", "Trash"))
-        self.trash_toggle_btn.setObjectName("SecondaryBtn")
+        self.trash_toggle_btn.setObjectName("ghost_btn")
         self.trash_toggle_btn.clicked.connect(self.toggle_trash_mode)
 
         self.restore_btn = QPushButton(t("dialog.management.btn_restore_from_trash", "Restore"))
-        self.restore_btn.setObjectName("PrimaryBtn")
+        self.restore_btn.setObjectName("primary_btn")
         self.restore_btn.clicked.connect(self.restore_selected)
 
         self.complete_btn = QPushButton(t("dialog.management.btn_mark_done"))
-        self.complete_btn.setObjectName("PrimaryBtn")
+        self.complete_btn.setObjectName("primary_btn")
         self.complete_btn.clicked.connect(self.mark_as_done)
         self.delete_btn = QPushButton(t("dialog.common.delete"))
-        self.delete_btn.setObjectName("DangerBtn")
+        self.delete_btn.setObjectName("danger_btn")
         self.delete_btn.clicked.connect(self.delete_selected)
         return [self.complete_btn, self.trash_toggle_btn, self.restore_btn, self.delete_btn]
 
@@ -862,21 +862,21 @@ class TaskManagementDialog(BaseManagementDialog):
 
     def extra_buttons(self):
         self.add_btn = QPushButton(t("dialog.management.btn_add_schedule"))
-        self.add_btn.setObjectName("PrimaryBtn")
+        self.add_btn.setObjectName("primary_btn")
         self.add_btn.clicked.connect(self.add_new)
         return [self.add_btn]
 
     def tail_buttons(self):
         self.trash_toggle_btn = QPushButton(t("dialog.management.btn_toggle_trash", "Trash"))
-        self.trash_toggle_btn.setObjectName("SecondaryBtn")
+        self.trash_toggle_btn.setObjectName("ghost_btn")
         self.trash_toggle_btn.clicked.connect(self.toggle_trash_mode)
 
         self.restore_btn = QPushButton(t("dialog.management.btn_restore_from_trash", "Restore"))
-        self.restore_btn.setObjectName("PrimaryBtn")
+        self.restore_btn.setObjectName("primary_btn")
         self.restore_btn.clicked.connect(self.restore_selected)
 
         self.delete_btn = QPushButton(t("dialog.common.delete"))
-        self.delete_btn.setObjectName("DangerBtn")
+        self.delete_btn.setObjectName("danger_btn")
         self.delete_btn.clicked.connect(self.delete_selected)
         return [self.trash_toggle_btn, self.restore_btn, self.delete_btn]
 
@@ -1017,21 +1017,21 @@ class RoutineManagementDialog(BaseManagementDialog):
 
     def extra_buttons(self):
         self.add_btn = QPushButton(t("dialog.management.btn_add_routine"))
-        self.add_btn.setObjectName("PrimaryBtn")
+        self.add_btn.setObjectName("primary_btn")
         self.add_btn.clicked.connect(self.add_new)
         return [self.add_btn]
 
     def tail_buttons(self):
         self.trash_toggle_btn = QPushButton(t("dialog.management.btn_toggle_trash", "Trash"))
-        self.trash_toggle_btn.setObjectName("SecondaryBtn")
+        self.trash_toggle_btn.setObjectName("ghost_btn")
         self.trash_toggle_btn.clicked.connect(self.toggle_trash_mode)
 
         self.restore_btn = QPushButton(t("dialog.management.btn_restore_from_trash", "Restore"))
-        self.restore_btn.setObjectName("PrimaryBtn")
+        self.restore_btn.setObjectName("primary_btn")
         self.restore_btn.clicked.connect(self.restore_selected)
 
         self.delete_btn = QPushButton(t("dialog.common.delete"))
-        self.delete_btn.setObjectName("DangerBtn")
+        self.delete_btn.setObjectName("danger_btn")
         self.delete_btn.clicked.connect(self.delete_selected)
         return [self.trash_toggle_btn, self.restore_btn, self.delete_btn]
 

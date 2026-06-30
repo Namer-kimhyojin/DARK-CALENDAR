@@ -929,6 +929,26 @@ def initialize_unified_database():
             "CREATE INDEX IF NOT EXISTS idx_unified_task_schedule_dates ON unified_task (type, deadline, end_date)"
         )
 
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_unified_task_schedule_overlap ON unified_task (type, deadline, end_date, target_date)"
+        )
+
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_unified_task_type_target_date ON unified_task (type, target_date)"
+        )
+
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_task_directive_deadline_order ON task_directive (deadline, id)"
+        )
+
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_task_directive_status_deadline ON task_directive (status, deadline)"
+        )
+
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_checklist_link_owner_completed ON task_checklist_link (owner_type, owner_id, is_completed)"
+        )
+
         # gcal_recurring_series: GCal 반복 일정 시리즈 메타데이터 테이블 (item 2)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS gcal_recurring_series (

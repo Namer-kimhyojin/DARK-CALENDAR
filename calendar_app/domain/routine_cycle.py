@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """Shared routine cycle constants and label helpers."""
 
 from __future__ import annotations
 
 from calendar_app.infrastructure.i18n import t
-
 
 # Sort order used by routine list/group views.
 CYCLE_ORDER = {
@@ -60,4 +58,3 @@ def cycle_display_name(cycle_type: str | None, *, scope: str = "recurrence") -> 
     if not key:
         return cycle
     return t(key, fallback)
-

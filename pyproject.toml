@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+# ---------------------------------------------------------------------------
+# Project metadata
+# ---------------------------------------------------------------------------
+[project]
+name = "dark-calendar"
+version = "2.8.3"
+requires-python = ">=3.12"
+dependencies = []   # runtime deps are managed via requirements.txt
+
+# ---------------------------------------------------------------------------
+# Ruff — linter + formatter
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["calendar_app"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes (undefined names, unused imports)
+    "I",    # isort (import order)
+    "UP",   # pyupgrade (modern Python syntax)
+    "B",    # flake8-bugbear (common bugs)
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long — ruff format handles this
+    "B008",   # function calls in default args (common in PyQt6)
+    "B904",   # raise ... from err — too noisy for existing code
+    "SIM108", # ternary operator — readability preference
+    "UP007",  # X | Y union syntax — PyQt6 type hints use Optional
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F401", "F811"]  # test files may re-import for fixture visibility
+
+[tool.ruff.lint.isort]
+known-first-party = ["calendar_app"]
+force-sort-within-sections = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+norecursedirs = ["backups", "build", "dist", ".venv", "recovered_source"]
+addopts = "-p no:warnings --tb=short -q"
+
+# ---------------------------------------------------------------------------
+# Mypy — 타입 체킹 (선택적, 점진적 적용)
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true     # PyQt6 stubs 미완성이므로 필수
+warn_unused_ignores = false
+check_untyped_defs = false        # 기존 코드 전체 강제 적용 금지
+exclude = [
+    "build/",
+    "dist/",
+    "backups/",
+    ".venv/",
+]
