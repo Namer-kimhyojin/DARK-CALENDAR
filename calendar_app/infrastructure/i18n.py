@@ -268,6 +268,17 @@ class I18nManager:
         )
         QLocale.setDefault(locale)
 
+        # Set layout direction for RTL languages (Arabic, Hebrew, etc.)
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import QApplication
+
+        app = QApplication.instance()
+        if app is not None:
+            if lang in {"ar"}:
+                app.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+            else:
+                app.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
     def _resolve(self, dotted_key):
         return self._resolve_from(self.translations, dotted_key)
 

@@ -1,27 +1,27 @@
 {
   "alarm_popup": {
-    "confirm": "Confirmed.",
-    "confirm_btn": "Confirm",
-    "done_btn": "Done",
-    "open_task": "Open Task",
-    "snooze_1h": "1 hour later",
-    "snooze_btn": "Snooze",
-    "snooze_min": "{mins} min later",
-    "status_updated": "Task marked as completed.",
-    "sync_error_details": "An error occurred during sync: {error}",
-    "sync_issue": "Sync Issue",
-    "task": "Task",
+    "confirm": "पुष्टि हो गई।",
+    "confirm_btn": "पुष्टि करें",
+    "done_btn": "हो गया",
+    "open_task": "कार्य खोलें",
+    "snooze_1h": "1 घंटे बाद",
+    "snooze_btn": "स्नूज़",
+    "snooze_min": "{mins} मिनट बाद",
+    "status_updated": "कार्य पूर्ण के रूप में चिह्नित।",
+    "sync_error_details": "सिंक के दौरान त्रुटि: {error}",
+    "sync_issue": "सिंक समस्या",
+    "task": "कार्य",
     "test_alarm_btn": "[DEV] Test Alarm Popup",
     "test_sync_error_btn": "[DEV] Test Sync Issue",
     "test_task_loc": "2nd Floor Seminar Room",
     "test_task_name": "HR Team Staff Lunch (Test)",
-    "time_now": "Now",
-    "time_past": "{mins} min ago",
-    "time_past_h": "{h} hr ago",
-    "time_remaining": "in {mins} min",
-    "time_remaining_h": "in {h} hr",
-    "time_remaining_hm": "in {h}h {m}m",
-    "view_issues": "View Issues"
+    "time_now": "अभी",
+    "time_past": "{mins} मिनट पहले",
+    "time_past_h": "{h} घंटे पहले",
+    "time_remaining": "{mins} मिनट में",
+    "time_remaining_h": "{h} घंटे में",
+    "time_remaining_hm": "{h} घंटे {m} मिनट में",
+    "view_issues": "सिंक समस्याएं देखें"
   },
   "app_name": "डार्क कैलेंडर",
   "autostart": {
@@ -965,7 +965,7 @@
       "not_found": "📍 [STATUS] This event was not found on Google Calendar (might have been deleted elsewhere).\n🛠 [ACTION] The app automatically restored it to Google or removed it locally to match current state.\n✅ [OUTCOME] Sync state restored. You can 'Clear Error' or 'Retry' to finalize.",
       "rate_limit": "📍 [STATUS] Too many sync requests sent to Google servers in a short time.\n⏳ [ACTION] The app will automatically retry after a short wait period.\n✅ [OUTCOME] This usually resolves itself after a few minutes.",
       "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again.",
-      "remote_orphan": "This event exists in Google Calendar but has no matching local event.<br><br><b>Cause</b>: may have been deleted locally or created directly in Google."
+      "remote_orphan": "Google Calendar में ऐसे इवेंट मिले जो ऐप डेटाबेस में नहीं हैं। यह पहले ऐप से हटाने या अधूरी सिंक के कारण हो सकता है। आप इन्हें Google Calendar से मैन्युअल रूप से हटा सकते हैं या सिंक को पुनः आयात करने दे सकते हैं।"
     },
     "issues_action_taken": "System Action",
     "issues_auto_healed": "Auto-Healed",
@@ -1255,7 +1255,7 @@
     "type_local": "Local"
   },
   "help": {
-    "content": "<h3>कैलेंडर का उपयोग कैसे करें</h3>\n        <घंटा>\n        <b>1) शेड्यूल जोड़ें</b><br>\n        किसी दिनांक या <b>Ctrl + N</b><br><br> पर डबल-क्लिक करें\n\n        <b>2) शेड्यूल संशोधित करें</b><br>\n        विवरण संपादित करने के लिए शेड्यूल पर डबल-क्लिक करें<br><br>\n\n        <b>3) स्थानांतरण/कॉपी शेड्यूल</b><br>\n        खींचें: स्थानांतरित करें, <b>Shift + खींचें</b>: कॉपी करें<br><br>\n\n        <b>4) शेड्यूल हटाएं</b><br>\n        शेड्यूल चुनें और <b>हटाएँ</b><br> दबाएँ\n        उस दिन के सभी शेड्यूल साफ़ करने के लिए किसी दिनांक पर <b>हटाएँ</b> दबाएँ।",
+    "content": "<h3>कैलेंडर का उपयोग कैसे करें</h3>\n        <hr>\n        <b>1) शेड्यूल जोड़ें</b><br>\n        किसी दिनांक या <b>Ctrl + N</b><br><br> पर डबल-क्लिक करें\n\n        <b>2) शेड्यूल संशोधित करें</b><br>\n        विवरण संपादित करने के लिए शेड्यूल पर डबल-क्लिक करें<br><br>\n\n        <b>3) स्थानांतरण/कॉपी शेड्यूल</b><br>\n        खींचें: स्थानांतरित करें, <b>Shift + खींचें</b>: कॉपी करें<br><br>\n\n        <b>4) शेड्यूल हटाएं</b><br>\n        शेड्यूल चुनें और <b>हटाएँ</b><br> दबाएँ\n        उस दिन के सभी शेड्यूल साफ़ करने के लिए किसी दिनांक पर <b>हटाएँ</b> दबाएँ।",
     "title": "कैलेंडर का उपयोग कैसे करें"
   },
   "labels": {
@@ -1359,7 +1359,7 @@
     "locale_open_fail": "Could not open locale folder.",
     "locale_open_file_fail": "Could not open current language file.",
     "locale_open_folder": "📂 Open User Locale Folder",
-    "locale_reset_confirm": "Delete the user locale override for the current language?",
+    "locale_reset_confirm": "वर्तमान भाषा का उपयोगकर्ता लोकेल ओवरराइड हटाएं?",
     "locale_reset_current": "↩ Reset Current Language Override",
     "locale_reset_done": "Override file deleted. Restarting app.",
     "locale_reset_no_file": "No user override file to delete.",

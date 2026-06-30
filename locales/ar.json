@@ -17,10 +17,10 @@
     "test_task_name": "غداء موظفي فريق الموارد البشرية (اختبار)",
     "time_now": "الآن",
     "time_past": "{mins} منذ دقيقة",
-    "time_past_h": "{h} hr ago",
+    "time_past_h": "منذ {h} ساعة",
     "time_remaining": "في {mins} دقيقة",
-    "time_remaining_h": "in {h} hr",
-    "time_remaining_hm": "in {h}h {m}m",
+    "time_remaining_h": "بعد {h} ساعة",
+    "time_remaining_hm": "بعد {h} ساعة و{m} دقيقة",
     "view_issues": "عرض القضايا"
   },
   "app_name": "التقويم المظلم",
@@ -965,7 +965,7 @@
       "not_found": "📍 [STATUS] This event was not found on Google Calendar (might have been deleted elsewhere).\n🛠 [ACTION] The app automatically restored it to Google or removed it locally to match current state.\n✅ [OUTCOME] Sync state restored. You can 'Clear Error' or 'Retry' to finalize.",
       "rate_limit": "📍 [STATUS] Too many sync requests sent to Google servers in a short time.\n⏳ [ACTION] The app will automatically retry after a short wait period.\n✅ [OUTCOME] This usually resolves itself after a few minutes.",
       "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again.",
-      "remote_orphan": "This event exists in Google Calendar but has no matching local event.<br><br><b>Cause</b>: may have been deleted locally or created directly in Google."
+      "remote_orphan": "تم اكتشاف أحداث على Google Calendar غير موجودة في قاعدة بيانات التطبيق. قد يكون هذا بسبب حذف سابق من التطبيق أو مزامنة جزئية. يمكنك حذفها من Google Calendar يدوياً أو السماح للمزامنة بإعادة استيرادها."
     },
     "issues_action_taken": "System Action",
     "issues_auto_healed": "Auto-Healed",
@@ -1255,7 +1255,7 @@
     "type_local": "Local"
   },
   "help": {
-    "content": "<h3>كيفية استخدام التقويم</h3>\n        <ساعة>\n        <b>1) إضافة جدول زمني</b><br>\n        انقر نقرًا مزدوجًا فوق التاريخ أو <b>Ctrl + N</b><br><br>\n\n        <b>2) تعديل الجدول</b><br>\n        انقر نقرًا مزدوجًا على الجدول الزمني لتعديل التفاصيل<br><br>\n\n        <b>3) نقل/نسخ الجدول</b><br>\n        السحب: نقل، <b>Shift + السحب</b>: نسخ<br><br>\n\n        <b>4) حذف الجدول</b><br>\n        حدد الجدول الزمني واضغط على <b>حذف</b><br>\n        اضغط على <b>حذف</b> في تاريخ ما لمسح كافة الجداول الزمنية لذلك اليوم.",
+    "content": "<h3>كيفية استخدام التقويم</h3>\n        <hr>\n        <b>1) إضافة جدول زمني</b><br>\n        انقر نقرًا مزدوجًا فوق التاريخ أو <b>Ctrl + N</b><br><br>\n\n        <b>2) تعديل الجدول</b><br>\n        انقر نقرًا مزدوجًا على الجدول الزمني لتعديل التفاصيل<br><br>\n\n        <b>3) نقل/نسخ الجدول</b><br>\n        السحب: نقل، <b>Shift + السحب</b>: نسخ<br><br>\n\n        <b>4) حذف الجدول</b><br>\n        حدد الجدول الزمني واضغط على <b>حذف</b><br>\n        اضغط على <b>حذف</b> في تاريخ ما لمسح كافة الجداول الزمنية لذلك اليوم.",
     "title": "كيفية استخدام التقويم"
   },
   "labels": {
@@ -1359,7 +1359,7 @@
     "locale_open_fail": "Could not open locale folder.",
     "locale_open_file_fail": "Could not open current language file.",
     "locale_open_folder": "📂 Open User Locale Folder",
-    "locale_reset_confirm": "Delete the user locale override for the current language?",
+    "locale_reset_confirm": "حذف ملف اللغة المخصص للغة الحالية؟",
     "locale_reset_current": "↩ Reset Current Language Override",
     "locale_reset_done": "Override file deleted. Restarting app.",
     "locale_reset_no_file": "No user override file to delete.",
