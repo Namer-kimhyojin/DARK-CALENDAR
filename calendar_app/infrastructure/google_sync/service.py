@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from dataclasses import dataclass
 import datetime
 import logging
@@ -410,6 +411,11 @@ class CalendarSyncService:
 
             if not creds or not creds.valid:
                 if not interactive:
+                    self._set_last_error(
+                        "auth_required",
+                        "A valid Google OAuth token is required for silent authentication",
+                        401,
+                    )
                     logger.warning(
                         "authenticate(non-interactive): cannot proceed without valid credentials "
                         "(interactive=False). creds_present=%s, creds_valid=%s",
@@ -500,7 +506,10 @@ class CalendarSyncService:
         calendar_id: str | None = None,
     ) -> list[GoogleEvent] | None:
         if not self.is_authenticated or not self.service:
-            return []
+            self._set_last_error(
+                "auth_required", "Google Calendar service is not authenticated", 401
+            )
+            return None
         self._clear_last_error()
 
         try:
@@ -512,10 +521,19 @@ class CalendarSyncService:
 
             events: list[GoogleEvent] = []
             page_token = None
+            seen_page_tokens: set[str] = set()
             max_pages = 200
             fetched_pages = 0
 
             while True:
+                if page_token:
+                    page_token_str = str(page_token)
+                    if page_token_str in seen_page_tokens:
+                        raise RuntimeError(
+                            f"Duplicate Google events page token detected: {page_token_str}"
+                        )
+                    seen_page_tokens.add(page_token_str)
+
                 request_params = {
                     "calendarId": calendar_id,
                     "timeMin": time_min,
@@ -541,8 +559,10 @@ class CalendarSyncService:
 
                 page_token = response.get("nextPageToken")
                 fetched_pages += 1
-                if not page_token or fetched_pages >= max_pages:
+                if not page_token:
                     break
+                if fetched_pages >= max_pages:
+                    raise RuntimeError(f"Google events pagination exceeded max pages ({max_pages})")
 
             return events
         except Exception as exc:
@@ -563,7 +583,12 @@ class CalendarSyncService:
         calendar_id: str | None = None,
     ) -> tuple[list[GoogleEvent] | None, str | None, bool]:
         if not self.is_authenticated or not self.service:
-            return [], None, False
+            self._set_last_error(
+                "auth_required",
+                "Google Calendar service is not authenticated",
+                401,
+            )
+            return None, None, False
         self._clear_last_error()
 
         resolved_calendar_id = self._normalize_calendar_id(calendar_id)
@@ -633,13 +658,14 @@ class CalendarSyncService:
                 self._set_last_error("fetch", str(_page_exc), _page_status)
                 if events:
                     logger.warning(
-                        "fetch_sync_events: HttpError %s on page %s; returning %d already-fetched events",
+                        "fetch_sync_events: HttpError %s on page %s after %d event(s); "
+                        "discarding the incomplete result",
                         _page_status,
                         page_token,
                         len(events),
                     )
                     socket.setdefaulttimeout(old_timeout)
-                    return events, None, False
+                    return None, None, False
                 socket.setdefaulttimeout(old_timeout)
                 raise
 
@@ -647,13 +673,14 @@ class CalendarSyncService:
                 self._set_last_error("fetch", str(_page_exc2))
                 if events:
                     logger.warning(
-                        "fetch_sync_events: Exception on page %s; returning %d already-fetched events: %s",
+                        "fetch_sync_events: Exception on page %s after %d event(s); "
+                        "discarding the incomplete result: %s",
                         page_token,
                         len(events),
                         _page_exc2,
                     )
                     socket.setdefaulttimeout(old_timeout)
-                    return events, None, False
+                    return None, None, False
                 socket.setdefaulttimeout(old_timeout)
                 raise
 
@@ -765,15 +792,13 @@ class CalendarSyncService:
             self._set_last_error("calendar_list", str(exc), status)
             if calendars:
                 logger.warning(
-                    "GCal calendar list fetch failed mid-page (status=%s); returning %d already-fetched calendars: %s",
+                    "GCal calendar list fetch failed mid-page (status=%s) after %d calendar(s); "
+                    "discarding the incomplete result: %s",
                     status,
                     len(calendars),
                     exc,
                 )
-                calendars.sort(
-                    key=lambda item: (not item.get("primary"), (item.get("summary") or "").lower())
-                )
-                return calendars
+                return []
 
             logger.warning("GCal calendar list fetch failed: %s", exc)
             return []
@@ -1043,6 +1068,7 @@ class CalendarSyncService:
         calendar_id: str | None = None,
         completed: bool = False,
         hide_completed: bool = False,
+        expected_remote_updated_at: str | None = None,
     ) -> bool:
         if not self.is_authenticated or not self.service or not event_id:
             return False
@@ -1095,6 +1121,17 @@ class CalendarSyncService:
 
             def _do_update():
                 ev = self.service.events().get(calendarId=calendar_id, eventId=event_id).execute()
+                current_updated_at = str(ev.get("updated") or "").strip()
+                expected_updated_at = str(expected_remote_updated_at or "").strip()
+                if (
+                    expected_updated_at
+                    and current_updated_at
+                    and current_updated_at != expected_updated_at
+                ):
+                    return {
+                        "_dark_calendar_conflict": True,
+                        "updated": current_updated_at,
+                    }
                 ev["summary"] = summary
                 ev["description"] = description
                 if location:
@@ -1123,22 +1160,35 @@ class CalendarSyncService:
                     ev.pop("transparency", None)
                     if ev.get("status") == "cancelled":
                         ev["status"] = "confirmed"
-                return (
-                    self.service.events()
-                    .update(
-                        calendarId=calendar_id,
-                        eventId=event_id,
-                        body=ev,
-                    )
-                    .execute()
+                update_request = self.service.events().update(
+                    calendarId=calendar_id,
+                    eventId=event_id,
+                    body=ev,
                 )
+                etag = str(ev.get("etag") or "").strip()
+                if etag and hasattr(update_request, "headers"):
+                    update_request.headers["If-Match"] = etag
+                return update_request.execute()
 
-            self._execute_request(_do_update)
+            update_result = self._execute_request(_do_update)
+            if isinstance(update_result, dict) and update_result.get("_dark_calendar_conflict"):
+                self._set_last_error(
+                    "conflict",
+                    "Remote event changed after pull; local update was not applied",
+                    412,
+                )
+                return False
             return True
 
         except HttpError as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
-            self._set_last_error("not_found" if status == 404 else "update", str(exc), status)
+            if status == 404:
+                error_kind = "not_found"
+            elif status == 412:
+                error_kind = "conflict"
+            else:
+                error_kind = "update"
+            self._set_last_error(error_kind, str(exc), status)
             if hasattr(exc, "content"):
                 print(
                     f"GCal Update Error (HttpError): {exc.content.decode('utf-8', errors='replace')}"

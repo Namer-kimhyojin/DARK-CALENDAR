@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+from datetime import datetime, timedelta
 import sqlite3
 from types import SimpleNamespace
 from unittest import TestCase
@@ -43,12 +45,16 @@ class FakeSyncService:
 
         self.update_calendar_ids = []
 
+        self.update_kwargs = []
+
     def update_event(self, *args, **kwargs):
         self.update_calls += 1
 
         calendar_id = kwargs.get("calendar_id")
 
         self.update_calendar_ids.append(calendar_id)
+
+        self.update_kwargs.append(dict(kwargs))
 
         if self.update_results_by_calendar:
             result = bool(self.update_results_by_calendar.get(calendar_id, False))
@@ -90,6 +96,109 @@ class FakeSyncService:
 
 
 class GCalSyncHelperTests(TestCase):
+    def test_auto_heal_orphan_scan_throttle_uses_last_run_timestamp(self):
+        class FakeSettings:
+            def __init__(self):
+                self.data = {}
+
+            def value(self, key, default=None, type=None):
+                value = self.data.get(key, default)
+                if type is not None and value is not None:
+                    return type(value)
+                return value
+
+            def setValue(self, key, value):
+                self.data[key] = value
+
+        app = SimpleNamespace(settings=FakeSettings())
+        key = engine._auto_heal_orphans_last_run_key()
+
+        self.assertTrue(engine._should_run_auto_heal_orphans(app))
+
+        engine._mark_auto_heal_orphans_run(app)
+        self.assertIn(key, app.settings.data)
+        self.assertFalse(engine._should_run_auto_heal_orphans(app))
+        self.assertTrue(engine._should_run_auto_heal_orphans(app, force=True))
+
+        app.settings.data[key] = (
+            datetime.now() - timedelta(hours=engine._AUTO_HEAL_ORPHANS_INTERVAL_HOURS + 1)
+        ).isoformat(timespec="seconds")
+        self.assertTrue(engine._should_run_auto_heal_orphans(app))
+
+    def test_incremental_backfill_probe_is_marked_only_after_success(self):
+        class FakeSettings:
+            def __init__(self):
+                self.data = {}
+
+            def value(self, key, default=None, type=None):
+                value = self.data.get(key, default)
+                if type is not None and value is not None:
+                    return type(value)
+                return value
+
+            def setValue(self, key, value):
+                self.data[key] = value
+
+        app = SimpleNamespace(settings=FakeSettings())
+
+        self.assertTrue(engine._should_run_incremental_backfill_probe(app, "primary"))
+        self.assertTrue(engine._should_run_incremental_backfill_probe(app, "primary"))
+
+        engine._mark_incremental_backfill_probe_run(app, "primary")
+
+        self.assertFalse(engine._should_run_incremental_backfill_probe(app, "primary"))
+
+    def test_sync_skips_orphan_auto_heal_scan_inside_throttle_window(self):
+        class FakeSettings:
+            def __init__(self):
+                self.data = {
+                    "gcal_enabled": "true",
+                    "gcal_calendar_id": "primary",
+                    "gcal_timezone": "Asia/Seoul",
+                    "gcal_sync_token::primary": "old-token",
+                    "gcal_sync_token_fails::primary": 0,
+                    "gcal_bound_calendar_id": "primary",
+                    engine._auto_heal_orphans_last_run_key(): datetime.now().isoformat(
+                        timespec="seconds"
+                    ),
+                }
+
+            def value(self, key, default=None, type=None):
+                value = self.data.get(key, default)
+                if type is not None and value is not None:
+                    return type(value)
+                return value
+
+            def setValue(self, key, value):
+                self.data[key] = value
+
+        class FakeDate:
+            def toString(self, fmt):
+                return "2026-03-14"
+
+        app = SimpleNamespace(
+            settings=FakeSettings(),
+            current_date=FakeDate(),
+            gcal_sync=FakeSyncService(update_result=True),
+            update_sync_status=lambda: None,
+        )
+
+        with (
+            patch.object(engine, "_process_google_delete_queue", return_value=(0, 0)),
+            patch.object(engine, "_push_local_changes_to_google", return_value=(0, 0, 0)),
+            patch.object(engine, "_active_sync_calendar_ids", return_value=["primary"]),
+            patch.object(engine, "_should_refresh_calendar_list", return_value=False),
+            patch.object(engine.gcal_db_adapter, "cleanup_duplicate_gcal_rows", return_value=0),
+            patch.object(engine.gcal_db_adapter, "get_all_gcal_tasks_map", return_value={}),
+            patch.object(engine, "auto_heal_google_orphans") as heal_mock,
+        ):
+            ok = engine.sync_google_calendar(app, silent=True)
+
+        self.assertTrue(ok)
+        heal_mock.assert_not_called()
+        self.assertFalse(app._last_gcal_sync_stats["orphan_auto_heal_ran"])
+        self.assertTrue(app._last_gcal_sync_stats["orphan_auto_heal_skipped"])
+
     def test_transient_update_failure_does_not_create_fallback(self):
         app = SimpleNamespace(
             settings=SimpleNamespace(gcal_enabled=True),
@@ -109,13 +218,22 @@ class GCalSyncHelperTests(TestCase):
         with patch(
             "calendar_app.infrastructure.google_sync.helpers._persist_gcal_event_id"
         ) as persist_mock:
-            result = gcal_sync_helpers.sync_task_to_google(app, task_data, create_if_missing=True)
+            result = gcal_sync_helpers.sync_task_to_google(
+                app,
+                task_data,
+                create_if_missing=True,
+                expected_remote_updated_at="2026-03-04T00:00:00Z",
+            )
 
         self.assertEqual(result.event_id, "existing-id")
         self.assertFalse(result.success)
         self.assertEqual(result.error_kind, "update")
         self.assertEqual(app.gcal_sync.update_calls, 1)
         self.assertEqual(app.gcal_sync.create_calls, 0)
+        self.assertEqual(
+            app.gcal_sync.update_kwargs[0].get("expected_remote_updated_at"),
+            "2026-03-04T00:00:00Z",
+        )
         persist_mock.assert_not_called()
 
     def test_not_found_update_failure_creates_fallback_and_persists_id_when_source_is_explicit(
@@ -705,6 +823,104 @@ class GCalSyncHelperTests(TestCase):
         self.assertEqual(kwargs.get("gcal_calendar_id"), "primary")
         self.assertEqual(kwargs.get("conflict_kind"), "remote_overwrite")
 
+    def test_sync_pulls_before_push_and_preserves_newer_local_dirty_task(self):
+        class FakeSettings:
+            def __init__(self):
+                self.data = {
+                    "gcal_enabled": "true",
+                    "gcal_calendar_id": "primary",
+                    "gcal_timezone": "Asia/Seoul",
+                    "gcal_sync_token::primary": "old-token",
+                    "gcal_sync_token_fails::primary": 0,
+                    "gcal_bound_calendar_id": "primary",
+                }
+
+            def value(self, key, default=None, type=None):
+                value = self.data.get(key, default)
+                if type is not None and value is not None:
+                    return type(value)
+                return value
+
+            def setValue(self, key, value):
+                self.data[key] = value
+
+        class FakeDate:
+            def toString(self, fmt):
+                return "2026-03-14"
+
+        class FakeEvent:
+            id = "evt-1"
+            summary = "Remote Old"
+            description = ""
+            start_time = "2026-03-14T09:00:00+09:00"
+            end_time = "2026-03-14T10:00:00+09:00"
+            location = ""
+            status = "confirmed"
+            color_id = None
+            updated_time = "2026-03-13T00:00:00Z"
+
+        app = SimpleNamespace(
+            settings=FakeSettings(),
+            current_date=FakeDate(),
+            gcal_sync=FakeSyncService(update_result=True),
+            update_sync_status=lambda: None,
+        )
+        app.gcal_sync.fetch_sync_events = lambda sync_token, calendar_id=None: (
+            [FakeEvent()],
+            "next-token",
+            False,
+        )
+        local_task = {
+            "id": 7,
+            "name": "Local New",
+            "deadline": "2026-03-14 09:00:00",
+            "end_date": "2026-03-14 10:00:00",
+            "description": "",
+            "location": "",
+            "all_day": 0,
+            "bg_color": None,
+            "gcal_source_calendar_id": "primary",
+            "gcal_source_summary": "primary",
+            "gcal_target_calendar_id": "primary",
+            "gcal_sync_mode": "local_owned",
+            "gcal_last_synced_at": "2026-03-13T00:00:00Z",
+            "gcal_remote_updated_at": "2026-03-13T00:00:00Z",
+            "gcal_dirty": 1,
+        }
+
+        with (
+            patch.object(engine, "_process_google_delete_queue", return_value=(0, 0)),
+            patch.object(
+                engine, "_push_local_changes_to_google", return_value=(1, 0, 0)
+            ) as push_mock,
+            patch.object(engine, "_active_sync_calendar_ids", return_value=["primary"]),
+            patch.object(engine, "_should_refresh_calendar_list", return_value=False),
+            patch.object(
+                engine, "_calendar_source_summary_map", return_value={"primary": "primary"}
+            ),
+            patch.object(engine.gcal_db_adapter, "cleanup_duplicate_gcal_rows", return_value=0),
+            patch.object(
+                engine.gcal_db_adapter,
+                "get_all_gcal_tasks_map",
+                return_value={"evt-1": ("unified_task", 7)},
+            ),
+            patch.object(engine.task_repo, "get_unified_task", return_value=local_task),
+            patch.object(engine.gcal_db_adapter, "update_task_from_gcal") as update_mock,
+            patch.object(engine.task_repo, "queue_gcal_sync_conflict") as conflict_mock,
+            patch.object(engine, "auto_heal_google_orphans"),
+        ):
+            success = engine.sync_google_calendar(app, silent=True)
+
+        self.assertTrue(success)
+        update_mock.assert_not_called()
+        conflict_mock.assert_not_called()
+        push_mock.assert_called_once_with(
+            app,
+            {"primary::evt-1": "2026-03-13T00:00:00Z"},
+        )
+        self.assertEqual(app.settings.data["gcal_sync_token::primary"], "next-token")
+        self.assertEqual(app._last_gcal_sync_stats["pushed_count"], 1)
+
     def test_archive_snapshot_contains_checklist_items(self):
         task_row = {
             "id": 7,
@@ -827,6 +1043,194 @@ class GCalSyncHelperTests(TestCase):
         self.assertFalse(ok)
         self.assertEqual(svc.last_error_kind, "auth")
         self.assertIn("token_write_failed", svc.last_error_message or "")
+
+    def test_noninteractive_auth_without_token_reports_auth_required(self):
+        svc = gcal_service.CalendarSyncService()
+
+        with (
+            patch.object(gcal_service, "HAS_GOOGLE_API", True),
+            patch.object(gcal_service.os.path, "exists", return_value=False),
+        ):
+            authenticated = svc.authenticate(interactive=False)
+
+        self.assertFalse(authenticated)
+        self.assertEqual(svc.last_error_kind, "auth_required")
+        self.assertEqual(svc.last_error_status, 401)
+
+    def test_fetch_sync_events_discards_incomplete_paginated_result(self):
+        svc = gcal_service.CalendarSyncService()
+        svc.is_authenticated = True
+        svc.service = object()
+
+        first_page = {
+            "items": [{"id": "evt-1"}],
+            "nextPageToken": "page-2",
+        }
+        fake_event = SimpleNamespace(id="evt-1")
+
+        with (
+            patch.object(
+                svc,
+                "_execute_request",
+                side_effect=[first_page, RuntimeError("page 2 failed")],
+            ),
+            patch.object(svc, "_to_google_event", return_value=fake_event),
+        ):
+            events, next_token, reset_required = svc.fetch_sync_events(None)
+
+        self.assertIsNone(events)
+        self.assertIsNone(next_token)
+        self.assertFalse(reset_required)
+        self.assertEqual(svc.last_error_kind, "fetch")
+
+    def test_fetch_events_discards_incomplete_paginated_result(self):
+        svc = gcal_service.CalendarSyncService()
+        svc.is_authenticated = True
+        svc.service = object()
+        first_page = {
+            "items": [{"id": "evt-1"}],
+            "nextPageToken": "page-2",
+        }
+        fake_event = SimpleNamespace(id="evt-1")
+
+        with (
+            patch.object(
+                svc,
+                "_execute_request",
+                side_effect=[first_page, RuntimeError("page 2 failed")],
+            ),
+            patch.object(svc, "_to_google_event", return_value=fake_event),
+        ):
+            events = svc.fetch_events("2026-03-01", "2026-03-31")
+
+        self.assertIsNone(events)
+        self.assertEqual(svc.last_error_kind, "fetch")
+
+    def test_calendar_list_discards_incomplete_paginated_result(self):
+        svc = gcal_service.CalendarSyncService()
+        svc.is_authenticated = True
+        svc.service = object()
+        first_page = {
+            "items": [
+                {
+                    "id": "primary@example.com",
+                    "summary": "Primary",
+                    "accessRole": "owner",
+                    "primary": True,
+                }
+            ],
+            "nextPageToken": "page-2",
+        }
+
+        with patch.object(
+            svc,
+            "_execute_request",
+            side_effect=[first_page, RuntimeError("page 2 failed")],
+        ):
+            calendars = svc.list_accessible_calendars()
+
+        self.assertEqual(calendars, [])
+        self.assertEqual(svc.last_error_kind, "calendar_list")
+
+    def test_update_event_rejects_remote_change_after_pull(self):
+        class FakeRequest:
+            def __init__(self, result):
+                self.result = result
+                self.headers = {}
+
+            def execute(self):
+                return self.result
+
+        class FakeEvents:
+            update_called = False
+
+            def get(self, **kwargs):
+                return FakeRequest(
+                    {
+                        "id": "evt-1",
+                        "updated": "2026-03-14T01:00:00Z",
+                        "etag": '"new-etag"',
+                    }
+                )
+
+            def update(self, **kwargs):
+                self.update_called = True
+                return FakeRequest(kwargs.get("body"))
+
+        class FakeService:
+            def __init__(self):
+                self.events_resource = FakeEvents()
+
+            def events(self):
+                return self.events_resource
+
+        svc = gcal_service.CalendarSyncService(time_zone="Asia/Seoul")
+        svc.is_authenticated = True
+        svc.service = FakeService()
+
+        updated = svc.update_event(
+            "evt-1",
+            "Local edit",
+            "2026-03-14T09:00:00+09:00",
+            "2026-03-14T10:00:00+09:00",
+            expected_remote_updated_at="2026-03-14T00:00:00Z",
+        )
+
+        self.assertFalse(updated)
+        self.assertFalse(svc.service.events_resource.update_called)
+        self.assertEqual(svc.last_error_kind, "conflict")
+        self.assertEqual(svc.last_error_status, 412)
+
+    def test_update_event_uses_remote_etag_precondition(self):
+        class FakeRequest:
+            def __init__(self, result):
+                self.result = result
+                self.headers = {}
+
+            def execute(self):
+                return self.result
+
+        class FakeEvents:
+            def __init__(self):
+                self.update_request = None
+
+            def get(self, **kwargs):
+                return FakeRequest(
+                    {
+                        "id": "evt-1",
+                        "updated": "2026-03-14T00:00:00Z",
+                        "etag": '"stable-etag"',
+                    }
+                )
+
+            def update(self, **kwargs):
+                self.update_request = FakeRequest(kwargs.get("body"))
+                return self.update_request
+
+        class FakeService:
+            def __init__(self):
+                self.events_resource = FakeEvents()
+
+            def events(self):
+                return self.events_resource
+
+        svc = gcal_service.CalendarSyncService(time_zone="Asia/Seoul")
+        svc.is_authenticated = True
+        svc.service = FakeService()
+
+        updated = svc.update_event(
+            "evt-1",
+            "Local edit",
+            "2026-03-14T09:00:00+09:00",
+            "2026-03-14T10:00:00+09:00",
+            expected_remote_updated_at="2026-03-14T00:00:00Z",
+        )
+
+        self.assertTrue(updated)
+        self.assertEqual(
+            svc.service.events_resource.update_request.headers.get("If-Match"),
+            '"stable-etag"',
+        )
 
     def test_to_iso_with_tz_respects_requested_timezone_offset(self):
         iso = datetime_utils.to_iso_with_tz("2026-03-14 09:00:00", tz_offset="+00:00")
@@ -1158,7 +1562,9 @@ class GCalSyncHelperTests(TestCase):
 
         with (
             patch.object(engine, "_process_google_delete_queue", return_value=(0, 0)),
-            patch.object(engine, "_push_local_changes_to_google", return_value=(0, 0, 0)),
+            patch.object(
+                engine, "_push_local_changes_to_google", return_value=(0, 0, 0)
+            ) as push_mock,
             patch.object(engine, "_active_sync_calendar_ids", return_value=["primary"]),
             patch.object(engine, "_should_refresh_calendar_list", return_value=False),
             patch.object(engine.gcal_db_adapter, "get_all_gcal_tasks_map", return_value={}),
@@ -1169,8 +1575,9 @@ class GCalSyncHelperTests(TestCase):
         self.assertEqual(app._last_gcal_sync_outcome, engine.SYNC_OUTCOME_FAILED)
         self.assertEqual(app._last_gcal_sync_error, "fetch")
         self.assertEqual(app._last_gcal_sync_stats["pull_fetch_failures"], 1)
+        push_mock.assert_not_called()
 
-    def test_sync_forces_token_advance_after_three_apply_failure_runs(self):
+    def test_sync_forces_full_resync_after_three_apply_failure_runs(self):
         class FakeSettings:
             def __init__(self):
                 self.data = {
@@ -1261,7 +1668,7 @@ class GCalSyncHelperTests(TestCase):
             ok3 = engine.sync_google_calendar(app, silent=True)
             self.assertTrue(ok3)
 
-        self.assertEqual(app.settings.data["gcal_sync_token::primary"], "next-token")
+        self.assertEqual(app.settings.data["gcal_sync_token::primary"], "")
         self.assertEqual(app.settings.data["gcal_apply_fail_streak::primary"], 0)
 
     def test_active_sync_calendar_ids_include_visible_read_only_gcal(self):

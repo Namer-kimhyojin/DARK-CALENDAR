@@ -961,6 +961,7 @@
     "first_setup_title": "Setup Assistant",
     "guidance": {
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Please go to 'Settings > Calendar & Sync > Authenticate' and log in again.",
+      "delete_retry_exhausted": "Automatic deletion retries have reached the limit and are paused.\nCheck the last error and Google Calendar permissions, then select Retry.\nThe item remains in diagnostics and is not discarded automatically.",
       "forbidden": "📍 [STATUS] No permission to write to this specific calendar (e.g. read-only shared calendar).\n🚫 [ACTION] Sync was automatically suspended to prevent unauthorized modification attempts.\n✅ [GUIDANCE] Check your permissions on Google Calendar web or use 'Force Ignore' to stop syncing this item.",
       "generic": "📍 [DETAILS]\n{error}\n\n❓ [HOW TO FIX] Please check your internet connection and click 'Retry'.\nIf the issue persists, use 'Force Ignore' to remove it from the sync queue.",
       "not_found": "📍 [STATUS] This event was not found on Google Calendar (might have been deleted elsewhere).\n🛠 [ACTION] The app automatically restored it to Google or removed it locally to match current state.\n✅ [OUTCOME] Sync state restored. You can 'Clear Error' or 'Retry' to finalize.",
@@ -1002,6 +1003,7 @@
     "issues_resolved": "Resolved",
     "issues_retry": "Retry",
     "issues_retry_count": "retry",
+    "issues_retry_exhausted": "Retry Limit Reached",
     "issues_retry_scheduled": "Retry Scheduled",
     "issues_retry_tooltip": "Manually retry syncing this event right now.",
     "issues_retrying_msg": "Manually retrying sync for this item. Please wait (notification will appear on completion).",
@@ -1071,6 +1073,7 @@
     "treatments": {
       "auto_healing": "Auto-healing completed (recreated or synchronized).",
       "manual": "Manual retry requested or action required.",
+      "manual_retry": "Review the error and retry manually.",
       "mirrored": "Forced local update to match server data.",
       "pending_retry": "Waiting for automatic retry after a transient error.",
       "stopped": "Sync stopped due to repeated failures. Manual fix required.",

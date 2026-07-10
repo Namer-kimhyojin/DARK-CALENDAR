@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import unittest
 from unittest.mock import patch
@@ -52,6 +53,17 @@ class GCalSyncIssuesDialogTests(TemporaryDatabaseTestCase):
                 dialog.table.setCurrentCell(row_index, 0)
                 return meta
         self.fail("Conflict row not found")
+
+    def _select_delete_queue_row(self, dialog):
+        for row_index in range(dialog.table.rowCount()):
+            item = dialog.table.item(row_index, 0)
+            if item is None:
+                continue
+            meta = item.data(Qt.ItemDataRole.UserRole)
+            if meta and meta.get("type") == "delete_queue":
+                dialog.table.setCurrentCell(row_index, 0)
+                return meta
+        self.fail("Delete queue row not found")
 
     def test_load_rows_includes_conflict_queue(self):
         task_id, conflict_id = self._create_conflict()
@@ -110,6 +122,36 @@ class GCalSyncIssuesDialogTests(TemporaryDatabaseTestCase):
         self.assertIn("QFrame#DiffPanel", dialog._diff_panel.styleSheet())
         self.assertIn("color:", dialog.retry_btn.styleSheet())
         self.assertIn("color:", dialog.force_ignore_btn.styleSheet())
+
+    def test_exhausted_delete_queue_row_is_retained_and_labeled(self):
+        queued = task_repo.queue_gcal_delete(
+            "evt-delete-failed",
+            gcal_calendar_id="primary",
+        )
+        self.assertTrue(queued)
+        queue_row = next(
+            row
+            for row in task_repo.get_gcal_delete_queue()
+            if row.get("gcal_event_id") == "evt-delete-failed"
+        )
+        queue_id = queue_row["id"]
+        for _ in range(5):
+            task_repo.mark_gcal_delete_failed(queue_id, "delete_failed")
+
+        dialog = GCalSyncIssuesDialog(None)
+        self.addCleanup(dialog.close)
+        meta = self._select_delete_queue_row(dialog)
+
+        self.assertTrue(meta["retry_exhausted"])
+        self.assertEqual(meta["status"], "재시도 한도 초과")
+        self.assertIn("(5/5)", meta["error"])
+
+        dialog.retry_selected()
+        queue_row = next(
+            row for row in task_repo.get_gcal_delete_queue() if row.get("id") == queue_id
+        )
+        self.assertEqual(int(queue_row.get("retry_count") or 0), 0)
+        self.assertIsNone(queue_row.get("last_error"))
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from datetime import UTC, datetime, timedelta
 from datetime import date as _date
 import json
@@ -48,6 +49,7 @@ _GCAL_DELETE_MAX_RETRIES = 5
 _SYNC_TOKEN_FAIL_LIMIT = 3
 _INCREMENTAL_BACKFILL_LOOKBACK_DAYS = 120
 _INCREMENTAL_BACKFILL_LOOKAHEAD_DAYS = 400
+_AUTO_HEAL_ORPHANS_INTERVAL_HOURS = 24
 
 SYNC_OUTCOME_SUCCESS = "success"
 SYNC_OUTCOME_SKIPPED = "skipped"
@@ -76,6 +78,10 @@ def _incremental_backfill_probe_key(calendar_id: str) -> str:
     return f"gcal_incremental_backfill_probe::{calendar_id}"
 
 
+def _auto_heal_orphans_last_run_key() -> str:
+    return "gcal_auto_heal_orphans_last_run"
+
+
 def _should_run_incremental_backfill_probe(app, calendar_id: str) -> bool:
     settings = getattr(app, "settings", None)
     if settings is None:
@@ -83,10 +89,55 @@ def _should_run_incremental_backfill_probe(app, calendar_id: str) -> bool:
     key = _incremental_backfill_probe_key(calendar_id)
     today = datetime.now().strftime("%Y-%m-%d")
     last = str(settings.value(key, "", type=str) or "").strip()
-    if last == today:
-        return False
-    _settings_set(app, key, today)
-    return True
+    return last != today
+
+
+def _mark_incremental_backfill_probe_run(app, calendar_id: str) -> None:
+    _settings_set(
+        app,
+        _incremental_backfill_probe_key(calendar_id),
+        datetime.now().strftime("%Y-%m-%d"),
+    )
+
+
+def _parse_settings_datetime(value):
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw)
+    except ValueError:
+        pass
+    try:
+        return datetime.strptime(raw[:10], "%Y-%m-%d")
+    except ValueError:
+        return None
+
+
+def _should_run_auto_heal_orphans(app, *, force: bool = False) -> bool:
+    if force:
+        return True
+
+    settings = getattr(app, "settings", None)
+    if settings is None:
+        return True
+
+    last_run = _parse_settings_datetime(
+        settings.value(_auto_heal_orphans_last_run_key(), "", type=str)
+    )
+    if last_run is None:
+        return True
+
+    elapsed = datetime.now() - last_run
+    return elapsed >= timedelta(hours=_AUTO_HEAL_ORPHANS_INTERVAL_HOURS)
+
+
+def _mark_auto_heal_orphans_run(app) -> None:
+    _settings_set(
+        app,
+        _auto_heal_orphans_last_run_key(),
+        datetime.now().isoformat(timespec="seconds"),
+    )
 
 
 def _date_only(value):
@@ -783,12 +834,13 @@ def _refresh_calendar_list_from_google(app) -> bool:
         return False
 
 
-def _push_local_changes_to_google(app):
+def _push_local_changes_to_google(app, remote_versions=None):
     pushed = 0
     failed = 0
     auto_healed = 0
     default_target_calendar_id = _get_default_gcal_id(app)
     sync = getattr(app, "gcal_sync", None)
+    remote_versions = remote_versions or {}
     tasks = task_repo.get_google_sync_tasks()
     # NEW-F01: tasks=None 諛⑹뼱 (DB ?ㅻ쪟 ??
     if tasks is None:
@@ -836,7 +888,9 @@ def _push_local_changes_to_google(app):
         if not _has_id and _cal_id:
             batch_create_eligible.append(_t)
         elif _has_id and _cal_id:
-            batch_update_eligible.append(_t)
+            # Updates use the sequential GET + ETag path so a remote edit that
+            # lands after pull cannot be overwritten by an unconditional batch patch.
+            remaining_tasks.append(_t)
         else:
             remaining_tasks.append(_t)
 
@@ -1043,12 +1097,20 @@ def _push_local_changes_to_google(app):
                 )
                 continue
             before_id = task.get("gcal_event_id")
+            event_key = gcal_db_adapter.make_gcal_event_lookup_key(
+                target_calendar_id,
+                before_id,
+            )
+            expected_remote_updated_at = remote_versions.get(event_key) or task.get(
+                "gcal_remote_updated_at"
+            )
             result = sync_task_to_google(
                 app,
                 task,
                 create_if_missing=True,
                 commit=True,
                 target_calendar_id=target_calendar_id,
+                expected_remote_updated_at=expected_remote_updated_at,
             )
             if not result.success:
                 failed += 1
@@ -1242,29 +1304,14 @@ def _process_google_delete_queue(app):
         if conn:
             conn.commit()
 
-    # NEW-A04: max_retry zombie cleanup
-    try:
-        zombie_rows = task_repo.get_gcal_delete_queue_zombies(
-            max_retry_count=_GCAL_DELETE_MAX_RETRIES, min_age_days=7
-        )
-        if zombie_rows and conn:
-            for zrow in zombie_rows:
-                logger.warning(
-                    "NEW-A04: Removing zombie delete-queue entry id=%s (event=%s, retries=%s, age>7d)",
-                    zrow.get("id"),
-                    zrow.get("gcal_event_id"),
-                    zrow.get("retry_count"),
-                )
-                task_repo.mark_gcal_delete_done(zrow.get("id"), commit=True)
-            conn.commit()
-    except Exception as _zombie_exc:
-        logger.debug("NEW-A04: Zombie cleanup skipped or failed: %s", _zombie_exc)
+    # Rows that reach the retry limit intentionally remain in the queue so the
+    # sync issues dialog can expose them for diagnosis and manual retry.
 
     return deleted, failed
 
 
 def sync_google_calendar(app, silent=False):
-    """Bi-directional sync with local push followed by Google pull."""
+    """Bi-directional sync with remote conflict detection before local push."""
     try:
         from calendar_app.infrastructure.google_sync.service import CalendarSyncService
 
@@ -1288,6 +1335,8 @@ def sync_google_calendar(app, silent=False):
             "pull_apply_failures": 0,
             "pull_fetch_failures": 0,
             "auto_healed": 0,
+            "orphan_auto_heal_ran": False,
+            "orphan_auto_heal_skipped": False,
         }
 
         if hasattr(app, "update_sync_status"):
@@ -1335,14 +1384,9 @@ def sync_google_calendar(app, silent=False):
         elif deleted_count:
             logger.info("GCal delete queue removed %d Google events", deleted_count)
 
-        pushed_count, push_failures, auto_healed = _push_local_changes_to_google(app)
-        app._last_gcal_sync_stats["pushed_count"] = pushed_count
-        app._last_gcal_sync_stats["push_failures"] = push_failures
-        app._last_gcal_sync_stats["auto_healed"] = auto_healed
-        if push_failures:
-            logger.warning("GCal local push completed with %d failures", push_failures)
-        elif pushed_count:
-            logger.info("GCal local push created %d new Google events", pushed_count)
+        pushed_count = 0
+        push_failures = 0
+        auto_healed = 0
 
         # 罹섎┛??紐⑸줉 ?먮룞 媛깆떊 (1?쒓컙留덈떎)
         if _should_refresh_calendar_list(app):
@@ -1362,6 +1406,7 @@ def sync_google_calendar(app, silent=False):
         app._last_gcal_sync_stats["pull_calendar_count"] = len(sync_calendar_ids)
         changed_dates = set()
         changed_any = False
+        remote_versions = {}
         pull_changes = 0
         pull_apply_failures = 0
         pull_fetch_failures = 0
@@ -1488,11 +1533,8 @@ def sync_google_calendar(app, silent=False):
             )
             force_probe = not _has_local
 
-            if (
-                not full_sync
-                and events is not None
-                and (_should_run_incremental_backfill_probe(app, sync_calendar_id) or force_probe)
-            ):
+            probe_due = _should_run_incremental_backfill_probe(app, sync_calendar_id)
+            if not full_sync and events is not None and (probe_due or force_probe):
                 probe_start = (
                     datetime.now() - timedelta(days=_INCREMENTAL_BACKFILL_LOOKBACK_DAYS)
                 ).strftime("%Y-%m-%d")
@@ -1504,6 +1546,8 @@ def sync_google_calendar(app, silent=False):
                     probe_end,
                     calendar_id=sync_calendar_id,
                 )
+                if probe_events is not None:
+                    _mark_incremental_backfill_probe_run(app, sync_calendar_id)
                 if probe_events:
                     existing_event_keys = {
                         gcal_db_adapter.make_gcal_event_lookup_key(
@@ -1627,6 +1671,8 @@ def sync_google_calendar(app, silent=False):
                     location = (event.location or "").strip()
                     bg_color = color_id_to_hex(event.color_id, getattr(app, "gcal_sync", None))
                     remote_updated_at = getattr(event, "updated_time", None)
+                    if remote_updated_at:
+                        remote_versions[event_key] = remote_updated_at
                     source_calendar_summary = source_summary_map.get(
                         source_calendar_id, source_calendar_id
                     )
@@ -1649,9 +1695,11 @@ def sync_google_calendar(app, silent=False):
                         if table == "unified_task":
                             local_task = task_repo.get_unified_task(local_id)
                             if local_task:
-                                if int(
-                                    local_task.get("gcal_dirty") or 0
-                                ) == 1 and _remote_is_newer_than_local_base(local_task, event):
+                                local_dirty = int(local_task.get("gcal_dirty") or 0) == 1
+                                remote_newer = local_dirty and _remote_is_newer_than_local_base(
+                                    local_task, event
+                                )
+                                if remote_newer:
                                     try:
                                         task_repo.queue_gcal_sync_conflict(
                                             local_id,
@@ -1712,6 +1760,14 @@ def sync_google_calendar(app, silent=False):
                                     and (local_task.get("gcal_remote_updated_at") or None)
                                     == remote_updated_at
                                 )
+                                if local_dirty and not remote_newer and not same_payload:
+                                    logger.info(
+                                        "Preserving local dirty task %s during pull; remote event %s "
+                                        "has not changed since the last sync",
+                                        local_id,
+                                        event.id,
+                                    )
+                                    continue
                                 if same_payload:
                                     needs_clear = int(
                                         local_task.get("gcal_dirty") or 0
@@ -1965,13 +2021,13 @@ def sync_google_calendar(app, silent=False):
                 _settings_set(app, apply_fail_streak_key, apply_fail_streak)
                 if apply_fail_streak >= force_advance_limit:
                     logger.error(
-                        "Forcing sync token advance for calendar %s after %d apply-failure runs "
-                        "(failures this run: %d)",
+                        "Clearing sync token for calendar %s after %d apply-failure runs "
+                        "to force a safe full resync (failures this run: %d)",
                         sync_calendar_id,
                         apply_fail_streak,
                         calendar_apply_failures,
                     )
-                    _settings_set(app, token_key, next_sync_token)
+                    _settings_set(app, token_key, "")
                     _settings_set(app, apply_fail_streak_key, 0)
                 else:
                     logger.warning(
@@ -1995,6 +2051,24 @@ def sync_google_calendar(app, silent=False):
                 raise Exception("Google Calendar fetch failed for one or more calendars.")
             return False
 
+        if pull_apply_failures:
+            logger.warning(
+                "Skipped local Google push because pull apply had %d failure(s); "
+                "the next cycle will revalidate remote state first",
+                pull_apply_failures,
+            )
+        else:
+            pushed_count, push_failures, auto_healed = _push_local_changes_to_google(
+                app, remote_versions
+            )
+            app._last_gcal_sync_stats["pushed_count"] = pushed_count
+            app._last_gcal_sync_stats["push_failures"] = push_failures
+            app._last_gcal_sync_stats["auto_healed"] = auto_healed
+            if push_failures:
+                logger.warning("GCal local push completed with %d failures", push_failures)
+            elif pushed_count:
+                logger.info("GCal local push created %d new Google events", pushed_count)
+
         _settings_set(app, _bound_calendar_key(), cal_id)
         app._last_gcal_sync_stats["pull_changes"] = pull_changes
         app._last_gcal_sync_stats["pull_apply_failures"] = pull_apply_failures
@@ -2009,8 +2083,20 @@ def sync_google_calendar(app, silent=False):
                 app.mark_panel_dirty(left=refresh_left, center=True)
 
         # 자동 고아 자가 치유(Auto-Healing) 기동
+        force_orphan_auto_heal = bool(
+            binding_changed or deleted_count or pushed_count or pull_changes
+        )
         try:
-            auto_heal_google_orphans(app, lookback_days=30)
+            if _should_run_auto_heal_orphans(app, force=force_orphan_auto_heal):
+                auto_heal_google_orphans(app, lookback_days=30)
+                _mark_auto_heal_orphans_run(app)
+                app._last_gcal_sync_stats["orphan_auto_heal_ran"] = True
+            else:
+                app._last_gcal_sync_stats["orphan_auto_heal_skipped"] = True
+                logger.debug(
+                    "Skipped GCal orphan auto-heal scan; last run is within %d hour(s)",
+                    _AUTO_HEAL_ORPHANS_INTERVAL_HOURS,
+                )
         except Exception as _heal_exc:
             logger.exception("Failed to run auto-heal for GCal orphans: %s", _heal_exc)
 

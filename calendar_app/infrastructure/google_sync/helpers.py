@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Minimal Google Calendar sync helper compatibility module."""
 
 from __future__ import annotations
@@ -136,6 +137,7 @@ def sync_task_to_google(
     commit=True,
     target_calendar_id=None,
     recurring_scope=None,
+    expected_remote_updated_at=None,
 ):
     if not app:
         existing_id = task_data.get("gcal_event_id") if isinstance(task_data, dict) else None
@@ -295,6 +297,7 @@ def sync_task_to_google(
             calendar_id=source_calendar_id,
             completed=is_completed,
             hide_completed=hide_completed,
+            expected_remote_updated_at=expected_remote_updated_at,
         )
         if ok:
             marked = _mark_task_synced(
@@ -329,6 +332,7 @@ def sync_task_to_google(
                 calendar_id=recovery_calendar_id,
                 completed=is_completed,
                 hide_completed=hide_completed,
+                expected_remote_updated_at=expected_remote_updated_at,
             )
             if not recovered:
                 continue
@@ -391,6 +395,7 @@ def sync_task_to_google(
                         color_id,
                         all_day,
                         calendar_id=source_calendar_id,
+                        expected_remote_updated_at=expected_remote_updated_at,
                     )
                     if ok:
                         _mark_task_synced(

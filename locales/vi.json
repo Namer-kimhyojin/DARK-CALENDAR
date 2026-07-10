@@ -932,6 +932,7 @@
     "title": "Chọn Việc"
   },
   "gcal": {
+    "issues_retry_exhausted": "Retry Limit Reached",
     "auto_healed_msg": "{count} problematic event(s) were automatically fixed and synced to your calendar.",
     "auto_healed_title": "Auto Sync Fix",
     "diff": {
@@ -959,6 +960,7 @@
     "first_setup_msg": "Chào mừng đến với Dark Calendar!\nBạn có muốn thiết lập đồng bộ Google Calendar ngay bây giờ không?",
     "first_setup_title": "Setup Assistant",
     "guidance": {
+      "delete_retry_exhausted": "Automatic deletion retries have reached the limit and are paused.\nCheck the last error and Google Calendar permissions, then select Retry.\nThe item remains in diagnostics and is not discarded automatically.",
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Please go to 'Settings > Calendar & Sync > Authenticate' and log in again.",
       "forbidden": "📍 [STATUS] No permission to write to this specific calendar (e.g. read-only shared calendar).\n🚫 [ACTION] Sync was automatically suspended to prevent unauthorized modification attempts.\n✅ [GUIDANCE] Check your permissions on Google Calendar web or use 'Force Ignore' to stop syncing this item.",
       "generic": "📍 [DETAILS]\n{error}\n\n❓ [HOW TO FIX] Please check your internet connection and click 'Retry'.\nIf the issue persists, use 'Force Ignore' to remove it from the sync queue.",
@@ -1055,6 +1057,7 @@
       "warning": "Vẫn còn xung đột hoặc lỗi đồng bộ chưa được xử lý."
     },
     "treatments": {
+      "manual_retry": "Review the error and retry manually.",
       "auto_healing": "Auto-healing completed (recreated or synchronized).",
       "manual": "Manual retry requested or action required.",
       "mirrored": "Forced local update to match server data.",

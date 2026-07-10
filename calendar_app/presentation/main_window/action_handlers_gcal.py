@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Google Calendar 동기화 관련 액션 핸들러 Mixin"""
 
 import datetime
@@ -565,7 +566,11 @@ class GCalActionsMixin:
                 win.load_rows()
 
         if success:
-            if stats.get("push_failures") or stats.get("delete_failures"):
+            if (
+                stats.get("push_failures")
+                or stats.get("delete_failures")
+                or stats.get("pull_apply_failures")
+            ):
                 QMessageBox.warning(
                     self,
                     t("gcal.sync_warning", "Sync Warning"),

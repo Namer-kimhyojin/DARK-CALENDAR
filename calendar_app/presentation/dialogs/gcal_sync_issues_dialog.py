@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Dialog listing unresolved Google sync issues with detailed guidance."""
 
 import json
@@ -34,6 +35,8 @@ from calendar_app.presentation.dialogs.dialog_styles import (
 )
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
+
+_DELETE_RETRY_LIMIT = 5
 
 
 def _gcal_issue_style_bundle(tokens=None, metrics=None):
@@ -449,7 +452,9 @@ class GCalSyncIssuesDialog(QDialog):
             # Status styling
             if col == 5:
                 st = str(value)
-                if st == t("gcal.issues_manual_needed", "사용자 확인 필요"):
+                if st == t("gcal.issues_manual_needed", "사용자 확인 필요") or st == t(
+                    "gcal.issues_retry_exhausted", "재시도 한도 초과"
+                ):
                     item.setText(st)
                     item.setForeground(QColor(self._style_bundle["status_manual"]))
                 elif st == t("gcal.issues_retry_scheduled", "재시도 예정"):
@@ -567,13 +572,19 @@ class GCalSyncIssuesDialog(QDialog):
             if not row.get("last_error"):
                 continue
             retry_count = int(row.get("retry_count") or 0)
+            exhausted = retry_count >= _DELETE_RETRY_LIMIT
             raw_err = row.get("last_error")
             err_text, treatment = self._map_error_to_friendly(raw_err)
             status = (
-                t("gcal.issues_retry_scheduled", "재시도 예정")
-                if retry_count < 5
-                else t("gcal.issues_manual_needed", "사용자 확인 필요")
+                t("gcal.issues_retry_exhausted", "재시도 한도 초과")
+                if exhausted
+                else t("gcal.issues_retry_scheduled", "재시도 예정")
             )
+            if exhausted:
+                treatment = t(
+                    "gcal.treatments.manual_retry",
+                    "오류 확인 후 수동 재시도",
+                )
 
             rows.append(
                 {
@@ -582,11 +593,12 @@ class GCalSyncIssuesDialog(QDialog):
                     "issue_type": t("gcal.issues_type_delete", "삭제 대기"),
                     "name": t("gcal.issues_delete_queue", "삭제 대기 이벤트"),
                     "deadline": row.get("created_at") or "-",
-                    "error": f"{err_text} ({retry_count}/5)",
+                    "error": f"{err_text} ({retry_count}/{_DELETE_RETRY_LIMIT})",
                     "raw_error": raw_err,
                     "treatment": treatment,
                     "status": status,
                     "dirty": False,
+                    "retry_exhausted": exhausted,
                 }
             )
 
@@ -788,7 +800,14 @@ class GCalSyncIssuesDialog(QDialog):
         raw = str(meta.get("raw_error") or "").lower()
         html_content = ""
 
-        if raw == "remote_orphan":
+        if meta.get("type") == "delete_queue" and meta.get("retry_exhausted"):
+            html_content = t(
+                "gcal.guidance.delete_retry_exhausted",
+                "삭제 요청이 자동 재시도 한도에 도달해 일시 중지되었습니다. "
+                "마지막 오류와 Google 캘린더 권한을 확인한 뒤 '재시도'를 누르세요. "
+                "항목은 자동 삭제되지 않으며 진단 목록에 계속 보존됩니다.",
+            )
+        elif raw == "remote_orphan":
             html_content = t(
                 "gcal.guidance.remote_orphan",
                 "이 이벤트는 구글 캘린더에는 있지만 로컬 DB에는 매칭되는 일정이 "

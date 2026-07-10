@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from importlib import import_module
 import traceback
 
@@ -76,14 +77,19 @@ class SyncWorker(QThread):
             success = sync_google_calendar(self.app, silent=self.silent)
             if success:
                 stats = getattr(self.app, "_last_gcal_sync_stats", {}) or {}
-                if stats.get("push_failures") or stats.get("delete_failures"):
+                if (
+                    stats.get("push_failures")
+                    or stats.get("delete_failures")
+                    or stats.get("pull_apply_failures")
+                ):
                     self.result_ready.emit(
                         True,
                         _translate(
                             "gcal.worker.sync_partial",
-                            "Sync complete (partial failures: push={push}, delete={delete})",
+                            "Sync complete (partial failures: push={push}, delete={delete}, pull={pull})",
                             push=stats.get("push_failures", 0),
                             delete=stats.get("delete_failures", 0),
+                            pull=stats.get("pull_apply_failures", 0),
                         ),
                     )
                 else:
