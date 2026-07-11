@@ -11,6 +11,7 @@ a = Analysis(
     datas=[
         ('Assets', 'Assets'),
         ('locales', 'locales'),
+        ('desk_calendar_default.db', '.'),
     ] + collect_data_files('tzdata'),
     hiddenimports=[
         'calendar_app',

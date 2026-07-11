@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Build or sanitize a Windows Store payload for Dark Calendar."""
 
 from __future__ import annotations
@@ -31,14 +32,16 @@ def _resolve_dist_dir(dist_dir: str | Path | None = None) -> Path:
     return Path(dist_dir)
 
 
-def create_clean_default_db() -> Path:
+def create_clean_default_db(output_path: str | Path | None = None) -> Path:
     """Create a bundled default DB without local data or sync state."""
     print("[1/4] creating clean bundled DB")
 
-    if DEFAULT_DB_PATH.exists():
-        DEFAULT_DB_PATH.unlink()
+    target_path = Path(output_path) if output_path is not None else DEFAULT_DB_PATH
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    if target_path.exists():
+        target_path.unlink()
 
-    conn = sqlite3.connect(str(DEFAULT_DB_PATH))
+    conn = sqlite3.connect(str(target_path))
     cur = conn.cursor()
 
     cur.execute(
@@ -314,9 +317,9 @@ def create_clean_default_db() -> Path:
     conn.commit()
     conn.close()
 
-    size_kb = DEFAULT_DB_PATH.stat().st_size / 1024
-    print(f"   created: {DEFAULT_DB_PATH.name} ({size_kb:.1f} KB)")
-    return DEFAULT_DB_PATH
+    size_kb = target_path.stat().st_size / 1024
+    print(f"   created: {target_path} ({size_kb:.1f} KB)")
+    return target_path
 
 
 def clean_sensitive_files(dist_dir: str | Path | None = None) -> int:
@@ -366,28 +369,40 @@ def run_pyinstaller() -> bool:
 
 
 def copy_default_db_to_dist(dist_dir: str | Path | None = None) -> bool:
-    """Copy the clean bundled DB into a prepared payload directory."""
+    """Copy the clean DB to the path used by a frozen app at runtime."""
     target_dir = _resolve_dist_dir(dist_dir)
     print(f"[4/4] copying {DEFAULT_DB_NAME} into {target_dir}")
     if not target_dir.exists():
         print(f"   target directory does not exist: {target_dir}")
         return False
 
-    dest = target_dir / DEFAULT_DB_NAME
+    internal_dir = target_dir / "_internal"
+    dest_dir = internal_dir if internal_dir.is_dir() else target_dir
+    dest = dest_dir / DEFAULT_DB_NAME
     shutil.copy2(str(DEFAULT_DB_PATH), str(dest))
     print(f"   copied: {dest}")
+
+    stale_root_copy = target_dir / DEFAULT_DB_NAME
+    if dest_dir != target_dir and stale_root_copy.exists():
+        stale_root_copy.unlink()
+        print(f"   removed stale root copy: {stale_root_copy}")
     return True
 
 
 def prepare_store_payload(dist_dir: str | Path | None = None) -> Path:
     """Prepare a clean payload directory for Store packaging."""
     target_dir = _resolve_dist_dir(dist_dir)
-    create_clean_default_db()
     if target_dir.exists():
         clean_sensitive_files(target_dir)
-        copy_default_db_to_dist(target_dir)
+        internal_dir = target_dir / "_internal"
+        runtime_dir = internal_dir if internal_dir.is_dir() else target_dir
+        create_clean_default_db(runtime_dir / DEFAULT_DB_NAME)
+        stale_root_copy = target_dir / DEFAULT_DB_NAME
+        if runtime_dir != target_dir and stale_root_copy.exists():
+            stale_root_copy.unlink()
+            print(f"   removed stale root copy: {stale_root_copy}")
     else:
-        print(f"[payload] target directory not found yet, skipping payload copy: {target_dir}")
+        print(f"[payload] target directory not found, skipping payload preparation: {target_dir}")
     return target_dir
 
 
@@ -434,13 +449,11 @@ def main() -> int:
         show_summary(target_dir)
         return 0
 
-    create_clean_default_db()
     if not run_pyinstaller():
         print("\nBuild aborted.")
         return 1
 
-    clean_sensitive_files(target_dir)
-    copy_default_db_to_dist(target_dir)
+    prepare_store_payload(target_dir)
     show_summary(target_dir)
     return 0
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import unittest
 from unittest.mock import patch
@@ -484,6 +485,15 @@ class PanelWidgetModeUiTests(unittest.TestCase):
         self.host._panel_widget_mode_controller = controller
         panel = controller._ensure_panel()
         self.assertFalse(hasattr(panel, "quick_add"))
+
+    def test_panel_skin_selection_is_shared_and_applies_immediately(self):
+        widget = pwm._PanelWidget(self.host)
+
+        widget._set_widget_mode_skin("sunset_glow")
+
+        self.assertEqual("sunset_glow", self.host.settings.value("widget_mode_skin"))
+        self.assertEqual("light", self.host.settings.value("widget_mode_panel_theme"))
+        self.assertEqual("#e46f51", widget.theme_tokens()["accent"])
 
     def test_refresh_visible_widgets_keeps_existing_panel_position(self):
         controller = pwm.PanelWidgetModeController(self.host)

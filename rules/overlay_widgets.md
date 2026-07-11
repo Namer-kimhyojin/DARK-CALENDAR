@@ -110,3 +110,48 @@ manager.set_app_data_provider(lambda: {
     "next_event": ...,
 })
 ```
+
+## 위젯 전용 모드 스킨
+
+- 스킨 레지스트리: `presentation/widgets/widget_mode_skins.py`
+- 선택 설정: 색상 `QSettings["widget_mode_skin"]`, 배치 `QSettings["widget_mode_layout"]`
+- 색상 스킨은 `WidgetModeSkin`의 `base_theme`과 semantic token override만 정의합니다.
+- 레이아웃은 `WidgetModeLayout`의 grid 배치표, 권장 크기, 행/열 stretch, 섹션별 UI 밀도를 정의합니다.
+- 색상과 레이아웃 선택은 서로 변경하지 않습니다.
+- 스킨/레이아웃 메뉴는 레지스트리를 순회하므로 새 항목 등록 시 셸이나 컨트롤러를 수정하지 않습니다.
+- 기존 `widget_mode_panel_theme=light|dark` 설정은 클래식 라이트/다크로 자동 호환됩니다.
+- 토큰 합성 순서: 기본 토큰 → light/dark 기반 → 스킨 override → 사용자 강조색 → 투명도.
+
+```python
+from calendar_app.presentation.widgets.widget_mode_skins import (
+    WidgetModeLayout,
+    WidgetModeSkin,
+    register_widget_mode_layout,
+    register_widget_mode_skin,
+)
+
+register_widget_mode_layout(
+    WidgetModeLayout(
+        "my_layout",
+        "widget_mode.layout_my_layout",
+        "내 레이아웃",
+        placements=(
+            ("hero", 0, 0, 1, 2),
+            ("calendar", 1, 0, 1, 1),
+            ("agenda", 1, 1, 1, 1),
+            ("filters", 2, 0, 1, 2),
+        ),
+        preferred_size=(720, 520),
+    )
+)
+
+register_widget_mode_skin(
+    WidgetModeSkin(
+        "my_skin",
+        "widget_mode.skin_my_skin",
+        "내 스킨",
+        base_theme="dark",
+        token_overrides={"accent": "#65a7ff"},
+    )
+)
+```

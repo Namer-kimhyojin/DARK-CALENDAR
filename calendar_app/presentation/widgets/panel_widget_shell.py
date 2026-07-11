@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from collections.abc import Callable
 import contextlib
 
@@ -31,9 +32,9 @@ from calendar_app.presentation.widgets.panel_widget_theme import (
     _WIDGET_COLOR_FOLLOW_MAIN,
     _WIDGET_COLOR_PRESET_HEX,
     _WIDGET_COLOR_THEME_KEY,
-    _apply_panel_theme_override,
+    _apply_configured_widget_color,
+    _apply_registered_widget_mode_skin,
     _apply_widget_background_opacity,
-    _apply_widget_color_override,
     _normalize_widget_color_mode,
     _read_widget_color_mode_from_settings,
     _resolve_widget_mode_tokens,
@@ -41,6 +42,12 @@ from calendar_app.presentation.widgets.panel_widget_theme import (
     _widget_mode_launcher_stylesheet,
     _widget_mode_menu_stylesheet,
     _widget_mode_panel_stylesheet,
+)
+from calendar_app.presentation.widgets.widget_mode_skins import (
+    get_widget_mode_skin,
+    read_widget_mode_skin_id,
+    widget_mode_skins,
+    write_widget_mode_skin_id,
 )
 
 
@@ -348,16 +355,16 @@ class _FloatingWidgetBase(QWidget):
         return "widget_mode_panel_theme"
 
     def _read_panel_theme(self) -> str:
-        raw = (
-            str(self._app.settings.value(self._panel_theme_setting_key(), "light") or "light")
-            .strip()
-            .lower()
-        )
-        return raw if raw in ("light", "dark") else "light"
+        return get_widget_mode_skin(self._read_widget_mode_skin()).base_theme
 
     def _set_panel_theme(self, value: str) -> None:
-        target = value if value in ("light", "dark") else "light"
-        self._app.settings.setValue(self._panel_theme_setting_key(), target)
+        self._set_widget_mode_skin("classic_dark" if value == "dark" else "classic_light")
+
+    def _read_widget_mode_skin(self) -> str:
+        return read_widget_mode_skin_id(self._app.settings)
+
+    def _set_widget_mode_skin(self, skin_id: str) -> None:
+        write_widget_mode_skin_id(self._app.settings, skin_id)
         self._theme_cache.clear()
         self.apply_palette(self._last_scale or 1.0)
         sib = self._get_sibling_widget()
@@ -417,16 +424,15 @@ class _FloatingWidgetBase(QWidget):
         )
 
         style_menu.addSeparator()
-        theme_menu = style_menu.addMenu(t("widget_mode.style_panel_theme", "패널 테마"))
-        current_theme = self._read_panel_theme()
-        for theme_val, theme_label in (
-            ("light", t("widget_mode.theme_light", "☀ 라이트 (밝은 배경용)")),
-            ("dark", t("widget_mode.theme_dark", "🌙 다크 (어두운 배경용)")),
-        ):
-            act = theme_menu.addAction(theme_label)
+        skin_menu = style_menu.addMenu(t("widget_mode.style_color_skin", "색상 스킨"))
+        current_skin = self._read_widget_mode_skin()
+        for skin in widget_mode_skins():
+            act = skin_menu.addAction(t(skin.label_key, skin.label_default))
             act.setCheckable(True)
-            act.setChecked(current_theme == theme_val)
-            act.triggered.connect(lambda _=False, v=theme_val: self._set_panel_theme(v))
+            act.setChecked(current_skin == skin.skin_id)
+            act.triggered.connect(
+                lambda _=False, selected=skin.skin_id: self._set_widget_mode_skin(selected)
+            )
 
     def moveEvent(self, event):
         super().moveEvent(event)
@@ -522,10 +528,8 @@ class _FloatingWidgetBase(QWidget):
 
     def _menu_stylesheet(self) -> str:
         tokens = _resolve_widget_mode_tokens(app=self._app)
-        tokens = _apply_panel_theme_override(tokens, self._read_panel_theme())
-        tokens = _apply_widget_color_override(
-            tokens, self._read_widget_color_mode(), settings=self._app.settings
-        )
+        tokens = _apply_registered_widget_mode_skin(tokens, self._app.settings)
+        tokens = _apply_configured_widget_color(tokens, self._app.settings)
         return _widget_mode_menu_stylesheet(tokens)
 
     def _add_context_menu_actions(self, menu: QMenu) -> None:
@@ -593,6 +597,7 @@ class _WidgetModeLauncher(QDialog):
     def apply_palette(self, scale: float = 1.0) -> None:
         s = scale
         tokens = _resolve_widget_mode_tokens(app=self._app)
+        tokens = _apply_registered_widget_mode_skin(tokens, self._app.settings)
         if not tokens:
             return
         self.setStyleSheet(_widget_mode_launcher_stylesheet(tokens=tokens, scale=s))
@@ -613,10 +618,8 @@ def _floating_handle_restore_clicked(self) -> None:
 
 def _floating_read_theme_tokens(self) -> dict[str, str]:
     tokens = _resolve_widget_mode_tokens(app=self._app)
-    tokens = _apply_panel_theme_override(tokens, self._read_panel_theme())
-    tokens = _apply_widget_color_override(
-        tokens, self._read_widget_color_mode(), settings=self._app.settings
-    )
+    tokens = _apply_registered_widget_mode_skin(tokens, self._app.settings)
+    tokens = _apply_configured_widget_color(tokens, self._app.settings)
     return _apply_widget_background_opacity(tokens, self._get_individual_opacity())
 
 
@@ -628,16 +631,16 @@ def _floating_theme_tokens(self) -> dict[str, str]:
 
 def _floating_apply_palette(self, scale: float = 1.0) -> None:
     new_scale = max(0.75, float(scale or 1.0))
-    # Only regenerate stylesheet when scale or panel-theme changed
+    # Only regenerate stylesheet when scale or skin-related settings changed.
     scale_changed = abs(new_scale - self._last_scale) > 0.001
     self._last_scale = new_scale
     tokens = self._read_theme_tokens()
     self._theme_cache = dict(tokens)
     self._surface_radius = max(10, int(round(16 * self._last_scale)))
-    # Stylesheet cache: keyed by (scale, panel_theme, accent_override)
+    # Stylesheet cache: keyed by (scale, skin, accent override, opacity).
     cache_key = (
         int(round(new_scale * 100)),
-        self._read_panel_theme(),
+        self._read_widget_mode_skin(),
         self._read_widget_color_mode(),
         self._get_individual_opacity(),
     )

@@ -1,7 +1,13 @@
+# -*- coding: utf-8 -*-
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QWidget
 
 import calendar_app.presentation.widgets.panel_widget_style as _pws
+from calendar_app.presentation.widgets.widget_mode_skins import (
+    apply_widget_mode_skin,
+    get_widget_mode_skin,
+    read_widget_mode_skin_id,
+)
 
 _WIDGET_COLOR_THEME_KEY = "widget_mode_color_theme"
 _WIDGET_COLOR_DEFAULT = "default"
@@ -31,18 +37,8 @@ def _blend_qcolor(base: QColor, mix: QColor, ratio: float) -> QColor:
 def _build_widget_mode_theme_tokens(app: QWidget) -> dict[str, str]:
     settings = getattr(app, "settings", None) if app is not None else None
     tokens = _resolve_widget_mode_tokens(app=app)
-    raw_theme = ""
-    if settings is not None:
-        raw_theme = (
-            str(settings.value("widget_mode_panel_theme", "light") or "light").strip().lower()
-        )
-    panel_theme = raw_theme if raw_theme in {"light", "dark"} else "light"
-    tokens = _apply_panel_theme_override(tokens, panel_theme)
-    return _apply_widget_color_override(
-        tokens,
-        _read_widget_color_mode_from_settings(settings),
-        settings=settings,
-    )
+    tokens = _apply_registered_widget_mode_skin(tokens, settings)
+    return _apply_configured_widget_color(tokens, settings)
 
 
 def _normalize_widget_color_mode(raw_value: object) -> str:
@@ -284,6 +280,15 @@ def _apply_widget_color_override(
     return updated
 
 
+def _apply_configured_widget_color(tokens: dict[str, str], settings) -> dict[str, str]:
+    """Apply a user accent, or the selected skin's accent when no override exists."""
+    mode = _read_widget_color_mode_from_settings(settings)
+    if mode == _WIDGET_COLOR_DEFAULT:
+        skin = get_widget_mode_skin(read_widget_mode_skin_id(settings))
+        mode = str(skin.token_overrides.get("accent", "") or _WIDGET_COLOR_DEFAULT)
+    return _apply_widget_color_override(tokens, mode, settings=settings)
+
+
 def _apply_widget_background_opacity(
     tokens: dict[str, str], opacity_percent: int
 ) -> dict[str, str]:
@@ -354,6 +359,13 @@ def _widget_mode_launcher_stylesheet(
 
 def _apply_panel_theme_override(tokens: dict[str, str], theme: str) -> dict[str, str]:
     return _pws.apply_dark_theme(tokens) if theme == "dark" else tokens
+
+
+def _apply_registered_widget_mode_skin(tokens: dict[str, str], settings) -> dict[str, str]:
+    skin_id = read_widget_mode_skin_id(settings)
+    skin = get_widget_mode_skin(skin_id)
+    themed = _apply_panel_theme_override(tokens, skin.base_theme)
+    return apply_widget_mode_skin(themed, skin.skin_id)
 
 
 def _widget_mode_panel_stylesheet(

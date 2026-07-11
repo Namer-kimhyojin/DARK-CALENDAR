@@ -14,7 +14,6 @@ a = Analysis(
         ('AppxManifest.xml', '.'),
         ('app_icon.ico', '.'),
         ('app_icon.png', '.'),
-        ('desk_calendar_default.db', '.'),
     ] + collect_data_files('tzdata'),
     hiddenimports=[
         'calendar_app',

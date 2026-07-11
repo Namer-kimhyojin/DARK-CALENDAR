@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from PyQt6.QtCore import QDate, QSize, Qt
 from PyQt6.QtWidgets import (
     QFrame,
@@ -246,7 +247,7 @@ def setup_top_bar(self, _size, _theme, _ta):
         }}
     """
     )
-    self.widget_mode_btn.clicked.connect(self.open_all_widget_panels)
+    self.widget_mode_btn.clicked.connect(self.toggle_widget_mode_panel)
     top_bar.addWidget(self.widget_mode_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
     self.top_bar_frame = QFrame()

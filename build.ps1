@@ -10,11 +10,14 @@ param(
     [ValidateSet("", "Stable", "Beta", "Dev")]
     [string]$Channel     = "",
 
+    [switch]$ResetState,
     [switch]$SkipResetState,
     [switch]$PurgeLocalData,
     [switch]$DryRunReset,
     [switch]$SkipMsix,
-    [switch]$AllowCrossArch
+    [switch]$AllowCrossArch,
+    [switch]$Sign,
+    [string]$CertThumbprint = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -64,11 +67,17 @@ if (-not [string]::IsNullOrWhiteSpace($Version))     { $buildArgs += @("-Version
 if (-not [string]::IsNullOrWhiteSpace($ReleaseDate)) { $buildArgs += @("-ReleaseDate", $ReleaseDate) }
 if (-not [string]::IsNullOrWhiteSpace($Channel))     { $buildArgs += @("-Channel",     $Channel) }
 
-if (-not $SkipResetState) { $buildArgs += "-ResetState" }
+$shouldResetState = ($ResetState -or $PurgeLocalData -or $DryRunReset) -and -not $SkipResetState
+if ($shouldResetState)    { $buildArgs += "-ResetState" }
 if ($PurgeLocalData)      { $buildArgs += "-PurgeLocalData" }
 if ($DryRunReset)         { $buildArgs += "-DryRunReset" }
 if ($SkipMsix)            { $buildArgs += "-SkipMsix" }
 if ($AllowCrossArch)      { $buildArgs += "-AllowCrossArch" }
+$shouldSign = $Sign -or -not [string]::IsNullOrWhiteSpace($CertThumbprint)
+if ($shouldSign)          { $buildArgs += "-Sign" }
+if (-not [string]::IsNullOrWhiteSpace($CertThumbprint)) {
+    $buildArgs += @("-CertThumbprint", $CertThumbprint)
+}
 
 & powershell -NoProfile -ExecutionPolicy Bypass -File $buildScript @buildArgs
 if ($LASTEXITCODE -ne 0) { throw "build-core.ps1 failed." }

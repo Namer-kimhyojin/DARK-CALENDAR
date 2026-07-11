@@ -1,9 +1,13 @@
+# -*- coding: utf-8 -*-
 from PyQt6.QtCore import QDate, QLocale, QPoint, QSize, Qt, QTime, QTimer, pyqtSignal
+from PyQt6.QtGui import QContextMenuEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QScrollArea,
     QToolButton,
     QVBoxLayout,
@@ -12,15 +16,26 @@ from PyQt6.QtWidgets import (
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.widgets.panel_widget_mode import (
-    _apply_panel_theme_override,
-    _apply_widget_color_override,
     _format_compact_date_with_weekday,
     _format_widget_datetime_label,
     _normalize_status,
     _parse_qdate,
     _parse_quick_add_text,
-    _read_widget_color_mode_from_settings,
     _resolve_widget_mode_tokens,
+)
+from calendar_app.presentation.widgets.panel_widget_theme import (
+    _apply_configured_widget_color,
+    _apply_registered_widget_mode_skin,
+    _widget_mode_menu_stylesheet,
+)
+from calendar_app.presentation.widgets.widget_mode_skins import (
+    get_widget_mode_layout,
+    read_widget_mode_layout_id,
+    read_widget_mode_skin_id,
+    widget_mode_layouts,
+    widget_mode_skins,
+    write_widget_mode_layout_id,
+    write_widget_mode_skin_id,
 )
 
 
@@ -31,18 +46,8 @@ def _safe_text(value) -> str:
 def _widget_theme_tokens(host: QWidget) -> dict[str, str]:
     tokens = _resolve_widget_mode_tokens(app=host)
     settings = getattr(host, "settings", None)
-    raw_theme = ""
-    if settings is not None:
-        raw_theme = (
-            str(settings.value("widget_mode_panel_theme", "light") or "light").strip().lower()
-        )
-    theme = raw_theme if raw_theme in {"light", "dark"} else "light"
-    tokens = _apply_panel_theme_override(tokens, theme)
-    return _apply_widget_color_override(
-        tokens,
-        _read_widget_color_mode_from_settings(settings),
-        settings=settings,
-    )
+    tokens = _apply_registered_widget_mode_skin(tokens, settings)
+    return _apply_configured_widget_color(tokens, settings)
 
 
 def _relative_widget_day(date: QDate) -> str:
@@ -80,6 +85,40 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             );
             border: 1px solid {tk.get("header_shell_border", tk.get("panel_border_soft", "rgba(255,255,255,16)"))};
             border-radius: 22px;
+        }}
+        QFrame#unified_filter_section,
+        QFrame#unified_agenda_section {{
+            background: transparent;
+            border: none;
+        }}
+        QFrame#unified_container[widgetLayout="dashboard"] QFrame#unified_agenda_section,
+        QFrame#unified_container[widgetLayout="magazine"] QFrame#unified_agenda_section {{
+            background: {tk.get("card_bg", tk["section_bg"])};
+            border: 1px solid {tk.get("card_border", tk.get("panel_border_soft", tk["panel_border"]))};
+            border-radius: 20px;
+        }}
+        QFrame#unified_container[widgetLayout="agenda_first"] QFrame#unified_agenda_section,
+        QFrame#unified_container[widgetLayout="minimal"] QFrame#unified_agenda_section {{
+            background: {tk.get("section_bg", tk["surface_bg"])};
+            border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", tk["panel_border"]))};
+            border-radius: 18px;
+        }}
+        QFrame#unified_container[widgetLayout="dashboard"] QWidget#unified_calendar_section,
+        QFrame#unified_container[widgetLayout="magazine"] QWidget#unified_calendar_section,
+        QFrame#unified_container[widgetLayout="agenda_first"] QWidget#unified_calendar_section {{
+            background: {tk.get("surface_alt", tk["section_bg"])};
+            border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", tk["panel_border"]))};
+            border-radius: 18px;
+        }}
+        QFrame#unified_container[widgetLayout="dashboard"] QFrame#unified_filter_section,
+        QFrame#unified_container[widgetLayout="magazine"] QFrame#unified_filter_section,
+        QFrame#unified_container[widgetLayout="minimal"] QFrame#unified_filter_section {{
+            background: {tk.get("hero_bg", tk["section_bg"])};
+            border: 1px solid {tk.get("hero_border", tk.get("panel_border_soft", tk["panel_border"]))};
+            border-radius: 16px;
+        }}
+        QFrame#unified_container[widgetLayout="minimal"] QFrame#unified_hero {{
+            border-radius: 18px;
         }}
         QLabel#unified_eyebrow {{
             color: {tk.get("text_faint", tk["text_secondary"])};
@@ -228,7 +267,9 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             font-weight: 700;
             background-clip: padding;
         }}
-        QScrollArea {{
+        QScrollArea#unified_scroll,
+        QWidget#unified_scroll_viewport,
+        QWidget#unified_scroll_content {{
             background: transparent;
             border: none;
         }}
@@ -305,13 +346,14 @@ class CompactCalendarGrid(QWidget):
         self._tokens: dict[str, str] = {}
         self._buttons = []
         self._last_render_state = None
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(6)
+        self.setObjectName("unified_calendar_section")
+        self._root_layout = QVBoxLayout(self)
+        self._root_layout.setContentsMargins(0, 0, 0, 0)
+        self._root_layout.setSpacing(6)
 
-        row = QHBoxLayout()
-        row.setSpacing(6)
-        root.addLayout(row)
+        self._row_layout = QHBoxLayout()
+        self._row_layout.setSpacing(6)
+        self._root_layout.addLayout(self._row_layout)
 
         for index in range(7):
             button = QToolButton(self)
@@ -319,11 +361,24 @@ class CompactCalendarGrid(QWidget):
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.setFixedSize(42, 54)
             button.clicked.connect(lambda _checked=False, idx=index: self._emit_clicked(idx))
-            row.addWidget(button)
+            self._row_layout.addWidget(button)
             self._buttons.append(button)
 
         self._dates = []
         self.update_grid()
+
+    def apply_layout_metrics(
+        self,
+        *,
+        cell_size: tuple[int, int],
+        spacing: int,
+        margins: tuple[int, int, int, int],
+    ) -> None:
+        width, height = cell_size
+        for button in self._buttons:
+            button.setFixedSize(max(30, width), max(38, height))
+        self._row_layout.setSpacing(max(0, spacing))
+        self._root_layout.setContentsMargins(*margins)
 
     def set_theme_tokens(self, tokens: dict[str, str]) -> None:
         normalized = dict(tokens or {})
@@ -429,6 +484,7 @@ class UnifiedWidgetWindow(QWidget):
         self._last_items = []
         self._last_today = QDate.currentDate()
         self._style_signature = None
+        self._active_layout_id = ""
         self._active_filter = "all"
         self._filter_buttons: dict[str, QToolButton] = {}
 
@@ -441,23 +497,21 @@ class UnifiedWidgetWindow(QWidget):
 
         self.container = QFrame(self)
         self.container.setObjectName("unified_container")
-        container_layout = QVBoxLayout(self.container)
-        container_layout.setContentsMargins(18, 18, 18, 18)
-        container_layout.setSpacing(14)
+        self.container_layout = QGridLayout(self.container)
 
         self.hero = QFrame(self.container)
         self.hero.setObjectName("unified_hero")
-        hero_layout = QVBoxLayout(self.hero)
-        hero_layout.setContentsMargins(16, 16, 16, 16)
-        hero_layout.setSpacing(12)
+        self.hero_layout = QVBoxLayout(self.hero)
+        self.hero_layout.setContentsMargins(16, 16, 16, 16)
+        self.hero_layout.setSpacing(12)
 
         self.eyebrow_label = QLabel(t("widget_mode.hero_eyebrow", "FOCUS WIDGET"), self.hero)
         self.eyebrow_label.setObjectName("unified_eyebrow")
-        hero_layout.addWidget(self.eyebrow_label)
+        self.hero_layout.addWidget(self.eyebrow_label)
 
         header = QHBoxLayout()
         header.setSpacing(10)
-        hero_layout.addLayout(header)
+        self.hero_layout.addLayout(header)
 
         self.clock_label = QLabel(QTime.currentTime().toString("HH:mm"), self.hero)
         self.clock_label.setObjectName("unified_clock")
@@ -492,7 +546,7 @@ class UnifiedWidgetWindow(QWidget):
 
         info_row = QHBoxLayout()
         info_row.setSpacing(6)
-        hero_layout.addLayout(info_row)
+        self.hero_layout.addLayout(info_row)
 
         self.status_chip = QLabel("", self.hero)
         self.status_chip.setObjectName("unified_chip_accent")
@@ -506,15 +560,14 @@ class UnifiedWidgetWindow(QWidget):
         self.hint_label.setObjectName("unified_hint")
         info_row.addWidget(self.hint_label, 1)
 
-        container_layout.addWidget(self.hero)
-
         self.cal_grid = CompactCalendarGrid(self)
         self.cal_grid.dateClicked.connect(self.controller.set_target_date)
-        container_layout.addWidget(self.cal_grid)
 
-        self.filter_row = QHBoxLayout()
+        self.filter_section = QFrame(self.container)
+        self.filter_section.setObjectName("unified_filter_section")
+        self.filter_row = QHBoxLayout(self.filter_section)
+        self.filter_row.setContentsMargins(0, 0, 0, 0)
         self.filter_row.setSpacing(6)
-        container_layout.addLayout(self.filter_row)
 
         for mode, label in (
             ("all", t("widget_mode.filter_all", "All")),
@@ -531,23 +584,93 @@ class UnifiedWidgetWindow(QWidget):
             self._filter_buttons[mode] = btn
         self.filter_row.addStretch(1)
 
-        self.agenda_header = QLabel(t("widget_mode.focus_list", "FOCUS LIST"), self.container)
+        self.agenda_section = QFrame(self.container)
+        self.agenda_section.setObjectName("unified_agenda_section")
+        self.agenda_layout = QVBoxLayout(self.agenda_section)
+        self.agenda_layout.setContentsMargins(0, 0, 0, 0)
+        self.agenda_layout.setSpacing(8)
+
+        self.agenda_header = QLabel(t("widget_mode.focus_list", "FOCUS LIST"), self.agenda_section)
         self.agenda_header.setObjectName("unified_section")
-        container_layout.addWidget(self.agenda_header)
+        self.agenda_layout.addWidget(self.agenda_header)
 
         self.scroll = QScrollArea(self)
+        self.scroll.setObjectName("unified_scroll")
         self.scroll.setWidgetResizable(True)
+        self.scroll.viewport().setObjectName("unified_scroll_viewport")
         self.scroll_content = QWidget()
+        self.scroll_content.setObjectName("unified_scroll_content")
         self.scroll_layout = QVBoxLayout(self.scroll_content)
         self.scroll_layout.setContentsMargins(0, 0, 0, 0)
         self.scroll_layout.setSpacing(8)
         self.scroll_layout.addStretch()
         self.scroll.setWidget(self.scroll_content)
-        container_layout.addWidget(self.scroll, 1)
+        self.agenda_layout.addWidget(self.scroll, 1)
 
         main_layout.addWidget(self.container)
+        self.apply_selected_layout(resize_to_layout=True)
         self.apply_theme()
         self._sync_filter_buttons()
+
+    def active_layout_id(self) -> str:
+        return self._active_layout_id
+
+    def apply_selected_layout(self, *, resize_to_layout: bool = False, force: bool = False) -> None:
+        settings = self.controller.main_window.settings
+        layout_spec = get_widget_mode_layout(read_widget_mode_layout_id(settings))
+        if self._active_layout_id == layout_spec.layout_id and not force:
+            return
+
+        sections = {
+            "hero": self.hero,
+            "calendar": self.cal_grid,
+            "filters": self.filter_section,
+            "agenda": self.agenda_section,
+        }
+        for section in sections.values():
+            self.container_layout.removeWidget(section)
+            section.setVisible(False)
+        for index in range(8):
+            self.container_layout.setRowStretch(index, 0)
+            self.container_layout.setColumnStretch(index, 0)
+
+        self.container_layout.setContentsMargins(*layout_spec.content_margins)
+        self.container_layout.setHorizontalSpacing(layout_spec.spacing)
+        self.container_layout.setVerticalSpacing(layout_spec.spacing)
+        for section_name, row, column, row_span, column_span in layout_spec.placements:
+            section = sections[section_name]
+            self.container_layout.addWidget(section, row, column, row_span, column_span)
+            section.setVisible(True)
+        for row, stretch in layout_spec.row_stretches:
+            self.container_layout.setRowStretch(row, stretch)
+        for column, stretch in layout_spec.column_stretches:
+            self.container_layout.setColumnStretch(column, stretch)
+
+        self.hero_layout.setContentsMargins(*layout_spec.hero_margins)
+        self.hero_layout.setSpacing(layout_spec.hero_spacing)
+        self.filter_row.setContentsMargins(*layout_spec.filter_margins)
+        self.filter_row.setSpacing(layout_spec.filter_spacing)
+        self.agenda_layout.setContentsMargins(*layout_spec.agenda_margins)
+        self.agenda_layout.setSpacing(layout_spec.agenda_spacing)
+        self.scroll_layout.setSpacing(max(5, layout_spec.agenda_spacing))
+        self.cal_grid.apply_layout_metrics(
+            cell_size=layout_spec.calendar_cell_size,
+            spacing=layout_spec.calendar_spacing,
+            margins=layout_spec.calendar_margins,
+        )
+        self.eyebrow_label.setVisible(layout_spec.show_eyebrow)
+        self.hint_label.setVisible(layout_spec.show_hint)
+
+        self._active_layout_id = layout_spec.layout_id
+        self.container.setProperty("widgetLayout", layout_spec.layout_id)
+        if resize_to_layout:
+            self.resize(self.controller.saved_size_for_layout(layout_spec))
+        self.container.updateGeometry()
+        self.updateGeometry()
+
+    def apply_skin_layout(self, *, resize_to_layout: bool = False, force: bool = False) -> None:
+        """Compatibility shim for callers from the initial combined skin/layout rollout."""
+        self.apply_selected_layout(resize_to_layout=resize_to_layout, force=force)
 
     def apply_theme(self) -> None:
         tokens = _widget_theme_tokens(self.controller.main_window)
@@ -751,6 +874,42 @@ class UnifiedWidgetWindow(QWidget):
             self.controller.save_position(self.pos())
             event.accept()
 
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        tokens = _widget_theme_tokens(self.controller.main_window)
+        menu = QMenu(self)
+        menu.setStyleSheet(_widget_mode_menu_stylesheet(tokens))
+
+        layout_menu = menu.addMenu(t("widget_mode.style_layout", "레이아웃"))
+        current_layout = read_widget_mode_layout_id(self.controller.main_window.settings)
+        for layout_spec in widget_mode_layouts():
+            action = layout_menu.addAction(t(layout_spec.label_key, layout_spec.label_default))
+            action.setCheckable(True)
+            action.setChecked(current_layout == layout_spec.layout_id)
+            action.triggered.connect(
+                lambda _checked=False, selected=layout_spec.layout_id: self.controller.set_layout(
+                    selected
+                )
+            )
+
+        skin_menu = menu.addMenu(t("widget_mode.style_color_skin", "색상 스킨"))
+        current_skin = read_widget_mode_skin_id(self.controller.main_window.settings)
+        for skin in widget_mode_skins():
+            action = skin_menu.addAction(t(skin.label_key, skin.label_default))
+            action.setCheckable(True)
+            action.setChecked(current_skin == skin.skin_id)
+            action.triggered.connect(
+                lambda _checked=False, selected=skin.skin_id: self.controller.set_skin(selected)
+            )
+
+        menu.addSeparator()
+        refresh_action = menu.addAction(t("widget_mode.menu_refresh", "새로고침"))
+        close_action = menu.addAction(t("widget_mode.close", "위젯 닫기"))
+        selected = menu.exec(event.globalPos())
+        if selected == refresh_action:
+            self.controller.force_refresh()
+        elif selected == close_action:
+            self.hide()
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if not self.isMinimized() and self.isVisible():
@@ -803,13 +962,6 @@ class UnifiedWidgetController:
 
         if not self.widget:
             self.widget = UnifiedWidgetWindow(self)
-            stored_size = self.main_window.settings.value(self.SIZE_KEY)
-            if (
-                isinstance(stored_size, QSize)
-                and stored_size.width() > 40
-                and stored_size.height() > 40
-            ):
-                self.widget.resize(stored_size)
             stored_pos = self.main_window.settings.value(self.POSITION_KEY)
             if isinstance(stored_pos, QPoint):
                 self.widget.move(stored_pos)
@@ -823,7 +975,45 @@ class UnifiedWidgetController:
         self.main_window.settings.setValue(self.POSITION_KEY, pos)
 
     def save_size(self, size: QSize) -> None:
-        self.main_window.settings.setValue(self.SIZE_KEY, size)
+        layout_id = self.widget.active_layout_id() if self.widget is not None else "stacked"
+        self.main_window.settings.setValue(self._layout_size_key(layout_id), size)
+
+    def _layout_size_key(self, layout_id: str) -> str:
+        return f"{self.SIZE_KEY}_{layout_id}"
+
+    def saved_size_for_layout(self, layout_spec) -> QSize:
+        stored = self.main_window.settings.value(self._layout_size_key(layout_spec.layout_id))
+        if stored is None and layout_spec.layout_id == "stacked":
+            stored = self.main_window.settings.value(self.SIZE_KEY)
+        if isinstance(stored, QSize) and stored.width() > 40 and stored.height() > 40:
+            return stored
+        return QSize(*layout_spec.preferred_size)
+
+    def set_skin(self, skin_id: str) -> None:
+        write_widget_mode_skin_id(self.main_window.settings, skin_id)
+        if self.widget is not None:
+            self.widget._style_signature = None
+            self.widget.apply_theme()
+
+        legacy = getattr(self.main_window, "_panel_widget_mode_controller", None)
+        panel = getattr(legacy, "_panel", None)
+        if panel is not None:
+            panel._theme_cache.clear()
+            panel.apply_palette(panel._last_scale or 1.0)
+
+    def set_layout(self, layout_id: str) -> None:
+        write_widget_mode_layout_id(self.main_window.settings, layout_id)
+        if self.widget is None:
+            return
+        self.widget.apply_selected_layout(resize_to_layout=True)
+        self.widget._style_signature = None
+        self.widget.apply_theme()
+
+    def force_refresh(self) -> None:
+        self._cache_refresh_pending = False
+        self._last_display_signature = None
+        self._items_cache.clear()
+        self.refresh_data()
 
     def open_quick_add_dialog(self) -> None:
         self._open_task_dialog("", default_task_type="schedule")

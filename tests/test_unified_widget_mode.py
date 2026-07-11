@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 import os
 import unittest
 from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QDate
+from PyQt6.QtCore import QDate, QSize
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from calendar_app.presentation.widgets import unified_widget_mode as uwm
@@ -309,6 +310,69 @@ class UnifiedWidgetModeTests(unittest.TestCase):
             self.host.current_date, self.host.open_task_dialog_calls[0]["initial_date"]
         )
         self.assertEqual("schedule", self.host.open_task_dialog_calls[0]["task_type"])
+
+    def test_set_skin_persists_and_rethemes_visible_widget(self):
+        self.controller = uwm.UnifiedWidgetController(self.host)
+        self.controller.widget = uwm.UnifiedWidgetWindow(self.controller)
+        before = self.controller.widget._style_signature
+
+        self.controller.set_skin("midnight_blue")
+
+        self.assertEqual("midnight_blue", self.host.settings.value("widget_mode_skin"))
+        self.assertEqual("dark", self.host.settings.value("widget_mode_panel_theme"))
+        self.assertEqual("stacked", self.host.settings.value("widget_mode_layout"))
+        self.assertEqual("stacked", self.controller.widget.active_layout_id())
+        self.assertNotEqual(before, self.controller.widget._style_signature)
+
+    def test_layout_skins_rearrange_existing_sections_without_recreating_them(self):
+        self.controller = uwm.UnifiedWidgetController(self.host)
+        widget = uwm.UnifiedWidgetWindow(self.controller)
+        self.controller.widget = widget
+        original_hero = widget.hero
+        original_agenda = widget.agenda_section
+
+        self.controller.set_layout("dashboard")
+
+        self.assertEqual("dashboard", widget.active_layout_id())
+        self.assertIs(original_hero, widget.hero)
+        self.assertIs(original_agenda, widget.agenda_section)
+        agenda_index = widget.container_layout.indexOf(widget.agenda_section)
+        self.assertEqual((1, 1, 2, 1), widget.container_layout.getItemPosition(agenda_index))
+        self.assertTrue(widget.cal_grid.isVisibleTo(widget.container))
+
+    def test_minimal_layout_hides_calendar_and_uses_its_preferred_size(self):
+        self.controller = uwm.UnifiedWidgetController(self.host)
+        widget = uwm.UnifiedWidgetWindow(self.controller)
+        self.controller.widget = widget
+
+        self.controller.set_layout("minimal")
+
+        self.assertEqual("minimal", widget.active_layout_id())
+        self.assertFalse(widget.cal_grid.isVisibleTo(widget.container))
+        self.assertEqual(QSize(350, 500), widget.size())
+
+    def test_widget_size_is_saved_per_layout(self):
+        self.controller = uwm.UnifiedWidgetController(self.host)
+        widget = uwm.UnifiedWidgetWindow(self.controller)
+        self.controller.widget = widget
+        self.controller.set_layout("dashboard")
+        self.controller.save_size(QSize(690, 510))
+
+        self.controller.set_layout("minimal")
+        self.controller.set_layout("dashboard")
+
+        self.assertEqual(QSize(690, 510), widget.size())
+
+    def test_color_skin_change_keeps_explicit_layout(self):
+        self.controller = uwm.UnifiedWidgetController(self.host)
+        widget = uwm.UnifiedWidgetWindow(self.controller)
+        self.controller.widget = widget
+        self.controller.set_layout("magazine")
+
+        self.controller.set_skin("forest_mist")
+
+        self.assertEqual("magazine", widget.active_layout_id())
+        self.assertEqual("forest_mist", self.host.settings.value("widget_mode_skin"))
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ Create a Windows Store upload package that:
 - `build_store.py`
   - creates `desk_calendar_default.db`
   - removes runtime state from a payload directory
-  - copies the clean DB into the payload directory
+  - copies the clean DB into the frozen runtime path `_internal/`
 - `build.ps1`
   - builds a native-architecture MSIX payload
   - calls `build_store.py --prepare-only` so every Store build is sanitized
@@ -42,10 +42,19 @@ Run this on the native build machine:
 .\build-store-release.ps1
 ```
 
-Optional cleanup before release:
+Optional local-state cleanup before release (never runs by default):
 
 ```powershell
-.\build-store-release.ps1 -PurgeLocalData
+.\build-store-release.ps1 -ResetState
+```
+
+`-PurgeLocalData` implies reset and also removes the app's LOCALAPPDATA profile.
+Use it only when that destructive cleanup is intentional.
+
+Optional signing for direct sideload distribution:
+
+```powershell
+.\build-store-release.ps1 -Sign -CertThumbprint <thumbprint>
 ```
 
 Native payload only, no MSIX/upload:
@@ -82,7 +91,7 @@ If only one native package is available, the scripts fall back to:
 
 The release payload keeps:
 
-- `desk_calendar_default.db` with only schema and the default local calendar row
+- `_internal\desk_calendar_default.db` with only schema and the default local calendar row
 
 The release payload removes:
 
