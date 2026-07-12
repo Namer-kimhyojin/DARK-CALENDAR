@@ -83,6 +83,7 @@
   "calendar": {
     "add_hint": "添加时间表",
     "help_hint": "日历使用指南",
+    "more_items": "+ 另外 {count} 项",
     "opt_month": "包括月份标签",
     "opt_week_start_monday": "Start week on Monday",
     "opt_week_start_tooltip": "Checked: weeks start on Monday. Unchecked: weeks start on Sunday.",
@@ -1088,7 +1089,9 @@
     "issues_scan_orphans_tooltip": "Find events in Google with no local match (last 6 months).",
     "issues_scanning": "Scanning...",
     "issues_type_orphan": "Google Orphan",
-    "setup_needed_auth_hint": "Please complete Google authentication in Calendar Integration Settings."
+    "setup_needed_auth_hint": "Please complete Google authentication in Calendar Integration Settings.",
+    "issues_empty_body": "Google 日历同步状态正常。刷新后可再次检查当前状态。",
+    "issues_empty_title": "未发现同步问题。"
   },
   "gcal_settings": {
     "account_tip": "If the connected account changes, re-authentication may be required to safely refresh calendar bindings.",
@@ -2227,7 +2230,33 @@
     "yesterday": "Yesterday",
     "hide_calendar": "Hide Calendar",
     "show_calendar": "Show Calendar",
-    "toggle_calendar": "Toggle Calendar"
+    "toggle_calendar": "Toggle Calendar",
+    "editor_accent": "Accent color",
+    "editor_base": "Base theme",
+    "editor_dark": "Dark base",
+    "editor_height": "Default height",
+    "editor_layout": "Layout",
+    "editor_light": "Light base",
+    "editor_show_eyebrow": "Show top caption",
+    "editor_show_hint": "Show guidance text",
+    "editor_skin": "Color skin",
+    "editor_template": "Composition template",
+    "editor_title": "Create widget style",
+    "editor_width": "Default width",
+    "layout_agenda_first": "Agenda First",
+    "layout_dashboard": "Side-by-side Dashboard",
+    "layout_magazine": "Magazine Board",
+    "layout_minimal": "Minimal List",
+    "layout_stacked": "Vertical Focus",
+    "skin_classic_dark": "Classic Dark",
+    "skin_classic_light": "Classic Light",
+    "skin_forest_mist": "Forest Mist",
+    "skin_lavender_dream": "Lavender Dream",
+    "skin_midnight_blue": "Midnight Blue",
+    "skin_sunset_glow": "Sunset Glow",
+    "style_color_skin": "Color Skin",
+    "style_layout": "Layout",
+    "style_skin": "Skin"
   },
   "widget_text": {
     "align": "对齐",

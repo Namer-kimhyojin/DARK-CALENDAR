@@ -1,8 +1,16 @@
 import re
 
-from PyQt6.QtCore import QSettings, QSize, Qt
+from PyQt6.QtCore import QSettings, QSize, Qt, QTimer
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QCalendarWidget, QDateEdit, QDialog, QHeaderView, QTableView
+from PyQt6.QtWidgets import (
+    QCalendarWidget,
+    QComboBox,
+    QDateEdit,
+    QDialog,
+    QHeaderView,
+    QLabel,
+    QTableView,
+)
 
 from calendar_app.shared.color_utils import (
     parse_css_alpha_to_unit,
@@ -1251,6 +1259,59 @@ def build_dialog_preview_stylesheet(
 
 COMMON_DIALOG_STYLE = FIXED_DIALOG_STYLE
 
+# Labels that must stay single-line (title bar, inline validation hints).
+_NO_WRAP_LABEL_ROLES = {"dialogTitle", "dialogSubtitle", "field_error", "field_hint"}
+_NO_WRAP_LABEL_NAMES = {"dialog_title", "dialogTitle", "dialog_subtitle", "dialogSubtitle"}
+
+
+def _fit_dialog_text(dialog: QDialog):
+    """Prevent clipped localized text: wrap body labels, widen combos to content.
+
+    Runs deferred (after the dialog's own _build_ui has populated children) so it
+    can walk the real widget tree. Idempotent — safe to call more than once.
+    """
+    try:
+        if dialog is None or not dialog.isWidgetType():
+            return
+        for lbl in dialog.findChildren(QLabel):
+            role = lbl.property("role")
+            if role in _NO_WRAP_LABEL_ROLES or lbl.objectName() in _NO_WRAP_LABEL_NAMES:
+                continue
+            # Icon-only labels carry a pixmap — wrapping would distort them.
+            pm = lbl.pixmap()
+            if pm is not None and not pm.isNull():
+                continue
+            if lbl.wordWrap():
+                continue
+            text = lbl.text() or ""
+            # Rich text / links manage their own layout; leave untouched.
+            if "<" in text and ">" in text:
+                continue
+            lbl.setWordWrap(True)
+        # Combos should size to their longest entry so localized items aren't elided.
+        for combo in dialog.findChildren(QComboBox):
+            combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        # Let the dialog grow (not shrink) so newly wrapped labels stay visible.
+        hint = dialog.sizeHint()
+        cur = dialog.size()
+        new_w = max(cur.width(), hint.width())
+        new_h = max(cur.height(), hint.height())
+        if new_w > cur.width() or new_h > cur.height():
+            dialog.resize(new_w, new_h)
+    except Exception:
+        # Text-fit is best-effort cosmetic polish; never break dialog creation.
+        pass
+
+
+def schedule_dialog_text_fit(dialog: QDialog):
+    """Queue a one-shot text-fit pass once the dialog's widgets exist."""
+    if dialog is None:
+        return
+    if dialog.property("_dc_text_fit_scheduled"):
+        return
+    dialog.setProperty("_dc_text_fit_scheduled", True)
+    QTimer.singleShot(0, lambda: _fit_dialog_text(dialog))
+
 
 def apply_common_dialog_style(
     dialog: QDialog,
@@ -1292,6 +1353,10 @@ def apply_common_dialog_style(
     if size is not None:
         w, h = size
         dialog.resize(w, h)
+
+    # Global truncation guard: wrap long localized labels / widen combos once the
+    # dialog's own _build_ui has populated its children (deferred to event loop).
+    schedule_dialog_text_fit(dialog)
 
 
 def build_dialog_footer(

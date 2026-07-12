@@ -92,6 +92,7 @@
   "calendar": {
     "add_hint": "일정 추가",
     "help_hint": "캘린더 사용 방법 안내",
+    "more_items": "+ {count}개 더 보기",
     "opt_month": "월 표기 포함",
     "opt_week_start_monday": "월요일부터 시작",
     "opt_week_start_tooltip": "체크 시 월요일부터, 해제 시 일요일부터 한 주를 시작합니다.",
@@ -986,6 +987,8 @@
     "issues_delete_remote_tooltip": "선택한 고아 이벤트를 구글 캘린더에서 삭제 큐에 추가합니다. 다음 동기화에서 실제 삭제됩니다.",
     "issues_details": "상세 내용",
     "issues_dirty": "로컬 변경",
+    "issues_empty_body": "Google Calendar 동기화 상태가 정상입니다. 새로고침하면 현재 상태를 다시 확인합니다.",
+    "issues_empty_title": "동기화 문제가 없습니다.",
     "issues_error": "문제",
     "issues_error_desc": "발생한 문제",
     "issues_force_ignore": "동기화 포기",
@@ -1259,7 +1262,7 @@
     "type_local": "로컬"
   },
   "help": {
-    "content": "<h3>캘린더 사용 방법</h3>\n        <hr>\n        <b>1) 일정 추가</b><br>\n        날짜 더블클릭 또는 <b>Ctrl + N</b><br><br>\n\n        <b>2) 일정 수정</b><br>\n        일정을 더블클릭하여 상세 편집<br><br>\n\n        <b>3) 일정 이동/복사</b><br>\n        드래그: 이동, <b>Shift + 드래그</b>: 복사<br><br>\n\n        <b>4) 일정 삭제</b><br>\n        일정 선택 후 <b>Delete</b><br>\n        날짜에서 <b>Delete</b>를 누르면 해당 날의 모든 일정을 삭제합니다.",
+    "content": "<h3>캘린더 사용 방법</h3>\n        <hr>\n        <b>1) 일정 추가</b><br>\n        날짜 더블클릭 또는 <b>Ctrl + N</b><br><br>\n\n        <b>2) 일정 수정</b><br>\n        일정을 더블클릭하여 상세 편집<br><br>\n\n        <b>3) 일정 이동/복사</b><br>\n        드래그: 이동, <b>Ctrl + 드래그</b>: 복사<br><br>\n\n        <b>4) 일정 삭제</b><br>\n        일정 선택 후 <b>Delete</b><br>\n        날짜에서 <b>Delete</b>를 누르면 해당 날의 모든 일정을 삭제합니다.",
     "title": "캘린더 사용 방법"
   },
   "labels": {
@@ -2149,6 +2152,18 @@
     "close": "위젯 닫기",
     "color_picker": "위젯 강조색 선택",
     "desc": "필요한 위젯만 열어서 사용하세요.",
+    "editor_accent": "강조 색상",
+    "editor_base": "기반 테마",
+    "editor_dark": "어두운 기반",
+    "editor_height": "기본 높이",
+    "editor_layout": "레이아웃",
+    "editor_light": "밝은 기반",
+    "editor_show_eyebrow": "상단 보조 제목 표시",
+    "editor_show_hint": "안내 문구 표시",
+    "editor_skin": "색상 스킨",
+    "editor_template": "구성 템플릿",
+    "editor_title": "위젯 스타일 만들기",
+    "editor_width": "기본 너비",
     "empty_panel": "이 날짜에 항목이 없습니다.",
     "empty_schedule": "일정 없음",
     "empty_schedule_filter": "이 날짜에 일정이 없습니다.",
