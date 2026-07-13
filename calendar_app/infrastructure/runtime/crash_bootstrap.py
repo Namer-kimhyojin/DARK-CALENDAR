@@ -1,12 +1,29 @@
+# -*- coding: utf-8 -*-
 """Crash/log bootstrap helpers for app entrypoint."""
 
 from __future__ import annotations
 
 import faulthandler
 import logging
+import logging.handlers
 import os
 import sys
 from typing import TextIO
+
+# 로그 파일 크기 상한: 5MB × (본 파일 + 백업 2개)
+_LOG_MAX_BYTES = 5 * 1024 * 1024
+_LOG_BACKUP_COUNT = 2
+
+
+def _trim_oversized_log(log_path: str) -> None:
+    """로테이션 도입 전 무한히 커진 기존 로그 파일을 정리한다."""
+    try:
+        if os.path.exists(log_path) and os.path.getsize(log_path) > _LOG_MAX_BYTES * (
+            _LOG_BACKUP_COUNT + 1
+        ):
+            os.remove(log_path)
+    except OSError:
+        pass
 
 
 def setup_crash_logging(log_path: str | None = None) -> TextIO | None:
@@ -25,11 +42,21 @@ def setup_crash_logging(log_path: str | None = None) -> TextIO | None:
             # Fallback to temp dir if AppData fails
             log_path = os.path.join(os.environ.get("TEMP", "."), "desk_calendar_crash.log")
 
+    _trim_oversized_log(log_path)
+
+    # 개인정보 최소 기록 원칙: 기본 INFO. 진단 시에만 환경변수로 DEBUG 활성화.
+    debug_enabled = os.environ.get("DARK_CALENDAR_DEBUG", "").strip() in ("1", "true", "on")
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.DEBUG if debug_enabled else logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s (%(filename)s:%(lineno)d): %(message)s",
         handlers=[
-            logging.FileHandler(log_path, encoding="utf-8", errors="strict"),
+            logging.handlers.RotatingFileHandler(
+                log_path,
+                maxBytes=_LOG_MAX_BYTES,
+                backupCount=_LOG_BACKUP_COUNT,
+                encoding="utf-8",
+                errors="strict",
+            ),
             logging.StreamHandler(sys.stdout),
         ],
     )

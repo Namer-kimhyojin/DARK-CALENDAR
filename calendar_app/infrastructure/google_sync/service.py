@@ -119,8 +119,12 @@ def _token_file_supports_scopes(token_path: str) -> bool:
     try:
         json_mod = __import__("json")
 
-        with open(token_path, encoding="utf-8", errors="strict") as fh:
-            payload = json_mod.load(fh)
+        from calendar_app.infrastructure.google_sync.token_store import load_token_json
+
+        token_text = load_token_json(token_path)
+        if not token_text:
+            return False
+        payload = json_mod.loads(token_text)
 
     except Exception:
         return False
@@ -319,8 +323,12 @@ class CalendarSyncService:
             import json as _json
             import urllib.request as _urllib_req
 
-            with open(TOKEN_PATH, encoding="utf-8", errors="strict") as fh:
-                token_data = _json.load(fh)
+            from calendar_app.infrastructure.google_sync.token_store import load_token_json
+
+            token_text = load_token_json()
+            if not token_text:
+                return True  # 읽을 수 없는 토큰 — 취소할 것 없음
+            token_data = _json.loads(token_text)
             # google-auth 라이브러리가 저장하는 키: "token" (access_token)
             token = str(token_data.get("token") or token_data.get("access_token") or "").strip()
             if not token:
@@ -374,7 +382,16 @@ class CalendarSyncService:
                     )
                     raise ValueError("token_missing_required_scopes")
 
-                creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+                import json as _json_load
+
+                from calendar_app.infrastructure.google_sync.token_store import (
+                    load_token_json as _load_token,
+                )
+
+                _token_text = _load_token()
+                if not _token_text:
+                    raise ValueError("token_unreadable")
+                creds = Credentials.from_authorized_user_info(_json_load.loads(_token_text), SCOPES)
 
                 if not _credentials_support_scopes(creds):
                     logger.warning(
@@ -450,8 +467,9 @@ class CalendarSyncService:
                     return False
 
             try:
-                with open(TOKEN_PATH, "w", encoding="utf-8", errors="strict") as token:
-                    token.write(creds.to_json())
+                from calendar_app.infrastructure.google_sync.token_store import save_token_json
+
+                save_token_json(creds.to_json())
 
             except OSError as exc:
                 self._set_last_error("auth", f"token_write_failed: {exc}")
@@ -976,7 +994,13 @@ class CalendarSyncService:
                         "%Y-%m-%dT%H:%M:%S"
                     ) + tz_offset
 
-                logger.debug("GCal create: summary=%r start=%s end=%s", summary, start_iso, end_iso)
+                # 일정 제목은 개인정보이므로 로그에 남기지 않는다 (길이만 기록)
+                logger.debug(
+                    "GCal create: summary_len=%d start=%s end=%s",
+                    len(summary or ""),
+                    start_iso,
+                    end_iso,
+                )
                 event = {
                     "summary": summary,
                     "description": description,

@@ -2,6 +2,7 @@
 # ruff: noqa: SIM105, E402
 
 import logging
+import logging.handlers
 import os
 import sqlite3
 import threading
@@ -12,7 +13,16 @@ from calendar_app.app_paths import DB_PATH, LOG_PATH
 def _build_logging_handlers():
     handlers = [logging.StreamHandler()]
     try:
-        handlers.insert(0, logging.FileHandler(LOG_PATH, encoding="utf-8", errors="strict"))
+        handlers.insert(
+            0,
+            logging.handlers.RotatingFileHandler(
+                LOG_PATH,
+                maxBytes=5 * 1024 * 1024,
+                backupCount=2,
+                encoding="utf-8",
+                errors="strict",
+            ),
+        )
     except OSError as exc:
         logging.getLogger(__name__).warning("File logging disabled for %s: %s", LOG_PATH, exc)
     return handlers
