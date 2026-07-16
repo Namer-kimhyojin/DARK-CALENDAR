@@ -9,12 +9,14 @@ from PyQt6.QtCore import QThread, pyqtSlot
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
-from calendar_app.infrastructure.google_sync.engine import SYNC_OUTCOME_FAILED, SYNC_OUTCOME_SKIPPED
 from calendar_app.infrastructure.i18n import t
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 
 logger = logging.getLogger(__name__)
+
+_SYNC_OUTCOME_FAILED = "failed"
+_SYNC_OUTCOME_SKIPPED = "skipped"
 
 
 class GCalActionsMixin:
@@ -531,7 +533,7 @@ class GCalActionsMixin:
             else:
                 self._increase_gcal_failure_backoff()
 
-                if outcome == SYNC_OUTCOME_FAILED:
+                if outcome == _SYNC_OUTCOME_FAILED:
                     logger.warning("GCal Sync Failure: %s", message)
 
                 else:
@@ -597,7 +599,7 @@ class GCalActionsMixin:
         elif message:
             outcome = getattr(self, "_last_gcal_sync_outcome", None)
 
-            if outcome == SYNC_OUTCOME_SKIPPED:
+            if outcome == _SYNC_OUTCOME_SKIPPED:
                 return
 
             self._increase_gcal_failure_backoff()

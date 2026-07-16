@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
 import os
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -89,6 +92,23 @@ class GCalStartupUxTests(unittest.TestCase):
 
         self.assertTrue(enabled)
         self.assertEqual(settings.data["gcal_enabled"], "true")
+
+    def test_importing_common_does_not_eagerly_import_google_service(self):
+        script = (
+            "import sys; "
+            "import calendar_app.infrastructure.google_sync.common; "
+            "print(int('calendar_app.infrastructure.google_sync.service' in sys.modules)); "
+            "print(int('googleapiclient.discovery' in sys.modules))"
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="strict",
+        )
+        self.assertEqual(result.stdout.strip().splitlines(), ["0", "0"])
 
     def test_check_first_time_setup_no_longer_opens_modal_prompt(self):
         host = _FakeGCalApp()

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """UI 테마 지정 다이얼로그 — 배경색 프리셋, 글자색, 투명도 통합."""
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSlider,
     QSpinBox,
@@ -400,6 +402,7 @@ def _build_picker_extra_stylesheet(tokens: dict | None = None) -> str:
     border_soft = tokens.get("border", tokens.get("border_soft", "rgba(255,255,255,0.10)"))
     border_focus = tokens.get("border_strong", tokens.get("border", "rgba(255,255,255,0.30)"))
     text_primary = tokens.get("text_primary", "#e1e1e6")
+
     css += f"""
     QFontComboBox {{
         background: {surface_item};
@@ -408,6 +411,17 @@ def _build_picker_extra_stylesheet(tokens: dict | None = None) -> str:
         border-radius: {shape["field_radius"]}px;
         padding: 4px 8px;
         selection-background-color: {_acc("0.25")};
+    }}
+    QFontComboBox::drop-down {{
+        border: none;
+        width: 0px;
+        subcontrol-origin: padding;
+        subcontrol-position: top right;
+    }}
+    QPushButton#fontComboPopupButton {{
+        min-width: 34px;
+        max-width: 34px;
+        padding: 0px;
     }}
     QFontComboBox:hover {{
         background: {surface_hover};
@@ -422,6 +436,9 @@ def _build_picker_extra_stylesheet(tokens: dict | None = None) -> str:
         border: 1px solid {border_soft};
         selection-background-color: {_acc("0.20")};
     }}
+    """
+
+    css += f"""
     QPushButton#btn_preset_filter {{
         border-radius: {shape["toolbar_button_radius"]}px;
     }}
@@ -815,6 +832,7 @@ class PanelColorPickerDialog(QDialog):
         )
 
         self._build_ui()
+        self._fit_initial_size_to_screen()
         self._auto_select_matching_preset()
         self._building = False
         self._refresh_preview()
@@ -943,6 +961,28 @@ class PanelColorPickerDialog(QDialog):
             btn.setVisible(True)
             self._preset_grid.addWidget(btn, row, col)
 
+    @staticmethod
+    def _wrap_tab_content(widget: QWidget) -> QScrollArea:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet(
+            "QScrollArea { background: transparent; border: none; }"
+            "QScrollArea > QWidget > QWidget { background: transparent; }"
+        )
+        scroll.setWidget(widget)
+        return scroll
+
+    def _fit_initial_size_to_screen(self):
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is None:
+            return
+        available = screen.availableGeometry()
+        width = min(max(self.minimumWidth(), self.sizeHint().width()), available.width() - 32)
+        height = min(760, max(420, available.height() - 48))
+        self.resize(width, height)
+
     # ------------------------------------------------------------------
     def _build_ui(self):
         root = QVBoxLayout(self)
@@ -956,11 +996,24 @@ class PanelColorPickerDialog(QDialog):
         root.addWidget(lbl_title)
 
         tabs = QTabWidget()
-        tabs.addTab(self._build_bg_tab(), t("dialog.theme.tab.background", "배경"))
-        tabs.addTab(self._build_text_tab(), t("dialog.theme.tab.text", "글자"))
-        tabs.addTab(self._build_point_tab(), t("dialog.theme.tab.accent", "포인트"))
-        tabs.addTab(self._build_font_tab(), t("dialog.theme.tab.font", "폰트"))
-        root.addWidget(tabs)
+        tabs.addTab(
+            self._wrap_tab_content(self._build_bg_tab()),
+            t("dialog.theme.tab.background", "배경"),
+        )
+        tabs.addTab(
+            self._wrap_tab_content(self._build_text_tab()),
+            t("dialog.theme.tab.text", "글자"),
+        )
+        tabs.addTab(
+            self._wrap_tab_content(self._build_point_tab()),
+            t("dialog.theme.tab.accent", "포인트"),
+        )
+        tabs.addTab(
+            self._wrap_tab_content(self._build_font_tab()),
+            t("dialog.theme.tab.font", "폰트"),
+        )
+        tabs.setMinimumHeight(300)
+        root.addWidget(tabs, 1)
 
         # ---- Preview ----
         lbl_pre = QLabel(t("dialog.theme.preview.title", "미리보기"))
@@ -1835,8 +1888,19 @@ class PanelColorPickerDialog(QDialog):
         from PyQt6.QtGui import QFont
 
         self._font_combo.setCurrentFont(QFont(init_family))
+        font_popup_label = t("dialog.theme.font.open_list", "글꼴 목록 펼치기")
+        self._font_popup_btn = QPushButton()
+        self._font_popup_btn.setObjectName("fontComboPopupButton")
+        icon_color = parse_hex_color(text_secondary, "#c8ccd4").name(QColor.NameFormat.HexRgb)
+        self._font_popup_btn.setIcon(_ic(ICON.NAV_DOWN, color=icon_color))
+        self._font_popup_btn.setFixedSize(34, 34)
+        self._font_popup_btn.setToolTip(font_popup_label)
+        self._font_popup_btn.setAccessibleName(font_popup_label)
+        self._font_popup_btn.setAccessibleDescription(font_popup_label)
+        self._font_popup_btn.clicked.connect(self._font_combo.showPopup)
         family_row.addWidget(family_lbl)
         family_row.addWidget(self._font_combo, 1)
+        family_row.addWidget(self._font_popup_btn)
         lay.addLayout(family_row)
 
         # 폰트 크기

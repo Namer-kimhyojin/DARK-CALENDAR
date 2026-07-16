@@ -282,10 +282,9 @@ python scripts/run_encoding_guard.py
 
 ## 빌드 / 배포
 
-- `build.ps1` — 로컬 빌드
-- `build_store.py` — MSIX 스토어 빌드
-- `bundle-msix.ps1` — MSIX 번들링
-- `build-store-release.ps1` — 스토어 릴리스 패키지
+- `build-release.bat` — 로컬 빌드부터 MSIX/스토어 업로드 패키지까지 실행하는 단일 진입점
+- `scripts/build_pipeline.ps1` — 통합 배치파일이 호출하는 내부 빌드 구현
+- `build_store.py` — 배포 페이로드 정리와 기본 DB 생성
 - `DarkCalendar.spec`, `Standalone.spec` — PyInstaller 스펙
 - `AppxManifest.xml` — MSIX 매니페스트
 - `release/store/DarkCalendar_x64.msixupload` — 스토어 제출 아티팩트

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 아이콘 매핑 테이블 — 이모지 → qtawesome (Font Awesome 6 / Material Design Icons)
 
@@ -84,6 +85,7 @@ class _IconKeys:
     GOTO_TODAY: str = "goto_today"
     NAV_PREV: str = "nav_prev"
     NAV_NEXT: str = "nav_next"
+    NAV_DOWN: str = "nav_down"
 
     # ── 필터 / 정렬 ────────────────────────────────────────────────────────
     FILTER: str = "filter"
@@ -241,6 +243,7 @@ ICON_MAPPING: dict[str, tuple[str, str, str]] = {
     ICON.GOTO_TODAY: ("mdi6.calendar-today", "", "오늘 날짜로 이동"),
     ICON.NAV_PREV: ("fa6s.chevron-left", "", "이전"),
     ICON.NAV_NEXT: ("fa6s.chevron-right", "", "다음"),
+    ICON.NAV_DOWN: ("fa6s.chevron-down", "", "펼치기"),
     # ── 필터 / 정렬 ─────────────────────────────────────────────────────────
     ICON.FILTER: ("fa6s.filter", "", "필터 메뉴"),
     ICON.FILTER_ALL: ("mdi6.filter-variant", "", "전체 보기"),

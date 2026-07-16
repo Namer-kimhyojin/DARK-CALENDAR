@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import contextlib
 from datetime import datetime
 import os
@@ -377,9 +378,15 @@ class GCalSettingsDialog(QDialog):
         """클릭 가능한 색상 스와치 버튼."""
         btn = QPushButton()
         btn.setFixedSize(size, size)
-        btn.setToolTip(t("gcal_settings.color_swatch_tip", "색상 변경"))
+        self._set_icon_button_accessibility(btn, t("gcal_settings.color_swatch_tip", "색상 변경"))
         self._apply_swatch_color(btn, color_str)
         return btn
+
+    @staticmethod
+    def _set_icon_button_accessibility(button: QPushButton, label: str):
+        button.setToolTip(label)
+        button.setAccessibleName(label)
+        button.setAccessibleDescription(label)
 
     def _apply_swatch_color(self, btn: QPushButton, color_str: str):
         c = QColor(color_str) if color_str else QColor("#4da6ff")
@@ -540,17 +547,18 @@ class GCalSettingsDialog(QDialog):
 
             if is_default:
                 default_btn.setIcon(_ic(ICON.STAR))
-                default_btn.setToolTip(t("gcal_settings.badge_default", "기본 캘린더"))
+                default_label = t("gcal_settings.badge_default", "기본 캘린더")
                 default_btn.setStyleSheet(self._calendar_row_action_button_style("warning"))
             else:
                 default_btn.setIcon(_ic(ICON.STAR_EMPTY))
-                default_btn.setToolTip(t("gcal_settings.set_default", "기본으로 지정"))
+                default_label = t("gcal_settings.set_default", "기본으로 지정")
                 default_btn.setStyleSheet(self._calendar_row_action_button_style("neutral"))
 
                 def _on_set_default(_=None, cid=cal_id):
                     self._set_default_calendar(cid)
 
                 default_btn.clicked.connect(_on_set_default)
+            self._set_icon_button_accessibility(default_btn, default_label)
 
         # ⑤ 보기 토글
         vis_btn = QPushButton()
@@ -560,7 +568,9 @@ class GCalSettingsDialog(QDialog):
         vis_btn.setChecked(is_vis)
         vis_btn.setFixedSize(26, 26)
         vis_btn.setIconSize(QSize(14, 14))
-        vis_btn.setToolTip(t("gcal_settings.col_visible_tip", "표시/숨김"))
+        self._set_icon_button_accessibility(
+            vis_btn, t("gcal_settings.col_visible_tip", "표시/숨김")
+        )
         self._apply_vis_btn_style(vis_btn, is_vis)
 
         def _on_vis_toggle(checked, cid=cal_id, vb=vis_btn):
@@ -629,7 +639,9 @@ class GCalSettingsDialog(QDialog):
             refresh_btn.setIcon(_ic(ICON.REFRESH))
             refresh_btn.setFixedSize(26, 26)
             refresh_btn.setIconSize(QSize(14, 14))
-            refresh_btn.setToolTip(t("gcal_settings.ics_refresh", "지금 소식 가져오기"))
+            self._set_icon_button_accessibility(
+                refresh_btn, t("gcal_settings.ics_refresh", "지금 소식 가져오기")
+            )
             refresh_btn.setStyleSheet(self._calendar_row_action_button_style("neutral"))
 
             def _on_ics_refresh(_=None, cid=cal_id, url=ics_url):
@@ -644,7 +656,7 @@ class GCalSettingsDialog(QDialog):
         edit_btn.setIcon(_ic(ICON.EDIT))
         edit_btn.setFixedSize(26, 26)
         edit_btn.setIconSize(QSize(14, 14))
-        edit_btn.setToolTip(t("gcal_settings.col_edit", "편집"))
+        self._set_icon_button_accessibility(edit_btn, t("gcal_settings.col_edit", "편집"))
         edit_btn.setStyleSheet(self._calendar_row_action_button_style("neutral"))
 
         def _on_edit(_=None, cid=cal_id, cname=cal["name"], ctype=cal_type):
@@ -659,7 +671,7 @@ class GCalSettingsDialog(QDialog):
         del_btn.setIcon(_ic(ICON.DELETE))
         del_btn.setFixedSize(26, 26)
         del_btn.setIconSize(QSize(14, 14))
-        del_btn.setToolTip(t("gcal_settings.col_delete", "삭제"))
+        self._set_icon_button_accessibility(del_btn, t("gcal_settings.col_delete", "삭제"))
         del_btn.setStyleSheet(self._calendar_row_action_button_style("danger"))
 
         def _on_del(_=None, cid=cal_id, cname=cal["name"]):

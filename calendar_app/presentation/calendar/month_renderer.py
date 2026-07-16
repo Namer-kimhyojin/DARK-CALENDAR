@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime
 import html as _html_mod
 import logging
@@ -2358,7 +2359,9 @@ def render_calendar(app):
                 remaining_single = len(tasks_for_col) - len(visible_single_tasks)
                 total_hidden = hidden_counts_by_col[c] + remaining_single
                 if total_hidden > 0:
-                    more_btn = QPushButton(f"+ {total_hidden}개 더보기")
+                    more_btn = QPushButton(
+                        t("calendar.more_items", "+ {count} more", count=total_hidden)
+                    )
                     more_btn.setCursor(Qt.CursorShape.PointingHandCursor)
                     more_btn.setStyleSheet(toolbar_styles["more_btn"])
                     more_btn.clicked.connect(lambda _, d=week_dates[c]: _jump_to_daily_view(app, d))

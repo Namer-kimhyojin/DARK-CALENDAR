@@ -144,6 +144,7 @@ class I18nRuntimeSupportTests(unittest.TestCase):
             "dialog.theme.bg.auto_apply_text",
             "calendar.opt_weekend_hidden",
             "calendar.opt_weekend_hidden_hint",
+            "calendar.more_items",
             "dialog.task.calendar_read_only",
             "palette.theme_dark",
             "palette.sync_google",

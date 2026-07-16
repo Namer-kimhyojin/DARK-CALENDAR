@@ -259,9 +259,15 @@ class GCalSyncHelperTests(TestCase):
             "gcal_source_calendar_id": "team-cal",
         }
 
-        with patch(
-            "calendar_app.infrastructure.google_sync.helpers._persist_gcal_event_id"
-        ) as persist_mock:
+        with (
+            patch(
+                "calendar_app.infrastructure.google_sync.helpers._persist_gcal_event_id"
+            ) as persist_mock,
+            patch(
+                "calendar_app.infrastructure.google_sync.helpers._mark_task_synced",
+                return_value=True,
+            ),
+        ):
             result = gcal_sync_helpers.sync_task_to_google(app, task_data, create_if_missing=True)
 
         self.assertEqual(result.event_id, "replacement-id")
@@ -889,6 +895,7 @@ class GCalSyncHelperTests(TestCase):
         }
 
         with (
+            patch.object(engine, "_get_default_gcal_id", return_value="primary"),
             patch.object(engine, "_process_google_delete_queue", return_value=(0, 0)),
             patch.object(
                 engine, "_push_local_changes_to_google", return_value=(1, 0, 0)

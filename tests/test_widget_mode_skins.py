@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from pathlib import Path
+import tempfile
 import unittest
 
 from calendar_app.presentation.widgets.widget_mode_skins import (
@@ -7,8 +9,11 @@ from calendar_app.presentation.widgets.widget_mode_skins import (
     WidgetModeLayout,
     WidgetModeSkin,
     apply_widget_mode_skin,
+    create_user_widget_layout,
+    create_user_widget_skin,
     get_widget_mode_layout,
     get_widget_mode_skin,
+    load_user_widget_styles,
     read_widget_mode_layout_id,
     read_widget_mode_skin_id,
     register_widget_mode_layout,
@@ -137,6 +142,30 @@ class WidgetModeSkinTests(unittest.TestCase):
         self.assertEqual("#abcdef", skin.token_overrides["accent"])
         with self.assertRaises(TypeError):
             skin.token_overrides["accent"] = "#111111"
+
+    def test_user_skin_and_layout_are_persisted_and_reloadable(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd() / "tmp") as temp_dir:
+            path = Path(temp_dir) / "widget_styles.json"
+            skin = create_user_widget_skin(
+                "Ocean Custom", base_theme="dark", accent="#336699", path=path
+            )
+            layout = create_user_widget_layout(
+                "Wide Custom",
+                template_id="dashboard",
+                preferred_size=(900, 600),
+                show_eyebrow=False,
+                show_hint=True,
+                path=path,
+            )
+
+            loaded_skins, loaded_layouts = load_user_widget_styles(path)
+
+            self.assertEqual((1, 1), (loaded_skins, loaded_layouts))
+            self.assertEqual(
+                "#336699", get_widget_mode_skin(skin.skin_id).token_overrides["accent"]
+            )
+            self.assertEqual((900, 600), get_widget_mode_layout(layout.layout_id).preferred_size)
+            self.assertFalse(get_widget_mode_layout(layout.layout_id).show_eyebrow)
 
 
 if __name__ == "__main__":

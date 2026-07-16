@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from datetime import UTC, datetime, timedelta
 import json
 
@@ -402,7 +404,7 @@ def get_all_routines_grouped_by_cycle():
 # ==================== CRUD: Update ====================
 
 
-def update_unified_task(task_id, updates, mark_gcal_dirty=None):
+def update_unified_task(task_id, updates, mark_gcal_dirty=None, commit=True):
     """
     통합 task 수정
     """
@@ -466,11 +468,13 @@ def update_unified_task(task_id, updates, mark_gcal_dirty=None):
     try:
         cur.execute(f"UPDATE unified_task SET {set_clause} WHERE id=?", values)
         changed = cur.rowcount > 0
-        conn.commit()
+        if commit:
+            conn.commit()
         return changed
     except Exception as e:
         logger.error(f"Error updating unified task: {e}")
-        conn.rollback()
+        if commit:
+            conn.rollback()
         return False
 
 

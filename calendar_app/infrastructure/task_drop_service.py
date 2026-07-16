@@ -1,11 +1,15 @@
+# -*- coding: utf-8 -*-
 """Shared task drop move/copy logic used by UI and sync flows."""
 
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 
 from calendar_app.infrastructure.db import calendar_repo, task_repo
 from calendar_app.infrastructure.db import db_repository_unified as _dbu
+
+logger = logging.getLogger(__name__)
 
 
 def _qdate_to_str(value):
@@ -52,14 +56,79 @@ def _apply_datetime_move(task, date_str, time_str):
     return updates
 
 
-def _clone_task(task, target_date, target_time):
+def _default_writable_calendar():
+    try:
+        default_row = calendar_repo.get_default_calendar()
+        rows = calendar_repo.list_calendars(include_inactive=True) or []
+    except Exception:
+        return None
+
+    candidates = []
+    if default_row:
+        candidates.append(default_row)
+    candidates.extend(row for row in rows if row not in candidates)
+    for row in candidates:
+        if not row or not row.get("id"):
+            continue
+        if not row.get("is_active", True):
+            continue
+        if calendar_repo.is_calendar_row_read_only(row):
+            continue
+        return row
+    return None
+
+
+def _copy_calendar_route(task, read_only_by_calendar):
+    calendar_id = str((task or {}).get("calendar_id") or "").strip()
+    if not calendar_id:
+        source_id = str(
+            (task or {}).get("gcal_target_calendar_id")
+            or (task or {}).get("gcal_source_calendar_id")
+            or ""
+        ).strip()
+        if source_id:
+            calendar_id = source_id if source_id.startswith("gcal::") else f"gcal::{source_id}"
+
+    if _is_task_in_read_only_calendar(task, read_only_by_calendar):
+        writable = _default_writable_calendar()
+        if not writable:
+            raise RuntimeError("No writable calendar is available for copied task")
+        calendar_id = str(writable.get("id") or "").strip()
+
+    target_gcal_id = None
+    if calendar_id.startswith("gcal::"):
+        target_gcal_id = calendar_id[len("gcal::") :] or None
+    return calendar_id or None, target_gcal_id
+
+
+def _clone_task(task, target_date, target_time, read_only_by_calendar, *, commit=True):
     payload = dict(task)
-    payload.pop("id", None)
-    payload.pop("gcal_event_id", None)
+    for key in (
+        "id",
+        "gcal_event_id",
+        "gcal_source_calendar_id",
+        "gcal_source_summary",
+        "gcal_target_calendar_id",
+        "gcal_last_synced_at",
+        "gcal_remote_updated_at",
+        "gcal_sync_error",
+        "series_id",
+        "series_order",
+        "series_total",
+        "created_at",
+        "updated_at",
+    ):
+        payload.pop(key, None)
+
+    calendar_id, target_gcal_id = _copy_calendar_route(task, read_only_by_calendar)
+    payload["calendar_id"] = calendar_id
+    payload["gcal_target_calendar_id"] = target_gcal_id
+    payload["gcal_sync_mode"] = "local_owned"
+    payload["gcal_dirty"] = 1
     payload["status"] = "in_progress"
     updates = _apply_datetime_move(task, target_date, target_time)
     payload.update(updates)
-    return task_repo.create_unified_task(payload)
+    return task_repo.create_unified_task(payload, commit=commit)
 
 
 def _load_tasks_by_ids(task_ids):
@@ -151,9 +220,15 @@ def _finalize_drop(app, changed):
         app.schedule_panel_refresh(left=True, center=True, right=False)
 
 
+def finalize_task_drag(app, changed=0):
+    """Finish a drag session and flush refreshes deferred while dragging."""
+    _finalize_drop(app, changed)
+
+
 def handle_task_drop(app, task_id_list, target_date, target_time, action):
     if app is not None:
         app._last_drop_blocked_readonly_ids = []
+        app._last_drop_failed_ids = []
 
     ids = _normalize_task_ids(task_id_list)
     if not ids:
@@ -168,31 +243,56 @@ def handle_task_drop(app, task_id_list, target_date, target_time, action):
     target_date_str = _qdate_to_str(target_date)
     target_time_str = _qtime_to_hhmmss(target_time)
     task_map = _load_tasks_by_ids(ids)
-    read_only_by_calendar = _calendar_read_only_map() if action_str == "move" else {}
+    read_only_by_calendar = _calendar_read_only_map()
+    conn = _dbu.get_connection()
+    if conn is None:
+        _finalize_drop(app, 0)
+        return 0, []
 
     changed = 0
     copied_ids = []
     blocked_readonly_ids = []
-    for task_id in ids:
-        task = task_map.get(task_id) or task_repo.get_unified_task(task_id)
-        if not task:
-            continue
-        if action_str == "copy":
-            new_id = _clone_task(task, target_date_str, target_time_str)
-            if new_id:
+    try:
+        for task_id in ids:
+            task = task_map.get(task_id) or task_repo.get_unified_task(task_id)
+            if not task:
+                continue
+            if action_str == "copy":
+                new_id = _clone_task(
+                    task,
+                    target_date_str,
+                    target_time_str,
+                    read_only_by_calendar,
+                    commit=False,
+                )
+                if not new_id:
+                    raise RuntimeError(f"Failed to copy task {task_id}")
                 changed += 1
                 copied_ids.append(new_id)
-            continue
+                continue
 
-        if _is_task_in_read_only_calendar(task, read_only_by_calendar):
-            blocked_readonly_ids.append(task_id)
-            continue
+            if _is_task_in_read_only_calendar(task, read_only_by_calendar):
+                blocked_readonly_ids.append(task_id)
+                continue
 
-        updates = _apply_datetime_move(task, target_date_str, target_time_str)
-        if not _has_effective_updates(task, updates):
-            continue
-        if task_repo.update_unified_task(task_id, updates):
+            updates = _apply_datetime_move(task, target_date_str, target_time_str)
+            if not _has_effective_updates(task, updates):
+                continue
+            if not task_repo.update_unified_task(task_id, updates, commit=False):
+                raise RuntimeError(f"Failed to move task {task_id}")
             changed += 1
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        logger.exception(
+            "Task drop transaction rolled back action=%s task_ids=%s",
+            action_str,
+            ids,
+        )
+        changed = 0
+        copied_ids = []
+        if app is not None:
+            app._last_drop_failed_ids = list(ids)
 
     if app is not None:
         app._last_drop_blocked_readonly_ids = blocked_readonly_ids

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """OverlayApp initialization helpers."""
 
 from __future__ import annotations
@@ -48,6 +49,9 @@ def initialize_overlay_app(app) -> None:
     app._latest_calendar_range_data = None
     app._latest_directive_data = None
     app._last_clicked_task_id = None
+    app._widget_mode_coordinator = None
+    app._unified_widget_controller = None
+    app._panel_widget_mode_controller = None
 
     app.gcal_sync = None
     app._bg_workers = []
@@ -55,6 +59,9 @@ def initialize_overlay_app(app) -> None:
     app._auth_worker = None
     app._is_shutting_down = False
     app._is_dragging = False
+    app._drag_pending_refresh = False
+    app._last_drop_blocked_readonly_ids = []
+    app._last_drop_failed_ids = []
 
     from calendar_app.domain.task_constants import load_custom_labels
 

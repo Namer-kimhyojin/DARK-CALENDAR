@@ -38,14 +38,14 @@ _STARTUP_PHASE_SPECS = (
     ("ready", 1, False),
 )
 _STARTUP_PHASE_MIN_MS = {
-    "preparing_runtime": 180,
-    "loading_ui_modules": 380,
-    "loading_font": 180,
-    "initializing_db": 450,
-    "migrating_data": 320,
-    "loading_labels": 180,
-    "starting_ui": 520,
-    "ready": 220,
+    "preparing_runtime": 40,
+    "loading_ui_modules": 80,
+    "loading_font": 30,
+    "initializing_db": 80,
+    "migrating_data": 50,
+    "loading_labels": 20,
+    "starting_ui": 120,
+    "ready": 80,
 }
 _STARTUP_PHASE_SOFT_CAP_RATIO = 0.84
 
@@ -142,11 +142,7 @@ def _settle_splash_phase(
     min_duration_ms: int,
 ) -> None:
     min_duration_s = max(0, int(min_duration_ms)) / 1000.0
-    while progress < end - 0.0005 or time.monotonic() - started_at < min_duration_s:
-        if progress < end - 0.0005:
-            delta = end - progress
-            progress = min(end, progress + max(0.004, min(0.018, delta * 0.28)))
-            splash.set_status(text, progress)
+    while time.monotonic() - started_at < min_duration_s:
         app.processEvents()
         time.sleep(0.012)
     splash.set_status(text, end)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Main-window shell/UI utility action mixin."""
 
 import os
@@ -380,30 +381,27 @@ class WindowShellActionsMixin:
             act.setEnabled(not any_floating)
 
     def _ensure_widget_mode_controller(self):
-        controller = getattr(self, "_panel_widget_mode_controller", None)
-        if controller is None:
-            from calendar_app.presentation.widgets.panel_widget_mode import (
-                PanelWidgetModeController,
+        """Compatibility entry point backed by the unified coordinator."""
+        return self._ensure_widget_mode_coordinator()
+
+    def _ensure_widget_mode_coordinator(self):
+        coordinator = getattr(self, "_widget_mode_coordinator", None)
+        if coordinator is None:
+            from calendar_app.presentation.widgets.widget_mode_coordinator import (
+                WidgetModeCoordinator,
             )
 
-            controller = PanelWidgetModeController(self)
-            self._panel_widget_mode_controller = controller
-        return controller
+            coordinator = WidgetModeCoordinator(self)
+            self._widget_mode_coordinator = coordinator
+            self._unified_widget_controller = coordinator.controller
+            self._panel_widget_mode_controller = coordinator
+        return coordinator
 
     def _ensure_unified_widget_controller(self):
-        controller = getattr(self, "_unified_widget_controller", None)
-        if controller is None:
-            from calendar_app.presentation.widgets.unified_widget_mode import (
-                UnifiedWidgetController,
-            )
-
-            controller = UnifiedWidgetController(self)
-            self._unified_widget_controller = controller
-        return controller
+        return self._ensure_widget_mode_coordinator().controller
 
     def toggle_unified_widget(self):
-        controller = self._ensure_unified_widget_controller()
-        controller.toggle_widget()
+        self._ensure_widget_mode_coordinator().toggle()
 
     def toggle_widget_mode_panel(self):
         # Use unified widget instead of separate panels per new requirement
@@ -422,28 +420,28 @@ class WindowShellActionsMixin:
         controller.enter_widget_mode(show_schedule=True, show_work=True)
 
     def stop_widget_mode(self):
-        controller = getattr(self, "_panel_widget_mode_controller", None)
+        controller = getattr(self, "_widget_mode_coordinator", None)
         if controller is None:
             return
         controller.exit_widget_mode()
 
     def is_widget_mode_active(self):
-        controller = getattr(self, "_panel_widget_mode_controller", None)
+        controller = getattr(self, "_widget_mode_coordinator", None)
         if controller is None:
             return False
         return controller.is_widget_mode_active()
 
     def refresh_widget_mode_panels(self, schedule=True, work=True):
-        controller = getattr(self, "_panel_widget_mode_controller", None)
+        controller = getattr(self, "_widget_mode_coordinator", None)
         if controller is None:
             return
         controller.refresh_visible_widgets(schedule=bool(schedule), work=bool(work))
 
     def close_widget_mode_panels(self):
-        controller = getattr(self, "_panel_widget_mode_controller", None)
+        controller = getattr(self, "_widget_mode_coordinator", None)
         if controller is None:
             return
-        controller.close_widgets()
+        controller.close_for_shutdown()
 
     def _calendar_toolbar_visible_setting(self):
         raw = (

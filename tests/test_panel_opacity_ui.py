@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 import os
 import re
 import unittest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication, QLabel
+from PyQt6.QtWidgets import QApplication, QLabel, QPushButton, QScrollArea, QTabWidget
 
 from calendar_app.presentation.dialogs.panel_color_picker_dialog import PanelColorPickerDialog
 from calendar_app.presentation.panels.side_panel_renderer import (
@@ -75,6 +76,21 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.assertEqual(dialog._op_lbl.text(), opacity_percent_label(102))
         self.assertEqual(dialog._bd_op_lbl.text(), opacity_percent_label(64))
         self.assertEqual(dialog._txt_op_lbl.text(), opacity_percent_label(153))
+
+    def test_theme_dialog_tabs_scroll_and_fit_available_height(self):
+        dialog = PanelColorPickerDialog()
+        self.addCleanup(dialog.close)
+
+        tabs = dialog.findChild(QTabWidget)
+        self.assertIsNotNone(tabs)
+        self.assertEqual(tabs.count(), 4)
+        self.assertTrue(all(isinstance(tabs.widget(i), QScrollArea) for i in range(4)))
+        self.assertLessEqual(dialog.height(), dialog.screen().availableGeometry().height() - 48)
+
+        font_popup_btn = dialog.findChild(QPushButton, "fontComboPopupButton")
+        self.assertIsNotNone(font_popup_btn)
+        self.assertFalse(font_popup_btn.icon().isNull())
+        self.assertTrue(font_popup_btn.accessibleName())
 
     def test_theme_dialog_preserves_fully_transparent_background(self):
         dialog = PanelColorPickerDialog(current_opacity=0)

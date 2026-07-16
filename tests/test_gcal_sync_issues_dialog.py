@@ -123,6 +123,33 @@ class GCalSyncIssuesDialogTests(TemporaryDatabaseTestCase):
         self.assertIn("color:", dialog.retry_btn.styleSheet())
         self.assertIn("color:", dialog.force_ignore_btn.styleSheet())
 
+    def test_empty_state_disables_selection_actions(self):
+        dialog = GCalSyncIssuesDialog(None)
+        self.addCleanup(dialog.close)
+
+        self.assertEqual(dialog.table.rowCount(), 0)
+        self.assertIs(dialog.table_stack.currentWidget(), dialog.empty_state)
+        self.assertFalse(dialog.guidance_box.isVisible())
+        self.assertFalse(dialog.retry_btn.isEnabled())
+        self.assertFalse(dialog.clear_btn.isEnabled())
+        self.assertFalse(dialog.force_ignore_btn.isEnabled())
+        self.assertFalse(dialog.clear_healed_btn.isEnabled())
+        self.assertTrue(dialog.refresh_btn.isEnabled())
+
+    def test_conflict_selection_enables_applicable_actions(self):
+        self._create_conflict()
+        dialog = GCalSyncIssuesDialog(None)
+        self.addCleanup(dialog.close)
+
+        self._select_conflict_row(dialog)
+
+        self.assertTrue(dialog.retry_btn.isEnabled())
+        self.assertTrue(dialog.clear_btn.isEnabled())
+        self.assertTrue(dialog.force_ignore_btn.isEnabled())
+        self.assertTrue(dialog.keep_local_btn.isEnabled())
+        self.assertTrue(dialog.use_remote_btn.isEnabled())
+        self.assertFalse(dialog.delete_remote_btn.isEnabled())
+
     def test_exhausted_delete_queue_row_is_retained_and_labeled(self):
         queued = task_repo.queue_gcal_delete(
             "evt-delete-failed",

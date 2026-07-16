@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import unittest
 
@@ -6,6 +7,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtWidgets import QApplication
 
 from calendar_app.bootstrap import (
+    _STARTUP_PHASE_MIN_MS,
     _advance_phase_progress,
     _build_startup_phase_ranges,
     _phase_soft_cap,
@@ -66,6 +68,9 @@ class SplashScreenTests(unittest.TestCase):
         self.assertGreater(progress, 0.2)
         self.assertLess(progress, 0.6)
         self.assertAlmostEqual(progress, soft_cap, places=3)
+
+    def test_startup_phase_minimum_holds_stay_below_one_second(self):
+        self.assertLess(sum(_STARTUP_PHASE_MIN_MS.values()), 1000)
 
     def test_finish_hold_starts_only_after_progress_reaches_one(self):
         splash = SplashScreen()

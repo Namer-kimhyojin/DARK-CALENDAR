@@ -1,17 +1,22 @@
 #Requires -Version 5.1
 [CmdletBinding()]
 param(
-    [ValidateSet("x64", "arm64")]
-    [string]$Arch = "x64",
+    [ValidateSet("auto", "x64", "arm64")]
+    [string]$Arch = "auto",
 
     [switch]$SkipMsix,
+    [switch]$SkipUpload,
+    [switch]$UploadOnly,
+    [switch]$ValidateOnly,
     [switch]$ResetState,
+    [switch]$SkipResetState,
     [switch]$PurgeLocalData,
     [switch]$DryRunReset,
     [switch]$AllowCrossArch,
 
     # Version override (skip interactive prompt when provided)
     [string]$Version        = "",
+    [string]$PackageVersion = "",
     [string]$ReleaseDate    = "",
     [ValidateSet("", "Stable", "Beta", "Dev")]
     [string]$Channel        = "",
@@ -23,11 +28,35 @@ param(
     # Output control
     [switch]$NoBanner,
     [switch]$NoLog,
-    [switch]$NoChecksum
+    [switch]$NoChecksum,
+    [switch]$Help
 )
 
 $ErrorActionPreference = "Stop"
 $BuildStart = Get-Date
+
+if ($Help) {
+    Write-Host "Dark Calendar unified release build"
+    Write-Host ""
+    Write-Host "  build-release.bat [options]"
+    Write-Host ""
+    Write-Host "Common options:"
+    Write-Host "  -Arch auto|x64|arm64       Target architecture (default: native host)"
+    Write-Host "  -Version X.Y.Z             App version; omit for interactive prompt"
+    Write-Host "  -PackageVersion X.Y.Z.W    Optional Store package version"
+    Write-Host "  -ReleaseDate YYYY-MM-DD    Release date"
+    Write-Host "  -Channel Stable|Beta|Dev   Release channel"
+    Write-Host "  -ResetState                Reset project release state"
+    Write-Host "  -PurgeLocalData            Also remove LOCALAPPDATA state (implies reset)"
+    Write-Host "  -SkipMsix                  Build sanitized payload only"
+    Write-Host "  -SkipUpload                Build MSIX without .msixupload"
+    Write-Host "  -UploadOnly                Recreate upload from existing native MSIX"
+    Write-Host "  -ValidateOnly              Run preflight checks without changing files"
+    Write-Host "  -Sign [-CertThumbprint X]  Sign MSIX for sideload distribution"
+    exit 0
+}
+
+if ($ValidateOnly) { $NoLog = $true }
 
 # ---------------------------------------------------------------------------
 # Console helpers
@@ -155,6 +184,13 @@ function Assert-VersionFormat {
     }
 }
 
+function Assert-PackageVersionFormat {
+    param([string]$Ver)
+    if ($Ver -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+        throw "PackageVersion must be MAJOR.MINOR.PATCH.REVISION (e.g. 3.2.0.0). Got: '$Ver'"
+    }
+}
+
 # ---------------------------------------------------------------------------
 # Version sync: write to all 3 locations
 # ---------------------------------------------------------------------------
@@ -162,23 +198,38 @@ function Assert-VersionFormat {
 function Sync-AppVersion {
     param(
         [string]$MetadataPath,
+        [string]$PyprojectPath,
         [string]$ManifestPath,
         [string]$VersionInfoPath,
         [string]$NewVersion,
+        [string]$NewPackageVersion,
         [string]$NewDate,
         [string]$NewChannel
     )
+
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false, $true)
 
     # 1. app_metadata.py
     $content = Get-Content $MetadataPath -Raw -Encoding utf8
     $content = $content -replace '(APP_VERSION\s*=\s*)"[^"]+"', ('$1"' + $NewVersion + '"')
     $content = $content -replace '(APP_RELEASE_DATE\s*=\s*)"[^"]+"', ('$1"' + $NewDate + '"')
     $content = $content -replace '(APP_RELEASE_CHANNEL\s*=\s*)"[^"]+"', ('$1"' + $NewChannel + '"')
-    [System.IO.File]::WriteAllText($MetadataPath, $content, [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($MetadataPath, $content, $utf8NoBom)
     Write-Info "updated: app_metadata.py  ($NewVersion / $NewDate / $NewChannel)"
 
-    # 2. AppxManifest.xml  (needs 4-part version: X.Y.Z.0)
-    $msixVer = "$NewVersion.0"
+    # 2. pyproject.toml
+    $pyproject = Get-Content $PyprojectPath -Raw -Encoding utf8
+    $pyproject = [regex]::Replace(
+        $pyproject,
+        '(?m)^(version\s*=\s*)"[^"]+"',
+        ('${1}"' + $NewVersion + '"'),
+        1
+    )
+    [System.IO.File]::WriteAllText($PyprojectPath, $pyproject, $utf8NoBom)
+    Write-Info "updated: pyproject.toml  ($NewVersion)"
+
+    # 3. AppxManifest.xml
+    $msixVer = $NewPackageVersion
     [xml]$xml = Get-Content -Path $ManifestPath -Encoding utf8
     $ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
     $ns.AddNamespace("f", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
@@ -191,7 +242,7 @@ function Sync-AppVersion {
         Write-Warn "AppxManifest.xml Identity node not found — skipped"
     }
 
-    # 3. version_info.txt
+    # 4. version_info.txt
     $parts = $NewVersion -split '\.'
     $ma = [int]$parts[0]; $mi = [int]$parts[1]; $pa = [int]$parts[2]
     $tuple = "($ma, $mi, $pa, 0)"
@@ -201,7 +252,7 @@ function Sync-AppVersion {
     $vi = $vi -replace 'prodvers\s*=\s*\([^)]+\)', "prodvers=$tuple"
     $vi = $vi -replace "(StringStruct\('FileVersion',\s*')[^']+(')", "`${1}$verStr`$2"
     $vi = $vi -replace "(StringStruct\('ProductVersion',\s*')[^']+(')", "`${1}$verStr`$2"
-    [System.IO.File]::WriteAllText($VersionInfoPath, $vi, [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($VersionInfoPath, $vi, $utf8NoBom)
     Write-Info "updated: version_info.txt  ($verStr)"
 }
 
@@ -310,6 +361,181 @@ function Test-PythonEnv {
     Write-Info "venv OK (PyInstaller, PyQt6 present)"
 }
 
+# Copy only files referenced by AppxManifest.xml to the MSIX root. The complete
+# runtime Assets directory already lives under _internal via PyInstaller.
+function Copy-ManifestAssets {
+    param(
+        [Parameter(Mandatory)][string]$ManifestPath,
+        [Parameter(Mandatory)][string]$SourceRoot,
+        [Parameter(Mandatory)][string]$DestinationRoot
+    )
+
+    [xml]$manifest = Get-Content $ManifestPath -Raw -Encoding utf8
+    $assetPaths = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::OrdinalIgnoreCase
+    )
+    foreach ($node in $manifest.SelectNodes("//*")) {
+        foreach ($attribute in $node.Attributes) {
+            if ($attribute.LocalName -notmatch "(Logo|Image)$") { continue }
+            $relative = [string]$attribute.Value
+            if (-not $relative.StartsWith("Assets\", [System.StringComparison]::OrdinalIgnoreCase)) {
+                continue
+            }
+            [void]$assetPaths.Add($relative)
+        }
+
+        # Properties/Logo stores its asset path as element text rather than as
+        # an attribute, so it must be collected separately from VisualElements.
+        if ($node.LocalName -match "(Logo|Image)$") {
+            $relative = ([string]$node.InnerText).Trim()
+            if ($relative.StartsWith("Assets\", [System.StringComparison]::OrdinalIgnoreCase)) {
+                [void]$assetPaths.Add($relative)
+            }
+        }
+    }
+    if ($assetPaths.Count -eq 0) { throw "No manifest asset references found." }
+
+    foreach ($relative in $assetPaths) {
+        $leaf = Split-Path -Leaf $relative
+        $source = Join-Path $SourceRoot $leaf
+        $destination = Join-Path $DestinationRoot $relative
+        if (-not (Test-Path $source -PathType Leaf)) {
+            throw "Manifest asset missing: $source"
+        }
+        $destinationDir = Split-Path -Parent $destination
+        if (-not (Test-Path $destinationDir)) {
+            New-Item -Path $destinationDir -ItemType Directory -Force | Out-Null
+        }
+        Copy-Item -LiteralPath $source -Destination $destination -Force
+    }
+    return $assetPaths.Count
+}
+
+# ---------------------------------------------------------------------------
+# Store upload packaging
+# ---------------------------------------------------------------------------
+
+function Find-Msix {
+    param(
+        [Parameter(Mandatory)][string]$DistDir,
+        [Parameter(Mandatory)][ValidateSet("x64", "arm64")][string]$TargetArch
+    )
+    $hits = Get-ChildItem -Path $DistDir -Filter "DarkCalendar-*-$TargetArch.msix" -File -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending
+    if ($hits) { return $hits[0].FullName }
+    return $null
+}
+
+function Get-MsixIdentity {
+    param([Parameter(Mandatory)][string]$Path)
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $resolved = (Resolve-Path -LiteralPath $Path).Path
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($resolved)
+    try {
+        $entry = $archive.GetEntry("AppxManifest.xml")
+        if ($null -eq $entry) { throw "AppxManifest.xml missing from: $Path" }
+        $reader = [System.IO.StreamReader]::new($entry.Open(), [System.Text.Encoding]::UTF8)
+        try { [xml]$manifest = $reader.ReadToEnd() } finally { $reader.Dispose() }
+        return [pscustomobject]@{
+            Name = [string]$manifest.Package.Identity.Name
+            Publisher = [string]$manifest.Package.Identity.Publisher
+            Version = [string]$manifest.Package.Identity.Version
+            Architecture = [string]$manifest.Package.Identity.ProcessorArchitecture
+        }
+    } finally {
+        $archive.Dispose()
+    }
+}
+
+function Assert-CompatiblePackages {
+    param(
+        [Parameter(Mandatory)][string]$X64Path,
+        [Parameter(Mandatory)][string]$Arm64Path
+    )
+
+    $x64 = Get-MsixIdentity $X64Path
+    $arm64 = Get-MsixIdentity $Arm64Path
+    foreach ($field in @("Name", "Publisher", "Version")) {
+        if ($x64.$field -ne $arm64.$field) {
+            throw "MSIX identity mismatch ($field): x64='$($x64.$field)', arm64='$($arm64.$field)'"
+        }
+    }
+    if ($x64.Architecture -ne "x64") {
+        throw "Expected x64 package, found architecture '$($x64.Architecture)'."
+    }
+    if ($arm64.Architecture -ne "arm64") {
+        throw "Expected arm64 package, found architecture '$($arm64.Architecture)'."
+    }
+}
+
+function New-StoreUpload {
+    param(
+        [Parameter(Mandatory)][string]$ProjectRoot,
+        [Parameter(Mandatory)][string]$ThisMsix,
+        [Parameter(Mandatory)][ValidateSet("x64", "arm64")][string]$ThisArch
+    )
+
+    if (-not (Test-Path $ThisMsix -PathType Leaf)) {
+        throw "MSIX not found: $ThisMsix"
+    }
+
+    $thisIdentity = Get-MsixIdentity $ThisMsix
+    $packageVersion = $thisIdentity.Version
+    Assert-PackageVersionFormat $packageVersion
+
+    $releaseDir = Join-Path $ProjectRoot "release\store"
+    if (-not (Test-Path $releaseDir)) {
+        New-Item -Path $releaseDir -ItemType Directory -Force | Out-Null
+    }
+
+    $otherArch = if ($ThisArch -eq "x64") { "arm64" } else { "x64" }
+    $otherMsix = Find-Msix -DistDir (Join-Path $ProjectRoot "dist\$otherArch") -TargetArch $otherArch
+
+    if ($otherMsix) {
+        $x64Msix = if ($ThisArch -eq "x64") { $ThisMsix } else { $otherMsix }
+        $arm64Msix = if ($ThisArch -eq "arm64") { $ThisMsix } else { $otherMsix }
+        Assert-CompatiblePackages -X64Path $x64Msix -Arm64Path $arm64Msix
+
+        $makeappx = Find-MakeAppx
+        if (-not $makeappx) { throw "makeappx.exe not found. Install Windows SDK." }
+
+        $bundlePath = Join-Path $releaseDir "DarkCalendar-$packageVersion-arm64_x64.msixbundle"
+        $staging = Join-Path $releaseDir ".bundle-staging"
+        if (Test-Path $staging) { Remove-Item -LiteralPath $staging -Recurse -Force }
+        New-Item -Path $staging -ItemType Directory -Force | Out-Null
+        try {
+            Copy-Item -LiteralPath $x64Msix -Destination (Join-Path $staging (Split-Path -Leaf $x64Msix)) -Force
+            Copy-Item -LiteralPath $arm64Msix -Destination (Join-Path $staging (Split-Path -Leaf $arm64Msix)) -Force
+            if (Test-Path $bundlePath) { Remove-Item -LiteralPath $bundlePath -Force }
+            Run-OrThrow -Exe $makeappx -Args @("bundle", "/d", $staging, "/p", $bundlePath, "/o") -WorkingDirectory $ProjectRoot
+        } finally {
+            if (Test-Path $staging) { Remove-Item -LiteralPath $staging -Recurse -Force }
+        }
+
+        $uploadTmp = Join-Path $releaseDir "DarkCalendar-$packageVersion-arm64_x64_upload.zip"
+        $uploadOut = Join-Path $releaseDir "DarkCalendar-$packageVersion-arm64_x64.msixupload"
+        if (Test-Path $uploadTmp) { Remove-Item -LiteralPath $uploadTmp -Force }
+        if (Test-Path $uploadOut) { Remove-Item -LiteralPath $uploadOut -Force }
+        Compress-Archive -LiteralPath $bundlePath -DestinationPath $uploadTmp -Force
+        Move-Item -LiteralPath $uploadTmp -Destination $uploadOut -Force
+        Write-Ok "combined Store upload created"
+        Write-Info $uploadOut
+        return $uploadOut
+    }
+
+    Write-Warn "$otherArch MSIX not found - creating a single-architecture upload"
+    $singleTmp = Join-Path $releaseDir "DarkCalendar-$packageVersion-${ThisArch}_upload.zip"
+    $singleOut = Join-Path $releaseDir "DarkCalendar-$packageVersion-${ThisArch}.msixupload"
+    if (Test-Path $singleTmp) { Remove-Item -LiteralPath $singleTmp -Force }
+    if (Test-Path $singleOut) { Remove-Item -LiteralPath $singleOut -Force }
+    Compress-Archive -LiteralPath $ThisMsix -DestinationPath $singleTmp -Force
+    Move-Item -LiteralPath $singleTmp -Destination $singleOut -Force
+    Write-Ok "$ThisArch Store upload created"
+    Write-Info $singleOut
+    return $singleOut
+}
+
 # ---------------------------------------------------------------------------
 # Checksum
 # ---------------------------------------------------------------------------
@@ -342,7 +568,7 @@ function Flush-Log {
 # Paths
 # ---------------------------------------------------------------------------
 
-$projectRoot    = Split-Path -Parent $PSCommandPath
+$projectRoot    = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $venvPython     = Join-Path $projectRoot ".venv\Scripts\python.exe"
 $resetScript    = Join-Path $projectRoot "scripts\reset_release_state.py"
 $payloadScript  = Join-Path $projectRoot "build_store.py"
@@ -350,9 +576,32 @@ $specPath       = Join-Path $projectRoot "DarkCalendar.spec"
 $manifestSource = Join-Path $projectRoot "AppxManifest.xml"
 $assetsSource   = Join-Path $projectRoot "Assets"
 $metadataFile   = Join-Path $projectRoot "calendar_app\app_metadata.py"
+$pyprojectFile  = Join-Path $projectRoot "pyproject.toml"
 $versionInfoFile = Join-Path $projectRoot "version_info.txt"
 $widgetSkinModule = Join-Path $projectRoot "calendar_app\presentation\widgets\widget_mode_skins.py"
 $logsDir        = Join-Path $projectRoot "build_logs"
+
+$hostArch = Get-HostArch
+if ([string]::IsNullOrWhiteSpace($hostArch)) {
+    throw "Cannot determine host architecture."
+}
+if ($Arch -eq "auto") { $Arch = $hostArch }
+if (-not $AllowCrossArch -and $hostArch -ne $Arch) {
+    throw "Cross-arch blocked. Host='$hostArch' target='$Arch'. Use -AllowCrossArch to override."
+}
+
+$effectiveResetState = ($ResetState -or $PurgeLocalData -or $DryRunReset) -and -not $SkipResetState
+$effectiveSign = $Sign -or -not [string]::IsNullOrWhiteSpace($CertThumbprint)
+
+if ($UploadOnly) {
+    if ($SkipUpload) { throw "-UploadOnly and -SkipUpload cannot be used together." }
+    $existingMsix = Find-Msix -DistDir (Join-Path $projectRoot "dist\$Arch") -TargetArch $Arch
+    if (-not $existingMsix) {
+        throw "No existing $Arch MSIX found. Run build-release.bat first."
+    }
+    [void](New-StoreUpload -ProjectRoot $projectRoot -ThisMsix $existingMsix -ThisArch $Arch)
+    exit 0
+}
 
 # ---------------------------------------------------------------------------
 # Determine version (interactive unless all 3 params supplied or NoBanner)
@@ -385,6 +634,16 @@ if (-not $allParamsGiven -and -not $NoBanner) {
 }
 
 Assert-VersionFormat $resolvedVersion
+if ($resolvedDate -notmatch '^\d{4}-\d{2}-\d{2}$') {
+    throw "ReleaseDate must be YYYY-MM-DD. Got: '$resolvedDate'"
+}
+
+$resolvedPackageVersion = if ([string]::IsNullOrWhiteSpace($PackageVersion)) {
+    "$resolvedVersion.0"
+} else {
+    $PackageVersion.Trim()
+}
+Assert-PackageVersionFormat $resolvedPackageVersion
 
 $appVersion = $resolvedVersion
 
@@ -395,7 +654,7 @@ $manifestDest  = Join-Path $appDir "AppxManifest.xml"
 $assetsDest    = Join-Path $appDir "Assets"
 $msixOutput    = Join-Path $distRoot "DarkCalendar-$appVersion-$Arch.msix"
 
-$TOTAL_STEPS   = if ($SkipMsix) { 8 } elseif ($Sign) { 10 } else { 9 }
+$TOTAL_STEPS   = if ($SkipMsix) { 8 } else { 11 }
 
 # ---------------------------------------------------------------------------
 # Log file setup
@@ -440,6 +699,7 @@ foreach ($chk in @(
     @{ Path = $manifestSource; Name = "AppxManifest.xml" },
     @{ Path = $assetsSource;  Name = "Assets/" },
     @{ Path = $payloadScript; Name = "build_store.py" }
+    @{ Path = $pyprojectFile; Name = "pyproject.toml" }
     @{ Path = $widgetSkinModule; Name = "widget_mode_skins.py" }
 )) {
     if (-not (Test-Path $chk.Path)) {
@@ -449,16 +709,18 @@ foreach ($chk in @(
     Write-Info "found: $($chk.Name)"
 }
 
-$hostArch = Get-HostArch
-if (-not $AllowCrossArch -and $hostArch -and $hostArch -ne $Arch) {
-    throw "Cross-arch blocked. Host='$hostArch' target='$Arch'. Use -AllowCrossArch to override."
-}
-
 Assert-DiskSpace -Path $projectRoot -MinimumGB 3
 Test-PythonEnv -Python $venvPython
 
 Write-Ok "preflight passed"
 Write-Log "preflight OK"
+
+if ($ValidateOnly) {
+    Write-Host ""
+    Write-Ok "release pipeline validation passed; no files were changed"
+    Flush-Log
+    exit 0
+}
 
 # ---------------------------------------------------------------------------
 # STEP 2 — Sync version to all files
@@ -469,9 +731,11 @@ Write-Log "[step 2] version sync — $resolvedVersion / $resolvedDate / $resolve
 
 Sync-AppVersion `
     -MetadataPath    $metadataFile `
+    -PyprojectPath   $pyprojectFile `
     -ManifestPath    $manifestSource `
     -VersionInfoPath $versionInfoFile `
     -NewVersion      $resolvedVersion `
+    -NewPackageVersion $resolvedPackageVersion `
     -NewDate         $resolvedDate `
     -NewChannel      $resolvedChannel
 
@@ -483,9 +747,9 @@ Write-Log "version sync OK"
 # ---------------------------------------------------------------------------
 
 Write-Step 3 $TOTAL_STEPS "Reset release state"
-Write-Log "[step 2] reset state"
+Write-Log "[step 3] reset state"
 
-if ($ResetState) {
+if ($effectiveResetState) {
     if (-not (Test-Path $resetScript)) { throw "Reset script not found: $resetScript" }
     $resetArgs = @($resetScript, "--project-dir", $projectRoot)
     if ($PurgeLocalData) { $resetArgs += "--purge-local-data" }
@@ -571,9 +835,11 @@ Set-ManifestArchitecture -ManifestPath $manifestDest -TargetArch $Arch
 Write-Info "manifest arch set to $Arch"
 
 if (Test-Path $assetsDest) { Remove-Item -Recurse -Force $assetsDest }
-Copy-Item -Path $assetsSource -Destination $assetsDest -Recurse -Force
-$assetCount = (Get-ChildItem -Recurse -File $assetsDest).Count
-Write-Ok "copied ($assetCount asset files)"
+$assetCount = Copy-ManifestAssets `
+    -ManifestPath $manifestDest `
+    -SourceRoot $assetsSource `
+    -DestinationRoot $appDir
+Write-Ok "copied ($assetCount manifest asset files)"
 Write-Log "assets+manifest OK — $assetCount files"
 
 # ---------------------------------------------------------------------------
@@ -634,7 +900,7 @@ if (-not $SkipMsix) {
     Write-Step 9 $TOTAL_STEPS "Code signing"
     Write-Log "[step 9] signing"
 
-    if ($Sign) {
+    if ($effectiveSign) {
         if (-not (Test-Path $msixOutput)) {
             Write-Warn "MSIX not found — signing skipped"
             Write-Log "skipped (no MSIX)"
@@ -678,6 +944,27 @@ if (-not $SkipMsix) {
 }
 
 # ---------------------------------------------------------------------------
+# STEP 11 — Store upload
+# ---------------------------------------------------------------------------
+
+$storeUpload = $null
+if (-not $SkipMsix) {
+    Write-Step 11 $TOTAL_STEPS "Store upload packaging"
+    Write-Log "[step 11] Store upload"
+
+    if ($SkipUpload) {
+        Write-Info "skipped (-SkipUpload)"
+        Write-Log "skipped"
+    } elseif (-not (Test-Path $msixOutput)) {
+        Write-Warn "MSIX not found - Store upload skipped"
+        Write-Log "skipped (no MSIX)"
+    } else {
+        $storeUpload = New-StoreUpload -ProjectRoot $projectRoot -ThisMsix $msixOutput -ThisArch $Arch
+        Write-Log "Store upload OK - $storeUpload"
+    }
+}
+
+# ---------------------------------------------------------------------------
 # Build summary
 # ---------------------------------------------------------------------------
 
@@ -690,6 +977,7 @@ Write-Log "=== Build summary ==="
 Write-Log "Elapsed : ${mins}m ${secs}s"
 Write-Log "appDir  : $appDir"
 if (Test-Path $msixOutput) { Write-Log "MSIX    : $msixOutput" }
+if ($storeUpload) { Write-Log "Upload  : $storeUpload" }
 Write-Log "Finished: $((Get-Date).ToString('o'))"
 
 Flush-Log
@@ -702,6 +990,9 @@ Write-Host ""
 Write-Host ("  payload : {0}" -f $appDir)
 if (Test-Path $msixOutput) {
     Write-Host ("  MSIX    : {0}" -f $msixOutput)
+}
+if ($storeUpload) {
+    Write-Host ("  upload  : {0}" -f $storeUpload)
 }
 if ($script:LogPath) {
     Write-Host ("  log     : {0}" -f $script:LogPath) -ForegroundColor DarkGray

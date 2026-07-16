@@ -9,8 +9,17 @@ widget-mode skin menu to discover it.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, replace
+import json
+import logging
+from pathlib import Path
+import re
 from types import MappingProxyType
+from uuid import uuid4
+
+from calendar_app.app_paths import get_app_data_dir
+
+logger = logging.getLogger(__name__)
 
 WIDGET_MODE_SKIN_SETTING_KEY = "widget_mode_skin"
 WIDGET_MODE_LAYOUT_SETTING_KEY = "widget_mode_layout"
@@ -59,6 +68,21 @@ class WidgetModeLayout:
         if width < 300 or height < 360:
             raise ValueError("preferred_size is too small for widget mode")
         object.__setattr__(self, "layout_id", normalized_id)
+        object.__setattr__(self, "placements", tuple(tuple(item) for item in self.placements))
+        object.__setattr__(self, "preferred_size", (int(width), int(height)))
+        for field_name in ("row_stretches", "column_stretches"):
+            object.__setattr__(
+                self, field_name, tuple(tuple(item) for item in getattr(self, field_name))
+            )
+        for field_name in (
+            "content_margins",
+            "hero_margins",
+            "calendar_cell_size",
+            "calendar_margins",
+            "filter_margins",
+            "agenda_margins",
+        ):
+            object.__setattr__(self, field_name, tuple(getattr(self, field_name)))
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,6 +113,8 @@ class WidgetModeSkin:
 
 _SKINS: dict[str, WidgetModeSkin] = {}
 _LAYOUTS: dict[str, WidgetModeLayout] = {}
+USER_STYLES_PATH = get_app_data_dir() / "widget_mode_styles.json"
+_CSS_COLOR_RE = re.compile(r"^(#[0-9a-fA-F]{6}|rgba?\([0-9., ]+\))$")
 
 
 def register_widget_mode_layout(layout: WidgetModeLayout, *, replace: bool = False) -> None:
@@ -178,6 +204,130 @@ def apply_widget_mode_skin(tokens: Mapping[str, str], skin_id: object) -> dict[s
     updated = dict(tokens)
     updated.update(get_widget_mode_skin(skin_id).token_overrides)
     return updated
+
+
+def _read_user_style_document(path: Path) -> dict[str, object]:
+    if not path.is_file():
+        return {"version": 1, "skins": [], "layouts": []}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8", errors="strict"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        logger.exception("Failed to read widget-mode user styles: %s", path)
+        return {"version": 1, "skins": [], "layouts": []}
+    if not isinstance(payload, dict):
+        return {"version": 1, "skins": [], "layouts": []}
+    return payload
+
+
+def _write_user_style_document(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        errors="strict",
+    )
+
+
+def load_user_widget_styles(path: Path | None = None) -> tuple[int, int]:
+    document = _read_user_style_document(path or USER_STYLES_PATH)
+    loaded_layouts = 0
+    loaded_skins = 0
+    for raw in document.get("layouts", []):
+        if not isinstance(raw, dict):
+            continue
+        try:
+            layout = WidgetModeLayout(**raw)
+            register_widget_mode_layout(layout, replace=True)
+            loaded_layouts += 1
+        except (TypeError, ValueError):
+            logger.warning("Ignoring invalid user widget layout", exc_info=True)
+    for raw in document.get("skins", []):
+        if not isinstance(raw, dict):
+            continue
+        try:
+            overrides = raw.get("token_overrides", {})
+            if not isinstance(overrides, dict) or any(
+                not _CSS_COLOR_RE.fullmatch(str(value).strip()) for value in overrides.values()
+            ):
+                raise ValueError("skin token overrides must be CSS colors")
+            skin = WidgetModeSkin(**raw)
+            register_widget_mode_skin(skin, replace=True)
+            loaded_skins += 1
+        except (TypeError, ValueError):
+            logger.warning("Ignoring invalid user widget skin", exc_info=True)
+    return loaded_skins, loaded_layouts
+
+
+def create_user_widget_skin(
+    name: str,
+    *,
+    base_theme: str,
+    accent: str,
+    path: Path | None = None,
+) -> WidgetModeSkin:
+    label = str(name or "").strip()
+    color = str(accent or "").strip()
+    if not label:
+        raise ValueError("skin name is required")
+    if not _CSS_COLOR_RE.fullmatch(color):
+        raise ValueError("accent must be a CSS color")
+    skin_id = f"user_skin_{uuid4().hex[:12]}"
+    skin = WidgetModeSkin(
+        skin_id,
+        f"widget_mode.{skin_id}",
+        label,
+        base_theme=base_theme,
+        token_overrides={"accent": color, "accent_deep": color},
+    )
+    target = path or USER_STYLES_PATH
+    document = _read_user_style_document(target)
+    skins = list(document.get("skins", []))
+    skins.append(
+        {
+            "skin_id": skin.skin_id,
+            "label_key": skin.label_key,
+            "label_default": skin.label_default,
+            "base_theme": skin.base_theme,
+            "legacy_layout_id": skin.legacy_layout_id,
+            "token_overrides": dict(skin.token_overrides),
+        }
+    )
+    document.update({"version": 1, "skins": skins})
+    _write_user_style_document(target, document)
+    register_widget_mode_skin(skin)
+    return skin
+
+
+def create_user_widget_layout(
+    name: str,
+    *,
+    template_id: str,
+    preferred_size: tuple[int, int],
+    show_eyebrow: bool,
+    show_hint: bool,
+    path: Path | None = None,
+) -> WidgetModeLayout:
+    label = str(name or "").strip()
+    if not label:
+        raise ValueError("layout name is required")
+    layout_id = f"user_layout_{uuid4().hex[:12]}"
+    layout = replace(
+        get_widget_mode_layout(template_id),
+        layout_id=layout_id,
+        label_key=f"widget_mode.{layout_id}",
+        label_default=label,
+        preferred_size=(int(preferred_size[0]), int(preferred_size[1])),
+        show_eyebrow=bool(show_eyebrow),
+        show_hint=bool(show_hint),
+    )
+    target = path or USER_STYLES_PATH
+    document = _read_user_style_document(target)
+    layouts = list(document.get("layouts", []))
+    layouts.append(asdict(layout))
+    document.update({"version": 1, "layouts": layouts})
+    _write_user_style_document(target, document)
+    register_widget_mode_layout(layout)
+    return layout
 
 
 def _register_builtin_layouts() -> None:
@@ -401,6 +551,7 @@ def _register_builtin_skins() -> None:
 
 _register_builtin_layouts()
 _register_builtin_skins()
+load_user_widget_styles()
 
 
 __all__ = [
@@ -411,9 +562,12 @@ __all__ = [
     "WidgetModeSkin",
     "WidgetModeLayout",
     "apply_widget_mode_skin",
+    "create_user_widget_layout",
+    "create_user_widget_skin",
     "get_widget_mode_skin",
     "get_widget_mode_layout",
     "read_widget_mode_skin_id",
+    "load_user_widget_styles",
     "read_widget_mode_layout_id",
     "register_widget_mode_skin",
     "register_widget_mode_layout",

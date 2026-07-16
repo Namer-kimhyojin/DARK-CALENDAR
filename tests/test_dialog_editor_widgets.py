@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
 import os
 import unittest
@@ -100,6 +101,8 @@ class DialogEditorWidgetTests(unittest.TestCase):
         self.assertEqual(theme["popup_border"], "rgba(34,195,202,110)")
         self.assertEqual(theme["popup_radius"], 12)
         self.assertEqual(theme["swatch_diameter"], 24)
+        self.assertIn("min-width: 0px;", theme["button_shell"])
+        self.assertIn("padding: 0px;", theme["button_shell"])
         self.assertIn("background: rgba(12,24,36,220);", popup_qss)
         self.assertIn("border-radius: 12px;", popup_qss)
         self.assertEqual(popup.styleSheet(), popup_qss)
@@ -388,6 +391,9 @@ class DialogEditorWidgetTests(unittest.TestCase):
         self.assertIn("rgba(77, 166, 255, 0.16)", vis_btn.styleSheet())
         self.assertIn("#1e2536", edit_btn.styleSheet())
         self.assertIn("rgba(210, 90, 102, 0.16)", del_btn.styleSheet())
+        for button in (default_btn, vis_btn, edit_btn, del_btn):
+            self.assertTrue(button.accessibleName())
+            self.assertEqual(button.accessibleDescription(), button.accessibleName())
 
     def test_gcal_run_auth_auto_refreshes_google_calendar_list(self):
         class _SyncStub:

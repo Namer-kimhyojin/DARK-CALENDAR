@@ -10,19 +10,9 @@ Create a Windows Store upload package that:
 
 ## Files
 
-- `build_store.py`
-  - creates `desk_calendar_default.db`
-  - removes runtime state from a payload directory
-  - copies the clean DB into the frozen runtime path `_internal/`
-- `build.ps1`
-  - builds a native-architecture MSIX payload
-  - calls `build_store.py --prepare-only` so every Store build is sanitized
-- `build-store-release.ps1`
-  - runs the native build for the current host
-  - creates a Store `.msixupload`
-  - bundles x64 + arm64 automatically when the opposite architecture MSIX is already present
-- `make-store-upload.ps1`
-  - creates `x64`, `arm64`, or combined `x64 + arm64` Store upload files
+- `build-release.bat` is the only release-build entrypoint.
+- `scripts/build_pipeline.ps1` is its internal implementation and must not be run directly in normal use.
+- `build_store.py` sanitizes the frozen payload and creates the clean bundled database.
 
 ## Native Build Rule
 
@@ -38,14 +28,14 @@ architecture-mismatched desktop executable inside the MSIX.
 
 Run this on the native build machine:
 
-```powershell
-.\build-store-release.ps1
+```bat
+build-release.bat
 ```
 
 Optional local-state cleanup before release (never runs by default):
 
-```powershell
-.\build-store-release.ps1 -ResetState
+```bat
+build-release.bat -ResetState
 ```
 
 `-PurgeLocalData` implies reset and also removes the app's LOCALAPPDATA profile.
@@ -53,14 +43,20 @@ Use it only when that destructive cleanup is intentional.
 
 Optional signing for direct sideload distribution:
 
-```powershell
-.\build-store-release.ps1 -Sign -CertThumbprint <thumbprint>
+```bat
+build-release.bat -Sign -CertThumbprint <thumbprint>
 ```
 
 Native payload only, no MSIX/upload:
 
-```powershell
-.\build-store-release.ps1 -SkipMsix
+```bat
+build-release.bat -SkipMsix
+```
+
+Preflight validation without changing version files or creating build output:
+
+```bat
+build-release.bat -ValidateOnly -Version 3.5.0 -PackageVersion 3.5.0.0 -ReleaseDate 2026-07-13 -Channel Stable
 ```
 
 ## Surface Support
@@ -70,22 +66,22 @@ possible.
 
 Recommended flow:
 
-1. Run `.\build-store-release.ps1` on an x64 machine.
-2. Run `.\build-store-release.ps1` on an arm64 machine.
-3. Once both `dist\x64\DarkCalendar-x64.msix` and `dist\arm64\DarkCalendar-arm64.msix` exist in the same workspace, rerun:
+1. Run `build-release.bat` on an x64 machine.
+2. Run `build-release.bat` on an arm64 machine.
+3. Once matching-version MSIX files exist under both `dist\x64` and `dist\arm64`, rerun:
 
-```powershell
-.\make-store-upload.ps1
+```bat
+build-release.bat -UploadOnly
 ```
 
 That creates:
 
-- `release\store\DarkCalendar_arm64_x64.msixupload`
+- `release\store\DarkCalendar-3.5.0.0-arm64_x64.msixupload`
 
 If only one native package is available, the scripts fall back to:
 
-- `release\store\DarkCalendar_x64.msixupload`
-- `release\store\DarkCalendar_arm64.msixupload`
+- `release\store\DarkCalendar-3.5.0.0-x64.msixupload`
+- `release\store\DarkCalendar-3.5.0.0-arm64.msixupload`
 
 ## Sanitized Payload Contents
 

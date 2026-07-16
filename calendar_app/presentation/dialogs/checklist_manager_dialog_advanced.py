@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 
 체크리스트 관리 다이얼로그
@@ -535,17 +536,25 @@ class ChecklistManagerDialog(QDialog):
 
         # 순서 이동 (아이콘만, 좁게)
         up_btn = QPushButton()
+        up_btn.setObjectName("checklistMoveUpButton")
         up_btn.setIcon(_ic(ICON.NAV_PREV))
         up_btn.setFixedWidth(32)
-        up_btn.setToolTip(f"{t('checklist_mgr.btn_up')}  Ctrl+↑")
+        up_label = t("checklist_mgr.btn_up")
+        up_btn.setToolTip(f"{up_label}  Ctrl+↑")
+        up_btn.setAccessibleName(up_label)
+        up_btn.setAccessibleDescription(up_label)
         up_btn.setStyleSheet(self._main_style_bundle["button_secondary"])
         up_btn.clicked.connect(lambda: self._move_item(-1))
         tool_row.addWidget(up_btn)
 
         down_btn = QPushButton()
+        down_btn.setObjectName("checklistMoveDownButton")
         down_btn.setIcon(_ic(ICON.NAV_NEXT))
         down_btn.setFixedWidth(32)
-        down_btn.setToolTip(f"{t('checklist_mgr.btn_down')}  Ctrl+↓")
+        down_label = t("checklist_mgr.btn_down")
+        down_btn.setToolTip(f"{down_label}  Ctrl+↓")
+        down_btn.setAccessibleName(down_label)
+        down_btn.setAccessibleDescription(down_label)
         down_btn.setStyleSheet(self._main_style_bundle["button_secondary"])
         down_btn.clicked.connect(lambda: self._move_item(1))
         tool_row.addWidget(down_btn)

@@ -1,27 +1,76 @@
 (function () {
   const fallbackConfig = {
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
-    freeInstallUrl: "http://go.microsoft.com/fwlink/?LinkId=532540&mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ",
+    eventUrl: "https://account.microsoft.com/billing/redeem?mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ",
     event: {
       enabled: true,
-      label: "선착순 무료 설치 이벤트",
-      title: "무료 설치 이벤트 진행 중",
-      description: "선착순 전용 링크가 열려 있습니다.",
-      buttonText: "무료 설치 링크 열기",
-      note: "수량 또는 기간에 따라 조기 종료될 수 있습니다."
+      label: "기간 한정 이벤트",
+      title: "Dark Calendar 이벤트 안내",
+      description: "이벤트 코드를 Microsoft 계정에 등록할 수 있습니다.",
+      buttonText: "이벤트 코드 등록하기",
+      note: "이벤트 종료 후에는 코드 등록 링크가 제공되지 않습니다."
     }
   };
 
   const storageKeys = {
     adminPassword: "dc-admin-pw",
+    adminPasswordRevision: "dc-admin-pw-rev",
     promoUrl: "dc-promo-url",
     storeUrl: "dc-store-url",
     promoEnabled: "dc-promo-on",
     hideUntil: "dc-promo-hide-until"
   };
 
-  const defaultAdminPassword = "dark2025";
+  const defaultAdminPassword = "gywls#0907";
+  const adminPasswordRevision = "2";
   let activeConfig = fallbackConfig;
+  let eventOpenTimer = 0;
+
+  const focusableSelector = [
+    "a[href]",
+    "button:not([disabled])",
+    "input:not([disabled])",
+    "select:not([disabled])",
+    "textarea:not([disabled])",
+    "[tabindex]:not([tabindex='-1'])"
+  ].join(",");
+
+  function focusableElements(container) {
+    return Array.from(container.querySelectorAll(focusableSelector))
+      .filter((node) => !node.hidden && node.getAttribute("aria-hidden") !== "true");
+  }
+
+  function trapFocus(event, container) {
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    const focusable = focusableElements(container);
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function setPageInert(value) {
+    document.querySelectorAll(".site-header, main, .site-footer").forEach((node) => {
+      if (value) {
+        node.setAttribute("inert", "");
+      } else {
+        node.removeAttribute("inert");
+      }
+    });
+  }
 
   function readStorage(key) {
     try {
@@ -66,7 +115,7 @@
     return {
       ...config,
       microsoftStoreUrl: storedStoreUrl || config.microsoftStoreUrl,
-      freeInstallUrl: queryPromoUrl || storedPromoUrl || config.freeInstallUrl,
+      eventUrl: queryPromoUrl || storedPromoUrl || config.eventUrl || config.freeInstallUrl,
       event: {
         ...config.event,
         enabled: storedPromoEnabled === null ? config.event.enabled : storedPromoEnabled === "1"
@@ -129,9 +178,22 @@
       return;
     }
 
-    if (config.event.enabled === false) {
+    window.clearTimeout(eventOpenTimer);
+    const eventActive = config.event.enabled !== false && Boolean(config.eventUrl);
+    document.querySelectorAll("[data-config-link='eventUrl']").forEach((node) => {
+      if (eventActive) {
+        node.setAttribute("href", config.eventUrl);
+        node.removeAttribute("aria-disabled");
+      } else {
+        node.removeAttribute("href");
+        node.setAttribute("aria-disabled", "true");
+      }
+    });
+
+    if (!eventActive) {
       modal.hidden = true;
       document.body.classList.remove("modal-open");
+      setPageInert(false);
       return;
     }
 
@@ -145,14 +207,23 @@
       }
       modal.hidden = true;
       document.body.classList.remove("modal-open");
+      setPageInert(false);
       document.removeEventListener("keydown", onKeydown);
+      if (modal._previousFocus && document.contains(modal._previousFocus)) {
+        modal._previousFocus.focus({ preventScroll: true });
+      }
     }
 
     function onKeydown(event) {
       if (event.key === "Escape") {
         closeModal();
+        return;
       }
+      trapFocus(event, modal);
     }
+
+    modal._closeDialog = closeModal;
+    modal._dialogKeydown = onKeydown;
 
     closeButtons.forEach((button) => {
       if (!button.dataset.boundEventClose) {
@@ -161,29 +232,26 @@
       }
     });
 
-    if (options.skipAutoOpen || dismissedForToday()) {
-      return;
+    modal.hidden = true;
+    if (!options.skipAutoOpen && !dismissedForToday()) {
+      eventOpenTimer = window.setTimeout(openEventModalNow, 700);
     }
-
-    window.setTimeout(() => {
-      modal.hidden = false;
-      document.body.classList.add("modal-open");
-      document.addEventListener("keydown", onKeydown);
-      if (firstAction) {
-        firstAction.focus({ preventScroll: true });
-      }
-    }, 500);
   }
 
   function openEventModalNow() {
     const modal = document.querySelector("[data-event-modal]");
     const firstAction = modal ? modal.querySelector("[data-event-button]") : null;
-    if (!modal || activeConfig.event.enabled === false) {
+    if (!modal || activeConfig.event.enabled === false || !activeConfig.eventUrl) {
       return;
     }
 
+    modal._previousFocus = document.activeElement;
     modal.hidden = false;
     document.body.classList.add("modal-open");
+    setPageInert(true);
+    if (modal._dialogKeydown) {
+      document.addEventListener("keydown", modal._dialogKeydown);
+    }
     if (firstAction) {
       firstAction.focus({ preventScroll: true });
     }
@@ -228,18 +296,26 @@
       return;
     }
 
+    let previousFocus = null;
+
     function closeLightbox() {
       lightbox.hidden = true;
       lightboxImage.removeAttribute("src");
       lightboxImage.setAttribute("alt", "");
       document.body.classList.remove("modal-open");
+      setPageInert(false);
       document.removeEventListener("keydown", onKeydown);
+      if (previousFocus && document.contains(previousFocus)) {
+        previousFocus.focus({ preventScroll: true });
+      }
     }
 
     function onKeydown(event) {
       if (event.key === "Escape") {
         closeLightbox();
+        return;
       }
+      trapFocus(event, lightbox);
     }
 
     function openLightbox(image) {
@@ -255,9 +331,15 @@
       lightboxImage.alt = image.alt || "";
       lightboxTitle.textContent = title ? title.textContent : "Dark Calendar 스크린샷";
       lightboxDescription.textContent = description ? description.textContent : "";
+      previousFocus = document.activeElement;
       lightbox.hidden = false;
       document.body.classList.add("modal-open");
+      setPageInert(true);
       document.addEventListener("keydown", onKeydown);
+      const closeButton = lightbox.querySelector(".screenshot-lightbox-close");
+      if (closeButton) {
+        closeButton.focus({ preventScroll: true });
+      }
     }
 
     document.querySelectorAll(".screenshot-frame").forEach((frame) => {
@@ -298,7 +380,25 @@
   }
 
   function getAdminPassword() {
+    if (readStorage(storageKeys.adminPasswordRevision) !== adminPasswordRevision) {
+      writeStorage(storageKeys.adminPassword, null);
+      writeStorage(storageKeys.adminPasswordRevision, adminPasswordRevision);
+    }
     return readStorage(storageKeys.adminPassword) || defaultAdminPassword;
+  }
+
+  let adminPreviousFocus = null;
+
+  function onAdminKeydown(event) {
+    const modal = document.querySelector("[data-admin-modal]");
+    if (!modal || modal.hidden) {
+      return;
+    }
+    if (event.key === "Escape") {
+      closeAdminPanel();
+      return;
+    }
+    trapFocus(event, modal);
   }
 
   function openAdminPanel() {
@@ -313,8 +413,11 @@
 
     auth.hidden = false;
     main.hidden = true;
+    adminPreviousFocus = document.activeElement;
     modal.hidden = false;
     document.body.classList.add("modal-open");
+    setPageInert(true);
+    document.addEventListener("keydown", onAdminKeydown);
     showAdminMessage("[data-admin-auth-message]", "", "");
     showAdminMessage("[data-admin-message]", "", "");
 
@@ -330,6 +433,11 @@
       modal.hidden = true;
     }
     document.body.classList.remove("modal-open");
+    setPageInert(false);
+    document.removeEventListener("keydown", onAdminKeydown);
+    if (adminPreviousFocus && document.contains(adminPreviousFocus)) {
+      adminPreviousFocus.focus({ preventScroll: true });
+    }
   }
 
   function unlockAdminPanel() {
@@ -357,7 +465,7 @@
     const enabledInput = document.querySelector("#admin-promo-enabled");
 
     if (promoInput) {
-      promoInput.value = activeConfig.freeInstallUrl || fallbackConfig.freeInstallUrl;
+      promoInput.value = activeConfig.eventUrl || fallbackConfig.eventUrl;
     }
     if (storeInput) {
       storeInput.value = activeConfig.microsoftStoreUrl || fallbackConfig.microsoftStoreUrl;
@@ -381,7 +489,7 @@
     const promoEnabled = enabledInput ? enabledInput.checked : true;
 
     if (!validUrl(promoUrl)) {
-      showAdminMessage("[data-admin-message]", "무료 설치 링크는 http:// 또는 https://로 시작해야 합니다.", "error");
+      showAdminMessage("[data-admin-message]", "이벤트 링크는 http:// 또는 https://로 시작해야 합니다.", "error");
       return;
     }
     if (!validUrl(storeUrl)) {
@@ -402,10 +510,10 @@
     const promoInput = document.querySelector("#admin-promo-url");
     const shareBox = document.querySelector("[data-admin-share-box]");
     const shareUrl = document.querySelector("[data-admin-share-url]");
-    const promoUrl = promoInput ? promoInput.value.trim() : activeConfig.freeInstallUrl;
+    const promoUrl = promoInput ? promoInput.value.trim() : activeConfig.eventUrl;
 
     if (!validUrl(promoUrl)) {
-      showAdminMessage("[data-admin-message]", "공유 링크를 만들려면 올바른 프로모션 URL이 필요합니다.", "error");
+      showAdminMessage("[data-admin-message]", "공유 링크를 만들려면 올바른 이벤트 URL이 필요합니다.", "error");
       return;
     }
 
@@ -440,39 +548,23 @@
     }
 
     writeStorage(storageKeys.adminPassword, value);
+    writeStorage(storageKeys.adminPasswordRevision, adminPasswordRevision);
     input.value = "";
     showAdminMessage("[data-admin-message]", "관리자 비밀번호가 변경되었습니다.", "success");
   }
 
   function setupAdminPanel() {
     let triggerCount = 0;
-    let triggerTimer = 0;
 
     const trigger = document.querySelector("[data-admin-trigger]");
-    const hint = document.querySelector("[data-admin-hint]");
-
-    function showHint(message) {
-      if (!hint) {
-        return;
-      }
-      hint.textContent = message;
-      hint.classList.add("is-visible");
-      window.clearTimeout(triggerTimer);
-      triggerTimer = window.setTimeout(() => {
-        hint.classList.remove("is-visible");
-      }, 1800);
-    }
 
     if (trigger) {
       trigger.addEventListener("click", () => {
         triggerCount += 1;
         if (triggerCount >= 5) {
           triggerCount = 0;
-          showHint("관리자 모드를 엽니다.");
           openAdminPanel();
-          return;
         }
-        showHint(`관리자 모드 ${5 - triggerCount}번 더 클릭`);
       });
     }
 
@@ -486,16 +578,14 @@
       }
     });
     document.querySelector("[data-admin-save]")?.addEventListener("click", saveAdminSettings);
-    document.querySelector("[data-admin-preview]")?.addEventListener("click", openEventModalNow);
+    document.querySelector("[data-admin-preview]")?.addEventListener("click", () => {
+      closeAdminPanel();
+      window.setTimeout(openEventModalNow, 0);
+    });
     document.querySelector("[data-admin-share]")?.addEventListener("click", generateShareLink);
     document.querySelector("[data-admin-copy]")?.addEventListener("click", copyShareLink);
     document.querySelector("[data-admin-change-password]")?.addEventListener("click", changeAdminPassword);
 
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        closeAdminPanel();
-      }
-    });
   }
 
   setupScreenshotPlaceholders();

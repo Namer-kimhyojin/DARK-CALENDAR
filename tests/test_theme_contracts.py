@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from pathlib import Path
 import unittest
 
@@ -442,6 +443,8 @@ class ThemeContractTests(unittest.TestCase):
         self.assertIn("min-height: 42px;", shared_qss)
         self.assertIn("border-radius: 8px;", picker_qss)
         self.assertIn("border-radius: 10px;", picker_qss)
+        self.assertIn("QPushButton#fontComboPopupButton", picker_qss)
+        self.assertNotIn("data:image/svg+xml", picker_qss)
 
     def test_panel_style_builders_consume_semantic_tokens(self):
         tokens = {

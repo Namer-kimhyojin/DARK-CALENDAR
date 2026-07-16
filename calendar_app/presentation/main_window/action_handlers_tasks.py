@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Task event interaction handlers mixin."""
 
 import logging
@@ -11,6 +12,7 @@ from calendar_app.infrastructure.db import directive_repo as db_directive
 from calendar_app.infrastructure.db import legacy_task_repo as db_legacy_task
 from calendar_app.infrastructure.db import search_repo as db_search
 from calendar_app.infrastructure.db import task_repo as db_task
+from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.google_sync.push_queue import gcal_push_queue
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.color_swatch_widget import ColorSwatchPopup
@@ -176,8 +178,22 @@ class TaskActionsMixin:
                 self, task_id_list, target_date, target_time, action
             )
 
+            blocked_readonly_ids = list(getattr(self, "_last_drop_blocked_readonly_ids", []) or [])
+            if blocked_readonly_ids and hasattr(self, "show_toast"):
+                self.show_toast(
+                    t("dialog.task.calendar_read_only", "읽기 전용 캘린더"),
+                    t("gcal.errors.forbidden", "해당 캘린더에 대한 수정 권한이 없습니다."),
+                )
+
+            failed_ids = list(getattr(self, "_last_drop_failed_ids", []) or [])
+            if failed_ids and hasattr(self, "show_toast"):
+                self.show_toast(
+                    t("dialog.task.save_failed", "저장 실패"),
+                    t("dialog.task.save_error_db", "데이터베이스 업데이트에 실패했습니다."),
+                )
+
             # If gcal is enabled, push the changes (updates for move, creates for copy)
-            if changed > 0 and self.settings.value("gcal_enabled", "true") == "true":
+            if changed > 0 and is_gcal_enabled(self.settings):
                 from calendar_app.infrastructure.db import task_repo as _task_repo
 
                 # Determine which IDs to push to Google Calendar
@@ -194,7 +210,8 @@ class TaskActionsMixin:
                         gcal_push_queue.enqueue(self, task, create_if_missing=True)
 
             # Trigger a general sync/refresh
-            self.wake_gcal_sync()
+            if changed > 0:
+                self.wake_gcal_sync()
         except Exception:
             logger.exception(
                 "Unhandled error in handle_task_dropped task_ids=%s target_date=%s target_time=%s action=%s selected=%s",
@@ -380,13 +397,13 @@ class TaskActionsMixin:
             return task_delete_usecases.delete_tasks_with_google_queue(
                 db_task,
                 target_ids,
-                queue_delete_fn=lambda event_id,
-                local_task_id,
-                gcal_calendar_id: queue_task_delete_from_google(
-                    self,
-                    event_id,
-                    local_task_id=local_task_id,
-                    gcal_calendar_id=gcal_calendar_id,
+                queue_delete_fn=lambda event_id, local_task_id, gcal_calendar_id: (
+                    queue_task_delete_from_google(
+                        self,
+                        event_id,
+                        local_task_id=local_task_id,
+                        gcal_calendar_id=gcal_calendar_id,
+                    )
                 ),
             )
 
@@ -524,13 +541,13 @@ class TaskActionsMixin:
             return task_delete_usecases.delete_tasks_with_google_queue(
                 db_task,
                 task_ids,
-                queue_delete_fn=lambda event_id,
-                local_task_id,
-                gcal_calendar_id: queue_task_delete_from_google(
-                    self,
-                    event_id,
-                    local_task_id=local_task_id,
-                    gcal_calendar_id=gcal_calendar_id,
+                queue_delete_fn=lambda event_id, local_task_id, gcal_calendar_id: (
+                    queue_task_delete_from_google(
+                        self,
+                        event_id,
+                        local_task_id=local_task_id,
+                        gcal_calendar_id=gcal_calendar_id,
+                    )
                 ),
             )
 
@@ -615,13 +632,13 @@ class TaskActionsMixin:
                 db_search,
                 db_task,
                 date_str,
-                queue_delete_fn=lambda event_id,
-                local_task_id,
-                gcal_calendar_id: queue_task_delete_from_google(
-                    self,
-                    event_id,
-                    local_task_id=local_task_id,
-                    gcal_calendar_id=gcal_calendar_id,
+                queue_delete_fn=lambda event_id, local_task_id, gcal_calendar_id: (
+                    queue_task_delete_from_google(
+                        self,
+                        event_id,
+                        local_task_id=local_task_id,
+                        gcal_calendar_id=gcal_calendar_id,
+                    )
                 ),
             )
 

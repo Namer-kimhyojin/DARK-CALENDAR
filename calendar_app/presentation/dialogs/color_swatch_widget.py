@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Google Calendar style color swatch widget.
 
 Displays a horizontal row of 12 circular color buttons (11 GCal colors + "none").
@@ -52,7 +53,15 @@ def _resolve_color_swatch_inputs(
 
 
 def _color_swatch_button_shell_stylesheet() -> str:
-    return "QPushButton { background: transparent; border: none; }"
+    return (
+        "QPushButton {"
+        " background: transparent;"
+        " border: none;"
+        " min-width: 0px;"
+        " padding: 0px;"
+        " margin: 0px;"
+        "}"
+    )
 
 
 def _color_swatch_theme_bundle(

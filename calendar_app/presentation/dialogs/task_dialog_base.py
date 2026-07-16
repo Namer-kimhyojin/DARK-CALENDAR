@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Shared base class for unified task add/modify dialogs."""
 
 from PyQt6.QtCore import QDate, QDateTime, Qt, QTime
@@ -7,6 +8,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -183,19 +185,18 @@ class BaseTaskDialog(QDialog):
         ops_inner.addLayout(combo_row)
 
         # 색상 태그
-        color_row = QHBoxLayout()
-        color_row.setSpacing(6)
+        color_column = QVBoxLayout()
+        color_column.setSpacing(4)
         color_lbl = QLabel(t("dialog.task.color_tag", "색상 태그"))
-        color_lbl.setFixedWidth(74)
-        color_row.addWidget(color_lbl)
+        color_lbl.setWordWrap(True)
+        color_column.addWidget(color_lbl)
         self.color_swatch = GoogleColorSwatch(
             tokens=self._ui_tokens(),
             metrics=self._dialog_metrics(),
         )
         self.color_swatch.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        color_row.addWidget(self.color_swatch)
-        color_row.addStretch()
-        ops_inner.addLayout(color_row)
+        color_column.addWidget(self.color_swatch)
+        ops_inner.addLayout(color_column)
         return ops_group
 
     def _make_quick_btn(self, label, accent=False):
@@ -740,9 +741,10 @@ class BaseTaskDialog(QDialog):
             t("dialog.task.alarm_10m"): 10,
         }
         self.alarm_checks = {}
-        alarm_row = QHBoxLayout()
-        alarm_row.setSpacing(16)
-        alarm_row.setContentsMargins(0, 0, 0, 0)
+        alarm_grid = QGridLayout()
+        alarm_grid.setHorizontalSpacing(12)
+        alarm_grid.setVerticalSpacing(6)
+        alarm_grid.setContentsMargins(0, 0, 0, 0)
 
         # 기본값 로드
         from PyQt6.QtCore import QSettings
@@ -754,31 +756,37 @@ class BaseTaskDialog(QDialog):
         else:
             default_alarms = []
 
-        for text, mins in self.alarm_opts.items():
+        for index, (text, mins) in enumerate(self.alarm_opts.items()):
             cb = QCheckBox(text)
             cb.toggled.connect(self._update_alarm_summary)
             if mins in default_alarms and not getattr(self, "_is_modify", False):
                 cb.setChecked(True)
-            alarm_row.addWidget(cb)
+            alarm_grid.addWidget(cb, index // 2, index % 2)
             self.alarm_checks[mins] = cb
-
-        alarm_row.addStretch()
 
         # 기본값 설정 버튼
         self.set_default_alarm_btn = QPushButton(
             t("dialog.task.save_alarm_default", "알람 기본값 저장")
         )
         self.set_default_alarm_btn.setObjectName("ghost_btn")
-        self.set_default_alarm_btn.setMinimumWidth(152)
+        self.set_default_alarm_btn.ensurePolished()
+        required_width = (
+            self.set_default_alarm_btn.fontMetrics().horizontalAdvance(
+                self.set_default_alarm_btn.text()
+            )
+            + 48
+        )
+        self.set_default_alarm_btn.setMinimumWidth(max(152, required_width))
         self.set_default_alarm_btn.setMinimumHeight(30)
         self.set_default_alarm_btn.setSizePolicy(
             QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed
         )
         self.set_default_alarm_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.set_default_alarm_btn.clicked.connect(self._save_default_alarms)
-        alarm_row.addWidget(self.set_default_alarm_btn)
+        alarm_grid.addWidget(self.set_default_alarm_btn, 0, 2, 2, 1)
+        alarm_grid.setColumnStretch(3, 1)
 
-        alarm_layout.addLayout(alarm_row)
+        alarm_layout.addLayout(alarm_grid)
         return alarm_group
 
     def _save_default_alarms(self):

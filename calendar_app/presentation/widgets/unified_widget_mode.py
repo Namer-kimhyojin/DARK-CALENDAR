@@ -28,6 +28,15 @@ from calendar_app.presentation.widgets.panel_widget_theme import (
     _apply_registered_widget_mode_skin,
     _widget_mode_menu_stylesheet,
 )
+from calendar_app.presentation.widgets.widget_mode_geometry import (
+    best_available_geometry,
+    clamp_rect,
+    deserialize_geometry,
+    geometry_key,
+    legacy_rect,
+    restore_rect,
+    serialize_geometry,
+)
 from calendar_app.presentation.widgets.widget_mode_skins import (
     get_widget_mode_layout,
     read_widget_mode_layout_id,
@@ -699,6 +708,9 @@ class UnifiedWidgetWindow(QWidget):
         self._last_render_key = None
         self.update_agenda(self._last_items)
 
+    def set_filter(self, mode: str) -> None:
+        self._set_filter(mode)
+
     def _filter_items(self, items: list[dict[str, object]]) -> list[dict[str, object]]:
         if self._active_filter == "all":
             return [dict(item) for item in items]
@@ -848,6 +860,7 @@ class UnifiedWidgetWindow(QWidget):
     def hideEvent(self, event):
         super().hideEvent(event)
         self.timer.stop()
+        self.controller.notify_hidden()
 
     def update_time(self) -> None:
         current_text = QTime.currentTime().toString("HH:mm")
@@ -904,8 +917,20 @@ class UnifiedWidgetWindow(QWidget):
         menu.addSeparator()
         refresh_action = menu.addAction(t("widget_mode.menu_refresh", "새로고침"))
         close_action = menu.addAction(t("widget_mode.close", "위젯 닫기"))
+        editor_action = menu.addAction(t("widget_mode.editor_title", "위젯 스타일 만들기"))
         selected = menu.exec(event.globalPos())
-        if selected == refresh_action:
+        if selected == editor_action:
+            from calendar_app.presentation.dialogs.widget_style_editor_dialog import (
+                WidgetStyleEditorDialog,
+            )
+
+            editor = WidgetStyleEditorDialog(self)
+            if editor.exec():
+                if editor.created_kind == "skin":
+                    self.controller.set_skin(editor.created_id)
+                elif editor.created_kind == "layout":
+                    self.controller.set_layout(editor.created_id)
+        elif selected == refresh_action:
             self.controller.force_refresh()
         elif selected == close_action:
             self.hide()
@@ -920,12 +945,17 @@ class UnifiedWidgetController:
     POSITION_KEY = "unified_widget_pos"
     SIZE_KEY = "unified_widget_size"
 
-    def __init__(self, main_window):
+    def __init__(self, main_window, *, on_hidden=None):
         self.main_window = main_window
         self.widget = None
+        self._on_hidden = on_hidden
+        self._restoring_geometry = False
         self._cache_refresh_pending = False
         self._last_display_signature = None
         self._items_cache = {}
+        app = QApplication.instance()
+        if app is not None:
+            app.screenRemoved.connect(self._handle_screen_change)
 
     def _current_date(self) -> QDate:
         target = getattr(self.main_window, "current_date", None)
@@ -956,27 +986,108 @@ class UnifiedWidgetController:
         return context_date.isValid() and context_date == target
 
     def toggle_widget(self):
-        if self.widget and self.widget.isVisible():
-            self.widget.hide()
-            return
+        if self.is_visible():
+            self.hide_widget()
+        else:
+            self.show_widget()
 
-        if not self.widget:
+    def show_widget(self, filter_mode: str = "all") -> None:
+        if self.widget is None:
             self.widget = UnifiedWidgetWindow(self)
-            stored_pos = self.main_window.settings.value(self.POSITION_KEY)
-            if isinstance(stored_pos, QPoint):
-                self.widget.move(stored_pos)
-            else:
-                screen = QApplication.primaryScreen().availableGeometry()
-                self.widget.move(screen.right() - self.widget.width() - 40, 40)
-
+            self._restore_geometry()
+        self.widget.set_filter(filter_mode)
         self.widget.show()
+        self.widget.raise_()
+
+    def hide_widget(self) -> None:
+        if self.widget is not None:
+            self.widget.hide()
+
+    def is_visible(self) -> bool:
+        return self.widget is not None and self.widget.isVisible()
+
+    def notify_hidden(self) -> None:
+        if self._on_hidden is not None:
+            self._on_hidden()
 
     def save_position(self, pos: QPoint) -> None:
-        self.main_window.settings.setValue(self.POSITION_KEY, pos)
+        del pos
+        self._save_geometry()
 
     def save_size(self, size: QSize) -> None:
+        if self._restoring_geometry:
+            return
         layout_id = self.widget.active_layout_id() if self.widget is not None else "stacked"
         self.main_window.settings.setValue(self._layout_size_key(layout_id), size)
+        self._save_geometry(size_override=size)
+
+    def _save_geometry(self, *, size_override: QSize | None = None) -> None:
+        if self.widget is None or self._restoring_geometry:
+            return
+        screen = self.widget.screen()
+        if screen is None:
+            screen_info = best_available_geometry(
+                QApplication.screens(), point=self.widget.frameGeometry().center()
+            )
+            if screen_info is None:
+                return
+            available, screen_name = screen_info
+        else:
+            available, screen_name = screen.availableGeometry(), screen.name()
+        rect = self.widget.geometry()
+        if size_override is not None:
+            rect.setSize(size_override)
+        raw = serialize_geometry(rect, available, screen_name)
+        self.main_window.settings.setValue(geometry_key(self.widget.active_layout_id()), raw)
+
+    def _restore_geometry(self) -> None:
+        if self.widget is None:
+            return
+        layout_id = self.widget.active_layout_id()
+        payload = deserialize_geometry(self.main_window.settings.value(geometry_key(layout_id)))
+        screen_info = best_available_geometry(
+            QApplication.screens(),
+            screen_name=str(payload.get("screen") or "") if payload else "",
+        )
+        if screen_info is None:
+            return
+        available, _screen_name = screen_info
+        if payload is not None:
+            target = restore_rect(payload, available)
+        else:
+            stored_pos = self.main_window.settings.value(self.POSITION_KEY)
+            stored_size = self.saved_size_for_layout(get_widget_mode_layout(layout_id))
+            if isinstance(stored_pos, QPoint):
+                target = legacy_rect(stored_pos, stored_size, available)
+            else:
+                target = clamp_rect(
+                    self.widget.geometry().translated(
+                        available.right() - self.widget.width() - 39 - self.widget.x(),
+                        available.top() + 40 - self.widget.y(),
+                    ),
+                    available,
+                )
+        self._restoring_geometry = True
+        try:
+            self.widget.setGeometry(target)
+        finally:
+            self._restoring_geometry = False
+
+    def _handle_screen_change(self, _screen=None) -> None:
+        if not self.is_visible():
+            return
+        screen_info = best_available_geometry(
+            QApplication.screens(), point=self.widget.frameGeometry().center()
+        )
+        if screen_info is None:
+            return
+        available, _screen_name = screen_info
+        self._restoring_geometry = True
+        try:
+            self.widget.setGeometry(clamp_rect(self.widget.geometry(), available))
+        finally:
+            self._restoring_geometry = False
+        self._save_geometry()
 
     def _layout_size_key(self, layout_id: str) -> str:
         return f"{self.SIZE_KEY}_{layout_id}"
@@ -1006,6 +1117,7 @@ class UnifiedWidgetController:
         if self.widget is None:
             return
         self.widget.apply_selected_layout(resize_to_layout=True)
+        self._restore_geometry()
         self.widget._style_signature = None
         self.widget.apply_theme()
 

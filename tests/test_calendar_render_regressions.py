@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import unittest
 
@@ -7,6 +9,7 @@ from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import QApplication
 
 from calendar_app.infrastructure.db import db_repository_unified as unified_repo
+from calendar_app.presentation import drag_drop_manager
 from calendar_app.presentation.calendar import month_renderer
 from calendar_app.presentation.widgets.ui_components import DraggableTaskButton
 from tests.support import TemporaryDatabaseTestCase
@@ -44,6 +47,25 @@ class DraggableTaskButtonRenderTests(unittest.TestCase):
         btn = DraggableTaskButton(100, "Render Regression")
         self.assertEqual(btn.title_label.text(), "Render Regression")
         self.assertGreater(btn.title_bar.minimumHeight(), 0)
+
+    def test_drag_pixmap_renders_single_and_stacked_cards(self):
+        single = drag_drop_manager.build_task_drag_pixmap(
+            [100], {100: {"name": "Render Regression"}}
+        )
+        stacked = drag_drop_manager.build_task_drag_pixmap(
+            [100, 101, 102],
+            {
+                100: {"name": "First"},
+                101: {"name": "Second"},
+                102: {"name": "Third"},
+            },
+        )
+
+        self.assertEqual(single.size(), stacked.size())
+        self.assertGreaterEqual(single.width(), 240)
+        self.assertGreaterEqual(single.height(), 80)
+        self.assertGreater(single.toImage().pixelColor(24, 24).alpha(), 0)
+        self.assertGreater(stacked.toImage().pixelColor(30, 6).alpha(), 0)
 
 
 class MonthRendererMonthRangeTests(unittest.TestCase):

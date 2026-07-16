@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
     QTextEdit,
@@ -53,6 +54,13 @@ def _gcal_issue_style_bundle(tokens=None, metrics=None):
     text_primary = tokens.get("text_primary", "#e7ecf4")
     text_secondary = tokens.get("text_secondary", "#cbd5e0")
     text_muted = tokens.get("text_muted", "#99aab5")
+    text_faint = tokens.get("text_faint", "#6f7b88")
+    disabled_button = (
+        "QPushButton:disabled { "
+        f"background-color: {surface_item}; color: {text_faint}; "
+        f"border: 1px solid {border_soft}; "
+        "}"
+    )
     return {
         "header_title": build_editor_text_style(
             tokens, tone="accent", font_px=base_font_px + 3, weight=700
@@ -89,6 +97,12 @@ def _gcal_issue_style_bundle(tokens=None, metrics=None):
         "guidance_text": build_editor_text_style(
             tokens, tone="secondary", font_px=max(12, base_font_px - 1), background="transparent"
         ),
+        "empty_title": build_editor_text_style(
+            tokens, tone="success", font_px=base_font_px + 2, weight=700
+        ),
+        "empty_body": build_editor_text_style(
+            tokens, tone="muted", font_px=max(12, base_font_px - 1)
+        ),
         "diff_panel": (
             "QFrame#DiffPanel { "
             f"background-color: {surface_alt}; border: 1px solid {tokens.get('accent_soft_border', border)}; "
@@ -107,9 +121,12 @@ def _gcal_issue_style_bundle(tokens=None, metrics=None):
             f"border-radius: {max(6, list_radius - 2)}px; padding: 6px; font-size: {max(12, base_font_px - 1)}px; "
             "}"
         ),
-        "button_secondary": build_editor_quick_button_style(tokens, metrics, tone="secondary"),
-        "button_accent": build_editor_quick_button_style(tokens, metrics, tone="accent"),
-        "button_warning": build_editor_quick_button_style(tokens, metrics, tone="warning"),
+        "button_secondary": build_editor_quick_button_style(tokens, metrics, tone="secondary")
+        + disabled_button,
+        "button_accent": build_editor_quick_button_style(tokens, metrics, tone="accent")
+        + disabled_button,
+        "button_warning": build_editor_quick_button_style(tokens, metrics, tone="warning")
+        + disabled_button,
         "status_manual": tokens.get("danger_hex", "#ff5f5f"),
         "status_retry": tokens.get("accent", "#4da6ff"),
         "status_healed": tokens.get("success_hex", "#42b883"),
@@ -175,7 +192,51 @@ class GCalSyncIssuesDialog(QDialog):
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.itemSelectionChanged.connect(self._on_selection_changed)
-        root.addWidget(self.table, 5)
+
+        self.empty_state = QFrame(self)
+        self.empty_state.setObjectName("GCalIssuesEmptyState")
+        empty_layout = QVBoxLayout(self.empty_state)
+        empty_layout.setContentsMargins(24, 24, 24, 24)
+        empty_layout.setSpacing(8)
+        empty_layout.addStretch(1)
+
+        empty_icon = QLabel(self.empty_state)
+        empty_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_icon_color = QColor(self._ui_tokens.get("success_hex", "#42b883"))
+        if not empty_icon_color.isValid():
+            empty_icon_color = QColor("#42b883")
+        empty_icon.setPixmap(
+            _ic(
+                ICON.STATUS_COMPLETED,
+                color=empty_icon_color.name(QColor.NameFormat.HexRgb),
+            ).pixmap(30, 30)
+        )
+        empty_layout.addWidget(empty_icon)
+
+        empty_title = QLabel(
+            t("gcal.issues_empty_title", "동기화 문제가 없습니다."), self.empty_state
+        )
+        empty_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_title.setStyleSheet(self._style_bundle["empty_title"])
+        empty_layout.addWidget(empty_title)
+
+        empty_body = QLabel(
+            t(
+                "gcal.issues_empty_body",
+                "Google Calendar 동기화 상태가 정상입니다. 새로고침하면 현재 상태를 다시 확인합니다.",
+            ),
+            self.empty_state,
+        )
+        empty_body.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        empty_body.setWordWrap(True)
+        empty_body.setStyleSheet(self._style_bundle["empty_body"])
+        empty_layout.addWidget(empty_body)
+        empty_layout.addStretch(1)
+
+        self.table_stack = QStackedWidget(self)
+        self.table_stack.addWidget(self.table)
+        self.table_stack.addWidget(self.empty_state)
+        root.addWidget(self.table_stack, 5)
 
         # 3. Guidance Panel (Redesigned)
         self.guidance_box = QFrame(self)
@@ -380,6 +441,19 @@ class GCalSyncIssuesDialog(QDialog):
 
         self.table.cellDoubleClicked.connect(self._on_cell_double_clicked)
         self.load_rows()
+
+    def _update_action_states(self, meta=None):
+        issue_type = str((meta or {}).get("type") or "")
+        can_manage = issue_type in {"task", "conflict", "delete_queue"}
+        is_conflict = issue_type == "conflict"
+        is_orphan = issue_type == "google_orphan"
+
+        self.retry_btn.setEnabled(can_manage)
+        self.clear_btn.setEnabled(can_manage)
+        self.force_ignore_btn.setEnabled(can_manage)
+        self.keep_local_btn.setEnabled(is_conflict)
+        self.use_remote_btn.setEnabled(is_conflict)
+        self.delete_remote_btn.setEnabled(is_orphan)
 
     def _map_error_to_friendly(self, error_raw):
         if not error_raw:
@@ -615,6 +689,24 @@ class GCalSyncIssuesDialog(QDialog):
                 row,
             )
 
+        has_rows = bool(rows)
+        self.table_stack.setCurrentWidget(self.table if has_rows else self.empty_state)
+        self.guidance_box.setVisible(has_rows)
+        self._diff_panel.setVisible(False)
+        self._update_action_states(None)
+
+        healed_label = t("gcal.issues_auto_healed", "시스템 자동 복구")
+        self.clear_healed_btn.setEnabled(
+            any(
+                row.get("type") == "task"
+                and (
+                    row.get("status") == healed_label
+                    or "auto_healed" in str(row.get("status") or "")
+                )
+                for row in rows
+            )
+        )
+
         # Adjust column widths
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
@@ -768,17 +860,12 @@ class GCalSyncIssuesDialog(QDialog):
         if not meta:
             self.guidance_text.setHtml("")
             self._diff_panel.setVisible(False)
-            self.keep_local_btn.setEnabled(False)
-            self.use_remote_btn.setEnabled(False)
-            if hasattr(self, "delete_remote_btn"):
-                self.delete_remote_btn.setEnabled(False)
+            self.guidance_box.setVisible(self.table.rowCount() > 0)
+            self._update_action_states(None)
             return
 
-        is_orphan = meta.get("type") == "google_orphan"
-        if hasattr(self, "delete_remote_btn"):
-            self.delete_remote_btn.setEnabled(is_orphan)
-
         is_conflict = meta.get("type") == "conflict"
+        self._update_action_states(meta)
         if is_conflict:
             local_snap = self._load_snapshot_json(
                 meta.get("local_snapshot_json") or meta.get("local_snapshot")
@@ -793,9 +880,6 @@ class GCalSyncIssuesDialog(QDialog):
         else:
             self._diff_panel.setVisible(False)
             self.guidance_box.setVisible(True)
-
-        self.keep_local_btn.setEnabled(is_conflict)
-        self.use_remote_btn.setEnabled(is_conflict)
 
         raw = str(meta.get("raw_error") or "").lower()
         html_content = ""
