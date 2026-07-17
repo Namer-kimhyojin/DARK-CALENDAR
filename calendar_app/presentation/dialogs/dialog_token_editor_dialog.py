@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Dialog UI token editor with live preview."""
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QScrollArea,
+    QSizePolicy,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -996,16 +998,62 @@ def _preview_variant_stylesheet(tokens=None, metrics=None) -> str:
 
 
 class DialogTokenEditorDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(
+        self,
+        parent=None,
+        *,
+        theme_color: str | None = None,
+        text_theme: str | None = None,
+        panel_base_color: str | None = None,
+        base_tokens: dict | None = None,
+        initial_color_overrides: dict | None = None,
+        initial_metric_overrides: dict | None = None,
+        persist_on_apply: bool = True,
+    ):
         super().__init__(parent)
-        apply_dialog_title(self, t("dialog.token_editor.title", "다이얼로그 UI 토큰 설정"))
-        apply_common_dialog_style(self, minimum_width=1080, size=(1200, 820))
+        apply_dialog_title(self, t("dialog.token_editor.title", "세부 모양 조정"))
+        apply_common_dialog_style(
+            self,
+            minimum_width=1080,
+            size=(1200, 820),
+            theme_color=theme_color,
+            text_theme=text_theme,
+            panel_base_color=panel_base_color,
+        )
         self.setModal(True)
 
-        self._default_tokens = get_dialog_theme_tokens(apply_overrides=False)
-        self._current_tokens = get_dialog_theme_tokens(apply_overrides=True)
+        self._theme_color = theme_color
+        self._text_theme = text_theme
+        self._panel_base_color = panel_base_color
+        self._persist_on_apply = bool(persist_on_apply)
+        self._result_color_overrides: dict | None = None
+        self._result_metric_overrides: dict | None = None
+
+        self._default_tokens = dict(
+            base_tokens
+            or get_dialog_theme_tokens(
+                theme_color=theme_color,
+                text_theme=text_theme,
+                panel_base_color=panel_base_color,
+                apply_overrides=False,
+            )
+        )
+        if initial_color_overrides is None:
+            self._current_tokens = get_dialog_theme_tokens(
+                theme_color=theme_color,
+                text_theme=text_theme,
+                panel_base_color=panel_base_color,
+                apply_overrides=True,
+            )
+        else:
+            self._current_tokens = dict(self._default_tokens)
+            self._current_tokens.update(initial_color_overrides)
         self._default_metrics = get_dialog_metric_tokens(apply_overrides=False)
-        self._current_metrics = get_dialog_metric_tokens(apply_overrides=True)
+        if initial_metric_overrides is None:
+            self._current_metrics = get_dialog_metric_tokens(apply_overrides=True)
+        else:
+            self._current_metrics = dict(self._default_metrics)
+            self._current_metrics.update(initial_metric_overrides)
         self._style_bundle = _dialog_token_editor_style_bundle(
             self._current_tokens, self._current_metrics
         )
@@ -1036,12 +1084,24 @@ class DialogTokenEditorDialog(QDialog):
         desc = QLabel(
             t(
                 "dialog.token_editor.desc",
-                "다이얼로그 공통 색상/크기/간격 토큰을 조정합니다. 버튼 타입별 스타일도 포함되며 우측 미리보기에서 즉시 확인할 수 있습니다.",
+                "프리셋으로 세부 모양을 조정하고 오른쪽에서 결과를 확인하세요. 개별 값은 전문가 보기에서 직접 바꿀 수 있습니다.",
             )
         )
         desc.setWordWrap(True)
         desc.setStyleSheet(self._style_bundle["desc"])
         root.addWidget(desc)
+
+        self.expert_mode_check = QCheckBox(
+            t("dialog.token_editor.expert_mode", "개별 값 직접 조정 (전문가)"),
+        )
+        self.expert_mode_check.setToolTip(
+            t(
+                "dialog.token_editor.expert_mode_tip",
+                "색상·크기·간격의 내부 값을 직접 편집합니다.",
+            )
+        )
+        self.expert_mode_check.setAccessibleName(self.expert_mode_check.text())
+        root.addWidget(self.expert_mode_check)
 
         # 프리셋 콤보/버튼/노트는 각 탭 내부(_build_color_tab/_build_metric_tab)에 배치.
         # 여기서는 콤보박스/노트 위젯만 미리 생성해 두고 탭 빌더에서 레이아웃에 삽입한다.
@@ -1081,6 +1141,8 @@ class DialogTokenEditorDialog(QDialog):
         tabs = QTabWidget()
         tabs.addTab(self._build_color_tab(), t("dialog.token_editor.tab_color", "색상 토큰"))
         tabs.addTab(self._build_metric_tab(), t("dialog.token_editor.tab_metric", "크기/간격 토큰"))
+        self.expert_mode_check.toggled.connect(self._set_expert_mode)
+        self._set_expert_mode(False)
 
         # 탭 빌드 후 시그널 초기 실행
         self._on_color_preset_changed(self.color_preset_combo.currentText())
@@ -1140,10 +1202,12 @@ class DialogTokenEditorDialog(QDialog):
         wrapper_lay = QVBoxLayout(wrapper)
         wrapper_lay.setContentsMargins(0, 0, 0, 0)
         wrapper_lay.setSpacing(0)
+        self.color_tab_layout = wrapper_lay
 
         # ── 프리셋 바 ─────────────────────────────────────────────────────────
         preset_bar = QFrame()
         preset_bar.setObjectName("presetBar")
+        preset_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         preset_bar.setStyleSheet(self._style_bundle["preset_bar"])
         bar_lay = QVBoxLayout(preset_bar)
         bar_lay.setContentsMargins(10, 8, 10, 8)
@@ -1158,16 +1222,16 @@ class DialogTokenEditorDialog(QDialog):
         row1.addWidget(self.preset_mode_dark)
         row1.addWidget(self.preset_mode_light)
         row1.addStretch(1)
-        export_btn = QPushButton("JSON 내보내기")
-        export_btn.setStyleSheet(self._style_bundle["button_ghost"])
-        export_btn.setFixedWidth(100)
-        export_btn.clicked.connect(self._export_tokens)
-        import_btn = QPushButton("JSON 가져오기")
-        import_btn.setStyleSheet(self._style_bundle["button_ghost"])
-        import_btn.setFixedWidth(100)
-        import_btn.clicked.connect(self._import_tokens)
-        row1.addWidget(export_btn)
-        row1.addWidget(import_btn)
+        self.export_btn = QPushButton(t("dialog.token_editor.export", "JSON 내보내기"))
+        self.export_btn.setStyleSheet(self._style_bundle["button_ghost"])
+        self.export_btn.setFixedWidth(100)
+        self.export_btn.clicked.connect(self._export_tokens)
+        self.import_btn = QPushButton(t("dialog.token_editor.import", "JSON 가져오기"))
+        self.import_btn.setStyleSheet(self._style_bundle["button_ghost"])
+        self.import_btn.setFixedWidth(100)
+        self.import_btn.clicked.connect(self._import_tokens)
+        row1.addWidget(self.export_btn)
+        row1.addWidget(self.import_btn)
         bar_lay.addLayout(row1)
 
         # 2행: 프리셋 선택 콤보 + 적용 버튼
@@ -1262,6 +1326,7 @@ class DialogTokenEditorDialog(QDialog):
 
         body_lay.addStretch(1)
         area.setWidget(body)
+        self.color_token_area = area
         wrapper_lay.addWidget(area, 1)
         return wrapper
 
@@ -1271,10 +1336,12 @@ class DialogTokenEditorDialog(QDialog):
         wrapper_lay = QVBoxLayout(wrapper)
         wrapper_lay.setContentsMargins(0, 0, 0, 0)
         wrapper_lay.setSpacing(0)
+        self.metric_tab_layout = wrapper_lay
 
         # ── 프리셋 바 ─────────────────────────────────────────────────────────
         preset_bar = QFrame()
         preset_bar.setObjectName("presetBar")
+        preset_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         preset_bar.setStyleSheet(self._style_bundle["preset_bar"])
         bar_lay = QHBoxLayout(preset_bar)
         bar_lay.setContentsMargins(8, 6, 8, 6)
@@ -1347,8 +1414,29 @@ class DialogTokenEditorDialog(QDialog):
 
         body_lay.addStretch(1)
         area.setWidget(body)
+        self.metric_token_area = area
         wrapper_lay.addWidget(area, 1)
         return wrapper
+
+    def _set_expert_mode(self, enabled: bool):
+        """Reveal raw token controls only when the user explicitly asks for them."""
+        for widget_name in (
+            "color_token_area",
+            "metric_token_area",
+            "export_btn",
+            "import_btn",
+        ):
+            widget = getattr(self, widget_name, None)
+            if widget is not None:
+                widget.setVisible(bool(enabled))
+        for layout_name, area_name in (
+            ("color_tab_layout", "color_token_area"),
+            ("metric_tab_layout", "metric_token_area"),
+        ):
+            layout = getattr(self, layout_name, None)
+            area = getattr(self, area_name, None)
+            if layout is not None and area is not None:
+                layout.setStretchFactor(area, 1 if enabled else 0)
 
     def _build_preview_widget(self) -> QWidget:
         root = QWidget()
@@ -1594,6 +1682,9 @@ class DialogTokenEditorDialog(QDialog):
         css = build_dialog_preview_stylesheet(
             token_overrides=token_overrides,
             metric_overrides=metric_overrides,
+            theme_color=self._theme_color,
+            text_theme=self._text_theme,
+            panel_base_color=self._panel_base_color,
         )
         css = (
             f"{css}\n{_preview_variant_stylesheet(tokens=preview_tokens, metrics=preview_metrics)}"
@@ -1845,10 +1936,21 @@ class DialogTokenEditorDialog(QDialog):
             return
 
         metric_overrides = self._collect_metric_overrides(diff_only=True)
-        set_dialog_token_overrides(color_overrides)
-        set_dialog_metric_overrides(metric_overrides)
+        self._result_color_overrides = dict(color_overrides)
+        self._result_metric_overrides = dict(metric_overrides)
+        if self._persist_on_apply:
+            set_dialog_token_overrides(color_overrides)
+            set_dialog_metric_overrides(metric_overrides)
         self._set_feedback(
             t("dialog.token_editor.apply_done", "Dialog token changes are ready to apply."),
             "success",
         )
         self.accept()
+
+    def selected_color_overrides(self) -> dict:
+        """Return the accepted sparse color overrides without exposing editor widgets."""
+        return dict(self._result_color_overrides or {})
+
+    def selected_metric_overrides(self) -> dict:
+        """Return the accepted sparse metric overrides without exposing editor widgets."""
+        return dict(self._result_metric_overrides or {})

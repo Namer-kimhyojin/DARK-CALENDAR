@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Theme and stylesheet builders for presentation layer."""
 
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
@@ -7,7 +8,7 @@ from calendar_app.shared.color_utils import (
     hex_to_rgba,
     hue_shifted_rgba,
 )
-from calendar_app.shared.theme_settings import get_opacity_factor
+from calendar_app.shared.theme_settings import get_theme_palette_inputs
 
 
 def _hex_to_rgba(hex_color, alpha_0_to_1):
@@ -285,7 +286,16 @@ def _build_top_menu_button_style(menu_btn_pt, theme_color, text_theme="dark"):
     """
 
 
-def _build_app_menu_style(menu_pt, theme_color, text_theme="dark"):
+def _build_app_menu_style(
+    menu_pt,
+    theme_color,
+    text_theme="dark",
+    *,
+    panel_base_color=None,
+    opacity_factor=None,
+    settings=None,
+    persist_opacity=True,
+):
     from PyQt6.QtCore import QSettings
     from PyQt6.QtGui import QColor
 
@@ -293,9 +303,13 @@ def _build_app_menu_style(menu_pt, theme_color, text_theme="dark"):
         return _hex_to_rgba(theme_color, round(a / 255, 3))
 
     text_pal = derive_text_palette(text_theme, theme_color)
-    s = QSettings("kimhyojin", "Dark Calendar")
-    panel_base = s.value("panel_base_color", "#1c1c1c")
-    opacity = get_opacity_factor(s, persist_normalized=True)
+    cfg = settings or QSettings("kimhyojin", "Dark Calendar")
+    _, effective_base, effective_opacity = get_theme_palette_inputs(
+        cfg,
+        persist_opacity=persist_opacity,
+    )
+    panel_base = panel_base_color or effective_base
+    opacity = effective_opacity if opacity_factor is None else float(opacity_factor)
     base = QColor(str(panel_base))
     if not base.isValid():
         base = QColor("#1c1c1c")
@@ -335,7 +349,16 @@ def _build_app_menu_style(menu_pt, theme_color, text_theme="dark"):
     """
 
 
-def apply_top_menu_theme(self, base_pt=None, theme_color=None, text_theme=None):
+def apply_top_menu_theme(
+    self,
+    base_pt=None,
+    theme_color=None,
+    text_theme=None,
+    panel_base_color=None,
+    opacity_factor=None,
+    *,
+    persist_opacity=True,
+):
     if base_pt is None:
         base_pt = self.settings.value("font_size", 10, type=int)
     if not base_pt or base_pt <= 0:
@@ -347,7 +370,15 @@ def apply_top_menu_theme(self, base_pt=None, theme_color=None, text_theme=None):
 
     menu_btn_pt = _scaled_pt(base_pt, 0, 9)
     menu_style = _build_top_menu_button_style(menu_btn_pt, theme_color, text_theme)
-    app_menu_style = _build_app_menu_style(base_pt, theme_color, text_theme)
+    app_menu_style = _build_app_menu_style(
+        base_pt,
+        theme_color,
+        text_theme,
+        panel_base_color=panel_base_color,
+        opacity_factor=opacity_factor,
+        settings=self.settings,
+        persist_opacity=persist_opacity,
+    )
     self._last_menu_style = app_menu_style
 
     def _apply_menu_style_recursive(menu, style, seen):
@@ -399,10 +430,17 @@ def apply_top_menu_theme(self, base_pt=None, theme_color=None, text_theme=None):
             menu_obj = getattr(_owner, menu_attr, None)
             if menu_obj is None:
                 return
+            from calendar_app.shared.theme_snapshot import build_theme_snapshot
+
+            snapshot = build_theme_snapshot(_owner.settings)
             fresh_style = _build_app_menu_style(
                 _owner.settings.value("font_size", 10, type=int) or 10,
-                _owner.settings.value("theme_color", "#4da6ff"),
-                _owner.settings.value("text_theme", "dark"),
+                snapshot.theme_color,
+                snapshot.text_theme,
+                panel_base_color=snapshot.panel_base_color,
+                opacity_factor=snapshot.opacity_factor,
+                settings=_owner.settings,
+                persist_opacity=False,
             )
             _owner._last_menu_style = fresh_style
             seen2 = set()

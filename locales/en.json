@@ -681,14 +681,17 @@
         "hint_short": "Accent color is used for buttons/links. Adjusted automatically when selecting a background preset.",
         "subtitle": "Set the UI accent color."
       },
-      "advanced": "Advanced Tokens",
-      "advanced_tip": "Edit detailed color tokens",
+      "advanced": "Advanced Settings",
+      "advanced_tip": "Fine-tune colors, sizes, and spacing",
       "bg": {
         "auto_apply_text": "Auto-apply recommended text colors when selecting a preset",
         "auto_apply_text_tip": "When enabled, text colors are automatically adjusted to match the selected preset.",
         "custom_picker_title": "Choose Background Color",
+        "details": "Background details",
         "subtitle": "Choose a preset palette or pick a custom background color."
       },
+      "changes_count": "{count} changes",
+      "changes_none": "No changes",
       "color_picker_title": "Pick Color",
       "custom_color": "Custom Color",
       "font": {
@@ -722,6 +725,7 @@
         "deep_teal": "Deep Teal",
         "dusk_gold": "Dusk Gold",
         "emerald_night": "Emerald Night",
+        "family_title": "Recommended Styles",
         "filter_all": "All",
         "filter_dark": "Dark",
         "filter_label": "Preset Type",
@@ -740,6 +744,7 @@
         "pastel_sage": "Pastel Sage",
         "pastel_sand": "Pastel Sand",
         "pastel_sky": "Pastel Sky",
+        "show_all": "Show all styles",
         "slate": "Slate"
       },
       "preview": {
@@ -750,17 +755,23 @@
         "title": "Preview"
       },
       "reset_icon": "↩",
+      "reset_section": "Revert {section} changes",
+      "revert_all": "Revert all",
       "tab": {
-        "accent": "Accent",
-        "background": "Background",
+        "accent": "Accent Color",
+        "background": "Style",
         "font": "Font",
-        "text": "Text"
+        "text": "Readability"
       },
       "text": {
         "apply_recommended": "Apply recommended text colors",
         "apply_recommended_disabled": "Recommended text colors are available when a preset is selected.",
         "apply_recommended_for_preset": "Apply recommended text colors for this preset",
         "apply_recommended_tip": "Auto-apply text colors suited to the background preset.",
+        "contrast_fix": "Improve readability automatically",
+        "contrast_fix_tip": "Adjust text colors automatically for the current background.",
+        "contrast_good": "Readable combination · Primary {primary}:1 / Secondary {secondary}:1",
+        "contrast_low": "Low contrast · Primary {primary}:1 / Secondary {secondary}:1",
         "faint": "Faint",
         "hint_short": "Primary: main text / Secondary: supporting / Muted: meta / Faint: hint",
         "input_bg": "Input Background",
@@ -770,7 +781,7 @@
         "secondary": "Secondary",
         "subtitle": "Set text colors by role."
       },
-      "title": "UI Theme",
+      "title": "Appearance",
       "tooltip": {
         "current_accent": "Current accent color",
         "current_color": "Current background color",
@@ -782,7 +793,10 @@
       "apply_color_preset": "Apply Preset",
       "apply_done": "Dialog token changes are ready to apply.",
       "apply_metric_preset": "Apply",
-      "desc": "Adjust common dialog color/size/spacing tokens. Button styles are included; live preview is on the right.",
+      "desc": "Fine-tune the appearance with presets and review the result on the right. Turn on expert mode to edit individual values.",
+      "expert_mode": "Edit individual values (Expert)",
+      "expert_mode_tip": "Directly edit internal color, size, and spacing values.",
+      "export": "Export JSON",
       "export_failed": "Failed to export UI tokens: {error}",
       "export_failed_title": "Export Failed",
       "export_success": "UI tokens exported successfully.",
@@ -790,6 +804,7 @@
       "header_preview": "Preview",
       "header_token": "Token",
       "header_value": "Value",
+      "import": "Import JSON",
       "import_failed": "Could not load JSON: {error}",
       "import_failed_title": "Import Failed",
       "import_success": "UI tokens imported successfully. Preview updated.",
@@ -849,9 +864,9 @@
       "reset_done": "All dialog tokens were reset to defaults.",
       "reset_one": "Default",
       "saved_toast": "Dialog UI tokens saved. Full effect after restart.",
-      "tab_color": "Color Tokens",
-      "tab_metric": "Size/Spacing Tokens",
-      "title": "Dialog UI Token Settings"
+      "tab_color": "Colors",
+      "tab_metric": "Size and Spacing",
+      "title": "Fine-tune Appearance"
     }
   },
   "drag": {
@@ -1433,7 +1448,7 @@
     "theme_mode": "🎨 Theme Mode",
     "theme_point_color": "🎨 Theme Point Color",
     "toggle_view": "📅 Toggle View (Weekly/Monthly)",
-    "ui_theme_open": "🎨 UI Theme Settings...",
+    "ui_theme_open": "🎨 Appearance...",
     "widget_clock": "Digital Clock",
     "widget_countdown": "Countdown",
     "widget_date_card": "Date Card",

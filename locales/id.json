@@ -678,8 +678,11 @@
         "auto_apply_text": "Auto-apply recommended text colors when selecting a preset",
         "auto_apply_text_tip": "When enabled, text colors are automatically adjusted to match the selected preset.",
         "custom_picker_title": "Choose Background Color",
+        "details": "Detail latar belakang",
         "subtitle": "Choose a preset palette or pick a custom background color."
       },
+      "changes_count": "{count} perubahan",
+      "changes_none": "Tidak ada perubahan",
       "color_picker_title": "Pick Color",
       "custom_color": "Custom Color",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "Violet"
       },
       "preset": {
+        "family_title": "Gaya yang direkomendasikan",
+        "show_all": "Tampilkan semua gaya",
         "burnt_orange": "Burnt Orange",
         "charcoal": "Charcoal",
         "crimson": "Crimson",
@@ -740,6 +745,8 @@
         "title": "Pratinjau"
       },
       "reset_icon": "↩",
+      "reset_section": "Kembalikan perubahan {section}",
+      "revert_all": "Kembalikan semua",
       "tab": {
         "accent": "Accent",
         "background": "Background",
@@ -747,6 +754,10 @@
         "text": "Text"
       },
       "text": {
+        "contrast_fix": "Perbaiki keterbacaan secara otomatis",
+        "contrast_fix_tip": "Sesuaikan warna teks secara otomatis untuk latar saat ini.",
+        "contrast_good": "Kombinasi mudah dibaca · Utama {primary}:1 / Sekunder {secondary}:1",
+        "contrast_low": "Kontras rendah · Utama {primary}:1 / Sekunder {secondary}:1",
         "apply_recommended": "Apply recommended text colors",
         "apply_recommended_disabled": "Recommended text colors are available when a preset is selected.",
         "apply_recommended_for_preset": "Apply recommended text colors for this preset",
@@ -770,6 +781,10 @@
       "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
+      "expert_mode": "Edit nilai individual (Pakar)",
+      "expert_mode_tip": "Edit langsung nilai warna, ukuran, dan jarak internal.",
+      "export": "Ekspor JSON",
+      "import": "Impor JSON",
       "apply_color_preset": "Apply Preset",
       "apply_done": "Dialog token changes are ready to apply.",
       "apply_metric_preset": "Terapkan",

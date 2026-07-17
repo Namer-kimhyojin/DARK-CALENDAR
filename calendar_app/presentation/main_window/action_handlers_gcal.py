@@ -675,8 +675,12 @@ class GCalActionsMixin:
 
         dlg.exec()
 
+    def refresh_sync_status_theme(self):
+        """Repaint sync status from cached state without querying issue tables."""
+        self.update_sync_status(refresh_issue_count=False)
+
     @pyqtSlot()
-    def update_sync_status(self):
+    def update_sync_status(self, refresh_issue_count=True):
         """구글 동기화 상태 및 마지막 동기화 시간 업데이트"""
 
         if not hasattr(self, "sync_status_lbl"):
@@ -706,19 +710,19 @@ class GCalActionsMixin:
 
         syncing = getattr(self, "_gcal_sync_in_progress", False)
 
-        sync_issue_count = 0
+        sync_issue_count = int(getattr(self, "_gcal_sync_issue_count", 0) or 0)
+        if refresh_issue_count:
+            try:
+                from calendar_app.infrastructure.db import task_repo as _task_repo
 
-        try:
-            from calendar_app.infrastructure.db import task_repo as _task_repo
-
-            sync_issue_count = (
-                _task_repo.count_unified_task_gcal_errors()
-                + _task_repo.count_gcal_delete_queue_errors()
-                + _task_repo.count_gcal_sync_conflicts()
-            )
-
-        except Exception:
-            sync_issue_count = 0
+                sync_issue_count = (
+                    _task_repo.count_unified_task_gcal_errors()
+                    + _task_repo.count_gcal_delete_queue_errors()
+                    + _task_repo.count_gcal_sync_conflicts()
+                )
+            except Exception:
+                sync_issue_count = 0
+            self._gcal_sync_issue_count = sync_issue_count
 
         last_sync = self.settings.value("last_successful_sync", t("gcal.last_sync_none"))
 

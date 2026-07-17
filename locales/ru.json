@@ -678,8 +678,11 @@
         "auto_apply_text": "Auto-apply recommended text colors when selecting a preset",
         "auto_apply_text_tip": "When enabled, text colors are automatically adjusted to match the selected preset.",
         "custom_picker_title": "Выбрать Фон Цвет",
+        "details": "Параметры фона",
         "subtitle": "Выбрать a preset palette or pick a custom background color."
       },
+      "changes_count": "Изменений: {count}",
+      "changes_none": "Нет изменений",
       "color_picker_title": "Pick Цвет",
       "custom_color": "Custom Цвет",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "Violet"
       },
       "preset": {
+        "family_title": "Рекомендуемые стили",
+        "show_all": "Показать все стили",
         "burnt_orange": "Burnt Orange",
         "charcoal": "Charcoal",
         "crimson": "Crimson",
@@ -740,6 +745,8 @@
         "title": "Preview"
       },
       "reset_icon": "↩",
+      "reset_section": "Отменить изменения: {section}",
+      "revert_all": "Отменить всё",
       "tab": {
         "accent": "Accent",
         "background": "Фон",
@@ -747,6 +754,10 @@
         "text": "Текст"
       },
       "text": {
+        "contrast_fix": "Автоматически улучшить читаемость",
+        "contrast_fix_tip": "Автоматически настроить цвета текста под текущий фон.",
+        "contrast_good": "Хорошая читаемость · Основной {primary}:1 / Вторичный {secondary}:1",
+        "contrast_low": "Низкий контраст · Основной {primary}:1 / Вторичный {secondary}:1",
         "apply_recommended": "Применить recommended text colors",
         "apply_recommended_disabled": "Recommended text colors are available when a preset is selected.",
         "apply_recommended_for_preset": "Применить recommended text colors for this preset",
@@ -770,6 +781,10 @@
       "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
+      "expert_mode": "Изменить отдельные значения (Эксперт)",
+      "expert_mode_tip": "Изменяйте внутренние значения цвета, размера и интервалов напрямую.",
+      "export": "Экспорт JSON",
+      "import": "Импорт JSON",
       "apply_color_preset": "Применить Preset",
       "apply_done": "Dialog token changes are ready to apply.",
       "apply_metric_preset": "Применить",

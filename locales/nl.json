@@ -678,8 +678,11 @@
         "auto_apply_text": "Auto-apply recommended text colors when selecting a preset",
         "auto_apply_text_tip": "When enabled, text colors are automatically adjusted to match the selected preset.",
         "custom_picker_title": "Kiezen Achtergrond Kleur",
+        "details": "Achtergronddetails",
         "subtitle": "Kiezen a preset palette or pick a custom background color."
       },
+      "changes_count": "{count} wijzigingen",
+      "changes_none": "Geen wijzigingen",
       "color_picker_title": "Pick Kleur",
       "custom_color": "Custom Kleur",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "Violet"
       },
       "preset": {
+        "family_title": "Aanbevolen stijlen",
+        "show_all": "Alle stijlen tonen",
         "burnt_orange": "Burnt Orange",
         "charcoal": "Charcoal",
         "crimson": "Crimson",
@@ -740,6 +745,8 @@
         "title": "Preview"
       },
       "reset_icon": "↩",
+      "reset_section": "Wijzigingen in {section} terugdraaien",
+      "revert_all": "Alles terugdraaien",
       "tab": {
         "accent": "Accent",
         "background": "Achtergrond",
@@ -747,6 +754,10 @@
         "text": "Tekst"
       },
       "text": {
+        "contrast_fix": "Leesbaarheid automatisch verbeteren",
+        "contrast_fix_tip": "Pas tekstkleuren automatisch aan de huidige achtergrond aan.",
+        "contrast_good": "Goed leesbaar · Primair {primary}:1 / Secundair {secondary}:1",
+        "contrast_low": "Laag contrast · Primair {primary}:1 / Secundair {secondary}:1",
         "apply_recommended": "Toepassen recommended text colors",
         "apply_recommended_disabled": "Recommended text colors are available when a preset is selected.",
         "apply_recommended_for_preset": "Toepassen recommended text colors for this preset",
@@ -770,6 +781,10 @@
       "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
+      "expert_mode": "Afzonderlijke waarden bewerken (Expert)",
+      "expert_mode_tip": "Bewerk interne waarden voor kleur, grootte en afstand rechtstreeks.",
+      "export": "JSON exporteren",
+      "import": "JSON importeren",
       "apply_color_preset": "Toepassen Preset",
       "apply_done": "Dialog token changes are ready to apply.",
       "apply_metric_preset": "Toepassen",

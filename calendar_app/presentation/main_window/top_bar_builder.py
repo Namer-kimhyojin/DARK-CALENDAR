@@ -26,8 +26,8 @@ def _topbar_palette(settings):
 
 
 def build_top_bar_frame_style(settings, opacity_factor: float = 1.0):
-    raw = settings.value("panel_base_color", "#1c1c1c")
-    pal_panel = derive_panel_palette(str(raw), opacity_factor)
+    _, panel_base, _ = get_theme_palette_inputs(settings)
+    pal_panel = derive_panel_palette(panel_base, opacity_factor)
     border = "rgba(255, 255, 255, 0.05)"
     return (
         f"background-color: {pal_panel['topbar_bg']}; "
@@ -52,8 +52,19 @@ def setup_top_bar(self, _size, _theme, _ta):
     _hover_bg_weak = "rgba(255,255,255,30)"
     _hover_bg_mid = "rgba(255,255,255,50)"
 
+    effective_text_theme, effective_panel_base, effective_opacity = get_theme_palette_inputs(
+        self.settings
+    )
     build_top_left_menus(self, top_bar, _size, _theme)
-    apply_top_menu_theme(self, _size, _theme)
+    apply_top_menu_theme(
+        self,
+        _size,
+        _theme,
+        effective_text_theme,
+        effective_panel_base,
+        effective_opacity,
+        persist_opacity=False,
+    )
 
     self.current_date = QDate.currentDate()
     top_bar.addStretch(1)

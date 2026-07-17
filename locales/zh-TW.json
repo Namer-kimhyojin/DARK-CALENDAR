@@ -678,8 +678,11 @@
         "auto_apply_text": "選擇預設時自動應用推薦文字顏色",
         "auto_apply_text_tip": "啟用時，文字顏色將根據選定的預設自動調整。",
         "custom_picker_title": "選擇背景顏色",
+        "details": "背景詳細設定",
         "subtitle": "選擇預設調色板或選擇自訂背景顏色。"
       },
+      "changes_count": "{count} 項變更",
+      "changes_none": "沒有變更",
       "color_picker_title": "選擇顏色",
       "custom_color": "自訂顏色",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "紫羅蘭"
       },
       "preset": {
+        "family_title": "推薦樣式",
+        "show_all": "顯示所有樣式",
         "burnt_orange": "焦橘色",
         "charcoal": "炭灰色",
         "crimson": "深紅色",
@@ -740,6 +745,8 @@
         "title": "預覽"
       },
       "reset_icon": "↩",
+      "reset_section": "復原「{section}」變更",
+      "revert_all": "全部復原",
       "tab": {
         "accent": "強調色",
         "background": "背景",
@@ -747,6 +754,10 @@
         "text": "文字"
       },
       "text": {
+        "contrast_fix": "自動提升可讀性",
+        "contrast_fix_tip": "依目前背景自動調整文字顏色。",
+        "contrast_good": "易讀組合 · 主要 {primary}:1 / 次要 {secondary}:1",
+        "contrast_low": "對比度偏低 · 主要 {primary}:1 / 次要 {secondary}:1",
         "apply_recommended": "套用建議文字顏色",
         "apply_recommended_disabled": "選擇預設後可使用建議文字顏色。",
         "apply_recommended_for_preset": "為此預設套用建議文字顏色",
@@ -770,6 +781,10 @@
       "opacity_hint": "0% = 完全透明，100% = 完全不透明"
     },
     "token_editor": {
+      "expert_mode": "編輯個別數值（進階）",
+      "expert_mode_tip": "直接編輯內部顏色、尺寸與間距數值。",
+      "export": "匯出 JSON",
+      "import": "匯入 JSON",
       "apply_color_preset": "應用預設",
       "apply_done": "對話框權杖變更已準備好應用。",
       "apply_metric_preset": "應用",

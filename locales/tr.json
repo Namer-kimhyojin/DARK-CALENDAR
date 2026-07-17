@@ -678,8 +678,11 @@
         "auto_apply_text": "Auto-apply recommended text colors when selecting a preset",
         "auto_apply_text_tip": "When enabled, text colors are automatically adjusted to match the selected preset.",
         "custom_picker_title": "Choose Background Color",
+        "details": "Arka plan ayrıntıları",
         "subtitle": "Choose a preset palette or pick a custom background color."
       },
+      "changes_count": "{count} değişiklik",
+      "changes_none": "Değişiklik yok",
       "color_picker_title": "Pick Color",
       "custom_color": "Custom Color",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "Violet"
       },
       "preset": {
+        "family_title": "Önerilen stiller",
+        "show_all": "Tüm stilleri göster",
         "burnt_orange": "Burnt Orange",
         "charcoal": "Charcoal",
         "crimson": "Crimson",
@@ -740,6 +745,8 @@
         "title": "Önizleme"
       },
       "reset_icon": "↩",
+      "reset_section": "{section} değişikliklerini geri al",
+      "revert_all": "Tümünü geri al",
       "tab": {
         "accent": "Accent",
         "background": "Background",
@@ -747,6 +754,10 @@
         "text": "Metin"
       },
       "text": {
+        "contrast_fix": "Okunabilirliği otomatik iyileştir",
+        "contrast_fix_tip": "Metin renklerini mevcut arka plana göre otomatik ayarlayın.",
+        "contrast_good": "Okunabilir kombinasyon · Birincil {primary}:1 / İkincil {secondary}:1",
+        "contrast_low": "Düşük kontrast · Birincil {primary}:1 / İkincil {secondary}:1",
         "apply_recommended": "Apply recommended text colors",
         "apply_recommended_disabled": "Recommended text colors are available when a preset is selected.",
         "apply_recommended_for_preset": "Apply recommended text colors for this preset",
@@ -770,6 +781,10 @@
       "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
+      "expert_mode": "Tek tek değerleri düzenle (Uzman)",
+      "expert_mode_tip": "Dahili renk, boyut ve aralık değerlerini doğrudan düzenleyin.",
+      "export": "JSON dışa aktar",
+      "import": "JSON içe aktar",
       "apply_color_preset": "Apply Preset",
       "apply_done": "Dialog token changes are ready to apply.",
       "apply_metric_preset": "Uygula",

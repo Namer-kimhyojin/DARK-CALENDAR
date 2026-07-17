@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """UI actions and window event handlers used by the main window."""
 
 import json
@@ -523,15 +524,17 @@ class MainWindowUiActionsMixin:
             PanelColorPickerDialog,
         )
         from calendar_app.shared.color_utils import derive_text_palette
+        from calendar_app.shared.theme_snapshot import build_theme_snapshot
 
-        current_base = str(self.settings.value("panel_base_color", "#1a2236"))
-        current_theme = str(self.settings.value("theme_color", "#4da6ff"))
+        current_snapshot = build_theme_snapshot(self.settings)
+        current_base = current_snapshot.panel_base_color
+        current_theme = current_snapshot.theme_color
         current_opacity = get_opacity_byte(self.settings, persist_normalized=True)
         current_border_opacity = int(self.settings.value("last_border_opacity", 80, type=int))
         current_text_opacity = int(self.settings.value("last_text_opacity", 255, type=int))
 
         current_text_theme = str(self.settings.value("text_theme", "dark"))
-        _tpal = derive_text_palette(current_text_theme, current_theme)
+        _tpal = derive_text_palette(current_snapshot.text_theme, current_theme)
         current_text_primary = str(
             self.settings.value("custom_text_primary", _tpal["text_primary"])
         )
@@ -565,6 +568,10 @@ class MainWindowUiActionsMixin:
             current_input_bg=current_input_bg,
             current_font_family=current_font_family,
             current_font_size=current_font_size,
+            current_style_family=str(self.settings.value("appearance_style_family", "") or ""),
+            current_accent_source=str(
+                self.settings.value("appearance_accent_source", "custom") or "custom"
+            ),
         )
         if dlg.exec() != PanelColorPickerDialog.DialogCode.Accepted:
             return
@@ -575,6 +582,22 @@ class MainWindowUiActionsMixin:
         # 모든 설정값을 먼저 저장한 뒤 한 번만 갱신
         self.settings.setValue("panel_base_color", self._normalize_hex_color(new_base))
         self._remember_panel_color(new_base)
+
+        style_family = dlg.selected_style_family()
+        self.settings.setValue("appearance_style_family", style_family)
+        self.settings.setValue("appearance_accent_source", dlg.selected_accent_source())
+        family_variants = dlg.selected_style_family_variants()
+        for variant_key in (
+            "dark_base",
+            "dark_accent",
+            "light_base",
+            "light_accent",
+        ):
+            setting_key = f"appearance_family_{variant_key}"
+            if variant_key in family_variants:
+                self.settings.setValue(setting_key, family_variants[variant_key])
+            else:
+                self.settings.remove(setting_key)
 
         if dlg.point_color_changed():
             self.settings.setValue("theme_color", dlg.selected_point_hex())
@@ -601,6 +624,14 @@ class MainWindowUiActionsMixin:
             self.settings.setValue("font_family", family)
             self.settings.setValue("font_size", size)
             self.apply_font_settings(family, size, refresh=False)
+
+        from calendar_app.presentation.dialogs.dialog_styles import (
+            set_dialog_metric_overrides,
+            set_dialog_token_overrides,
+        )
+
+        set_dialog_token_overrides(dlg.selected_dialog_color_overrides(), self.settings)
+        set_dialog_metric_overrides(dlg.selected_dialog_metric_overrides(), self.settings)
 
         # 모든 값이 저장된 후 한 번만 UI 갱신
         if hasattr(self, "apply_theme_settings"):

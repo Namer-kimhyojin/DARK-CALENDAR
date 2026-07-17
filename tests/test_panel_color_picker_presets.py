@@ -1,16 +1,40 @@
+# -*- coding: utf-8 -*-
 import json
 from pathlib import Path
 import unittest
 
 from calendar_app.presentation.dialogs.panel_color_picker_dialog import (
     _DARK_PRESETS,
+    _FAMILY_BY_PRESET_KEY,
     _LIGHT_PRESETS,
     _PRESETS,
+    _STYLE_FAMILIES,
+    _accessible_text_palette,
+    _contrast_ratio,
     _preset_mode_for_key,
 )
 
 
 class PanelColorPickerPresetTests(unittest.TestCase):
+    def test_style_families_pair_dark_and_light_variants(self):
+        family_ids = [family_id for family_id, *_ in _STYLE_FAMILIES]
+        self.assertEqual(len(family_ids), len(set(family_ids)))
+        self.assertGreaterEqual(len(family_ids), 6)
+
+        for family_id, dark_key, light_key in _STYLE_FAMILIES:
+            self.assertEqual(_preset_mode_for_key(dark_key), "dark")
+            self.assertEqual(_preset_mode_for_key(light_key), "light")
+            self.assertEqual(_FAMILY_BY_PRESET_KEY[dark_key], family_id)
+            self.assertEqual(_FAMILY_BY_PRESET_KEY[light_key], family_id)
+
+    def test_accessible_palette_meets_role_contrast_targets(self):
+        for background in ("#101820", "#f4f7fb", "#777777"):
+            palette = _accessible_text_palette(background)
+            self.assertGreaterEqual(_contrast_ratio(palette["primary"], background), 4.5)
+            self.assertGreaterEqual(_contrast_ratio(palette["secondary"], background), 4.5)
+            self.assertGreaterEqual(_contrast_ratio(palette["muted"], background), 3.0)
+            self.assertGreaterEqual(_contrast_ratio(palette["faint"], background), 2.0)
+
     def test_dark_light_groups_are_complete_and_disjoint(self):
         dark_keys = {name_key for name_key, *_ in _DARK_PRESETS}
         light_keys = {name_key for name_key, *_ in _LIGHT_PRESETS}

@@ -678,8 +678,11 @@
         "auto_apply_text": "Auto-apply recommended text colors when selecting a preset",
         "auto_apply_text_tip": "When enabled, text colors are automatically adjusted to match the selected preset.",
         "custom_picker_title": "Choose Background Color",
+        "details": "Détails de l’arrière-plan",
         "subtitle": "Choose a preset palette or pick a custom background color."
       },
+      "changes_count": "{count} modifications",
+      "changes_none": "Aucune modification",
       "color_picker_title": "Pick Color",
       "custom_color": "Custom Color",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "Violet"
       },
       "preset": {
+        "family_title": "Styles recommandés",
+        "show_all": "Afficher tous les styles",
         "burnt_orange": "Burnt Orange",
         "charcoal": "Charcoal",
         "crimson": "Crimson",
@@ -740,6 +745,8 @@
         "title": "Aperçu"
       },
       "reset_icon": "↩",
+      "reset_section": "Annuler les modifications de {section}",
+      "revert_all": "Tout annuler",
       "tab": {
         "accent": "Accent",
         "background": "Background",
@@ -747,6 +754,10 @@
         "text": "Text"
       },
       "text": {
+        "contrast_fix": "Améliorer automatiquement la lisibilité",
+        "contrast_fix_tip": "Ajuste automatiquement les couleurs du texte au fond actuel.",
+        "contrast_good": "Combinaison lisible · Principal {primary}:1 / Secondaire {secondary}:1",
+        "contrast_low": "Contraste faible · Principal {primary}:1 / Secondaire {secondary}:1",
         "apply_recommended": "Apply recommended text colors",
         "apply_recommended_disabled": "Recommended text colors are available when a preset is selected.",
         "apply_recommended_for_preset": "Apply recommended text colors for this preset",
@@ -770,6 +781,10 @@
       "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
+      "expert_mode": "Modifier les valeurs individuelles (Expert)",
+      "expert_mode_tip": "Modifiez directement les valeurs internes de couleur, taille et espacement.",
+      "export": "Exporter JSON",
+      "import": "Importer JSON",
       "apply_color_preset": "Apply Preset",
       "apply_done": "Dialog token changes are ready to apply.",
       "apply_metric_preset": "Appliquer",

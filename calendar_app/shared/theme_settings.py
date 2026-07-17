@@ -1,9 +1,11 @@
+# -*- coding: utf-8 -*-
 """Helpers for reading theme-related values from QSettings."""
 
 from PyQt6.QtCore import QSettings
 
 from calendar_app.shared.color_utils import derive_panel_palette
 from calendar_app.shared.qt_helpers import scaled_pt
+from calendar_app.shared.system_theme import resolve_effective_appearance
 
 OPACITY_STORAGE_UNIT_KEY = "last_opacity_unit"
 OPACITY_UNIT_BYTE = "byte"
@@ -110,18 +112,27 @@ def get_opacity_factor(settings=None, default=200, persist_normalized=False):
 
 
 def get_text_theme_and_panel_base(settings=None):
-    """Return (text_theme, panel_base_color) from app settings."""
+    """Return the effective text theme and panel base from app settings."""
     cfg = _get_settings(settings)
-    return (
-        cfg.value("text_theme", "dark"),
-        cfg.value("panel_base_color", "#1c1c1c"),
+    text_theme, panel_base, _ = resolve_effective_appearance(
+        cfg,
+        text_theme=str(cfg.value("text_theme", "dark") or "dark"),
+        panel_base_color=str(cfg.value("panel_base_color", "#1c1c1c") or "#1c1c1c"),
+        theme_color=str(cfg.value("theme_color", "#4da6ff") or "#4da6ff"),
     )
+    return text_theme, panel_base
 
 
 def get_theme_color(settings=None, default="#4da6ff"):
-    """Return theme accent color from app settings."""
+    """Return the effective theme accent color from app settings."""
     cfg = _get_settings(settings)
-    return str(cfg.value("theme_color", default) or default)
+    _, _, accent = resolve_effective_appearance(
+        cfg,
+        text_theme=str(cfg.value("text_theme", "dark") or "dark"),
+        panel_base_color=str(cfg.value("panel_base_color", "#1c1c1c") or "#1c1c1c"),
+        theme_color=str(cfg.value("theme_color", default) or default),
+    )
+    return accent
 
 
 def get_theme_palette_inputs(settings=None, persist_opacity=False):

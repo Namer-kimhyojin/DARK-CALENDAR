@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QMenu, QToolButton
 
@@ -300,7 +302,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     act_auto.setChecked(current_mode == "auto")
 
     act_theme = self.display_menu.addAction(
-        _se(t("menu.ui_theme_open", "UI 테마 상세 설정...")),
+        _se(t("menu.ui_theme_open", "모양 설정...")),
         self.open_panel_background_color_dialog,
     )
     act_theme.setIcon(_ic(ICON.COLOR_PICKER))

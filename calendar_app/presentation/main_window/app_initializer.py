@@ -54,6 +54,7 @@ def initialize_overlay_app(app) -> None:
     app._panel_widget_mode_controller = None
 
     app.gcal_sync = None
+    app._gcal_sync_issue_count = 0
     app._bg_workers = []
     app._sync_worker = None
     app._auth_worker = None
@@ -62,6 +63,12 @@ def initialize_overlay_app(app) -> None:
     app._drag_pending_refresh = False
     app._last_drop_blocked_readonly_ids = []
     app._last_drop_failed_ids = []
+    app._system_theme_style_hints = None
+    app._system_theme_refresh_timer = None
+    app._last_system_text_theme = None
+    app._last_applied_system_text_theme = None
+    app._pending_system_text_theme = None
+    app._system_theme_apply_count = 0
 
     from calendar_app.domain.task_constants import load_custom_labels
 
@@ -76,6 +83,7 @@ def initialize_overlay_app(app) -> None:
 
     setup_main_ui(app)
     setup_idle_lock_ui(app)
+    app.initialize_system_theme_listener()
     _setup_command_palette(app)
     app.init_overlay_manager()
     _initialize_routine_rollover(app)

@@ -626,6 +626,49 @@ class DialogEditorWidgetTests(unittest.TestCase):
         self.assertIn("border: 1px solid", dialog._color_edits[first_key].styleSheet())
         self.assertIn("background: transparent", dialog._color_swatches[first_key].styleSheet())
 
+    def test_dialog_token_editor_hides_raw_values_until_expert_mode(self):
+        dialog = DialogTokenEditorDialog()
+        self.addCleanup(_safe_close, dialog)
+
+        self.assertTrue(dialog.color_token_area.isHidden())
+        self.assertTrue(dialog.metric_token_area.isHidden())
+        self.assertTrue(dialog.export_btn.isHidden())
+        self.assertTrue(dialog.import_btn.isHidden())
+
+        dialog.expert_mode_check.setChecked(True)
+
+        self.assertFalse(dialog.color_token_area.isHidden())
+        self.assertFalse(dialog.metric_token_area.isHidden())
+        self.assertFalse(dialog.export_btn.isHidden())
+        self.assertFalse(dialog.import_btn.isHidden())
+
+    def test_dialog_token_editor_can_stage_changes_without_persisting(self):
+        dialog = DialogTokenEditorDialog(
+            initial_color_overrides={},
+            initial_metric_overrides={},
+            persist_on_apply=False,
+        )
+        self.addCleanup(_safe_close, dialog)
+
+        dialog._color_edits["accent"].setText("#112233")
+        dialog._metric_spins["button_height"].setValue(31)
+        with (
+            patch(
+                "calendar_app.presentation.dialogs.dialog_token_editor_dialog.set_dialog_token_overrides"
+            ) as token_mock,
+            patch(
+                "calendar_app.presentation.dialogs.dialog_token_editor_dialog.set_dialog_metric_overrides"
+            ) as metric_mock,
+            patch.object(dialog, "accept") as accept_mock,
+        ):
+            dialog._apply()
+
+        token_mock.assert_not_called()
+        metric_mock.assert_not_called()
+        accept_mock.assert_called_once()
+        self.assertEqual(dialog.selected_color_overrides()["accent"], "#112233")
+        self.assertEqual(dialog.selected_metric_overrides()["button_height"], 31)
+
     def test_dialog_token_editor_button_metric_defaults_allow_small_values(self):
         dialog = DialogTokenEditorDialog()
         self.addCleanup(_safe_close, dialog)

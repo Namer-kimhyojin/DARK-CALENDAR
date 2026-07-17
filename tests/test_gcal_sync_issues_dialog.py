@@ -9,6 +9,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from calendar_app.infrastructure.db import task_repo
+from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.gcal_sync_issues_dialog import GCalSyncIssuesDialog
 from tests.support import TemporaryDatabaseTestCase
 
@@ -170,7 +171,10 @@ class GCalSyncIssuesDialogTests(TemporaryDatabaseTestCase):
         meta = self._select_delete_queue_row(dialog)
 
         self.assertTrue(meta["retry_exhausted"])
-        self.assertEqual(meta["status"], "재시도 한도 초과")
+        self.assertEqual(
+            meta["status"],
+            t("gcal.issues_retry_exhausted", "재시도 한도 초과"),
+        )
         self.assertIn("(5/5)", meta["error"])
 
         dialog.retry_selected()

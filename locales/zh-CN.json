@@ -678,8 +678,11 @@
         "auto_apply_text": "选择预设时自动应用推荐文本颜色",
         "auto_apply_text_tip": "启用时，文本颜色将根据选定的预设自动调整。",
         "custom_picker_title": "选择背景颜色",
+        "details": "背景详细设置",
         "subtitle": "选择预设调色板或选择自定义背景颜色。"
       },
+      "changes_count": "{count} 项更改",
+      "changes_none": "无更改",
       "color_picker_title": "选择颜色",
       "custom_color": "自定义颜色",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "紫罗兰"
       },
       "preset": {
+        "family_title": "推荐样式",
+        "show_all": "显示所有样式",
         "burnt_orange": "焦橙色",
         "charcoal": "炭灰色",
         "crimson": "深红色",
@@ -740,6 +745,8 @@
         "title": "预览"
       },
       "reset_icon": "↩",
+      "reset_section": "撤销{section}更改",
+      "revert_all": "全部撤销",
       "tab": {
         "accent": "强调色",
         "background": "背景",
@@ -747,6 +754,10 @@
         "text": "文本"
       },
       "text": {
+        "contrast_fix": "自动提高可读性",
+        "contrast_fix_tip": "根据当前背景自动调整文本颜色。",
+        "contrast_good": "易读组合 · 主要 {primary}:1 / 次要 {secondary}:1",
+        "contrast_low": "对比度较低 · 主要 {primary}:1 / 次要 {secondary}:1",
         "apply_recommended": "应用推荐文本颜色",
         "apply_recommended_disabled": "选择预设后可使用推荐文本颜色。",
         "apply_recommended_for_preset": "为此预设应用推荐文本颜色",
@@ -770,6 +781,10 @@
       "opacity_hint": "0% = 完全透明，100% = 完全不透明"
     },
     "token_editor": {
+      "expert_mode": "编辑单个值（专家）",
+      "expert_mode_tip": "直接编辑内部颜色、尺寸和间距值。",
+      "export": "导出 JSON",
+      "import": "导入 JSON",
       "apply_color_preset": "应用预设",
       "apply_done": "对话框令牌更改已准备好应用。",
       "apply_metric_preset": "应用",

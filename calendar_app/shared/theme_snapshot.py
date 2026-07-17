@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Unified theme snapshot and semantic token builders."""
 
 from __future__ import annotations
@@ -7,7 +8,7 @@ from functools import lru_cache
 import re
 
 from PyQt6.QtCore import QSettings
-from PyQt6.QtGui import QColor, QPalette
+from PyQt6.QtGui import QColor
 
 from calendar_app.shared.color_utils import (
     derive_panel_palette,
@@ -18,6 +19,7 @@ from calendar_app.shared.color_utils import (
     parse_hex_color,
     shift_rgb,
 )
+from calendar_app.shared.system_theme import resolve_effective_appearance
 from calendar_app.shared.theme_settings import get_opacity_factor
 
 _RGBA_COLOR_RE = re.compile(
@@ -265,41 +267,19 @@ def build_theme_snapshot(
 ) -> ThemeSnapshot:
     cfg = _resolve_settings(settings)
 
-    resolved_theme = str(theme_color or cfg.value("theme_color", "#4da6ff") or "#4da6ff")
-    resolved_text_theme = str(text_theme or cfg.value("text_theme", "dark") or "dark")
-
-    # Resolve 'auto' (System Default) theme
-    if resolved_text_theme == "auto":
-        from PyQt6.QtWidgets import QApplication
-
-        app = QApplication.instance()
-        if app:
-            palette = app.palette()
-            base_color = palette.color(QPalette.ColorRole.Window)
-            # Simple heuristic: if window background is dark, use dark theme
-            if base_color.lightness() < 128:
-                resolved_text_theme = "dark"
-                default_panel = "#1c1c1c"
-            else:
-                resolved_text_theme = "light"
-                default_panel = "#fefefe"
-        else:
-            resolved_text_theme = "dark"
-            default_panel = "#1c1c1c"
-
-        # If text_theme is auto, we also force panel_base_color to follow system if not explicitly overridden
-        resolved_panel_base = str(
-            panel_base_color or cfg.value("panel_base_color", default_panel) or default_panel
-        )
-        # If it was still the "other" default, switch it
-        if resolved_text_theme == "dark" and resolved_panel_base == "#fefefe":
-            resolved_panel_base = "#1c1c1c"
-        elif resolved_text_theme == "light" and resolved_panel_base == "#1c1c1c":
-            resolved_panel_base = "#fefefe"
-    else:
-        resolved_panel_base = str(
-            panel_base_color or cfg.value("panel_base_color", "#1c1c1c") or "#1c1c1c"
-        )
+    requested_theme = str(theme_color or cfg.value("theme_color", "#4da6ff") or "#4da6ff")
+    requested_text_theme = str(text_theme or cfg.value("text_theme", "dark") or "dark")
+    requested_panel_base = str(
+        panel_base_color or cfg.value("panel_base_color", "#1c1c1c") or "#1c1c1c"
+    )
+    resolved_text_theme, resolved_panel_base, resolved_theme = resolve_effective_appearance(
+        cfg,
+        text_theme=requested_text_theme,
+        panel_base_color=requested_panel_base,
+        theme_color=requested_theme,
+        allow_family_base=panel_base_color is None,
+        allow_family_accent=theme_color is None,
+    )
 
     if opacity_factor is None:
         resolved_opacity = get_opacity_factor(cfg, persist_normalized=persist_opacity)

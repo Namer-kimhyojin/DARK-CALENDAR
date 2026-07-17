@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 from pathlib import Path
 import unittest
@@ -142,6 +143,11 @@ class I18nRuntimeSupportTests(unittest.TestCase):
             "widget.weather.refresh_interval",
             "dialog.theme.preset.filter_label",
             "dialog.theme.bg.auto_apply_text",
+            "dialog.theme.bg.details",
+            "dialog.theme.changes_count",
+            "dialog.theme.changes_none",
+            "dialog.theme.reset_section",
+            "dialog.theme.revert_all",
             "calendar.opt_weekend_hidden",
             "calendar.opt_weekend_hidden_hint",
             "calendar.more_items",

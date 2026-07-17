@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Panel refresh scheduling mixin for UI update coalescing."""
 
 
@@ -11,6 +12,7 @@ class RefreshSchedulerMixin:
         if hasattr(self, "_ui_refresh_timer"):
             return
         self._pending_refresh = {"left": False, "center": False, "right": False}
+        self._pending_data_consumer_refresh = False
         self._panel_dirty = {"left": True, "center": True, "right": True}
         self._ui_refresh_timer = QTimer(self)
         self._ui_refresh_timer.setSingleShot(True)
@@ -22,7 +24,14 @@ class RefreshSchedulerMixin:
         self._panel_dirty["center"] = self._panel_dirty["center"] or bool(center)
         self._panel_dirty["right"] = self._panel_dirty["right"] or bool(right)
 
-    def schedule_panel_refresh(self, left=False, center=False, right=False, delay_ms=0):
+    def schedule_panel_refresh(
+        self,
+        left=False,
+        center=False,
+        right=False,
+        delay_ms=0,
+        notify_data_consumers=True,
+    ):
         if getattr(self, "_is_shutting_down", False):
             return
         # 드래그 중에는 패널 리프레시를 보류 (필요 시 자동으로 인한 새로고침 방지)
@@ -35,6 +44,9 @@ class RefreshSchedulerMixin:
         self._pending_refresh["left"] = self._pending_refresh["left"] or left
         self._pending_refresh["center"] = self._pending_refresh["center"] or center
         self._pending_refresh["right"] = self._pending_refresh["right"] or right
+        self._pending_data_consumer_refresh = self._pending_data_consumer_refresh or bool(
+            notify_data_consumers
+        )
 
         delay_ms = max(0, int(delay_ms or 16))
 
@@ -58,7 +70,9 @@ class RefreshSchedulerMixin:
     def _flush_scheduled_refresh(self):
         self._ensure_refresh_scheduler()
         pending = dict(self._pending_refresh)
+        notify_data_consumers = self._pending_data_consumer_refresh
         self._pending_refresh = {"left": False, "center": False, "right": False}
+        self._pending_data_consumer_refresh = False
         if pending["left"]:
             self.load_left_panel(force=False)
             self._panel_dirty["left"] = False
@@ -70,7 +84,7 @@ class RefreshSchedulerMixin:
             self._panel_dirty["right"] = False
 
         # Proxy synchronization: trigger unified widget refresh if any operational data changed
-        if pending["left"] or pending["center"] or pending["right"]:
+        if notify_data_consumers and (pending["left"] or pending["center"] or pending["right"]):
             controller = getattr(self, "_unified_widget_controller", None)
             if controller is not None:
                 controller.refresh_data()

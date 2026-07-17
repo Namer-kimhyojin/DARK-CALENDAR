@@ -681,14 +681,17 @@
         "hint_short": "포인트 색은 버튼/링크 강조에 사용됩니다. 배경 프리셋 선택 시 함께 맞춰집니다.",
         "subtitle": "UI 포인트 색상을 지정합니다."
       },
-      "advanced": "고급 토큰",
-      "advanced_tip": "상세 색상 토큰 편집",
+      "advanced": "고급 사용자 설정",
+      "advanced_tip": "색상, 크기와 간격을 세부 조정",
       "bg": {
         "auto_apply_text": "프리셋 선택 시 권장 글자색 자동 적용",
         "auto_apply_text_tip": "활성화 시 프리셋에 맞는 글자색이 자동으로 조정됩니다.",
         "custom_picker_title": "배경 색상 선택",
+        "details": "배경 세부 설정",
         "subtitle": "배경 프리셋을 선택하거나 직접 색상을 지정합니다."
       },
+      "changes_count": "변경사항 {count}개",
+      "changes_none": "변경사항 없음",
       "color_picker_title": "색상 선택",
       "custom_color": "직접 색상",
       "font": {
@@ -722,6 +725,7 @@
         "deep_teal": "딥 틸",
         "dusk_gold": "더스크 골드",
         "emerald_night": "에메랄드 나이트",
+        "family_title": "추천 스타일",
         "filter_all": "전체",
         "filter_dark": "다크",
         "filter_label": "프리셋 유형",
@@ -740,6 +744,7 @@
         "pastel_sage": "파스텔 세이지",
         "pastel_sand": "파스텔 샌드",
         "pastel_sky": "파스텔 스카이",
+        "show_all": "모든 스타일 보기",
         "slate": "슬레이트"
       },
       "preview": {
@@ -750,17 +755,23 @@
         "title": "미리보기"
       },
       "reset_icon": "↩",
+      "reset_section": "{section} 변경 되돌리기",
+      "revert_all": "전체 되돌리기",
       "tab": {
-        "accent": "포인트",
-        "background": "배경",
-        "font": "폰트",
-        "text": "글자"
+        "accent": "포인트 색상",
+        "background": "스타일",
+        "font": "글꼴",
+        "text": "가독성"
       },
       "text": {
         "apply_recommended": "권장 글자색 적용",
         "apply_recommended_disabled": "프리셋 선택 시 권장 글자색을 사용할 수 있습니다.",
         "apply_recommended_for_preset": "이 프리셋에 맞는 권장 글자색 적용",
         "apply_recommended_tip": "배경 프리셋에 맞는 글자색 자동 적용",
+        "contrast_fix": "읽기 편하게 자동 보정",
+        "contrast_fix_tip": "현재 배경에 맞춰 텍스트 색상을 자동으로 조정합니다.",
+        "contrast_good": "읽기 편한 조합 · 기본 {primary}:1 / 보조 {secondary}:1",
+        "contrast_low": "대비가 낮습니다 · 기본 {primary}:1 / 보조 {secondary}:1",
         "faint": "희미 글자",
         "hint_short": "기본: 주요 텍스트 / 보조: 부가 / 흐림: 메타 / 희미: 힌트",
         "input_bg": "입력 배경",
@@ -770,7 +781,7 @@
         "secondary": "보조 글자",
         "subtitle": "역할별 글자 색상을 지정합니다."
       },
-      "title": "UI 테마",
+      "title": "모양 설정",
       "tooltip": {
         "current_accent": "현재 포인트 색상",
         "current_color": "현재 배경색",
@@ -782,7 +793,10 @@
       "apply_color_preset": "프리셋 적용",
       "apply_done": "다이얼로그 토큰 변경사항을 적용할 준비가 됐습니다.",
       "apply_metric_preset": "적용",
-      "desc": "다이얼로그 공통 색상/크기/간격 토큰을 조정합니다. 버튼 타입별 스타일도 포함되며 우측 미리보기에서 확인합니다.",
+      "desc": "프리셋으로 세부 모양을 조정하고 오른쪽에서 결과를 확인하세요. 개별 값은 전문가 보기에서 직접 바꿀 수 있습니다.",
+      "expert_mode": "개별 값 직접 조정 (전문가)",
+      "expert_mode_tip": "색상·크기·간격의 내부 값을 직접 편집합니다.",
+      "export": "JSON 내보내기",
       "export_failed": "UI 토큰 내보내기 실패: {error}",
       "export_failed_title": "내보내기 실패",
       "export_success": "UI 토큰을 성공적으로 내보냈습니다.",
@@ -790,6 +804,7 @@
       "header_preview": "미리보기",
       "header_token": "토큰",
       "header_value": "색상값",
+      "import": "JSON 가져오기",
       "import_failed": "JSON 파일을 불러오지 못했습니다: {error}",
       "import_failed_title": "가져오기 실패",
       "import_success": "UI 토큰을 성공적으로 가져왔습니다. 미리보기가 업데이트되었습니다.",
@@ -849,9 +864,9 @@
       "reset_done": "모든 다이얼로그 토큰이 기본값으로 복원되었습니다.",
       "reset_one": "기본값",
       "saved_toast": "다이얼로그 UI 토큰이 저장되었습니다. 재시작 후 전체 반영됩니다.",
-      "tab_color": "색상 토큰",
-      "tab_metric": "크기/간격 토큰",
-      "title": "다이얼로그 UI 토큰 설정"
+      "tab_color": "색상",
+      "tab_metric": "크기와 간격",
+      "title": "세부 모양 조정"
     }
   },
   "drag": {
@@ -1433,7 +1448,7 @@
     "theme_mode": "🎨 테마 모드",
     "theme_point_color": "🎨 테마 포인트 컬러",
     "toggle_view": "📅 뷰 전환 (주간/월간)",
-    "ui_theme_open": "🎨 UI 테마 상세 설정...",
+    "ui_theme_open": "🎨 모양 설정...",
     "widget_clock": "🕐 디지털 시계",
     "widget_countdown": "⏳ 카운트다운",
     "widget_date_card": "📅 날짜 카드",

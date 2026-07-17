@@ -678,8 +678,11 @@
         "auto_apply_text": "Empfohlene Textfarben bei Auswahl einer Vorlage automatisch anwenden",
         "auto_apply_text_tip": "Wenn aktiviert, werden Textfarben automatisch an die ausgewählte Vorlage angepasst.",
         "custom_picker_title": "Hintergrundfarbe wählen",
+        "details": "Hintergrunddetails",
         "subtitle": "Wählen Sie eine Vorlagenpalette oder eine benutzerdefinierte Hintergrundfarbe."
       },
+      "changes_count": "{count} Änderungen",
+      "changes_none": "Keine Änderungen",
       "color_picker_title": "Farbe wählen",
       "custom_color": "Benutzerdefinierte Farbe",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "Violett"
       },
       "preset": {
+        "family_title": "Empfohlene Stile",
+        "show_all": "Alle Stile anzeigen",
         "burnt_orange": "Gebranntes Orange",
         "charcoal": "Anthrazit",
         "crimson": "Karmesinrot",
@@ -740,6 +745,8 @@
         "title": "Vorschau"
       },
       "reset_icon": "↩",
+      "reset_section": "Änderungen in {section} zurücksetzen",
+      "revert_all": "Alles zurücksetzen",
       "tab": {
         "accent": "Akzent",
         "background": "Hintergrund",
@@ -747,6 +754,10 @@
         "text": "Text"
       },
       "text": {
+        "contrast_fix": "Lesbarkeit automatisch verbessern",
+        "contrast_fix_tip": "Textfarben automatisch an den aktuellen Hintergrund anpassen.",
+        "contrast_good": "Gut lesbar · Primär {primary}:1 / Sekundär {secondary}:1",
+        "contrast_low": "Niedriger Kontrast · Primär {primary}:1 / Sekundär {secondary}:1",
         "apply_recommended": "Empfohlene Textfarben anwenden",
         "apply_recommended_disabled": "Empfohlene Textfarben sind verfügbar, wenn eine Vorlage ausgewählt ist.",
         "apply_recommended_for_preset": "Empfohlene Textfarben für diese Vorlage anwenden",
@@ -770,6 +781,10 @@
       "opacity_hint": "0 % = vollständig transparent, 100 % = vollständig undurchsichtig"
     },
     "token_editor": {
+      "expert_mode": "Einzelne Werte bearbeiten (Experte)",
+      "expert_mode_tip": "Interne Farb-, Größen- und Abstandswerte direkt bearbeiten.",
+      "export": "JSON exportieren",
+      "import": "JSON importieren",
       "apply_color_preset": "Vorlage anwenden",
       "apply_done": "Änderungen der Dialog-Tokens sind bereit zur Anwendung.",
       "apply_metric_preset": "Anwenden",

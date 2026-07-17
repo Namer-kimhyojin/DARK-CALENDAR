@@ -678,8 +678,11 @@
         "auto_apply_text": "Auto-apply recommended text colors when selecting a preset",
         "auto_apply_text_tip": "When enabled, text colors are automatically adjusted to match the selected preset.",
         "custom_picker_title": "Choose Background Color",
+        "details": "Detalles del fondo",
         "subtitle": "Choose a preset palette or pick a custom background color."
       },
+      "changes_count": "{count} cambios",
+      "changes_none": "Sin cambios",
       "color_picker_title": "Pick Color",
       "custom_color": "Custom Color",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "Violeta"
       },
       "preset": {
+        "family_title": "Estilos recomendados",
+        "show_all": "Mostrar todos los estilos",
         "burnt_orange": "Burnt Orange",
         "charcoal": "Charcoal",
         "crimson": "Crimson",
@@ -740,6 +745,8 @@
         "title": "Vista previa"
       },
       "reset_icon": "↩",
+      "reset_section": "Revertir cambios de {section}",
+      "revert_all": "Revertir todo",
       "tab": {
         "accent": "Accent",
         "background": "Background",
@@ -747,6 +754,10 @@
         "text": "Text"
       },
       "text": {
+        "contrast_fix": "Mejorar la legibilidad automáticamente",
+        "contrast_fix_tip": "Ajusta automáticamente los colores del texto al fondo actual.",
+        "contrast_good": "Combinación legible · Principal {primary}:1 / Secundario {secondary}:1",
+        "contrast_low": "Contraste bajo · Principal {primary}:1 / Secundario {secondary}:1",
         "apply_recommended": "Apply recommended text colors",
         "apply_recommended_disabled": "Recommended text colors are available when a preset is selected.",
         "apply_recommended_for_preset": "Apply recommended text colors for this preset",
@@ -770,6 +781,10 @@
       "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
+      "expert_mode": "Editar valores individuales (Experto)",
+      "expert_mode_tip": "Edita directamente los valores internos de color, tamaño y espaciado.",
+      "export": "Exportar JSON",
+      "import": "Importar JSON",
       "apply_color_preset": "Apply Preset",
       "apply_done": "Dialog token changes are ready to apply.",
       "apply_metric_preset": "Aplicar",

@@ -678,8 +678,11 @@
         "auto_apply_text": "Auto-apply recommended text colors when selecting a preset",
         "auto_apply_text_tip": "When enabled, text colors are automatically adjusted to match the selected preset.",
         "custom_picker_title": "Choose Background Color",
+        "details": "รายละเอียดพื้นหลัง",
         "subtitle": "Choose a preset palette or pick a custom background color."
       },
+      "changes_count": "เปลี่ยนแปลง {count} รายการ",
+      "changes_none": "ไม่มีการเปลี่ยนแปลง",
       "color_picker_title": "Pick Color",
       "custom_color": "Custom Color",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "Violet"
       },
       "preset": {
+        "family_title": "สไตล์ที่แนะนำ",
+        "show_all": "แสดงสไตล์ทั้งหมด",
         "burnt_orange": "Burnt Orange",
         "charcoal": "Charcoal",
         "crimson": "Crimson",
@@ -740,6 +745,8 @@
         "title": "ตัวอย่าง"
       },
       "reset_icon": "↩",
+      "reset_section": "ย้อนการเปลี่ยนแปลง {section}",
+      "revert_all": "ย้อนกลับทั้งหมด",
       "tab": {
         "accent": "Accent",
         "background": "Background",
@@ -747,6 +754,10 @@
         "text": "Text"
       },
       "text": {
+        "contrast_fix": "ปรับให้อ่านง่ายโดยอัตโนมัติ",
+        "contrast_fix_tip": "ปรับสีข้อความให้เหมาะกับพื้นหลังปัจจุบันโดยอัตโนมัติ",
+        "contrast_good": "อ่านง่าย · ข้อความหลัก {primary}:1 / ข้อความรอง {secondary}:1",
+        "contrast_low": "คอนทราสต์ต่ำ · ข้อความหลัก {primary}:1 / ข้อความรอง {secondary}:1",
         "apply_recommended": "Apply recommended text colors",
         "apply_recommended_disabled": "Recommended text colors are available when a preset is selected.",
         "apply_recommended_for_preset": "Apply recommended text colors for this preset",
@@ -770,6 +781,10 @@
       "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
+      "expert_mode": "แก้ไขค่าแต่ละรายการ (ผู้เชี่ยวชาญ)",
+      "expert_mode_tip": "แก้ไขค่าสี ขนาด และระยะห่างภายในโดยตรง",
+      "export": "ส่งออก JSON",
+      "import": "นำเข้า JSON",
       "apply_color_preset": "Apply Preset",
       "apply_done": "Dialog token changes are ready to apply.",
       "apply_metric_preset": "นำไปใช้",

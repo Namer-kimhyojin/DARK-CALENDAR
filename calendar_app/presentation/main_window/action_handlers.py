@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ActionHandlers mixin composition root."""
 
 import logging
@@ -78,6 +79,7 @@ class ActionHandlersMixin(
             "search_debounce_timer",
             "_ui_refresh_timer",
             "_sync_anim_timer",
+            "_system_theme_refresh_timer",
         ):
             timer = getattr(self, timer_name, None)
             if timer is not None:

@@ -678,8 +678,11 @@
         "auto_apply_text": "プリセット選択時に推奨テキストカラーを自動適用",
         "auto_apply_text_tip": "有効にすると、選択したプリセットに合わせてテキストカラーが自動調整されます。",
         "custom_picker_title": "背景色を選択",
+        "details": "背景の詳細設定",
         "subtitle": "プリセットパレットを選択するか、カスタム背景色を選びます。"
       },
+      "changes_count": "{count} 件の変更",
+      "changes_none": "変更なし",
       "color_picker_title": "色を選択",
       "custom_color": "カスタムカラー",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "バイオレット"
       },
       "preset": {
+        "family_title": "おすすめスタイル",
+        "show_all": "すべてのスタイルを表示",
         "burnt_orange": "バーントオレンジ",
         "charcoal": "チャコール",
         "crimson": "クリムゾン",
@@ -740,6 +745,8 @@
         "title": "プレビュー"
       },
       "reset_icon": "↩",
+      "reset_section": "{section}の変更を元に戻す",
+      "revert_all": "すべて元に戻す",
       "tab": {
         "accent": "アクセント",
         "background": "背景",
@@ -747,6 +754,10 @@
         "text": "テキスト"
       },
       "text": {
+        "contrast_fix": "読みやすさを自動調整",
+        "contrast_fix_tip": "現在の背景に合わせて文字色を自動調整します。",
+        "contrast_good": "読みやすい組み合わせ · 基本文字 {primary}:1 / 補助文字 {secondary}:1",
+        "contrast_low": "コントラスト不足 · 基本文字 {primary}:1 / 補助文字 {secondary}:1",
         "apply_recommended": "推奨テキストカラーを適用",
         "apply_recommended_disabled": "推奨テキストカラーはプリセット選択時に利用できます。",
         "apply_recommended_for_preset": "このプリセットに推奨のテキストカラーを適用",
@@ -770,6 +781,10 @@
       "opacity_hint": "0% = 完全に透明、100% = 完全に不透明"
     },
     "token_editor": {
+      "expert_mode": "個別の値を編集（上級者向け）",
+      "expert_mode_tip": "色、サイズ、間隔の内部値を直接編集します。",
+      "export": "JSONを書き出す",
+      "import": "JSONを読み込む",
       "apply_color_preset": "プリセットを適用",
       "apply_done": "ダイアログトークンの変更を適用する準備ができました。",
       "apply_metric_preset": "適用",

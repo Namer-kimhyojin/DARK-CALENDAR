@@ -678,8 +678,11 @@
         "auto_apply_text": "Auto-apply recommended text colors when selecting a preset",
         "auto_apply_text_tip": "When enabled, text colors are automatically adjusted to match the selected preset.",
         "custom_picker_title": "Choose Background Color",
+        "details": "पृष्ठभूमि विवरण",
         "subtitle": "Choose a preset palette or pick a custom background color."
       },
+      "changes_count": "{count} बदलाव",
+      "changes_none": "कोई बदलाव नहीं",
       "color_picker_title": "Pick Color",
       "custom_color": "Custom Color",
       "font": {
@@ -705,6 +708,8 @@
         "violet": "Violet"
       },
       "preset": {
+        "family_title": "सुझाई गई शैलियाँ",
+        "show_all": "सभी शैलियाँ दिखाएँ",
         "burnt_orange": "Burnt Orange",
         "charcoal": "Charcoal",
         "crimson": "Crimson",
@@ -740,6 +745,8 @@
         "title": "पूर्वावलोकन"
       },
       "reset_icon": "↩",
+      "reset_section": "{section} के बदलाव वापस करें",
+      "revert_all": "सभी बदलाव वापस करें",
       "tab": {
         "accent": "Accent",
         "background": "Background",
@@ -747,6 +754,10 @@
         "text": "Text"
       },
       "text": {
+        "contrast_fix": "पढ़ने योग्य बनाना स्वचालित करें",
+        "contrast_fix_tip": "वर्तमान पृष्ठभूमि के लिए टेक्स्ट रंग अपने आप समायोजित करें।",
+        "contrast_good": "पढ़ने योग्य संयोजन · मुख्य {primary}:1 / सहायक {secondary}:1",
+        "contrast_low": "कम कंट्रास्ट · मुख्य {primary}:1 / सहायक {secondary}:1",
         "apply_recommended": "Apply recommended text colors",
         "apply_recommended_disabled": "Recommended text colors are available when a preset is selected.",
         "apply_recommended_for_preset": "Apply recommended text colors for this preset",
@@ -770,6 +781,10 @@
       "opacity_hint": "0% = fully transparent, 100% = fully opaque"
     },
     "token_editor": {
+      "expert_mode": "अलग-अलग मान संपादित करें (विशेषज्ञ)",
+      "expert_mode_tip": "आंतरिक रंग, आकार और रिक्ति मान सीधे संपादित करें।",
+      "export": "JSON निर्यात करें",
+      "import": "JSON आयात करें",
       "apply_color_preset": "Apply Preset",
       "apply_done": "Dialog token changes are ready to apply.",
       "apply_metric_preset": "लागू करें",
