@@ -1,15 +1,16 @@
+# -*- coding: utf-8 -*-
 """Alarm popup window shown when a task alarm fires."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import suppress
 from datetime import datetime
-import os
 import re
+import winsound
 
-from PyQt6.QtCore import QDate, QLocale, QSettings, Qt, QTimer, QUrl, pyqtSignal
+from PyQt6.QtCore import QDate, QLocale, QSettings, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QCursor, QPainter, QPainterPath
-from PyQt6.QtMultimedia import QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
@@ -427,18 +428,12 @@ class AlarmPopupWindow(QWidget):
         self._play_notification_sound()
 
     def _play_notification_sound(self) -> None:
-        """Play a subtle notification sound using QSoundEffect."""
-        try:
-            self._sound = QSoundEffect(self)
-            sys_sound = "C:/Windows/Media/notify.wav"
-            if os.path.exists(sys_sound):
-                self._sound.setSource(QUrl.fromLocalFile(sys_sound))
-            else:
-                return
-            self._sound.setVolume(0.5)
-            self._sound.play()
-        except Exception:
-            pass
+        """Play the Windows notification sound without Qt Multimedia/FFmpeg."""
+        with suppress(Exception):
+            winsound.PlaySound(
+                "SystemNotification",
+                winsound.SND_ALIAS | winsound.SND_ASYNC | winsound.SND_NODEFAULT,
+            )
 
     def _build_ui(self) -> None:
         root_layout = QVBoxLayout(self)

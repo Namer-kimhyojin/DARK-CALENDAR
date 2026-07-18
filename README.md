@@ -11,10 +11,11 @@ The application uses PyQt6, which is distributed by Riverbank Computing under GP
 ## Corresponding source
 
 - Source repository: <https://github.com/Namer-kimhyojin/DARK-CALENDAR>
-- Source for release `3.6.0`: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/tree/v3.6.0>
+- Release page for `3.6.1`: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.6.1>
+- Complete corresponding-source archive: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v3.6.1/DarkCalendar-3.6.1-corresponding-source.zip>
 - Source availability notice: [SOURCE_OFFER.md](SOURCE_OFFER.md)
 
-Each distributed binary must point to the tag matching that binary's version. The tag must contain the complete source and build scripts used for the release.
+Each distributed binary must point to the matching release. The release must contain the application tag, exact dependency lock, license bundle, and complete corresponding-source archive used for that binary.
 
 ## Development
 
@@ -39,10 +40,11 @@ python scripts/run_encoding_guard.py
 Build the Windows package:
 
 ```powershell
+python -m pip install -r requirements-build.lock
 build-release.bat -Arch x64
 ```
 
-The build pipeline and PyInstaller specifications in this repository are part of the Corresponding Source.
+Release builds must use `requirements-build.lock`; `requirements-runtime.lock` is the authoritative runtime dependency inventory. The build pipeline and PyInstaller specifications in this repository are part of the Corresponding Source.
 
 ## Data and credentials
 

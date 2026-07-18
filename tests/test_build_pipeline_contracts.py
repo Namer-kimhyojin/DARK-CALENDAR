@@ -113,6 +113,19 @@ class BuildPipelineContractTests(unittest.TestCase):
             script,
         )
         self.assertIn("Open-source notice missing from payload root", script)
+        self.assertIn('"bundle-licenses"', script)
+        self.assertIn('"build-source-bundle"', script)
+        self.assertIn('"verify-payload"', script)
+        self.assertIn("requirements-runtime.lock", script)
+
+    def test_store_spec_removes_unused_qt_multimedia_pdf_and_svg_payloads(self):
+        spec = self._read("DarkCalendar.spec")
+
+        self.assertIn("'PyQt6.QtMultimedia'", spec)
+        self.assertIn("'qt6multimedia.dll'", spec)
+        self.assertIn("'avcodec-61.dll'", spec)
+        self.assertIn("'qt6pdf.dll'", spec)
+        self.assertIn("'qt6svg.dll'", spec)
 
     def test_homepage_exposes_versioned_source_and_gpl(self):
         metadata = self._read("calendar_app/app_metadata.py")
@@ -122,13 +135,17 @@ class BuildPipelineContractTests(unittest.TestCase):
         config = self._read("docs/site-config.json")
         homepage = self._read("docs/index.html")
         self.assertIn(f'"appVersion": "{version_match.group(1)}"', config)
-        self.assertIn(f"/tree/v{version_match.group(1)}", config)
+        self.assertIn(f"/releases/tag/v{version_match.group(1)}", config)
         self.assertIn('data-config-link="releaseSourceUrl"', homepage)
         self.assertIn("GNU General Public License v3.0", homepage)
 
         script = self._read("docs/app.js")
-        self.assertIn("const directSectionVisit = Boolean(window.location.hash);", script)
-        self.assertIn("skipAutoOpen: directSectionVisit", script)
+        self.assertIn(
+            'const eventBand = document.querySelector("[data-event-band]");',
+            script,
+        )
+        self.assertIn("eventBand.hidden = !eventActive;", script)
+        self.assertNotIn("setupEventModal", script)
 
 
 if __name__ == "__main__":

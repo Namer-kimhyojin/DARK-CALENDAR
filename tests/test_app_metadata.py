@@ -41,8 +41,8 @@ class AppMetadataTests(unittest.TestCase):
         self.assertEqual(APP_LICENSE_SPDX, "GPL-3.0-only")
         self.assertIn("GNU General Public License", APP_LICENSE_NAME)
         self.assertTrue(APP_SOURCE_URL.startswith("https://github.com/"))
-        self.assertEqual(APP_RELEASE_SOURCE_URL, f"{APP_SOURCE_URL}/tree/v{APP_VERSION}")
-        self.assertEqual(APP_LICENSE_URL, f"{APP_SOURCE_URL}/blob/main/LICENSE")
+        self.assertEqual(APP_RELEASE_SOURCE_URL, f"{APP_SOURCE_URL}/releases/tag/v{APP_VERSION}")
+        self.assertEqual(APP_LICENSE_URL, f"{APP_SOURCE_URL}/blob/v{APP_VERSION}/LICENSE")
 
     def test_shortcut_guide_emphasizes_recovery_shortcuts_and_sections(self):
         html = build_shortcut_guide_html()

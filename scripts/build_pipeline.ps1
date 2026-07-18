@@ -197,6 +197,7 @@ function Assert-PackageVersionFormat {
 
 function Sync-AppVersion {
     param(
+        [string]$ProjectRoot,
         [string]$MetadataPath,
         [string]$PyprojectPath,
         [string]$ManifestPath,
@@ -254,6 +255,48 @@ function Sync-AppVersion {
     $vi = $vi -replace "(StringStruct\('ProductVersion',\s*')[^']+(')", "`${1}$verStr`$2"
     [System.IO.File]::WriteAllText($VersionInfoPath, $vi, $utf8NoBom)
     Write-Info "updated: version_info.txt  ($verStr)"
+
+    # 5. Website and release-source notices
+    $releasePage = "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v$NewVersion"
+    $releaseAsset = "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v$NewVersion/DarkCalendar-$NewVersion-corresponding-source.zip"
+    $licenseUrl = "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v$NewVersion/LICENSE"
+    $thirdPartyUrl = "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v$NewVersion/THIRD_PARTY_NOTICES.md"
+
+    $siteConfigPath = Join-Path $ProjectRoot "docs\site-config.json"
+    $siteConfig = Get-Content $siteConfigPath -Raw -Encoding utf8
+    $siteConfig = $siteConfig -replace '("appVersion"\s*:\s*)"[^"]+"', ('${1}"' + $NewVersion + '"')
+    $siteConfig = $siteConfig -replace '("releaseSourceUrl"\s*:\s*)"[^"]+"', ('${1}"' + $releasePage + '"')
+    $siteConfig = $siteConfig -replace '("licenseUrl"\s*:\s*)"[^"]+"', ('${1}"' + $licenseUrl + '"')
+    $siteConfig = $siteConfig -replace '("thirdPartyNoticesUrl"\s*:\s*)"[^"]+"', ('${1}"' + $thirdPartyUrl + '"')
+    [System.IO.File]::WriteAllText($siteConfigPath, $siteConfig, $utf8NoBom)
+
+    $siteScriptPath = Join-Path $ProjectRoot "docs\app.js"
+    $siteScript = Get-Content $siteScriptPath -Raw -Encoding utf8
+    $siteScript = $siteScript -replace '(appVersion\s*:\s*)"[^"]+"', ('${1}"' + $NewVersion + '"')
+    $siteScript = $siteScript -replace '(releaseSourceUrl\s*:\s*)"[^"]+"', ('${1}"' + $releasePage + '"')
+    $siteScript = $siteScript -replace '(licenseUrl\s*:\s*)"[^"]+"', ('${1}"' + $licenseUrl + '"')
+    $siteScript = $siteScript -replace '(thirdPartyNoticesUrl\s*:\s*)"[^"]+"', ('${1}"' + $thirdPartyUrl + '"')
+    [System.IO.File]::WriteAllText($siteScriptPath, $siteScript, $utf8NoBom)
+
+    $homepagePath = Join-Path $ProjectRoot "docs\index.html"
+    $homepage = Get-Content $homepagePath -Raw -Encoding utf8
+    $homepage = $homepage -replace 'Dark Calendar \d+\.\d+\.\d+', "Dark Calendar $NewVersion"
+    $homepage = $homepage -replace '(data-config-text="appVersion">)\d+\.\d+\.\d+', ('${1}' + $NewVersion)
+    $homepage = $homepage -replace 'https://github\.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v\d+\.\d+\.\d+', $releasePage
+    $homepage = $homepage -replace 'https://github\.com/Namer-kimhyojin/DARK-CALENDAR/blob/v\d+\.\d+\.\d+/LICENSE', $licenseUrl
+    $homepage = $homepage -replace 'https://github\.com/Namer-kimhyojin/DARK-CALENDAR/blob/v\d+\.\d+\.\d+/THIRD_PARTY_NOTICES\.md', $thirdPartyUrl
+    [System.IO.File]::WriteAllText($homepagePath, $homepage, $utf8NoBom)
+
+    foreach ($noticeName in @("README.md", "SOURCE_OFFER.md")) {
+        $noticePath = Join-Path $ProjectRoot $noticeName
+        $notice = Get-Content $noticePath -Raw -Encoding utf8
+        $notice = $notice -replace 'releases/tag/v\d+\.\d+\.\d+', "releases/tag/v$NewVersion"
+        $notice = $notice -replace 'releases/download/v\d+\.\d+\.\d+/DarkCalendar-\d+\.\d+\.\d+-corresponding-source\.zip', "releases/download/v$NewVersion/DarkCalendar-$NewVersion-corresponding-source.zip"
+        $notice = $notice -replace 'release `\d+\.\d+\.\d+`', "release ``$NewVersion``"
+        $notice = $notice -replace 'version `\d+\.\d+\.\d+`', "version ``$NewVersion``"
+        [System.IO.File]::WriteAllText($noticePath, $notice, $utf8NoBom)
+    }
+    Write-Info "updated: website + release-source notices  ($NewVersion)"
 }
 
 # ---------------------------------------------------------------------------
@@ -356,7 +399,7 @@ function Test-PythonEnv {
         if ($LASTEXITCODE -ne 0) { $missing += $pkg }
     }
     if ($missing.Count -gt 0) {
-        throw "Missing packages in venv: $($missing -join ', '). Run: pip install -r requirements.txt"
+        throw "Missing packages in venv: $($missing -join ', '). Run: pip install -r requirements-build.lock"
     }
     Write-Info "venv OK (PyInstaller, PyQt6 present)"
 }
@@ -572,6 +615,11 @@ $projectRoot    = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $venvPython     = Join-Path $projectRoot ".venv\Scripts\python.exe"
 $resetScript    = Join-Path $projectRoot "scripts\reset_release_state.py"
 $payloadScript  = Join-Path $projectRoot "build_store.py"
+$complianceScript = Join-Path $projectRoot "scripts\release_compliance.py"
+$runtimeLock    = Join-Path $projectRoot "requirements-runtime.lock"
+$buildLock      = Join-Path $projectRoot "requirements-build.lock"
+$complianceConfig = Join-Path $projectRoot "release-compliance.json"
+$complianceCache = Join-Path $projectRoot "release\compliance-cache"
 $specPath       = Join-Path $projectRoot "DarkCalendar.spec"
 $manifestSource = Join-Path $projectRoot "AppxManifest.xml"
 $assetsSource   = Join-Path $projectRoot "Assets"
@@ -653,6 +701,7 @@ $appDir        = Join-Path $distRoot "DarkCalendar"
 $manifestDest  = Join-Path $appDir "AppxManifest.xml"
 $assetsDest    = Join-Path $appDir "Assets"
 $msixOutput    = Join-Path $distRoot "DarkCalendar-$appVersion-$Arch.msix"
+$sourceBundle  = Join-Path $projectRoot "release\source\DarkCalendar-$appVersion-corresponding-source.zip"
 
 $TOTAL_STEPS   = if ($SkipMsix) { 8 } else { 11 }
 
@@ -699,6 +748,10 @@ foreach ($chk in @(
     @{ Path = $manifestSource; Name = "AppxManifest.xml" },
     @{ Path = $assetsSource;  Name = "Assets/" },
     @{ Path = $payloadScript; Name = "build_store.py" }
+    @{ Path = $complianceScript; Name = "release_compliance.py" }
+    @{ Path = $runtimeLock; Name = "requirements-runtime.lock" }
+    @{ Path = $buildLock; Name = "requirements-build.lock" }
+    @{ Path = $complianceConfig; Name = "release-compliance.json" }
     @{ Path = $pyprojectFile; Name = "pyproject.toml" }
     @{ Path = $widgetSkinModule; Name = "widget_mode_skins.py" }
 )) {
@@ -711,6 +764,16 @@ foreach ($chk in @(
 
 Assert-DiskSpace -Path $projectRoot -MinimumGB 3
 Test-PythonEnv -Python $venvPython
+Run-OrThrow -Exe $venvPython -Args @(
+    $complianceScript,
+    "verify-env",
+    "--lock", $runtimeLock
+) -WorkingDirectory $projectRoot
+Run-OrThrow -Exe $venvPython -Args @(
+    $complianceScript,
+    "verify-env",
+    "--lock", $buildLock
+) -WorkingDirectory $projectRoot
 
 Write-Ok "preflight passed"
 Write-Log "preflight OK"
@@ -730,6 +793,7 @@ Write-Step 2 $TOTAL_STEPS "Sync version info"
 Write-Log "[step 2] version sync — $resolvedVersion / $resolvedDate / $resolvedChannel"
 
 Sync-AppVersion `
+    -ProjectRoot     $projectRoot `
     -MetadataPath    $metadataFile `
     -PyprojectPath   $pyprojectFile `
     -ManifestPath    $manifestSource `
@@ -853,8 +917,17 @@ foreach ($legalFile in $legalFiles) {
     }
 }
 
-Write-Ok "copied ($assetCount manifest asset files, $($legalFiles.Count) open-source notices)"
-Write-Log "assets+manifest+notices OK — $assetCount assets / $($legalFiles.Count) notices"
+Run-OrThrow -Exe $venvPython -Args @(
+    $complianceScript,
+    "bundle-licenses",
+    "--lock", $runtimeLock,
+    "--config", $complianceConfig,
+    "--payload-dir", $appDir,
+    "--cache-dir", $complianceCache
+) -WorkingDirectory $projectRoot
+
+Write-Ok "copied ($assetCount manifest asset files, $($legalFiles.Count) notices, locked license bundle)"
+Write-Log "assets+manifest+notices OK — $assetCount assets / $($legalFiles.Count) notices / locked licenses"
 
 # ---------------------------------------------------------------------------
 # STEP 7 — Store payload sanitisation
@@ -875,8 +948,29 @@ if (Test-Path $staleRootDb) {
     throw "Stale root default DB remains in payload: $staleRootDb"
 }
 
-Write-Ok "payload ready"
-Write-Log "payload OK"
+Run-OrThrow -Exe $venvPython -Args @(
+    $complianceScript,
+    "build-source-bundle",
+    "--project-root", $projectRoot,
+    "--version", $appVersion,
+    "--lock", $runtimeLock,
+    "--config", $complianceConfig,
+    "--output", $sourceBundle,
+    "--cache-dir", $complianceCache
+) -WorkingDirectory $projectRoot
+
+Run-OrThrow -Exe $venvPython -Args @(
+    $complianceScript,
+    "verify-payload",
+    "--payload-dir", $appDir,
+    "--lock", $runtimeLock,
+    "--config", $complianceConfig,
+    "--source-bundle", $sourceBundle
+) -WorkingDirectory $projectRoot
+
+Write-Ok "payload and corresponding source ready"
+Write-Info $sourceBundle
+Write-Log "payload + compliance source bundle OK — $sourceBundle"
 
 # ---------------------------------------------------------------------------
 # STEP 8 — MSIX packaging

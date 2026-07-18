@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "sourceOverrides": {
+    "PyQt6-Qt6": {
+      "reason": "The wheel contains Qt 6 libraries; the corresponding QtBase source is mirrored below."
+    },
+    "pywin32": {
+      "filename": "pywin32-b311.tar.gz",
+      "url": "https://github.com/mhammond/pywin32/archive/refs/tags/b311.tar.gz",
+      "sha256": "4ae3f0d4adacc331733fe1204f7f93b8654615ca325adfc9eb6c67198246a91b"
+    }
+  },
+  "additionalSources": [
+    {
+      "name": "QtBase",
+      "version": "6.10.2",
+      "filename": "qtbase-everywhere-src-6.10.2.tar.xz",
+      "url": "https://download.qt.io/archive/qt/6.10/6.10.2/submodules/qtbase-everywhere-src-6.10.2.tar.xz",
+      "sha256": "aeb78d29291a2b5fd53cb55950f8f5065b4978c25fb1d77f627d695ab9adf21e"
+    }
+  ],
+  "commonLicenseTexts": [
+    {
+      "filename": "Apache-2.0.txt",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "filename": "OFL-1.1.txt",
+      "url": "https://openfontlicense.org/documents/OFL.txt",
+      "sha256": "1d361a8f8e8ce6e68457dcd93fb56e162e6baa3bbb7e7573a290d44399f6b57e"
+    },
+    {
+      "filename": "MIT.txt",
+      "url": "https://raw.githubusercontent.com/spdx/license-list-data/main/text/MIT.txt",
+      "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+    },
+    {
+      "filename": "CC-BY-4.0.txt",
+      "url": "https://creativecommons.org/licenses/by/4.0/legalcode.txt",
+      "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411"
+    }
+  ],
+  "forbiddenPayloadFiles": [
+    "Qt6Multimedia.dll",
+    "Qt6Pdf.dll",
+    "Qt6Svg.dll",
+    "avcodec-61.dll",
+    "avformat-61.dll",
+    "avutil-59.dll",
+    "swresample-5.dll",
+    "swscale-8.dll",
+    "ffmpegmediaplugin.dll",
+    "qpdf.dll",
+    "qsvg.dll",
+    "qsvgicon.dll"
+  ]
+}
