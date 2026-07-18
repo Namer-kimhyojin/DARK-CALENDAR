@@ -191,15 +191,16 @@
         {
           "id": "weather-widget",
           "title": "실시간 날씨 위젯",
-          "summary": "현재 위치나 지정 위치의 날씨를 바탕화면에서 바로 확인할 수 있습니다.",
+          "summary": "지정한 도시의 날씨를 바탕화면에서 바로 확인할 수 있습니다.",
           "details": [
-            "Open-Meteo 기반 현재 날씨 정보를 사용합니다.",
+            "MET Norway 날씨 데이터와 GeoNames 로컬 도시 검색을 사용합니다.",
             "도시명, 온도, 날씨 상태, 아이콘 중심의 간결한 카드형 표시가 가능합니다.",
             "스타일 프리셋과 템플릿 기반 표시를 함께 지원합니다."
           ],
           "tags": [
             "weather",
-            "open-meteo",
+            "met-norway",
+            "geonames",
             "overlay-widget"
           ]
         }

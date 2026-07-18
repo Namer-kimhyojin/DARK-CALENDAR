@@ -1,6 +1,6 @@
 # Dark Calendar Privacy Policy
 
-**Effective date: July 13, 2026**
+**Effective date: July 18, 2026**
 
 Dark Calendar ("the App") is a Windows desktop calendar application developed and distributed by Hyojin Kim ("the Developer"). This policy explains how the App handles your information.
 
@@ -33,7 +33,9 @@ This data is never transmitted to the Developer, and the Developer has no access
 - The App's use of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), **including the Limited Use requirements.**
 
 ### 3.2 Weather widget
-- Only the **city name you type** is sent to Open-Meteo (an open-source weather service, [open-meteo.com](https://open-meteo.com)) to look up coordinates and weather.
+- The **city name you type is searched locally** in the GeoNames city dataset bundled with the App and is not sent externally.
+- The resulting latitude and longitude (rounded to four decimal places), together with standard web request information such as your IP address, may be sent to MET Norway ([api.met.no](https://api.met.no/)) to retrieve weather data. MET Norway stores API access logs in its own data center in Oslo, Norway.
+- Weather data is provided under MET Norway's CC BY 4.0/NLOD 2.0 terms, and city data is provided by GeoNames under CC BY 4.0.
 - Device location (GPS, etc.) is never collected or used.
 
 ### 3.3 ICS calendar subscriptions

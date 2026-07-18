@@ -6,6 +6,24 @@ __pycache__/
 # Virtual environment
 .venv/
 
+# Credentials and local secrets
+.env
+.env.*
+!.env.example
+credentials.json
+client_secret*.json
+token.json
+*.key
+*.p12
+*.pem
+*.pfx
+
+# Runtime-only user data
+desk_calendar.db
+desk_calendar.db-shm
+desk_calendar.db-wal
+*.log
+
 # Build artifacts
 build/
 dist/

@@ -2026,6 +2026,54 @@ button.outline-button {
   background: #050d13;
 }
 
+.open-source-section {
+  background:
+    radial-gradient(circle at 80% 10%, rgba(41, 211, 255, 0.12), transparent 34%),
+    #071019;
+}
+
+.open-source-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 48px;
+}
+
+.open-source-grid article {
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(5, 13, 19, 0.82);
+}
+
+.open-source-grid article > span {
+  color: var(--cyan);
+  font-weight: 900;
+}
+
+.open-source-grid h3 {
+  margin-top: auto;
+  font-size: 25px;
+}
+
+.open-source-grid p {
+  color: #aebdcb;
+}
+
+.open-source-grid .outline-button {
+  align-self: flex-start;
+  margin-top: 14px;
+}
+
+.open-source-note {
+  max-width: 900px;
+  margin-top: 28px;
+  color: #8396a8;
+}
+
 .faq-list {
   max-width: 980px;
   margin-top: 52px;
@@ -2191,7 +2239,8 @@ button.outline-button {
 
   .feature-grid-rich,
   .screenshot-mosaic,
-  .workflow-steps {
+  .workflow-steps,
+  .open-source-grid {
     grid-template-columns: 1fr;
   }
 

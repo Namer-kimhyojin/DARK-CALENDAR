@@ -10,7 +10,7 @@
   <meta property="og:image" content="assets/hero_concept.png">
   <meta name="theme-color" content="#061018">
   <link rel="icon" href="assets/app_icon.png">
-  <link rel="stylesheet" href="styles.css?v=20260713-ui4">
+  <link rel="stylesheet" href="styles.css?v=20260718-oss1">
 </head>
 <body>
   <header class="site-header" aria-label="상단 메뉴">
@@ -22,6 +22,7 @@
       <a href="#features">기능</a>
       <a href="#screenshots">화면</a>
       <a href="#workflow">사용 흐름</a>
+      <a href="#open-source">오픈소스</a>
       <a href="#faq">FAQ</a>
     </nav>
     <a class="header-store" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare">
@@ -47,6 +48,7 @@
           <li>Microsoft Store</li>
           <li>로컬 우선</li>
           <li>Google Calendar</li>
+          <li>GPLv3 오픈소스</li>
         </ul>
       </div>
 
@@ -63,7 +65,7 @@
 
     <section class="trust-strip" aria-label="제품 정보">
       <p><strong>Microsoft Store</strong><span>공식 스토어에서 간편 설치</span></p>
-      <p><strong>Paid app</strong><span>무료 앱이 아닌 유료 프로그램</span></p>
+      <p><strong>GPLv3</strong><span>소스가 공개된 유료 프로그램</span></p>
       <p><strong>Local first</strong><span>기본 기능은 로컬 중심</span></p>
       <p><strong>Google Calendar</strong><span>필요할 때 계정 연결</span></p>
     </section>
@@ -355,6 +357,33 @@
       </div>
     </section>
 
+    <section class="section open-source-section" id="open-source" aria-labelledby="open-source-title">
+      <p class="section-kicker">Open source</p>
+      <h2 id="open-source-title">구매할 수 있고,<br>소스도 확인할 수 있습니다.</h2>
+      <p class="section-lead">Dark Calendar는 GNU General Public License v3.0으로 배포되는 오픈소스 소프트웨어입니다. 앱 판매 여부와 관계없이 사용자는 설치한 버전에 대응하는 소스 코드와 빌드 안내를 확인할 수 있습니다.</p>
+      <div class="open-source-grid">
+        <article>
+          <span>01</span>
+          <h3>설치 버전의 소스</h3>
+          <p>현재 배포 버전과 같은 태그의 전체 대응 소스를 GitHub에서 제공합니다.</p>
+          <a class="outline-button" data-config-link="releaseSourceUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/tree/v3.6.0">버전별 소스 보기</a>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>GPLv3 라이선스</h3>
+          <p>복제·수정·재배포 조건과 사용자 권리는 GPLv3 전문에서 확인할 수 있습니다.</p>
+          <a class="outline-button" data-config-link="licenseUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/main/LICENSE">라이선스 전문 보기</a>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>제3자 구성요소</h3>
+          <p>PyQt6, Qt와 기타 라이브러리의 라이선스 및 고지 사항을 함께 제공합니다.</p>
+          <a class="outline-button" data-config-link="thirdPartyNoticesUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/main/THIRD_PARTY_NOTICES.md">제3자 고지 보기</a>
+        </article>
+      </div>
+      <p class="open-source-note">Microsoft Store 구매는 앱 설치·업데이트 경로를 제공하며, GPLv3에 따른 소스 접근 권리를 제한하지 않습니다.</p>
+    </section>
+
     <section class="section faq-section" id="faq" aria-labelledby="faq-title">
       <p class="section-kicker">FAQ</p>
       <h2 id="faq-title">설치 전에 많이 묻는 질문.</h2>
@@ -384,6 +413,7 @@
       <p>Dark Calendar는 유료 앱입니다. 공식 Microsoft Store에서 가격, 구매 조건과 설치 방법을 확인하세요.</p>
       <div class="support-actions">
         <a class="primary-button" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare">Microsoft Store에서 가격·설치 확인</a>
+        <a class="outline-button" data-config-link="sourceCodeUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR">GitHub 저장소 보기</a>
       </div>
     </section>
   </main>
@@ -485,14 +515,17 @@
       <a href="#features">기능</a>
       <a href="#screenshots">화면</a>
       <a href="#workflow">사용 흐름</a>
+      <a href="#open-source">오픈소스</a>
       <a href="#faq">FAQ</a>
       <a href="#install">설치</a>
       <a data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare">Microsoft Store</a>
+      <a data-config-link="sourceCodeUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR">GitHub</a>
+      <a data-config-link="licenseUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/main/LICENSE">GPLv3</a>
       <a href="privacy.html">개인정보처리방침</a>
     </nav>
-    <button class="footer-copy" type="button" data-admin-trigger aria-label="저작권 정보">© 2026 Kim Hyojin. All rights reserved.</button>
+    <button class="footer-copy" type="button" data-admin-trigger aria-label="저작권 정보">© 2026 Kim Hyojin · GPLv3 open-source software.</button>
   </footer>
 
-  <script src="app.js?v=20260713-ui5"></script>
+  <script src="app.js?v=20260718-oss1"></script>
 </body>
 </html>

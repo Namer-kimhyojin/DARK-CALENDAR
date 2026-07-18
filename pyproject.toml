@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.backends.legacy:build"
 
 # ---------------------------------------------------------------------------
@@ -7,9 +7,20 @@ build-backend = "setuptools.backends.legacy:build"
 # ---------------------------------------------------------------------------
 [project]
 name = "dark-calendar"
-version = "3.5.0"
+version = "3.6.0"
+description = "Windows desktop calendar, task workspace, and overlay widgets"
+readme = "README.md"
+license = "GPL-3.0-only"
+authors = [
+    { name = "Kim Hyojin", email = "aplus.mylife@gmail.com" },
+]
 requires-python = ">=3.12"
 dependencies = []   # runtime deps are managed via requirements.txt
+
+[project.urls]
+Homepage = "https://namer-kimhyojin.github.io/dark_calendar/"
+Repository = "https://github.com/Namer-kimhyojin/DARK-CALENDAR"
+Issues = "https://github.com/Namer-kimhyojin/DARK-CALENDAR/issues"
 
 # ---------------------------------------------------------------------------
 # Ruff — linter + formatter

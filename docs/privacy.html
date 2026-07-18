@@ -73,7 +73,7 @@
     <!-- ============================ 한국어 ============================ -->
     <section id="ko">
       <h1>개인정보처리방침</h1>
-      <p class="effective">시행일: 2026년 7월 13일</p>
+      <p class="effective">시행일: 2026년 7월 18일</p>
 
       <p>Dark Calendar(이하 "본 앱")는 김효진(이하 "개발자")이 개발·배포하는 Windows용 데스크톱 캘린더 애플리케이션입니다. 본 방침은 본 앱이 이용자의 정보를 어떻게 처리하는지 설명합니다.</p>
 
@@ -110,7 +110,9 @@
 
       <h3>3.2 날씨 위젯</h3>
       <ul>
-        <li>이용자가 입력한 <strong>도시 이름</strong>만 Open-Meteo(오픈소스 날씨 서비스, <a href="https://open-meteo.com" rel="noopener">open-meteo.com</a>)에 전송되어 좌표와 날씨를 조회합니다.</li>
+        <li>이용자가 입력한 <strong>도시 이름은 앱에 포함된 GeoNames 도시 데이터에서 로컬로 검색</strong>되며 외부로 전송되지 않습니다.</li>
+        <li>검색된 위도·경도(소수점 4자리)와 일반적인 웹 요청 정보(IP 주소 등)는 날씨 조회를 위해 노르웨이 기상청 MET Norway(<a href="https://api.met.no/" rel="noopener">api.met.no</a>)에 전달될 수 있습니다. MET Norway는 API 접근 로그를 노르웨이 오슬로의 자체 데이터센터에 저장합니다.</li>
+        <li>날씨 데이터는 MET Norway의 CC BY 4.0/NLOD 2.0 데이터이며, 도시 데이터는 GeoNames의 CC BY 4.0 데이터입니다.</li>
         <li>GPS 등 기기 위치정보는 수집·사용하지 않습니다.</li>
       </ul>
 
@@ -141,7 +143,7 @@
     <!-- ============================ English ============================ -->
     <section id="en" lang="en">
       <h1>Privacy Policy</h1>
-      <p class="effective">Effective date: July 13, 2026</p>
+      <p class="effective">Effective date: July 18, 2026</p>
 
       <p>Dark Calendar ("the App") is a Windows desktop calendar application developed and distributed by Hyojin Kim ("the Developer"). This policy explains how the App handles your information.</p>
 
@@ -178,7 +180,9 @@
 
       <h3>3.2 Weather widget</h3>
       <ul>
-        <li>Only the <strong>city name you type</strong> is sent to Open-Meteo (an open-source weather service, <a href="https://open-meteo.com" rel="noopener">open-meteo.com</a>) to look up coordinates and weather.</li>
+        <li>The <strong>city name you type is searched locally</strong> in the GeoNames city dataset bundled with the App and is not sent externally.</li>
+        <li>The resulting latitude and longitude (rounded to four decimal places), together with standard web request information such as your IP address, may be sent to MET Norway (<a href="https://api.met.no/" rel="noopener">api.met.no</a>) to retrieve weather data. MET Norway stores API access logs in its own data center in Oslo, Norway.</li>
+        <li>Weather data is provided under MET Norway's CC BY 4.0/NLOD 2.0 terms, and city data is provided by GeoNames under CC BY 4.0.</li>
         <li>Device location (GPS, etc.) is never collected or used.</li>
       </ul>
 

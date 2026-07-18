@@ -97,6 +97,39 @@ class BuildPipelineContractTests(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertEqual(project["project"]["version"], match.group(1))
 
+    def test_release_packages_include_open_source_notices(self):
+        required = ("LICENSE", "README.md", "SOURCE_OFFER.md", "THIRD_PARTY_NOTICES.md")
+        for spec_name in ("DarkCalendar.spec", "Standalone.spec"):
+            spec = self._read(spec_name)
+            for filename in required:
+                self.assertIn(f"('{filename}', '.')", spec, spec_name)
+
+            for distribution in ("PyQt6", "PyQt6-Qt6", "PyQt6-sip", "QtAwesome"):
+                self.assertIn(f"copy_metadata('{distribution}')", spec, spec_name)
+
+        script = self._read("scripts/build_pipeline.ps1")
+        self.assertIn(
+            '$legalFiles = @("LICENSE", "README.md", "SOURCE_OFFER.md", "THIRD_PARTY_NOTICES.md")',
+            script,
+        )
+        self.assertIn("Open-source notice missing from payload root", script)
+
+    def test_homepage_exposes_versioned_source_and_gpl(self):
+        metadata = self._read("calendar_app/app_metadata.py")
+        version_match = re.search(r'^APP_VERSION\s*=\s*"([^"]+)"', metadata, re.MULTILINE)
+        self.assertIsNotNone(version_match)
+
+        config = self._read("docs/site-config.json")
+        homepage = self._read("docs/index.html")
+        self.assertIn(f'"appVersion": "{version_match.group(1)}"', config)
+        self.assertIn(f"/tree/v{version_match.group(1)}", config)
+        self.assertIn('data-config-link="releaseSourceUrl"', homepage)
+        self.assertIn("GNU General Public License v3.0", homepage)
+
+        script = self._read("docs/app.js")
+        self.assertIn("const directSectionVisit = Boolean(window.location.hash);", script)
+        self.assertIn("skipAutoOpen: directSectionVisit", script)
+
 
 if __name__ == "__main__":
     unittest.main()

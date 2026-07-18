@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import unittest
 
@@ -80,6 +81,18 @@ class TestSystemMenu(unittest.TestCase):
 
         # Second item should be a separator
         self.assertTrue(actions[1].isSeparator(), "A separator should follow the autostart action")
+
+    def test_system_menu_exposes_source_and_open_source_license(self):
+        host = MockApp()
+        layout = QVBoxLayout()
+        build_system_menu(host, layout, "")
+
+        action_texts = [action.text() for action in host.sys_menu.actions()]
+        self.assertIn("오픈소스 정보", action_texts)
+
+        open_source_texts = [action.text() for action in host.open_source_menu.actions()]
+        self.assertIn("이 버전의 GitHub 소스", open_source_texts)
+        self.assertIn("GPLv3 오픈소스 라이선스", open_source_texts)
 
 
 if __name__ == "__main__":

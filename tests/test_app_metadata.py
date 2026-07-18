@@ -1,8 +1,14 @@
+# -*- coding: utf-8 -*-
 import unittest
 
 from calendar_app.app_metadata import (
+    APP_LICENSE_NAME,
+    APP_LICENSE_SPDX,
+    APP_LICENSE_URL,
     APP_RELEASE_CHANNEL,
     APP_RELEASE_DATE,
+    APP_RELEASE_SOURCE_URL,
+    APP_SOURCE_URL,
     APP_VERSION,
     APP_VERSION_DETAIL,
     APP_VERSION_DISPLAY,
@@ -30,6 +36,13 @@ class AppMetadataTests(unittest.TestCase):
 
         self.assertIn(APP_VERSION_DISPLAY, html)
         self.assertIn("tester@example.com", html)
+
+    def test_open_source_metadata_points_to_versioned_github_source(self):
+        self.assertEqual(APP_LICENSE_SPDX, "GPL-3.0-only")
+        self.assertIn("GNU General Public License", APP_LICENSE_NAME)
+        self.assertTrue(APP_SOURCE_URL.startswith("https://github.com/"))
+        self.assertEqual(APP_RELEASE_SOURCE_URL, f"{APP_SOURCE_URL}/tree/v{APP_VERSION}")
+        self.assertEqual(APP_LICENSE_URL, f"{APP_SOURCE_URL}/blob/main/LICENSE")
 
     def test_shortcut_guide_emphasizes_recovery_shortcuts_and_sections(self):
         html = build_shortcut_guide_html()

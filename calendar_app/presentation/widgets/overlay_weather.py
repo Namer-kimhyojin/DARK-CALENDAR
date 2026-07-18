@@ -1,19 +1,30 @@
-"""Overlay weather widget — displays current weather from Open-Meteo."""
+# -*- coding: utf-8 -*-
+"""Overlay weather widget using local GeoNames lookup and MET Norway data."""
 
 from __future__ import annotations
 
 import base64
 import contextlib
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 import json
 import logging
 import re
 
-from PyQt6.QtCore import QBuffer, QIODevice, QPoint, Qt, QTimer, QUrl
+from PyQt6.QtCore import QBuffer, QIODevice, QPoint, Qt, QTimer, QUrl, QUrlQuery
 from PyQt6.QtNetwork import QNetworkReply, QNetworkRequest
 from PyQt6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout
 
+from calendar_app.app_metadata import APP_VERSION
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.runtime.network import get_network_manager
+from calendar_app.infrastructure.weather.geonames import find_city
+from calendar_app.infrastructure.weather.met_norway import (
+    GEONAMES_LICENSE_URL,
+    MET_FORECAST_ENDPOINT,
+    MET_LICENSE_URL,
+    parse_locationforecast,
+)
 from calendar_app.presentation.widgets.overlay_base import (
     _DLG_SS,
     _apply_align_tags,
@@ -76,6 +87,8 @@ def _weather_icon_b64(wmo_code: int, color: str, size: int) -> str:
 
 
 _NETWORK_TIMEOUT_MS = 10_000  # abort reply after 10 s
+_APP_HOMEPAGE = "https://namer-kimhyojin.github.io/dark_calendar/"
+_MET_USER_AGENT = f"DarkCalendar/{APP_VERSION} {_APP_HOMEPAGE}".encode("utf-8", errors="strict")
 
 _WEATHER_DESC = {
     0: "Clear Sky",
@@ -193,10 +206,17 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._template_label.setVisible(False)
         layout.addWidget(self._template_label)
 
+        self._source_label = QLabel("", frame)
+        self._source_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._source_label.setTextFormat(Qt.TextFormat.RichText)
+        self._source_label.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+        self._source_label.setOpenExternalLinks(True)
+        layout.addWidget(self._source_label)
+
         return frame
 
     def request_update(self) -> None:
-        """Fetch latest weather from Open-Meteo."""
+        """Fetch the latest MET Norway forecast for the configured city."""
         # Clean up old replies
         for r in self._pending_replies:
             if r.isRunning():
@@ -235,95 +255,154 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._refresh_face()
 
     def _geocode_location(self, name: str) -> None:
-        """Resolve city name to coordinates."""
-        url = QUrl(
-            f"https://geocoding-api.open-meteo.com/v1/search?name={name}&count=1&language=en&format=json"
-        )
-        request = QNetworkRequest(url)
-        reply = self._network_manager.get(request)
-        reply.finished.connect(lambda r=reply: self._on_geocode_reply(r, name))
-        self._pending_replies.append(reply)
-        self._watch_reply(reply)
+        """Resolve a city using the bundled GeoNames dataset."""
+        city = find_city(name)
+        if city is None:
+            logger.warning("Local GeoNames lookup failed for: %s", name)
+            self._show_error(t("weather.error.location_not_found", "위치를 찾을 수 없습니다"))
+            self._refresh_face()
+            return
 
-    def _on_geocode_reply(self, reply: QNetworkReply, original_name: str) -> None:
-        if reply in self._pending_replies:
-            self._pending_replies.remove(reply)
-
-        if reply.error() == QNetworkReply.NetworkError.NoError:
-            try:
-                data = json.loads(reply.readAll().data().decode())
-                results = data.get("results", [])
-                if results:
-                    best = results[0]
-                    lat = best.get("latitude", 37.5665)
-                    lon = best.get("longitude", 126.9780)
-                    city_name = best.get("name", original_name)
-
-                    self._set("lat", lat)
-                    self._set("lon", lon)
-                    self._set("resolved_name", original_name)
-                    self._set("display_name", city_name)
-
-                    self._fetch_weather(lat, lon, city_name)
-                else:
-                    logger.warning(f"Geocoding failed for: {original_name}")
-                    self._show_error(
-                        t("weather.error.location_not_found", "위치를 찾을 수 없습니다")
-                    )
-            except Exception as exc:
-                logger.error(f"Geocoding parse error: {exc}")
-                self._show_error(t("weather.error.parse_failed", "데이터 파싱 오류"))
-        elif reply.error() == QNetworkReply.NetworkError.OperationCanceledError:
-            self._show_error(t("weather.error.timeout", "요청 시간 초과"))
-        else:
-            self._show_error(t("weather.error.network", "네트워크 오류"))
-        reply.deleteLater()
+        lat = round(city.latitude, 4)
+        lon = round(city.longitude, 4)
+        self._set("lat", lat)
+        self._set("lon", lon)
+        self._set("resolved_name", name)
+        self._set("display_name", city.name)
+        self._fetch_weather(lat, lon, city.name)
 
     def _fetch_weather(self, lat: float, lon: float, display_name: str) -> None:
-        """Fetch weather data for specific coordinates."""
+        """Fetch MET Norway weather data for specific coordinates."""
         unit = "fahrenheit" if self._get("unit") == "fahrenheit" else "celsius"
-        url = QUrl(
-            f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true&temperature_unit={unit}"
-        )
+
+        if self._restore_weather_cache(lat, lon, display_name, unit, require_fresh=True):
+            self._refresh_face()
+            return
+
+        url = QUrl(MET_FORECAST_ENDPOINT)
+        query = QUrlQuery()
+        query.addQueryItem("lat", f"{round(float(lat), 4):.4f}")
+        query.addQueryItem("lon", f"{round(float(lon), 4):.4f}")
+        url.setQuery(query)
         request = QNetworkRequest(url)
+        request.setRawHeader(b"User-Agent", _MET_USER_AGENT)
+        request.setRawHeader(b"Accept", b"application/geo+json, application/json")
+        last_modified = str(self._get("met_cache_last_modified", "") or "").strip()
+        if last_modified:
+            request.setRawHeader(
+                b"If-Modified-Since", last_modified.encode("utf-8", errors="replace")
+            )
 
         reply = self._network_manager.get(request)
-        reply.finished.connect(lambda r=reply, name=display_name: self._on_weather_reply(r, name))
+        reply.finished.connect(
+            lambda r=reply, name=display_name, request_unit=unit, request_lat=lat, request_lon=lon: (
+                self._on_weather_reply(r, name, request_unit, request_lat, request_lon)
+            )
+        )
         self._pending_replies.append(reply)
         self._watch_reply(reply)
 
-    def _on_weather_reply(self, reply: QNetworkReply, display_name: str) -> None:
+    def _on_weather_reply(
+        self,
+        reply: QNetworkReply,
+        display_name: str,
+        unit: str,
+        lat: float,
+        lon: float,
+    ) -> None:
         if reply in self._pending_replies:
             self._pending_replies.remove(reply)
 
-        if reply.error() == QNetworkReply.NetworkError.NoError:
+        status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+        if status == 304:
+            self._store_response_headers(reply)
+            if not self._restore_weather_cache(lat, lon, display_name, unit, require_fresh=False):
+                self._show_error(t("weather.error.network", "네트워크 오류"))
+        elif reply.error() == QNetworkReply.NetworkError.NoError:
             try:
-                data = json.loads(reply.readAll().data().decode())
+                data = json.loads(reply.readAll().data().decode("utf-8", errors="replace"))
                 self._weather_data["error"] = ""
-                self._update_weather_data(data, display_name)
-            except (json.JSONDecodeError, KeyError):
-                self._show_error(t("weather.error.parse_failed", "데이터 파싱 오류"))
+                self._update_weather_data(data, display_name, unit)
+                self._store_weather_cache(lat, lon, display_name, unit)
+                self._store_response_headers(reply)
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+                logger.warning("MET Norway response parse failed: %s", exc)
+                if not self._restore_weather_cache(
+                    lat, lon, display_name, unit, require_fresh=False
+                ):
+                    self._show_error(t("weather.error.parse_failed", "데이터 파싱 오류"))
         elif reply.error() == QNetworkReply.NetworkError.OperationCanceledError:
-            self._show_error(t("weather.error.timeout", "요청 시간 초과"))
+            if not self._restore_weather_cache(lat, lon, display_name, unit, require_fresh=False):
+                self._show_error(t("weather.error.timeout", "요청 시간 초과"))
         else:
-            self._show_error(t("weather.error.network", "네트워크 오류"))
+            if not self._restore_weather_cache(lat, lon, display_name, unit, require_fresh=False):
+                self._show_error(t("weather.error.network", "네트워크 오류"))
         reply.deleteLater()
         self._refresh_face()
 
-    def _update_weather_data(self, json_data: dict, display_name: str) -> None:
-        current = json_data.get("current_weather", {})
-        temp = current.get("temperature", "--")
-        code = current.get("weathercode", 0)
+    def _update_weather_data(self, json_data: dict, display_name: str, unit: str) -> None:
+        parsed = parse_locationforecast(json_data, display_name, unit)
+        parsed["desc"] = self._weather_code_to_text(int(parsed.get("_wmo", 2)))
+        parsed["error"] = ""
+        self._weather_data.update(parsed)
 
-        self._weather_data.update(
-            {
-                "city": display_name,
-                "temp": str(temp),
-                "unit": "°F" if self._get("unit") == "fahrenheit" else "°C",
-                "desc": self._weather_code_to_text(code),
-                "_wmo": int(code),
-            }
+    def _store_weather_cache(self, lat: float, lon: float, display_name: str, unit: str) -> None:
+        cache = {
+            "lat": round(float(lat), 4),
+            "lon": round(float(lon), 4),
+            "display_name": display_name,
+            "unit": unit,
+            "weather": self._weather_data,
+        }
+        self._set("met_cache_json", json.dumps(cache, ensure_ascii=False))
+
+    def _store_response_headers(self, reply: QNetworkReply) -> None:
+        expires = bytes(reply.rawHeader(b"Expires")).decode("utf-8", errors="replace").strip()
+        last_modified = (
+            bytes(reply.rawHeader(b"Last-Modified")).decode("utf-8", errors="replace").strip()
         )
+        if expires:
+            self._set("met_cache_expires", expires)
+        if last_modified:
+            self._set("met_cache_last_modified", last_modified)
+
+    def _restore_weather_cache(
+        self,
+        lat: float,
+        lon: float,
+        display_name: str,
+        unit: str,
+        *,
+        require_fresh: bool,
+    ) -> bool:
+        raw_cache = str(self._get("met_cache_json", "") or "")
+        if not raw_cache:
+            return False
+        try:
+            cache = json.loads(raw_cache)
+            if round(float(cache.get("lat")), 4) != round(float(lat), 4):
+                return False
+            if round(float(cache.get("lon")), 4) != round(float(lon), 4):
+                return False
+            if str(cache.get("unit")) != unit:
+                return False
+            if require_fresh:
+                expires_text = str(self._get("met_cache_expires", "") or "").strip()
+                if not expires_text:
+                    return False
+                expires_at = parsedate_to_datetime(expires_text)
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=UTC)
+                if datetime.now(UTC) >= expires_at:
+                    return False
+            weather = cache.get("weather")
+            if not isinstance(weather, dict):
+                return False
+            weather["city"] = display_name
+            self._weather_data.update(weather)
+            return True
+        except (json.JSONDecodeError, TypeError, ValueError, OverflowError):
+            return False
 
     def _update_refresh_interval(self) -> None:
         minutes = self._get("refresh_interval", 30, type_=int)
@@ -369,6 +448,16 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         for label in (self._icon_label, self._temp_label, self._city_label):
             if label:
                 label.setVisible(False)
+
+        source_names = t("widget.weather.source_attribution", "MET Norway · GeoNames")
+        source_html = source_names.replace(
+            "MET Norway", f'<a href="{MET_LICENSE_URL}">MET Norway</a>'
+        ).replace("GeoNames", f'<a href="{GEONAMES_LICENSE_URL}">GeoNames</a>')
+        self._source_label.setText(source_html)
+        self._source_label.setStyleSheet(
+            "font-size: 8px; color: rgba(170,180,195,180); background: transparent;"
+        )
+        self._source_label.setVisible(True)
 
     def _refresh_face(self) -> None:
         """Re-render widget after data update."""

@@ -839,8 +839,22 @@ $assetCount = Copy-ManifestAssets `
     -ManifestPath $manifestDest `
     -SourceRoot $assetsSource `
     -DestinationRoot $appDir
-Write-Ok "copied ($assetCount manifest asset files)"
-Write-Log "assets+manifest OK — $assetCount files"
+
+$legalFiles = @("LICENSE", "README.md", "SOURCE_OFFER.md", "THIRD_PARTY_NOTICES.md")
+foreach ($legalFile in $legalFiles) {
+    $legalSource = Join-Path $projectRoot $legalFile
+    $legalDest = Join-Path $appDir $legalFile
+    if (-not (Test-Path $legalSource)) {
+        throw "Open-source notice missing from project root: $legalSource"
+    }
+    Copy-Item -LiteralPath $legalSource -Destination $legalDest -Force
+    if (-not (Test-Path $legalDest)) {
+        throw "Open-source notice missing from payload root: $legalDest"
+    }
+}
+
+Write-Ok "copied ($assetCount manifest asset files, $($legalFiles.Count) open-source notices)"
+Write-Log "assets+manifest+notices OK — $assetCount assets / $($legalFiles.Count) notices"
 
 # ---------------------------------------------------------------------------
 # STEP 7 — Store payload sanitisation

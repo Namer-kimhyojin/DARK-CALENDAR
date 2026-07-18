@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, copy_metadata
 
 block_cipher = None
 
@@ -14,7 +14,15 @@ a = Analysis(
         ('AppxManifest.xml', '.'),
         ('app_icon.ico', '.'),
         ('app_icon.png', '.'),
-    ] + collect_data_files('tzdata'),
+        ('LICENSE', '.'),
+        ('README.md', '.'),
+        ('SOURCE_OFFER.md', '.'),
+        ('THIRD_PARTY_NOTICES.md', '.'),
+    ] + collect_data_files('tzdata')
+    + copy_metadata('PyQt6')
+    + copy_metadata('PyQt6-Qt6')
+    + copy_metadata('PyQt6-sip')
+    + copy_metadata('QtAwesome'),
     hiddenimports=[
         'calendar_app',
         'calendar_app.bootstrap',

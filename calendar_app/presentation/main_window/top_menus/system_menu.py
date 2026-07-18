@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
+
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QAction, QDesktopServices
 from PyQt6.QtWidgets import QMenu, QToolButton
 
+from calendar_app.app_metadata import APP_LICENSE_URL, APP_RELEASE_SOURCE_URL
 from calendar_app.infrastructure.i18n import get_locale_display_name, list_available_locale_codes, t
 from calendar_app.infrastructure.runtime import system_manager
 from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key
@@ -15,6 +18,10 @@ HOMEPAGE_URL = "https://namer-kimhyojin.github.io/dark_calendar/"
 
 def _open_homepage():
     QDesktopServices.openUrl(QUrl(HOMEPAGE_URL))
+
+
+def _open_external_url(url: str):
+    QDesktopServices.openUrl(QUrl(url))
 
 
 def build_system_menu(self, top_bar, menu_btn_style="", menu_style=""):
@@ -114,6 +121,20 @@ def build_system_menu(self, top_bar, menu_btn_style="", menu_style=""):
         lambda: _open_homepage(),
     )
     act_home.setIcon(_ic(ICON.GLOBE))
+    self.open_source_menu = self.sys_menu.addMenu(_se(t("menu.open_source_info", "오픈소스 정보")))
+    self.open_source_menu.setIcon(_ic(ICON.INFO))
+    self.open_source_menu.setStyleSheet(menu_style)
+    act_source = self.open_source_menu.addAction(
+        _se(t("menu.release_source_code", "이 버전의 GitHub 소스")),
+        lambda: _open_external_url(APP_RELEASE_SOURCE_URL),
+    )
+    act_source.setIcon(_ic(ICON.GLOBE))
+    act_license = self.open_source_menu.addAction(
+        _se(t("menu.open_source_license", "GPLv3 오픈소스 라이선스")),
+        lambda: _open_external_url(APP_LICENSE_URL),
+    )
+    act_license.setIcon(_ic(ICON.INFO))
+    self.sys_menu.addSeparator()
     act_exit = self.sys_menu.addAction(_se(t("menu.exit")), self.request_app_exit)
     act_exit.setIcon(_ic(ICON.CLOSE))
 
