@@ -8,6 +8,7 @@ from PyQt6.QtWidgets import QApplication, QMenu, QVBoxLayout, QWidget
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.runtime import system_manager
 from calendar_app.presentation.main_window.top_menus.system_menu import build_system_menu
 
@@ -88,11 +89,11 @@ class TestSystemMenu(unittest.TestCase):
         build_system_menu(host, layout, "")
 
         action_texts = [action.text() for action in host.sys_menu.actions()]
-        self.assertIn("오픈소스 정보", action_texts)
+        self.assertIn(t("menu.open_source_info", "오픈소스 정보"), action_texts)
 
         open_source_texts = [action.text() for action in host.open_source_menu.actions()]
-        self.assertIn("이 버전의 GitHub 소스", open_source_texts)
-        self.assertIn("GPLv3 오픈소스 라이선스", open_source_texts)
+        self.assertIn(t("menu.release_source_code", "이 버전의 GitHub 소스"), open_source_texts)
+        self.assertIn(t("menu.open_source_license", "GPLv3 오픈소스 라이선스"), open_source_texts)
 
 
 if __name__ == "__main__":
