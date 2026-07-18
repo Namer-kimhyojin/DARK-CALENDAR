@@ -4,15 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dark Calendar | 일정과 할 일을 바탕화면 한 곳에</title>
-  <meta name="description" content="Dark Calendar는 캘린더, 루틴, 집중 타이머와 위젯을 원하는 위치에 배치하는 유료 Windows 데스크톱 앱입니다.">
+  <meta name="description" content="Dark Calendar 3.6.0은 캘린더, 루틴, 집중 타이머와 위젯을 한 화면에 배치하는 GPLv3 오픈소스 Windows 데스크톱 앱입니다.">
   <meta property="og:title" content="Dark Calendar">
-  <meta property="og:description" content="일정과 할 일을 바탕화면 한 곳에서 확인하고 바로 집중하세요.">
-  <meta property="og:image" content="assets/hero_concept.png">
+  <meta property="og:description" content="일정과 할 일을 바탕화면 한 곳에서 확인하세요. Microsoft Store 설치와 GPLv3 공개 소스를 함께 제공합니다.">
+  <meta property="og:image" content="https://namer-kimhyojin.github.io/dark_calendar/assets/hero_concept.png">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:url" content="https://namer-kimhyojin.github.io/dark_calendar/">
   <meta name="theme-color" content="#061018">
+  <link rel="canonical" href="https://namer-kimhyojin.github.io/dark_calendar/">
   <link rel="icon" href="assets/app_icon.png">
-  <link rel="stylesheet" href="styles.css?v=20260718-oss1">
+  <link rel="stylesheet" href="styles.css?v=20260718-ux2">
 </head>
 <body>
+  <a class="skip-link" href="#top">본문으로 바로가기</a>
   <header class="site-header" aria-label="상단 메뉴">
     <a class="brand" href="#top" aria-label="Dark Calendar 홈">
       <img src="assets/app_icon.png" alt="" class="brand-icon">
@@ -25,16 +30,26 @@
       <a href="#open-source">오픈소스</a>
       <a href="#faq">FAQ</a>
     </nav>
+    <details class="mobile-nav">
+      <summary>메뉴</summary>
+      <nav aria-label="모바일 홈페이지 섹션">
+        <a href="#features">기능</a>
+        <a href="#screenshots">제품 화면</a>
+        <a href="#workflow">사용 흐름</a>
+        <a href="#open-source">오픈소스</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+    </details>
     <a class="header-store" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare">
       설치 안내
     </a>
   </header>
 
-  <main id="top">
+  <main id="top" tabindex="-1">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-backdrop" aria-hidden="true"></div>
       <div class="hero-content">
-        <p class="release-pill">Windows 데스크톱 캘린더 &amp; 업무 위젯</p>
+        <p class="release-pill"><span data-config-text="appVersion">3.6.0</span> 최신 버전 · GPLv3 오픈소스</p>
         <h1 id="hero-title">일정과 할 일을<br>바탕화면 한 곳에</h1>
         <p class="hero-lead">오늘을 확인하고, 해야 할 일을 고르고, 바로 집중하세요.</p>
         <p class="hero-copy">캘린더, 루틴, 집중 타이머, D-Day 위젯을 원하는 위치에 배치하고 다시 켰을 때도 그대로 이어갑니다.</p>
@@ -62,6 +77,18 @@
         </figure>
       </div>
     </section>
+
+    <aside class="event-band" data-event-band aria-labelledby="event-band-title" hidden>
+      <div>
+        <p class="section-kicker" data-event-label>기간 한정 이벤트</p>
+        <h2 id="event-band-title" data-event-title>Dark Calendar 이벤트 안내</h2>
+        <p data-event-description>이벤트 코드를 Microsoft 계정에 등록할 수 있습니다.</p>
+        <small data-event-note>이벤트 종료 후에는 코드 등록 링크가 제공되지 않습니다.</small>
+      </div>
+      <div class="event-actions">
+        <a class="primary-button" data-config-link="eventUrl" data-event-button href="https://account.microsoft.com/billing/redeem?mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ">이벤트 코드 등록하기</a>
+      </div>
+    </aside>
 
     <section class="trust-strip" aria-label="제품 정보">
       <p><strong>Microsoft Store</strong><span>공식 스토어에서 간편 설치</span></p>
@@ -359,8 +386,8 @@
 
     <section class="section open-source-section" id="open-source" aria-labelledby="open-source-title">
       <p class="section-kicker">Open source</p>
-      <h2 id="open-source-title">구매할 수 있고,<br>소스도 확인할 수 있습니다.</h2>
-      <p class="section-lead">Dark Calendar는 GNU General Public License v3.0으로 배포되는 오픈소스 소프트웨어입니다. 앱 판매 여부와 관계없이 사용자는 설치한 버전에 대응하는 소스 코드와 빌드 안내를 확인할 수 있습니다.</p>
+      <h2 id="open-source-title">유료로 설치하고,<br>GPLv3 소스도 확인하세요.</h2>
+      <p class="section-lead">Dark Calendar <strong>v<span data-config-text="appVersion">3.6.0</span></strong>은 GNU General Public License v3.0으로 배포됩니다. Microsoft Store는 편리한 설치·업데이트 경로를 제공하고, GitHub는 같은 버전의 전체 대응 소스와 빌드 안내를 제공합니다.</p>
       <div class="open-source-grid">
         <article>
           <span>01</span>
@@ -404,6 +431,18 @@
           <summary>어디에서 설치하나요?</summary>
           <p>공식 Microsoft Store 페이지에서 설치할 수 있습니다.</p>
         </details>
+        <details>
+          <summary>오픈소스인데 왜 유료인가요?</summary>
+          <p>GPLv3는 상업적 판매를 허용합니다. Microsoft Store 구매는 간편한 설치와 업데이트 경로를 제공하며, 소스 코드 확인·수정·재배포 권리는 GPLv3 조건에 따라 그대로 유지됩니다.</p>
+        </details>
+        <details>
+          <summary>PyQt6 라이선스는 어떻게 적용되나요?</summary>
+          <p>이 프로젝트는 PyQt6의 GPLv3 배포판을 사용하며, Dark Calendar 전체 대응 소스를 GPLv3로 공개합니다. Qt와 다른 구성요소의 개별 조건은 제3자 고지에서 확인할 수 있습니다.</p>
+        </details>
+        <details>
+          <summary>날씨 위젯은 위치정보를 수집하나요?</summary>
+          <p>GPS는 사용하지 않습니다. 입력한 도시명은 포함된 GeoNames 데이터에서 로컬로 검색하고, 날씨 조회 시 좌표와 일반적인 웹 요청 정보가 MET Norway에 전달될 수 있습니다. 자세한 내용은 <a href="privacy.html">개인정보처리방침</a>에서 확인하세요.</p>
+        </details>
       </div>
     </section>
 
@@ -430,79 +469,6 @@
     </section>
   </div>
 
-  <div class="event-modal" data-event-modal hidden>
-    <div class="event-modal-backdrop" data-event-close aria-hidden="true"></div>
-    <section class="event-modal-panel" role="dialog" aria-modal="true" aria-labelledby="event-modal-title" aria-describedby="event-modal-desc">
-      <button class="event-modal-close" type="button" data-event-close aria-label="이벤트 팝업 닫기">×</button>
-      <p class="section-kicker" data-event-label>기간 한정 이벤트</p>
-      <h2 id="event-modal-title" data-event-title>Dark Calendar 이벤트 안내</h2>
-      <p id="event-modal-desc" data-event-description>이벤트 코드를 Microsoft 계정에 등록할 수 있습니다.</p>
-      <small data-event-note>이벤트 종료 후에는 코드 등록 링크가 제공되지 않습니다.</small>
-      <label class="event-dismiss">
-        <input type="checkbox" data-event-dismiss-today>
-        <span>오늘 하루 다시 보지 않기</span>
-      </label>
-      <div class="event-modal-actions">
-        <a class="primary-button" data-config-link="eventUrl" data-event-button href="https://account.microsoft.com/billing/redeem?mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ">이벤트 코드 등록하기</a>
-        <button class="outline-button" type="button" data-event-close>나중에 보기</button>
-      </div>
-    </section>
-  </div>
-
-  <div class="admin-modal" data-admin-modal hidden>
-    <div class="admin-modal-backdrop" data-admin-close aria-hidden="true"></div>
-    <section class="admin-panel" role="dialog" aria-modal="true" aria-labelledby="admin-title">
-      <button class="admin-close" type="button" data-admin-close aria-label="관리자 패널 닫기">×</button>
-      <p class="section-kicker">Promotion Admin</p>
-      <h2 id="admin-title">이벤트 관리</h2>
-
-      <div class="admin-auth" data-admin-auth>
-        <label for="admin-password">관리자 비밀번호</label>
-        <div class="admin-inline">
-          <input id="admin-password" type="password" autocomplete="current-password" placeholder="비밀번호 입력">
-          <button class="outline-button" type="button" data-admin-unlock>열기</button>
-        </div>
-        <p class="admin-message" data-admin-auth-message></p>
-      </div>
-
-      <div class="admin-main" data-admin-main hidden>
-        <label for="admin-promo-url">이벤트 코드 등록 링크</label>
-        <input id="admin-promo-url" type="url" placeholder="https:// 또는 http:// 링크">
-
-        <label for="admin-store-url">Microsoft Store 링크</label>
-        <input id="admin-store-url" type="url" placeholder="https://apps.microsoft.com/...">
-
-        <label class="admin-toggle">
-          <input id="admin-promo-enabled" type="checkbox">
-          <span>이벤트 팝업 노출</span>
-        </label>
-
-        <div class="admin-actions">
-          <button class="primary-button" type="button" data-admin-save>저장</button>
-          <button class="outline-button" type="button" data-admin-preview>팝업 미리보기</button>
-          <button class="outline-button" type="button" data-admin-share>공유 링크 생성</button>
-        </div>
-
-        <div class="admin-share" data-admin-share-box hidden>
-          <strong>공유용 이벤트 URL</strong>
-          <code data-admin-share-url></code>
-          <button class="outline-button" type="button" data-admin-copy>복사</button>
-        </div>
-
-        <details class="admin-password-box">
-          <summary>관리자 비밀번호 변경</summary>
-          <label for="admin-new-password">새 비밀번호</label>
-          <div class="admin-inline">
-            <input id="admin-new-password" type="password" autocomplete="new-password" placeholder="4자 이상">
-            <button class="outline-button" type="button" data-admin-change-password>변경</button>
-          </div>
-        </details>
-
-        <p class="admin-message" data-admin-message></p>
-      </div>
-    </section>
-  </div>
-
   <footer class="site-footer">
     <div class="footer-brand">
       <img src="assets/app_icon.png" alt="" class="footer-icon">
@@ -523,9 +489,9 @@
       <a data-config-link="licenseUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/main/LICENSE">GPLv3</a>
       <a href="privacy.html">개인정보처리방침</a>
     </nav>
-    <button class="footer-copy" type="button" data-admin-trigger aria-label="저작권 정보">© 2026 Kim Hyojin · GPLv3 open-source software.</button>
+    <span class="footer-copy">© 2026 Kim Hyojin · GPLv3 open-source software.</span>
   </footer>
 
-  <script src="app.js?v=20260718-oss1"></script>
+  <script src="app.js?v=20260718-ux2"></script>
 </body>
 </html>
