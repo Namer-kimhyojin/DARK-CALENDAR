@@ -32,12 +32,36 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['PyQt6.Qt6.qml', 'PyQt6.Qt6.network', 'PyQt6.Qt6.sql', 'PyQt6.Qt6.test', 'PyQt6.Qt6.xml'],
+    excludes=['PyQt6.QtMultimedia', 'PyQt6.QtPdf', 'PyQt6.QtSvg'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
 )
+
+# The app uses the native Windows notification sound and does not load PDF or
+# SVG image plugins. Removing those optional plugins also removes FFmpeg and
+# unrelated Qt modules from the distributed compliance surface.
+_FORBIDDEN_QT_RUNTIME_FILES = {
+    'qt6multimedia.dll',
+    'qt6pdf.dll',
+    'qt6svg.dll',
+    'avcodec-61.dll',
+    'avformat-61.dll',
+    'avutil-59.dll',
+    'swresample-5.dll',
+    'swscale-8.dll',
+    'ffmpegmediaplugin.dll',
+    'qpdf.dll',
+    'qsvg.dll',
+    'qsvgicon.dll',
+}
+a.binaries = [
+    item
+    for item in a.binaries
+    if str(item[0]).replace('\\', '/').rsplit('/', 1)[-1].lower()
+    not in _FORBIDDEN_QT_RUNTIME_FILES
+]
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(

@@ -27,6 +27,7 @@ desk_calendar.db-wal
 # Build artifacts
 build/
 dist/
+release/
 
 # Temporary folders
 tmp/

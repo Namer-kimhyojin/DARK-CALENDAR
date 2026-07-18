@@ -29,6 +29,7 @@ architecture-mismatched desktop executable inside the MSIX.
 Run this on the native build machine:
 
 ```bat
+python -m pip install -r requirements-build.lock
 build-release.bat
 ```
 
@@ -56,7 +57,7 @@ build-release.bat -SkipMsix
 Preflight validation without changing version files or creating build output:
 
 ```bat
-build-release.bat -ValidateOnly -Version 3.5.0 -PackageVersion 3.5.0.0 -ReleaseDate 2026-07-13 -Channel Stable
+build-release.bat -ValidateOnly -Version 3.6.1 -PackageVersion 3.6.1.0 -ReleaseDate 2026-07-18 -Channel Stable
 ```
 
 ## Surface Support
@@ -76,12 +77,21 @@ build-release.bat -UploadOnly
 
 That creates:
 
-- `release\store\DarkCalendar-3.5.0.0-arm64_x64.msixupload`
+- `release\store\DarkCalendar-3.6.1.0-arm64_x64.msixupload`
 
 If only one native package is available, the scripts fall back to:
 
-- `release\store\DarkCalendar-3.5.0.0-x64.msixupload`
-- `release\store\DarkCalendar-3.5.0.0-arm64.msixupload`
+- `release\store\DarkCalendar-3.6.1.0-x64.msixupload`
+- `release\store\DarkCalendar-3.6.1.0-arm64.msixupload`
+
+## Open-source compliance gate
+
+Every release build verifies both lock files, copies license texts for every runtime package, removes unapproved Qt/FFmpeg modules, and generates:
+
+- `THIRD_PARTY_MANIFEST.json` and `THIRD_PARTY_LICENSES/` inside the payload
+- `release\source\DarkCalendar-3.6.1-corresponding-source.zip`
+
+Do not submit the Store upload unless `scripts/release_compliance.py verify-payload` passes and the corresponding-source ZIP is attached to the matching GitHub release.
 
 ## Sanitized Payload Contents
 
