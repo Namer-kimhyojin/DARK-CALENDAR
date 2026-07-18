@@ -1,0 +1,2 @@
+[   95967ms] [ERROR] Access to fetch at 'file:///D:/%EA%B0%9C%EB%B0%9C%EA%B4%80%EB%A0%A8/Dark%20Calendar/docs/site-config.json' from origin 'null' has been blocked by CORS policy: Cross origin requests are only supported for protocol schemes: chrome, chrome-extension, chrome-untrusted, data, http, https, isolated-app. @ file:///D:/%EA%B0%9C%EB%B0%9C%EA%B4%80%EB%A0%A8/Dark%20Calendar/docs/index.html:185
+[   95968ms] [ERROR] Failed to load resource: net::ERR_FAILED @ file:///D:/%EA%B0%9C%EB%B0%9C%EA%B4%80%EB%A0%A8/Dark%20Calendar/docs/site-config.json:0

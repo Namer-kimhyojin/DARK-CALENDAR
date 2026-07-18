@@ -1,0 +1,29 @@
+repos:
+  # ── 기본 파일 위생 ────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace       # 후행 공백 제거
+      - id: end-of-file-fixer         # 파일 끝 개행 보장
+      - id: check-merge-conflict      # 충돌 마커 잔재 감지
+      - id: check-yaml                # YAML 문법 검사
+      - id: check-toml                # TOML 문법 검사
+      - id: debug-statements          # pdb/breakpoint 잔재 감지
+
+  # ── Ruff — 린트 + 포맷 ──────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.9
+    hooks:
+      - id: ruff                      # 린트 (자동 수정)
+        args: [--fix]
+      - id: ruff-format               # 포맷 (자동 포맷)
+
+  # ── 인코딩 정책 (프로젝트 커스텀) ────────────────────────────
+  - repo: local
+    hooks:
+      - id: encoding-guard
+        name: encoding-guard
+        entry: python scripts/run_encoding_guard.py
+        language: system
+        always_run: true
+        pass_filenames: false

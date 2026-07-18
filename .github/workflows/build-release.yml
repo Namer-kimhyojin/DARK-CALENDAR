@@ -1,0 +1,143 @@
+name: Build Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_arm64:
+        description: Build ARM64 package (requires self-hosted ARM64 Windows runner)
+        required: false
+        default: false
+        type: boolean
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-x64:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        shell: powershell
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --upgrade pip
+          .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+          .\.venv\Scripts\python.exe -m pip install pyinstaller
+
+      - name: Build x64
+        shell: powershell
+        run: .\build.ps1 -Arch x64
+
+      - name: Create x64 Store Upload
+        shell: powershell
+        run: .\make-store-upload.ps1 -X64Only
+
+      - name: Upload x64 dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-dist-x64
+          path: dist/x64/DarkCalendar
+          if-no-files-found: error
+
+      - name: Upload x64 MSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-msix-x64
+          path: dist/x64/DarkCalendar-x64.msix
+          if-no-files-found: warn
+
+      - name: Upload x64 MSIXUpload
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-msixupload-x64
+          path: release/store/DarkCalendar_x64.msixupload
+          if-no-files-found: warn
+
+  build-arm64:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_arm64 == true }}
+    runs-on:
+      - self-hosted
+      - Windows
+      - ARM64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        shell: powershell
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --upgrade pip
+          .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+          .\.venv\Scripts\python.exe -m pip install pyinstaller
+
+      - name: Build arm64
+        shell: powershell
+        run: .\build.ps1 -Arch arm64
+
+      - name: Upload arm64 dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-dist-arm64
+          path: dist/arm64/DarkCalendar
+          if-no-files-found: error
+
+      - name: Upload arm64 MSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-msix-arm64
+          path: dist/arm64/DarkCalendar-arm64.msix
+          if-no-files-found: warn
+
+  bundle-msix:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_arm64 == true }}
+    needs:
+      - build-x64
+      - build-arm64
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download x64 MSIX
+        uses: actions/download-artifact@v4
+        with:
+          name: darkcalendar-msix-x64
+          path: dist/x64
+
+      - name: Download arm64 MSIX
+        uses: actions/download-artifact@v4
+        with:
+          name: darkcalendar-msix-arm64
+          path: dist/arm64
+
+      - name: Create ARM64+X64 Store Upload
+        shell: powershell
+        run: .\make-store-upload.ps1 -X64Package "dist\x64\DarkCalendar-x64.msix" -Arm64Package "dist\arm64\DarkCalendar-arm64.msix" -OutputDir "release\store"
+
+      - name: Upload MSIX bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-msixbundle
+          path: release/store/DarkCalendar.msixbundle
+          if-no-files-found: error
+
+      - name: Upload ARM64+X64 MSIXUpload
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-msixupload-arm64-x64
+          path: release/store/DarkCalendar_arm64_x64.msixupload
+          if-no-files-found: error

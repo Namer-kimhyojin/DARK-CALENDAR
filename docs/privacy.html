@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>개인정보처리방침 | Dark Calendar</title>
+  <meta name="description" content="Dark Calendar 개인정보처리방침 — 개발자는 어떤 개인정보도 수집하지 않으며 모든 데이터는 이용자 PC에만 저장됩니다.">
+  <meta name="theme-color" content="#061018">
+  <link rel="icon" href="assets/app_icon.png">
+  <style>
+    :root {
+      --bg: #061018;
+      --panel: #0c1a26;
+      --border: #1c3040;
+      --text: #dce6ef;
+      --muted: #8fa3b5;
+      --accent: #4da6ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+      line-height: 1.7;
+    }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 32px 20px 80px; }
+    header.top {
+      display: flex; align-items: center; gap: 10px; padding: 18px 0 26px;
+      border-bottom: 1px solid var(--border); margin-bottom: 34px;
+    }
+    header.top img { width: 34px; height: 34px; border-radius: 8px; }
+    header.top a { color: var(--text); text-decoration: none; font-weight: 700; font-size: 18px; }
+    header.top .back { margin-left: auto; color: var(--accent); font-size: 14px; font-weight: 500; }
+    .lang-nav { margin-bottom: 30px; font-size: 14px; color: var(--muted); }
+    .lang-nav a { color: var(--accent); text-decoration: none; }
+    h1 { font-size: 28px; margin-bottom: 6px; }
+    .effective { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+    h2 { font-size: 19px; margin: 34px 0 12px; color: #fff; }
+    h3 { font-size: 16px; margin: 22px 0 8px; color: var(--accent); }
+    p, li { font-size: 15px; color: var(--text); }
+    ul { padding-left: 22px; margin: 8px 0 14px; }
+    li { margin-bottom: 5px; }
+    a { color: var(--accent); }
+    table {
+      width: 100%; border-collapse: collapse; margin: 12px 0 18px; font-size: 14px;
+    }
+    th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; }
+    th { background: var(--panel); color: #fff; font-weight: 600; }
+    .summary-box {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+      padding: 18px 20px; margin: 18px 0 8px;
+    }
+    .summary-box li { margin-bottom: 7px; }
+    code {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+      padding: 1px 6px; font-size: 13px; color: #cfe3f5;
+    }
+    hr.divider { border: none; border-top: 1px solid var(--border); margin: 56px 0 40px; }
+    footer { margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--border);
+      color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <img src="assets/app_icon.png" alt="">
+      <a href="index.html">Dark Calendar</a>
+      <a class="back" href="index.html">← 홈으로</a>
+    </header>
+
+    <nav class="lang-nav">한국어 · <a href="#en">English</a></nav>
+
+    <!-- ============================ 한국어 ============================ -->
+    <section id="ko">
+      <h1>개인정보처리방침</h1>
+      <p class="effective">시행일: 2026년 7월 18일</p>
+
+      <p>Dark Calendar(이하 "본 앱")는 김효진(이하 "개발자")이 개발·배포하는 Windows용 데스크톱 캘린더 애플리케이션입니다. 본 방침은 본 앱이 이용자의 정보를 어떻게 처리하는지 설명합니다.</p>
+
+      <h2>1. 핵심 요약</h2>
+      <div class="summary-box">
+        <ul>
+          <li><strong>개발자는 이용자의 개인정보를 수집하지 않습니다.</strong> 본 앱에는 서버, 계정 시스템, 분석 도구, 광고가 없습니다.</li>
+          <li>이용자가 만든 모든 일정·업무·설정 데이터는 <strong>이용자 PC에만 저장</strong>됩니다.</li>
+          <li>외부 전송은 이용자가 직접 활성화한 기능(Google Calendar 연동, 날씨 위젯, ICS 구독)에 한해, 해당 서비스 제공자에게만 이루어집니다.</li>
+        </ul>
+      </div>
+
+      <h2>2. 로컬에 저장되는 데이터</h2>
+      <p>본 앱은 다음 데이터를 이용자 PC의 로컬 폴더(<code>%LOCALAPPDATA%\kimhyojin\Dark Calendar</code>)에 저장합니다.</p>
+      <table>
+        <tr><th>데이터</th><th>용도</th></tr>
+        <tr><td>일정·업무·체크리스트 데이터 (SQLite DB)</td><td>캘린더 기능 제공</td></tr>
+        <tr><td>앱 설정 (Windows 레지스트리 <code>HKCU\Software\kimhyojin\Dark Calendar</code>)</td><td>테마·언어·레이아웃 유지</td></tr>
+        <tr><td>Google 인증 토큰 (<code>token.json</code>, 암호화 저장) — Google 연동 사용 시에만</td><td>재로그인 없이 동기화 유지</td></tr>
+        <tr><td>진단 로그 파일</td><td>오류 확인</td></tr>
+      </table>
+      <p>이 데이터는 개발자에게 전송되지 않으며, 개발자는 접근할 수 없습니다.</p>
+
+      <h2>3. 제3자 서비스로의 전송 (이용자가 활성화한 경우에만)</h2>
+
+      <h3>3.1 Google Calendar 연동</h3>
+      <ul>
+        <li>이용자가 Google 계정으로 로그인하면 본 앱은 Google Calendar API를 통해 일정 데이터를 읽고 씁니다.</li>
+        <li>전송 대상: Google LLC (<a href="https://policies.google.com/privacy" rel="noopener">Google 개인정보처리방침</a>)</li>
+        <li>인증 토큰은 이용자 PC에만 Windows DPAPI로 암호화되어 저장되며, 개발자 서버로 전송되지 않습니다.</li>
+        <li>연동 해제 시 본 앱은 Google에 토큰 취소(revoke)를 요청하고 로컬 토큰을 삭제합니다.</li>
+        <li>본 앱의 Google API로부터 받은 정보의 사용은 <strong>제한적 사용(Limited Use) 요구사항을 포함한 <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API 서비스 사용자 데이터 정책</a>을 준수합니다.</strong></li>
+      </ul>
+
+      <h3>3.2 날씨 위젯</h3>
+      <ul>
+        <li>이용자가 입력한 <strong>도시 이름은 앱에 포함된 GeoNames 도시 데이터에서 로컬로 검색</strong>되며 외부로 전송되지 않습니다.</li>
+        <li>검색된 위도·경도(소수점 4자리)와 일반적인 웹 요청 정보(IP 주소 등)는 날씨 조회를 위해 노르웨이 기상청 MET Norway(<a href="https://api.met.no/" rel="noopener">api.met.no</a>)에 전달될 수 있습니다. MET Norway는 API 접근 로그를 노르웨이 오슬로의 자체 데이터센터에 저장합니다.</li>
+        <li>날씨 데이터는 MET Norway의 CC BY 4.0/NLOD 2.0 데이터이며, 도시 데이터는 GeoNames의 CC BY 4.0 데이터입니다.</li>
+        <li>GPS 등 기기 위치정보는 수집·사용하지 않습니다.</li>
+      </ul>
+
+      <h3>3.3 ICS 캘린더 구독</h3>
+      <ul>
+        <li>이용자가 직접 입력한 ICS 주소(URL)에 접속하여 일정을 가져옵니다. 해당 URL의 운영자에게 일반적인 웹 요청 정보(IP 주소 등)가 전달될 수 있습니다.</li>
+      </ul>
+
+      <h2>4. 데이터 보관 및 삭제</h2>
+      <ul>
+        <li>모든 데이터는 이용자가 삭제할 때까지 로컬에 보관됩니다.</li>
+        <li><strong>Google 연동 해제</strong>: 앱 내 Google Calendar 설정에서 연동 해제 시 토큰이 취소·삭제됩니다. <a href="https://myaccount.google.com/permissions" rel="noopener">Google 계정 보안 설정</a>에서도 언제든 접근 권한을 철회할 수 있습니다.</li>
+        <li><strong>전체 삭제</strong>: 앱 제거 후 <code>%LOCALAPPDATA%\kimhyojin\Dark Calendar</code> 폴더를 삭제하면 모든 데이터가 완전히 제거됩니다.</li>
+      </ul>
+
+      <h2>5. 아동의 개인정보</h2>
+      <p>본 앱은 개인정보를 수집하지 않으므로 아동으로부터 별도의 정보를 수집하지 않습니다.</p>
+
+      <h2>6. 방침 변경</h2>
+      <p>본 방침이 변경되는 경우 이 페이지에 갱신된 버전과 시행일을 게시합니다.</p>
+
+      <h2>7. 문의</h2>
+      <p>개인정보 관련 문의: <a href="mailto:aplus.mylife@gmail.com">aplus.mylife@gmail.com</a></p>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ============================ English ============================ -->
+    <section id="en" lang="en">
+      <h1>Privacy Policy</h1>
+      <p class="effective">Effective date: July 18, 2026</p>
+
+      <p>Dark Calendar ("the App") is a Windows desktop calendar application developed and distributed by Hyojin Kim ("the Developer"). This policy explains how the App handles your information.</p>
+
+      <h2>1. Summary</h2>
+      <div class="summary-box">
+        <ul>
+          <li><strong>The Developer does not collect any personal data.</strong> The App has no server, no account system, no analytics, and no advertising.</li>
+          <li>All schedules, tasks, and settings you create are <strong>stored only on your PC</strong>.</li>
+          <li>Data leaves your device only through features you explicitly enable (Google Calendar sync, weather widget, ICS subscriptions), and only to those service providers.</li>
+        </ul>
+      </div>
+
+      <h2>2. Data stored locally</h2>
+      <p>The App stores the following on your PC under <code>%LOCALAPPDATA%\kimhyojin\Dark Calendar</code>:</p>
+      <table>
+        <tr><th>Data</th><th>Purpose</th></tr>
+        <tr><td>Schedule/task/checklist data (SQLite database)</td><td>Core calendar features</td></tr>
+        <tr><td>App settings (Windows registry <code>HKCU\Software\kimhyojin\Dark Calendar</code>)</td><td>Preserving theme, language, layout</td></tr>
+        <tr><td>Google auth token (<code>token.json</code>, stored encrypted) — only if Google sync is enabled</td><td>Keeping sync signed in</td></tr>
+        <tr><td>Diagnostic log files</td><td>Troubleshooting</td></tr>
+      </table>
+      <p>This data is never transmitted to the Developer, and the Developer has no access to it.</p>
+
+      <h2>3. Transfers to third-party services (only when you enable them)</h2>
+
+      <h3>3.1 Google Calendar sync</h3>
+      <ul>
+        <li>When you sign in with your Google account, the App reads and writes your calendar events via the Google Calendar API.</li>
+        <li>Recipient: Google LLC (<a href="https://policies.google.com/privacy" rel="noopener">Google Privacy Policy</a>)</li>
+        <li>Auth tokens are stored only on your PC, encrypted with Windows DPAPI, and never sent to the Developer.</li>
+        <li>When you disconnect, the App requests token revocation from Google and deletes the local token.</li>
+        <li>The App's use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>, <strong>including the Limited Use requirements.</strong></li>
+      </ul>
+
+      <h3>3.2 Weather widget</h3>
+      <ul>
+        <li>The <strong>city name you type is searched locally</strong> in the GeoNames city dataset bundled with the App and is not sent externally.</li>
+        <li>The resulting latitude and longitude (rounded to four decimal places), together with standard web request information such as your IP address, may be sent to MET Norway (<a href="https://api.met.no/" rel="noopener">api.met.no</a>) to retrieve weather data. MET Norway stores API access logs in its own data center in Oslo, Norway.</li>
+        <li>Weather data is provided under MET Norway's CC BY 4.0/NLOD 2.0 terms, and city data is provided by GeoNames under CC BY 4.0.</li>
+        <li>Device location (GPS, etc.) is never collected or used.</li>
+      </ul>
+
+      <h3>3.3 ICS calendar subscriptions</h3>
+      <ul>
+        <li>The App fetches events from ICS URLs you enter yourself. Standard web request information (such as your IP address) may be visible to the operator of that URL.</li>
+      </ul>
+
+      <h2>4. Retention and deletion</h2>
+      <ul>
+        <li>All data remains on your PC until you delete it.</li>
+        <li><strong>Disconnecting Google sync</strong>: revokes and deletes the token. You can also revoke access anytime at <a href="https://myaccount.google.com/permissions" rel="noopener">Google Account permissions</a>.</li>
+        <li><strong>Full deletion</strong>: uninstall the App, then delete the <code>%LOCALAPPDATA%\kimhyojin\Dark Calendar</code> folder to remove all data.</li>
+      </ul>
+
+      <h2>5. Children's privacy</h2>
+      <p>The App collects no personal data and therefore collects no data from children.</p>
+
+      <h2>6. Changes to this policy</h2>
+      <p>If this policy changes, the updated version and effective date will be posted on this page.</p>
+
+      <h2>7. Contact</h2>
+      <p>Privacy inquiries: <a href="mailto:aplus.mylife@gmail.com">aplus.mylife@gmail.com</a></p>
+    </section>
+
+    <footer>© 2026 Kim Hyojin. All rights reserved. · <a href="index.html">Dark Calendar 홈</a></footer>
+  </div>
+</body>
+</html>

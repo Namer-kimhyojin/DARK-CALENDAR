@@ -1,0 +1,656 @@
+{
+  "meta": {
+    "appName": "Dark Calendar",
+    "platform": "Windows Desktop",
+    "languageDefault": "ko-KR",
+    "sourceBasis": "Repository-derived product summary generated from the current codebase",
+    "generatedOn": "2026-06-30"
+  },
+  "releaseLinks": {
+    "microsoftStoreUrl": "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
+    "freeInstallUrl": "http://go.microsoft.com/fwlink/?LinkId=532540&mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ",
+    "linkConfigFile": "docs/site-config.json",
+    "notes": [
+      "Microsoft Store URL is the official public product page.",
+      "Free install URL is used for the limited first-come event and can be replaced in site-config.json without editing page markup."
+    ]
+  },
+  "campaign": {
+    "enabled": true,
+    "type": "first-come-free-install",
+    "label": "선착순 무료 설치 이벤트",
+    "title": "무료 설치 이벤트 진행 중",
+    "description": "선착순 전용 링크가 열려 있습니다.",
+    "primaryCta": "무료 설치 링크 열기",
+    "secondaryCta": "Microsoft Store 보기",
+    "disclaimer": "수량 또는 기간에 따라 조기 종료될 수 있습니다."
+  },
+  "brand": {
+    "oneLiner": "일정, 루틴, 디렉티브, 위젯을 한 화면에 모아두는 Windows 데스크톱 캘린더",
+    "shortDescription": "Dark Calendar는 월간 캘린더와 업무 패널, 오버레이 위젯, 집중 도구를 결합한 개인 생산성 앱입니다.",
+    "toneKeywords": [
+      "몰입감 있는",
+      "데스크톱 중심",
+      "실용적인",
+      "커스터마이즈 가능한",
+      "다크 UI"
+    ]
+  },
+  "positioning": {
+    "targetUsers": [
+      "바탕화면에서 일정과 업무를 항상 보고 싶은 사용자",
+      "반복 업무와 일정 관리를 함께 하고 싶은 개인 사용자",
+      "Google Calendar와 데스크톱 업무 흐름을 연결하고 싶은 사용자",
+      "집중 모드, D-Day, 카운트다운 같은 시각적 위젯을 선호하는 사용자"
+    ],
+    "coreValueProps": [
+      "달력 보기와 업무 실행을 하나의 앱 안에서 이어서 처리할 수 있습니다.",
+      "오버레이 위젯을 통해 중요한 시간 정보와 상태를 바탕화면 위에 상시 배치할 수 있습니다.",
+      "루틴, 일정, 디렉티브를 분리해 관리하면서도 한 화면에서 함께 볼 수 있습니다.",
+      "배치, 테마, 언어, 위젯 표현 방식을 사용자가 세밀하게 조정할 수 있습니다."
+    ]
+  },
+  "hero": {
+    "headline": "Calendar, your way.",
+    "subheadline": "캘린더를 고정하고, 패널을 띄우고, 위젯을 남겨두세요.",
+    "primaryCta": "배치 살펴보기",
+    "secondaryCta": "Store에서 보기",
+    "highlightBullets": [
+      "월간 캘린더 + 업무 패널 통합",
+      "멀티 오버레이 위젯 지원",
+      "Google Calendar 연동",
+      "집중 모드와 Pomodoro 내장",
+      "한국어 기본, 다국어 전환 지원"
+    ],
+    "image": {
+      "slotId": "hero-main-visual",
+      "assetType": "placeholder-composite",
+      "title": "메인 히어로 비주얼",
+      "description": "Dark Calendar의 대표 화면을 보여주는 핵심 이미지입니다. 월간 캘린더, 오른쪽 업무 패널, 상단 바, 오버레이 위젯이 함께 보이는 구성이 적합합니다.",
+      "recommendedContent": [
+        "메인 앱 창 전체 스크린샷",
+        "시계 또는 D-Day 오버레이 위젯이 함께 보이는 장면",
+        "다크 테마 분위기가 드러나는 UI"
+      ],
+      "alt": "Dark Calendar 메인 화면과 오버레이 위젯이 함께 보이는 대표 이미지",
+      "layoutHint": "desktop-wide",
+      "replacementNotes": "초기에는 모니터 프레임 목업 안에 앱 스크린샷과 위젯을 합성한 플레이스홀더를 사용하고, 추후 실제 앱 사용 장면 이미지로 교체합니다."
+    }
+  },
+  "homepageSections": [
+    {
+      "id": "overview",
+      "title": "앱 소개",
+      "description": "Dark Calendar는 단순히 일정을 기록하는 앱이 아니라, 바탕화면 위에서 계속 보이고 바로 조작할 수 있는 생산성 허브를 지향합니다. 캘린더, 루틴, 디렉티브, 포커스 도구, 위젯을 하나의 흐름으로 연결해 일과 생활의 맥락 전환 비용을 줄여줍니다."
+    },
+    {
+      "id": "features",
+      "title": "주요 기능",
+      "description": "사용자가 실제로 체감하는 핵심 기능들을 중심으로 설명하는 섹션입니다."
+    },
+    {
+      "id": "customization",
+      "title": "커스터마이징",
+      "description": "레이아웃, 위젯, 테마, 언어, 표시 방식 등 사용자 환경에 맞게 세부 조정 가능한 요소를 소개합니다."
+    },
+    {
+      "id": "workflow",
+      "title": "사용 흐름",
+      "description": "일정 확인부터 실행, 집중, 잠금, 회고까지 이어지는 하루 업무 흐름을 설명하는 섹션입니다."
+    },
+    {
+      "id": "faq",
+      "title": "자주 묻는 질문",
+      "description": "설치 대상, 동기화 범위, 커스터마이징 범위 같은 방문자 질문에 답하는 섹션입니다."
+    }
+  ],
+  "featureGroups": [
+    {
+      "groupTitle": "캘린더와 업무 관리",
+      "items": [
+        {
+          "id": "monthly-calendar",
+          "title": "월간 캘린더 중심 화면",
+          "summary": "월간 캘린더를 기준으로 날짜별 일정을 빠르게 확인하고 관리할 수 있습니다.",
+          "details": [
+            "캘린더 패널과 업무 패널을 함께 배치해 날짜 확인과 작업 처리를 동시에 진행할 수 있습니다.",
+            "오늘 일정, 루틴, 디렉티브를 별도 패널로 나눠 보여줘 정보 구조가 명확합니다.",
+            "패널 표시 상태와 레이아웃은 사용 흐름에 맞게 바꿀 수 있습니다."
+          ],
+          "tags": [
+            "calendar",
+            "monthly-view",
+            "dock-panels"
+          ]
+        },
+        {
+          "id": "routine-management",
+          "title": "반복 업무와 루틴 관리",
+          "summary": "반복되는 업무를 루틴으로 관리하고 다음 발생 일정을 자연스럽게 이어갈 수 있습니다.",
+          "details": [
+            "루틴은 일반 일정과 분리된 흐름으로 관리됩니다.",
+            "반복 규칙에 따라 다음 루틴 생성 및 overdue rollover 로직이 포함되어 있습니다.",
+            "루틴 상태, 우선순위, 복제, 일괄 처리 기능을 통해 반복 업무 유지 비용을 줄입니다."
+          ],
+          "tags": [
+            "routine",
+            "recurring-work",
+            "productivity"
+          ]
+        },
+        {
+          "id": "directive-panel",
+          "title": "디렉티브 패널로 실행 항목 분리",
+          "summary": "일정과는 별개로 처리해야 할 실행 항목을 디렉티브 패널에서 관리할 수 있습니다.",
+          "details": [
+            "업무성 액션 아이템을 일정과 섞지 않고 따로 추적할 수 있습니다.",
+            "패널 내 다중 선택, 키보드 처리, 빠른 삭제 흐름을 고려한 상호작용이 포함되어 있습니다.",
+            "오늘 일정과 실행 항목을 같은 화면에서 함께 확인할 수 있습니다."
+          ],
+          "tags": [
+            "directive",
+            "action-items",
+            "panel-workflow"
+          ]
+        }
+      ]
+    },
+    {
+      "groupTitle": "오버레이 위젯",
+      "items": [
+        {
+          "id": "overlay-widgets",
+          "title": "바탕화면 오버레이 위젯",
+          "summary": "중요한 시간 정보와 상태 정보를 데스크톱 위에 상시 띄워둘 수 있습니다.",
+          "details": [
+            "지원 위젯 종류는 시계, 스톱워치, 날짜 카드, 카운트다운, D-Day, 텍스트, 날씨입니다.",
+            "위젯은 멀티 인스턴스를 지원해 같은 종류를 여러 개 배치할 수 있습니다.",
+            "위젯 상태와 배치는 QSettings에 저장되어 앱 재시작 후에도 복원됩니다."
+          ],
+          "tags": [
+            "overlay",
+            "desktop-widget",
+            "multi-instance"
+          ]
+        },
+        {
+          "id": "text-template-engine",
+          "title": "템플릿 기반 텍스트 위젯",
+          "summary": "시간, 카운트다운, D-Day, 작업 수, 다음 일정 같은 값을 조합해 나만의 정보 위젯을 만들 수 있습니다.",
+          "details": [
+            "템플릿 변수, 스타일 태그, 조건문을 이용해 표현 방식을 커스터마이즈할 수 있습니다.",
+            "빠른 값, 중간 주기 값, 느린 값이 분리 갱신되어 실시간성과 효율을 함께 고려합니다.",
+            "다른 위젯 인스턴스 값을 참조하는 구성도 가능합니다."
+          ],
+          "tags": [
+            "template",
+            "custom-widget",
+            "live-data"
+          ]
+        },
+        {
+          "id": "weather-widget",
+          "title": "실시간 날씨 위젯",
+          "summary": "지정한 도시의 날씨를 바탕화면에서 바로 확인할 수 있습니다.",
+          "details": [
+            "MET Norway 날씨 데이터와 GeoNames 로컬 도시 검색을 사용합니다.",
+            "도시명, 온도, 날씨 상태, 아이콘 중심의 간결한 카드형 표시가 가능합니다.",
+            "스타일 프리셋과 템플릿 기반 표시를 함께 지원합니다."
+          ],
+          "tags": [
+            "weather",
+            "met-norway",
+            "geonames",
+            "overlay-widget"
+          ]
+        }
+      ]
+    },
+    {
+      "groupTitle": "집중과 실행",
+      "items": [
+        {
+          "id": "focus-mode",
+          "title": "집중 모드와 Pomodoro",
+          "summary": "선택한 작업에 몰입할 수 있도록 Focus UI와 Pomodoro 흐름을 제공합니다.",
+          "details": [
+            "집중 시간, 짧은 휴식, 긴 휴식, 목표 세션 수를 설정할 수 있습니다.",
+            "세션 완료 기록과 로그 조회 흐름이 포함되어 있습니다.",
+            "포커스 전용 카드 UI를 통해 현재 작업과 진행 상태를 또렷하게 보여줍니다."
+          ],
+          "tags": [
+            "focus",
+            "pomodoro",
+            "deep-work"
+          ]
+        },
+        {
+          "id": "countdown-dday",
+          "title": "카운트다운과 D-Day 관리",
+          "summary": "마감이나 중요한 이벤트를 시각적으로 강조해 긴장감 있게 추적할 수 있습니다.",
+          "details": [
+            "카운트다운 목표 시각을 설정해 남은 시간을 실시간으로 표시할 수 있습니다.",
+            "일정 기반 D-Day 위젯을 바로 생성하는 흐름이 포함되어 있습니다.",
+            "중요한 날짜를 메인 업무 흐름과 분리해 더 선명하게 보여줄 수 있습니다."
+          ],
+          "tags": [
+            "countdown",
+            "d-day",
+            "deadline"
+          ]
+        }
+      ]
+    },
+    {
+      "groupTitle": "연동과 자동화",
+      "items": [
+        {
+          "id": "google-calendar-sync",
+          "title": "Google Calendar 연동",
+          "summary": "데스크톱 일정 관리와 Google Calendar를 연결해 동기화할 수 있습니다.",
+          "details": [
+            "별도 설정 다이얼로그를 통해 계정 및 동기화 상태를 관리합니다.",
+            "동기화 엔진은 백그라운드 작업과 증분 동기화 흐름을 포함합니다.",
+            "캘린더 선택, 동기화 이슈 확인, 기본 대상 캘린더 관리가 가능합니다."
+          ],
+          "tags": [
+            "google-calendar",
+            "sync",
+            "integration"
+          ]
+        },
+        {
+          "id": "natural-language-input",
+          "title": "자연어 일정 입력",
+          "summary": "짧은 문장으로 날짜와 시간을 포함한 작업을 빠르게 만들 수 있습니다.",
+          "details": [
+            "한국어와 영어 기반의 상대 날짜, 요일, 시간 표현을 해석합니다.",
+            "Command Palette 흐름과 연결되어 키보드 중심 입력에 잘 맞습니다.",
+            "빠르게 떠오른 일정을 정형 입력 없이 바로 캡처할 수 있습니다."
+          ],
+          "tags": [
+            "nlp",
+            "quick-capture",
+            "command-palette"
+          ]
+        }
+      ]
+    },
+    {
+      "groupTitle": "사용자 환경 제어",
+      "items": [
+        {
+          "id": "layout-presets",
+          "title": "5가지 레이아웃 프리셋",
+          "summary": "업무 상황에 따라 패널 배치를 즉시 전환할 수 있습니다.",
+          "details": [
+            "전체 패널 표시, 캘린더 집중, 업무 집중, 탭 분할, 전체 플로팅 레이아웃이 제공됩니다.",
+            "도크 패널과 플로팅 창을 조합해 다양한 작업 환경을 만들 수 있습니다.",
+            "사용자 지정 프리셋 이름 저장과 레이아웃 복원이 가능합니다."
+          ],
+          "tags": [
+            "layout",
+            "dock",
+            "workspace"
+          ]
+        },
+        {
+          "id": "theme-and-language",
+          "title": "테마와 다국어 지원",
+          "summary": "다크 중심 UI를 기반으로 시각 스타일과 언어를 사용자 취향에 맞게 조정할 수 있습니다.",
+          "details": [
+            "UI 토큰 기반 스타일 구조로 색상과 표현 체계를 관리합니다.",
+            "한국어 기본 UI이며 번들 로케일과 사용자 오버라이드 로케일을 지원합니다.",
+            "언어 전환 메뉴와 로케일 검증/초기화 도구가 포함되어 있습니다."
+          ],
+          "tags": [
+            "theme",
+            "i18n",
+            "localization"
+          ]
+        },
+        {
+          "id": "lock-away-mode",
+          "title": "고정 모드와 자리 비움 설정",
+          "summary": "공용 공간이나 집중 환경에서 화면 상호작용을 제한하고 상태를 제어할 수 있습니다.",
+          "details": [
+            "잠금 모드로 도크와 상단 UI 상호작용을 제한할 수 있습니다.",
+            "즉시 자리 비움, 유휴 잠금, 비밀번호 해제 같은 흐름을 제공합니다.",
+            "자리 비움 화면의 메시지와 표시 방식도 설정할 수 있습니다."
+          ],
+          "tags": [
+            "lock-mode",
+            "away-mode",
+            "privacy"
+          ]
+        }
+      ]
+    }
+  ],
+  "imageLibrary": [
+    {
+      "id": "brand-app-icon",
+      "category": "brand-asset",
+      "sourceType": "existing-local-asset",
+      "path": "Assets/app_icon.png",
+      "purpose": "파비콘, 앱 아이콘, 메타 썸네일, 카드형 소개 블록",
+      "alt": "Dark Calendar 앱 아이콘"
+    },
+    {
+      "id": "brand-poster-art",
+      "category": "brand-asset",
+      "sourceType": "existing-local-asset",
+      "path": "Assets/PosterArt.png",
+      "purpose": "오픈그래프 이미지, 앱 소개 상단 비주얼, 스토어 느낌의 배너",
+      "alt": "Dark Calendar 포스터 아트"
+    },
+    {
+      "id": "brand-splash",
+      "category": "brand-asset",
+      "sourceType": "existing-local-asset",
+      "path": "Assets/SplashScreen.png",
+      "purpose": "앱 로딩 화면 소개, 브랜드 분위기 전달",
+      "alt": "Dark Calendar 스플래시 화면"
+    }
+  ],
+  "imagePlaceholders": [
+    {
+      "id": "hero-main-visual",
+      "section": "hero",
+      "assetType": "placeholder-composite",
+      "title": "대표 메인 화면 이미지",
+      "goal": "방문자가 첫 화면에서 앱의 정체성을 즉시 이해하도록 돕는 대표 비주얼",
+      "description": "월간 캘린더, 루틴/디렉티브 패널, 상단 메뉴, 오버레이 위젯이 한 프레임에 담긴 데스크톱 앱 화면입니다.",
+      "suggestedComposition": [
+        "왼쪽에는 월간 캘린더",
+        "오른쪽에는 루틴 또는 디렉티브 패널",
+        "상단에는 앱 메뉴 바",
+        "전면 또는 주변에는 시계, D-Day, 카운트다운 위젯 1~2개"
+      ],
+      "preferredAspectRatio": "16:10",
+      "preferredSize": "1600x1000+",
+      "backgroundStyle": "dark desktop or neutral gradient",
+      "alt": "Dark Calendar 메인 UI와 위젯을 함께 보여주는 대표 화면",
+      "caption": "캘린더와 업무 패널, 위젯이 하나의 흐름으로 이어지는 데스크톱 경험",
+      "replacementNotes": "초기에는 UI 와이어프레임이나 목업으로 대체 가능하며, 실제 제품 캡처 확보 후 교체"
+    },
+    {
+      "id": "overview-lifestyle",
+      "section": "overview",
+      "assetType": "concept-illustration-or-mockup",
+      "title": "데스크톱 워크플로 콘셉트 이미지",
+      "goal": "Dark Calendar가 단순 캘린더가 아니라 데스크톱 업무 허브라는 인상을 강화",
+      "description": "작업용 데스크톱 배경 위에 Dark Calendar 창과 위젯이 자연스럽게 배치된 사용 장면",
+      "suggestedComposition": [
+        "실제 모니터 또는 노트북 화면 목업",
+        "앱 창은 좌측 또는 중앙",
+        "우측 또는 하단에 오버레이 위젯이 떠 있는 구성"
+      ],
+      "preferredAspectRatio": "3:2",
+      "alt": "데스크톱 환경에서 Dark Calendar를 사용하는 콘셉트 이미지",
+      "caption": "일정을 보는 순간에서 실행하는 순간까지 한 화면에서",
+      "replacementNotes": "실제 사용 사진이 없으면 제품 중심 3D 목업 또는 평면 UI 합성으로 대체"
+    },
+    {
+      "id": "feature-calendar-panel",
+      "section": "features",
+      "assetType": "ui-screenshot",
+      "title": "캘린더와 패널 통합 화면",
+      "goal": "월간 캘린더와 업무 패널 구조를 직관적으로 설명",
+      "description": "월간 캘린더, 오늘 패널, 루틴 또는 디렉티브 패널이 동시에 보이는 실제 UI 캡처",
+      "suggestedComposition": [
+        "캘린더 셀 내용이 어느 정도 보이게 확대",
+        "패널 타이틀과 카드형 업무 항목이 읽히는 수준의 해상도"
+      ],
+      "preferredAspectRatio": "16:9",
+      "alt": "월간 캘린더와 업무 패널이 함께 보이는 Dark Calendar 화면",
+      "caption": "일정 확인과 실행 관리가 분리되지 않는 구조",
+      "replacementNotes": "초기에는 기능 영역에 라벨을 표시한 annotated placeholder도 적합"
+    },
+    {
+      "id": "feature-overlay-widgets",
+      "section": "features",
+      "assetType": "ui-collage",
+      "title": "오버레이 위젯 모음 이미지",
+      "goal": "지원 위젯 종류와 개별 스타일 다양성을 보여주기 위한 비주얼",
+      "description": "시계, 날짜 카드, 카운트다운, D-Day, 텍스트, 날씨 위젯을 카드형 콜라주로 배치한 이미지",
+      "suggestedComposition": [
+        "각 위젯을 개별 카드로 잘라 모아둔 콜라주",
+        "배경은 어둡고 위젯 대비가 잘 보이게 구성"
+      ],
+      "preferredAspectRatio": "4:3",
+      "alt": "Dark Calendar에서 제공하는 다양한 오버레이 위젯 예시",
+      "caption": "필요한 정보만 골라 바탕화면 위에 고정",
+      "replacementNotes": "실제 위젯 스크린샷이 확보되면 하나씩 교체하고, 초기에는 아이콘+텍스트 기반 타일로 대체 가능"
+    },
+    {
+      "id": "feature-focus-mode",
+      "section": "features",
+      "assetType": "ui-screenshot",
+      "title": "집중 모드 화면",
+      "goal": "Focus Mode와 Pomodoro 흐름을 시각적으로 전달",
+      "description": "집중 중인 작업명, 남은 시간, 세션 상태가 강조된 Focus UI 화면",
+      "suggestedComposition": [
+        "중앙 카드형 인터페이스",
+        "타이머 숫자가 잘 보이는 확대 구도",
+        "배경은 최소화해 집중감을 강조"
+      ],
+      "preferredAspectRatio": "16:9",
+      "alt": "Dark Calendar의 집중 모드와 타이머 인터페이스",
+      "caption": "선택한 작업에 몰입할 수 있도록 설계된 집중 화면",
+      "replacementNotes": "초기에는 타이머 중심 일러스트 또는 개념 mock screen으로 대체 가능"
+    },
+    {
+      "id": "feature-google-sync",
+      "section": "features",
+      "assetType": "ui-screenshot-or-diagram",
+      "title": "Google Calendar 연동 화면",
+      "goal": "외부 캘린더 연동 가능성을 명확히 보여주기 위한 설명 비주얼",
+      "description": "Google Calendar 설정 다이얼로그 또는 Dark Calendar와 Google Calendar 간 연결 개념도",
+      "suggestedComposition": [
+        "좌측은 앱 설정 UI",
+        "우측은 Google Calendar 아이콘 또는 캘린더 개념 그래픽",
+        "연결 화살표나 sync 상태 배지"
+      ],
+      "preferredAspectRatio": "16:9",
+      "alt": "Dark Calendar의 Google Calendar 연동을 설명하는 이미지",
+      "caption": "데스크톱 일정 관리와 Google Calendar를 자연스럽게 연결",
+      "replacementNotes": "실제 설정 화면이 정리되기 전에는 다이어그램형 플레이스홀더 사용 가능"
+    },
+    {
+      "id": "customization-layouts",
+      "section": "customization",
+      "assetType": "multi-shot-grid",
+      "title": "레이아웃 프리셋 비교 이미지",
+      "goal": "한 앱이 다양한 작업 배치를 지원한다는 점을 한눈에 설명",
+      "description": "서로 다른 3~5개 레이아웃 프리셋을 작은 썸네일로 나란히 보여주는 비교 이미지",
+      "suggestedComposition": [
+        "각 썸네일에 preset 이름 또는 번호 라벨 추가",
+        "캘린더 중심 / 업무 중심 / 플로팅 형태가 구분되게 배열"
+      ],
+      "preferredAspectRatio": "16:9",
+      "alt": "Dark Calendar의 다양한 레이아웃 프리셋 비교 이미지",
+      "caption": "상황에 따라 화면 구성을 바로 전환",
+      "replacementNotes": "처음에는 동일 화면의 와이어프레임 썸네일 변형본으로도 충분"
+    },
+    {
+      "id": "workflow-sequence",
+      "section": "workflow",
+      "assetType": "step-illustration",
+      "title": "하루 사용 흐름 단계 이미지",
+      "goal": "앱 사용 흐름을 스토리처럼 설명하는 보조 비주얼",
+      "description": "오늘 일정 확인, 디렉티브 정리, 집중 모드 시작, D-Day 확인 단계를 연결한 4단계 흐름 그래픽",
+      "suggestedComposition": [
+        "4개의 카드 또는 스텝 블록",
+        "각 단계마다 작은 앱 UI 썸네일 또는 아이콘",
+        "좌에서 우로 이어지는 흐름선"
+      ],
+      "preferredAspectRatio": "21:9",
+      "alt": "Dark Calendar의 하루 업무 흐름을 보여주는 단계형 이미지",
+      "caption": "확인, 실행, 집중, 추적이 한 흐름으로 이어집니다",
+      "replacementNotes": "실제 UI 캡처 대신 아이콘 기반 인포그래픽으로 먼저 제작 가능"
+    },
+    {
+      "id": "faq-supportive-visual",
+      "section": "faq",
+      "assetType": "simple-support-graphic",
+      "title": "FAQ 보조 비주얼",
+      "goal": "텍스트가 많은 FAQ 구간의 시각적 밀도를 완화",
+      "description": "앱 아이콘, 말풍선, 캘린더 심볼을 활용한 가벼운 장식 그래픽",
+      "suggestedComposition": [
+        "브랜드 아이콘 중심",
+        "복잡한 UI 대신 심플한 도형과 작은 캘린더 모티프"
+      ],
+      "preferredAspectRatio": "1:1",
+      "alt": "Dark Calendar FAQ 영역용 보조 그래픽",
+      "caption": "궁금한 점을 빠르게 확인하세요",
+      "replacementNotes": "실제 제품 이미지가 없어도 바로 사용 가능한 가장 단순한 플레이스홀더 영역"
+    }
+  ],
+  "imageUsageGuide": {
+    "visualStyle": [
+      "다크 테마를 유지하되 배경은 너무 검게 뭉치지 않도록 대비를 확보합니다.",
+      "제품 스크린샷은 텍스트가 읽히는 수준으로 선명해야 합니다.",
+      "위젯 이미지는 개별 오브젝트처럼 잘라내거나 그림자 처리해 독립성을 강조하는 편이 좋습니다.",
+      "설명용 이미지는 실제 UI 캡처와 개념 그래픽을 혼합해도 괜찮습니다."
+    ],
+    "placeholderRules": [
+      "실제 이미지가 없을 때는 slotId를 유지한 채 동일 비율 플레이스홀더로 먼저 배치합니다.",
+      "플레이스홀더 안에는 제목, 용도, 예상 이미지 유형을 짧게 표기하면 교체 작업이 쉬워집니다.",
+      "hero와 features 이미지는 가장 먼저 실제 화면으로 교체하는 우선순위가 높습니다."
+    ],
+    "recommendedPriority": [
+      "hero-main-visual",
+      "feature-calendar-panel",
+      "feature-overlay-widgets",
+      "feature-focus-mode",
+      "customization-layouts"
+    ]
+  },
+  "layoutFreedom": {
+    "sectionId": "layout-freedom",
+    "kicker": "Panel Freedom",
+    "headline": "하루를 보는 방식은 하나가 아닙니다.",
+    "summary": "캘린더는 크게, 업무 패널은 옆에, 위젯은 바탕화면 위에 둡니다.",
+    "chips": [
+      "좌·우 도킹",
+      "탭 패널",
+      "플로팅 분리",
+      "5가지 프리셋",
+      "잠금 모드"
+    ],
+    "layoutModes": [
+      {
+        "id": "all-panels",
+        "title": "모든 패널을 한 화면에",
+        "subtitle": "All Panels",
+        "description": "월간 캘린더와 오늘 일정, 루틴, 디렉티브를 동시에 펼쳐 하루 전체를 한 번에 파악합니다.",
+        "visualPlaceholder": "all-docked-panel-diagram"
+      },
+      {
+        "id": "calendar-focus",
+        "title": "캘린더를 크게, 패널은 탭으로",
+        "subtitle": "Calendar Focus",
+        "description": "일정 검토가 중요한 날에는 캘린더를 넓히고 보조 패널은 탭으로 접어 화면 밀도를 조절합니다.",
+        "visualPlaceholder": "calendar-focus-panel-diagram"
+      },
+      {
+        "id": "work-focus",
+        "title": "업무 패널 중심으로 전환",
+        "subtitle": "Work Focus",
+        "description": "처리해야 할 일이 많은 시간에는 오늘 일정·루틴·디렉티브 패널을 넓게 배치해 실행에 집중합니다.",
+        "visualPlaceholder": "work-focus-panel-diagram"
+      },
+      {
+        "id": "floating-workspace",
+        "title": "패널을 분리해 멀티 모니터로",
+        "subtitle": "Floating Workspace",
+        "description": "플로팅 패널은 필요한 위치에 따로 띄울 수 있어 세로 모니터, 보조 모니터, 데스크톱 위젯 환경에 잘 맞습니다.",
+        "visualPlaceholder": "floating-workspace-panel-diagram"
+      }
+    ]
+  },
+  "workflowHighlights": [
+    {
+      "title": "아침에 오늘 할 일 파악",
+      "description": "월간 캘린더와 오늘 패널, 루틴 패널을 열어 일정과 반복 업무를 동시에 확인합니다."
+    },
+    {
+      "title": "바로 실행할 항목 분리",
+      "description": "디렉티브 패널로 실행 중심 항목을 따로 관리해 일정과 액션 아이템을 구분합니다."
+    },
+    {
+      "title": "집중 세션 시작",
+      "description": "선택한 작업으로 Focus Mode를 시작하고 Pomodoro 세션을 기록합니다."
+    },
+    {
+      "title": "중요한 정보는 위젯으로 고정",
+      "description": "시계, D-Day, 카운트다운, 텍스트 위젯을 바탕화면에 띄워 계속 확인합니다."
+    },
+    {
+      "title": "자리 비움 시 안전하게 유지",
+      "description": "고정 모드나 자리 비움 설정으로 업무 화면 상태를 안전하게 유지합니다."
+    }
+  ],
+  "differentiators": [
+    {
+      "title": "달력 앱과 데스크톱 위젯 앱의 결합",
+      "description": "단순 일정 앱이 아니라 바탕화면 상시 정보 레이어까지 포함한 구조입니다."
+    },
+    {
+      "title": "루틴과 디렉티브를 별도 모델로 분리",
+      "description": "일정, 반복 업무, 실행 항목을 하나로 뭉개지 않고 역할에 맞게 다룹니다."
+    },
+    {
+      "title": "템플릿 기반 정보 표현",
+      "description": "텍스트 위젯으로 사용자별 대시보드를 직접 조합할 수 있습니다."
+    },
+    {
+      "title": "Windows 데스크톱 사용성에 최적화",
+      "description": "도크, 플로팅, 자동 시작, 단축키, 오버레이, 단일 인스턴스 등 데스크톱 워크플로를 우선합니다."
+    }
+  ],
+  "faq": [
+    {
+      "question": "Dark Calendar는 어떤 플랫폼에서 사용할 수 있나요?",
+      "answer": "현재 코드베이스 기준으로 Windows 데스크톱 앱이며 PyQt6 기반으로 동작합니다."
+    },
+    {
+      "question": "Google Calendar와 연동되나요?",
+      "answer": "네. Google Calendar 설정 및 동기화 흐름이 포함되어 있으며, 기본 캘린더 선택과 동기화 상태 확인을 지원합니다."
+    },
+    {
+      "question": "반복 업무도 관리할 수 있나요?",
+      "answer": "네. 일정과 별개로 루틴 모델을 두고 반복 업무 생성, 상태 관리, 다음 회차 흐름을 지원합니다."
+    },
+    {
+      "question": "위젯을 여러 개 띄울 수 있나요?",
+      "answer": "네. 같은 종류의 위젯도 여러 인스턴스로 생성해 각각 따로 배치하고 저장할 수 있습니다."
+    },
+    {
+      "question": "언어 변경이 가능한가요?",
+      "answer": "가능합니다. 한국어가 기본이며 로케일 전환과 사용자 번역 오버라이드 구조를 지원합니다."
+    }
+  ],
+  "seo": {
+    "title": "Dark Calendar | Windows 데스크톱 캘린더와 오버레이 위젯 앱",
+    "description": "Dark Calendar는 월간 캘린더, 루틴 관리, Google Calendar 연동, Focus Mode, D-Day와 카운트다운 위젯을 제공하는 Windows 데스크톱 생산성 앱입니다.",
+    "keywords": [
+      "Windows 캘린더 앱",
+      "데스크톱 일정 관리",
+      "오버레이 위젯",
+      "D-Day 위젯",
+      "카운트다운 위젯",
+      "루틴 관리 앱",
+      "Google Calendar 동기화",
+      "Pomodoro 앱",
+      "다크 테마 캘린더",
+      "생산성 데스크톱 앱"
+    ]
+  },
+  "contentBlocks": {
+    "downloadNotice": "현재 Dark Calendar는 Windows 데스크톱 환경에 맞춰 설계된 앱입니다.",
+    "trustNote": "사용자 설정, 위젯 배치, 언어 환경, 캘린더 연결 상태를 로컬 앱 흐름 안에서 지속적으로 유지하도록 설계되어 있습니다.",
+    "footerSummary": "Dark Calendar는 일정 확인용 캘린더를 넘어, 실제 실행과 집중까지 이어지는 데스크톱 생산성 환경을 만드는 앱입니다."
+  }
+}

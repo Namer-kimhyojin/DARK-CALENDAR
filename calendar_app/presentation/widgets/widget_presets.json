@@ -1,0 +1,342 @@
+{
+  "$schema_version": 1,
+  "clock": [
+    {
+      "label_key": "widget.clock.preset_focus",
+      "label_default": "Focus",
+      "template": "{time:%H:%M|size=40|bold}\n{date:%Y.%m.%d|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.clock.preset_timezone",
+      "label_default": "Timezone",
+      "template": "{time:%H:%M|size=34|bold}\n{tz_label|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.clock.preset_weekday",
+      "label_default": "Weekday+Time",
+      "template": "{weekday|size=12|color=muted}\n{time:%H:%M|size=38|bold}"
+    },
+    {
+      "label_key": "widget.clock.preset_seconds",
+      "label_default": "With Seconds",
+      "template": "{time:%H:%M:%S|size=32|bold}\n{date:%Y.%m.%d|size=10|color=muted}"
+    },
+    {
+      "label_key": "widget.clock.preset_full",
+      "label_default": "Full Date+Time",
+      "template": "{date:%Y.%m.%d|size=12|color=muted}  {weekday:short|size=12|color=muted}\n{time:%H:%M|size=36|bold}"
+    },
+    {
+      "label_key": "widget.clock.preset_minimal_hm",
+      "label_default": "Minimal HH:mm",
+      "template": "{time:%H:%M|size=48|bold}"
+    },
+    {
+      "label_key": "widget.clock.preset_ampm",
+      "label_default": "AM/PM 12h",
+      "template": "{time:%p|size=12|color=muted}\n{time:%I:%M|size=38|bold}"
+    },
+    {
+      "label_key": "widget.clock.preset_world",
+      "label_default": "World Clock",
+      "template": "{time:%H:%M|size=30|bold}  {tz_label|size=12|color=muted}\n{date:%m/%d|size=11|color=muted}  {weekday:short|size=11|color=muted}"
+    }
+  ],
+  "stopwatch": [
+    {
+      "label_key": "widget.stopwatch.preset_default",
+      "label_default": "Default",
+      "template": "__DEFAULT__"
+    },
+    {
+      "label_key": "widget.stopwatch.preset_compact",
+      "label_default": "Compact",
+      "template": "{elapsed|size=34|bold}"
+    },
+    {
+      "label_key": "widget.stopwatch.preset_status",
+      "label_default": "Icon+Status",
+      "template": "{status_icon|size=14}  {elapsed|size=32|bold}\n{status|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.stopwatch.preset_split",
+      "label_default": "Split M:S",
+      "template": "{minutes|size=40|bold}:{seconds|size=40|bold}.{tenths|size=22|color=muted}"
+    },
+    {
+      "label_key": "widget.stopwatch.preset_hms",
+      "label_default": "H:M:S Full",
+      "template": "{hours|size=26|bold}h {minutes|size=26|bold}m {seconds|size=26|bold}s"
+    },
+    {
+      "label_key": "widget.stopwatch.preset_tenths",
+      "label_default": "Tenths Focus",
+      "template": "{elapsed|size=30|bold}.{tenths|size=22|bold|color=accent}\n{status|size=10|color=muted}"
+    },
+    {
+      "label_key": "widget.stopwatch.preset_minimal",
+      "label_default": "Minimal",
+      "template": "{elapsed|size=42|bold}"
+    },
+    {
+      "label_key": "widget.stopwatch.preset_lab",
+      "label_default": "Lab Timer",
+      "template": "{status_icon|size=18|color=accent}\n{hours|size=20|bold}h {minutes|size=20|bold}m {seconds|size=20|bold}s"
+    }
+  ],
+  "countdown": [
+    {
+      "label_key": "widget.countdown.preset_default",
+      "label_default": "Default",
+      "template": "__DEFAULT__"
+    },
+    {
+      "label_key": "widget.countdown.preset_d_day",
+      "label_default": "D-Day",
+      "template": "D-{days|size=38|bold}\n{target:%Y.%m.%d|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.countdown.preset_flip",
+      "label_default": "H:M:S",
+      "template": "{hours|size=32|bold}:{minutes|size=32|bold}:{seconds|size=32|bold}"
+    },
+    {
+      "label_key": "widget.countdown.preset_days_big",
+      "label_default": "Days Big",
+      "template": "{days|size=48|bold}\n{target:%Y.%m.%d|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.countdown.preset_compact",
+      "label_default": "Compact",
+      "template": "{remaining|size=28|bold}"
+    },
+    {
+      "label_key": "widget.countdown.preset_full",
+      "label_default": "Full H:M:S",
+      "template": "{days|size=13|color=muted}d  {hours|size=30|bold}:{minutes|size=30|bold}:{seconds|size=30|bold}"
+    },
+    {
+      "label_key": "widget.countdown.preset_alarm",
+      "label_default": "Alarm Style",
+      "template": "{remaining|size=36|bold}\n{target:%Y.%m.%d %H:%M|size=10|color=muted}"
+    }
+  ],
+  "dday": [
+    {
+      "label_key": "widget.dday.preset_default",
+      "label_default": "Default",
+      "template": "__DEFAULT__"
+    },
+    {
+      "label_key": "widget.dday.preset_big",
+      "label_default": "Big D-Day",
+      "template": "{dday|size=60|bold|color=accent}\n{label|size=13|italic}"
+    },
+    {
+      "label_key": "widget.dday.preset_days",
+      "label_default": "Days Count",
+      "template": "{days|size=48|bold}\n{date:%Y.%m.%d|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.dday.preset_sign",
+      "label_default": "Sign+Days",
+      "template": "{sign|size=18|color=muted}{days|size=48|bold}\n{label|size=12}"
+    },
+    {
+      "label_key": "widget.dday.preset_label_top",
+      "label_default": "Label+Date",
+      "template": "{label|size=13|italic|color=muted}\n{dday|size=44|bold}\n{date:%Y.%m.%d|size=10|color=muted}"
+    },
+    {
+      "label_key": "widget.dday.preset_compact",
+      "label_default": "Compact",
+      "template": "{dday|size=28|bold}  {label|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.dday.preset_days_left",
+      "label_default": "Days Left",
+      "template": "{days|size=42|bold}\n{date_short|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.dday.preset_minimal",
+      "label_default": "Minimal",
+      "template": "{dday|size=52|bold}"
+    }
+  ],
+  "datecard": [
+    {
+      "label_key": "widget.datecard.preset_default",
+      "label_default": "Default",
+      "template": "__DEFAULT__"
+    },
+    {
+      "label_key": "widget.datecard.preset_big_day",
+      "label_default": "Big Day",
+      "template": "{day|size=42|bold}\n{weekday|size=12|color=muted}\n{date|size=10|color=muted}"
+    },
+    {
+      "label_key": "widget.datecard.preset_strip",
+      "label_default": "Strip",
+      "template": "{weekday:short|size=12|color=muted}  {day|size=22|bold}  {date:%m/%d|size=12}"
+    },
+    {
+      "label_key": "widget.datecard.preset_doy",
+      "label_default": "Day of Year",
+      "template": "{doy|size=32|bold}\n{date|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.datecard.preset_month_day",
+      "label_default": "Month.Day",
+      "template": "{month|size=18|color=muted}\n{day|size=48|bold}"
+    },
+    {
+      "label_key": "widget.datecard.preset_en_week",
+      "label_default": "EN Weekday",
+      "template": "{weekday:en|size=13|color=muted}\n{day|size=40|bold}\n{date:%Y/%m/%d|size=10|color=muted}"
+    },
+    {
+      "label_key": "widget.datecard.preset_full_date",
+      "label_default": "Full Date",
+      "template": "{date:%Y.%m.%d|size=22|bold}\n{weekday|size=12|color=muted}"
+    },
+    {
+      "label_key": "widget.datecard.preset_year_week",
+      "label_default": "Year+DOY",
+      "template": "{year|size=12|color=muted}\n{doy|size=38|bold}  {weekday:short|size=13|color=muted}"
+    },
+    {
+      "label_key": "widget.datecard.preset_glass",
+      "label_default": "Glass",
+      "template": "{weekday|size=12|color=muted}\n{day|size=44|bold}\n{date|size=10|color=muted}"
+    },
+    {
+      "label_key": "widget.datecard.preset_week_num",
+      "label_default": "Week Num",
+      "template": "W{week_num|size=40|bold}\n{date|size=10|color=muted}"
+    },
+    {
+      "label_key": "widget.datecard.preset_quarter",
+      "label_default": "Quarter",
+      "template": "{quarter|size=36|bold|color=accent}\n{date|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.datecard.preset_month_end",
+      "label_default": "Month End",
+      "template": "{days_left_month|size=42|bold}\n{date:%Y.%m|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.datecard.preset_tomorrow",
+      "label_default": "Tomorrow",
+      "template": "{tomorrow|size=18|bold}\n{weekday|size=12|color=muted}"
+    }
+  ],
+  "text": [
+    {
+      "label_key": "widget_text.preset_clock_date",
+      "label_default": "Clock + Date",
+      "template": "{time:%H:%M|size=36|bold}\n{date:%Y.%m.%d|size=12|color=muted}"
+    },
+    {
+      "label_key": "widget_text.preset_task_overview",
+      "label_default": "Task Overview",
+      "template": "{task_count|size=32|bold}\n{next_event|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget_text.preset_stopwatch",
+      "label_default": "Stopwatch",
+      "template": "{stopwatch:stopwatch_0|size=32|bold}\n{time:%H:%M|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget_text.preset_countdown",
+      "label_default": "Countdown",
+      "template": "{countdown:countdown_0|size=28|bold}\n{date:%Y.%m.%d|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget_text.preset_dday",
+      "label_default": "D-Day",
+      "template": "{dday:dday_0|size=40|bold|color=accent}\n{date:%Y.%m.%d|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget_text.preset_conditional_task",
+      "label_default": "Conditional Tasks",
+      "template": "{if task_count > 0}Tasks {task_count|size=28|bold}\n{next_event|size=11|color=muted}{else}No tasks today{/if}"
+    },
+    {
+      "label_key": "widget_text.preset_clock_stopwatch",
+      "label_default": "Clock + Stopwatch",
+      "template": "{time:%H:%M|size=30|bold}\n{stopwatch:stopwatch_0|size=16|color=muted}"
+    },
+    {
+      "label_key": "widget_text.preset_dashboard",
+      "label_default": "Dashboard",
+      "template": "{time:%H:%M|size=26|bold}  {date:%m.%d|size=11|color=muted}\nTasks {task_count|size=13|bold}  {next_event|size=10|color=muted}"
+    },
+    {
+      "label_key": "widget_text.preset_time_only",
+      "label_default": "Time Only",
+      "template": "{time:%H:%M|size=52|bold}"
+    },
+    {
+      "label_key": "widget_text.preset_world_time",
+      "label_default": "World Time",
+      "template": "{time:%H:%M|size=28|bold}  KST\n{time:tz=UTC:%H:%M|size=20|color=muted}  UTC"
+    },
+    {
+      "label_key": "widget_text.preset_custom_var",
+      "label_default": "Custom Variable",
+      "template": "{custom_var|size=28|bold}"
+    },
+    {
+      "label_key": "widget_text.preset_countdown_alert",
+      "label_default": "Countdown Alert",
+      "template": "{if countdown:countdown_0 < 1h}곧 종료!{else}{countdown:countdown_0|size=24|bold}{/if}"
+    }
+  ],
+  "weather": [
+    {
+      "label_key": "widget.weather.preset_default",
+      "label_default": "Default",
+      "template": "{icon|size=32}\n{temp|size=24|bold}{unit}\n{city|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.weather.preset_temp_only",
+      "label_default": "Temp Only",
+      "template": "{temp|size=42|bold}{unit|size=20}"
+    },
+    {
+      "label_key": "widget.weather.preset_icon_temp",
+      "label_default": "Icon + Temp",
+      "template": "{icon|size=28}\n{temp|size=30|bold}{unit|size=16}"
+    },
+    {
+      "label_key": "widget.weather.preset_full",
+      "label_default": "Full Info",
+      "template": "{city|size=13|bold}\n{icon|size=22} {temp|size=22|bold}{unit|size=13}\n{desc|size=11|color=muted}\n💧 {humidity}  💨 {wind|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.weather.preset_compact_inline",
+      "label_default": "Compact Inline",
+      "template": "{icon|size=18}  {temp|size=20|bold}{unit|size=13}  {city|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.weather.preset_city_focus",
+      "label_default": "City Focus",
+      "template": "{city|size=16|bold}\n{icon|size=20}  {temp|size=24|bold}{unit|size=14}\n{desc|size=10|color=muted}"
+    },
+    {
+      "label_key": "widget.weather.preset_desc_card",
+      "label_default": "Desc Card",
+      "template": "{icon|size=34}\n{desc|size=13|bold}\n{temp|size=18|bold}{unit|size=12}  {city|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.weather.preset_wind_humidity",
+      "label_default": "Wind & Humidity",
+      "template": "{icon|size=24}  {temp|size=28|bold}{unit|size=15}\n💨 {wind|size=12|color=muted}  💧 {humidity|size=12|color=muted}\n{city|size=10|color=muted}"
+    },
+    {
+      "label_key": "widget.weather.preset_minimal_icon",
+      "label_default": "Minimal Icon",
+      "template": "{icon|size=40}"
+    }
+  ]
+}
