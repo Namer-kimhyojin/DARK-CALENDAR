@@ -40,6 +40,24 @@ body.modal-open {
   overflow: hidden;
 }
 
+.skip-link {
+  position: fixed;
+  z-index: 120;
+  top: 12px;
+  left: 12px;
+  transform: translateY(-160%);
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: #031018;
+  background: #dff6ff;
+  font-weight: 800;
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -89,6 +107,10 @@ a {
 
 .nav-links a:hover {
   color: var(--cyan);
+}
+
+.mobile-nav {
+  display: none;
 }
 
 .header-store {
@@ -404,6 +426,10 @@ h1 {
   border-top: 1px solid rgba(184, 221, 255, 0.22);
   border-bottom: 1px solid rgba(184, 221, 255, 0.22);
   background: linear-gradient(90deg, rgba(18, 110, 219, 0.22), rgba(7, 17, 24, 0.74));
+}
+
+.event-band[hidden] {
+  display: none;
 }
 
 .event-band h2,
@@ -1949,7 +1975,9 @@ button.outline-button {
 }
 
 .section {
+  min-height: auto;
   padding: 108px clamp(24px, 7vw, 118px);
+  scroll-margin-top: 96px;
 }
 
 .section h2 {
@@ -2099,6 +2127,12 @@ button.outline-button {
   font-size: 16px;
 }
 
+.faq-list details p a {
+  color: var(--cyan);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .install-section {
   display: grid;
   justify-items: center;
@@ -2154,25 +2188,70 @@ button.outline-button {
 
 @media (max-width: 760px) {
   html {
-    scroll-padding-top: 118px;
+    scroll-padding-top: 82px;
   }
 
   .site-header {
-    gap: 14px 12px;
-    padding: 17px 18px 13px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 10px;
+    padding: 14px 16px;
+    background: rgba(3, 8, 12, 0.94);
+    border-bottom: 1px solid rgba(190, 221, 255, 0.12);
+    backdrop-filter: blur(18px);
   }
 
   .nav-links {
-    justify-content: flex-start;
-    gap: 22px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    font-size: 14px;
-    scrollbar-width: none;
+    display: none;
   }
 
-  .nav-links::-webkit-scrollbar {
+  .mobile-nav {
+    position: relative;
+    display: block;
+    justify-self: end;
+  }
+
+  .mobile-nav summary {
+    min-height: 40px;
+    padding: 10px 13px;
+    border: 1px solid rgba(224, 241, 255, 0.28);
+    border-radius: 999px;
+    color: #dbeaf7;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .mobile-nav summary::-webkit-details-marker {
     display: none;
+  }
+
+  .mobile-nav nav {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    display: grid;
+    width: min(240px, calc(100vw - 32px));
+    padding: 10px;
+    border: 1px solid rgba(190, 221, 255, 0.2);
+    border-radius: 14px;
+    background: rgba(5, 13, 19, 0.98);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.46);
+  }
+
+  .mobile-nav nav a {
+    min-height: 44px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    color: #dbeaf7;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .mobile-nav nav a:hover,
+  .mobile-nav nav a:focus-visible {
+    color: #ffffff;
+    background: rgba(47, 145, 255, 0.18);
   }
 
   .header-store {
@@ -2185,7 +2264,7 @@ button.outline-button {
     grid-template-columns: 1fr;
     gap: 42px;
     min-height: auto;
-    padding: 154px 22px 68px;
+    padding: 116px 22px 68px;
     background-position: 54% center;
   }
 
@@ -2222,6 +2301,10 @@ button.outline-button {
 
   .event-band .event-actions {
     align-items: stretch;
+  }
+
+  .event-band .primary-button {
+    width: 100%;
   }
 
   .trust-strip {
@@ -2270,7 +2353,7 @@ button.outline-button {
   }
 
   .hero {
-    padding-top: 148px;
+    padding-top: 108px;
   }
 
   .hero-trust {
@@ -2280,6 +2363,10 @@ button.outline-button {
 
   .hero-trust li {
     text-align: center;
+  }
+
+  .hero-trust li:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
 
   .trust-strip {
