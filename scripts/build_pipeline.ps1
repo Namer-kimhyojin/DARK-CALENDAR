@@ -247,12 +247,16 @@ function Sync-AppVersion {
     $parts = $NewVersion -split '\.'
     $ma = [int]$parts[0]; $mi = [int]$parts[1]; $pa = [int]$parts[2]
     $tuple = "($ma, $mi, $pa, 0)"
-    $verStr = "$NewVersion.0"
+    $verStr = "${NewVersion}.0"
     $vi = Get-Content $VersionInfoPath -Raw -Encoding utf8
     $vi = $vi -replace 'filevers\s*=\s*\([^)]+\)', "filevers=$tuple"
     $vi = $vi -replace 'prodvers\s*=\s*\([^)]+\)', "prodvers=$tuple"
-    $vi = $vi -replace "(StringStruct\('FileVersion',\s*')[^']+(')", "`${1}$verStr`$2"
-    $vi = $vi -replace "(StringStruct\('ProductVersion',\s*')[^']+(')", "`${1}$verStr`$2"
+    $vi = $vi -replace (
+        '(StringStruct\(''FileVersion'',\s*'')[^'']+('')'
+    ), ('$1' + $verStr + '$2')
+    $vi = $vi -replace (
+        '(StringStruct\(''ProductVersion'',\s*'')[^'']+('')'
+    ), ('$1' + $verStr + '$2')
     [System.IO.File]::WriteAllText($VersionInfoPath, $vi, $utf8NoBom)
     Write-Info "updated: version_info.txt  ($verStr)"
 
