@@ -253,10 +253,10 @@ function Sync-AppVersion {
     $vi = $vi -replace 'prodvers\s*=\s*\([^)]+\)', "prodvers=$tuple"
     $vi = $vi -replace (
         '(StringStruct\(''FileVersion'',\s*'')[^'']+('')'
-    ), ('$1' + $verStr + '$2')
+    ), ('${1}' + $verStr + '${2}')
     $vi = $vi -replace (
         '(StringStruct\(''ProductVersion'',\s*'')[^'']+('')'
-    ), ('$1' + $verStr + '$2')
+    ), ('${1}' + $verStr + '${2}')
     [System.IO.File]::WriteAllText($VersionInfoPath, $vi, $utf8NoBom)
     Write-Info "updated: version_info.txt  ($verStr)"
 
@@ -731,7 +731,7 @@ if (-not $allParamsGiven -and -not $NoBanner) {
     $curDate    = Get-AppField $metadataFile "APP_RELEASE_DATE"
     $curChannel = Get-AppField $metadataFile "APP_RELEASE_CHANNEL"
     if ([string]::IsNullOrWhiteSpace($resolvedVersion))  { $resolvedVersion  = $curVer }
-    if ([string]::IsNullOrWhiteSpace($resolvedDate))     { $resolvedDate     = (Get-Date).ToString("yyyy-MM-dd") }
+    if ([string]::IsNullOrWhiteSpace($resolvedDate))     { $resolvedDate     = $curDate }
     if ([string]::IsNullOrWhiteSpace($resolvedChannel))  { $resolvedChannel  = $curChannel }
 }
 
