@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import importlib.util
 from pathlib import Path
 import re
@@ -39,6 +40,16 @@ class I18nSyncTests(TestCase):
         self.assertTrue(changed)
         self.assertEqual(target["gcal"]["sync"], "Sync")
         self.assertEqual(target["gcal"]["status"]["ok"], "정상")
+
+    def test_repair_placeholder_mismatches_uses_safe_fallback(self):
+        base = {"focus": {"duration": "{minutes}분 {seconds}초"}}
+        target = {"focus": {"duration": "{분}m {초}s"}}
+        fallback = {"focus": {"duration": "{minutes}m {seconds}s"}}
+
+        changed = i18n_sync.repair_placeholder_mismatches(base, target, fallback)
+
+        self.assertTrue(changed)
+        self.assertEqual(target["focus"]["duration"], "{minutes}m {seconds}s")
 
     def test_compare_locale_detects_broken_text_and_type_mismatch(self):
         base = {"dialog": {"title": "설정", "items": ["하나", "둘"]}}

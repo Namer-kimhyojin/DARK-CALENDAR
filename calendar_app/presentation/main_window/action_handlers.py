@@ -95,37 +95,60 @@ class ActionHandlersMixin(
             except RuntimeError:
                 return False
 
+        def _stop_worker(worker, label, *, stop_method=None) -> None:
+            if not _is_running(worker):
+                return
+
+            try:
+                if stop_method is not None:
+                    stop_method()
+                else:
+                    worker.requestInterruption()
+                quit_method = getattr(worker, "quit", None)
+                if callable(quit_method):
+                    quit_method()
+            except RuntimeError:
+                return
+            except Exception:
+                logger.exception("Failed to request cooperative shutdown for %s", label)
+
+            try:
+                if worker.wait(wait_ms):
+                    return
+
+                grace_ms = max(1500, int(wait_ms) * 3)
+                logger.warning(
+                    "%s did not stop within %dms; waiting %dms more without forced termination",
+                    label,
+                    wait_ms,
+                    grace_ms,
+                )
+                if not worker.wait(grace_ms):
+                    logger.error(
+                        "%s is still running after cooperative shutdown; "
+                        "QThread.terminate() was intentionally skipped",
+                        label,
+                    )
+            except RuntimeError:
+                return
+            except Exception:
+                logger.exception("Failed while waiting for %s shutdown", label)
+
         # 2. Stop GCal sync worker
         sync_worker = getattr(self, "_sync_worker", None)
-        if _is_running(sync_worker):
-            sync_worker.requestInterruption()
-            if not sync_worker.wait(wait_ms):
-                logger.warning("Force terminating sync_worker")
-                sync_worker.terminate()
-                sync_worker.wait(200)
+        _stop_worker(sync_worker, "sync_worker")
 
         # 3. Stop general background workers
-        for worker in list(getattr(self, "_bg_workers", [])):
-            if _is_running(worker):
-                worker.requestInterruption()
-                if not worker.wait(wait_ms):
-                    logger.warning("Force terminating background worker")
-                    worker.terminate()
-                    worker.wait(200)
+        for index, worker in enumerate(list(getattr(self, "_bg_workers", [])), start=1):
+            _stop_worker(worker, f"background_worker[{index}]")
 
         # 4. Stop AlarmWorker (Idle Detector)
         alarm_worker = getattr(self, "alarm_worker", None)
-        if _is_running(alarm_worker):
-            try:
-                alarm_worker.stop()
-                if not alarm_worker.wait(wait_ms):
-                    logger.warning("Force terminating alarm_worker")
-                    alarm_worker.terminate()
-                    alarm_worker.wait(200)
-            except RuntimeError:
-                pass
-            except Exception:
-                logger.exception("Failed to stop alarm worker")
+        _stop_worker(
+            alarm_worker,
+            "alarm_worker",
+            stop_method=getattr(alarm_worker, "stop", None),
+        )
 
         # 5. Stop TaskAlarmChecker
         task_alarm_checker = getattr(self, "task_alarm_checker", None)
@@ -139,6 +162,7 @@ class ActionHandlersMixin(
         if not self._confirm_app_exit():
             return
 
+        self._exit_requested = True
         self.shutdown_background_workers()
         tray_icon = getattr(self, "tray_icon", None)
         if tray_icon is not None:
@@ -151,12 +175,13 @@ class ActionHandlersMixin(
 
         # Explicitly release single instance lock if it exists to help with restarts
         app = QApplication.instance()
-        if hasattr(app, "_shared_memory"):
+        if app is not None and hasattr(app, "_shared_memory"):
             # Deleting the shared memory object or detaching it helps the new process start
             del app._shared_memory
 
         self.close()
-        app.quit()
+        if app is not None:
+            app.quit()
 
     def set_language(self, lang_code):
         import os

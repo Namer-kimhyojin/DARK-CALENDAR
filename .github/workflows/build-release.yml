@@ -12,9 +12,18 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.13"
+
 jobs:
   build-x64:
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,25 +31,34 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
+      - name: Install locked build environment
         shell: powershell
         run: |
           python -m venv .venv
           .\.venv\Scripts\python.exe -m pip install --upgrade pip
-          .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-          .\.venv\Scripts\python.exe -m pip install pyinstaller
+          .\.venv\Scripts\python.exe -m pip install -r requirements-build.lock
 
-      - name: Build x64
+      - name: Verify tag matches application version
+        if: github.ref_type == 'tag'
         shell: powershell
-        run: .\build.ps1 -Arch x64
+        run: |
+          $metadata = Get-Content "calendar_app\app_metadata.py" -Raw -Encoding utf8
+          $match = [regex]::Match($metadata, 'APP_VERSION\s*=\s*"([^"]+)"')
+          if (-not $match.Success) {
+            throw "APP_VERSION was not found."
+          }
+          $expectedTag = "v$($match.Groups[1].Value)"
+          if ($env:GITHUB_REF_NAME -ne $expectedTag) {
+            throw "Tag '$env:GITHUB_REF_NAME' does not match '$expectedTag'."
+          }
 
-      - name: Create x64 Store Upload
+      - name: Build x64 release
         shell: powershell
-        run: .\make-store-upload.ps1 -X64Only
+        run: .\build-release.bat -Arch x64 -NoBanner
 
-      - name: Upload x64 dist
+      - name: Upload x64 payload
         uses: actions/upload-artifact@v4
         with:
           name: darkcalendar-dist-x64
@@ -51,22 +69,30 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: darkcalendar-msix-x64
-          path: dist/x64/DarkCalendar-x64.msix
-          if-no-files-found: warn
+          path: dist/x64/DarkCalendar-*-x64.msix
+          if-no-files-found: error
 
-      - name: Upload x64 MSIXUpload
+      - name: Upload GitHub release assets
         uses: actions/upload-artifact@v4
         with:
-          name: darkcalendar-msixupload-x64
-          path: release/store/DarkCalendar_x64.msixupload
-          if-no-files-found: warn
+          name: darkcalendar-github-release-x64
+          path: |
+            dist/x64/DarkCalendar-*-x64.msix
+            dist/x64/DarkCalendar-*-x64.msix.sha256
+            release/store/*-x64.msixupload
+            release/store/*-x64.msixupload.sha256
+            release/source/*-corresponding-source.zip
+            release/source/*-corresponding-source.zip.sha256
+          if-no-files-found: error
 
   build-arm64:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_arm64 == true }}
+    if: github.event_name == 'workflow_dispatch' && inputs.build_arm64 == true
     runs-on:
       - self-hosted
       - Windows
       - ARM64
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,21 +100,20 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
+      - name: Install locked build environment
         shell: powershell
         run: |
           python -m venv .venv
           .\.venv\Scripts\python.exe -m pip install --upgrade pip
-          .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-          .\.venv\Scripts\python.exe -m pip install pyinstaller
+          .\.venv\Scripts\python.exe -m pip install -r requirements-build.lock
 
-      - name: Build arm64
+      - name: Build arm64 release
         shell: powershell
-        run: .\build.ps1 -Arch arm64
+        run: .\build-release.bat -Arch arm64 -NoBanner
 
-      - name: Upload arm64 dist
+      - name: Upload arm64 payload
         uses: actions/upload-artifact@v4
         with:
           name: darkcalendar-dist-arm64
@@ -99,15 +124,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: darkcalendar-msix-arm64
-          path: dist/arm64/DarkCalendar-arm64.msix
-          if-no-files-found: warn
+          path: dist/arm64/DarkCalendar-*-arm64.msix
+          if-no-files-found: error
 
   bundle-msix:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_arm64 == true }}
+    if: github.event_name == 'workflow_dispatch' && inputs.build_arm64 == true
     needs:
       - build-x64
       - build-arm64
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -124,20 +151,65 @@ jobs:
           name: darkcalendar-msix-arm64
           path: dist/arm64
 
-      - name: Create ARM64+X64 Store Upload
+      - name: Create ARM64 and x64 Store upload
         shell: powershell
-        run: .\make-store-upload.ps1 -X64Package "dist\x64\DarkCalendar-x64.msix" -Arm64Package "dist\arm64\DarkCalendar-arm64.msix" -OutputDir "release\store"
+        run: .\build-release.bat -Arch x64 -UploadOnly -NoBanner
 
-      - name: Upload MSIX bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: darkcalendar-msixbundle
-          path: release/store/DarkCalendar.msixbundle
-          if-no-files-found: error
-
-      - name: Upload ARM64+X64 MSIXUpload
+      - name: Upload combined Store package
         uses: actions/upload-artifact@v4
         with:
           name: darkcalendar-msixupload-arm64-x64
-          path: release/store/DarkCalendar_arm64_x64.msixupload
+          path: |
+            release/store/*-arm64_x64.msixbundle
+            release/store/*-arm64_x64.msixupload
           if-no-files-found: error
+
+  publish-github-release:
+    if: github.ref_type == 'tag'
+    needs:
+      - build-x64
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download verified release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: darkcalendar-github-release-x64
+          path: release-assets
+
+      - name: Publish GitHub release
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = $env:GITHUB_REF_NAME.TrimStart("v")
+          $notesPath = "docs\release-$version-notes.md"
+          $assets = Get-ChildItem "release-assets" -Recurse -File |
+            Select-Object -ExpandProperty FullName
+          if (-not $assets) {
+            throw "No release assets were downloaded."
+          }
+
+          gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:GITHUB_REF_NAME @assets --clobber `
+              --repo $env:GITHUB_REPOSITORY
+          } else {
+            $releaseArgs = @(
+              "release", "create", $env:GITHUB_REF_NAME,
+              "--repo", $env:GITHUB_REPOSITORY,
+              "--verify-tag",
+              "--title", "Dark Calendar $version"
+            )
+            if (Test-Path $notesPath -PathType Leaf) {
+              $releaseArgs += @("--notes-file", $notesPath)
+            } else {
+              $releaseArgs += "--generate-notes"
+            }
+            $releaseArgs += $assets
+            & gh @releaseArgs
+          }

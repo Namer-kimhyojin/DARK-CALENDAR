@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Window drag/resize/multi-monitor behavior for main overlay window."""
 
 import logging
@@ -13,12 +14,26 @@ except ImportError:
     HAS_WIN32 = False
 
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
 
 logger = logging.getLogger(__name__)
 
 RESIZE_MARGIN = 10
 SAFE_SCREEN_MARGIN = 6
 TITLE_DRAG_HEIGHT = 60
+
+
+def _can_hide_to_tray(window) -> bool:
+    """Return whether closing the main window can safely leave a tray entry."""
+    if not getattr(window, "_tray_available", False):
+        return False
+    tray_icon = getattr(window, "tray_icon", None)
+    if tray_icon is None:
+        return False
+    try:
+        return QSystemTrayIcon.isSystemTrayAvailable() and tray_icon.isVisible()
+    except RuntimeError:
+        return False
 
 
 def _set_window_bottom(hwnd):
@@ -211,10 +226,23 @@ class WindowEventsMixin:
         super().leaveEvent(event)
 
     def closeEvent(self, event):
+        exit_without_tray = False
+        if not getattr(self, "_exit_requested", False):
+            if _can_hide_to_tray(self):
+                event.ignore()
+                self.hide()
+                self.is_visible = False
+                return
+            # A tray-only app must not leave an unreachable background process
+            # when the operating system has no usable notification area.
+            self._exit_requested = True
+            exit_without_tray = True
+
         from calendar_app.presentation.main_window.window_restore_helpers import save_window_layout
 
         # 종료 플래그를 먼저 설정 — 이후 타이머 콜백이 새 워커를 시작하지 못하게 함
         self._is_shutting_down = True
+        self.is_visible = False
 
         # 모든 타이머 정리 — 종료 후 타이머 콜백이 파괴된 객체에 접근하는 것을 방지
         for _timer_attr in (
@@ -276,6 +304,10 @@ class WindowEventsMixin:
 
         save_window_layout(self)
         super().closeEvent(event)
+        if exit_without_tray:
+            app = QApplication.instance()
+            if app is not None:
+                app.quit()
 
     def showEvent(self, event):
         super().showEvent(event)

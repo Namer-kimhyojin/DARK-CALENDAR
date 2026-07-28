@@ -20,6 +20,9 @@ def initialize_overlay_app(app) -> None:
     _initialize_focus_timer_defaults(app)
     app.old_pos_drag = None
     app.is_visible = True
+    app._exit_requested = False
+    app._tray_available = False
+    app.tray_icon = None
     app.is_focus_mode = False
     app.is_fullscreen = False
     app._resize_dir = None

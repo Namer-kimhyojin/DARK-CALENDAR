@@ -105,6 +105,9 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.assertLessEqual(dialog.height(), dialog.screen().availableGeometry().height() - 48)
 
         font_popup_btn = dialog.findChild(QPushButton, "fontComboPopupButton")
+        self.assertIsNone(font_popup_btn)
+        dialog._section_toggles["font"].click()
+        font_popup_btn = dialog.findChild(QPushButton, "fontComboPopupButton")
         self.assertIsNotNone(font_popup_btn)
         self.assertFalse(font_popup_btn.icon().isNull())
         self.assertTrue(font_popup_btn.accessibleName())
@@ -113,11 +116,14 @@ class PanelOpacityUiTests(unittest.TestCase):
 
         self.assertTrue(dialog._preset_grid_widget.isHidden())
         self.assertTrue(all(button.isHidden() for button in dialog._preset_filter_btns.values()))
+        self.assertFalse(dialog._preset_buttons_built)
         self.assertEqual(len(dialog._family_btns), 8)
         self.assertTrue(all(not button.isHidden() for button in dialog._family_btns.values()))
 
         dialog._style_details_toggle.click()
         dialog._show_all_styles.setChecked(True)
+        self.assertTrue(dialog._preset_buttons_built)
+        self.assertTrue(dialog._preset_btns)
         self.assertFalse(dialog._preset_grid_widget.isHidden())
         self.assertTrue(
             all(not button.isHidden() for button in dialog._preset_filter_btns.values())
@@ -193,6 +199,34 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.assertFalse(dialog._apply_btn.isEnabled())
         self.assertEqual(dialog._change_summary_label.text(), "변경사항 없음")
 
+    def test_preview_identifies_current_selection_and_compares_applied_appearance(self):
+        dialog = PanelColorPickerDialog()
+        self.addCleanup(dialog.close)
+
+        self.assertIn("현재 선택:", dialog._preview_selection_label.text())
+        self.assertFalse(dialog._preview_compare_btn.isEnabled())
+        initial_preview = dialog._preview_frame.styleSheet()
+
+        dialog._slider.setValue(dialog._slider.value() - 1)
+        dialog._flush_preview_refresh()
+        changed_preview = dialog._preview_frame.styleSheet()
+
+        self.assertNotEqual(changed_preview, initial_preview)
+        self.assertIn("스타일", dialog._change_summary_label.text())
+        self.assertTrue(dialog._preview_compare_btn.isEnabled())
+
+        dialog._preview_compare_btn.click()
+
+        self.assertTrue(dialog._preview_compare_btn.isChecked())
+        self.assertEqual(dialog._preview_compare_btn.text(), "변경 후 보기")
+        self.assertEqual(dialog._preview_frame.styleSheet(), initial_preview)
+
+        dialog._preview_compare_btn.click()
+
+        self.assertFalse(dialog._preview_compare_btn.isChecked())
+        self.assertEqual(dialog._preview_compare_btn.text(), "현재 적용값 보기")
+        self.assertEqual(dialog._preview_frame.styleSheet(), changed_preview)
+
     def test_section_revert_preserves_changes_in_other_sections(self):
         dialog = PanelColorPickerDialog()
         self.addCleanup(dialog.close)
@@ -233,6 +267,7 @@ class PanelOpacityUiTests(unittest.TestCase):
 
         dialog._set_appearance_mode("light")
         dialog._slider.setValue(dialog._slider.value() - 1)
+        dialog._section_toggles["font"].click()
         dialog._font_size_spin.setValue(dialog._font_size_spin.value() + 1)
         dialog._dialog_color_overrides = {
             **dialog._dialog_color_overrides,
@@ -256,6 +291,7 @@ class PanelOpacityUiTests(unittest.TestCase):
         dialog = PanelColorPickerDialog()
         self.addCleanup(dialog.close)
         original_primary = dialog._row_primary.hex_value()
+        dialog._section_toggles["font"].click()
         original_font_size = dialog._font_size_spin.value()
 
         dialog._row_primary.set_value("#010203")

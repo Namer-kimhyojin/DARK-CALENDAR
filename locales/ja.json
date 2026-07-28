@@ -23,6 +23,10 @@
     "time_remaining_hm": "あと{h}時間{m}分",
     "view_issues": "同期の問題を見る"
   },
+  "app": {
+    "exit_message": "Dark Calendarを終了します。\nトレイに最小化せず、プログラムを完全に終了します。\n続行しますか？",
+    "exit_title": "終了"
+  },
   "app_name": "ダークカレンダー",
   "autostart": {
     "disabled": "無効",
@@ -30,13 +34,13 @@
     "msg": "起動時の自動起動は {status} になりました。"
   },
   "away_lock": {
+    "admin_pw_placeholder": "管理者パスワード",
+    "admin_pw_title": "管理者パスワードを入力してください。",
     "date_format": "yyyy.MM.dd(ddd)",
     "default_msg": "🔒 あなたは離れています。\n(マウスを動かすとロックが解除されます。)",
     "placeholder_pw": "パスワードを入力してください",
-    "unlock_btn": "ロックを解除する",
     "secondary_screen_hint": "サブロック画面",
-    "admin_pw_placeholder": "管理者パスワード",
-    "admin_pw_title": "管理者パスワードを入力してください。"
+    "unlock_btn": "ロックを解除する"
   },
   "away_settings": {
     "btn_align_center": "中央揃え",
@@ -80,6 +84,11 @@
     "tip_test": "現在の設定でアウェイ画面をプレビューする",
     "title": "外出中モードの設定"
   },
+  "btn": {
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "ok": "OK"
+  },
   "calendar": {
     "add_hint": "スケジュールを追加",
     "help_hint": "カレンダー利用ガイド",
@@ -92,19 +101,11 @@
     "opt_weekend_hidden": "{label}（{count}件非表示）",
     "opt_weekend_hidden_hint": "週末の予定が{count}件非表示です。週末表示を有効にすると表示されます。",
     "options": "⚙️オプション",
-    "options_with_hidden": "{label} ({count})",
+    "options_with_hidden": "{label}({count})",
     "selection_hint": "Ctrl+クリックで複数選択",
     "sync_hint": "Googleカレンダーの同期",
     "today": "今日",
-    "weekdays": [
-      "月",
-      "火",
-      "水",
-      "木",
-      "金",
-      "土",
-      "日"
-    ]
+    "weekdays": ["月", "火", "水", "木", "金", "土", "日"]
   },
   "checklist_mgr": {
     "btn_add_item": "アイテムの追加",
@@ -260,6 +261,7 @@
     "opacity_up": "➕ 10%増加",
     "priority_change": "🎯 優先順位を変更する",
     "refresh": "🔄リフレッシュ",
+    "reset_all_checklist": "↺ Reset All",
     "screen_mgmt": "🖥️ ウィンドウ管理",
     "snap_bottom": "⬇️ スナップボトム",
     "snap_center": "🎯 中央画面",
@@ -287,8 +289,11 @@
       "title": "アラーム"
     },
     "checklist": {
+      "add": "＋ 項目を追加",
       "add_btn": "➕ 項目追加",
       "add_item": "項目を追加",
+      "add_prompt": "項目の内容:",
+      "add_title": "項目を追加",
       "apply_template_msg": "選択したテンプレートを適用しますか？\n既存の項目は保持されます。",
       "apply_template_title": "テンプレートの適用",
       "del_btn": "➖ 項目削除",
@@ -303,17 +308,14 @@
       "items_label": "チェックリスト項目:",
       "manage": "⚙️ 管理",
       "progress": "📊 進捗状況",
+      "remove": "項目を削除",
       "required": "[必須]",
       "template": "📋 テンプレート:",
       "template_select": "-- テンプレートを選択 --",
       "title": "✅ チェックリスト",
       "type_label": "項目種別:",
       "type_list": "リスト型",
-      "type_process": "プロセス型",
-      "add": "＋ 項目を追加",
-      "add_prompt": "項目の内容:",
-      "add_title": "項目を追加",
-      "remove": "項目を削除"
+      "type_process": "プロセス型"
     },
     "common": {
       "add": "追加",
@@ -327,6 +329,7 @@
       "delete_all_date_title": "日付のすべてのスケジュールを削除",
       "delete_confirm": "これを削除してもよろしいですか?",
       "delete_done": "削除完了",
+      "delete_error": "削除中にエラーが発生しました。",
       "delete_n": "{n} アイテムを削除",
       "delete_n_confirm": "{n} 選択したアイテムを削除しますか?",
       "delete_selected": "選択したものを削除",
@@ -334,6 +337,7 @@
       "delete_title": "削除の確認",
       "delete_toast_n": "{n} 個のアイテムが削除されました。",
       "error": "エラー",
+      "loading": "処理中...",
       "modify": "編集",
       "no": "いいえ",
       "notification": "通知",
@@ -344,9 +348,15 @@
       "today": "今日",
       "unspecified": "不特定",
       "warning": "警告",
-      "yes": "はい",
-      "delete_error": "削除中にエラーが発生しました。",
-      "loading": "処理中..."
+      "yes": "はい"
+    },
+    "daily": {
+      "date_header": "今日",
+      "no_routines": "  本日期限のタスクはありません。",
+      "no_schedule": "  本日の予定はありません。",
+      "routine_section": "📋 本日期限",
+      "schedule_section": "📅 今日の予定",
+      "title": "今日の予定 & 期限のタスク"
     },
     "directive": {
       "btn_delete": "消去",
@@ -586,6 +596,7 @@
       "color": "色",
       "color_none": "なし",
       "color_tag": "カラータグ",
+      "cycle_section": "繰り返し設定",
       "del_all_series": "シリーズ全体を削除",
       "del_confirm": "これを削除してもよろしいですか?",
       "del_confirm_specific": "この{type}を削除しますか?\n関連するチェックリスト項目はすべて削除されます。",
@@ -614,14 +625,18 @@
       "mod_success": "変更は正常に保存されました。",
       "name_hint_routine": "例: 週次レポート (非定期的なタスクを含む)",
       "name_hint_schedule": "例: 毎週のブリーフィングと準備",
+      "name_placeholder_routine": "タスク名を入力",
       "name_required": "タスク名を入力してください。",
       "name_routine": "タスク名 (必須)",
       "name_schedule": "スケジュール内容（必須）",
+      "name_section": "タスク名",
       "no_alarm": "アラームなし",
       "no_tasks_saved": "タスクは保存されていません。重複入力や無効な入力がないか確認してください。",
       "not_found": "タスク情報が見つかりません。",
       "ops_section": "動作設定",
       "priority": "優先度",
+      "purge_gcal_confirm": "この予定をローカルカレンダーに移動すると、Googleカレンダーから削除されます。\n（ローカル予定としてのみ保持され、同期されません。）\n\n続行しますか？",
+      "purge_gcal_title": "Googleカレンダーから削除",
       "quick": {
         "am": "午前",
         "evening": "夜",
@@ -634,6 +649,7 @@
       "reg_routine": "登録ルーチン",
       "reg_schedule": "新しいスケジュールを追加",
       "routine_count_msg": "{count}件のルーチンが登録されました。",
+      "routine_datetime_section": "日付と時刻",
       "routine_end_error": "繰り返しの終了は開始日以降である必要があります。",
       "routine_reg_success": "ルーチンが正常に登録されました。",
       "routine_reg_success_continue": "ルーティンを登録しました。続けて入力できます。",
@@ -649,22 +665,16 @@
       "start_day_routine": "繰り返しの開始:",
       "start_dt": "開始時刻:",
       "status": "現在の状況",
-      "tag_hint": "💡 #タグを直接入力することで、効率的な検索が可能になります。(例: #緊急 #報告 #契約)",
-      "unit_day": "d",
-      "unit_hour": "時間",
-      "unit_min": "分",
-      "untitled": "無題",
-      "cycle_section": "繰り返し設定",
-      "name_placeholder_routine": "タスク名を入力",
-      "name_section": "タスク名",
-      "purge_gcal_confirm": "この予定をローカルカレンダーに移動すると、Googleカレンダーから削除されます。\n（ローカル予定としてのみ保持され、同期されません。）\n\n続行しますか？",
-      "purge_gcal_title": "Googleカレンダーから削除",
-      "routine_datetime_section": "日付と時刻",
       "tab_basic": "基本",
       "tab_checklist": "チェックリスト",
       "tab_detail": "詳細",
+      "tag_hint": "💡 #タグを直接入力することで、効率的な検索が可能になります。(例: #緊急 #報告 #契約)",
       "tags_placeholder": "カンマ区切り（例: 仕事, プロジェクトA）",
-      "tags_section": "分類タグ"
+      "tags_section": "分類タグ",
+      "unit_day": "d",
+      "unit_hour": "時間",
+      "unit_min": "分",
+      "untitled": "無題"
     },
     "theme": {
       "accent": {
@@ -683,6 +693,7 @@
       },
       "changes_count": "{count} 件の変更",
       "changes_none": "変更なし",
+      "changes_summary": "{count} 件の変更: {items}",
       "color_picker_title": "色を選択",
       "custom_color": "カスタムカラー",
       "font": {
@@ -694,6 +705,7 @@
       "opacity": "不透明度",
       "opacity_bg": "背景:",
       "opacity_border": "枠線:",
+      "opacity_hint": "0% = 完全に透明、100% = 完全に不透明",
       "opacity_text": "テキスト:",
       "point": {
         "blue": "ブルー",
@@ -708,8 +720,6 @@
         "violet": "バイオレット"
       },
       "preset": {
-        "family_title": "おすすめスタイル",
-        "show_all": "すべてのスタイルを表示",
         "burnt_orange": "バーントオレンジ",
         "charcoal": "チャコール",
         "crimson": "クリムゾン",
@@ -717,6 +727,7 @@
         "deep_teal": "ディープティール",
         "dusk_gold": "ダスクゴールド",
         "emerald_night": "エメラルドナイト",
+        "family_title": "おすすめスタイル",
         "filter_all": "すべて",
         "filter_dark": "ダーク",
         "filter_label": "プリセットの種類",
@@ -735,13 +746,19 @@
         "pastel_sage": "パステルセージ",
         "pastel_sand": "パステルサンド",
         "pastel_sky": "パステルスカイ",
+        "show_all": "すべてのスタイルを表示",
         "slate": "スレート"
       },
       "preview": {
-        "app_name": "Dark Calendar",
+        "app_name": "ダークカレンダー",
+        "custom_style": "カスタム",
         "input_hint": "内容を入力...",
         "item_deadline": "プロジェクトの締め切り",
         "item_today": "今日のタスク",
+        "selection_summary": "現在の選択: {mode} · {style} · {accent}",
+        "show_changed": "変更後を表示",
+        "show_current": "現在の外観を表示",
+        "show_current_tip": "変更前に現在適用されている外観をプレビューします。",
         "title": "プレビュー"
       },
       "reset_icon": "↩",
@@ -754,14 +771,14 @@
         "text": "テキスト"
       },
       "text": {
-        "contrast_fix": "読みやすさを自動調整",
-        "contrast_fix_tip": "現在の背景に合わせて文字色を自動調整します。",
-        "contrast_good": "読みやすい組み合わせ · 基本文字 {primary}:1 / 補助文字 {secondary}:1",
-        "contrast_low": "コントラスト不足 · 基本文字 {primary}:1 / 補助文字 {secondary}:1",
         "apply_recommended": "推奨テキストカラーを適用",
         "apply_recommended_disabled": "推奨テキストカラーはプリセット選択時に利用できます。",
         "apply_recommended_for_preset": "このプリセットに推奨のテキストカラーを適用",
         "apply_recommended_tip": "背景プリセットに適したテキストカラーを自動適用します。",
+        "contrast_fix": "読みやすさを自動調整",
+        "contrast_fix_tip": "現在の背景に合わせて文字色を自動調整します。",
+        "contrast_good": "読みやすい組み合わせ · 基本文字 {primary}:1 / 補助文字 {secondary}:1",
+        "contrast_low": "コントラスト不足 · 基本文字 {primary}:1 / 補助文字 {secondary}:1",
         "faint": "フェイント",
         "hint_short": "プライマリ: メインテキスト / セカンダリ: 補助 / ミュート: メタ情報 / フェイント: ヒント",
         "input_bg": "入力欄の背景",
@@ -777,25 +794,28 @@
         "current_color": "現在の背景色",
         "pick_color": "色を選択",
         "reset_default": "デフォルトに戻す"
-      },
-      "opacity_hint": "0% = 完全に透明、100% = 完全に不透明"
+      }
     },
     "token_editor": {
-      "expert_mode": "個別の値を編集（上級者向け）",
-      "expert_mode_tip": "色、サイズ、間隔の内部値を直接編集します。",
-      "export": "JSONを書き出す",
-      "import": "JSONを読み込む",
       "apply_color_preset": "プリセットを適用",
       "apply_done": "ダイアログトークンの変更を適用する準備ができました。",
       "apply_metric_preset": "適用",
       "desc": "共通ダイアログの色・サイズ・余白トークンを調整します。ボタンスタイルも含まれ、ライブプレビューは右側に表示されます。",
+      "expert_mode": "個別の値を編集（上級者向け）",
+      "expert_mode_tip": "色、サイズ、間隔の内部値を直接編集します。",
+      "export": "JSONを書き出す",
       "export_failed": "UIトークンのエクスポートに失敗しました: {error}",
+      "export_failed_title": "エクスポート失敗",
       "export_success": "UIトークンを正常にエクスポートしました。",
+      "export_title": "UIトークンのエクスポート",
       "header_preview": "プレビュー",
       "header_token": "トークン",
       "header_value": "値",
+      "import": "JSONを読み込む",
       "import_failed": "JSONを読み込めませんでした: {error}",
+      "import_failed_title": "インポート失敗",
       "import_success": "UIトークンを正常にインポートしました。プレビューを更新しました。",
+      "import_title": "UIトークンのインポート",
       "invalid_msg": "無効なカラー形式です。hexまたはrgba(r,g,b,a)、transparentを使用してください。",
       "invalid_short": "1つ以上のカラー値が無効です。",
       "invalid_title": "入力エラー",
@@ -853,19 +873,7 @@
       "saved_toast": "ダイアログUIトークンを保存しました。再起動後に完全に反映されます。",
       "tab_color": "カラートークン",
       "tab_metric": "サイズ/余白トークン",
-      "title": "ダイアログUIトークン設定",
-      "export_failed_title": "エクスポート失敗",
-      "export_title": "UIトークンのエクスポート",
-      "import_failed_title": "インポート失敗",
-      "import_title": "UIトークンのインポート"
-    },
-    "daily": {
-      "date_header": "今日",
-      "no_routines": "  本日期限のタスクはありません。",
-      "no_schedule": "  本日の予定はありません。",
-      "routine_section": "📋 本日期限",
-      "schedule_section": "📅 今日の予定",
-      "title": "今日の予定 & 期限のタスク"
+      "title": "ダイアログUIトークン設定"
     }
   },
   "drag": {
@@ -882,7 +890,7 @@
     "congrats_msg": "素晴らしい集中でした。生産性が上がっています。",
     "congrats_title": "タスク完了！",
     "current_task": "現在、次のことに重点を置いています。\n\n{task_name}",
-    "duration_hours_minutes": "{hours}h {minutes}m",
+    "duration_hours_minutes": "{hours}h{minutes}m",
     "duration_minutes": "{minutes}m",
     "duration_minutes_seconds": "{minutes}m {seconds}s",
     "duration_seconds": "{seconds}s",
@@ -948,7 +956,6 @@
     "title": "重点タスクの選択"
   },
   "gcal": {
-    "issues_retry_exhausted": "再試行上限に到達",
     "auto_healed_msg": "{count}件の問題のある予定が自動的に修正され、カレンダーに同期されました。",
     "auto_healed_title": "自動同期修正",
     "diff": {
@@ -970,14 +977,14 @@
       "push_failed": "ローカルの変更をGoogleサーバーへ反映できませんでした。",
       "rate_limit": "Google APIのレート制限を超えました。しばらくしてから再試行してください。",
       "remote_newer_than_local": "リモートのデータがローカルより新しいため、競合を防ぐためサーバー版を保持しました。",
-      "unknown": "不明なエラーが発生しました。",
-      "remote_orphan": "Googleのみに存在（ローカルに一致なし）"
+      "remote_orphan": "Googleのみに存在（ローカルに一致なし）",
+      "unknown": "不明なエラーが発生しました。"
     },
     "first_setup_msg": "ダークカレンダーへようこそ！\n今すぐ Google カレンダーの同期を設定しますか?",
     "first_setup_title": "セットアップアシスタント",
     "guidance": {
-      "delete_retry_exhausted": "自動削除の再試行が上限に達し、一時停止しました。\n最後のエラーとGoogleカレンダーの権限を確認してから「再試行」を選択してください。\n項目は診断に残り、自動的に破棄されることはありません。",
       "auth": "📍 [状態] Google認証の有効期限が切れているか、無効です。\n🔒 [操作] セキュリティのため、すべての同期処理を安全に一時停止しました。\n✅ [ガイド] 「設定 > カレンダーと同期 > 認証」から再度ログインしてください。",
+      "delete_retry_exhausted": "自動削除の再試行が上限に達し、一時停止しました。\n最後のエラーとGoogleカレンダーの権限を確認してから「再試行」を選択してください。\n項目は診断に残り、自動的に破棄されることはありません。",
       "forbidden": "📍 [状態] この特定のカレンダー（例: 読み取り専用の共有カレンダー）への書き込み権限がありません。\n🚫 [操作] 不正な変更を防ぐため、同期を自動的に停止しました。\n✅ [ガイド] GoogleカレンダーのWebで権限を確認するか、「強制的に無視」でこの項目の同期を停止してください。",
       "generic": "📍 [詳細]\n{error}\n\n❓ [対処方法] インターネット接続を確認して「再試行」をクリックしてください。\n問題が続く場合は「強制的に無視」で同期キューから削除してください。",
       "not_found": "📍 [状態] この予定はGoogleカレンダーに見つかりませんでした（他の場所で削除された可能性があります）。\n🛠 [操作] アプリが現在の状態に合わせて自動的にGoogleへ復元するか、ローカルから削除しました。\n✅ [結果] 同期状態を復元しました。「エラーをクリア」または「再試行」で確定できます。",
@@ -994,9 +1001,16 @@
     "issues_clear_healed_tooltip": "解決済みの問題をクリア",
     "issues_clear_tooltip": "このエラー表示だけをリストから削除します。根本的な問題が解決していない場合、再び表示されることがあります。",
     "issues_deadline": "時間",
+    "issues_delete_failed": "削除キューへの登録に失敗しました。ログを確認してください。",
     "issues_delete_queue": "削除待ちイベント",
+    "issues_delete_queued": "削除キューに登録しました。次回の同期後にGoogleから削除されます。",
+    "issues_delete_remote": "Googleから削除",
+    "issues_delete_remote_confirm": "この予定をGoogleカレンダーから削除します。\n\n予定: {name}\nカレンダー: {cal}\n\nこの操作は取り消せません。続行しますか？",
+    "issues_delete_remote_tooltip": "選択した孤立予定をGoogleカレンダーからの削除キューに登録します。次回の同期時に削除されます。",
     "issues_details": "詳細情報",
     "issues_dirty": "ローカル変更",
+    "issues_empty_body": "Google カレンダーの同期は正常です。更新して現在の状態をもう一度確認できます。",
+    "issues_empty_title": "同期の問題はありません。",
     "issues_error": "問題",
     "issues_error_desc": "同期の問題",
     "issues_force_ignore": "強制的に無視（解決）",
@@ -1014,9 +1028,16 @@
     "issues_resolved": "解決済み",
     "issues_retry": "再試行",
     "issues_retry_count": "再試行",
+    "issues_retry_exhausted": "再試行上限に到達",
     "issues_retry_scheduled": "再試行を予約済み",
     "issues_retry_tooltip": "この予定の同期を今すぐ手動で再試行します。",
     "issues_retrying_msg": "この項目の同期を手動で再試行しています。しばらくお待ちください（完了時に通知が表示されます）。",
+    "issues_scan_clean": "孤立した予定は見つかりませんでした。すべて正常です。",
+    "issues_scan_found": "Googleに{n}件の孤立した予定が見つかりました。リストから確認して削除してください。",
+    "issues_scan_no_sync": "Google同期が設定されていません。スキャンできません。",
+    "issues_scan_orphans": "Googleの孤立予定をスキャン",
+    "issues_scan_orphans_tooltip": "ローカルに一致しないGoogleの予定を検索します（過去6か月）。",
+    "issues_scanning": "スキャン中...",
     "issues_select_hint": "項目を選択すると、この問題の詳細とシステムの対応が表示されます。",
     "issues_status": "現在の状態",
     "issues_target": "スケジュール",
@@ -1024,6 +1045,7 @@
     "issues_type": "種類",
     "issues_type_conflict": "同期の競合",
     "issues_type_delete": "削除キュー",
+    "issues_type_orphan": "Googleの孤立",
     "issues_type_task": "予定",
     "issues_use_remote": "Google版を使用",
     "issues_use_remote_done": "ローカルデータがGoogle版で上書きされます。",
@@ -1044,6 +1066,7 @@
     "setup_done": "セットアップ完了",
     "setup_guide_msg": "Google カレンダーの同期がオンになりました。\n同期を開始するには認証してください。",
     "setup_guide_title": "セットアップガイド",
+    "setup_needed_auth_hint": "カレンダー連携設定でGoogle認証を完了してください。",
     "setup_needed_msg": "Googleカレンダー同期がまだ設定されていません。\nシステム > カレンダー連携設定 から設定してください。",
     "setup_success": "Google カレンダーの同期が正常に有効になりました。",
     "status": {
@@ -1073,9 +1096,9 @@
       "warning": "未解決の同期競合または失敗があります。"
     },
     "treatments": {
-      "manual_retry": "エラーを確認して手動で再試行してください。",
       "auto_healing": "自動修復が完了しました（再作成または同期）。",
       "manual": "手動での再試行、または対応が必要です。",
+      "manual_retry": "エラーを確認して手動で再試行してください。",
       "mirrored": "サーバーデータに合わせてローカルを強制更新しました。",
       "pending_retry": "一時的なエラーの後、自動再試行を待っています。",
       "stopped": "繰り返しの失敗により同期を停止しました。手動での対応が必要です。",
@@ -1091,22 +1114,7 @@
       "sync_partial": "同期完了（一部失敗: push={push}, delete={delete}）",
       "sync_skipped": "同期スキップ",
       "sync_skipped_or_failed": "同期に失敗したかスキップされました"
-    },
-    "issues_delete_failed": "削除キューへの登録に失敗しました。ログを確認してください。",
-    "issues_delete_queued": "削除キューに登録しました。次回の同期後にGoogleから削除されます。",
-    "issues_delete_remote": "Googleから削除",
-    "issues_delete_remote_confirm": "この予定をGoogleカレンダーから削除します。\n\n予定: {name}\nカレンダー: {cal}\n\nこの操作は取り消せません。続行しますか？",
-    "issues_delete_remote_tooltip": "選択した孤立予定をGoogleカレンダーからの削除キューに登録します。次回の同期時に削除されます。",
-    "issues_scan_clean": "孤立した予定は見つかりませんでした。すべて正常です。",
-    "issues_scan_found": "Googleに{n}件の孤立した予定が見つかりました。リストから確認して削除してください。",
-    "issues_scan_no_sync": "Google同期が設定されていません。スキャンできません。",
-    "issues_scan_orphans": "Googleの孤立予定をスキャン",
-    "issues_scan_orphans_tooltip": "ローカルに一致しないGoogleの予定を検索します（過去6か月）。",
-    "issues_scanning": "スキャン中...",
-    "issues_type_orphan": "Googleの孤立",
-    "setup_needed_auth_hint": "カレンダー連携設定でGoogle認証を完了してください。",
-    "issues_empty_body": "Google カレンダーの同期は正常です。更新して現在の状態をもう一度確認できます。",
-    "issues_empty_title": "同期の問題はありません。"
+    }
   },
   "gcal_settings": {
     "account_tip": "接続されているアカウントが変更された場合、カレンダーのバインドを安全に更新するために再認証が必要になる場合があります。",
@@ -1370,9 +1378,6 @@
     "hide_calendar_toolbar": "🗓️ カレンダーツールバー表示/非表示",
     "hide_topbar": "📌 トップバーの表示/非表示",
     "homepage": "🌐 ホームページを開く",
-    "open_source_info": "Open-source information",
-    "open_source_license": "GPLv3 open-source license",
-    "release_source_code": "GitHub source for this version",
     "instant_away": "💤 インスタントアウェイモード",
     "label_settings": "🏷️ ラベル設定",
     "language": "🌐 言語",
@@ -1391,6 +1396,8 @@
     "locale_validate_current": "✔ 現在の言語ファイルを検証",
     "no_calendars": "カレンダーなし",
     "opacity": "🪟 不透明度",
+    "open_source_info": "オープンソース情報",
+    "open_source_license": "GPLv3オープンソースライセンス",
     "overlay_clock": "オーバーレイクロック",
     "overlay_clock_bg_color": "時計の背景色",
     "overlay_clock_format": "時計表示フォーマット",
@@ -1428,6 +1435,7 @@
     "priority_change": "🎯 優先度の変更",
     "register": "➕ 登録する",
     "register_btn": "📝 登録する",
+    "release_source_code": "GitHub source for this version",
     "rename_preset": "✏️ 保存されたプリセットの名前を変更する",
     "routine_mgmt": "🔄 日常管理",
     "routine_status": "📊 日常のステータス",
@@ -1471,14 +1479,15 @@
   },
   "palette": {
     "exit_app": "アプリ: 終了",
+    "hint_command": "コマンドを検索する",
+    "hint_create": "Enterでスケジュールを作成します",
+    "hint_create_confirm": "Enterでこのスケジュールを作成します",
+    "hint_default": "> コマンド  + 作成  / 検索",
+    "hint_record": "予定・ルーティン・ディレクティブを検索",
+    "hint_record_jump": "Enterで項目を開く。Shift+Enterで日付に移動。",
+    "hint_run_command": "Enterで選択したコマンドを実行します",
     "kw": {
-      "theme": [
-        "テーマ",
-        "ダーク",
-        "ライト",
-        "色",
-        "外観"
-      ]
+      "theme": ["テーマ", "ダーク", "ライト", "色", "外観"]
     },
     "nlp_preview": "新規: [{title}] - {date} {time}",
     "no_selection": "Enterキーで選択した結果を開きます",
@@ -1487,14 +1496,7 @@
     "task_registered": "登録しました: {title}",
     "theme_dark": "テーマ: ダークモードに変更",
     "theme_light": "テーマ: ライトモードに変更",
-    "title": "コマンドパレット",
-    "hint_command": "コマンドを検索する",
-    "hint_create": "Enterでスケジュールを作成します",
-    "hint_create_confirm": "Enterでこのスケジュールを作成します",
-    "hint_default": "> コマンド  + 作成  / 検索",
-    "hint_record": "予定・ルーティン・ディレクティブを検索",
-    "hint_record_jump": "Enterで項目を開く。Shift+Enterで日付に移動。",
-    "hint_run_command": "Enterで選択したコマンドを実行します"
+    "title": "コマンドパレット"
   },
   "panel": {
     "checklist_tooltip": "チェックリストの表示/非表示",
@@ -1752,12 +1754,12 @@
   "weather": {
     "desc": {
       "clear": "快晴",
-      "storm": "雷雨",
       "cloudy": "曇り",
       "fog": "霧",
       "rain": "雨",
       "showers": "にわか雨",
-      "snow": "雪"
+      "snow": "雪",
+      "storm": "雷雨"
     },
     "error": {
       "location_not_found": "場所が見つかりません",
@@ -2176,6 +2178,18 @@
     "close": "ウィジェットを閉じる",
     "color_picker": "ウィジェットのアクセントカラーを選択",
     "desc": "必要なウィジェットだけを開きます。",
+    "editor_accent": "アクセントカラー",
+    "editor_base": "ベーステーマ",
+    "editor_dark": "ダークベース",
+    "editor_height": "デフォルトの高さ",
+    "editor_layout": "レイアウト",
+    "editor_light": "ライトベース",
+    "editor_show_eyebrow": "上部キャプションを表示",
+    "editor_show_hint": "ガイドテキストを表示",
+    "editor_skin": "カラースキン",
+    "editor_template": "構成テンプレート",
+    "editor_title": "ウィジェットスタイルを作成",
+    "editor_width": "デフォルトの幅",
     "empty_panel": "この日付のアイテムはありません。",
     "empty_schedule": "予定なし",
     "empty_schedule_filter": "この日の予定はありません。",
@@ -2188,7 +2202,13 @@
     "focus_list": "フォーカスリスト",
     "header_caption": "選択した日の予定と作業",
     "hero_eyebrow": "フォーカスウィジェット",
+    "hide_calendar": "カレンダーを非表示",
     "item_count_chip": "{count}件",
+    "layout_agenda_first": "予定を優先",
+    "layout_dashboard": "横並びダッシュボード",
+    "layout_magazine": "マガジンボード",
+    "layout_minimal": "ミニマルリスト",
+    "layout_stacked": "縦型フォーカス",
     "legend_selected_date": "選択した日",
     "legend_today_date": "今日",
     "memo_popup_title": "メモ",
@@ -2228,11 +2248,21 @@
     "section_routine_today": "ルーティン",
     "section_today": "今日",
     "section_work_today": "今日の作業",
+    "show_calendar": "カレンダーを表示",
+    "skin_classic_dark": "クラシックダーク",
+    "skin_classic_light": "クラシックライト",
+    "skin_forest_mist": "フォレストミスト",
+    "skin_lavender_dream": "ラベンダードリーム",
+    "skin_midnight_blue": "ミッドナイトブルー",
+    "skin_sunset_glow": "サンセットグロー",
     "style_color": "色",
     "style_color_custom": "カスタム...",
+    "style_color_skin": "カラースキン",
+    "style_layout": "レイアウト",
     "style_menu": "スタイル",
     "style_panel_theme": "パネルテーマ",
     "style_size": "サイズ",
+    "style_skin": "スキン",
     "task_type": "作業",
     "theme_dark": "🌙 ダーク（暗い背景向け）",
     "theme_light": "☀ ライト（明るい背景向け）",
@@ -2240,42 +2270,14 @@
     "toast_always_top_off": "常に最前面を無効にしました。",
     "toast_always_top_on": "常に最前面を有効にしました。",
     "today": "今日",
+    "toggle_calendar": "カレンダーの表示切替",
     "tomorrow": "明日",
     "untitled": "無題",
     "widget_hint_actions": "日をタップして再フォーカス",
     "widget_hint_empty": "選択した日の項目はありません。",
     "work_summary": "{count}件の作業",
     "work_title": "作業",
-    "yesterday": "昨日",
-    "hide_calendar": "カレンダーを非表示",
-    "show_calendar": "カレンダーを表示",
-    "toggle_calendar": "カレンダーの表示切替",
-    "editor_accent": "アクセントカラー",
-    "editor_base": "ベーステーマ",
-    "editor_dark": "ダークベース",
-    "editor_height": "デフォルトの高さ",
-    "editor_layout": "レイアウト",
-    "editor_light": "ライトベース",
-    "editor_show_eyebrow": "上部キャプションを表示",
-    "editor_show_hint": "ガイドテキストを表示",
-    "editor_skin": "カラースキン",
-    "editor_template": "構成テンプレート",
-    "editor_title": "ウィジェットスタイルを作成",
-    "editor_width": "デフォルトの幅",
-    "layout_agenda_first": "予定を優先",
-    "layout_dashboard": "横並びダッシュボード",
-    "layout_magazine": "マガジンボード",
-    "layout_minimal": "ミニマルリスト",
-    "layout_stacked": "縦型フォーカス",
-    "skin_classic_dark": "クラシックダーク",
-    "skin_classic_light": "クラシックライト",
-    "skin_forest_mist": "フォレストミスト",
-    "skin_lavender_dream": "ラベンダードリーム",
-    "skin_midnight_blue": "ミッドナイトブルー",
-    "skin_sunset_glow": "サンセットグロー",
-    "style_color_skin": "カラースキン",
-    "style_layout": "レイアウト",
-    "style_skin": "スキン"
+    "yesterday": "昨日"
   },
   "widget_text": {
     "align": "配置",
@@ -2288,6 +2290,7 @@
     "edit": "テキストを編集...",
     "edit_prompt": "表示するテキストを入力:",
     "edit_title": "テキストを編集",
+    "group_align": "配置",
     "group_app_data": "アプリデータ",
     "group_conditions": "条件",
     "group_time_date": "時間 / 日付",
@@ -2332,6 +2335,9 @@
     "template_help": "インラインスタイル: {value|size=36|bold|italic|color=#ff4da6}\n改行: \\n   例: {time:%H:%M|size=36|bold}\\n{date|size=12|color=#8090b0}\n条件ブロック: {if task_count > 0}内容{else}代替{/if}（ネスト不可）\nタイムゾーン: {time:tz=JST:%H:%M} / {time:tz=UTC+9:%H:%M}",
     "template_label": "テキスト / テンプレート:",
     "template_placeholder": "テキストまたは {time:%H:%M} のような変数を入力...",
+    "var_align_center": "中央",
+    "var_align_left": "左",
+    "var_align_right": "右",
     "var_condition_block": "条件ブロック",
     "var_countdown": "カウントダウン",
     "var_countdown_condition": "カウントダウン条件",
@@ -2347,19 +2353,6 @@
     "var_time": "時刻",
     "var_weekday": "曜日",
     "var_weekday_short": "曜日（略）",
-    "word_wrap": "折り返し",
-    "group_align": "配置",
-    "var_align_center": "中央",
-    "var_align_left": "左",
-    "var_align_right": "右"
-  },
-  "btn": {
-    "cancel": "キャンセル",
-    "confirm": "確認",
-    "ok": "OK"
-  },
-  "app": {
-    "exit_message": "Dark Calendarを終了します。\nトレイに最小化せず、プログラムを完全に終了します。\n続行しますか？",
-    "exit_title": "終了"
+    "word_wrap": "折り返し"
   }
 }

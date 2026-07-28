@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Infrastructure bootstrap and runtime wiring (Tray, Shortcuts, Window Control)."""
 
 from __future__ import annotations
@@ -19,11 +20,12 @@ from calendar_app.shared.theme_settings import opacity_percent_to_byte
 logger = logging.getLogger(__name__)
 
 
-def setup_app_infrastructure(app) -> None:
+def setup_app_infrastructure(app) -> bool:
     """Initialize system tray, shortcuts, and other OS-level infrastructure."""
-    init_tray_icon(app)
+    tray_available = init_tray_icon(app)
     init_shortcuts(app)
     init_idle_detector(app)
+    return tray_available
 
 
 def init_idle_detector(app):
@@ -110,9 +112,10 @@ def _create_action(app, label, handler, shortcut_id=None, parent_menu=None):
 
 def init_tray_icon(app):
     """Initialize system tray icon with optimized and icon-rich menu."""
+    app._tray_available = False
     if not QSystemTrayIcon.isSystemTrayAvailable():
         logger.warning("System tray not available on this system.")
-        return
+        return False
 
     app.tray_icon = QSystemTrayIcon(app)
 
@@ -251,9 +254,9 @@ def init_tray_icon(app):
     act_away = _create_action(
         app,
         t("menu.instant_away"),
-        lambda: app.toggle_idle_lock(True, manual=True)
-        if hasattr(app, "toggle_idle_lock")
-        else None,
+        lambda: (
+            app.toggle_idle_lock(True, manual=True) if hasattr(app, "toggle_idle_lock") else None
+        ),
         "away_lock",
         tray_menu,
     )
@@ -346,7 +349,25 @@ def init_tray_icon(app):
     app.tray_icon.setContextMenu(tray_menu)
     app.tray_icon.activated.connect(lambda reason: _handle_tray_activation(app, reason))
     app.tray_icon.show()
+    app._tray_available = app.tray_icon.isVisible()
     logger.info("System tray and unified shortcuts initialized.")
+    return app._tray_available
+
+
+def _set_overlay_visible(app, visible: bool, *, refresh: bool = False) -> None:
+    """Apply one authoritative main-window visibility transition."""
+    if visible:
+        if app.isMinimized():
+            app.showNormal()
+        else:
+            app.show()
+        app.is_visible = app.isVisible()
+        if refresh and hasattr(app, "_refresh_all_panels"):
+            app._refresh_all_panels()
+        return
+
+    app.hide()
+    app.is_visible = False
 
 
 def _handle_tray_activation(app, reason: QSystemTrayIcon.ActivationReason) -> None:
@@ -360,17 +381,11 @@ def _handle_tray_activation(app, reason: QSystemTrayIcon.ActivationReason) -> No
                 app.stop_widget_mode()
             return
         if app.isVisible():
-            app.hide()
-            app.is_visible = False
+            _set_overlay_visible(app, False)
         else:
-            app.show()
-            app.is_visible = True
-            if app.isMinimized():
-                app.showNormal()
+            _set_overlay_visible(app, True, refresh=True)
             app.activateWindow()
             app.raise_()
-            if hasattr(app, "_refresh_all_panels"):
-                app._refresh_all_panels()
 
 
 def _toggle_lock_via_shortcut(app):
@@ -386,13 +401,8 @@ def init_shortcuts(app):
 
 
 def toggle_overlay(app) -> None:
-    """Toggle 'Always on Top' (overlay) mode."""
-    if getattr(app, "is_visible", True):
-        app.hide()
-        app.is_visible = False
-    else:
-        app.show()
-        app.is_visible = True
+    """Toggle main-window visibility using the actual Qt window state."""
+    _set_overlay_visible(app, not app.isVisible())
 
 
 def toggle_fullscreen(app) -> None:

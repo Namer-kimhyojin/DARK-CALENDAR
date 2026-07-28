@@ -899,7 +899,9 @@ class BaseTaskDialog(QDialog):
     def _load_checklist_templates(self):
         """체크리스트 템플릿 목록 로드"""
         self.checklist_template_combo.clear()
-        self.checklist_template_combo.addItem("-- 템플릿 선택 --", None)
+        self.checklist_template_combo.addItem(
+            t("dialog.checklist.template_select", "-- 템플릿 선택 --"), None
+        )
         templates = checklist_template_repo.get_all_checklist_templates(active_only=True)
         for t_item in templates:
             item_count = len(checklist_template_repo.get_checklist_items(t_item["id"]))

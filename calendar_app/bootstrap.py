@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Application bootstrap/runtime entry helpers."""
 
 from __future__ import annotations
@@ -375,7 +376,12 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
     window.first_paint.connect(splash.finish)
     window.show()
 
-    signal.signal(signal.SIGINT, lambda *_: window.close())
+    def _handle_sigint(*_):
+        window._exit_requested = True
+        window.close()
+        app.quit()
+
+    signal.signal(signal.SIGINT, _handle_sigint)
     app._sigint_pump = QTimer()
     app._sigint_pump.timeout.connect(lambda: None)
     app._sigint_pump.start(200)

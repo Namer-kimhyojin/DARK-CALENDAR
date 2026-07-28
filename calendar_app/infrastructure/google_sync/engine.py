@@ -159,6 +159,14 @@ def _resolved_primary_alias_id(app) -> str:
     return "primary"
 
 
+def _event_lookup_key(app, calendar_id, event_id) -> str:
+    return gcal_db_adapter.make_gcal_event_lookup_key(
+        calendar_id,
+        event_id,
+        resolved_primary_id=_resolved_primary_alias_id(app),
+    )
+
+
 def _refresh_resolved_primary_alias_id(app) -> str:
     sync_service = getattr(app, "gcal_sync", None)
     if sync_service is None or not getattr(sync_service, "is_authenticated", False):
@@ -1097,7 +1105,8 @@ def _push_local_changes_to_google(app, remote_versions=None):
                 )
                 continue
             before_id = task.get("gcal_event_id")
-            event_key = gcal_db_adapter.make_gcal_event_lookup_key(
+            event_key = _event_lookup_key(
+                app,
                 target_calendar_id,
                 before_id,
             )
@@ -1550,7 +1559,8 @@ def sync_google_calendar(app, silent=False):
                     _mark_incremental_backfill_probe_run(app, sync_calendar_id)
                 if probe_events:
                     existing_event_keys = {
-                        gcal_db_adapter.make_gcal_event_lookup_key(
+                        _event_lookup_key(
+                            app,
                             _normalize_calendar_id(
                                 getattr(ev, "source_calendar_id", None) or sync_calendar_id
                             ),
@@ -1563,9 +1573,7 @@ def sync_google_calendar(app, silent=False):
                         source_calendar_id = _normalize_calendar_id(
                             getattr(probe_event, "source_calendar_id", None) or sync_calendar_id
                         )
-                        event_key = gcal_db_adapter.make_gcal_event_lookup_key(
-                            source_calendar_id, probe_event.id
-                        )
+                        event_key = _event_lookup_key(app, source_calendar_id, probe_event.id)
                         if event_key in existing_event_keys:
                             continue
                         if event_key in local_gcal_map:
@@ -1600,9 +1608,7 @@ def sync_google_calendar(app, silent=False):
                     source_calendar_id = _normalize_calendar_id(
                         getattr(event, "source_calendar_id", None) or sync_calendar_id
                     )
-                    event_key = gcal_db_adapter.make_gcal_event_lookup_key(
-                        source_calendar_id, event.id
-                    )
+                    event_key = _event_lookup_key(app, source_calendar_id, event.id)
                     fetched_event_keys.add(event_key)
 
                     local_info = local_gcal_map.get(event_key)

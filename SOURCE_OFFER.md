@@ -6,13 +6,13 @@ The complete corresponding source for each release is available from:
 
 <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases>
 
-For version `3.6.1`, use the complete corresponding-source archive:
+For version `3.6.5`, use the complete corresponding-source archive:
 
-<https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v3.6.1/DarkCalendar-3.6.1-corresponding-source.zip>
+<https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v3.6.5/DarkCalendar-3.6.5-corresponding-source.zip>
 
 Release page and application source tag:
 
-<https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.6.1>
+<https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.6.5>
 
 The source archive includes the application code, exact dependency declarations, build scripts, PyInstaller specifications, resources, PyQt6 source, applicable Qt source, and other upstream source archives used to build the distributed application. Build outputs, user data, credentials, signing keys, and generally available system tools are not included.
 

@@ -1307,7 +1307,7 @@ def create_task_box(
                 from PyQt6.QtWidgets import QMenu
 
                 menu = QMenu(checklist_container)
-                reset_act = menu.addAction("↺  전체 초기화")
+                reset_act = menu.addAction(t("context_menu.reset_all_checklist", "↺  전체 초기화"))
                 reset_act.triggered.connect(lambda: app.reset_checklist_items(c_tid))
                 menu.exec(checklist_container.mapToGlobal(pos))
 

@@ -426,7 +426,7 @@ def build_dialog_base_tokens(
     text_theme: str | None = None,
     panel_base_color: str | None = None,
     input_bg: str | None = None,
-    opacity_factor: float = 1.0,
+    opacity_factor: float | None = None,
 ) -> dict[str, str]:
     snapshot = snapshot or build_theme_snapshot(
         settings=settings,

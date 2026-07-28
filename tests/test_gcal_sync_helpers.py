@@ -96,6 +96,29 @@ class FakeSyncService:
 
 
 class GCalSyncHelperTests(TestCase):
+    def test_lookup_key_can_use_the_calling_apps_primary_calendar_resolution(self):
+        with patch.object(
+            repository,
+            "_resolved_primary_calendar_id",
+            return_value="global-settings@example.com",
+        ):
+            self.assertEqual(
+                repository.make_gcal_event_lookup_key(
+                    "primary",
+                    "evt-1",
+                    resolved_primary_id="app-settings@example.com",
+                ),
+                "app-settings@example.com::evt-1",
+            )
+            self.assertEqual(
+                repository.make_gcal_event_lookup_key(
+                    "primary",
+                    "evt-2",
+                    resolved_primary_id="primary",
+                ),
+                "primary::evt-2",
+            )
+
     def test_auto_heal_orphan_scan_throttle_uses_last_run_timestamp(self):
         class FakeSettings:
             def __init__(self):

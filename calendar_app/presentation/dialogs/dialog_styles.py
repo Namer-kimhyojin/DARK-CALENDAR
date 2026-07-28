@@ -1334,7 +1334,6 @@ def apply_common_dialog_style(
         theme_color=theme_color,
         text_theme=text_theme,
         panel_base_color=panel_base_color,
-        opacity_factor=1.0,
     )
     parts = [get_shared_qss(shared_tokens), base]
 

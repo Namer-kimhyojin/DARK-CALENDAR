@@ -142,6 +142,7 @@ class _IconKeys:
     SETTINGS: str = "settings"
     WIDGET_MGR: str = "widget_mgr"
     ALWAYS_ON_TOP: str = "always_on_top"
+    SHOW: str = "show"
     HIDE: str = "hide"
     RESET_POS: str = "reset_pos"
     RESET_SIZE: str = "reset_size"
@@ -294,6 +295,7 @@ ICON_MAPPING: dict[str, tuple[str, str, str]] = {
     ICON.SETTINGS: ("fa6s.gears", "", "설정"),
     ICON.WIDGET_MGR: ("fa6s.window-restore", "", "위젯 관리자"),
     ICON.ALWAYS_ON_TOP: ("mdi6.pin-outline", "", "항상 위에"),
+    ICON.SHOW: ("fa6s.eye", "", "표시하기"),
     ICON.HIDE: ("fa6s.eye-slash", "", "숨기기"),
     ICON.RESET_POS: ("mdi6.map-marker-radius", "", "위치 초기화"),
     ICON.RESET_SIZE: ("fa6s.maximize", "", "크기 초기화"),

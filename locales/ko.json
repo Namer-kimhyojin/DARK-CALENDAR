@@ -261,6 +261,7 @@
     "opacity_up": "➕ 10% 올리기",
     "priority_change": "🎯 중요도 변경",
     "refresh": "🔄 새로고침",
+    "reset_all_checklist": "↺ 전체 초기화",
     "screen_mgmt": "🖥️ 화면 위치 관리",
     "snap_bottom": "⬇️ 하단 붙이기",
     "snap_center": "🎯 화면 중앙",
@@ -692,6 +693,7 @@
       },
       "changes_count": "변경사항 {count}개",
       "changes_none": "변경사항 없음",
+      "changes_summary": "변경사항 {count}개: {items}",
       "color_picker_title": "색상 선택",
       "custom_color": "직접 색상",
       "font": {
@@ -749,9 +751,14 @@
       },
       "preview": {
         "app_name": "Dark Calendar",
+        "custom_style": "사용자 지정",
         "input_hint": "내용을 입력하세요...",
         "item_deadline": "프로젝트 마감",
         "item_today": "오늘 할 일",
+        "selection_summary": "현재 선택: {mode} · {style} · {accent}",
+        "show_changed": "변경 후 보기",
+        "show_current": "현재 적용값 보기",
+        "show_current_tip": "변경 전의 현재 적용 모습을 미리보기에서 확인합니다.",
         "title": "미리보기"
       },
       "reset_icon": "↩",

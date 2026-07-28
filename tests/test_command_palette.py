@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import types
 import unittest
@@ -183,6 +184,15 @@ class CommandPaletteTests(TemporaryDatabaseTestCase):
         self.assertEqual("2026-04-06 14:30:00", rows[0]["deadline"])
         self.assertTrue(host.refresh_calls)
         self.assertTrue(host.toast_calls)
+
+    def test_palette_exit_commands_use_confirmed_application_exit_path(self):
+        exit_calls = []
+        host = types.SimpleNamespace(request_app_exit=lambda: exit_calls.append("exit"))
+
+        OverlayApp.handle_palette_command(host, "request_app_exit", {})
+        OverlayApp.handle_palette_command(host, "exit_app", {})
+
+        self.assertEqual(["exit", "exit"], exit_calls)
 
     def test_handle_palette_command_opens_records_and_jumps_date(self):
         host = _ActionHost()

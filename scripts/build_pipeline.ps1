@@ -296,7 +296,57 @@ function Sync-AppVersion {
         $notice = $notice -replace 'version `\d+\.\d+\.\d+`', "version ``$NewVersion``"
         [System.IO.File]::WriteAllText($noticePath, $notice, $utf8NoBom)
     }
-    Write-Info "updated: website + release-source notices  ($NewVersion)"
+
+    $runtimeLockPath = Join-Path $ProjectRoot "requirements-runtime.lock"
+    $runtimeLock = Get-Content $runtimeLockPath -Raw -Encoding utf8
+    $runtimeLock = $runtimeLock -replace (
+        'Dark Calendar \d+\.\d+\.\d+ release runtime lock'
+    ), "Dark Calendar $NewVersion release runtime lock"
+    [System.IO.File]::WriteAllText($runtimeLockPath, $runtimeLock, $utf8NoBom)
+
+    $thirdPartyPath = Join-Path $ProjectRoot "THIRD_PARTY_NOTICES.md"
+    $thirdParty = Get-Content $thirdPartyPath -Raw -Encoding utf8
+    $thirdParty = $thirdParty -replace (
+        'Dark Calendar \d+\.\d+\.\d+ uses the native Windows notification sound API'
+    ), "Dark Calendar $NewVersion uses the native Windows notification sound API"
+    [System.IO.File]::WriteAllText($thirdPartyPath, $thirdParty, $utf8NoBom)
+
+    $partnerGuidePath = Join-Path $ProjectRoot "docs\microsoft-store-gpl-release.md"
+    $partnerGuide = Get-Content $partnerGuidePath -Raw -Encoding utf8
+    $partnerGuide = $partnerGuide -replace (
+        'Dark Calendar \d+\.\d+\.\d+ in Partner Center'
+    ), "Dark Calendar $NewVersion in Partner Center"
+    $partnerGuide = $partnerGuide -replace (
+        'github\.com/Namer-kimhyojin/DARK-CALENDAR/blob/v\d+\.\d+\.\d+/LICENSE'
+    ), "github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v$NewVersion/LICENSE"
+    $partnerGuide = $partnerGuide -replace (
+        'releases/download/v\d+\.\d+\.\d+/DarkCalendar-\d+\.\d+\.\d+-corresponding-source\.zip'
+    ), "releases/download/v$NewVersion/DarkCalendar-$NewVersion-corresponding-source.zip"
+    $partnerGuide = $partnerGuide -replace (
+        'releases/tag/v\d+\.\d+\.\d+'
+    ), "releases/tag/v$NewVersion"
+    $partnerGuide = $partnerGuide -replace (
+        'matching \d+\.\d+\.\d+ release asset'
+    ), "matching $NewVersion release asset"
+    $partnerGuide = $partnerGuide -replace (
+        'package version is \d+\.\d+\.\d+\.\d+'
+    ), "package version is $NewPackageVersion"
+    [System.IO.File]::WriteAllText($partnerGuidePath, $partnerGuide, $utf8NoBom)
+
+    $releaseGuidePath = Join-Path $ProjectRoot "docs\store_release_process.md"
+    $releaseGuide = Get-Content $releaseGuidePath -Raw -Encoding utf8
+    $releaseGuide = $releaseGuide -replace (
+        '-ValidateOnly -Version \d+\.\d+\.\d+ -PackageVersion \d+\.\d+\.\d+\.\d+ -ReleaseDate \d{4}-\d{2}-\d{2} -Channel'
+    ), "-ValidateOnly -Version $NewVersion -PackageVersion $NewPackageVersion -ReleaseDate $NewDate -Channel"
+    $releaseGuide = $releaseGuide -replace (
+        'DarkCalendar-\d+\.\d+\.\d+\.\d+-'
+    ), "DarkCalendar-$NewPackageVersion-"
+    $releaseGuide = $releaseGuide -replace (
+        'DarkCalendar-\d+\.\d+\.\d+-corresponding-source\.zip'
+    ), "DarkCalendar-$NewVersion-corresponding-source.zip"
+    [System.IO.File]::WriteAllText($releaseGuidePath, $releaseGuide, $utf8NoBom)
+
+    Write-Info "updated: website + open-source release notices  ($NewVersion)"
 }
 
 # ---------------------------------------------------------------------------
@@ -968,6 +1018,11 @@ Run-OrThrow -Exe $venvPython -Args @(
     "--source-bundle", $sourceBundle
 ) -WorkingDirectory $projectRoot
 
+if (-not $NoChecksum) {
+    $sourceChecksum = New-Sha256File -FilePath $sourceBundle
+    Write-Info "source checksum: $sourceChecksum"
+}
+
 Write-Ok "payload and corresponding source ready"
 Write-Info $sourceBundle
 Write-Log "payload + compliance source bundle OK — $sourceBundle"
@@ -1068,6 +1123,10 @@ if (-not $SkipMsix) {
         Write-Log "skipped (no MSIX)"
     } else {
         $storeUpload = New-StoreUpload -ProjectRoot $projectRoot -ThisMsix $msixOutput -ThisArch $Arch
+        if (-not $NoChecksum) {
+            $storeChecksum = New-Sha256File -FilePath $storeUpload
+            Write-Info "upload checksum: $storeChecksum"
+        }
         Write-Log "Store upload OK - $storeUpload"
     }
 }

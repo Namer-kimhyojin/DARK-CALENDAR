@@ -370,8 +370,8 @@ class ThemeContractTests(unittest.TestCase):
         settings.setValue("panel_base_color", "#eef2f6")
         settings.setValue("custom_input_bg", "#f7fbff")
 
-        snapshot = build_theme_snapshot(settings=settings, opacity_factor=1.0)
-        shared_tokens = get_ui_tokens(settings=settings, opacity_factor=1.0)
+        snapshot = build_theme_snapshot(settings=settings)
+        shared_tokens = get_ui_tokens(settings=settings)
         dialog_tokens = get_dialog_theme_tokens(settings=settings, apply_overrides=False)
 
         self.assertEqual(snapshot.theme_color, "#22c3ca")

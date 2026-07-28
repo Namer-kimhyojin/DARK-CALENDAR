@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from datetime import UTC, datetime
 
 from PyQt6.QtCore import QSettings
@@ -26,17 +27,24 @@ def _resolved_primary_calendar_id():
     return "primary"
 
 
-def _canonical_lookup_calendar_id(calendar_id):
+def _canonical_lookup_calendar_id(calendar_id, resolved_primary_id=None):
     normalized = _normalize_calendar_id(calendar_id)
     if normalized == "primary":
-        default_calendar_id = _resolved_primary_calendar_id()
+        default_calendar_id = (
+            _normalize_calendar_id(resolved_primary_id)
+            if resolved_primary_id is not None
+            else _resolved_primary_calendar_id()
+        )
         if default_calendar_id and default_calendar_id != "primary":
             return default_calendar_id
     return normalized
 
 
-def make_gcal_event_lookup_key(calendar_id, event_id):
-    return f"{_canonical_lookup_calendar_id(calendar_id)}::{str(event_id or '').strip()}"
+def make_gcal_event_lookup_key(calendar_id, event_id, *, resolved_primary_id=None):
+    return (
+        f"{_canonical_lookup_calendar_id(calendar_id, resolved_primary_id)}::"
+        f"{str(event_id or '').strip()}"
+    )
 
 
 def get_connection():

@@ -54,6 +54,9 @@ class DailySummaryDialog(QDialog):
         root.addWidget(sched_header)
 
         sched_items = self._load_schedule(today)
+        task_items_preview = self._load_due_routines(today)
+        self.has_content = bool(sched_items) or bool(task_items_preview)
+
         if sched_items:
             for item in sched_items:
                 lbl = QLabel(item)
@@ -74,7 +77,7 @@ class DailySummaryDialog(QDialog):
         task_header.setStyleSheet("font-size:13px; font-weight:700;")
         root.addWidget(task_header)
 
-        task_items = self._load_due_routines(today)
+        task_items = task_items_preview
         if task_items:
             for name, pct_text, tags_text in task_items:
                 row = QHBoxLayout()
@@ -188,6 +191,9 @@ def maybe_show_daily_summary(app) -> None:
     settings.setValue(_SETTINGS_KEY_LAST_SHOWN, today)
     try:
         dlg = DailySummaryDialog(parent=app)
+        if not dlg.has_content:
+            dlg.deleteLater()
+            return
         dlg.exec()
     except Exception:
         logger.exception("DailySummary: dialog failed")

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Main application window shell."""
 
 from PyQt6.QtCore import QDate
@@ -55,10 +56,8 @@ class OverlayApp(MainWindowUiActionsMixin, ActionHandlersMixin, WindowEventsMixi
                 self.left_dock.setVisible(not self.left_dock.isVisible())
             if hasattr(self, "center_dock"):
                 self.center_dock.setVisible(not self.center_dock.isVisible())
-        elif cmd_id == "exit_app":
-            from PyQt6.QtWidgets import QApplication
-
-            QApplication.quit()
+        elif cmd_id in {"exit_app", "request_app_exit"}:
+            self.request_app_exit()
         elif cmd_id == "create_task_nlp":
             # NLP task creation logic
             try:

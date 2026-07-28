@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import argparse
 import copy
 import json
@@ -242,6 +243,49 @@ def fill_missing(base, target, translator=None, is_target_ko=False, prefix=""):
     return changed
 
 
+def repair_placeholder_mismatches(base, target, fallback, prefix=""):
+    """Replace unsafe translated format strings with a placeholder-safe fallback."""
+    changed = False
+    if not isinstance(base, dict) or not isinstance(target, dict):
+        return changed
+
+    for key, base_value in base.items():
+        dotted_key = f"{prefix}.{key}" if prefix else key
+        if key not in target:
+            continue
+        target_value = target[key]
+
+        if isinstance(base_value, dict) and isinstance(target_value, dict):
+            fallback_value = fallback.get(key, {}) if isinstance(fallback, dict) else {}
+            if repair_placeholder_mismatches(
+                base_value,
+                target_value,
+                fallback_value,
+                dotted_key,
+            ):
+                changed = True
+            continue
+
+        if not isinstance(base_value, str) or not isinstance(target_value, str):
+            continue
+        if placeholders(base_value) == placeholders(target_value):
+            continue
+
+        fallback_value = fallback.get(key) if isinstance(fallback, dict) else None
+        if isinstance(fallback_value, str) and placeholders(fallback_value) == placeholders(
+            base_value
+        ):
+            target[key] = fallback_value
+            changed = True
+            continue
+
+        raise ValueError(
+            f"No placeholder-safe fallback for {dotted_key}: "
+            f"expected {sorted(placeholders(base_value))}"
+        )
+    return changed
+
+
 def locale_paths(base_lang, target_langs):
     base_path = LOCALES_DIR / f"{base_lang}.json"
     if not base_path.exists():
@@ -267,7 +311,16 @@ def print_issue_block(label, items, limit):
         print(f"    ... +{len(items) - limit} more")
 
 
-def process_locale(base_data, target_path, fill, limit, auto_translate=False, base_lang="ko"):
+def process_locale(
+    base_data,
+    target_path,
+    fill,
+    limit,
+    auto_translate=False,
+    base_lang="ko",
+    repair_placeholders=False,
+    fallback_data=None,
+):
     target_data = normalize_locale_data(load_locale(target_path))
 
     translator = None
@@ -284,7 +337,15 @@ def process_locale(base_data, target_path, fill, limit, auto_translate=False, ba
             pass
 
     is_target_ko = target_path.name == "ko.json"
-    changed = fill_missing(base_data, target_data, translator, is_target_ko) if fill else False
+    changed = False
+    if repair_placeholders:
+        changed = repair_placeholder_mismatches(
+            base_data,
+            target_data,
+            fallback_data or {},
+        )
+    if fill and fill_missing(base_data, target_data, translator, is_target_ko):
+        changed = True
     if changed:
         save_locale(target_path, target_data)
     issues = compare_locale(base_data, target_data)
@@ -323,6 +384,11 @@ def main(argv=None):
         help="Automatically translate filled missing keys using deep_translator (requires pip install deep-translator)",
     )
     parser.add_argument(
+        "--repair-placeholders",
+        action="store_true",
+        help="Replace placeholder-mismatched strings with the matching English fallback.",
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=20,
@@ -332,12 +398,20 @@ def main(argv=None):
 
     base_path, target_paths = locale_paths(args.base, args.locales)
     base_data = normalize_locale_data(load_locale(base_path))
+    fallback_data = normalize_locale_data(load_locale(LOCALES_DIR / "en.json"))
 
     has_issues = False
     changed_any = False
     for target_path in target_paths:
         issues, changed = process_locale(
-            base_data, target_path, args.fill_missing, args.limit, args.auto_translate, args.base
+            base_data,
+            target_path,
+            args.fill_missing,
+            args.limit,
+            args.auto_translate,
+            args.base,
+            args.repair_placeholders,
+            fallback_data,
         )
         changed_any = changed_any or changed
         has_issues = has_issues or any(issues.values())
