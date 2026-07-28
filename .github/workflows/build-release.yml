@@ -55,7 +55,7 @@ jobs:
           }
 
       - name: Build x64 release
-        shell: powershell
+        shell: cmd
         run: .\build-release.bat -Arch x64 -NoBanner
 
       - name: Upload x64 payload
@@ -110,7 +110,7 @@ jobs:
           .\.venv\Scripts\python.exe -m pip install -r requirements-build.lock
 
       - name: Build arm64 release
-        shell: powershell
+        shell: cmd
         run: .\build-release.bat -Arch arm64 -NoBanner
 
       - name: Upload arm64 payload
@@ -152,7 +152,7 @@ jobs:
           path: dist/arm64
 
       - name: Create ARM64 and x64 Store upload
-        shell: powershell
+        shell: cmd
         run: .\build-release.bat -Arch x64 -UploadOnly -NoBanner
 
       - name: Upload combined Store package
