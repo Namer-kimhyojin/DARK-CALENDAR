@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -82,6 +83,22 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
         self.assertFalse(dialog.start_time.isHidden())
         self.assertFalse(dialog.end_time.isHidden())
 
+    def test_all_day_schedule_keeps_date_shortcuts_and_hides_time_actions(self):
+        dialog = UnifiedTaskDialog(task_type="schedule", initial_date=QDate(2026, 7, 11))
+        self.addCleanup(dialog.close)
+        dialog.show()
+        self._app.processEvents()
+        date_buttons = [
+            button
+            for button in dialog.findChildren(QPushButton)
+            if button.property("quickAction") in {"today", "tomorrow"}
+        ]
+
+        self.assertTrue(dialog.all_day_check.isChecked())
+        self.assertTrue(all(not button.isHidden() for button in date_buttons))
+        self.assertTrue(dialog.start_time_shortcuts.isHidden())
+        self.assertTrue(dialog.end_time_shortcuts.isHidden())
+
     def test_period_inputs_reflow_for_schedule_and_routine(self):
         for task_type in ("schedule", "routine"):
             with self.subTest(task_type=task_type):
@@ -110,6 +127,71 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
         self.assertTrue(dialog.end_time.accessibleName())
         self.assertIs(dialog.start_label_widget.buddy(), dialog.start_date)
         self.assertIs(dialog.end_label_widget.buddy(), dialog.end_date)
+        self.assertEqual(dialog.start_date.displayFormat(), "yyyy-MM-dd")
+        self.assertEqual(dialog.end_date.displayFormat(), "yyyy-MM-dd")
+        self.assertTrue(dialog.start_weekday_label.text())
+        self.assertTrue(dialog.end_weekday_label.text())
+
+    def test_schedule_quick_actions_update_start_and_keep_duration(self):
+        dialog = UnifiedTaskDialog(
+            task_type="schedule",
+            initial_date=QDate(2026, 7, 11),
+            initial_time=QTime(14, 30),
+        )
+        self.addCleanup(dialog.close)
+        tomorrow_btn = next(
+            button
+            for button in dialog.findChildren(QPushButton)
+            if button.property("quickAction") == "tomorrow"
+        )
+
+        tomorrow_btn.click()
+
+        self.assertEqual(dialog.start_date.date(), QDate.currentDate().addDays(1))
+        self.assertEqual(dialog.start_time.time(), QTime(14, 30))
+        self.assertEqual(dialog.end_time.time(), QTime(15, 30))
+
+    def test_schedule_quick_actions_have_clear_groups_icons_and_semantics(self):
+        dialog = UnifiedTaskDialog(
+            task_type="schedule",
+            initial_date=QDate(2026, 7, 11),
+            initial_time=QTime(14, 30),
+        )
+        self.addCleanup(dialog.close)
+        quick_buttons = [
+            button
+            for button in dialog.findChildren(QPushButton)
+            if button.property("quickActionButton")
+        ]
+
+        self.assertGreaterEqual(len(quick_buttons), 6)
+        self.assertTrue(all(not button.icon().isNull() for button in quick_buttons))
+        self.assertTrue(all(button.accessibleName() for button in quick_buttons))
+        self.assertTrue(all(button.accessibleDescription() for button in quick_buttons))
+        self.assertTrue(
+            all(button.toolTip() == button.accessibleDescription() for button in quick_buttons)
+        )
+        self.assertTrue(
+            any(button.property("quickDurationMinutes") == 60 for button in quick_buttons)
+        )
+        self.assertFalse(dialog.start_time_shortcuts.isHidden())
+        self.assertFalse(dialog.end_time_shortcuts.isHidden())
+
+    def test_missing_name_uses_inline_feedback_instead_of_modal_warning(self):
+        dialog = UnifiedTaskDialog(task_type="schedule")
+        self.addCleanup(dialog.close)
+        dialog.tabs.setCurrentIndex(1)
+
+        with patch(
+            "calendar_app.presentation.dialogs.task_dialog_unified.QMessageBox.warning"
+        ) as warning:
+            dialog._create_task()
+
+        warning.assert_not_called()
+        self.assertEqual(0, dialog.tabs.currentIndex())
+        self.assertFalse(dialog.status_feedback_label.isHidden())
+        self.assertTrue(dialog.status_feedback_label.text())
+        self.assertTrue(dialog.status_feedback_label.accessibleDescription())
 
     def test_routine_create_and_modify_use_same_initial_size(self):
         task_id = unified_repo.create_unified_task(
@@ -129,8 +211,22 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
         self.addCleanup(modify_dialog.close)
 
         self.assertEqual(create_dialog.size(), modify_dialog.size())
-        self.assertGreaterEqual(create_dialog.width(), 720)
-        self.assertGreaterEqual(create_dialog.height(), 560)
+        self.assertGreaterEqual(create_dialog.width(), 640)
+        self.assertLessEqual(create_dialog.width(), 700)
+        self.assertGreaterEqual(create_dialog.height(), 500)
+        self.assertLessEqual(create_dialog.height(), 660)
+
+    def test_schedule_dialog_stays_compact_and_scrollable(self):
+        dialog = UnifiedTaskDialog(task_type="schedule")
+        self.addCleanup(dialog.close)
+
+        self.assertLessEqual(dialog.width(), 700)
+        self.assertLessEqual(dialog.height(), 620)
+        self.assertLessEqual(dialog.maximumWidth(), 700)
+        self.assertLessEqual(dialog.maximumHeight(), 660)
+        self.assertTrue(
+            all(isinstance(dialog.tabs.widget(i), QScrollArea) for i in range(dialog.tabs.count()))
+        )
 
     def test_schedule_color_swatch_fits_detail_view_in_create_and_modify(self):
         task_id = unified_repo.create_unified_task(

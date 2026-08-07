@@ -25,6 +25,12 @@ def initialize_overlay_app(app) -> None:
     app.tray_icon = None
     app.is_focus_mode = False
     app.is_fullscreen = False
+    app._focus_saved_dock_visibility = None
+    app._focus_saved_chrome_visibility = None
+    app._focus_entry_was_fullscreen = False
+    app._focus_entry_was_maximized = False
+    app._focus_windowed_was_maximized = False
+    app._focus_fullscreen_btn = None
     app._resize_dir = None
     app._screen_fill_active = False
     app._last_clicked_date = None
@@ -55,6 +61,7 @@ def initialize_overlay_app(app) -> None:
     app._widget_mode_coordinator = None
     app._unified_widget_controller = None
     app._panel_widget_mode_controller = None
+    app._welcome_banner = None
 
     app.gcal_sync = None
     app._gcal_sync_issue_count = 0

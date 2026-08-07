@@ -25,6 +25,7 @@ a = Analysis(
     + copy_metadata('QtAwesome'),
     hiddenimports=[
         'calendar_app',
+        'PyQt6.QtPrintSupport',
         'calendar_app.bootstrap',
         'calendar_app.presentation.main_window.app_window',
         'calendar_app.infrastructure.runtime.crash_bootstrap',

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """OverlayWidgetManager — manages multiple instances of each overlay widget type.
 
 Each widget type can have N simultaneous instances.  Instance metadata (id, name,
@@ -31,7 +32,7 @@ from typing import TYPE_CHECKING
 import weakref
 
 from PyQt6.QtCore import QPoint
-from PyQt6.QtWidgets import QInputDialog, QMenu, QMessageBox
+from PyQt6.QtWidgets import QDialog, QInputDialog, QLineEdit, QMenu, QMessageBox
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.widgets.overlay_base import _overlay_menu_style
@@ -112,7 +113,33 @@ _SETTINGS_KEY = "overlay_instances"
 
 def widget_type_label(widget_type: str) -> str:
     info = _WIDGET_TYPES.get(widget_type, {})
-    return t(info.get("label_key", ""), info.get("label_default", widget_type))
+    return _se(t(info.get("label_key", ""), info.get("label_default", widget_type)))
+
+
+def _prompt_widget_name(parent, title: str, label: str, default_name: str):
+    """Show a comfortably sized widget-name prompt and return ``(text, accepted)``."""
+    dialog = QInputDialog(parent)
+    dialog.setInputMode(QInputDialog.InputMode.TextInput)
+    dialog.setWindowTitle(_se(title))
+    dialog.setLabelText(label)
+    dialog.setTextValue(_se(default_name))
+
+    metrics = dialog.fontMetrics()
+    content_width = max(
+        metrics.horizontalAdvance(str(value))
+        for value in (dialog.windowTitle(), label, dialog.textValue())
+    )
+    dialog_width = max(380, min(640, content_width + 120))
+    dialog.setMinimumWidth(dialog_width)
+
+    name_edit = dialog.findChild(QLineEdit)
+    if name_edit is not None:
+        name_edit.setMinimumWidth(dialog_width - 56)
+        name_edit.setAccessibleName(label)
+        name_edit.selectAll()
+
+    accepted = dialog.exec() == QDialog.DialogCode.Accepted
+    return dialog.textValue(), accepted
 
 
 class OverlayWidgetManager:
@@ -521,11 +548,11 @@ class OverlayWidgetManager:
         type_label = widget_type_label(widget_type)
         idx = self._instance_count_of(widget_type)
         default_name = f"{type_label} {idx + 1}" if idx > 0 else type_label
-        name, ok = QInputDialog.getText(
-            None,
+        name, ok = _prompt_widget_name(
+            self._owner,
             t("widget_manager.add_widget_title", "Add {label}", label=type_label),
             t("widget_manager.widget_name", "Widget name:"),
-            text=default_name,
+            default_name,
         )
         if not ok:
             return

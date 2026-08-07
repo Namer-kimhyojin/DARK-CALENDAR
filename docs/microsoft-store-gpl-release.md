@@ -1,22 +1,22 @@
 # Microsoft Store GPLv3 Release Settings
 
-Use these values for Dark Calendar 3.6.5 in Partner Center. The Store submission remains blocked until each item is confirmed manually.
+Use these values for Dark Calendar 3.6.6 in Partner Center. The Store submission remains blocked until each item is confirmed manually.
 
 ## Separate license terms
 
 Dark Calendar is licensed under the GNU General Public License version 3 only (GPL-3.0-only). These separate license terms govern the application instead of the Microsoft Standard Application License Terms. Recipients may run, study, modify, copy, and redistribute the application under GPLv3. The complete license text is included in the package and available at:
 
-<https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.6.5/LICENSE>
+<https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.6.6/LICENSE>
 
 ## Corresponding source
 
 Complete corresponding source for the exact Store binary, including application source, build scripts, dependency locks, PyQt6 source, applicable Qt source, and upstream source archives:
 
-<https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v3.6.5/DarkCalendar-3.6.5-corresponding-source.zip>
+<https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v3.6.6/DarkCalendar-3.6.6-corresponding-source.zip>
 
 Release page:
 
-<https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.6.5>
+<https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.6.6>
 
 ## Store listing disclosure
 
@@ -32,7 +32,7 @@ Suggested English disclosure:
 
 - [ ] Separate/custom application terms identify GPL-3.0-only.
 - [ ] Store description includes the paid-open-source disclosure.
-- [ ] Source URL points to the matching 3.6.5 release asset.
+- [ ] Source URL points to the matching 3.6.6 release asset.
 - [ ] Privacy policy URL is present for the Win32 application.
-- [ ] The submitted package version is 3.6.5.0.
+- [ ] The submitted package version is 3.6.6.0.
 - [ ] No Store DRM or publisher term is represented as limiting GPLv3 copying or redistribution rights.

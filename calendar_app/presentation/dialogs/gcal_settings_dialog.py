@@ -40,6 +40,7 @@ from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
+    schedule_dialog_text_fit,
 )
 from calendar_app.shared.calendar_defaults import DEFAULT_CALENDAR_COLOR
 from calendar_app.shared.datetime_utils import timezone_offset_for_name
@@ -109,8 +110,11 @@ class GCalSettingsDialog(QDialog):
             else QSettings(APP_VENDOR, APP_NAME)
         )
         apply_dialog_title(self, t("gcal_settings.title", "캘린더 및 동기화 설정"))
-        self.setMinimumSize(900, 580)
-        self.resize(1020, 680)
+        self.setAccessibleName(self.windowTitle())
+        self.setSizeGripEnabled(True)
+        self.setMinimumSize(820, 560)
+        self.setProperty("_dc_preferred_size", QSize(980, 680))
+        self.resize(980, 680)
         self._all_timezones = self._build_timezone_list()
         self._calendar_choices = []
         self._browse_creds_open = False
@@ -119,6 +123,7 @@ class GCalSettingsDialog(QDialog):
         self._dialog_metrics = get_dialog_metric_tokens(apply_overrides=True)
         self._style_bundle = build_settings_style_bundle(self._ui_tokens, self._dialog_metrics)
         self._init_ui()
+        schedule_dialog_text_fit(self)
         self._load_state()
         self._refresh_status()
         # initial_tab으로 직접 이동
@@ -252,7 +257,9 @@ class GCalSettingsDialog(QDialog):
         for idx, (label, nav_icon) in enumerate(nav_items):
             btn = QPushButton(_se(label))
             btn.setIcon(nav_icon)
-            btn.setCheckable(False)
+            btn.setCheckable(True)
+            btn.setAutoExclusive(True)
+            btn.setAccessibleName(_se(label))
             btn.setStyleSheet(self._style_bundle["nav_button"])
             btn.clicked.connect(lambda _, i=idx: self._switch_section(i))
             self._nav_btns.append(btn)
@@ -263,7 +270,11 @@ class GCalSettingsDialog(QDialog):
 
     def _switch_section(self, idx: int):
         for i, btn in enumerate(self._nav_btns):
-            btn.setStyleSheet(self._style_bundle["nav_button_active" if i == idx else "nav_button"])
+            is_current = i == idx
+            btn.setChecked(is_current)
+            btn.setStyleSheet(
+                self._style_bundle["nav_button_active" if is_current else "nav_button"]
+            )
         self._stack.setCurrentIndex(idx)
 
     # ──────────────────────────────────────────────
@@ -374,7 +385,7 @@ class GCalSettingsDialog(QDialog):
 
     # ── 캘린더 카드 아이템 (테이블 대체) ──────────────────────────────────
 
-    def _make_color_swatch(self, color_str: str, size: int = 18) -> QPushButton:
+    def _make_color_swatch(self, color_str: str, size: int = 40) -> QPushButton:
         """클릭 가능한 색상 스와치 버튼."""
         btn = QPushButton()
         btn.setFixedSize(size, size)
@@ -436,8 +447,8 @@ class GCalSettingsDialog(QDialog):
             f"border: 1px solid {palette['border']};"
             "border-radius: 7px;"
             "padding: 0px;"
-            "min-width: 26px; max-width: 26px;"
-            "min-height: 26px; max-height: 26px;"
+            "min-width: 40px; max-width: 40px;"
+            "min-height: 40px; max-height: 40px;"
             "}"
             "QPushButton:hover {"
             f"background-color: {palette['hover_bg']};"
@@ -459,7 +470,7 @@ class GCalSettingsDialog(QDialog):
         row_frame = QFrame()
         row_frame.setObjectName("calRow")
         row_frame.setStyleSheet(self._style_bundle["calendar_row"])
-        row_frame.setFixedHeight(54)
+        row_frame.setFixedHeight(64)
         row_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         h = QHBoxLayout(row_frame)
@@ -468,8 +479,8 @@ class GCalSettingsDialog(QDialog):
 
         # ① 색상 스와치
         cal_color = str(cal.get("color") or "").strip()
-        swatch = self._make_color_swatch(cal_color or "#4da6ff", size=18)
-        swatch.setFixedWidth(30)  # Pill-like width
+        swatch = self._make_color_swatch(cal_color or "#4da6ff", size=40)
+        swatch.setFixedWidth(40)  # Pill-like width
         cal_id = cal["id"]
         cal_type = cal.get("type", "local")
 
@@ -541,8 +552,8 @@ class GCalSettingsDialog(QDialog):
             is_default = bool(cal.get("is_default"))
             default_btn = QPushButton()
             default_btn.setObjectName("calendarDefaultButton")
-            default_btn.setFixedSize(26, 26)
-            default_btn.setIconSize(QSize(14, 14))
+            default_btn.setFixedSize(40, 40)
+            default_btn.setIconSize(QSize(18, 18))
             default_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
             if is_default:
@@ -566,8 +577,8 @@ class GCalSettingsDialog(QDialog):
         is_vis = bool(cal.get("is_visible", 1))
         vis_btn.setCheckable(True)
         vis_btn.setChecked(is_vis)
-        vis_btn.setFixedSize(26, 26)
-        vis_btn.setIconSize(QSize(14, 14))
+        vis_btn.setFixedSize(40, 40)
+        vis_btn.setIconSize(QSize(18, 18))
         self._set_icon_button_accessibility(
             vis_btn, t("gcal_settings.col_visible_tip", "표시/숨김")
         )
@@ -626,7 +637,7 @@ class GCalSettingsDialog(QDialog):
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.VLine)
         sep.setFixedWidth(1)
-        sep.setMaximumHeight(20)
+        sep.setMaximumHeight(28)
         sep.setStyleSheet(self._calendar_action_separator_style())
         al.addWidget(sep)
 
@@ -637,8 +648,8 @@ class GCalSettingsDialog(QDialog):
             refresh_btn = QPushButton()
             refresh_btn.setObjectName("calendarRefreshButton")
             refresh_btn.setIcon(_ic(ICON.REFRESH))
-            refresh_btn.setFixedSize(26, 26)
-            refresh_btn.setIconSize(QSize(14, 14))
+            refresh_btn.setFixedSize(40, 40)
+            refresh_btn.setIconSize(QSize(18, 18))
             self._set_icon_button_accessibility(
                 refresh_btn, t("gcal_settings.ics_refresh", "지금 소식 가져오기")
             )
@@ -654,8 +665,8 @@ class GCalSettingsDialog(QDialog):
         edit_btn = QPushButton()
         edit_btn.setObjectName("calendarEditButton")
         edit_btn.setIcon(_ic(ICON.EDIT))
-        edit_btn.setFixedSize(26, 26)
-        edit_btn.setIconSize(QSize(14, 14))
+        edit_btn.setFixedSize(40, 40)
+        edit_btn.setIconSize(QSize(18, 18))
         self._set_icon_button_accessibility(edit_btn, t("gcal_settings.col_edit", "편집"))
         edit_btn.setStyleSheet(self._calendar_row_action_button_style("neutral"))
 
@@ -669,8 +680,8 @@ class GCalSettingsDialog(QDialog):
         del_btn = QPushButton()
         del_btn.setObjectName("calendarDeleteButton")
         del_btn.setIcon(_ic(ICON.DELETE))
-        del_btn.setFixedSize(26, 26)
-        del_btn.setIconSize(QSize(14, 14))
+        del_btn.setFixedSize(40, 40)
+        del_btn.setIconSize(QSize(18, 18))
         self._set_icon_button_accessibility(del_btn, t("gcal_settings.col_delete", "삭제"))
         del_btn.setStyleSheet(self._calendar_row_action_button_style("danger"))
 
@@ -1716,6 +1727,7 @@ class GCalSettingsDialog(QDialog):
 
         reset_btn = QPushButton(t("gcal_settings.reset", "연결 초기화"))
         self._apply_section_button_style(reset_btn, "danger")
+        reset_btn.setAutoDefault(False)
         reset_btn.clicked.connect(self.reset_auth)
         layout.addWidget(reset_btn)
         layout.addStretch(1)
@@ -1724,17 +1736,20 @@ class GCalSettingsDialog(QDialog):
         auth_btn.setIcon(_ic(ICON.AUTH))
         self._apply_section_button_style(auth_btn, "accent")
         auth_btn.setMinimumWidth(100)
+        auth_btn.setAutoDefault(False)
         auth_btn.clicked.connect(self.run_auth)
 
         save_btn = QPushButton(t("gcal_settings.save", "설정 저장"))
         self._apply_section_button_style(save_btn, "success")
         # save_btn.setFixedHeight(28) # Removed for standardization
         save_btn.setMinimumWidth(80)
+        save_btn.setDefault(True)
         save_btn.clicked.connect(self.save_settings)
 
         close_btn = QPushButton(t("common.close", "닫기"))
         self._apply_section_button_style(close_btn, "secondary")
         close_btn.setMinimumWidth(64)
+        close_btn.setAutoDefault(False)
         close_btn.clicked.connect(self.reject)
 
         layout.addWidget(auth_btn)

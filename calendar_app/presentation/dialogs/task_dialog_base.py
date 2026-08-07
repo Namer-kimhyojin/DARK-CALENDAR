@@ -100,7 +100,9 @@ class BaseTaskDialog(QDialog):
 
         if icon:
             icon_lbl = QLabel()
-            icon_lbl.setPixmap(_ic(icon).pixmap(14, 14))
+            icon_lbl.setPixmap(
+                _ic(icon, color=self._ui_tokens().get("accent", "#4da6ff")).pixmap(14, 14)
+            )
             header_row.addWidget(icon_lbl)
         lbl = QLabel(title)
         lbl.setObjectName("TaskDialogSectionLabel")
@@ -199,13 +201,17 @@ class BaseTaskDialog(QDialog):
         ops_inner.addLayout(color_column)
         return ops_group
 
-    def _make_quick_btn(self, label, accent=False):
-        btn = QPushButton(label)
+    def _make_quick_btn(self, label, accent=False, icon_key=None):
+        btn = QPushButton(_se(label))
         btn.setObjectName("ghost_btn")
         btn.setMinimumHeight(34)
         btn.setMaximumHeight(34)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setProperty("accentVariant", bool(accent))
+        btn.setProperty("quickActionButton", True)
+        btn.setAccessibleName(_se(label))
+        if icon_key:
+            btn.setIcon(_ic(icon_key, color=self._ui_tokens().get("accent", "#4da6ff")))
         return btn
 
     def _build_quick_action_row(self, actions):

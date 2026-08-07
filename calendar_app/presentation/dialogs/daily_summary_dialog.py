@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Daily summary notification dialog — shows today's schedule + due routine tasks."""
 
 import logging
@@ -16,7 +17,10 @@ from PyQt6.QtWidgets import (
 from calendar_app.infrastructure.db import db_repository_unified as repo
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
-from calendar_app.presentation.dialogs.dialog_styles import apply_common_dialog_style
+from calendar_app.presentation.dialogs.dialog_styles import (
+    apply_common_dialog_style,
+    get_dialog_theme_tokens,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +43,10 @@ class DailySummaryDialog(QDialog):
         self._build_ui()
 
     def _build_ui(self):
+        tokens = get_dialog_theme_tokens()
+        text_muted = tokens.get("text_muted", "#9aa0ad")
+        border_soft = tokens.get("border_soft", "rgba(255,255,255,0.12)")
+        item_bg = tokens.get("surface_item", "#111116")
         root = QVBoxLayout(self)
         root.setContentsMargins(14, 10, 14, 10)
         root.setSpacing(10)
@@ -65,7 +73,7 @@ class DailySummaryDialog(QDialog):
                 root.addWidget(lbl)
         else:
             empty = QLabel(t("dialog.daily.no_schedule", "  오늘 예정된 일정이 없습니다."))
-            empty.setStyleSheet("padding-left:8px; font-size:12px; color:#888;")
+            empty.setStyleSheet(f"padding-left:8px; font-size:12px; color:{text_muted};")
             root.addWidget(empty)
 
         sep1 = QFrame()
@@ -92,15 +100,16 @@ class DailySummaryDialog(QDialog):
                 if tags_text:
                     tag_lbl = QLabel(tags_text)
                     tag_lbl.setStyleSheet(
-                        "font-size:11px; color:#888; padding:1px 5px;"
-                        " border:1px solid #444; border-radius:4px;"
+                        f"font-size:11px; color:{text_muted}; padding:1px 5px;"
+                        f" background:{item_bg}; border:1px solid {border_soft};"
+                        " border-radius:4px;"
                     )
                     tag_lbl.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
                     row.addWidget(tag_lbl)
                 root.addLayout(row)
         else:
             empty2 = QLabel(t("dialog.daily.no_routines", "  오늘 마감인 업무가 없습니다."))
-            empty2.setStyleSheet("padding-left:8px; font-size:12px; color:#888;")
+            empty2.setStyleSheet(f"padding-left:8px; font-size:12px; color:{text_muted};")
             root.addWidget(empty2)
 
         root.addStretch()

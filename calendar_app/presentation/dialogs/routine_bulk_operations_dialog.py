@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Bulk operations dialog for routine tasks."""
 
 from PyQt6.QtCore import QDate, Qt, pyqtSignal
@@ -5,7 +6,6 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDateEdit,
     QDialog,
     QFrame,
     QGroupBox,
@@ -26,6 +26,7 @@ from calendar_app.infrastructure.db import checklist_repo, common_repo
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import apply_common_dialog_style
+from calendar_app.presentation.dialogs.time_picker_widget import DatePickerWidget
 
 
 class RoutineBulkOperationsDialog(QDialog):
@@ -286,11 +287,7 @@ class RoutineBulkOperationsDialog(QDialog):
 
         date_layout.addWidget(QLabel(t("dialog.routine_bulk.new_target_date")))
 
-        self.copy_target_date = QDateEdit()
-
-        self.copy_target_date.setCalendarPopup(True)
-
-        self.copy_target_date.setDate(QDate.currentDate())
+        self.copy_target_date = DatePickerWidget(QDate.currentDate())
 
         date_layout.addWidget(self.copy_target_date)
 

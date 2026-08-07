@@ -1,14 +1,23 @@
+# -*- coding: utf-8 -*-
+
 import re
 
-from PyQt6.QtCore import QSettings, QSize, Qt, QTimer
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import QEvent, QObject, QSettings, QSize, Qt, QTimer
+from PyQt6.QtGui import QColor, QGuiApplication
 from PyQt6.QtWidgets import (
+    QAbstractButton,
     QCalendarWidget,
+    QColorDialog,
     QComboBox,
     QDateEdit,
     QDialog,
+    QFileDialog,
+    QFontDialog,
+    QFormLayout,
     QHeaderView,
+    QInputDialog,
     QLabel,
+    QMessageBox,
     QTableView,
 )
 
@@ -664,6 +673,8 @@ def get_dialog_metric_tokens(
 
 def _build_dialog_metric_override_styles(metrics: dict) -> str:
     m = {**DIALOG_METRIC_DEFAULTS, **(metrics or {})}
+    footer_button_height = max(34, int(m["button_height"]))
+    footer_button_min_width = max(76, int(m["button_min_width"]))
     return f"""
 /* DC_DIALOG_METRIC_OVERRIDES */
 QDialog {{
@@ -698,6 +709,11 @@ QPushButton {{
     min-width: {m["button_min_width"]}px;
     padding: {m["button_padding_y"]}px {m["button_padding_x"]}px;
     border-radius: {m["button_radius"]}px;
+}}
+QPushButton[dialogFooter="true"] {{
+    min-height: {footer_button_height}px;
+    max-height: {footer_button_height}px;
+    min-width: {footer_button_min_width}px;
 }}
 QListWidget, QTableView, QTableWidget {{
     border-radius: {m["list_radius"]}px;
@@ -796,6 +812,8 @@ def _build_dialog_token_override_styles(tokens: dict) -> str:
     surface_item = tokens.get("surface_item", "#111116")
     surface_hover = tokens.get("surface_hover", "#18181f")
     surface_top = tokens.get("surface_top", "#13131a")
+    input_bg = tokens.get("input_bg", surface_item)
+    base_hex = tokens.get("base_hex", surface_bg)
 
     tab_strip_bg = tokens.get("tab_strip_bg", surface_top)
     tab_idle_bg = tokens.get("tab_idle_bg", surface_alt)
@@ -928,7 +946,7 @@ QLabel {{
     color: {text_muted};
 }}
 QLineEdit, QComboBox, QDateEdit, QTimeEdit, QSpinBox, QTextEdit, QPlainTextEdit {{
-    background-color: {surface_item};
+    background-color: {input_bg};
     color: {text_primary};
     border: 1px solid {border_soft};
 }}
@@ -937,7 +955,8 @@ QLineEdit:hover, QComboBox:hover, QDateEdit:hover, QTimeEdit:hover, QSpinBox:hov
 }}
 QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QTimeEdit:focus,
 QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus {{
-    border: 1px solid {accent_hex};
+    border: 2px solid {accent_hex};
+    background-color: {input_bg};
 }}
 QLineEdit::placeholder {{
     color: {placeholder};
@@ -961,6 +980,9 @@ QPushButton:disabled {{
     background-color: {button_disabled_bg};
     color: {button_disabled_text};
     border-color: {button_disabled_border};
+}}
+QPushButton:focus, QToolButton:focus {{
+    border: 2px solid {accent_hex};
 }}
 QPushButton[default="true"], QPushButton:default,
 QPushButton#primary_btn {{
@@ -1046,6 +1068,39 @@ QTableWidget::item:selected {{
 QAbstractItemView {{
     selection-background-color: {list_selected_bg};
     selection-color: {list_selected_text};
+}}
+QPushButton[default="true"]:focus, QPushButton:default:focus,
+QPushButton#primary_btn:focus {{
+    border: 2px solid {tokens.get("accent_text", text_primary)};
+}}
+QComboBox QAbstractItemView,
+QCalendarWidget QAbstractItemView,
+QCalendarWidget QTableView {{
+    background-color: {input_bg};
+    color: {text_primary};
+    border-color: {border};
+}}
+QCalendarWidget QWidget {{
+    alternate-background-color: {input_bg};
+}}
+QCalendarWidget QWidget#qt_calendar_navigationbar {{
+    background-color: {base_hex};
+    border-bottom: 1px solid {border_soft};
+}}
+QCalendarWidget QToolButton {{
+    background-color: transparent;
+    color: {text_primary};
+    border-color: transparent;
+}}
+QCalendarWidget QToolButton:hover {{
+    background-color: {surface_hover};
+    color: {text_primary};
+}}
+QCalendarWidget QSpinBox#qt_calendar_yearedit,
+QCalendarWidget QMenu#qt_calendar_monthmenu {{
+    background-color: {input_bg};
+    color: {text_primary};
+    border: 1px solid {border};
 }}
 QHeaderView::section {{
     background-color: {table_header_bg};
@@ -1264,42 +1319,117 @@ _NO_WRAP_LABEL_ROLES = {"dialogTitle", "dialogSubtitle", "field_error", "field_h
 _NO_WRAP_LABEL_NAMES = {"dialog_title", "dialogTitle", "dialog_subtitle", "dialogSubtitle"}
 
 
-def _fit_dialog_text(dialog: QDialog):
-    """Prevent clipped localized text: wrap body labels, widen combos to content.
+def _clean_accessible_text(value: str) -> str:
+    plain = re.sub(r"<[^>]+>", "", str(value or ""))
+    return plain.replace("&", "").strip().rstrip(":：").strip()
 
-    Runs deferred (after the dialog's own _build_ui has populated children) so it
-    can walk the real widget tree. Idempotent — safe to call more than once.
-    """
+
+def _available_dialog_bounds(dialog: QDialog) -> tuple[int, int] | None:
+    screen = dialog.screen() or QGuiApplication.primaryScreen()
+    if screen is None:
+        return None
+    available = screen.availableGeometry()
+    return max(360, available.width() - 32), max(280, available.height() - 56)
+
+
+def _fit_dialog_text(dialog: QDialog):
+    """Fit localized content, accessibility metadata, and size to the active screen."""
     try:
         if dialog is None or not dialog.isWidgetType():
             return
+
+        if not dialog.accessibleName() and dialog.windowTitle():
+            dialog.setAccessibleName(dialog.windowTitle())
+
         for lbl in dialog.findChildren(QLabel):
             role = lbl.property("role")
             if role in _NO_WRAP_LABEL_ROLES or lbl.objectName() in _NO_WRAP_LABEL_NAMES:
                 continue
-            # Icon-only labels carry a pixmap — wrapping would distort them.
             pm = lbl.pixmap()
             if pm is not None and not pm.isNull():
                 continue
             if lbl.wordWrap():
                 continue
             text = lbl.text() or ""
-            # Rich text / links manage their own layout; leave untouched.
             if "<" in text and ">" in text:
                 continue
             lbl.setWordWrap(True)
-        # Combos should size to their longest entry so localized items aren't elided.
+
+        for form in dialog.findChildren(QFormLayout):
+            for row in range(form.rowCount()):
+                label_item = form.itemAt(row, QFormLayout.ItemRole.LabelRole)
+                field_item = form.itemAt(row, QFormLayout.ItemRole.FieldRole)
+                label = label_item.widget() if label_item is not None else None
+                field = field_item.widget() if field_item is not None else None
+                if not isinstance(label, QLabel) or field is None:
+                    continue
+                label.setBuddy(field)
+                label_text = _clean_accessible_text(label.text())
+                if label_text and not field.accessibleName():
+                    field.setAccessibleName(label_text)
+
+        for button in dialog.findChildren(QAbstractButton):
+            text = _clean_accessible_text(button.text())
+            tooltip = str(button.toolTip() or "").strip()
+            label = text or tooltip
+            if label and not button.accessibleName():
+                button.setAccessibleName(label)
+            if tooltip and not button.accessibleDescription():
+                button.setAccessibleDescription(tooltip)
+
         for combo in dialog.findChildren(QComboBox):
-            combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-        # Let the dialog grow (not shrink) so newly wrapped labels stay visible.
+            combo.setSizeAdjustPolicy(
+                QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+            )
+            if combo.minimumContentsLength() <= 0:
+                combo.setMinimumContentsLength(18)
+            if not combo.toolTip() and not combo.property("_dc_tooltip_bound"):
+                combo.setProperty("_dc_tooltip_bound", True)
+                combo.setToolTip(combo.currentText())
+                combo.currentTextChanged.connect(combo.setToolTip)
+
         hint = dialog.sizeHint()
-        cur = dialog.size()
-        new_w = max(cur.width(), hint.width())
-        new_h = max(cur.height(), hint.height())
-        if new_w > cur.width() or new_h > cur.height():
-            dialog.resize(new_w, new_h)
+        current = dialog.size()
+        preferred = dialog.property("_dc_preferred_size")
+        if isinstance(preferred, QSize) and preferred.isValid():
+            target_width = max(dialog.minimumWidth(), preferred.width())
+            target_height = max(dialog.minimumHeight(), preferred.height())
+        else:
+            target_width = max(current.width(), hint.width())
+            target_height = max(current.height(), hint.height())
+        bounds = _available_dialog_bounds(dialog)
+        if bounds is not None:
+            max_width, max_height = bounds
+            existing_max_width = dialog.maximumWidth()
+            existing_max_height = dialog.maximumHeight()
+            if existing_max_width < 16777215:
+                max_width = min(max_width, existing_max_width)
+            if existing_max_height < 16777215:
+                max_height = min(max_height, existing_max_height)
+            if dialog.minimumWidth() > max_width:
+                dialog.setMinimumWidth(max_width)
+            if dialog.minimumHeight() > max_height:
+                dialog.setMinimumHeight(max_height)
+            dialog.setMaximumSize(max_width, max_height)
+            target_width = min(target_width, max_width)
+            target_height = min(target_height, max_height)
+        has_preferred_size = isinstance(preferred, QSize) and preferred.isValid()
+        if has_preferred_size and bounds is not None:
+            dialog.setMaximumSize(target_width, target_height)
+        dialog.resize(target_width, target_height)
+        if has_preferred_size and bounds is not None:
+
+            def _release_initial_size_cap():
+                try:
+                    if dialog is not None and dialog.isWidgetType():
+                        dialog.setMaximumSize(max_width, max_height)
+                        dialog.resize(target_width, target_height)
+                except RuntimeError:
+                    return
+
+            QTimer.singleShot(0, _release_initial_size_cap)
     except Exception:
-        # Text-fit is best-effort cosmetic polish; never break dialog creation.
+        # Accessibility/layout fitting is best-effort cosmetic polish.
         pass
 
 
@@ -1347,15 +1477,74 @@ def apply_common_dialog_style(
         parts.append(str(extra_stylesheet))
 
     dialog.setStyleSheet("\n".join(parts))
+    dialog.setProperty("_dc_common_style_applied", True)
+    if not dialog.accessibleName() and dialog.windowTitle():
+        dialog.setAccessibleName(dialog.windowTitle())
     if minimum_width is not None:
         dialog.setMinimumWidth(minimum_width)
     if size is not None:
         w, h = size
+        dialog.setProperty("_dc_preferred_size", QSize(w, h))
         dialog.resize(w, h)
 
     # Global truncation guard: wrap long localized labels / widen combos once the
     # dialog's own _build_ui has populated its children (deferred to event loop).
     schedule_dialog_text_fit(dialog)
+
+
+class _CommonDialogStyleFilter(QObject):
+    """Theme standard Qt popups and otherwise-unskinned modal dialogs on show."""
+
+    _standard_dialog_types = (
+        QMessageBox,
+        QInputDialog,
+        QColorDialog,
+        QFontDialog,
+        QFileDialog,
+    )
+
+    def eventFilter(self, watched, event):
+        if event.type() != QEvent.Type.Show or not isinstance(watched, QDialog):
+            return False
+        if watched.property("_dc_common_style_applied"):
+            return False
+        if watched.property("dcSkipCommonDialogStyle"):
+            return False
+
+        is_standard = isinstance(watched, self._standard_dialog_types)
+        has_custom_style = bool((watched.styleSheet() or "").strip())
+        is_translucent = watched.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        if not is_standard and (has_custom_style or is_translucent):
+            return False
+
+        watched.setProperty("_dc_common_style_applied", True)
+        standard_control_style = None
+        if is_standard:
+            standard_control_style = (
+                "QMessageBox QPushButton, QInputDialog QPushButton, "
+                "QColorDialog QPushButton, QFontDialog QPushButton, QFileDialog QPushButton {"
+                "min-height: 36px; max-height: 36px; min-width: 88px; padding: 4px 16px;"
+                "}"
+            )
+        apply_common_dialog_style(
+            watched,
+            keep_existing_stylesheet=True,
+            extra_stylesheet=standard_control_style,
+        )
+        if not watched.accessibleName() and watched.windowTitle():
+            watched.setAccessibleName(watched.windowTitle())
+        return False
+
+
+def install_common_dialog_style_filter(app):
+    """Install one application-level safety net for message/input/file popups."""
+    existing = getattr(app, "_dc_common_dialog_style_filter", None)
+    if existing is not None:
+        return existing
+    style_filter = _CommonDialogStyleFilter(app)
+    app.installEventFilter(style_filter)
+    app._dc_common_dialog_style_filter = style_filter
+    return style_filter
 
 
 def build_dialog_footer(
@@ -1365,13 +1554,7 @@ def build_dialog_footer(
     cancel_object_name: str = "ghost_btn",
     extra_left_widget=None,
 ):
-    """공통 다이얼로그 푸터 빌더.
-
-    Returns
-    -------
-    tuple[QHBoxLayout, QPushButton, QPushButton | None]
-        (footer_layout, ok_btn, cancel_btn)  — cancel_btn은 cancel_label=None이면 None.
-    """
+    """Build a consistent footer with accessible labels and default-button semantics."""
     from PyQt6.QtWidgets import QHBoxLayout, QPushButton
 
     layout = QHBoxLayout()
@@ -1387,10 +1570,18 @@ def build_dialog_footer(
     if cancel_label is not None:
         cancel_btn = QPushButton(cancel_label)
         cancel_btn.setObjectName(cancel_object_name)
+        cancel_btn.setProperty("dialogFooter", True)
+        cancel_btn.setAccessibleName(cancel_label)
+        cancel_btn.setAutoDefault(False)
         layout.addWidget(cancel_btn)
 
     ok_btn = QPushButton(ok_label)
     ok_btn.setObjectName(ok_object_name)
+    ok_btn.setProperty("dialogFooter", True)
+    ok_btn.setAccessibleName(ok_label)
+    if ok_object_name != "danger_btn":
+        ok_btn.setDefault(True)
+        ok_btn.setAutoDefault(True)
     layout.addWidget(ok_btn)
 
     return layout, ok_btn, cancel_btn

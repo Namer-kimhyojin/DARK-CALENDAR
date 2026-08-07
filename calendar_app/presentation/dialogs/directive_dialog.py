@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import logging
 import sqlite3
 
@@ -6,7 +8,6 @@ from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QComboBox,
     QCompleter,
-    QDateEdit,
     QDialog,
     QFrame,
     QGroupBox,
@@ -17,7 +18,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QTextEdit,
-    QTimeEdit,
     QVBoxLayout,
 )
 
@@ -39,6 +39,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
     polish_calendar_popup,
 )
+from calendar_app.presentation.dialogs.time_picker_widget import DatePickerWidget, TimePickerWidget
 
 logger = logging.getLogger(__name__)
 
@@ -126,15 +127,12 @@ class DirectiveDialog(QDialog):
 
         dt_input_row = QHBoxLayout()
         dt_input_row.setSpacing(6)
-        self.deadline_date = QDateEdit(QDate.currentDate())
-        self.deadline_date.setCalendarPopup(True)
-        self.deadline_date.setDisplayFormat("yyyy-MM-dd")
+        self.deadline_date = DatePickerWidget(QDate.currentDate())
         self.deadline_date.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.deadline_date.setMinimumHeight(30)
         polish_calendar_popup(self.deadline_date)
 
-        self.deadline_time = QTimeEdit(QTime(12, 0))
-        self.deadline_time.setDisplayFormat("HH:mm")
+        self.deadline_time = TimePickerWidget(QTime(12, 0))
         self.deadline_time.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.deadline_time.setMinimumHeight(30)
 

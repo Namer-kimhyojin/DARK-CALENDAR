@@ -299,6 +299,12 @@ class ThemeActionsMixin:
                 self.dock_manager,
                 build_dock_manager_style(self.settings, theme),
             )
+        if getattr(self, "_welcome_banner", None) is not None:
+            from calendar_app.presentation.main_window.first_run_banner import (
+                apply_first_run_banner_theme,
+            )
+
+            apply_first_run_banner_theme(self)
 
         self._apply_slider_opacity_style()
 

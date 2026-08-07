@@ -88,6 +88,8 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.sync_action_btn.setToolTip(t("topbar.sync_now"))
     self.sync_action_btn.setAccessibleName(t("topbar.sync_now"))
     self.sync_action_btn.setAccessibleDescription(t("topbar.sync_checking"))
+    self.sync_action_btn.setMinimumSize(32, 32)
+    self.sync_action_btn.setMaximumSize(36, 36)
     self.sync_action_btn.setStyleSheet(
         f"""
         QToolButton {{
@@ -168,8 +170,8 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.lock_btn.setAccessibleDescription(
         t("topbar.lock_on_hint") if is_locked else t("topbar.lock_off_hint")
     )
-    self.lock_btn.setMinimumSize(26, 26)
-    self.lock_btn.setMaximumSize(32, 32)
+    self.lock_btn.setMinimumSize(32, 32)
+    self.lock_btn.setMaximumSize(36, 36)
     self.lock_btn.setStyleSheet(_btn_style)
     self.lock_btn.clicked.connect(self.toggle_lock_mode)
     top_bar.addWidget(self.lock_btn, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -196,8 +198,8 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.magnet_btn.setAccessibleDescription(
         t("topbar.magnet_on_hint") if is_magnet else t("topbar.magnet_off_hint")
     )
-    self.magnet_btn.setMinimumSize(26, 26)
-    self.magnet_btn.setMaximumSize(32, 32)
+    self.magnet_btn.setMinimumSize(32, 32)
+    self.magnet_btn.setMaximumSize(36, 36)
     self.magnet_btn.setStyleSheet(_btn_style)
     self.magnet_btn.clicked.connect(self.toggle_magnet_mode)
     top_bar.addWidget(self.magnet_btn, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -213,6 +215,10 @@ def setup_top_bar(self, _size, _theme, _ta):
         _ic(ICON.SEARCH, color=_tb_text), QLineEdit.ActionPosition.LeadingPosition
     )
     self.search_edit.setAccessibleName(t("topbar.search_placeholder", "Search schedule..."))
+    self.search_edit.setAccessibleDescription(
+        t("topbar.search_accessible_hint", "일정, 루틴, 지시사항을 검색합니다.")
+    )
+    self.search_edit.setMinimumHeight(32)
     self.search_edit.setMinimumWidth(140)
     self.search_edit.setMaximumWidth(260)
     self.search_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -240,8 +246,8 @@ def setup_top_bar(self, _size, _theme, _ta):
         t("topbar.widget_mode_hint", "위젯 전용 모드 열기")
     )
     self.widget_mode_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    self.widget_mode_btn.setMinimumSize(26, 26)
-    self.widget_mode_btn.setMaximumSize(32, 32)
+    self.widget_mode_btn.setMinimumSize(32, 32)
+    self.widget_mode_btn.setMaximumSize(36, 36)
     self.widget_mode_btn.setStyleSheet(
         f"""
         QToolButton {{

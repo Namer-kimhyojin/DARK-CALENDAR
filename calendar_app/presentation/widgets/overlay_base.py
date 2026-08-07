@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Shared infrastructure for all overlay widgets.
 
 Contains:
@@ -55,6 +56,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
+from calendar_app.presentation.dialogs.time_picker_widget import DatePickerWidget, TimePickerWidget
 from calendar_app.presentation.widgets import overlay_preset_logic as _preset_logic
 from calendar_app.presentation.widgets import overlay_preset_service as _preset_service
 from calendar_app.presentation.widgets import overlay_preset_store as _preset_store
@@ -2418,8 +2420,7 @@ class _BaseOverlayWidget(QWidget):
             w.setChecked(bool(val))
             return w
         elif ftype == "date":
-            w = QDateEdit()
-            w.setCalendarPopup(True)
+            w = DatePickerWidget()
             # Use a slightly larger font for better visibility
             font = w.font()
             font.setPointSize(10)
@@ -2428,7 +2429,7 @@ class _BaseOverlayWidget(QWidget):
             w.setDate(dv if dv.isValid() else QDate.currentDate())
             return w
         elif ftype == "time":
-            w = QTimeEdit()
+            w = TimePickerWidget()
             font = w.font()
             font.setPointSize(10)
             w.setFont(font)

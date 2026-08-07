@@ -235,6 +235,11 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             background: transparent;
             padding: 10px 2px;
         }}
+        QFrame#unified_empty_state {{
+            background: {tk.get("surface_alt", tk["section_bg"])};
+            border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", tk["panel_border"]))};
+            border-radius: 16px;
+        }}
         QFrame#agenda_item_schedule,
         QFrame#agenda_item_task {{
             background: qlineargradient(
@@ -831,10 +836,59 @@ class UnifiedWidgetWindow(QWidget):
                 if self._active_filter == "work"
                 else t("widget_mode.empty_panel", "No items for this date.")
             )
-            empty = QLabel(empty_text, self.scroll_content)
+            empty_state = QFrame(self.scroll_content)
+            empty_state.setObjectName("unified_empty_state")
+            empty_layout = QVBoxLayout(empty_state)
+            empty_layout.setContentsMargins(14, 12, 14, 12)
+            empty_layout.setSpacing(8)
+
+            empty = QLabel(empty_text, empty_state)
             empty.setWordWrap(True)
             empty.setObjectName("unified_empty")
-            self.scroll_layout.insertWidget(0, empty)
+            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            empty.setAccessibleName(empty_text)
+            empty_layout.addWidget(empty)
+
+            actions = QHBoxLayout()
+            actions.setSpacing(7)
+            actions.addStretch(1)
+
+            add_action = QToolButton(empty_state)
+            add_action.setObjectName("unified_primary_action")
+            if self._active_filter == "work":
+                action_label = t("panel.empty.add_routine", "루틴 만들기")
+                add_action.clicked.connect(
+                    lambda _checked=False: self.controller._open_task_dialog(
+                        "", default_task_type="routine"
+                    )
+                )
+            else:
+                action_label = t("panel.empty.add_schedule", "일정 만들기")
+                add_action.clicked.connect(
+                    lambda _checked=False: self.controller.open_quick_add_dialog()
+                )
+            add_action.setText(action_label)
+            add_action.setToolTip(action_label)
+            add_action.setAccessibleName(action_label)
+            add_action.setCursor(Qt.CursorShape.PointingHandCursor)
+            add_action.setMinimumHeight(32)
+            actions.addWidget(add_action)
+
+            if self._active_filter != "all":
+                show_all = QToolButton(empty_state)
+                show_all.setObjectName("unified_action_btn")
+                show_all_label = t("widget_mode.show_all", "전체 보기")
+                show_all.setText(show_all_label)
+                show_all.setToolTip(show_all_label)
+                show_all.setAccessibleName(show_all_label)
+                show_all.setCursor(Qt.CursorShape.PointingHandCursor)
+                show_all.setMinimumHeight(32)
+                show_all.clicked.connect(lambda _checked=False: self.set_filter("all"))
+                actions.addWidget(show_all)
+
+            actions.addStretch(1)
+            empty_layout.addLayout(actions)
+            self.scroll_layout.insertWidget(0, empty_state)
             return
 
         for insert_at, item in enumerate(filtered_items):

@@ -55,6 +55,7 @@ from calendar_app.presentation.dialogs.dialog_editor_styles import (
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
+    build_dialog_footer,
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
@@ -263,6 +264,16 @@ def _checklist_main_style_bundle(
     return {**base_bundle, **custom_bundle}
 
 
+def _checklist_footer_button_style(stylesheet: str, metrics: dict) -> str:
+    target_height = max(44, int(metrics.get("button_height", 34)))
+    return re.sub(
+        r"min-height: \d+px; max-height: \d+px;",
+        f"min-height: {target_height}px; max-height: {target_height}px;",
+        stylesheet,
+        count=1,
+    )
+
+
 def _checklist_subdialog_style_bundle(
     tokens: dict | None = None, metrics: dict | None = None
 ) -> dict[str, str]:
@@ -270,8 +281,12 @@ def _checklist_subdialog_style_bundle(
     return {
         "heading": build_editor_text_style(tokens, tone="primary", font_px=18, weight=700),
         "caption": build_editor_text_style(tokens, tone="muted", font_px=12),
-        "button_primary": build_editor_quick_button_style(tokens, metrics, tone="accent"),
-        "button_secondary": build_editor_quick_button_style(tokens, metrics, tone="secondary"),
+        "button_primary": _checklist_footer_button_style(
+            build_editor_quick_button_style(tokens, metrics, tone="accent"), metrics
+        ),
+        "button_secondary": _checklist_footer_button_style(
+            build_editor_quick_button_style(tokens, metrics, tone="secondary"), metrics
+        ),
     }
 
 
@@ -1198,15 +1213,20 @@ class ChecklistItemEditDialog(QDialog):
             t("checklist_mgr.header_item_edit") if item_id else t("checklist_mgr.btn_add_item"),
         )
 
-        self.setMinimumWidth(520)
-
         self.setObjectName("TaskEditorDialog")
         self._ui_tokens = getattr(parent, "_ui_tokens", get_dialog_theme_tokens())
         self._dialog_metrics = get_dialog_metric_tokens(apply_overrides=True)
         self._style_bundle = _checklist_subdialog_style_bundle(
             self._ui_tokens, self._dialog_metrics
         )
-        self.setStyleSheet(_checklist_editor_stylesheet(self._ui_tokens, self._dialog_metrics))
+        apply_common_dialog_style(
+            self,
+            minimum_width=520,
+            size=(560, 520),
+            extra_stylesheet=_checklist_editor_stylesheet(self._ui_tokens, self._dialog_metrics),
+        )
+        self.setAccessibleName(self.windowTitle())
+        self.setSizeGripEnabled(True)
         self.init_ui()
 
         if item_id:
@@ -1235,6 +1255,8 @@ class ChecklistItemEditDialog(QDialog):
         self.text_edit.setObjectName("TaskTitleEdit")
 
         self.text_edit.setPlaceholderText(t("checklist_mgr.placeholder_item_name"))
+        field_label.setBuddy(self.text_edit)
+        self.text_edit.setAccessibleName(field_label.text())
 
         layout.addWidget(self.text_edit)
 
@@ -1247,6 +1269,8 @@ class ChecklistItemEditDialog(QDialog):
         self.desc_edit.setFixedHeight(62)
 
         self.desc_edit.setPlaceholderText(t("checklist_mgr.placeholder_item_desc"))
+        desc_label.setBuddy(self.desc_edit)
+        self.desc_edit.setAccessibleName(desc_label.text())
 
         layout.addWidget(self.desc_edit)
 
@@ -1259,6 +1283,8 @@ class ChecklistItemEditDialog(QDialog):
         self.guide_edit.setFixedHeight(78)
 
         self.guide_edit.setPlaceholderText(t("checklist_mgr.placeholder_item_guide"))
+        guide_label.setBuddy(self.guide_edit)
+        self.guide_edit.setAccessibleName(guide_label.text())
 
         layout.addWidget(self.guide_edit)
 
@@ -1271,27 +1297,16 @@ class ChecklistItemEditDialog(QDialog):
         _sep.setFrameShape(QFrame.Shape.HLine)
         layout.addWidget(_sep)
 
-        buttons = QHBoxLayout()
-
-        buttons.addStretch()
-
-        save_btn = QPushButton(t("common.save"))
-
-        save_btn.setObjectName("primary_btn")
+        buttons, save_btn, cancel_btn = build_dialog_footer(
+            ok_label=t("common.save"),
+            cancel_label=t("common.cancel"),
+        )
         save_btn.setStyleSheet(self._style_bundle["button_primary"])
-
+        save_btn.setFixedHeight(max(44, int(self._dialog_metrics["button_height"])))
         save_btn.clicked.connect(self._save)
-
-        buttons.addWidget(save_btn)
-
-        cancel_btn = QPushButton(t("common.cancel"))
-
-        cancel_btn.setObjectName("ghost_btn")
         cancel_btn.setStyleSheet(self._style_bundle["button_secondary"])
-
+        cancel_btn.setFixedHeight(max(44, int(self._dialog_metrics["button_height"])))
         cancel_btn.clicked.connect(self.reject)
-
-        buttons.addWidget(cancel_btn)
 
         layout.addLayout(buttons)
 
@@ -1352,15 +1367,20 @@ class BulkOperationsDialog(QDialog):
 
         apply_dialog_title(self, t("checklist_mgr.btn_bulk"))
 
-        self.setMinimumSize(460, 320)
-
         self.setObjectName("TaskEditorDialog")
         self._ui_tokens = getattr(parent, "_ui_tokens", get_dialog_theme_tokens())
         self._dialog_metrics = get_dialog_metric_tokens(apply_overrides=True)
         self._style_bundle = _checklist_subdialog_style_bundle(
             self._ui_tokens, self._dialog_metrics
         )
-        self.setStyleSheet(_checklist_editor_stylesheet(self._ui_tokens, self._dialog_metrics))
+        apply_common_dialog_style(
+            self,
+            minimum_width=460,
+            size=(520, 400),
+            extra_stylesheet=_checklist_editor_stylesheet(self._ui_tokens, self._dialog_metrics),
+        )
+        self.setAccessibleName(self.windowTitle())
+        self.setSizeGripEnabled(True)
         self.init_ui()
 
     def init_ui(self):
@@ -1401,6 +1421,7 @@ class BulkOperationsDialog(QDialog):
         self.prefix_edit = QLineEdit()
 
         self.prefix_edit.setPlaceholderText(t("checklist_mgr.placeholder_prefix"))
+        self.prefix_edit.setAccessibleName(op_prefix.text())
 
         self.prefix_edit.setEnabled(False)
 
@@ -1414,27 +1435,16 @@ class BulkOperationsDialog(QDialog):
         _sep.setFrameShape(QFrame.Shape.HLine)
         layout.addWidget(_sep)
 
-        buttons = QHBoxLayout()
-
-        buttons.addStretch()
-
-        apply_btn = QPushButton(t("checklist_mgr.btn_apply_bulk"))
-
-        apply_btn.setObjectName("primary_btn")
+        buttons, apply_btn, cancel_btn = build_dialog_footer(
+            ok_label=t("checklist_mgr.btn_apply_bulk"),
+            cancel_label=t("common.cancel"),
+        )
         apply_btn.setStyleSheet(self._style_bundle["button_primary"])
-
+        apply_btn.setFixedHeight(max(44, int(self._dialog_metrics["button_height"])))
         apply_btn.clicked.connect(self._apply)
-
-        buttons.addWidget(apply_btn)
-
-        cancel_btn = QPushButton(t("common.cancel"))
-
-        cancel_btn.setObjectName("ghost_btn")
         cancel_btn.setStyleSheet(self._style_bundle["button_secondary"])
-
+        cancel_btn.setFixedHeight(max(44, int(self._dialog_metrics["button_height"])))
         cancel_btn.clicked.connect(self.reject)
-
-        buttons.addWidget(cancel_btn)
 
         layout.addLayout(buttons)
 

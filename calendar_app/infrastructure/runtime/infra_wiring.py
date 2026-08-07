@@ -151,18 +151,22 @@ def init_tray_icon(app):
     _create_action(app, t("tray.show_hide"), app.toggle_overlay, "show_hide", tray_menu).setIcon(
         _ic(ICON.HIDE)
     )
-    _create_action(app, t("tray.topbar"), app.toggle_top_bar, "topbar", tray_menu).setIcon(
+    view_menu = QMenu(_se(t("tray.view_options", "화면 및 창")), tray_menu)
+    view_menu.setIcon(_ic(ICON.SCREEN_MGMT))
+    view_menu.setStyleSheet(style)
+    _create_action(app, t("tray.topbar"), app.toggle_top_bar, "topbar", view_menu).setIcon(
         _ic(ICON.SCREEN_MGMT)
     )
     _create_action(
-        app, t("tray.calendar_topbar"), app.toggle_calendar_toolbar, "cal_toolbar", tray_menu
+        app, t("tray.calendar_topbar"), app.toggle_calendar_toolbar, "cal_toolbar", view_menu
     ).setIcon(_ic(ICON.TOOLBAR))
     _create_action(
-        app, t("tray.fullscreen"), app.toggle_fullscreen, "fullscreen", tray_menu
+        app, t("tray.fullscreen"), app.toggle_fullscreen, "fullscreen", view_menu
     ).setIcon(_ic(ICON.FULLSCREEN))
     _create_action(
-        app, t("tray.restore"), app.restore_window_to_safe_area, "restore_pos", tray_menu
+        app, t("tray.restore"), app.restore_window_to_safe_area, "restore_pos", view_menu
     ).setIcon(_ic(ICON.RESET_POS))
+    tray_menu.addMenu(view_menu)
 
     tray_menu.addSeparator()
 
@@ -237,8 +241,11 @@ def init_tray_icon(app):
     tray_menu.addSeparator()
 
     # --- 4. Special Modes ---
+    focus_menu = QMenu(_se(t("tray.focus_tools", "집중 및 잠금")), tray_menu)
+    focus_menu.setIcon(_ic(ICON.POMODORO))
+    focus_menu.setStyleSheet(style)
     act_focus = _create_action(
-        app, t("tray.focus_mode"), app.toggle_focus_mode, "focus_mode", tray_menu
+        app, t("tray.focus_mode"), app.toggle_focus_mode, "focus_mode", focus_menu
     )
     act_focus.setIcon(_ic(ICON.POMODORO))
     act_pomo = _create_action(
@@ -246,10 +253,10 @@ def init_tray_icon(app):
         t("tray.focus_timer_settings", "Pomodoro Settings..."),
         app.open_pomodoro_settings_dialog,
         None,
-        tray_menu,
+        focus_menu,
     )
     act_pomo.setIcon(_ic(ICON.SETTINGS))
-    act_flog = _create_action(app, t("tray.focus_log"), app.open_focus_log_dialog, None, tray_menu)
+    act_flog = _create_action(app, t("tray.focus_log"), app.open_focus_log_dialog, None, focus_menu)
     act_flog.setIcon(_ic(ICON.DOCS))
     act_away = _create_action(
         app,
@@ -258,17 +265,18 @@ def init_tray_icon(app):
             app.toggle_idle_lock(True, manual=True) if hasattr(app, "toggle_idle_lock") else None
         ),
         "away_lock",
-        tray_menu,
+        focus_menu,
     )
     act_away.setIcon(_ic(ICON.LOCK))
     act_lock = _create_action(
-        app, t("tray.lock_mode"), lambda: _toggle_lock_via_shortcut(app), "lock_mode", tray_menu
+        app, t("tray.lock_mode"), lambda: _toggle_lock_via_shortcut(app), "lock_mode", focus_menu
     )
     act_lock.setIcon(_ic(ICON.LOCK))
     act_magnet = _create_action(
-        app, t("tray.magnet_mode"), app.toggle_magnet_mode, "magnet_mode", tray_menu
+        app, t("tray.magnet_mode"), app.toggle_magnet_mode, "magnet_mode", focus_menu
     )
     act_magnet.setIcon(_ic(ICON.MAGNET))
+    tray_menu.addMenu(focus_menu)
 
     tray_menu.addSeparator()
 
@@ -407,6 +415,11 @@ def toggle_overlay(app) -> None:
 
 def toggle_fullscreen(app) -> None:
     """Toggle fullscreen mode."""
+    if getattr(app, "is_focus_mode", False):
+        from calendar_app.presentation.focus_mode import toggle_focus_fullscreen
+
+        if toggle_focus_fullscreen(app):
+            return
     if app.isFullScreen():
         app.showNormal()
         app.is_fullscreen = False

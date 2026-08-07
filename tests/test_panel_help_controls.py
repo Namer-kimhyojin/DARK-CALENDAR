@@ -1,14 +1,15 @@
+# -*- coding: utf-8 -*-
 import os
 import unittest
 from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton
+from PyQt6.QtWidgets import QApplication, QLineEdit, QMainWindow, QPushButton, QWidget
 
 from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key
 from calendar_app.presentation.dialogs.dialog_router import DialogActionsMixin
-from calendar_app.presentation.panels.side_panel_renderer import DockTitleBar
+from calendar_app.presentation.panels.side_panel_renderer import DockTitleBar, _panel_empty_items
 
 
 class _DialogHost(DialogActionsMixin, QMainWindow):
@@ -56,7 +57,7 @@ class PanelHelpControlTests(unittest.TestCase):
 
         self.assertEqual([], help_buttons)
 
-    def test_dock_title_bar_uses_compact_toolbar_button_size(self):
+    def test_dock_title_bar_uses_accessible_toolbar_button_size(self):
         title_bar = DockTitleBar(
             "Schedule",
             add_handler=lambda: None,
@@ -66,7 +67,48 @@ class PanelHelpControlTests(unittest.TestCase):
 
         buttons = title_bar.findChildren(QPushButton)
         self.assertEqual(2, len(buttons))
-        self.assertTrue(all(btn.width() == 20 and btn.height() == 20 for btn in buttons))
+        self.assertTrue(all(btn.width() == 28 and btn.height() == 28 for btn in buttons))
+        self.assertTrue(all(btn.accessibleName() for btn in buttons))
+
+    def test_panel_empty_state_offers_primary_action(self):
+        host = QWidget()
+        self.addCleanup(host.close)
+        calls = []
+
+        items = _panel_empty_items(
+            host,
+            "No schedules yet.",
+            "Create schedule",
+            lambda: calls.append("create"),
+        )
+
+        self.assertEqual(1, len(items))
+        action = items[0].findChild(QPushButton, "panel_empty_action")
+        self.assertIsNotNone(action)
+        self.assertGreaterEqual(action.minimumHeight(), 32)
+        self.assertIn("background: transparent", items[0].styleSheet())
+        self.assertIn("font-weight: 500", items[0].styleSheet())
+        action.click()
+        self.assertEqual(["create"], calls)
+
+    def test_search_empty_state_clears_the_current_query(self):
+        host = QWidget()
+        host.search_edit = QLineEdit(host)
+        host.search_edit.setText("quarterly review")
+        self.addCleanup(host.close)
+
+        items = _panel_empty_items(
+            host,
+            "No schedules yet.",
+            "Create schedule",
+            lambda: None,
+            search_query=host.search_edit.text(),
+        )
+
+        action = items[0].findChild(QPushButton, "panel_empty_action")
+        self.assertIsNotNone(action)
+        action.click()
+        self.assertEqual("", host.search_edit.text())
 
     def test_panel_shortcut_help_dialog_lists_quick_recovery_shortcuts(self):
         host = _DialogHost()

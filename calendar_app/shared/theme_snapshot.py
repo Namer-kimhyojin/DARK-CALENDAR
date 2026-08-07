@@ -11,6 +11,8 @@ from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QColor
 
 from calendar_app.shared.color_utils import (
+    contrast_ratio,
+    contrasting_text_color,
     derive_panel_palette,
     derive_text_palette,
     derive_ui_palette,
@@ -450,6 +452,15 @@ def build_dialog_base_tokens(
     success = QColor("#35b66a")
     warning = QColor("#d39a2a")
     danger = QColor("#d25a66")
+    surface_is_dark = base.lightnessF() < 0.5
+    neutral_rgb = "255,255,255" if surface_is_dark else "0,0,0"
+
+    def _neutral(alpha: float) -> str:
+        return f"rgba({neutral_rgb},{max(0.0, min(1.0, float(alpha))):.2f})"
+
+    text_primary = str(text_palette.get("text_primary", "#e1e1e6"))
+    accent_role_text = accent_hex if contrast_ratio(accent_hex, base) >= 3.0 else text_primary
+    accent_text = contrasting_text_color(accent_hex)
 
     return {
         "accent": accent_hex,
@@ -464,8 +475,8 @@ def build_dialog_base_tokens(
         "tab_active_bg": panel_palette.get("item_bg", "#111116"),
         "tab_text": str(text_palette.get("text_muted", "#9aa0ad")),
         "tab_text_hover": str(text_palette.get("text_secondary", "#d0d0da")),
-        "tab_text_active": accent_hex,
-        "text_primary": str(text_palette.get("text_primary", "#e1e1e6")),
+        "tab_text_active": accent_role_text,
+        "text_primary": text_primary,
         "text_secondary": str(text_palette.get("text_secondary", "#c8ccd4")),
         "text_muted": str(text_palette.get("text_muted", "#9aa0ad")),
         "text_faint": str(text_palette.get("text_faint", "#7a7a8a")),
@@ -475,8 +486,8 @@ def build_dialog_base_tokens(
         "surface_hover": panel_palette.get("surface_hover_bg", "#18181f"),
         "surface_top": panel_palette.get("topbar_bg", "#13131a"),
         "base_hex": base.name(QColor.NameFormat.HexRgb),
-        "border_soft": "rgba(255,255,255,0.10)",
-        "border": "rgba(255,255,255,0.16)",
+        "border_soft": _neutral(0.10),
+        "border": _neutral(0.16),
         "success_hex": success.name(QColor.NameFormat.HexRgb),
         "success_soft_bg": _rgba(success, 0.16),
         "warning_hex": warning.name(QColor.NameFormat.HexRgb),
@@ -487,44 +498,45 @@ def build_dialog_base_tokens(
         "input_bg": snapshot.input_bg,
         "list_selected_bg": _rgba(accent, 0.12),
         "list_selected_border": _rgba(accent, 0.25),
-        "list_selected_text": shift_rgb(accent, 32).name(QColor.NameFormat.HexRgb),
+        "list_selected_text": text_primary,
         "list_hover_bg": _rgba(accent, 0.06),
         "table_header_bg": panel_palette.get("toolbar_bg", "#1e1e26"),
         "table_header_text": str(text_palette.get("text_faint", "#7a7a8a")),
         "check_indicator_bg": panel_palette.get("surface_hover_bg", "#18181f"),
-        "check_indicator_border": "rgba(255,255,255,0.22)",
+        "check_indicator_border": _neutral(0.22),
         "check_checked_bg": accent_hex,
         "check_checked_border": accent_hex,
         "button_base_bg": panel_palette.get("item_bg", "#1e1e26"),
         "button_base_text": str(text_palette.get("text_secondary", "#c8ccd4")),
-        "button_base_border": "rgba(255,255,255,0.16)",
+        "button_base_border": _neutral(0.16),
         "button_base_hover_bg": panel_palette.get("surface_hover_bg", "#26262f"),
         "button_base_hover_text": str(text_palette.get("text_primary", "#ffffff")),
-        "button_base_hover_border": "rgba(255,255,255,0.26)",
+        "button_base_hover_border": _neutral(0.26),
         "button_pressed_bg": panel_palette.get("topbar_bg", "#18181f"),
         "button_pressed_text": str(text_palette.get("text_primary", "#ffffff")),
-        "button_pressed_border": "rgba(255,255,255,0.30)",
+        "button_pressed_border": _neutral(0.30),
         "button_disabled_bg": panel_palette.get("toolbar_bg", "#1c1c23"),
         "button_disabled_text": str(text_palette.get("text_faint", "#7a7a8a")),
-        "button_disabled_border": "rgba(255,255,255,0.08)",
+        "button_disabled_border": _neutral(0.08),
         "button_primary_bg": _rgba(accent, 0.10),
-        "button_primary_text": accent_hex,
+        "button_primary_text": accent_role_text,
+        "accent_text": accent_text,
         "button_primary_border": _rgba(accent, 0.55),
         "button_primary_hover_bg": _rgba(accent, 0.18),
         "button_primary_hover_text": str(text_palette.get("text_primary", "#ffffff")),
         "button_primary_hover_border": accent_hex,
         "button_secondary_bg": panel_palette.get("surface_hover_bg", "#18181f"),
         "button_secondary_text": str(text_palette.get("text_muted", "#9aa0ad")),
-        "button_secondary_border": "rgba(255,255,255,0.12)",
+        "button_secondary_border": _neutral(0.12),
         "button_secondary_hover_bg": panel_palette.get("toolbar_bg", "#22222a"),
         "button_secondary_hover_text": str(text_palette.get("text_primary", "#e0e0e8")),
-        "button_secondary_hover_border": "rgba(255,255,255,0.22)",
+        "button_secondary_hover_border": _neutral(0.22),
         "button_ghost_bg": panel_palette.get("surface_bg", "#16161b"),
         "button_ghost_text": str(text_palette.get("text_muted", "#9aa0ad")),
-        "button_ghost_border": "rgba(255,255,255,0.12)",
+        "button_ghost_border": _neutral(0.12),
         "button_ghost_hover_bg": panel_palette.get("surface_hover_bg", "#22222a"),
         "button_ghost_hover_text": str(text_palette.get("text_primary", "#e0e0e8")),
-        "button_ghost_hover_border": "rgba(255,255,255,0.24)",
+        "button_ghost_hover_border": _neutral(0.24),
         "button_success_bg": _rgba(success, 0.14),
         "button_success_text": success.name(QColor.NameFormat.HexRgb),
         "button_success_border": _rgba(success, 0.42),
@@ -539,16 +551,16 @@ def build_dialog_base_tokens(
         "button_danger_hover_border": _rgba(danger, 0.65),
         "toolbutton_bg": panel_palette.get("item_bg", "#1e1e26"),
         "toolbutton_text": str(text_palette.get("text_secondary", "#c8ccd4")),
-        "toolbutton_border": "rgba(255,255,255,0.16)",
+        "toolbutton_border": _neutral(0.16),
         "toolbutton_hover_bg": panel_palette.get("surface_hover_bg", "#26262f"),
         "toolbutton_hover_text": str(text_palette.get("text_primary", "#ffffff")),
-        "toolbutton_hover_border": "rgba(255,255,255,0.26)",
+        "toolbutton_hover_border": _neutral(0.26),
         "toolbutton_pressed_bg": panel_palette.get("topbar_bg", "#18181f"),
         "toolbutton_pressed_text": str(text_palette.get("text_primary", "#ffffff")),
-        "toolbutton_pressed_border": "rgba(255,255,255,0.30)",
+        "toolbutton_pressed_border": _neutral(0.30),
         "toolbutton_disabled_bg": panel_palette.get("toolbar_bg", "#1c1c23"),
         "toolbutton_disabled_text": str(text_palette.get("text_faint", "#7a7a8a")),
-        "toolbutton_disabled_border": "rgba(255,255,255,0.08)",
+        "toolbutton_disabled_border": _neutral(0.08),
     }
 
 

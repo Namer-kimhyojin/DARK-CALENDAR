@@ -222,7 +222,13 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
 
     self.display_menu.addSeparator()
 
-    self.act_topbar = self.display_menu.addAction(
+    self.display_window_menu = self.display_menu.addMenu(
+        _se(t("menu.window_view_options", "화면 및 창"))
+    )
+    self.display_window_menu.setIcon(_ic(ICON.SCREEN_MGMT))
+    self.display_window_menu.setStyleSheet(menu_style)
+
+    self.act_topbar = self.display_window_menu.addAction(
         f"{_se(t('menu.hide_topbar'))}\t{get_key('topbar')}"
     )
     self.act_topbar.setIcon(_ic(ICON.HIDE))
@@ -232,7 +238,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
 
     self.act_topbar.triggered.connect(self.toggle_top_bar)
 
-    self.act_calendar_toolbar = self.display_menu.addAction(
+    self.act_calendar_toolbar = self.display_window_menu.addAction(
         f"{_se(t('menu.hide_calendar_toolbar'))}\t{get_key('cal_toolbar')}"
     )
     self.act_calendar_toolbar.setIcon(_ic(ICON.SCREEN_MGMT))
@@ -242,23 +248,29 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
 
     self.act_calendar_toolbar.triggered.connect(self.set_calendar_toolbar_visible)
 
-    act_fs = self.display_menu.addAction(
+    act_fs = self.display_window_menu.addAction(
         f"{_se(t('menu.fullscreen'))}\t{get_key('fullscreen')}", self.toggle_fullscreen
     )
     act_fs.setIcon(_ic(ICON.FULLSCREEN))
 
-    act_fm = self.display_menu.addAction(
+    self.display_mode_menu = self.display_menu.addMenu(
+        _se(t("menu.focus_view_options", "집중 및 잠금"))
+    )
+    self.display_mode_menu.setIcon(_ic(ICON.POMODORO))
+    self.display_mode_menu.setStyleSheet(menu_style)
+
+    act_fm = self.display_mode_menu.addAction(
         f"{_se(t('menu.focus_mode'))}\t{get_key('focus_mode')}", self.toggle_focus_mode
     )
     act_fm.setIcon(_ic(ICON.POMODORO))
 
-    act_wm = self.display_menu.addAction(
+    act_wm = self.display_mode_menu.addAction(
         f"{_se(t('menu.widget_mode_toggle', '위젯 전용 모드'))}\t{get_key('widget_mode', 'F12')}",
         self.toggle_widget_mode_panel,
     )
     act_wm.setIcon(_ic(ICON.WIDGET_MGR))
 
-    self.instant_away_act = self.display_menu.addAction(
+    self.instant_away_act = self.display_mode_menu.addAction(
         _se(t("menu.instant_away")), lambda: self.toggle_idle_lock(True, manual=True)
     )
     self.instant_away_act.setIcon(_ic(ICON.LOCK))

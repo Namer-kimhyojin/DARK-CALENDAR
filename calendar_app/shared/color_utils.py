@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Shared color helpers used by UI rendering/styling modules."""
 
 from PyQt6.QtGui import QColor
@@ -50,6 +51,34 @@ def shift_rgb(color: QColor, delta: int) -> QColor:
         max(0, min(255, color.green() + delta)),
         max(0, min(255, color.blue() + delta)),
     )
+
+
+def contrast_ratio(foreground: str | QColor, background: str | QColor) -> float:
+    """Return the WCAG contrast ratio for two opaque colors."""
+
+    def _relative_luminance(value: str | QColor) -> float:
+        color = QColor(value) if isinstance(value, QColor) else parse_hex_color(value, "#000000")
+        channels = []
+        for channel in (color.redF(), color.greenF(), color.blueF()):
+            channels.append(
+                channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
+            )
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+
+    light = _relative_luminance(foreground)
+    dark = _relative_luminance(background)
+    return (max(light, dark) + 0.05) / (min(light, dark) + 0.05)
+
+
+def contrasting_text_color(
+    background: str | QColor,
+    *,
+    light: str = "#ffffff",
+    dark: str = "#101318",
+) -> str:
+    """Choose whichever text color has the stronger contrast on ``background``."""
+
+    return light if contrast_ratio(light, background) >= contrast_ratio(dark, background) else dark
 
 
 def _shift_rgb(color: QColor, delta: int) -> QColor:

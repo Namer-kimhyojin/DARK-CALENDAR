@@ -46,7 +46,9 @@ from calendar_app.presentation.dialogs.routine_recurrence_wizard import (
     get_weekday_names,
 )
 from calendar_app.presentation.dialogs.task_dialog_base import BaseTaskDialog
-from calendar_app.presentation.dialogs.time_picker_widget import TimePickerWidget
+from calendar_app.presentation.dialogs.time_picker_widget import DatePickerWidget, TimePickerWidget
+from calendar_app.shared.icon_map import ICON
+from calendar_app.shared.icon_map import strip_leading_emoji as _se
 
 
 class UnifiedTaskDialog(BaseTaskDialog):
@@ -134,19 +136,19 @@ class UnifiedTaskDialog(BaseTaskDialog):
                 if task_type == "routine"
                 else t("dialog.task.mod_schedule")
             )
-            size = (780, 800 if task_type == "routine" else 760)
+            size = (700, 660 if task_type == "routine" else 620)
         else:
             title = (
                 t("dialog.task.reg_routine")
                 if task_type == "routine"
                 else t("dialog.task.reg_schedule")
             )
-            size = (780, 800 if task_type == "routine" else 760)
+            size = (700, 660 if task_type == "routine" else 620)
         apply_dialog_title(self, title)
         self.setObjectName("TaskEditorDialog")
         apply_common_dialog_style(
             self,
-            minimum_width=640,
+            minimum_width=560,
             size=size,
             extra_stylesheet=build_task_editor_stylesheet(),
         )
@@ -180,13 +182,14 @@ class UnifiedTaskDialog(BaseTaskDialog):
         if screen is None:
             return
         available = screen.availableGeometry()
-        max_width = max(420, available.width() - 32)
-        max_height = max(420, available.height() - 48)
-        self.setMinimumWidth(min(640, max_width))
-        preferred_min_height = 560 if self.task_type == "routine" else 520
+        max_width = max(420, min(700, int(available.width() * 0.86)))
+        max_height = max(420, min(660, int(available.height() * 0.80)))
+        self.setMinimumWidth(min(560, max_width))
+        preferred_min_height = 500 if self.task_type == "routine" else 480
         self.setMinimumHeight(min(preferred_min_height, max_height))
-        width = min(max(720, self.width()), max_width)
+        width = min(max(640, self.width()), max_width)
         height = min(max(preferred_min_height, self.height()), max_height)
+        self.setMaximumSize(max_width, max_height)
         self.resize(width, height)
         self._update_period_layout_for_width(width)
 
@@ -211,6 +214,21 @@ class UnifiedTaskDialog(BaseTaskDialog):
         button.setMinimumWidth(max(int(minimum_width), label_width + 36))
         button.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
 
+    @staticmethod
+    def _create_weekday_badge(date_edit: QDateEdit) -> QLabel:
+        """Show the weekday without putting locale text inside QDateEdit."""
+        label = QLabel()
+        label.setObjectName("TaskWeekdayBadge")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setMinimumWidth(34)
+
+        def update_label(value: QDate):
+            label.setText(value.toString("ddd"))
+
+        date_edit.dateChanged.connect(update_label)
+        update_label(date_edit.date())
+        return label
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._update_period_layout_for_width(event.size().width())
@@ -227,6 +245,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
             f"color: {self._ui_tokens().get('accent', '#3c8cff')}; font-size: 13px; font-weight: 700; padding: 6px; border-radius: 4px; background: rgba(60, 140, 255, 0.08);"
         )
         self.status_feedback_label.setVisible(False)
+        self.status_feedback_label.setAccessibleName(t("dialog.task.feedback", "입력 상태"))
         outer.addWidget(self.status_feedback_label)
 
         self.tabs = QTabWidget()
@@ -315,6 +334,31 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
         if self.task_type == "routine":
             self._update_period_display()
+
+    def _show_status_feedback(self, message, *, is_error=False, auto_hide_ms=0):
+        tokens = self._ui_tokens()
+        color = (
+            tokens.get("danger_hex", "#ff5f6d")
+            if is_error
+            else tokens.get("tab_text_active", tokens.get("accent", "#3c8cff"))
+        )
+        background = (
+            tokens.get("danger_soft_bg", "rgba(255, 95, 109, 0.10)")
+            if is_error
+            else tokens.get("accent_soft_bg", "rgba(60, 140, 255, 0.08)")
+        )
+        self.status_feedback_label.setText(message)
+        self.status_feedback_label.setAccessibleDescription(message)
+        self.status_feedback_label.setStyleSheet(
+            f"color: {color}; font-size: 13px; font-weight: 700; "
+            f"padding: 6px; border-radius: 4px; background: {background};"
+        )
+        self.status_feedback_label.setVisible(True)
+        if auto_hide_ms > 0:
+            QTimer.singleShot(
+                auto_hide_ms,
+                lambda: self.status_feedback_label.setVisible(False),
+            )
 
     # ── Basic tab ─────────────────────────────────────────────────────────
     def _build_basic_tab(self):
@@ -424,10 +468,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
             start_edit_row = QHBoxLayout()
             start_edit_row.setSpacing(8)
-            self.start_date = QDateEdit(self.initial_date)
-            self.start_date.setCalendarPopup(True)
-            self.start_date.setDisplayFormat("yyyy-MM-dd")
-            self.start_date.setMinimumWidth(130)
+            self.start_date = DatePickerWidget(self.initial_date)
+            self.start_date.setMinimumWidth(132)
             self.start_date.setAccessibleName(t("dialog.task.start_dt"))
             self.start_label_widget.setBuddy(self.start_date)
             polish_calendar_popup(self.start_date)
@@ -436,6 +478,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
             self.start_time.setAccessibleName(t("dialog.task.start_dt"))
             self._set_editor_height(self.start_date)
             start_edit_row.addWidget(self.start_date)
+            self.start_weekday_label = self._create_weekday_badge(self.start_date)
+            start_edit_row.addWidget(self.start_weekday_label)
             start_edit_row.addWidget(self.start_time)
             start_edit_row.addStretch()
             start_col.addLayout(start_edit_row)
@@ -450,10 +494,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
             end_edit_row = QHBoxLayout()
             end_edit_row.setSpacing(8)
             end_qdate = self.preset_end_date if self.preset_end_date else self.initial_date
-            self.end_date = QDateEdit(end_qdate)
-            self.end_date.setCalendarPopup(True)
-            self.end_date.setDisplayFormat("yyyy-MM-dd")
-            self.end_date.setMinimumWidth(130)
+            self.end_date = DatePickerWidget(end_qdate)
+            self.end_date.setMinimumWidth(132)
             self.end_date.setAccessibleName(t("dialog.task.end_dt"))
             self.end_label_widget.setBuddy(self.end_date)
             polish_calendar_popup(self.end_date)
@@ -465,6 +507,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
             self.end_time.setAccessibleName(t("dialog.task.end_dt"))
             self._set_editor_height(self.end_date)
             end_edit_row.addWidget(self.end_date)
+            self.end_weekday_label = self._create_weekday_badge(self.end_date)
+            end_edit_row.addWidget(self.end_weekday_label)
             end_edit_row.addWidget(self.end_time)
             end_edit_row.addStretch()
             end_col.addLayout(end_edit_row)
@@ -472,20 +516,72 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
             schedule_layout.addLayout(times_row)
 
-            duration_row = QHBoxLayout()
-            duration_row.setSpacing(6)
+            start_shortcut_row = QHBoxLayout()
+            start_shortcut_row.setSpacing(6)
+            start_shortcut_label = QLabel(_se(t("dialog.task.start_dt", "시작일시:")))
+            start_shortcut_label.setObjectName("TaskQuickActionLabel")
+            start_shortcut_label.setMinimumWidth(76)
+            start_shortcut_row.addWidget(start_shortcut_label)
+            for label, action, icon_key in [
+                (t("dialog.common.today", "오늘"), "today", ICON.GOTO_TODAY),
+                (t("common.tomorrow", "내일"), "tomorrow", ICON.NAV_NEXT),
+            ]:
+                date_btn = self._make_quick_btn(label, icon_key=icon_key)
+                date_btn.setProperty("quickAction", action)
+                description = f"{t('dialog.task.start_dt', '시작일시:')} {label}"
+                date_btn.setAccessibleDescription(description)
+                date_btn.setToolTip(description)
+                date_btn.clicked.connect(
+                    lambda _=False, quick_action=action: self._apply_start_quick_action(
+                        quick_action
+                    )
+                )
+                start_shortcut_row.addWidget(date_btn)
+
+            self.start_time_shortcuts = QWidget()
+            time_shortcut_layout = QHBoxLayout(self.start_time_shortcuts)
+            time_shortcut_layout.setContentsMargins(0, 0, 0, 0)
+            time_shortcut_layout.setSpacing(6)
+            now_btn = self._make_quick_btn(
+                t("alarm_popup.time_now", "지금"), icon_key=ICON.STATUS_PENDING
+            )
+            now_btn.setProperty("quickAction", "now")
+            now_description = (
+                f"{t('dialog.task.start_dt', '시작일시:')} {t('alarm_popup.time_now', '지금')}"
+            )
+            now_btn.setAccessibleDescription(now_description)
+            now_btn.setToolTip(now_description)
+            now_btn.clicked.connect(lambda _=False: self._apply_start_quick_action("now"))
+            time_shortcut_layout.addWidget(now_btn)
+            start_shortcut_row.addWidget(self.start_time_shortcuts)
+            start_shortcut_row.addStretch()
+            schedule_layout.addLayout(start_shortcut_row)
+
+            self.end_time_shortcuts = QWidget()
+            duration_shortcut_row = QHBoxLayout(self.end_time_shortcuts)
+            duration_shortcut_row.setContentsMargins(0, 0, 0, 0)
+            duration_shortcut_row.setSpacing(6)
+            duration_shortcut_label = QLabel(_se(t("dialog.task.duration_prefix", "일정 길이:")))
+            duration_shortcut_label.setObjectName("TaskQuickActionLabel")
+            duration_shortcut_label.setMinimumWidth(76)
+            duration_shortcut_row.addWidget(duration_shortcut_label)
             for label_key, fallback, minutes in [
                 ("dialog.task.quick.h1", "+1시간", 60),
                 ("dialog.task.quick.h3", "+3시간", 180),
                 ("dialog.task.quick.h6", "+6시간", 360),
             ]:
-                duration_btn = self._make_quick_btn(t(label_key, fallback))
+                duration_label = t(label_key, fallback)
+                duration_btn = self._make_quick_btn(duration_label, icon_key=ICON.FORWARD)
+                duration_btn.setProperty("quickDurationMinutes", minutes)
+                description = f"{t('dialog.task.duration_prefix', '일정 길이:')} {duration_label}"
+                duration_btn.setAccessibleDescription(description)
+                duration_btn.setToolTip(description)
                 duration_btn.clicked.connect(
                     lambda _=False, mins=minutes: self._set_end_from_start_offset(mins)
                 )
-                duration_row.addWidget(duration_btn)
-            duration_row.addStretch()
-            schedule_layout.addLayout(duration_row)
+                duration_shortcut_row.addWidget(duration_btn)
+            duration_shortcut_row.addStretch()
+            schedule_layout.addWidget(self.end_time_shortcuts)
 
             # 초기 상태 반영 (종일 등)
             if not self._is_modify:
@@ -520,10 +616,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
             dt_row = QHBoxLayout()
             dt_row.setSpacing(8)
-            self.start_date = QDateEdit(self.initial_date)
-            self.start_date.setCalendarPopup(True)
-            self.start_date.setDisplayFormat("yyyy-MM-dd")
-            self.start_date.setMinimumWidth(130)
+            self.start_date = DatePickerWidget(self.initial_date)
+            self.start_date.setMinimumWidth(132)
             self.start_date.setAccessibleName(t("dialog.task.start_day_routine"))
             self.start_label_widget.setBuddy(self.start_date)
             polish_calendar_popup(self.start_date)
@@ -532,6 +626,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
             self.start_time.setAccessibleName(t("dialog.task.start_day_routine"))
             self._set_editor_height(self.start_date)
             dt_row.addWidget(self.start_date)
+            self.start_weekday_label = self._create_weekday_badge(self.start_date)
+            dt_row.addWidget(self.start_weekday_label)
             dt_row.addWidget(self.start_time)
             dt_row.addStretch()
             start_col.addLayout(dt_row)
@@ -546,10 +642,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
             end_lbl = QLabel(t("dialog.task.end_day_routine"))
             end_col.addWidget(end_lbl)
 
-            self.routine_period_end_date = QDateEdit(self.initial_date.addDays(14))
-            self.routine_period_end_date.setCalendarPopup(True)
-            self.routine_period_end_date.setDisplayFormat("yyyy-MM-dd")
-            self.routine_period_end_date.setMinimumWidth(130)
+            self.routine_period_end_date = DatePickerWidget(self.initial_date.addDays(14))
+            self.routine_period_end_date.setMinimumWidth(132)
             self.routine_period_end_date.setAccessibleName(t("dialog.task.end_day_routine"))
             end_lbl.setBuddy(self.routine_period_end_date)
             polish_calendar_popup(self.routine_period_end_date)
@@ -557,12 +651,34 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
             end_edit_row = QHBoxLayout()
             end_edit_row.addWidget(self.routine_period_end_date)
+            self.routine_end_weekday_label = self._create_weekday_badge(
+                self.routine_period_end_date
+            )
+            end_edit_row.addWidget(self.routine_end_weekday_label)
             end_edit_row.addStretch()
             end_col.addLayout(end_edit_row)
 
             routine_dates_row.addWidget(self.routine_end_container, 1)
 
             schedule_layout.addLayout(routine_dates_row)
+
+            routine_shortcuts = QHBoxLayout()
+            routine_shortcuts.setSpacing(6)
+            for label, action in [
+                (t("dialog.common.today", "오늘"), "today"),
+                (t("common.tomorrow", "내일"), "tomorrow"),
+                (t("alarm_popup.time_now", "지금"), "now"),
+            ]:
+                quick_btn = self._make_quick_btn(label, accent=action == "now")
+                quick_btn.setProperty("quickAction", action)
+                quick_btn.clicked.connect(
+                    lambda _=False, quick_action=action: self._apply_start_quick_action(
+                        quick_action
+                    )
+                )
+                routine_shortcuts.addWidget(quick_btn)
+            routine_shortcuts.addStretch()
+            schedule_layout.addLayout(routine_shortcuts)
 
             # 생성 예정 미리보기
             self.routine_preview_label = QLabel()
@@ -1072,7 +1188,9 @@ class UnifiedTaskDialog(BaseTaskDialog):
     def _create_task(self, continue_after_save=False):
         """Create mode: save new task(s) to DB."""
         if not self.name_edit.text().strip():
-            QMessageBox.warning(self, t("dialog.task.entry_error"), t("dialog.task.name_required"))
+            self.tabs.setCurrentIndex(0)
+            self._show_status_feedback(t("dialog.task.name_required"), is_error=True)
+            self.name_edit.setFocus()
             return
 
         priority = self.priority_combo.currentData()
@@ -1203,11 +1321,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
                     "일정이 등록되었습니다. 계속해서 입력하세요.",
                 )
             )
-            self.status_feedback_label.setText(success_msg)
-            self.status_feedback_label.setVisible(True)
-
-            # 2.5초 뒤 라벨 가림
-            QTimer.singleShot(2500, lambda: self.status_feedback_label.setVisible(False))
+            self._show_status_feedback(success_msg, auto_hide_ms=2500)
 
             # 제목 및 추가 내용 초기화 후 포커스 이동
             self.name_edit.clear()
@@ -1399,7 +1513,9 @@ class UnifiedTaskDialog(BaseTaskDialog):
     def _save_changes(self):
         """수정 모드: 변경사항 저장"""
         if not self.name_edit.text().strip():
-            QMessageBox.warning(self, t("dialog.task.entry_error"), t("dialog.task.name_required"))
+            self.tabs.setCurrentIndex(0)
+            self._show_status_feedback(t("dialog.task.name_required"), is_error=True)
+            self.name_edit.setFocus()
             return
 
         priority = self.priority_combo.currentData()

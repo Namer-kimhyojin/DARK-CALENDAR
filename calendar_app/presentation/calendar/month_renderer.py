@@ -1619,6 +1619,16 @@ def render_calendar(app):
     opt_menu.addSeparator()
     opt_menu.addAction(show_month_action)
     opt_menu.addAction(show_weekday_action)
+    opt_menu.addSeparator()
+
+    from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key
+
+    print_action = QAction(
+        f"{t('print.menu', '인쇄...')}\t{get_key('calendar_print', 'Ctrl+P')}", app
+    )
+    print_action.setIcon(_ic(ICON.VIEW_CALENDAR, color=_icon_color))
+    print_action.triggered.connect(app.open_calendar_print_dialog)
+    opt_menu.addAction(print_action)
 
     # ?? 캘린더蹂닿린/?④린湲??좉? ?????????????????????????????????????????
     def _rebuild_calendar_visibility_actions():

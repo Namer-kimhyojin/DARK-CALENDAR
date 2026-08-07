@@ -230,6 +230,11 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
 
     app = QApplication(sys.argv)
     _install_qt_message_handler()
+    from calendar_app.presentation.dialogs.dialog_styles import (
+        install_common_dialog_style_filter,
+    )
+
+    install_common_dialog_style_filter(app)
 
     if os.path.exists(APP_ICON_PATH):
         app.setWindowIcon(QIcon(APP_ICON_PATH))

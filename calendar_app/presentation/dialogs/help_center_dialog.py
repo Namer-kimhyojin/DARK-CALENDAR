@@ -135,13 +135,13 @@ class HelpCenterDialog(QDialog):
 
         self.setObjectName("HelpCenterDialog")
         apply_dialog_title(self, t("shortcut.title", "Dark Calendar 도움말 센터"))
-        self.setSizeGripEnabled(False)
+        self.setSizeGripEnabled(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         apply_common_dialog_style(
             self,
-            minimum_width=1180,
-            size=(1260, 860),
+            minimum_width=900,
+            size=(1080, 720),
             extra_stylesheet=(
                 f"QFrame#helpCenterHeader {{"
                 f"background: rgba(10, 15, 25, 0.98);"
@@ -194,7 +194,7 @@ class HelpCenterDialog(QDialog):
                 f"selection-background-color: rgba(77, 166, 255, 0.32);"
                 f"}}"
                 f"QLineEdit#helpCenterSearch:focus {{"
-                f"border: 1px solid rgba(77, 166, 255, 0.42);"
+                f"border: 2px solid rgba(77, 166, 255, 0.72);"
                 f"}}"
                 f"QFrame#helpCenterSidebar {{"
                 f"background: rgba(10, 16, 28, 0.92);"
@@ -357,6 +357,10 @@ class HelpCenterDialog(QDialog):
         self.search_input = QLineEdit()
         self.search_input.setObjectName("helpCenterSearch")
         self.search_input.setClearButtonEnabled(True)
+        self.search_input.setAccessibleName(t("shortcut.search", "도움말 검색"))
+        self.search_input.setAccessibleDescription(
+            t("shortcut.search_hint", "기능 이름, 단축키 또는 메뉴 위치로 검색합니다.")
+        )
         self.search_input.setPlaceholderText("예: 잠금, 위젯, F11, Ctrl+Shift+1")
         self.search_input.textChanged.connect(self._on_search_text_changed)
         header_right.addWidget(self.search_input)
@@ -389,6 +393,7 @@ class HelpCenterDialog(QDialog):
 
         self.nav_list = QListWidget()
         self.nav_list.setObjectName("helpCenterNav")
+        self.nav_list.setAccessibleName(t("shortcut.topics", "도움말 주제"))
         self.nav_list.currentItemChanged.connect(self._on_page_changed)
         sidebar_layout.addWidget(self.nav_list, 1)
         body.addWidget(sidebar)
@@ -417,6 +422,7 @@ class HelpCenterDialog(QDialog):
 
         close_btn = QPushButton(t("common.close", "닫기"))
         close_btn.setObjectName("primary_btn")
+        close_btn.setProperty("dialogFooter", True)
         close_btn.setFixedWidth(max(92, int(metrics.get("button_min_width", 45)) + 14))
         close_btn.clicked.connect(self.accept)
         close_btn.setDefault(True)

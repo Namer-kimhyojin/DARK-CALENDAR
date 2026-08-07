@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from datetime import date
@@ -379,6 +380,15 @@ class CommandPalette(QWidget):
                 "Search commands, schedules, or type + to create... (>, +, /)",
             )
         )
+        search_accessible = t("palette.accessible_search", "명령과 일정을 검색하거나 만듭니다.")
+        self.search_bar.setAccessibleName(search_accessible)
+        self.search_bar.setAccessibleDescription(
+            t(
+                "palette.accessible_search_hint",
+                "명령은 >, 새 항목은 +, 기존 항목 검색은 /로 시작할 수 있습니다.",
+            )
+        )
+        self.search_bar.setMinimumHeight(36)
         self.search_bar.addAction(_ic(ICON.SEARCH), QLineEdit.ActionPosition.LeadingPosition)
         self.search_layout.addWidget(self.search_bar)
 
@@ -396,6 +406,10 @@ class CommandPalette(QWidget):
         self.container_layout.addWidget(self.divider)
 
         self.result_list = QListWidget()
+        self.result_list.setAccessibleName(t("palette.accessible_results", "검색 결과"))
+        self.result_list.setAccessibleDescription(
+            t("palette.accessible_results_hint", "위아래 화살표로 이동하고 Enter로 실행합니다.")
+        )
         self.result_list.setVisible(False)
         self.container_layout.addWidget(self.result_list)
 
@@ -405,6 +419,7 @@ class CommandPalette(QWidget):
         self.hint_layout.setContentsMargins(16, 8, 16, 8)
         self.hint_label = QLabel(t("palette.no_selection", "Enter opens the selected result"))
         self.hint_label.setObjectName("paletteHintLabel")
+        self.hint_label.setAccessibleName(t("palette.accessible_hint", "사용 안내"))
         self.hint_layout.addWidget(self.hint_label)
         self.container_layout.addWidget(self.hint_bar)
 

@@ -118,6 +118,12 @@ class BuildPipelineContractTests(unittest.TestCase):
         self.assertIn('"verify-payload"', script)
         self.assertIn("requirements-runtime.lock", script)
 
+    def test_print_support_is_explicitly_packaged(self):
+        for spec_name in ("DarkCalendar.spec", "Standalone.spec"):
+            spec = self._read(spec_name)
+            self.assertIn("'PyQt6.QtPrintSupport'", spec, spec_name)
+            self.assertNotRegex(spec, r"excludes=\[[^\]]*PyQt6\.QtPrintSupport")
+
     def test_store_spec_removes_unused_qt_multimedia_pdf_and_svg_payloads(self):
         spec = self._read("DarkCalendar.spec")
 

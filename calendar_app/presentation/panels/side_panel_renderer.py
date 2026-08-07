@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import logging
 
 from PyQt6.QtCore import QDate, QEvent, QLocale, QObject, Qt, QTimer
@@ -673,10 +674,10 @@ class DockTitleBar(QWidget):
             _toolbar_button_style()
             + """
             QPushButton {
-                min-width: 20px;
-                max-width: 20px;
-                min-height: 20px;
-                max-height: 20px;
+                min-width: 28px;
+                max-width: 28px;
+                min-height: 28px;
+                max-height: 28px;
                 padding: 0px;
             }
             """
@@ -684,17 +685,21 @@ class DockTitleBar(QWidget):
 
         if add_handler:
             add_btn = QPushButton("+")
-            add_btn.setFixedSize(20, 20)
-            add_btn.setToolTip(t("panel.toolbar.add"))
+            add_btn.setFixedSize(28, 28)
+            add_label = t("panel.toolbar.add")
+            add_btn.setToolTip(add_label)
+            add_btn.setAccessibleName(add_label)
             add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             add_btn.setStyleSheet(icon_btn_style)
             add_btn.clicked.connect(add_handler)
             layout.addWidget(add_btn)
 
         if manage_handler:
-            manage_btn = QPushButton("...")
-            manage_btn.setFixedSize(20, 20)
-            manage_btn.setToolTip(t("panel.toolbar.manage"))
+            manage_btn = QPushButton("⋯")
+            manage_btn.setFixedSize(28, 28)
+            manage_label = t("panel.toolbar.manage")
+            manage_btn.setToolTip(manage_label)
+            manage_btn.setAccessibleName(manage_label)
             manage_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             manage_btn.setStyleSheet(icon_btn_style)
             manage_btn.clicked.connect(manage_handler)
@@ -818,6 +823,76 @@ def create_panel(
     scroll.setWidget(frame)
 
     return scroll, title_bar
+
+
+def _build_panel_empty_state(message, action_label, action_handler):
+    tokens = _semantic_tokens()
+    frame = QFrame()
+    frame.setObjectName("panel_empty_state")
+    frame.setStyleSheet(
+        f"""
+        QFrame#panel_empty_state {{
+            background: {tokens.get("surface_alt", tokens.get("bg_hover", "rgba(255,255,255,0.04)"))};
+            border: 1px solid {tokens.get("border_soft", "rgba(255,255,255,0.08)")};
+            border-radius: {tokens.get("radius_md", "8px")};
+        }}
+        QLabel#panel_empty_message {{
+            color: {tokens.get("text_muted", tokens.get("text_secondary", "#a8afbb"))};
+            background: transparent;
+            border: none;
+        }}
+        QPushButton#panel_empty_action {{
+            color: {tokens.get("text_muted", tokens.get("text_secondary", "#a8afbb"))};
+            background: transparent;
+            border: 1px solid {tokens.get("border_soft", "rgba(255,255,255,0.12)")};
+            border-radius: {tokens.get("button_radius", "8px")};
+            padding: 4px 10px;
+            font-weight: 500;
+        }}
+        QPushButton#panel_empty_action:hover {{
+            color: {tokens.get("text_primary", "#ffffff")};
+            background: {tokens.get("bg_hover", "rgba(255,255,255,0.06)")};
+            border-color: {tokens.get("border_strong", tokens.get("text_muted", "#a8afbb"))};
+        }}
+        QPushButton#panel_empty_action:focus {{
+            color: {tokens.get("text_secondary", "#c5cfda")};
+            border-color: {tokens.get("text_muted", "#a8afbb")};
+        }}
+        """
+    )
+    layout = QVBoxLayout(frame)
+    layout.setContentsMargins(12, 12, 12, 12)
+    layout.setSpacing(9)
+
+    label = QLabel(message)
+    label.setObjectName("panel_empty_message")
+    label.setWordWrap(True)
+    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    label.setAccessibleName(message)
+    layout.addWidget(label)
+
+    button = QPushButton(action_label)
+    button.setObjectName("panel_empty_action")
+    button.setMinimumHeight(32)
+    button.setCursor(Qt.CursorShape.PointingHandCursor)
+    button.setAccessibleName(action_label)
+    button.clicked.connect(action_handler)
+    layout.addWidget(button, alignment=Qt.AlignmentFlag.AlignCenter)
+    return frame
+
+
+def _panel_empty_items(app, message, action_label, action_handler, *, search_query=""):
+    if str(search_query or "").strip():
+        search_edit = getattr(app, "search_edit", None)
+        if search_edit is not None:
+            return [
+                _build_panel_empty_state(
+                    t("panel.empty.search", "검색 결과가 없습니다."),
+                    t("panel.empty.clear_search", "검색 지우기"),
+                    search_edit.clear,
+                )
+            ]
+    return [_build_panel_empty_state(message, action_label, action_handler)]
 
 
 def _left_panel_mode(app):
@@ -1473,10 +1548,18 @@ def load_left_panel(app):
         today_items.append(task_box)
 
     if not today_items:
-        if panel_mode == "week":
-            today_items = [t("panel.empty.week", "No schedules registered for this week.")]
-        else:
-            today_items = [t("panel.empty.today", "No items for today.")]
+        empty_message = (
+            t("panel.empty.week", "No schedules registered for this week.")
+            if panel_mode == "week"
+            else t("panel.empty.today", "No items for today.")
+        )
+        today_items = _panel_empty_items(
+            app,
+            empty_message,
+            t("panel.empty.add_schedule", "일정 만들기"),
+            app.open_task_dialog,
+            search_query=search_query,
+        )
 
     panel_title = (
         t("panel.this_week_schedule", "This Week Schedule")
@@ -1895,10 +1978,22 @@ def load_right_panel(app):
         )
 
     if not routine_items:
-        routine_items = [t("panel.empty.routine", "No routine tasks found.")]
+        routine_items = _panel_empty_items(
+            app,
+            t("panel.empty.routine", "No routine tasks found."),
+            t("panel.empty.add_routine", "루틴 만들기"),
+            app.open_routine_add_dialog,
+            search_query=search_query,
+        )
 
     if not directive_items:
-        directive_items = [t("panel.empty.directive", "No directions found.")]
+        directive_items = _panel_empty_items(
+            app,
+            t("panel.empty.directive", "No directions found."),
+            t("panel.empty.add_directive", "지시사항 만들기"),
+            app.open_directive_dialog,
+            search_query=search_query,
+        )
 
     panel_1, title_bar_1 = create_panel(
         app,

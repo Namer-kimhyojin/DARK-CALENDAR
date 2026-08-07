@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Single source of truth for global keyboard shortcuts."""
 
 from __future__ import annotations
@@ -169,6 +170,13 @@ SHORTCUTS: list[dict] = [
         "group": "view",
         "label_ko": "레이아웃 프리셋 5",
         "action": None,
+    },
+    {
+        "id": "calendar_print",
+        "key": "Ctrl+P",
+        "group": "system",
+        "label_ko": "캘린더 인쇄",
+        "action": "open_calendar_print_dialog",
     },
     {
         "id": "sync_gcal",
@@ -449,6 +457,11 @@ _SHORTCUT_HELP_META_KO: dict[str, dict] = {
         "description": "분리형 배치를 적용합니다.",
         "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "분리", "부동", "5"],
+    },
+    "calendar_print": {
+        "description": "현재 보기 또는 지정 기간의 캘린더를 미리보고 인쇄합니다.",
+        "menu_path": "캘린더 > 옵션 > 인쇄",
+        "tags": ["인쇄", "프린터", "PDF", "print"],
     },
     "sync_gcal": {
         "description": "구글 캘린더 동기화를 바로 시작합니다.",

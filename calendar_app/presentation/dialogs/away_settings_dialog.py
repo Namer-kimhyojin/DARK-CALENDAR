@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont, QTextCharFormat
 from PyQt6.QtWidgets import (
@@ -14,6 +15,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QRadioButton,
+    QScrollArea,
     QSizePolicy,
     QSlider,
     QSpinBox,
@@ -41,7 +43,7 @@ from calendar_app.shared.value_parsers import as_bool
 
 # ?? 怨듯넻 移섏닔 ?곸닔 ????????????????????????????????????????????????
 
-_H = 31
+_H = 36
 
 
 def _fit_btn(btn, minimum=76, extra=10):
@@ -115,7 +117,8 @@ def _away_style_bundle(tokens=None, metrics=None):
         ),
         "tool_btn": (
             f"QToolButton {{ background: transparent; color: {text_muted}; border: none; border-radius: {tool_radius}px; "
-            "font-size: 14px; padding: 0; }"
+            f"font-size: 14px; padding: 0; min-width: {_H}px; max-width: {_H}px; "
+            f"min-height: {_H}px; max-height: {_H}px; }}"
             f"QToolButton:hover {{ background: {tokens.get('button_secondary_hover_bg', surface_top)}; color: {text_primary}; }}"
             f"QToolButton:checked {{ background: {accent_soft_bg}; color: {accent}; border: 1px solid {accent_soft_border}; }}"
         ),
@@ -142,7 +145,10 @@ class AwaySettingsDialog(QDialog):
 
         apply_dialog_title(self, t("away_settings.title"))
 
-        apply_common_dialog_style(self, minimum_width=860, size=(900, 800))
+        apply_common_dialog_style(self, minimum_width=760, size=(900, 720))
+        self.setMinimumHeight(600)
+
+        self.setSizeGripEnabled(True)
 
         base_font = self.font()
 
@@ -177,9 +183,42 @@ class AwaySettingsDialog(QDialog):
 
         root.setContentsMargins(18, 16, 18, 16)
 
-        root.addWidget(self._build_editor_section(), 3)  # 硫붿떆吏 ?몄쭛
+        self.section_tabs = QTabWidget()
+        self.section_tabs.setObjectName("AwaySettingsSections")
+        self.section_tabs.setAccessibleName(
+            t("away_settings.accessible_sections", "자리 비움 설정 영역")
+        )
 
-        root.addWidget(self._build_options_section(), 2)  # ?좉툑/鍮꾩＜???ㅼ젙
+        message_label = t("away_settings.section_message", "메시지")
+        options_label = t("away_settings.section_lock_visual", "잠금 · 배경")
+        self.message_scroll = self._build_section_scroll(
+            self._build_editor_section(),
+            message_label,
+            "awayMessageScroll",
+        )
+        self.options_scroll = self._build_section_scroll(
+            self._build_options_section(),
+            options_label,
+            "awayOptionsScroll",
+        )
+        self.section_tabs.addTab(self.message_scroll, message_label)
+        self.section_tabs.addTab(self.options_scroll, options_label)
+        self.section_tabs.setTabToolTip(
+            0,
+            t(
+                "away_settings.section_message_tip",
+                "자리 비움 화면에 표시할 메시지와 서식을 편집합니다.",
+            ),
+        )
+        self.section_tabs.setTabToolTip(
+            1,
+            t(
+                "away_settings.section_lock_visual_tip",
+                "자동 잠금, 해제 방법, 시계와 배경을 설정합니다.",
+            ),
+        )
+        self.content_scroll = self.message_scroll
+        root.addWidget(self.section_tabs, 1)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
@@ -187,7 +226,27 @@ class AwaySettingsDialog(QDialog):
 
         root.addLayout(self._build_button_bar())
 
-    # ?? 硫붿떆吏 ?몄쭛湲?(WYSIWYG) ???????????????????????????????????????
+    @staticmethod
+    def _build_section_scroll(
+        section: QWidget,
+        accessible_name: str,
+        object_name: str,
+    ) -> QScrollArea:
+        scroll = QScrollArea()
+        scroll.setObjectName(object_name)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setAccessibleName(accessible_name)
+
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 8, 6, 0)
+        content_layout.setSpacing(0)
+        content_layout.addWidget(section)
+        content_layout.addStretch(1)
+        scroll.setWidget(content)
+        return scroll
 
     def _build_editor_section(self):
         group = QGroupBox(t("away_settings.msg_group"))
@@ -205,6 +264,9 @@ class AwaySettingsDialog(QDialog):
         lay.addWidget(hint)
 
         self.editor_tabs = QTabWidget()
+        self.editor_tabs.setMinimumHeight(210)
+        self.editor_tabs.setMaximumHeight(240)
+        self.editor_tabs.setAccessibleName(t("away_settings.msg_group"))
 
         rich_tab = QWidget()
 
@@ -220,7 +282,7 @@ class AwaySettingsDialog(QDialog):
 
         self.msg_edit.setPlaceholderText(t("away_settings.placeholder_msg"))
 
-        self.msg_edit.setMinimumHeight(180)
+        self.msg_edit.setMinimumHeight(120)
 
         self.msg_edit.setStyleSheet(self._style_bundle["rich_editor"])
 
@@ -246,7 +308,7 @@ class AwaySettingsDialog(QDialog):
 
         self.html_edit = QTextEdit()
 
-        self.html_edit.setMinimumHeight(180)
+        self.html_edit.setMinimumHeight(120)
 
         self.html_edit.setStyleSheet(self._style_bundle["html_editor"])
 
@@ -272,7 +334,7 @@ class AwaySettingsDialog(QDialog):
 
         preview_box = QFrame()
 
-        preview_box.setMinimumHeight(122)
+        preview_box.setMinimumHeight(90)
 
         preview_box.setStyleSheet(self._style_bundle["preview_box"])
 
@@ -305,7 +367,7 @@ class AwaySettingsDialog(QDialog):
 
         bar.setObjectName("AwayFormatToolbar")
 
-        bar.setFixedHeight(31 + 12)
+        bar.setFixedHeight(_H + 12)
 
         bar.setStyleSheet(self._style_bundle["toolbar"])
 
@@ -327,6 +389,9 @@ class AwaySettingsDialog(QDialog):
             b.setCheckable(True)
 
             b.setToolTip(tip)
+            b.setAccessibleName(tip)
+            b.setAccessibleDescription(tip)
+            b.setProperty("awayToolbarAction", True)
 
             b.setFixedSize(tb_h, tb_h)
 
@@ -452,7 +517,7 @@ class AwaySettingsDialog(QDialog):
 
         self.color_swatch = QPushButton()
 
-        self.color_swatch.setFixedSize(26, 26)
+        self.color_swatch.setFixedSize(36, 36)
 
         self.color_swatch.setCheckable(False)
 
@@ -695,48 +760,32 @@ class AwaySettingsDialog(QDialog):
 
     def _build_button_bar(self):
         row = QHBoxLayout()
-
-        row.setSpacing(6)
-
+        row.setSpacing(8)
         row.setContentsMargins(0, 4, 0, 0)
 
         reset_btn = QPushButton(t("away_settings.btn_default"))
-
         reset_btn.setObjectName("ghost_btn")
-
+        reset_btn.setAutoDefault(False)
         _fit_btn(reset_btn, minimum=82, extra=28)
-
         reset_btn.clicked.connect(self._reset_to_default)
-
         row.addWidget(reset_btn)
-
-        save_btn = QPushButton(t("dialog.common.ok"))
-
-        save_btn.setDefault(True)
-
-        _fit_btn(save_btn, minimum=82, extra=28)
-
-        save_btn.clicked.connect(self._save_settings)
-
-        row.addWidget(save_btn)
+        row.addStretch(1)
 
         close_btn = QPushButton(t("common.cancel"))
-
         close_btn.setObjectName("ghost_btn")
-
+        close_btn.setAutoDefault(False)
         _fit_btn(close_btn, minimum=82, extra=28)
-
         close_btn.clicked.connect(self.reject)
-
         row.addWidget(close_btn)
 
+        save_btn = QPushButton(t("dialog.common.ok"))
+        save_btn.setObjectName("primary_btn")
+        save_btn.setDefault(True)
+        _fit_btn(save_btn, minimum=82, extra=28)
+        save_btn.clicked.connect(self._save_settings)
+        row.addWidget(save_btn)
+
         return row
-
-    # ?????????????????????????????????????????????????????????????
-
-    # ?쒖떇 ?숈옉
-
-    # ?????????????????????????????????????????????????????????????
 
     def _refresh_swatch(self):
         c = self._fmt_color.name()

@@ -6,14 +6,18 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QSettings
+from PyQt6.QtCore import QDate, QSettings, Qt, QTime
+from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import (
+    QAbstractSpinBox,
     QApplication,
     QCheckBox,
+    QDateTimeEdit,
     QDialog,
     QFrame,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QWidget,
@@ -30,11 +34,18 @@ from calendar_app.presentation.dialogs.color_swatch_widget import (
     _color_swatch_popup_stylesheet,
     _color_swatch_theme_bundle,
 )
+from calendar_app.presentation.dialogs.dialog_editor_styles import build_task_editor_stylesheet
+from calendar_app.presentation.dialogs.dialog_styles import (
+    build_dialog_stylesheet,
+    get_dialog_theme_tokens,
+    install_common_dialog_style_filter,
+)
 from calendar_app.presentation.dialogs.dialog_token_editor_dialog import DialogTokenEditorDialog
 from calendar_app.presentation.dialogs.focus_log_dialog import FocusLogDialog
 from calendar_app.presentation.dialogs.gcal_settings_dialog import GCalSettingsDialog
 from calendar_app.presentation.dialogs.label_settings_dialog import LabelSettingsDialog
 from calendar_app.presentation.dialogs.time_picker_widget import (
+    DatePickerWidget,
     TimePickerWidget,
     _time_picker_metric_bundle,
 )
@@ -71,6 +82,74 @@ class DialogEditorWidgetTests(unittest.TestCase):
         self.assertEqual(widget.maximumHeight(), 44)
         self.assertEqual(widget.minimumWidth(), 104)
         self.assertEqual(widget.objectName(), "TaskTimeEdit")
+        self.assertEqual(widget.buttonSymbols(), QAbstractSpinBox.ButtonSymbols.UpDownArrows)
+        self.assertEqual(widget.property("controlAffordance"), "stepper")
+
+    def test_time_picker_steps_minutes_in_five_minute_increments(self):
+        widget = TimePickerWidget(QTime(9, 0))
+        self.addCleanup(widget.close)
+        widget.setCurrentSection(QDateTimeEdit.Section.MinuteSection)
+
+        widget.stepBy(1)
+
+        self.assertEqual(widget.time(), QTime(9, 5))
+
+    def test_time_picker_accepts_continuous_numeric_keypad_entry(self):
+        widget = TimePickerWidget(QTime(12, 0))
+        self.addCleanup(widget.close)
+
+        for key in (Qt.Key.Key_0, Qt.Key.Key_9, Qt.Key.Key_3, Qt.Key.Key_0):
+            QTest.keyClick(widget, key, Qt.KeyboardModifier.KeypadModifier)
+
+        self.assertEqual(widget.time(), QTime(9, 30))
+        self.assertTrue(widget.toolTip())
+        self.assertEqual(widget.toolTip(), widget.accessibleDescription())
+
+    def test_date_picker_accepts_continuous_numeric_keypad_entry(self):
+        widget = DatePickerWidget(QDate(2025, 1, 1))
+        self.addCleanup(widget.close)
+
+        QTest.keyClicks(widget, "20260804")
+
+        self.assertEqual(widget.date(), QDate(2026, 8, 4))
+        self.assertEqual(widget.displayFormat(), "yyyy-MM-dd")
+        self.assertTrue(widget.calendarPopup())
+        self.assertEqual(widget.property("controlAffordance"), "calendar")
+
+    def test_standard_message_box_receives_common_theme_on_show(self):
+        install_common_dialog_style_filter(self._app)
+        box = QMessageBox()
+        self.addCleanup(box.close)
+        box.setWindowTitle("Theme safety net")
+        box.setText("Readable modal text")
+
+        box.show()
+        self._app.processEvents()
+
+        self.assertTrue(box.property("_dc_common_style_applied"))
+        self.assertEqual(box.accessibleName(), "Theme safety net")
+        self.assertIn("DC_DIALOG_BASE", box.styleSheet())
+        self.assertTrue(all(button.height() >= 44 for button in box.buttons()))
+
+    def test_light_dialog_tokens_and_bright_accent_keep_text_readable(self):
+        tokens = get_dialog_theme_tokens(
+            theme_color="#50fa7b",
+            text_theme="light",
+            panel_base_color="#fefefe",
+            apply_overrides=False,
+        )
+        stylesheet = build_task_editor_stylesheet(tokens=tokens)
+        common_stylesheet = build_dialog_stylesheet(
+            theme_color="#50fa7b",
+            text_theme="light",
+            panel_base_color="#fefefe",
+        )
+
+        self.assertEqual(tokens["accent_text"], "#101318")
+        self.assertTrue(tokens["border"].startswith("rgba(0,0,0,"))
+        self.assertTrue(tokens["border_soft"].startswith("rgba(0,0,0,"))
+        self.assertIn("color: #101318;", stylesheet)
+        self.assertIn("background-color: #fefefe;", common_stylesheet)
 
     def test_color_swatch_and_popup_follow_dialog_tokens(self):
         tokens = {
@@ -386,7 +465,7 @@ class DialogEditorWidgetTests(unittest.TestCase):
         self.assertIsNotNone(edit_btn)
         self.assertIsNotNone(del_btn)
         self.assertIn("font-size: 13px", name_lbl.styleSheet())
-        self.assertIn("min-width: 26px", default_btn.styleSheet())
+        self.assertIn("min-width: 40px", default_btn.styleSheet())
         self.assertIn("#1e2536", default_btn.styleSheet())
         self.assertIn("rgba(77, 166, 255, 0.16)", vis_btn.styleSheet())
         self.assertIn("#1e2536", edit_btn.styleSheet())

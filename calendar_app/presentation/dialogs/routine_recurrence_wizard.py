@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import (
     QButtonGroup,
@@ -79,6 +81,7 @@ def _apply_wizard_theme_tokens(css: str, tokens=None) -> str:
     border = tokens.get("border", "#3d3d47")
     border_soft = tokens.get("border_soft", "#2d2d35")
     success = tokens.get("success_hex", "#35d06e")
+    accent_text = tokens.get("accent_text", "#101318")
 
     replacements = {
         "#4da6ff": accent,
@@ -88,11 +91,15 @@ def _apply_wizard_theme_tokens(css: str, tokens=None) -> str:
         "#15151a": surface_item,
         "#101015": surface_hover,
         "#3d3d47": border,
+        "#33333d": border,
+        "#4a4a56": accent,
         "#23232b": surface_top,
         "#35d06e": success,
         "#9fe2a3": success,
         "#ffffff": text_primary,
         "#cacedb": text_secondary,
+        "#e1e1e6": text_secondary,
+        "#0d0d0f": accent_text,
         "#8c8c9a": text_muted,
         "#9aa8b8": text_muted,
         "rgba(77, 166, 255, 0.1)": tokens.get("button_primary_bg", "rgba(77, 166, 255, 26)"),

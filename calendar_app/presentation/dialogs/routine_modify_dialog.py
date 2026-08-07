@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Dedicated modify dialog for 일반업무 (routine type tasks)."""
 
 from datetime import datetime
@@ -6,7 +7,6 @@ from PyQt6.QtCore import QDate, Qt, QTime, pyqtSignal
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
-    QDateEdit,
     QFrame,
     QGridLayout,
     QGroupBox,
@@ -38,7 +38,7 @@ from calendar_app.presentation.dialogs.routine_recurrence_wizard import (
     get_weekday_names,
 )
 from calendar_app.presentation.dialogs.task_dialog_base import BaseTaskDialog
-from calendar_app.presentation.dialogs.time_picker_widget import TimePickerWidget
+from calendar_app.presentation.dialogs.time_picker_widget import DatePickerWidget, TimePickerWidget
 
 
 class RoutineModifyDialog(BaseTaskDialog):
@@ -178,9 +178,7 @@ class RoutineModifyDialog(BaseTaskDialog):
         dt_row = QHBoxLayout()
         dt_row.setSpacing(8)
 
-        self.start_date = QDateEdit(self.initial_date)
-        self.start_date.setCalendarPopup(True)
-        self.start_date.setDisplayFormat("yyyy-MM-dd")
+        self.start_date = DatePickerWidget(self.initial_date)
         self.start_date.setMinimumWidth(130)
         self._set_editor_height(self.start_date)
         polish_calendar_popup(self.start_date)

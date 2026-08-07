@@ -6,7 +6,7 @@ from unittest.mock import patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QDate, QSize
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6.QtWidgets import QApplication, QToolButton, QWidget
 
 from calendar_app.presentation.widgets import unified_widget_mode as uwm
 
@@ -310,6 +310,38 @@ class UnifiedWidgetModeTests(unittest.TestCase):
             self.host.current_date, self.host.open_task_dialog_calls[0]["initial_date"]
         )
         self.assertEqual("schedule", self.host.open_task_dialog_calls[0]["task_type"])
+
+    def test_empty_agenda_offers_schedule_creation(self):
+        self.controller = uwm.UnifiedWidgetController(self.host)
+        widget = uwm.UnifiedWidgetWindow(self.controller)
+        self.controller.widget = widget
+        widget._last_render_key = None
+
+        widget.update_agenda([])
+
+        action = widget.findChild(QToolButton, "unified_primary_action")
+        self.assertIsNotNone(action)
+        action.click()
+        self.assertEqual(1, len(self.host.open_task_dialog_calls))
+        self.assertEqual("schedule", self.host.open_task_dialog_calls[0]["task_type"])
+
+    def test_filtered_empty_agenda_can_return_to_all_items(self):
+        self.controller = uwm.UnifiedWidgetController(self.host)
+        widget = uwm.UnifiedWidgetWindow(self.controller)
+        self.controller.widget = widget
+        widget._active_filter = "work"
+        widget._last_render_key = None
+
+        widget.update_agenda([])
+
+        actions = [
+            button
+            for button in widget.findChildren(QToolButton, "unified_action_btn")
+            if button.text() == uwm.t("widget_mode.show_all", "Show all")
+        ]
+        self.assertEqual(1, len(actions))
+        actions[0].click()
+        self.assertEqual("all", widget._active_filter)
 
     def test_set_skin_persists_and_rethemes_visible_widget(self):
         self.controller = uwm.UnifiedWidgetController(self.host)

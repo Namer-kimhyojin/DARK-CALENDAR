@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QSlider, QWidget
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.main_window.dock_factory import setup_body_and_docks
+from calendar_app.presentation.main_window.first_run_banner import build_first_run_banner
 from calendar_app.presentation.main_window.idle_lock_ui_builder import (
     setup_idle_lock_ui,  # noqa: F401
 )
@@ -110,8 +112,11 @@ def setup_main_ui(self):
     _menu_wrapper = QWidget()
     _vbox = _VBox(_menu_wrapper)
     _vbox.setContentsMargins(0, 0, 0, 3)
-    _vbox.setSpacing(0)
+    _vbox.setSpacing(3)
     _vbox.addWidget(self.top_bar_frame)
+    self._welcome_banner = build_first_run_banner(self)
+    if self._welcome_banner is not None:
+        _vbox.addWidget(self._welcome_banner)
     self._top_bar_menu_wrapper = _menu_wrapper
     self.setMenuWidget(_menu_wrapper)
 

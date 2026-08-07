@@ -24,6 +24,7 @@ _DIALOG_ROUTE_MAP = {
     "routine_management_dialog": "open_routine_management_dialog",
     "gcal_settings_dialog": "open_gcal_settings_dialog",
     "gcal_sync_issues_dialog": "open_gcal_sync_issues_dialog",
+    "calendar_print_dialog": "open_calendar_print_dialog",
     "modify_task_dialog": "open_modify_task_dialog",
     "directive_dialog": "open_directive_dialog",
     "routine_add_dialog": "open_routine_add_dialog",
@@ -220,6 +221,17 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     # Schedule / Task dialogs
     # ------------------------------------------------------------------
+    def open_calendar_print_dialog(self, checked=False):
+        if not self._acquire_dialog_guard("open_calendar_print_dialog"):
+            return
+
+        from calendar_app.presentation.dialogs.calendar_print_dialog import (
+            CalendarPrintDialog,
+        )
+
+        dialog = CalendarPrintDialog(self)
+        dialog.exec()
+
     def open_task_dialog(
         self, initial_date=None, task_type=None, end_date=None, initial_time=None, **kwargs
     ):

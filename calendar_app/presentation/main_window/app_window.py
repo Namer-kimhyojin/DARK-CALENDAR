@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Main application window shell."""
 
-from PyQt6.QtCore import QDate
+from PyQt6.QtCore import QDate, Qt
 from PyQt6.QtWidgets import QApplication, QMainWindow
 
 from calendar_app.presentation.main_window.action_handlers import ActionHandlersMixin
@@ -30,6 +30,12 @@ class OverlayApp(MainWindowUiActionsMixin, ActionHandlersMixin, WindowEventsMixi
         self.command_palette.show_at_center(rect)
 
     def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape and getattr(self, "is_focus_mode", False):
+            from calendar_app.presentation.focus_mode import exit_focus_fullscreen
+
+            if exit_focus_fullscreen(self):
+                event.accept()
+                return
         super().keyPressEvent(event)
 
     def handle_palette_command(self, cmd_id: str, params: dict):
