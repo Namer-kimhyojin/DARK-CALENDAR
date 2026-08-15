@@ -59,6 +59,7 @@ class BaseTaskDialog(QDialog):
     # ── Common state initializer ──────────────────────────────────────────
     def _init_common_state(self):
         self._auto_end_duration_mins = 60
+        self._all_day_span_days = 1
         self._updating_end_controls = False
         self._routine_cycle_type = "monthly"
         self._routine_recurrence = None
@@ -258,6 +259,44 @@ class BaseTaskDialog(QDialog):
         time_edit.blockSignals(old_time)
         date_edit.blockSignals(old_date)
 
+    def _is_all_day_schedule(self):
+        return (
+            self.task_type == "schedule"
+            and getattr(self, "all_day_check", None) is not None
+            and self.all_day_check.isChecked()
+        )
+
+    def _sync_all_day_span_from_controls(self):
+        if self.start_date is None or self.end_date is None:
+            return
+        start = self.start_date.date()
+        end = self.end_date.date()
+        if end >= start:
+            self._all_day_span_days = max(1, start.daysTo(end) + 1)
+        self._update_period_keep_accessibility()
+
+    def _update_period_keep_accessibility(self):
+        if self.auto_end_check is None or not self._is_all_day_schedule():
+            return
+        hint = t(
+            "dialog.task.keep_period_hint",
+            "시작일 변경 시 {count}일 기간을 유지합니다.",
+            count=self._all_day_span_days,
+        )
+        self.auto_end_check.setAccessibleDescription(hint)
+        self.auto_end_check.setToolTip(hint)
+
+    def _apply_all_day_end_from_start(self):
+        if self.start_date is None or self.end_date is None:
+            return
+        end = self.start_date.date().addDays(max(1, self._all_day_span_days) - 1)
+        old_block = self.end_date.blockSignals(True)
+        self._updating_end_controls = True
+        self.end_date.setDate(end)
+        self._updating_end_controls = False
+        self.end_date.blockSignals(old_block)
+        self._update_period_keep_accessibility()
+
     def _update_duration_summary(self):
         if not hasattr(self, "duration_summary_label"):
             return
@@ -273,6 +312,35 @@ class BaseTaskDialog(QDialog):
                 build_editor_text_style(tokens, tone="muted", font_px=14)
             )
             return
+        if self._is_all_day_schedule():
+            start_date = self.start_date.date()
+            end_date = self.end_date.date()
+            if end_date < start_date:
+                self.duration_summary_label.setText(
+                    t(
+                        "dialog.task.date_end_before_start",
+                        "종료일은 시작일보다 빠를 수 없습니다. 종료일을 다시 선택해 주세요.",
+                    )
+                )
+                self.duration_summary_label.setStyleSheet(
+                    build_editor_text_style(tokens, tone="danger", font_px=14)
+                )
+                return
+            day_count = start_date.daysTo(end_date) + 1
+            self.duration_summary_label.setText(
+                t(
+                    "dialog.task.all_day_duration_summary",
+                    "📅 {start} → {end} · 총 {count}일 · 종일",
+                    start=start_date.toString("M/d"),
+                    end=end_date.toString("M/d"),
+                    count=day_count,
+                )
+            )
+            self.duration_summary_label.setStyleSheet(
+                build_editor_text_style(tokens, tone="accent", font_px=14, weight=600)
+            )
+            return
+
         start_value = self._date_time_value(self.start_date, self.start_time)
         end_value = self._date_time_value(self.end_date, self.end_time)
         secs = start_value.secsTo(end_value)
@@ -390,6 +458,9 @@ class BaseTaskDialog(QDialog):
             or not self.auto_end_check.isChecked()
         ):
             return
+        if self._is_all_day_schedule():
+            self._apply_all_day_end_from_start()
+            return
         start_value = self._date_time_value(self.start_date, self.start_time)
         end_value = start_value.addSecs(self._auto_end_duration_mins * 60)
         self._updating_end_controls = True
@@ -399,6 +470,8 @@ class BaseTaskDialog(QDialog):
     def _handle_start_datetime_changed(self):
         if self.task_type == "routine":
             self._update_routine_mode_ui()
+        elif self._is_all_day_schedule() and self.auto_end_check.isChecked():
+            self._apply_all_day_end_from_start()
         elif (
             hasattr(self, "end_date")
             and self.end_date is not None
@@ -414,7 +487,9 @@ class BaseTaskDialog(QDialog):
     def _handle_end_datetime_changed(self):
         if self._updating_end_controls or self.end_date is None or self.end_time is None:
             return
-        if self.auto_end_check.isChecked():
+        if self._is_all_day_schedule():
+            self._sync_all_day_span_from_controls()
+        elif self.auto_end_check.isChecked():
             self._sync_auto_end_duration_from_controls()
         self._update_duration_summary()
 

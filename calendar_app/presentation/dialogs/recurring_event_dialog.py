@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Dialog to choose the scope for editing or deleting a recurring GCal event.
 """
@@ -27,7 +28,7 @@ class RecurringEventScopeDialog(QDialog):
     SCOPE_FOLLOWING = "this_and_following"
     SCOPE_ALL = "all"
 
-    def __init__(self, mode: str = "edit", parent=None):
+    def __init__(self, mode: str = "edit", parent=None, *, allow_all: bool = True):
         """
         Parameters
         ----------
@@ -36,6 +37,7 @@ class RecurringEventScopeDialog(QDialog):
         """
         super().__init__(parent)
         self._mode = mode
+        self._allow_all = bool(allow_all)
         self._scope = self.SCOPE_SINGLE
         self._setup_ui()
 
@@ -82,6 +84,7 @@ class RecurringEventScopeDialog(QDialog):
 
         self._rb_all = QRadioButton(all_lbl)
         self._btn_group.addButton(self._rb_all, 2)
+        self._rb_all.setVisible(self._allow_all)
         layout.addWidget(self._rb_all)
 
         sep = QFrame()

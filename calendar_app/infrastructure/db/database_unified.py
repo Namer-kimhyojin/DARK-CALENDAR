@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # legacy DB module: suppress style-only lints (try/except/pass migration guards, late re-export import)
 # ruff: noqa: SIM105, E402
 
@@ -682,6 +683,13 @@ def initialize_unified_database():
 
         # Missing columns for worklog
         worklog_cols = get_table_columns(cur, "worklog")
+        if "elapsed_secs" not in worklog_cols:
+            try:
+                cur.execute("ALTER TABLE worklog ADD COLUMN elapsed_secs INTEGER DEFAULT 0")
+                if "duration_seconds" in worklog_cols:
+                    cur.execute("UPDATE worklog SET elapsed_secs=COALESCE(duration_seconds, 0)")
+            except sqlite3.OperationalError:
+                pass
         if "task_type" not in worklog_cols:
             try:
                 cur.execute("ALTER TABLE worklog ADD COLUMN task_type TEXT")
@@ -873,6 +881,8 @@ def initialize_unified_database():
 
         cur.execute("CREATE INDEX IF NOT EXISTS idx_unified_task_status ON unified_task (status)")
 
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_worklog_logged_at ON worklog (logged_at)")
+
         cur.execute(
             "CREATE INDEX IF NOT EXISTS idx_unified_task_target_date ON unified_task (target_date)"
         )
@@ -894,6 +904,19 @@ def initialize_unified_database():
         )
 
         if "gcal_calendar_id" in get_table_columns(cur, "gcal_delete_queue"):
+            cur.execute(
+                "DELETE FROM gcal_delete_queue WHERE id NOT IN ("
+                "SELECT MIN(id) FROM gcal_delete_queue "
+                "GROUP BY gcal_event_id, COALESCE(trim(gcal_calendar_id), '')"
+                ")"
+            )
+            cur.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS "
+                "idx_gcal_delete_queue_event_calendar_unique "
+                "ON gcal_delete_queue ("
+                "gcal_event_id, COALESCE(trim(gcal_calendar_id), '')"
+                ")"
+            )
             cur.execute(
                 "CREATE INDEX IF NOT EXISTS idx_gcal_delete_queue_calendar_id ON gcal_delete_queue (gcal_calendar_id)"
             )

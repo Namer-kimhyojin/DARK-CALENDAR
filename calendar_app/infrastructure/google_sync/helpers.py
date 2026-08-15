@@ -35,7 +35,27 @@ class SyncTaskResult:
 
 
 def resolve_app_context(ctx):
-    return ctx
+    """Walk QObject parents to find the main application context."""
+    current = ctx
+    visited = set()
+    fallback = ctx
+    while current is not None and id(current) not in visited:
+        visited.add(id(current))
+        if hasattr(current, "gcal_sync") or (
+            hasattr(current, "settings")
+            and hasattr(current, "open_task_dialog")
+            and hasattr(current, "open_modify_task_dialog")
+        ):
+            return current
+
+        parent_getter = getattr(current, "parent", None)
+        if not callable(parent_getter):
+            parent_getter = getattr(current, "parentWidget", None)
+        try:
+            current = parent_getter() if callable(parent_getter) else None
+        except RuntimeError:
+            current = None
+    return fallback
 
 
 def _setting_value(settings, key, default=None):

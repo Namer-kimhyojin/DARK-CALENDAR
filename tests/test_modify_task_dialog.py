@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import unittest
 from unittest.mock import patch
@@ -96,6 +98,58 @@ class ModifyTaskDialogTests(TemporaryDatabaseTestCase):
         self.assertEqual(task["location"], "회의실 A")
         self.assertEqual(task["assignee"], "홍길동")
 
+    def test_google_delete_is_not_queued_when_local_calendar_move_fails_to_save(self):
+        task_id = self._create_schedule_task()
+        dialog = UnifiedModifyTaskDialog(task_id)
+        self.addCleanup(dialog.close)
+        dialog.task_data.update(
+            {
+                "calendar_id": "gcal::source",
+                "gcal_event_id": "remote-event",
+                "gcal_source_calendar_id": "source@example.com",
+            }
+        )
+
+        with (
+            patch.object(dialog, "_get_selected_calendar_id", return_value="local::private"),
+            patch.object(
+                QMessageBox,
+                "question",
+                return_value=QMessageBox.StandardButton.Yes,
+            ),
+            patch(
+                "calendar_app.presentation.dialogs.task_dialog_unified."
+                "task_repo.update_unified_task_with_gcal_delete",
+                return_value=False,
+            ) as atomic_move,
+            patch.object(QMessageBox, "critical", return_value=QMessageBox.StandardButton.Ok),
+        ):
+            dialog._save_changes()
+
+        atomic_move.assert_called_once()
+
+    def _create_weekly_series(self):
+        series_id = "weekly-series"
+        task_ids = []
+        for order, target_date in enumerate(("2026-04-01", "2026-04-08", "2026-04-15"), start=1):
+            task_ids.append(
+                task_db.create_unified_task(
+                    {
+                        "name": "기존 반복 업무",
+                        "type": "routine",
+                        "priority": "normal",
+                        "status": "pending",
+                        "cycle_type": "weekly",
+                        "target_date": target_date,
+                        "deadline": f"{target_date} 09:00:00",
+                        "series_id": series_id,
+                        "series_order": order,
+                        "series_total": 3,
+                    }
+                )
+            )
+        return task_ids
+
     def test_modify_routine_repeat_mode_exposes_end_date_and_creates_series(self):
         task_id = self._create_routine_task()
         dialog = UnifiedModifyTaskDialog(task_id)
@@ -137,6 +191,96 @@ class ModifyTaskDialogTests(TemporaryDatabaseTestCase):
         self.assertEqual(len({row["series_id"] for row in rows}), 1)
         self.assertEqual([int(row["series_order"]) for row in rows], [1, 2, 3])
         self.assertEqual({int(row["series_total"]) for row in rows}, {3})
+
+    def test_edit_this_and_following_renames_and_shortens_without_duplicates(self):
+        task_ids = self._create_weekly_series()
+        dialog = UnifiedModifyTaskDialog(task_ids[0])
+        self.addCleanup(dialog.close)
+        dialog.name_edit.setText("변경된 반복 업무")
+        dialog.routine_period_end_date.setDate(QDate(2026, 4, 8))
+
+        with (
+            patch.object(
+                dialog,
+                "_choose_repeat_routine_edit_scope",
+                return_value="this_and_following",
+            ),
+            patch.object(QMessageBox, "information", return_value=QMessageBox.StandardButton.Ok),
+        ):
+            dialog._save_changes()
+
+        conn = task_db.get_connection()
+        rows = conn.execute(
+            "SELECT name, target_date, series_id, series_order, series_total "
+            "FROM unified_task ORDER BY target_date, id"
+        ).fetchall()
+        self.assertEqual(len(rows), 2)
+        self.assertEqual({row["name"] for row in rows}, {"변경된 반복 업무"})
+        self.assertEqual([row["target_date"] for row in rows], ["2026-04-01", "2026-04-08"])
+        self.assertEqual(len({row["series_id"] for row in rows}), 1)
+        self.assertEqual([row["series_order"] for row in rows], [1, 2])
+        self.assertEqual({row["series_total"] for row in rows}, {2})
+
+    def test_edit_single_scope_changes_only_selected_occurrence(self):
+        task_ids = self._create_weekly_series()
+        dialog = UnifiedModifyTaskDialog(task_ids[1])
+        self.addCleanup(dialog.close)
+        dialog.name_edit.setText("이번 일정만 변경")
+
+        with (
+            patch.object(dialog, "_choose_repeat_routine_edit_scope", return_value="single"),
+            patch.object(QMessageBox, "information", return_value=QMessageBox.StandardButton.Ok),
+        ):
+            dialog._save_changes()
+
+        conn = task_db.get_connection()
+        rows = conn.execute(
+            "SELECT name, target_date, series_id, series_order, series_total "
+            "FROM unified_task ORDER BY target_date, id"
+        ).fetchall()
+        self.assertEqual(
+            [row["name"] for row in rows],
+            [
+                "기존 반복 업무",
+                "이번 일정만 변경",
+                "기존 반복 업무",
+            ],
+        )
+        self.assertEqual({row["series_id"] for row in rows}, {"weekly-series"})
+        self.assertEqual([row["series_order"] for row in rows], [1, 2, 3])
+        self.assertEqual({row["series_total"] for row in rows}, {3})
+
+    def test_edit_following_from_middle_splits_series_and_renumbers_both_sides(self):
+        task_ids = self._create_weekly_series()
+        dialog = UnifiedModifyTaskDialog(task_ids[1])
+        self.addCleanup(dialog.close)
+        dialog.name_edit.setText("이후 반복 업무")
+        dialog.routine_period_end_date.setDate(QDate(2026, 4, 15))
+
+        with (
+            patch.object(
+                dialog,
+                "_choose_repeat_routine_edit_scope",
+                return_value="this_and_following",
+            ),
+            patch.object(QMessageBox, "information", return_value=QMessageBox.StandardButton.Ok),
+        ):
+            dialog._save_changes()
+
+        conn = task_db.get_connection()
+        rows = conn.execute(
+            "SELECT name, target_date, series_id, series_order, series_total "
+            "FROM unified_task ORDER BY target_date, id"
+        ).fetchall()
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(rows[0]["name"], "기존 반복 업무")
+        self.assertEqual(rows[0]["series_id"], "weekly-series")
+        self.assertEqual((rows[0]["series_order"], rows[0]["series_total"]), (1, 1))
+        self.assertEqual([row["name"] for row in rows[1:]], ["이후 반복 업무"] * 2)
+        self.assertNotEqual(rows[1]["series_id"], "weekly-series")
+        self.assertEqual(rows[1]["series_id"], rows[2]["series_id"])
+        self.assertEqual([row["series_order"] for row in rows[1:]], [1, 2])
+        self.assertEqual({row["series_total"] for row in rows[1:]}, {2})
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Dialog for customizing priority/status icon and text labels."""
 
 from PyQt6.QtCore import QPoint, Qt, QTimer
@@ -31,6 +32,7 @@ from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
     build_collapsible_section,
+    build_dialog_footer,
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
@@ -726,25 +728,20 @@ class LabelSettingsDialog(QDialog):
         divider.setStyleSheet(self._style_bundle["divider"])
         root.addWidget(divider)
 
-        btn_row = QHBoxLayout()
         self.reset_btn = QPushButton(t("dialog.label_settings.reset"))
         self.reset_btn.setObjectName("danger_btn")
+        self.reset_btn.setAccessibleName(self.reset_btn.text())
+        self.reset_btn.setAutoDefault(False)
         self.reset_btn.clicked.connect(self._reset_to_default)
-        btn_row.addWidget(self.reset_btn)
-        btn_row.addStretch()
-
-        self.save_btn = QPushButton(t("dialog.common.save"))
-        self.save_btn.setObjectName("primary_btn")
+        btn_row, self.save_btn, self.cancel_btn = build_dialog_footer(
+            ok_label=t("dialog.common.save"),
+            cancel_label=t("dialog.common.cancel"),
+            extra_left_widget=self.reset_btn,
+        )
         self.save_btn.setStyleSheet(self._style_bundle["button_accent"])
         self.save_btn.clicked.connect(self._save)
-        btn_row.addWidget(self.save_btn)
-
-        self.cancel_btn = QPushButton(t("dialog.common.cancel"))
-        self.cancel_btn.setObjectName("ghost_btn")
         self.cancel_btn.setStyleSheet(self._style_bundle["button_secondary"])
         self.cancel_btn.clicked.connect(self.reject)
-        btn_row.addWidget(self.cancel_btn)
-
         root.addLayout(btn_row)
 
     def _add_header_row(self, grid, col_offset=0):

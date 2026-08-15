@@ -71,6 +71,12 @@ def initialize_overlay_app(app) -> None:
     app._is_shutting_down = False
     app._is_dragging = False
     app._drag_pending_refresh = False
+    app._task_dialog_refresh_depth = 0
+    app._task_dialog_pending_refresh = {"left": False, "center": False, "right": False}
+    app._task_dialog_pending_data_refresh = False
+    app._is_calendar_range_dragging = False
+    app._active_calendar_range_drag_cell = None
+    app._create_range_preview_cells = []
     app._last_drop_blocked_readonly_ids = []
     app._last_drop_failed_ids = []
     app._system_theme_style_hints = None

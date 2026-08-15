@@ -9,16 +9,19 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QPushButton,
+    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
+    QWidget,
 )
 
 from calendar_app.infrastructure.db import db_repository_unified as repo
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.dialogs.dialog_editor_styles import build_editor_text_style
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
+    build_dialog_footer,
     get_dialog_theme_tokens,
 )
 
@@ -38,28 +41,69 @@ class DailySummaryDialog(QDialog):
 
     def __init__(self, parent=None, theme_color=None):
         super().__init__(parent)
+        self._theme_color = theme_color
+        self._dialog_settings = getattr(parent, "settings", None)
         apply_dialog_title(self, t("dialog.daily.title", "오늘의 일정 & 마감 업무"))
-        apply_common_dialog_style(self, minimum_width=480, theme_color=theme_color)
+        apply_common_dialog_style(
+            self,
+            minimum_width=480,
+            size=(540, 440),
+            theme_color=theme_color,
+        )
+        self._ui_tokens = get_dialog_theme_tokens(
+            theme_color=self._theme_color,
+            settings=self._dialog_settings,
+        )
         self._build_ui()
 
     def _build_ui(self):
-        tokens = get_dialog_theme_tokens()
+        tokens = self._ui_tokens
+        text_primary = tokens.get("text_primary", "#f4f7fb")
+        text_secondary = tokens.get("text_secondary", "#c8ccd4")
         text_muted = tokens.get("text_muted", "#9aa0ad")
         border_soft = tokens.get("border_soft", "rgba(255,255,255,0.12)")
         item_bg = tokens.get("surface_item", "#111116")
         root = QVBoxLayout(self)
-        root.setContentsMargins(14, 10, 14, 10)
-        root.setSpacing(10)
+        root.setContentsMargins(18, 14, 18, 14)
+        root.setSpacing(0)
+
+        self.summary_scroll = QScrollArea()
+        self.summary_scroll.setObjectName("dailySummaryContent")
+        self.summary_scroll.setWidgetResizable(True)
+        self.summary_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.summary_scroll.setAccessibleName(t("dialog.daily.title", "오늘의 일정 & 마감 업무"))
+        self.summary_scroll.setStyleSheet(
+            "QScrollArea { background: transparent; border: none; }"
+            "QScrollBar:vertical { width: 10px; margin: 4px 0; }"
+        )
+        content = QWidget()
+        content.setObjectName("dailySummaryScrollContent")
+        content.setStyleSheet("QWidget#dailySummaryScrollContent { background: transparent; }")
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(0, 0, 4, 0)
+        content_layout.setSpacing(10)
+        self.summary_scroll.setWidget(content)
+        root.addWidget(self.summary_scroll, 1)
 
         today = _today_str()
         today_label = QLabel(t("dialog.daily.date_header", "오늘") + f"  {today}")
-        today_label.setStyleSheet("font-size:14px; font-weight:700;")
-        root.addWidget(today_label)
+        today_label.setStyleSheet(
+            build_editor_text_style(
+                tokens,
+                color=text_primary,
+                font_px=16,
+                weight=700,
+                padding="0 0 4px 0",
+            )
+        )
+        content_layout.addWidget(today_label)
 
         # ── 오늘의 일정 섹션 ───────────────────────────────────────────────
         sched_header = QLabel(t("dialog.daily.schedule_section", "📅 오늘의 일정"))
-        sched_header.setStyleSheet("font-size:13px; font-weight:700; margin-top:4px;")
-        root.addWidget(sched_header)
+        sched_header.setStyleSheet(
+            build_editor_text_style(tokens, tone="accent", font_px=13, weight=700, margin_top=4)
+        )
+        content_layout.addWidget(sched_header)
 
         sched_items = self._load_schedule(today)
         task_items_preview = self._load_due_routines(today)
@@ -69,21 +113,39 @@ class DailySummaryDialog(QDialog):
             for item in sched_items:
                 lbl = QLabel(item)
                 lbl.setWordWrap(True)
-                lbl.setStyleSheet("padding-left:8px; font-size:12px;")
-                root.addWidget(lbl)
+                lbl.setStyleSheet(
+                    build_editor_text_style(
+                        tokens,
+                        color=text_secondary,
+                        font_px=13,
+                        weight=500,
+                        padding="3px 0 3px 8px",
+                    )
+                )
+                content_layout.addWidget(lbl)
         else:
             empty = QLabel(t("dialog.daily.no_schedule", "  오늘 예정된 일정이 없습니다."))
-            empty.setStyleSheet(f"padding-left:8px; font-size:12px; color:{text_muted};")
-            root.addWidget(empty)
+            empty.setStyleSheet(
+                build_editor_text_style(
+                    tokens,
+                    color=text_muted,
+                    font_px=13,
+                    padding="3px 0 3px 8px",
+                )
+            )
+            content_layout.addWidget(empty)
 
         sep1 = QFrame()
         sep1.setFrameShape(QFrame.Shape.HLine)
-        root.addWidget(sep1)
+        sep1.setStyleSheet(f"background-color: {border_soft}; max-height: 1px;")
+        content_layout.addWidget(sep1)
 
         # ── 마감 업무 섹션 ─────────────────────────────────────────────────
         task_header = QLabel(t("dialog.daily.routine_section", "📋 오늘 마감 업무"))
-        task_header.setStyleSheet("font-size:13px; font-weight:700;")
-        root.addWidget(task_header)
+        task_header.setStyleSheet(
+            build_editor_text_style(tokens, tone="accent", font_px=13, weight=700)
+        )
+        content_layout.addWidget(task_header)
 
         task_items = task_items_preview
         if task_items:
@@ -95,43 +157,47 @@ class DailySummaryDialog(QDialog):
                     txt += f"  {pct_text}"
                 item_lbl = QLabel(txt)
                 item_lbl.setWordWrap(True)
-                item_lbl.setStyleSheet("padding-left:8px; font-size:12px;")
+                item_lbl.setStyleSheet(
+                    build_editor_text_style(
+                        tokens,
+                        color=text_secondary,
+                        font_px=13,
+                        weight=500,
+                        padding="3px 0 3px 8px",
+                    )
+                )
                 row.addWidget(item_lbl, 1)
                 if tags_text:
                     tag_lbl = QLabel(tags_text)
                     tag_lbl.setStyleSheet(
-                        f"font-size:11px; color:{text_muted}; padding:1px 5px;"
+                        f"font-size:11px; color:{text_muted}; padding:2px 6px;"
                         f" background:{item_bg}; border:1px solid {border_soft};"
-                        " border-radius:4px;"
+                        " border-radius:6px;"
                     )
+                    tag_lbl.setWordWrap(True)
+                    tag_lbl.setMaximumWidth(150)
                     tag_lbl.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Preferred)
                     row.addWidget(tag_lbl)
-                root.addLayout(row)
+                content_layout.addLayout(row)
         else:
             empty2 = QLabel(t("dialog.daily.no_routines", "  오늘 마감인 업무가 없습니다."))
-            empty2.setStyleSheet(f"padding-left:8px; font-size:12px; color:{text_muted};")
-            root.addWidget(empty2)
+            empty2.setStyleSheet(
+                build_editor_text_style(
+                    tokens,
+                    color=text_muted,
+                    font_px=13,
+                    padding="3px 0 3px 8px",
+                )
+            )
+            content_layout.addWidget(empty2)
 
-        root.addStretch()
-
-        sep2 = QFrame()
-        sep2.setFrameShape(QFrame.Shape.HLine)
-        root.addWidget(sep2)
-
-        # ── 푸터 ───────────────────────────────────────────────────────────
-        footer = QHBoxLayout()
-        footer.setSpacing(8)
-        footer.addStretch()
-
-        ok_btn = QPushButton(t("btn.confirm", "확인"))
-        ok_btn.setObjectName("primary_btn")
-        ok_btn.setFixedHeight(34)
-        ok_btn.setMinimumWidth(90)
+        footer, ok_btn, _ = build_dialog_footer(
+            ok_label=t("btn.confirm", "확인"),
+            cancel_label=None,
+        )
         ok_btn.clicked.connect(self.accept)
-        footer.addWidget(ok_btn)
-
         root.addLayout(footer)
-        self.resize(480, 360)
+        self.ok_btn = ok_btn
 
     def _load_schedule(self, today: str) -> list:
         try:

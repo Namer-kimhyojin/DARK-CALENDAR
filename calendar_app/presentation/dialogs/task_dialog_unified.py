@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDateEdit,
+    QDialog,
     QFrame,
     QGridLayout,
     QGroupBox,
@@ -30,10 +31,6 @@ from PyQt6.QtWidgets import (
 
 from calendar_app.infrastructure.db import checklist_repo, common_repo, routine_repo, task_repo
 from calendar_app.infrastructure.db import checklist_repository as checklist_template_repo
-from calendar_app.infrastructure.google_sync.helpers import (
-    queue_task_delete_from_google,
-    queue_task_sync_to_google,
-)
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_editor_styles import build_task_editor_stylesheet
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
@@ -41,6 +38,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
     polish_calendar_popup,
 )
+from calendar_app.presentation.dialogs.recurring_event_dialog import RecurringEventScopeDialog
 from calendar_app.presentation.dialogs.routine_recurrence_wizard import (
     get_cycle_labels,
     get_weekday_names,
@@ -198,13 +196,16 @@ class UnifiedTaskDialog(BaseTaskDialog):
         if period_layout is None:
             return
         available_width = int(width if width is not None else self.width())
-        compact = available_width < 720
+        compact = available_width < 660
         direction = (
             QBoxLayout.Direction.TopToBottom if compact else QBoxLayout.Direction.LeftToRight
         )
         if period_layout.direction() != direction:
             period_layout.setDirection(direction)
         period_layout.setSpacing(12 if compact else 24)
+        direction_label = getattr(self, "_period_direction_label", None)
+        if direction_label is not None:
+            direction_label.setText("↓" if compact else "→")
 
     @staticmethod
     def _fit_action_button_width(button, minimum_width=0):
@@ -431,7 +432,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
             # ── 상단 옵션 (종일/자동유지) ──────────────────────────────────
             option_row = QHBoxLayout()
             option_row.setContentsMargins(2, 0, 0, 5)
-            self.all_day_check = QCheckBox(t("dialog.task.all_day"))
+            self.all_day_check = QCheckBox(t("dialog.task.all_day_label", "종일 일정"))
             self.all_day_check.setObjectName("TaskDialogOptionCheck")
             self.all_day_check.setChecked(
                 not self._is_modify and not self._has_explicit_initial_time
@@ -485,6 +486,14 @@ class UnifiedTaskDialog(BaseTaskDialog):
             start_col.addLayout(start_edit_row)
             times_row.addLayout(start_col, 1)
 
+            self._period_direction_label = QLabel("→")
+            self._period_direction_label.setObjectName("TaskPeriodDirection")
+            self._period_direction_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self._period_direction_label.setAccessibleName(
+                t("dialog.task.period_direction", "시작일에서 종료일")
+            )
+            times_row.addWidget(self._period_direction_label)
+
             # R: 종료 섹션
             end_col = QVBoxLayout()
             end_col.setSpacing(5)
@@ -505,6 +514,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
             )
             self.end_time = TimePickerWidget(e_time)
             self.end_time.setAccessibleName(t("dialog.task.end_dt"))
+            self._sync_all_day_span_from_controls()
             self._set_editor_height(self.end_date)
             end_edit_row.addWidget(self.end_date)
             self.end_weekday_label = self._create_weekday_badge(self.end_date)
@@ -1004,6 +1014,10 @@ class UnifiedTaskDialog(BaseTaskDialog):
             self.assignee_edit.setText(data["assignee"])
         if data.get("bg_color"):
             self.color_swatch.set_color(data["bg_color"])
+        if "all_day" in data and hasattr(self, "all_day_check"):
+            is_all_day = bool(data["all_day"])
+            self.all_day_check.setChecked(is_all_day)
+            self._on_all_day_toggled(is_all_day)
 
     # ── Template loader (create mode) ─────────────────────────────────────
     def _load_from_template(self, template_id):
@@ -1138,28 +1152,65 @@ class UnifiedTaskDialog(BaseTaskDialog):
         return dates
 
     def _routine_exists_for_date(self, name: str, target_date_str: str) -> bool:
+        return self._routine_for_date(name, target_date_str) is not None
+
+    def _routine_for_date(self, name: str, target_date_str: str):
         conn = common_repo.get_connection()
         if not conn:
-            return False
+            return None
         cur = conn.cursor()
         cur.execute(
-            "SELECT 1 FROM unified_task WHERE type='routine' AND name=? AND target_date=? LIMIT 1",
+            "SELECT * FROM unified_task WHERE type='routine' AND name=? AND target_date=? LIMIT 1",
             (name, target_date_str),
         )
-        return cur.fetchone() is not None
+        row = cur.fetchone()
+        return dict(row) if row else None
 
-    def _copy_checklist_to_task(self, task_id: int):
+    def _copy_checklist_to_task(self, task_id: int, *, commit: bool = True) -> bool:
         # checklist는 routine에만 존재 — schedule은 위젯 없음
         if not hasattr(self, "checklist_widget"):
-            return
+            return True
         for i in range(self.checklist_widget.count()):
             item = self.checklist_widget.item(i)
             item_text = item.data(Qt.ItemDataRole.UserRole)
             link_id = checklist_repo.add_checklist_item(
-                task_id, item_text, i, display_type=self.checklist_display_type
+                task_id,
+                item_text,
+                i,
+                display_type=self.checklist_display_type,
+                commit=commit,
             )
-            if link_id and item.data(Qt.ItemDataRole.UserRole + 1):
-                checklist_repo.toggle_checklist_item(link_id)
+            if not link_id:
+                return False
+            if item.data(Qt.ItemDataRole.UserRole + 1) and not checklist_repo.toggle_checklist_item(
+                link_id, commit=commit
+            ):
+                return False
+        return True
+
+    def _validate_schedule_period(self):
+        if self.task_type != "schedule" or self.end_date is None:
+            return True
+        if self._is_all_day_schedule():
+            valid = self.end_date.date() >= self.start_date.date()
+            message = t(
+                "dialog.task.date_end_before_start",
+                "종료일은 시작일보다 빠를 수 없습니다. 종료일을 다시 선택해 주세요.",
+            )
+        else:
+            start = self._date_time_value(self.start_date, self.start_time)
+            end = self._date_time_value(self.end_date, self.end_time)
+            valid = end >= start
+            message = t(
+                "dialog.task.end_before_start",
+                "종료 시각은 시작 시각보다 빠를 수 없습니다.",
+            )
+        if valid:
+            return True
+        self.tabs.setCurrentIndex(0)
+        self._show_status_feedback(message, is_error=True)
+        self.end_date.setFocus()
+        return False
 
     # ── Save / Delete (dispatches to create or modify logic) ─────────────
     def save_data(self):
@@ -1192,18 +1243,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
             self._show_status_feedback(t("dialog.task.name_required"), is_error=True)
             self.name_edit.setFocus()
             return
-
-        priority = self.priority_combo.currentData()
-        status_val = self.status_combo.currentData()
-
-        deadline_dt = f"{self.start_date.date().toString('yyyy-MM-dd')} {self.start_time.time().toString('HH:mm:ss')}"
-
-        end_date_str = None
-        if hasattr(self, "end_date") and self.end_date:
-            end_date_str = f"{self.end_date.date().toString('yyyy-MM-dd')} {self.end_time.time().toString('HH:mm:ss')}"
-
-        selected_alarms = [str(mins) for mins, cb in self.alarm_checks.items() if cb.isChecked()]
-        alarm_time_str = ",".join(selected_alarms) if selected_alarms else None
+        if not self._validate_schedule_period():
+            return
 
         cycle_type = None
         recurrence = None
@@ -1211,44 +1252,17 @@ class UnifiedTaskDialog(BaseTaskDialog):
             cycle_type = self._get_routine_cycle_type()
             recurrence = "mode=single" if cycle_type == "single" else None
 
-        task_data = {
-            "name": self.name_edit.text().strip(),
-            "type": self.task_type,
-            "priority": priority,
-            "status": status_val,
-            "deadline": deadline_dt,
-            "end_date": end_date_str,
-            "alarm_time": alarm_time_str,
-            "bg_color": self.color_swatch.selected_color() or None,
-            "icon": None,
-            "recurrence": recurrence,
-            "template_id": self.template_id if self.task_type == "routine" else None,
-            "target_date": self.start_date.date().toString("yyyy-MM-dd")
-            if self.task_type == "routine"
-            else None,
-            "cycle_type": cycle_type,
-            "all_day": 1
-            if hasattr(self, "all_day_check") and self.all_day_check.isChecked()
-            else 0,
-            "description": self.memo_edit.toPlainText()
-            if hasattr(self, "memo_edit") and self.memo_edit
-            else None,
-            "location": self.location_edit.text().strip()
-            if hasattr(self, "location_edit")
-            else None,
-            "assignee": self.assignee_edit.text().strip()
-            if hasattr(self, "assignee_edit")
-            else None,
-            "calendar_id": None
-            if self.task_type == "routine"
-            else self._get_selected_calendar_id(),
-            "tags": self.tags_edit.text().strip()
-            if self.task_type == "routine" and hasattr(self, "tags_edit")
-            else None,
-        }
+        task_data = self._build_task_payload()
+        task_data.update(
+            {
+                "type": self.task_type,
+                "recurrence": recurrence,
+                "template_id": self.template_id if self.task_type == "routine" else None,
+                "cycle_type": cycle_type,
+            }
+        )
 
         created_ids = []
-        skipped = 0
 
         is_repeat_routine = (
             self.task_type == "routine"
@@ -1269,34 +1283,46 @@ class UnifiedTaskDialog(BaseTaskDialog):
                 )
                 return
 
-            repeat_dates = list(
+            candidate_dates = list(
                 self._iter_routine_dates(self.start_date.date(), period_end, cycle_type)
             )
+            repeat_dates = [
+                date
+                for date in candidate_dates
+                if not self._routine_exists_for_date(task_data["name"], date.toString("yyyy-MM-dd"))
+            ]
             series_id = uuid4().hex
             series_total = len(repeat_dates)
-            for idx, d in enumerate(repeat_dates, start=1):
-                target_date = d.toString("yyyy-MM-dd")
-                if self._routine_exists_for_date(task_data["name"], target_date):
-                    skipped += 1
-                    continue
-                item_payload = dict(task_data)
-                item_payload["series_id"] = series_id
-                item_payload["series_order"] = idx
-                item_payload["series_total"] = series_total
-                item_payload["target_date"] = target_date
-                item_payload["deadline"] = (
-                    f"{target_date} {self.start_time.time().toString('HH:mm:ss')}"
-                )
-                item_payload["end_date"] = None
-                task_id = task_repo.create_unified_task(item_payload)
-                if task_id:
+        conn = common_repo.get_connection()
+        if conn is None:
+            QMessageBox.critical(self, t("dialog.task.save_failed"), t("dialog.task.save_error_db"))
+            return
+        try:
+            if is_repeat_routine:
+                for idx, d in enumerate(repeat_dates, start=1):
+                    target_date = d.toString("yyyy-MM-dd")
+                    item_payload = dict(task_data)
+                    item_payload["series_id"] = series_id
+                    item_payload["series_order"] = idx
+                    item_payload["series_total"] = series_total
+                    item_payload["target_date"] = target_date
+                    item_payload["deadline"] = (
+                        f"{target_date} {self.start_time.time().toString('HH:mm:ss')}"
+                    )
+                    item_payload["end_date"] = None
+                    task_id = task_repo.create_unified_task(item_payload, commit=False)
+                    if not task_id or not self._copy_checklist_to_task(task_id, commit=False):
+                        raise RuntimeError("repeat routine persistence failed")
                     created_ids.append(task_id)
-                    self._copy_checklist_to_task(task_id)
-        else:
-            task_id = task_repo.create_unified_task(task_data)
-            if task_id:
+            else:
+                task_id = task_repo.create_unified_task(task_data, commit=False)
+                if not task_id or not self._copy_checklist_to_task(task_id, commit=False):
+                    raise RuntimeError("task persistence failed")
                 created_ids.append(task_id)
-                self._copy_checklist_to_task(task_id)
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            created_ids.clear()
 
         if not created_ids:
             QMessageBox.critical(
@@ -1439,7 +1465,10 @@ class UnifiedTaskDialog(BaseTaskDialog):
             self._load_checklist_items()
 
         if self.task_type == "schedule" and self.end_date is not None and self.end_time is not None:
-            self._sync_auto_end_duration_from_controls()
+            if self._is_all_day_schedule():
+                self._sync_all_day_span_from_controls()
+            else:
+                self._sync_auto_end_duration_from_controls()
         self._update_duration_summary()
         self._update_alarm_summary()
 
@@ -1510,41 +1539,34 @@ class UnifiedTaskDialog(BaseTaskDialog):
         )
 
     # ── Modify mode: save / delete ────────────────────────────────────────
-    def _save_changes(self):
-        """수정 모드: 변경사항 저장"""
-        if not self.name_edit.text().strip():
-            self.tabs.setCurrentIndex(0)
-            self._show_status_feedback(t("dialog.task.name_required"), is_error=True)
-            self.name_edit.setFocus()
-            return
-
-        priority = self.priority_combo.currentData()
-        status_val = self.status_combo.currentData()
-
-        deadline_dt = f"{self.start_date.date().toString('yyyy-MM-dd')} {self.start_time.time().toString('HH:mm:ss')}"
-
-        end_date_str = None
+    def _build_task_payload(self) -> dict:
+        """Build fields shared by create and modify persistence paths."""
+        deadline = (
+            f"{self.start_date.date().toString('yyyy-MM-dd')} "
+            f"{self.start_time.time().toString('HH:mm:ss')}"
+        )
+        end_date = None
         if hasattr(self, "end_date") and self.end_date:
-            end_date_str = f"{self.end_date.date().toString('yyyy-MM-dd')} {self.end_time.time().toString('HH:mm:ss')}"
-
-        selected_alarms = [str(mins) for mins, cb in self.alarm_checks.items() if cb.isChecked()]
-        alarm_time = ",".join(selected_alarms) if selected_alarms else ""
-
-        updates = {
+            end_date = (
+                f"{self.end_date.date().toString('yyyy-MM-dd')} "
+                f"{self.end_time.time().toString('HH:mm:ss')}"
+            )
+        selected_alarms = [
+            str(minutes) for minutes, checkbox in self.alarm_checks.items() if checkbox.isChecked()
+        ]
+        return {
             "name": self.name_edit.text().strip(),
-            "priority": priority,
-            "status": status_val,
-            "deadline": deadline_dt,
-            "end_date": end_date_str,
+            "priority": self.priority_combo.currentData(),
+            "status": self.status_combo.currentData(),
+            "deadline": deadline,
+            "end_date": end_date,
             "target_date": self.start_date.date().toString("yyyy-MM-dd")
             if self.task_type == "routine"
             else None,
-            "alarm_time": alarm_time,
+            "alarm_time": ",".join(selected_alarms) if selected_alarms else None,
             "bg_color": self.color_swatch.selected_color() or None,
             "icon": None,
-            "all_day": 1
-            if hasattr(self, "all_day_check") and self.all_day_check.isChecked()
-            else 0,
+            "all_day": int(bool(hasattr(self, "all_day_check") and self.all_day_check.isChecked())),
             "description": self.memo_edit.toPlainText().strip()
             if hasattr(self, "memo_edit") and self.memo_edit
             else None,
@@ -1562,6 +1584,18 @@ class UnifiedTaskDialog(BaseTaskDialog):
             else None,
         }
 
+    def _save_changes(self):
+        """수정 모드: 변경사항 저장"""
+        if not self.name_edit.text().strip():
+            self.tabs.setCurrentIndex(0)
+            self._show_status_feedback(t("dialog.task.name_required"), is_error=True)
+            self.name_edit.setFocus()
+            return
+        if not self._validate_schedule_period():
+            return
+
+        updates = self._build_task_payload()
+
         if self.task_type == "routine":
             updates["cycle_type"] = self._get_routine_cycle_type()
             updates["recurrence"] = self._build_recurrence_rule()
@@ -1570,9 +1604,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
                 return
 
         # ── Calendar move 처리 ─────────────────────────────────────────────
-        # 캘린더 변경 시 Google 측에서도 이동이 일어나려면 _previous_gcal_calendar_id
-        # 를 sync 페이로드에 전달하고, 기존 gcal_source/target_calendar_id 는 비워
-        # 리졸버가 NEW calendar_id 로 매핑된 Google 캘린더를 사용하도록 한다.
+        # 원격 동기화는 로컬 저장 성공 후 라우터가 수행한다. 여기서는 Google
+        # 캘린더 이동에 필요한 일회성 문맥만 보관한다.
         prev_gcal_cal_id = self.task_data.get("gcal_source_calendar_id") or self.task_data.get(
             "gcal_target_calendar_id"
         )
@@ -1588,6 +1621,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
             and "::" in new_local_cal
             and not new_local_cal.startswith("gcal::")
         )
+        pending_gcal_delete = None
 
         if moving_off_gcal:
             reply = QMessageBox.question(
@@ -1604,17 +1638,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
             if reply != QMessageBox.StandardButton.Yes:
                 return  # abort save — keep the existing gcal binding
 
-            # Queue delete for the previous Google event
-            try:
-                from calendar_app.infrastructure.db import task_repo as _tr_purge
-
-                _tr_purge.queue_gcal_delete(
-                    prev_gcal_event_id,
-                    gcal_calendar_id=prev_gcal_cal_id,
-                    local_task_id=self.task_id,
-                )
-            except Exception as e:
-                print(f"GCal purge enqueue error: {e}")
+            pending_gcal_delete = (prev_gcal_event_id, prev_gcal_cal_id)
 
             # Clear gcal binding on the local task so future syncs ignore it
             updates["gcal_event_id"] = None
@@ -1623,40 +1647,36 @@ class UnifiedTaskDialog(BaseTaskDialog):
             updates["gcal_dirty"] = 0
             updates["gcal_sync_error"] = None
 
-            # Skip the normal sync_task_to_google path — task is now local-only
-            sync_payload = None
-        else:
-            sync_payload = dict(self.task_data)
-            sync_payload.update(updates)
-            sync_payload["gcal_event_id"] = self.task_data.get("gcal_event_id")
-            if calendar_changed:
-                if prev_gcal_cal_id:
-                    sync_payload["_previous_gcal_calendar_id"] = prev_gcal_cal_id
-                # 리졸버가 NEW calendar_id 를 사용하도록 OLD gcal 라우팅 키 제거
-                sync_payload.pop("gcal_source_calendar_id", None)
-                sync_payload.pop("gcal_target_calendar_id", None)
+        self.skip_post_commit_gcal_sync = bool(moving_off_gcal)
+        self.post_commit_gcal_sync_overrides = {}
+        if calendar_changed and not moving_off_gcal and prev_gcal_cal_id:
+            self.post_commit_gcal_sync_overrides["_previous_gcal_calendar_id"] = prev_gcal_cal_id
 
-        if sync_payload is not None:
-            try:
-                _app = self.parent()
-                if _app and hasattr(_app, "gcal_sync"):
-                    queue_task_sync_to_google(_app, sync_payload)
-            except Exception as e:
-                print(f"GCal sync error in modify dialog: {e}")
-        else:
-            # Trigger sync to drain the delete-queue (Google event removal)
-            try:
-                _app = self.parent()
-                if _app and hasattr(_app, "sync_google_calendar"):
-                    _app.sync_google_calendar(silent=True)
-            except Exception as e:
-                print(f"GCal purge sync trigger error: {e}")
-
-        success = task_repo.update_unified_task(self.task_id, updates)
-        if success:
+        if moving_off_gcal:
+            event_id, calendar_id = pending_gcal_delete
+            success = task_repo.update_unified_task_with_gcal_delete(
+                self.task_id,
+                updates,
+                event_id,
+                gcal_calendar_id=calendar_id,
+            )
+            self.post_commit_gcal_delete_queued = bool(success)
             created_repeat_count = 0
-            if self.task_type == "routine":
-                created_repeat_count = self._create_missing_repeat_instances(updates)
+        elif self.task_type == "routine":
+            conn = common_repo.get_connection()
+            created_repeat_count = None
+            if conn is not None:
+                created_repeat_count = self._reconcile_repeat_routine_series(updates)
+            success = created_repeat_count is not None
+            if conn is not None:
+                if success:
+                    conn.commit()
+                else:
+                    conn.rollback()
+        else:
+            success = task_repo.update_unified_task(self.task_id, updates)
+            created_repeat_count = 0
+        if success:
             updates["id"] = self.task_id
             self.task_modified.emit(updates)
             message = t("dialog.task.mod_success")
@@ -1713,24 +1733,97 @@ class UnifiedTaskDialog(BaseTaskDialog):
         repeat_dates = self._selected_repeat_dates_or_warn()
         if repeat_dates is None:
             return False
-        if not repeat_dates:
-            updates["series_id"] = None
-            updates["series_order"] = None
-            updates["series_total"] = None
-            return True
+        desired_dates = [date.toString("yyyy-MM-dd") for date in repeat_dates]
+        if not desired_dates:
+            desired_dates = [str(updates.get("target_date") or "")[:10]]
 
-        current_target = self.start_date.date().toString("yyyy-MM-dd")
-        series_id = str(self.task_data.get("series_id") or "").strip() or uuid4().hex
-        updates["series_id"] = series_id
-        updates["series_total"] = len(repeat_dates)
-        updates["series_order"] = 1
-        for idx, date in enumerate(repeat_dates, start=1):
-            if date.toString("yyyy-MM-dd") == current_target:
-                updates["series_order"] = idx
-                break
+        existing_series_id = str(self.task_data.get("series_id") or "").strip()
+        scope = "this_and_following"
+        if existing_series_id:
+            scope = self._choose_repeat_routine_edit_scope()
+            if scope is None:
+                return False
+            if scope == "single":
+                self._prepared_repeat_reconciliation = {
+                    "scope": scope,
+                    "desired_dates": desired_dates,
+                }
+                updates["series_id"] = self.task_data.get("series_id")
+                updates["series_order"] = self.task_data.get("series_order")
+                updates["series_total"] = self.task_data.get("series_total")
+                return True
+
+        series_rows = self._load_repeat_series_rows(existing_series_id)
+        eligible_ids = {
+            int(row["id"]) for row in series_rows if self._is_current_or_future_series_row(row)
+        }
+        eligible_ids.add(int(self.task_id))
+        if self._has_repeat_routine_conflict(updates["name"], desired_dates, eligible_ids):
+            QMessageBox.warning(
+                self,
+                t("dialog.task.entry_error"),
+                t(
+                    "dialog.task.no_tasks_saved",
+                    "등록된 업무가 없습니다. 중복 또는 입력값을 확인해 주세요.",
+                ),
+            )
+            return False
+
+        self._prepared_repeat_reconciliation = {
+            "scope": scope,
+            "desired_dates": desired_dates,
+            "series_rows": series_rows,
+        }
+        series_id = existing_series_id or uuid4().hex
+        updates["series_id"] = series_id if len(desired_dates) > 1 else None
+        updates["series_order"] = 1 if len(desired_dates) > 1 else None
+        updates["series_total"] = len(desired_dates) if len(desired_dates) > 1 else None
         return True
 
-    def _copy_existing_checklist_to_task(self, task_id: int):
+    def _choose_repeat_routine_edit_scope(self) -> str | None:
+        dialog = RecurringEventScopeDialog(mode="edit", parent=self, allow_all=False)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return None
+        return dialog.get_scope()
+
+    def _load_repeat_series_rows(self, series_id: str) -> list[dict]:
+        if not series_id:
+            return [dict(self.task_data)]
+        conn = common_repo.get_connection()
+        if conn is None:
+            return []
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT * FROM unified_task WHERE type='routine' AND series_id=? "
+            "ORDER BY date(target_date), id",
+            (series_id,),
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+    def _is_current_or_future_series_row(self, row: dict) -> bool:
+        if int(row.get("id") or 0) == int(self.task_id):
+            return True
+        anchor = str(self.task_data.get("target_date") or self.task_data.get("deadline") or "")[:10]
+        return str(row.get("target_date") or row.get("deadline") or "")[:10] >= anchor
+
+    def _has_repeat_routine_conflict(
+        self, name: str, desired_dates: list[str], eligible_ids: set[int]
+    ) -> bool:
+        if not desired_dates:
+            return False
+        conn = common_repo.get_connection()
+        if conn is None:
+            return True
+        placeholders = ",".join("?" for _ in desired_dates)
+        cur = conn.cursor()
+        cur.execute(
+            f"SELECT id FROM unified_task WHERE type='routine' AND name=? "
+            f"AND target_date IN ({placeholders})",
+            (name, *desired_dates),
+        )
+        return any(int(row["id"]) not in eligible_ids for row in cur.fetchall())
+
+    def _copy_existing_checklist_to_task(self, task_id: int, *, commit: bool = True) -> bool:
         items = checklist_repo.get_task_checklist_items(self.task_id)
         for i, item in enumerate(items):
             link_id = checklist_repo.add_checklist_item(
@@ -1738,20 +1831,94 @@ class UnifiedTaskDialog(BaseTaskDialog):
                 item.get("item_text") or "",
                 i,
                 display_type=item.get("display_type", self.checklist_display_type),
+                commit=commit,
             )
-            if link_id and item.get("is_completed"):
-                checklist_repo.toggle_checklist_item(link_id)
+            if not link_id:
+                return False
+            if item.get("is_completed") and not checklist_repo.toggle_checklist_item(
+                link_id, commit=commit
+            ):
+                return False
+        return True
 
-    def _create_missing_repeat_instances(self, base_updates: dict) -> int:
-        repeat_dates = self._selected_repeat_dates_or_warn()
-        if not repeat_dates:
-            return 0
+    def _reconcile_repeat_routine_series(self, base_updates: dict) -> int | None:
+        prepared = getattr(self, "_prepared_repeat_reconciliation", {}) or {}
+        scope = prepared.get("scope", "this_and_following")
+        if scope == "single":
+            return (
+                0
+                if task_repo.update_unified_task(self.task_id, base_updates, commit=False)
+                else None
+            )
 
-        current_target = self.start_date.date().toString("yyyy-MM-dd")
-        series_id = base_updates.get("series_id") or self.task_data.get("series_id") or uuid4().hex
-        series_total = len(repeat_dates)
+        desired_dates = list(prepared.get("desired_dates") or [])
+        if not desired_dates:
+            return None
+        series_rows = list(prepared.get("series_rows") or [dict(self.task_data)])
+        current_id = int(self.task_id)
+        current_row = next(
+            (row for row in series_rows if int(row.get("id") or 0) == current_id),
+            dict(self.task_data),
+        )
+        past_rows = [
+            row
+            for row in series_rows
+            if int(row.get("id") or 0) != current_id
+            and not self._is_current_or_future_series_row(row)
+        ]
+        eligible_rows = [
+            row
+            for row in series_rows
+            if int(row.get("id") or 0) != current_id and self._is_current_or_future_series_row(row)
+        ]
+
+        old_series_id = str(self.task_data.get("series_id") or "").strip()
+        for index, row in enumerate(past_rows, start=1):
+            if not task_repo.update_unified_task(
+                row["id"],
+                {
+                    "series_id": old_series_id,
+                    "series_order": index,
+                    "series_total": len(past_rows),
+                },
+                commit=False,
+            ):
+                return None
+
+        series_id = (
+            (old_series_id if old_series_id and not past_rows else uuid4().hex)
+            if len(desired_dates) > 1
+            else None
+        )
+        by_date: dict[str, list[dict]] = {}
+        for row in eligible_rows:
+            key = str(row.get("target_date") or row.get("deadline") or "")[:10]
+            by_date.setdefault(key, []).append(row)
+        unused = list(eligible_rows)
+        assignments: list[tuple[str, dict | None]] = [(desired_dates[0], current_row)]
+        for target_date in desired_dates[1:]:
+            matching = next((row for row in by_date.get(target_date, []) if row in unused), None)
+            if matching is None and unused:
+                matching = unused[0]
+            if matching is not None:
+                unused.remove(matching)
+            assignments.append((target_date, matching))
+
+        common_keys = {
+            "name",
+            "priority",
+            "alarm_time",
+            "bg_color",
+            "description",
+            "location",
+            "assignee",
+            "tags",
+            "cycle_type",
+            "recurrence",
+            "all_day",
+        }
         created = 0
-        base_payload = dict(self.task_data)
+        base_payload = dict(current_row)
         base_payload.update(base_updates)
         base_payload.pop("id", None)
         base_payload["type"] = "routine"
@@ -1759,26 +1926,38 @@ class UnifiedTaskDialog(BaseTaskDialog):
         base_payload["gcal_event_id"] = None
         base_payload["gcal_source_calendar_id"] = None
         base_payload["gcal_target_calendar_id"] = None
+        start_time = self.start_time.time().toString("HH:mm:ss")
 
-        for idx, date in enumerate(repeat_dates, start=1):
-            target_date = date.toString("yyyy-MM-dd")
-            if target_date == current_target:
+        for index, (target_date, row) in enumerate(assignments, start=1):
+            metadata = {
+                "target_date": target_date,
+                "deadline": f"{target_date} {start_time}",
+                "end_date": None,
+                "series_id": series_id,
+                "series_order": index if series_id else None,
+                "series_total": len(desired_dates) if series_id else None,
+            }
+            if row is not None:
+                row_updates = (
+                    dict(base_updates)
+                    if int(row["id"]) == current_id
+                    else {key: base_updates.get(key) for key in common_keys if key in base_updates}
+                )
+                row_updates.update(metadata)
+                if not task_repo.update_unified_task(row["id"], row_updates, commit=False):
+                    return None
                 continue
-            if self._routine_exists_for_date(base_payload["name"], target_date):
-                continue
+
             item_payload = dict(base_payload)
-            item_payload["series_id"] = series_id
-            item_payload["series_order"] = idx
-            item_payload["series_total"] = series_total
-            item_payload["target_date"] = target_date
-            item_payload["deadline"] = (
-                f"{target_date} {self.start_time.time().toString('HH:mm:ss')}"
-            )
-            item_payload["end_date"] = None
-            task_id = task_repo.create_unified_task(item_payload)
-            if task_id:
-                created += 1
-                self._copy_existing_checklist_to_task(task_id)
+            item_payload.update(metadata)
+            task_id = task_repo.create_unified_task(item_payload, commit=False)
+            if not task_id or not self._copy_existing_checklist_to_task(task_id, commit=False):
+                return None
+            created += 1
+
+        for row in unused:
+            if not task_repo.delete_unified_task(row["id"], commit=False):
+                return None
         return created
 
     def _delete_task(self):
@@ -1844,13 +2023,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            if self.task_type == "schedule":
-                try:
-                    gcal_event_id = self.task_data.get("gcal_event_id")
-                    queue_task_delete_from_google(self, gcal_event_id, local_task_id=self.task_id)
-                except Exception as e:
-                    print(f"GCal delete error in modify dialog: {e}")
-            success = task_repo.delete_unified_task(self.task_id)
+            success = task_repo.delete_unified_task_with_gcal_outbox(self.task_id)
             if success:
                 self.task_deleted.emit(self.task_id)
                 QMessageBox.information(
@@ -1861,8 +2034,20 @@ class UnifiedTaskDialog(BaseTaskDialog):
                 QMessageBox.critical(self, t("dialog.task.save_failed"), t("dialog.task.del_fail"))
 
     def _on_all_day_toggled(self, checked):
-        """종합일정(종일) 선택 시 시간 입력 위젯 활성/비활성"""
+        """종일 일정에서는 시간 대신 포함 일수로 기간을 유지한다."""
         if self.task_type == "schedule":
+            self.auto_end_check.setText(
+                t("dialog.task.keep_period", "기간 유지")
+                if checked
+                else t("dialog.task.auto_end", "종료 자동 유지")
+            )
+            if checked:
+                self._sync_all_day_span_from_controls()
+            else:
+                self.auto_end_check.setAccessibleDescription("")
+                self.auto_end_check.setToolTip("")
+                self._sync_auto_end_duration_from_controls()
+
             if hasattr(self, "start_time") and self.start_time:
                 self.start_time.setVisible(not checked)
             if hasattr(self, "end_time") and self.end_time:
@@ -1871,9 +2056,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
             if hasattr(self, "start_time_shortcuts"):
                 self.start_time_shortcuts.setVisible(not checked)
             if hasattr(self, "end_time_shortcuts"):
-                # 종일 일정이어도 +1일 등의 날짜 조정은 유용할 수 있으나,
-                # 사용자의 요청은 "시간 입력 안하고 날짜만 입력"이므로 일단 숨깁니다.
                 self.end_time_shortcuts.setVisible(not checked)
+            self._update_duration_summary()
 
         elif self.task_type == "routine":
             pass

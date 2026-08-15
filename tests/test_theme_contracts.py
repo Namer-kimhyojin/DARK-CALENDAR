@@ -786,6 +786,7 @@ class ThemeContractTests(unittest.TestCase):
 
         self.assertIn('ClickableCell[selected_date="true"]', qss)
         self.assertIn('ClickableCell[drag_range_preview="true"]', qss)
+        self.assertIn('ClickableCell[create_range_preview="true"]', qss)
         self.assertIn('ClickableCell[drag_mode="move"]', qss)
         self.assertIn('ClickableCell[drag_mode="copy"][drag_batch="true"]', qss)
         self.assertIn('ClickableCell[is_other_month="true"] QLabel#dayNumLabel', qss)

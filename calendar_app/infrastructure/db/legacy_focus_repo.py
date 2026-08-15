@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Legacy focus/worklog adapter for staged migration."""
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ __all__ = bind_proxy_exports(
     _legacy,
     [
         "get_worklog_entries",
+        "get_worklog_stats",
         "insert_worklog_entry",
         "delete_worklog_entry",
         "get_incomplete_tasks",

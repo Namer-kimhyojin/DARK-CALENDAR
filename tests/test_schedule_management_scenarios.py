@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 
 from calendar_app.application import task_delete_usecases
@@ -112,7 +113,8 @@ class ScheduleManagementScenarioTests(TemporaryDatabaseTestCase):
         )
 
         self.assertEqual(deleted_count, 1)
-        self.assertEqual(queued_refs, [("evt-schedule", schedule_id, "cal-team")])
+        self.assertEqual(queued_refs, [])
+        self.assertTrue(task_repo.is_gcal_delete_queued("evt-schedule", "cal-team"))
         self.assertIsNone(task_repo.get_unified_task(schedule_id))
         self.assertIsNotNone(task_repo.get_unified_task(routine_id))
         self.assertIsNotNone(task_repo.get_unified_task(other_schedule_id))

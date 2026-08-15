@@ -161,7 +161,15 @@ class TaskActionsMixin:
         """Shift+클릭으로 날짜 범위 선택 후 일정 추가."""
         end_d = pack[0] if isinstance(pack, tuple) else pack
         start_d = self._last_clicked_date if self._last_clicked_date else end_d
+        self._open_cell_range_dialog(start_d, end_d)
 
+    def handle_cell_drag_range(self, pack):
+        """빈 날짜 셀 드래그 범위를 종일 일정 등록 창으로 전달."""
+        if not isinstance(pack, tuple) or len(pack) < 2:
+            return
+        self._open_cell_range_dialog(pack[0], pack[1])
+
+    def _open_cell_range_dialog(self, start_d, end_d):
         if start_d > end_d:
             start_d, end_d = end_d, start_d
 
@@ -209,9 +217,6 @@ class TaskActionsMixin:
                     if task:
                         gcal_push_queue.enqueue(self, task, create_if_missing=True)
 
-            # Trigger a general sync/refresh
-            if changed > 0:
-                self.wake_gcal_sync()
         except Exception:
             logger.exception(
                 "Unhandled error in handle_task_dropped task_ids=%s target_date=%s target_time=%s action=%s selected=%s",
@@ -240,7 +245,6 @@ class TaskActionsMixin:
             if self.settings.value("gcal_enabled", "true") == "true":
                 gcal_push_queue.enqueue(self, task, create_if_missing=True)
 
-            self.wake_gcal_sync()
             self.schedule_panel_refresh(left=True, center=True, right=True)
 
     def auto_assign_color_tags_to_selection(self):
@@ -572,7 +576,6 @@ class TaskActionsMixin:
         task = task_usecases.resize_task_and_get_sync_payload(db_task, task_id, minutes)
         if task:
             gcal_push_queue.enqueue(self, task, create_if_missing=True)
-            self.wake_gcal_sync()
             self.selected_task_ids.clear()
             self.update_task_selection_status()
             self.schedule_panel_refresh(left=True, center=True)
@@ -701,8 +704,14 @@ class TaskActionsMixin:
 
         # Parse start/end datetime
         start_raw = str(task_row.get("_start_raw") or task_row.get("deadline") or "").strip()
-        end_raw = str(task_row.get("_end_raw") or task_row.get("end_date") or "").strip()
-        _all_day = bool(task_row.get("all_day", False))
+        is_all_day = bool(task_row.get("all_day", False))
+        # Subscription providers represent all-day ``end`` as an exclusive
+        # boundary.  The month renderer normalizes it to the inclusive
+        # ``end_date`` displayed to the user, so copying must use that value.
+        if is_all_day:
+            end_raw = str(task_row.get("end_date") or task_row.get("_end_raw") or "").strip()
+        else:
+            end_raw = str(task_row.get("_end_raw") or task_row.get("end_date") or "").strip()
 
         start_d = QDate.currentDate()
         start_t = QTime(9, 0)
@@ -741,6 +750,7 @@ class TaskActionsMixin:
             "memo": task_row.get("description") or "",
             "location": task_row.get("location") or "",
             "bg_color": task_row.get("bg_color"),
+            "all_day": is_all_day,
         }
         # open_task_dialog를 통해 다이얼로그 팝업 (사용자가 최종 '등록' 클릭 시 저장됨)
         # 이 방식이 사용자에게 명확한 '진입점(버튼)'과 '종료점(등록 완료)'을 제공함.

@@ -9,6 +9,7 @@ from PyQt6.QtCore import QDate, QTime
 from PyQt6.QtWidgets import QApplication, QBoxLayout, QPushButton, QScrollArea
 
 from calendar_app.infrastructure.db import db_repository_unified as unified_repo
+from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.task_dialog_unified import UnifiedTaskDialog
 from tests.support import TemporaryDatabaseTestCase
 
@@ -99,19 +100,36 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
         self.assertTrue(dialog.start_time_shortcuts.isHidden())
         self.assertTrue(dialog.end_time_shortcuts.isHidden())
 
+    def test_subscription_prefill_explicitly_restores_all_day_mode(self):
+        dialog = UnifiedTaskDialog(
+            task_type="schedule",
+            initial_date=QDate(2026, 8, 15),
+            initial_time=QTime(9, 0),
+            end_date=QDate(2026, 8, 16),
+            prefill_dict={"name": "Conference", "all_day": True},
+        )
+        self.addCleanup(dialog.close)
+        dialog.show()
+        self._app.processEvents()
+
+        self.assertTrue(dialog.all_day_check.isChecked())
+        self.assertTrue(dialog.start_time.isHidden())
+        self.assertTrue(dialog.end_time.isHidden())
+        self.assertEqual(dialog.end_date.date(), QDate(2026, 8, 16))
+
     def test_period_inputs_reflow_for_schedule_and_routine(self):
         for task_type in ("schedule", "routine"):
             with self.subTest(task_type=task_type):
                 dialog = UnifiedTaskDialog(task_type=task_type)
                 self.addCleanup(dialog.close)
 
-                dialog._update_period_layout_for_width(680)
+                dialog._update_period_layout_for_width(640)
                 self.assertEqual(
                     dialog._period_range_layout.direction(),
                     QBoxLayout.Direction.TopToBottom,
                 )
 
-                dialog._update_period_layout_for_width(780)
+                dialog._update_period_layout_for_width(680)
                 self.assertEqual(
                     dialog._period_range_layout.direction(),
                     QBoxLayout.Direction.LeftToRight,
@@ -150,6 +168,66 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
         self.assertEqual(dialog.start_date.date(), QDate.currentDate().addDays(1))
         self.assertEqual(dialog.start_time.time(), QTime(14, 30))
         self.assertEqual(dialog.end_time.time(), QTime(15, 30))
+
+    def test_two_day_all_day_schedule_counts_dates_and_keeps_span(self):
+        start = QDate(2026, 8, 13)
+        dialog = UnifiedTaskDialog(
+            task_type="schedule",
+            initial_date=start,
+            end_date=start.addDays(1),
+        )
+        self.addCleanup(dialog.close)
+        dialog.show()
+        self._app.processEvents()
+
+        self.assertTrue(dialog.all_day_check.isChecked())
+        self.assertEqual(dialog._all_day_span_days, 2)
+        self.assertEqual(
+            dialog.duration_summary_label.text(),
+            t(
+                "dialog.task.all_day_duration_summary",
+                "📅 {start} → {end} · 총 {count}일 · 종일",
+                start="8/13",
+                end="8/14",
+                count=2,
+            ),
+        )
+        self.assertEqual(
+            dialog.auto_end_check.text(),
+            t("dialog.task.keep_period", "기간 유지"),
+        )
+
+        dialog.start_date.setDate(start.addDays(2))
+        self._app.processEvents()
+
+        self.assertEqual(dialog.end_date.date(), start.addDays(3))
+        self.assertEqual(dialog._all_day_span_days, 2)
+
+    def test_invalid_all_day_period_is_blocked_with_inline_feedback(self):
+        start = QDate(2026, 8, 13)
+        dialog = UnifiedTaskDialog(
+            task_type="schedule",
+            initial_date=start,
+            end_date=start.addDays(1),
+        )
+        self.addCleanup(dialog.close)
+        dialog.name_edit.setText("Invalid period")
+        dialog.end_date.setDate(start.addDays(-1))
+
+        with patch(
+            "calendar_app.presentation.dialogs.task_dialog_unified.task_repo.create_unified_task"
+        ) as create_task:
+            dialog._create_task()
+
+        create_task.assert_not_called()
+        self.assertFalse(dialog.status_feedback_label.isHidden())
+        self.assertEqual(
+            dialog.status_feedback_label.text(),
+            t(
+                "dialog.task.date_end_before_start",
+                "종료일은 시작일보다 빠를 수 없습니다. 종료일을 다시 선택해 주세요.",
+            ),
+        )
 
     def test_schedule_quick_actions_have_clear_groups_icons_and_semantics(self):
         dialog = UnifiedTaskDialog(

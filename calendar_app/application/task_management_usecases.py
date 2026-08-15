@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Application usecases for schedule task management dialog."""
 
 from __future__ import annotations
@@ -79,18 +80,25 @@ def restore_trashed_tasks(repo, archive_ids):
 def purge_trashed_tasks(repo, archive_ids):
     purged = 0
     gcal_refs = []
+    atomic_purge = getattr(repo, "purge_task_trash_with_gcal_outbox", None)
     for archive_id in archive_ids:
-        result = repo.purge_task_trash(archive_id)
+        result = (
+            atomic_purge(archive_id)
+            if callable(atomic_purge)
+            else repo.purge_task_trash(archive_id)
+        )
         if result is None:
             continue
         purged += 1
         if isinstance(result, dict):
             gcal_event_id = result.get("gcal_event_id")
             gcal_calendar_id = result.get("gcal_calendar_id")
+            gcal_delete_queued = bool(result.get("gcal_delete_queued", False))
         else:
             gcal_event_id = result
             gcal_calendar_id = None
-        if gcal_event_id:
+            gcal_delete_queued = False
+        if gcal_event_id and not gcal_delete_queued:
             gcal_refs.append(
                 {
                     "gcal_event_id": gcal_event_id,

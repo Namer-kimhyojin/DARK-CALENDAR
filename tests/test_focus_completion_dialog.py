@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import unittest
 
@@ -60,6 +62,27 @@ class FocusCompletionDialogLocaleTests(unittest.TestCase):
         self.assertIsNotNone(dialog.break_btn)
         self.assertIsNotNone(dialog.log_btn)
         self.assertEqual(dialog.break_btn.objectName(), "focusCompletionLongBreakBtn")
+
+    def test_completion_uses_one_accent_role_and_explicit_keyboard_action(self):
+        dialog = FocusCompletionDialog(
+            sessions=2,
+            total_secs=1500,
+            today_sessions=4,
+            today_secs=3000,
+            monthly_sessions=8,
+            monthly_secs=6000,
+        )
+        self.addCleanup(dialog.close)
+
+        accent = dialog._ui_tokens["tab_text_active"]
+        primary = dialog._ui_tokens["text_primary"]
+        self.assertIn("border: 1px solid", dialog.container.styleSheet())
+        self.assertIn(f"color: {accent};", dialog.current_value_label.styleSheet())
+        self.assertIn(f"color: {primary};", dialog.today_value_label.styleSheet())
+        self.assertIn(f"color: {primary};", dialog.month_value_label.styleSheet())
+        self.assertTrue(dialog.ok_btn.isDefault())
+        self.assertFalse(dialog.break_btn.autoDefault())
+        self.assertFalse(dialog.log_btn.autoDefault())
 
 
 if __name__ == "__main__":

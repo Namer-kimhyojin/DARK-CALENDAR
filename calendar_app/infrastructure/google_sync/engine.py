@@ -4,6 +4,7 @@ from datetime import date as _date
 import json
 import logging
 
+from calendar_app.domain.date_range import inclusive_end_from_exclusive
 from calendar_app.infrastructure.db import task_repo
 from calendar_app.infrastructure.google_sync import repository as gcal_db_adapter
 from calendar_app.infrastructure.google_sync.common import (
@@ -622,9 +623,7 @@ def _normalize_gcal_event_datetimes(event, target_tz_offset="+09:00"):
             try:
                 # GCal 종일 이벤트 end_date 는 exclusive (마지막 날 다음 날)
                 en_date_exclusive = _date.fromisoformat(end_raw[:10])
-                en_date = en_date_exclusive - timedelta(days=1)
-                if en_date < st_date:
-                    en_date = st_date
+                en_date = inclusive_end_from_exclusive(st_date, en_date_exclusive)
             except ValueError:
                 en_date = st_date
         else:

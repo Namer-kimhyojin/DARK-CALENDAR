@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import logging
 
 from PyQt6.QtCore import QModelIndex, QSortFilterProxyModel, Qt, QTimer
@@ -34,9 +36,9 @@ from calendar_app.domain.task_status_view import normalize_status as _normalize_
 from calendar_app.infrastructure.db import directive_repo, search_repo, task_repo
 from calendar_app.infrastructure.google_sync.helpers import (
     queue_task_delete_from_google,
-    queue_task_sync_to_google,
     resolve_app_context,
 )
+from calendar_app.infrastructure.google_sync.push_queue import gcal_push_queue
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
@@ -449,12 +451,13 @@ class BaseManagementDialog(QDialog):
         if not archive_ids:
             return 0
         purged, gcal_refs = task_management_usecases.purge_trashed_tasks(task_repo, archive_ids)
+        app = resolve_app_context(self)
         try:
             task_delete_usecases.queue_google_deletes_for_refs(
                 gcal_refs,
                 queue_delete_fn=lambda event_id, local_task_id, gcal_calendar_id: (
                     queue_task_delete_from_google(
-                        self,
+                        app,
                         event_id,
                         local_task_id=local_task_id,
                         gcal_calendar_id=gcal_calendar_id,
@@ -474,16 +477,20 @@ class BaseManagementDialog(QDialog):
         row_id = item.data(Qt.ItemDataRole.UserRole)
         task = inline_update_fn(task_repo, row_id, field, item.text())
         if task:
-            queue_task_sync_to_google(self, task, create_if_missing=True)
+            gcal_push_queue.enqueue(resolve_app_context(self), task, create_if_missing=True)
 
     def _open_unified_task_create_dialog(self, *, task_type: str, post_success=None):
-        from calendar_app.presentation.dialogs.task_dialog_unified import UnifiedTaskDialog
-
-        dlg = UnifiedTaskDialog(self, task_type=task_type)
         app = resolve_app_context(self)
-        if app and hasattr(app, "handle_task_added"):
-            dlg.task_added.connect(app.handle_task_added)
-        if dlg.exec():
+        if app is not self and hasattr(app, "open_task_dialog"):
+            result = app.open_task_dialog(task_type=task_type)
+        else:
+            from calendar_app.presentation.dialogs.task_dialog_unified import UnifiedTaskDialog
+
+            dlg = UnifiedTaskDialog(self, task_type=task_type)
+            if app and hasattr(app, "handle_task_added"):
+                dlg.task_added.connect(app.handle_task_added)
+            result = dlg.exec()
+        if result:
             if callable(post_success):
                 post_success()
             self.load_data()
@@ -491,12 +498,17 @@ class BaseManagementDialog(QDialog):
     def _open_unified_task_modify_dialog(self, row_id):
         if self._trash_mode:
             return
-        from calendar_app.presentation.dialogs.modify_task_dialog_unified import (
-            UnifiedModifyTaskDialog,
-        )
+        app = resolve_app_context(self)
+        if app is not self and hasattr(app, "open_modify_task_dialog"):
+            result = app.open_modify_task_dialog(int(row_id))
+        else:
+            from calendar_app.presentation.dialogs.modify_task_dialog_unified import (
+                UnifiedModifyTaskDialog,
+            )
 
-        dlg = UnifiedModifyTaskDialog(int(row_id), self)
-        if dlg.exec():
+            dlg = UnifiedModifyTaskDialog(int(row_id), self)
+            result = dlg.exec()
+        if result:
             self.load_data()
 
     def _bulk_task_status_update(self, new_status, *, bulk_update_fn):
@@ -506,8 +518,9 @@ class BaseManagementDialog(QDialog):
         if not ids:
             return
         tasks = bulk_update_fn(task_repo, ids, new_status)
+        app = resolve_app_context(self)
         for task in tasks:
-            queue_task_sync_to_google(self, task, create_if_missing=True)
+            gcal_push_queue.enqueue(app, task, create_if_missing=True)
         self.load_data()
 
     def _bulk_task_priority_update(self, new_priority, *, bulk_update_fn):

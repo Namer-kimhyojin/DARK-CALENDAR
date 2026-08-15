@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Pomodoro/focus timer settings dialog."""
 
 from __future__ import annotations
@@ -23,7 +24,10 @@ from calendar_app.presentation.dialogs.dialog_editor_styles import (
     get_dialog_theme_tokens,
 )
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
-from calendar_app.presentation.dialogs.dialog_styles import apply_common_dialog_style
+from calendar_app.presentation.dialogs.dialog_styles import (
+    apply_common_dialog_style,
+    build_dialog_footer,
+)
 from calendar_app.shared.value_parsers import as_bool
 
 
@@ -386,22 +390,16 @@ class PomodoroSettingsDialog(QDialog):
         # Footer
         footer = QFrame()
         footer.setFixedHeight(64)
-        footer_layout = QHBoxLayout(footer)
-        footer_layout.setContentsMargins(24, 0, 24, 0)
-
-        cancel_btn = QPushButton(t("common.cancel", "Cancel"))
-        cancel_btn.setObjectName("ghost_btn")
-        cancel_btn.setMinimumWidth(100)
-        cancel_btn.clicked.connect(self.reject)
-
-        save_btn = QPushButton(t("common.save", "Save"))
-        save_btn.setObjectName("primary_btn")
-        save_btn.setMinimumWidth(100)
-        save_btn.clicked.connect(self._save)
-
-        footer_layout.addStretch(1)
-        footer_layout.addWidget(cancel_btn)
-        footer_layout.addWidget(save_btn)
+        footer_layout, self.save_btn, self.cancel_btn = build_dialog_footer(
+            ok_label=t("common.save", "Save"),
+            cancel_label=t("common.cancel", "Cancel"),
+        )
+        footer_layout.setContentsMargins(24, 8, 24, 8)
+        self.cancel_btn.setMinimumWidth(100)
+        self.cancel_btn.clicked.connect(self.reject)
+        self.save_btn.setMinimumWidth(100)
+        self.save_btn.clicked.connect(self._save)
+        footer.setLayout(footer_layout)
 
         layout.addWidget(footer)
 

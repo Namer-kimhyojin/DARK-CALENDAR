@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -13,6 +14,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QScrollArea,
     QToolButton,
     QWidget,
 )
@@ -22,9 +24,12 @@ from calendar_app.presentation.dialogs.checklist_manager_dialog_advanced import 
     BulkOperationsDialog,
     ChecklistItemEditDialog,
 )
+from calendar_app.presentation.dialogs.daily_summary_dialog import DailySummaryDialog
 from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
     build_dialog_footer,
+    build_dialog_stylesheet,
+    get_dialog_theme_tokens,
 )
 from calendar_app.presentation.dialogs.gcal_settings_dialog import GCalSettingsDialog
 from calendar_app.presentation.dialogs.help_center_dialog import HelpCenterDialog
@@ -82,6 +87,43 @@ class DialogUsabilityAccessibilityTests(unittest.TestCase):
         self.assertFalse(cancel_button.autoDefault())
         self.assertGreaterEqual(ok_button.height(), 44)
         self.assertGreaterEqual(cancel_button.height(), 44)
+
+    def test_common_dialog_default_labels_use_secondary_not_hint_text(self):
+        tokens = get_dialog_theme_tokens()
+        stylesheet = build_dialog_stylesheet()
+
+        self.assertIn(
+            f"QLabel {{\n    color: {tokens['text_secondary']};\n}}",
+            stylesheet,
+        )
+        self.assertIn(
+            f'QLabel[role="dialogSubtitle"], QLabel#dialogSubtitle, QLabel#dialog_subtitle {{\n'
+            f"    color: {tokens['title_subtext']};",
+            stylesheet,
+        )
+
+    def test_daily_summary_keeps_long_content_scrollable_and_footer_consistent(self):
+        with (
+            patch.object(
+                DailySummaryDialog,
+                "_load_schedule",
+                return_value=["• 월간 계획 검토 09:00 ~ 10:00"],
+            ),
+            patch.object(
+                DailySummaryDialog,
+                "_load_due_routines",
+                return_value=[("배포 체크", "(1/3)", "업무 · 중요")],
+            ),
+        ):
+            dialog = DailySummaryDialog()
+        self.addCleanup(dialog.close)
+        _show_and_polish(dialog)
+
+        self.assertIsInstance(dialog.summary_scroll, QScrollArea)
+        self.assertTrue(dialog.summary_scroll.widgetResizable())
+        self.assertTrue(dialog.ok_btn.property("dialogFooter"))
+        self.assertTrue(dialog.ok_btn.isDefault())
+        self.assertGreaterEqual(dialog.ok_btn.height(), 44)
 
     def test_help_center_is_resizable_compact_and_named(self):
         dialog = HelpCenterDialog()

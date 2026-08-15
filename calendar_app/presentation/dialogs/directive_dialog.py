@@ -35,6 +35,7 @@ from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     FieldValidator,
     apply_common_dialog_style,
+    build_dialog_footer,
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
     polish_calendar_popup,
@@ -242,28 +243,23 @@ class DirectiveDialog(QDialog):
         sep.setFrameShape(QFrame.Shape.HLine)
         layout.addWidget(sep)
 
-        btn_row = QHBoxLayout()
+        del_btn = None
         if self.task_id:
             del_btn = QPushButton(t("dialog.directive.btn_delete"))
             del_btn.setObjectName("danger_btn")
+            del_btn.setAccessibleName(del_btn.text())
+            del_btn.setAutoDefault(False)
             del_btn.clicked.connect(self.delete_data)
-            btn_row.addWidget(del_btn)
-
-        btn_row.addStretch()
         save_label = (
             t("dialog.directive.btn_save") if self.task_id else t("dialog.directive.btn_register")
         )
-        self.save_btn = QPushButton(save_label)
-        self.save_btn.setObjectName("primary_btn")
-        self.save_btn.setDefault(True)
+        btn_row, self.save_btn, cancel_btn = build_dialog_footer(
+            ok_label=save_label,
+            cancel_label=t("dialog.common.cancel"),
+            extra_left_widget=del_btn,
+        )
         self.save_btn.clicked.connect(self.save_data)
-
-        cancel_btn = QPushButton(t("dialog.common.cancel"))
-        cancel_btn.setObjectName("ghost_btn")
         cancel_btn.clicked.connect(self.reject)
-
-        btn_row.addWidget(self.save_btn)
-        btn_row.addWidget(cancel_btn)
         layout.addLayout(btn_row)
         self.setLayout(layout)
 

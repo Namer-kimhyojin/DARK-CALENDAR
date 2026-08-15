@@ -1,4 +1,6 @@
-from datetime import datetime
+# -*- coding: utf-8 -*-
+
+from datetime import datetime, timedelta
 import sqlite3
 
 from calendar_app.infrastructure.db.database_unified import db_manager, logger
@@ -856,6 +858,63 @@ def get_worklog_entries(limit=100):
         logger.exception("Error in get_worklog_entries: %s", e)
 
         return []
+
+
+def get_worklog_stats(reference_date=None):
+    """Aggregate today's and current-month focus totals in SQLite."""
+    conn = db_manager.get_connection()
+    if not conn:
+        return None
+    day = str(reference_date or datetime.now().strftime("%Y-%m-%d"))[:10]
+    try:
+        reference = datetime.strptime(day, "%Y-%m-%d")
+        day_start = reference.strftime("%Y-%m-%d 00:00:00")
+        next_day_start = (reference + timedelta(days=1)).strftime("%Y-%m-%d 00:00:00")
+        month_start_dt = reference.replace(day=1)
+        next_month_start_dt = (month_start_dt.replace(day=28) + timedelta(days=4)).replace(day=1)
+        month_start = month_start_dt.strftime("%Y-%m-%d 00:00:00")
+        next_month_start = next_month_start_dt.strftime("%Y-%m-%d 00:00:00")
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT
+                COUNT(CASE WHEN logged_at >= ? AND logged_at < ? THEN 1 END)
+                    AS today_sessions,
+                COALESCE(SUM(CASE WHEN logged_at >= ? AND logged_at < ?
+                                  THEN MAX(COALESCE(elapsed_secs, 0), 0) ELSE 0 END), 0)
+                    AS today_secs,
+                COUNT(*) AS monthly_sessions,
+                COALESCE(SUM(MAX(COALESCE(elapsed_secs, 0), 0)), 0)
+                    AS monthly_secs
+            FROM worklog
+            WHERE logged_at >= ? AND logged_at < ?
+            """,
+            (
+                day_start,
+                next_day_start,
+                day_start,
+                next_day_start,
+                month_start,
+                next_month_start,
+            ),
+        )
+        row = cur.fetchone()
+        if not row:
+            return {
+                "today_sessions": 0,
+                "today_secs": 0,
+                "monthly_sessions": 0,
+                "monthly_secs": 0,
+            }
+        return {
+            "today_sessions": int(row[0] or 0),
+            "today_secs": int(row[1] or 0),
+            "monthly_sessions": int(row[2] or 0),
+            "monthly_secs": int(row[3] or 0),
+        }
+    except Exception as e:
+        logger.exception("Error in get_worklog_stats: %s", e)
+        return None
 
 
 def get_incomplete_tasks():

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Single-worker push queue for Google Calendar sync.
 
 Problem
@@ -56,8 +57,8 @@ class GcalPushQueue:
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._lock = threading.Lock()
-        # Dedup: task_id -> (enqueue_time, task_data, kwargs)
-        self._pending: dict[Any, tuple[float, Any, dict]] = {}
+        # Dedup: task_id -> (first_enqueue_time, app, latest_task_data, kwargs)
+        self._pending: dict[Any, tuple[float, Any, Any, dict]] = {}
         self._pending_lock = threading.Lock()
 
     # ------------------------------------------------------------------
@@ -93,14 +94,17 @@ class GcalPushQueue:
         if task_id and DEDUP_WINDOW_SECS > 0:
             with self._pending_lock:
                 prev = self._pending.get(task_id)
-                if prev is not None and (time.monotonic() - prev[0]) < DEDUP_WINDOW_SECS:
-                    # Still within the dedup window — replace with latest data
-                    self._pending[task_id] = (prev[0], task_data, kwargs)
+                if prev is not None:
+                    # A single queue token represents this task. Replace the
+                    # payload that the worker will read, never just a side copy.
+                    self._pending[task_id] = (prev[0], app, task_data, kwargs)
                     logger.debug("push_queue: dedup collapsed rapid edit for task %s", task_id)
                     return
-                self._pending[task_id] = (time.monotonic(), task_data, kwargs)
+                self._pending[task_id] = (time.monotonic(), app, task_data, kwargs)
+            self._queue.put(("task", task_id))
+            return
 
-        self._queue.put((app, task_data, kwargs))
+        self._queue.put(("raw", app, task_data, kwargs))
 
     def stop(self, timeout: float = 5.0) -> None:
         """Signal the worker to stop and wait for it to finish."""
@@ -143,13 +147,28 @@ class GcalPushQueue:
                 # Sentinel: stop requested
                 break
 
-            app, task_data, kwargs = item
-            task_id = (task_data or {}).get("id")
-
-            # Remove from pending dedup tracker
-            if task_id:
+            if item[0] == "task":
+                task_id = item[1]
+                # Keep the token pending for the configured window so rapid
+                # consecutive edits are guaranteed to coalesce to the latest.
                 with self._pending_lock:
-                    self._pending.pop(task_id, None)
+                    pending = self._pending.get(task_id)
+                if pending is None:
+                    self._queue.task_done()
+                    continue
+                wait_secs = max(0.0, pending[0] + DEDUP_WINDOW_SECS - time.monotonic())
+                if wait_secs and self._stop_event.wait(wait_secs):
+                    self._queue.task_done()
+                    break
+                with self._pending_lock:
+                    pending = self._pending.pop(task_id, None)
+                if pending is None:
+                    self._queue.task_done()
+                    continue
+                _queued_at, app, task_data, kwargs = pending
+            else:
+                _kind, app, task_data, kwargs = item
+                task_id = (task_data or {}).get("id")
 
             try:
                 from calendar_app.infrastructure.google_sync.helpers import (

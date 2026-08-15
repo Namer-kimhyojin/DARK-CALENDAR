@@ -532,7 +532,7 @@ def mark_routine_incomplete(task_id):
 # ==================== CRUD: Delete ====================
 
 
-def delete_unified_task(task_id):
+def delete_unified_task(task_id, commit=True):
     """
     통합 task 삭제
     """
@@ -545,10 +545,72 @@ def delete_unified_task(task_id):
     try:
         cur.execute("DELETE FROM task_checklist_link WHERE owner_id=?", (task_id,))
         cur.execute("DELETE FROM unified_task WHERE id=?", (task_id,))
+        deleted = cur.rowcount > 0
+        if commit:
+            conn.commit()
+        return deleted
+    except Exception as e:
+        logger.error(f"Error deleting unified task: {e}")
+        if commit:
+            conn.rollback()
+        return False
+
+
+def delete_unified_task_with_gcal_outbox(task_id):
+    """Delete a task and persist its Google delete request atomically."""
+    conn = get_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM unified_task WHERE id=?", (task_id,))
+        row = cur.fetchone()
+        if not row:
+            return False
+        task = dict(row)
+        event_id = task.get("gcal_event_id")
+        if task.get("type") == "schedule" and event_id:
+            calendar_id = task.get("gcal_source_calendar_id") or task.get("gcal_target_calendar_id")
+            if not queue_gcal_delete(
+                event_id,
+                gcal_calendar_id=calendar_id,
+                local_task_id=task_id,
+                commit=False,
+            ):
+                conn.rollback()
+                return False
+        if not delete_unified_task(task_id, commit=False):
+            conn.rollback()
+            return False
         conn.commit()
         return True
     except Exception as e:
-        logger.error(f"Error deleting unified task: {e}")
+        logger.error(f"Error deleting unified task with Google outbox: {e}")
+        conn.rollback()
+        return False
+
+
+def update_unified_task_with_gcal_delete(task_id, updates, gcal_event_id, gcal_calendar_id=None):
+    """Update a task and persist a Google delete request atomically."""
+    conn = get_connection()
+    if not conn or not gcal_event_id:
+        return False
+    try:
+        if not update_unified_task(task_id, updates, commit=False):
+            conn.rollback()
+            return False
+        if not queue_gcal_delete(
+            gcal_event_id,
+            gcal_calendar_id=gcal_calendar_id,
+            local_task_id=task_id,
+            commit=False,
+        ):
+            conn.rollback()
+            return False
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error updating unified task with Google outbox: {e}")
         conn.rollback()
         return False
 
@@ -809,6 +871,48 @@ def purge_task_trash(archive_id):
         return None
 
 
+def purge_task_trash_with_gcal_outbox(archive_id):
+    """Purge archived data and queue its remote deletion in one transaction."""
+    conn = get_connection()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT gcal_event_id, snapshot_json FROM gcal_deleted_task_archive WHERE id=?",
+            (archive_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        row = dict(row)
+        snapshot = _load_archive_snapshot(row.get("snapshot_json"))
+        task = snapshot.get("task") if isinstance(snapshot.get("task"), dict) else {}
+        event_id = task.get("gcal_event_id") or row.get("gcal_event_id")
+        calendar_id = _archive_calendar_id_from_task(task)
+        if event_id and not queue_gcal_delete(
+            event_id,
+            gcal_calendar_id=calendar_id,
+            commit=False,
+        ):
+            conn.rollback()
+            return None
+        cur.execute("DELETE FROM gcal_deleted_task_archive WHERE id=?", (archive_id,))
+        if cur.rowcount <= 0:
+            conn.rollback()
+            return None
+        conn.commit()
+        return {
+            "gcal_event_id": event_id,
+            "gcal_calendar_id": calendar_id,
+            "gcal_delete_queued": bool(event_id),
+        }
+    except Exception as e:
+        logger.error(f"Error purging task trash with Google outbox: {e}")
+        conn.rollback()
+        return None
+
+
 def purge_task_trash_older_than(cutoff_datetime):
     conn = get_connection()
     if not conn:
@@ -820,12 +924,16 @@ def purge_task_trash_older_than(cutoff_datetime):
             ).strftime("%Y-%m-%d %H:%M:%S")
         cur = conn.cursor()
         cur.execute(
-            "DELETE FROM gcal_deleted_task_archive WHERE datetime(archived_at) < datetime(?)",
+            "SELECT id FROM gcal_deleted_task_archive "
+            "WHERE datetime(archived_at) < datetime(?) ORDER BY id",
             (cutoff_datetime,),
         )
-        deleted = int(cur.rowcount or 0)
-        conn.commit()
-        return deleted
+        archive_ids = [int(row["id"]) for row in cur.fetchall()]
+        return sum(
+            1
+            for archive_id in archive_ids
+            if purge_task_trash_with_gcal_outbox(archive_id) is not None
+        )
     except Exception as e:
         logger.error(f"Error purging old task trash items: {e}")
         conn.rollback()
@@ -1214,8 +1322,15 @@ def mark_gcal_sync_conflict_resolved(conflict_id, resolution):
         return False
 
 
-def queue_gcal_delete(gcal_event_id, gcal_calendar_id=None, local_task_id=None):
-    if not gcal_event_id:
+def queue_gcal_delete(
+    gcal_event_id,
+    gcal_calendar_id=None,
+    local_task_id=None,
+    recurring_scope=None,
+    commit=True,
+):
+    event_id = str(gcal_event_id or "").strip()
+    if not event_id:
         return False
     conn = get_connection()
     if not conn:
@@ -1225,6 +1340,7 @@ def queue_gcal_delete(gcal_event_id, gcal_calendar_id=None, local_task_id=None):
         queue_cols = _table_columns(cur, "gcal_delete_queue")
         has_calendar_col = "gcal_calendar_id" in queue_cols
         has_retry_col = "next_retry_at" in queue_cols
+        has_scope_col = "recurring_scope" in queue_cols
 
         normalized_calendar_id = str(gcal_calendar_id or "").strip() or None
         if not normalized_calendar_id and local_task_id:
@@ -1251,49 +1367,94 @@ def queue_gcal_delete(gcal_event_id, gcal_calendar_id=None, local_task_id=None):
                 "WHERE gcal_event_id=? "
                 "AND COALESCE(trim(gcal_calendar_id), '') = COALESCE(trim(?), '') "
                 "LIMIT 1",
-                (str(gcal_event_id), normalized_calendar_id),
+                (event_id, normalized_calendar_id),
             )
         else:
             cur.execute(
                 "SELECT id FROM gcal_delete_queue WHERE gcal_event_id=? LIMIT 1",
-                (str(gcal_event_id),),
+                (event_id,),
             )
         existing = cur.fetchone()
 
         if existing:
-            cur.execute(
-                "UPDATE gcal_delete_queue SET local_task_id=COALESCE(?, local_task_id) WHERE id=?",
-                (local_task_id, existing["id"]),
-            )
-            conn.commit()
+            if has_scope_col:
+                cur.execute(
+                    "UPDATE gcal_delete_queue "
+                    "SET local_task_id=COALESCE(?, local_task_id), "
+                    "recurring_scope=COALESCE(?, recurring_scope) WHERE id=?",
+                    (local_task_id, recurring_scope, existing["id"]),
+                )
+            else:
+                cur.execute(
+                    "UPDATE gcal_delete_queue "
+                    "SET local_task_id=COALESCE(?, local_task_id) WHERE id=?",
+                    (local_task_id, existing["id"]),
+                )
+            if commit:
+                conn.commit()
             return True
 
-        if has_retry_col and has_calendar_col:
+        if has_retry_col and has_calendar_col and has_scope_col:
             cur.execute(
-                "INSERT INTO gcal_delete_queue (gcal_event_id, gcal_calendar_id, local_task_id, next_retry_at) "
+                "INSERT OR IGNORE INTO gcal_delete_queue "
+                "(gcal_event_id, gcal_calendar_id, local_task_id, next_retry_at, recurring_scope) "
+                "VALUES (?, ?, ?, datetime('now', 'localtime'), ?)",
+                (event_id, normalized_calendar_id, local_task_id, recurring_scope),
+            )
+        elif has_retry_col and has_calendar_col:
+            cur.execute(
+                "INSERT OR IGNORE INTO gcal_delete_queue (gcal_event_id, gcal_calendar_id, local_task_id, next_retry_at) "
                 "VALUES (?, ?, ?, datetime('now', 'localtime'))",
-                (str(gcal_event_id), normalized_calendar_id, local_task_id),
+                (event_id, normalized_calendar_id, local_task_id),
             )
         elif has_retry_col:
             cur.execute(
-                "INSERT INTO gcal_delete_queue (gcal_event_id, local_task_id, next_retry_at) "
+                "INSERT OR IGNORE INTO gcal_delete_queue (gcal_event_id, local_task_id, next_retry_at) "
                 "VALUES (?, ?, datetime('now', 'localtime'))",
-                (str(gcal_event_id), local_task_id),
+                (event_id, local_task_id),
             )
         elif has_calendar_col:
             cur.execute(
-                "INSERT INTO gcal_delete_queue (gcal_event_id, gcal_calendar_id, local_task_id) "
+                "INSERT OR IGNORE INTO gcal_delete_queue (gcal_event_id, gcal_calendar_id, local_task_id) "
                 "VALUES (?, ?, ?)",
-                (str(gcal_event_id), normalized_calendar_id, local_task_id),
+                (event_id, normalized_calendar_id, local_task_id),
             )
         else:
             cur.execute(
-                "INSERT INTO gcal_delete_queue (gcal_event_id, local_task_id) VALUES (?, ?)",
-                (str(gcal_event_id), local_task_id),
+                "INSERT OR IGNORE INTO gcal_delete_queue (gcal_event_id, local_task_id) VALUES (?, ?)",
+                (event_id, local_task_id),
             )
-        conn.commit()
+        if cur.rowcount == 0:
+            if has_calendar_col:
+                if has_scope_col:
+                    cur.execute(
+                        "UPDATE gcal_delete_queue "
+                        "SET local_task_id=COALESCE(?, local_task_id), "
+                        "recurring_scope=COALESCE(?, recurring_scope) "
+                        "WHERE gcal_event_id=? AND "
+                        "COALESCE(trim(gcal_calendar_id), '')=COALESCE(trim(?), '')",
+                        (local_task_id, recurring_scope, event_id, normalized_calendar_id),
+                    )
+                else:
+                    cur.execute(
+                        "UPDATE gcal_delete_queue SET local_task_id=COALESCE(?, local_task_id) "
+                        "WHERE gcal_event_id=? AND "
+                        "COALESCE(trim(gcal_calendar_id), '')=COALESCE(trim(?), '')",
+                        (local_task_id, event_id, normalized_calendar_id),
+                    )
+            else:
+                cur.execute(
+                    "UPDATE gcal_delete_queue SET local_task_id=COALESCE(?, local_task_id) "
+                    "WHERE gcal_event_id=?",
+                    (local_task_id, event_id),
+                )
+        if commit:
+            conn.commit()
         return True
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error queueing Google delete: {e}")
+        if commit:
+            conn.rollback()
         return False
 
 
@@ -1437,7 +1598,7 @@ def clear_gcal_delete_queue():
 # ==================== 체크리스트 관리 ====================
 
 
-def add_checklist_item(owner_id, item_text, item_order=0, display_type=None):
+def add_checklist_item(owner_id, item_text, item_order=0, display_type=None, commit=True):
     """
     체크리스트 항목 추가
     """
@@ -1466,15 +1627,17 @@ def add_checklist_item(owner_id, item_text, item_order=0, display_type=None):
         )
 
         link_id = cur.lastrowid
-        conn.commit()
+        if commit:
+            conn.commit()
         return link_id
     except Exception as e:
         logger.error(f"Error adding checklist item: {e}")
-        conn.rollback()
+        if commit:
+            conn.rollback()
         return None
 
 
-def toggle_checklist_item(link_id):
+def toggle_checklist_item(link_id, commit=True):
     """체크리스트 항목 완료/미완료 토글"""
     conn = get_connection()
     if not conn:
@@ -1497,11 +1660,13 @@ def toggle_checklist_item(link_id):
         )
 
         changed = cur.rowcount > 0
-        conn.commit()
+        if commit:
+            conn.commit()
         return changed
     except Exception as e:
         logger.error(f"Error toggling checklist item: {e}")
-        conn.rollback()
+        if commit:
+            conn.rollback()
         return False
 
 

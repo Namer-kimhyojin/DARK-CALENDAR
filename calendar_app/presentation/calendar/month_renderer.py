@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from calendar_app.domain.date_range import inclusive_day_count, inclusive_end_from_exclusive
 from calendar_app.domain.task_constants import priority_icon
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
@@ -816,6 +817,67 @@ def _subscription_source_text(task_row):
     ).strip()
 
 
+def _format_subscription_datetime(raw_value) -> str:
+    import re
+
+    raw = str(raw_value or "").strip()
+    if not raw:
+        return ""
+    if re.match(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$", raw):
+        return raw.replace("-", ".")
+    match = re.match(
+        r"^([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2})(?::[0-9]{2})?(.*)$",
+        raw,
+    )
+    if not match:
+        return raw
+    date_part = match.group(1).replace("-", ".")
+    time_part = match.group(2)
+    timezone_part = match.group(3)
+    timezone_text = ""
+    timezone_match = re.match(r"([+-][0-9]{2}:[0-9]{2})", timezone_part)
+    if timezone_match:
+        timezone_text = f" (UTC{timezone_match.group(1)})"
+    elif "Z" in timezone_part:
+        timezone_text = " (UTC)"
+    return f"{date_part} {time_part}{timezone_text}"
+
+
+def _subscription_period_text(task_row) -> str:
+    """Return a user-facing period, honoring inclusive all-day end dates."""
+    all_day = bool(task_row.get("all_day"))
+    if all_day:
+        start_raw = str(task_row.get("deadline") or task_row.get("_start_raw") or "").strip()
+        end_raw = str(task_row.get("end_date") or "").strip()
+        if not end_raw:
+            raw_exclusive_end = str(task_row.get("_end_raw") or "").strip()
+            try:
+                start_date = datetime.datetime.strptime(start_raw[:10], "%Y-%m-%d").date()
+                exclusive_end = datetime.datetime.strptime(
+                    raw_exclusive_end[:10], "%Y-%m-%d"
+                ).date()
+                end_raw = inclusive_end_from_exclusive(start_date, exclusive_end).isoformat()
+            except (TypeError, ValueError):
+                end_raw = raw_exclusive_end
+        start_disp = _format_subscription_datetime(start_raw[:10])
+        end_disp = _format_subscription_datetime(end_raw[:10])
+        all_day_label = t("subscription.all_day", "(종일)")
+        if start_disp and end_disp and start_disp != end_disp:
+            return f"{start_disp} ~ {end_disp}  {all_day_label}"
+        return f"{start_disp or end_disp}  {all_day_label}".strip()
+
+    start_raw = str(task_row.get("_start_raw") or task_row.get("deadline") or "").strip()
+    end_raw = str(task_row.get("_end_raw") or task_row.get("end_date") or "").strip()
+    start_disp = _format_subscription_datetime(start_raw)
+    end_disp = _format_subscription_datetime(end_raw)
+    if start_disp == end_disp or not end_disp:
+        return start_disp
+    if start_raw[:10] and start_raw[:10] == end_raw[:10]:
+        end_time_only = end_disp.split(" ")[1] if " " in end_disp else end_disp
+        return f"{start_disp} ~ {end_time_only}"
+    return f"{start_disp} ~ {end_disp}"
+
+
 def _normalize_subscription_event(subscription_row, event, index):
     all_day = bool(
         str(getattr(event, "start_time", "")).strip()
@@ -829,7 +891,8 @@ def _normalize_subscription_event(subscription_row, event, index):
         if end_value:
             try:
                 exclusive = datetime.datetime.strptime(end_value[:10], "%Y-%m-%d").date()
-                inclusive = exclusive - datetime.timedelta(days=1)
+                start_date = datetime.datetime.strptime(start_value[:10], "%Y-%m-%d").date()
+                inclusive = inclusive_end_from_exclusive(start_date, exclusive)
                 end_str = f"{inclusive.isoformat()} 00:00:00"
             except Exception:
                 end_str = f"{end_value[:10]} 00:00:00"
@@ -957,6 +1020,15 @@ def _connect_task_button_signals(app, btn):
     btn.taskResized.connect(app.handle_task_resized)
 
 
+def _connect_calendar_cell_signals(app, cell):
+    """Keep modal-opening slots outside the originating mouse event stack."""
+    cell.doubleClicked.connect(app.open_task_dialog, Qt.ConnectionType.QueuedConnection)
+    cell.clicked.connect(app.handle_cell_click)
+    cell.shiftClicked.connect(app.handle_cell_shift_click, Qt.ConnectionType.QueuedConnection)
+    cell.rangeSelected.connect(app.handle_cell_drag_range, Qt.ConnectionType.QueuedConnection)
+    cell.taskDropped.connect(app.handle_task_dropped)
+
+
 def _format_task_period_text(task_row):
     start_date, end_date = _task_date_range(task_row)
     if not start_date:
@@ -1031,7 +1103,7 @@ def _task_span_days(task_row):
     start_date, end_date = _task_date_range(task_row)
     if not start_date or not end_date:
         return 1
-    return max(1, start_date.daysTo(end_date) + 1)
+    return inclusive_day_count(start_date.toPyDate(), end_date.toPyDate())
 
 
 def _theme_harmonized_color(theme_hex, seed_value, tokens=None):
@@ -1124,8 +1196,6 @@ def _build_single_task_tooltip_html(task_row, theme_color):
 
 
 def _show_subscription_detail(task_row, parent=None):
-    import re as _re
-
     from PyQt6.QtCore import Qt
     from PyQt6.QtWidgets import (
         QApplication,
@@ -1205,51 +1275,7 @@ def _show_subscription_detail(task_row, parent=None):
         d.setStyleSheet(detail_styles["divider"])
         form.addWidget(d)
 
-    def _fmt_datetime(raw):
-        if not raw:
-            return ""
-        raw = raw.strip()
-        if _re.match(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$", raw):
-            return raw.replace("-", ".")
-        m = _re.match(r"^([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2})(?::[0-9]{2})?(.*)$", raw)
-        if m:
-            date_part = m.group(1).replace("-", ".")
-            time_part = m.group(2)
-            tz_part = m.group(3)
-            tz_str = ""
-            tz_m = _re.match(r"([+-][0-9]{2}:[0-9]{2})", tz_part)
-            if tz_m:
-                tz_str = f" (UTC{tz_m.group(1)})"
-            elif "Z" in tz_part:
-                tz_str = " (UTC)"
-            return f"{date_part} {time_part}{tz_str}"
-        return raw
-
-    all_day = bool(task_row.get("all_day"))
-    start_raw = str(task_row.get("_start_raw") or task_row.get("deadline") or "").strip()
-    end_raw = str(task_row.get("_end_raw") or task_row.get("end_date") or "").strip()
-
-    if all_day:
-        start_disp = _fmt_datetime(start_raw[:10] if start_raw else "")
-        end_disp = _fmt_datetime(end_raw[:10] if end_raw else "")
-        all_day_label = t("subscription.all_day", "(종일)")
-        if start_disp and end_disp and start_disp != end_disp:
-            time_str = f"{start_disp} ~ {end_disp}  {all_day_label}"
-        else:
-            time_str = f"{start_disp or end_disp}  {all_day_label}"
-    else:
-        start_disp = _fmt_datetime(start_raw)
-        end_disp = _fmt_datetime(end_raw)
-        if start_disp == end_disp or not end_disp:
-            time_str = start_disp
-        else:
-            sd = start_raw[:10]
-            ed = end_raw[:10]
-            if sd and ed and sd == ed:
-                end_time_only = end_disp.split(" ")[1] if " " in end_disp else end_disp
-                time_str = f"{start_disp} ~ {end_time_only}"
-            else:
-                time_str = f"{start_disp} ~ {end_disp}"
+    time_str = _subscription_period_text(task_row)
 
     _lbl = _ICON_TIME + chr(32) + t("tooltip.label_period", "기간")
     _add_row(_lbl, time_str)
@@ -1290,7 +1316,7 @@ def _show_subscription_detail(task_row, parent=None):
     if updated_raw:
         _add_divider()
         _lbl = chr(0x1F504) + chr(32) + t("subscription.label_updated", "수정일")
-        _add_row(_lbl, _fmt_datetime(updated_raw), muted=True)
+        _add_row(_lbl, _format_subscription_datetime(updated_raw), muted=True)
 
     event_id = str(task_row.get("_gcal_event_id") or "").strip()
     if event_id:
@@ -1457,6 +1483,15 @@ def render_calendar(app):
 
     if app.view_mode_state != normalized_mode:
         app.view_mode_state = normalized_mode
+
+    active_range_cell = getattr(app, "_active_calendar_range_drag_cell", None)
+    if active_range_cell is not None:
+        try:
+            active_range_cell._cancel_create_range_drag()
+        except RuntimeError:
+            app._active_calendar_range_drag_cell = None
+            app._is_calendar_range_dragging = False
+            ClickableCell._clear_create_range_preview_for_app(app)
 
     app.reset_frame(app.center_frame)
     new_layout = QVBoxLayout()
@@ -1841,6 +1876,7 @@ def render_calendar(app):
 
     app._calendar_cells_by_date = {}
     app._drag_range_preview_cells = []
+    app._create_range_preview_cells = []
 
     if not is_grid_view:
         # ?쇨컙 紐⑤뱶 ??湲고? ?덈퉬 泥섎━
@@ -2055,10 +2091,20 @@ def render_calendar(app):
                     day_str = f"★ {day_str}"
 
                 cell_frame = ClickableCell(target_date)
-                cell_frame.doubleClicked.connect(app.open_task_dialog)
-                cell_frame.clicked.connect(app.handle_cell_click)
-                cell_frame.shiftClicked.connect(app.handle_cell_shift_click)
-                cell_frame.taskDropped.connect(app.handle_task_dropped)
+                _connect_calendar_cell_signals(app, cell_frame)
+                cell_frame.setAccessibleName(
+                    t(
+                        "calendar.date_cell_accessible",
+                        "{date} 날짜 셀",
+                        date=target_date.toString("yyyy-MM-dd"),
+                    )
+                )
+                cell_frame.setAccessibleDescription(
+                    t(
+                        "calendar.range_create_hint",
+                        "빈 영역을 드래그하면 여러 날의 종일 일정을 만들 수 있습니다.",
+                    )
+                )
 
                 cell_frame.setProperty("is_today", is_today)
                 cell_frame.setProperty(
@@ -2072,6 +2118,9 @@ def render_calendar(app):
                 cell_frame.setProperty("drag_range_preview", False)
                 cell_frame.setProperty("drag_range_start", False)
                 cell_frame.setProperty("drag_range_end", False)
+                cell_frame.setProperty("create_range_preview", False)
+                cell_frame.setProperty("create_range_start", False)
+                cell_frame.setProperty("create_range_end", False)
                 app._calendar_cells_by_date[target_date.toString("yyyy-MM-dd")] = cell_frame
 
                 # ?대? ?섏쭅 ?덉씠?꾩썐 (諛곌꼍??

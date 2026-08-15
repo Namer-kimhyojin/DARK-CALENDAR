@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from calendar_app.application import focus_usecases
 from calendar_app.presentation.dialogs.checklist_manager_dialog_advanced import (
     BulkOperationsDialog,
     ChecklistItemEditDialog,
@@ -42,6 +43,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
 )
 from calendar_app.presentation.dialogs.dialog_token_editor_dialog import DialogTokenEditorDialog
 from calendar_app.presentation.dialogs.focus_log_dialog import FocusLogDialog
+from calendar_app.presentation.dialogs.focus_task_selector import FocusTaskSelectorDialog
 from calendar_app.presentation.dialogs.gcal_settings_dialog import GCalSettingsDialog
 from calendar_app.presentation.dialogs.label_settings_dialog import LabelSettingsDialog
 from calendar_app.presentation.dialogs.time_picker_widget import (
@@ -663,8 +665,10 @@ class DialogEditorWidgetTests(unittest.TestCase):
 
     def test_focus_log_dialog_uses_token_style_bundle(self):
         with patch(
-            "calendar_app.presentation.dialogs.focus_log_dialog.focus_usecases.get_focus_logs",
-            return_value=[],
+            "calendar_app.presentation.dialogs.focus_history_panel.focus_usecases.get_focus_history_snapshot",
+            return_value=focus_usecases.FocusHistorySnapshot(
+                entries=(), stats=focus_usecases.FocusStatsSnapshot()
+            ),
         ):
             dialog = FocusLogDialog()
         self.addCleanup(_safe_close, dialog)
@@ -676,6 +680,51 @@ class DialogEditorWidgetTests(unittest.TestCase):
         close_btn = button_row.itemAt(2).widget()
         self.assertIn("color:", refresh_btn.styleSheet())
         self.assertIn("color:", close_btn.styleSheet())
+
+    def test_focus_log_dialog_hides_internal_id_and_accepts_extended_rows(self):
+        logs = [
+            focus_usecases.FocusLogEntry(
+                17, 4, "디자인 검토", 125, "2026-08-15 09:30:00", "schedule"
+            ),
+        ]
+        with patch(
+            "calendar_app.presentation.dialogs.focus_history_panel.focus_usecases.get_focus_history_snapshot",
+            return_value=focus_usecases.FocusHistorySnapshot(
+                entries=tuple(logs), stats=focus_usecases.FocusStatsSnapshot()
+            ),
+        ):
+            dialog = FocusLogDialog()
+        self.addCleanup(_safe_close, dialog)
+
+        self.assertEqual(dialog.table.columnCount(), 3)
+        self.assertEqual(dialog.table.rowCount(), 1)
+        self.assertEqual(dialog.table.item(0, 0).data(Qt.ItemDataRole.UserRole), 17)
+        self.assertEqual(dialog.table.item(0, 1).text(), "디자인 검토")
+        self.assertNotIn("ID", [dialog.table.horizontalHeaderItem(i).text() for i in range(3)])
+
+    def test_focus_selector_loads_history_only_when_log_tab_is_first_opened(self):
+        with (
+            patch(
+                "calendar_app.presentation.dialogs.focus_task_selector."
+                "focus_usecases.get_filtered_focus_tasks",
+                return_value=[],
+            ),
+            patch(
+                "calendar_app.presentation.dialogs.focus_task_selector.FocusHistoryPanel.reload"
+            ) as reload_history,
+        ):
+            dialog = FocusTaskSelectorDialog(QDate(2026, 8, 15))
+            self.addCleanup(_safe_close, dialog)
+            self.assertEqual(reload_history.call_count, 0)
+
+            dialog.tabs.setCurrentWidget(dialog.log_tab)
+            self._app.processEvents()
+            self.assertEqual(reload_history.call_count, 1)
+
+            dialog.tabs.setCurrentWidget(dialog.task_tab)
+            dialog.tabs.setCurrentWidget(dialog.log_tab)
+            self._app.processEvents()
+            self.assertEqual(reload_history.call_count, 1)
 
     def test_label_settings_dialog_uses_token_style_bundle(self):
         dialog = LabelSettingsDialog()

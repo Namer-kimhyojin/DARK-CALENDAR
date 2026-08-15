@@ -106,7 +106,7 @@ FIXED_DIALOG_STYLE = """
         font-weight: 500;
     }
     QLabel {
-        color: #9aa0ad;
+        color: #c8ccd4;
         font-weight: 600;
         font-size: 13px;
         margin-top: 2px;
@@ -943,7 +943,7 @@ QLabel[role="dialogSubtitle"], QLabel#dialogSubtitle, QLabel#dialog_subtitle {{
     color: {title_subtext};
 }}
 QLabel {{
-    color: {text_muted};
+    color: {text_secondary};
 }}
 QLineEdit, QComboBox, QDateEdit, QTimeEdit, QSpinBox, QTextEdit, QPlainTextEdit {{
     background-color: {input_bg};

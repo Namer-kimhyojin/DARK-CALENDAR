@@ -18,6 +18,46 @@ class RefreshSchedulerMixin:
         self._ui_refresh_timer.setSingleShot(True)
         self._ui_refresh_timer.timeout.connect(self._flush_scheduled_refresh)
 
+    def begin_task_dialog_refresh_guard(self):
+        self._task_dialog_refresh_depth = int(getattr(self, "_task_dialog_refresh_depth", 0)) + 1
+
+    def _defer_task_dialog_refresh(self, left, center, right, notify):
+        pending = getattr(
+            self,
+            "_task_dialog_pending_refresh",
+            {"left": False, "center": False, "right": False},
+        )
+        pending["left"] = pending["left"] or bool(left)
+        pending["center"] = pending["center"] or bool(center)
+        pending["right"] = pending["right"] or bool(right)
+        self._task_dialog_pending_refresh = pending
+        self._task_dialog_pending_data_refresh = bool(
+            getattr(self, "_task_dialog_pending_data_refresh", False) or notify
+        )
+
+    def end_task_dialog_refresh_guard(self):
+        depth = max(0, int(getattr(self, "_task_dialog_refresh_depth", 0)) - 1)
+        self._task_dialog_refresh_depth = depth
+        if depth:
+            return
+        pending = dict(
+            getattr(
+                self,
+                "_task_dialog_pending_refresh",
+                {"left": False, "center": False, "right": False},
+            )
+        )
+        notify = bool(getattr(self, "_task_dialog_pending_data_refresh", False))
+        self._task_dialog_pending_refresh = {"left": False, "center": False, "right": False}
+        self._task_dialog_pending_data_refresh = False
+        if any(pending.values()):
+            self.schedule_panel_refresh(
+                left=pending["left"],
+                center=pending["center"],
+                right=pending["right"],
+                notify_data_consumers=notify,
+            )
+
     def mark_panel_dirty(self, left=False, center=False, right=False):
         self._ensure_refresh_scheduler()
         self._panel_dirty["left"] = self._panel_dirty["left"] or bool(left)
@@ -34,8 +74,13 @@ class RefreshSchedulerMixin:
     ):
         if getattr(self, "_is_shutting_down", False):
             return
+        if int(getattr(self, "_task_dialog_refresh_depth", 0)) > 0:
+            self._defer_task_dialog_refresh(left, center, right, notify_data_consumers)
+            return
         # 드래그 중에는 패널 리프레시를 보류 (필요 시 자동으로 인한 새로고침 방지)
-        if getattr(self, "_is_dragging", False):
+        if getattr(self, "_is_dragging", False) or getattr(
+            self, "_is_calendar_range_dragging", False
+        ):
             if left or center:
                 self._drag_pending_refresh = True
             return
@@ -73,6 +118,14 @@ class RefreshSchedulerMixin:
         notify_data_consumers = self._pending_data_consumer_refresh
         self._pending_refresh = {"left": False, "center": False, "right": False}
         self._pending_data_consumer_refresh = False
+        if int(getattr(self, "_task_dialog_refresh_depth", 0)) > 0:
+            self._defer_task_dialog_refresh(
+                pending["left"],
+                pending["center"],
+                pending["right"],
+                notify_data_consumers,
+            )
+            return
         if pending["left"]:
             self.load_left_panel(force=False)
             self._panel_dirty["left"] = False

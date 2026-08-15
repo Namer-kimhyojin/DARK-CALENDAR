@@ -1,10 +1,124 @@
+# -*- coding: utf-8 -*-
 """Application usecases for focus mode flows."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 _FOCUS_FUTURE_WINDOW_DAYS = 365
+
+
+@dataclass(frozen=True)
+class FocusLogEntry:
+    """UI-independent representation of one persisted focus session."""
+
+    id: int | None
+    task_id: int | None
+    task_name: str
+    elapsed_secs: int
+    logged_at: str
+    task_type: str | None = None
+
+
+@dataclass(frozen=True)
+class FocusStatsSnapshot:
+    """Today and current-month totals calculated from one log collection."""
+
+    today_sessions: int = 0
+    today_secs: int = 0
+    monthly_sessions: int = 0
+    monthly_secs: int = 0
+
+
+@dataclass(frozen=True)
+class FocusHistorySnapshot:
+    """Recent entries and their aggregate statistics from one repository read."""
+
+    entries: tuple[FocusLogEntry, ...]
+    stats: FocusStatsSnapshot
+    load_error: str | None = None
+
+
+def normalize_focus_log_entry(row) -> FocusLogEntry | None:
+    """Normalize legacy tuple rows and mapping rows to one stable shape."""
+    if isinstance(row, dict):
+        log_id = row.get("id")
+        task_id = row.get("task_id")
+        task_name = row.get("task_name")
+        elapsed_secs = row.get("elapsed_secs")
+        logged_at = row.get("logged_at")
+        task_type = row.get("task_type")
+    else:
+        try:
+            values = tuple(row)
+        except TypeError:
+            return None
+        if len(values) < 5:
+            return None
+        log_id, task_id, task_name, elapsed_secs, logged_at = values[:5]
+        task_type = values[5] if len(values) > 5 else None
+
+    try:
+        normalized_secs = max(0, int(elapsed_secs or 0))
+    except (TypeError, ValueError):
+        normalized_secs = 0
+
+    return FocusLogEntry(
+        id=log_id,
+        task_id=task_id,
+        task_name=str(task_name or ""),
+        elapsed_secs=normalized_secs,
+        logged_at=str(logged_at or ""),
+        task_type=str(task_type) if task_type not in (None, "") else None,
+    )
+
+
+def get_focus_history_snapshot(
+    repo, *, limit: int = 100, stats_limit: int = 5000, now: datetime | None = None
+) -> FocusHistorySnapshot:
+    """Fetch recent rows and use an uncapped SQL aggregate for statistics."""
+    del stats_limit  # compatibility argument; aggregate stats are no longer row-capped
+    fetch_limit = max(0, int(limit or 0))
+    errors = []
+    try:
+        rows = repo.get_worklog_entries(limit=fetch_limit)
+    except Exception as exc:
+        errors.append(str(exc) or exc.__class__.__name__)
+        rows = []
+
+    entries = tuple(
+        entry
+        for entry in (normalize_focus_log_entry(row) for row in (rows or []))
+        if entry is not None
+    )
+    try:
+        reference_day = (now or datetime.now()).strftime("%Y-%m-%d")
+        raw_stats = repo.get_worklog_stats(reference_day)
+        if raw_stats is None:
+            raise RuntimeError("focus statistics unavailable")
+        stats = FocusStatsSnapshot(
+            today_sessions=max(0, int(raw_stats.get("today_sessions", 0) or 0)),
+            today_secs=max(0, int(raw_stats.get("today_secs", 0) or 0)),
+            monthly_sessions=max(0, int(raw_stats.get("monthly_sessions", 0) or 0)),
+            monthly_secs=max(0, int(raw_stats.get("monthly_secs", 0) or 0)),
+        )
+    except Exception as exc:
+        errors.append(str(exc) or exc.__class__.__name__)
+        stats = FocusStatsSnapshot()
+
+    return FocusHistorySnapshot(
+        entries=entries,
+        stats=stats,
+        load_error="; ".join(errors) if errors else None,
+    )
+
+
+def get_focus_stats_snapshot(
+    repo, *, limit: int = 5000, now: datetime | None = None
+) -> FocusStatsSnapshot:
+    """Return focus totals; ``limit`` remains only for API compatibility."""
+    return get_focus_history_snapshot(repo, limit=0, stats_limit=limit, now=now).stats
 
 
 def persist_focus_log(repo, task_id: int, elapsed_secs: int) -> bool:
@@ -168,50 +282,11 @@ def select_auto_focus_task(repo, today_str: str, fallback_tasks=None):
 
 def get_today_focus_stats(repo) -> tuple[int, int]:
     """Return (total_sessions, total_seconds) for today from the persistent store."""
-    try:
-        from datetime import datetime
-
-        today = datetime.now().date()
-        sessions = 0
-        total_secs = 0
-
-        # get_worklog_entries returns (id, task_id, task_name, elapsed_secs, logged_at)
-        logs = repo.get_worklog_entries(limit=500)
-        for log in logs:
-            try:
-                dt_str = str(log[4] or "")
-                log_date = datetime.strptime(dt_str[:10], "%Y-%m-%d").date()
-                if log_date == today:
-                    sessions += 1
-                    total_secs += int(log[3] or 0)
-            except Exception:
-                continue
-        return sessions, total_secs
-    except Exception as e:
-        print(f"Error for get_today_focus_stats: {e}")
-        return 0, 0
+    stats = get_focus_stats_snapshot(repo, limit=500)
+    return stats.today_sessions, stats.today_secs
 
 
 def get_monthly_focus_stats(repo) -> tuple[int, int]:
     """Return (total_sessions, total_seconds) for the current month from the persistent store."""
-    try:
-        from datetime import datetime
-
-        today = datetime.now().date()
-        sessions = 0
-        total_secs = 0
-
-        logs = repo.get_worklog_entries(limit=5000)
-        for log in logs:
-            try:
-                dt_str = str(log[4] or "")
-                log_date = datetime.strptime(dt_str[:10], "%Y-%m-%d").date()
-                if log_date.year == today.year and log_date.month == today.month:
-                    sessions += 1
-                    total_secs += int(log[3] or 0)
-            except Exception:
-                continue
-        return sessions, total_secs
-    except Exception as e:
-        print(f"Error for get_monthly_focus_stats: {e}")
-        return 0, 0
+    stats = get_focus_stats_snapshot(repo, limit=5000)
+    return stats.monthly_sessions, stats.monthly_secs

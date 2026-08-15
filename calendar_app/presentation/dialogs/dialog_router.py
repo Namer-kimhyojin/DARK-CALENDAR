@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Dialog-related action handlers mixin."""
 
 import logging
@@ -251,8 +252,8 @@ class DialogActionsMixin:
             and not kwargs
         ):
             if hasattr(self, "open_modify_task_dialog"):
-                self.open_modify_task_dialog(initial_date)
-            return
+                return self.open_modify_task_dialog(initial_date)
+            return None
 
         # ClickableCell.doubleClicked emits (QDate, target_time) as a tuple;
         # handle_cell_shift_click calls open_task_dialog(start_d, None, end_d) positionally.
@@ -280,17 +281,24 @@ class DialogActionsMixin:
 
         from calendar_app.presentation.dialogs.task_dialog_unified import UnifiedTaskDialog
 
-        dlg = UnifiedTaskDialog(
-            self,
-            initial_date=initial_date,
-            initial_time=initial_time,
-            task_type=task_type,
-            end_date=end_date,
-            **kwargs,
-        )
-        if hasattr(dlg, "task_added"):
-            dlg.task_added.connect(self.handle_task_added)
-        dlg.exec()
+        guard_started = hasattr(self, "begin_task_dialog_refresh_guard")
+        if guard_started:
+            self.begin_task_dialog_refresh_guard()
+        try:
+            dlg = UnifiedTaskDialog(
+                self,
+                initial_date=initial_date,
+                initial_time=initial_time,
+                task_type=task_type,
+                end_date=end_date,
+                **kwargs,
+            )
+            if hasattr(dlg, "task_added"):
+                dlg.task_added.connect(self.handle_task_added)
+            return dlg.exec()
+        finally:
+            if guard_started:
+                self.end_task_dialog_refresh_guard()
 
     def open_modify_task_dialog(self, task_id, tab_index=0):
         from PyQt6.QtWidgets import QDialog
@@ -298,6 +306,9 @@ class DialogActionsMixin:
         if not self._acquire_dialog_guard(f"open_modify_task_dialog:{task_id}"):
             return
 
+        refresh_guard_started = hasattr(self, "begin_task_dialog_refresh_guard")
+        if refresh_guard_started:
+            self.begin_task_dialog_refresh_guard()
         try:
             from calendar_app.infrastructure.db import task_repo as _task_repo
 
@@ -318,16 +329,28 @@ class DialogActionsMixin:
             self._refresh_all_panels()
             if (
                 result == QDialog.DialogCode.Accepted
+                and getattr(dlg, "post_commit_gcal_delete_queued", False)
+                and hasattr(self, "wake_gcal_sync")
+            ):
+                self.wake_gcal_sync()
+            if (
+                result == QDialog.DialogCode.Accepted
                 and task_type != "routine"
                 and self.settings.value("gcal_enabled", "true") == "true"
             ):
                 from calendar_app.infrastructure.google_sync.push_queue import gcal_push_queue
 
                 task = _task_repo.get_unified_task(task_id)
-                if task:
+                if task and not getattr(dlg, "skip_post_commit_gcal_sync", False):
+                    task.update(getattr(dlg, "post_commit_gcal_sync_overrides", {}) or {})
                     gcal_push_queue.enqueue(self, task, create_if_missing=True)
+            return result
         except Exception:
             logger.exception("open_modify_task_dialog failed for task_id=%s", task_id)
+            return None
+        finally:
+            if refresh_guard_started:
+                self.end_task_dialog_refresh_guard()
 
     # ------------------------------------------------------------------
     # Work management (tabbed) dialogs
@@ -377,11 +400,7 @@ class DialogActionsMixin:
             self.schedule_panel_refresh(right=True)
 
     def open_routine_add_dialog(self, checked=False):
-        from calendar_app.presentation.dialogs.task_dialog_unified import UnifiedTaskDialog
-
-        dlg = UnifiedTaskDialog(self, task_type="routine")
-        if dlg.exec():
-            self.schedule_panel_refresh(right=True)
+        return self.open_task_dialog(task_type="routine")
 
     # ------------------------------------------------------------------
     # Checklist / Focus log
@@ -396,14 +415,9 @@ class DialogActionsMixin:
 
     def open_focus_log_dialog(self, checked=False):
         try:
-            from PyQt6.QtCore import QDate
+            from calendar_app.presentation.dialogs.focus_log_dialog import FocusLogDialog
 
-            from calendar_app.presentation.dialogs.focus_task_selector import (
-                FocusTaskSelectorDialog,
-            )
-
-            current_date = getattr(self, "current_date", None) or QDate.currentDate()
-            dlg = FocusTaskSelectorDialog(current_date, self)
+            dlg = FocusLogDialog(self)
             dlg.exec()
         except Exception:
             logger.exception("open_focus_log_dialog failed")
@@ -432,7 +446,15 @@ class DialogActionsMixin:
 
         title = t("help.title") or _default_calendar_help_title()
         content = t("help.content") or _default_calendar_help_content()
-        content = f"{content}{_panel_shortcut_help_html(t('panel.main_calendar', 'Main Calendar'))}"
+        range_help = (
+            f"<br><br><b>{t('calendar.range_create_help_title', '여러 날 일정 빠르게 만들기')}</b><br>"
+            f"{t('calendar.range_create_hint', '빈 날짜를 드래그해 여러 날의 종일 일정을 만드세요.')}<br>"
+            f"{t('calendar.range_create_shift_hint', '시작 날짜 클릭 후 Shift+종료 날짜 클릭으로도 범위를 등록할 수 있습니다.')}"
+        )
+        content = (
+            f"{content}{range_help}"
+            f"{_panel_shortcut_help_html(t('panel.main_calendar', 'Main Calendar'))}"
+        )
         msg = QMessageBox(self)
         msg.setWindowTitle(title)
         msg.setText(content)

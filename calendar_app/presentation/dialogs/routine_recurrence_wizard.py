@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QRadioButton,
     QVBoxLayout,
 )
@@ -21,6 +20,7 @@ from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
+    build_dialog_footer,
     get_dialog_theme_tokens,
 )
 
@@ -376,18 +376,12 @@ class RoutineRecurrenceWizard(QDialog):
         sep.setFrameShape(QFrame.Shape.HLine)
         main_layout.addWidget(sep)
 
-        btn_row = QHBoxLayout()
-        cancel_btn = QPushButton(t("common.cancel"))
-        cancel_btn.setObjectName("ghost_btn")
+        btn_row, self.finish_btn, cancel_btn = build_dialog_footer(
+            ok_label=t("recurrence.finish"),
+            cancel_label=t("common.cancel"),
+        )
         cancel_btn.clicked.connect(self.reject)
-
-        self.finish_btn = QPushButton(t("recurrence.finish"))
-        self.finish_btn.setObjectName("primary_btn")
         self.finish_btn.clicked.connect(self.accept)
-
-        btn_row.addStretch()
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(self.finish_btn)
         main_layout.addLayout(btn_row)
 
         # 시그널 연결

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import logging
 import sys
 
@@ -1663,6 +1664,7 @@ class ClickableCell(QFrame):
     doubleClicked = pyqtSignal(object)
     shiftClicked = pyqtSignal(object)
     clicked = pyqtSignal(object)
+    rangeSelected = pyqtSignal(object)
     taskDropped = pyqtSignal(
         object, object, object, str
     )  # task_id(int or list), date, time, action
@@ -1682,21 +1684,172 @@ class ClickableCell(QFrame):
         self.setProperty("drag_range_preview", False)
         self.setProperty("drag_range_start", False)
         self.setProperty("drag_range_end", False)
+        self.setProperty("create_range_preview", False)
+        self.setProperty("create_range_start", False)
+        self.setProperty("create_range_end", False)
         self._drag_pulse_timer = QTimer(self)
         self._drag_pulse_timer.setInterval(520)
         self._drag_pulse_timer.timeout.connect(self._toggle_drag_pulse)
         self._cached_drag_count = None
         self._cached_drag_span_days = None
+        self._range_press_global_pos = None
+        self._range_drag_anchor_date = None
+        self._range_drag_end_date = None
+        self._range_dragging = False
+        self._range_cancel_filter_installed = False
 
     def _flush_single_click(self):
         if self._pending_click_pack is not None:
             self.clicked.emit(self._pending_click_pack)
         self._pending_click_pack = None
 
+    @staticmethod
+    def _calendar_cell_at_global_position(global_pos):
+        widget = QApplication.widgetAt(global_pos)
+        while widget is not None:
+            if isinstance(widget, ClickableCell):
+                return widget
+            widget = widget.parentWidget()
+        return None
+
+    @staticmethod
+    def _clear_create_range_preview_for_app(app, restore_status=True):
+        if app is None:
+            return
+        for cell in list(getattr(app, "_create_range_preview_cells", []) or []):
+            try:
+                cell.setProperty("create_range_preview", False)
+                cell.setProperty("create_range_start", False)
+                cell.setProperty("create_range_end", False)
+                cell.style().unpolish(cell)
+                cell.style().polish(cell)
+            except RuntimeError:
+                continue
+        app._create_range_preview_cells = []
+        if restore_status:
+            if hasattr(app, "update_task_selection_status"):
+                app.update_task_selection_status()
+            elif hasattr(app, "selection_status_lbl"):
+                app.selection_status_lbl.setText(
+                    t("calendar.selection_hint", "Ctrl+클릭 다중 선택")
+                )
+
+    def _update_create_range_preview(self, anchor_date, current_date):
+        app = self.window()
+        date_map = getattr(app, "_calendar_cells_by_date", None)
+        if not isinstance(date_map, dict):
+            return
+        start_date, end_date = anchor_date, current_date
+        if start_date > end_date:
+            start_date, end_date = end_date, start_date
+        preview_cells = []
+        for offset in range(start_date.daysTo(end_date) + 1):
+            key = start_date.addDays(offset).toString("yyyy-MM-dd")
+            cell = date_map.get(key)
+            if cell is not None:
+                preview_cells.append(cell)
+        self._clear_create_range_preview_for_app(app, restore_status=False)
+        for cell in preview_cells:
+            cell.setProperty("create_range_preview", True)
+            cell.setProperty("create_range_start", cell.target_date == start_date)
+            cell.setProperty("create_range_end", cell.target_date == end_date)
+            cell.style().unpolish(cell)
+            cell.style().polish(cell)
+        app._create_range_preview_cells = preview_cells
+        count = start_date.daysTo(end_date) + 1
+        status = t(
+            "calendar.range_create_status",
+            "{start} → {end} · 총 {count}일 · 종일",
+            start=start_date.toString("M/d"),
+            end=end_date.toString("M/d"),
+            count=count,
+        )
+        if hasattr(app, "selection_status_lbl"):
+            app.selection_status_lbl.setText(status)
+            app.selection_status_lbl.setAccessibleDescription(status)
+
+    def _finish_create_range_drag(self):
+        if not self._range_dragging:
+            return False
+        start_date = self._range_drag_anchor_date
+        end_date = self._range_drag_end_date or start_date
+        self._cancel_create_range_drag()
+        if start_date is not None and end_date is not None:
+            self.rangeSelected.emit((start_date, end_date))
+        return True
+
+    def _install_create_range_cancel_filter(self):
+        qapp = QApplication.instance()
+        if qapp is not None and not self._range_cancel_filter_installed:
+            qapp.installEventFilter(self)
+            self._range_cancel_filter_installed = True
+
+    def _cancel_create_range_drag(self):
+        """Clear range-drag state after cancel, focus loss, or rerender."""
+        try:
+            app = self.window()
+        except RuntimeError:
+            app = None
+        was_active = bool(
+            self._range_dragging
+            or (app is not None and getattr(app, "_is_calendar_range_dragging", False))
+        )
+        if app is not None:
+            app._is_calendar_range_dragging = False
+            if getattr(app, "_active_calendar_range_drag_cell", None) is self:
+                app._active_calendar_range_drag_cell = None
+            self._clear_create_range_preview_for_app(app)
+        self._range_dragging = False
+        self._range_press_global_pos = None
+        self._range_drag_anchor_date = None
+        self._range_drag_end_date = None
+        qapp = QApplication.instance()
+        if qapp is not None and self._range_cancel_filter_installed:
+            qapp.removeEventFilter(self)
+        self._range_cancel_filter_installed = False
+        if app is not None and getattr(app, "_drag_pending_refresh", False):
+            app._drag_pending_refresh = False
+            if hasattr(app, "schedule_panel_refresh"):
+                app.schedule_panel_refresh(left=True, center=True)
+        return was_active
+
+    def eventFilter(self, watched, event):
+        if self._range_dragging:
+            event_type = event.type()
+            try:
+                app_window = self.window()
+            except RuntimeError:
+                app_window = None
+            cancel = (
+                event_type == QEvent.Type.ApplicationDeactivate
+                or (event_type == QEvent.Type.KeyPress and event.key() == Qt.Key.Key_Escape)
+                or (
+                    watched is app_window
+                    and event_type
+                    in {
+                        QEvent.Type.WindowDeactivate,
+                        QEvent.Type.Hide,
+                        QEvent.Type.Close,
+                    }
+                )
+                or (
+                    watched is self
+                    and event_type in {QEvent.Type.UngrabMouse, QEvent.Type.DeferredDelete}
+                )
+            )
+            if cancel:
+                self._cancel_create_range_drag()
+                if event_type == QEvent.Type.KeyPress:
+                    return True
+        return super().eventFilter(watched, event)
+
     def mouseDoubleClickEvent(self, event):
         super().mouseDoubleClickEvent(event)
         self._single_click_timer.stop()
         self._pending_click_pack = None
+        self._range_press_global_pos = None
+        self._range_drag_anchor_date = None
+        self._range_drag_end_date = None
         if isinstance(self.parent(), TimeGridContainer):
             self.parent().selecting = False
             if hasattr(self.parent(), "overlay"):
@@ -1733,15 +1886,53 @@ class ClickableCell(QFrame):
                 if app is not None:
                     interval = max(200, int(app.doubleClickInterval()))
                 self._single_click_timer.start(interval)
+                if not isinstance(self.parent(), TimeGridContainer):
+                    self._range_press_global_pos = event.globalPosition().toPoint()
+                    self._range_drag_anchor_date = self.target_date
+                    self._range_drag_end_date = self.target_date
 
     def mouseMoveEvent(self, event):
         if isinstance(self.parent(), TimeGridContainer) and self.parent().selecting:
             self.parent().mouseMoveEvent(event)
+        elif (
+            self._range_press_global_pos is not None and event.buttons() & Qt.MouseButton.LeftButton
+        ):
+            global_pos = event.globalPosition().toPoint()
+            distance = (global_pos - self._range_press_global_pos).manhattanLength()
+            if not self._range_dragging and distance >= QApplication.startDragDistance():
+                self._range_dragging = True
+                self._single_click_timer.stop()
+                self._pending_click_pack = None
+                window = self.window()
+                window._is_calendar_range_dragging = True
+                window._active_calendar_range_drag_cell = self
+                self._install_create_range_cancel_filter()
+            if self._range_dragging:
+                target_cell = self._calendar_cell_at_global_position(global_pos)
+                if target_cell is not None and not isinstance(
+                    target_cell.parent(), TimeGridContainer
+                ):
+                    self._range_drag_end_date = target_cell.target_date
+                self._update_create_range_preview(
+                    self._range_drag_anchor_date, self._range_drag_end_date
+                )
+                event.accept()
+                return
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if isinstance(self.parent(), TimeGridContainer) and self.parent().selecting:
             self.parent().mouseReleaseEvent(event)
+        elif event.button() == Qt.MouseButton.LeftButton and self._range_dragging:
+            target_cell = self._calendar_cell_at_global_position(event.globalPosition().toPoint())
+            if target_cell is not None and not isinstance(target_cell.parent(), TimeGridContainer):
+                self._range_drag_end_date = target_cell.target_date
+            self._finish_create_range_drag()
+            event.accept()
+            return
+        self._range_press_global_pos = None
+        self._range_drag_anchor_date = None
+        self._range_drag_end_date = None
         super().mouseReleaseEvent(event)
 
     def dragEnterEvent(self, event):

@@ -336,6 +336,9 @@ def _format_mmss(total_secs: int) -> str:
 
 def _open_focus_log_dialog(app) -> None:
     try:
+        if hasattr(app, "open_focus_log_dialog"):
+            app.open_focus_log_dialog()
+            return
         from calendar_app.presentation.dialogs.focus_log_dialog import FocusLogDialog
 
         dlg = FocusLogDialog(app)
@@ -1130,10 +1133,11 @@ def _exit_focus_mode(app, is_set_completed: bool = False) -> None:
         show_summary = is_set_completed or saved_sessions > 0
         if show_summary:
             try:
-                today_sessions, today_secs = focus_usecases.get_today_focus_stats(legacy_focus_repo)
-                monthly_sessions, monthly_secs = focus_usecases.get_monthly_focus_stats(
-                    legacy_focus_repo
-                )
+                stats = focus_usecases.get_focus_stats_snapshot(legacy_focus_repo)
+                today_sessions = stats.today_sessions
+                today_secs = stats.today_secs
+                monthly_sessions = stats.monthly_sessions
+                monthly_secs = stats.monthly_secs
 
                 # Graceful fallback: local memory (saved_sessions) is more reliable for 'this exact session'
                 final_today_sessions = max(today_sessions, saved_sessions)

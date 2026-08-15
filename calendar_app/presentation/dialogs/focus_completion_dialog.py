@@ -70,6 +70,7 @@ class FocusCompletionDialog(QDialog):
             theme_color=theme_color,
             settings=getattr(self.parent(), "settings", None),
         )
+        self._ui_tokens = tokens
         theme_color = tokens.get("accent", theme_color)
         accent_display = tokens.get("tab_text_active", theme_color)
         accent_text = tokens.get("accent_text", "#101318")
@@ -80,17 +81,19 @@ class FocusCompletionDialog(QDialog):
         text_secondary = tokens.get("text_secondary", "#c7d2e8")
         border = tokens.get("border", "rgba(255,255,255,0.18)")
         border_soft = tokens.get("border_soft", "rgba(255,255,255,0.12)")
-        success = tokens.get("success_hex", "#62d995")
-        warning = tokens.get("warning_hex", "#f0b35a")
+        accent_soft_border = tokens.get("accent_soft_border", border_soft)
 
         self.setAccessibleName(t("focus.congrats_title", "Task Completed!"))
+        self.setAccessibleDescription(
+            t("focus.congrats_msg", "Great focus. Your productivity is rising.")
+        )
 
         self.container = QFrame()
         self.container.setStyleSheet(f"""
             QFrame {{
                 background-color: {surface_bg};
-                border: 2px solid {theme_color};
-                border-radius: 20px;
+                border: 1px solid {accent_soft_border};
+                border-radius: 16px;
             }}
             QLabel {{
                 background: transparent;
@@ -99,22 +102,22 @@ class FocusCompletionDialog(QDialog):
             }}
         """)
         container_layout = QVBoxLayout(self.container)
-        container_layout.setContentsMargins(30, 30, 30, 30)
+        container_layout.setContentsMargins(28, 26, 28, 26)
+        container_layout.setSpacing(10)
 
-        # Trophy
+        # 완료 상태는 한 가지 강조색으로만 표시하고, 정보 수치는 명도 차로 구분한다.
         trophy_lbl = QLabel()
-        trophy_lbl.setPixmap(_ic(ICON.FOCUS_DONE, color=warning).pixmap(52, 52))
+        trophy_lbl.setPixmap(_ic(ICON.FOCUS_DONE, color=accent_display).pixmap(48, 48))
         trophy_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        trophy_lbl.setAccessibleName(t("focus.congrats_title", "Task Completed!"))
         container_layout.addWidget(trophy_lbl)
 
-        # Title
         title_lbl = QLabel(t("focus.congrats_title", "Task Completed!"))
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_lbl.setObjectName("dialogTitle")
-        title_lbl.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {warning};")
+        title_lbl.setStyleSheet(f"font-size: 22px; font-weight: 700; color: {text_primary};")
         container_layout.addWidget(title_lbl)
 
-        # Message
         msg_lbl = QLabel(t("focus.congrats_msg", "Great focus. Your productivity is rising."))
         msg_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         msg_lbl.setWordWrap(True)
@@ -123,15 +126,23 @@ class FocusCompletionDialog(QDialog):
 
         # Stats Sections
         stats_widget = QWidget()
+        self.stats_widget = stats_widget
+        stats_widget.setObjectName("focusCompletionStats")
+        stats_widget.setStyleSheet(
+            f"QWidget#focusCompletionStats {{ background: {surface_item}; "
+            f"border: 1px solid {border_soft}; border-radius: 12px; }}"
+        )
         stats_layout = QVBoxLayout(stats_widget)
-        stats_layout.setSpacing(15)
+        stats_layout.setContentsMargins(16, 12, 16, 12)
+        stats_layout.setSpacing(10)
 
         # Current set stats
         curr_row = QHBoxLayout()
         curr_lbl = QLabel(t("focus.stat_current_set", "This Set:"))
-        curr_lbl.setStyleSheet(f"font-weight: bold; color: {text_primary};")
+        curr_lbl.setStyleSheet(f"font-weight: 600; color: {text_secondary};")
         curr_data = QLabel(self._format_session_summary(self.sessions, self.total_secs))
-        curr_data.setStyleSheet(f"color: {accent_display}; font-weight: bold;")
+        self.current_value_label = curr_data
+        curr_data.setStyleSheet(f"color: {accent_display}; font-weight: 700;")
         curr_row.addWidget(curr_lbl)
         curr_row.addStretch()
         curr_row.addWidget(curr_data)
@@ -146,9 +157,10 @@ class FocusCompletionDialog(QDialog):
         # Today total stats
         today_row = QHBoxLayout()
         today_lbl = QLabel(t("focus.stat_today_total", "Today's Total:"))
-        today_lbl.setStyleSheet(f"font-weight: bold; color: {text_primary};")
+        today_lbl.setStyleSheet(f"font-weight: 600; color: {text_secondary};")
         today_data = QLabel(self._format_session_summary(self.today_sessions, self.today_secs))
-        today_data.setStyleSheet(f"color: {success}; font-weight: bold;")
+        self.today_value_label = today_data
+        today_data.setStyleSheet(f"color: {text_primary}; font-weight: 700;")
         today_row.addWidget(today_lbl)
         today_row.addStretch()
         today_row.addWidget(today_data)
@@ -163,16 +175,17 @@ class FocusCompletionDialog(QDialog):
         # Monthly total stats
         month_row = QHBoxLayout()
         month_lbl = QLabel(t("focus.stat_month_total", "This Month's Total:"))
-        month_lbl.setStyleSheet(f"font-weight: bold; color: {text_primary};")
+        month_lbl.setStyleSheet(f"font-weight: 600; color: {text_secondary};")
         month_data = QLabel(self._format_session_summary(self.monthly_sessions, self.monthly_secs))
-        month_data.setStyleSheet(f"color: {warning}; font-weight: bold;")
+        self.month_value_label = month_data
+        month_data.setStyleSheet(f"color: {text_primary}; font-weight: 700;")
         month_row.addWidget(month_lbl)
         month_row.addStretch()
         month_row.addWidget(month_data)
         stats_layout.addLayout(month_row)
 
         container_layout.addWidget(stats_widget)
-        container_layout.addStretch()
+        container_layout.addSpacing(4)
 
         # Buttons
         secondary_btn_layout = QHBoxLayout()
@@ -185,14 +198,16 @@ class FocusCompletionDialog(QDialog):
             self.break_btn.setMinimumHeight(44)
             self.break_btn.setMinimumWidth(140)
             self.break_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.break_btn.setAccessibleName(self.break_btn.text())
+            self.break_btn.setAutoDefault(False)
             self.break_btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: transparent;
                     color: {accent_display};
-                    border: 2px solid {theme_color};
-                    border-radius: 12px;
+                    border: 1px solid {accent_soft_border};
+                    border-radius: 10px;
                     font-size: 14px;
-                    font-weight: bold;
+                    font-weight: 700;
                 }}
                 QPushButton:hover {{
                     background-color: {theme_color};
@@ -209,14 +224,16 @@ class FocusCompletionDialog(QDialog):
             self.log_btn.setMinimumHeight(44)
             self.log_btn.setMinimumWidth(140)
             self.log_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.log_btn.setAccessibleName(self.log_btn.text())
+            self.log_btn.setAutoDefault(False)
             self.log_btn.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {surface_item};
                     color: {text_secondary};
                     border: 1px solid {border};
-                    border-radius: 12px;
+                    border-radius: 10px;
                     font-size: 14px;
-                    font-weight: bold;
+                    font-weight: 700;
                 }}
                 QPushButton:hover {{
                     background-color: {surface_hover};
@@ -237,14 +254,17 @@ class FocusCompletionDialog(QDialog):
         self.ok_btn.setObjectName("primary_btn")
         self.ok_btn.setMinimumHeight(46)
         self.ok_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.ok_btn.setAccessibleName(ok_text)
+        self.ok_btn.setDefault(True)
+        self.ok_btn.setAutoDefault(True)
         self.ok_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {theme_color};
                 color: {accent_text};
                 border: none;
-                border-radius: 12px;
+                border-radius: 10px;
                 font-size: 16px;
-                font-weight: bold;
+                font-weight: 700;
             }}
             QPushButton:hover {{
                 background-color: {tokens.get("accent_hover", theme_color)};
@@ -258,7 +278,8 @@ class FocusCompletionDialog(QDialog):
         container_layout.addWidget(self.ok_btn)
 
         main_layout.addWidget(self.container)
-        self.setFixedSize(440, 540)
+        self.setMinimumWidth(440)
+        self.resize(460, 500)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:

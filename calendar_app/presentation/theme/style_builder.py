@@ -76,6 +76,30 @@ def build_global_stylesheet(
             background-color: {tc(0.10)};
             border: 1px solid {tc(0.44)};
         }}
+        ClickableCell[create_range_preview="true"] {{
+            background-color: {tc(0.16)};
+            border-top: 2px solid {tc(0.72)};
+            border-bottom: 2px solid {tc(0.72)};
+            border-left: none;
+            border-right: none;
+        }}
+        ClickableCell[create_range_preview="true"][create_range_start="true"] {{
+            border-left: 2px solid {tc(0.72)};
+            border-top-left-radius: {drag_range_radius}px;
+            border-bottom-left-radius: {drag_range_radius}px;
+        }}
+        ClickableCell[create_range_preview="true"][create_range_end="true"] {{
+            border-right: 2px solid {tc(0.72)};
+            border-top-right-radius: {drag_range_radius}px;
+            border-bottom-right-radius: {drag_range_radius}px;
+        }}
+        ClickableCell[create_range_preview="true"] QLabel#dayNumLabel {{
+            color: {p["text_inverse"]};
+            font-weight: 800;
+            background-color: {theme_color};
+            border-radius: 4px;
+            padding: 1px 6px;
+        }}
         ClickableCell[drag_range_preview="true"] {{
             background-color: {tc(0.10)};
             border-top: 2px solid {tc(0.45)};
