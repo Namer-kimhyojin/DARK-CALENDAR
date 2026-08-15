@@ -1,4 +1,4 @@
-# Dark Calendar 3.6.6 release runtime lock (Windows x64/arm64)
+# Dark Calendar 3.6.7 release runtime lock (Windows x64/arm64)
 # Regenerate only after a clean dependency and license review.
 PyQt6==6.10.2
 PyQt6-Qt6==6.10.2
