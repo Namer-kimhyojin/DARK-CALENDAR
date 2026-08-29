@@ -5,7 +5,7 @@
     appVersion: "3.6.7",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
-    promotionKitUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/main/marketing/DARK_CALENDAR_PROMOTION_KIT.md",
+    promotionKitUrl: "promo.html",
     releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.6.7",
     licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.6.7/LICENSE",
     thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.6.7/THIRD_PARTY_NOTICES.md",
@@ -297,7 +297,7 @@
       shareTitle: "바탕화면을 더 잘 쓰고 싶은 사람에게<br><em>Dark Calendar를 알려주세요.</em>",
       shareBody: "일정과 위젯을 자기 방식대로 배치하고 싶은 친구나 동료에게 이 페이지를 공유해 주세요.",
       shareActionsLabel: "Dark Calendar 공유 방법", shareX: "X에 공유", shareFacebook: "Facebook", shareLinkedIn: "LinkedIn", shareEmail: "이메일", shareCopy: "링크 복사", shareCopied: "링크를 복사했습니다.", shareFailed: "주소창의 링크를 복사해 주세요.",
-      shareText: "캘린더와 위젯을 바탕화면에 직접 배치하고, 위치·크기·레이아웃·색상까지 내 방식대로 만드는 Windows 앱, Dark Calendar.", footerPromotion: "홍보 자료"
+      shareText: "캘린더와 위젯을 바탕화면에 직접 배치하고, 위치·크기·레이아웃·색상까지 내 방식대로 만드는 Windows 앱, Dark Calendar.", shareKit: "공식 홍보자료 내려받기", footerPromotion: "홍보 자료"
     },
     en: {
       navGoogle: "Google sync",
@@ -360,7 +360,7 @@
       shareTitle: "Know someone who wants a better desktop?<br><em>Share Dark Calendar.</em>",
       shareBody: "Send this page to a friend or teammate who wants calendars and widgets arranged around the way they work.",
       shareActionsLabel: "Ways to share Dark Calendar", shareX: "Share on X", shareFacebook: "Facebook", shareLinkedIn: "LinkedIn", shareEmail: "Email", shareCopy: "Copy link", shareCopied: "Link copied.", shareFailed: "Please copy the link from the address bar.",
-      shareText: "Dark Calendar is a Windows app that puts calendars and widgets directly on your desktop—with freely adjustable position, size, layout, and color.", footerPromotion: "Promotion kit"
+      shareText: "Dark Calendar is a Windows app that puts calendars and widgets directly on your desktop—with freely adjustable position, size, layout, and color.", shareKit: "Download the official media kit", footerPromotion: "Promotion kit"
     },
     ja: {
       navGoogle: "Google連携",
@@ -423,7 +423,7 @@
       shareTitle: "デスクトップをもっと活用したい人へ<br><em>Dark Calendarを紹介してください。</em>",
       shareBody: "カレンダーやウィジェットを自分らしく配置したい友人や同僚に、このページを共有してください。",
       shareActionsLabel: "Dark Calendarの共有方法", shareX: "Xで共有", shareFacebook: "Facebook", shareLinkedIn: "LinkedIn", shareEmail: "メール", shareCopy: "リンクをコピー", shareCopied: "リンクをコピーしました。", shareFailed: "アドレスバーのリンクをコピーしてください。",
-      shareText: "カレンダーとウィジェットをデスクトップに直接置き、位置・サイズ・レイアウト・色まで自由に整えられるWindowsアプリ、Dark Calendar。", footerPromotion: "プロモーション資料"
+      shareText: "カレンダーとウィジェットをデスクトップに直接置き、位置・サイズ・レイアウト・色まで自由に整えられるWindowsアプリ、Dark Calendar。", shareKit: "公式プロモーション素材を入手", footerPromotion: "プロモーション資料"
     },
     zh: {
       navGoogle: "Google 同步",
@@ -486,7 +486,7 @@
       shareTitle: "把 Dark Calendar 分享给<br><em>想让桌面更高效的人。</em>",
       shareBody: "将此页面分享给希望按自己的方式排列日历和小组件的朋友或同事。",
       shareActionsLabel: "Dark Calendar 分享方式", shareX: "分享到 X", shareFacebook: "Facebook", shareLinkedIn: "LinkedIn", shareEmail: "电子邮件", shareCopy: "复制链接", shareCopied: "链接已复制。", shareFailed: "请复制地址栏中的链接。",
-      shareText: "Dark Calendar 是一款 Windows 应用，可将日历和小组件直接放在桌面，并自由调整位置、大小、布局和颜色。", footerPromotion: "推广资料"
+      shareText: "Dark Calendar 是一款 Windows 应用，可将日历和小组件直接放在桌面，并自由调整位置、大小、布局和颜色。", shareKit: "下载官方推广素材", footerPromotion: "推广资料"
     }
   };
 

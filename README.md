@@ -2,7 +2,7 @@
 
 Dark Calendar turns the Windows desktop into a personal time workspace. Place calendars, tasks, clocks, weather, D-Day, countdown, and text widgets directly on the desktop—then move, resize, recolor, and arrange them around the way you work.
 
-[Official website](https://namer-kimhyojin.github.io/DARK-CALENDAR/) · [Microsoft Store](https://apps.microsoft.com/detail/9mxq08rf22k8) · [Latest release](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/latest) · [Promotion kit](marketing/DARK_CALENDAR_PROMOTION_KIT.md)
+[Official website](https://namer-kimhyojin.github.io/DARK-CALENDAR/) · [Microsoft Store](https://apps.microsoft.com/detail/9mxq08rf22k8) · [Latest release](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/latest) · [Media kit](https://namer-kimhyojin.github.io/DARK-CALENDAR/promo.html) · [Campaign plan](marketing/DARK_CALENDAR_PROMOTION_KIT.md)
 
 ![Dark Calendar desktop customization](docs/assets/desktop-customization.webp)
 

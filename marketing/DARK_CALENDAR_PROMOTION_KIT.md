@@ -6,6 +6,8 @@ Microsoft Store: <https://apps.microsoft.com/detail/9mxq08rf22k8>
 
 GitHub: <https://github.com/Namer-kimhyojin/DARK-CALENDAR>
 
+Public media kit: <https://namer-kimhyojin.github.io/DARK-CALENDAR/promo.html>
+
 ## Campaign assumptions
 
 - Goal: increase product awareness and qualified visits to the Microsoft Store listing.
@@ -109,6 +111,7 @@ Use the existing assets so every post looks connected to the official website:
 - `docs/assets/screenshots/focus-mode.png`: focus and Pomodoro story.
 - `docs/assets/google-calendar-setup.webp`: beginner Google Calendar education.
 - `docs/assets/og-dark-calendar.png`: general link preview and campaign cover.
+- `docs/assets/promo-social-square.png`: square social creative with the campaign line “Your Desktop, Your Time.”
 
 For screenshot posts, blur or replace any personal schedule, account, location, or notification content before publishing.
 
