@@ -5,17 +5,57 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dark Calendar | 일정과 할 일을 바탕화면 한 곳에</title>
   <meta name="description" content="캘린더와 위젯을 바탕화면에 직접 배치하고, 크기·위치·레이아웃·색상을 자유롭게 구성하는 맞춤형 Windows 데스크톱 캘린더 Dark Calendar.">
+  <meta name="keywords" content="Dark Calendar, Windows 캘린더, 데스크톱 캘린더, 바탕화면 위젯, 일정 관리, Pomodoro, Google Calendar 동기화">
+  <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="theme-color" content="#0a0a0b">
   <meta property="og:title" content="Dark Calendar">
   <meta property="og:description" content="캘린더와 위젯을 바탕화면에 바로 배치하고 크기, 위치, 레이아웃과 색상을 내 방식대로 구성하세요.">
   <meta property="og:image" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/og-dark-calendar.png">
+  <meta property="og:image:alt" content="Dark Calendar — Plan, Focus, Flow">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/">
+  <meta property="og:site_name" content="Dark Calendar">
+  <meta property="og:locale" content="ko_KR">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Dark Calendar">
+  <meta name="twitter:description" content="캘린더와 위젯을 바탕화면에 바로 배치하고 크기, 위치, 레이아웃과 색상을 내 방식대로 구성하세요.">
+  <meta name="twitter:image" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/og-dark-calendar.png">
+  <meta name="twitter:image:alt" content="Dark Calendar — Plan, Focus, Flow">
   <link rel="canonical" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/">
+  <link rel="alternate" hreflang="ko" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ko">
+  <link rel="alternate" hreflang="en" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=en">
+  <link rel="alternate" hreflang="ja" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ja">
+  <link rel="alternate" hreflang="zh-CN" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=zh">
+  <link rel="alternate" hreflang="x-default" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/">
   <link rel="icon" href="assets/app_icon.png">
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
+  <script type="application/ld+json" id="software-schema">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Dark Calendar",
+      "description": "A customizable Windows desktop calendar with movable and resizable widgets, focus tools, and optional Google Calendar sync.",
+      "applicationCategory": "ProductivityApplication",
+      "operatingSystem": "Windows 10, Windows 11",
+      "softwareVersion": "3.6.7",
+      "url": "https://namer-kimhyojin.github.io/DARK-CALENDAR/",
+      "downloadUrl": "https://apps.microsoft.com/detail/9mxq08rf22k8",
+      "license": "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.6.7/LICENSE",
+      "image": "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/og-dark-calendar.png",
+      "screenshot": [
+        "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/screenshots/main-dashboard.png",
+        "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/screenshots/widget-manager.png"
+      ],
+      "featureList": [
+        "Place calendars and widgets directly on the Windows desktop",
+        "Move and resize widgets freely",
+        "Create custom layouts and color themes",
+        "Focus sessions and Pomodoro tracking",
+        "Optional Google Calendar synchronization"
+      ]
+    }
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main-content" data-i18n="skip">본문으로 건너뛰기</a>
@@ -396,6 +436,22 @@
         <a class="button button-quiet" data-config-link="sourceCodeUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR" target="_blank" rel="noopener"><span data-i18n="ctaSecondary">GitHub 소스 보기</span><span aria-hidden="true">↗</span></a>
       </div>
     </section>
+
+    <section class="share-panel" id="share" aria-labelledby="share-title">
+      <div class="share-copy">
+        <p class="section-index">SHARE DARK CALENDAR</p>
+        <h2 id="share-title" data-i18n="shareTitle">바탕화면을 더 잘 쓰고 싶은 사람에게<br><em>Dark Calendar를 알려주세요.</em></h2>
+        <p data-i18n="shareBody">일정과 위젯을 자기 방식대로 배치하고 싶은 친구나 동료에게 이 페이지를 공유해 주세요.</p>
+      </div>
+      <div class="share-actions" aria-label="공유 방법" data-i18n-aria="shareActionsLabel">
+        <a class="share-link" data-share-channel="x" href="https://twitter.com/intent/tweet" target="_blank" rel="noopener"><span aria-hidden="true">X</span><b data-i18n="shareX">X에 공유</b></a>
+        <a class="share-link" data-share-channel="facebook" href="https://www.facebook.com/sharer/sharer.php" target="_blank" rel="noopener"><span aria-hidden="true">f</span><b data-i18n="shareFacebook">Facebook</b></a>
+        <a class="share-link" data-share-channel="linkedin" href="https://www.linkedin.com/sharing/share-offsite/" target="_blank" rel="noopener"><span aria-hidden="true">in</span><b data-i18n="shareLinkedIn">LinkedIn</b></a>
+        <a class="share-link" data-share-channel="email" href="mailto:"><span aria-hidden="true">@</span><b data-i18n="shareEmail">이메일</b></a>
+        <button class="share-link" type="button" data-copy-share><span aria-hidden="true">↗</span><b data-i18n="shareCopy">링크 복사</b></button>
+        <p class="share-status" role="status" aria-live="polite" data-share-status></p>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -403,6 +459,7 @@
     <div class="footer-links">
       <a data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&amp;gl=KR&amp;ocid=pdpshare" target="_blank" rel="noopener">Microsoft Store</a>
       <a data-config-link="sourceCodeUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR" target="_blank" rel="noopener">GitHub</a>
+      <a data-config-link="promotionKitUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/main/marketing/DARK_CALENDAR_PROMOTION_KIT.md" target="_blank" rel="noopener" data-i18n="footerPromotion">홍보 자료</a>
       <a href="privacy.html" data-i18n="footerPrivacy">개인정보처리방침</a>
       <a data-config-link="licenseUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.6.7/LICENSE" target="_blank" rel="noopener">GPLv3</a>
     </div>

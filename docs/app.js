@@ -5,6 +5,7 @@
     appVersion: "3.6.7",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
+    promotionKitUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/main/marketing/DARK_CALENDAR_PROMOTION_KIT.md",
     releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.6.7",
     licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.6.7/LICENSE",
     thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.6.7/THIRD_PARTY_NOTICES.md",
@@ -292,7 +293,11 @@
       syncPullTitle: "Google 일정을 가져옵니다.", syncPullBody: "제목, 날짜·시간, 종일 일정, 설명, 장소, 색상과 반복 일정 정보를 Dark Calendar에서 함께 볼 수 있습니다.",
       syncPushTitle: "내 변경 사항을 보냅니다.", syncPushBody: "Dark Calendar에서 만든 일정과 수정한 시간·내용이 선택한 Google 캘린더에 반영됩니다.",
       syncSafetyTitle: "먼저 확인하고 안전하게 반영합니다.", syncSafetyBody: "동기화할 때 Google 변경 사항을 먼저 확인한 뒤 로컬 변경을 전송합니다. 양쪽이 함께 바뀐 충돌은 기록을 보존하고 선택할 수 있게 안내합니다.",
-      permissionTitle: "권한 요청이 크게 보이는 이유", permissionBody: "현재 버전은 여러 캘린더의 일정을 가져오고 만들고 수정·삭제하기 위해 Google Calendar 전체 접근 권한을 사용합니다. 인증 파일과 토큰은 사용자 PC에 저장되며 개발자 서버로 전송되지 않습니다.", permissionLink: "개인정보 처리 방식 확인 ↗"
+      permissionTitle: "권한 요청이 크게 보이는 이유", permissionBody: "현재 버전은 여러 캘린더의 일정을 가져오고 만들고 수정·삭제하기 위해 Google Calendar 전체 접근 권한을 사용합니다. 인증 파일과 토큰은 사용자 PC에 저장되며 개발자 서버로 전송되지 않습니다.", permissionLink: "개인정보 처리 방식 확인 ↗",
+      shareTitle: "바탕화면을 더 잘 쓰고 싶은 사람에게<br><em>Dark Calendar를 알려주세요.</em>",
+      shareBody: "일정과 위젯을 자기 방식대로 배치하고 싶은 친구나 동료에게 이 페이지를 공유해 주세요.",
+      shareActionsLabel: "Dark Calendar 공유 방법", shareX: "X에 공유", shareFacebook: "Facebook", shareLinkedIn: "LinkedIn", shareEmail: "이메일", shareCopy: "링크 복사", shareCopied: "링크를 복사했습니다.", shareFailed: "주소창의 링크를 복사해 주세요.",
+      shareText: "캘린더와 위젯을 바탕화면에 직접 배치하고, 위치·크기·레이아웃·색상까지 내 방식대로 만드는 Windows 앱, Dark Calendar.", footerPromotion: "홍보 자료"
     },
     en: {
       navGoogle: "Google sync",
@@ -351,7 +356,11 @@
       syncPullTitle: "Bring Google events in.", syncPullBody: "View titles, dates and times, all-day events, descriptions, locations, colors, and recurring events in Dark Calendar.",
       syncPushTitle: "Send your changes out.", syncPushBody: "Events created in Dark Calendar and edits to their time or content are reflected in the selected Google calendar.",
       syncSafetyTitle: "Check first, then apply safely.", syncSafetyBody: "Sync checks Google changes before sending local edits. If both sides changed, it preserves conflict records and guides you through the choice.",
-      permissionTitle: "Why the permission request looks broad", permissionBody: "The current version uses full Google Calendar access to read, create, edit, and delete events across multiple calendars. Credentials and tokens stay on your PC and are not sent to the developer’s server.", permissionLink: "Review data handling ↗"
+      permissionTitle: "Why the permission request looks broad", permissionBody: "The current version uses full Google Calendar access to read, create, edit, and delete events across multiple calendars. Credentials and tokens stay on your PC and are not sent to the developer’s server.", permissionLink: "Review data handling ↗",
+      shareTitle: "Know someone who wants a better desktop?<br><em>Share Dark Calendar.</em>",
+      shareBody: "Send this page to a friend or teammate who wants calendars and widgets arranged around the way they work.",
+      shareActionsLabel: "Ways to share Dark Calendar", shareX: "Share on X", shareFacebook: "Facebook", shareLinkedIn: "LinkedIn", shareEmail: "Email", shareCopy: "Copy link", shareCopied: "Link copied.", shareFailed: "Please copy the link from the address bar.",
+      shareText: "Dark Calendar is a Windows app that puts calendars and widgets directly on your desktop—with freely adjustable position, size, layout, and color.", footerPromotion: "Promotion kit"
     },
     ja: {
       navGoogle: "Google連携",
@@ -410,7 +419,11 @@
       syncPullTitle: "Google予定を取り込みます。", syncPullBody: "タイトル、日時、終日予定、説明、場所、色、繰り返し予定をDark Calendarで確認できます。",
       syncPushTitle: "変更内容をGoogleへ送ります。", syncPushBody: "Dark Calendarで作成した予定や変更した時刻・内容が選択中のGoogleカレンダーへ反映されます。",
       syncSafetyTitle: "先に確認して安全に反映。", syncSafetyBody: "Google側の変更を先に確認してからローカル変更を送信します。両方が変わった場合は記録を保存し、選択できるよう案内します。",
-      permissionTitle: "権限要求が大きく見える理由", permissionBody: "現行版は複数カレンダーの予定を取得・作成・編集・削除するためGoogle Calendar全体へのアクセスを使用します。認証ファイルとトークンはPCに保存され、開発者サーバーへ送信されません。", permissionLink: "データ処理を確認 ↗"
+      permissionTitle: "権限要求が大きく見える理由", permissionBody: "現行版は複数カレンダーの予定を取得・作成・編集・削除するためGoogle Calendar全体へのアクセスを使用します。認証ファイルとトークンはPCに保存され、開発者サーバーへ送信されません。", permissionLink: "データ処理を確認 ↗",
+      shareTitle: "デスクトップをもっと活用したい人へ<br><em>Dark Calendarを紹介してください。</em>",
+      shareBody: "カレンダーやウィジェットを自分らしく配置したい友人や同僚に、このページを共有してください。",
+      shareActionsLabel: "Dark Calendarの共有方法", shareX: "Xで共有", shareFacebook: "Facebook", shareLinkedIn: "LinkedIn", shareEmail: "メール", shareCopy: "リンクをコピー", shareCopied: "リンクをコピーしました。", shareFailed: "アドレスバーのリンクをコピーしてください。",
+      shareText: "カレンダーとウィジェットをデスクトップに直接置き、位置・サイズ・レイアウト・色まで自由に整えられるWindowsアプリ、Dark Calendar。", footerPromotion: "プロモーション資料"
     },
     zh: {
       navGoogle: "Google 同步",
@@ -469,7 +482,11 @@
       syncPullTitle: "导入 Google 日程。", syncPullBody: "可在Dark Calendar中查看标题、日期与时间、全天事件、说明、地点、颜色和重复事件。",
       syncPushTitle: "发送你的更改。", syncPushBody: "在Dark Calendar中新建的事件，以及对时间与内容的修改，会同步到所选Google日历。",
       syncSafetyTitle: "先检查，再安全更新。", syncSafetyBody: "同步会先检查Google端的更改，再发送本地编辑。若两端都已变化，系统会保留冲突记录并引导你选择。",
-      permissionTitle: "为什么权限请求看起来较广", permissionBody: "当前版本使用完整Google Calendar访问权限，以便在多个日历中读取、创建、编辑和删除事件。凭据与令牌只保存在你的电脑，不会发送到开发者服务器。", permissionLink: "查看数据处理方式 ↗"
+      permissionTitle: "为什么权限请求看起来较广", permissionBody: "当前版本使用完整Google Calendar访问权限，以便在多个日历中读取、创建、编辑和删除事件。凭据与令牌只保存在你的电脑，不会发送到开发者服务器。", permissionLink: "查看数据处理方式 ↗",
+      shareTitle: "把 Dark Calendar 分享给<br><em>想让桌面更高效的人。</em>",
+      shareBody: "将此页面分享给希望按自己的方式排列日历和小组件的朋友或同事。",
+      shareActionsLabel: "Dark Calendar 分享方式", shareX: "分享到 X", shareFacebook: "Facebook", shareLinkedIn: "LinkedIn", shareEmail: "电子邮件", shareCopy: "复制链接", shareCopied: "链接已复制。", shareFailed: "请复制地址栏中的链接。",
+      shareText: "Dark Calendar 是一款 Windows 应用，可将日历和小组件直接放在桌面，并自由调整位置、大小、布局和颜色。", footerPromotion: "推广资料"
     }
   };
 
@@ -504,7 +521,7 @@
     }
   };
 
-  const richTextKeys = new Set(["heroTitle", "desktopTitle", "featuresTitle", "atlasTitle", "exploreTitle", "googleTitle", "workflowTitle", "privacyTitle", "faqTitle", "ctaTitle"]);
+  const richTextKeys = new Set(["heroTitle", "desktopTitle", "featuresTitle", "atlasTitle", "exploreTitle", "googleTitle", "workflowTitle", "privacyTitle", "faqTitle", "ctaTitle", "shareTitle"]);
   let currentLanguage = "ko";
   let currentScreen = "main";
   let currentConfig = fallbackConfig;
@@ -549,6 +566,29 @@
     }));
   }
 
+  function publicShareUrl() {
+    const url = new URL("https://namer-kimhyojin.github.io/DARK-CALENDAR/");
+    if (currentLanguage !== "ko") url.searchParams.set("lang", currentLanguage);
+    return url.toString();
+  }
+
+  function updateShareLinks() {
+    const copy = translations[currentLanguage];
+    const url = publicShareUrl();
+    const values = {
+      x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(copy.shareText)}&url=${encodeURIComponent(url)}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+      email: `mailto:?subject=${encodeURIComponent(copy.metaTitle)}&body=${encodeURIComponent(`${copy.shareText}\n\n${url}`)}`
+    };
+    document.querySelectorAll("[data-share-channel]").forEach((node) => {
+      const value = values[node.dataset.shareChannel];
+      if (value) node.setAttribute("href", value);
+    });
+    const status = document.querySelector("[data-share-status]");
+    if (status) status.textContent = "";
+  }
+
   function setLanguage(language, persist) {
     currentLanguage = normalizedLanguage(language);
     const copy = translations[currentLanguage];
@@ -556,6 +596,9 @@
     document.title = copy.metaTitle;
     document.querySelector('meta[name="description"]')?.setAttribute("content", copy.metaDescription);
     document.querySelector('meta[property="og:description"]')?.setAttribute("content", copy.metaDescription);
+    document.querySelector('meta[name="twitter:description"]')?.setAttribute("content", copy.metaDescription);
+    document.querySelector('meta[name="twitter:title"]')?.setAttribute("content", copy.metaTitle);
+    document.querySelector('meta[property="og:locale"]')?.setAttribute("content", ({ ko: "ko_KR", en: "en_US", ja: "ja_JP", zh: "zh_CN" })[currentLanguage]);
 
     document.querySelectorAll("[data-i18n]").forEach((node) => {
       const key = node.dataset.i18n;
@@ -580,6 +623,7 @@
     });
 
     updateScreen();
+    updateShareLinks();
 
     if (persist) {
       try {
@@ -612,6 +656,19 @@
 
     const eventBand = document.querySelector("[data-event-band]");
     if (eventBand) eventBand.hidden = currentConfig.event.enabled === false || !currentConfig.eventUrl;
+
+    const schemaNode = document.querySelector("#software-schema");
+    if (schemaNode) {
+      try {
+        const schema = JSON.parse(schemaNode.textContent);
+        schema.softwareVersion = currentConfig.appVersion;
+        schema.downloadUrl = currentConfig.microsoftStoreUrl;
+        schema.license = currentConfig.licenseUrl;
+        schemaNode.textContent = JSON.stringify(schema);
+      } catch (_error) {
+        // The visible site remains usable if structured data cannot be refreshed.
+      }
+    }
   }
 
   function setupHeader() {
@@ -717,11 +774,38 @@
     });
   }
 
+  function setupSharing() {
+    const copyButton = document.querySelector("[data-copy-share]");
+    const status = document.querySelector("[data-share-status]");
+    if (!copyButton || !status) return;
+
+    copyButton.addEventListener("click", async () => {
+      const url = publicShareUrl();
+      let copied = false;
+      try {
+        await window.navigator.clipboard.writeText(url);
+        copied = true;
+      } catch (_error) {
+        const helper = document.createElement("textarea");
+        helper.value = url;
+        helper.setAttribute("readonly", "");
+        helper.style.position = "fixed";
+        helper.style.opacity = "0";
+        document.body.appendChild(helper);
+        helper.select();
+        copied = document.execCommand("copy");
+        helper.remove();
+      }
+      status.textContent = copied ? translations[currentLanguage].shareCopied : translations[currentLanguage].shareFailed;
+    });
+  }
+
   setupHeader();
   setupLanguagePicker();
   setupScreenExplorer();
   setupLightbox();
   setupFaq();
+  setupSharing();
   setLanguage(savedLanguage(), false);
 
   fetch("site-config.json", { cache: "no-store" })

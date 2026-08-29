@@ -1,6 +1,19 @@
 # Dark Calendar
 
-Dark Calendar is a Windows desktop calendar, task workspace, and overlay-widget application.
+Dark Calendar turns the Windows desktop into a personal time workspace. Place calendars, tasks, clocks, weather, D-Day, countdown, and text widgets directly on the desktop—then move, resize, recolor, and arrange them around the way you work.
+
+[Official website](https://namer-kimhyojin.github.io/DARK-CALENDAR/) · [Microsoft Store](https://apps.microsoft.com/detail/9mxq08rf22k8) · [Latest release](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/latest) · [Promotion kit](marketing/DARK_CALENDAR_PROMOTION_KIT.md)
+
+![Dark Calendar desktop customization](docs/assets/desktop-customization.webp)
+
+## Why Dark Calendar
+
+- Put calendars and seven kinds of widgets directly on the Windows desktop.
+- Move and resize each element freely, including multiple instances of the same widget.
+- Build calendar-first, task-first, or widget-first layouts with custom colors and themes.
+- Connect Google Calendar when needed, or keep schedules local to the PC.
+- Plan tasks, run Pomodoro focus sessions, and review focus history in one workspace.
+- Use the app in 19 interface languages, with Korean as the default.
 
 ## License
 
