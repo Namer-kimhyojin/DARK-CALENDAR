@@ -655,7 +655,8 @@
     });
 
     const eventBand = document.querySelector("[data-event-band]");
-    if (eventBand) eventBand.hidden = currentConfig.event.enabled === false || !currentConfig.eventUrl;
+    const eventActive = currentConfig.event.enabled !== false && Boolean(currentConfig.eventUrl);
+    if (eventBand) eventBand.hidden = !eventActive;
 
     const schemaNode = document.querySelector("#software-schema");
     if (schemaNode) {

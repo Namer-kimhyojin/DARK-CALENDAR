@@ -8,6 +8,10 @@ GitHub: <https://github.com/Namer-kimhyojin/DARK-CALENDAR>
 
 Public media kit: <https://namer-kimhyojin.github.io/DARK-CALENDAR/promo.html>
 
+Seven-day execution plan: [`LAUNCH_CAMPAIGN_2026-08-31.md`](LAUNCH_CAMPAIGN_2026-08-31.md)
+
+Generated asset prompts: [`GENERATED_PROMO_ASSETS.md`](GENERATED_PROMO_ASSETS.md)
+
 ## Campaign assumptions
 
 - Goal: increase product awareness and qualified visits to the Microsoft Store listing.
@@ -112,6 +116,9 @@ Use the existing assets so every post looks connected to the official website:
 - `docs/assets/google-calendar-setup.webp`: beginner Google Calendar education.
 - `docs/assets/og-dark-calendar.png`: general link preview and campaign cover.
 - `docs/assets/promo-social-square.png`: square social creative with the campaign line “Your Desktop, Your Time.”
+- `docs/assets/promo-social-landscape.png`: 16:9 launch banner for LinkedIn, X, and rich link previews.
+- `docs/assets/promo-social-story.png`: 9:16 cover for Stories and short-form video.
+- `docs/assets/promo-google-sync-landscape.png`: beginner-friendly four-step Google Calendar sync overview.
 
 For screenshot posts, blur or replace any personal schedule, account, location, or notification content before publishing.
 
