@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -29,6 +30,28 @@ class _State:
 class _Task:
     def __init__(self, state_name):
         self.state = _State(state_name)
+
+
+class _RegistryKeyStub:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+
+class _WinregStub:
+    HKEY_CURRENT_USER = object()
+
+    def __init__(self, value):
+        self.value = value
+
+    @staticmethod
+    def OpenKey(_root, _path):
+        return _RegistryKeyStub()
+
+    def QueryValueEx(self, _key, _name):
+        return self.value, 1
 
 
 class SystemManagerAutostartTests(unittest.TestCase):
@@ -107,6 +130,22 @@ class SystemManagerAutostartTests(unittest.TestCase):
 
         register.assert_not_called()
         self.assertTrue(settings.values[system_manager._KEY])
+
+    def test_registry_status_requires_current_executable_command(self):
+        expected = r'"C:\Program Files\Dark Calendar\DarkCalendar.exe"'
+
+        for registered, enabled in (
+            (expected, True),
+            (r'"C:\Old Location\DarkCalendar.exe"', False),
+            ("", False),
+        ):
+            with (
+                self.subTest(registered=registered),
+                patch.object(system_manager.sys, "platform", "win32"),
+                patch.object(system_manager, "_standalone_command", return_value=expected),
+                patch.dict(sys.modules, {"winreg": _WinregStub(registered)}),
+            ):
+                self.assertIs(system_manager._registry_autostart_enabled(), enabled)
 
 
 if __name__ == "__main__":

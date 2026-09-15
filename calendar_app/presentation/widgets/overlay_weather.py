@@ -152,6 +152,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._refresh_timer = QTimer(self)
         self._refresh_timer.timeout.connect(self.request_update)
         self._pending_replies: list[QNetworkReply] = []
+        self._runtime_active = False
 
         self._weather_data: dict = {
             "city": "---",
@@ -164,9 +165,8 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             "error": "",
         }
 
-        self._update_refresh_interval()
-        # Defer first network request until event loop is running
-        QTimer.singleShot(0, self.request_update)
+        if self.is_enabled():
+            self._set_runtime_active(True)
 
     def _settings_prefix(self) -> str:
         return self._PREFIX
@@ -313,6 +313,13 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         if reply in self._pending_replies:
             self._pending_replies.remove(reply)
 
+        if (
+            not self._runtime_active
+            and reply.error() == QNetworkReply.NetworkError.OperationCanceledError
+        ):
+            reply.deleteLater()
+            return
+
         status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
         if status == 304:
             self._store_response_headers(reply)
@@ -406,7 +413,23 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
 
     def _update_refresh_interval(self) -> None:
         minutes = self._get("refresh_interval", 30, type_=int)
+        if minutes not in {5, 10, 30, 60, 120}:
+            minutes = 30
+            self._set("refresh_interval", minutes)
         self._refresh_timer.start(minutes * 60 * 1000)
+
+    def _set_runtime_active(self, active: bool) -> None:
+        was_active = self._runtime_active
+        self._runtime_active = active
+        if active:
+            self._update_refresh_interval()
+            if not was_active:
+                QTimer.singleShot(0, self.request_update)
+            return
+        self._refresh_timer.stop()
+        for reply in list(self._pending_replies):
+            if reply.isRunning():
+                reply.abort()
 
     def _weather_code_to_text(self, code: int) -> str:
         # Simplified WMO codes

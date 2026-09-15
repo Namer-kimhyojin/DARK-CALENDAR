@@ -1055,6 +1055,7 @@ class UnifiedWidgetController:
 
     def hide_widget(self) -> None:
         if self.widget is not None:
+            self._save_geometry()
             self.widget.hide()
 
     def is_visible(self) -> bool:

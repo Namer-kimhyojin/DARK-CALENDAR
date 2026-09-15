@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import unittest
 
@@ -59,3 +60,13 @@ class OverlayCountdownResizeTests(unittest.TestCase):
         self.assertEqual(
             widget._target_label.text(), t("widget.countdown.set_target", "Set target")
         )
+
+    def test_template_days_uses_target_datetime_for_long_countdowns(self):
+        widget = OverlayCountdownWidget(self.owner)
+        self.addCleanup(widget.close)
+        target = QDateTime.currentDateTime().addDays(2).addSecs(3600)
+        remaining, _ = widget._cd_remaining(target)
+
+        rendered = widget._resolve_cd_template("{days}", remaining, target)
+
+        self.assertEqual(rendered, "2")

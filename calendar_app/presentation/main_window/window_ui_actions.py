@@ -86,6 +86,7 @@ class MainWindowUiActionsMixin:
         self._ensure_stopwatch_timer()
         self._ensure_countdown_timer()
         self._ensure_slow_text_timer()
+        self._refresh_slow_text_widgets()
 
     def open_widget_manager(self):
         """위젯 관리자 다이얼로그를 열거나 이미 열려 있으면 앞으로 가져온다."""

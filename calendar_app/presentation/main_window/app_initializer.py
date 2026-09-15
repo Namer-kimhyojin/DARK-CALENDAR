@@ -23,6 +23,9 @@ def initialize_overlay_app(app) -> None:
     app._exit_requested = False
     app._tray_available = False
     app.tray_icon = None
+    app.autostart_act = None
+    app.autostart_menu_act = None
+    app.autostart_tray_act = None
     app.is_focus_mode = False
     app.is_fullscreen = False
     app._focus_saved_dock_visibility = None

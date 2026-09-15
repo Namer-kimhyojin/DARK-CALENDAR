@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import unittest
 
@@ -65,3 +66,19 @@ class OverlayTextMenuTests(unittest.TestCase):
         self.assertEqual(len(non_separator), 1)
         non_separator[0].trigger()
         self.assertEqual(called, [True])
+
+    def test_instance_countdown_reference_works_in_condition(self):
+        class CountdownStub:
+            @staticmethod
+            def get_remaining_text():
+                return "00:30:00"
+
+        widget = OverlayTextWidget(self.owner)
+        self.addCleanup(widget.close)
+
+        result = widget.resolve_template(
+            widget_registry={"countdown_0": CountdownStub()},
+            override_text=("{if countdown:countdown_0 < 1h}soon{else}later{/if}"),
+        )
+
+        self.assertEqual(result, "soon")

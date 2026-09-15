@@ -3018,7 +3018,7 @@ class _BaseOverlayWidget(QWidget):
 
     # -- shared conditional expression engine --
 
-    _RE_COND_PARSE = _re.compile(r"^(\w+)\s*(==|!=|<=|>=|<|>)\s*(.+)$")
+    _RE_COND_PARSE = _re.compile(r"^([\w:.-]+)\s*(==|!=|<=|>=|<|>)\s*(.+)$")
     _RE_DURATION = _re.compile(r"^(\d+(?:\.\d+)?)(h|m|s)$")
     _RE_COND_BLOCK = _re.compile(
         r"\{if\s+([^}]+)\}"  # {if condition}
@@ -3143,20 +3143,47 @@ class _BaseOverlayWidget(QWidget):
         py = self._get("pos_y")
         if px is None or py is None:
             target = self.owner.frameGeometry().topRight() + default_offset
-            self.move(target)
         else:
-            self.move(int(px), int(py))
+            target = QPoint(int(px), int(py))
+        self.move(self._clamp_restored_position(target))
+
+    def _clamp_restored_position(self, target: QPoint) -> QPoint:
+        """Keep a restored overlay reachable after monitor/layout changes."""
+        app = QApplication.instance()
+        if app is None:
+            return target
+
+        size = self.sizeHint().expandedTo(self.minimumSizeHint())
+        width = max(1, self.width(), size.width())
+        height = max(1, self.height(), size.height())
+        center = target + QPoint(width // 2, height // 2)
+        screen = app.screenAt(center)
+        if screen is None and hasattr(self.owner, "screen"):
+            with contextlib.suppress(RuntimeError):
+                screen = self.owner.screen()
+        if screen is None:
+            screen = app.primaryScreen()
+        if screen is None:
+            return target
+
+        available = screen.availableGeometry()
+        max_x = max(available.left(), available.right() - width + 1)
+        max_y = max(available.top(), available.bottom() - height + 1)
+        return QPoint(
+            min(max(target.x(), available.left()), max_x),
+            min(max(target.y(), available.top()), max_y),
+        )
 
     def reset_position(self, default_offset: QPoint):
         target = self.owner.frameGeometry().topRight() + default_offset
-        self.move(target)
+        self.move(self._clamp_restored_position(target))
         self.save_position()
 
     def center_on_owner(self):
         owner_rect = self.owner.frameGeometry()
         target_x = owner_rect.x() + max(0, (owner_rect.width() - self.width()) // 2)
         target_y = owner_rect.y() + max(0, (owner_rect.height() - self.height()) // 2)
-        self.move(target_x, target_y)
+        self.move(self._clamp_restored_position(QPoint(target_x, target_y)))
         self.save_position()
 
     # -- enabled/visible --
@@ -3190,11 +3217,17 @@ class _BaseOverlayWidget(QWidget):
         self._set("enabled", val)
         if val:
             self._show_with_correct_size()
+            self._set_runtime_active(True)
         else:
+            self._set_runtime_active(False)
             self.hide()
         sync = getattr(self, "_overlay_manager_sync", None)
         if callable(sync):
             sync()
+
+    def _set_runtime_active(self, active: bool) -> None:
+        """Allow subclasses to pause timers/network work while hidden."""
+        del active
 
     def set_interaction_locked(self, locked: bool):
         """고정 모드 시 드래그/리사이즈 비활성화."""
@@ -3830,7 +3863,7 @@ class _BaseOverlayWidget(QWidget):
         self._update_always_on_top(not self.always_on_top())
 
     def _action_reset_position(self):
-        raise NotImplementedError
+        self.center_on_owner()
 
     def _action_reset_size(self):
         """Clear fixed-size constraint and return to content-fit mode."""

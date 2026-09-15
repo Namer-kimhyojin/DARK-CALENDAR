@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Helpers to restore window state and bind dock/menu visibility."""
 
 from PyQt6.QtCore import Qt, QTimer
@@ -152,6 +153,8 @@ def save_window_layout(self):
     with contextlib.suppress(Exception):
         if hasattr(self, "overlay_manager"):
             self.overlay_manager.save_all()
+    with contextlib.suppress(Exception):
+        self.settings.sync()
 
 
 def persist_dock_layout(self):

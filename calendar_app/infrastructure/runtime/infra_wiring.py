@@ -110,6 +110,19 @@ def _create_action(app, label, handler, shortcut_id=None, parent_menu=None):
     return act
 
 
+def _create_tray_autostart_action(app, parent_menu):
+    """Create the tray autostart action with the same icon contract as other items."""
+    from calendar_app.infrastructure.i18n import t
+    from calendar_app.infrastructure.runtime import system_manager
+
+    action = _create_action(app, t("menu.autostart"), app.toggle_autostart, None, parent_menu)
+    action.setIcon(_ic(ICON.AUTOSTART))
+    action.setCheckable(True)
+    action.setChecked(system_manager.is_autostart_enabled())
+    app.autostart_tray_act = action
+    return action
+
+
 def init_tray_icon(app):
     """Initialize system tray icon with optimized and icon-rich menu."""
     app._tray_available = False
@@ -341,14 +354,7 @@ def init_tray_icon(app):
     act_theme.setIcon(_ic(ICON.COLOR_PICKER))
 
     # Autostart (Checkable)
-    from calendar_app.infrastructure.runtime import system_manager
-
-    act_auto = QAction(t("menu.autostart"), app)
-    act_auto.setCheckable(True)
-    act_auto.setChecked(system_manager.is_autostart_enabled())
-    act_auto.triggered.connect(app.toggle_autostart)
-    tray_menu.addAction(act_auto)
-    app.autostart_act = act_auto  # Sync with existing action in Top Menu if any
+    _create_tray_autostart_action(app, tray_menu)
 
     tray_menu.addSeparator()
     act_exit = _create_action(app, t("tray.exit"), app.request_app_exit, None, tray_menu)

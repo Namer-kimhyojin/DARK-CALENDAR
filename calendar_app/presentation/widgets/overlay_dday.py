@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Stay-on-top D-Day overlay widget."""
 
 from __future__ import annotations
@@ -153,8 +154,14 @@ class OverlayDDayWidget(_BaseOverlayWidget):
         if not hasattr(self, "_dd_timer"):
             self._dd_timer = QTimer(self)
             self._dd_timer.timeout.connect(self._tick_dd)
-        if not self._dd_timer.isActive():
+        if self.is_enabled() and not self._dd_timer.isActive():
             self._dd_timer.start(60_000)
+
+    def _set_runtime_active(self, active: bool) -> None:
+        if active:
+            self._start_dd_timer()
+        elif hasattr(self, "_dd_timer"):
+            self._dd_timer.stop()
 
     # ------------------------------------------------------------------
     # Template Engine

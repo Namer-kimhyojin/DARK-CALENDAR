@@ -255,8 +255,8 @@ class OverlayWidgetManager:
             (m := _r()) and m._ui_remove_with_confirm(iid, parent_widget=None)
         )
         widget._overlay_inst_id = inst_id
-        widget.restore_position(self._default_offset_for_type(widget_type, idx))
         widget.apply_initial_settings()
+        widget.restore_position(self._default_offset_for_type(widget_type, idx))
 
         self._widgets[inst_id] = widget
         self._meta[inst_id] = {"_id": inst_id, "type": widget_type, "name": name, "enabled": False}
@@ -268,11 +268,20 @@ class OverlayWidgetManager:
         """Hide and destroy the instance."""
         widget = self._widgets.pop(inst_id, None)
         if widget is not None:
-            widget.hide()
+            widget.set_enabled(False)
             widget.deleteLater()
         self._meta.pop(inst_id, None)
+        self._remove_instance_settings(inst_id)
         self._save()
         self._notify_listeners()
+
+    def _remove_instance_settings(self, inst_id: str) -> None:
+        """Remove every QSettings value owned by a deleted instance."""
+        prefix = f"{self._settings_prefix(inst_id)}_"
+        settings = self._settings()
+        for key in list(settings.allKeys()):
+            if str(key).startswith(prefix):
+                settings.remove(key)
 
     def rename_instance(self, inst_id: str, new_name: str):
         if inst_id in self._meta:
@@ -462,10 +471,9 @@ class OverlayWidgetManager:
                 continue
             widget_tier = w.refresh_tier()
             widget_rank = _tier_rank.get(widget_tier, 0)
-            # Refresh widget if caller tier is at least as frequent as widget's needs
-            # e.g. caller=fast(3) refreshes fast(3), med(2), slow(1) widgets
-            # e.g. caller=med(2) refreshes med(2) and slow(1) but NOT fast(3)
-            if widget_rank > 0 and caller_rank >= widget_rank:
+            # Each tier has its own timer. Refreshing slower tiers from the
+            # 100 ms timer both wastes work and replaces app data with defaults.
+            if widget_rank > 0 and caller_rank == widget_rank:
                 w.refresh_template(countdown_remaining, stopwatch_text, _ad, registry)
 
     # ------------------------------------------------------------------
@@ -621,28 +629,58 @@ class OverlayWidgetManager:
         self._had_saved_instances = raw is not None
         if raw is None:
             return  # 진짜 첫 실행 — 키가 없음
+        needs_repair = False
         try:
-            items: list[dict] = json.loads(str(raw))
+            parsed = json.loads(str(raw))
         except Exception:
-            items = []
+            logger.warning("Invalid overlay instance settings; starting with an empty list")
+            parsed = []
+            needs_repair = True
+        if not isinstance(parsed, list):
+            logger.warning("Overlay instance settings must be a list; ignoring %s", type(parsed))
+            parsed = []
+            needs_repair = True
+        items = [item for item in parsed if isinstance(item, dict)]
+        if len(items) != len(parsed):
+            needs_repair = True
 
         # Determine highest counter per type from saved ids
-        for item in items:
-            iid = item.get("id", "")
-            parts = iid.rsplit("_", 1)
-            if len(parts) == 2:
-                wtype, num_str = parts
-                with contextlib.suppress(ValueError):
-                    self._counters[wtype] = max(self._counters.get(wtype, 0), int(num_str) + 1)
-
+        valid_items: list[dict] = []
         for item in items:
             iid = item.get("id", "")
             wtype = item.get("type", "")
-            name = item.get("name", iid)
-            enabled = item.get("enabled", False)
+            if not isinstance(iid, str) or wtype not in _WIDGET_TYPES:
+                needs_repair = True
+                continue
+            parts = iid.rsplit("_", 1)
+            if len(parts) != 2 or parts[0] != wtype:
+                needs_repair = True
+                continue
+            try:
+                number = int(parts[1])
+            except ValueError:
+                needs_repair = True
+                continue
+            if number < 0:
+                needs_repair = True
+                continue
+            self._counters[wtype] = max(self._counters.get(wtype, 0), number + 1)
+            valid_items.append(item)
 
+        restored_ids: set[str] = set()
+        for item in valid_items:
+            iid = item.get("id", "")
+            wtype = item.get("type", "")
+            name = str(item.get("name", iid) or iid)
+            enabled = item.get("enabled", False) is True
+
+            if not isinstance(iid, str) or not iid or iid in restored_ids or iid in self._meta:
+                logger.warning("Invalid or duplicate overlay instance id %r, skipping", iid)
+                needs_repair = True
+                continue
             if wtype not in _WIDGET_TYPES:
                 logger.warning("Unknown overlay widget type %r in saved data, skipping", wtype)
+                needs_repair = True
                 continue
 
             try:
@@ -657,20 +695,28 @@ class OverlayWidgetManager:
                 )
                 widget._overlay_inst_id = iid
                 idx = self._instance_count_of(wtype)
-                widget.restore_position(self._default_offset_for_type(wtype, idx))
                 widget.apply_initial_settings()
-                if enabled:
-                    widget.set_enabled(True)
+                widget.restore_position(self._default_offset_for_type(wtype, idx))
+                widget.set_enabled(enabled)
 
                 self._widgets[iid] = widget
                 self._meta[iid] = {"_id": iid, "type": wtype, "name": name, "enabled": enabled}
+                restored_ids.add(iid)
             except Exception:
                 logger.exception("Failed to restore overlay instance %r", iid)
+                needs_repair = True
+        if needs_repair:
+            self._save()
         self._notify_listeners()
 
     def save_all(self):
-        """Explicit save (call at shutdown)."""
+        """Persist live widget positions and metadata, then flush at shutdown."""
+        for widget in self._widgets.values():
+            with contextlib.suppress(Exception):
+                widget.save_position()
         self._save()
+        with contextlib.suppress(Exception):
+            self._settings().sync()
 
     def set_all_interaction_locked(self, locked: bool):
         """고정 모드 시 모든 위젯의 드래그/리사이즈를 잠금/해제."""

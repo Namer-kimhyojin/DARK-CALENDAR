@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 from unittest.mock import patch
 
@@ -8,6 +9,7 @@ class _SettingsStub:
     def __init__(self, values=None):
         self.values = dict(values or {})
         self.removed = []
+        self.synced = 0
 
     def value(self, key, default=None):
         return self.values.get(key, default)
@@ -18,6 +20,9 @@ class _SettingsStub:
     def remove(self, key):
         self.removed.append(key)
         self.values.pop(key, None)
+
+    def sync(self):
+        self.synced += 1
 
 
 class _SignalStub:
@@ -104,6 +109,28 @@ class _AppStub:
 
 
 class WindowRestoreHelperTests(unittest.TestCase):
+    def test_shutdown_save_flushes_layout_and_overlay_positions(self):
+        class _OverlayManagerStub:
+            def __init__(self):
+                self.save_calls = 0
+
+            def save_all(self):
+                self.save_calls += 1
+
+        app = _AppStub()
+        app._layout_saved = False
+        app.overlay_manager = _OverlayManagerStub()
+        app.saveGeometry = lambda: b"current-geometry"
+        app.saveState = lambda: b"current-state"
+
+        wrh.save_window_layout(app)
+
+        self.assertEqual(b"current-geometry", app.settings.values["last_geometry"])
+        self.assertEqual(b"current-state", app.settings.values["last_state"])
+        self.assertEqual(wrh._LAYOUT_VERSION, app.settings.values["layout_version"])
+        self.assertEqual(1, app.overlay_manager.save_calls)
+        self.assertEqual(1, app.settings.synced)
+
     def test_successful_restore_keeps_saved_split_sizes(self):
         app = _AppStub(
             settings_values={

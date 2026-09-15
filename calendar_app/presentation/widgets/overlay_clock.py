@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Overlay digital clock widget."""
 
 from __future__ import annotations
@@ -89,9 +90,17 @@ class OverlayClockWidget(_BaseOverlayWidget):
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
-        self._timer.start(1000)
+        if self.is_enabled():
+            self._timer.start(1000)
         self._tick()
         return frame
+
+    def _set_runtime_active(self, active: bool) -> None:
+        if active:
+            if not self._timer.isActive():
+                self._timer.start(1000)
+        else:
+            self._timer.stop()
 
     # ------------------------------------------------------------------
     # Timezone support
@@ -109,7 +118,7 @@ class OverlayClockWidget(_BaseOverlayWidget):
             (t("widget.clock.tz.utc_5_30", "UTC+5:30 Mumbai/New Delhi"), 330, "IST"),
             (t("widget.clock.tz.utc_6", "UTC+6  Dhaka/Almaty"), 360, "BST"),
             (t("widget.clock.tz.utc_7", "UTC+7  Bangkok/Hanoi/Jakarta"), 420, "ICT"),
-            (t("widget.clock.tz.utc_8", "UTC+8  Beijing/Singapore/Seoul"), 480, "CST"),
+            (t("widget.clock.tz.utc_8", "UTC+8  Beijing/Singapore"), 480, "CST"),
             (t("widget.clock.tz.utc_9", "UTC+9  Tokyo/Seoul"), 540, "JST"),
             (t("widget.clock.tz.utc_9_30", "UTC+9:30 Adelaide"), 570, "ACST"),
             (t("widget.clock.tz.utc_10", "UTC+10 Sydney/Vladivostok"), 600, "AEST"),

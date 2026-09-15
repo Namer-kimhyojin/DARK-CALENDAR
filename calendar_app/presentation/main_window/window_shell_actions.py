@@ -501,8 +501,13 @@ class WindowShellActionsMixin:
         new_state = bool(checked) if isinstance(checked, bool) else not enabled
         changed = system_manager.set_autostart(new_state)
         actual_state = system_manager.is_autostart_enabled()
-        if hasattr(self, "autostart_act"):
-            self.autostart_act.setChecked(actual_state)
+        synced_actions = set()
+        for attr_name in ("autostart_act", "autostart_menu_act", "autostart_tray_act"):
+            action = getattr(self, attr_name, None)
+            if action is None or id(action) in synced_actions:
+                continue
+            action.setChecked(actual_state)
+            synced_actions.add(id(action))
         if not changed or actual_state != new_state:
             QMessageBox.warning(
                 self,

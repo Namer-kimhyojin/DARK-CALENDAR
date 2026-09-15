@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Overlay stopwatch widget."""
 
 from __future__ import annotations
@@ -89,9 +90,21 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
         base = float(self._get("sw_elapsed_ms", 0.0) or 0.0)
         if self._get("sw_running", False, type_=bool):
             started = self._get("sw_started_mono")
+            started_boot = self._get("sw_started_boot_epoch")
             if started is not None:
                 with contextlib.suppress(TypeError, ValueError):
-                    base += max(0.0, (time.monotonic() - float(started)) * 1000.0)
+                    current_mono = time.monotonic()
+                    started_mono = float(started)
+                    current_boot = time.time() - current_mono
+                    same_boot = (
+                        started_boot is not None and abs(current_boot - float(started_boot)) < 5.0
+                    )
+                    if same_boot and current_mono >= started_mono:
+                        return base + (current_mono - started_mono) * 1000.0
+            started_wall = self._get("sw_started_wall")
+            if started_wall is not None:
+                with contextlib.suppress(TypeError, ValueError):
+                    base += max(0.0, (time.time() - float(started_wall)) * 1000.0)
         return base
 
     def _sw_running(self) -> bool:
@@ -114,8 +127,14 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
             self._set("sw_elapsed_ms", self._sw_elapsed_ms())
             self._set("sw_running", False)
             self._set("sw_started_mono", None)
+            self._set("sw_started_wall", None)
+            self._set("sw_started_boot_epoch", None)
         else:
-            self._set("sw_started_mono", time.monotonic())
+            started_mono = time.monotonic()
+            started_wall = time.time()
+            self._set("sw_started_mono", started_mono)
+            self._set("sw_started_wall", started_wall)
+            self._set("sw_started_boot_epoch", started_wall - started_mono)
             self._set("sw_running", True)
         self._tick_sw()
 
@@ -123,6 +142,8 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
         self._set("sw_elapsed_ms", 0.0)
         self._set("sw_running", False)
         self._set("sw_started_mono", None)
+        self._set("sw_started_wall", None)
+        self._set("sw_started_boot_epoch", None)
         self._tick_sw()
 
     def _tick_sw(self):
@@ -185,8 +206,14 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
         if not hasattr(self, "_sw_timer"):
             self._sw_timer = QTimer(self)
             self._sw_timer.timeout.connect(self._tick_sw)
-        if not self._sw_timer.isActive():
+        if self.is_enabled() and not self._sw_timer.isActive():
             self._sw_timer.start(100)
+
+    def _set_runtime_active(self, active: bool) -> None:
+        if active:
+            self._start_sw_timer()
+        elif hasattr(self, "_sw_timer"):
+            self._sw_timer.stop()
 
     def get_elapsed_text(self) -> str:
         return self._format_elapsed(self._sw_elapsed_ms())

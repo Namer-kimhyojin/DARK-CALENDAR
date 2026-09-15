@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Overlay countdown widget."""
 
 from __future__ import annotations
@@ -204,8 +205,14 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
         if not hasattr(self, "_cd_timer"):
             self._cd_timer = QTimer(self)
             self._cd_timer.timeout.connect(self._tick_cd)
-        if not self._cd_timer.isActive():
+        if self.is_enabled() and not self._cd_timer.isActive():
             self._cd_timer.start(1000)
+
+    def _set_runtime_active(self, active: bool) -> None:
+        if active:
+            self._start_cd_timer()
+        elif hasattr(self, "_cd_timer"):
+            self._cd_timer.stop()
 
     # ------------------------------------------------------------------
     # Template engine
@@ -225,7 +232,9 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
         template = _protect_align_tags(template)
 
         secs = 0
-        if remaining and remaining not in ("--:--:--", "∞", "00:00:00"):
+        if target_dt is not None:
+            secs = max(0, QDateTime.currentDateTime().secsTo(target_dt))
+        elif remaining and remaining not in ("--:--:--", "∞", "00:00:00"):
             parts = remaining.split(":")
             secs = sum(int(p) * f for p, f in zip(reversed(parts), [1, 60, 3600], strict=False))
 

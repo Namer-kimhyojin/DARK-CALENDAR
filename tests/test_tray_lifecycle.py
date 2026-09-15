@@ -4,15 +4,18 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMenu, QWidget
 
 from calendar_app.infrastructure.runtime.infra_wiring import (
+    _create_tray_autostart_action,
     _set_overlay_visible,
     init_tray_icon,
     toggle_overlay,
 )
 from calendar_app.presentation.main_window.action_handlers import ActionHandlersMixin
 from calendar_app.presentation.main_window.window_events import WindowEventsMixin
+from calendar_app.presentation.main_window.window_shell_actions import WindowShellActionsMixin
 
 
 class _FakeOverlay:
@@ -137,6 +140,55 @@ def test_unavailable_system_tray_is_recorded_for_close_fallback():
 
     assert available is False
     assert overlay._tray_available is False
+
+
+def test_tray_autostart_action_uses_shared_icon_and_strips_label_emoji():
+    host = QWidget()
+    host.toggle_autostart = lambda _checked=False: None
+    menu = QMenu(host)
+
+    with patch(
+        "calendar_app.infrastructure.runtime.system_manager.is_autostart_enabled",
+        return_value=True,
+    ):
+        action = _create_tray_autostart_action(host, menu)
+
+    assert action in menu.actions()
+    assert action is host.autostart_tray_act
+    assert action.isCheckable()
+    assert action.isChecked()
+    assert not action.icon().isNull()
+    assert not action.text().startswith("🚀")
+
+
+def test_autostart_toggle_keeps_top_and_tray_actions_in_sync():
+    class _Host(WindowShellActionsMixin, QWidget):
+        pass
+
+    host = _Host()
+    host.autostart_menu_act = QAction(host)
+    host.autostart_menu_act.setCheckable(True)
+    host.autostart_act = host.autostart_menu_act
+    host.autostart_tray_act = QAction(host)
+    host.autostart_tray_act.setCheckable(True)
+
+    with (
+        patch(
+            "calendar_app.presentation.main_window.window_shell_actions.system_manager."
+            "is_autostart_enabled",
+            side_effect=[False, True],
+        ),
+        patch(
+            "calendar_app.presentation.main_window.window_shell_actions.system_manager."
+            "set_autostart",
+            return_value=True,
+        ),
+        patch("calendar_app.presentation.main_window.window_shell_actions.QMessageBox.information"),
+    ):
+        host.toggle_autostart(True)
+
+    assert host.autostart_menu_act.isChecked()
+    assert host.autostart_tray_act.isChecked()
 
 
 def test_confirmed_exit_marks_explicit_exit_before_closing_window():

@@ -80,19 +80,24 @@ class OverlayXxxWidget(OverlayBaseWidget):
 
 | 위젯 | 상태 키 | 타이머 |
 |---|---|---|
-| Stopwatch | `sw_elapsed_ms`, `sw_running`, `sw_started_mono` | 100ms, 자체 관리 |
+| Stopwatch | `sw_elapsed_ms`, `sw_running`, `sw_started_mono`, `sw_started_wall`, `sw_started_boot_epoch` | 100ms, 자체 관리 |
 | Countdown | `cd_target_iso` | 1000ms, 자체 관리 |
 | Clock | `tz_offset_mins` (None=로컬) | 1000ms |
 | D-Day | `dd_target_date` (yyyy-MM-dd), `dd_label` | 60s, 자체 관리 |
 
 **Stopwatch/Countdown/DDday 위젯**은 자체 디스플레이를 직접 관리합니다 — 공유 push refresh 없음.
 
+- 실행 중 스톱워치는 같은 부팅 세션에서는 monotonic 시계를 사용하고, Windows 재부팅으로 monotonic 기준점이 바뀌면 wall-clock 시작값으로 복원합니다.
+- 숨긴 위젯의 자체 타이머와 날씨 네트워크 갱신은 정지하고, 다시 표시할 때 재개합니다.
+- 인스턴스 삭제 시 `oi_<inst_id>_`로 시작하는 전용 설정을 함께 제거해 ID 재사용 시 이전 설정이 섞이지 않게 합니다.
+- 저장 좌표가 현재 모니터 범위를 벗어나면 사용 가능한 화면 안으로 보정합니다.
+
 ## 크로스 위젯 참조
 
 ```python
 # widget_registry()로 다른 위젯 값 참조 가능
 registry = manager.widget_registry()  # {inst_id: widget}
-manager.refresh_all_texts(tier="fast")  # text 위젯 전체 갱신
+manager.refresh_all_texts(tier="fast")  # fast 변수를 쓰는 text 위젯만 갱신
 
 # Text 위젯 템플릿에서 참조
 {stopwatch:stopwatch_0}   # stopwatch_0 인스턴스 값

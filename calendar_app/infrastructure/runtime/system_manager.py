@@ -99,7 +99,9 @@ def _registry_autostart_enabled() -> bool:
 
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _RUN_KEY) as key:
             value, _value_type = winreg.QueryValueEx(key, _RUN_VALUE_NAME)
-        return bool(str(value).strip())
+        registered = str(value).strip().casefold()
+        expected = _standalone_command().strip().casefold()
+        return bool(registered) and registered == expected
     except (FileNotFoundError, OSError):
         return False
 

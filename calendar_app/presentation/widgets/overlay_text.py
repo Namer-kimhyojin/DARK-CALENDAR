@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Stay-on-top text/template overlay widget."""
 
 from __future__ import annotations
@@ -169,6 +170,11 @@ class OverlayTextWidget(_BaseOverlayWidget):
             "stopwatch": stopwatch_text,
             "day_of_year": qdate.dayOfYear(),
         }
+        for inst_id, widget in _reg.items():
+            if hasattr(widget, "get_remaining_text"):
+                eval_ctx[f"countdown:{inst_id}"] = widget.get_remaining_text()
+            if hasattr(widget, "get_elapsed_text"):
+                eval_ctx[f"stopwatch:{inst_id}"] = widget.get_elapsed_text()
 
         raw = self._process_conditionals(raw, eval_ctx)
 

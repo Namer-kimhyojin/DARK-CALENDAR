@@ -395,6 +395,27 @@ class UnifiedWidgetModeTests(unittest.TestCase):
 
         self.assertEqual(QSize(690, 510), widget.size())
 
+    def test_hiding_widget_persists_current_geometry(self):
+        self.controller = uwm.UnifiedWidgetController(self.host)
+        widget = uwm.UnifiedWidgetWindow(self.controller)
+        self.controller.widget = widget
+        widget.move(123, 145)
+
+        self.controller.hide_widget()
+
+        stored = self.host.settings.value(uwm.geometry_key(widget.active_layout_id()))
+        payload = uwm.deserialize_geometry(stored)
+        self.assertIsNotNone(payload)
+        self.assertGreater(payload["x_ratio"], 0)
+        self.assertGreater(payload["y_ratio"], 0)
+        self.assertEqual(widget.width(), payload["width"])
+        self.assertEqual(widget.height(), payload["height"])
+
+        widget.move(300, 300)
+        self.controller._restore_geometry()
+        self.assertEqual(123, widget.x())
+        self.assertEqual(145, widget.y())
+
     def test_color_skin_change_keeps_explicit_layout(self):
         self.controller = uwm.UnifiedWidgetController(self.host)
         widget = uwm.UnifiedWidgetWindow(self.controller)
