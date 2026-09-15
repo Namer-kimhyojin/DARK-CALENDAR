@@ -238,6 +238,14 @@ function Sync-AppVersion {
     if ($null -ne $identity) {
         $identity.SetAttribute("Version", $msixVer)
         $xml.Save($ManifestPath)
+        $manifestContent = [System.IO.File]::ReadAllText($ManifestPath, [System.Text.Encoding]::UTF8)
+        if (-not $manifestContent.EndsWith("`n")) {
+            [System.IO.File]::WriteAllText(
+                $ManifestPath,
+                $manifestContent + [System.Environment]::NewLine,
+                $utf8NoBom
+            )
+        }
         Write-Info "updated: AppxManifest.xml  ($msixVer)"
     } else {
         Write-Warn "AppxManifest.xml Identity node not found — skipped"

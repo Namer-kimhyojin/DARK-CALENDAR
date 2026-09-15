@@ -15,10 +15,10 @@
 
 ## Build evidence
 
-- [ ] x64 payload, MSIX, Store upload, corresponding-source ZIP, and SHA-256 files build successfully.
-- [ ] Packaged manifest contains the `DarkCalendarStartup` Windows startup task.
-- [ ] Packaged payload contains the Python/WinRT runtime and passes the locked-license verifier.
-- [ ] Packaged executable remains alive through the local smoke launch.
+- [x] x64 payload, MSIX, Store upload, corresponding-source ZIP, and SHA-256 files build successfully.
+- [x] Packaged manifest contains the `DarkCalendarStartup` Windows startup task.
+- [x] Packaged payload contains the Python/WinRT runtime and passes the locked-license verifier.
+- [x] Packaged executable remains alive through the local smoke launch.
 
 ## External release
 
