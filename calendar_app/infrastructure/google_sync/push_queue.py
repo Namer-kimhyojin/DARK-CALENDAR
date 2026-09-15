@@ -60,6 +60,7 @@ class GcalPushQueue:
         # Dedup: task_id -> (first_enqueue_time, app, latest_task_data, kwargs)
         self._pending: dict[Any, tuple[float, Any, Any, dict]] = {}
         self._pending_lock = threading.Lock()
+        self._atexit_registered = False
 
     # ------------------------------------------------------------------
     # Public API
@@ -81,6 +82,9 @@ class GcalPushQueue:
         older entry is replaced with the latest task_data, so only the most
         recent version is sent to GCal.
         """
+        if getattr(app, "_is_shutting_down", False):
+            logger.debug("push_queue: enqueue ignored during application shutdown")
+            return
         self._ensure_started(app)
 
         task_id = (task_data or {}).get("id")
@@ -106,15 +110,36 @@ class GcalPushQueue:
 
         self._queue.put(("raw", app, task_data, kwargs))
 
-    def stop(self, timeout: float = 5.0) -> None:
-        """Signal the worker to stop and wait for it to finish."""
-        self._stop_event.set()
-        # Unblock the worker if it is waiting on an empty queue
-        self._queue.put(None)
+    def stop(self, timeout: float = 5.0) -> bool:
+        """Signal the worker to stop, wait, and report whether it finished."""
+
         with self._lock:
-            t = self._thread
-        if t is not None and t.is_alive():
-            t.join(timeout=timeout)
+            thread = self._thread
+        if thread is None:
+            return True
+        if not self._stop_event.is_set():
+            self._stop_event.set()
+            # Unblock the worker if it is waiting on an empty queue.  Retries
+            # wait on the same sentinel instead of growing the queue.
+            self._queue.put(None)
+        if thread.is_alive():
+            thread.join(timeout=max(0.0, float(timeout)))
+        if thread.is_alive():
+            return False
+
+        with self._lock:
+            if self._thread is thread:
+                self._thread = None
+        with self._pending_lock:
+            self._pending.clear()
+        while True:
+            try:
+                self._queue.get_nowait()
+            except queue.Empty:
+                break
+            else:
+                self._queue.task_done()
+        return True
 
     # ------------------------------------------------------------------
     # Internal
@@ -132,7 +157,9 @@ class GcalPushQueue:
             )
             t.start()
             self._thread = t
-            atexit.register(self.stop)
+            if not self._atexit_registered:
+                atexit.register(self.stop)
+                self._atexit_registered = True
             logger.debug("push_queue: worker thread started")
 
     def _worker(self) -> None:
@@ -145,6 +172,7 @@ class GcalPushQueue:
 
             if item is None:
                 # Sentinel: stop requested
+                self._queue.task_done()
                 break
 
             if item[0] == "task":

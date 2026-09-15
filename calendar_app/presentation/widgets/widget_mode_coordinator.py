@@ -10,12 +10,37 @@ from PyQt6.QtCore import Qt
 
 from calendar_app.presentation.widgets.unified_widget_mode import UnifiedWidgetController
 
+_RESUME_SETTING_KEY = "widget_mode_resume"
+
+
+def _resume_requested(settings) -> bool:
+    value = settings.value(_RESUME_SETTING_KEY, False)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int | float):
+        return value != 0
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _write_resume_requested(settings, enabled: bool, *, sync: bool = False) -> None:
+    settings.setValue(_RESUME_SETTING_KEY, bool(enabled))
+    if sync:
+        sync_settings = getattr(settings, "sync", None)
+        if callable(sync_settings):
+            sync_settings()
+
 
 class WidgetModeState(Enum):
     CLOSED = auto()
     OPENING = auto()
     ACTIVE = auto()
     CLOSING = auto()
+
+
+def restore_saved_widget_workspace(window) -> None:
+    """Restore after the first main-window paint so the splash can finish."""
+    if _resume_requested(window.settings):
+        window._ensure_widget_mode_coordinator().enter()
 
 
 @dataclass(frozen=True)
@@ -37,13 +62,13 @@ class WidgetModeCoordinator:
     def is_widget_mode_active(self) -> bool:
         return self.state in {WidgetModeState.OPENING, WidgetModeState.ACTIVE}
 
-    def toggle(self, filter_mode: str = "all") -> None:
+    def toggle(self, filter_mode: str | None = None) -> None:
         if self.is_widget_mode_active():
             self.exit_widget_mode()
         else:
             self.enter(filter_mode)
 
-    def enter(self, filter_mode: str = "all") -> None:
+    def enter(self, filter_mode: str | None = None) -> None:
         if self.is_widget_mode_active():
             self.controller.show_widget(filter_mode)
             return
@@ -61,6 +86,7 @@ class WidgetModeCoordinator:
         if hasattr(window, "is_visible"):
             window.is_visible = False
         self.state = WidgetModeState.ACTIVE
+        _write_resume_requested(self.main_window.settings, True)
 
     def enter_widget_mode(self, show_schedule=True, show_work=True) -> None:
         if show_schedule and not show_work:
@@ -72,9 +98,40 @@ class WidgetModeCoordinator:
         self.enter(filter_mode)
 
     def exit_widget_mode(self) -> None:
+        _write_resume_requested(self.main_window.settings, False)
         self._exit(restore_main=True)
 
+    def return_to_main(self) -> None:
+        """Explicit navigation always reveals the main window, even from the tray."""
+        snapshot = self._snapshot
+        self.exit_widget_mode()
+        if snapshot is not None and not snapshot.visible:
+            self._restore_main_window(snapshot)
+        if not self.main_window.isVisible() or self.main_window.isMinimized():
+            self.main_window.showNormal()
+        if hasattr(self.main_window, "is_visible"):
+            self.main_window.is_visible = True
+        self.main_window.raise_()
+        self.main_window.activateWindow()
+
+    def hide_to_tray(self) -> None:
+        self._exit(restore_main=False)
+
     def close_for_shutdown(self) -> None:
+        # Capture the user's launch mode before hiding the widget.  Persisting
+        # and flushing here avoids relying on an earlier enter() write during
+        # tray exit, OS shutdown, or a fast application restart.
+        resume_after_restart = (
+            self.is_widget_mode_active()
+            or self.controller.is_visible()
+            or _resume_requested(self.main_window.settings)
+        )
+        _write_resume_requested(
+            self.main_window.settings,
+            resume_after_restart,
+            sync=True,
+        )
+        self.controller.prepare_shutdown()
         self._exit(restore_main=False)
 
     def close_widgets(self) -> None:
@@ -119,4 +176,4 @@ class WidgetModeCoordinator:
     def _on_widget_hidden(self) -> None:
         if self._internal_hide or not self.is_widget_mode_active():
             return
-        self._exit(restore_main=True)
+        self.exit_widget_mode()

@@ -82,3 +82,19 @@ class OverlayTextMenuTests(unittest.TestCase):
         )
 
         self.assertEqual(result, "soon")
+
+    def test_instance_dday_reference_works_in_condition(self):
+        class DdayStub:
+            @staticmethod
+            def get_dday_text():
+                return "D-0"
+
+        widget = OverlayTextWidget(self.owner)
+        self.addCleanup(widget.close)
+
+        result = widget.resolve_template(
+            widget_registry={"dday_0": DdayStub()},
+            override_text="{if dday:dday_0 == D-0}today{else}later{/if}",
+        )
+
+        self.assertEqual(result, "today")

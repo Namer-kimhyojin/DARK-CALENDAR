@@ -718,6 +718,16 @@ class OverlayWidgetManager:
         with contextlib.suppress(Exception):
             self._settings().sync()
 
+    def shutdown(self):
+        """Persist widgets, then stop their timers/network work without disabling them."""
+
+        self.save_all()
+        for widget in self._widgets.values():
+            with contextlib.suppress(Exception):
+                widget._set_runtime_active(False)
+            with contextlib.suppress(RuntimeError):
+                widget.hide()
+
     def set_all_interaction_locked(self, locked: bool):
         """고정 모드 시 모든 위젯의 드래그/리사이즈를 잠금/해제."""
         for widget in self._widgets.values():

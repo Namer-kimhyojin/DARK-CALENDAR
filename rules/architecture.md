@@ -74,6 +74,14 @@ DB 작업이나 네트워크 요청은 UI 블로킹을 방지하기 위해 `shar
 
 워커 인스턴스는 `app._bg_workers`에 추가하고, 완료 후 제거합니다.
 
+### 종료 수명주기
+
+- 실제 앱 종료는 `ActionHandlersMixin.shutdown_background_workers()` 한 경로로 모읍니다.
+- 종료 함수는 멱등이어야 하며, 타이머 중지 → 위젯 상태 저장 → QThread 협력 종료 → Python 작업 큐 종료 → `QSettings.sync()` 순서를 지킵니다.
+- `closeEvent()`는 트레이 숨김 여부만 결정하고, 실제 종료 시 공용 종료 함수를 호출합니다. 별도의 중복 워커 정리를 추가하지 않습니다.
+- `QThread.terminate()`와 `os._exit()`은 정상 종료·재시작에 사용하지 않습니다. DB 연결 정리와 단일 인스턴스 잠금 해제가 실행될 수 있도록 Qt 이벤트 루프를 정상 종료합니다.
+- 최종 안전망은 `bootstrap._finalize_runtime()`이며, DB 연결을 닫은 뒤 단일 인스턴스 잠금을 해제합니다.
+
 ## 설정 저장
 
 앱 설정은 `QSettings("kimhyojin", "Dark Calendar")`를 통해 저장합니다.

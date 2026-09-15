@@ -643,6 +643,9 @@ class GCalActionsMixin:
     def _sync_ics_calendars(self):
         """ICS 구독 캘린더를 백그라운드에서 fetch하여 DB에 저장합니다."""
 
+        if getattr(self, "_is_shutting_down", False):
+            return
+
         try:
             from calendar_app.infrastructure.ics.ics_fetcher import sync_all_ics_calendars
 

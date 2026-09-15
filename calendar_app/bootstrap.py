@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import signal
@@ -96,6 +97,56 @@ def _apply_saved_font(app: QApplication, build_ui_font) -> None:
         size = 10
         settings.setValue("font_size", size)
     app.setFont(build_ui_font(family, size))
+
+
+def _finalize_runtime(app: QApplication, window) -> None:
+    """Run the complete shutdown sequence once, including non-Qt resources."""
+
+    if getattr(app, "_runtime_shutdown_complete", False):
+        return
+    app._runtime_shutdown_complete = True
+
+    sigint_pump = getattr(app, "_sigint_pump", None)
+    if sigint_pump is not None:
+        with contextlib.suppress(AttributeError, RuntimeError):
+            sigint_pump.stop()
+
+    if window is not None:
+        shutdown = getattr(window, "shutdown_background_workers", None)
+        if callable(shutdown):
+            try:
+                stopped = shutdown()
+                if stopped is False:
+                    logging.getLogger(__name__).warning(
+                        "Background shutdown was incomplete; retrying before database close"
+                    )
+                    shutdown(wait_ms=1000)
+            except Exception:
+                logging.getLogger(__name__).exception("Final application shutdown failed")
+        try:
+            from calendar_app.presentation.main_window.action_handlers import (
+                _save_window_layout_for_shutdown,
+            )
+
+            _save_window_layout_for_shutdown(window)
+        except Exception:
+            logging.getLogger(__name__).exception("Final window layout save failed")
+
+    try:
+        from calendar_app.infrastructure.db.database_unified import db_manager
+
+        db_manager.close_all_connections()
+    except Exception:
+        logging.getLogger(__name__).exception("Failed to close database connections")
+
+    try:
+        from calendar_app.presentation.main_window.action_handlers import (
+            _release_single_instance_lock,
+        )
+
+        _release_single_instance_lock(app)
+    except Exception:
+        logging.getLogger(__name__).exception("Failed to release single-instance lock")
 
 
 def _build_startup_phase_ranges(specs=_STARTUP_PHASE_SPECS) -> dict[str, tuple[float, float]]:
@@ -379,6 +430,15 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
     # Connect splash finish to main window's first actual paint event
     # to ensure the transition is seamless when the app UI is actually ready.
     window.first_paint.connect(splash.finish)
+
+    def _restore_widget_workspace():
+        from calendar_app.presentation.widgets.widget_mode_coordinator import (
+            restore_saved_widget_workspace,
+        )
+
+        QTimer.singleShot(0, lambda: restore_saved_widget_workspace(window))
+
+    window.first_paint.connect(_restore_widget_workspace)
     window.show()
 
     def _handle_sigint(*_):
@@ -391,9 +451,11 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
     app._sigint_pump.timeout.connect(lambda: None)
     app._sigint_pump.start(200)
 
-    exit_code = app.exec()
-
-    from calendar_app.infrastructure.db.database_unified import db_manager
-
-    db_manager.close_all_connections()
+    app.aboutToQuit.connect(lambda: _finalize_runtime(app, window))
+    try:
+        exit_code = app.exec()
+    finally:
+        # Covers event-loop errors and any platform path that does not emit
+        # aboutToQuit.  The finalizer is idempotent.
+        _finalize_runtime(app, window)
     return exit_code

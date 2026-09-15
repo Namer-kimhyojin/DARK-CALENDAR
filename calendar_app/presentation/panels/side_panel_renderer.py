@@ -1828,6 +1828,13 @@ def load_right_panel(app):
         routine_items.append(task_box)
 
     di_rows = directive_repo.get_recent_directives()
+    # Publish unfiltered source data for the widget workspace. Main-panel search
+    # and status filters must not hide rows from the widget's independent view.
+    app._latest_directive_data = {
+        "context_date": today_str,
+        "routine_rows": [dict(row) for row in merged_rows],
+        "directive_rows": list(di_rows or []),
+    }
     status_filter = (
         str(
             getattr(

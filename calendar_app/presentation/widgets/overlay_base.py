@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import html as _html
 import json
 import os as _os
 import re as _re
@@ -67,8 +68,19 @@ from calendar_app.presentation.widgets.overlay_color_utils import (
     _rgba_css,
     _to_rgba_str,
 )
+from calendar_app.presentation.widgets.overlay_display_presets import (
+    CUSTOM_DISPLAY_PRESET_ID,
+    DEFAULT_DISPLAY_PRESET_ID,
+    OverlayDisplayPreset,
+    overlay_display_preset,
+    overlay_display_presets,
+)
 from calendar_app.presentation.widgets.overlay_measure_utils import (
     _measure_face_size_precise,
+)
+from calendar_app.presentation.widgets.overlay_template_validation import (
+    normalize_widget_template_kind,
+    validate_widget_template,
 )
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
@@ -77,11 +89,9 @@ from calendar_app.shared.ui_tokens import get_ui_tokens
 # Grammar hint fallback strings — kept on one line so the guardrail test can
 # verify that color= aliases stay within their allowed_line_markers bucket.
 _GRAMMAR_TOKEN_FALLBACK = (
-    "Variable or text style: {value|size=36|bold|italic|color=accent}"  # grammar_token
+    "Variable style: {value|size=36|bold|italic|color=accent}"  # grammar_token
 )
-_GRAMMAR_PLAIN_FALLBACK = (
-    "Plain text with style: {Focus Mode|size=18|bold|color=warning}"  # grammar_plain_text
-)
+_GRAMMAR_PLAIN_FALLBACK = "Enter plain text without braces."  # grammar_plain_text
 
 # ---------------------------------------------------------------------------
 # FlowLayout — wrapping button flow (used in Quick Insert panel)
@@ -676,7 +686,54 @@ _PRESET_FALLBACK: dict = {
         {
             "label_key": "widget_text.preset_countdown_alert",
             "label_default": "Countdown Alert",
-            "template": "{if countdown:countdown_0 < 1h}Less than 1 hour left{else}{countdown:countdown_0|size=24|bold}{/if}",
+            "template": "{if countdown:countdown_0 < 1h}곧 종료!{else}{countdown:countdown_0|size=24|bold}{/if}",
+        },
+    ],
+    "weather": [
+        {
+            "label_key": "widget.weather.preset_default",
+            "label_default": "Default",
+            "template": "{icon|size=32}\n{temp|size=24|bold}{unit}\n{city|size=11|color=muted}",
+        },
+        {
+            "label_key": "widget.weather.preset_temp_only",
+            "label_default": "Temp Only",
+            "template": "{temp|size=42|bold}{unit|size=20}",
+        },
+        {
+            "label_key": "widget.weather.preset_icon_temp",
+            "label_default": "Icon + Temp",
+            "template": "{icon|size=28}\n{temp|size=30|bold}{unit|size=16}",
+        },
+        {
+            "label_key": "widget.weather.preset_full",
+            "label_default": "Full Info",
+            "template": "{city|size=13|bold}\n{icon|size=22} {temp|size=22|bold}{unit|size=13}\n{desc|size=11|color=muted}\n💧 {humidity}  💨 {wind|size=11|color=muted}",
+        },
+        {
+            "label_key": "widget.weather.preset_compact_inline",
+            "label_default": "Compact Inline",
+            "template": "{icon|size=18}  {temp|size=20|bold}{unit|size=13}  {city|size=11|color=muted}",
+        },
+        {
+            "label_key": "widget.weather.preset_city_focus",
+            "label_default": "City Focus",
+            "template": "{city|size=16|bold}\n{icon|size=20}  {temp|size=24|bold}{unit|size=14}\n{desc|size=10|color=muted}",
+        },
+        {
+            "label_key": "widget.weather.preset_desc_card",
+            "label_default": "Desc Card",
+            "template": "{icon|size=34}\n{desc|size=13|bold}\n{temp|size=18|bold}{unit|size=12}  {city|size=11|color=muted}",
+        },
+        {
+            "label_key": "widget.weather.preset_wind_humidity",
+            "label_default": "Wind & Humidity",
+            "template": "{icon|size=24}  {temp|size=28|bold}{unit|size=15}\n💨 {wind|size=12|color=muted}  💧 {humidity|size=12|color=muted}\n{city|size=10|color=muted}",
+        },
+        {
+            "label_key": "widget.weather.preset_minimal_icon",
+            "label_default": "Minimal Icon",
+            "template": "{icon|size=40}",
         },
     ],
 }
@@ -732,14 +789,34 @@ def _get_widget_presets(widget_type: str, translate_fn, default_template: str = 
     """Return ``[(translated_label, template_str), ...]`` for *widget_type*.
 
     Entries whose template is ``"__DEFAULT__"`` are replaced with *default_template*.
+    A malformed shipped catalog falls back as a whole for that widget so the
+    fixed default set never becomes partially unavailable.
     """
+    _kind = normalize_widget_template_kind(widget_type)
     _data = _load_widget_presets_json()
+    _entries = _data.get(_kind, [])
+    if not isinstance(_entries, list) or any(
+        not isinstance(_entry, dict)
+        or validate_widget_template(
+            _kind,
+            _entry.get("template", ""),
+            allow_default_sentinel=True,
+        )
+        for _entry in _entries
+    ):
+        _entries = _PRESET_FALLBACK.get(_kind, [])
     _result = []
-    for _entry in _data.get(widget_type, []):
+    for _entry in _entries:
         _lkey = _entry.get("label_key", "")
         _ldefault = _entry.get("label_default", "")
         _label = translate_fn(_lkey, _ldefault) if _lkey else _ldefault
         _tmpl = _entry.get("template", "")
+        if validate_widget_template(
+            _kind,
+            _tmpl,
+            allow_default_sentinel=True,
+        ):
+            continue
         if _tmpl == "__DEFAULT__":
             _tmpl = default_template
         _result.append((_label, _tmpl))
@@ -762,8 +839,9 @@ def _build_face_ss(
         ``"solid"`` (default), ``"transparent"``, ``"double"``,
         ``"bottom_only"``, ``"left_only"``, ``"right_only"``, ``"outlined"``
 
-    Optional *sp* keys: ``glass``, ``glass_bg_cap``, ``glass_border_boost``,
-    ``accent_bg_color``, ``accent_border_color``, ``border_width``, ``radius``.
+    Optional *sp* keys: ``background_type``, ``glass``, ``glass_bg_cap``,
+    ``glass_border_boost``, ``accent_bg_color``, ``accent_border_color``,
+    ``border_width``, ``radius``.
     """
     _radius = sp.get("radius", 12)
     _btype = sp.get("border_type", "solid")
@@ -777,7 +855,9 @@ def _build_face_ss(
 
     _bg_css = f"qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {_g1}, stop:0.5 {_g2}, stop:1 {_g3})"
 
-    if "accent_bg_color" in sp:
+    if sp.get("background_type") == "transparent":
+        _bg_css = "transparent"
+    elif "accent_bg_color" in sp:
         _bg_css = sp["accent_bg_color"]
     elif sp.get("glass"):
         # Extra translucency for glass mode
@@ -1221,6 +1301,18 @@ def _apply_span(value: str, hints: list[str]) -> str:
             if not raw:
                 continue
             try:
+                if raw.endswith("x"):
+                    num = float(raw[:-1])
+                    styles.append(f"line-height:RATIO:{num}_TMPLREF_lh")
+                    continue
+                if raw.endswith("%"):
+                    num = float(raw[:-1]) / 100.0
+                    styles.append(f"line-height:RATIO:{num}_TMPLREF_lh")
+                    continue
+                if raw.endswith("pt"):
+                    num = float(raw[:-2])
+                    styles.append(f"line-height:REF:{num}_TMPLREF_lh")
+                    continue
                 num = float(raw)
             except ValueError:
                 styles.append(f"line-height:{raw}")
@@ -1381,6 +1473,7 @@ class _BaseOverlayWidget(QWidget):
         self._last_fit_size: tuple[int, int] = (0, 0)
         self._last_live_scale_apply_at: float = 0.0
         self._last_live_fit_at: float = 0.0
+        self._initialize_display_preset()
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
 
@@ -1427,6 +1520,9 @@ class _BaseOverlayWidget(QWidget):
         # Determine kind (e.g. "clock" from "overlay_clock")
         kind = self._settings_prefix().replace("overlay_", "")
         sp = _style_params_for(kind, style)
+        preset = overlay_display_preset(self.display_preset_id())
+        if preset is not None:
+            sp.update(preset.style_params)
 
         # Ensure face has an object name for stylesheet scoping
         obj_name = self.face.objectName() or f"{kind}Face"
@@ -1466,6 +1562,68 @@ class _BaseOverlayWidget(QWidget):
 
     def _set(self, key, val):
         self._s().setValue(f"{self._pref()}_{key}", val)
+
+    def _setting_exists(self, key: str) -> bool:
+        marker = "__dark_calendar_missing_setting__"
+        return self._get(key, marker) != marker
+
+    def _resolve_preset_font(self, preset: OverlayDisplayPreset) -> str:
+        available = set(QFontDatabase.families())
+        for family in preset.font_candidates:
+            if family in available:
+                return family
+        return self.font_family()
+
+    def _store_display_preset(self, preset_id: str) -> bool:
+        preset = overlay_display_preset(preset_id)
+        if preset is None:
+            self._set("appearance_preset", CUSTOM_DISPLAY_PRESET_ID)
+            return False
+        self._set("appearance_preset", preset.preset_id)
+        self._set("font_family", self._resolve_preset_font(preset))
+        self._set("text_color_rgba", preset.text_rgba)
+        self._set("bg_color_rgba", preset.background_rgba)
+        self._set("border_color_rgba", preset.border_rgba)
+        self._set("widget_opacity", 100)
+        return True
+
+    def _initialize_display_preset(self) -> None:
+        """Initialize new widgets without overwriting legacy/custom appearance."""
+        if not callable(getattr(self._s(), "setValue", None)):
+            return
+        if self._setting_exists("appearance_preset"):
+            return
+        legacy_appearance_keys = (
+            "display_style",
+            "font_family",
+            "text_color_rgba",
+            "bg_color_rgba",
+            "border_color_rgba",
+            "widget_opacity",
+        )
+        if any(self._setting_exists(key) for key in legacy_appearance_keys):
+            self._set("appearance_preset", CUSTOM_DISPLAY_PRESET_ID)
+            return
+        self._store_display_preset(DEFAULT_DISPLAY_PRESET_ID)
+
+    def display_preset_id(self) -> str:
+        raw = str(self._get("appearance_preset", CUSTOM_DISPLAY_PRESET_ID) or "")
+        if raw == CUSTOM_DISPLAY_PRESET_ID or overlay_display_preset(raw) is not None:
+            return raw
+        return CUSTOM_DISPLAY_PRESET_ID
+
+    def _display_preset_items(self) -> list[tuple[str, str]]:
+        return [
+            (preset.preset_id, t(preset.label_key, preset.label_default))
+            for preset in overlay_display_presets()
+        ]
+
+    def _set_display_preset(self, preset_id: str) -> None:
+        if self._store_display_preset(preset_id):
+            self._apply_and_resize(refit=True)
+
+    def _mark_display_preset_custom(self) -> None:
+        self._set("appearance_preset", CUSTOM_DISPLAY_PRESET_ID)
 
     def _screen_bounds(self) -> tuple[int, int]:
         app = QApplication.instance()
@@ -1875,9 +2033,15 @@ class _BaseOverlayWidget(QWidget):
         def refresh_combo(select_name: str | None = None, select_kind: str | None = None):
             combo.blockSignals(True)
             combo.clear()
+            user_presets = _preset_service.restore_fixed_builtin_presets(
+                self._s(),
+                self._pref(),
+                built_in_names,
+                copy_suffix=t("widget.preset.legacy_copy_suffix", "(User copy)"),
+            )
             entries = _preset_logic.build_row_entries(
                 built_in_presets,
-                self._load_user_presets(),
+                user_presets,
             )
             _preset_ui.append_row_entries(
                 combo,
@@ -1971,6 +2135,19 @@ class _BaseOverlayWidget(QWidget):
     def _warn_preset_name_builtin(self, parent) -> None:
         _preset_ui.warn_preset_name_builtin(parent)
 
+    def _widget_preset_kind(self) -> str:
+        return normalize_widget_template_kind(self._settings_prefix())
+
+    def _validate_user_preset_template(self, parent, template: str) -> bool:
+        issues = validate_widget_template(self._widget_preset_kind(), template)
+        if not issues:
+            return True
+        _preset_ui.warn_invalid_template(
+            parent,
+            "\n".join(issue.summary() for issue in issues[:4]),
+        )
+        return False
+
     def _prompt_preset_name(self, parent, *, initial: str = "") -> str | None:
         return _preset_ui.prompt_preset_name(parent, initial=initial)
 
@@ -2011,6 +2188,8 @@ class _BaseOverlayWidget(QWidget):
         if payload is None:
             return None
         name, template = payload
+        if not self._validate_user_preset_template(parent, template):
+            return None
         if name in built_in_names:
             self._warn_preset_name_builtin(parent)
             return None
@@ -2033,6 +2212,8 @@ class _BaseOverlayWidget(QWidget):
         if payload is None:
             return None
         name, template = payload
+        if not self._validate_user_preset_template(parent, template):
+            return None
         if self._has_preset_name_conflict(name, built_in_names):
             self._warn_preset_name_exists(parent)
             return None
@@ -2047,6 +2228,8 @@ class _BaseOverlayWidget(QWidget):
 
     def _try_update_user_preset(self, parent, name: str, editor_text: str) -> bool:
         if not name:
+            return False
+        if not self._validate_user_preset_template(parent, editor_text):
             return False
         return self._try_upsert_user_preset_entry(
             parent,
@@ -2079,13 +2262,13 @@ class _BaseOverlayWidget(QWidget):
         if self._has_preset_name_conflict(new_name, built_in_names):
             self._warn_preset_name_exists(parent)
             return None
-        self._apply_rename_preset_policy(
+        renamed = self._apply_rename_preset_policy(
             old_name=old_name,
             new_name=new_name,
             built_in_names=built_in_names,
             fallback_template=fallback_template,
         )
-        return new_name
+        return new_name if renamed else None
 
     def _try_delete_manager_preset(
         self,
@@ -2095,16 +2278,16 @@ class _BaseOverlayWidget(QWidget):
         kind: str,
         built_in_names: set[str],
     ) -> bool:
-        if not name:
+        if not name or kind != "user" or name in built_in_names:
             return False
         if not self._confirm_delete_preset(parent, name):
             return False
-        self._apply_delete_preset_policy(
+        deleted = self._apply_delete_preset_policy(
             name=name,
             kind=kind,
             built_in_names=built_in_names,
         )
-        return True
+        return deleted
 
     def _confirm_delete_preset(self, parent, name: str) -> bool:
         return _preset_ui.confirm_delete_preset(parent, name)
@@ -2134,8 +2317,8 @@ class _BaseOverlayWidget(QWidget):
         new_name: str,
         built_in_names: set[str],
         fallback_template: str,
-    ) -> None:
-        _preset_service.apply_rename_preset_policy(
+    ) -> bool:
+        return _preset_service.apply_rename_preset_policy(
             self._s(),
             self._pref(),
             old_name=old_name,
@@ -2150,8 +2333,8 @@ class _BaseOverlayWidget(QWidget):
         name: str,
         kind: str,
         built_in_names: set[str],
-    ) -> None:
-        _preset_service.apply_delete_preset_policy(
+    ) -> bool:
+        return _preset_service.apply_delete_preset_policy(
             self._s(),
             self._pref(),
             name=name,
@@ -2238,14 +2421,23 @@ class _BaseOverlayWidget(QWidget):
             placeholder = t("widget.preset.select_hint", "Select a preset")
             _preset_ui.add_manager_placeholder(preset_combo, placeholder)
 
-            user_preset_rows = self._load_user_presets()
-            hidden_builtins = self._load_hidden_builtins()
+            user_preset_rows = _preset_service.restore_fixed_builtin_presets(
+                self._s(),
+                self._pref(),
+                built_in_names,
+                copy_suffix=t("widget.preset.legacy_copy_suffix", "(User copy)"),
+            )
             entries = _preset_logic.build_effective_entries(
                 built_in_presets,
                 user_preset_rows,
-                hidden_builtins,
+                set(),
             )
-            combo_entries = _preset_ui.append_manager_entries(preset_combo, entries)
+            combo_entries = _preset_ui.append_manager_entries(
+                preset_combo,
+                entries,
+                builtin_label=t("widget.preset.kind_builtin", "Built-in"),
+                user_label=t("widget.preset.kind_user", "User"),
+            )
 
             target_idx = 0
             if select_name:
@@ -2271,6 +2463,7 @@ class _BaseOverlayWidget(QWidget):
             has_selection = current_index() > 0 and bool(current_name())
             states = _preset_logic.manager_button_states(
                 has_selection=has_selection,
+                current_kind=current_kind(),
                 editor_text=editor.toPlainText(),
                 current_template=current_template(),
             )
@@ -2289,11 +2482,15 @@ class _BaseOverlayWidget(QWidget):
                 refresh_combo(name, "user")
 
         def update_preset():
+            if current_kind() != "user":
+                return
             name = current_name()
             if self._try_update_user_preset(parent, name, editor.toPlainText()):
                 refresh_combo(name, "user", keep_editor=True)
 
         def rename_preset():
+            if current_kind() != "user":
+                return
             new_name = self._try_rename_manager_preset(
                 parent,
                 old_name=current_name(),
@@ -2304,6 +2501,8 @@ class _BaseOverlayWidget(QWidget):
                 refresh_combo(new_name, "user", keep_editor=True)
 
         def delete_preset():
+            if current_kind() != "user":
+                return
             if self._try_delete_manager_preset(
                 parent,
                 name=current_name(),
@@ -2346,6 +2545,12 @@ class _BaseOverlayWidget(QWidget):
             "refresh": refresh_combo,
             "sync": _sync_buttons,
             "original_template": original_template,
+            "buttons": {
+                "add": add_btn,
+                "update": update_btn,
+                "rename": rename_btn,
+                "delete": delete_btn,
+            },
         }
 
     def _make_labeled_row(self, label_text, field):
@@ -2478,7 +2683,9 @@ class _BaseOverlayWidget(QWidget):
         self._add_section_label(basic, t("widget.common.section_display", "Display"))
         style_combo = self._make_style_combo()
         basic.addLayout(
-            self._make_labeled_row(t("widget.common.style", "Display style:"), style_combo)
+            self._make_labeled_row(
+                t("widget.common.display_format", "Display format:"), style_combo
+            )
         )
 
         self._active_settings_widgets = {}
@@ -2496,6 +2703,17 @@ class _BaseOverlayWidget(QWidget):
         appear_scroll, appear = self._make_scroll_tab()
         tabs.addTab(appear_scroll, t("widget.common.tab_appearance", "Appearance"))
 
+        self._add_section_label(
+            appear, t("widget.common.section_display_presets", "DESIGN PRESETS")
+        )
+        display_preset_combo = self._make_display_preset_combo()
+        appear.addLayout(
+            self._make_labeled_row(
+                t("widget.common.display_preset", "Display style:"),
+                display_preset_combo,
+            )
+        )
+        self._add_divider(appear)
         self._add_section_label(appear, t("widget.common.section_colors", "Colors"))
         bg_btn = self._make_rgba_color_button(self.bg_color_rgba())
         appear.addLayout(self._make_labeled_row(t("widget.common.bg_color", "Background:"), bg_btn))
@@ -2566,6 +2784,25 @@ class _BaseOverlayWidget(QWidget):
         appear.addLayout(self._make_labeled_row(t("widget.common.font_size", "Size:"), size_spin))
         appear.addStretch()
 
+        def _set_preset_color(btn: QPushButton, slider: QSlider, rgba: str) -> None:
+            color, alpha = _parse_rgba(rgba)
+            normalized = _to_rgba_str(color, alpha)
+            btn.setProperty("_rgba", normalized)
+            btn.setStyleSheet(_overlay_color_button_style(normalized))
+            slider.setValue(int(round(alpha * 100 / 255)))
+
+        def _preview_display_preset(_index: int) -> None:
+            preset = overlay_display_preset(str(display_preset_combo.currentData() or ""))
+            if preset is None:
+                return
+            _set_preset_color(fg_btn, txt_alpha_slider, preset.text_rgba)
+            _set_preset_color(bg_btn, bg_alpha_slider, preset.background_rgba)
+            _set_preset_color(bd_btn, bd_alpha_slider, preset.border_rgba)
+            font_combo.setCurrentFont(QFont(self._resolve_preset_font(preset)))
+            opacity_slider.setValue(100)
+
+        display_preset_combo.currentIndexChanged.connect(_preview_display_preset)
+
         # -- Page 3: Advanced (Template) --
         template_editor = None
         if has_template:
@@ -2575,7 +2812,9 @@ class _BaseOverlayWidget(QWidget):
                 current_template=self._get(self._TEMPLATE_KEY or "template", default_template),
                 default_template=default_template,
                 presets=_get_widget_presets(
-                    self._settings_prefix().replace("overlay_", ""), t, default_template
+                    self._widget_preset_kind(),
+                    t,
+                    default_template,
                 ),
                 placeholder=default_template,
                 hint_text=template_hint,
@@ -2617,39 +2856,61 @@ class _BaseOverlayWidget(QWidget):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             # Commit Style
             self._set("display_style", style_combo.currentData())
+            selected_preset_id = str(display_preset_combo.currentData() or CUSTOM_DISPLAY_PRESET_ID)
 
             # Commit Appearance — merge alpha sliders into rgba values
             def _merge_alpha(rgba_str: str, new_alpha: int, fallback_alpha: int) -> str:
                 c, _ = _parse_rgba(rgba_str, fallback_alpha=fallback_alpha)
                 return _to_rgba_str(c, new_alpha)
 
-            self._set(
-                "bg_color_rgba",
-                _merge_alpha(
-                    str(bg_btn.property("_rgba")),
-                    int(round(bg_alpha_slider.value() * 255 / 100)),
-                    214,
-                ),
+            new_bg_rgba = _merge_alpha(
+                str(bg_btn.property("_rgba")),
+                int(round(bg_alpha_slider.value() * 255 / 100)),
+                214,
             )
-            self._set(
-                "border_color_rgba",
-                _merge_alpha(
-                    str(bd_btn.property("_rgba")),
-                    int(round(bd_alpha_slider.value() * 255 / 100)),
-                    32,
-                ),
+            new_border_rgba = _merge_alpha(
+                str(bd_btn.property("_rgba")),
+                int(round(bd_alpha_slider.value() * 255 / 100)),
+                32,
             )
-            self._set(
-                "text_color_rgba",
-                _merge_alpha(
-                    str(fg_btn.property("_rgba")),
-                    int(round(txt_alpha_slider.value() * 255 / 100)),
-                    255,
-                ),
+            new_text_rgba = _merge_alpha(
+                str(fg_btn.property("_rgba")),
+                int(round(txt_alpha_slider.value() * 255 / 100)),
+                255,
             )
-            self._set("font_family", font_combo.currentFont().family())
+            new_font_family = font_combo.currentFont().family()
+            self._set("bg_color_rgba", new_bg_rgba)
+            self._set("border_color_rgba", new_border_rgba)
+            self._set("text_color_rgba", new_text_rgba)
+            self._set("font_family", new_font_family)
             self._set("font_size", size_spin.value())
             self._set("widget_opacity", opacity_slider.value())
+
+            selected_preset = overlay_display_preset(selected_preset_id)
+            if selected_preset is not None:
+
+                def _dialog_rgba(raw: str, fallback_alpha: int) -> str:
+                    color, alpha = _parse_rgba(raw, fallback_alpha=fallback_alpha)
+                    percent = int(round(alpha * 100 / 255))
+                    return _to_rgba_str(color, int(round(percent * 255 / 100)))
+
+                expected_values = (
+                    _dialog_rgba(selected_preset.background_rgba, 214),
+                    _dialog_rgba(selected_preset.border_rgba, 32),
+                    _dialog_rgba(selected_preset.text_rgba, 255),
+                    self._resolve_preset_font(selected_preset),
+                    100,
+                )
+                actual_values = (
+                    new_bg_rgba.lower(),
+                    new_border_rgba.lower(),
+                    new_text_rgba.lower(),
+                    new_font_family,
+                    opacity_slider.value(),
+                )
+                if actual_values != expected_values:
+                    selected_preset_id = CUSTOM_DISPLAY_PRESET_ID
+            self._set("appearance_preset", selected_preset_id)
 
             # Commit extra fields
             for key, w in self._active_settings_widgets.items():
@@ -2684,6 +2945,20 @@ class _BaseOverlayWidget(QWidget):
             if style_id == current:
                 selected_index = index
         combo.setCurrentIndex(selected_index)
+        return combo
+
+    def _make_display_preset_combo(self, parent=None):
+        from PyQt6.QtWidgets import QComboBox as _QComboBox
+
+        combo = _QComboBox(parent)
+        combo.addItem(
+            t("widget.display_preset.custom", "Custom appearance"),
+            CUSTOM_DISPLAY_PRESET_ID,
+        )
+        for preset_id, label in self._display_preset_items():
+            combo.addItem(label, preset_id)
+        selected = combo.findData(self.display_preset_id())
+        combo.setCurrentIndex(max(0, selected))
         return combo
 
     def _wrap_preview_html(
@@ -2971,6 +3246,20 @@ class _BaseOverlayWidget(QWidget):
                     )
                 )
                 preview_meta.setText("")
+                return
+            issues = validate_widget_template(self._widget_preset_kind(), template)
+            if issues:
+                message = t(
+                    "widget.preset.invalid_preview",
+                    "Fix the template syntax to display a preview.",
+                )
+                preview_lbl.setText(
+                    self._wrap_preview_html(
+                        f"<b>{_html.escape(message)}</b>",
+                        preview_size=preview_lbl.size(),
+                    )
+                )
+                preview_meta.setText(issues[0].summary())
                 return
             html = render_preview(template)
             preview_lbl.setText(self._wrap_preview_html(html, preview_size=preview_lbl.size()))
@@ -3659,16 +3948,36 @@ class _BaseOverlayWidget(QWidget):
 
         self._build_context_menu(menu)
 
+        menu.addSeparator()
+        style_menu = menu.addMenu(t("widget.menu.display_style", "Display Style"))
+        style_menu.setIcon(_ic(ICON.DISPLAY_STYLE))
+        style_menu.setStyleSheet(self._menu_style())
+        preset_id = self.display_preset_id()
+        if preset_id == CUSTOM_DISPLAY_PRESET_ID:
+            custom = style_menu.addAction(t("widget.display_preset.custom", "Custom appearance"))
+            custom.setCheckable(True)
+            custom.setChecked(True)
+            custom.setEnabled(False)
+            style_menu.addSeparator()
+        for candidate_id, label in self._display_preset_items():
+            act = style_menu.addAction(
+                label,
+                lambda *_, selected_id=candidate_id: self._set_display_preset(selected_id),
+            )
+            act.setCheckable(True)
+            act.setChecked(candidate_id == preset_id)
+
         if len(self._STYLES) > 1:
-            menu.addSeparator()
-            style_menu = menu.addMenu(t("widget.menu.display_style", "Display Style"))
-            style_menu.setIcon(_ic(ICON.DISPLAY_STYLE))
-            style_menu.setStyleSheet(self._menu_style())
-            cur = self.display_style()
-            for sid, slabel in self._style_items():
-                act = style_menu.addAction(slabel, lambda *_, s=sid: self._set_display_style(s))
+            format_menu = menu.addMenu(t("widget.menu.display_format", "Display format"))
+            format_menu.setStyleSheet(self._menu_style())
+            current_format = self.display_style()
+            for style_id, style_label in self._style_items():
+                act = format_menu.addAction(
+                    style_label,
+                    lambda *_, selected_id=style_id: self._set_display_style(selected_id),
+                )
                 act.setCheckable(True)
-                act.setChecked(sid == cur)
+                act.setChecked(style_id == current_format)
 
         menu.addSeparator()
         app_menu = menu.addMenu(t("widget.menu.appearance", "Appearance"))
@@ -3742,6 +4051,7 @@ class _BaseOverlayWidget(QWidget):
             family, size = dlg.result_font()
             self._set("font_family", family)
             self._set("font_size", size)
+            self._mark_display_preset_custom()
             self._apply_and_resize()
 
     def _action_text_color(self):
@@ -3750,6 +4060,7 @@ class _BaseOverlayWidget(QWidget):
         )
         if result:
             self._set("text_color_rgba", result)
+            self._mark_display_preset_custom()
             self._apply_and_resize()
 
     def _action_bg_color(self):
@@ -3758,6 +4069,7 @@ class _BaseOverlayWidget(QWidget):
         )
         if result:
             self._set("bg_color_rgba", result)
+            self._mark_display_preset_custom()
             self._apply_and_resize()
 
     def _action_border_color(self):
@@ -3766,6 +4078,7 @@ class _BaseOverlayWidget(QWidget):
         )
         if result:
             self._set("border_color_rgba", result)
+            self._mark_display_preset_custom()
             self._apply_and_resize()
 
     def _action_open_opacity_dialog(self):
@@ -3836,27 +4149,32 @@ class _BaseOverlayWidget(QWidget):
 
     def _action_widget_opacity(self, opacity_100: int):
         self._set("widget_opacity", opacity_100)
+        self._mark_display_preset_custom()
         self.setWindowOpacity(max(0.1, min(1.0, opacity_100 / 100.0)))
 
     def _action_text_alpha(self, alpha: int):
         c, _ = _parse_rgba(self.text_color_rgba())
         self._set("text_color_rgba", _to_rgba_str(c, alpha))
+        self._mark_display_preset_custom()
         self._apply_and_resize()
 
     def _action_bg_alpha(self, alpha: int):
         c, _ = _parse_rgba(self.bg_color_rgba())
         self._set("bg_color_rgba", _to_rgba_str(c, alpha))
+        self._mark_display_preset_custom()
         self._apply_and_resize()
 
     def _action_border_alpha(self, alpha: int):
         c, _ = _parse_rgba(self.border_color_rgba())
         self._set("border_color_rgba", _to_rgba_str(c, alpha))
+        self._mark_display_preset_custom()
         self._apply_and_resize()
 
     def _action_reset_colors(self):
         self._set("text_color_rgba", self._DEFAULT_TEXT_RGBA)
         self._set("bg_color_rgba", self._DEFAULT_BG_RGBA)
         self._set("border_color_rgba", self._DEFAULT_BORDER_RGBA)
+        self._mark_display_preset_custom()
         self._apply_and_resize()
 
     def _toggle_always_on_top(self):

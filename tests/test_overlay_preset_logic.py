@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 
 from calendar_app.presentation.widgets import overlay_preset_logic as logic
@@ -16,7 +17,7 @@ class OverlayPresetLogicTests(unittest.TestCase):
         self.assertEqual(cleaned, [("A", "ta"), ("B", ""), ("C", "tc")])
         self.assertEqual(names, {"A", "C"})
 
-    def test_build_effective_entries_merges_builtin_user_and_hidden(self):
+    def test_build_effective_entries_keeps_builtins_fixed_and_visible(self):
         entries = logic.build_effective_entries(
             [("A", "ta"), ("B", "tb"), ("C", "tc")],
             [
@@ -28,7 +29,8 @@ class OverlayPresetLogicTests(unittest.TestCase):
         self.assertEqual(
             entries,
             [
-                {"name": "A", "template": "ua", "kind": "user"},
+                {"name": "A", "template": "ta", "kind": "builtin"},
+                {"name": "B", "template": "tb", "kind": "builtin"},
                 {"name": "C", "template": "tc", "kind": "builtin"},
                 {"name": "X", "template": "ux", "kind": "user"},
             ],
@@ -88,7 +90,11 @@ class OverlayPresetLogicTests(unittest.TestCase):
     def test_build_row_entries_keeps_builtin_then_user_order(self):
         entries = logic.build_row_entries(
             [("B1", "t1"), ("B2", "t2")],
-            [{"name": "U1", "template": "u1"}, {"name": "", "template": "drop"}],
+            [
+                {"name": "B1", "template": "override"},
+                {"name": "U1", "template": "u1"},
+                {"name": "", "template": "drop"},
+            ],
         )
         self.assertEqual(
             entries,
@@ -119,45 +125,23 @@ class OverlayPresetLogicTests(unittest.TestCase):
         self.assertTrue(logic.is_name_conflict("U1", {"B1"}, user_presets))
         self.assertFalse(logic.is_name_conflict("Z", {"B1"}, user_presets))
 
-    def test_apply_rename_with_builtin_policy_hides_old_builtin_when_fallback(self):
-        presets, hidden, renamed = logic.apply_rename_with_builtin_policy(
-            presets=[{"name": "X", "template": "tx"}],
-            hidden_builtins={"Q"},
-            old_name="B1",
-            new_name="N1",
-            built_in_names={"B1"},
-            fallback_template="fallback",
-        )
-        self.assertFalse(renamed)
-        self.assertIn("B1", hidden)
-        self.assertIn({"name": "N1", "template": "fallback"}, presets)
-
-    def test_apply_delete_with_builtin_policy_hides_builtin_only_for_builtin_kind(self):
-        presets, hidden = logic.apply_delete_with_builtin_policy(
-            presets=[
-                {"name": "B1", "template": "user-override"},
-                {"name": "U1", "template": "u"},
+    def test_legacy_builtin_override_is_migrated_to_unique_user_copy(self):
+        presets, changed = logic.migrate_builtin_name_conflicts(
+            user_presets=[
+                {"name": "B1", "template": "override"},
+                {"name": "B1 (User copy)", "template": "existing"},
             ],
-            hidden_builtins=set(),
-            name="B1",
-            kind="builtin",
             built_in_names={"B1"},
+            copy_suffix="(User copy)",
         )
-        self.assertEqual(presets, [{"name": "U1", "template": "u"}])
-        self.assertEqual(hidden, {"B1"})
-
-        presets2, hidden2 = logic.apply_delete_with_builtin_policy(
-            presets=[
-                {"name": "B1", "template": "user-override"},
-                {"name": "U1", "template": "u"},
+        self.assertTrue(changed)
+        self.assertEqual(
+            presets,
+            [
+                {"name": "B1 (User copy) 2", "template": "override"},
+                {"name": "B1 (User copy)", "template": "existing"},
             ],
-            hidden_builtins=set(),
-            name="B1",
-            kind="user",
-            built_in_names={"B1"},
         )
-        self.assertEqual(presets2, [{"name": "U1", "template": "u"}])
-        self.assertEqual(hidden2, set())
 
     def test_row_button_states_follow_current_kind_and_count(self):
         self.assertEqual(
@@ -173,6 +157,7 @@ class OverlayPresetLogicTests(unittest.TestCase):
         self.assertEqual(
             logic.manager_button_states(
                 has_selection=False,
+                current_kind="placeholder",
                 editor_text="x",
                 current_template="x",
             ),
@@ -181,6 +166,16 @@ class OverlayPresetLogicTests(unittest.TestCase):
         self.assertEqual(
             logic.manager_button_states(
                 has_selection=True,
+                current_kind="builtin",
+                editor_text="x",
+                current_template="y",
+            ),
+            {"add": True, "update": False, "rename": False, "delete": False},
+        )
+        self.assertEqual(
+            logic.manager_button_states(
+                has_selection=True,
+                current_kind="user",
                 editor_text="x",
                 current_template="y",
             ),
@@ -189,6 +184,7 @@ class OverlayPresetLogicTests(unittest.TestCase):
         self.assertEqual(
             logic.manager_button_states(
                 has_selection=True,
+                current_kind="user",
                 editor_text="   ",
                 current_template="",
             ),

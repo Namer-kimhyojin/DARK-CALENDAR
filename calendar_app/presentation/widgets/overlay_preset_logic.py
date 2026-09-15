@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Preset list/data manipulation helpers extracted from overlay_base."""
 
 from __future__ import annotations
@@ -34,26 +35,25 @@ def build_effective_entries(
     user_presets: list[dict[str, str]],
     hidden_builtins: set[str],
 ) -> list[dict[str, str]]:
-    user_map = {
-        str(entry.get("name") or ""): str(entry.get("template") or "")
-        for entry in user_presets
-        if str(entry.get("name") or "")
-    }
-    entries: list[dict[str, str]] = []
-    for label, template in built_in_presets:
-        if label in hidden_builtins:
+    """Keep built-ins immutable and append only non-conflicting user presets."""
+
+    del hidden_builtins  # Legacy hidden state is intentionally ignored.
+    built_in_names = {label for label, _template in built_in_presets}
+    entries = [
+        {"name": label, "template": template, "kind": "builtin"}
+        for label, template in built_in_presets
+    ]
+    for entry in user_presets:
+        name = str(entry.get("name") or "")
+        if not name or name in built_in_names:
             continue
-        effective_template = user_map.pop(label, template)
-        effective_kind = "user" if has_user_entry(user_presets, label) else "builtin"
         entries.append(
             {
-                "name": label,
-                "template": effective_template,
-                "kind": effective_kind,
+                "name": name,
+                "template": str(entry.get("template") or ""),
+                "kind": "user",
             }
         )
-    for name, template in user_map.items():
-        entries.append({"name": name, "template": template, "kind": "user"})
     return entries
 
 
@@ -138,16 +138,7 @@ def build_row_entries(
     built_in_presets: list[tuple[str, str]],
     user_presets: list[dict[str, str]],
 ) -> list[dict[str, str]]:
-    entries: list[dict[str, str]] = []
-    for name, template in built_in_presets:
-        entries.append({"name": name, "template": template, "kind": "builtin"})
-    for entry in user_presets:
-        name = str(entry.get("name") or "")
-        template = str(entry.get("template") or "")
-        if not name:
-            continue
-        entries.append({"name": name, "template": template, "kind": "user"})
-    return entries
+    return build_effective_entries(built_in_presets, user_presets, set())
 
 
 def find_selection_index(
@@ -182,15 +173,57 @@ def row_button_states(*, current_kind: str, item_count: int) -> dict[str, bool]:
 def manager_button_states(
     *,
     has_selection: bool,
+    current_kind: str,
     editor_text: str,
     current_template: str,
 ) -> dict[str, bool]:
     has_template = bool(str(editor_text).strip())
     dirty = str(editor_text) != str(current_template)
-    can_customize = has_selection
+    can_customize = has_selection and current_kind == "user"
     return {
         "add": has_template,
-        "update": has_selection and has_template and dirty,
+        "update": can_customize and has_template and dirty,
         "rename": can_customize,
         "delete": can_customize,
     }
+
+
+def migrate_builtin_name_conflicts(
+    user_presets: list[dict[str, str]],
+    built_in_names: set[str],
+    *,
+    copy_suffix: str,
+) -> tuple[list[dict[str, str]], bool]:
+    """Rename legacy built-in overrides into separate, lossless user copies."""
+
+    used_names = set(built_in_names)
+    used_names.update(
+        str(entry.get("name") or "")
+        for entry in user_presets
+        if str(entry.get("name") or "") not in built_in_names
+    )
+    migrated: list[dict[str, str]] = []
+    changed = False
+    suffix = str(copy_suffix or "(User copy)").strip()
+    for entry in user_presets:
+        name = str(entry.get("name") or "").strip()
+        if not name:
+            changed = True
+            continue
+        candidate = name
+        if name in built_in_names:
+            base = f"{name} {suffix}".strip()
+            candidate = base
+            number = 2
+            while candidate in used_names:
+                candidate = f"{base} {number}"
+                number += 1
+            changed = True
+        used_names.add(candidate)
+        migrated.append(
+            {
+                "name": candidate,
+                "template": str(entry.get("template") or ""),
+            }
+        )
+    return migrated, changed

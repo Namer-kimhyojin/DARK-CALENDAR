@@ -72,6 +72,8 @@ def initialize_overlay_app(app) -> None:
     app._sync_worker = None
     app._auth_worker = None
     app._is_shutting_down = False
+    app._shutdown_in_progress = False
+    app._shutdown_complete = False
     app._is_dragging = False
     app._drag_pending_refresh = False
     app._task_dialog_refresh_depth = 0

@@ -303,6 +303,7 @@ class UnifiedWidgetModeTests(unittest.TestCase):
         self.controller = uwm.UnifiedWidgetController(self.host)
         widget = uwm.UnifiedWidgetWindow(self.controller)
 
+        widget.set_filter("schedule")
         widget.add_btn.click()
 
         self.assertEqual(1, len(self.host.open_task_dialog_calls))
@@ -319,7 +320,7 @@ class UnifiedWidgetModeTests(unittest.TestCase):
 
         widget.update_agenda([])
 
-        action = widget.findChild(QToolButton, "unified_primary_action")
+        action = widget.scroll_content.findChild(QToolButton, "unified_primary_action")
         self.assertIsNotNone(action)
         action.click()
         self.assertEqual(1, len(self.host.open_task_dialog_calls))
@@ -369,7 +370,9 @@ class UnifiedWidgetModeTests(unittest.TestCase):
         self.assertIs(original_hero, widget.hero)
         self.assertIs(original_agenda, widget.agenda_section)
         agenda_index = widget.container_layout.indexOf(widget.agenda_section)
-        self.assertEqual((1, 1, 2, 1), widget.container_layout.getItemPosition(agenda_index))
+        self.assertEqual((2, 1, 1, 1), widget.container_layout.getItemPosition(agenda_index))
+        filter_index = widget.container_layout.indexOf(widget.filter_section)
+        self.assertEqual((1, 1, 1, 1), widget.container_layout.getItemPosition(filter_index))
         self.assertTrue(widget.cal_grid.isVisibleTo(widget.container))
 
     def test_minimal_layout_hides_calendar_and_uses_its_preferred_size(self):
@@ -388,6 +391,7 @@ class UnifiedWidgetModeTests(unittest.TestCase):
         widget = uwm.UnifiedWidgetWindow(self.controller)
         self.controller.widget = widget
         self.controller.set_layout("dashboard")
+        widget.resize(QSize(690, 510))
         self.controller.save_size(QSize(690, 510))
 
         self.controller.set_layout("minimal")

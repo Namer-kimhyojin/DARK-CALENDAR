@@ -352,6 +352,12 @@ class WindowShellActionsMixin:
         if self.is_widget_mode_active():
             self.stop_widget_mode()
             return
+        if (
+            not self.isVisible()
+            and str(self.settings.value("widget_mode_resume", "false")).lower() == "true"
+        ):
+            self._ensure_widget_mode_coordinator().enter()
+            return
         from calendar_app.infrastructure.runtime.infra_manager import toggle_overlay
 
         toggle_overlay(self)

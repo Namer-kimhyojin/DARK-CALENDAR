@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Preset persistence/policy service helpers extracted from overlay_base."""
 
 from __future__ import annotations
@@ -46,19 +47,22 @@ def apply_rename_preset_policy(
     new_name: str,
     built_in_names: set[str],
     fallback_template: str,
-) -> None:
+) -> bool:
+    if old_name in built_in_names:
+        return False
     presets = _preset_store.load_user_presets(settings, prefix)
-    hidden = _preset_store.load_hidden_builtins(settings, prefix)
-    updated_presets, updated_hidden, _ = _preset_logic.apply_rename_with_builtin_policy(
+    if not _preset_logic.has_user_entry(presets, old_name):
+        return False
+    updated_presets, renamed = _preset_logic.rename_user_preset(
         presets,
-        hidden,
-        old_name=old_name,
-        new_name=new_name,
-        built_in_names=built_in_names,
+        old_name,
+        new_name,
         fallback_template=fallback_template,
     )
+    if not renamed:
+        return False
     _preset_store.save_user_presets(settings, prefix, updated_presets)
-    _preset_store.save_hidden_builtins(settings, prefix, updated_hidden)
+    return True
 
 
 def apply_delete_preset_policy(
@@ -68,15 +72,35 @@ def apply_delete_preset_policy(
     name: str,
     kind: str,
     built_in_names: set[str],
-) -> None:
+) -> bool:
+    if kind != "user" or name in built_in_names:
+        return False
     presets = _preset_store.load_user_presets(settings, prefix)
-    hidden = _preset_store.load_hidden_builtins(settings, prefix)
-    updated_presets, updated_hidden = _preset_logic.apply_delete_with_builtin_policy(
-        presets,
-        hidden,
-        name=name,
-        kind=kind,
-        built_in_names=built_in_names,
-    )
+    if not _preset_logic.has_user_entry(presets, name):
+        return False
+    updated_presets = _preset_logic.remove_user_preset(presets, name)
     _preset_store.save_user_presets(settings, prefix, updated_presets)
-    _preset_store.save_hidden_builtins(settings, prefix, updated_hidden)
+    return True
+
+
+def restore_fixed_builtin_presets(
+    settings,
+    prefix: str,
+    built_in_names: set[str],
+    *,
+    copy_suffix: str,
+) -> list[dict[str, str]]:
+    """Restore hidden built-ins and preserve old overrides as user copies."""
+
+    presets = _preset_store.load_user_presets(settings, prefix)
+    migrated, changed = _preset_logic.migrate_builtin_name_conflicts(
+        presets,
+        built_in_names,
+        copy_suffix=copy_suffix,
+    )
+    hidden = _preset_store.load_hidden_builtins(settings, prefix)
+    if changed:
+        _preset_store.save_user_presets(settings, prefix, migrated)
+    if hidden:
+        _preset_store.save_hidden_builtins(settings, prefix, set())
+    return migrated

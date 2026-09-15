@@ -49,6 +49,27 @@ class WidgetModeSkinTests(unittest.TestCase):
             {placement[0] for placement in get_widget_mode_layout("minimal").placements},
         )
 
+    def test_board_layouts_place_filters_with_the_agenda_opposite_the_calendar(self):
+        dashboard = {
+            section: (row, column, row_span, column_span)
+            for section, row, column, row_span, column_span in get_widget_mode_layout(
+                "dashboard"
+            ).placements
+        }
+        magazine = {
+            section: (row, column, row_span, column_span)
+            for section, row, column, row_span, column_span in get_widget_mode_layout(
+                "magazine"
+            ).placements
+        }
+
+        self.assertEqual((1, 0, 2, 1), dashboard["calendar"])
+        self.assertEqual(1, dashboard["filters"][1])
+        self.assertEqual(1, dashboard["agenda"][1])
+        self.assertEqual((1, 1, 2, 1), magazine["calendar"])
+        self.assertEqual(0, magazine["filters"][1])
+        self.assertEqual(0, magazine["agenda"][1])
+
     def test_builtin_skins_have_stable_unique_ids(self):
         skin_ids = [skin.skin_id for skin in widget_mode_skins()]
 

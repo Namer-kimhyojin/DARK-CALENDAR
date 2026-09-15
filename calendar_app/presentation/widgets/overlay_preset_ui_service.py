@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Preset UI dialog/message helpers extracted from overlay_base."""
 
 from __future__ import annotations
@@ -29,6 +30,15 @@ def warn_preset_name_builtin(parent) -> None:
         parent,
         "widget.preset.name_builtin",
         "That name is reserved for a built-in preset.",
+    )
+
+
+def warn_invalid_template(parent, details: str) -> None:
+    warn_preset(
+        parent,
+        "widget.preset.invalid_template",
+        "Check the template syntax:\n{details}",
+        details=details,
     )
 
 
@@ -102,6 +112,9 @@ def add_manager_placeholder(combo: QComboBox, placeholder_text: str) -> None:
 def append_manager_entries(
     combo: QComboBox,
     entries: list[dict[str, str]],
+    *,
+    builtin_label: str = "",
+    user_label: str = "",
 ) -> list[dict[str, str]]:
     combo_entries: list[dict[str, str]] = [{"name": "", "kind": "placeholder"}]
     for entry in entries:
@@ -109,7 +122,8 @@ def append_manager_entries(
         template = entry["template"]
         kind = entry["kind"]
         combo_entries.append({"name": name, "kind": kind})
-        combo.addItem(name)
+        kind_label = builtin_label if kind == "builtin" else user_label
+        combo.addItem(f"{name}  ·  {kind_label}" if kind_label else name)
         idx = combo.count() - 1
         combo.setItemData(idx, name, Qt.ItemDataRole.UserRole + 1)
         combo.setItemData(idx, template, Qt.ItemDataRole.UserRole + 2)

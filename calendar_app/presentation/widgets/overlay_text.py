@@ -175,6 +175,8 @@ class OverlayTextWidget(_BaseOverlayWidget):
                 eval_ctx[f"countdown:{inst_id}"] = widget.get_remaining_text()
             if hasattr(widget, "get_elapsed_text"):
                 eval_ctx[f"stopwatch:{inst_id}"] = widget.get_elapsed_text()
+            if hasattr(widget, "get_dday_text"):
+                eval_ctx[f"dday:{inst_id}"] = widget.get_dday_text()
 
         raw = self._process_conditionals(raw, eval_ctx)
 

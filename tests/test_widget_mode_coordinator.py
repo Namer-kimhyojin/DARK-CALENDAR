@@ -15,6 +15,7 @@ from calendar_app.presentation.widgets.widget_mode_coordinator import (
 class _FakeSettings:
     def __init__(self):
         self.values = {"overlay_instances": "keep", "oi_clock_x": 17}
+        self.sync_calls = 0
 
     def value(self, key, default=None, type=None):
         del type
@@ -22,6 +23,9 @@ class _FakeSettings:
 
     def setValue(self, key, value):
         self.values[key] = value
+
+    def sync(self):
+        self.sync_calls += 1
 
 
 class _Host(QWidget):
@@ -79,6 +83,7 @@ def test_shutdown_close_does_not_restore_main_or_touch_overlay_settings():
     host.show()
     coordinator = WidgetModeCoordinator(host)
     coordinator.enter()
+    coordinator.controller._load_timer.start(5_000)
     overlay_before = {
         key: value
         for key, value in host.settings.values.items()
@@ -94,6 +99,40 @@ def test_shutdown_close_does_not_restore_main_or_touch_overlay_settings():
     }
     assert coordinator.state is WidgetModeState.CLOSED
     assert not host.isVisible()
+    assert host.settings.value("widget_mode_resume") is True
+    assert host.settings.sync_calls == 1
+    assert not coordinator.controller._load_timer.isActive()
     assert overlay_after == overlay_before
+    coordinator.controller.widget.close()
+    host.close()
+
+
+def test_shutdown_reasserts_active_widget_mode_before_hiding_window():
+    host = _Host()
+    host.show()
+    coordinator = WidgetModeCoordinator(host)
+    coordinator.enter("work")
+    host.settings.setValue("widget_mode_resume", False)
+
+    coordinator.close_for_shutdown()
+
+    assert coordinator.state is WidgetModeState.CLOSED
+    assert host.settings.value("widget_mode_resume") is True
+    assert host.settings.sync_calls == 1
+    coordinator.controller.widget.close()
+    host.close()
+
+
+def test_shutdown_after_explicit_return_to_main_keeps_resume_disabled():
+    host = _Host()
+    host.show()
+    coordinator = WidgetModeCoordinator(host)
+    coordinator.enter()
+    coordinator.exit_widget_mode()
+
+    coordinator.close_for_shutdown()
+
+    assert host.settings.value("widget_mode_resume") is False
+    assert host.settings.sync_calls == 1
     coordinator.controller.widget.close()
     host.close()

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """ActionHandlers mixin composition root."""
 
+import contextlib
 import logging
 
 from PyQt6.QtWidgets import QApplication, QMessageBox
@@ -17,6 +18,71 @@ from calendar_app.presentation.main_window.theme_actions import ThemeActionsMixi
 from calendar_app.presentation.main_window.window_shell_actions import WindowShellActionsMixin
 
 logger = logging.getLogger(__name__)
+
+_SHUTDOWN_TIMER_ATTRS = (
+    "gcal_sync_timer",
+    "gcal_quick_sync_timer",
+    "gcal_sleep_timer",
+    "gcal_sleep_poll_timer",
+    "gcal_idle_timer",
+    "ics_sync_timer",
+    "_wake_sync_timer",
+    "search_debounce_timer",
+    "_sync_anim_timer",
+    "_system_theme_refresh_timer",
+    "_stopwatch_timer",
+    "_countdown_timer",
+    "_slow_text_timer",
+    "_ui_refresh_timer",
+    "_away_admin_hold_timer",
+    "_away_password_focus_timer",
+    "_lock_clock_timer",
+    "_overlay_unlock_timer",
+    "_daily_summary_timer",
+    "_geom_persist_timer",
+    "_dock_persist_timer",
+    "_focus_timer",
+)
+
+
+def _release_single_instance_lock(app) -> None:
+    """Detach the shared-memory lock explicitly and tolerate Qt teardown."""
+
+    shared_memory = getattr(app, "_shared_memory", None) if app is not None else None
+    if shared_memory is None:
+        return
+    try:
+        if shared_memory.isAttached():
+            shared_memory.detach()
+    except (AttributeError, RuntimeError):
+        logger.debug("Single-instance lock was already released", exc_info=True)
+    with contextlib.suppress(AttributeError, RuntimeError):
+        delattr(app, "_shared_memory")
+
+
+def _save_window_layout_for_shutdown(window) -> bool:
+    """Best-effort layout persistence that never prevents application exit."""
+
+    if getattr(window, "_layout_saved", False):
+        return True
+    try:
+        from calendar_app.presentation.main_window.window_restore_helpers import (
+            save_window_layout,
+        )
+
+        save_window_layout(window)
+        return True
+    except Exception:
+        logger.exception("Failed to save window layout during shutdown")
+        return False
+
+
+def _detached_process_started(result) -> bool:
+    """Normalize PyQt's platform-dependent startDetached return shape."""
+
+    if isinstance(result, tuple):
+        return bool(result[0]) if result else False
+    return bool(result)
 
 
 def _build_exit_confirmation_box(parent) -> QMessageBox:
@@ -58,35 +124,14 @@ class ActionHandlersMixin(
             DialogActionsMixin.show_calendar_help(self)
 
     def shutdown_background_workers(self, wait_ms=500):
-        if getattr(self, "_is_shutting_down", False):
-            return
+        if getattr(self, "_shutdown_complete", False):
+            return True
+        if getattr(self, "_shutdown_in_progress", False):
+            return False
 
         self._is_shutting_down = True
+        self._shutdown_in_progress = True
         logger.info("Shutting down background workers...")
-
-        if hasattr(self, "close_widget_mode_panels"):
-            try:
-                self.close_widget_mode_panels()
-            except Exception:
-                logger.exception("Failed to close widget-mode panels")
-
-        # 1. Stop all timers
-        for timer_name in (
-            "gcal_sync_timer",
-            "gcal_quick_sync_timer",
-            "gcal_sleep_timer",
-            "gcal_sleep_poll_timer",
-            "search_debounce_timer",
-            "_ui_refresh_timer",
-            "_sync_anim_timer",
-            "_system_theme_refresh_timer",
-        ):
-            timer = getattr(self, timer_name, None)
-            if timer is not None:
-                try:
-                    timer.stop()
-                except Exception:
-                    logger.exception("Failed to stop timer %s", timer_name)
 
         def _is_running(w) -> bool:
             """Qt 객체가 이미 삭제된 경우 RuntimeError를 무시하고 False를 반환."""
@@ -95,9 +140,9 @@ class ActionHandlersMixin(
             except RuntimeError:
                 return False
 
-        def _stop_worker(worker, label, *, stop_method=None) -> None:
+        def _stop_worker(worker, label, *, stop_method=None) -> bool:
             if not _is_running(worker):
-                return
+                return True
 
             try:
                 if stop_method is not None:
@@ -108,13 +153,13 @@ class ActionHandlersMixin(
                 if callable(quit_method):
                     quit_method()
             except RuntimeError:
-                return
+                return True
             except Exception:
                 logger.exception("Failed to request cooperative shutdown for %s", label)
 
             try:
                 if worker.wait(wait_ms):
-                    return
+                    return True
 
                 grace_ms = max(1500, int(wait_ms) * 3)
                 logger.warning(
@@ -129,34 +174,102 @@ class ActionHandlersMixin(
                         "QThread.terminate() was intentionally skipped",
                         label,
                     )
+                    return False
+                return True
             except RuntimeError:
-                return
+                return True
             except Exception:
                 logger.exception("Failed while waiting for %s shutdown", label)
+                return False
 
-        # 2. Stop GCal sync worker
-        sync_worker = getattr(self, "_sync_worker", None)
-        _stop_worker(sync_worker, "sync_worker")
+        shutdown_succeeded = True
+        try:
+            # Stop every known application timer before waiting for workers so
+            # no new refresh/auth/sync work can be scheduled during teardown.
+            for timer_name in _SHUTDOWN_TIMER_ATTRS:
+                timer = getattr(self, timer_name, None)
+                if timer is not None:
+                    try:
+                        timer.stop()
+                    except (AttributeError, RuntimeError):
+                        continue
+                    except Exception:
+                        logger.exception("Failed to stop timer %s", timer_name)
 
-        # 3. Stop general background workers
-        for index, worker in enumerate(list(getattr(self, "_bg_workers", [])), start=1):
-            _stop_worker(worker, f"background_worker[{index}]")
+            if hasattr(self, "close_widget_mode_panels"):
+                try:
+                    self.close_widget_mode_panels()
+                except Exception:
+                    logger.exception("Failed to close widget-mode panels")
 
-        # 4. Stop AlarmWorker (Idle Detector)
-        alarm_worker = getattr(self, "alarm_worker", None)
-        _stop_worker(
-            alarm_worker,
-            "alarm_worker",
-            stop_method=getattr(alarm_worker, "stop", None),
-        )
+            overlay_manager = getattr(self, "overlay_manager", None)
+            shutdown_overlays = getattr(overlay_manager, "shutdown", None)
+            if callable(shutdown_overlays):
+                try:
+                    shutdown_overlays()
+                except Exception:
+                    logger.exception("Failed to shut down desktop overlay widgets")
 
-        # 5. Stop TaskAlarmChecker
-        task_alarm_checker = getattr(self, "task_alarm_checker", None)
-        if task_alarm_checker is not None:
+            seen_workers: set[int] = set()
+
+            def _stop_once(worker, label, *, stop_method=None) -> bool:
+                if worker is None or id(worker) in seen_workers:
+                    return True
+                seen_workers.add(id(worker))
+                return _stop_worker(worker, label, stop_method=stop_method)
+
+            if not _stop_once(getattr(self, "_sync_worker", None), "sync_worker"):
+                shutdown_succeeded = False
+            if not _stop_once(getattr(self, "_auth_worker", None), "auth_worker"):
+                shutdown_succeeded = False
+            for index, worker in enumerate(list(getattr(self, "_bg_workers", [])), start=1):
+                if not _stop_once(worker, f"background_worker[{index}]"):
+                    shutdown_succeeded = False
+
+            alarm_worker = getattr(self, "alarm_worker", None)
+            if not _stop_once(
+                alarm_worker,
+                "alarm_worker",
+                stop_method=getattr(alarm_worker, "stop", None),
+            ):
+                shutdown_succeeded = False
+
+            task_alarm_checker = getattr(self, "task_alarm_checker", None)
+            if task_alarm_checker is not None:
+                try:
+                    task_alarm_checker.stop()
+                except (AttributeError, RuntimeError):
+                    pass
+                except Exception:
+                    logger.exception("Failed to stop task_alarm_checker")
+
+            # This is a Python daemon thread, not a QThread, so it must be
+            # stopped explicitly before database connections and Qt objects
+            # disappear.  atexit remains only as a final fallback.
             try:
-                task_alarm_checker.stop()
+                from calendar_app.infrastructure.google_sync.push_queue import gcal_push_queue
+
+                stopped = gcal_push_queue.stop(timeout=max(1.5, int(wait_ms) / 1000 * 3))
+                if not stopped:
+                    logger.error("gcal_push_queue is still running after shutdown timeout")
+                    shutdown_succeeded = False
             except Exception:
-                logger.exception("Failed to stop task_alarm_checker")
+                logger.exception("Failed to stop gcal_push_queue")
+                shutdown_succeeded = False
+
+            settings = getattr(self, "settings", None)
+            sync_settings = getattr(settings, "sync", None)
+            if callable(sync_settings):
+                try:
+                    sync_settings()
+                except (AttributeError, RuntimeError):
+                    pass
+                except Exception:
+                    logger.exception("Failed to flush application settings")
+        finally:
+            self._shutdown_in_progress = False
+            self._shutdown_complete = shutdown_succeeded
+        return shutdown_succeeded
 
     def request_app_exit(self, checked=False):
         if not self._confirm_app_exit():
@@ -168,17 +281,9 @@ class ActionHandlersMixin(
         if tray_icon is not None:
             tray_icon.hide()
 
-        # 종료 전 윈도우 레이아웃 저장
-        from calendar_app.presentation.main_window.window_restore_helpers import save_window_layout
+        _save_window_layout_for_shutdown(self)
 
-        save_window_layout(self)
-
-        # Explicitly release single instance lock if it exists to help with restarts
         app = QApplication.instance()
-        if app is not None and hasattr(app, "_shared_memory"):
-            # Deleting the shared memory object or detaching it helps the new process start
-            del app._shared_memory
-
         self.close()
         if app is not None:
             app.quit()
@@ -221,27 +326,34 @@ class ActionHandlersMixin(
 
         logger.info("Restarting application via %s %s in %s", executable, args, cwd)
 
-        # Use startDetached with working directory for better stability on Windows
-        QProcess.startDetached(executable, args, cwd)
+        # Use startDetached with working directory for better stability on Windows.
+        # Only tear down this process once the replacement was accepted by Qt.
+        if not _detached_process_started(QProcess.startDetached(executable, args, cwd)):
+            logger.error("Failed to start replacement process for language change")
+            QMessageBox.warning(
+                self,
+                title,
+                t(
+                    "system_msg.restart_failed",
+                    "앱을 자동으로 다시 시작하지 못했습니다. 앱을 직접 다시 실행해 주세요.",
+                ),
+            )
+            return
 
-        # Shutdown background workers and release the lock immediately
+        self._exit_requested = True
         self.shutdown_background_workers(wait_ms=200)
+        _save_window_layout_for_shutdown(self)
         app = QApplication.instance()
-        if hasattr(app, "_shared_memory"):
-            app._shared_memory.detach()
-            del app._shared_memory
-
-        # Give a small window for the OS to see the detach, then force exit
-        logger.info("Application restarting, forcing exit in 500ms...")
-        from PyQt6.QtCore import QTimer
-
-        QTimer.singleShot(500, lambda: os._exit(0))
+        logger.info("Application restarting after graceful shutdown")
+        self.close()
+        if app is not None:
+            app.quit()
 
     def _restart_application_for_locale_tools(self):
         import os
         import sys
 
-        from PyQt6.QtCore import QProcess, QTimer
+        from PyQt6.QtCore import QProcess
 
         if getattr(sys, "frozen", False):
             executable = sys.executable
@@ -252,16 +364,26 @@ class ActionHandlersMixin(
 
         cwd = os.path.dirname(os.path.abspath(sys.argv[0]))
         logger.info("Restarting application via %s %s in %s", executable, args, cwd)
-        QProcess.startDetached(executable, args, cwd)
+        if not _detached_process_started(QProcess.startDetached(executable, args, cwd)):
+            logger.error("Failed to start replacement process from locale tools")
+            QMessageBox.warning(
+                self,
+                t("menu.locale_tools", "로케일 파일 관리"),
+                t(
+                    "system_msg.restart_failed",
+                    "앱을 자동으로 다시 시작하지 못했습니다. 앱을 직접 다시 실행해 주세요.",
+                ),
+            )
+            return
 
+        self._exit_requested = True
         self.shutdown_background_workers(wait_ms=200)
+        _save_window_layout_for_shutdown(self)
         app = QApplication.instance()
-        if hasattr(app, "_shared_memory"):
-            app._shared_memory.detach()
-            del app._shared_memory
-
-        logger.info("Application restarting from locale tools, forcing exit in 500ms...")
-        QTimer.singleShot(500, lambda: os._exit(0))
+        logger.info("Application restarting from locale tools after graceful shutdown")
+        self.close()
+        if app is not None:
+            app.quit()
 
     def open_locale_override_folder(self):
         from PyQt6.QtCore import QUrl

@@ -7,13 +7,17 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMenu, QWidget
 
+from calendar_app.bootstrap import _finalize_runtime
 from calendar_app.infrastructure.runtime.infra_wiring import (
     _create_tray_autostart_action,
     _set_overlay_visible,
     init_tray_icon,
     toggle_overlay,
 )
-from calendar_app.presentation.main_window.action_handlers import ActionHandlersMixin
+from calendar_app.presentation.main_window.action_handlers import (
+    ActionHandlersMixin,
+    _detached_process_started,
+)
 from calendar_app.presentation.main_window.window_events import WindowEventsMixin
 from calendar_app.presentation.main_window.window_shell_actions import WindowShellActionsMixin
 
@@ -72,6 +76,10 @@ class _TrayLifecycleWindow(WindowEventsMixin, QMainWindow):
         self._is_shutting_down = False
         self.is_visible = True
         self.tray_icon = _FakeTrayIcon()
+        self.widget_shutdown_calls = 0
+
+    def close_widget_mode_panels(self):
+        self.widget_shutdown_calls += 1
 
 
 _QT_APP = QApplication.instance() or QApplication([])
@@ -123,9 +131,11 @@ def test_regular_close_hides_to_tray_without_entering_shutdown():
     assert window.is_visible is False
     assert window._is_shutting_down is False
     assert window._exit_requested is False
+    assert window.widget_shutdown_calls == 0
 
     window._exit_requested = True
     window.close()
+    assert window.widget_shutdown_calls == 1
 
 
 def test_unavailable_system_tray_is_recorded_for_close_fallback():
@@ -276,3 +286,156 @@ def test_shutdown_uses_cooperative_worker_stop_without_qthread_terminate():
     assert worker.quit_calls == 1
     assert worker.wait_calls == [1, 1500]
     assert worker.terminate_calls == 0
+
+
+def test_shutdown_is_idempotent_and_covers_auth_queue_settings_and_duplicate_workers():
+    class _FakeWorker:
+        def __init__(self, *, uses_stop=False):
+            self.uses_stop = uses_stop
+            self.stop_calls = 0
+            self.interruption_calls = 0
+            self.quit_calls = 0
+            self.wait_calls = []
+
+        def isRunning(self):
+            return True
+
+        def stop(self):
+            self.stop_calls += 1
+
+        def requestInterruption(self):
+            self.interruption_calls += 1
+
+        def quit(self):
+            self.quit_calls += 1
+
+        def wait(self, timeout):
+            self.wait_calls.append(timeout)
+            return True
+
+    class _FakeTimer:
+        def __init__(self):
+            self.stop_calls = 0
+
+        def stop(self):
+            self.stop_calls += 1
+
+    class _FakeSettings:
+        def __init__(self):
+            self.sync_calls = 0
+
+        def sync(self):
+            self.sync_calls += 1
+
+    class _FakeChecker:
+        def __init__(self):
+            self.stop_calls = 0
+
+        def stop(self):
+            self.stop_calls += 1
+
+    class _ShutdownHost:
+        def __init__(self):
+            self._is_shutting_down = False
+            self._shutdown_in_progress = False
+            self._shutdown_complete = False
+            self._sync_worker = _FakeWorker()
+            self._auth_worker = _FakeWorker()
+            self.alarm_worker = _FakeWorker(uses_stop=True)
+            # Duplicate references must still be stopped only once.
+            self._bg_workers = [self._sync_worker, self._auth_worker]
+            self.task_alarm_checker = _FakeChecker()
+            self.settings = _FakeSettings()
+            self._ui_refresh_timer = _FakeTimer()
+            self.widget_shutdown_calls = 0
+
+        def close_widget_mode_panels(self):
+            self.widget_shutdown_calls += 1
+
+    host = _ShutdownHost()
+
+    with patch(
+        "calendar_app.infrastructure.google_sync.push_queue.gcal_push_queue.stop",
+        return_value=True,
+    ) as stop_push_queue:
+        ActionHandlersMixin.shutdown_background_workers(host, wait_ms=25)
+        ActionHandlersMixin.shutdown_background_workers(host, wait_ms=25)
+
+    assert host._shutdown_complete is True
+    assert host.widget_shutdown_calls == 1
+    assert host._ui_refresh_timer.stop_calls == 1
+    assert host._sync_worker.interruption_calls == 1
+    assert host._auth_worker.interruption_calls == 1
+    assert host.alarm_worker.stop_calls == 1
+    assert host.task_alarm_checker.stop_calls == 1
+    assert host.settings.sync_calls == 1
+    stop_push_queue.assert_called_once()
+
+
+def test_close_event_delegates_to_shared_shutdown_without_fallback_duplication():
+    class _SharedShutdownWindow(_TrayLifecycleWindow):
+        def __init__(self):
+            super().__init__()
+            self.shared_shutdown_calls = 0
+
+        def shutdown_background_workers(self):
+            self.shared_shutdown_calls += 1
+
+    window = _SharedShutdownWindow()
+    window._exit_requested = True
+
+    with patch(
+        "calendar_app.presentation.main_window.action_handlers._save_window_layout_for_shutdown",
+        return_value=True,
+    ):
+        window.close()
+
+    assert window.shared_shutdown_calls == 1
+    assert window.widget_shutdown_calls == 0
+
+
+def test_start_detached_result_normalization_handles_pyqt_return_shapes():
+    assert _detached_process_started((True, 1234)) is True
+    assert _detached_process_started((False, 0)) is False
+    assert _detached_process_started(True) is True
+    assert _detached_process_started(False) is False
+
+
+def test_runtime_finalizer_stops_pump_workers_db_and_lock_once():
+    calls = []
+
+    class _Pump:
+        def stop(self):
+            calls.append("pump")
+
+    class _Application:
+        def __init__(self):
+            self._sigint_pump = _Pump()
+            self._runtime_shutdown_complete = False
+
+    class _Window:
+        def shutdown_background_workers(self):
+            calls.append("workers")
+
+    application = _Application()
+    window = _Window()
+
+    with (
+        patch(
+            "calendar_app.presentation.main_window.action_handlers."
+            "_save_window_layout_for_shutdown",
+            side_effect=lambda _window: calls.append("layout"),
+        ),
+        patch(
+            "calendar_app.infrastructure.db.database_unified.db_manager.close_all_connections",
+            side_effect=lambda: calls.append("db"),
+        ),
+        patch(
+            "calendar_app.presentation.main_window.action_handlers._release_single_instance_lock",
+            side_effect=lambda _app: calls.append("lock"),
+        ),
+    ):
+        _finalize_runtime(application, window)
+        _finalize_runtime(application, window)
+
+    assert calls == ["pump", "workers", "layout", "db", "lock"]

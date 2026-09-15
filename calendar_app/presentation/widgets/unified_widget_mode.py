@@ -1,14 +1,37 @@
 # -*- coding: utf-8 -*-
-from PyQt6.QtCore import QDate, QLocale, QPoint, QSize, Qt, QTime, QTimer, pyqtSignal
-from PyQt6.QtGui import QContextMenuEvent
+from PyQt6.QtCore import (
+    QDate,
+    QEvent,
+    QLocale,
+    QPoint,
+    QSize,
+    Qt,
+    QTime,
+    QTimer,
+    pyqtSignal,
+)
+from PyQt6.QtGui import (
+    QColor,
+    QContextMenuEvent,
+    QFont,
+    QPainter,
+    QPen,
+)
 from PyQt6.QtWidgets import (
     QApplication,
+    QCalendarWidget,
+    QCheckBox,
+    QDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QLayout,
     QMenu,
+    QPushButton,
     QScrollArea,
+    QSizeGrip,
+    QSizePolicy,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -23,10 +46,16 @@ from calendar_app.presentation.widgets.panel_widget_mode import (
     _parse_quick_add_text,
     _resolve_widget_mode_tokens,
 )
+from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor
 from calendar_app.presentation.widgets.panel_widget_theme import (
     _apply_configured_widget_color,
     _apply_registered_widget_mode_skin,
     _widget_mode_menu_stylesheet,
+)
+from calendar_app.presentation.widgets.widget_mode_density import (
+    DENSITIES,
+    DENSITY_KEY,
+    read_widget_density,
 )
 from calendar_app.presentation.widgets.widget_mode_geometry import (
     best_available_geometry,
@@ -37,6 +66,10 @@ from calendar_app.presentation.widgets.widget_mode_geometry import (
     restore_rect,
     serialize_geometry,
 )
+from calendar_app.presentation.widgets.widget_mode_opacity import (
+    apply_widget_opacity,
+    read_widget_opacities,
+)
 from calendar_app.presentation.widgets.widget_mode_skins import (
     get_widget_mode_layout,
     read_widget_mode_layout_id,
@@ -46,6 +79,15 @@ from calendar_app.presentation.widgets.widget_mode_skins import (
     write_widget_mode_layout_id,
     write_widget_mode_skin_id,
 )
+from calendar_app.presentation.widgets.widget_mode_typography import (
+    read_widget_typography,
+)
+from calendar_app.presentation.widgets.widget_mode_visibility import (
+    read_widget_calendar_visibility,
+    write_widget_calendar_visibility,
+)
+from calendar_app.shared.icon_map import ICON
+from calendar_app.shared.icon_map import icon as _ic
 
 
 def _safe_text(value) -> str:
@@ -138,9 +180,9 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
         }}
         QLabel#unified_clock {{
             color: {tk.get("text_primary", "#ffffff")};
-            font-size: 27pt;
+            font-size: 15pt;
             font-weight: 800;
-            letter-spacing: -0.8px;
+            letter-spacing: 0px;
             background: transparent;
         }}
         QLabel#unified_date {{
@@ -311,45 +353,341 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
     """
 
 
+class _CompletionCheckBox(QCheckBox):
+    """Theme-aware indicator retaining native checkbox keyboard/accessibility behavior."""
+
+    def __init__(self, controller, parent):
+        super().__init__(parent)
+        self._controller = controller
+        self.setFixedSize(24, 24)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def paintEvent(self, event):
+        tokens = _widget_theme_tokens(self._controller.main_window)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(
+            QPen(QColor(tokens["accent"] if self.isChecked() else tokens["text_secondary"]), 1.5)
+        )
+        background = css_to_qcolor(tokens["section_bg"])
+        background.setAlpha(
+            round(
+                background.alpha()
+                * read_widget_opacities(self._controller.main_window.settings)[1]
+                / 100
+            )
+        )
+        painter.setBrush(background)
+        painter.drawRoundedRect(3, 3, 18, 18, 5, 5)
+        if self.isChecked():
+            painter.drawPixmap(5, 5, _ic(ICON.CHECK, color=tokens["accent"]).pixmap(14, 14))
+        if self.hasFocus():
+            painter.setPen(QPen(QColor(tokens["accent"]), 1, Qt.PenStyle.DotLine))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRoundedRect(1, 1, 22, 22, 6, 6)
+        painter.end()
+
+
+class _AgendaTitleButton(QPushButton):
+    """Keep the full accessible title while fitting long text into a small row."""
+
+    def __init__(self, title, parent):
+        super().__init__(title, parent)
+        self._full_title = title
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.setText(
+            self.fontMetrics().elidedText(
+                self._full_title, Qt.TextElideMode.ElideRight, max(0, self.width() - 4)
+            )
+        )
+
+
 class AgendaItemWidget(QFrame):
-    def __init__(self, title: str, time_text: str, *, is_task: bool = False, parent=None):
+    def __init__(
+        self,
+        title: str,
+        time_text: str,
+        *,
+        is_task: bool = False,
+        item=None,
+        controller=None,
+        parent=None,
+    ):
         super().__init__(parent)
         self.setObjectName("agenda_item_task" if is_task else "agenda_item_schedule")
+        density = read_widget_density(controller.main_window.settings if controller else None)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(14, 12, 14, 12)
-        layout.setSpacing(12)
+        layout.setContentsMargins(10, density.vertical_margin, 10, density.vertical_margin)
+        layout.setSpacing(8)
 
         marker = QFrame(self)
         marker.setObjectName(
             "agenda_item_marker_task" if is_task else "agenda_item_marker_schedule"
         )
         marker.setFixedSize(10, 10)
-        layout.addWidget(marker, 0, Qt.AlignmentFlag.AlignTop)
+        marker_slot = QWidget(self)
+        marker_slot.setObjectName("agenda_item_marker_slot")
+        marker_slot.setFixedSize(24, 28)
+        marker_layout = QVBoxLayout(marker_slot)
+        marker_layout.setContentsMargins(0, 0, 0, 0)
+        marker_layout.addWidget(marker, 0, Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(marker_slot, 0, Qt.AlignmentFlag.AlignTop)
+        item = item or {}
+        self.setProperty("completed", bool(item.get("completed")))
+        if is_task and item.get("item_id") and controller is not None:
+            marker_slot.hide()
+            check = _CompletionCheckBox(controller, self)
+            check.setObjectName("agenda_complete")
+            check.setChecked(bool(item.get("completed")))
+            check.setAccessibleName(
+                t("widget_mode.complete_named", "완료 상태 변경: {name}", name=title)
+            )
+            check.setToolTip(check.accessibleName())
+            check.clicked.connect(lambda checked: controller.set_item_completed(item, checked))
+            layout.insertWidget(0, check, 0, Qt.AlignmentFlag.AlignTop)
 
         body = QVBoxLayout()
         body.setContentsMargins(0, 0, 0, 0)
         body.setSpacing(3)
         layout.addLayout(body, 1)
 
-        title_label = QLabel(title, self)
+        title_label = (
+            _AgendaTitleButton(title, self)
+            if item.get("item_id") and controller
+            else QLabel(title, self)
+        )
         title_label.setObjectName("agenda_item_title")
-        title_label.setWordWrap(True)
+        if isinstance(title_label, QPushButton):
+            title_label.setFlat(True)
+            title_label.setCursor(Qt.CursorShape.PointingHandCursor)
+            title_label.clicked.connect(lambda: controller.open_item(item))
+            title_label.setAccessibleName(t("widget_mode.open_named", "열기: {name}", name=title))
+            title_label.setMinimumWidth(0)
+            typography = read_widget_typography(controller.main_window.settings)
+            title_label.setMinimumHeight(
+                max(28, int(typography.title * 1.5 + density.title_padding))
+            )
+            title_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        else:
+            title_label.setWordWrap(True)
         title_label.setToolTip(title)
         body.addWidget(title_label)
 
-        meta_label = QLabel(
-            t("widget_mode.task_type", "Work")
-            if is_task
-            else t("widget_mode.schedule_type", "Schedule"),
-            self,
-        )
-        meta_label.setObjectName("agenda_item_meta")
-        body.addWidget(meta_label)
-
+        # Section headings already identify schedules/work. Keep only useful metadata.
         time_label = QLabel(_safe_text(time_text), self)
         time_label.setObjectName("agenda_item_time")
         time_label.setVisible(bool(_safe_text(time_text)))
-        layout.addWidget(time_label, 0, Qt.AlignmentFlag.AlignTop)
+        if density.key == "compact":
+            layout.addWidget(time_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        else:
+            body.addWidget(time_label)
+        self.setMinimumHeight(body.minimumSize().height() + density.vertical_margin * 2)
+
+
+class _CompactMonthCalendar(QWidget):
+    """Transparent six-week month grid using the widget's semantic tokens."""
+
+    dateClicked = pyqtSignal(QDate)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("unified_month_calendar")
+        self.setAccessibleName(t("widget_mode.month_calendar", "월간 날짜 선택"))
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._tokens: dict[str, str] = {}
+        self._selected_date = QDate.currentDate()
+        self._dates: list[QDate] = []
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(4)
+        navigation = QHBoxLayout()
+        navigation.setContentsMargins(0, 0, 0, 0)
+        navigation.setSpacing(4)
+        self.previous_btn = QToolButton(self)
+        self.previous_btn.setObjectName("unified_month_nav")
+        self.previous_btn.setArrowType(Qt.ArrowType.LeftArrow)
+        self.previous_btn.setAccessibleName(t("widget_mode.month_prev", "이전 달"))
+        self.previous_btn.setToolTip(self.previous_btn.accessibleName())
+        self.previous_btn.clicked.connect(lambda: self._navigate_month(-1))
+        navigation.addWidget(self.previous_btn)
+        navigation.addStretch(1)
+        self.month_label = QLabel(self)
+        self.month_label.setObjectName("unified_month_title")
+        self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.month_label.setMinimumWidth(110)
+        self.month_label.setFixedHeight(30)
+        navigation.addWidget(self.month_label)
+        navigation.addStretch(1)
+        self.next_btn = QToolButton(self)
+        self.next_btn.setObjectName("unified_month_nav")
+        self.next_btn.setArrowType(Qt.ArrowType.RightArrow)
+        self.next_btn.setAccessibleName(t("widget_mode.month_next", "다음 달"))
+        self.next_btn.setToolTip(self.next_btn.accessibleName())
+        self.next_btn.clicked.connect(lambda: self._navigate_month(1))
+        navigation.addWidget(self.next_btn)
+        root.addLayout(navigation)
+
+        self.weekday_row = QHBoxLayout()
+        self.weekday_row.setContentsMargins(0, 0, 0, 0)
+        self.weekday_row.setSpacing(2)
+        self.weekday_labels: list[QLabel] = []
+        weekday_keys = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+        for key in weekday_keys:
+            label = QLabel(self)
+            label.setObjectName("unified_month_weekday")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setFixedHeight(24)
+            label.setText(t(f"weekday.{key}", key.title()))
+            self.weekday_row.addWidget(label, 1)
+            self.weekday_labels.append(label)
+        root.addLayout(self.weekday_row)
+
+        self.day_grid = QGridLayout()
+        self.day_grid.setContentsMargins(0, 0, 0, 0)
+        self.day_grid.setHorizontalSpacing(2)
+        self.day_grid.setVerticalSpacing(2)
+        self.day_buttons: list[QToolButton] = []
+        for index in range(42):
+            button = QToolButton(self)
+            button.setObjectName("unified_month_day")
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.clicked.connect(lambda _checked=False, idx=index: self._emit_clicked(idx))
+            self.day_grid.addWidget(button, index // 7, index % 7)
+            self.day_buttons.append(button)
+        root.addLayout(self.day_grid, 1)
+        self.update_month(self._selected_date)
+
+    def selectedDate(self) -> QDate:
+        return QDate(self._selected_date)
+
+    def setSelectedDate(self, selected: QDate) -> None:
+        if not isinstance(selected, QDate) or not selected.isValid():
+            return
+        self._selected_date = QDate(selected)
+        self.update_month(selected)
+
+    def set_theme_tokens(
+        self,
+        tokens: dict[str, str],
+        *,
+        opacities=(100, 100),
+        font_size: float = 9.4,
+    ) -> None:
+        normalized = dict(tokens or {})
+        normalized["_text_opacity"], normalized["_background_opacity"] = opacities
+        normalized["_font_size"] = float(font_size)
+        if normalized == self._tokens:
+            return
+        self._tokens = normalized
+        self._apply_style()
+        self.update_month(self._selected_date, force=True)
+
+    def apply_layout_metrics(self, *, cell_height: int, spacing: int) -> None:
+        height = max(25, int(cell_height * 0.62))
+        for button in self.day_buttons:
+            button.setMinimumSize(24, height)
+            button.setMaximumHeight(height)
+            button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        gap = max(1, min(4, int(spacing)))
+        self.day_grid.setHorizontalSpacing(gap)
+        self.day_grid.setVerticalSpacing(gap)
+        self.setMinimumHeight(62 + (height * 6) + (gap * 5))
+
+    def _apply_style(self) -> None:
+        tk = self._tokens
+        if not tk:
+            return
+        font_size = float(tk.get("_font_size", 9.4))
+        self.setStyleSheet(
+            apply_widget_opacity(
+                f"""
+                QWidget#unified_month_calendar {{ background: transparent; border: none; }}
+                QLabel#unified_month_title {{ color: {tk["text_primary"]};
+                    background: transparent; font-size: {font_size:.1f}pt;
+                    font-weight: 700; }}
+                QLabel#unified_month_weekday {{ color: {tk["text_secondary"]};
+                    background: transparent; font-size: {max(7.5, font_size - 1.2):.1f}pt;
+                    font-weight: 600; padding: 2px 0; }}
+                QToolButton#unified_month_nav {{ color: {tk["text_secondary"]};
+                    background: transparent; border: 1px solid transparent;
+                    border-radius: 6px; min-width: 28px; min-height: 26px; }}
+                QToolButton#unified_month_nav:hover {{ color: {tk["text_primary"]};
+                    background: {tk.get("button_hover", tk["surface_alt"])}; }}
+                """,
+                tk.get("_text_opacity", 100),
+                tk.get("_background_opacity", 100),
+            )
+        )
+
+    def _day_stylesheet(self, day: QDate, *, current_month: int, today: QDate) -> str:
+        tk = self._tokens
+        if not tk:
+            return ""
+        text = (
+            tk.get("text_faint", tk["text_secondary"])
+            if day.month() != current_month
+            else tk["text_secondary"]
+        )
+        if day.month() == current_month and day.dayOfWeek() in {
+            Qt.DayOfWeek.Saturday.value,
+            Qt.DayOfWeek.Sunday.value,
+        }:
+            text = tk.get("accent_deep", tk["text_primary"])
+        background = "transparent"
+        border = "transparent"
+        weight = 500
+        if day == today:
+            border = tk.get("hero_border", tk["accent"])
+            text = tk["text_primary"]
+        if day == self._selected_date:
+            background = tk.get("hero_bg_strong", tk["surface_alt"])
+            border = tk.get("hero_border", tk["accent"])
+            text = tk.get("accent_deep", tk["text_primary"])
+            weight = 700
+        font_size = float(tk.get("_font_size", 9.4))
+        return apply_widget_opacity(
+            f"""
+            QToolButton {{ color: {text}; background: {background};
+                border: 1px solid {border}; border-radius: 7px;
+                font-size: {font_size:.1f}pt; font-weight: {weight}; padding: 2px; }}
+            QToolButton:hover {{ color: {tk["text_primary"]};
+                background: {tk.get("button_hover", tk["surface_alt"])}; }}
+            """,
+            tk.get("_text_opacity", 100),
+            tk.get("_background_opacity", 100),
+        )
+
+    def _navigate_month(self, delta: int) -> None:
+        self.dateClicked.emit(self._selected_date.addMonths(int(delta)))
+
+    def _emit_clicked(self, index: int) -> None:
+        if 0 <= index < len(self._dates):
+            self.dateClicked.emit(self._dates[index])
+
+    def update_month(self, selected: QDate, *, force: bool = False) -> None:
+        if not isinstance(selected, QDate) or not selected.isValid():
+            return
+        self._selected_date = QDate(selected)
+        first = QDate(selected.year(), selected.month(), 1)
+        grid_start = first.addDays(1 - first.dayOfWeek())
+        self.month_label.setText(f"{selected.year()}. {selected.month():02d}")
+        weekday_keys = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+        for key, label in zip(weekday_keys, self.weekday_labels, strict=True):
+            label.setText(t(f"weekday.{key}", key.title()))
+        self._dates = []
+        today = QDate.currentDate()
+        for index, button in enumerate(self.day_buttons):
+            day = grid_start.addDays(index)
+            self._dates.append(day)
+            button.setText(str(day.day()))
+            button.setToolTip(_format_compact_date_with_weekday(day))
+            button.setAccessibleName(button.toolTip())
+            button.setStyleSheet(
+                self._day_stylesheet(day, current_month=selected.month(), today=today)
+            )
 
 
 class CompactCalendarGrid(QWidget):
@@ -360,14 +698,19 @@ class CompactCalendarGrid(QWidget):
         self._tokens: dict[str, str] = {}
         self._buttons = []
         self._last_render_state = None
+        self._display_mode = "week"
+        self._selected_date = QDate.currentDate()
         self.setObjectName("unified_calendar_section")
         self._root_layout = QVBoxLayout(self)
         self._root_layout.setContentsMargins(0, 0, 0, 0)
         self._root_layout.setSpacing(6)
 
-        self._row_layout = QHBoxLayout()
+        self._week_strip = QWidget(self)
+        self._week_strip.setObjectName("unified_week_strip")
+        self._row_layout = QHBoxLayout(self._week_strip)
+        self._row_layout.setContentsMargins(0, 0, 0, 0)
         self._row_layout.setSpacing(6)
-        self._root_layout.addLayout(self._row_layout)
+        self._root_layout.addWidget(self._week_strip)
 
         for index in range(7):
             button = QToolButton(self)
@@ -378,8 +721,27 @@ class CompactCalendarGrid(QWidget):
             self._row_layout.addWidget(button)
             self._buttons.append(button)
 
+        self.month_calendar = _CompactMonthCalendar(self)
+        self.month_calendar.dateClicked.connect(self.dateClicked)
+        self.month_calendar.hide()
+        self._root_layout.addWidget(self.month_calendar, 1)
+
         self._dates = []
         self.update_grid()
+
+    @property
+    def display_mode(self) -> str:
+        return self._display_mode
+
+    def set_display_mode(self, mode: str) -> None:
+        normalized = "month" if str(mode).lower() == "month" else "week"
+        if normalized == self._display_mode:
+            return
+        self._display_mode = normalized
+        self._week_strip.setVisible(normalized == "week")
+        self.month_calendar.setVisible(normalized == "month")
+        self._last_render_state = None
+        self.update_grid(self._selected_date)
 
     def apply_layout_metrics(
         self,
@@ -390,16 +752,31 @@ class CompactCalendarGrid(QWidget):
     ) -> None:
         width, height = cell_size
         for button in self._buttons:
-            button.setFixedSize(max(30, width), max(38, height))
+            button.setMinimumSize(28, max(38, height))
+            button.setMaximumSize(16777215, max(38, height))
+        self.month_calendar.apply_layout_metrics(cell_height=height, spacing=spacing)
         self._row_layout.setSpacing(max(0, spacing))
         self._root_layout.setContentsMargins(*margins)
 
-    def set_theme_tokens(self, tokens: dict[str, str]) -> None:
+    def set_theme_tokens(
+        self,
+        tokens: dict[str, str],
+        *,
+        opacities=(100, 100),
+        font_size: float = 9.4,
+    ) -> None:
         normalized = dict(tokens or {})
+        normalized["_text_opacity"], normalized["_background_opacity"] = opacities
+        normalized["_font_size"] = float(font_size)
         if normalized == self._tokens:
             return
         self._tokens = normalized
         self._last_render_state = None
+        self.month_calendar.set_theme_tokens(
+            tokens,
+            opacities=opacities,
+            font_size=font_size,
+        )
 
     def _button_stylesheet(self, day: QDate, today: QDate, selected: QDate) -> str:
         tk = self._tokens or {
@@ -413,38 +790,52 @@ class CompactCalendarGrid(QWidget):
             "hero_border": "rgba(34,195,202,110)",
             "accent_deep": "#22c3ca",
         }
-        border = tk.get("section_border_soft", "rgba(255,255,255,14)")
-        background = tk.get("surface_alt", "rgba(24, 26, 34, 180)")
+        border = "transparent"
+        border_bottom = "transparent"
+        background = "transparent"
         text = tk.get("text_secondary", "#b0b8d0")
-        weight = "600"
+        weight = "500"
         if day == today:
-            border = tk.get("hero_border", border)
-            background = tk.get("hero_bg", background)
+            border = tk.get("section_border_soft", tk.get("hero_border", border))
+            border_bottom = tk.get("accent", tk.get("hero_border", border))
+            background = tk.get("hero_bg", tk.get("surface_alt", background))
             text = tk.get("text_primary", "#ffffff")
+            weight = "600"
         if day == selected:
-            border = tk.get("hero_border", border)
+            border = tk.get("hero_border", tk.get("accent", border))
+            border_bottom = tk.get("accent_deep", tk.get("accent", border))
             background = (
                 "qlineargradient("
                 "x1: 0, y1: 0, x2: 1, y2: 1,"
-                f"stop: 0 {tk.get('hero_bg_strong', background)},"
-                f"stop: 1 {tk.get('section_bg_alt', background)}"
+                f"stop: 0 {tk.get('hero_bg_strong', tk.get('surface_alt', background))},"
+                f"stop: 1 {tk.get('section_bg_alt', tk.get('surface_alt', background))}"
                 ")"
             )
             text = tk.get("accent_deep", tk.get("text_primary", "#ffffff"))
-            weight = "800"
-        return (
-            "QToolButton {"
-            f"background: {background};"
-            f"border: 1px solid {border};"
-            "border-radius: 14px;"
-            f"color: {text};"
-            "font-size: 9.4pt;"
-            f"font-weight: {weight};"
-            "padding: 5px 0 6px 0;"
-            "}"
-            "QToolButton:hover {"
-            f"background: {tk.get('button_hover', tk.get('section_bg_alt', 'rgba(255, 255, 255, 12)'))};"
-            "}"
+            weight = "700"
+        return apply_widget_opacity(
+            (
+                "QToolButton {"
+                f"background: {background};"
+                f"border: 1px solid {border};"
+                f"border-bottom: 3px solid {border_bottom};"
+                "border-radius: 8px;"
+                f"color: {text};"
+                f"font-size: {float(tk.get('_font_size', 9.4)):.1f}pt;"
+                f"font-weight: {weight};"
+                "padding: 5px 2px 4px 2px;"
+                "}"
+                "QToolButton:hover {"
+                f"background: {tk.get('button_hover', tk.get('section_bg_alt', 'rgba(255, 255, 255, 12)'))};"
+                f"border: 1px solid {tk.get('hero_border', border)};"
+                f"border-bottom: 3px solid {border_bottom};"
+                "}"
+                "QToolButton:focus {"
+                f"border: 2px solid {tk.get('accent', tk.get('hero_border', border))};"
+                "}"
+            ),
+            tk.get("_text_opacity", 100),
+            tk.get("_background_opacity", 100),
         )
 
     def _emit_clicked(self, index: int) -> None:
@@ -459,10 +850,12 @@ class CompactCalendarGrid(QWidget):
             if isinstance(selected_date, QDate) and selected_date.isValid()
             else QDate.currentDate()
         )
+        self._selected_date = selected
         today = QDate.currentDate()
         week_start = selected.addDays(1 - selected.dayOfWeek())
         locale = QLocale()
         state = (
+            self._display_mode,
             selected.toString("yyyy-MM-dd"),
             today.toString("yyyy-MM-dd"),
             week_start.toString("yyyy-MM-dd"),
@@ -471,6 +864,7 @@ class CompactCalendarGrid(QWidget):
         if state == self._last_render_state:
             return
         self._last_render_state = state
+        self.month_calendar.setSelectedDate(selected)
 
         self._dates = []
         for offset, button in enumerate(self._buttons):
@@ -480,6 +874,10 @@ class CompactCalendarGrid(QWidget):
                 day.dayOfWeek(), QLocale.FormatType.ShortFormat
             ).strip() or day.toString("ddd")
             button.setText(f"{weekday}\n{day.day()}")
+            button.setProperty(
+                "dateState",
+                "selected" if day == selected else "today" if day == today else "default",
+            )
             button.setStyleSheet(self._button_stylesheet(day, today, selected))
 
 
@@ -487,10 +885,11 @@ class UnifiedWidgetWindow(QWidget):
     def __init__(self, controller):
         super().__init__(None)
         self.controller = controller
-        self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.Tool
-            | Qt.WindowType.WindowStaysOnTopHint
+        settings = controller.main_window.settings
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
+        self.setWindowFlag(
+            Qt.WindowType.WindowStaysOnTopHint,
+            str(settings.value("widget_mode_always_top", "true")).lower() == "true",
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.resize(360, 560)
@@ -501,13 +900,46 @@ class UnifiedWidgetWindow(QWidget):
         self._active_layout_id = ""
         self._active_filter = "all"
         self._filter_buttons: dict[str, QToolButton] = {}
+        self._data_state = "ready"
+        self._drag_offset = None
 
         self._build_ui()
         self._setup_refresh_timer()
 
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        self.surface = QFrame(self)
+        self.surface.setObjectName("unified_surface")
+        main_layout.addWidget(self.surface)
+        surface_layout = QVBoxLayout(self.surface)
+        surface_layout.setContentsMargins(14, 10, 14, 8)
+        surface_layout.setSpacing(4)
+
+        self.toolbar = QFrame(self)
+        self.toolbar.setObjectName("unified_toolbar")
+        bar = QHBoxLayout(self.toolbar)
+        bar.setContentsMargins(0, 0, 0, 0)
+        bar.setSpacing(2)
+        self.toolbar.installEventFilter(self)
+        self.restore_btn = self._button(
+            t("widget_mode.return_main", "메인 화면으로"), self.controller.return_to_main
+        )
+        bar.addWidget(self.restore_btn)
+        bar.addStretch(1)
+        self.pin_btn = self._button(t("widget_mode.pin", "항상 위"), self._toggle_pin)
+        self.pin_btn.setCheckable(True)
+        self.pin_btn.setChecked(bool(self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint))
+        bar.addWidget(self.pin_btn)
+        self.customize_btn = self._button(
+            t("widget_mode.customize", "꾸미기"), self.open_customization
+        )
+        bar.addWidget(self.customize_btn)
+        self.more_btn = self._button("...", self._show_more_menu)
+        self.more_btn.setAccessibleName(t("widget_mode.more", "더 보기"))
+        self.more_btn.setToolTip(self.more_btn.accessibleName())
+        bar.addWidget(self.more_btn)
+        surface_layout.addWidget(self.toolbar)
 
         self.container = QFrame(self)
         self.container.setObjectName("unified_container")
@@ -544,7 +976,26 @@ class UnifiedWidgetWindow(QWidget):
 
         actions = QHBoxLayout()
         actions.setSpacing(6)
-        header.addLayout(actions)
+        self.hero_layout.addLayout(actions)
+
+        self.previous_week_btn = self._button(
+            "‹",
+            lambda: self.controller.set_target_date(self.controller._current_date().addDays(-7)),
+        )
+        self.previous_week_btn.setToolTip(t("widget_mode.previous_week", "이전 주"))
+        self.previous_week_btn.setAccessibleName(self.previous_week_btn.toolTip())
+        actions.addWidget(self.previous_week_btn)
+        self.date_picker_btn = self._button(
+            t("widget_mode.pick_date", "날짜 선택"), self._pick_date
+        )
+        actions.addWidget(self.date_picker_btn)
+        self.next_week_btn = self._button(
+            "›", lambda: self.controller.set_target_date(self.controller._current_date().addDays(7))
+        )
+        self.next_week_btn.setToolTip(t("widget_mode.next_week", "다음 주"))
+        self.next_week_btn.setAccessibleName(self.next_week_btn.toolTip())
+        actions.addWidget(self.next_week_btn)
+        actions.addStretch(1)
 
         self.today_btn = QToolButton(self.hero)
         self.today_btn.setObjectName("unified_action_btn")
@@ -555,8 +1006,7 @@ class UnifiedWidgetWindow(QWidget):
         self.add_btn = QToolButton(self.hero)
         self.add_btn.setObjectName("unified_primary_action")
         self.add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.add_btn.clicked.connect(self.controller.open_quick_add_dialog)
-        actions.addWidget(self.add_btn)
+        self.add_btn.clicked.connect(self._add_item)
 
         info_row = QHBoxLayout()
         info_row.setSpacing(6)
@@ -597,6 +1047,10 @@ class UnifiedWidgetWindow(QWidget):
             self.filter_row.addWidget(btn)
             self._filter_buttons[mode] = btn
         self.filter_row.addStretch(1)
+        self.week_toggle_btn = self._button(t("widget_mode.week_toggle", "주간"), self._toggle_week)
+        self.week_toggle_btn.setCheckable(True)
+        self.filter_row.addWidget(self.week_toggle_btn)
+        self.filter_row.addWidget(self.add_btn)
 
         self.agenda_section = QFrame(self.container)
         self.agenda_section.setObjectName("unified_agenda_section")
@@ -606,25 +1060,164 @@ class UnifiedWidgetWindow(QWidget):
 
         self.agenda_header = QLabel(t("widget_mode.focus_list", "FOCUS LIST"), self.agenda_section)
         self.agenda_header.setObjectName("unified_section")
-        self.agenda_layout.addWidget(self.agenda_header)
+        self.agenda_header.hide()
 
         self.scroll = QScrollArea(self)
         self.scroll.setObjectName("unified_scroll")
         self.scroll.setWidgetResizable(True)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll.viewport().setObjectName("unified_scroll_viewport")
         self.scroll_content = QWidget()
         self.scroll_content.setObjectName("unified_scroll_content")
         self.scroll_layout = QVBoxLayout(self.scroll_content)
+        self.scroll_layout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
         self.scroll_layout.setContentsMargins(0, 0, 0, 0)
         self.scroll_layout.setSpacing(8)
         self.scroll_layout.addStretch()
         self.scroll.setWidget(self.scroll_content)
         self.agenda_layout.addWidget(self.scroll, 1)
 
-        main_layout.addWidget(self.container)
+        surface_layout.addWidget(self.container, 1)
+        footer = QHBoxLayout()
+        self.completed_btn = self._button(
+            t("widget_mode.show_completed", "완료 업무 보기"), self._toggle_completed
+        )
+        self.completed_btn.setCheckable(True)
+        self.completed_btn.setChecked(
+            str(
+                self.controller.main_window.settings.value("widget_mode_show_completed", "false")
+            ).lower()
+            == "true"
+        )
+        footer.addWidget(self.completed_btn)
+        footer.addStretch(1)
+        self.undo_btn = self._button(
+            t("widget_mode.undo", "실행 취소"), self.controller.undo_completion
+        )
+        self.undo_btn.hide()
+        footer.addWidget(self.undo_btn)
+        footer.addWidget(self.count_chip)
+        footer.addWidget(self.clock_label)
+        self.size_grip = QSizeGrip(self)
+        footer.addWidget(self.size_grip)
+        surface_layout.addLayout(footer)
+        self.feedback_label = QLabel(self)
+        self.feedback_label.setWordWrap(True)
+        self.feedback_label.setObjectName("unified_hint")
+        self.feedback_label.hide()
+        surface_layout.addWidget(self.feedback_label)
+        # Reuse existing routes/controls while removing the separate hero/navigation rows.
+        bar.insertWidget(1, self.date_picker_btn)
+        bar.insertWidget(3, self.today_btn)
+        self.date_picker_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.date_picker_btn.setMinimumWidth(0)
+        self.date_picker_btn.setArrowType(Qt.ArrowType.DownArrow)
+        self.date_picker_btn.setProperty("datePicker", True)
+        for button in (self.restore_btn, self.pin_btn, self.customize_btn, self.more_btn):
+            button.setProperty("compactControl", True)
+        self.date_label.hide()
+        self.previous_week_btn.hide()
+        self.next_week_btn.hide()
         self.apply_selected_layout(resize_to_layout=True)
         self.apply_theme()
         self._sync_filter_buttons()
+
+    def _button(self, text, callback):
+        button = QToolButton(self)
+        button.setObjectName("unified_action_btn")
+        button.setText(text)
+        button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        button.setToolTip(text)
+        button.setAccessibleName(text)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setMinimumHeight(32)
+        button.clicked.connect(callback)
+        return button
+
+    def _toggle_pin(self):
+        self.controller.set_always_top(self.pin_btn.isChecked())
+
+    def _toggle_week(self):
+        write_widget_calendar_visibility(
+            self.controller.main_window.settings,
+            self._active_layout_id or "stacked",
+            self.week_toggle_btn.isChecked(),
+        )
+        self.apply_selected_layout(force=True)
+
+    def set_density(self, key):
+        if key not in {density.key for density in DENSITIES}:
+            return
+        self.controller.main_window.settings.setValue(DENSITY_KEY, key)
+        self.apply_selected_layout(force=True)
+        self.apply_theme()
+
+    def _toggle_completed(self):
+        self.controller.main_window.settings.setValue(
+            "widget_mode_show_completed", self.completed_btn.isChecked()
+        )
+        self.controller.force_refresh()
+
+    def _add_item(self):
+        if self._active_filter == "work":
+            self.controller._open_task_dialog("", default_task_type="routine")
+        elif self._active_filter == "schedule":
+            self.controller.open_quick_add_dialog()
+        else:
+            menu = QMenu(self)
+            for kind, label in (
+                ("schedule", t("widget_mode.action_add_schedule", "일정 추가")),
+                ("routine", t("widget_mode.add_work", "업무 추가")),
+                ("directive", t("widget_mode.add_directive", "지시·협조 추가")),
+            ):
+                menu.addAction(
+                    label,
+                    lambda selected=kind: self.controller._open_task_dialog(
+                        "", default_task_type=selected
+                    ),
+                )
+            menu.exec(self.add_btn.mapToGlobal(self.add_btn.rect().bottomLeft()))
+
+    def _pick_date(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle(t("widget_mode.pick_date", "날짜 선택"))
+        layout = QVBoxLayout(dialog)
+        calendar = QCalendarWidget(dialog)
+        calendar.setSelectedDate(self.controller._current_date())
+        layout.addWidget(calendar)
+        calendar.clicked.connect(
+            lambda date: (self.controller.set_target_date(date), dialog.accept())
+        )
+        dialog.exec()
+
+    def open_customization(self):
+        from calendar_app.presentation.dialogs.widget_customization_dialog import (
+            WidgetCustomizationDialog,
+        )
+
+        dialog = WidgetCustomizationDialog(self.controller, self)
+        dialog.exec()
+        dialog.deleteLater()
+
+    def _show_more_menu(self):
+        self._open_menu(self.more_btn.mapToGlobal(self.more_btn.rect().bottomLeft()))
+
+    def eventFilter(self, watched, event):
+        if watched is self.toolbar:
+            if (
+                event.type() == QEvent.Type.MouseButtonPress
+                and event.button() == Qt.MouseButton.LeftButton
+            ):
+                self._drag_offset = event.globalPosition().toPoint() - self.pos()
+                return True
+            if event.type() == QEvent.Type.MouseMove and self._drag_offset is not None:
+                self.move(event.globalPosition().toPoint() - self._drag_offset)
+                return True
+            if event.type() == QEvent.Type.MouseButtonRelease and self._drag_offset is not None:
+                self._drag_offset = None
+                self.controller.save_position(self.pos())
+                return True
+        return super().eventFilter(watched, event)
 
     def active_layout_id(self) -> str:
         return self._active_layout_id
@@ -648,32 +1241,70 @@ class UnifiedWidgetWindow(QWidget):
             self.container_layout.setRowStretch(index, 0)
             self.container_layout.setColumnStretch(index, 0)
 
-        self.container_layout.setContentsMargins(*layout_spec.content_margins)
-        self.container_layout.setHorizontalSpacing(layout_spec.spacing)
-        self.container_layout.setVerticalSpacing(layout_spec.spacing)
-        for section_name, row, column, row_span, column_span in layout_spec.placements:
+        self.container_layout.setContentsMargins(0, 4, 0, 4)
+        self.container_layout.setHorizontalSpacing(min(10, layout_spec.spacing))
+        self.container_layout.setVerticalSpacing(min(10, layout_spec.spacing))
+        # Keep saved layout identity; only its presentation adapts to narrow windows.
+        target_width = (
+            self.controller.saved_size_for_layout(layout_spec).width()
+            if resize_to_layout
+            else self.width()
+        )
+        compact = target_width < 640 and layout_spec.layout_id in {"dashboard", "magazine"}
+        placements = (
+            get_widget_mode_layout("stacked").placements if compact else layout_spec.placements
+        )
+        self._compact_layout = compact
+        for section_name, row, column, row_span, column_span in placements:
             section = sections[section_name]
             self.container_layout.addWidget(section, row, column, row_span, column_span)
             section.setVisible(True)
-        for row, stretch in layout_spec.row_stretches:
+        for row, stretch in ((3, 1),) if compact else layout_spec.row_stretches:
             self.container_layout.setRowStretch(row, stretch)
-        for column, stretch in layout_spec.column_stretches:
+        for column, stretch in ((0, 1),) if compact else layout_spec.column_stretches:
             self.container_layout.setColumnStretch(column, stretch)
 
-        self.hero_layout.setContentsMargins(*layout_spec.hero_margins)
-        self.hero_layout.setSpacing(layout_spec.hero_spacing)
-        self.filter_row.setContentsMargins(*layout_spec.filter_margins)
+        self.hero_layout.setContentsMargins(0, 8, 0, 8)
+        self.hero_layout.setSpacing(6)
+        self.filter_row.setContentsMargins(0, 4, 0, 4)
         self.filter_row.setSpacing(layout_spec.filter_spacing)
-        self.agenda_layout.setContentsMargins(*layout_spec.agenda_margins)
+        self.agenda_layout.setContentsMargins(0, 8, 0, 0)
         self.agenda_layout.setSpacing(layout_spec.agenda_spacing)
-        self.scroll_layout.setSpacing(max(5, layout_spec.agenda_spacing))
+        self.scroll_layout.setSpacing(read_widget_density(settings).row_spacing)
         self.cal_grid.apply_layout_metrics(
             cell_size=layout_spec.calendar_cell_size,
             spacing=layout_spec.calendar_spacing,
             margins=layout_spec.calendar_margins,
         )
-        self.eyebrow_label.setVisible(layout_spec.show_eyebrow)
-        self.hint_label.setVisible(layout_spec.show_hint)
+        calendar_mode = "month" if layout_spec.layout_id in {"dashboard", "magazine"} else "week"
+        self.cal_grid.set_display_mode(calendar_mode)
+        calendar_visible = read_widget_calendar_visibility(settings, layout_spec.layout_id)
+        if not calendar_visible:
+            self.cal_grid.hide()
+        self.week_toggle_btn.setChecked(calendar_visible)
+        self.week_toggle_btn.setVisible(any(section == "calendar" for section, *_ in placements))
+        if calendar_mode == "month":
+            self.week_toggle_btn.setText(t("widget_mode.month_toggle", "월간"))
+            self.week_toggle_btn.setToolTip(
+                t("widget_mode.month_toggle_help", "월간 날짜 표시 / 접기")
+            )
+        else:
+            self.week_toggle_btn.setText(t("widget_mode.week_toggle", "주간"))
+            self.week_toggle_btn.setToolTip(
+                t("widget_mode.week_toggle_help", "주간 날짜 표시 / 접기")
+            )
+        self.eyebrow_label.setVisible(
+            layout_spec.show_eyebrow and layout_spec.layout_id.startswith("user_layout_")
+        )
+        self.status_chip.hide()
+        self.clock_label.setVisible(
+            str(settings.value("widget_mode_show_clock", "true")).lower() == "true"
+        )
+        self.hint_label.setVisible(
+            str(settings.value("widget_mode_show_hint", "false")).lower() == "true"
+        )
+        self.caption_label.hide()
+        self.hero.setVisible(not self.eyebrow_label.isHidden() or not self.hint_label.isHidden())
 
         self._active_layout_id = layout_spec.layout_id
         self.container.setProperty("widgetLayout", layout_spec.layout_id)
@@ -688,18 +1319,116 @@ class UnifiedWidgetWindow(QWidget):
 
     def apply_theme(self) -> None:
         tokens = _widget_theme_tokens(self.controller.main_window)
-        signature = tuple(sorted(tokens.items()))
+        settings = self.controller.main_window.settings
+        opacities = read_widget_opacities(settings)
+        family = str(settings.value("widget_mode_font_family", QApplication.font().family()))
+        weight = int(settings.value("widget_mode_font_weight", 500))
+        weight = weight if weight in {400, 500, 600, 700} else 500
+        typography = read_widget_typography(settings)
+        signature = (
+            tuple(sorted(tokens.items())),
+            family,
+            weight,
+            typography,
+            read_widget_density(settings).key,
+            opacities,
+        )
         if signature == self._style_signature:
             return
         self._style_signature = signature
-        self.container.setStyleSheet(_unified_widget_stylesheet(tokens))
-        self.cal_grid.set_theme_tokens(tokens)
+        base_font = QFont(family, int(round(typography.body)))
+        self.setFont(base_font)
+        css_family = (
+            family.replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ").replace("\r", " ")
+        )
+        self.setStyleSheet(
+            apply_widget_opacity(
+                _unified_widget_stylesheet(tokens)
+                + f"""
+            QWidget {{ font-family: "{css_family}"; }}
+            QFrame#unified_surface {{ background: {tokens["panel_bg"]};
+                border: 1px solid {tokens["panel_border"]}; border-radius: 16px; }}
+            QFrame#unified_toolbar, QFrame#unified_container, QFrame#unified_hero {{
+                background: transparent; border: none; border-radius: 0; }}
+            QFrame#unified_container[widgetLayout] QFrame#unified_agenda_section,
+            QFrame#unified_container[widgetLayout] QFrame#unified_filter_section,
+            QFrame#unified_container[widgetLayout] QWidget#unified_calendar_section {{
+                background: transparent; border: none; border-radius: 0; }}
+            QLabel#unified_eyebrow {{ font-size: {typography.secondary:.1f}pt; }}
+            QLabel#unified_date {{ font-size: {typography.date:.1f}pt; }}
+            QLabel#unified_caption, QLabel#unified_hint,
+            QLabel#unified_chip, QLabel#unified_chip_accent {{
+                font-size: {typography.secondary:.1f}pt; }}
+            QLabel#unified_section {{ letter-spacing: 0; font-size: {typography.section:.1f}pt; font-weight: 600;
+                color: {tokens["text_secondary"]}; }}
+            QLabel#unified_clock {{ font-size: {typography.control:.1f}pt; font-weight: 500; letter-spacing: 0; }}
+            QLabel#unified_empty {{ font-size: {typography.body:.1f}pt; }}
+            QToolButton#unified_action_btn, QToolButton#unified_filter_btn,
+            QToolButton#unified_primary_action {{ border-radius: 7px; letter-spacing: 0;
+                font-size: {typography.control:.1f}pt; font-weight: 500; }}
+            QToolButton#unified_action_btn {{ background: transparent; border: 1px solid transparent; }}
+            QToolButton#unified_action_btn:hover {{ background: {tokens["section_bg"]}; }}
+            QToolButton#unified_primary_action:hover,
+            QToolButton#unified_primary_action:pressed {{
+                color: {tokens["text_primary"]};
+                background: {tokens.get("button_primary_hover_bg", tokens["section_bg_alt"])};
+                border: 1px solid {tokens.get("button_primary_hover_border", tokens["accent"])}; }}
+            QFrame#agenda_item_task, QFrame#agenda_item_schedule {{
+                background: {tokens["section_bg"]}; border: 1px solid {tokens["panel_border"]}; border-radius: 10px; }}
+            QPushButton#agenda_item_title {{ color: {tokens["text_primary"]}; text-align: left;
+                background: transparent; border: none; padding: 0; font-size: {typography.title:.1f}pt; font-weight: {weight}; }}
+            QLabel#agenda_item_title {{ font-size: {typography.title:.1f}pt; font-weight: {weight}; }}
+            QLabel#agenda_item_time {{ background: transparent; border: none; padding: 0;
+                color: {tokens["text_secondary"]}; font-size: {typography.secondary:.1f}pt; }}
+            QFrame[completed="true"] QPushButton#agenda_item_title {{ color: {tokens["text_secondary"]}; text-decoration: line-through; }}
+            QPushButton#agenda_item_title:hover {{ color: {tokens["accent"]}; }}
+            QToolButton:focus, QPushButton#agenda_item_title:focus {{ border: 2px solid {tokens["accent"]}; }}
+            QToolButton#unified_action_btn {{ padding: 4px 8px; }}
+            QToolButton[compactControl="true"] {{ padding: 2px; }}
+            QToolButton#unified_action_btn[datePicker="true"] {{
+                font-size: {typography.date:.1f}pt; }}
+            QToolButton#unified_action_btn:checked {{ border: 2px solid {tokens["accent"]}; color: {tokens["text_primary"]}; }}
+            QCheckBox {{ color: {tokens["text_primary"]}; }}
+            QCheckBox#agenda_complete {{ background: transparent; border: none; }}
+            QCheckBox::indicator {{ width: 20px; height: 20px; }}
+        """,
+                *opacities,
+            )
+        )
+        color = tokens.get("text_primary", "#ffffff")
+        self.customize_btn.setIcon(_ic(ICON.DISPLAY_STYLE, color=color))
+        self.restore_btn.setIcon(_ic(ICON.CALENDAR, color=color))
+        self.pin_btn.setIcon(_ic(ICON.ALWAYS_ON_TOP, color=color))
+        for button in (self.restore_btn, self.customize_btn, self.pin_btn):
+            button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+            button.setIconSize(QSize(16, 16))
+            button.setFixedWidth(28)
+        self.customize_btn.setIconSize(QSize(18, 18))
+        self.customize_btn.setFixedWidth(32)
+        self.more_btn.setFixedWidth(28)
+        self.setWindowOpacity(1.0)
+        self.cal_grid.set_theme_tokens(
+            tokens,
+            opacities=opacities,
+            font_size=typography.calendar,
+        )
         self.cal_grid.update_grid(self.controller._current_date())
+        self._last_render_key = None
         self._refresh_locale_texts()
 
     def _sync_filter_buttons(self) -> None:
         for mode, btn in self._filter_buttons.items():
             btn.setChecked(mode == self._active_filter)
+        text = (
+            t("widget_mode.add_work", "업무 추가")
+            if self._active_filter == "work"
+            else t("widget_mode.action_add_schedule", "일정 추가")
+            if self._active_filter == "schedule"
+            else t("widget_mode.add_any", "+ 추가")
+        )
+        self.add_btn.setText(text)
+        self.add_btn.setToolTip(text)
+        self.add_btn.setAccessibleName(text)
 
     def _set_filter(self, mode: str) -> None:
         target = str(mode or "all").strip().lower()
@@ -709,6 +1438,7 @@ class UnifiedWidgetWindow(QWidget):
             self._sync_filter_buttons()
             return
         self._active_filter = target
+        self.controller.main_window.settings.setValue("widget_mode_filter", target)
         self._sync_filter_buttons()
         self._last_render_key = None
         self.update_agenda(self._last_items)
@@ -764,8 +1494,7 @@ class UnifiedWidgetWindow(QWidget):
         self.eyebrow_label.setText(t("widget_mode.hero_eyebrow", "집중 위젯"))
         self.today_btn.setText(t("widget_mode.today", "오늘"))
         self.today_btn.setToolTip(t("widget_mode.today", "오늘"))
-        self.add_btn.setText(t("widget_mode.add_short", "새 일정"))
-        self.add_btn.setToolTip(t("widget_mode.action_add_schedule", "일정 추가"))
+        self._sync_filter_buttons()
         labels = {
             "all": t("widget_mode.filter_all", "전체"),
             "schedule": t("widget_mode.filter_schedule", "일정"),
@@ -781,11 +1510,17 @@ class UnifiedWidgetWindow(QWidget):
             item = self.scroll_layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
+                widget.hide()
                 widget.deleteLater()
 
     def update_header(self, target_date: QDate) -> None:
         label = _format_compact_date_with_weekday(target_date)
         self.date_label.setText(label)
+        self.date_picker_btn.setText(label)
+        self.date_picker_btn.setToolTip(t("widget_mode.pick_date", "날짜 선택"))
+        self.date_picker_btn.setAccessibleName(
+            f"{label} · {t('widget_mode.pick_date', '날짜 선택')}"
+        )
         self.caption_label.setText(t("widget_mode.header_caption", "Selected day agenda and work"))
         self.status_chip.setText(_relative_widget_day(target_date))
         self.cal_grid.update_grid(target_date)
@@ -793,8 +1528,10 @@ class UnifiedWidgetWindow(QWidget):
     def update_agenda(self, items: list[dict[str, object]]) -> None:
         self._last_items = [dict(item) for item in items]
         filtered_items = self._filter_items(self._last_items)
+        if self._active_filter == "schedule":
+            filtered_items = [item for item in filtered_items if not item.get("is_section")]
         render_key = tuple(
-            [self._active_filter]
+            [self._active_filter, read_widget_density(self.controller.main_window.settings).key]
             + [tuple(sorted(item.items(), key=lambda pair: pair[0])) for item in filtered_items]
         )
         if self._last_render_key == render_key:
@@ -828,6 +1565,32 @@ class UnifiedWidgetWindow(QWidget):
         )
 
         self._clear_items()
+        if self._data_state != "ready":
+            text = (
+                t("widget_mode.loading", "일정을 불러오는 중…")
+                if self._data_state == "loading"
+                else t(
+                    "widget_mode.load_delayed",
+                    "일정을 아직 불러오지 못했습니다. 다시 시도해 주세요.",
+                )
+            )
+            state_frame = QFrame(self.scroll_content)
+            state_frame.setObjectName("unified_empty_state")
+            state_layout = QVBoxLayout(state_frame)
+            state_layout.setContentsMargins(16, 16, 16, 16)
+            state_label = QLabel(text, state_frame)
+            state_label.setObjectName("unified_empty")
+            state_label.setWordWrap(True)
+            state_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+            state_layout.addWidget(state_label)
+            self.scroll_layout.insertWidget(0, state_frame)
+            if self._data_state == "delayed":
+                retry = self._button(
+                    t("widget_mode.retry", "다시 시도"), self.controller.retry_refresh
+                )
+                state_layout.addWidget(retry, 0, Qt.AlignmentFlag.AlignLeft)
+            if not filtered_items:
+                return
         if not filtered_items:
             empty_text = (
                 t("widget_mode.empty_schedule_filter", "No schedules for this date.")
@@ -891,7 +1654,7 @@ class UnifiedWidgetWindow(QWidget):
             self.scroll_layout.insertWidget(0, empty_state)
             return
 
-        for insert_at, item in enumerate(filtered_items):
+        for insert_at, item in enumerate(filtered_items, start=int(self._data_state != "ready")):
             if item.get("is_section"):
                 section = QLabel(_safe_text(item.get("title")), self.scroll_content)
                 section.setObjectName("unified_section")
@@ -901,6 +1664,8 @@ class UnifiedWidgetWindow(QWidget):
                     _safe_text(item.get("title")) or t("widget_mode.untitled", "Untitled"),
                     _safe_text(item.get("time")),
                     is_task=bool(item.get("is_task")),
+                    item=item,
+                    controller=self.controller,
                     parent=self.scroll_content,
                 )
                 self.scroll_layout.insertWidget(insert_at, widget)
@@ -922,29 +1687,54 @@ class UnifiedWidgetWindow(QWidget):
             self.clock_label.setText(current_text)
         today = QDate.currentDate()
         if today != self._last_today and self.isVisible():
+            follow_today = self.controller._current_date() == self._last_today
             self._last_today = today
-            self.controller.refresh_data()
+            if follow_today:
+                self.controller.set_target_date(today)
+            else:
+                self.controller.refresh_data()
         self._schedule_next_clock_tick()
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.drag_start = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
-            event.accept()
-
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            self.move(event.globalPosition().toPoint() - self.drag_start)
-            event.accept()
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.controller.save_position(self.pos())
-            event.accept()
-
     def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        self._open_menu(event.globalPos())
+
+    def _open_menu(self, global_pos) -> None:
         tokens = _widget_theme_tokens(self.controller.main_window)
         menu = QMenu(self)
         menu.setStyleSheet(_widget_mode_menu_stylesheet(tokens))
+        density_menu = menu.addMenu(t("widget_mode.density", "목록 밀도"))
+        current_density = read_widget_density(self.controller.main_window.settings).key
+        for density in DENSITIES:
+            action = density_menu.addAction(t(f"widget_mode.density_{density.key}", density.label))
+            action.setCheckable(True)
+            action.setChecked(density.key == current_density)
+            action.triggered.connect(lambda checked=False, key=density.key: self.set_density(key))
+        monthly = self.cal_grid.display_mode == "month"
+        previous_week = menu.addAction(
+            t("widget_mode.month_prev", "이전 달")
+            if monthly
+            else t("widget_mode.previous_week", "이전 주")
+        )
+        previous_week.triggered.connect(
+            lambda: self.controller.set_target_date(
+                self.controller._current_date().addMonths(-1)
+                if monthly
+                else self.controller._current_date().addDays(-7)
+            )
+        )
+        next_week = menu.addAction(
+            t("widget_mode.month_next", "다음 달")
+            if monthly
+            else t("widget_mode.next_week", "다음 주")
+        )
+        next_week.triggered.connect(
+            lambda: self.controller.set_target_date(
+                self.controller._current_date().addMonths(1)
+                if monthly
+                else self.controller._current_date().addDays(7)
+            )
+        )
+        menu.addSeparator()
 
         layout_menu = menu.addMenu(t("widget_mode.style_layout", "레이아웃"))
         current_layout = read_widget_mode_layout_id(self.controller.main_window.settings)
@@ -970,9 +1760,15 @@ class UnifiedWidgetWindow(QWidget):
 
         menu.addSeparator()
         refresh_action = menu.addAction(t("widget_mode.menu_refresh", "새로고침"))
-        close_action = menu.addAction(t("widget_mode.close", "위젯 닫기"))
+        close_action = menu.addAction(t("widget_mode.return_main", "메인 화면으로"))
+        hide_action = menu.addAction(t("widget_mode.hide_tray", "트레이로 숨기기"))
+        recover_action = menu.addAction(t("widget_mode.recover_position", "화면 안으로 이동"))
         editor_action = menu.addAction(t("widget_mode.editor_title", "위젯 스타일 만들기"))
-        selected = menu.exec(event.globalPos())
+        manager = getattr(self.controller.main_window, "overlay_manager", None)
+        if manager is not None:
+            widget_menu = menu.addMenu(t("widget_mode.desktop_widgets", "바탕화면 위젯 관리"))
+            manager.build_widgets_menu(widget_menu, _widget_mode_menu_stylesheet(tokens))
+        selected = menu.exec(global_pos)
         if selected == editor_action:
             from calendar_app.presentation.dialogs.widget_style_editor_dialog import (
                 WidgetStyleEditorDialog,
@@ -987,10 +1783,27 @@ class UnifiedWidgetWindow(QWidget):
         elif selected == refresh_action:
             self.controller.force_refresh()
         elif selected == close_action:
-            self.hide()
+            self.controller.return_to_main()
+        elif selected == hide_action:
+            self.controller.hide_to_tray()
+        elif selected == recover_action:
+            self.controller._handle_screen_change()
+
+    def set_data_state(self, state):
+        if state != self._data_state:
+            self._data_state = state
+            self._last_render_key = None
+
+    def show_feedback(self, text, *, undo=False):
+        self.feedback_label.setText(text)
+        self.feedback_label.show()
+        self.undo_btn.setVisible(undo)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        compact = self.width() < 640 and self._active_layout_id in {"dashboard", "magazine"}
+        if hasattr(self, "_compact_layout") and compact != self._compact_layout:
+            self.apply_selected_layout(force=True)
         if not self.isMinimized() and self.isVisible():
             self.controller.save_size(self.size())
 
@@ -1004,12 +1817,21 @@ class UnifiedWidgetController:
         self.widget = None
         self._on_hidden = on_hidden
         self._restoring_geometry = False
+        self._changing_window_flags = False
         self._cache_refresh_pending = False
         self._last_display_signature = None
         self._items_cache = {}
+        self._status_overrides = {}
+        self._undo_completion = None
+        self._load_timer = QTimer(main_window)
+        self._load_timer.setSingleShot(True)
+        self._load_timer.timeout.connect(self._loading_delayed)
         app = QApplication.instance()
         if app is not None:
             app.screenRemoved.connect(self._handle_screen_change)
+            main_window.destroyed.connect(
+                lambda: app.screenRemoved.disconnect(self._handle_screen_change)
+            )
 
     def _current_date(self) -> QDate:
         target = getattr(self.main_window, "current_date", None)
@@ -1045,10 +1867,12 @@ class UnifiedWidgetController:
         else:
             self.show_widget()
 
-    def show_widget(self, filter_mode: str = "all") -> None:
+    def show_widget(self, filter_mode: str | None = None) -> None:
         if self.widget is None:
             self.widget = UnifiedWidgetWindow(self)
             self._restore_geometry()
+        if filter_mode is None:
+            filter_mode = str(self.main_window.settings.value("widget_mode_filter", "all"))
         self.widget.set_filter(filter_mode)
         self.widget.show()
         self.widget.raise_()
@@ -1058,12 +1882,136 @@ class UnifiedWidgetController:
             self._save_geometry()
             self.widget.hide()
 
+    def prepare_shutdown(self) -> None:
+        """Cancel delayed UI work before the Qt event loop begins teardown."""
+
+        self._load_timer.stop()
+
     def is_visible(self) -> bool:
         return self.widget is not None and self.widget.isVisible()
 
     def notify_hidden(self) -> None:
+        if getattr(self, "_changing_window_flags", False):
+            return
+        self._load_timer.stop()
         if self._on_hidden is not None:
             self._on_hidden()
+
+    def return_to_main(self):
+        coordinator = getattr(self.main_window, "_widget_mode_coordinator", None)
+        if coordinator is not None:
+            coordinator.return_to_main()
+        else:
+            self.hide_widget()
+            self.main_window.showNormal()
+
+    def hide_to_tray(self):
+        coordinator = getattr(self.main_window, "_widget_mode_coordinator", None)
+        if coordinator is not None:
+            coordinator.hide_to_tray()
+        else:
+            self.hide_widget()
+
+    def set_always_top(self, enabled, *, persist=True):
+        if persist:
+            self.main_window.settings.setValue("widget_mode_always_top", bool(enabled))
+        if self.widget is None:
+            return
+        visible = self.widget.isVisible()
+        geometry = self.widget.geometry()
+        self._changing_window_flags = True
+        try:
+            self.widget.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, bool(enabled))
+            self.widget.setGeometry(geometry)
+            self.widget.pin_btn.setChecked(bool(enabled))
+            if visible:
+                self.widget.show()
+        finally:
+            self._changing_window_flags = False
+
+    def _run_main_dialog(self, callback, *args, **kwargs):
+        pinned = self.is_visible() and bool(
+            self.widget.windowFlags() & Qt.WindowType.WindowStaysOnTopHint
+        )
+        if pinned:
+            self.set_always_top(False, persist=False)
+        try:
+            return callback(*args, **kwargs)
+        finally:
+            if pinned and self.is_visible():
+                self.set_always_top(True, persist=False)
+
+    def open_item(self, item):
+        item_id = int(item.get("item_id") or 0)
+        if item_id <= 0:
+            return
+        if item.get("source") == "directive":
+            callback = getattr(self.main_window, "open_directive_dialog", None)
+            if callback:
+                self._run_main_dialog(callback, task_id=item_id)
+        else:
+            callback = getattr(self.main_window, "open_modify_task_dialog", None)
+            if callback:
+                self._run_main_dialog(callback, item_id)
+
+    def _write_status(self, item, status):
+        callback = getattr(
+            self.main_window,
+            "handle_directive_status_changed"
+            if item.get("source") == "directive"
+            else "handle_task_status_changed",
+            None,
+        )
+        try:
+            success = callback and callback(int(item["item_id"]), status)
+        except Exception:
+            success = False
+        if not success:
+            self.widget.show_feedback(
+                t("widget_mode.save_failed", "저장하지 못했습니다. 다시 시도해 주세요.")
+            )
+            self.widget._last_render_key = None
+            self.widget.update_agenda(self.widget._last_items)
+            return False
+        self._status_overrides[(item["source"], item["item_id"])] = status
+        self.force_refresh()
+        return True
+
+    def set_item_completed(self, item, completed):
+        if not item.get("item_id"):
+            return
+        previous = str(item.get("status") or "pending")
+        status = "completed" if completed else "pending"
+        if self._write_status(item, status):
+            self._undo_completion = (dict(item), previous)
+            self.widget.show_feedback(
+                t("widget_mode.saved_status", "업무 상태를 저장했습니다."), undo=True
+            )
+
+    def undo_completion(self):
+        if self._undo_completion is None:
+            return
+        item, previous = self._undo_completion
+        if self._write_status(item, previous):
+            self._undo_completion = None
+            self.widget.show_feedback(t("widget_mode.undone", "이전 상태로 되돌렸습니다."))
+
+    def _effective_status(self, source, item_id, status):
+        key = (source, item_id)
+        override = self._status_overrides.get(key)
+        if override == status:
+            self._status_overrides.pop(key, None)
+        return override if override is not None else status
+
+    def _loading_delayed(self):
+        if self.is_visible() and self._cache_refresh_pending:
+            self.widget.set_data_state("delayed")
+            self.widget.update_agenda(self.widget._last_items)
+
+    def retry_refresh(self):
+        self._load_timer.stop()
+        self.main_window.schedule_panel_refresh(center=True, right=True)
+        self.force_refresh()
 
     def save_position(self, pos: QPoint) -> None:
         del pos
@@ -1168,6 +2116,7 @@ class UnifiedWidgetController:
             panel.apply_palette(panel._last_scale or 1.0)
 
     def set_layout(self, layout_id: str) -> None:
+        self._save_geometry()
         write_widget_mode_layout_id(self.main_window.settings, layout_id)
         if self.widget is None:
             return
@@ -1178,6 +2127,8 @@ class UnifiedWidgetController:
 
     def force_refresh(self) -> None:
         self._cache_refresh_pending = False
+        if self.widget is not None:
+            self.widget.set_data_state("ready")
         self._last_display_signature = None
         self._items_cache.clear()
         self.refresh_data()
@@ -1200,7 +2151,7 @@ class UnifiedWidgetController:
         }
         if time_str:
             kwargs["initial_time"] = time_str
-        self.main_window.open_task_dialog(**kwargs)
+        self._run_main_dialog(self.main_window.open_task_dialog, **kwargs)
 
     def set_target_date(self, target: QDate) -> None:
         if not isinstance(target, QDate) or not target.isValid():
@@ -1300,11 +2251,19 @@ class UnifiedWidgetController:
 
         items = []
         routine_items = []
+        show_completed = (
+            str(self.main_window.settings.value("widget_mode_show_completed", "false")).lower()
+            == "true"
+        )
         for row in cache.get("routine_rows", []) or []:
             if not isinstance(row, dict):
                 continue
-            status = _normalize_status(row.get("status"))
-            if status in {"done", "completed"} or row.get("is_completed") in (1, True):
+            raw_status = _normalize_status(row.get("status"))
+            if row.get("is_completed") in (1, True):
+                raw_status = "completed"
+            status = self._effective_status("task", row.get("id"), raw_status)
+            completed = status in {"done", "completed"}
+            if completed and not show_completed:
                 continue
             due_qd = _parse_qdate(
                 row.get("period_end") or row.get("deadline") or row.get("target_date")
@@ -1317,9 +2276,13 @@ class UnifiedWidgetController:
                     {
                         "title": _safe_text(row.get("name"))
                         or t("widget_mode.untitled", "Untitled"),
-                        "time": t("widget_mode.routine_short", "Routine"),
+                        "time": "",
                         "is_task": True,
                         "item_kind": "work",
+                        "item_id": row.get("id"),
+                        "source": "task",
+                        "status": status,
+                        "completed": completed,
                     }
                 )
 
@@ -1328,8 +2291,9 @@ class UnifiedWidgetController:
         for row in cache.get("directive_rows", []) or []:
             if not isinstance(row, (tuple, list)) or len(row) < 5:
                 continue
-            status = _normalize_status(row[2])
-            if status in done_statuses:
+            status = self._effective_status("directive", row[0], _normalize_status(row[2]))
+            completed = status in {"done", "completed"}
+            if status in done_statuses and not (completed and show_completed):
                 continue
             deadline_qd = _parse_qdate(row[4])
             if deadline_qd.isValid() and deadline_qd == target:
@@ -1339,6 +2303,10 @@ class UnifiedWidgetController:
                         "time": "",
                         "is_task": True,
                         "item_kind": "work",
+                        "item_id": row[0],
+                        "source": "directive",
+                        "status": status,
+                        "completed": completed,
                     }
                 )
 
@@ -1350,7 +2318,7 @@ class UnifiedWidgetController:
                     "section_kind": "work",
                 }
             )
-            items.extend(routine_items[:10])
+            items.extend(routine_items)
         if directive_items:
             items.append(
                 {
@@ -1359,7 +2327,7 @@ class UnifiedWidgetController:
                     "section_kind": "work",
                 }
             )
-            items.extend(directive_items[:10])
+            items.extend(directive_items)
         return items
 
     def _schedule_items_for_date(self, target: QDate) -> list[dict[str, object]]:
@@ -1368,12 +2336,12 @@ class UnifiedWidgetController:
             return []
         items = [
             {
-                "title": t("widget_mode.section_today", "Schedule"),
+                "title": t("widget_mode.filter_schedule", "일정"),
                 "is_section": True,
                 "section_kind": "schedule",
             }
         ]
-        for row in rows[:18]:
+        for row in rows:
             items.append(
                 {
                     "title": _safe_text(row.get("name")) or t("widget_mode.untitled", "Untitled"),
@@ -1382,6 +2350,8 @@ class UnifiedWidgetController:
                     ),
                     "is_task": False,
                     "item_kind": "schedule",
+                    "item_id": row.get("id"),
+                    "source": "task",
                 }
             )
         return items
@@ -1394,12 +2364,14 @@ class UnifiedWidgetController:
         has_work = self._directive_cache_matches_date(target)
         if has_schedule and has_work:
             self._cache_refresh_pending = False
+            self._load_timer.stop()
             return True
         if self._cache_refresh_pending:
             return False
         if hasattr(self.main_window, "schedule_panel_refresh"):
             self.main_window.schedule_panel_refresh(center=not has_schedule, right=not has_work)
         self._cache_refresh_pending = True
+        self._load_timer.start(10000)
         return False
 
     def refresh_data(self):
@@ -1410,11 +2382,13 @@ class UnifiedWidgetController:
         target = self._current_date()
         self.widget.update_header(target)
         if not self._ensure_cache_coverage(target):
-            self.widget.update_agenda([])
-            return
+            if self.widget._data_state != "delayed":
+                self.widget.set_data_state("loading")
+        else:
+            self.widget.set_data_state("ready")
 
         signature = self._display_signature(target)
-        if signature == self._last_display_signature:
+        if signature == self._last_display_signature and self.widget._last_render_key is not None:
             return
 
         items = self._get_cached_items(signature)

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Window drag/resize/multi-monitor behavior for main overlay window."""
 
+import contextlib
 import logging
 
 try:
@@ -238,71 +239,107 @@ class WindowEventsMixin:
             self._exit_requested = True
             exit_without_tray = True
 
-        from calendar_app.presentation.main_window.window_restore_helpers import save_window_layout
-
         # 종료 플래그를 먼저 설정 — 이후 타이머 콜백이 새 워커를 시작하지 못하게 함
+        shutdown_already_started = bool(getattr(self, "_is_shutting_down", False))
         self._is_shutting_down = True
         self.is_visible = False
 
-        # 모든 타이머 정리 — 종료 후 타이머 콜백이 파괴된 객체에 접근하는 것을 방지
-        for _timer_attr in (
-            # GCal 관련
-            "gcal_sync_timer",
-            "gcal_quick_sync_timer",
-            "gcal_sleep_timer",
-            "gcal_sleep_poll_timer",
-            "gcal_idle_timer",
-            "_wake_sync_timer",
-            "search_debounce_timer",
-            "_sync_anim_timer",
-            # 오버레이 텍스트 위젯
-            "_stopwatch_timer",
-            "_countdown_timer",
-            "_slow_text_timer",
-            # 패널 갱신
-            "_ui_refresh_timer",
-            # 잠금화면
-            "_away_admin_hold_timer",
-            "_away_password_focus_timer",
-            "_lock_clock_timer",
-            "_overlay_unlock_timer",
-            "_daily_summary_timer",
-        ):
-            _t = getattr(self, _timer_attr, None)
-            if _t is not None:
-                import contextlib
+        # OverlayApp owns one idempotent shutdown entry point.  Keeping the
+        # close event on that path prevents workers (notably AlarmWorker) from
+        # receiving duplicate stop/wait calls.  Lightweight test/fallback
+        # hosts without ActionHandlersMixin retain the local cleanup below.
+        shared_shutdown = getattr(self, "shutdown_background_workers", None)
+        shared_shutdown_handled = False
+        if callable(shared_shutdown):
+            try:
+                shared_shutdown()
+                shared_shutdown_handled = True
+            except Exception:
+                logger.exception("Shared application shutdown failed; using close-event fallback")
+        elif shutdown_already_started:
+            shared_shutdown_handled = True
 
-                with contextlib.suppress(RuntimeError):
-                    _t.stop()
-
-        # 백그라운드 QThread 워커 종료 — msleep 중인 스레드가 이벤트 루프 소멸 후
-        # Qt 내부 시설에 접근해 SIGABRT를 일으키거나 프로세스가 잔류하는 것을 방지
-        for _worker_attr in ("alarm_worker", "_sync_worker", "_auth_worker"):
-            _w = getattr(self, _worker_attr, None)
-            if _w is not None:
+        if not shared_shutdown_handled:
+            # Persist widget-only state before fallback cleanup hides/destroys
+            # its top-level windows.
+            close_widget_mode = getattr(self, "close_widget_mode_panels", None)
+            if not shutdown_already_started and callable(close_widget_mode):
                 try:
-                    if hasattr(_w, "stop"):
-                        _w.stop()
-                    _w.quit()
-                    _w.wait(2000)
-                except RuntimeError:
-                    pass
-
-        # _bg_workers 리스트 내 모든 워커 스레드 안전하게 종료
-        _bg_list = getattr(self, "_bg_workers", [])
-        for _w in _bg_list:
-            if _w is not None:
-                try:
-                    if hasattr(_w, "stop"):
-                        _w.stop()
-                    if hasattr(_w, "quit"):
-                        _w.quit()
-                    if hasattr(_w, "wait"):
-                        _w.wait(2000)
+                    close_widget_mode()
                 except Exception:
-                    pass
+                    logger.exception("Failed to persist widget mode during shutdown")
 
-        save_window_layout(self)
+            # 모든 타이머 정리 — 종료 후 타이머 콜백이 파괴된 객체에 접근하는 것을 방지
+            for _timer_attr in (
+                "gcal_sync_timer",
+                "gcal_quick_sync_timer",
+                "gcal_sleep_timer",
+                "gcal_sleep_poll_timer",
+                "gcal_idle_timer",
+                "ics_sync_timer",
+                "_wake_sync_timer",
+                "search_debounce_timer",
+                "_sync_anim_timer",
+                "_system_theme_refresh_timer",
+                "_stopwatch_timer",
+                "_countdown_timer",
+                "_slow_text_timer",
+                "_ui_refresh_timer",
+                "_away_admin_hold_timer",
+                "_away_password_focus_timer",
+                "_lock_clock_timer",
+                "_overlay_unlock_timer",
+                "_daily_summary_timer",
+                "_geom_persist_timer",
+                "_dock_persist_timer",
+                "_focus_timer",
+            ):
+                timer = getattr(self, _timer_attr, None)
+                if timer is not None:
+                    with contextlib.suppress(AttributeError, RuntimeError):
+                        timer.stop()
+
+            # Fallback QThread cleanup for hosts without ActionHandlersMixin.
+            seen_workers: set[int] = set()
+            workers = [
+                getattr(self, "alarm_worker", None),
+                getattr(self, "_sync_worker", None),
+                getattr(self, "_auth_worker", None),
+                *list(getattr(self, "_bg_workers", [])),
+            ]
+            for worker in workers:
+                if worker is None or id(worker) in seen_workers:
+                    continue
+                seen_workers.add(id(worker))
+                try:
+                    stop_method = getattr(worker, "stop", None)
+                    if callable(stop_method):
+                        stop_method()
+                    else:
+                        request_interruption = getattr(worker, "requestInterruption", None)
+                        if callable(request_interruption):
+                            request_interruption()
+                    quit_method = getattr(worker, "quit", None)
+                    if callable(quit_method):
+                        quit_method()
+                    wait_method = getattr(worker, "wait", None)
+                    if callable(wait_method):
+                        wait_method(2000)
+                except (AttributeError, RuntimeError):
+                    pass
+                except Exception:
+                    logger.exception("Failed to stop fallback worker during close")
+
+        try:
+            from calendar_app.presentation.main_window.action_handlers import (
+                _save_window_layout_for_shutdown,
+            )
+
+            _save_window_layout_for_shutdown(self)
+        except Exception:
+            # Import/teardown failures must not make the application refuse to
+            # close.  Settings are independently synced by shared shutdown.
+            logger.exception("Could not run window layout shutdown helper")
         super().closeEvent(event)
         if exit_without_tray:
             app = QApplication.instance()

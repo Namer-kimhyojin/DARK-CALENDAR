@@ -109,6 +109,8 @@ class TaskActionsMixin:
         """일정 상태 변경(완료/미완료)."""
         if task_usecases.update_task_status(db_task, task_id, status):
             self._refresh_all_panels()
+            return True
+        return False
 
     def handle_task_priority_changed(self, task_id, priority):
         """일정/일반업무 중요도 변경."""
@@ -673,8 +675,10 @@ class TaskActionsMixin:
         try:
             if task_usecases.update_directive_status(db_directive, directive_id, new_status):
                 self.schedule_panel_refresh(right=True)
+                return True
         except Exception:
             logger.exception("Error updating directive status for directive_id=%s", directive_id)
+        return False
 
     def handle_directive_priority_changed(self, directive_id, priority):
         """Change directive priority."""

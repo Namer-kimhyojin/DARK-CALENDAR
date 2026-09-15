@@ -65,6 +65,20 @@ class OverlayManagerLifecycleTests(unittest.TestCase):
         self.assertEqual(47, restored_widget.font_size())
         self.assertEqual(widget.pos(), restored_widget.pos())
 
+    def test_shutdown_preserves_enabled_state_but_stops_widget_runtime(self):
+        inst_id = self.manager.add_instance("clock")
+        widget = self.manager.get_widget(inst_id)
+        self.manager.show_instance(inst_id)
+        widget.move(211, 322)
+        self.assertTrue(widget._timer.isActive())
+
+        self.manager.shutdown()
+
+        self.assertFalse(widget._timer.isActive())
+        self.assertFalse(widget.isVisible())
+        self.assertTrue(widget.is_enabled())
+        self.assertEqual((int(widget._get("pos_x")), int(widget._get("pos_y"))), (211, 322))
+
     def test_deleted_instance_does_not_leak_settings_when_id_is_reused(self):
         first = self.manager.add_instance("clock")
         self.manager.get_widget(first)._set("font_size", 47)
