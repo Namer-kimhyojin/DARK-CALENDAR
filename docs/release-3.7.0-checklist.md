@@ -17,7 +17,13 @@
 - [x] Packaged payload passes the locked-license and sensitive-file verifier.
 - [x] Package identity is `Kimhyojin.DarkCalendar`, version `3.7.0.0`, architecture `x64`.
 - [x] The pipeline rejects release packaging outside the CI-tested Python 3.13.15 ABI.
-- [ ] The Python 3.13.15 CI packaged executable passes the launch/exit smoke test.
+- [x] The Python 3.13.15 CI packaged executable opens a responsive `Dark Calendar` window with no new fatal/import traceback.
+
+## Previous Store install audit
+
+- [x] The installed 3.6.9 package reports `Status=Ok`, `SignatureKind=Store`, and version `3.6.9.0`.
+- [x] The 76% stall correlates with `ERROR_INSTALL_CANCEL`; Windows later completed staging and registration of the same package.
+- [x] The Store-installed 3.6.9 executable launches successfully after registration.
 
 ## External release
 
