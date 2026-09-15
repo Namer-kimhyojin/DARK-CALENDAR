@@ -293,6 +293,7 @@ function Sync-AppVersion {
     $homepagePath = Join-Path $ProjectRoot "docs\index.html"
     $homepage = Get-Content $homepagePath -Raw -Encoding utf8
     $homepage = $homepage -replace 'Dark Calendar \d+\.\d+\.\d+', "Dark Calendar $NewVersion"
+    $homepage = $homepage -replace '("softwareVersion"\s*:\s*")\d+\.\d+\.\d+', ('${1}' + $NewVersion)
     $homepage = $homepage -replace '(data-config-text="appVersion">)\d+\.\d+\.\d+', ('${1}' + $NewVersion)
     $homepage = $homepage -replace 'https://github\.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v\d+\.\d+\.\d+', $releasePage
     $homepage = $homepage -replace 'https://github\.com/Namer-kimhyojin/DARK-CALENDAR/blob/v\d+\.\d+\.\d+/LICENSE', $licenseUrl
@@ -304,6 +305,7 @@ function Sync-AppVersion {
         $notice = Get-Content $noticePath -Raw -Encoding utf8
         $notice = $notice -replace 'releases/tag/v\d+\.\d+\.\d+', "releases/tag/v$NewVersion"
         $notice = $notice -replace 'releases/download/v\d+\.\d+\.\d+/DarkCalendar-\d+\.\d+\.\d+-corresponding-source\.zip', "releases/download/v$NewVersion/DarkCalendar-$NewVersion-corresponding-source.zip"
+        $notice = $notice -replace '(Release page for `)\d+\.\d+\.\d+(`)', ('${1}' + $NewVersion + '${2}')
         $notice = $notice -replace 'release `\d+\.\d+\.\d+`', "release ``$NewVersion``"
         $notice = $notice -replace 'version `\d+\.\d+\.\d+`', "version ``$NewVersion``"
         [System.IO.File]::WriteAllText($noticePath, $notice, $utf8NoBom)

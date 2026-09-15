@@ -80,6 +80,8 @@ class BuildPipelineContractTests(unittest.TestCase):
         self.assertIn("[System.Text.UTF8Encoding]::new($false, $true)", script)
         self.assertIn("function New-StoreUpload", script)
         self.assertIn("[switch]$UploadOnly", script)
+        self.assertIn('("softwareVersion"\\s*:\\s*")', script)
+        self.assertIn("(Release page for `)", script)
 
     def test_store_artifact_names_include_package_version(self):
         script = self._read("scripts/build_pipeline.ps1")

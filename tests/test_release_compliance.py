@@ -93,7 +93,11 @@ def test_release_version_surfaces_are_in_sync():
         f"v{APP_VERSION}/DarkCalendar-{APP_VERSION}-corresponding-source.zip"
     )
     assert site_config["releaseSourceUrl"] == expected_release_url
-    assert expected_release_url in (ROOT / "README.md").read_text(encoding="utf-8", errors="strict")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8", errors="strict")
+    homepage = (ROOT / "docs" / "index.html").read_text(encoding="utf-8", errors="strict")
+    assert expected_release_url in readme
+    assert f"Release page for `{APP_VERSION}`" in readme
+    assert f'"softwareVersion": "{APP_VERSION}"' in homepage
     assert expected_source_asset in (ROOT / "SOURCE_OFFER.md").read_text(
         encoding="utf-8", errors="strict"
     )
