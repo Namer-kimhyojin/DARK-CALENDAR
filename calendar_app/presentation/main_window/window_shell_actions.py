@@ -329,7 +329,8 @@ class WindowShellActionsMixin:
         try:
             from winotify import Notification
 
-            from calendar_app.app_paths import APP_ICON_TOAST_PATH, APP_NAME
+            from calendar_app.app_metadata import APP_NAME
+            from calendar_app.app_paths import APP_ICON_TOAST_PATH
 
             toast = Notification(
                 app_id=APP_NAME,
@@ -520,7 +521,7 @@ class WindowShellActionsMixin:
                 t("common.notification"),
                 t(
                     "autostart.registration_failed",
-                    "Please allow Dark Calendar in Windows Startup Apps settings.",
+                    "Please allow Air Calendar in Windows Startup Apps settings.",
                 ),
             )
             return

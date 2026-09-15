@@ -47,7 +47,7 @@ class ExitConfirmationDialogTests(unittest.TestCase):
         self.addCleanup(box.close)
 
         self.assertEqual(box.windowTitle(), "종료 안내")
-        self.assertIn("Dark Calendar를 종료합니다.", box.text())
+        self.assertIn("Air Calendar를 종료합니다.", box.text())
         self.assertEqual(
             box.standardButtons(),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,

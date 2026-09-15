@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Dark Calendar includes third-party software. `requirements-runtime.lock` is the authoritative runtime version list. Each binary payload also contains:
+Air Calendar includes third-party software. `requirements-runtime.lock` is the authoritative runtime version list. Each binary payload also contains:
 
 - `THIRD_PARTY_MANIFEST.json` — exact package versions and license-file hashes
 - `THIRD_PARTY_LICENSES/` — license texts copied from every locked distribution
@@ -30,9 +30,9 @@ All transitive Python packages and their exact versions are recorded in the payl
 
 ## Qt and PyQt
 
-The free edition of PyQt6 is GPLv3. Dark Calendar is therefore distributed as a GPLv3-covered work. The complete corresponding-source release asset mirrors the exact PyQt6 source and the applicable QtBase source, along with the application source and the remaining locked Python source distributions.
+The free edition of PyQt6 is GPLv3. Air Calendar is therefore distributed as a GPLv3-covered work. The complete corresponding-source release asset mirrors the exact PyQt6 source and the applicable QtBase source, along with the application source and the remaining locked Python source distributions.
 
-Dark Calendar 3.7.0 uses the native Windows notification sound API. Qt Multimedia and its FFmpeg runtime, along with unused Qt PDF and SVG image plugins, are intentionally excluded from the release payload.
+Air Calendar 3.7.1 uses the native Windows notification sound API. Qt Multimedia and its FFmpeg runtime, along with unused Qt PDF and SVG image plugins, are intentionally excluded from the release payload.
 
 ## QtAwesome bundled fonts
 

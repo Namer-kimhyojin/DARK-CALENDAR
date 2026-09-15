@@ -24,7 +24,7 @@
     "view_issues": "Просмотр проблем синхронизации"
   },
   "app": {
-    "exit_message": "Dark Calendar закроется.\nПрограмма завершится полностью, без сворачивания в трей.\nПродолжить?",
+    "exit_message": "Air Calendar закроется.\nПрограмма завершится полностью, без сворачивания в трей.\nПродолжить?",
     "exit_title": "Выход"
   },
   "app_name": "Темный календарь",
@@ -32,7 +32,7 @@
     "disabled": "Выключено",
     "enabled": "Включено",
     "msg": "Автозапуск: {status}.",
-    "registration_failed": "Разрешите Dark Calendar в настройках автозагрузки приложений Windows."
+    "registration_failed": "Разрешите Air Calendar в настройках автозагрузки приложений Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Пароль администратора",
@@ -1006,7 +1006,7 @@
       "remote_orphan": "Только в Google (без локального соответствия)",
       "unknown": "Произошла неизвестная ошибка."
     },
-    "first_setup_msg": "Добро пожаловать в Dark Calendar!\nХотите настроить синхронизацию с Google сейчас?",
+    "first_setup_msg": "Добро пожаловать в Air Calendar!\nХотите настроить синхронизацию с Google сейчас?",
     "first_setup_title": "Мастер Настройки",
     "guidance": {
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Please go to 'Settings > Календарь & Синхронизация > Authenticate' and log in again.",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "Ежегодно"
   },
   "shortcut": {
-    "content": "<h3>Горячие клавиши</h3><hr><b>[Управление расписанием]</b><br>• <b>Ctrl + N</b>: Добавить новое событие<br>• <b>Ctrl + R</b>: Зарегистрировать рутину<br>• <b>Ctrl + G</b>: Зарегистрировать директиву<br>• <b>Ctrl + L</b>: Управление шаблонами чеклиста<br>• <b>Ctrl + Shift + L</b>: Режим блокировки рабочего стола<br><br><b>[Операции на экране]</b><br>• <b>Ctrl + Shift + B</b>: Показать/скрыть верхнюю панель<br>• <b>Ctrl + M</b>: Переключить режим магнита<br>• <b>Ctrl + F</b>: Переключить режим фокуса<br>• <b>F11</b>: Переключить полный экран<br>• <b>Ctrl + Alt + R</b>: Менеджер рутин<br><br><b>[Предустановки макета]</b><br>• <b>Ctrl + Shift + 1</b>: Полностью прикреплённый макет<br>• <b>Ctrl + Shift + 2</b>: Макет с акцентом на календарь<br>• <b>Ctrl + Shift + 3</b>: Макет с акцентом на задачи<br>• <b>Ctrl + Shift + 4</b>: Макет с разделёнными вкладками<br>• <b>Ctrl + Shift + 5</b>: Полностью отдельный макет<br>• <b>Ctrl + Shift + S</b>: Сохранить текущий макет<br><br><b>[Навигация]</b><br>• <b>Ctrl + Left/Right</b>: Предыдущая/следующая дата<br>• <b>Ctrl + T</b>: Перейти к сегодня<br>• <b>Delete</b>: Удалить выбранное событие<br>• <b>Esc</b>: Снять выделение<br>• <b>F1</b>: Открыть справку<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>Версия: {APP_VERSION}<br>Автор: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Руководство по горячим клавишам Dark Calendar"
+    "content": "<h3>Горячие клавиши</h3><hr><b>[Управление расписанием]</b><br>• <b>Ctrl + N</b>: Добавить новое событие<br>• <b>Ctrl + R</b>: Зарегистрировать рутину<br>• <b>Ctrl + G</b>: Зарегистрировать директиву<br>• <b>Ctrl + L</b>: Управление шаблонами чеклиста<br>• <b>Ctrl + Shift + L</b>: Режим блокировки рабочего стола<br><br><b>[Операции на экране]</b><br>• <b>Ctrl + Shift + B</b>: Показать/скрыть верхнюю панель<br>• <b>Ctrl + M</b>: Переключить режим магнита<br>• <b>Ctrl + F</b>: Переключить режим фокуса<br>• <b>F11</b>: Переключить полный экран<br>• <b>Ctrl + Alt + R</b>: Менеджер рутин<br><br><b>[Предустановки макета]</b><br>• <b>Ctrl + Shift + 1</b>: Полностью прикреплённый макет<br>• <b>Ctrl + Shift + 2</b>: Макет с акцентом на календарь<br>• <b>Ctrl + Shift + 3</b>: Макет с акцентом на задачи<br>• <b>Ctrl + Shift + 4</b>: Макет с разделёнными вкладками<br>• <b>Ctrl + Shift + 5</b>: Полностью отдельный макет<br>• <b>Ctrl + Shift + S</b>: Сохранить текущий макет<br><br><b>[Навигация]</b><br>• <b>Ctrl + Left/Right</b>: Предыдущая/следующая дата<br>• <b>Ctrl + T</b>: Перейти к сегодня<br>• <b>Delete</b>: Удалить выбранное событие<br>• <b>Esc</b>: Снять выделение<br>• <b>F1</b>: Открыть справку<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Версия: {APP_VERSION}<br>Автор: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Руководство по горячим клавишам Air Calendar"
   },
   "splash": {
     "initializing_db": "Инициализация базы данных...",
@@ -1773,7 +1773,7 @@
     "status_tentative": "Пробный"
   },
   "system_msg": {
-    "already_running": "Dark Calendar уже запущен.",
+    "already_running": "Air Calendar уже запущен.",
     "lang_saved_msg": "Настройки языка сохранены.\nСистема перезапустится для применения изменений.",
     "lang_saved_title": "Язык Сохранен"
   },

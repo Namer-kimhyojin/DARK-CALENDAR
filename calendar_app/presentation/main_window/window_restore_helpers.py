@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """Helpers to restore window state and bind dock/menu visibility."""
 
+import logging
+
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QSizeGrip
 
 _LAYOUT_VERSION = "v3"  # bump this when dock area topology changes
+
+logger = logging.getLogger(__name__)
 
 
 def restore_window_and_bind_menu_state(self):
@@ -17,27 +21,46 @@ def restore_window_and_bind_menu_state(self):
     else:
         self.resize(1200, 700)
 
-    default_restored = False
-    preset_manager = getattr(self, "preset_manager", None)
-    if preset_manager is not None:
-        try:
-            default_restored = bool(preset_manager.apply_saved_default_on_startup())
-        except Exception:
-            default_restored = False
+    state = self.settings.value("last_state")
+    saved_ver = self.settings.value("layout_version", "")
 
-    state = True if default_restored else self.settings.value("last_state")
-    saved_ver = _LAYOUT_VERSION if default_restored else self.settings.value("layout_version", "")
+    # Discard saved state when dock topology has changed (e.g. Left+Right area
+    # → single LeftDockWidgetArea with splitDockWidget).  Restoring an
+    # incompatible state would move docks back to the old RightDockWidgetArea.
+    if saved_ver != _LAYOUT_VERSION:
+        state = None
+        self.settings.remove("last_state")
+        self.settings.setValue("layout_version", _LAYOUT_VERSION)
 
-    # Re-apply screen-fill mode if user had it active at last shutdown.
-    # restoreGeometry alone is not enough because:
-    #  - Qt's saveGeometry stores frame-relative coords; subsequent layout work
-    #    can nudge by a pixel and the visual "fill" is lost.
-    #  - The user's _toggle_screen_fill uses setGeometry (not showMaximized)
-    #    for multi-monitor support, so the maximized flag was never set.
-    # Persisting the flag lets us re-run the fill logic against the current
-    # screen at startup.
+    restored = False
+    restore_source = "none"
+    if state:
+        restored = bool(self.restoreState(state))
+        if restored:
+            restore_source = "last_session"
+
+    # The last live session is authoritative.  A user-saved default remains a
+    # useful recovery fallback, but must not replace the layout that was active
+    # immediately before a language-change restart or a normal relaunch.
+    if not restored:
+        preset_manager = getattr(self, "preset_manager", None)
+        if preset_manager is not None:
+            try:
+                restored = bool(preset_manager.apply_saved_default_on_startup())
+                if restored:
+                    restore_source = "saved_default"
+            except Exception:
+                restored = False
+
+    self._layout_restore_succeeded = restored
+    self._layout_restore_source = restore_source
+    should_normalize_splits = not restored
+
+    # Re-apply screen-fill mode only as part of a valid last-session restore.
+    # restoreGeometry alone is not enough because the fill action uses
+    # setGeometry rather than Qt's maximized window state.
     if (
-        not default_restored
+        restore_source == "last_session"
         and str(self.settings.value("screen_fill_active", "false")).lower() == "true"
     ):
 
@@ -52,21 +75,8 @@ def restore_window_and_bind_menu_state(self):
 
         QTimer.singleShot(0, _reapply_fill)
 
-    # Discard saved state when dock topology has changed (e.g. Left+Right area
-    # → single LeftDockWidgetArea with splitDockWidget).  Restoring an
-    # incompatible state would move docks back to the old RightDockWidgetArea.
-    if saved_ver != _LAYOUT_VERSION:
-        state = None
-        self.settings.remove("last_state")
-        self.settings.setValue("layout_version", _LAYOUT_VERSION)
-
-    restored = default_restored
-    if state and not default_restored:
-        restored = bool(self.restoreState(state))
-    should_normalize_splits = not state or not restored
-
     # 저장된 레이아웃이 없을 때(첫 실행·초기화 후) 기본 레이아웃(Preset 1: 전체 도킹) 적용
-    if not state or not restored:
+    if not restored:
         from calendar_app.presentation.main_window.dock_sections.dock_layout_presets import (
             _preset_all_docked,
         )
@@ -80,20 +90,15 @@ def restore_window_and_bind_menu_state(self):
     # been shown yet – use isHidden() (explicitly hidden flag) so we don't falsely
     # discard a valid state (including one with floating docks).
     docks = [self.left_dock, self.center_dock, self.routine_dock, self.directive_dock]
-    if (state and not restored) or all(dock.isHidden() for dock in docks):
+    if state and not restored:
         for dock in docks:
             dock.setVisible(True)
         self.settings.remove("last_state")
-    elif not default_restored:
-        # Ensure right-side docks are alive; don't force-show floating ones.
-        for dock in (self.routine_dock, self.directive_dock):
-            if dock.isHidden():
-                dock.setVisible(True)
 
-    self.act_today.setChecked(self.left_dock.isVisible())
-    self.act_calendar.setChecked(self.center_dock.isVisible())
-    self.act_routine.setChecked(self.routine_dock.isVisible())
-    self.act_directive.setChecked(self.directive_dock.isVisible())
+    self.act_today.setChecked(not self.left_dock.isHidden())
+    self.act_calendar.setChecked(not self.center_dock.isHidden())
+    self.act_routine.setChecked(not self.routine_dock.isHidden())
+    self.act_directive.setChecked(not self.directive_dock.isHidden())
 
     # 단차 방지: 좌/우 열의 수직 분할선을 항상 50/50으로 동기화
     # (저장된 상태에서 두 열의 분할 위치가 다를 경우 시각적 단차 발생)
@@ -137,24 +142,48 @@ def _sync_vertical_splits(app):
         pass
 
 
-def save_window_layout(self):
-    """종료 시점의 윈도우 geometry와 dock 레이아웃을 QSettings에 저장. 중복 호출 무해."""
-    import contextlib
+def flush_window_layout(self) -> bool:
+    """Persist the complete live session before a restart or final shutdown."""
 
-    if getattr(self, "_layout_saved", False):
-        return
-    self._layout_saved = True
-    with contextlib.suppress(Exception):
+    saved = True
+    try:
         self.settings.setValue("last_geometry", self.saveGeometry())
-    with contextlib.suppress(Exception):
+    except Exception:
+        logger.exception("Failed to persist window geometry")
+        saved = False
+    try:
         self.settings.setValue("last_state", self.saveState())
         self.settings.setValue("layout_version", _LAYOUT_VERSION)
-    # 오버레이 위젯 위치도 저장
-    with contextlib.suppress(Exception):
-        if hasattr(self, "overlay_manager"):
-            self.overlay_manager.save_all()
-    with contextlib.suppress(Exception):
+    except Exception:
+        logger.exception("Failed to persist dock layout")
+        saved = False
+
+    # OverlayWidgetManager.save_all() captures live coordinates before syncing
+    # its instance metadata.  This is required when the user changes language
+    # while an overlay was moved since the last reactive settings write.
+    try:
+        overlay_manager = getattr(self, "overlay_manager", None)
+        if overlay_manager is not None:
+            overlay_manager.save_all()
+    except Exception:
+        logger.exception("Failed to persist overlay widget state")
+        saved = False
+
+    try:
         self.settings.sync()
+    except Exception:
+        logger.exception("Failed to flush application settings")
+        saved = False
+    return saved
+
+
+def save_window_layout(self) -> bool:
+    """종료 시점의 윈도우 geometry와 dock 레이아웃을 QSettings에 저장. 중복 호출 무해."""
+    if getattr(self, "_layout_saved", False):
+        return True
+    saved = flush_window_layout(self)
+    self._layout_saved = saved
+    return saved
 
 
 def persist_dock_layout(self):

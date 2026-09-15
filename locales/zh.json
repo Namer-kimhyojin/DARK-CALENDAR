@@ -24,7 +24,7 @@
     "view_issues": "查看同步问题"
   },
   "app": {
-    "exit_message": "Dark Calendar 即将关闭。\n程序将完全退出，不会最小化到系统托盘。\n继续？",
+    "exit_message": "Air Calendar 即将关闭。\n程序将完全退出，不会最小化到系统托盘。\n继续？",
     "exit_title": "退出"
   },
   "app_name": "暗黑日历",
@@ -32,7 +32,7 @@
     "disabled": "残疾人",
     "enabled": "启用",
     "msg": "启动时自动启动已 {status}。",
-    "registration_failed": "请在 Windows 启动应用设置中允许 Dark Calendar。"
+    "registration_failed": "请在 Windows 启动应用设置中允许 Air Calendar。"
   },
   "away_lock": {
     "admin_pw_placeholder": "管理员密码",
@@ -770,7 +770,7 @@
         "slate": "Slate"
       },
       "preview": {
-        "app_name": "Dark Calendar",
+        "app_name": "Air Calendar",
         "custom_style": "自定义",
         "input_hint": "Enter content...",
         "item_deadline": "Project Deadline",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "每年"
   },
   "shortcut": {
-    "content": "<h3>快捷键指南</h3><hr><b>[日程管理]</b><br>• <b>Ctrl + N</b>: 添加新日程<br>• <b>Ctrl + R</b>: 注册例程<br>• <b>Ctrl + G</b>: 注册指令<br>• <b>Ctrl + L</b>: 管理清单模板<br>• <b>Ctrl + Shift + L</b>: 桌面锁定模式<br><br><b>[屏幕操作]</b><br>• <b>Ctrl + Shift + B</b>: 显示/隐藏顶栏<br>• <b>Ctrl + M</b>: 切换磁吸模式<br>• <b>Ctrl + F</b>: 切换专注模式<br>• <b>F11</b>: 切换全屏<br>• <b>Ctrl + Alt + R</b>: 例程管理器<br><br><b>[布局预设]</b><br>• <b>Ctrl + Shift + 1</b>: 完全停靠布局<br>• <b>Ctrl + Shift + 2</b>: 日历聚焦布局<br>• <b>Ctrl + Shift + 3</b>: 任务聚焦布局<br>• <b>Ctrl + Shift + 4</b>: 标签页分割布局<br>• <b>Ctrl + Shift + 5</b>: 完全分离布局<br>• <b>Ctrl + Shift + S</b>: 保存当前布局<br><br><b>[导航]</b><br>• <b>Ctrl + Left/Right</b>: 上一个/下一个日期<br>• <b>Ctrl + T</b>: 跳转到今天<br>• <b>Delete</b>: 删除选中日程<br>• <b>Esc</b>: 清除选择<br>• <b>F1</b>: 打开快捷键指南<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>版本: {APP_VERSION}<br>作者: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Dark Calendar 快捷键指南"
+    "content": "<h3>快捷键指南</h3><hr><b>[日程管理]</b><br>• <b>Ctrl + N</b>: 添加新日程<br>• <b>Ctrl + R</b>: 注册例程<br>• <b>Ctrl + G</b>: 注册指令<br>• <b>Ctrl + L</b>: 管理清单模板<br>• <b>Ctrl + Shift + L</b>: 桌面锁定模式<br><br><b>[屏幕操作]</b><br>• <b>Ctrl + Shift + B</b>: 显示/隐藏顶栏<br>• <b>Ctrl + M</b>: 切换磁吸模式<br>• <b>Ctrl + F</b>: 切换专注模式<br>• <b>F11</b>: 切换全屏<br>• <b>Ctrl + Alt + R</b>: 例程管理器<br><br><b>[布局预设]</b><br>• <b>Ctrl + Shift + 1</b>: 完全停靠布局<br>• <b>Ctrl + Shift + 2</b>: 日历聚焦布局<br>• <b>Ctrl + Shift + 3</b>: 任务聚焦布局<br>• <b>Ctrl + Shift + 4</b>: 标签页分割布局<br>• <b>Ctrl + Shift + 5</b>: 完全分离布局<br>• <b>Ctrl + Shift + S</b>: 保存当前布局<br><br><b>[导航]</b><br>• <b>Ctrl + Left/Right</b>: 上一个/下一个日期<br>• <b>Ctrl + T</b>: 跳转到今天<br>• <b>Delete</b>: 删除选中日程<br>• <b>Esc</b>: 清除选择<br>• <b>F1</b>: 打开快捷键指南<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>版本: {APP_VERSION}<br>作者: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Air Calendar 快捷键指南"
   },
   "splash": {
     "initializing_db": "正在初始化数据库...",

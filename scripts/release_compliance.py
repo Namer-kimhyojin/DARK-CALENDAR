@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Build and verify Dark Calendar open-source compliance artifacts."""
+"""Build and verify Air Calendar open-source compliance artifacts."""
 
 from __future__ import annotations
 
@@ -18,7 +18,8 @@ import zipfile
 
 _LICENSE_NAME_RE = re.compile(r"^(license|copying|copyright|notice|authors)(\..*)?$", re.IGNORECASE)
 _PIN_RE = re.compile(r"^([A-Za-z0-9_.-]+)==([^;\s]+)")
-_USER_AGENT = "DarkCalendar-ReleaseCompliance/1.0"
+_USER_AGENT = "AirCalendar-ReleaseCompliance/1.0"
+_FORBIDDEN_FOREIGN_ICU_PREFIXES = ("icudt", "icuin", "icuuc")
 _REQUIRED_UNTRACKED_SOURCE_FILES = (
     Path("requirements-runtime.lock"),
     Path("requirements-build.lock"),
@@ -402,10 +403,17 @@ def verify_payload(
     hits = sorted(
         str(path.relative_to(payload_dir))
         for path in payload_dir.rglob("*")
-        if path.is_file() and path.name.lower() in forbidden
+        if path.is_file()
+        and (
+            path.name.lower() in forbidden
+            or (
+                path.suffix.lower() == ".dll"
+                and path.name.lower().startswith(_FORBIDDEN_FOREIGN_ICU_PREFIXES)
+            )
+        )
     )
     if hits:
-        raise RuntimeError("Unapproved Qt/FFmpeg payload files found:\n- " + "\n- ".join(hits))
+        raise RuntimeError("Unapproved runtime payload files found:\n- " + "\n- ".join(hits))
 
     if source_bundle is not None and not source_bundle.is_file():
         raise RuntimeError(f"Corresponding-source bundle missing: {source_bundle}")

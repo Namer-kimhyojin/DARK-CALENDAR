@@ -176,7 +176,7 @@ def main() -> None:
     args = parser.parse_args()
 
     print("=" * 60)
-    print("  Dark Calendar - Icon Generator")
+    print("  Air Calendar - Icon Generator")
     print("=" * 60)
     print()
     print("  [Master image requirements]")

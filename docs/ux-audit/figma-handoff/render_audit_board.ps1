@@ -178,7 +178,7 @@ try {
     Add-Text $slide 'Mobile stability  UP' 650 1480 260 30 18 $green $true 'Segoe UI' | Out-Null
     Add-Text $slide 'License clarity  UP' 970 1480 290 30 18 $green $true 'Segoe UI' | Out-Null
     Add-Text $slide 'Security confusion  DOWN' 1320 1480 360 30 18 $green $true 'Segoe UI' | Out-Null
-    Add-Text $slide 'Dark Calendar / Homepage UX handoff board' 2180 1482 580 28 16 $muted $false 'Segoe UI' 3 | Out-Null
+    Add-Text $slide 'Air Calendar / Homepage UX handoff board' 2180 1482 580 28 16 $muted $false 'Segoe UI' 3 | Out-Null
 
     $slide.Export($output, 'PNG', 3840, 2160)
 }

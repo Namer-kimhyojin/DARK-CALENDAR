@@ -131,6 +131,18 @@ class WindowRestoreHelperTests(unittest.TestCase):
         self.assertEqual(1, app.overlay_manager.save_calls)
         self.assertEqual(1, app.settings.synced)
 
+    def test_restart_flush_refreshes_layout_even_after_a_prior_final_save(self):
+        app = _AppStub()
+        app._layout_saved = True
+        app.saveGeometry = lambda: b"restart-geometry"
+        app.saveState = lambda: b"restart-state"
+
+        self.assertTrue(wrh.flush_window_layout(app))
+
+        self.assertEqual(b"restart-geometry", app.settings.values["last_geometry"])
+        self.assertEqual(b"restart-state", app.settings.values["last_state"])
+        self.assertEqual(1, app.settings.synced)
+
     def test_successful_restore_keeps_saved_split_sizes(self):
         app = _AppStub(
             settings_values={
@@ -176,7 +188,7 @@ class WindowRestoreHelperTests(unittest.TestCase):
         self.assertTrue(any(delay == 0 for delay, _ in scheduled))
         self.assertTrue(any(delay == 50 for delay, _ in scheduled))
 
-    def test_saved_default_takes_priority_over_last_session_layout(self):
+    def test_last_session_layout_takes_priority_over_saved_default(self):
         app = _AppStub(
             settings_values={
                 "last_geometry": b"old-geom",
@@ -194,11 +206,57 @@ class WindowRestoreHelperTests(unittest.TestCase):
         ):
             wrh.restore_window_and_bind_menu_state(app)
 
-        self.assertEqual(1, app.preset_manager.calls)
+        self.assertEqual(0, app.preset_manager.calls)
         self.assertEqual([b"old-geom"], app.restored_geometry)
-        self.assertEqual([], app.restored_state)
+        self.assertEqual([b"old-state"], app.restored_state)
+        self.assertTrue(app._layout_restore_succeeded)
+        self.assertEqual("last_session", app._layout_restore_source)
         self.assertFalse(any(delay == 0 for delay, _ in scheduled))
         self.assertFalse(any(delay == 50 for delay, _ in scheduled))
+
+    def test_saved_default_is_used_only_when_last_session_restore_fails(self):
+        app = _AppStub(
+            settings_values={
+                "last_geometry": b"old-geom",
+                "last_state": b"broken-state",
+                "layout_version": wrh._LAYOUT_VERSION,
+            },
+            restore_ok=False,
+        )
+        app.preset_manager = _PresetManagerStub(restored=True)
+        scheduled = []
+
+        with patch.object(
+            wrh.QTimer,
+            "singleShot",
+            side_effect=lambda delay, callback: scheduled.append((delay, callback)),
+        ):
+            wrh.restore_window_and_bind_menu_state(app)
+
+        self.assertEqual([b"broken-state"], app.restored_state)
+        self.assertEqual(1, app.preset_manager.calls)
+        self.assertTrue(app._layout_restore_succeeded)
+        self.assertEqual("saved_default", app._layout_restore_source)
+        self.assertFalse(any(delay == 0 for delay, _ in scheduled))
+        self.assertFalse(any(delay == 50 for delay, _ in scheduled))
+
+    def test_successful_restore_preserves_explicitly_hidden_right_panels(self):
+        app = _AppStub(
+            settings_values={
+                "last_state": b"state",
+                "layout_version": wrh._LAYOUT_VERSION,
+            }
+        )
+        app.routine_dock._hidden = True
+        app.directive_dock._hidden = True
+
+        with patch.object(wrh.QTimer, "singleShot"):
+            wrh.restore_window_and_bind_menu_state(app)
+
+        self.assertTrue(app.routine_dock.isHidden())
+        self.assertTrue(app.directive_dock.isHidden())
+        self.assertFalse(app.act_routine.checked)
+        self.assertFalse(app.act_directive.checked)
 
 
 if __name__ == "__main__":

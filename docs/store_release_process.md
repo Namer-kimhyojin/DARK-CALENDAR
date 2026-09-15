@@ -8,6 +8,21 @@ Create a Windows Store upload package that:
 - excludes local DB files, logs, Google credentials, and Google token files
 - supports x64 and arm64 Store submission when both native MSIX packages exist
 
+## Air Calendar Rebrand Compatibility
+
+`Air Calendar` is the public product and package display name. The existing
+Microsoft Store product identity remains `Kimhyojin.DarkCalendar`; the packaged
+executable remains `DarkCalendar.exe`, and the startup task ID remains
+`DarkCalendarStartup`. These are compatibility identifiers, not customer-facing
+brand strings. Changing `Package/Identity/Name` requires a separate Store
+product and breaks the existing package family, purchase entitlement, and
+automatic-update chain.
+
+For the existing Store product, always copy the identity values shown under
+Partner Center > Product management > Product identity. Rename the listing by
+reserving/selecting `Air Calendar` for every Store language, while keeping the
+manifest identity unchanged.
+
 ## Files
 
 - `build-release.bat` is the only release-build entrypoint.
@@ -57,7 +72,7 @@ build-release.bat -SkipMsix
 Preflight validation without changing version files or creating build output:
 
 ```bat
-build-release.bat -ValidateOnly -Version 3.7.0 -PackageVersion 3.7.0.0 -ReleaseDate 2026-09-15 -Channel Stable
+build-release.bat -ValidateOnly -Version 3.7.1 -PackageVersion 3.7.1.0 -ReleaseDate 2026-09-15 -Channel Stable
 ```
 
 ## Surface Support
@@ -77,19 +92,19 @@ build-release.bat -UploadOnly
 
 That creates:
 
-- `release\store\DarkCalendar-3.7.0.0-arm64_x64.msixupload`
+- `release\store\DarkCalendar-3.7.1.0-arm64_x64.msixupload`
 
 If only one native package is available, the scripts fall back to:
 
-- `release\store\DarkCalendar-3.7.0.0-x64.msixupload`
-- `release\store\DarkCalendar-3.7.0.0-arm64.msixupload`
+- `release\store\DarkCalendar-3.7.1.0-x64.msixupload`
+- `release\store\DarkCalendar-3.7.1.0-arm64.msixupload`
 
 ## Open-source compliance gate
 
 Every release build verifies both lock files, copies license texts for every runtime package, removes unapproved Qt/FFmpeg modules, and generates:
 
 - `THIRD_PARTY_MANIFEST.json` and `THIRD_PARTY_LICENSES/` inside the payload
-- `release\source\DarkCalendar-3.7.0-corresponding-source.zip`
+- `release\source\DarkCalendar-3.7.1-corresponding-source.zip`
 
 Do not submit the Store upload unless `scripts/release_compliance.py verify-payload` passes and the corresponding-source ZIP is attached to the matching GitHub release.
 

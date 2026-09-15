@@ -1,10 +1,10 @@
-# -*- Dark Calendar — CLAUDE.md -*-
+# -*- Air Calendar — CLAUDE.md -*-
 # 이 파일은 Claude Code가 이 프로젝트에서 작업할 때 참조하던 지침서입니다.
 # 현재 기준 문서는 AGENTS.md이며, 이 파일은 호환용 보조 지침으로 유지합니다.
 
 ## 프로젝트 개요
 
-- **앱 이름**: Dark Calendar v2.8.3
+- **앱 이름**: Air Calendar
 - **플랫폼**: Windows (PyQt6 데스크톱 앱)
 - **언어**: Python 3.x, PyQt6 6.10.2
 - **UI 언어**: 한국어 (i18n 지원 — `infrastructure/i18n.py`)

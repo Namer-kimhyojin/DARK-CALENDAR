@@ -1,12 +1,12 @@
-# Dark Calendar
+# Air Calendar
 
-Dark Calendar turns the Windows desktop into a personal time workspace. Place calendars, tasks, clocks, weather, D-Day, countdown, and text widgets directly on the desktop—then move, resize, recolor, and arrange them around the way you work.
+Air Calendar turns the Windows desktop into a personal time workspace. Place calendars, tasks, clocks, weather, D-Day, countdown, and text widgets directly on the desktop—then move, resize, recolor, and arrange them around the way you work.
 
 [Official website](https://namer-kimhyojin.github.io/DARK-CALENDAR/) · [Microsoft Store](https://apps.microsoft.com/detail/9mxq08rf22k8) · [Latest release](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/latest) · [Media kit](https://namer-kimhyojin.github.io/DARK-CALENDAR/promo.html) · [Campaign plan](marketing/DARK_CALENDAR_PROMOTION_KIT.md)
 
-![Dark Calendar desktop customization](docs/assets/desktop-customization.webp)
+![Air Calendar desktop customization](docs/assets/desktop-customization.webp)
 
-## Why Dark Calendar
+## Why Air Calendar
 
 - Put calendars and seven kinds of widgets directly on the Windows desktop.
 - Move and resize each element freely, including multiple instances of the same widget.
@@ -17,15 +17,15 @@ Dark Calendar turns the Windows desktop into a personal time workspace. Place ca
 
 ## License
 
-Dark Calendar is free software distributed under the **GNU General Public License v3.0 only** (`GPL-3.0-only`). See [LICENSE](LICENSE).
+Air Calendar is free software distributed under the **GNU General Public License v3.0 only** (`GPL-3.0-only`). See [LICENSE](LICENSE).
 
 The application uses PyQt6, which is distributed by Riverbank Computing under GPLv3 or a commercial license. This repository uses the GPLv3 edition. Third-party components and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Corresponding source
 
 - Source repository: <https://github.com/Namer-kimhyojin/DARK-CALENDAR>
-- Release page for `3.7.0`: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.7.0>
-- Complete corresponding-source archive: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v3.7.0/DarkCalendar-3.7.0-corresponding-source.zip>
+- Release page for `3.7.1`: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.7.1>
+- Complete corresponding-source archive: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v3.7.1/DarkCalendar-3.7.1-corresponding-source.zip>
 - Source availability notice: [SOURCE_OFFER.md](SOURCE_OFFER.md)
 
 Each distributed binary must point to the matching release. The release must contain the application tag, exact dependency lock, license bundle, and complete corresponding-source archive used for that binary.

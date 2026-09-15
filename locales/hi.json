@@ -24,7 +24,7 @@
     "view_issues": "सिंक समस्याएं देखें"
   },
   "app": {
-    "exit_message": "Dark Calendar बंद हो रहा है।\nप्रोग्राम ट्रे में न जाकर पूरी तरह बंद होगा।\nजारी रखें?",
+    "exit_message": "Air Calendar बंद हो रहा है।\nप्रोग्राम ट्रे में न जाकर पूरी तरह बंद होगा।\nजारी रखें?",
     "exit_title": "बाहर निकलें"
   },
   "app_name": "डार्क कैलेंडर",
@@ -32,7 +32,7 @@
     "disabled": "अक्षम",
     "enabled": "सक्षम",
     "msg": "ऑटो-लॉन्च {status} है।",
-    "registration_failed": "Windows की स्टार्टअप ऐप्स सेटिंग में Dark Calendar को अनुमति दें।"
+    "registration_failed": "Windows की स्टार्टअप ऐप्स सेटिंग में Air Calendar को अनुमति दें।"
   },
   "away_lock": {
     "admin_pw_placeholder": "व्यवस्थापक पासवर्ड",
@@ -1006,7 +1006,7 @@
       "remote_orphan": "केवल Google में (कोई स्थानीय मिलान नहीं)",
       "unknown": "एक अज्ञात त्रुटि हुई।"
     },
-    "first_setup_msg": "Dark Calendar में आपका स्वागत है!\nगूगल सिंक सेटअप करें?",
+    "first_setup_msg": "Air Calendar में आपका स्वागत है!\nगूगल सिंक सेटअप करें?",
     "first_setup_title": "सहायक",
     "guidance": {
       "auth": "📍 [स्थिति] Google प्रमाणीकरण समाप्त हो गया है या अमान्य है।\n🔒 [कार्रवाई] सुरक्षा के लिए सभी सिंक प्रक्रियाओं को सुरक्षित रूप से रोक दिया गया है।\n✅ [मार्गदर्शन] कृपया 'सेटिंग्स > कैलेंडर और सिंक > प्रमाणित करें' पर जाएं और फिर से लॉग इन करें।",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "वार्षिक"
   },
   "shortcut": {
-    "content": "<h3>शॉर्टकट गाइड</h3><hr><b>[कार्यक्रम प्रबंधन]</b><br>• <b>Ctrl + N</b>: नया कार्यक्रम जोड़ें<br>• <b>Ctrl + R</b>: रूटीन दर्ज करें<br>• <b>Ctrl + G</b>: निर्देश दर्ज करें<br>• <b>Ctrl + L</b>: चेकलिस्ट टेम्पलेट प्रबंधित करें<br>• <b>Ctrl + Shift + L</b>: डेस्कटॉप लॉक मोड<br><br><b>[स्क्रीन संचालन]</b><br>• <b>Ctrl + Shift + B</b>: शीर्ष बार दिखाएं/छुपाएं<br>• <b>Ctrl + M</b>: मैग्नेट मोड टॉगल करें<br>• <b>Ctrl + F</b>: फ़ोकस मोड टॉगल करें<br>• <b>F11</b>: पूर्ण स्क्रीन टॉगल करें<br>• <b>Ctrl + Alt + R</b>: रूटीन प्रबंधक<br><br><b>[लेआउट प्रीसेट]</b><br>• <b>Ctrl + Shift + 1</b>: पूरी तरह डॉक्ड लेआउट<br>• <b>Ctrl + Shift + 2</b>: कैलेंडर केंद्रित लेआउट<br>• <b>Ctrl + Shift + 3</b>: कार्य केंद्रित लेआउट<br>• <b>Ctrl + Shift + 4</b>: टैब विभाजित लेआउट<br>• <b>Ctrl + Shift + 5</b>: पूरी तरह अलग लेआउट<br>• <b>Ctrl + Shift + S</b>: वर्तमान लेआउट सहेजें<br><br><b>[नेविगेशन]</b><br>• <b>Ctrl + Left/Right</b>: पिछली/अगली तारीख<br>• <b>Ctrl + T</b>: आज पर जाएं<br>• <b>Delete</b>: चुने हुए कार्यक्रम को हटाएं<br>• <b>Esc</b>: चयन रद्द करें<br>• <b>F1</b>: शॉर्टकट गाइड खोलें<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>संस्करण: {APP_VERSION}<br>लेखक: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Dark Calendar शॉर्टकट गाइड"
+    "content": "<h3>शॉर्टकट गाइड</h3><hr><b>[कार्यक्रम प्रबंधन]</b><br>• <b>Ctrl + N</b>: नया कार्यक्रम जोड़ें<br>• <b>Ctrl + R</b>: रूटीन दर्ज करें<br>• <b>Ctrl + G</b>: निर्देश दर्ज करें<br>• <b>Ctrl + L</b>: चेकलिस्ट टेम्पलेट प्रबंधित करें<br>• <b>Ctrl + Shift + L</b>: डेस्कटॉप लॉक मोड<br><br><b>[स्क्रीन संचालन]</b><br>• <b>Ctrl + Shift + B</b>: शीर्ष बार दिखाएं/छुपाएं<br>• <b>Ctrl + M</b>: मैग्नेट मोड टॉगल करें<br>• <b>Ctrl + F</b>: फ़ोकस मोड टॉगल करें<br>• <b>F11</b>: पूर्ण स्क्रीन टॉगल करें<br>• <b>Ctrl + Alt + R</b>: रूटीन प्रबंधक<br><br><b>[लेआउट प्रीसेट]</b><br>• <b>Ctrl + Shift + 1</b>: पूरी तरह डॉक्ड लेआउट<br>• <b>Ctrl + Shift + 2</b>: कैलेंडर केंद्रित लेआउट<br>• <b>Ctrl + Shift + 3</b>: कार्य केंद्रित लेआउट<br>• <b>Ctrl + Shift + 4</b>: टैब विभाजित लेआउट<br>• <b>Ctrl + Shift + 5</b>: पूरी तरह अलग लेआउट<br>• <b>Ctrl + Shift + S</b>: वर्तमान लेआउट सहेजें<br><br><b>[नेविगेशन]</b><br>• <b>Ctrl + Left/Right</b>: पिछली/अगली तारीख<br>• <b>Ctrl + T</b>: आज पर जाएं<br>• <b>Delete</b>: चुने हुए कार्यक्रम को हटाएं<br>• <b>Esc</b>: चयन रद्द करें<br>• <b>F1</b>: शॉर्टकट गाइड खोलें<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>संस्करण: {APP_VERSION}<br>लेखक: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Air Calendar शॉर्टकट गाइड"
   },
   "splash": {
     "initializing_db": "डेटाबेस आरंभ हो रहा है...",

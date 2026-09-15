@@ -277,7 +277,7 @@ def _run_splash_phase(
 
 def run(overlay_cls=None, build_ui_font=None) -> int:
     QCoreApplication.setOrganizationName("kimhyojin")
-    QCoreApplication.setApplicationName("Dark Calendar")
+    QCoreApplication.setApplicationName(APP_NAME)
 
     app = QApplication(sys.argv)
     _install_qt_message_handler()

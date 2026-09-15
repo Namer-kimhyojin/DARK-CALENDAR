@@ -24,7 +24,7 @@
     "view_issues": "Synchronisatieproblemen bekijken"
   },
   "app": {
-    "exit_message": "Dark Calendar wordt gesloten.\nHet programma wordt volledig afgesloten zonder naar de taakbalk te minimaliseren.\nDoorgaan?",
+    "exit_message": "Air Calendar wordt gesloten.\nHet programma wordt volledig afgesloten zonder naar de taakbalk te minimaliseren.\nDoorgaan?",
     "exit_title": "Afsluiten"
   },
   "app_name": "Donkere kalender",
@@ -32,7 +32,7 @@
     "disabled": "Uitgeschakeld",
     "enabled": "Ingeschakeld",
     "msg": "Automatisch starten bij opstarten is {status}.",
-    "registration_failed": "Sta Dark Calendar toe in de instellingen voor opstart-apps van Windows."
+    "registration_failed": "Sta Air Calendar toe in de instellingen voor opstart-apps van Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Beheerderswachtwoord",
@@ -1006,7 +1006,7 @@
       "remote_orphan": "Alleen in Google (geen lokale match)",
       "unknown": "Er is een onbekende fout opgetreden."
     },
-    "first_setup_msg": "Welkom bij Dark Calendar!\nWil je nu Google Calendar-synchronisatie instellen?",
+    "first_setup_msg": "Welkom bij Air Calendar!\nWil je nu Google Calendar-synchronisatie instellen?",
     "first_setup_title": "Installatieassistent",
     "guidance": {
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Please go to 'Settings > Kalender & Synchronisatie > Authenticate' and log in again.",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "Jaarlijks"
   },
   "shortcut": {
-    "content": "<h3>Snelgids</h3><hr><b>[Agendabeheer]</b><br>• <b>Ctrl + N</b>: Nieuwe afspraak toevoegen<br>• <b>Ctrl + R</b>: Routine registreren<br>• <b>Ctrl + G</b>: Richtlijn registreren<br>• <b>Ctrl + L</b>: Controlelijstsjablonen beheren<br>• <b>Ctrl + Shift + L</b>: Bureaubladvergrendelingsmodus<br><br><b>[Schermbewerkingen]</b><br>• <b>Ctrl + Shift + B</b>: Bovenste balk tonen/verbergen<br>• <b>Ctrl + M</b>: Magneetmodus in-/uitschakelen<br>• <b>Ctrl + F</b>: Focusmodus in-/uitschakelen<br>• <b>F11</b>: Volledig scherm in-/uitschakelen<br>• <b>Ctrl + Alt + R</b>: Routinebeheer<br><br><b>[Lay-outpreset]</b><br>• <b>Ctrl + Shift + 1</b>: Volledig gedokt lay-out<br>• <b>Ctrl + Shift + 2</b>: Agendagericht lay-out<br>• <b>Ctrl + Shift + 3</b>: Taakgericht lay-out<br>• <b>Ctrl + Shift + 4</b>: Tabblad gesplitst lay-out<br>• <b>Ctrl + Shift + 5</b>: Volledig losgekoppeld lay-out<br>• <b>Ctrl + Shift + S</b>: Huidig lay-out opslaan<br><br><b>[Navigatie]</b><br>• <b>Ctrl + Left/Right</b>: Vorige/volgende datum<br>• <b>Ctrl + T</b>: Naar vandaag springen<br>• <b>Delete</b>: Geselecteerde afspraak verwijderen<br>• <b>Esc</b>: Selectie wissen<br>• <b>F1</b>: Snelgids openen<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>Versie: {APP_VERSION}<br>Auteur: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Dark Calendar Snelgids"
+    "content": "<h3>Snelgids</h3><hr><b>[Agendabeheer]</b><br>• <b>Ctrl + N</b>: Nieuwe afspraak toevoegen<br>• <b>Ctrl + R</b>: Routine registreren<br>• <b>Ctrl + G</b>: Richtlijn registreren<br>• <b>Ctrl + L</b>: Controlelijstsjablonen beheren<br>• <b>Ctrl + Shift + L</b>: Bureaubladvergrendelingsmodus<br><br><b>[Schermbewerkingen]</b><br>• <b>Ctrl + Shift + B</b>: Bovenste balk tonen/verbergen<br>• <b>Ctrl + M</b>: Magneetmodus in-/uitschakelen<br>• <b>Ctrl + F</b>: Focusmodus in-/uitschakelen<br>• <b>F11</b>: Volledig scherm in-/uitschakelen<br>• <b>Ctrl + Alt + R</b>: Routinebeheer<br><br><b>[Lay-outpreset]</b><br>• <b>Ctrl + Shift + 1</b>: Volledig gedokt lay-out<br>• <b>Ctrl + Shift + 2</b>: Agendagericht lay-out<br>• <b>Ctrl + Shift + 3</b>: Taakgericht lay-out<br>• <b>Ctrl + Shift + 4</b>: Tabblad gesplitst lay-out<br>• <b>Ctrl + Shift + 5</b>: Volledig losgekoppeld lay-out<br>• <b>Ctrl + Shift + S</b>: Huidig lay-out opslaan<br><br><b>[Navigatie]</b><br>• <b>Ctrl + Left/Right</b>: Vorige/volgende datum<br>• <b>Ctrl + T</b>: Naar vandaag springen<br>• <b>Delete</b>: Geselecteerde afspraak verwijderen<br>• <b>Esc</b>: Selectie wissen<br>• <b>F1</b>: Snelgids openen<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Versie: {APP_VERSION}<br>Auteur: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Air Calendar Snelgids"
   },
   "splash": {
     "initializing_db": "Database initialiseren...",

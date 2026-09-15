@@ -46,7 +46,7 @@ def fetch_and_sync(calendar_id: str, ics_url: str) -> tuple[int, int, str | None
     try:
         req = urllib.request.Request(
             ics_url,
-            headers={"User-Agent": "DarkCalendar/1.0 ICS-Fetcher"},
+            headers={"User-Agent": "AirCalendar/1.0 ICS-Fetcher"},
         )
         with urllib.request.urlopen(req, timeout=15) as resp:
             raw = resp.read()

@@ -24,7 +24,7 @@
     "view_issues": "Senkronizasyon sorunlarını gör"
   },
   "app": {
-    "exit_message": "Dark Calendar kapanıyor.\nProgram, sistem tepsisine küçültülmeden tamamen kapanacak.\nDevam edilsin mi?",
+    "exit_message": "Air Calendar kapanıyor.\nProgram, sistem tepsisine küçültülmeden tamamen kapanacak.\nDevam edilsin mi?",
     "exit_title": "Çıkış"
   },
   "app_name": "Koyu Takvim",
@@ -32,7 +32,7 @@
     "disabled": "Devre Dışı",
     "enabled": "Etkinleştirildi",
     "msg": "Başlangıçta otomatik başlatma {status} olarak yapıldı.",
-    "registration_failed": "Windows Başlangıç Uygulamaları ayarlarında Dark Calendar'a izin verin."
+    "registration_failed": "Windows Başlangıç Uygulamaları ayarlarında Air Calendar'a izin verin."
   },
   "away_lock": {
     "admin_pw_placeholder": "Yönetici şifresi",
@@ -1006,7 +1006,7 @@
       "remote_orphan": "Yalnızca Google'da (yerel eşleşme yok)",
       "unknown": "Bilinmeyen bir hata oluştu."
     },
-    "first_setup_msg": "Dark Calendar'a hoş geldiniz!\nGoogle Takvim senkronizasyonunu şimdi kurmak ister misiniz?",
+    "first_setup_msg": "Air Calendar'a hoş geldiniz!\nGoogle Takvim senkronizasyonunu şimdi kurmak ister misiniz?",
     "first_setup_title": "Kurulum Asistanı",
     "guidance": {
       "auth": "📍 [DURUM] Google kimlik doğrulamasının süresi doldu veya geçersiz.\n🔒 [EYLEM] Güvenlik nedeniyle tüm senkronizasyon işlemleri güvenli bir şekilde duraklatıldı.\n✅ [REHBERLİK] Lütfen 'Ayarlar > Takvim ve Senkronizasyon > Kimlik Doğrula'ya gidin ve tekrar giriş yapın.",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "Yıllık"
   },
   "shortcut": {
-    "content": "<h3>Kısayol Kılavuzu</h3><hr><b>[Program Yönetimi]</b><br>• <b>Ctrl + N</b>: Yeni program ekle<br>• <b>Ctrl + R</b>: Rutin kaydet<br>• <b>Ctrl + G</b>: Direktif kaydet<br>• <b>Ctrl + L</b>: Kontrol listesi şablonlarını yönet<br>• <b>Ctrl + Shift + L</b>: Masaüstü kilit modu<br><br><b>[Ekran İşlemleri]</b><br>• <b>Ctrl + Shift + B</b>: Üst çubuğu göster/gizle<br>• <b>Ctrl + M</b>: Mıknatıs modu aç/kapat<br>• <b>Ctrl + F</b>: Odak modu aç/kapat<br>• <b>F11</b>: Tam ekran aç/kapat<br>• <b>Ctrl + Alt + R</b>: Rutin yöneticisi<br><br><b>[Düzen Önayarları]</b><br>• <b>Ctrl + Shift + 1</b>: Tam yerleşik düzen<br>• <b>Ctrl + Shift + 2</b>: Takvim odaklı düzen<br>• <b>Ctrl + Shift + 3</b>: Görev odaklı düzen<br>• <b>Ctrl + Shift + 4</b>: Sekme bölünmüş düzen<br>• <b>Ctrl + Shift + 5</b>: Tam ayrık düzen<br>• <b>Ctrl + Shift + S</b>: Mevcut düzeni kaydet<br><br><b>[Gezinme]</b><br>• <b>Ctrl + Left/Right</b>: Önceki/sonraki tarih<br>• <b>Ctrl + T</b>: Bugüne git<br>• <b>Delete</b>: Seçilen programı sil<br>• <b>Esc</b>: Seçimi temizle<br>• <b>F1</b>: Kısayol kılavuzunu aç<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>Sürüm: {APP_VERSION}<br>Yazar: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Dark Calendar Kısayol Kılavuzu"
+    "content": "<h3>Kısayol Kılavuzu</h3><hr><b>[Program Yönetimi]</b><br>• <b>Ctrl + N</b>: Yeni program ekle<br>• <b>Ctrl + R</b>: Rutin kaydet<br>• <b>Ctrl + G</b>: Direktif kaydet<br>• <b>Ctrl + L</b>: Kontrol listesi şablonlarını yönet<br>• <b>Ctrl + Shift + L</b>: Masaüstü kilit modu<br><br><b>[Ekran İşlemleri]</b><br>• <b>Ctrl + Shift + B</b>: Üst çubuğu göster/gizle<br>• <b>Ctrl + M</b>: Mıknatıs modu aç/kapat<br>• <b>Ctrl + F</b>: Odak modu aç/kapat<br>• <b>F11</b>: Tam ekran aç/kapat<br>• <b>Ctrl + Alt + R</b>: Rutin yöneticisi<br><br><b>[Düzen Önayarları]</b><br>• <b>Ctrl + Shift + 1</b>: Tam yerleşik düzen<br>• <b>Ctrl + Shift + 2</b>: Takvim odaklı düzen<br>• <b>Ctrl + Shift + 3</b>: Görev odaklı düzen<br>• <b>Ctrl + Shift + 4</b>: Sekme bölünmüş düzen<br>• <b>Ctrl + Shift + 5</b>: Tam ayrık düzen<br>• <b>Ctrl + Shift + S</b>: Mevcut düzeni kaydet<br><br><b>[Gezinme]</b><br>• <b>Ctrl + Left/Right</b>: Önceki/sonraki tarih<br>• <b>Ctrl + T</b>: Bugüne git<br>• <b>Delete</b>: Seçilen programı sil<br>• <b>Esc</b>: Seçimi temizle<br>• <b>F1</b>: Kısayol kılavuzunu aç<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Sürüm: {APP_VERSION}<br>Yazar: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Air Calendar Kısayol Kılavuzu"
   },
   "splash": {
     "initializing_db": "Veritabanı başlatılıyor...",

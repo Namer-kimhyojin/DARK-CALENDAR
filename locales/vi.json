@@ -24,7 +24,7 @@
     "view_issues": "Xem sự cố đồng bộ"
   },
   "app": {
-    "exit_message": "Dark Calendar sẽ đóng.\nChương trình sẽ thoát hoàn toàn mà không thu nhỏ vào khay hệ thống.\nTiếp tục?",
+    "exit_message": "Air Calendar sẽ đóng.\nChương trình sẽ thoát hoàn toàn mà không thu nhỏ vào khay hệ thống.\nTiếp tục?",
     "exit_title": "Thoát"
   },
   "app_name": "Lịch tối",
@@ -32,7 +32,7 @@
     "disabled": "Tắt",
     "enabled": "Bật",
     "msg": "Tự động khởi chạy khi khởi động đã ở trạng thái {status}.",
-    "registration_failed": "Hãy cho phép Dark Calendar trong cài đặt Ứng dụng khởi động của Windows."
+    "registration_failed": "Hãy cho phép Air Calendar trong cài đặt Ứng dụng khởi động của Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Mật khẩu admin",
@@ -1006,7 +1006,7 @@
       "remote_orphan": "Chỉ có trong Google (không có kết quả phù hợp địa phương)",
       "unknown": "Đã xảy ra lỗi không xác định."
     },
-    "first_setup_msg": "Chào mừng đến với Dark Calendar!\nBạn có muốn thiết lập đồng bộ Google Calendar ngay bây giờ không?",
+    "first_setup_msg": "Chào mừng đến với Air Calendar!\nBạn có muốn thiết lập đồng bộ Google Calendar ngay bây giờ không?",
     "first_setup_title": "Trợ lý thiết lập",
     "guidance": {
       "auth": "📍 [TÌNH TRẠNG] Xác thực Google đã hết hạn hoặc không hợp lệ.\n🔒 [HÀNH ĐỘNG] Tất cả quá trình đồng bộ hóa đều được tạm dừng một cách an toàn để bảo mật.\n✅ [HƯỚNG DẪN] Vui lòng vào 'Cài đặt > Lịch & Đồng bộ hóa > Xác thực' và đăng nhập lại.",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "Hàng năm"
   },
   "shortcut": {
-    "content": "<h3>Hướng dẫn phím tắt</h3><hr><b>[Quản lý lịch]</b><br>• <b>Ctrl + N</b>: Thêm lịch mới<br>• <b>Ctrl + R</b>: Đăng ký thói quen<br>• <b>Ctrl + G</b>: Đăng ký chỉ thị<br>• <b>Ctrl + L</b>: Quản lý mẫu danh sách kiểm tra<br>• <b>Ctrl + Shift + L</b>: Chế độ khóa màn hình nền<br><br><b>[Thao tác màn hình]</b><br>• <b>Ctrl + Shift + B</b>: Hiện/ẩn thanh trên<br>• <b>Ctrl + M</b>: Bật/tắt chế độ nam châm<br>• <b>Ctrl + F</b>: Bật/tắt chế độ tập trung<br>• <b>F11</b>: Bật/tắt toàn màn hình<br>• <b>Ctrl + Alt + R</b>: Quản lý thói quen<br><br><b>[Bố cục cài sẵn]</b><br>• <b>Ctrl + Shift + 1</b>: Bố cục neo đầy đủ<br>• <b>Ctrl + Shift + 2</b>: Bố cục tập trung lịch<br>• <b>Ctrl + Shift + 3</b>: Bố cục tập trung nhiệm vụ<br>• <b>Ctrl + Shift + 4</b>: Bố cục tab chia đôi<br>• <b>Ctrl + Shift + 5</b>: Bố cục tách biệt hoàn toàn<br>• <b>Ctrl + Shift + S</b>: Lưu bố cục hiện tại<br><br><b>[Điều hướng]</b><br>• <b>Ctrl + Left/Right</b>: Ngày trước/sau<br>• <b>Ctrl + T</b>: Đi đến hôm nay<br>• <b>Delete</b>: Xóa lịch đã chọn<br>• <b>Esc</b>: Hủy chọn<br>• <b>F1</b>: Mở hướng dẫn phím tắt<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>Phiên bản: {APP_VERSION}<br>Tác giả: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Hướng dẫn phím tắt Dark Calendar"
+    "content": "<h3>Hướng dẫn phím tắt</h3><hr><b>[Quản lý lịch]</b><br>• <b>Ctrl + N</b>: Thêm lịch mới<br>• <b>Ctrl + R</b>: Đăng ký thói quen<br>• <b>Ctrl + G</b>: Đăng ký chỉ thị<br>• <b>Ctrl + L</b>: Quản lý mẫu danh sách kiểm tra<br>• <b>Ctrl + Shift + L</b>: Chế độ khóa màn hình nền<br><br><b>[Thao tác màn hình]</b><br>• <b>Ctrl + Shift + B</b>: Hiện/ẩn thanh trên<br>• <b>Ctrl + M</b>: Bật/tắt chế độ nam châm<br>• <b>Ctrl + F</b>: Bật/tắt chế độ tập trung<br>• <b>F11</b>: Bật/tắt toàn màn hình<br>• <b>Ctrl + Alt + R</b>: Quản lý thói quen<br><br><b>[Bố cục cài sẵn]</b><br>• <b>Ctrl + Shift + 1</b>: Bố cục neo đầy đủ<br>• <b>Ctrl + Shift + 2</b>: Bố cục tập trung lịch<br>• <b>Ctrl + Shift + 3</b>: Bố cục tập trung nhiệm vụ<br>• <b>Ctrl + Shift + 4</b>: Bố cục tab chia đôi<br>• <b>Ctrl + Shift + 5</b>: Bố cục tách biệt hoàn toàn<br>• <b>Ctrl + Shift + S</b>: Lưu bố cục hiện tại<br><br><b>[Điều hướng]</b><br>• <b>Ctrl + Left/Right</b>: Ngày trước/sau<br>• <b>Ctrl + T</b>: Đi đến hôm nay<br>• <b>Delete</b>: Xóa lịch đã chọn<br>• <b>Esc</b>: Hủy chọn<br>• <b>F1</b>: Mở hướng dẫn phím tắt<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Phiên bản: {APP_VERSION}<br>Tác giả: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Hướng dẫn phím tắt Air Calendar"
   },
   "splash": {
     "initializing_db": "Đang khởi tạo cơ sở dữ liệu...",

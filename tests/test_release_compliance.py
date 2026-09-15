@@ -29,7 +29,8 @@ def test_runtime_lock_rejects_version_ranges():
             release_compliance.read_lock(lock)
 
 
-def test_payload_verifier_rejects_removed_qt_and_ffmpeg_modules():
+@pytest.mark.parametrize("forbidden_name", ["avcodec-61.dll", "icuuc.dll", "icudt78.dll"])
+def test_payload_verifier_rejects_removed_runtime_modules(forbidden_name: str):
     with tempfile.TemporaryDirectory() as temp_dir:
         payload = Path(temp_dir)
         for name in ("LICENSE", "README.md", "SOURCE_OFFER.md", "THIRD_PARTY_NOTICES.md"):
@@ -43,9 +44,9 @@ def test_payload_verifier_rejects_removed_qt_and_ffmpeg_modules():
             encoding="utf-8",
             errors="strict",
         )
-        (payload / "avcodec-61.dll").write_bytes(b"not allowed")
+        (payload / forbidden_name).write_bytes(b"not allowed")
 
-        with pytest.raises(RuntimeError, match="Unapproved Qt/FFmpeg"):
+        with pytest.raises(RuntimeError, match="Unapproved runtime"):
             release_compliance.verify_payload(
                 payload,
                 ROOT / "requirements-runtime.lock",

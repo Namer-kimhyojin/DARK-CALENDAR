@@ -58,11 +58,24 @@ _FORBIDDEN_QT_RUNTIME_FILES = {
     'qsvg.dll',
     'qsvgicon.dll',
 }
+
+# Qt uses the Windows ICU shim on supported Windows versions. PyInstaller may
+# otherwise collect an unrelated icu*.dll from a tool on PATH (for example
+# Poppler), causing QtCore to fail at startup with Windows error 0xc0000139.
+_FORBIDDEN_FOREIGN_ICU_PREFIXES = ('icudt', 'icuin', 'icuuc')
+
+
+def _is_forbidden_runtime_file(item):
+    name = str(item[0]).replace('\\', '/').rsplit('/', 1)[-1].lower()
+    return name in _FORBIDDEN_QT_RUNTIME_FILES or (
+        name.endswith('.dll') and name.startswith(_FORBIDDEN_FOREIGN_ICU_PREFIXES)
+    )
+
+
 a.binaries = [
     item
     for item in a.binaries
-    if str(item[0]).replace('\\', '/').rsplit('/', 1)[-1].lower()
-    not in _FORBIDDEN_QT_RUNTIME_FILES
+    if not _is_forbidden_runtime_file(item)
 ]
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 

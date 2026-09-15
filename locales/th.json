@@ -24,7 +24,7 @@
     "view_issues": "ดูปัญหาการซิงค์"
   },
   "app": {
-    "exit_message": "Dark Calendar กำลังจะปิด\nโปรแกรมจะปิดสมบูรณ์โดยไม่ย่อลงในถาดระบบ\nดำเนินการต่อ?",
+    "exit_message": "Air Calendar กำลังจะปิด\nโปรแกรมจะปิดสมบูรณ์โดยไม่ย่อลงในถาดระบบ\nดำเนินการต่อ?",
     "exit_title": "ออก"
   },
   "app_name": "ปฏิทินมืด",
@@ -32,7 +32,7 @@
     "disabled": "ปิดการใช้งาน",
     "enabled": "เปิดการใช้งาน",
     "msg": "การเปิดตัวอัตโนมัติเมื่อเริ่มต้นใช้งานอยู่ที่ {status}",
-    "registration_failed": "โปรดอนุญาต Dark Calendar ในการตั้งค่าแอปเริ่มต้นของ Windows"
+    "registration_failed": "โปรดอนุญาต Air Calendar ในการตั้งค่าแอปเริ่มต้นของ Windows"
   },
   "away_lock": {
     "admin_pw_placeholder": "รหัสผ่านผู้ดูแล",
@@ -1006,7 +1006,7 @@
       "remote_orphan": "เฉพาะใน Google เท่านั้น (ไม่มีการจับคู่ในท้องถิ่น)",
       "unknown": "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ"
     },
-    "first_setup_msg": "ยินดีต้อนรับสู่ Dark Calendar!\nต้องการตั้งค่าการซิงค์ Google Calendar ตอนนี้หรือไม่?",
+    "first_setup_msg": "ยินดีต้อนรับสู่ Air Calendar!\nต้องการตั้งค่าการซิงค์ Google Calendar ตอนนี้หรือไม่?",
     "first_setup_title": "ผู้ช่วยตั้งค่า",
     "guidance": {
       "auth": "📍 [สถานะ] การตรวจสอบสิทธิ์ของ Google หมดอายุหรือไม่ถูกต้อง\n🔒 [การดำเนินการ] กระบวนการซิงค์ทั้งหมดหยุดชั่วคราวอย่างปลอดภัยเพื่อความปลอดภัย\n✅ [คำแนะนำ] โปรดไปที่ 'การตั้งค่า > ปฏิทินและการซิงค์ > ตรวจสอบสิทธิ์' และเข้าสู่ระบบอีกครั้ง",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "ทุกปี"
   },
   "shortcut": {
-    "content": "<h3>คู่มือปุ่มลัด</h3><hr><b>[การจัดการตาราง]</b><br>• <b>Ctrl + N</b>: เพิ่มตารางใหม่<br>• <b>Ctrl + R</b>: ลงทะเบียนรูทีน<br>• <b>Ctrl + G</b>: ลงทะเบียนคำสั่ง<br>• <b>Ctrl + L</b>: จัดการเทมเพลตรายการตรวจสอบ<br>• <b>Ctrl + Shift + L</b>: โหมดล็อคเดสก์ท็อป<br><br><b>[การดำเนินการหน้าจอ]</b><br>• <b>Ctrl + Shift + B</b>: แสดง/ซ่อนแถบด้านบน<br>• <b>Ctrl + M</b>: สลับโหมดแม่เหล็ก<br>• <b>Ctrl + F</b>: สลับโหมดโฟกัส<br>• <b>F11</b>: สลับโหมดเต็มหน้าจอ<br>• <b>Ctrl + Alt + R</b>: ตัวจัดการรูทีน<br><br><b>[เค้าโครงที่ตั้งไว้ล่วงหน้า]</b><br>• <b>Ctrl + Shift + 1</b>: เค้าโครงแนบสมบูรณ์<br>• <b>Ctrl + Shift + 2</b>: เค้าโครงเน้นปฏิทิน<br>• <b>Ctrl + Shift + 3</b>: เค้าโครงเน้นงาน<br>• <b>Ctrl + Shift + 4</b>: เค้าโครงแบ่งแท็บ<br>• <b>Ctrl + Shift + 5</b>: เค้าโครงแยกสมบูรณ์<br>• <b>Ctrl + Shift + S</b>: บันทึกเค้าโครงปัจจุบัน<br><br><b>[การนำทาง]</b><br>• <b>Ctrl + Left/Right</b>: วันก่อนหน้า/ถัดไป<br>• <b>Ctrl + T</b>: ไปที่วันนี้<br>• <b>Delete</b>: ลบตารางที่เลือก<br>• <b>Esc</b>: ยกเลิกการเลือก<br>• <b>F1</b>: เปิดคู่มือปุ่มลัด<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>เวอร์ชัน: {APP_VERSION}<br>ผู้แต่ง: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "คู่มือปุ่มลัด Dark Calendar"
+    "content": "<h3>คู่มือปุ่มลัด</h3><hr><b>[การจัดการตาราง]</b><br>• <b>Ctrl + N</b>: เพิ่มตารางใหม่<br>• <b>Ctrl + R</b>: ลงทะเบียนรูทีน<br>• <b>Ctrl + G</b>: ลงทะเบียนคำสั่ง<br>• <b>Ctrl + L</b>: จัดการเทมเพลตรายการตรวจสอบ<br>• <b>Ctrl + Shift + L</b>: โหมดล็อคเดสก์ท็อป<br><br><b>[การดำเนินการหน้าจอ]</b><br>• <b>Ctrl + Shift + B</b>: แสดง/ซ่อนแถบด้านบน<br>• <b>Ctrl + M</b>: สลับโหมดแม่เหล็ก<br>• <b>Ctrl + F</b>: สลับโหมดโฟกัส<br>• <b>F11</b>: สลับโหมดเต็มหน้าจอ<br>• <b>Ctrl + Alt + R</b>: ตัวจัดการรูทีน<br><br><b>[เค้าโครงที่ตั้งไว้ล่วงหน้า]</b><br>• <b>Ctrl + Shift + 1</b>: เค้าโครงแนบสมบูรณ์<br>• <b>Ctrl + Shift + 2</b>: เค้าโครงเน้นปฏิทิน<br>• <b>Ctrl + Shift + 3</b>: เค้าโครงเน้นงาน<br>• <b>Ctrl + Shift + 4</b>: เค้าโครงแบ่งแท็บ<br>• <b>Ctrl + Shift + 5</b>: เค้าโครงแยกสมบูรณ์<br>• <b>Ctrl + Shift + S</b>: บันทึกเค้าโครงปัจจุบัน<br><br><b>[การนำทาง]</b><br>• <b>Ctrl + Left/Right</b>: วันก่อนหน้า/ถัดไป<br>• <b>Ctrl + T</b>: ไปที่วันนี้<br>• <b>Delete</b>: ลบตารางที่เลือก<br>• <b>Esc</b>: ยกเลิกการเลือก<br>• <b>F1</b>: เปิดคู่มือปุ่มลัด<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>เวอร์ชัน: {APP_VERSION}<br>ผู้แต่ง: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "คู่มือปุ่มลัด Air Calendar"
   },
   "splash": {
     "initializing_db": "กำลังเริ่มต้นฐานข้อมูล...",

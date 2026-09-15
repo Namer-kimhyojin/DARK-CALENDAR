@@ -748,7 +748,7 @@ def _build_preview_widget(
     top_lay = QHBoxLayout(top)
     top_lay.setContentsMargins(12, 0, 12, 0)
 
-    lbl_title = QLabel(t("dialog.theme.preview.app_name", "Dark Calendar"))
+    lbl_title = QLabel(t("dialog.theme.preview.app_name", "Air Calendar"))
     lbl_title.setObjectName("previewTitle")
     top_lay.addWidget(lbl_title)
 

@@ -1,8 +1,16 @@
 # -*- coding: utf-8 -*-
 """Application metadata used by runtime UI surfaces."""
 
-APP_NAME = "Dark Calendar"
-APP_VERSION = "3.7.0"
+APP_NAME = "Air Calendar"
+# Compatibility identifiers intentionally retain the former product name so
+# existing Store installs, settings, databases, and desktop widget positions
+# continue to upgrade in place after the public rebrand.
+APP_LEGACY_NAME = "Dark Calendar"
+APP_SETTINGS_ORGANIZATION = "kimhyojin"
+APP_SETTINGS_NAME = APP_LEGACY_NAME
+APP_EXECUTABLE_NAME = "DarkCalendar.exe"
+APP_PACKAGE_IDENTITY_NAME = "Kimhyojin.DarkCalendar"
+APP_VERSION = "3.7.1"
 APP_RELEASE_CHANNEL = "Stable"
 APP_RELEASE_DATE = "2026-09-15"
 APP_VERSION_LABEL = f"v{APP_VERSION}"

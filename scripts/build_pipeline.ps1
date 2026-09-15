@@ -36,7 +36,7 @@ $ErrorActionPreference = "Stop"
 $BuildStart = Get-Date
 
 if ($Help) {
-    Write-Host "Dark Calendar unified release build"
+    Write-Host "Air Calendar unified release build"
     Write-Host ""
     Write-Host "  build-release.bat [options]"
     Write-Host ""
@@ -292,7 +292,7 @@ function Sync-AppVersion {
 
     $homepagePath = Join-Path $ProjectRoot "docs\index.html"
     $homepage = Get-Content $homepagePath -Raw -Encoding utf8
-    $homepage = $homepage -replace 'Dark Calendar \d+\.\d+\.\d+', "Dark Calendar $NewVersion"
+    $homepage = $homepage -replace 'Air Calendar \d+\.\d+\.\d+', "Air Calendar $NewVersion"
     $homepage = $homepage -replace '("softwareVersion"\s*:\s*")\d+\.\d+\.\d+', ('${1}' + $NewVersion)
     $homepage = $homepage -replace '(data-config-text="appVersion">)\d+\.\d+\.\d+', ('${1}' + $NewVersion)
     $homepage = $homepage -replace 'https://github\.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v\d+\.\d+\.\d+', $releasePage
@@ -314,22 +314,22 @@ function Sync-AppVersion {
     $runtimeLockPath = Join-Path $ProjectRoot "requirements-runtime.lock"
     $runtimeLock = Get-Content $runtimeLockPath -Raw -Encoding utf8
     $runtimeLock = $runtimeLock -replace (
-        'Dark Calendar \d+\.\d+\.\d+ release runtime lock'
-    ), "Dark Calendar $NewVersion release runtime lock"
+        'Air Calendar \d+\.\d+\.\d+ release runtime lock'
+    ), "Air Calendar $NewVersion release runtime lock"
     [System.IO.File]::WriteAllText($runtimeLockPath, $runtimeLock, $utf8NoBom)
 
     $thirdPartyPath = Join-Path $ProjectRoot "THIRD_PARTY_NOTICES.md"
     $thirdParty = Get-Content $thirdPartyPath -Raw -Encoding utf8
     $thirdParty = $thirdParty -replace (
-        'Dark Calendar \d+\.\d+\.\d+ uses the native Windows notification sound API'
-    ), "Dark Calendar $NewVersion uses the native Windows notification sound API"
+        'Air Calendar \d+\.\d+\.\d+ uses the native Windows notification sound API'
+    ), "Air Calendar $NewVersion uses the native Windows notification sound API"
     [System.IO.File]::WriteAllText($thirdPartyPath, $thirdParty, $utf8NoBom)
 
     $partnerGuidePath = Join-Path $ProjectRoot "docs\microsoft-store-gpl-release.md"
     $partnerGuide = Get-Content $partnerGuidePath -Raw -Encoding utf8
     $partnerGuide = $partnerGuide -replace (
-        'Dark Calendar \d+\.\d+\.\d+ in Partner Center'
-    ), "Dark Calendar $NewVersion in Partner Center"
+        'Air Calendar \d+\.\d+\.\d+ in Partner Center'
+    ), "Air Calendar $NewVersion in Partner Center"
     $partnerGuide = $partnerGuide -replace (
         'github\.com/Namer-kimhyojin/DARK-CALENDAR/blob/v\d+\.\d+\.\d+/LICENSE'
     ), "github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v$NewVersion/LICENSE"
@@ -791,14 +791,14 @@ if (-not $NoLog) {
 if (-not $NoBanner) {
     Write-Host ""
     Write-Host ("=" * 62) -ForegroundColor DarkGray
-    Write-Host ("  Dark Calendar  v{0}  [{1}]" -f $appVersion, $Arch.ToUpper()) -ForegroundColor White
+    Write-Host ("  Air Calendar  v{0}  [{1}]" -f $appVersion, $Arch.ToUpper()) -ForegroundColor White
     Write-Host ("  Build started: {0}" -f (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")) -ForegroundColor DarkGray
     if ($script:LogPath) { Write-Host ("  Log: {0}" -f $script:LogPath) -ForegroundColor DarkGray }
     Write-Host ("=" * 62) -ForegroundColor DarkGray
     Write-Host ""
 }
 
-Write-Log "=== Dark Calendar Build Log ==="
+Write-Log "=== Air Calendar Build Log ==="
 Write-Log "Version : $appVersion"
 Write-Log "Arch    : $Arch"
 Write-Log "Started : $((Get-Date).ToString('o'))"

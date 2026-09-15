@@ -842,7 +842,9 @@ def build_shortcut_guide_html(
     if app_email:
         author_label = f"{author_label} ({app_email})" if author_label else app_email
 
-    footer_parts = ["<b style='color:#f4f8ff; font-size:11px;'>Dark Calendar</b>"]
+    from calendar_app.app_metadata import APP_NAME
+
+    footer_parts = [f"<b style='color:#f4f8ff; font-size:11px;'>{APP_NAME}</b>"]
     if version_label:
         footer_parts.append(f"<span style='color:#9fb3d1;'>{html.escape(version_label)}</span>")
     if author_label:

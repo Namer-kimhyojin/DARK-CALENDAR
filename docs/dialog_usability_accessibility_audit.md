@@ -1,4 +1,4 @@
-# Dark Calendar 다이얼로그 시인성·편의성 감사
+# Air Calendar 다이얼로그 시인성·편의성 감사
 
 ## 감사 기준
 

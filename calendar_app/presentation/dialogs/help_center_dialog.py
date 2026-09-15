@@ -134,7 +134,7 @@ class HelpCenterDialog(QDialog):
         sidebar_width = 214
 
         self.setObjectName("HelpCenterDialog")
-        apply_dialog_title(self, t("shortcut.title", "Dark Calendar 도움말 센터"))
+        apply_dialog_title(self, t("shortcut.title", "Air Calendar 도움말 센터"))
         self.setSizeGripEnabled(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 

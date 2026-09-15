@@ -401,6 +401,64 @@ def test_start_detached_result_normalization_handles_pyqt_return_shapes():
     assert _detached_process_started(False) is False
 
 
+def test_language_restart_flushes_live_session_before_launching_replacement():
+    calls = []
+
+    class _Settings:
+        def __init__(self):
+            self.values = {"language": "ko"}
+
+        def value(self, key, default=None):
+            return self.values.get(key, default)
+
+        def setValue(self, key, value):
+            self.values[key] = value
+
+        def sync(self):
+            calls.append("settings_sync")
+
+    class _Host:
+        def __init__(self):
+            self.settings = _Settings()
+            self._exit_requested = False
+
+        def shutdown_background_workers(self, wait_ms=500):
+            calls.append(("shutdown", wait_ms))
+
+        def close(self):
+            calls.append("close")
+
+    host = _Host()
+
+    with (
+        patch("calendar_app.presentation.main_window.action_handlers.QMessageBox.information"),
+        patch("calendar_app.presentation.main_window.action_handlers.QMessageBox.warning"),
+        patch(
+            "calendar_app.presentation.main_window.window_restore_helpers.flush_window_layout",
+            side_effect=lambda _host: calls.append("flush") or True,
+        ),
+        patch(
+            "PyQt6.QtCore.QProcess.startDetached",
+            side_effect=lambda *_args: calls.append("start") or True,
+        ),
+        patch(
+            "calendar_app.presentation.main_window.action_handlers._save_window_layout_for_shutdown",
+            side_effect=lambda _host: calls.append("final_save") or True,
+        ),
+        patch(
+            "calendar_app.presentation.main_window.action_handlers.QApplication.instance",
+            return_value=None,
+        ),
+    ):
+        ActionHandlersMixin.set_language(host, "en")
+
+    assert host.settings.values["language"] == "en"
+    assert calls.index("flush") < calls.index("start")
+    assert calls.index("start") < calls.index(("shutdown", 200))
+    assert calls.index(("shutdown", 200)) < calls.index("final_save")
+    assert host._exit_requested is True
+
+
 def test_runtime_finalizer_stops_pump_workers_db_and_lock_once():
     calls = []
 

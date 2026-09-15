@@ -24,15 +24,15 @@
     "view_issues": "동기화 문제 보기"
   },
   "app": {
-    "exit_message": "Dark Calendar를 종료합니다.\n트레이로 전환되지 않고 프로그램이 완전히 종료됩니다.\n계속하시겠습니까?",
+    "exit_message": "Air Calendar를 종료합니다.\n트레이로 전환되지 않고 프로그램이 완전히 종료됩니다.\n계속하시겠습니까?",
     "exit_title": "종료 안내"
   },
-  "app_name": "Dark Calendar",
+  "app_name": "Air Calendar",
   "autostart": {
     "disabled": "비활성",
     "enabled": "활성",
     "msg": "윈도우 시작 시 자동 실행이 {status}되었습니다.",
-    "registration_failed": "Windows 시작 앱 설정에서 Dark Calendar를 직접 허용해 주세요."
+    "registration_failed": "Windows 시작 앱 설정에서 Air Calendar를 직접 허용해 주세요."
   },
   "away_lock": {
     "admin_pw_placeholder": "관리자 비밀번호",
@@ -770,7 +770,7 @@
         "slate": "슬레이트"
       },
       "preview": {
-        "app_name": "Dark Calendar",
+        "app_name": "Air Calendar",
         "custom_style": "사용자 지정",
         "input_hint": "내용을 입력하세요...",
         "item_deadline": "프로젝트 마감",
@@ -1621,13 +1621,13 @@
     "column_time": "시간",
     "content_options_name": "인쇄 범위 및 출력 옵션",
     "data_note": "Google·ICS 일정은 현재 로컬 DB에 저장된 마지막 동기화 상태를 기준으로 출력합니다. 상세 일정은 선택한 방식에 따라 별도 페이지에 포함됩니다.",
-    "details_always": "상세 일정 항상 포함",
+    "details_always": "전체 상세 일정 포함",
     "details_follow": "상세 일정 {count}건 · 다음 페이지",
-    "details_hint": "달력 칸에 모두 표시되지 않은 기간의 전체 일정입니다.",
+    "details_hint": "달력 칸에 표시되지 않은 일정만 모았습니다.",
     "details_hint_all": "선택한 기간의 전체 일정 목록입니다.",
-    "details_overflow": "칸이 넘칠 때만 상세 페이지",
+    "details_overflow": "넘친 일정만 상세 페이지 (권장)",
     "details_title": "{period} 상세 일정",
-    "document_name": "Dark Calendar 일정",
+    "document_name": "Air Calendar 일정",
     "error_begin": "인쇄 출력을 시작하지 못했습니다.",
     "error_invalid_printer": "사용 가능한 프린터가 없습니다.",
     "error_missing_events": "출력에서 {count}개 일정이 누락되었습니다.",
@@ -1737,8 +1737,8 @@
     "yearly": "연간"
   },
   "shortcut": {
-    "content": "<h3>단축키 가이드</h3><hr><b>[일정 관리]</b><br>• <b>Ctrl + N</b>: 새 일정 추가<br>• <b>Ctrl + R</b>: 루틴 등록<br>• <b>Ctrl + G</b>: 지시사항 등록<br>• <b>Ctrl + L</b>: 체크리스트 템플릿 관리<br>• <b>Ctrl + Shift + L</b>: 바탕화면 고정 모드<br><br><b>[화면 조작]</b><br>• <b>Ctrl + Shift + B</b>: 상단바 보이기/숨기기<br>• <b>Ctrl + M</b>: 자석 모드 토글<br>• <b>Ctrl + F</b>: 집중 모드 토글<br>• <b>F11</b>: 전체화면 토글<br>• <b>Ctrl + Alt + R</b>: 루틴 관리자<br><br><b>[레이아웃 프리셋]</b><br>• <b>Ctrl + Shift + 1</b>: 완전 도킹 레이아웃<br>• <b>Ctrl + Shift + 2</b>: 캘린더 중심 레이아웃<br>• <b>Ctrl + Shift + 3</b>: 할일 중심 레이아웃<br>• <b>Ctrl + Shift + 4</b>: 탭 분할 레이아웃<br>• <b>Ctrl + Shift + 5</b>: 완전 분리 레이아웃<br>• <b>Ctrl + Shift + S</b>: 현재 레이아웃 저장<br><br><b>[네비게이션]</b><br>• <b>Ctrl + Left/Right</b>: 이전/다음 날짜 이동<br>• <b>Ctrl + T</b>: 오늘 날짜로 이동<br>• <b>Delete</b>: 선택한 일정 삭제<br>• <b>Esc</b>: 선택 해제<br>• <b>F1</b>: 단축키 가이드 열기<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>버전: {APP_VERSION}<br>제작: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Dark Calendar 단축키 가이드"
+    "content": "<h3>단축키 가이드</h3><hr><b>[일정 관리]</b><br>• <b>Ctrl + N</b>: 새 일정 추가<br>• <b>Ctrl + R</b>: 루틴 등록<br>• <b>Ctrl + G</b>: 지시사항 등록<br>• <b>Ctrl + L</b>: 체크리스트 템플릿 관리<br>• <b>Ctrl + Shift + L</b>: 바탕화면 고정 모드<br><br><b>[화면 조작]</b><br>• <b>Ctrl + Shift + B</b>: 상단바 보이기/숨기기<br>• <b>Ctrl + M</b>: 자석 모드 토글<br>• <b>Ctrl + F</b>: 집중 모드 토글<br>• <b>F11</b>: 전체화면 토글<br>• <b>Ctrl + Alt + R</b>: 루틴 관리자<br><br><b>[레이아웃 프리셋]</b><br>• <b>Ctrl + Shift + 1</b>: 완전 도킹 레이아웃<br>• <b>Ctrl + Shift + 2</b>: 캘린더 중심 레이아웃<br>• <b>Ctrl + Shift + 3</b>: 할일 중심 레이아웃<br>• <b>Ctrl + Shift + 4</b>: 탭 분할 레이아웃<br>• <b>Ctrl + Shift + 5</b>: 완전 분리 레이아웃<br>• <b>Ctrl + Shift + S</b>: 현재 레이아웃 저장<br><br><b>[네비게이션]</b><br>• <b>Ctrl + Left/Right</b>: 이전/다음 날짜 이동<br>• <b>Ctrl + T</b>: 오늘 날짜로 이동<br>• <b>Delete</b>: 선택한 일정 삭제<br>• <b>Esc</b>: 선택 해제<br>• <b>F1</b>: 단축키 가이드 열기<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>버전: {APP_VERSION}<br>제작: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Air Calendar 단축키 가이드"
   },
   "splash": {
     "initializing_db": "데이터베이스 초기화 중...",
@@ -1773,7 +1773,7 @@
     "status_tentative": "미정"
   },
   "system_msg": {
-    "already_running": "Dark Calendar가 이미 실행 중입니다.\n\n화면 하단 작업표시줄의 트레이 아이콘을 확인해 주세요.",
+    "already_running": "Air Calendar가 이미 실행 중입니다.\n\n화면 하단 작업표시줄의 트레이 아이콘을 확인해 주세요.",
     "lang_saved_msg": "언어 설정이 저장되었습니다.\n변경사항을 적용하기 위해 앱을 재시작합니다.",
     "lang_saved_title": "언어 설정"
   },

@@ -24,7 +24,7 @@
     "view_issues": "查看同步問題"
   },
   "app": {
-    "exit_message": "Dark Calendar 即將關閉。\n程式將完全結束，不會最小化到系統匣。\n繼續？",
+    "exit_message": "Air Calendar 即將關閉。\n程式將完全結束，不會最小化到系統匣。\n繼續？",
     "exit_title": "結束"
   },
   "app_name": "暗黑行事曆",
@@ -32,7 +32,7 @@
     "disabled": "殘障人士",
     "enabled": "啟用",
     "msg": "啟動時自動啟動已 {status}。",
-    "registration_failed": "請在 Windows 啟動應用程式設定中允許 Dark Calendar。"
+    "registration_failed": "請在 Windows 啟動應用程式設定中允許 Air Calendar。"
   },
   "away_lock": {
     "admin_pw_placeholder": "管理員密碼",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "每年"
   },
   "shortcut": {
-    "content": "<h3>快捷鍵指南</h3><hr><b>[行程管理]</b><br>• <b>Ctrl + N</b>: 新增行程<br>• <b>Ctrl + R</b>: 登錄例行事項<br>• <b>Ctrl + G</b>: 登錄指示事項<br>• <b>Ctrl + L</b>: 管理清單範本<br>• <b>Ctrl + Shift + L</b>: 桌面鎖定模式<br><br><b>[畫面操作]</b><br>• <b>Ctrl + Shift + B</b>: 顯示/隱藏頂端列<br>• <b>Ctrl + M</b>: 切換磁吸模式<br>• <b>Ctrl + F</b>: 切換專注模式<br>• <b>F11</b>: 切換全螢幕<br>• <b>Ctrl + Alt + R</b>: 例行事項管理員<br><br><b>[版面預設]</b><br>• <b>Ctrl + Shift + 1</b>: 完全停靠版面<br>• <b>Ctrl + Shift + 2</b>: 行事曆聚焦版面<br>• <b>Ctrl + Shift + 3</b>: 任務聚焦版面<br>• <b>Ctrl + Shift + 4</b>: 分頁標籤版面<br>• <b>Ctrl + Shift + 5</b>: 完全分離版面<br>• <b>Ctrl + Shift + S</b>: 儲存目前版面<br><br><b>[導覽]</b><br>• <b>Ctrl + Left/Right</b>: 上一個/下一個日期<br>• <b>Ctrl + T</b>: 跳至今天<br>• <b>Delete</b>: 刪除選取的行程<br>• <b>Esc</b>: 清除選取<br>• <b>F1</b>: 開啟快捷鍵指南<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>版本: {APP_VERSION}<br>作者: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Dark Calendar 快捷鍵指南"
+    "content": "<h3>快捷鍵指南</h3><hr><b>[行程管理]</b><br>• <b>Ctrl + N</b>: 新增行程<br>• <b>Ctrl + R</b>: 登錄例行事項<br>• <b>Ctrl + G</b>: 登錄指示事項<br>• <b>Ctrl + L</b>: 管理清單範本<br>• <b>Ctrl + Shift + L</b>: 桌面鎖定模式<br><br><b>[畫面操作]</b><br>• <b>Ctrl + Shift + B</b>: 顯示/隱藏頂端列<br>• <b>Ctrl + M</b>: 切換磁吸模式<br>• <b>Ctrl + F</b>: 切換專注模式<br>• <b>F11</b>: 切換全螢幕<br>• <b>Ctrl + Alt + R</b>: 例行事項管理員<br><br><b>[版面預設]</b><br>• <b>Ctrl + Shift + 1</b>: 完全停靠版面<br>• <b>Ctrl + Shift + 2</b>: 行事曆聚焦版面<br>• <b>Ctrl + Shift + 3</b>: 任務聚焦版面<br>• <b>Ctrl + Shift + 4</b>: 分頁標籤版面<br>• <b>Ctrl + Shift + 5</b>: 完全分離版面<br>• <b>Ctrl + Shift + S</b>: 儲存目前版面<br><br><b>[導覽]</b><br>• <b>Ctrl + Left/Right</b>: 上一個/下一個日期<br>• <b>Ctrl + T</b>: 跳至今天<br>• <b>Delete</b>: 刪除選取的行程<br>• <b>Esc</b>: 清除選取<br>• <b>F1</b>: 開啟快捷鍵指南<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>版本: {APP_VERSION}<br>作者: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Air Calendar 快捷鍵指南"
   },
   "splash": {
     "initializing_db": "正在初始化資料庫...",

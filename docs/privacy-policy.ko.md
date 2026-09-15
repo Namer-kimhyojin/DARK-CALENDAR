@@ -1,8 +1,8 @@
-# Dark Calendar 개인정보처리방침
+# Air Calendar 개인정보처리방침
 
 **시행일: 2026년 7월 18일**
 
-Dark Calendar(이하 "본 앱")는 김효진(이하 "개발자")이 개발·배포하는 Windows용 데스크톱 캘린더 애플리케이션입니다. 본 방침은 본 앱이 이용자의 정보를 어떻게 처리하는지 설명합니다.
+Air Calendar(이하 "본 앱")는 김효진(이하 "개발자")이 개발·배포하는 Windows용 데스크톱 캘린더 애플리케이션입니다. 본 방침은 본 앱이 이용자의 정보를 어떻게 처리하는지 설명합니다.
 
 ## 1. 핵심 요약
 
@@ -12,12 +12,12 @@ Dark Calendar(이하 "본 앱")는 김효진(이하 "개발자")이 개발·배�
 
 ## 2. 로컬에 저장되는 데이터
 
-본 앱은 다음 데이터를 이용자 PC의 로컬 폴더(`%LOCALAPPDATA%\kimhyojin\Dark Calendar`)에 저장합니다.
+본 앱은 다음 데이터를 이용자 PC의 로컬 폴더(`%LOCALAPPDATA%\kimhyojin\Air Calendar`)에 저장합니다.
 
 | 데이터 | 용도 |
 |---|---|
 | 일정·업무·체크리스트 데이터 (SQLite DB) | 캘린더 기능 제공 |
-| 앱 설정 (Windows 레지스트리 `HKCU\Software\kimhyojin\Dark Calendar`) | 테마·언어·레이아웃 유지 |
+| 앱 설정 (Windows 레지스트리 `HKCU\Software\kimhyojin\Air Calendar`) | 테마·언어·레이아웃 유지 |
 | Google 인증 토큰 (`token.json`) — Google 연동 사용 시에만 | 재로그인 없이 동기화 유지 |
 | 진단 로그 파일 | 오류 확인 |
 
@@ -45,7 +45,7 @@ Dark Calendar(이하 "본 앱")는 김효진(이하 "개발자")이 개발·배�
 
 - 모든 데이터는 이용자가 삭제할 때까지 로컬에 보관됩니다.
 - **Google 연동 해제**: 앱 내 Google Calendar 설정에서 연동 해제 시 토큰이 취소·삭제됩니다. [Google 계정 보안 설정](https://myaccount.google.com/permissions)에서도 언제든 접근 권한을 철회할 수 있습니다.
-- **전체 삭제**: 앱 제거 후 `%LOCALAPPDATA%\kimhyojin\Dark Calendar` 폴더를 삭제하면 모든 데이터가 완전히 제거됩니다.
+- **전체 삭제**: 앱 제거 후 `%LOCALAPPDATA%\kimhyojin\Air Calendar` 폴더를 삭제하면 모든 데이터가 완전히 제거됩니다.
 
 ## 5. 아동의 개인정보
 

@@ -1,4 +1,4 @@
-# Dark Calendar Promotion Kit
+# Air Calendar Promotion Kit
 
 Official website: <https://namer-kimhyojin.github.io/DARK-CALENDAR/>
 
@@ -24,7 +24,7 @@ Generated asset prompts: [`GENERATED_PROMO_ASSETS.md`](GENERATED_PROMO_ASSETS.md
 
 Campaign name: **Your Desktop, Your Time**
 
-Core message: **Dark Calendar puts your calendar and essential widgets directly on the Windows desktop, with the freedom to move, resize, arrange, and recolor everything around the way you work.**
+Core message: **Air Calendar puts your calendar and essential widgets directly on the Windows desktop, with the freedom to move, resize, arrange, and recolor everything around the way you work.**
 
 Supporting messages:
 
@@ -68,43 +68,43 @@ Keep roughly 20% of slots open for release news, user questions, or an unexpecte
 
 바탕화면을 단순한 배경이 아니라 ‘나만의 시간 공간’으로 만들어 보세요.
 
-Dark Calendar는 캘린더, 할 일, 시계, 날씨, D-Day 위젯을 Windows 바탕화면에 직접 배치할 수 있는 데스크톱 앱입니다. 각 요소의 위치와 크기를 자유롭게 바꾸고, 업무 방식에 맞는 레이아웃과 색상으로 구성할 수 있습니다.
+Air Calendar는 캘린더, 할 일, 시계, 날씨, D-Day 위젯을 Windows 바탕화면에 직접 배치할 수 있는 데스크톱 앱입니다. 각 요소의 위치와 크기를 자유롭게 바꾸고, 업무 방식에 맞는 레이아웃과 색상으로 구성할 수 있습니다.
 
 일정 확인부터 집중 모드, 선택형 Google Calendar 동기화까지 한곳에서 이어집니다.
 
 공식 홈페이지: https://namer-kimhyojin.github.io/DARK-CALENDAR/
 
-#DarkCalendar #Windows앱 #바탕화면위젯 #일정관리 #생산성
+#AirCalendar #Windows앱 #바탕화면위젯 #일정관리 #생산성
 
 ### Korean — short
 
-캘린더와 위젯을 바탕화면에 바로. 위치·크기·레이아웃·색상은 내 방식대로. Windows 데스크톱을 나만의 시간 공간으로 만드는 Dark Calendar를 만나보세요.
+캘린더와 위젯을 바탕화면에 바로. 위치·크기·레이아웃·색상은 내 방식대로. Windows 데스크톱을 나만의 시간 공간으로 만드는 Air Calendar를 만나보세요.
 
 https://namer-kimhyojin.github.io/DARK-CALENDAR/
 
 ### English
 
-Your desktop can be more than a background. Dark Calendar puts calendars, tasks, clocks, weather, D-Day, and other widgets directly on Windows—then lets you move, resize, recolor, and arrange everything around the way you work.
+Your desktop can be more than a background. Air Calendar puts calendars, tasks, clocks, weather, D-Day, and other widgets directly on Windows—then lets you move, resize, recolor, and arrange everything around the way you work.
 
 Explore the app: https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=en
 
-#DarkCalendar #WindowsApps #DesktopWidgets #Productivity #Calendar
+#AirCalendar #WindowsApps #DesktopWidgets #Productivity #Calendar
 
 ### Japanese
 
-デスクトップを、ただの背景から「自分だけの時間空間」へ。Dark Calendarなら、カレンダー、タスク、時計、天気、D-DayをWindowsデスクトップに直接配置し、位置・サイズ・レイアウト・色を自由に調整できます。
+デスクトップを、ただの背景から「自分だけの時間空間」へ。Air Calendarなら、カレンダー、タスク、時計、天気、D-DayをWindowsデスクトップに直接配置し、位置・サイズ・レイアウト・色を自由に調整できます。
 
 公式サイト: https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ja
 
-#DarkCalendar #Windowsアプリ #デスクトップウィジェット #予定管理 #生産性
+#AirCalendar #Windowsアプリ #デスクトップウィジェット #予定管理 #生産性
 
 ### Simplified Chinese
 
-让桌面不再只是背景。Dark Calendar 可将日历、任务、时钟、天气和 D-Day 小组件直接放在 Windows 桌面，并自由调整位置、大小、布局和颜色。
+让桌面不再只是背景。Air Calendar 可将日历、任务、时钟、天气和 D-Day 小组件直接放在 Windows 桌面，并自由调整位置、大小、布局和颜色。
 
 官方网站: https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=zh
 
-#DarkCalendar #Windows应用 #桌面小组件 #日程管理 #效率工具
+#AirCalendar #Windows应用 #桌面小组件 #日程管理 #效率工具
 
 ## Creative directions
 

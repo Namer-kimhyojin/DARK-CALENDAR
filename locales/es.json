@@ -24,7 +24,7 @@
     "view_issues": "Ver problemas de sincronización"
   },
   "app": {
-    "exit_message": "Dark Calendar se cerrará.\nEl programa se cerrará completamente sin minimizarse en la bandeja del sistema.\n¿Continuar?",
+    "exit_message": "Air Calendar se cerrará.\nEl programa se cerrará completamente sin minimizarse en la bandeja del sistema.\n¿Continuar?",
     "exit_title": "Salir"
   },
   "app_name": "Calendario oscuro",
@@ -32,7 +32,7 @@
     "disabled": "Desactivado",
     "enabled": "Activado",
     "msg": "El inicio automático ha sido {status}.",
-    "registration_failed": "Permite Dark Calendar en la configuración de aplicaciones de inicio de Windows."
+    "registration_failed": "Permite Air Calendar en la configuración de aplicaciones de inicio de Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Contraseña de admin",
@@ -1006,7 +1006,7 @@
       "remote_orphan": "Solo en Google (no hay coincidencia local)",
       "unknown": "Se produjo un error desconocido."
     },
-    "first_setup_msg": "¡Bienvenido a Dark Calendar!\n¿Desea configurar la sincronización de Google ahora?",
+    "first_setup_msg": "¡Bienvenido a Air Calendar!\n¿Desea configurar la sincronización de Google ahora?",
     "first_setup_title": "Asistente de Configuración",
     "guidance": {
       "auth": "📍 [ESTADO] La autenticación de Google ha caducado o no es válida.\n🔒 [ACCIÓN] Todos los procesos de sincronización se pausan de forma segura por motivos de seguridad.\n✅ [ORIENTACIÓN] Vaya a 'Configuración > Calendario y sincronización > Autenticar' e inicie sesión nuevamente.",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "Anual"
   },
   "shortcut": {
-    "content": "<h3>Guía de atajos</h3><hr><b>[Gestión de agenda]</b><br>• <b>Ctrl + N</b>: Añadir nueva agenda<br>• <b>Ctrl + R</b>: Registrar rutina<br>• <b>Ctrl + G</b>: Registrar directiva<br>• <b>Ctrl + L</b>: Gestionar plantillas de lista<br>• <b>Ctrl + Shift + L</b>: Modo bloqueo de escritorio<br><br><b>[Operaciones de pantalla]</b><br>• <b>Ctrl + Shift + B</b>: Mostrar/ocultar barra superior<br>• <b>Ctrl + M</b>: Alternar modo magnético<br>• <b>Ctrl + F</b>: Alternar modo enfoque<br>• <b>F11</b>: Alternar pantalla completa<br>• <b>Ctrl + Alt + R</b>: Administrador de rutinas<br><br><b>[Diseños predefinidos]</b><br>• <b>Ctrl + Shift + 1</b>: Diseño acoplado completo<br>• <b>Ctrl + Shift + 2</b>: Diseño centrado en calendario<br>• <b>Ctrl + Shift + 3</b>: Diseño centrado en tareas<br>• <b>Ctrl + Shift + 4</b>: Diseño dividido por pestañas<br>• <b>Ctrl + Shift + 5</b>: Diseño completamente separado<br>• <b>Ctrl + Shift + S</b>: Guardar diseño actual<br><br><b>[Navegación]</b><br>• <b>Ctrl + Left/Right</b>: Fecha anterior/siguiente<br>• <b>Ctrl + T</b>: Ir a hoy<br>• <b>Delete</b>: Eliminar agenda seleccionada<br>• <b>Esc</b>: Cancelar selección<br>• <b>F1</b>: Abrir guía de atajos<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>Versión: {APP_VERSION}<br>Autor: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Guía de atajos Dark Calendar"
+    "content": "<h3>Guía de atajos</h3><hr><b>[Gestión de agenda]</b><br>• <b>Ctrl + N</b>: Añadir nueva agenda<br>• <b>Ctrl + R</b>: Registrar rutina<br>• <b>Ctrl + G</b>: Registrar directiva<br>• <b>Ctrl + L</b>: Gestionar plantillas de lista<br>• <b>Ctrl + Shift + L</b>: Modo bloqueo de escritorio<br><br><b>[Operaciones de pantalla]</b><br>• <b>Ctrl + Shift + B</b>: Mostrar/ocultar barra superior<br>• <b>Ctrl + M</b>: Alternar modo magnético<br>• <b>Ctrl + F</b>: Alternar modo enfoque<br>• <b>F11</b>: Alternar pantalla completa<br>• <b>Ctrl + Alt + R</b>: Administrador de rutinas<br><br><b>[Diseños predefinidos]</b><br>• <b>Ctrl + Shift + 1</b>: Diseño acoplado completo<br>• <b>Ctrl + Shift + 2</b>: Diseño centrado en calendario<br>• <b>Ctrl + Shift + 3</b>: Diseño centrado en tareas<br>• <b>Ctrl + Shift + 4</b>: Diseño dividido por pestañas<br>• <b>Ctrl + Shift + 5</b>: Diseño completamente separado<br>• <b>Ctrl + Shift + S</b>: Guardar diseño actual<br><br><b>[Navegación]</b><br>• <b>Ctrl + Left/Right</b>: Fecha anterior/siguiente<br>• <b>Ctrl + T</b>: Ir a hoy<br>• <b>Delete</b>: Eliminar agenda seleccionada<br>• <b>Esc</b>: Cancelar selección<br>• <b>F1</b>: Abrir guía de atajos<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Versión: {APP_VERSION}<br>Autor: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Guía de atajos Air Calendar"
   },
   "splash": {
     "initializing_db": "Inicializando base de datos...",
@@ -1773,7 +1773,7 @@
     "status_tentative": "Tentativo"
   },
   "system_msg": {
-    "already_running": "Dark Calendar ya está en ejecución.",
+    "already_running": "Air Calendar ya está en ejecución.",
     "lang_saved_msg": "Configuración de idioma guardada.\nEl sistema se reiniciará para aplicar los cambios.",
     "lang_saved_title": "Idioma Guardado"
   },

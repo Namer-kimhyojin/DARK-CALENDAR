@@ -37,6 +37,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from calendar_app.app_metadata import APP_NAME
 from calendar_app.application.calendar_print_service import (
     CalendarPrintRequest,
     build_calendar_print_document,
@@ -56,6 +57,8 @@ from calendar_app.presentation.printing.calendar_print_renderer import (
     configure_printer,
     render_calendar_document,
 )
+
+_PRINT_LAYOUT_VERSION = 2
 
 
 def _color_icon(color_value: str, size: int = 12) -> QIcon:
@@ -225,10 +228,10 @@ class CalendarPrintDialog(QDialog):
         output_form.addRow(t("print.label_margin", "여백"), self.margin_spin)
 
         self.detail_mode_combo = QComboBox()
-        self.detail_mode_combo.addItem(t("print.details_always", "상세 일정 항상 포함"), "all")
         self.detail_mode_combo.addItem(
-            t("print.details_overflow", "칸이 넘칠 때만 상세 페이지"), "overflow"
+            t("print.details_overflow", "넘친 일정만 상세 페이지 (권장)"), "overflow"
         )
+        self.detail_mode_combo.addItem(t("print.details_always", "전체 상세 일정 포함"), "all")
         output_form.addRow(t("print.label_detail_pages", "상세 일정"), self.detail_mode_combo)
 
         self.show_weekends_check = QCheckBox(t("print.show_weekends", "주말 표시"))
@@ -313,6 +316,20 @@ class CalendarPrintDialog(QDialog):
         )
         self._loading_settings = True
         try:
+            saved_output_preset = str(
+                self.settings.value("print_output_preset", "readable") or "readable"
+            )
+            saved_detail_mode = str(
+                self.settings.value("print_detail_page_mode", "overflow") or "overflow"
+            )
+            layout_version = self.settings.value("print_layout_version", 0, type=int)
+            if layout_version < _PRINT_LAYOUT_VERSION and saved_output_preset in {
+                "readable",
+                "balanced",
+                "compact",
+                "grayscale",
+            }:
+                saved_detail_mode = "overflow"
             today = getattr(self.app, "current_date", None) or QDate.currentDate()
             self.start_date_edit.setDate(QDate(today.year(), today.month(), 1))
             self.end_date_edit.setDate(QDate(today.year(), today.month(), today.daysInMonth()))
@@ -326,7 +343,7 @@ class CalendarPrintDialog(QDialog):
             )
             self._set_combo_data(
                 self.output_preset_combo,
-                self.settings.value("print_output_preset", "readable"),
+                saved_output_preset,
             )
             self._set_combo_data(
                 self.paper_combo,
@@ -339,7 +356,7 @@ class CalendarPrintDialog(QDialog):
             self.margin_spin.setValue(self.settings.value("print_margin_mm", 12, type=int))
             self._set_combo_data(
                 self.detail_mode_combo,
-                self.settings.value("print_detail_page_mode", "all"),
+                saved_detail_mode,
             )
             self.show_weekends_check.setChecked(
                 self.settings.value(
@@ -378,10 +395,10 @@ class CalendarPrintDialog(QDialog):
             self._update_output_summary()
             return
         specifications = {
-            "readable": (12, "all", False),
-            "balanced": (10, "all", False),
+            "readable": (12, "overflow", False),
+            "balanced": (10, "overflow", False),
             "compact": (7, "overflow", False),
-            "grayscale": (10, "all", True),
+            "grayscale": (10, "overflow", True),
         }
         margin_mm, detail_mode, grayscale = specifications.get(
             preset,
@@ -425,6 +442,7 @@ class CalendarPrintDialog(QDialog):
         self.output_summary_label.setAccessibleDescription(summary)
 
     def _save_settings(self) -> None:
+        self.settings.setValue("print_layout_version", _PRINT_LAYOUT_VERSION)
         self.settings.setValue("print_scope_mode", self.scope_combo.currentData())
         self.settings.setValue("print_page_unit", self.page_unit_combo.currentData())
         self.settings.setValue(
@@ -522,7 +540,7 @@ class CalendarPrintDialog(QDialog):
             include_completed=self.include_completed_check.isChecked(),
             include_location=self.include_location_check.isChecked(),
             grayscale=self.grayscale_check.isChecked(),
-            detail_page_mode=str(self.detail_mode_combo.currentData() or "all"),
+            detail_page_mode=str(self.detail_mode_combo.currentData() or "overflow"),
         )
 
     def _build_document(self):
@@ -554,7 +572,7 @@ class CalendarPrintDialog(QDialog):
             paper_size=str(self.paper_combo.currentData() or "A4"),
             orientation=str(self.orientation_combo.currentData() or "landscape"),
             margin_mm=float(self.margin_spin.value()),
-            document_title=t("print.document_name", "Dark Calendar 일정"),
+            document_title=t("print.document_name", f"{APP_NAME} 일정"),
         )
 
     def _new_printer(self, *, pdf_path: str | None = None) -> QPrinter:
@@ -648,7 +666,7 @@ class CalendarPrintDialog(QDialog):
     def _save_pdf(self) -> None:
         try:
             self._save_settings()
-            suggested = f"DarkCalendar_{self.start_date_edit.date().toString('yyyyMMdd')}.pdf"
+            suggested = f"AirCalendar_{self.start_date_edit.date().toString('yyyyMMdd')}.pdf"
             path, _ = QFileDialog.getSaveFileName(
                 self,
                 t("print.save_pdf_title", "캘린더 PDF 저장"),

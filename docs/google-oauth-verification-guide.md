@@ -2,7 +2,7 @@
 
 ## ⚠️ 현재 구조에서는 검증 불필요
 
-Dark Calendar는 **사용자가 각자 자신의 Google Cloud 프로젝트에서 OAuth 클라이언트
+Air Calendar는 **사용자가 각자 자신의 Google Cloud 프로젝트에서 OAuth 클라이언트
 (credentials.json)를 만들어 등록하는 BYO 방식**입니다 (`build_store.py`가 배포 시
 credentials.json을 제거하고, GCal 설정 다이얼로그에서 사용자가 직접 파일을 선택).
 
@@ -16,7 +16,7 @@ credentials.json을 제거하고, GCal 설정 다이얼로그에서 사용자가
 
 ---
 
-Dark Calendar가 사용하는 `https://www.googleapis.com/auth/calendar`는 **민감(sensitive) 범위**이므로,
+Air Calendar가 사용하는 `https://www.googleapis.com/auth/calendar`는 **민감(sensitive) 범위**이므로,
 개발자 공용 클라이언트 ID를 배포하는 경우 검증 없이는 (1) 로그인 시 "확인되지 않은 앱" 경고 표시,
 (2) 사용자 100명 제한이 적용됩니다.
 
@@ -26,7 +26,7 @@ Dark Calendar가 사용하는 `https://www.googleapis.com/auth/calendar`는 **�
 - [ ] 처리방침을 홈페이지에 게시: `https://namer-kimhyojin.github.io/dark_calendar/privacy` (예시)
 - [ ] 홈페이지에 앱 소개 + 기능 설명 존재 확인 (검증 심사관이 확인함)
 - [ ] Google Cloud Console의 OAuth 동의 화면에 다음 등록:
-  - 앱 이름: Dark Calendar
+  - 앱 이름: Air Calendar
   - 사용자 지원 이메일
   - 앱 홈페이지 링크
   - **개인정보처리방침 링크** (필수)
@@ -44,7 +44,7 @@ Dark Calendar가 사용하는 `https://www.googleapis.com/auth/calendar`는 **�
 
 ## 범위 정당화 문안 (제출 양식에 사용)
 
-> Dark Calendar is a Windows desktop calendar application. It requires the
+> Air Calendar is a Windows desktop calendar application. It requires the
 > `https://www.googleapis.com/auth/calendar` scope because it provides two-way
 > synchronization between the user's local calendar and Google Calendar:
 >

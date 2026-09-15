@@ -1,9 +1,9 @@
-# -*- Dark Calendar — AGENTS.md -*-
+# -*- Air Calendar — AGENTS.md -*-
 # Codex가 이 프로젝트에서 작업할 때 가장 먼저 참조하는 기준 지침서입니다.
 
 ## 프로젝트 개요
 
-- **앱 이름**: Dark Calendar
+- **앱 이름**: Air Calendar
 - **플랫폼**: Windows 데스크톱 앱
 - **언어/프레임워크**: Python 3.x, PyQt6 6.10.2
 - **UI 언어**: 한국어 기본, i18n 지원 (`calendar_app/infrastructure/i18n.py`)

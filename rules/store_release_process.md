@@ -8,6 +8,15 @@ Create a Windows Store upload package that:
 - excludes local DB files, logs, Google credentials, and Google token files
 - supports x64 and arm64 Store submission when both native MSIX packages exist
 
+## Product Identity Rule
+
+- Public product/display name: `Air Calendar`
+- Existing Store identity: `Kimhyojin.DarkCalendar` (must not be renamed)
+- Existing packaged executable: `DarkCalendar.exe` (compatibility filename)
+- Existing startup task ID: `DarkCalendarStartup` (compatibility ID)
+- A different `Package/Identity/Name` is a separate Store product and must not
+  be used for an update intended for current purchasers.
+
 ## Files
 
 - `build-release.bat` is the only release-build entrypoint.

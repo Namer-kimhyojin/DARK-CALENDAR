@@ -58,7 +58,7 @@ def test_current_month_request_uses_one_month_and_visible_calendars():
         assert request.end_date.isoformat() == "2026-04-30"
         assert request.page_unit == "month"
         assert request.selected_calendar_ids == ("local::work",)
-        assert request.detail_page_mode == "all"
+        assert request.detail_page_mode == "overflow"
         assert dialog.output_preset_combo.currentData() == "readable"
         assert dialog.margin_spin.value() == 12
         assert "전체 페이지" in dialog.preview_btn.text()
@@ -144,8 +144,28 @@ def test_output_presets_keep_quality_choices_visible_and_customizable():
         QApplication.processEvents()
 
         assert dialog.grayscale_check.isChecked()
-        assert dialog.detail_mode_combo.currentData() == "all"
+        assert dialog.detail_mode_combo.currentData() == "overflow"
         assert dialog.margin_spin.value() == 10
+
+        dialog.close()
+        host.close()
+
+
+def test_readable_preset_migrates_old_always_detail_default_to_overflow():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        settings = QSettings(f"{tmpdir}/print-test.ini", QSettings.Format.IniFormat)
+        settings.setValue("print_output_preset", "readable")
+        settings.setValue("print_detail_page_mode", "all")
+        host = _Host(settings)
+        with patch(
+            "calendar_app.presentation.dialogs.calendar_print_dialog.list_calendars",
+            return_value=CALENDARS,
+        ):
+            dialog = CalendarPrintDialog(host)
+
+        assert dialog.detail_mode_combo.currentData() == "overflow"
+        dialog._save_settings()
+        assert settings.value("print_layout_version", 0, type=int) == 2
 
         dialog.close()
         host.close()

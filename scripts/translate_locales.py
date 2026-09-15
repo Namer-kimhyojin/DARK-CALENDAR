@@ -111,7 +111,7 @@ def translate_chunk(
 ) -> dict[str, str]:
     """Translate a chunk of {key: english_value} -> {key: translated_value}."""
     lines = "\n".join(f"{k}\t{v}" for k, v in chunk.items())
-    prompt = f"""You are a professional UI translator for a desktop calendar app called "Dark Calendar".
+    prompt = f"""You are a professional UI translator for a desktop calendar app called "Air Calendar".
 Translate the following UI strings from English to {lang_name}.
 
 Rules:

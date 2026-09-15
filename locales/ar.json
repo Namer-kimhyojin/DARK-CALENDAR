@@ -24,7 +24,7 @@
     "view_issues": "عرض القضايا"
   },
   "app": {
-    "exit_message": "سيتم إغلاق Dark Calendar.\nسيتم إغلاق البرنامج نهائياً دون التصغير إلى علبة النظام.\nهل تريد المتابعة؟",
+    "exit_message": "سيتم إغلاق Air Calendar.\nسيتم إغلاق البرنامج نهائياً دون التصغير إلى علبة النظام.\nهل تريد المتابعة؟",
     "exit_title": "خروج"
   },
   "app_name": "التقويم المظلم",
@@ -32,7 +32,7 @@
     "disabled": "عاجز",
     "enabled": "ممكّن",
     "msg": "التشغيل التلقائي عند بدء التشغيل كان {status}.",
-    "registration_failed": "يرجى السماح لتطبيق Dark Calendar في إعدادات تطبيقات بدء التشغيل في Windows."
+    "registration_failed": "يرجى السماح لتطبيق Air Calendar في إعدادات تطبيقات بدء التشغيل في Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "كلمة مرور المسؤول",
@@ -1006,7 +1006,7 @@
       "remote_orphan": "فقط في Google (لا يوجد تطابق محلي)",
       "unknown": "حدث خطأ غير معروف."
     },
-    "first_setup_msg": "مرحبًا بك في Dark Calendar!\nهل تريد إعداد مزامنة Google Calendar الآن؟",
+    "first_setup_msg": "مرحبًا بك في Air Calendar!\nهل تريد إعداد مزامنة Google Calendar الآن؟",
     "first_setup_title": "مساعد الإعداد",
     "guidance": {
       "auth": "📍 [الحالة] انتهت صلاحية مصادقة Google أو أنها غير صالحة.\n🔒 [الإجراء] يتم إيقاف جميع عمليات المزامنة مؤقتًا بأمان لأسباب تتعلق بالأمان.\n✅ [التوجيه] يرجى الانتقال إلى \"الإعدادات > التقويم والمزامنة > المصادقة\" وتسجيل الدخول مرة أخرى.",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "سنوي"
   },
   "shortcut": {
-    "content": "<h3>دليل الاختصارات</h3><hr><b>[إدارة الجداول]</b><br>• <b>Ctrl + N</b>: إضافة جدول جديد<br>• <b>Ctrl + R</b>: تسجيل روتين<br>• <b>Ctrl + G</b>: تسجيل توجيه<br>• <b>Ctrl + L</b>: إدارة قوالب قائمة المراجعة<br>• <b>Ctrl + Shift + L</b>: وضع قفل سطح المكتب<br><br><b>[عمليات الشاشة]</b><br>• <b>Ctrl + Shift + B</b>: إظهار/إخفاء شريط الأدوات العلوي<br>• <b>Ctrl + M</b>: تبديل وضع المغناطيس<br>• <b>Ctrl + F</b>: تبديل وضع التركيز<br>• <b>F11</b>: تبديل وضع الشاشة الكاملة<br>• <b>Ctrl + Alt + R</b>: مدير الروتين<br><br><b>[تخطيطات محددة مسبقاً]</b><br>• <b>Ctrl + Shift + 1</b>: تخطيط موضوع بالكامل<br>• <b>Ctrl + Shift + 2</b>: تخطيط مركّز على التقويم<br>• <b>Ctrl + Shift + 3</b>: تخطيط مركّز على المهام<br>• <b>Ctrl + Shift + 4</b>: تخطيط مقسّم بتبويب<br>• <b>Ctrl + Shift + 5</b>: تخطيط منفصل بالكامل<br>• <b>Ctrl + Shift + S</b>: حفظ التخطيط الحالي<br><br><b>[التنقل]</b><br>• <b>Ctrl + Left/Right</b>: التاريخ السابق/التالي<br>• <b>Ctrl + T</b>: الانتقال إلى اليوم<br>• <b>Delete</b>: حذف الجدول المحدد<br>• <b>Esc</b>: إلغاء التحديد<br>• <b>F1</b>: فتح دليل الاختصارات<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>الإصدار: {APP_VERSION}<br>المطوّر: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Dark Calendar - دليل الاختصارات"
+    "content": "<h3>دليل الاختصارات</h3><hr><b>[إدارة الجداول]</b><br>• <b>Ctrl + N</b>: إضافة جدول جديد<br>• <b>Ctrl + R</b>: تسجيل روتين<br>• <b>Ctrl + G</b>: تسجيل توجيه<br>• <b>Ctrl + L</b>: إدارة قوالب قائمة المراجعة<br>• <b>Ctrl + Shift + L</b>: وضع قفل سطح المكتب<br><br><b>[عمليات الشاشة]</b><br>• <b>Ctrl + Shift + B</b>: إظهار/إخفاء شريط الأدوات العلوي<br>• <b>Ctrl + M</b>: تبديل وضع المغناطيس<br>• <b>Ctrl + F</b>: تبديل وضع التركيز<br>• <b>F11</b>: تبديل وضع الشاشة الكاملة<br>• <b>Ctrl + Alt + R</b>: مدير الروتين<br><br><b>[تخطيطات محددة مسبقاً]</b><br>• <b>Ctrl + Shift + 1</b>: تخطيط موضوع بالكامل<br>• <b>Ctrl + Shift + 2</b>: تخطيط مركّز على التقويم<br>• <b>Ctrl + Shift + 3</b>: تخطيط مركّز على المهام<br>• <b>Ctrl + Shift + 4</b>: تخطيط مقسّم بتبويب<br>• <b>Ctrl + Shift + 5</b>: تخطيط منفصل بالكامل<br>• <b>Ctrl + Shift + S</b>: حفظ التخطيط الحالي<br><br><b>[التنقل]</b><br>• <b>Ctrl + Left/Right</b>: التاريخ السابق/التالي<br>• <b>Ctrl + T</b>: الانتقال إلى اليوم<br>• <b>Delete</b>: حذف الجدول المحدد<br>• <b>Esc</b>: إلغاء التحديد<br>• <b>F1</b>: فتح دليل الاختصارات<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>الإصدار: {APP_VERSION}<br>المطوّر: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Air Calendar - دليل الاختصارات"
   },
   "splash": {
     "initializing_db": "تهيئة قاعدة البيانات...",

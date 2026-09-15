@@ -20,11 +20,11 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtPrintSupport import QPrinter
 
+from calendar_app.app_metadata import APP_NAME
 from calendar_app.application.calendar_print_service import (
     CalendarPrintDocument,
     CalendarPrintEvent,
     CalendarPrintPage,
-    events_for_day,
 )
 from calendar_app.infrastructure.i18n import t
 
@@ -34,7 +34,7 @@ class CalendarPrintRenderOptions:
     paper_size: str = "A4"
     orientation: str = "landscape"
     margin_mm: float = 10.0
-    document_title: str = "Dark Calendar"
+    document_title: str = APP_NAME
 
 
 @dataclass(frozen=True)
@@ -53,6 +53,26 @@ class _SheetPlan:
     period_index: int
     page: CalendarPrintPage
     detail_events: tuple[CalendarPrintEvent, ...] = ()
+
+
+@dataclass(frozen=True)
+class _MultidaySegment:
+    event: CalendarPrintEvent
+    row: int
+    start_col: int
+    end_col: int
+    lane: int
+    visible_start: date
+    visible_end: date
+
+
+@dataclass(frozen=True)
+class _WeekLayout:
+    row: int
+    visible_lane_count: int
+    segments: tuple[_MultidaySegment, ...]
+    single_events: tuple[tuple[CalendarPrintEvent, ...], ...]
+    hidden_counts: tuple[int, ...]
 
 
 _PAPER_SIZE_IDS = {
@@ -84,7 +104,7 @@ def configure_printer(
     printer.setPageLayout(layout)
     printer.setFullPage(False)
     printer.setDocName(options.document_title)
-    printer.setCreator("Dark Calendar")
+    printer.setCreator(APP_NAME)
     printer.setColorMode(QPrinter.ColorMode.GrayScale if grayscale else QPrinter.ColorMode.Color)
 
 
@@ -113,7 +133,7 @@ def _event_color(event: CalendarPrintEvent, grayscale: bool) -> tuple[QColor, QC
     accent = _valid_color(event.calendar_color)
     if grayscale:
         accent = _gray(accent)
-    fill = _mix(accent, QColor("#ffffff"), 0.84)
+    fill = _mix(accent, QColor("#ffffff"), 0.90)
     return accent.darker(115), fill
 
 
@@ -158,23 +178,26 @@ def _event_time_text(event: CalendarPrintEvent) -> str:
 
 def _priority_marker(event: CalendarPrintEvent) -> str:
     return {
-        "urgent": "[U] ",
-        "high": "[H] ",
-        "low": "[L] ",
+        "urgent": f"{t('priority.urgent', '긴급')} · ",
+        "high": f"{t('priority.high', '높음')} · ",
     }.get(event.priority, "")
 
 
 def _event_cell_text(event: CalendarPrintEvent, target: date) -> str:
-    prefix = ""
-    suffix = ""
-    if event.is_multiday:
-        if event.start_date < target:
-            prefix = "< "
-        if event.end_date > target:
-            suffix = " >"
-    time_text = _event_time_text(event)
+    del target
+    time_text = "" if event.all_day or event.is_multiday else _event_time_text(event)
     timed = f"{time_text} " if time_text else ""
-    return f"{prefix}{timed}{_priority_marker(event)}{event.name}{suffix}"
+    return f"{timed}{_priority_marker(event)}{event.name}"
+
+
+def _multiday_segment_text(segment: _MultidaySegment) -> str:
+    event = segment.event
+    continued = event.start_date < segment.visible_start
+    prefix = "... " if continued else ""
+    time_text = ""
+    if not event.all_day and not continued and event.start_time is not None:
+        time_text = f"{event.start_time.strftime('%H:%M')} "
+    return f"{prefix}{time_text}{_priority_marker(event)}{event.name}"
 
 
 def _details_event_sort_key(event: CalendarPrintEvent):
@@ -260,21 +283,145 @@ def _calendar_geometry(page: CalendarPrintPage, width_pt: float, height_pt: floa
     }
 
 
-def _calendar_overflow_keys(page: CalendarPrintPage, width_pt: float, height_pt: float) -> set[str]:
-    geometry = _calendar_geometry(page, width_pt, height_pt)
-    capacity = int(geometry["capacity"])
-    drawn: set[str] = set()
-    hidden: set[str] = set()
-    for target in page.grid_dates:
-        occurrences = events_for_day(page, target)
-        if not occurrences:
-            continue
-        visible_count = capacity if len(occurrences) <= capacity else max(0, capacity - 1)
-        drawn.update(event.event_key for event in occurrences[:visible_count])
-        hidden.update(event.event_key for event in occurrences[visible_count:])
+def _assign_multiday_segments(
+    page: CalendarPrintPage,
+    row: int,
+    row_dates: tuple[date, ...],
+) -> tuple[_MultidaySegment, ...]:
+    candidates: list[tuple[int, int, date, date, CalendarPrintEvent]] = []
     for event in page.events:
-        if event.event_key not in drawn:
-            hidden.add(event.event_key)
+        if not event.is_multiday:
+            continue
+        visible_indices = [
+            index
+            for index, target in enumerate(row_dates)
+            if page.period_start <= target <= page.period_end and event.occurs_on(target)
+        ]
+        if not visible_indices:
+            continue
+        start_col = min(visible_indices)
+        end_col = max(visible_indices)
+        candidates.append(
+            (
+                start_col,
+                end_col,
+                row_dates[start_col],
+                row_dates[end_col],
+                event,
+            )
+        )
+
+    candidates.sort(
+        key=lambda item: (
+            item[0],
+            -(item[1] - item[0]),
+            item[4].start_date,
+            item[4].name.casefold(),
+            item[4].event_key,
+        )
+    )
+    lane_ends: list[int] = []
+    segments: list[_MultidaySegment] = []
+    for start_col, end_col, visible_start, visible_end, event in candidates:
+        lane = next(
+            (index for index, occupied_end in enumerate(lane_ends) if start_col > occupied_end),
+            len(lane_ends),
+        )
+        if lane == len(lane_ends):
+            lane_ends.append(end_col)
+        else:
+            lane_ends[lane] = end_col
+        segments.append(
+            _MultidaySegment(
+                event=event,
+                row=row,
+                start_col=start_col,
+                end_col=end_col,
+                lane=lane,
+                visible_start=visible_start,
+                visible_end=visible_end,
+            )
+        )
+    return tuple(segments)
+
+
+def _build_week_layouts(
+    page: CalendarPrintPage,
+    width_pt: float,
+    height_pt: float,
+) -> tuple[tuple[_WeekLayout, ...], set[str]]:
+    geometry = _calendar_geometry(page, width_pt, height_pt)
+    columns = int(geometry["columns"])
+    capacity = int(geometry["capacity"])
+    layouts: list[_WeekLayout] = []
+    overflow_keys: set[str] = set()
+
+    for row in range(int(geometry["rows"])):
+        row_dates = tuple(page.grid_dates[row * columns : (row + 1) * columns])
+        segments = _assign_multiday_segments(page, row, row_dates)
+        lane_count = max((segment.lane for segment in segments), default=-1) + 1
+        row_has_singles = any(
+            not event.is_multiday
+            and any(
+                page.period_start <= target <= page.period_end and event.occurs_on(target)
+                for target in row_dates
+            )
+            for event in page.events
+        )
+        visible_lane_count = min(lane_count, capacity)
+        if lane_count > capacity or (lane_count >= capacity and row_has_singles):
+            visible_lane_count = max(0, capacity - 1)
+        visible_segments = tuple(
+            segment for segment in segments if segment.lane < visible_lane_count
+        )
+
+        single_events: list[tuple[CalendarPrintEvent, ...]] = []
+        hidden_counts: list[int] = []
+        for col, target in enumerate(row_dates):
+            singles = tuple(
+                event
+                for event in page.events
+                if not event.is_multiday
+                and page.period_start <= target <= page.period_end
+                and event.occurs_on(target)
+            )
+            hidden_multiday = tuple(
+                segment.event
+                for segment in segments
+                if segment.lane >= visible_lane_count
+                and segment.start_col <= col <= segment.end_col
+            )
+            remaining = max(0, capacity - visible_lane_count)
+            needs_more_line = bool(hidden_multiday) or len(singles) > remaining
+            visible_single_count = (
+                max(0, remaining - 1) if needs_more_line else min(len(singles), remaining)
+            )
+            visible_singles = singles[:visible_single_count]
+            hidden_singles = singles[visible_single_count:]
+            single_events.append(visible_singles)
+            hidden_counts.append(len(hidden_multiday) + len(hidden_singles))
+            overflow_keys.update(event.event_key for event in hidden_multiday)
+            overflow_keys.update(event.event_key for event in hidden_singles)
+
+        layouts.append(
+            _WeekLayout(
+                row=row,
+                visible_lane_count=visible_lane_count,
+                segments=visible_segments,
+                single_events=tuple(single_events),
+                hidden_counts=tuple(hidden_counts),
+            )
+        )
+    return tuple(layouts), overflow_keys
+
+
+def _calendar_overflow_keys(page: CalendarPrintPage, width_pt: float, height_pt: float) -> set[str]:
+    layouts, hidden = _build_week_layouts(page, width_pt, height_pt)
+    drawn = {segment.event.event_key for layout in layouts for segment in layout.segments}
+    drawn.update(
+        event.event_key for layout in layouts for events in layout.single_events for event in events
+    )
+    hidden.update(event.event_key for event in page.events if event.event_key not in drawn)
     return hidden
 
 
@@ -298,7 +445,12 @@ def _build_sheet_plan(
             continue
         if document.request.detail_page_mode == "overflow" and not overflow:
             continue
-        ordered = tuple(sorted(page.events, key=_details_event_sort_key))
+        detail_events = (
+            tuple(event for event in page.events if event.event_key in overflow)
+            if document.request.detail_page_mode == "overflow"
+            else page.events
+        )
+        ordered = tuple(sorted(detail_events, key=_details_event_sort_key))
         for offset in range(0, len(ordered), detail_capacity):
             sheets.append(
                 _SheetPlan(
@@ -335,6 +487,11 @@ def _draw_header(
         color="#4b5563",
         elide=True,
     )
+    ctx.painter.setPen(ctx.pen("#d7dce4", 0.45))
+    ctx.painter.drawLine(
+        ctx.rect(0, 52, ctx.width_pt, 0).topLeft(),
+        ctx.rect(0, 52, ctx.width_pt, 0).topRight(),
+    )
 
     used_calendars: list[tuple[str, str, str]] = []
     seen: set[str] = set()
@@ -357,7 +514,10 @@ def _draw_header(
             if document.request.grayscale
             else _valid_color(color_value)
         )
-        ctx.painter.fillRect(ctx.rect(x, y + 4, 7, 7), QBrush(accent))
+        ctx.painter.setPen(Qt.PenStyle.NoPen)
+        ctx.painter.setBrush(QBrush(accent))
+        ctx.painter.drawEllipse(ctx.rect(x, y + 4, 7, 7))
+        ctx.painter.setBrush(QBrush(Qt.BrushStyle.NoBrush))
         ctx.draw_text(
             ctx.rect(x + 10, y, item_width - 12, 15),
             name,
@@ -388,8 +548,8 @@ def _draw_weekday_header(
     first_week = page.grid_dates[:columns]
     for col, target in enumerate(first_week):
         rect = ctx.rect(col * cell_width, y, cell_width, height)
-        ctx.painter.fillRect(rect, QBrush(QColor("#eef1f5")))
-        ctx.painter.setPen(ctx.pen("#c8ced8", 0.45))
+        ctx.painter.fillRect(rect, QBrush(QColor("#f4f6f8")))
+        ctx.painter.setPen(ctx.pen("#d5dae2", 0.45))
         ctx.painter.drawRect(rect)
         color = "#111827"
         if page.page_unit != "week" or len(first_week) >= 5:
@@ -416,7 +576,10 @@ def _draw_event_line(
     grayscale: bool,
 ) -> None:
     accent, fill = _event_color(event, grayscale)
-    ctx.painter.fillRect(rect, QBrush(fill))
+    radius = 2.5 * ctx.scale
+    ctx.painter.setPen(ctx.pen(_mix(accent, QColor("#ffffff"), 0.52), 0.35))
+    ctx.painter.setBrush(QBrush(fill))
+    ctx.painter.drawRoundedRect(rect, radius, radius)
     strip = QRectF(rect.x(), rect.y(), max(ctx.scale * 2.2, 1.0), rect.height())
     ctx.painter.fillRect(strip, QBrush(accent))
     text_rect = QRectF(
@@ -428,8 +591,39 @@ def _draw_event_line(
     ctx.draw_text(
         text_rect,
         _event_cell_text(event, target),
-        size=7.5,
+        size=8.0,
         color="#111827",
+        elide=True,
+    )
+
+
+def _draw_multiday_bar(
+    ctx: _RenderContext,
+    rect: QRectF,
+    segment: _MultidaySegment,
+    *,
+    grayscale: bool,
+) -> None:
+    accent, fill = _event_color(segment.event, grayscale)
+    radius = 3.2 * ctx.scale
+    ctx.painter.setPen(ctx.pen(_mix(accent, QColor("#ffffff"), 0.35), 0.55))
+    ctx.painter.setBrush(QBrush(fill))
+    ctx.painter.drawRoundedRect(rect, radius, radius)
+    if segment.event.start_date == segment.visible_start:
+        strip = QRectF(rect.x(), rect.y(), max(ctx.scale * 2.6, 1.0), rect.height())
+        ctx.painter.fillRect(strip, QBrush(accent))
+    text_rect = QRectF(
+        rect.x() + 5.0 * ctx.scale,
+        rect.y(),
+        max(0.0, rect.width() - 8.0 * ctx.scale),
+        rect.height(),
+    )
+    ctx.draw_text(
+        text_rect,
+        _multiday_segment_text(segment),
+        size=8.0,
+        color="#111827",
+        bold=segment.event.priority in {"urgent", "high"},
         elide=True,
     )
 
@@ -450,9 +644,10 @@ def _draw_calendar_sheet(
     grid_y = float(geometry["header_height"] + geometry["weekday_height"])
     day_header_height = float(geometry["day_header_height"])
     event_line_height = float(geometry["event_line_height"])
-    capacity = int(geometry["capacity"])
     drawn: set[str] = set()
 
+    # Draw the calendar paper first, then place event layers over the complete
+    # grid. This lets multi-day events read as one continuous weekly ribbon.
     for index, target in enumerate(page.grid_dates):
         row = index // columns
         col = index % columns
@@ -463,11 +658,11 @@ def _draw_calendar_sheet(
         is_other_month = page.page_unit == "month" and target.month != page.anchor_date.month
         background = QColor("#ffffff")
         if not in_scope:
-            background = QColor("#f0f1f3")
+            background = QColor("#f3f4f6")
         elif is_other_month:
-            background = QColor("#fafafa")
+            background = QColor("#fafbfc")
         ctx.painter.fillRect(cell, QBrush(background))
-        ctx.painter.setPen(ctx.pen("#bcc3cc", 0.45))
+        ctx.painter.setPen(ctx.pen("#d4d9e1", 0.38))
         ctx.painter.drawRect(cell)
 
         date_color = "#9aa0a8" if not in_scope or is_other_month else "#20242a"
@@ -482,39 +677,62 @@ def _draw_calendar_sheet(
         ctx.draw_text(
             ctx.rect(x + 3, y + 1, cell_width - 6, day_header_height - 1),
             date_text,
-            size=8.5,
+            size=9.0,
             color=date_color,
             bold=in_scope and target == date.today(),
             align=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
         )
 
-        occurrences = events_for_day(page, target)
-        if not occurrences:
-            continue
-        visible_count = capacity if len(occurrences) <= capacity else max(0, capacity - 1)
-        for event_index, event in enumerate(occurrences[:visible_count]):
+    layouts, _ = _build_week_layouts(page, ctx.width_pt, ctx.height_pt)
+    for layout in layouts:
+        row_y = grid_y + layout.row * cell_height
+        for segment in layout.segments:
             event_rect = ctx.rect(
-                x + 2.5,
-                y + day_header_height + event_index * event_line_height,
-                cell_width - 5,
+                segment.start_col * cell_width + 2.5,
+                row_y + day_header_height + segment.lane * event_line_height,
+                (segment.end_col - segment.start_col + 1) * cell_width - 5,
                 event_line_height - 1.2,
             )
-            _draw_event_line(
+            _draw_multiday_bar(
                 ctx,
                 event_rect,
-                event,
-                target,
+                segment,
                 grayscale=document.request.grayscale,
             )
-            drawn.add(event.event_key)
+            drawn.add(segment.event.event_key)
 
-        hidden_count = len(occurrences) - visible_count
-        if hidden_count > 0:
-            hidden_y = y + day_header_height + visible_count * event_line_height
+        row_dates = page.grid_dates[layout.row * columns : (layout.row + 1) * columns]
+        for col, target in enumerate(row_dates):
+            x = col * cell_width
+            for event_index, event in enumerate(layout.single_events[col]):
+                line_index = layout.visible_lane_count + event_index
+                event_rect = ctx.rect(
+                    x + 2.5,
+                    row_y + day_header_height + line_index * event_line_height,
+                    cell_width - 5,
+                    event_line_height - 1.2,
+                )
+                _draw_event_line(
+                    ctx,
+                    event_rect,
+                    event,
+                    target,
+                    grayscale=document.request.grayscale,
+                )
+                drawn.add(event.event_key)
+
+            hidden_count = layout.hidden_counts[col]
+            if hidden_count <= 0:
+                continue
+            hidden_y = (
+                row_y
+                + day_header_height
+                + (layout.visible_lane_count + len(layout.single_events[col])) * event_line_height
+            )
             ctx.draw_text(
                 ctx.rect(x + 4, hidden_y, cell_width - 8, event_line_height),
                 t("print.more_events", "+{count}건 · 상세 페이지", count=hidden_count),
-                size=7.2,
+                size=7.4,
                 color="#334155",
                 bold=True,
                 elide=True,
@@ -546,7 +764,7 @@ def _draw_details_sheet(
         if document.request.detail_page_mode == "all"
         else t(
             "print.details_hint",
-            "달력 칸에 모두 표시되지 않은 기간의 전체 일정입니다.",
+            "달력 칸에 표시되지 않은 일정만 모았습니다.",
         )
     )
     ctx.draw_text(
@@ -559,7 +777,9 @@ def _draw_details_sheet(
     header_y = 50.0
     row_height = 23.0
     columns = (76.0, 48.0, 96.0)
-    ctx.painter.fillRect(ctx.rect(0, header_y, ctx.width_pt, 20), QBrush(QColor("#e8ecf1")))
+    ctx.painter.fillRect(ctx.rect(0, header_y, ctx.width_pt, 20), QBrush(QColor("#f0f3f7")))
+    detail_accent = QColor("#6b7280" if document.request.grayscale else "#4d7cff")
+    ctx.painter.fillRect(ctx.rect(0, header_y, 3.0, 20), QBrush(detail_accent))
     headers = (
         t("print.column_date", "날짜"),
         t("print.column_time", "시간"),
@@ -583,7 +803,7 @@ def _draw_details_sheet(
         y = header_y + 20.0 + index * row_height
         if index % 2:
             ctx.painter.fillRect(
-                ctx.rect(0, y, ctx.width_pt, row_height), QBrush(QColor("#f7f8fa"))
+                ctx.rect(0, y, ctx.width_pt, row_height), QBrush(QColor("#fafbfc"))
             )
         accent, _ = _event_color(event, document.request.grayscale)
         ctx.painter.fillRect(ctx.rect(0, y, 2.5, row_height), QBrush(accent))
@@ -603,7 +823,7 @@ def _draw_details_sheet(
             ctx.draw_text(
                 ctx.rect(x + 4, y, width - 8, row_height),
                 value,
-                size=7.7,
+                size=8.3,
                 color="#111827",
                 elide=True,
             )
@@ -695,12 +915,21 @@ def render_calendar_document(
                 and sheets[index + 1].kind == "details"
                 and sheets[index + 1].period_index == sheet.period_index
             )
+            details_follow_count = (
+                sum(
+                    len(candidate.detail_events)
+                    for candidate in sheets[index + 1 :]
+                    if candidate.kind == "details" and candidate.period_index == sheet.period_index
+                )
+                if has_details_after
+                else 0
+            )
             _draw_footer(
                 ctx,
                 document,
                 index + 1,
                 len(sheets),
-                details_follow_count=(len(sheet.page.events) if has_details_after else 0),
+                details_follow_count=details_follow_count,
             )
     finally:
         painter.end()

@@ -144,6 +144,14 @@ class BuildPipelineContractTests(unittest.TestCase):
         self.assertIn("'qt6pdf.dll'", spec)
         self.assertIn("'qt6svg.dll'", spec)
 
+    def test_store_build_rejects_foreign_icu_dlls_that_break_qtcore(self):
+        spec = self._read("DarkCalendar.spec")
+        compliance = self._read("scripts/release_compliance.py")
+
+        for prefix in ("icudt", "icuin", "icuuc"):
+            self.assertIn(prefix, spec)
+            self.assertIn(prefix, compliance)
+
     def test_homepage_exposes_versioned_source_and_gpl(self):
         metadata = self._read("calendar_app/app_metadata.py")
         version_match = re.search(r'^APP_VERSION\s*=\s*"([^"]+)"', metadata, re.MULTILINE)

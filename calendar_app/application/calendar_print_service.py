@@ -30,7 +30,7 @@ class CalendarPrintRequest:
     include_completed: bool = True
     include_location: bool = False
     grayscale: bool = False
-    detail_page_mode: DetailPageMode = "all"
+    detail_page_mode: DetailPageMode = "overflow"
 
     def validate(self) -> None:
         if self.end_date < self.start_date:

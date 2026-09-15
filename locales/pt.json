@@ -24,7 +24,7 @@
     "view_issues": "Ver problemas de sincronização"
   },
   "app": {
-    "exit_message": "Dark Calendar será fechado.\nO programa será encerrado completamente sem minimizar para a bandeja.\nContinuar?",
+    "exit_message": "Air Calendar será fechado.\nO programa será encerrado completamente sem minimizar para a bandeja.\nContinuar?",
     "exit_title": "Sair"
   },
   "app_name": "Calendário escuro",
@@ -32,7 +32,7 @@
     "disabled": "Desativado",
     "enabled": "Ativado",
     "msg": "Lançamento auto: {status}.",
-    "registration_failed": "Permita o Dark Calendar nas configurações de aplicativos de inicialização do Windows."
+    "registration_failed": "Permita o Air Calendar nas configurações de aplicativos de inicialização do Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Senha de admin",
@@ -770,7 +770,7 @@
         "slate": "Ardósia"
       },
       "preview": {
-        "app_name": "Dark Calendario",
+        "app_name": "Air Calendario",
         "custom_style": "Personalizado",
         "input_hint": "Introduza content...",
         "item_deadline": "Project Prazo",
@@ -1006,7 +1006,7 @@
       "remote_orphan": "Only em Google (no local match)",
       "unknown": "Ocorreu um erro desconhecido."
     },
-    "first_setup_msg": "Bem-vindo ao Dark Calendar!\nDeseja configurar a sincronização Google agora?",
+    "first_setup_msg": "Bem-vindo ao Air Calendar!\nDeseja configurar a sincronização Google agora?",
     "first_setup_title": "Assistente de Configuração",
     "guidance": {
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] Todos sincronizacao processes are safely paused for segurity.\n✅ [GUIDANCE] Por favor go to 'Definicoes > Calendario & Sincronizacao > Authenticate' and log em again.",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "Anual"
   },
   "shortcut": {
-    "content": "<h3>Guia de atalhos</h3><hr><b>[Gestão de agenda]</b><br>• <b>Ctrl + N</b>: Adicionar nova agenda<br>• <b>Ctrl + R</b>: Registrar rotina<br>• <b>Ctrl + G</b>: Registrar diretiva<br>• <b>Ctrl + L</b>: Gerenciar modelos de lista<br>• <b>Ctrl + Shift + L</b>: Modo bloqueio de área de trabalho<br><br><b>[Operações de tela]</b><br>• <b>Ctrl + Shift + B</b>: Mostrar/ocultar barra superior<br>• <b>Ctrl + M</b>: Alternar modo magnético<br>• <b>Ctrl + F</b>: Alternar modo foco<br>• <b>F11</b>: Alternar tela cheia<br>• <b>Ctrl + Alt + R</b>: Gerenciador de rotinas<br><br><b>[Layouts predefinidos]</b><br>• <b>Ctrl + Shift + 1</b>: Layout totalmente ancorado<br>• <b>Ctrl + Shift + 2</b>: Layout focado no calendário<br>• <b>Ctrl + Shift + 3</b>: Layout focado em tarefas<br>• <b>Ctrl + Shift + 4</b>: Layout dividido por abas<br>• <b>Ctrl + Shift + 5</b>: Layout completamente separado<br>• <b>Ctrl + Shift + S</b>: Salvar layout atual<br><br><b>[Navegação]</b><br>• <b>Ctrl + Left/Right</b>: Data anterior/seguinte<br>• <b>Ctrl + T</b>: Ir para hoje<br>• <b>Delete</b>: Excluir agenda selecionada<br>• <b>Esc</b>: Cancelar seleção<br>• <b>F1</b>: Abrir guia de atalhos<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>Versão: {APP_VERSION}<br>Autor: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Guia de atalhos Dark Calendar"
+    "content": "<h3>Guia de atalhos</h3><hr><b>[Gestão de agenda]</b><br>• <b>Ctrl + N</b>: Adicionar nova agenda<br>• <b>Ctrl + R</b>: Registrar rotina<br>• <b>Ctrl + G</b>: Registrar diretiva<br>• <b>Ctrl + L</b>: Gerenciar modelos de lista<br>• <b>Ctrl + Shift + L</b>: Modo bloqueio de área de trabalho<br><br><b>[Operações de tela]</b><br>• <b>Ctrl + Shift + B</b>: Mostrar/ocultar barra superior<br>• <b>Ctrl + M</b>: Alternar modo magnético<br>• <b>Ctrl + F</b>: Alternar modo foco<br>• <b>F11</b>: Alternar tela cheia<br>• <b>Ctrl + Alt + R</b>: Gerenciador de rotinas<br><br><b>[Layouts predefinidos]</b><br>• <b>Ctrl + Shift + 1</b>: Layout totalmente ancorado<br>• <b>Ctrl + Shift + 2</b>: Layout focado no calendário<br>• <b>Ctrl + Shift + 3</b>: Layout focado em tarefas<br>• <b>Ctrl + Shift + 4</b>: Layout dividido por abas<br>• <b>Ctrl + Shift + 5</b>: Layout completamente separado<br>• <b>Ctrl + Shift + S</b>: Salvar layout atual<br><br><b>[Navegação]</b><br>• <b>Ctrl + Left/Right</b>: Data anterior/seguinte<br>• <b>Ctrl + T</b>: Ir para hoje<br>• <b>Delete</b>: Excluir agenda selecionada<br>• <b>Esc</b>: Cancelar seleção<br>• <b>F1</b>: Abrir guia de atalhos<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Versão: {APP_VERSION}<br>Autor: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Guia de atalhos Air Calendar"
   },
   "splash": {
     "initializing_db": "Inicializando banco de dados...",

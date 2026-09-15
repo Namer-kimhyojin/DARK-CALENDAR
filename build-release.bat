@@ -14,12 +14,12 @@ set "EXIT_CODE=%ERRORLEVEL%"
 
 if not "%EXIT_CODE%"=="0" (
     echo.
-    echo Dark Calendar release build failed. Exit code: %EXIT_CODE%
+    echo Air Calendar release build failed. Exit code: %EXIT_CODE%
     if "%~1"=="" pause
     exit /b %EXIT_CODE%
 )
 
 echo.
-echo Dark Calendar release build completed.
+echo Air Calendar release build completed.
 if "%~1"=="" pause
 exit /b 0

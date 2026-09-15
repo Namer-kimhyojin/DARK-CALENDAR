@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5" xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities" IgnorableNamespaces="uap uap5 desktop rescap">
-  <Identity Name="Kimhyojin.DarkCalendar" Publisher="CN=D8C69F65-7BB6-4038-9AF7-23C4D0C69EC3" Version="3.7.0.0" />
+  <Identity Name="Kimhyojin.DarkCalendar" Publisher="CN=D8C69F65-7BB6-4038-9AF7-23C4D0C69EC3" Version="3.7.1.0" />
   <Properties>
-    <DisplayName>Dark Calendar</DisplayName>
+    <DisplayName>Air Calendar</DisplayName>
     <PublisherDisplayName>Kim,hyojin</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -31,13 +31,13 @@
   </Resources>
   <Applications>
     <Application Id="App" Executable="DarkCalendar.exe" EntryPoint="Windows.FullTrustApplication">
-      <uap:VisualElements DisplayName="Dark Calendar" Description="Beautiful Desktop Calendar with Routine and Task Management" BackgroundColor="#1C1C1C" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png">
+      <uap:VisualElements DisplayName="Air Calendar" Description="Modern desktop calendar with tasks and customizable widgets" BackgroundColor="#1C1C1C" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square310x310Logo="Assets\Square310x310Logo.png" />
         <uap:SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#1C1C1C" />
       </uap:VisualElements>
       <Extensions>
         <desktop:Extension Category="windows.startupTask" Executable="DarkCalendar.exe" EntryPoint="Windows.FullTrustApplication">
-          <desktop:StartupTask TaskId="DarkCalendarStartup" Enabled="false" DisplayName="Dark Calendar" />
+          <desktop:StartupTask TaskId="DarkCalendarStartup" Enabled="false" DisplayName="Air Calendar" />
         </desktop:Extension>
       </Extensions>
     </Application>

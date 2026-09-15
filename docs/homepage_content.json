@@ -1,6 +1,6 @@
 {
   "meta": {
-    "appName": "Dark Calendar",
+    "appName": "Air Calendar",
     "platform": "Windows Desktop",
     "languageDefault": "ko-KR",
     "sourceBasis": "Repository-derived product summary generated from the current codebase",
@@ -27,7 +27,7 @@
   },
   "brand": {
     "oneLiner": "일정, 루틴, 디렉티브, 위젯을 한 화면에 모아두는 Windows 데스크톱 캘린더",
-    "shortDescription": "Dark Calendar는 월간 캘린더와 업무 패널, 오버레이 위젯, 집중 도구를 결합한 개인 생산성 앱입니다.",
+    "shortDescription": "Air Calendar는 월간 캘린더와 업무 패널, 오버레이 위젯, 집중 도구를 결합한 개인 생산성 앱입니다.",
     "toneKeywords": [
       "몰입감 있는",
       "데스크톱 중심",
@@ -66,13 +66,13 @@
       "slotId": "hero-main-visual",
       "assetType": "placeholder-composite",
       "title": "메인 히어로 비주얼",
-      "description": "Dark Calendar의 대표 화면을 보여주는 핵심 이미지입니다. 월간 캘린더, 오른쪽 업무 패널, 상단 바, 오버레이 위젯이 함께 보이는 구성이 적합합니다.",
+      "description": "Air Calendar의 대표 화면을 보여주는 핵심 이미지입니다. 월간 캘린더, 오른쪽 업무 패널, 상단 바, 오버레이 위젯이 함께 보이는 구성이 적합합니다.",
       "recommendedContent": [
         "메인 앱 창 전체 스크린샷",
         "시계 또는 D-Day 오버레이 위젯이 함께 보이는 장면",
         "다크 테마 분위기가 드러나는 UI"
       ],
-      "alt": "Dark Calendar 메인 화면과 오버레이 위젯이 함께 보이는 대표 이미지",
+      "alt": "Air Calendar 메인 화면과 오버레이 위젯이 함께 보이는 대표 이미지",
       "layoutHint": "desktop-wide",
       "replacementNotes": "초기에는 모니터 프레임 목업 안에 앱 스크린샷과 위젯을 합성한 플레이스홀더를 사용하고, 추후 실제 앱 사용 장면 이미지로 교체합니다."
     }
@@ -81,7 +81,7 @@
     {
       "id": "overview",
       "title": "앱 소개",
-      "description": "Dark Calendar는 단순히 일정을 기록하는 앱이 아니라, 바탕화면 위에서 계속 보이고 바로 조작할 수 있는 생산성 허브를 지향합니다. 캘린더, 루틴, 디렉티브, 포커스 도구, 위젯을 하나의 흐름으로 연결해 일과 생활의 맥락 전환 비용을 줄여줍니다."
+      "description": "Air Calendar는 단순히 일정을 기록하는 앱이 아니라, 바탕화면 위에서 계속 보이고 바로 조작할 수 있는 생산성 허브를 지향합니다. 캘린더, 루틴, 디렉티브, 포커스 도구, 위젯을 하나의 흐름으로 연결해 일과 생활의 맥락 전환 비용을 줄여줍니다."
     },
     {
       "id": "features",
@@ -334,7 +334,7 @@
       "sourceType": "existing-local-asset",
       "path": "Assets/app_icon.png",
       "purpose": "파비콘, 앱 아이콘, 메타 썸네일, 카드형 소개 블록",
-      "alt": "Dark Calendar 앱 아이콘"
+      "alt": "Air Calendar 앱 아이콘"
     },
     {
       "id": "brand-poster-art",
@@ -342,7 +342,7 @@
       "sourceType": "existing-local-asset",
       "path": "Assets/PosterArt.png",
       "purpose": "오픈그래프 이미지, 앱 소개 상단 비주얼, 스토어 느낌의 배너",
-      "alt": "Dark Calendar 포스터 아트"
+      "alt": "Air Calendar 포스터 아트"
     },
     {
       "id": "brand-splash",
@@ -350,7 +350,7 @@
       "sourceType": "existing-local-asset",
       "path": "Assets/SplashScreen.png",
       "purpose": "앱 로딩 화면 소개, 브랜드 분위기 전달",
-      "alt": "Dark Calendar 스플래시 화면"
+      "alt": "Air Calendar 스플래시 화면"
     }
   ],
   "imagePlaceholders": [
@@ -370,7 +370,7 @@
       "preferredAspectRatio": "16:10",
       "preferredSize": "1600x1000+",
       "backgroundStyle": "dark desktop or neutral gradient",
-      "alt": "Dark Calendar 메인 UI와 위젯을 함께 보여주는 대표 화면",
+      "alt": "Air Calendar 메인 UI와 위젯을 함께 보여주는 대표 화면",
       "caption": "캘린더와 업무 패널, 위젯이 하나의 흐름으로 이어지는 데스크톱 경험",
       "replacementNotes": "초기에는 UI 와이어프레임이나 목업으로 대체 가능하며, 실제 제품 캡처 확보 후 교체"
     },
@@ -379,15 +379,15 @@
       "section": "overview",
       "assetType": "concept-illustration-or-mockup",
       "title": "데스크톱 워크플로 콘셉트 이미지",
-      "goal": "Dark Calendar가 단순 캘린더가 아니라 데스크톱 업무 허브라는 인상을 강화",
-      "description": "작업용 데스크톱 배경 위에 Dark Calendar 창과 위젯이 자연스럽게 배치된 사용 장면",
+      "goal": "Air Calendar가 단순 캘린더가 아니라 데스크톱 업무 허브라는 인상을 강화",
+      "description": "작업용 데스크톱 배경 위에 Air Calendar 창과 위젯이 자연스럽게 배치된 사용 장면",
       "suggestedComposition": [
         "실제 모니터 또는 노트북 화면 목업",
         "앱 창은 좌측 또는 중앙",
         "우측 또는 하단에 오버레이 위젯이 떠 있는 구성"
       ],
       "preferredAspectRatio": "3:2",
-      "alt": "데스크톱 환경에서 Dark Calendar를 사용하는 콘셉트 이미지",
+      "alt": "데스크톱 환경에서 Air Calendar를 사용하는 콘셉트 이미지",
       "caption": "일정을 보는 순간에서 실행하는 순간까지 한 화면에서",
       "replacementNotes": "실제 사용 사진이 없으면 제품 중심 3D 목업 또는 평면 UI 합성으로 대체"
     },
@@ -403,7 +403,7 @@
         "패널 타이틀과 카드형 업무 항목이 읽히는 수준의 해상도"
       ],
       "preferredAspectRatio": "16:9",
-      "alt": "월간 캘린더와 업무 패널이 함께 보이는 Dark Calendar 화면",
+      "alt": "월간 캘린더와 업무 패널이 함께 보이는 Air Calendar 화면",
       "caption": "일정 확인과 실행 관리가 분리되지 않는 구조",
       "replacementNotes": "초기에는 기능 영역에 라벨을 표시한 annotated placeholder도 적합"
     },
@@ -419,7 +419,7 @@
         "배경은 어둡고 위젯 대비가 잘 보이게 구성"
       ],
       "preferredAspectRatio": "4:3",
-      "alt": "Dark Calendar에서 제공하는 다양한 오버레이 위젯 예시",
+      "alt": "Air Calendar에서 제공하는 다양한 오버레이 위젯 예시",
       "caption": "필요한 정보만 골라 바탕화면 위에 고정",
       "replacementNotes": "실제 위젯 스크린샷이 확보되면 하나씩 교체하고, 초기에는 아이콘+텍스트 기반 타일로 대체 가능"
     },
@@ -436,7 +436,7 @@
         "배경은 최소화해 집중감을 강조"
       ],
       "preferredAspectRatio": "16:9",
-      "alt": "Dark Calendar의 집중 모드와 타이머 인터페이스",
+      "alt": "Air Calendar의 집중 모드와 타이머 인터페이스",
       "caption": "선택한 작업에 몰입할 수 있도록 설계된 집중 화면",
       "replacementNotes": "초기에는 타이머 중심 일러스트 또는 개념 mock screen으로 대체 가능"
     },
@@ -446,14 +446,14 @@
       "assetType": "ui-screenshot-or-diagram",
       "title": "Google Calendar 연동 화면",
       "goal": "외부 캘린더 연동 가능성을 명확히 보여주기 위한 설명 비주얼",
-      "description": "Google Calendar 설정 다이얼로그 또는 Dark Calendar와 Google Calendar 간 연결 개념도",
+      "description": "Google Calendar 설정 다이얼로그 또는 Air Calendar와 Google Calendar 간 연결 개념도",
       "suggestedComposition": [
         "좌측은 앱 설정 UI",
         "우측은 Google Calendar 아이콘 또는 캘린더 개념 그래픽",
         "연결 화살표나 sync 상태 배지"
       ],
       "preferredAspectRatio": "16:9",
-      "alt": "Dark Calendar의 Google Calendar 연동을 설명하는 이미지",
+      "alt": "Air Calendar의 Google Calendar 연동을 설명하는 이미지",
       "caption": "데스크톱 일정 관리와 Google Calendar를 자연스럽게 연결",
       "replacementNotes": "실제 설정 화면이 정리되기 전에는 다이어그램형 플레이스홀더 사용 가능"
     },
@@ -469,7 +469,7 @@
         "캘린더 중심 / 업무 중심 / 플로팅 형태가 구분되게 배열"
       ],
       "preferredAspectRatio": "16:9",
-      "alt": "Dark Calendar의 다양한 레이아웃 프리셋 비교 이미지",
+      "alt": "Air Calendar의 다양한 레이아웃 프리셋 비교 이미지",
       "caption": "상황에 따라 화면 구성을 바로 전환",
       "replacementNotes": "처음에는 동일 화면의 와이어프레임 썸네일 변형본으로도 충분"
     },
@@ -486,7 +486,7 @@
         "좌에서 우로 이어지는 흐름선"
       ],
       "preferredAspectRatio": "21:9",
-      "alt": "Dark Calendar의 하루 업무 흐름을 보여주는 단계형 이미지",
+      "alt": "Air Calendar의 하루 업무 흐름을 보여주는 단계형 이미지",
       "caption": "확인, 실행, 집중, 추적이 한 흐름으로 이어집니다",
       "replacementNotes": "실제 UI 캡처 대신 아이콘 기반 인포그래픽으로 먼저 제작 가능"
     },
@@ -502,7 +502,7 @@
         "복잡한 UI 대신 심플한 도형과 작은 캘린더 모티프"
       ],
       "preferredAspectRatio": "1:1",
-      "alt": "Dark Calendar FAQ 영역용 보조 그래픽",
+      "alt": "Air Calendar FAQ 영역용 보조 그래픽",
       "caption": "궁금한 점을 빠르게 확인하세요",
       "replacementNotes": "실제 제품 이미지가 없어도 바로 사용 가능한 가장 단순한 플레이스홀더 영역"
     }
@@ -612,7 +612,7 @@
   ],
   "faq": [
     {
-      "question": "Dark Calendar는 어떤 플랫폼에서 사용할 수 있나요?",
+      "question": "Air Calendar는 어떤 플랫폼에서 사용할 수 있나요?",
       "answer": "현재 코드베이스 기준으로 Windows 데스크톱 앱이며 PyQt6 기반으로 동작합니다."
     },
     {
@@ -633,8 +633,8 @@
     }
   ],
   "seo": {
-    "title": "Dark Calendar | Windows 데스크톱 캘린더와 오버레이 위젯 앱",
-    "description": "Dark Calendar는 월간 캘린더, 루틴 관리, Google Calendar 연동, Focus Mode, D-Day와 카운트다운 위젯을 제공하는 Windows 데스크톱 생산성 앱입니다.",
+    "title": "Air Calendar | Windows 데스크톱 캘린더와 오버레이 위젯 앱",
+    "description": "Air Calendar는 월간 캘린더, 루틴 관리, Google Calendar 연동, Focus Mode, D-Day와 카운트다운 위젯을 제공하는 Windows 데스크톱 생산성 앱입니다.",
     "keywords": [
       "Windows 캘린더 앱",
       "데스크톱 일정 관리",
@@ -649,8 +649,8 @@
     ]
   },
   "contentBlocks": {
-    "downloadNotice": "현재 Dark Calendar는 Windows 데스크톱 환경에 맞춰 설계된 앱입니다.",
+    "downloadNotice": "현재 Air Calendar는 Windows 데스크톱 환경에 맞춰 설계된 앱입니다.",
     "trustNote": "사용자 설정, 위젯 배치, 언어 환경, 캘린더 연결 상태를 로컬 앱 흐름 안에서 지속적으로 유지하도록 설계되어 있습니다.",
-    "footerSummary": "Dark Calendar는 일정 확인용 캘린더를 넘어, 실제 실행과 집중까지 이어지는 데스크톱 생산성 환경을 만드는 앱입니다."
+    "footerSummary": "Air Calendar는 일정 확인용 캘린더를 넘어, 실제 실행과 집중까지 이어지는 데스크톱 생산성 환경을 만드는 앱입니다."
   }
 }

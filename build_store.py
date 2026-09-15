@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Build or sanitize a Windows Store payload for Dark Calendar."""
+"""Build or sanitize a Windows Store payload for Air Calendar."""
 
 from __future__ import annotations
 
@@ -411,7 +411,7 @@ def show_summary(dist_dir: str | Path | None = None) -> None:
 
     target_dir = _resolve_dist_dir(dist_dir)
     print("\n" + "=" * 60)
-    print(f"  Dark Calendar {APP_VERSION_DISPLAY} Store payload ready")
+    print(f"  Air Calendar {APP_VERSION_DISPLAY} Store payload ready")
     print("=" * 60)
     print(f"  output: {target_dir}")
     print(f"  bundled DB: {DEFAULT_DB_NAME} (clean)")
@@ -440,7 +440,7 @@ def main() -> int:
     target_dir = _resolve_dist_dir(args.dist_dir)
 
     print("=" * 60)
-    print("  Dark Calendar Store payload build")
+    print("  Air Calendar Store payload build")
     print("=" * 60)
     print()
 

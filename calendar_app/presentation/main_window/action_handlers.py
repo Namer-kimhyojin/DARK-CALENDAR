@@ -6,6 +6,7 @@ import logging
 
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
+from calendar_app.app_metadata import APP_NAME
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_router import DialogActionsMixin
 from calendar_app.presentation.main_window.action_handlers_gcal import GCalActionsMixin
@@ -70,8 +71,7 @@ def _save_window_layout_for_shutdown(window) -> bool:
             save_window_layout,
         )
 
-        save_window_layout(window)
-        return True
+        return bool(save_window_layout(window))
     except Exception:
         logger.exception("Failed to save window layout during shutdown")
         return False
@@ -92,7 +92,7 @@ def _build_exit_confirmation_box(parent) -> QMessageBox:
     box.setText(
         t(
             "app.exit_message",
-            "Dark Calendar를 종료합니다.\n트레이로 전환되지 않고 프로그램이 완전히 종료됩니다.\n계속하시겠습니까?",
+            f"{APP_NAME}를 종료합니다.\n트레이로 전환되지 않고 프로그램이 완전히 종료됩니다.\n계속하시겠습니까?",
         )
     )
     box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
@@ -296,7 +296,8 @@ class ActionHandlersMixin(
 
         from calendar_app.infrastructure.i18n import t
 
-        if self.settings.value("language") == lang_code:
+        previous_language = self.settings.value("language")
+        if previous_language == lang_code:
             return
 
         self.settings.setValue("language", lang_code)
@@ -309,6 +310,26 @@ class ActionHandlersMixin(
         title = t("system_msg.lang_saved_title", "언어 설정")
 
         QMessageBox.information(self, title, msg)
+
+        # Commit the live layout, overlay positions, and every pending
+        # QSettings write before the replacement process can read them.
+        from calendar_app.presentation.main_window.window_restore_helpers import (
+            flush_window_layout,
+        )
+
+        if not flush_window_layout(self):
+            logger.error("Cancelled language restart because session state could not be saved")
+            self.settings.setValue("language", previous_language)
+            self.settings.sync()
+            QMessageBox.warning(
+                self,
+                title,
+                t(
+                    "system_msg.restart_failed",
+                    "앱 상태를 저장하지 못해 자동 재시작을 취소했습니다. 다시 시도해 주세요.",
+                ),
+            )
+            return
 
         # Determine the executable to run
         if getattr(sys, "frozen", False):
@@ -354,6 +375,22 @@ class ActionHandlersMixin(
         import sys
 
         from PyQt6.QtCore import QProcess
+
+        from calendar_app.presentation.main_window.window_restore_helpers import (
+            flush_window_layout,
+        )
+
+        if not flush_window_layout(self):
+            logger.error("Cancelled locale-tools restart because session state could not be saved")
+            QMessageBox.warning(
+                self,
+                t("menu.locale_tools", "로케일 파일 관리"),
+                t(
+                    "system_msg.restart_failed",
+                    "앱 상태를 저장하지 못해 자동 재시작을 취소했습니다. 다시 시도해 주세요.",
+                ),
+            )
+            return
 
         if getattr(sys, "frozen", False):
             executable = sys.executable

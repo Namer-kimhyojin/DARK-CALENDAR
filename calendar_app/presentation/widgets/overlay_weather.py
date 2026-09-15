@@ -88,7 +88,7 @@ def _weather_icon_b64(wmo_code: int, color: str, size: int) -> str:
 
 _NETWORK_TIMEOUT_MS = 10_000  # abort reply after 10 s
 _APP_HOMEPAGE = "https://namer-kimhyojin.github.io/dark_calendar/"
-_MET_USER_AGENT = f"DarkCalendar/{APP_VERSION} {_APP_HOMEPAGE}".encode("utf-8", errors="strict")
+_MET_USER_AGENT = f"AirCalendar/{APP_VERSION} {_APP_HOMEPAGE}".encode("utf-8", errors="strict")
 
 _WEATHER_DESC = {
     0: "Clear Sky",

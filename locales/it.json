@@ -24,7 +24,7 @@
     "view_issues": "Visualizza problemi di sincronizzazione"
   },
   "app": {
-    "exit_message": "Dark Calendar si chiuderà.\nIl programma si chiuderà completamente senza ridursi a icona.\nContinuare?",
+    "exit_message": "Air Calendar si chiuderà.\nIl programma si chiuderà completamente senza ridursi a icona.\nContinuare?",
     "exit_title": "Esci"
   },
   "app_name": "Calendario oscuro",
@@ -32,7 +32,7 @@
     "disabled": "Disabilitato",
     "enabled": "Abilitato",
     "msg": "L'avvio automatico all'avvio è stato {status}.",
-    "registration_failed": "Consenti Dark Calendar nelle impostazioni delle app di avvio di Windows."
+    "registration_failed": "Consenti Air Calendar nelle impostazioni delle app di avvio di Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Password admin",
@@ -770,7 +770,7 @@
         "slate": "Ardesia"
       },
       "preview": {
-        "app_name": "Dark Calendario",
+        "app_name": "Air Calendario",
         "custom_style": "Personalizzato",
         "input_hint": "Inserisci content...",
         "item_deadline": "Project Scadenza",
@@ -1006,7 +1006,7 @@
       "remote_orphan": "Only tra Google (no local match)",
       "unknown": "Si è verificato un errore sconosciuto."
     },
-    "first_setup_msg": "Benvenuto in Dark Calendar!\nVuoi configurare la sincronizzazione ora?",
+    "first_setup_msg": "Benvenuto in Air Calendar!\nVuoi configurare la sincronizzazione ora?",
     "first_setup_title": "Assistente di Configurazione",
     "guidance": {
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] Tutti sincronizzazione processes are safely paused for security.\n✅ [GUIDANCE] Per favore go to 'Impostazioni > Calendario & Sincronizzazione > Authenticate' and log tra again.",
@@ -1627,7 +1627,7 @@
     "details_hint_all": "This page lists every event in the selected period.",
     "details_overflow": "Only when calendar cells overflow",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "Annoly"
   },
   "shortcut": {
-    "content": "<h3>Guida rapida</h3><hr><b>[Gestione promemoria]</b><br>• <b>Ctrl + N</b>: Aggiungi nuovo promemoria<br>• <b>Ctrl + R</b>: Registra routine<br>• <b>Ctrl + G</b>: Registra direttiva<br>• <b>Ctrl + L</b>: Gestisci modelli di lista<br>• <b>Ctrl + Shift + L</b>: Modalità blocco desktop<br><br><b>[Operazioni schermo]</b><br>• <b>Ctrl + Shift + B</b>: Mostra/nascondi barra superiore<br>• <b>Ctrl + M</b>: Attiva/disattiva modalità calamita<br>• <b>Ctrl + F</b>: Attiva/disattiva modalità focus<br>• <b>F11</b>: Attiva/disattiva schermo intero<br>• <b>Ctrl + Alt + R</b>: Gestione routine<br><br><b>[Layout preimpostati]</b><br>• <b>Ctrl + Shift + 1</b>: Layout ancorato completo<br>• <b>Ctrl + Shift + 2</b>: Layout centrato sul calendario<br>• <b>Ctrl + Shift + 3</b>: Layout centrato sui task<br>• <b>Ctrl + Shift + 4</b>: Layout a schede divise<br>• <b>Ctrl + Shift + 5</b>: Layout completamente separato<br>• <b>Ctrl + Shift + S</b>: Salva layout corrente<br><br><b>[Navigazione]</b><br>• <b>Ctrl + Left/Right</b>: Data precedente/successiva<br>• <b>Ctrl + T</b>: Vai a oggi<br>• <b>Delete</b>: Elimina promemoria selezionato<br>• <b>Esc</b>: Cancella selezione<br>• <b>F1</b>: Apri guida rapida<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>Versione: {APP_VERSION}<br>Autore: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Guida rapida Dark Calendar"
+    "content": "<h3>Guida rapida</h3><hr><b>[Gestione promemoria]</b><br>• <b>Ctrl + N</b>: Aggiungi nuovo promemoria<br>• <b>Ctrl + R</b>: Registra routine<br>• <b>Ctrl + G</b>: Registra direttiva<br>• <b>Ctrl + L</b>: Gestisci modelli di lista<br>• <b>Ctrl + Shift + L</b>: Modalità blocco desktop<br><br><b>[Operazioni schermo]</b><br>• <b>Ctrl + Shift + B</b>: Mostra/nascondi barra superiore<br>• <b>Ctrl + M</b>: Attiva/disattiva modalità calamita<br>• <b>Ctrl + F</b>: Attiva/disattiva modalità focus<br>• <b>F11</b>: Attiva/disattiva schermo intero<br>• <b>Ctrl + Alt + R</b>: Gestione routine<br><br><b>[Layout preimpostati]</b><br>• <b>Ctrl + Shift + 1</b>: Layout ancorato completo<br>• <b>Ctrl + Shift + 2</b>: Layout centrato sul calendario<br>• <b>Ctrl + Shift + 3</b>: Layout centrato sui task<br>• <b>Ctrl + Shift + 4</b>: Layout a schede divise<br>• <b>Ctrl + Shift + 5</b>: Layout completamente separato<br>• <b>Ctrl + Shift + S</b>: Salva layout corrente<br><br><b>[Navigazione]</b><br>• <b>Ctrl + Left/Right</b>: Data precedente/successiva<br>• <b>Ctrl + T</b>: Vai a oggi<br>• <b>Delete</b>: Elimina promemoria selezionato<br>• <b>Esc</b>: Cancella selezione<br>• <b>F1</b>: Apri guida rapida<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Versione: {APP_VERSION}<br>Autore: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Guida rapida Air Calendar"
   },
   "splash": {
     "initializing_db": "Inizializzazione database...",
@@ -1773,7 +1773,7 @@
     "status_tentative": "Provvisorio"
   },
   "system_msg": {
-    "already_running": "Dark Calendario is already running.\n\nPer favore check the tray icon tra the attivitabar.",
+    "already_running": "Air Calendario is already running.\n\nPer favore check the tray icon tra the attivitabar.",
     "lang_saved_msg": "Lingua settings saved.\nThe app will restart to apply changes.",
     "lang_saved_title": "Lingua Impostazioni"
   },

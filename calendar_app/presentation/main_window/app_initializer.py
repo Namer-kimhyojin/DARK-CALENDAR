@@ -7,6 +7,7 @@ import logging
 
 from PyQt6.QtCore import QDate, QSettings, Qt, QTimer
 
+from calendar_app.app_metadata import APP_NAME
 from calendar_app.infrastructure.google_sync.common import ensure_gcal_startup_defaults
 from calendar_app.presentation.main_window.ui_builder import setup_idle_lock_ui, setup_main_ui
 from calendar_app.preset_manager import PresetManager
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 def initialize_overlay_app(app) -> None:
     app.settings = QSettings("kimhyojin", "Dark Calendar")
+    app.setWindowTitle(APP_NAME)
     ensure_gcal_startup_defaults(app.settings)
     _initialize_focus_timer_defaults(app)
     app.old_pos_drag = None
@@ -74,6 +76,9 @@ def initialize_overlay_app(app) -> None:
     app._is_shutting_down = False
     app._shutdown_in_progress = False
     app._shutdown_complete = False
+    app._layout_saved = False
+    app._layout_restore_succeeded = False
+    app._layout_restore_source = "none"
     app._is_dragging = False
     app._drag_pending_refresh = False
     app._task_dialog_refresh_depth = 0
@@ -183,22 +188,24 @@ def _force_restore_docks_and_panels(app) -> None:
         if hasattr(app, "focus_frame"):
             app.focus_frame.hide()
 
-        dock_specs = [
-            ("left_dock", Qt.DockWidgetArea.LeftDockWidgetArea),
-            ("center_dock", Qt.DockWidgetArea.LeftDockWidgetArea),
-            ("routine_dock", Qt.DockWidgetArea.RightDockWidgetArea),
-            ("directive_dock", Qt.DockWidgetArea.RightDockWidgetArea),
-        ]
-        for attr, area in dock_specs:
-            dock = getattr(app, attr, None)
-            if dock is None:
-                continue
-            # Floating docks are intentionally detached – preserve their state.
-            # Only re-add to the dock manager when a panel is invisible and not floating
-            # (i.e., truly lost due to a broken legacy state).
-            if not dock.isVisible() and not dock.isFloating():
-                app.dock_manager.addDockWidget(area, dock)
-            dock.show()
+        # A successful QMainWindow.restoreState() is authoritative.  During a
+        # language-change restart this callback may run before the main window
+        # is visible, when isVisible() is false for every correctly restored
+        # dock.  Re-adding them at that moment destroys the saved splitter tree.
+        if not getattr(app, "_layout_restore_succeeded", False):
+            dock_specs = [
+                ("left_dock", Qt.DockWidgetArea.LeftDockWidgetArea),
+                ("center_dock", Qt.DockWidgetArea.LeftDockWidgetArea),
+                ("routine_dock", Qt.DockWidgetArea.RightDockWidgetArea),
+                ("directive_dock", Qt.DockWidgetArea.RightDockWidgetArea),
+            ]
+            for attr, area in dock_specs:
+                dock = getattr(app, attr, None)
+                if dock is None:
+                    continue
+                if not dock.isFloating():
+                    app.dock_manager.addDockWidget(area, dock)
+                dock.show()
 
         if hasattr(app, "sync_panel_menu_state"):
             app.sync_panel_menu_state()

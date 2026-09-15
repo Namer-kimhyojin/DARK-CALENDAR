@@ -24,15 +24,15 @@
     "view_issues": "View Issues"
   },
   "app": {
-    "exit_message": "Dark Calendar is closing.\nThe program will fully exit without minimizing to tray.\nContinue?",
+    "exit_message": "Air Calendar is closing.\nThe program will fully exit without minimizing to tray.\nContinue?",
     "exit_title": "Exit"
   },
-  "app_name": "Dark Calendar",
+  "app_name": "Air Calendar",
   "autostart": {
     "disabled": "Disabled",
     "enabled": "Enabled",
     "msg": "Auto-launch on startup has been {status}.",
-    "registration_failed": "Please allow Dark Calendar in Windows Startup Apps settings."
+    "registration_failed": "Please allow Air Calendar in Windows Startup Apps settings."
   },
   "away_lock": {
     "admin_pw_placeholder": "Admin password",
@@ -770,7 +770,7 @@
         "slate": "Slate"
       },
       "preview": {
-        "app_name": "Dark Calendar",
+        "app_name": "Air Calendar",
         "custom_style": "Custom",
         "input_hint": "Enter content...",
         "item_deadline": "Project Deadline",
@@ -1006,7 +1006,7 @@
       "remote_orphan": "Only in Google (no local match)",
       "unknown": "An unknown error occurred."
     },
-    "first_setup_msg": "Welcome to Dark Calendar!\nWould you like to set up Google Calendar sync now?",
+    "first_setup_msg": "Welcome to Air Calendar!\nWould you like to set up Google Calendar sync now?",
     "first_setup_title": "Setup Assistant",
     "guidance": {
       "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Please go to 'Settings > Calendar & Sync > Authenticate' and log in again.",
@@ -1621,13 +1621,13 @@
     "column_time": "Time",
     "content_options_name": "Print range and output options",
     "data_note": "Google and ICS events use the latest synchronized data stored in the local database. Detail pages follow the selected detail setting.",
-    "details_always": "Always include event details",
+    "details_always": "Include all event details",
     "details_follow": "{count} event details · next page",
-    "details_hint": "This page lists every event for a period that did not fully fit in the calendar grid.",
+    "details_hint": "This page lists only events that did not fit in the calendar grid.",
     "details_hint_all": "This page lists every event in the selected period.",
-    "details_overflow": "Only when calendar cells overflow",
+    "details_overflow": "Only overflow events (recommended)",
     "details_title": "{period} event details",
-    "document_name": "Dark Calendar schedule",
+    "document_name": "Air Calendar schedule",
     "error_begin": "Could not start the print output.",
     "error_invalid_printer": "No usable printer is available.",
     "error_missing_events": "{count} events were missing from the output.",
@@ -1737,8 +1737,8 @@
     "yearly": "Yearly"
   },
   "shortcut": {
-    "content": "<h3>Shortcut Guide</h3><hr><b>[Schedule Management]</b><br>• <b>Ctrl + N</b>: Add New Schedule<br>• <b>Ctrl + R</b>: Register Routine<br>• <b>Ctrl + D</b>: Register Directive<br>• <b>Ctrl + L</b>: Manage Checklist Templates<br>• <b>Ctrl + Shift + L</b>: Desktop Lock Mode<br><br><b>[Screen Operations]</b><br>• <b>Ctrl + B</b>: Show/Hide Top Bar<br>• <b>Ctrl + M</b>: Toggle Magnet Mode<br>• <b>Ctrl + F</b>: Toggle Focus Mode<br>• <b>Ctrl + Space</b>: Toggle Focus Mode<br>• <b>F11</b>: Toggle Fullscreen<br>• <b>Ctrl + Alt + R</b>: Routine Weekly Dashboard<br><br><b>[Layout Presets]</b><br>• <b>Ctrl + Shift + 1</b>: Full Docked Layout<br>• <b>Ctrl + Shift + 2</b>: Calendar Focused Layout<br>• <b>Ctrl + Shift + 3</b>: Task Focused Layout<br>• <b>Ctrl + Shift + 4</b>: Tab Split Layout<br>• <b>Ctrl + Shift + 5</b>: Full Detached Layout<br>• <b>Ctrl + Shift + S</b>: Save Current Layout<br><br><b>[Navigation]</b><br>• <b>Ctrl + Left/Right</b>: Prev/Next Date<br>• <b>Ctrl + T</b>: Jump to Today<br>• <b>Delete</b>: Delete Selected Schedule<br>• <b>Delete</b> (on date): Delete All Schedules on that Date<br>• <b>Esc</b>: Clear Selection<br>• <b>F1</b>: Open Shortcut Guide<br><hr><div style=\"color:#888; font-size:11px;\"><b>Dark Calendar</b><br>Version: {APP_VERSION}<br>Author: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Dark Calendar Shortcut Guide"
+    "content": "<h3>Shortcut Guide</h3><hr><b>[Schedule Management]</b><br>• <b>Ctrl + N</b>: Add New Schedule<br>• <b>Ctrl + R</b>: Register Routine<br>• <b>Ctrl + D</b>: Register Directive<br>• <b>Ctrl + L</b>: Manage Checklist Templates<br>• <b>Ctrl + Shift + L</b>: Desktop Lock Mode<br><br><b>[Screen Operations]</b><br>• <b>Ctrl + B</b>: Show/Hide Top Bar<br>• <b>Ctrl + M</b>: Toggle Magnet Mode<br>• <b>Ctrl + F</b>: Toggle Focus Mode<br>• <b>Ctrl + Space</b>: Toggle Focus Mode<br>• <b>F11</b>: Toggle Fullscreen<br>• <b>Ctrl + Alt + R</b>: Routine Weekly Dashboard<br><br><b>[Layout Presets]</b><br>• <b>Ctrl + Shift + 1</b>: Full Docked Layout<br>• <b>Ctrl + Shift + 2</b>: Calendar Focused Layout<br>• <b>Ctrl + Shift + 3</b>: Task Focused Layout<br>• <b>Ctrl + Shift + 4</b>: Tab Split Layout<br>• <b>Ctrl + Shift + 5</b>: Full Detached Layout<br>• <b>Ctrl + Shift + S</b>: Save Current Layout<br><br><b>[Navigation]</b><br>• <b>Ctrl + Left/Right</b>: Prev/Next Date<br>• <b>Ctrl + T</b>: Jump to Today<br>• <b>Delete</b>: Delete Selected Schedule<br>• <b>Delete</b> (on date): Delete All Schedules on that Date<br>• <b>Esc</b>: Clear Selection<br>• <b>F1</b>: Open Shortcut Guide<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Version: {APP_VERSION}<br>Author: {APP_AUTHOR} ({APP_EMAIL})</div>",
+    "title": "Air Calendar Shortcut Guide"
   },
   "splash": {
     "initializing_db": "Initializing database...",
@@ -1773,7 +1773,7 @@
     "status_tentative": "Tentative"
   },
   "system_msg": {
-    "already_running": "Dark Calendar is already running.\n\nPlease check the tray icon in the taskbar.",
+    "already_running": "Air Calendar is already running.\n\nPlease check the tray icon in the taskbar.",
     "lang_saved_msg": "Language settings saved.\nThe app will restart to apply changes.",
     "lang_saved_title": "Language Settings"
   },
