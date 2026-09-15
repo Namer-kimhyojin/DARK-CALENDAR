@@ -204,7 +204,7 @@ jobs:
               "release", "create", $env:GITHUB_REF_NAME,
               "--repo", $env:GITHUB_REPOSITORY,
               "--verify-tag",
-              "--title", "Dark Calendar $version"
+              "--title", "Air Calendar $version"
             )
             if (Test-Path $notesPath -PathType Leaf) {
               $releaseArgs += @("--notes-file", $notesPath)
