@@ -453,9 +453,14 @@ function Assert-DiskSpace {
 
 function Test-PythonEnv {
     param([string]$Python)
-    $ver = & $Python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>&1
+    $ver = & $Python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')" 2>&1
     if ($LASTEXITCODE -ne 0) { throw "venv Python not executable: $Python" }
     Write-Info "Python $ver"
+
+    $releasePythonVersion = "3.13.15"
+    if ([string]$ver -ne $releasePythonVersion) {
+        throw "Release builds require Python $releasePythonVersion (found $ver). Recreate .venv with Python $releasePythonVersion before packaging."
+    }
 
     $missing = @()
     foreach ($pkg in @("PyInstaller", "PyQt6")) {

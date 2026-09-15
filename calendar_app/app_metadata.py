@@ -2,7 +2,7 @@
 """Application metadata used by runtime UI surfaces."""
 
 APP_NAME = "Dark Calendar"
-APP_VERSION = "3.6.9"
+APP_VERSION = "3.7.0"
 APP_RELEASE_CHANNEL = "Stable"
 APP_RELEASE_DATE = "2026-09-15"
 APP_VERSION_LABEL = f"v{APP_VERSION}"

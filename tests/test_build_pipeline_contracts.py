@@ -25,6 +25,15 @@ class BuildPipelineContractTests(unittest.TestCase):
         self.assertIn("Sanitized bundled DB missing from runtime path", script)
         self.assertIn("Stale root default DB remains in payload", script)
 
+    def test_release_build_uses_the_ci_python_version(self):
+        script = self._read("scripts/build_pipeline.ps1")
+
+        self.assertIn('$releasePythonVersion = "3.13.15"', script)
+        self.assertIn("Release builds require Python $releasePythonVersion", script)
+
+        workflow = self._read(".github/workflows/build-release.yml")
+        self.assertIn('PYTHON_VERSION: "3.13.15"', workflow)
+
     def test_msix_root_copies_only_manifest_referenced_assets(self):
         script = self._read("scripts/build_pipeline.ps1")
 

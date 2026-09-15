@@ -24,8 +24,8 @@ The application uses PyQt6, which is distributed by Riverbank Computing under GP
 ## Corresponding source
 
 - Source repository: <https://github.com/Namer-kimhyojin/DARK-CALENDAR>
-- Release page for `3.6.9`: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.6.9>
-- Complete corresponding-source archive: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v3.6.9/DarkCalendar-3.6.9-corresponding-source.zip>
+- Release page for `3.7.0`: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.7.0>
+- Complete corresponding-source archive: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v3.7.0/DarkCalendar-3.7.0-corresponding-source.zip>
 - Source availability notice: [SOURCE_OFFER.md](SOURCE_OFFER.md)
 
 Each distributed binary must point to the matching release. The release must contain the application tag, exact dependency lock, license bundle, and complete corresponding-source archive used for that binary.
