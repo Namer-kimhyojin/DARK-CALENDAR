@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "비활성",
     "enabled": "활성",
-    "msg": "윈도우 시작 시 자동 실행이 {status}되었습니다."
+    "msg": "윈도우 시작 시 자동 실행이 {status}되었습니다.",
+    "registration_failed": "Windows 시작 앱 설정에서 Dark Calendar를 직접 허용해 주세요."
   },
   "away_lock": {
     "admin_pw_placeholder": "관리자 비밀번호",

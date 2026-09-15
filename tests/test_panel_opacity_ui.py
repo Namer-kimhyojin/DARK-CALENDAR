@@ -169,6 +169,21 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.assertEqual(dialog.selected_point_hex(), "#1971c2")
         self.assertEqual(dialog.selected_text_theme(), "light")
 
+    def test_style_family_cards_preview_only_the_current_mode_variant(self):
+        dialog = PanelColorPickerDialog()
+        self.addCleanup(dialog.close)
+
+        ocean = dialog._family_btns["ocean"]
+        self.assertEqual(ocean.objectName(), "appearanceFamilyCard")
+        self.assertEqual(ocean.iconSize().width(), 88)
+        self.assertIn("블루\n네이비", ocean.text())
+        self.assertEqual(ocean.property("variant_label"), "네이비")
+
+        dialog._set_appearance_mode("light")
+
+        self.assertIn("블루\n파스텔 스카이", ocean.text())
+        self.assertEqual(ocean.property("variant_label"), "파스텔 스카이")
+
     def test_mode_controls_expose_system_light_and_dark(self):
         dialog = PanelColorPickerDialog()
         self.addCleanup(dialog.close)
@@ -319,7 +334,7 @@ class PanelOpacityUiTests(unittest.TestCase):
         dialog._select_style_family("ocean")
         selected = dialog._family_btns["ocean"]
         self.assertTrue(selected.text().startswith("✓ "))
-        self.assertEqual(selected.accessibleName(), selected.text())
+        self.assertEqual(selected.accessibleName(), selected.text().replace("\n", ", "))
 
         first = list(dialog._family_btns.values())[0]
         navigation = QSignalSpy(first.navigate_requested)

@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "殘障人士",
     "enabled": "啟用",
-    "msg": "啟動時自動啟動已 {status}。"
+    "msg": "啟動時自動啟動已 {status}。",
+    "registration_failed": "請在 Windows 啟動應用程式設定中允許 Dark Calendar。"
   },
   "away_lock": {
     "admin_pw_placeholder": "管理員密碼",

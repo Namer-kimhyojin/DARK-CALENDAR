@@ -20,6 +20,8 @@ This summary does not replace the bundled license texts.
 | requests-oauthlib | 2.0.0 | ISC | <https://github.com/requests/requests-oauthlib> |
 | tzdata | 2026.3 | Apache-2.0; IANA timezone data terms also apply | <https://github.com/python/tzdata> |
 | icalendar | 7.2.0 | BSD-family license | <https://github.com/collective/icalendar> |
+| Python/WinRT runtime and Windows.ApplicationModel projection | 3.2.1 | MIT | <https://github.com/pywinrt/pywinrt> |
+| typing_extensions | 4.15.0 | PSF-2.0 | <https://github.com/python/typing_extensions> |
 | pywin32 | 311 | PSF-style licenses | <https://github.com/mhammond/pywin32> |
 | MET Norway Locationforecast | API data | CC BY 4.0 / NLOD 2.0 | <https://api.met.no/doc/License> |
 | GeoNames cities15000 | 2026-07-18 snapshot | CC BY 4.0 | <https://www.geonames.org/export/> |
@@ -30,7 +32,7 @@ All transitive Python packages and their exact versions are recorded in the payl
 
 The free edition of PyQt6 is GPLv3. Dark Calendar is therefore distributed as a GPLv3-covered work. The complete corresponding-source release asset mirrors the exact PyQt6 source and the applicable QtBase source, along with the application source and the remaining locked Python source distributions.
 
-Dark Calendar 3.6.7 uses the native Windows notification sound API. Qt Multimedia and its FFmpeg runtime, along with unused Qt PDF and SVG image plugins, are intentionally excluded from the release payload.
+Dark Calendar 3.6.8 uses the native Windows notification sound API. Qt Multimedia and its FFmpeg runtime, along with unused Qt PDF and SVG image plugins, are intentionally excluded from the release payload.
 
 ## QtAwesome bundled fonts
 

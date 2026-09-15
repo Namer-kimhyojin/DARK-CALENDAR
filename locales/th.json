@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "ปิดการใช้งาน",
     "enabled": "เปิดการใช้งาน",
-    "msg": "การเปิดตัวอัตโนมัติเมื่อเริ่มต้นใช้งานอยู่ที่ {status}"
+    "msg": "การเปิดตัวอัตโนมัติเมื่อเริ่มต้นใช้งานอยู่ที่ {status}",
+    "registration_failed": "โปรดอนุญาต Dark Calendar ในการตั้งค่าแอปเริ่มต้นของ Windows"
   },
   "away_lock": {
     "admin_pw_placeholder": "รหัสผ่านผู้ดูแล",

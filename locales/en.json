@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "Disabled",
     "enabled": "Enabled",
-    "msg": "Auto-launch on startup has been {status}."
+    "msg": "Auto-launch on startup has been {status}.",
+    "registration_failed": "Please allow Dark Calendar in Windows Startup Apps settings."
   },
   "away_lock": {
     "admin_pw_placeholder": "Admin password",

@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "Disabilitato",
     "enabled": "Abilitato",
-    "msg": "L'avvio automatico all'avvio è stato {status}."
+    "msg": "L'avvio automatico all'avvio è stato {status}.",
+    "registration_failed": "Consenti Dark Calendar nelle impostazioni delle app di avvio di Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Password admin",

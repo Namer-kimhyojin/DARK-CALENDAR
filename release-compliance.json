@@ -10,6 +10,14 @@
       "sha256": "4ae3f0d4adacc331733fe1204f7f93b8654615ca325adfc9eb6c67198246a91b"
     }
   },
+  "licenseFallbacks": {
+    "winrt-runtime": {
+      "filename": "MIT.txt"
+    },
+    "winrt-Windows.ApplicationModel": {
+      "filename": "MIT.txt"
+    }
+  },
   "additionalSources": [
     {
       "name": "QtBase",

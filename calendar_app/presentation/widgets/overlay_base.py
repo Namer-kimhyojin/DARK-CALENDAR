@@ -1357,11 +1357,14 @@ class _BaseOverlayWidget(QWidget):
     _TEMPLATE_KEY: str | None = None
 
     def __init__(self, owner):
-        flags = (
-            Qt.WindowType.Tool
-            | Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.WindowStaysOnTopHint
+        flags = Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint
+        always_on_top = owner.settings.value(
+            f"{self._settings_prefix()}_always_on_top",
+            True,
+            type=bool,
         )
+        if always_on_top:
+            flags |= Qt.WindowType.WindowStaysOnTopHint
         super().__init__(None, flags)
         self.owner = owner
         self._drag_offset: QPoint | None = None

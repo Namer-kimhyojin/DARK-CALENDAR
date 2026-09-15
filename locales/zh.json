@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "残疾人",
     "enabled": "启用",
-    "msg": "启动时自动启动已 {status}。"
+    "msg": "启动时自动启动已 {status}。",
+    "registration_failed": "请在 Windows 启动应用设置中允许 Dark Calendar。"
   },
   "away_lock": {
     "admin_pw_placeholder": "管理员密码",

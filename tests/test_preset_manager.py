@@ -11,14 +11,16 @@ from calendar_app.preset_manager import PresetManager
 
 class _FakeSettings:
     def __init__(self, payload):
-        self.payload = payload
+        self.values = {PresetManager.SETTINGS_KEY: payload}
 
     def value(self, key, default=None):
-        return self.payload if key == PresetManager.SETTINGS_KEY else default
+        return self.values.get(key, default)
 
     def setValue(self, key, value):
-        if key == PresetManager.SETTINGS_KEY:
-            self.payload = value
+        self.values[key] = value
+
+    def remove(self, key):
+        self.values.pop(key, None)
 
     def sync(self):
         pass
@@ -29,6 +31,53 @@ class _PresetHost(QWidget):
         super().__init__()
         self.settings = _FakeSettings(payload)
         self.preset_load_menu = QMenu(self)
+
+
+class _DockStub:
+    def __init__(self):
+        self.visible = True
+
+    def isVisible(self):
+        return self.visible
+
+    def setVisible(self, visible):
+        self.visible = bool(visible)
+
+
+class _DockManagerStub:
+    def __init__(self):
+        self.restored = []
+
+    def restoreState(self, state):
+        self.restored.append(bytes(state))
+        return True
+
+    def saveState(self):
+        from PyQt6.QtCore import QByteArray
+
+        return QByteArray(b"active-state")
+
+
+class _ApplyHost(QWidget):
+    def __init__(self, payload):
+        super().__init__()
+        self.settings = _FakeSettings(payload)
+        self.dock_manager = _DockManagerStub()
+        self.restored_geometry = []
+        for name in PresetManager.DOCK_NAMES:
+            setattr(self, name, _DockStub())
+
+    def restoreGeometry(self, geometry):
+        self.restored_geometry.append(bytes(geometry))
+        return True
+
+    def saveGeometry(self):
+        from PyQt6.QtCore import QByteArray
+
+        return QByteArray(b"active-geometry")
+
+    def ensure_window_on_screen(self):
+        return None
 
 
 class PresetManagerMenuTests(unittest.TestCase):
@@ -107,6 +156,51 @@ class PresetManagerMenuTests(unittest.TestCase):
         self.assertIn(t("layout.none_saved"), texts)
         self.assertNotIn("프리셋1", texts)
         self.assertNotIn("프리셋5", texts)
+
+    def test_loaded_default_restores_window_geometry_and_becomes_active_state(self):
+        from PyQt6.QtCore import QByteArray
+
+        geometry_b64 = PresetManager._encode_qbytearray(QByteArray(b"saved-geometry"))
+        state_b64 = PresetManager._encode_qbytearray(QByteArray(b"saved-state"))
+        payload = {
+            PresetManager.DEFAULT_PRESET_KEY: {
+                "window_geometry_b64": geometry_b64,
+                "dock_state_b64": state_b64,
+                "visibility": {"directive_dock": False},
+            }
+        }
+        host = _ApplyHost(payload)
+        self.addCleanup(host.close)
+
+        manager = PresetManager(host)
+        self.assertTrue(manager._apply_payload(payload[PresetManager.DEFAULT_PRESET_KEY]))
+
+        self.assertEqual([b"saved-geometry"], host.restored_geometry)
+        self.assertEqual([b"saved-state"], host.dock_manager.restored)
+        self.assertFalse(host.directive_dock.visible)
+        self.assertEqual(b"active-geometry", bytes(host.settings.values["last_geometry"]))
+        self.assertEqual(b"active-state", bytes(host.settings.values["last_state"]))
+        self.assertEqual("false", host.settings.values["screen_fill_active"])
+
+    def test_startup_default_keeps_last_window_position(self):
+        from PyQt6.QtCore import QByteArray
+
+        payload = {
+            PresetManager.DEFAULT_PRESET_KEY: {
+                "window_geometry_b64": PresetManager._encode_qbytearray(
+                    QByteArray(b"preset-geometry")
+                ),
+                "dock_state_b64": PresetManager._encode_qbytearray(QByteArray(b"saved-state")),
+            }
+        }
+        host = _ApplyHost(payload)
+        self.addCleanup(host.close)
+
+        manager = PresetManager(host)
+        self.assertTrue(manager.apply_saved_default_on_startup())
+
+        self.assertEqual([], host.restored_geometry)
+        self.assertEqual([b"saved-state"], host.dock_manager.restored)
 
 
 if __name__ == "__main__":

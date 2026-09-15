@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "Dinonaktifkan",
     "enabled": "Diaktifkan",
-    "msg": "Peluncuran otomatis saat permulaan telah {status}."
+    "msg": "Peluncuran otomatis saat permulaan telah {status}.",
+    "registration_failed": "Izinkan Dark Calendar di pengaturan Aplikasi Startup Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Kata sandi admin",

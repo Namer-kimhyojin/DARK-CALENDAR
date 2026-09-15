@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "Выключено",
     "enabled": "Включено",
-    "msg": "Автозапуск: {status}."
+    "msg": "Автозапуск: {status}.",
+    "registration_failed": "Разрешите Dark Calendar в настройках автозагрузки приложений Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Пароль администратора",

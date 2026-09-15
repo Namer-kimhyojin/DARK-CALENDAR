@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "عاجز",
     "enabled": "ممكّن",
-    "msg": "التشغيل التلقائي عند بدء التشغيل كان {status}."
+    "msg": "التشغيل التلقائي عند بدء التشغيل كان {status}.",
+    "registration_failed": "يرجى السماح لتطبيق Dark Calendar في إعدادات تطبيقات بدء التشغيل في Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "كلمة مرور المسؤول",

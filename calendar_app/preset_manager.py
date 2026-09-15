@@ -141,6 +141,11 @@ class PresetManager:
             return
         self._apply_builtin_default_layout()
 
+    def apply_saved_default_on_startup(self) -> bool:
+        """Apply the user's saved default silently during app startup."""
+        payload = self._read_presets().get(self.DEFAULT_PRESET_KEY)
+        return isinstance(payload, dict) and self._apply_payload(payload, restore_geometry=False)
+
     def save_default_preset(self):
         presets = self._read_presets()
         presets[self.DEFAULT_PRESET_KEY] = self._capture_current_layout()
@@ -296,7 +301,12 @@ class PresetManager:
         if hasattr(self.app, "schedule_panel_refresh"):
             self.app.schedule_panel_refresh(left=True, center=True, right=True)
 
-    def _apply_payload(self, payload: dict) -> bool:
+    def _apply_payload(self, payload: dict, *, restore_geometry: bool = True) -> bool:
+        geometry_b64 = payload.get("window_geometry_b64", "")
+        geometry = self._decode_qbytearray(geometry_b64)
+        if restore_geometry and geometry and hasattr(self.app, "restoreGeometry"):
+            self.app.restoreGeometry(geometry)
+
         state_b64 = payload.get("dock_state_b64", "")
         state = self._decode_qbytearray(state_b64)
         restored = bool(state) and bool(self.app.dock_manager.restoreState(state))
@@ -331,7 +341,22 @@ class PresetManager:
         if hasattr(self.app, "ensure_window_on_screen"):
             self.app.ensure_window_on_screen()
 
+        if restored:
+            self._persist_applied_layout()
+
         return restored
+
+    def _persist_applied_layout(self) -> None:
+        """Make a loaded preset the crash-safe current window state."""
+        from calendar_app.presentation.main_window.window_restore_helpers import _LAYOUT_VERSION
+
+        if hasattr(self.app, "saveGeometry"):
+            self.app.settings.setValue("last_geometry", self.app.saveGeometry())
+        if hasattr(self.app.dock_manager, "saveState"):
+            self.app.settings.setValue("last_state", self.app.dock_manager.saveState())
+        self.app.settings.setValue("layout_version", _LAYOUT_VERSION)
+        self.app.settings.setValue("screen_fill_active", "false")
+        self.app.settings.sync()
 
     def _capture_current_layout(self) -> dict:
         state = self.app.dock_manager.saveState()

@@ -1,5 +1,7 @@
 PyQt6==6.10.2
 qtawesome>=1.4.2
+winrt-runtime==3.2.1; platform_system == "Windows"
+winrt-Windows.ApplicationModel==3.2.1; platform_system == "Windows"
 pywin32==311; platform_system == "Windows" and platform_machine != "ARM64"
 google-api-python-client==2.191.0
 google-auth==2.48.0

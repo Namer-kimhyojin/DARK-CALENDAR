@@ -29,6 +29,7 @@ a = Analysis(
         'calendar_app.bootstrap',
         'calendar_app.presentation.main_window.app_window',
         'calendar_app.infrastructure.runtime.crash_bootstrap',
+        'winrt.windows.applicationmodel',
     ],
     hookspath=[],
     hooksconfig={},

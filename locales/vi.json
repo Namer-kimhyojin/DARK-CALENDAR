@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "Tắt",
     "enabled": "Bật",
-    "msg": "Tự động khởi chạy khi khởi động đã ở trạng thái {status}."
+    "msg": "Tự động khởi chạy khi khởi động đã ở trạng thái {status}.",
+    "registration_failed": "Hãy cho phép Dark Calendar trong cài đặt Ứng dụng khởi động của Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Mật khẩu admin",

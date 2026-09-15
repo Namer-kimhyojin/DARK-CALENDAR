@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "無効",
     "enabled": "有効",
-    "msg": "起動時の自動起動は {status} になりました。"
+    "msg": "起動時の自動起動は {status} になりました。",
+    "registration_failed": "Windows のスタートアップ アプリ設定で Dark Calendar を許可してください。"
   },
   "away_lock": {
     "admin_pw_placeholder": "管理者パスワード",

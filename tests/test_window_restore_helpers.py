@@ -59,6 +59,16 @@ class _FocusStub:
         self.hidden = True
 
 
+class _PresetManagerStub:
+    def __init__(self, restored):
+        self.restored = restored
+        self.calls = 0
+
+    def apply_saved_default_on_startup(self):
+        self.calls += 1
+        return self.restored
+
+
 class _AppStub:
     def __init__(self, settings_values=None, restore_ok=True):
         self.focus_frame = _FocusStub()
@@ -138,6 +148,30 @@ class WindowRestoreHelperTests(unittest.TestCase):
         self.assertEqual([b"state"], app.restored_state)
         self.assertTrue(any(delay == 0 for delay, _ in scheduled))
         self.assertTrue(any(delay == 50 for delay, _ in scheduled))
+
+    def test_saved_default_takes_priority_over_last_session_layout(self):
+        app = _AppStub(
+            settings_values={
+                "last_geometry": b"old-geom",
+                "last_state": b"old-state",
+                "layout_version": wrh._LAYOUT_VERSION,
+            }
+        )
+        app.preset_manager = _PresetManagerStub(restored=True)
+        scheduled = []
+
+        with patch.object(
+            wrh.QTimer,
+            "singleShot",
+            side_effect=lambda delay, callback: scheduled.append((delay, callback)),
+        ):
+            wrh.restore_window_and_bind_menu_state(app)
+
+        self.assertEqual(1, app.preset_manager.calls)
+        self.assertEqual([b"old-geom"], app.restored_geometry)
+        self.assertEqual([], app.restored_state)
+        self.assertFalse(any(delay == 0 for delay, _ in scheduled))
+        self.assertFalse(any(delay == 50 for delay, _ in scheduled))
 
 
 if __name__ == "__main__":

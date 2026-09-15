@@ -159,13 +159,30 @@ def bundle_licenses(
     output_dir.mkdir(parents=True)
 
     packages: list[dict[str, object]] = []
+    common_license_configs = {
+        str(item["filename"]): item for item in config.get("commonLicenseTexts", [])
+    }
+    license_fallbacks = {
+        _canonical_name(name): value for name, value in config.get("licenseFallbacks", {}).items()
+    }
     for item in resolved:
         name = item["name"]
         version = item["version"]
         distribution = metadata.distribution(name)
         sources = _license_files(distribution)
         if not sources:
-            raise RuntimeError(f"No bundled license text found for {name}=={version}")
+            fallback = license_fallbacks.get(_canonical_name(name), {})
+            fallback_filename = str(fallback.get("filename", ""))
+            fallback_config = common_license_configs.get(fallback_filename)
+            if fallback_config is None:
+                raise RuntimeError(f"No bundled license text found for {name}=={version}")
+            sources = [
+                _download(
+                    str(fallback_config["url"]),
+                    cache_dir / "licenses" / fallback_filename,
+                    str(fallback_config["sha256"]),
+                )
+            ]
 
         package_dir = output_dir / f"{_canonical_name(name)}-{version}"
         package_dir.mkdir(parents=True)

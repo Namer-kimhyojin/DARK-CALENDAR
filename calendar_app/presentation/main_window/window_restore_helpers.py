@@ -11,13 +11,21 @@ def restore_window_and_bind_menu_state(self):
         self.focus_frame.hide()
 
     geom = self.settings.value("last_geometry")
-    state = self.settings.value("last_state")
-    saved_ver = self.settings.value("layout_version", "")
-
     if geom:
         self.restoreGeometry(geom)
     else:
         self.resize(1200, 700)
+
+    default_restored = False
+    preset_manager = getattr(self, "preset_manager", None)
+    if preset_manager is not None:
+        try:
+            default_restored = bool(preset_manager.apply_saved_default_on_startup())
+        except Exception:
+            default_restored = False
+
+    state = True if default_restored else self.settings.value("last_state")
+    saved_ver = _LAYOUT_VERSION if default_restored else self.settings.value("layout_version", "")
 
     # Re-apply screen-fill mode if user had it active at last shutdown.
     # restoreGeometry alone is not enough because:
@@ -27,7 +35,10 @@ def restore_window_and_bind_menu_state(self):
     #    for multi-monitor support, so the maximized flag was never set.
     # Persisting the flag lets us re-run the fill logic against the current
     # screen at startup.
-    if str(self.settings.value("screen_fill_active", "false")).lower() == "true":
+    if (
+        not default_restored
+        and str(self.settings.value("screen_fill_active", "false")).lower() == "true"
+    ):
 
         def _reapply_fill(app=self):
             try:
@@ -48,8 +59,8 @@ def restore_window_and_bind_menu_state(self):
         self.settings.remove("last_state")
         self.settings.setValue("layout_version", _LAYOUT_VERSION)
 
-    restored = False
-    if state:
+    restored = default_restored
+    if state and not default_restored:
         restored = bool(self.restoreState(state))
     should_normalize_splits = not state or not restored
 
@@ -72,7 +83,7 @@ def restore_window_and_bind_menu_state(self):
         for dock in docks:
             dock.setVisible(True)
         self.settings.remove("last_state")
-    else:
+    elif not default_restored:
         # Ensure right-side docks are alive; don't force-show floating ones.
         for dock in (self.routine_dock, self.directive_dock):
             if dock.isHidden():

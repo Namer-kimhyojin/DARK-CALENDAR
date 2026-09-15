@@ -495,14 +495,25 @@ class WindowShellActionsMixin:
 
         toggle_focus_pause(self)
 
-    def toggle_autostart(self):
+    def toggle_autostart(self, checked=None):
         """윈도우 시작 시 자동 실행 설정 토글."""
         enabled = system_manager.is_autostart_enabled()
-        new_state = not enabled
-        system_manager.set_autostart(new_state)
+        new_state = bool(checked) if isinstance(checked, bool) else not enabled
+        changed = system_manager.set_autostart(new_state)
+        actual_state = system_manager.is_autostart_enabled()
         if hasattr(self, "autostart_act"):
-            self.autostart_act.setChecked(new_state)
-        status_text = t("autostart.enabled") if new_state else t("autostart.disabled")
+            self.autostart_act.setChecked(actual_state)
+        if not changed or actual_state != new_state:
+            QMessageBox.warning(
+                self,
+                t("common.notification"),
+                t(
+                    "autostart.registration_failed",
+                    "Please allow Dark Calendar in Windows Startup Apps settings.",
+                ),
+            )
+            return
+        status_text = t("autostart.enabled") if actual_state else t("autostart.disabled")
         msg = t("autostart.msg").format(status=status_text)
         QMessageBox.information(self, t("common.notification"), msg)
 

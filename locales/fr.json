@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "Désactivé",
     "enabled": "Activé",
-    "msg": "Lancement auto : {status}."
+    "msg": "Lancement auto : {status}.",
+    "registration_failed": "Autorisez Dark Calendar dans les paramètres des applications de démarrage de Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Mot de passe admin",

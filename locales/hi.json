@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "अक्षम",
     "enabled": "सक्षम",
-    "msg": "ऑटो-लॉन्च {status} है।"
+    "msg": "ऑटो-लॉन्च {status} है।",
+    "registration_failed": "Windows की स्टार्टअप ऐप्स सेटिंग में Dark Calendar को अनुमति दें।"
   },
   "away_lock": {
     "admin_pw_placeholder": "व्यवस्थापक पासवर्ड",

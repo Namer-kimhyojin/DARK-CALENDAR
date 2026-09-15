@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "Inaktiv",
     "enabled": "Aktiv",
-    "msg": "Autostart ist nun {status}."
+    "msg": "Autostart ist nun {status}.",
+    "registration_failed": "Bitte erlauben Sie Dark Calendar in den Windows-Einstellungen für Autostart-Apps."
   },
   "away_lock": {
     "admin_pw_placeholder": "Admin-Passwort",

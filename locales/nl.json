@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "Uitgeschakeld",
     "enabled": "Ingeschakeld",
-    "msg": "Automatisch starten bij opstarten is {status}."
+    "msg": "Automatisch starten bij opstarten is {status}.",
+    "registration_failed": "Sta Dark Calendar toe in de instellingen voor opstart-apps van Windows."
   },
   "away_lock": {
     "admin_pw_placeholder": "Beheerderswachtwoord",

@@ -281,6 +281,17 @@ _FAMILY_BY_PRESET_KEY = {
     for preset_key in (dark_key, light_key)
 }
 
+_STYLE_FAMILY_LABELS = {
+    "ocean": ("dialog.theme.point.blue", "Blue"),
+    "violet": ("dialog.theme.point.violet", "Violet"),
+    "neutral": ("dialog.theme.point.gray", "Gray"),
+    "forest": ("dialog.theme.point.emerald", "Emerald"),
+    "warm": ("dialog.theme.point.orange", "Orange"),
+    "rose": ("dialog.theme.point.pink", "Pink"),
+    "teal": ("dialog.theme.point.mint", "Mint"),
+    "gold": ("dialog.theme.point.gold", "Gold"),
+}
+
 _SWATCH_SIZE = 44
 _PREVIEW_H = 140
 
@@ -598,22 +609,42 @@ def _make_swatch_pixmap(base_hex: str, theme_hex: str, size: int) -> QPixmap:
     return px
 
 
-def _make_family_swatch_pixmap(dark_preset: tuple, light_preset: tuple) -> QPixmap:
-    width, height = 64, 34
+def _make_family_preview_pixmap(preset: tuple, width: int = 88, height: int = 48) -> QPixmap:
+    """Render a tiny calendar surface instead of an abstract split-color swatch."""
     px = QPixmap(width, height)
     px.fill(Qt.GlobalColor.transparent)
     painter = QPainter(px)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-    for offset, preset in ((1, dark_preset), (width // 2, light_preset)):
-        _, _, base_hex, accent_hex, _ = preset
-        base = parse_hex_color(base_hex, "#1c1c1c")
-        accent = parse_hex_color(accent_hex, "#4da6ff")
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(base)
-        painter.drawRect(offset, 2, width // 2 - 1, height - 4)
-        painter.setBrush(accent)
-        painter.drawRect(offset, 2, width // 2 - 1, 6)
+    _, _, base_hex, accent_hex, text_colors = preset
+    base = parse_hex_color(base_hex, "#1c1c1c")
+    accent = parse_hex_color(accent_hex, "#4da6ff")
+    text = parse_hex_color(text_colors.get("secondary"), "#c5cfda")
+    border = QColor(0, 0, 0, 62) if _is_light_base_color(base_hex) else QColor(255, 255, 255, 48)
+
+    painter.setPen(border)
+    painter.setBrush(base)
+    painter.drawRoundedRect(1, 1, width - 2, height - 2, 7, 7)
+
+    painter.setPen(Qt.PenStyle.NoPen)
+    header = QColor(accent)
+    header.setAlpha(72)
+    painter.setBrush(header)
+    painter.drawRoundedRect(2, 2, width - 4, 12, 6, 6)
+    painter.drawRect(2, 8, width - 4, 6)
+
+    painter.setPen(text)
+    painter.drawLine(9, 20, width - 9, 20)
+    painter.drawLine(9, 30, width - 9, 30)
+    for column_x in (width // 3, (width * 2) // 3):
+        painter.drawLine(column_x, 17, column_x, height - 7)
+
+    event = QColor(accent)
+    event.setAlpha(190)
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(event)
+    painter.drawRoundedRect(width // 3 + 3, 23, width // 3 - 6, 5, 2, 2)
+    painter.drawEllipse(9, 35, 5, 5)
 
     painter.end()
     return px
@@ -1183,11 +1214,7 @@ class PanelColorPickerDialog(QDialog):
         if family is None:
             return
         _, dark_key, light_key = family
-        mode = self._appearance_mode
-        if mode == "auto":
-            mode = self._system_mode_variant()
-        if mode not in {"dark", "light"}:
-            mode = "light" if _is_light_base_color(self._base_hex) else "dark"
+        mode = self._effective_appearance_mode()
         preset_key = light_key if mode == "light" else dark_key
         preset_index = _PRESET_INDEX_BY_KEY.get(preset_key)
         if preset_index is not None:
@@ -1201,6 +1228,14 @@ class PanelColorPickerDialog(QDialog):
             opacity_factor=self._opacity / 255.0,
         )
         return snapshot.text_theme if snapshot.text_theme in {"dark", "light"} else "dark"
+
+    def _effective_appearance_mode(self) -> str:
+        mode = self._appearance_mode
+        if mode == "auto":
+            mode = self._system_mode_variant()
+        if mode not in {"dark", "light"}:
+            mode = "light" if _is_light_base_color(self._base_hex) else "dark"
+        return mode
 
     def _set_appearance_mode(self, mode: str):
         mode = str(mode or "dark").lower()
@@ -1232,12 +1267,48 @@ class PanelColorPickerDialog(QDialog):
         selected_family = None
         if self._selected_preset is not None and self._selected_preset < len(_PRESETS):
             selected_family = _FAMILY_BY_PRESET_KEY.get(_PRESETS[self._selected_preset][0])
+        mode = self._effective_appearance_mode()
         for family_id, button in self._family_btns.items():
             selected = family_id == selected_family
-            label = str(button.property("family_label") or button.text()).removeprefix("✓ ")
-            button.setText(f"✓ {label}" if selected else label)
-            button.setAccessibleName(button.text())
-            button.setStyleSheet(self._preset_btn_ss(selected))
+            family = next(item for item in _STYLE_FAMILIES if item[0] == family_id)
+            _, dark_key, light_key = family
+            preset_key = light_key if mode == "light" else dark_key
+            preset = _PRESET_BY_KEY[preset_key]
+            family_label = str(button.property("family_label") or "")
+            variant_label = t(preset_key, preset[1])
+            prefix = "✓ " if selected else ""
+            button.setText(f"{prefix}{family_label}\n{variant_label}")
+            button.setIcon(QIcon(_make_family_preview_pixmap(preset)))
+            button.setProperty("variant_label", variant_label)
+            button.setChecked(selected)
+            button.setAccessibleName(button.text().replace("\n", ", "))
+            button.setStyleSheet(self._family_btn_ss(selected))
+
+    def _family_btn_ss(self, selected: bool) -> str:
+        tokens = self._ui_tokens
+        shape = _picker_shape_metrics(tokens)
+        accent = parse_hex_color(tokens.get("accent", "#4da6ff"), "#4da6ff")
+        if selected:
+            background = f"rgba({accent.red()},{accent.green()},{accent.blue()},0.16)"
+            border = f"rgba({accent.red()},{accent.green()},{accent.blue()},0.82)"
+        else:
+            background = tokens.get("bg_item", "rgba(255,255,255,0.05)")
+            border = tokens.get("border", "rgba(255,255,255,0.12)")
+        return (
+            "QPushButton#appearanceFamilyCard {"
+            f"background: {background}; border: {'2px' if selected else '1px'} solid {border};"
+            f"border-radius: {shape['button_radius']}px;"
+            f"color: {tokens.get('text_primary', '#ffffff')};"
+            "font-size: 12px; font-weight: 700; text-align: left; padding: 7px 10px;"
+            "}"
+            "QPushButton#appearanceFamilyCard:hover {"
+            f"background: {tokens.get('bg_item_hover', 'rgba(255,255,255,0.10)')};"
+            f"border-color: {tokens.get('border_strong', border)};"
+            "}"
+            "QPushButton#appearanceFamilyCard:focus {"
+            f"border: 2px solid {tokens.get('accent', '#4da6ff')};"
+            "}"
+        )
 
     def _rebuild_preset_grid(self):
         if self._preset_grid is None or not self._preset_buttons_built:
@@ -1648,6 +1719,18 @@ class PanelColorPickerDialog(QDialog):
         lay.setContentsMargins(12, 12, 12, 12)
         lay.setSpacing(10)
 
+        style_hint = QLabel(
+            t(
+                "dialog.theme.bg.subtitle",
+                "배경 프리셋을 선택하거나 직접 색상을 지정합니다.",
+            )
+        )
+        style_hint.setWordWrap(True)
+        style_hint.setStyleSheet(
+            f"font-size: 11px; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.55)')};"
+        )
+        lay.addWidget(style_hint)
+
         mode_header = QLabel(t("dialog.token_editor.preset_color_mode", "Theme Mode:"))
         mode_header.setStyleSheet(
             f"font-size: 12px; font-weight: 700; color: {self._ui_tokens.get('text_secondary')};"
@@ -1690,24 +1773,31 @@ class PanelColorPickerDialog(QDialog):
         family_grid.setHorizontalSpacing(8)
         family_grid.setVerticalSpacing(8)
         self._family_btns = {}
-        family_columns = (
-            2 if self._wide_appearance_layout or self._appearance_available_width < 680 else 3
-        )
+        family_columns = 1 if self._appearance_available_width < 680 else 2
         for index, (family_id, dark_key, light_key) in enumerate(_STYLE_FAMILIES):
             dark_preset = _PRESET_BY_KEY[dark_key]
             light_preset = _PRESET_BY_KEY[light_key]
-            family_label = t(dark_key, dark_preset[1])
-            button = _FamilyStyleButton(family_label)
+            label_key, label_fallback = _STYLE_FAMILY_LABELS[family_id]
+            family_label = t(label_key, label_fallback)
+            active_preset = (
+                light_preset if self._effective_appearance_mode() == "light" else dark_preset
+            )
+            button = _FamilyStyleButton()
+            button.setObjectName("appearanceFamilyCard")
+            button.setCheckable(True)
             button.setProperty("family_label", family_label)
             button.setProperty("navigation_columns", family_columns)
-            button.setIcon(QIcon(_make_family_swatch_pixmap(dark_preset, light_preset)))
-            button.setIconSize(QSize(64, 34))
-            button.setMinimumHeight(48)
+            button.setText(f"{family_label}\n{t(active_preset[0], active_preset[1])}")
+            button.setIcon(QIcon(_make_family_preview_pixmap(active_preset)))
+            button.setIconSize(QSize(88, 48))
+            button.setMinimumHeight(72)
+            button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
             button.setToolTip(f"{t(dark_key, dark_preset[1])} / {t(light_key, light_preset[1])}")
             button.setAccessibleName(family_label)
             button.setAccessibleDescription(button.toolTip())
+            button.setStyleSheet(self._family_btn_ss(False))
             button.clicked.connect(
                 lambda _checked=False, selected_family=family_id: self._select_style_family(
                     selected_family
@@ -1719,6 +1809,8 @@ class PanelColorPickerDialog(QDialog):
             self._family_btns[family_id] = button
             row, column = divmod(index, family_columns)
             family_grid.addWidget(button, row, column)
+        for column in range(family_columns):
+            family_grid.setColumnStretch(column, 1)
         lay.addLayout(family_grid)
 
         details_title = t("dialog.theme.bg.details", "배경 세부 설정")

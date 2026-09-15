@@ -31,7 +31,8 @@
   "autostart": {
     "disabled": "Devre Dışı",
     "enabled": "Etkinleştirildi",
-    "msg": "Başlangıçta otomatik başlatma {status} olarak yapıldı."
+    "msg": "Başlangıçta otomatik başlatma {status} olarak yapıldı.",
+    "registration_failed": "Windows Başlangıç Uygulamaları ayarlarında Dark Calendar'a izin verin."
   },
   "away_lock": {
     "admin_pw_placeholder": "Yönetici şifresi",
