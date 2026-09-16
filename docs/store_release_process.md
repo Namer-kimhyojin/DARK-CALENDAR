@@ -72,7 +72,7 @@ build-release.bat -SkipMsix
 Preflight validation without changing version files or creating build output:
 
 ```bat
-build-release.bat -ValidateOnly -Version 3.7.2 -PackageVersion 3.7.2.0 -ReleaseDate 2026-09-16 -Channel Stable
+build-release.bat -ValidateOnly -Version 3.7.3 -PackageVersion 3.7.3.0 -ReleaseDate 2026-09-17 -Channel Stable
 ```
 
 ## Surface Support
@@ -92,19 +92,19 @@ build-release.bat -UploadOnly
 
 That creates:
 
-- `release\store\DarkCalendar-3.7.2.0-arm64_x64.msixupload`
+- `release\store\DarkCalendar-3.7.3.0-arm64_x64.msixupload`
 
 If only one native package is available, the scripts fall back to:
 
-- `release\store\DarkCalendar-3.7.2.0-x64.msixupload`
-- `release\store\DarkCalendar-3.7.2.0-arm64.msixupload`
+- `release\store\DarkCalendar-3.7.3.0-x64.msixupload`
+- `release\store\DarkCalendar-3.7.3.0-arm64.msixupload`
 
 ## Open-source compliance gate
 
 Every release build verifies both lock files, copies license texts for every runtime package, removes unapproved Qt/FFmpeg modules, and generates:
 
 - `THIRD_PARTY_MANIFEST.json` and `THIRD_PARTY_LICENSES/` inside the payload
-- `release\source\DarkCalendar-3.7.2-corresponding-source.zip`
+- `release\source\DarkCalendar-3.7.3-corresponding-source.zip`
 
 Do not submit the Store upload unless `scripts/release_compliance.py verify-payload` passes and the corresponding-source ZIP is attached to the matching GitHub release.
 
