@@ -32,7 +32,7 @@ All transitive Python packages and their exact versions are recorded in the payl
 
 The free edition of PyQt6 is GPLv3. Air Calendar is therefore distributed as a GPLv3-covered work. The complete corresponding-source release asset mirrors the exact PyQt6 source and the applicable QtBase source, along with the application source and the remaining locked Python source distributions.
 
-Air Calendar 3.7.3 uses the native Windows notification sound API. Qt Multimedia and its FFmpeg runtime, along with unused Qt PDF and SVG image plugins, are intentionally excluded from the release payload.
+Air Calendar 3.7.4 uses the native Windows notification sound API. Qt Multimedia and its FFmpeg runtime, along with unused Qt PDF and SVG image plugins, are intentionally excluded from the release payload.
 
 ## QtAwesome bundled fonts
 

@@ -5,19 +5,19 @@
 
 ## Pre-deploy
 
-- [ ] Full automated test suite passes in the release checkout.
-- [ ] Ruff, formatting, locale JSON, encoding guard, release preflight, and diff checks pass.
-- [ ] Enhanced help center, guided Windows startup recovery, widget mode, theme, and calendar regressions are covered by focused tests.
-- [ ] Existing Store identity, settings namespace, and user database compatibility remain unchanged.
+- [x] All 113 test files pass in independent processes in the release checkout.
+- [x] Ruff, formatting, locale JSON, encoding guard, release preflight, and diff checks pass.
+- [x] Enhanced help center, guided Windows startup recovery, widget mode, theme, and calendar regressions are covered by focused tests.
+- [x] Existing Store identity, settings namespace, and user database compatibility remain unchanged.
 - [x] The owner requested build, local installation, and deployment in this task.
 
 ## Build evidence
 
-- [ ] A clean x64 executable payload is rebuilt from source rather than reusing an older payload.
-- [ ] x64 MSIX, Store upload, corresponding-source ZIP, and SHA-256 files build successfully.
-- [ ] Packaged payload passes locked-license, required-DLL, and sensitive-file verification.
-- [ ] Package identity is `Kimhyojin.DarkCalendar`, version `3.7.4.0`, architecture `x64`; public display name is `Air Calendar`.
-- [ ] The rebuilt executable displays the enhanced help center and guided startup recovery UI.
+- [x] A clean x64 executable payload is rebuilt from source rather than reusing an older payload.
+- [x] x64 MSIX, Store upload, corresponding-source ZIP, and SHA-256 files build successfully.
+- [x] Packaged payload passes locked-license, required-DLL, and sensitive-file verification.
+- [x] Package identity is `Kimhyojin.DarkCalendar`, version `3.7.4.0`, architecture `x64`; public display name is `Air Calendar`.
+- [x] The packaged Korean locale contains the enhanced help center and guided startup recovery UI resources.
 
 ## External release
 
