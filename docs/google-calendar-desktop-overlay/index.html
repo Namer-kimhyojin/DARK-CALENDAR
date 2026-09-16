@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Google Calendar Desktop Overlay for Windows | Air Calendar</title>
+  <meta name="description" content="View selected Google Calendars in a customizable Windows desktop workspace with optional two-way sync in Air Calendar.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="theme-color" content="#08090b">
+  <link rel="canonical" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/google-calendar-desktop-overlay/">
+  <meta property="og:title" content="Google Calendar Desktop Overlay for Windows | Air Calendar">
+  <meta property="og:description" content="Connect selected Google calendars to a customizable desktop calendar workspace.">
+  <meta property="og:image" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/promo-google-sync-landscape.png">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/google-calendar-desktop-overlay/">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="../assets/app_icon.png">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../guide.css">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"HowTo","name":"Set up Google Calendar in Air Calendar","description":"Connect selected Google calendars to the Air Calendar Windows desktop app.","totalTime":"PT15M","step":[{"@type":"HowToStep","name":"Prepare Google Calendar API access"},{"@type":"HowToStep","name":"Create a Desktop app OAuth client"},{"@type":"HowToStep","name":"Authorize Air Calendar"},{"@type":"HowToStep","name":"Select calendars and test access"}]}
+  </script>
+</head>
+<body class="guide-page">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><div class="header-inner">
+    <a class="brand" href="../" aria-label="Air Calendar home"><img src="../assets/app_icon.png" width="36" height="36" alt=""><span>Air Calendar</span></a>
+    <nav class="desktop-nav" aria-label="Guide navigation"><a href="../desktop-calendar-widget-windows/">Desktop calendar</a><a href="../dday-countdown-widget-windows/">D-Day</a><a href="../pomodoro-calendar-workflow/">Pomodoro</a></nav>
+    <a class="header-cta" href="https://apps.microsoft.com/detail/9mxq08rf22k8?cid=aircal-seo-google-overlay" target="_blank" rel="noopener"><span>View in Store</span><span aria-hidden="true">↗</span></a>
+  </div></header>
+  <main class="guide-main" id="main-content">
+    <section class="guide-hero">
+      <div>
+        <nav class="guide-breadcrumb" aria-label="Breadcrumb"><a href="../">Air Calendar</a><span aria-hidden="true">/</span><span>Google Calendar overlay</span></nav>
+        <p class="guide-kicker">OPTIONAL GOOGLE CALENDAR SYNC</p>
+        <h1>Google Calendar,<br><em>on your desktop.</em></h1>
+        <p class="guide-lead">Air Calendar can show selected Google calendars alongside local schedules and tasks. The connection is optional, controlled by you, and configured with a desktop OAuth credential from your own Google Cloud project.</p>
+        <div class="guide-actions"><a class="button button-primary" href="https://apps.microsoft.com/detail/9mxq08rf22k8?cid=aircal-seo-google-overlay" target="_blank" rel="noopener">Check price and install ↗</a><a class="button button-quiet" href="#setup">View setup outline ↓</a></div>
+        <p class="guide-note">Paid app · One-time Google Cloud setup · Local calendar works independently</p>
+      </div>
+      <figure class="guide-hero-visual"><img src="../assets/screenshots/calendar-sync-air-calendar.png" alt="Air Calendar Google Calendar connection and calendar selection settings"><figcaption>Connection, calendar selection, subscriptions, sync, and diagnostics are organized in guided tabs.</figcaption></figure>
+    </section>
+    <section class="guide-proof" aria-label="Synchronization highlights">
+      <article><span>OPTIONAL</span><h2>No account required</h2><p>Use local calendars and widgets without enabling Google Calendar sync.</p></article>
+      <article><span>SELECTIVE</span><h2>Choose calendars</h2><p>Connect the calendars you want to see rather than merging every calendar by default.</p></article>
+      <article><span>TWO-WAY</span><h2>Keep changes aligned</h2><p>Supported schedule changes can move between Air Calendar and the selected Google calendar.</p></article>
+    </section>
+    <section class="guide-content" id="setup">
+      <aside class="guide-content-aside"><p class="guide-kicker">SETUP OUTLINE</p><h2>Connect with your own Google credential.</h2><p>Google requires a desktop OAuth client. The detailed home-page guide covers each screen.</p></aside>
+      <div class="guide-steps">
+        <article class="guide-step"><span>01</span><div><h3>Enable Google Calendar API</h3><p>Create or choose a Google Cloud project, then enable Google Calendar API for that project.</p></div></article>
+        <article class="guide-step"><span>02</span><div><h3>Create a Desktop app OAuth client</h3><p>Prepare the consent screen, add your Google account as a test user when required, and download the JSON credential for a <strong>Desktop app</strong>.</p></div></article>
+        <article class="guide-step"><span>03</span><div><h3>Authorize inside Air Calendar</h3><p>Open Calendar &amp; Sync settings, choose the JSON file, start authorization, and approve access in the browser.</p></div></article>
+        <article class="guide-step"><span>04</span><div><h3>Select calendars, test, and save</h3><p>Choose the calendars to use, run the access test, and save only after the connection succeeds.</p></div></article>
+        <aside class="guide-callout"><strong>A Web application credential will not work.</strong><p>Choose the Google OAuth client type “Desktop app.” Credentials and tokens stay on your PC; Air Calendar does not send them to a developer server.</p></aside>
+      </div>
+    </section>
+    <section class="guide-related"><p class="guide-kicker">MORE AIR CALENDAR GUIDES</p><h2>Shape the rest of your desktop.</h2><div class="guide-related-grid">
+      <a class="guide-related-card" href="../desktop-calendar-widget-windows/"><span>DESKTOP</span><h3>Desktop calendar widget for Windows</h3><p>Arrange a calendar, work panels, and widgets around your screen.</p><b>Read guide →</b></a>
+      <a class="guide-related-card" href="../pomodoro-calendar-workflow/"><span>FOCUS</span><h3>Pomodoro calendar workflow</h3><p>Move from planning to a timed focus session without losing context.</p><b>Read guide →</b></a>
+    </div></section>
+  </main>
+  <footer class="site-footer"><div class="footer-brand"><img src="../assets/app_icon.png" width="40" height="40" alt=""><div><strong>Air Calendar</strong><small>Windows desktop calendar &amp; widgets</small></div></div><div class="footer-links"><a href="../">Home</a><a href="https://apps.microsoft.com/detail/9mxq08rf22k8?cid=aircal-seo-google-overlay" target="_blank" rel="noopener">Microsoft Store</a><a href="../privacy.html">Privacy</a></div><p>© 2026 Kim Hyojin. All rights reserved.</p></footer>
+</body>
+</html>
