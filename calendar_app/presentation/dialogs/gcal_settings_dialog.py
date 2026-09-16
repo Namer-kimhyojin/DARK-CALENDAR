@@ -600,7 +600,7 @@ class GCalSettingsDialog(QDialog):
             if self.parent_app and hasattr(self.parent_app, "_gcal_subscription_events_cache"):
                 self.parent_app._gcal_subscription_events_cache = {}
             if self.parent_app and hasattr(self.parent_app, "schedule_panel_refresh"):
-                self.parent_app.schedule_panel_refresh(center=True)
+                self.parent_app.schedule_panel_refresh(left=True, center=True)
 
         vis_btn.toggled.connect(_on_vis_toggle)
 

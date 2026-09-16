@@ -1972,6 +1972,64 @@ def _canonical_gcal_calendar_id_for_query(calendar_id):
     return cid
 
 
+def _filter_hidden_calendar_rows(tasks):
+    """Hide rows whose effective calendar is hidden, including legacy GCal aliases.
+
+    Older Google rows can keep ``calendar_id='gcal::primary'`` while their
+    concrete calendar identity lives in ``gcal_source_calendar_id`` or
+    ``gcal_target_calendar_id``.  The SQL join on ``calendar_id`` cannot resolve
+    that alias, so apply the same visibility setting through the concrete ID.
+    """
+    if not tasks:
+        return []
+    conn = get_connection()
+    if not conn:
+        return list(tasks)
+
+    cur = conn.cursor()
+    cur.execute("SELECT id, type, is_visible, gcal_calendar_id FROM calendar")
+    calendars = [dict(row) for row in cur.fetchall()]
+    by_id = {str(row.get("id") or "").strip(): row for row in calendars}
+    by_gcal_id = {
+        str(row.get("gcal_calendar_id") or "").strip(): row
+        for row in calendars
+        if str(row.get("gcal_calendar_id") or "").strip()
+    }
+    resolved_primary = _resolved_primary_gcal_id_for_query()
+
+    def _canonical_id(value):
+        calendar_id = str(value or "").strip()
+        if calendar_id.startswith("gcal::"):
+            calendar_id = calendar_id[len("gcal::") :]
+        if calendar_id == "primary" and resolved_primary != "primary":
+            return resolved_primary
+        return calendar_id
+
+    visible_rows = []
+    for task in tasks:
+        stored_calendar_id = str(task.get("calendar_id") or "").strip()
+        is_google_row = bool(
+            str(task.get("gcal_event_id") or "").strip()
+            or str(task.get("gcal_sync_mode") or "").strip()
+            or stored_calendar_id.startswith("gcal::")
+        )
+        uses_primary_alias = stored_calendar_id in {"primary", "gcal::primary"}
+        calendar = None if is_google_row and uses_primary_alias else by_id.get(stored_calendar_id)
+        if calendar is None and is_google_row:
+            for candidate in (
+                task.get("gcal_source_calendar_id"),
+                task.get("gcal_target_calendar_id"),
+                stored_calendar_id,
+            ):
+                calendar = by_gcal_id.get(_canonical_id(candidate))
+                if calendar is not None:
+                    break
+        if calendar is not None and not bool(calendar.get("is_visible", 1)):
+            continue
+        visible_rows.append(task)
+    return visible_rows
+
+
 def _gcal_row_dedupe_key(task):
     event_id = str(task.get("gcal_event_id") or "").strip()
     if not event_id:
@@ -2075,6 +2133,7 @@ def get_schedule_tasks_overlapping_range_with_progress(
     cur.execute(query, tuple(params))
     rows = cur.fetchall()
     tasks = [dict(row) for row in rows]
+    tasks = _filter_hidden_calendar_rows(tasks)
     tasks = _dedupe_gcal_schedule_rows(tasks)
     _apply_checklist_progress_batch(tasks)
     return tasks

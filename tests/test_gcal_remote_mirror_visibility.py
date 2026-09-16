@@ -1,11 +1,61 @@
+# -*- coding: utf-8 -*-
 import unittest
 
+from calendar_app.infrastructure.db import calendar_repo
 from calendar_app.infrastructure.db import db_repository_unified as unified_repo
 from calendar_app.infrastructure.google_sync import repository as gcal_repo
 from tests.support import TemporaryDatabaseTestCase
 
 
 class RemoteMirrorVisibilityTests(TemporaryDatabaseTestCase):
+    def test_overlap_query_hides_legacy_primary_alias_for_hidden_google_calendar(self):
+        self.assertTrue(
+            calendar_repo.upsert_calendar(
+                "gcal::team@example.com",
+                "gcal",
+                "숨긴 팀 캘린더",
+                is_visible=False,
+                gcal_calendar_id="team@example.com",
+            )
+        )
+        self.assertTrue(
+            calendar_repo.upsert_calendar(
+                "gcal::primary",
+                "gcal",
+                "이전 기본 별칭",
+                is_visible=True,
+                gcal_calendar_id="primary",
+            )
+        )
+        task_id = unified_repo.create_unified_task(
+            {
+                "name": "Hidden remote mirror",
+                "type": "schedule",
+                "priority": "normal",
+                "status": "in_progress",
+                "deadline": "2026-03-26 12:00:00",
+                "end_date": "2026-03-26 13:00:00",
+                "target_date": "2026-03-26",
+                "calendar_id": "gcal::primary",
+                "gcal_event_id": "evt-hidden",
+                "gcal_source_calendar_id": "team@example.com",
+                "gcal_target_calendar_id": "team@example.com",
+                "gcal_sync_mode": "remote_mirror",
+            }
+        )
+        self.assertIsNotNone(task_id)
+
+        hidden_rows = unified_repo.get_schedule_tasks_overlapping_range_with_progress(
+            "2026-03-26", "2026-03-26"
+        )
+        self.assertNotIn(task_id, {row["id"] for row in hidden_rows})
+
+        self.assertTrue(calendar_repo.set_calendar_visible("gcal::team@example.com", True))
+        visible_rows = unified_repo.get_schedule_tasks_overlapping_range_with_progress(
+            "2026-03-26", "2026-03-26"
+        )
+        self.assertIn(task_id, {row["id"] for row in visible_rows})
+
     def test_overlap_query_includes_remote_mirror_even_if_type_is_routine(self):
         task_id = unified_repo.create_unified_task(
             {
