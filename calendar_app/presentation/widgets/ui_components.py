@@ -13,6 +13,7 @@ from PyQt6.QtCore import (
     QPropertyAnimation,
     QRect,
     QSettings,
+    QSize,
     Qt,
     QTime,
     QTimer,
@@ -29,22 +30,23 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMenu,
+    QPushButton,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
 from calendar_app.domain.task_constants import PRIORITY_MENU_ITEMS, STATUS_MENU_ITEMS
-from calendar_app.infrastructure.db import checklist_repo, task_repo
+from calendar_app.infrastructure.db import calendar_repo, checklist_repo, task_repo
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation import drag_drop_manager as ddm
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
+from calendar_app.presentation.widgets.schedule_info import build_schedule_info
 from calendar_app.shared.color_utils import derive_ui_palette
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.qt_helpers import apply_hover_state
-from calendar_app.shared.search_utils import strip_hashtags
 from calendar_app.shared.theme_settings import (
     get_opacity_factor,
     get_theme_color,
@@ -54,10 +56,41 @@ from calendar_app.shared.ui_tokens import get_ui_tokens
 
 logger = logging.getLogger(__name__)
 
-_ICON_TIME = "[T]"
-_ICON_LOCATION = "[L]"
-_ICON_ASSIGNEE = "[A]"
-_ICON_DESC = "[M]"
+
+def _clear_layout(layout):
+    """Remove nested layouts immediately so rebuilt detail cards cannot overlap."""
+    while layout.count():
+        item = layout.takeAt(0)
+        child_layout = item.layout()
+        if child_layout is not None:
+            _clear_layout(child_layout)
+            child_layout.deleteLater()
+        widget = item.widget()
+        if widget is not None:
+            widget.hide()
+            widget.setParent(None)
+            widget.deleteLater()
+
+
+def _detail_overlay_position(anchor_rect, card_size, available_rect, margin=8):
+    """Return a screen-safe point, preferring above when bottom space is short."""
+    x = anchor_rect.x() + (anchor_rect.width() - card_size.width()) // 2
+    x = max(
+        available_rect.left() + margin,
+        min(x, available_rect.right() - card_size.width() - margin + 1),
+    )
+
+    below_y = anchor_rect.bottom() + 1
+    space_below = available_rect.bottom() - below_y - margin + 1
+    if space_below < card_size.height():
+        y = anchor_rect.top() - card_size.height()
+    else:
+        y = below_y
+    y = max(
+        available_rect.top() + margin,
+        min(y, available_rect.bottom() - card_size.height() - margin + 1),
+    )
+    return QPoint(x, y)
 
 
 def _merged_ui_tokens(tokens=None, settings=None):
@@ -476,7 +509,7 @@ class HoverInfoEventFilter(QObject):
         super().__init__(parent)
         self._delay_timer = QTimer(self)
         self._delay_timer.setSingleShot(True)
-        self._delay_timer.setInterval(320)  # 0.32s delay to reduce accidental flicker
+        self._delay_timer.setInterval(350)
         self._delay_timer.timeout.connect(self._do_show_popup)
         self._current_watched = None
 
@@ -486,13 +519,11 @@ class HoverInfoEventFilter(QObject):
         if event.type() == QEvent.Type.Enter:
             html = watched.property("_hover_info_html")
             if html:
+                detail_overlay = globals().get("_detail_overlay")
+                if detail_overlay is not None and detail_overlay.isVisible():
+                    return super().eventFilter(watched, event)
                 self._current_watched = watched
-                mode = str(watched.property("_hover_info_mode") or "side")
-                if mode == "inline_center":
-                    self._delay_timer.stop()
-                    popup.show_for(watched, html)
-                else:
-                    self._delay_timer.start()
+                self._delay_timer.start()
 
         elif event.type() in (QEvent.Type.MouseMove, QEvent.Type.Move, QEvent.Type.Resize):
             if popup.isVisible() and popup._anchor is watched:
@@ -513,7 +544,15 @@ class HoverInfoEventFilter(QObject):
 
         return super().eventFilter(watched, event)
 
+    def cancel_for(self, watched=None):
+        if watched is None or self._current_watched is watched:
+            self._delay_timer.stop()
+            self._current_watched = None
+
     def _do_show_popup(self):
+        detail_overlay = globals().get("_detail_overlay")
+        if detail_overlay is not None and detail_overlay.isVisible():
+            return
         if self._current_watched and self._current_watched.isVisible():
             html = self._current_watched.property("_hover_info_html")
             if html:
@@ -543,6 +582,18 @@ def install_hover_info(widget, html, mode="side"):
     if not widget.property("_hover_info_installed"):
         widget.installEventFilter(_hover_info_filter)
         widget.setProperty("_hover_info_installed", True)
+
+
+def hide_hover_info(widget=None):
+    """Cancel a pending preview and hide the active hover card."""
+    if _hover_info_filter is not None:
+        _hover_info_filter.cancel_for(widget)
+    if _hover_info_popup is None:
+        return
+    if widget is None:
+        _hover_info_popup._stop_popup()
+    else:
+        _hover_info_popup.hide_for(widget)
 
 
 # ---------------------------------------------------------------------------
@@ -629,6 +680,14 @@ class _DetailExpandOverlay(QFrame):
         from PyQt6.QtCore import QEvent as _QEvent
 
         if (
+            event.type() == _QEvent.Type.KeyPress
+            and event.key() == Qt.Key.Key_Escape
+            and self.isVisible()
+        ):
+            self._do_collapse()
+            return True
+
+        if (
             event.type() == _QEvent.Type.MouseButtonPress
             and self.isVisible()
             and self._owner is not None
@@ -670,15 +729,35 @@ class _DetailExpandOverlay(QFrame):
                     pass
 
     def _reposition(self):
-        """Position overlay just below owner's title_bar (global coords)."""
+        """Position a readable detail card near the owner and within the screen."""
         try:
             if self._owner is None:
                 return
             bar = self._owner.title_bar
-            gp = bar.mapToGlobal(QPoint(0, bar.height()))
-            self.setFixedWidth(min(bar.width(), 280))
+            screen = bar.screen() or QApplication.primaryScreen()
+            available = screen.availableGeometry()
+            max_width = max(1, available.width() - 16)
+            card_width = min(max(320, bar.width()), 380, max_width)
+            self.setFixedWidth(card_width)
+            self.layout().activate()
+            if self._owner.detail_container.layout() is not None:
+                self._owner.detail_container.layout().activate()
             self.adjustSize()
-            self.move(gp)
+            card_height = max(
+                self.height(),
+                self.sizeHint().height(),
+                self._owner.detail_container.sizeHint().height(),
+            )
+            self.resize(card_width, card_height)
+
+            bar_rect = QRect(bar.mapToGlobal(QPoint(0, 0)), bar.size())
+            self.move(
+                _detail_overlay_position(
+                    bar_rect,
+                    QSize(card_width, card_height),
+                    available,
+                )
+            )
         except RuntimeError:
             self.hide()
             self._owner = None
@@ -809,22 +888,19 @@ class DraggableTaskButton(QFrame):
         # 2. Detail Card (The "new block" below)
         self.detail_container = QFrame()
         self.detail_container.setObjectName("taskDetailCard")
-        self.detail_container.setStyleSheet("""
-            QFrame#taskDetailCard {
-                background-color: rgba(22, 24, 31, 0.96);
-                border-top: 1px solid rgba(255, 255, 255, 0.14);
-                border-left: 1px solid rgba(255, 255, 255, 0.05);
-                border-right: 1px solid rgba(255, 255, 255, 0.05);
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-                border-radius: 0px;
-                margin: 0px 2px 2px 2px;
-            }
-        """)
+        self.detail_container.setStyleSheet(_task_detail_card_style())
         self.detail_layout = QVBoxLayout(self.detail_container)
         self.detail_layout.setContentsMargins(10, 8, 10, 8)
         self.detail_layout.setSpacing(8)
         self.detail_container.setVisible(False)
         self.detail_container.setMaximumHeight(0)
+
+        self.detail_title_label = QLabel()
+        self.detail_title_label.setWordWrap(True)
+        self.detail_title_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.detail_layout.addWidget(self.detail_title_label)
 
         self.info_widget = QWidget()
         self.info_layout = QVBoxLayout(self.info_widget)
@@ -837,6 +913,12 @@ class DraggableTaskButton(QFrame):
         self.checklist_layout.setContentsMargins(0, 0, 0, 0)
         self.checklist_layout.setSpacing(2)
         self.detail_layout.addWidget(self.checklist_widget)
+
+        self.actions_widget = QWidget()
+        self.actions_layout = QHBoxLayout(self.actions_widget)
+        self.actions_layout.setContentsMargins(0, 2, 0, 0)
+        self.actions_layout.setSpacing(6)
+        self.detail_layout.addWidget(self.actions_widget)
 
         # detail_container is a free child (not in main_layout) so grid rows
         # are never resized by expansion; overlay manages its geometry.
@@ -1146,25 +1228,17 @@ class DraggableTaskButton(QFrame):
         self.checklist_layout.setContentsMargins(10, 0, 2, 2)
         return True
 
-    def _render_info_items(self):
-        task = task_repo.get_unified_task(self.task_id)
+    def _render_info_items(self, task=None):
+        task = task or task_repo.get_unified_task(self.task_id)
         if not task:
             return False
         s = QSettings("kimhyojin", "Dark Calendar")
         text_theme, panel_base, opacity_factor = get_theme_palette_inputs(s)
         text_pal = derive_ui_palette(text_theme, panel_base, opacity_factor)
 
-        while self.info_layout.count():
-            child = self.info_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+        _clear_layout(self.info_layout)
 
-        def _clean_text(value):
-            if value is None:
-                return ""
-            return strip_hashtags(str(value)).strip()
-
-        def _add_info(label, text, rich=False):
+        def _add_info(label, text):
             if not text:
                 return
             row = QHBoxLayout()
@@ -1176,10 +1250,6 @@ class DraggableTaskButton(QFrame):
                 f"background:transparent; color: {text_pal['text_secondary']}; font-size: 9pt;"
             )
             tlbl = QLabel()
-            if rich:
-                from PyQt6.QtCore import Qt as _Qt
-
-                tlbl.setTextFormat(_Qt.TextFormat.RichText)
             tlbl.setText(text)
             tlbl.setStyleSheet(
                 f"background:transparent; color: {text_pal['text_primary']}; font-size: 9pt;"
@@ -1189,45 +1259,62 @@ class DraggableTaskButton(QFrame):
             row.addWidget(tlbl, 1)
             self.info_layout.addLayout(row)
 
-        # Time range
-        _deadline_str = str(task["deadline"]) if task.get("deadline") else ""
-        _deadline_parts = _deadline_str.split()
-        _is_all_day = bool(task.get("all_day")) or len(_deadline_parts) <= 1
-        if _is_all_day:
-            start = t("tooltip.all_day", "All day")
-        else:
-            start = _deadline_parts[1][:5]
-        end = (
-            str(task.get("end_date", "")).split()[1][:5]
-            if task.get("end_date") and not _is_all_day
-            else ""
-        )
-        if end:
-            _add_info(f"{_ICON_TIME} {t('tooltip.label_time', 'Time')}", f"{start} - {end}")
-        else:
-            _add_info(f"{_ICON_TIME} {t('tooltip.label_time', 'Time')}", start)
-
-        location = task.get("location")
-        clean_location = _clean_text(location)
-        if clean_location and clean_location not in ["None", "none", "-"]:
-            _add_info(f"{_ICON_LOCATION} {t('tooltip.label_location', 'Location')}", clean_location)
-
-        assignee = task.get("assignee")
-        clean_assignee = _clean_text(assignee)
-        if clean_assignee and clean_assignee not in ["None", "none", "-"]:
-            _add_info(f"{_ICON_ASSIGNEE} {t('tooltip.label_assignee', 'Assignee')}", clean_assignee)
-
-        memo = task.get("memo") or task.get("description")
-        clean_memo = _clean_text(memo)
-        if clean_memo and clean_memo not in ["None", "none", "-"]:
-            import html as _html_mod
-
-            _lined = _html_mod.escape(clean_memo).replace("\n", "<br>")
-            _add_info(
-                f"{_ICON_DESC} {t('tooltip.label_description', 'Description')}", _lined, rich=True
-            )
+        calendar_id = str(
+            task.get("calendar_id")
+            or task.get("gcal_source_calendar_id")
+            or task.get("gcal_target_calendar_id")
+            or ""
+        ).strip()
+        try:
+            calendar_data = calendar_repo.get_calendar(calendar_id) if calendar_id else None
+        except Exception:
+            calendar_data = None
+        source_text = str((calendar_data or {}).get("name") or "").strip()
+        info = build_schedule_info(task, source_text=source_text, detail=True)
+        for row in info.rows:
+            _add_info(row.label, row.value)
 
         return self.info_layout.count() > 0
+
+    def _render_detail_actions(self, task):
+        _clear_layout(self.actions_layout)
+
+        edit_btn = QPushButton(_se(t("context_menu.edit_schedule", "일정 수정")))
+        edit_btn.setObjectName("ghost_btn")
+        edit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        edit_btn.setMinimumHeight(32)
+        edit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        edit_btn.clicked.connect(self._request_edit_from_detail)
+
+        status = str(task.get("status") or "pending").strip().lower()
+        is_completed = status in {"completed", "done"}
+        status_label = (
+            t("dialog.routine_bulk.not_completed", "미완료")
+            if is_completed
+            else t("widget_mode.menu_complete_task", "완료 처리")
+        )
+        status_btn = QPushButton(_se(status_label))
+        status_btn.setObjectName("primary_btn")
+        status_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        status_btn.setMinimumHeight(32)
+        status_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        status_btn.clicked.connect(
+            lambda checked=False, new_status="pending" if is_completed else "completed": (
+                self._request_status_from_detail(new_status)
+            )
+        )
+
+        self.actions_layout.addWidget(edit_btn, 1)
+        self.actions_layout.addWidget(status_btn, 1)
+        return True
+
+    def _request_edit_from_detail(self):
+        get_detail_overlay()._do_collapse(self)
+        QTimer.singleShot(0, lambda: self.doubleClicked.emit(self.task_id))
+
+    def _request_status_from_detail(self, status):
+        get_detail_overlay()._do_collapse(self)
+        self.taskStatusChanged.emit(self.task_id, status)
 
     def _collapsed_detail_height(self):
         return 0
@@ -1247,6 +1334,7 @@ class DraggableTaskButton(QFrame):
             ov = get_detail_overlay()
             ov.adjustSize()
             ov._reposition()
+            QTimer.singleShot(0, ov._reposition)
         self._detail_anim_expanding = False
         self._detail_anim_collapsing = False
 
@@ -1255,15 +1343,29 @@ class DraggableTaskButton(QFrame):
         self._detail_anim_group.stop()
         self._fade_anim.stop()
         if expand:
+            hide_hover_info()
             # Move detail_container into floating overlay (no grid impact)
             ov.show_for(self)
             # Populate content
             self.detail_container.setVisible(True)
             self.detail_container.setMaximumHeight(16777215)
-            has_info = self._render_info_items()
+            task = task_repo.get_unified_task(self.task_id) or {}
+            s = QSettings("kimhyojin", "Dark Calendar")
+            text_theme, panel_base, opacity_factor = get_theme_palette_inputs(s)
+            text_pal = derive_ui_palette(text_theme, panel_base, opacity_factor)
+            title = str(task.get("name") or self.raw_text or "").strip()
+            self.detail_title_label.setText(title)
+            self.detail_title_label.setStyleSheet(
+                f"background:transparent; color:{text_pal['text_primary']}; "
+                "font-size:10pt; font-weight:600; padding:0 0 2px 0;"
+            )
+            self.detail_title_label.setVisible(bool(title))
+            has_info = self._render_info_items(task)
             has_checklist = self._render_checklist_items()
+            has_actions = self._render_detail_actions(task)
             self.info_widget.setVisible(has_info)
             self.checklist_widget.setVisible(has_checklist)
+            self.actions_widget.setVisible(has_actions)
             # Size overlay to fit content
             self.detail_container.updateGeometry()
             self.detail_container.adjustSize()
@@ -1533,6 +1635,7 @@ class DraggableTaskButton(QFrame):
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
+        hide_hover_info(self)
         if event.button() == Qt.MouseButton.LeftButton:
             self._single_click_timer.stop()
             self._pending_expand_toggle = False

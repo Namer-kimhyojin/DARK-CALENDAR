@@ -24,10 +24,16 @@ from calendar_app.domain.task_constants import (
     status_icon,
 )
 from calendar_app.domain.task_status_view import normalize_status as _normalize_task_status
-from calendar_app.infrastructure.db import checklist_repo, directive_repo, search_repo
+from calendar_app.infrastructure.db import (
+    calendar_repo,
+    checklist_repo,
+    directive_repo,
+    search_repo,
+)
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
+from calendar_app.presentation.widgets.schedule_info import build_schedule_hover_html
 from calendar_app.presentation.widgets.ui_components import install_hover_info
 from calendar_app.shared.color_utils import derive_text_palette, parse_hex_color, rgba_from_qcolor
 from calendar_app.shared.icon_map import ICON
@@ -1110,6 +1116,7 @@ def create_task_box(
     is_routine=False,
     is_directive=False,
     tooltip_title=None,
+    hover_html=None,
     bg_color=None,
     checklist_display_type="list",
 ):
@@ -1170,30 +1177,33 @@ def create_task_box(
     title_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     title_btn.setMinimumHeight(24)
 
-    heading = tooltip_title if tooltip_title else title_text
-    _sep_color = _tc_rgba(115)
-    _title_color = get_theme_color()
-    tooltip_lines = [
-        f"<div style='font-size: {_fpt()};'><b style='color:{_title_color};'>{heading}</b></div>"
-    ]
-    if info_items:
-        _tip_icon_color = _panel_text_muted()
-        _tip_text_color = _panel_text_secondary()
-        tooltip_lines.append(
-            f"<div style='border-bottom: 1px solid {_sep_color}; margin:5px 0 4px 0;'></div>"
-            "<table cellspacing='0' cellpadding='0' style='margin-top:1px;'>"
-        )
-        for icon, text in info_items:
+    if hover_html:
+        install_hover_info(title_btn, hover_html)
+    elif tooltip_title or info_items:
+        heading = tooltip_title if tooltip_title else title_text
+        _sep_color = _tc_rgba(115)
+        _title_color = get_theme_color()
+        tooltip_lines = [
+            f"<div style='font-size: {_fpt()};'><b style='color:{_title_color};'>{heading}</b></div>"
+        ]
+        if info_items:
+            _tip_icon_color = _panel_text_muted()
+            _tip_text_color = _panel_text_secondary()
             tooltip_lines.append(
-                f"<tr>"
-                f"<td style='width:16px; padding:2px 0; vertical-align:top; color:{_tip_icon_color};'>{icon}</td>"
-                f"<td style='padding:2px 0 2px 6px; white-space: normal; color:{_tip_text_color};'>{text}</td>"
-                f"</tr>"
+                f"<div style='border-bottom: 1px solid {_sep_color}; margin:5px 0 4px 0;'></div>"
+                "<table cellspacing='0' cellpadding='0' style='margin-top:1px;'>"
             )
-        tooltip_lines.append("</table>")
+            for icon, text in info_items:
+                tooltip_lines.append(
+                    f"<tr>"
+                    f"<td style='width:16px; padding:2px 0; vertical-align:top; color:{_tip_icon_color};'>{icon}</td>"
+                    f"<td style='padding:2px 0 2px 6px; white-space: normal; color:{_tip_text_color};'>{text}</td>"
+                    f"</tr>"
+                )
+            tooltip_lines.append("</table>")
 
-    tooltip_html = f"<div style='text-align: left;'>{''.join(tooltip_lines)}</div>"
-    install_hover_info(title_btn, tooltip_html)
+        tooltip_html = f"<div style='text-align: left;'>{''.join(tooltip_lines)}</div>"
+        install_hover_info(title_btn, tooltip_html)
 
     top_layout.addWidget(title_btn)
 
@@ -1478,11 +1488,6 @@ def load_left_panel(app):
 
         deadline_parts = deadline.split()
         date_part = deadline_parts[0] if deadline_parts else start_date_str  # yyyy-MM-dd
-        start_time = deadline_parts[1][:5] if len(deadline_parts) > 1 else "All day"
-
-        end_date_raw = task.get("end_date") or task.get("end_time", "")
-        end_parts = str(end_date_raw).split() if end_date_raw else []
-        end_time = end_parts[1][:5] if len(end_parts) > 1 else ""
 
         try:
             qd = QDate.fromString(date_part, "yyyy-MM-dd")
@@ -1503,29 +1508,34 @@ def load_left_panel(app):
         def main_handler(checked=False, _tid=t_id):
             app.open_modify_task_dialog(_tid)
 
-        tooltip_name = _tooltip_text_without_tags(name) or str(name).strip()
-        tooltip_title = f"[{date_label}] {tooltip_name}"
-
-        # Build tooltip info rows
-        info_items = []
-        if end_time:
-            info_items.append(("[T]", f"{start_time} ~ {end_time}"))
-        else:
-            info_items.append(("[T]", start_time))
-        clean_location = _tooltip_text_without_tags(location)
-        if clean_location:
-            info_items.append(("[L]", clean_location))
-
-        clean_assignee = _tooltip_text_without_tags(assignee)
-        if clean_assignee:
-            info_items.append(("[A]", clean_assignee))
-
-        clean_memo = _tooltip_text_without_tags(memo)
-        if clean_memo and clean_memo not in ["none", "None", "-"]:
-            import html as _html_mod
-
-            _memo_html = _html_mod.escape(clean_memo).replace("\n", "<br>")
-            info_items.append(("[M]", _memo_html))
+        calendar_id = str(
+            task.get("calendar_id")
+            or task.get("gcal_source_calendar_id")
+            or task.get("gcal_target_calendar_id")
+            or ""
+        ).strip()
+        try:
+            calendar_data = calendar_repo.get_calendar(calendar_id) if calendar_id else None
+        except Exception:
+            calendar_data = None
+        calendar_type = str((calendar_data or {}).get("type") or "").strip().lower()
+        source_text = str(
+            task.get("_subscription_summary")
+            or task.get("calendar_name")
+            or (
+                (calendar_data or {}).get("name")
+                if calendar_type in {"gcal", "shared", "ics"}
+                else ""
+            )
+            or task.get("_subscription_calendar_id")
+            or ""
+        ).strip()
+        hover_html, hover_info = build_schedule_hover_html(
+            task,
+            get_theme_color(),
+            context="week" if panel_mode == "week" else "today",
+            source_text=source_text,
+        )
 
         steps = checklist_map.get(t_id, [])
         checklist_display_type, checklist_items = _build_checklist_items(app, steps)
@@ -1538,10 +1548,10 @@ def load_left_panel(app):
             app,
             main_title,
             main_handler,
-            info_items,
+            None,
             checklist_items,
             tid=t_id,
-            tooltip_title=tooltip_title,
+            hover_html=hover_html if hover_info.has_more_than_all_day else None,
             bg_color=task.get("bg_color") or _calendar_color_for_task(task),
             checklist_display_type=checklist_display_type,
         )

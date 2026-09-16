@@ -25,6 +25,7 @@ from calendar_app.domain.task_constants import priority_icon
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
+from calendar_app.presentation.widgets.schedule_info import build_schedule_hover_html
 from calendar_app.shared.color_utils import derive_ui_palette
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
@@ -1129,70 +1130,24 @@ def _theme_harmonized_color(theme_hex, seed_value, tokens=None):
 
 
 def _build_multiday_tooltip_html(task_row, theme_color):
-    title = _tooltip_clean_text(task_row.get("name")) or t("common.no_title")
-    period_text = _format_task_period_text(task_row)
-    location = _tooltip_html_text(task_row.get("location"))
-    assignee = _tooltip_html_text(task_row.get("assignee"))
-    memo_text = clean_calendar_description(
-        task_row.get("memo") or task_row.get("description"),
-        source_calendar_id=task_row.get("gcal_source_calendar_id")
-        or task_row.get("_subscription_calendar_id"),
-        sync_mode=task_row.get("gcal_sync_mode"),
+    html, _info = build_schedule_hover_html(
+        task_row,
+        theme_color,
+        context="calendar",
+        source_text=_subscription_source_text(task_row),
     )
-    memo = _tooltip_html_text(memo_text)
-    source = _tooltip_html_text(_subscription_source_text(task_row))
-
-    prio_icon = priority_icon(task_row.get("priority")) if task_row.get("priority") else ""
-    title_text = f"{prio_icon} {title}" if prio_icon else title
-    title_html = _html_mod.escape(title_text)
-    detail_rows = _build_tooltip_rows(
-        [
-            (
-                f"{_ICON_TIME} {t('tooltip.label_period', '기간')}",
-                _html_mod.escape(period_text),
-                "",
-            ),
-            (f"\U0001f4e1 {t('tooltip.label_source', '출처')}", source, ""),
-            (f"{_ICON_LOCATION} {t('tooltip.label_location', '장소')}", location, ""),
-            (f"{_ICON_ASSIGNEE} {t('tooltip.label_assignee', '담당')}", assignee, ""),
-            (f"{_ICON_DESC} {t('tooltip.label_description', '설명')}", memo, "line-height:1.3;"),
-        ]
-    )
-    pal = _ui_palette()
-    return f"<div style='text-align:left; color:{pal['text_primary']};'><div style='font-size:{_fpt()}; margin-bottom:1px;'><b style='color:{theme_color};'>{title_html}</b></div>{detail_rows}</div>"
+    return html
 
 
 def _build_single_task_tooltip_html(task_row, theme_color):
     """Build rich hover tooltip HTML for single-day events."""
-    title = _tooltip_clean_text(task_row.get("name")) or t("common.no_title")
-    time_hint = _tooltip_time_range(task_row)
-    location = _tooltip_html_text(task_row.get("location"))
-    assignee = _tooltip_html_text(task_row.get("assignee"))
-    memo_text = clean_calendar_description(
-        task_row.get("memo") or task_row.get("description"),
-        source_calendar_id=task_row.get("gcal_source_calendar_id")
-        or task_row.get("_subscription_calendar_id"),
-        sync_mode=task_row.get("gcal_sync_mode"),
+    html, _info = build_schedule_hover_html(
+        task_row,
+        theme_color,
+        context="calendar",
+        source_text=_subscription_source_text(task_row),
     )
-    memo = _tooltip_html_text(memo_text)
-    source = _tooltip_html_text(_subscription_source_text(task_row))
-
-    prio_icon = priority_icon(task_row.get("priority")) if task_row.get("priority") else ""
-    title_text = f"{prio_icon} {title}" if prio_icon else title
-    title_html = _html_mod.escape(title_text)
-    if memo and len(_tooltip_clean_text(memo_text)) > 120:
-        memo = _html_mod.escape(_tooltip_clean_text(memo_text)[:120] + "...").replace("\n", "<br>")
-    detail_rows = _build_tooltip_rows(
-        [
-            (f"{_ICON_TIME} {t('tooltip.label_time', '시간')}", _html_mod.escape(time_hint), ""),
-            (f"\U0001f4e1 {t('tooltip.label_source', '출처')}", source, ""),
-            (f"{_ICON_LOCATION} {t('tooltip.label_location', '장소')}", location, ""),
-            (f"{_ICON_ASSIGNEE} {t('tooltip.label_assignee', '담당')}", assignee, ""),
-            (f"{_ICON_DESC} {t('tooltip.label_description', '설명')}", memo, "line-height:1.3;"),
-        ]
-    )
-    pal = _ui_palette()
-    return f"<div style='text-align:left; color:{pal['text_primary']};'><div style='font-size:{_fpt()}; margin-bottom:1px;'><b style='color:{theme_color};'>{title_html}</b></div>{detail_rows}</div>"
+    return html
 
 
 def _show_subscription_detail(task_row, parent=None):
@@ -2279,10 +2234,10 @@ def render_calendar(app):
                     def _on_sub_click(e, tr=task_row, b=btn):
                         if e.button() == Qt.MouseButton.LeftButton:
                             from calendar_app.presentation.widgets.ui_components import (
-                                get_hover_info_popup,
+                                hide_hover_info,
                             )
 
-                            get_hover_info_popup().hide_for(b)
+                            hide_hover_info(b)
                             _show_subscription_detail(tr, b.window())
                             e.accept()
 
@@ -2300,14 +2255,7 @@ def render_calendar(app):
                 # local stylesheet overrides the global border-radius/padding rules.
                 btn.set_tag_color(tcol)
 
-                if is_subscription:
-                    btn.setCursor(Qt.CursorShape.PointingHandCursor)
-                    btn.mousePressEvent = lambda e, tr=task_row, b=btn: (
-                        _show_subscription_detail(tr, b.window())
-                        if e.button() == Qt.MouseButton.LeftButton
-                        else None
-                    )
-                else:
+                if not is_subscription:
                     _connect_task_button_signals(app, btn)
 
                 if tid in app.selected_task_ids:
