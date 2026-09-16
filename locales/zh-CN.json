@@ -123,15 +123,7 @@
     "selection_hint": "Ctrl+单击进行多选",
     "sync_hint": "谷歌日历同步",
     "today": "今天",
-    "weekdays": [
-      "周一",
-      "周二",
-      "周三",
-      "周四",
-      "周五",
-      "周六",
-      "周日"
-    ]
+    "weekdays": ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
   },
   "checklist_mgr": {
     "btn_add_item": "添加项目",
@@ -970,6 +962,7 @@
   },
   "focus_selector": {
     "auto_pick": "自动选择",
+    "auto_pick_no_tasks": "There are no tasks available for automatic selection.",
     "col_datetime": "日期/时间",
     "col_duration": "期间",
     "col_task": "任务",
@@ -989,12 +982,15 @@
     "no_tasks": "没有任务与此过滤器匹配。",
     "pick_prompt": "选择要关注的任务。",
     "select_done": "选择",
+    "select_no_selection": "Select a task from the list first.",
     "settings_hint": "您可以在此更改专注模式类型和番茄钟行为。",
     "settings_saved": "已保存。下次开始专注模式时将使用新值。",
     "tab_logs": "焦点日志",
     "tab_settings": "设置",
     "tab_tasks": "任务选择",
-    "title": "焦点任务选择"
+    "task_load_error": "Could not load tasks. Please try again.",
+    "title": "焦点任务选择",
+    "unsaved_settings_confirm": "You have unsaved Pomodoro settings. Discard them and close?"
   },
   "gcal": {
     "auto_healed_msg": "已自动修复{count}个有问题的日程并同步到您的日历。",
@@ -1535,13 +1531,7 @@
     "hint_record_jump": "Enter打开项目。Shift+Enter跳转到其日期。",
     "hint_run_command": "Enter执行选定命令",
     "kw": {
-      "theme": [
-        "主题",
-        "深色",
-        "浅色",
-        "颜色",
-        "外观"
-      ]
+      "theme": ["主题", "深色", "浅色", "颜色", "外观"]
     },
     "nlp_preview": "新建：[{title}] - {date} {time}",
     "no_selection": "按 Enter 键打开所选结果",
@@ -1758,518 +1748,382 @@
     "yearly": "每年"
   },
   "shortcut": {
-    "title": "Air Calendar 帮助中心",
-    "search": "搜索帮助",
-    "search_hint": "按功能名称、快捷键或菜单位置搜索。",
-    "topics": "帮助主题",
+    "chrome": {
+      "badge_recovery": "4个核心恢复按键",
+      "badge_search": "支持搜索",
+      "badge_total": "共 {count} 个快捷键",
+      "eyebrow": "F1 帮助中心",
+      "footer_hint": "搜索支持按功能名称、快捷键或菜单位置进行。",
+      "header_subtitle": "按功能名称、按键名称或菜单位置搜索，快速找到你最常用的内容。",
+      "header_title": "快速查找快捷键和功能的帮助中心",
+      "meta_aliases": "附加按键：{value}",
+      "meta_group": "分类：{value}",
+      "meta_menu_path": "菜单位置：{value}",
+      "quickstart_section_desc": "新用户可以从这里开始，立即上手。",
+      "quickstart_section_title": "从这里开始",
+      "recovery_primary_desc": "出现问题时应首先尝试的按键。",
+      "recovery_primary_title": "首先要检查的恢复按键",
+      "recovery_secondary_desc": "在整理锁定或窗口状态时经常需要一起用到的快捷键。",
+      "recovery_secondary_title": "值得一并记住的实用按键",
+      "search_empty": "没有匹配的结果。\n请尝试更短的关键词，例如功能名称、按键名称或菜单名称。",
+      "search_examples": "试试搜索：菜单栏、日历、例行任务、强制解锁",
+      "search_placeholder": "例如：锁定、小组件、F11、Ctrl+Shift+1",
+      "search_results_count": "“{query}”的搜索结果 {count} 条",
+      "search_results_desc": "输入搜索词，即可立即在此看到结果。",
+      "search_results_title": "搜索结果",
+      "search_tips_desc": "帮助不仅支持按快捷键搜索，也支持按菜单名称和场景关键词搜索。",
+      "search_tips_title": "搜索提示",
+      "sidebar_hint": "在左侧选择一个部分，或直接使用上方的框搜索。",
+      "sidebar_title": "浏览",
+      "tip_layout": "想更改布局时：试试 `布局`、`预设`、`Ctrl+Shift+1`",
+      "tip_lock": "当锁定无法解除时：试试 `锁定`、`恢复`、`强制`",
+      "tip_widget": "查找小组件功能时：试试 `小组件`、`F12`"
+    },
     "entries": {
-      "new_schedule": {
-        "label": "添加新日程",
-        "description": "直接打开日程录入窗口。",
-        "menu_path": "注册 > 新日程",
-        "tags": [
-          "日程",
-          "添加",
-          "注册"
-        ]
-      },
-      "new_routine": {
-        "label": "注册例行任务",
-        "description": "快速添加重复性工作例程。",
-        "menu_path": "注册 > 例行任务",
-        "tags": [
-          "例行任务",
-          "任务",
-          "重复"
-        ]
-      },
-      "new_directive": {
-        "label": "注册指示事项",
-        "description": "打开输入指示或协作事项的窗口。",
-        "menu_path": "注册 > 指示事项",
-        "tags": [
-          "指示",
-          "协作"
-        ]
-      },
-      "checklist": {
-        "label": "管理检查清单",
-        "description": "管理检查清单模板和项目结构。",
-        "menu_path": "任务 > 管理检查清单",
-        "tags": [
-          "检查清单",
-          "模板"
-        ]
-      },
-      "today": {
-        "label": "跳转到今天",
-        "description": "立即将所选日期移动到今天。",
-        "menu_path": "导航",
-        "tags": [
-          "今天",
-          "日期"
-        ]
-      },
-      "prev_day": {
-        "label": "前一天",
-        "description": "移动到当前日期的前一天。",
-        "menu_path": "导航",
-        "tags": [
-          "前",
-          "日期",
-          "左"
-        ]
-      },
-      "next_day": {
-        "label": "后一天",
-        "description": "移动到当前日期的后一天。",
-        "menu_path": "导航",
-        "tags": [
-          "后",
-          "日期",
-          "右"
-        ]
-      },
-      "command_palette": {
-        "label": "命令面板",
-        "description": "打开命令搜索框以立即查找功能。",
-        "menu_path": "直接调用",
-        "tags": [
-          "搜索",
-          "命令",
-          "面板"
-        ]
-      },
-      "focus_mode": {
-        "label": "切换专注模式",
-        "description": "开启或关闭专注模式。",
-        "menu_path": "视图 > 专注模式",
-        "tags": [
-          "专注",
-          "番茄钟"
-        ]
-      },
-      "focus_pause": {
-        "label": "暂停专注",
-        "description": "暂停或恢复当前专注会话。",
-        "menu_path": "专注模式",
-        "tags": [
-          "专注",
-          "暂停"
-        ]
-      },
-      "lock_mode": {
-        "label": "锁定模式",
-        "description": "开启或关闭桌面锁定模式。",
-        "menu_path": "视图 > 锁定模式",
-        "tags": [
-          "锁定"
-        ]
-      },
-      "magnet_mode": {
-        "label": "磁吸模式",
-        "description": "切换磁吸模式，帮助面板对齐和吸附。",
-        "menu_path": "视图 > 磁吸模式",
-        "tags": [
-          "磁吸",
-          "面板"
-        ]
-      },
       "away_lock": {
-        "label": "离开锁定",
         "description": "立即启动离开锁定模式。",
+        "label": "离开锁定",
         "menu_path": "视图 > 离开锁定",
-        "tags": [
-          "离开",
-          "锁定"
-        ]
-      },
-      "topbar": {
-        "label": "切换顶栏",
-        "description": "切换顶部菜单栏的显示状态。",
-        "menu_path": "视图 > 顶栏",
-        "tags": [
-          "菜单栏",
-          "顶栏",
-          "恢复"
-        ]
+        "tags": ["离开", "锁定"]
       },
       "cal_toolbar": {
-        "label": "切换日历工具栏",
         "description": "隐藏或重新显示日历工具栏。",
+        "label": "切换日历工具栏",
         "menu_path": "视图 > 日历工具栏",
-        "tags": [
-          "日历",
-          "工具栏"
-        ]
-      },
-      "fullscreen": {
-        "label": "切换全屏",
-        "description": "开启或关闭全屏显示。",
-        "menu_path": "视图 > 全屏",
-        "tags": [
-          "全屏"
-        ]
-      },
-      "save_layout": {
-        "label": "保存当前布局",
-        "description": "将当前面板排列保存为预设。",
-        "menu_path": "视图 > 布局预设 > 保存",
-        "tags": [
-          "布局",
-          "预设",
-          "保存"
-        ]
-      },
-      "layout_1": {
-        "label": "布局预设 1",
-        "description": "应用默认的4面板停靠布局。",
-        "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "预设",
-          "停靠",
-          "1"
-        ]
-      },
-      "layout_2": {
-        "label": "布局预设 2",
-        "description": "应用以日历为中心的布局。",
-        "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "日历",
-          "2"
-        ]
-      },
-      "layout_3": {
-        "label": "布局预设 3",
-        "description": "应用以任务为中心的布局。",
-        "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "任务",
-          "3"
-        ]
-      },
-      "layout_4": {
-        "label": "布局预设 4",
-        "description": "应用分屏标签布局。",
-        "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "标签",
-          "分屏",
-          "4"
-        ]
-      },
-      "layout_5": {
-        "label": "布局预设 5",
-        "description": "应用完全分离的浮动布局。",
-        "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "分离",
-          "浮动",
-          "5"
-        ]
+        "tags": ["日历", "工具栏"]
       },
       "calendar_print": {
-        "label": "打印日历",
         "description": "预览并打印当前或所选期间的日历。",
+        "label": "打印日历",
         "menu_path": "日历 > 选项 > 打印",
-        "tags": [
-          "打印",
-          "打印机",
-          "PDF"
-        ]
+        "tags": ["打印", "打印机", "PDF"]
       },
-      "sync_gcal": {
-        "label": "同步谷歌日历",
-        "description": "立即开始与谷歌日历同步。",
-        "menu_path": "系统 > 日历与同步",
-        "tags": [
-          "谷歌",
-          "同步",
-          "日历",
-          "F5"
-        ]
-      },
-      "routine_mgr": {
-        "label": "例行任务管理器",
-        "description": "直接打开例行任务管理器标签页。",
-        "menu_path": "任务 > 例行任务概览",
-        "tags": [
-          "例行任务",
-          "管理"
-        ]
+      "checklist": {
+        "description": "管理检查清单模板和项目结构。",
+        "label": "管理检查清单",
+        "menu_path": "任务 > 管理检查清单",
+        "tags": ["检查清单", "模板"]
       },
       "color_assign": {
-        "label": "自动分配颜色",
         "description": "自动为所选项目分配颜色。",
+        "label": "自动分配颜色",
         "menu_path": "任务 > 自动分配颜色",
-        "tags": [
-          "颜色",
-          "标签",
-          "自动"
-        ]
+        "tags": ["颜色", "标签", "自动"]
       },
-      "show_hide": {
-        "label": "显示/隐藏窗口",
-        "description": "隐藏主窗口或重新显示。",
-        "menu_path": "窗口控制",
-        "tags": [
-          "窗口",
-          "隐藏",
-          "显示",
-          "叠加层"
-        ]
-      },
-      "widget_mode": {
-        "label": "切换小组件模式",
-        "description": "打开仅显示小组件的面板模式。",
-        "menu_path": "视图 > 仅小组件模式",
-        "tags": [
-          "小组件",
-          "面板"
-        ]
-      },
-      "restore_pos": {
-        "label": "恢复窗口位置",
-        "description": "将窗口恢复到屏幕上的安全位置。",
-        "menu_path": "窗口控制",
-        "tags": [
-          "窗口",
-          "恢复",
-          "位置"
-        ]
-      },
-      "opacity_up": {
-        "label": "增加不透明度",
-        "description": "提高窗口不透明度。",
-        "menu_path": "窗口控制",
-        "tags": [
-          "不透明度",
-          "更亮"
-        ]
-      },
-      "opacity_down": {
-        "label": "降低不透明度",
-        "description": "降低窗口不透明度。",
-        "menu_path": "窗口控制",
-        "tags": [
-          "不透明度",
-          "更暗"
-        ]
-      },
-      "monitor_left": {
-        "label": "移动到上一个显示器",
-        "description": "将窗口移动到另一个显示器。",
-        "menu_path": "窗口控制",
-        "tags": [
-          "显示器",
-          "屏幕",
-          "左"
-        ]
-      },
-      "monitor_right": {
-        "label": "移动到下一个显示器",
-        "description": "将窗口移动到另一个显示器。",
-        "menu_path": "窗口控制",
-        "tags": [
-          "显示器",
-          "屏幕",
-          "右"
-        ]
-      },
-      "help": {
-        "label": "快捷键指南",
-        "description": "打开帮助中心。",
-        "menu_path": "系统 > 快捷键指南",
-        "tags": [
-          "帮助",
-          "F1"
-        ]
+      "command_palette": {
+        "description": "打开命令搜索框以立即查找功能。",
+        "label": "命令面板",
+        "menu_path": "直接调用",
+        "tags": ["搜索", "命令", "面板"]
       },
       "delete": {
-        "label": "删除所选项目",
         "description": "删除当前选中的日程或项目。",
+        "label": "删除所选项目",
         "menu_path": "选择状态",
-        "tags": [
-          "删除",
-          "移除"
-        ]
+        "tags": ["删除", "移除"]
       },
       "escape": {
-        "label": "清除选择",
         "description": "清除当前选择或焦点。",
+        "label": "清除选择",
         "menu_path": "选择状态",
-        "tags": [
-          "取消选择",
-          "取消",
-          "esc"
-        ]
+        "tags": ["取消选择", "取消", "esc"]
+      },
+      "focus_mode": {
+        "description": "开启或关闭专注模式。",
+        "label": "切换专注模式",
+        "menu_path": "视图 > 专注模式",
+        "tags": ["专注", "番茄钟"]
+      },
+      "focus_pause": {
+        "description": "暂停或恢复当前专注会话。",
+        "label": "暂停专注",
+        "menu_path": "专注模式",
+        "tags": ["专注", "暂停"]
       },
       "force_unlock": {
-        "label": "强制解锁",
         "description": "强制清除意外的锁定状态。",
+        "label": "强制解锁",
         "menu_path": "紧急恢复",
-        "tags": [
-          "强制",
-          "解锁",
-          "恢复",
-          "紧急"
-        ]
+        "tags": ["强制", "解锁", "恢复", "紧急"]
+      },
+      "fullscreen": {
+        "description": "开启或关闭全屏显示。",
+        "label": "切换全屏",
+        "menu_path": "视图 > 全屏",
+        "tags": ["全屏"]
+      },
+      "help": {
+        "description": "打开帮助中心。",
+        "label": "快捷键指南",
+        "menu_path": "系统 > 快捷键指南",
+        "tags": ["帮助", "F1"]
+      },
+      "layout_1": {
+        "description": "应用默认的4面板停靠布局。",
+        "label": "布局预设 1",
+        "menu_path": "视图 > 布局预设",
+        "tags": ["布局", "预设", "停靠", "1"]
+      },
+      "layout_2": {
+        "description": "应用以日历为中心的布局。",
+        "label": "布局预设 2",
+        "menu_path": "视图 > 布局预设",
+        "tags": ["布局", "日历", "2"]
+      },
+      "layout_3": {
+        "description": "应用以任务为中心的布局。",
+        "label": "布局预设 3",
+        "menu_path": "视图 > 布局预设",
+        "tags": ["布局", "任务", "3"]
+      },
+      "layout_4": {
+        "description": "应用分屏标签布局。",
+        "label": "布局预设 4",
+        "menu_path": "视图 > 布局预设",
+        "tags": ["布局", "标签", "分屏", "4"]
+      },
+      "layout_5": {
+        "description": "应用完全分离的浮动布局。",
+        "label": "布局预设 5",
+        "menu_path": "视图 > 布局预设",
+        "tags": ["布局", "分离", "浮动", "5"]
+      },
+      "lock_mode": {
+        "description": "开启或关闭桌面锁定模式。",
+        "label": "锁定模式",
+        "menu_path": "视图 > 锁定模式",
+        "tags": ["锁定"]
+      },
+      "magnet_mode": {
+        "description": "切换磁吸模式，帮助面板对齐和吸附。",
+        "label": "磁吸模式",
+        "menu_path": "视图 > 磁吸模式",
+        "tags": ["磁吸", "面板"]
+      },
+      "monitor_left": {
+        "description": "将窗口移动到另一个显示器。",
+        "label": "移动到上一个显示器",
+        "menu_path": "窗口控制",
+        "tags": ["显示器", "屏幕", "左"]
+      },
+      "monitor_right": {
+        "description": "将窗口移动到另一个显示器。",
+        "label": "移动到下一个显示器",
+        "menu_path": "窗口控制",
+        "tags": ["显示器", "屏幕", "右"]
+      },
+      "new_directive": {
+        "description": "打开输入指示或协作事项的窗口。",
+        "label": "注册指示事项",
+        "menu_path": "注册 > 指示事项",
+        "tags": ["指示", "协作"]
+      },
+      "new_routine": {
+        "description": "快速添加重复性工作例程。",
+        "label": "注册例行任务",
+        "menu_path": "注册 > 例行任务",
+        "tags": ["例行任务", "任务", "重复"]
+      },
+      "new_schedule": {
+        "description": "直接打开日程录入窗口。",
+        "label": "添加新日程",
+        "menu_path": "注册 > 新日程",
+        "tags": ["日程", "添加", "注册"]
+      },
+      "next_day": {
+        "description": "移动到当前日期的后一天。",
+        "label": "后一天",
+        "menu_path": "导航",
+        "tags": ["后", "日期", "右"]
+      },
+      "opacity_down": {
+        "description": "降低窗口不透明度。",
+        "label": "降低不透明度",
+        "menu_path": "窗口控制",
+        "tags": ["不透明度", "更暗"]
+      },
+      "opacity_up": {
+        "description": "提高窗口不透明度。",
+        "label": "增加不透明度",
+        "menu_path": "窗口控制",
+        "tags": ["不透明度", "更亮"]
+      },
+      "prev_day": {
+        "description": "移动到当前日期的前一天。",
+        "label": "前一天",
+        "menu_path": "导航",
+        "tags": ["前", "日期", "左"]
+      },
+      "restore_pos": {
+        "description": "将窗口恢复到屏幕上的安全位置。",
+        "label": "恢复窗口位置",
+        "menu_path": "窗口控制",
+        "tags": ["窗口", "恢复", "位置"]
+      },
+      "routine_mgr": {
+        "description": "直接打开例行任务管理器标签页。",
+        "label": "例行任务管理器",
+        "menu_path": "任务 > 例行任务概览",
+        "tags": ["例行任务", "管理"]
+      },
+      "save_layout": {
+        "description": "将当前面板排列保存为预设。",
+        "label": "保存当前布局",
+        "menu_path": "视图 > 布局预设 > 保存",
+        "tags": ["布局", "预设", "保存"]
+      },
+      "show_hide": {
+        "description": "隐藏主窗口或重新显示。",
+        "label": "显示/隐藏窗口",
+        "menu_path": "窗口控制",
+        "tags": ["窗口", "隐藏", "显示", "叠加层"]
+      },
+      "sync_gcal": {
+        "description": "立即开始与谷歌日历同步。",
+        "label": "同步谷歌日历",
+        "menu_path": "系统 > 日历与同步",
+        "tags": ["谷歌", "同步", "日历", "F5"]
+      },
+      "today": {
+        "description": "立即将所选日期移动到今天。",
+        "label": "跳转到今天",
+        "menu_path": "导航",
+        "tags": ["今天", "日期"]
+      },
+      "topbar": {
+        "description": "切换顶部菜单栏的显示状态。",
+        "label": "切换顶栏",
+        "menu_path": "视图 > 顶栏",
+        "tags": ["菜单栏", "顶栏", "恢复"]
+      },
+      "widget_mode": {
+        "description": "打开仅显示小组件的面板模式。",
+        "label": "切换小组件模式",
+        "menu_path": "视图 > 仅小组件模式",
+        "tags": ["小组件", "面板"]
       }
     },
     "groups": {
-      "register": {
-        "label": "注册",
-        "description": "快速开始新日程、例行任务或指示事项。"
-      },
-      "navigate": {
-        "label": "导航",
-        "description": "在日期和选择之间移动，或立即调用功能。"
-      },
-      "mode": {
-        "label": "模式",
-        "description": "控制专注、磁吸和锁定等工作模式。"
-      },
-      "view": {
-        "label": "视图",
-        "description": "涵盖工具栏、全屏和布局。"
-      },
       "admin": {
-        "label": "管理",
-        "description": "打开管理界面和自动清理工具。"
-      },
-      "window": {
-        "label": "窗口",
-        "description": "调整窗口行为，如位置、显示器和不透明度。"
-      },
-      "system": {
-        "label": "系统",
-        "description": "访问帮助和系统支持功能。"
+        "description": "打开管理界面和自动清理工具。",
+        "label": "管理"
       },
       "edit": {
-        "label": "编辑",
-        "description": "清除或整理当前选择。"
+        "description": "清除或整理当前选择。",
+        "label": "编辑"
       },
       "emergency": {
-        "label": "紧急情况",
-        "description": "强制从意外的锁定状态恢复。"
+        "description": "强制从意外的锁定状态恢复。",
+        "label": "紧急情况"
+      },
+      "mode": {
+        "description": "控制专注、磁吸和锁定等工作模式。",
+        "label": "模式"
+      },
+      "navigate": {
+        "description": "在日期和选择之间移动，或立即调用功能。",
+        "label": "导航"
+      },
+      "register": {
+        "description": "快速开始新日程、例行任务或指示事项。",
+        "label": "注册"
+      },
+      "system": {
+        "description": "访问帮助和系统支持功能。",
+        "label": "系统"
+      },
+      "view": {
+        "description": "涵盖工具栏、全屏和布局。",
+        "label": "视图"
+      },
+      "window": {
+        "description": "调整窗口行为，如位置、显示器和不透明度。",
+        "label": "窗口"
+      }
+    },
+    "hero": {
+      "quickstart": {
+        "desc": "我们将打开应用后立即会用到的内容，以及按 F1 时会查找的内容放在最前面。",
+        "title": "最常用的功能优先展示"
+      },
+      "recovery": {
+        "desc": "仅列出菜单消失或锁定状态混乱时你最需要的按键。",
+        "title": "遇到问题时首先尝试的按键"
+      },
+      "reference": {
+        "desc": "每个快捷键都按功能组整理，便于无需搜索即可快速浏览。",
+        "title": "按类别浏览所有快捷键"
+      },
+      "search": {
+        "desc": "输入按键名称或功能名称，即可立即看到匹配的快捷键。",
+        "title": "搜索结果"
+      },
+      "workflows": {
+        "desc": "快捷键围绕注册、导航、切换视图等实际工作流程分组，即使你不知道名称，也能按场景找到它们。",
+        "title": "按场景分组，更快找到"
+      }
+    },
+    "pages": {
+      "quickstart": {
+        "subtitle": "首先要查看的内容，以及你最常用的功能",
+        "title": "快速入门"
+      },
+      "recovery": {
+        "subtitle": "用于锁定、隐藏菜单和窗口恢复的按键",
+        "title": "屏幕恢复"
+      },
+      "reference": {
+        "subtitle": "按类别列出的完整清单",
+        "title": "所有快捷键"
+      },
+      "workflows": {
+        "subtitle": "按场景分组的关键快捷键",
+        "title": "常见任务"
       }
     },
     "priority": {
-      "topbar": {
-        "badge": "恢复菜单栏",
-        "note": "顶栏消失时首先要检查的项目。"
-      },
-      "magnet_mode": {
-        "badge": "切换磁吸",
-        "note": "快速切换面板是否可以移动和吸附。"
+      "force_unlock": {
+        "badge": "紧急恢复",
+        "note": "强制清除意外的锁定状态。"
       },
       "lock_mode": {
         "badge": "解锁",
         "note": "即使处于锁定状态，也可直接从主屏幕切换。"
       },
-      "force_unlock": {
-        "badge": "紧急恢复",
-        "note": "强制清除意外的锁定状态。"
+      "magnet_mode": {
+        "badge": "切换磁吸",
+        "note": "快速切换面板是否可以移动和吸附。"
+      },
+      "topbar": {
+        "badge": "恢复菜单栏",
+        "note": "顶栏消失时首先要检查的项目。"
       }
     },
-    "pages": {
-      "quickstart": {
-        "title": "快速入门",
-        "subtitle": "首先要查看的内容，以及你最常用的功能"
-      },
-      "workflows": {
-        "title": "常见任务",
-        "subtitle": "按场景分组的关键快捷键"
-      },
-      "recovery": {
-        "title": "屏幕恢复",
-        "subtitle": "用于锁定、隐藏菜单和窗口恢复的按键"
-      },
-      "reference": {
-        "title": "所有快捷键",
-        "subtitle": "按类别列出的完整清单"
-      }
-    },
+    "search": "搜索帮助",
+    "search_hint": "按功能名称、快捷键或菜单位置搜索。",
+    "title": "Air Calendar 帮助中心",
+    "topics": "帮助主题",
     "workflows": {
-      "new": {
-        "title": "创建新内容",
-        "desc": "快速开始日程或任务时"
-      },
-      "navigate": {
-        "title": "移动与搜索",
-        "desc": "在日期之间移动或快速搜索功能时"
+      "focus_lock": {
+        "desc": "控制专注状态或锁定状态时",
+        "title": "专注与锁定"
       },
       "layout": {
-        "title": "屏幕与布局",
-        "desc": "更改外观或面板排列时"
+        "desc": "更改外观或面板排列时",
+        "title": "屏幕与布局"
       },
-      "focus_lock": {
-        "title": "专注与锁定",
-        "desc": "控制专注状态或锁定状态时"
+      "navigate": {
+        "desc": "在日期之间移动或快速搜索功能时",
+        "title": "移动与搜索"
+      },
+      "new": {
+        "desc": "快速开始日程或任务时",
+        "title": "创建新内容"
       },
       "window_tools": {
-        "title": "窗口与管理工具",
-        "desc": "调整窗口状态或需要管理功能时"
+        "desc": "调整窗口状态或需要管理功能时",
+        "title": "窗口与管理工具"
       }
-    },
-    "hero": {
-      "quickstart": {
-        "title": "最常用的功能优先展示",
-        "desc": "我们将打开应用后立即会用到的内容，以及按 F1 时会查找的内容放在最前面。"
-      },
-      "workflows": {
-        "title": "按场景分组，更快找到",
-        "desc": "快捷键围绕注册、导航、切换视图等实际工作流程分组，即使你不知道名称，也能按场景找到它们。"
-      },
-      "recovery": {
-        "title": "遇到问题时首先尝试的按键",
-        "desc": "仅列出菜单消失或锁定状态混乱时你最需要的按键。"
-      },
-      "reference": {
-        "title": "按类别浏览所有快捷键",
-        "desc": "每个快捷键都按功能组整理，便于无需搜索即可快速浏览。"
-      },
-      "search": {
-        "title": "搜索结果",
-        "desc": "输入按键名称或功能名称，即可立即看到匹配的快捷键。"
-      }
-    },
-    "chrome": {
-      "eyebrow": "F1 帮助中心",
-      "header_title": "快速查找快捷键和功能的帮助中心",
-      "header_subtitle": "按功能名称、按键名称或菜单位置搜索，快速找到你最常用的内容。",
-      "badge_recovery": "4个核心恢复按键",
-      "badge_total": "共 {count} 个快捷键",
-      "badge_search": "支持搜索",
-      "search_placeholder": "例如：锁定、小组件、F11、Ctrl+Shift+1",
-      "search_examples": "试试搜索：菜单栏、日历、例行任务、强制解锁",
-      "sidebar_title": "浏览",
-      "sidebar_hint": "在左侧选择一个部分，或直接使用上方的框搜索。",
-      "footer_hint": "搜索支持按功能名称、快捷键或菜单位置进行。",
-      "quickstart_section_title": "从这里开始",
-      "quickstart_section_desc": "新用户可以从这里开始，立即上手。",
-      "search_tips_title": "搜索提示",
-      "search_tips_desc": "帮助不仅支持按快捷键搜索，也支持按菜单名称和场景关键词搜索。",
-      "tip_lock": "当锁定无法解除时：试试 `锁定`、`恢复`、`强制`",
-      "tip_layout": "想更改布局时：试试 `布局`、`预设`、`Ctrl+Shift+1`",
-      "tip_widget": "查找小组件功能时：试试 `小组件`、`F12`",
-      "recovery_primary_title": "首先要检查的恢复按键",
-      "recovery_primary_desc": "出现问题时应首先尝试的按键。",
-      "recovery_secondary_title": "值得一并记住的实用按键",
-      "recovery_secondary_desc": "在整理锁定或窗口状态时经常需要一起用到的快捷键。",
-      "search_results_title": "搜索结果",
-      "search_results_desc": "输入搜索词，即可立即在此看到结果。",
-      "search_results_count": "“{query}”的搜索结果 {count} 条",
-      "search_empty": "没有匹配的结果。\n请尝试更短的关键词，例如功能名称、按键名称或菜单名称。",
-      "meta_menu_path": "菜单位置：{value}",
-      "meta_aliases": "附加按键：{value}",
-      "meta_group": "分类：{value}"
     }
   },
   "splash": {
@@ -2887,12 +2741,14 @@
     "editor_template": "组合模板",
     "editor_title": "创建小组件样式",
     "editor_width": "默认宽度",
+    "empty_directive_filter": "No directives for this date.",
     "empty_panel": "此日期没有条目。",
     "empty_schedule": "无日程",
     "empty_schedule_filter": "此日期没有日程。",
     "empty_work": "无工作项",
     "empty_work_filter": "此日期没有工作。",
     "filter_all": "全部",
+    "filter_directive": "Directives",
     "filter_schedule": "日程",
     "filter_work": "工作",
     "filtered_count_chip": "{count}/{total}",
@@ -2911,6 +2767,7 @@
     "hide_calendar": "隐藏日历",
     "hide_tray": "Hide to tray",
     "item_count_chip": "{count}项",
+    "item_more_named": "Item actions: {name}",
     "layout_agenda_first": "日程优先",
     "layout_dashboard": "并排仪表盘",
     "layout_magazine": "杂志板",
@@ -2934,6 +2791,7 @@
     "menu_priority": "优先级",
     "menu_realign": "重新排列小组件",
     "menu_refresh": "刷新",
+    "menu_reopen": "Reopen",
     "menu_reserve_space": "预留屏幕空间",
     "month_calendar": "Choose a date from the month",
     "month_next": "下个月",
@@ -2976,6 +2834,8 @@
     "scale_tooltip_value": "缩放：{value}%",
     "schedule_title": "日程",
     "schedule_type": "日程",
+    "section_directive_no_deadline": "Directives without a deadline",
+    "section_directive_overdue": "Overdue directives",
     "section_directive_today": "指令",
     "section_routine_today": "例行",
     "section_today": "今天",

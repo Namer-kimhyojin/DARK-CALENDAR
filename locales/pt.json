@@ -123,15 +123,7 @@
     "selection_hint": "Ctrl+Click para selecionar",
     "sync_hint": "Sincronização Google",
     "today": "Hoje",
-    "weekdays": [
-      "Seg",
-      "Ter",
-      "Qua",
-      "Qui",
-      "Sex",
-      "Sáb",
-      "Dom"
-    ]
+    "weekdays": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
   },
   "checklist_mgr": {
     "btn_add_item": "Adicionar Item",
@@ -970,6 +962,7 @@
   },
   "focus_selector": {
     "auto_pick": "Auto",
+    "auto_pick_no_tasks": "There are no tasks available for automatic selection.",
     "col_datetime": "Data/Hora",
     "col_duration": "Duração",
     "col_task": "Tarefa",
@@ -989,12 +982,15 @@
     "no_tasks": "Nenhum.",
     "pick_prompt": "Escolha.",
     "select_done": "Escolher",
+    "select_no_selection": "Select a task from the list first.",
     "settings_hint": "Você pode alterar o tipo de modo Focus e o comportamento do Pomodoro aqui.",
     "settings_saved": "Guardard. Naovo values will be used next time Focus Mode starts.",
     "tab_logs": "Registos",
     "tab_settings": "Definicoes",
     "tab_tasks": "Tarefas",
-    "title": "Escolha de Tarefa"
+    "task_load_error": "Could not load tasks. Please try again.",
+    "title": "Escolha de Tarefa",
+    "unsaved_settings_confirm": "You have unsaved Pomodoro settings. Discard them and close?"
   },
   "gcal": {
     "auto_healed_msg": "{count} problematic evento(s) were automatically fixed and sincronizacaoed to your calendario.",
@@ -1535,13 +1531,7 @@
     "hint_record_jump": "Enter abre o item. Shift+Enter vai para a data.",
     "hint_run_command": "Enter executa o comando selecionado",
     "kw": {
-      "theme": [
-        "theme",
-        "dark",
-        "light",
-        "color",
-        "appearance"
-      ]
+      "theme": ["theme", "dark", "light", "color", "appearance"]
     },
     "nlp_preview": "Naovo: [{title}] - {date} {time}",
     "no_selection": "Press Introduza to open the selected result",
@@ -1758,518 +1748,382 @@
     "yearly": "Anual"
   },
   "shortcut": {
-    "title": "Central de ajuda do Air Calendar",
-    "search": "Pesquisar ajuda",
-    "search_hint": "Pesquise por nome de recurso, atalho ou local de menu.",
-    "topics": "Tópicos de ajuda",
+    "chrome": {
+      "badge_recovery": "4 teclas de recuperação principais",
+      "badge_search": "Pesquisa disponível",
+      "badge_total": "{count} atalhos no total",
+      "eyebrow": "CENTRAL DE AJUDA F1",
+      "footer_hint": "A pesquisa funciona por nome de recurso, atalho ou local de menu.",
+      "header_subtitle": "Pesquise por nome de recurso, nome de tecla ou local de menu, e encontre rapidamente o que você mais usa.",
+      "header_title": "A central de ajuda para encontrar atalhos e recursos rapidamente",
+      "meta_aliases": "Teclas adicionais: {value}",
+      "meta_group": "Categoria: {value}",
+      "meta_menu_path": "Local do menu: {value}",
+      "quickstart_section_desc": "Novos usuários podem começar aqui para se familiarizar rapidamente.",
+      "quickstart_section_title": "Comece aqui",
+      "recovery_primary_desc": "As teclas a tentar primeiro quando algo dá errado.",
+      "recovery_primary_title": "Teclas de recuperação para verificar primeiro",
+      "recovery_secondary_desc": "Atalhos frequentemente necessários juntos ao limpar o estado de bloqueio ou janela.",
+      "recovery_secondary_title": "Teclas úteis para lembrar junto com elas",
+      "search_empty": "Nenhum resultado correspondente.\nTente uma palavra-chave mais curta, como um nome de recurso, tecla ou menu.",
+      "search_examples": "Tente pesquisar: barra de menu, calendário, rotina, forçar desbloqueio",
+      "search_placeholder": "ex. bloqueio, widget, F11, Ctrl+Shift+1",
+      "search_results_count": "{count} resultados para '{query}'",
+      "search_results_desc": "Digite um termo de pesquisa para ver os resultados aparecerem aqui imediatamente.",
+      "search_results_title": "Resultados da pesquisa",
+      "search_tips_desc": "A ajuda também pode ser pesquisada por nomes de menu e palavras-chave de situação, não apenas atalhos.",
+      "search_tips_title": "Dicas de pesquisa",
+      "sidebar_hint": "Escolha uma seção à esquerda, ou pesquise diretamente usando a caixa acima.",
+      "sidebar_title": "Navegar",
+      "tip_layout": "Quando quiser mudar o layout: tente `layout`, `predefinição`, `Ctrl+Shift+1`",
+      "tip_lock": "Quando um bloqueio não libera: tente `bloqueio`, `recuperação`, `forçar`",
+      "tip_widget": "Ao procurar recursos de widget: tente `widget`, `F12`"
+    },
     "entries": {
-      "new_schedule": {
-        "label": "Adicionar novo evento",
-        "description": "Abre diretamente a janela de registro de eventos.",
-        "menu_path": "Registrar > Novo evento",
-        "tags": [
-          "evento",
-          "adicionar",
-          "registrar"
-        ]
-      },
-      "new_routine": {
-        "label": "Registrar rotina",
-        "description": "Adiciona rapidamente uma rotina de tarefa recorrente.",
-        "menu_path": "Registrar > Rotina",
-        "tags": [
-          "rotina",
-          "tarefa",
-          "recorrente"
-        ]
-      },
-      "new_directive": {
-        "label": "Registrar diretiva",
-        "description": "Abre a janela para inserir uma diretiva ou item de cooperação.",
-        "menu_path": "Registrar > Diretiva",
-        "tags": [
-          "diretiva",
-          "cooperação"
-        ]
-      },
-      "checklist": {
-        "label": "Gerenciar checklist",
-        "description": "Gerencia modelos e a estrutura de itens do checklist.",
-        "menu_path": "Tarefas > Gerenciar checklist",
-        "tags": [
-          "checklist",
-          "modelo"
-        ]
-      },
-      "today": {
-        "label": "Ir para hoje",
-        "description": "Move instantaneamente a data selecionada para hoje.",
-        "menu_path": "Navegação",
-        "tags": [
-          "hoje",
-          "data"
-        ]
-      },
-      "prev_day": {
-        "label": "Dia anterior",
-        "description": "Move-se um dia antes da data atual.",
-        "menu_path": "Navegação",
-        "tags": [
-          "anterior",
-          "data",
-          "esquerda"
-        ]
-      },
-      "next_day": {
-        "label": "Próximo dia",
-        "description": "Move-se um dia depois da data atual.",
-        "menu_path": "Navegação",
-        "tags": [
-          "próximo",
-          "data",
-          "direita"
-        ]
-      },
-      "command_palette": {
-        "label": "Paleta de comandos",
-        "description": "Abre a caixa de busca de comandos para encontrar um recurso instantaneamente.",
-        "menu_path": "Chamada direta",
-        "tags": [
-          "busca",
-          "comando",
-          "paleta"
-        ]
-      },
-      "focus_mode": {
-        "label": "Alternar modo foco",
-        "description": "Ativa ou desativa o modo foco.",
-        "menu_path": "Exibir > Modo foco",
-        "tags": [
-          "foco",
-          "pomodoro"
-        ]
-      },
-      "focus_pause": {
-        "label": "Pausar foco",
-        "description": "Pausa ou retoma a sessão de foco atual.",
-        "menu_path": "Modo foco",
-        "tags": [
-          "foco",
-          "pausa"
-        ]
-      },
-      "lock_mode": {
-        "label": "Modo bloqueio",
-        "description": "Ativa ou desativa o modo de bloqueio da área de trabalho.",
-        "menu_path": "Exibir > Modo bloqueio",
-        "tags": [
-          "bloqueio"
-        ]
-      },
-      "magnet_mode": {
-        "label": "Modo ímã",
-        "description": "Ativa o modo ímã, que ajuda a alinhar e encaixar painéis.",
-        "menu_path": "Exibir > Modo ímã",
-        "tags": [
-          "ímã",
-          "painel"
-        ]
-      },
       "away_lock": {
-        "label": "Bloqueio por ausência",
         "description": "Inicia imediatamente o modo de bloqueio por ausência.",
+        "label": "Bloqueio por ausência",
         "menu_path": "Exibir > Bloqueio por ausência",
-        "tags": [
-          "ausência",
-          "bloqueio"
-        ]
-      },
-      "topbar": {
-        "label": "Alternar barra superior",
-        "description": "Ativa ou desativa a exibição da barra de menu superior.",
-        "menu_path": "Exibir > Barra superior",
-        "tags": [
-          "barra de menu",
-          "barra superior",
-          "recuperação"
-        ]
+        "tags": ["ausência", "bloqueio"]
       },
       "cal_toolbar": {
-        "label": "Alternar barra de ferramentas do calendário",
         "description": "Oculta ou mostra novamente a barra de ferramentas do calendário.",
+        "label": "Alternar barra de ferramentas do calendário",
         "menu_path": "Exibir > Barra de ferramentas do calendário",
-        "tags": [
-          "calendário",
-          "barra de ferramentas"
-        ]
-      },
-      "fullscreen": {
-        "label": "Alternar tela cheia",
-        "description": "Ativa ou desativa a exibição em tela cheia.",
-        "menu_path": "Exibir > Tela cheia",
-        "tags": [
-          "tela cheia"
-        ]
-      },
-      "save_layout": {
-        "label": "Salvar layout atual",
-        "description": "Salva o arranjo atual dos painéis como predefinição.",
-        "menu_path": "Exibir > Predefinições de layout > Salvar",
-        "tags": [
-          "layout",
-          "predefinição",
-          "salvar"
-        ]
-      },
-      "layout_1": {
-        "label": "Predefinição de layout 1",
-        "description": "Aplica o layout padrão de 4 painéis ancorados.",
-        "menu_path": "Exibir > Predefinições de layout",
-        "tags": [
-          "layout",
-          "predefinição",
-          "ancorado",
-          "1"
-        ]
-      },
-      "layout_2": {
-        "label": "Predefinição de layout 2",
-        "description": "Aplica um layout centrado no calendário.",
-        "menu_path": "Exibir > Predefinições de layout",
-        "tags": [
-          "layout",
-          "calendário",
-          "2"
-        ]
-      },
-      "layout_3": {
-        "label": "Predefinição de layout 3",
-        "description": "Aplica um layout centrado em tarefas.",
-        "menu_path": "Exibir > Predefinições de layout",
-        "tags": [
-          "layout",
-          "tarefa",
-          "3"
-        ]
-      },
-      "layout_4": {
-        "label": "Predefinição de layout 4",
-        "description": "Aplica um layout de abas divididas.",
-        "menu_path": "Exibir > Predefinições de layout",
-        "tags": [
-          "layout",
-          "aba",
-          "dividido",
-          "4"
-        ]
-      },
-      "layout_5": {
-        "label": "Predefinição de layout 5",
-        "description": "Aplica um layout flutuante totalmente separado.",
-        "menu_path": "Exibir > Predefinições de layout",
-        "tags": [
-          "layout",
-          "separado",
-          "flutuante",
-          "5"
-        ]
+        "tags": ["calendário", "barra de ferramentas"]
       },
       "calendar_print": {
-        "label": "Imprimir calendário",
         "description": "Visualiza e imprime o calendário do período atual ou escolhido.",
+        "label": "Imprimir calendário",
         "menu_path": "Calendário > Opções > Imprimir",
-        "tags": [
-          "imprimir",
-          "impressora",
-          "PDF"
-        ]
+        "tags": ["imprimir", "impressora", "PDF"]
       },
-      "sync_gcal": {
-        "label": "Sincronizar Google Calendar",
-        "description": "Inicia imediatamente uma sincronização com o Google Calendar.",
-        "menu_path": "Sistema > Calendário e sincronização",
-        "tags": [
-          "google",
-          "sincronização",
-          "calendário",
-          "F5"
-        ]
-      },
-      "routine_mgr": {
-        "label": "Gerenciador de rotinas",
-        "description": "Abre diretamente a aba do gerenciador de rotinas.",
-        "menu_path": "Tarefas > Visão geral de rotinas",
-        "tags": [
-          "rotina",
-          "gerenciar"
-        ]
+      "checklist": {
+        "description": "Gerencia modelos e a estrutura de itens do checklist.",
+        "label": "Gerenciar checklist",
+        "menu_path": "Tarefas > Gerenciar checklist",
+        "tags": ["checklist", "modelo"]
       },
       "color_assign": {
-        "label": "Atribuição automática de cor",
         "description": "Atribui cores automaticamente aos itens selecionados.",
+        "label": "Atribuição automática de cor",
         "menu_path": "Tarefas > Atribuição automática de cor",
-        "tags": [
-          "cor",
-          "etiqueta",
-          "automático"
-        ]
+        "tags": ["cor", "etiqueta", "automático"]
       },
-      "show_hide": {
-        "label": "Mostrar/ocultar janela",
-        "description": "Oculta a janela principal ou a exibe novamente.",
-        "menu_path": "Controle de janela",
-        "tags": [
-          "janela",
-          "ocultar",
-          "mostrar",
-          "sobreposição"
-        ]
-      },
-      "widget_mode": {
-        "label": "Alternar modo widget",
-        "description": "Abre o modo de painel somente widgets.",
-        "menu_path": "Exibir > Modo somente widgets",
-        "tags": [
-          "widget",
-          "painel"
-        ]
-      },
-      "restore_pos": {
-        "label": "Restaurar posição da janela",
-        "description": "Restaura a janela para uma posição segura da tela.",
-        "menu_path": "Controle de janela",
-        "tags": [
-          "janela",
-          "restaurar",
-          "posição"
-        ]
-      },
-      "opacity_up": {
-        "label": "Aumentar opacidade",
-        "description": "Aumenta a opacidade da janela.",
-        "menu_path": "Controle de janela",
-        "tags": [
-          "opacidade",
-          "mais clara"
-        ]
-      },
-      "opacity_down": {
-        "label": "Diminuir opacidade",
-        "description": "Reduz a opacidade da janela.",
-        "menu_path": "Controle de janela",
-        "tags": [
-          "opacidade",
-          "mais escura"
-        ]
-      },
-      "monitor_left": {
-        "label": "Mover para o monitor anterior",
-        "description": "Move a janela para outro monitor.",
-        "menu_path": "Controle de janela",
-        "tags": [
-          "monitor",
-          "tela",
-          "esquerda"
-        ]
-      },
-      "monitor_right": {
-        "label": "Mover para o próximo monitor",
-        "description": "Move a janela para outro monitor.",
-        "menu_path": "Controle de janela",
-        "tags": [
-          "monitor",
-          "tela",
-          "direita"
-        ]
-      },
-      "help": {
-        "label": "Guia de atalhos",
-        "description": "Abre a central de ajuda.",
-        "menu_path": "Sistema > Guia de atalhos",
-        "tags": [
-          "ajuda",
-          "F1"
-        ]
+      "command_palette": {
+        "description": "Abre a caixa de busca de comandos para encontrar um recurso instantaneamente.",
+        "label": "Paleta de comandos",
+        "menu_path": "Chamada direta",
+        "tags": ["busca", "comando", "paleta"]
       },
       "delete": {
-        "label": "Excluir item selecionado",
         "description": "Exclui o evento ou item atualmente selecionado.",
+        "label": "Excluir item selecionado",
         "menu_path": "Estado de seleção",
-        "tags": [
-          "excluir",
-          "remover"
-        ]
+        "tags": ["excluir", "remover"]
       },
       "escape": {
-        "label": "Limpar seleção",
         "description": "Limpa a seleção ou o foco atual.",
+        "label": "Limpar seleção",
         "menu_path": "Estado de seleção",
-        "tags": [
-          "desmarcar",
-          "cancelar",
-          "escape"
-        ]
+        "tags": ["desmarcar", "cancelar", "escape"]
+      },
+      "focus_mode": {
+        "description": "Ativa ou desativa o modo foco.",
+        "label": "Alternar modo foco",
+        "menu_path": "Exibir > Modo foco",
+        "tags": ["foco", "pomodoro"]
+      },
+      "focus_pause": {
+        "description": "Pausa ou retoma a sessão de foco atual.",
+        "label": "Pausar foco",
+        "menu_path": "Modo foco",
+        "tags": ["foco", "pausa"]
       },
       "force_unlock": {
-        "label": "Forçar desbloqueio",
         "description": "Limpa à força um estado de bloqueio inesperado.",
+        "label": "Forçar desbloqueio",
         "menu_path": "Recuperação de emergência",
-        "tags": [
-          "forçar",
-          "desbloquear",
-          "recuperação",
-          "emergência"
-        ]
+        "tags": ["forçar", "desbloquear", "recuperação", "emergência"]
+      },
+      "fullscreen": {
+        "description": "Ativa ou desativa a exibição em tela cheia.",
+        "label": "Alternar tela cheia",
+        "menu_path": "Exibir > Tela cheia",
+        "tags": ["tela cheia"]
+      },
+      "help": {
+        "description": "Abre a central de ajuda.",
+        "label": "Guia de atalhos",
+        "menu_path": "Sistema > Guia de atalhos",
+        "tags": ["ajuda", "F1"]
+      },
+      "layout_1": {
+        "description": "Aplica o layout padrão de 4 painéis ancorados.",
+        "label": "Predefinição de layout 1",
+        "menu_path": "Exibir > Predefinições de layout",
+        "tags": ["layout", "predefinição", "ancorado", "1"]
+      },
+      "layout_2": {
+        "description": "Aplica um layout centrado no calendário.",
+        "label": "Predefinição de layout 2",
+        "menu_path": "Exibir > Predefinições de layout",
+        "tags": ["layout", "calendário", "2"]
+      },
+      "layout_3": {
+        "description": "Aplica um layout centrado em tarefas.",
+        "label": "Predefinição de layout 3",
+        "menu_path": "Exibir > Predefinições de layout",
+        "tags": ["layout", "tarefa", "3"]
+      },
+      "layout_4": {
+        "description": "Aplica um layout de abas divididas.",
+        "label": "Predefinição de layout 4",
+        "menu_path": "Exibir > Predefinições de layout",
+        "tags": ["layout", "aba", "dividido", "4"]
+      },
+      "layout_5": {
+        "description": "Aplica um layout flutuante totalmente separado.",
+        "label": "Predefinição de layout 5",
+        "menu_path": "Exibir > Predefinições de layout",
+        "tags": ["layout", "separado", "flutuante", "5"]
+      },
+      "lock_mode": {
+        "description": "Ativa ou desativa o modo de bloqueio da área de trabalho.",
+        "label": "Modo bloqueio",
+        "menu_path": "Exibir > Modo bloqueio",
+        "tags": ["bloqueio"]
+      },
+      "magnet_mode": {
+        "description": "Ativa o modo ímã, que ajuda a alinhar e encaixar painéis.",
+        "label": "Modo ímã",
+        "menu_path": "Exibir > Modo ímã",
+        "tags": ["ímã", "painel"]
+      },
+      "monitor_left": {
+        "description": "Move a janela para outro monitor.",
+        "label": "Mover para o monitor anterior",
+        "menu_path": "Controle de janela",
+        "tags": ["monitor", "tela", "esquerda"]
+      },
+      "monitor_right": {
+        "description": "Move a janela para outro monitor.",
+        "label": "Mover para o próximo monitor",
+        "menu_path": "Controle de janela",
+        "tags": ["monitor", "tela", "direita"]
+      },
+      "new_directive": {
+        "description": "Abre a janela para inserir uma diretiva ou item de cooperação.",
+        "label": "Registrar diretiva",
+        "menu_path": "Registrar > Diretiva",
+        "tags": ["diretiva", "cooperação"]
+      },
+      "new_routine": {
+        "description": "Adiciona rapidamente uma rotina de tarefa recorrente.",
+        "label": "Registrar rotina",
+        "menu_path": "Registrar > Rotina",
+        "tags": ["rotina", "tarefa", "recorrente"]
+      },
+      "new_schedule": {
+        "description": "Abre diretamente a janela de registro de eventos.",
+        "label": "Adicionar novo evento",
+        "menu_path": "Registrar > Novo evento",
+        "tags": ["evento", "adicionar", "registrar"]
+      },
+      "next_day": {
+        "description": "Move-se um dia depois da data atual.",
+        "label": "Próximo dia",
+        "menu_path": "Navegação",
+        "tags": ["próximo", "data", "direita"]
+      },
+      "opacity_down": {
+        "description": "Reduz a opacidade da janela.",
+        "label": "Diminuir opacidade",
+        "menu_path": "Controle de janela",
+        "tags": ["opacidade", "mais escura"]
+      },
+      "opacity_up": {
+        "description": "Aumenta a opacidade da janela.",
+        "label": "Aumentar opacidade",
+        "menu_path": "Controle de janela",
+        "tags": ["opacidade", "mais clara"]
+      },
+      "prev_day": {
+        "description": "Move-se um dia antes da data atual.",
+        "label": "Dia anterior",
+        "menu_path": "Navegação",
+        "tags": ["anterior", "data", "esquerda"]
+      },
+      "restore_pos": {
+        "description": "Restaura a janela para uma posição segura da tela.",
+        "label": "Restaurar posição da janela",
+        "menu_path": "Controle de janela",
+        "tags": ["janela", "restaurar", "posição"]
+      },
+      "routine_mgr": {
+        "description": "Abre diretamente a aba do gerenciador de rotinas.",
+        "label": "Gerenciador de rotinas",
+        "menu_path": "Tarefas > Visão geral de rotinas",
+        "tags": ["rotina", "gerenciar"]
+      },
+      "save_layout": {
+        "description": "Salva o arranjo atual dos painéis como predefinição.",
+        "label": "Salvar layout atual",
+        "menu_path": "Exibir > Predefinições de layout > Salvar",
+        "tags": ["layout", "predefinição", "salvar"]
+      },
+      "show_hide": {
+        "description": "Oculta a janela principal ou a exibe novamente.",
+        "label": "Mostrar/ocultar janela",
+        "menu_path": "Controle de janela",
+        "tags": ["janela", "ocultar", "mostrar", "sobreposição"]
+      },
+      "sync_gcal": {
+        "description": "Inicia imediatamente uma sincronização com o Google Calendar.",
+        "label": "Sincronizar Google Calendar",
+        "menu_path": "Sistema > Calendário e sincronização",
+        "tags": ["google", "sincronização", "calendário", "F5"]
+      },
+      "today": {
+        "description": "Move instantaneamente a data selecionada para hoje.",
+        "label": "Ir para hoje",
+        "menu_path": "Navegação",
+        "tags": ["hoje", "data"]
+      },
+      "topbar": {
+        "description": "Ativa ou desativa a exibição da barra de menu superior.",
+        "label": "Alternar barra superior",
+        "menu_path": "Exibir > Barra superior",
+        "tags": ["barra de menu", "barra superior", "recuperação"]
+      },
+      "widget_mode": {
+        "description": "Abre o modo de painel somente widgets.",
+        "label": "Alternar modo widget",
+        "menu_path": "Exibir > Modo somente widgets",
+        "tags": ["widget", "painel"]
       }
     },
     "groups": {
-      "register": {
-        "label": "Registrar",
-        "description": "Inicie rapidamente um novo evento, rotina ou diretiva."
-      },
-      "navigate": {
-        "label": "Navegar",
-        "description": "Mova-se entre datas e seleções, ou chame recursos instantaneamente."
-      },
-      "mode": {
-        "label": "Modo",
-        "description": "Controla modos de trabalho como foco, ímã e bloqueio."
-      },
-      "view": {
-        "label": "Exibir",
-        "description": "Cobre barras de ferramentas, tela cheia e layout."
-      },
       "admin": {
-        "label": "Administração",
-        "description": "Abre telas de gerenciamento e ferramentas de limpeza automatizadas."
-      },
-      "window": {
-        "label": "Janela",
-        "description": "Ajusta o comportamento da janela, como posição, monitor e opacidade."
-      },
-      "system": {
-        "label": "Sistema",
-        "description": "Acesse ajuda e recursos de suporte do sistema."
+        "description": "Abre telas de gerenciamento e ferramentas de limpeza automatizadas.",
+        "label": "Administração"
       },
       "edit": {
-        "label": "Editar",
-        "description": "Limpa ou organiza a seleção atual."
+        "description": "Limpa ou organiza a seleção atual.",
+        "label": "Editar"
       },
       "emergency": {
-        "label": "Emergência",
-        "description": "Recupera à força de um estado de bloqueio inesperado."
+        "description": "Recupera à força de um estado de bloqueio inesperado.",
+        "label": "Emergência"
+      },
+      "mode": {
+        "description": "Controla modos de trabalho como foco, ímã e bloqueio.",
+        "label": "Modo"
+      },
+      "navigate": {
+        "description": "Mova-se entre datas e seleções, ou chame recursos instantaneamente.",
+        "label": "Navegar"
+      },
+      "register": {
+        "description": "Inicie rapidamente um novo evento, rotina ou diretiva.",
+        "label": "Registrar"
+      },
+      "system": {
+        "description": "Acesse ajuda e recursos de suporte do sistema.",
+        "label": "Sistema"
+      },
+      "view": {
+        "description": "Cobre barras de ferramentas, tela cheia e layout.",
+        "label": "Exibir"
+      },
+      "window": {
+        "description": "Ajusta o comportamento da janela, como posição, monitor e opacidade.",
+        "label": "Janela"
+      }
+    },
+    "hero": {
+      "quickstart": {
+        "desc": "Colocamos primeiro o que você usará logo após abrir o aplicativo, e o que você buscará ao pressionar F1.",
+        "title": "Os recursos mais usados primeiro"
+      },
+      "recovery": {
+        "desc": "Apenas as teclas mais necessárias quando o menu desaparece ou o estado de bloqueio se complica.",
+        "title": "Teclas para tentar primeiro quando travar"
+      },
+      "reference": {
+        "desc": "Cada atalho organizado por grupo funcional — ótimo para revisar sem pesquisar.",
+        "title": "Navegue por todos os atalhos por categoria"
+      },
+      "search": {
+        "desc": "Digite um nome de tecla ou recurso para ver imediatamente os atalhos correspondentes.",
+        "title": "Resultados da pesquisa"
+      },
+      "workflows": {
+        "desc": "Os atalhos são agrupados em torno de fluxos de trabalho reais como registrar, navegar e alternar exibições, para você encontrá-los pela situação mesmo sem saber o nome.",
+        "title": "Agrupado por situação para encontrar mais rápido"
+      }
+    },
+    "pages": {
+      "quickstart": {
+        "subtitle": "O que verificar primeiro e o que você mais usará",
+        "title": "Início rápido"
+      },
+      "recovery": {
+        "subtitle": "Teclas para bloqueio, menus ocultos e recuperação de janela",
+        "title": "Recuperação de tela"
+      },
+      "reference": {
+        "subtitle": "Lista completa por categoria",
+        "title": "Todos os atalhos"
+      },
+      "workflows": {
+        "subtitle": "Atalhos principais agrupados por situação",
+        "title": "Tarefas comuns"
       }
     },
     "priority": {
-      "topbar": {
-        "badge": "Recuperar barra de menu",
-        "note": "A primeira coisa a verificar quando a barra superior desaparece."
-      },
-      "magnet_mode": {
-        "badge": "Alternar ímã",
-        "note": "Alterna rapidamente se os painéis podem se mover e encaixar."
+      "force_unlock": {
+        "badge": "Recuperação de emergência",
+        "note": "Limpa à força um estado de bloqueio inesperado."
       },
       "lock_mode": {
         "badge": "Desbloquear",
         "note": "Alterne diretamente da tela principal, mesmo bloqueado."
       },
-      "force_unlock": {
-        "badge": "Recuperação de emergência",
-        "note": "Limpa à força um estado de bloqueio inesperado."
+      "magnet_mode": {
+        "badge": "Alternar ímã",
+        "note": "Alterna rapidamente se os painéis podem se mover e encaixar."
+      },
+      "topbar": {
+        "badge": "Recuperar barra de menu",
+        "note": "A primeira coisa a verificar quando a barra superior desaparece."
       }
     },
-    "pages": {
-      "quickstart": {
-        "title": "Início rápido",
-        "subtitle": "O que verificar primeiro e o que você mais usará"
-      },
-      "workflows": {
-        "title": "Tarefas comuns",
-        "subtitle": "Atalhos principais agrupados por situação"
-      },
-      "recovery": {
-        "title": "Recuperação de tela",
-        "subtitle": "Teclas para bloqueio, menus ocultos e recuperação de janela"
-      },
-      "reference": {
-        "title": "Todos os atalhos",
-        "subtitle": "Lista completa por categoria"
-      }
-    },
+    "search": "Pesquisar ajuda",
+    "search_hint": "Pesquise por nome de recurso, atalho ou local de menu.",
+    "title": "Central de ajuda do Air Calendar",
+    "topics": "Tópicos de ajuda",
     "workflows": {
-      "new": {
-        "title": "Criar algo novo",
-        "desc": "Ao iniciar rapidamente um evento ou tarefa"
-      },
-      "navigate": {
-        "title": "Mover e pesquisar",
-        "desc": "Ao mover entre datas ou pesquisar rapidamente um recurso"
+      "focus_lock": {
+        "desc": "Ao controlar o estado de foco ou bloqueio",
+        "title": "Foco e bloqueio"
       },
       "layout": {
-        "title": "Tela e layout",
-        "desc": "Ao mudar a aparência ou o arranjo dos painéis"
+        "desc": "Ao mudar a aparência ou o arranjo dos painéis",
+        "title": "Tela e layout"
       },
-      "focus_lock": {
-        "title": "Foco e bloqueio",
-        "desc": "Ao controlar o estado de foco ou bloqueio"
+      "navigate": {
+        "desc": "Ao mover entre datas ou pesquisar rapidamente um recurso",
+        "title": "Mover e pesquisar"
+      },
+      "new": {
+        "desc": "Ao iniciar rapidamente um evento ou tarefa",
+        "title": "Criar algo novo"
       },
       "window_tools": {
-        "title": "Janela e ferramentas de administração",
-        "desc": "Ao ajustar o estado da janela ou quando precisar de um recurso de gerenciamento"
+        "desc": "Ao ajustar o estado da janela ou quando precisar de um recurso de gerenciamento",
+        "title": "Janela e ferramentas de administração"
       }
-    },
-    "hero": {
-      "quickstart": {
-        "title": "Os recursos mais usados primeiro",
-        "desc": "Colocamos primeiro o que você usará logo após abrir o aplicativo, e o que você buscará ao pressionar F1."
-      },
-      "workflows": {
-        "title": "Agrupado por situação para encontrar mais rápido",
-        "desc": "Os atalhos são agrupados em torno de fluxos de trabalho reais como registrar, navegar e alternar exibições, para você encontrá-los pela situação mesmo sem saber o nome."
-      },
-      "recovery": {
-        "title": "Teclas para tentar primeiro quando travar",
-        "desc": "Apenas as teclas mais necessárias quando o menu desaparece ou o estado de bloqueio se complica."
-      },
-      "reference": {
-        "title": "Navegue por todos os atalhos por categoria",
-        "desc": "Cada atalho organizado por grupo funcional — ótimo para revisar sem pesquisar."
-      },
-      "search": {
-        "title": "Resultados da pesquisa",
-        "desc": "Digite um nome de tecla ou recurso para ver imediatamente os atalhos correspondentes."
-      }
-    },
-    "chrome": {
-      "eyebrow": "CENTRAL DE AJUDA F1",
-      "header_title": "A central de ajuda para encontrar atalhos e recursos rapidamente",
-      "header_subtitle": "Pesquise por nome de recurso, nome de tecla ou local de menu, e encontre rapidamente o que você mais usa.",
-      "badge_recovery": "4 teclas de recuperação principais",
-      "badge_total": "{count} atalhos no total",
-      "badge_search": "Pesquisa disponível",
-      "search_placeholder": "ex. bloqueio, widget, F11, Ctrl+Shift+1",
-      "search_examples": "Tente pesquisar: barra de menu, calendário, rotina, forçar desbloqueio",
-      "sidebar_title": "Navegar",
-      "sidebar_hint": "Escolha uma seção à esquerda, ou pesquise diretamente usando a caixa acima.",
-      "footer_hint": "A pesquisa funciona por nome de recurso, atalho ou local de menu.",
-      "quickstart_section_title": "Comece aqui",
-      "quickstart_section_desc": "Novos usuários podem começar aqui para se familiarizar rapidamente.",
-      "search_tips_title": "Dicas de pesquisa",
-      "search_tips_desc": "A ajuda também pode ser pesquisada por nomes de menu e palavras-chave de situação, não apenas atalhos.",
-      "tip_lock": "Quando um bloqueio não libera: tente `bloqueio`, `recuperação`, `forçar`",
-      "tip_layout": "Quando quiser mudar o layout: tente `layout`, `predefinição`, `Ctrl+Shift+1`",
-      "tip_widget": "Ao procurar recursos de widget: tente `widget`, `F12`",
-      "recovery_primary_title": "Teclas de recuperação para verificar primeiro",
-      "recovery_primary_desc": "As teclas a tentar primeiro quando algo dá errado.",
-      "recovery_secondary_title": "Teclas úteis para lembrar junto com elas",
-      "recovery_secondary_desc": "Atalhos frequentemente necessários juntos ao limpar o estado de bloqueio ou janela.",
-      "search_results_title": "Resultados da pesquisa",
-      "search_results_desc": "Digite um termo de pesquisa para ver os resultados aparecerem aqui imediatamente.",
-      "search_results_count": "{count} resultados para '{query}'",
-      "search_empty": "Nenhum resultado correspondente.\nTente uma palavra-chave mais curta, como um nome de recurso, tecla ou menu.",
-      "meta_menu_path": "Local do menu: {value}",
-      "meta_aliases": "Teclas adicionais: {value}",
-      "meta_group": "Categoria: {value}"
     }
   },
   "splash": {
@@ -2887,12 +2741,14 @@
     "editor_template": "Modelo de composição",
     "editor_title": "Criar estilo de widget",
     "editor_width": "Padrao width",
+    "empty_directive_filter": "No directives for this date.",
     "empty_panel": "Sem itens para esta data.",
     "empty_schedule": "Nao cronograma",
     "empty_schedule_filter": "Nao cronogramas for this date.",
     "empty_work": "Nao work itens",
     "empty_work_filter": "Nao work for this date.",
     "filter_all": "Todos",
+    "filter_directive": "Directives",
     "filter_schedule": "Cronograma",
     "filter_work": "Trabalhar",
     "filtered_count_chip": "{count}/{total}",
@@ -2911,6 +2767,7 @@
     "hide_calendar": "Hide Calendario",
     "hide_tray": "Hide to tray",
     "item_count_chip": "{count} itens",
+    "item_more_named": "Item actions: {name}",
     "layout_agenda_first": "Agenda Primeiro",
     "layout_dashboard": "Painel lado a lado",
     "layout_magazine": "Quadro de revista",
@@ -2934,6 +2791,7 @@
     "menu_priority": "Prioridade",
     "menu_realign": "Realinhar widgets",
     "menu_refresh": "Atualizar",
+    "menu_reopen": "Reopen",
     "menu_reserve_space": "Reserve espaço na tela",
     "month_calendar": "Choose a date from the month",
     "month_next": "Proximo Mes",
@@ -2976,6 +2834,8 @@
     "scale_tooltip_value": "Scale: {value}%",
     "schedule_title": "Cronograma",
     "schedule_type": "Cronograma",
+    "section_directive_no_deadline": "Directives without a deadline",
+    "section_directive_overdue": "Overdue directives",
     "section_directive_today": "Diretivas",
     "section_routine_today": "Rotina",
     "section_today": "Hoje",

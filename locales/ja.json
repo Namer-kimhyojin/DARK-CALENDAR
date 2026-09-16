@@ -123,15 +123,7 @@
     "selection_hint": "Ctrl+クリックで複数選択",
     "sync_hint": "Googleカレンダーの同期",
     "today": "今日",
-    "weekdays": [
-      "月",
-      "火",
-      "水",
-      "木",
-      "金",
-      "土",
-      "日"
-    ]
+    "weekdays": ["月", "火", "水", "木", "金", "土", "日"]
   },
   "checklist_mgr": {
     "btn_add_item": "アイテムの追加",
@@ -970,6 +962,7 @@
   },
   "focus_selector": {
     "auto_pick": "自動選択",
+    "auto_pick_no_tasks": "There are no tasks available for automatic selection.",
     "col_datetime": "日付/時刻",
     "col_duration": "間隔",
     "col_task": "タスク",
@@ -989,12 +982,15 @@
     "no_tasks": "このフィルターに一致するタスクはありません。",
     "pick_prompt": "集中するタスクを選択します。",
     "select_done": "選択",
+    "select_no_selection": "Select a task from the list first.",
     "settings_hint": "フォーカスモードの種類とポモドーロの動作をここで変更できます。",
     "settings_saved": "保存しました。次回フォーカスモード開始時から新しい値が使用されます。",
     "tab_logs": "フォーカスログ",
     "tab_settings": "設定",
     "tab_tasks": "タスクの選択",
-    "title": "重点タスクの選択"
+    "task_load_error": "Could not load tasks. Please try again.",
+    "title": "重点タスクの選択",
+    "unsaved_settings_confirm": "You have unsaved Pomodoro settings. Discard them and close?"
   },
   "gcal": {
     "auto_healed_msg": "{count}件の問題のある予定が自動的に修正され、カレンダーに同期されました。",
@@ -1535,13 +1531,7 @@
     "hint_record_jump": "Enterで項目を開く。Shift+Enterで日付に移動。",
     "hint_run_command": "Enterで選択したコマンドを実行します",
     "kw": {
-      "theme": [
-        "テーマ",
-        "ダーク",
-        "ライト",
-        "色",
-        "外観"
-      ]
+      "theme": ["テーマ", "ダーク", "ライト", "色", "外観"]
     },
     "nlp_preview": "新規: [{title}] - {date} {time}",
     "no_selection": "Enterキーで選択した結果を開きます",
@@ -1758,518 +1748,382 @@
     "yearly": "毎年"
   },
   "shortcut": {
-    "title": "Air Calendar ヘルプセンター",
-    "search": "ヘルプを検索",
-    "search_hint": "機能名、ショートカット、メニューの場所で検索します。",
-    "topics": "ヘルプトピック",
+    "chrome": {
+      "badge_recovery": "コア復旧キー4個",
+      "badge_search": "検索対応",
+      "badge_total": "ショートカット全{count}個",
+      "eyebrow": "F1 ヘルプセンター",
+      "footer_hint": "検索は機能名、ショートカット、メニューの場所で行えます。",
+      "header_subtitle": "機能名、キー名、メニューの場所で検索し、最もよく使うものをすばやく見つけましょう。",
+      "header_title": "ショートカットと機能をすばやく見つけるためのヘルプセンター",
+      "meta_aliases": "追加キー：{value}",
+      "meta_group": "分類：{value}",
+      "meta_menu_path": "メニューの場所：{value}",
+      "quickstart_section_desc": "新規ユーザーはここからすぐにコツをつかめます。",
+      "quickstart_section_title": "ここから始める",
+      "recovery_primary_desc": "問題が発生したときに最初に試すべきキー。",
+      "recovery_primary_title": "最初に確認する復旧キー",
+      "recovery_secondary_desc": "ロックやウィンドウの状態を整理する際に一緒に必要になることが多いショートカット。",
+      "recovery_secondary_title": "一緒に覚えておきたい便利なキー",
+      "search_empty": "一致する結果がありません。\n機能名、キー名、メニュー名などより短いキーワードで再検索してください。",
+      "search_examples": "検索例：メニューバー、カレンダー、ルーティン、強制ロック解除",
+      "search_placeholder": "例：ロック、ウィジェット、F11、Ctrl+Shift+1",
+      "search_results_count": "「{query}」の検索結果 {count}件",
+      "search_results_desc": "検索語を入力すると、ここにすぐ結果が表示されます。",
+      "search_results_title": "検索結果",
+      "search_tips_desc": "ヘルプはショートカットだけでなく、メニュー名や状況別キーワードでも検索できます。",
+      "search_tips_title": "検索のヒント",
+      "sidebar_hint": "左からセクションを選択するか、上のボックスで直接検索してください。",
+      "sidebar_title": "閲覧",
+      "tip_layout": "レイアウトを変更したいとき：「レイアウト」「プリセット」「Ctrl+Shift+1」で検索",
+      "tip_lock": "ロックが解除できないとき：「ロック」「復旧」「強制」で検索",
+      "tip_widget": "ウィジェット機能を探しているとき：「ウィジェット」「F12」で検索"
+    },
     "entries": {
-      "new_schedule": {
-        "label": "新しい予定を追加",
-        "description": "予定入力ウィンドウを直接開きます。",
-        "menu_path": "登録 > 新しい予定",
-        "tags": [
-          "予定",
-          "追加",
-          "登録"
-        ]
-      },
-      "new_routine": {
-        "label": "ルーティンを登録",
-        "description": "繰り返しのタスクルーティンをすばやく追加します。",
-        "menu_path": "登録 > ルーティン",
-        "tags": [
-          "ルーティン",
-          "タスク",
-          "繰り返し"
-        ]
-      },
-      "new_directive": {
-        "label": "指示事項を登録",
-        "description": "指示事項や協力事項を入力するウィンドウを開きます。",
-        "menu_path": "登録 > 指示事項",
-        "tags": [
-          "指示",
-          "協力"
-        ]
-      },
-      "checklist": {
-        "label": "チェックリストを管理",
-        "description": "チェックリストのテンプレートと項目構成を管理します。",
-        "menu_path": "タスク > チェックリスト管理",
-        "tags": [
-          "チェックリスト",
-          "テンプレート"
-        ]
-      },
-      "today": {
-        "label": "今日に移動",
-        "description": "選択中の日付を即座に今日に移動します。",
-        "menu_path": "ナビゲーション",
-        "tags": [
-          "今日",
-          "日付"
-        ]
-      },
-      "prev_day": {
-        "label": "前日",
-        "description": "現在の日付の1日前に移動します。",
-        "menu_path": "ナビゲーション",
-        "tags": [
-          "前",
-          "日付",
-          "左"
-        ]
-      },
-      "next_day": {
-        "label": "翌日",
-        "description": "現在の日付の1日後に移動します。",
-        "menu_path": "ナビゲーション",
-        "tags": [
-          "次",
-          "日付",
-          "右"
-        ]
-      },
-      "command_palette": {
-        "label": "コマンドパレット",
-        "description": "機能を瞬時に検索できるコマンド検索ボックスを開きます。",
-        "menu_path": "直接呼び出し",
-        "tags": [
-          "検索",
-          "コマンド",
-          "パレット"
-        ]
-      },
-      "focus_mode": {
-        "label": "集中モード切替",
-        "description": "集中モードのオン・オフを切り替えます。",
-        "menu_path": "表示 > 集中モード",
-        "tags": [
-          "集中",
-          "ポモドーロ"
-        ]
-      },
-      "focus_pause": {
-        "label": "集中を一時停止",
-        "description": "現在の集中セッションを一時停止・再開します。",
-        "menu_path": "集中モード",
-        "tags": [
-          "集中",
-          "一時停止"
-        ]
-      },
-      "lock_mode": {
-        "label": "ロックモード",
-        "description": "デスクトップロックモードのオン・オフを切り替えます。",
-        "menu_path": "表示 > ロックモード",
-        "tags": [
-          "ロック"
-        ]
-      },
-      "magnet_mode": {
-        "label": "マグネットモード",
-        "description": "パネルの整列とスナップを助けるマグネットモードを切り替えます。",
-        "menu_path": "表示 > マグネットモード",
-        "tags": [
-          "マグネット",
-          "パネル"
-        ]
-      },
       "away_lock": {
-        "label": "離席ロック",
         "description": "離席ロックモードを即座に開始します。",
+        "label": "離席ロック",
         "menu_path": "表示 > 離席ロック",
-        "tags": [
-          "離席",
-          "ロック"
-        ]
-      },
-      "topbar": {
-        "label": "トップバー切替",
-        "description": "上部メニューバーの表示・非表示を切り替えます。",
-        "menu_path": "表示 > トップバー",
-        "tags": [
-          "メニューバー",
-          "トップバー",
-          "復旧"
-        ]
+        "tags": ["離席", "ロック"]
       },
       "cal_toolbar": {
-        "label": "カレンダーツールバー切替",
         "description": "カレンダーツールバーを非表示・再表示します。",
+        "label": "カレンダーツールバー切替",
         "menu_path": "表示 > カレンダーツールバー",
-        "tags": [
-          "カレンダー",
-          "ツールバー"
-        ]
-      },
-      "fullscreen": {
-        "label": "全画面表示切替",
-        "description": "全画面表示のオン・オフを切り替えます。",
-        "menu_path": "表示 > 全画面表示",
-        "tags": [
-          "全画面"
-        ]
-      },
-      "save_layout": {
-        "label": "現在のレイアウトを保存",
-        "description": "現在のパネル配置をプリセットとして保存します。",
-        "menu_path": "表示 > レイアウトプリセット > 保存",
-        "tags": [
-          "レイアウト",
-          "プリセット",
-          "保存"
-        ]
-      },
-      "layout_1": {
-        "label": "レイアウトプリセット1",
-        "description": "デフォルトの4パネルドッキングレイアウトを適用します。",
-        "menu_path": "表示 > レイアウトプリセット",
-        "tags": [
-          "レイアウト",
-          "プリセット",
-          "ドッキング",
-          "1"
-        ]
-      },
-      "layout_2": {
-        "label": "レイアウトプリセット2",
-        "description": "カレンダー中心のレイアウトを適用します。",
-        "menu_path": "表示 > レイアウトプリセット",
-        "tags": [
-          "レイアウト",
-          "カレンダー",
-          "2"
-        ]
-      },
-      "layout_3": {
-        "label": "レイアウトプリセット3",
-        "description": "タスク中心のレイアウトを適用します。",
-        "menu_path": "表示 > レイアウトプリセット",
-        "tags": [
-          "レイアウト",
-          "タスク",
-          "3"
-        ]
-      },
-      "layout_4": {
-        "label": "レイアウトプリセット4",
-        "description": "分割タブレイアウトを適用します。",
-        "menu_path": "表示 > レイアウトプリセット",
-        "tags": [
-          "レイアウト",
-          "タブ",
-          "分割",
-          "4"
-        ]
-      },
-      "layout_5": {
-        "label": "レイアウトプリセット5",
-        "description": "完全に分離したフローティングレイアウトを適用します。",
-        "menu_path": "表示 > レイアウトプリセット",
-        "tags": [
-          "レイアウト",
-          "分離",
-          "フローティング",
-          "5"
-        ]
+        "tags": ["カレンダー", "ツールバー"]
       },
       "calendar_print": {
-        "label": "カレンダーを印刷",
         "description": "現在または選択した期間のカレンダーをプレビューして印刷します。",
+        "label": "カレンダーを印刷",
         "menu_path": "カレンダー > オプション > 印刷",
-        "tags": [
-          "印刷",
-          "プリンター",
-          "PDF"
-        ]
+        "tags": ["印刷", "プリンター", "PDF"]
       },
-      "sync_gcal": {
-        "label": "Googleカレンダー同期",
-        "description": "Googleカレンダーとの同期を即座に開始します。",
-        "menu_path": "システム > カレンダーと同期",
-        "tags": [
-          "google",
-          "同期",
-          "カレンダー",
-          "F5"
-        ]
-      },
-      "routine_mgr": {
-        "label": "ルーティンマネージャー",
-        "description": "ルーティンマネージャータブを直接開きます。",
-        "menu_path": "タスク > ルーティン概要",
-        "tags": [
-          "ルーティン",
-          "管理"
-        ]
+      "checklist": {
+        "description": "チェックリストのテンプレートと項目構成を管理します。",
+        "label": "チェックリストを管理",
+        "menu_path": "タスク > チェックリスト管理",
+        "tags": ["チェックリスト", "テンプレート"]
       },
       "color_assign": {
-        "label": "自動カラー割り当て",
         "description": "選択した項目に自動的に色を割り当てます。",
+        "label": "自動カラー割り当て",
         "menu_path": "タスク > 自動カラー割り当て",
-        "tags": [
-          "色",
-          "タグ",
-          "自動"
-        ]
+        "tags": ["色", "タグ", "自動"]
       },
-      "show_hide": {
-        "label": "ウィンドウ表示/非表示",
-        "description": "メインウィンドウを非表示にするか、再表示します。",
-        "menu_path": "ウィンドウ制御",
-        "tags": [
-          "ウィンドウ",
-          "非表示",
-          "表示",
-          "オーバーレイ"
-        ]
-      },
-      "widget_mode": {
-        "label": "ウィジェットモード切替",
-        "description": "ウィジェットのみのパネルモードを開きます。",
-        "menu_path": "表示 > ウィジェット専用モード",
-        "tags": [
-          "ウィジェット",
-          "パネル"
-        ]
-      },
-      "restore_pos": {
-        "label": "ウィンドウ位置を復元",
-        "description": "ウィンドウを安全な画面位置に復元します。",
-        "menu_path": "ウィンドウ制御",
-        "tags": [
-          "ウィンドウ",
-          "復元",
-          "位置"
-        ]
-      },
-      "opacity_up": {
-        "label": "不透明度を上げる",
-        "description": "ウィンドウの不透明度を上げます。",
-        "menu_path": "ウィンドウ制御",
-        "tags": [
-          "不透明度",
-          "明るく"
-        ]
-      },
-      "opacity_down": {
-        "label": "不透明度を下げる",
-        "description": "ウィンドウの不透明度を下げます。",
-        "menu_path": "ウィンドウ制御",
-        "tags": [
-          "不透明度",
-          "暗く"
-        ]
-      },
-      "monitor_left": {
-        "label": "前のモニターへ移動",
-        "description": "ウィンドウを別のモニターに移動します。",
-        "menu_path": "ウィンドウ制御",
-        "tags": [
-          "モニター",
-          "ディスプレイ",
-          "左"
-        ]
-      },
-      "monitor_right": {
-        "label": "次のモニターへ移動",
-        "description": "ウィンドウを別のモニターに移動します。",
-        "menu_path": "ウィンドウ制御",
-        "tags": [
-          "モニター",
-          "ディスプレイ",
-          "右"
-        ]
-      },
-      "help": {
-        "label": "ショートカットガイド",
-        "description": "ヘルプセンターを開きます。",
-        "menu_path": "システム > ショートカットガイド",
-        "tags": [
-          "ヘルプ",
-          "F1"
-        ]
+      "command_palette": {
+        "description": "機能を瞬時に検索できるコマンド検索ボックスを開きます。",
+        "label": "コマンドパレット",
+        "menu_path": "直接呼び出し",
+        "tags": ["検索", "コマンド", "パレット"]
       },
       "delete": {
-        "label": "選択項目を削除",
         "description": "現在選択している予定または項目を削除します。",
+        "label": "選択項目を削除",
         "menu_path": "選択状態",
-        "tags": [
-          "削除",
-          "消去"
-        ]
+        "tags": ["削除", "消去"]
       },
       "escape": {
-        "label": "選択を解除",
         "description": "現在の選択またはフォーカスを解除します。",
+        "label": "選択を解除",
         "menu_path": "選択状態",
-        "tags": [
-          "選択解除",
-          "キャンセル",
-          "エスケープ"
-        ]
+        "tags": ["選択解除", "キャンセル", "エスケープ"]
+      },
+      "focus_mode": {
+        "description": "集中モードのオン・オフを切り替えます。",
+        "label": "集中モード切替",
+        "menu_path": "表示 > 集中モード",
+        "tags": ["集中", "ポモドーロ"]
+      },
+      "focus_pause": {
+        "description": "現在の集中セッションを一時停止・再開します。",
+        "label": "集中を一時停止",
+        "menu_path": "集中モード",
+        "tags": ["集中", "一時停止"]
       },
       "force_unlock": {
-        "label": "強制ロック解除",
         "description": "予期しないロック状態を強制的に解除します。",
+        "label": "強制ロック解除",
         "menu_path": "緊急復旧",
-        "tags": [
-          "強制",
-          "ロック解除",
-          "復旧",
-          "緊急"
-        ]
+        "tags": ["強制", "ロック解除", "復旧", "緊急"]
+      },
+      "fullscreen": {
+        "description": "全画面表示のオン・オフを切り替えます。",
+        "label": "全画面表示切替",
+        "menu_path": "表示 > 全画面表示",
+        "tags": ["全画面"]
+      },
+      "help": {
+        "description": "ヘルプセンターを開きます。",
+        "label": "ショートカットガイド",
+        "menu_path": "システム > ショートカットガイド",
+        "tags": ["ヘルプ", "F1"]
+      },
+      "layout_1": {
+        "description": "デフォルトの4パネルドッキングレイアウトを適用します。",
+        "label": "レイアウトプリセット1",
+        "menu_path": "表示 > レイアウトプリセット",
+        "tags": ["レイアウト", "プリセット", "ドッキング", "1"]
+      },
+      "layout_2": {
+        "description": "カレンダー中心のレイアウトを適用します。",
+        "label": "レイアウトプリセット2",
+        "menu_path": "表示 > レイアウトプリセット",
+        "tags": ["レイアウト", "カレンダー", "2"]
+      },
+      "layout_3": {
+        "description": "タスク中心のレイアウトを適用します。",
+        "label": "レイアウトプリセット3",
+        "menu_path": "表示 > レイアウトプリセット",
+        "tags": ["レイアウト", "タスク", "3"]
+      },
+      "layout_4": {
+        "description": "分割タブレイアウトを適用します。",
+        "label": "レイアウトプリセット4",
+        "menu_path": "表示 > レイアウトプリセット",
+        "tags": ["レイアウト", "タブ", "分割", "4"]
+      },
+      "layout_5": {
+        "description": "完全に分離したフローティングレイアウトを適用します。",
+        "label": "レイアウトプリセット5",
+        "menu_path": "表示 > レイアウトプリセット",
+        "tags": ["レイアウト", "分離", "フローティング", "5"]
+      },
+      "lock_mode": {
+        "description": "デスクトップロックモードのオン・オフを切り替えます。",
+        "label": "ロックモード",
+        "menu_path": "表示 > ロックモード",
+        "tags": ["ロック"]
+      },
+      "magnet_mode": {
+        "description": "パネルの整列とスナップを助けるマグネットモードを切り替えます。",
+        "label": "マグネットモード",
+        "menu_path": "表示 > マグネットモード",
+        "tags": ["マグネット", "パネル"]
+      },
+      "monitor_left": {
+        "description": "ウィンドウを別のモニターに移動します。",
+        "label": "前のモニターへ移動",
+        "menu_path": "ウィンドウ制御",
+        "tags": ["モニター", "ディスプレイ", "左"]
+      },
+      "monitor_right": {
+        "description": "ウィンドウを別のモニターに移動します。",
+        "label": "次のモニターへ移動",
+        "menu_path": "ウィンドウ制御",
+        "tags": ["モニター", "ディスプレイ", "右"]
+      },
+      "new_directive": {
+        "description": "指示事項や協力事項を入力するウィンドウを開きます。",
+        "label": "指示事項を登録",
+        "menu_path": "登録 > 指示事項",
+        "tags": ["指示", "協力"]
+      },
+      "new_routine": {
+        "description": "繰り返しのタスクルーティンをすばやく追加します。",
+        "label": "ルーティンを登録",
+        "menu_path": "登録 > ルーティン",
+        "tags": ["ルーティン", "タスク", "繰り返し"]
+      },
+      "new_schedule": {
+        "description": "予定入力ウィンドウを直接開きます。",
+        "label": "新しい予定を追加",
+        "menu_path": "登録 > 新しい予定",
+        "tags": ["予定", "追加", "登録"]
+      },
+      "next_day": {
+        "description": "現在の日付の1日後に移動します。",
+        "label": "翌日",
+        "menu_path": "ナビゲーション",
+        "tags": ["次", "日付", "右"]
+      },
+      "opacity_down": {
+        "description": "ウィンドウの不透明度を下げます。",
+        "label": "不透明度を下げる",
+        "menu_path": "ウィンドウ制御",
+        "tags": ["不透明度", "暗く"]
+      },
+      "opacity_up": {
+        "description": "ウィンドウの不透明度を上げます。",
+        "label": "不透明度を上げる",
+        "menu_path": "ウィンドウ制御",
+        "tags": ["不透明度", "明るく"]
+      },
+      "prev_day": {
+        "description": "現在の日付の1日前に移動します。",
+        "label": "前日",
+        "menu_path": "ナビゲーション",
+        "tags": ["前", "日付", "左"]
+      },
+      "restore_pos": {
+        "description": "ウィンドウを安全な画面位置に復元します。",
+        "label": "ウィンドウ位置を復元",
+        "menu_path": "ウィンドウ制御",
+        "tags": ["ウィンドウ", "復元", "位置"]
+      },
+      "routine_mgr": {
+        "description": "ルーティンマネージャータブを直接開きます。",
+        "label": "ルーティンマネージャー",
+        "menu_path": "タスク > ルーティン概要",
+        "tags": ["ルーティン", "管理"]
+      },
+      "save_layout": {
+        "description": "現在のパネル配置をプリセットとして保存します。",
+        "label": "現在のレイアウトを保存",
+        "menu_path": "表示 > レイアウトプリセット > 保存",
+        "tags": ["レイアウト", "プリセット", "保存"]
+      },
+      "show_hide": {
+        "description": "メインウィンドウを非表示にするか、再表示します。",
+        "label": "ウィンドウ表示/非表示",
+        "menu_path": "ウィンドウ制御",
+        "tags": ["ウィンドウ", "非表示", "表示", "オーバーレイ"]
+      },
+      "sync_gcal": {
+        "description": "Googleカレンダーとの同期を即座に開始します。",
+        "label": "Googleカレンダー同期",
+        "menu_path": "システム > カレンダーと同期",
+        "tags": ["google", "同期", "カレンダー", "F5"]
+      },
+      "today": {
+        "description": "選択中の日付を即座に今日に移動します。",
+        "label": "今日に移動",
+        "menu_path": "ナビゲーション",
+        "tags": ["今日", "日付"]
+      },
+      "topbar": {
+        "description": "上部メニューバーの表示・非表示を切り替えます。",
+        "label": "トップバー切替",
+        "menu_path": "表示 > トップバー",
+        "tags": ["メニューバー", "トップバー", "復旧"]
+      },
+      "widget_mode": {
+        "description": "ウィジェットのみのパネルモードを開きます。",
+        "label": "ウィジェットモード切替",
+        "menu_path": "表示 > ウィジェット専用モード",
+        "tags": ["ウィジェット", "パネル"]
       }
     },
     "groups": {
-      "register": {
-        "label": "登録",
-        "description": "新しい予定、ルーティン、指示事項をすばやく開始します。"
-      },
-      "navigate": {
-        "label": "ナビゲーション",
-        "description": "日付や選択を移動したり、機能を即座に呼び出したりします。"
-      },
-      "mode": {
-        "label": "モード",
-        "description": "集中、マグネット、ロックなどの作業モードを制御します。"
-      },
-      "view": {
-        "label": "表示",
-        "description": "ツールバー、全画面表示、レイアウトに関するものです。"
-      },
       "admin": {
-        "label": "管理",
-        "description": "管理画面と自動整理ツールを開きます。"
-      },
-      "window": {
-        "label": "ウィンドウ",
-        "description": "位置、モニター、不透明度などのウィンドウの動作を調整します。"
-      },
-      "system": {
-        "label": "システム",
-        "description": "ヘルプとシステムサポート機能にアクセスします。"
+        "description": "管理画面と自動整理ツールを開きます。",
+        "label": "管理"
       },
       "edit": {
-        "label": "編集",
-        "description": "現在の選択を解除または整理します。"
+        "description": "現在の選択を解除または整理します。",
+        "label": "編集"
       },
       "emergency": {
-        "label": "緊急",
-        "description": "予期しないロック状態から強制的に復旧します。"
+        "description": "予期しないロック状態から強制的に復旧します。",
+        "label": "緊急"
+      },
+      "mode": {
+        "description": "集中、マグネット、ロックなどの作業モードを制御します。",
+        "label": "モード"
+      },
+      "navigate": {
+        "description": "日付や選択を移動したり、機能を即座に呼び出したりします。",
+        "label": "ナビゲーション"
+      },
+      "register": {
+        "description": "新しい予定、ルーティン、指示事項をすばやく開始します。",
+        "label": "登録"
+      },
+      "system": {
+        "description": "ヘルプとシステムサポート機能にアクセスします。",
+        "label": "システム"
+      },
+      "view": {
+        "description": "ツールバー、全画面表示、レイアウトに関するものです。",
+        "label": "表示"
+      },
+      "window": {
+        "description": "位置、モニター、不透明度などのウィンドウの動作を調整します。",
+        "label": "ウィンドウ"
+      }
+    },
+    "hero": {
+      "quickstart": {
+        "desc": "アプリを開いた直後に使うもの、F1を押したときに探すものを一番上に配置しています。",
+        "title": "よく使う機能を最初に"
+      },
+      "recovery": {
+        "desc": "メニューが消えたりロック状態がややこしくなったりしたときに最も必要なキーだけを掲載しています。",
+        "title": "困ったときに最初に試すキー"
+      },
+      "reference": {
+        "desc": "すべてのショートカットを機能グループごとに整理。検索せずに一覧を見るのに適しています。",
+        "title": "カテゴリ別にすべてのショートカットを閲覧"
+      },
+      "search": {
+        "desc": "キー名や機能名を入力すると、一致するショートカットがすぐに表示されます。",
+        "title": "検索結果"
+      },
+      "workflows": {
+        "desc": "ショートカットは登録、移動、表示切替といった実際のワークフローに沿ってグループ化されているため、名前を知らなくても状況で見つけられます。",
+        "title": "状況別にグループ化してすばやく発見"
+      }
+    },
+    "pages": {
+      "quickstart": {
+        "subtitle": "最初に確認すべきこと、最もよく使うもの",
+        "title": "クイックスタート"
+      },
+      "recovery": {
+        "subtitle": "ロック、隠れたメニュー、ウィンドウ復旧のためのキー",
+        "title": "画面復旧"
+      },
+      "reference": {
+        "subtitle": "カテゴリ別の完全なリスト",
+        "title": "すべてのショートカット"
+      },
+      "workflows": {
+        "subtitle": "状況別にグループ化された主要なショートカット",
+        "title": "よくある作業"
       }
     },
     "priority": {
-      "topbar": {
-        "badge": "メニューバー復旧",
-        "note": "トップバーが消えたときに最初に確認すること。"
-      },
-      "magnet_mode": {
-        "badge": "マグネット切替",
-        "note": "パネルが動いてスナップするかどうかをすばやく切り替えます。"
+      "force_unlock": {
+        "badge": "緊急復旧",
+        "note": "予期しないロック状態を強制的に解除します。"
       },
       "lock_mode": {
         "badge": "ロック解除",
         "note": "ロック中でもメイン画面から直接切り替えられます。"
       },
-      "force_unlock": {
-        "badge": "緊急復旧",
-        "note": "予期しないロック状態を強制的に解除します。"
+      "magnet_mode": {
+        "badge": "マグネット切替",
+        "note": "パネルが動いてスナップするかどうかをすばやく切り替えます。"
+      },
+      "topbar": {
+        "badge": "メニューバー復旧",
+        "note": "トップバーが消えたときに最初に確認すること。"
       }
     },
-    "pages": {
-      "quickstart": {
-        "title": "クイックスタート",
-        "subtitle": "最初に確認すべきこと、最もよく使うもの"
-      },
-      "workflows": {
-        "title": "よくある作業",
-        "subtitle": "状況別にグループ化された主要なショートカット"
-      },
-      "recovery": {
-        "title": "画面復旧",
-        "subtitle": "ロック、隠れたメニュー、ウィンドウ復旧のためのキー"
-      },
-      "reference": {
-        "title": "すべてのショートカット",
-        "subtitle": "カテゴリ別の完全なリスト"
-      }
-    },
+    "search": "ヘルプを検索",
+    "search_hint": "機能名、ショートカット、メニューの場所で検索します。",
+    "title": "Air Calendar ヘルプセンター",
+    "topics": "ヘルプトピック",
     "workflows": {
-      "new": {
-        "title": "新しいものを作成",
-        "desc": "予定やタスクをすばやく開始するとき"
-      },
-      "navigate": {
-        "title": "移動と検索",
-        "desc": "日付間を移動したり機能をすばやく検索したりするとき"
+      "focus_lock": {
+        "desc": "集中状態やロック状態を制御するとき",
+        "title": "集中とロック"
       },
       "layout": {
-        "title": "画面とレイアウト",
-        "desc": "表示方法やパネル配置を変更するとき"
+        "desc": "表示方法やパネル配置を変更するとき",
+        "title": "画面とレイアウト"
       },
-      "focus_lock": {
-        "title": "集中とロック",
-        "desc": "集中状態やロック状態を制御するとき"
+      "navigate": {
+        "desc": "日付間を移動したり機能をすばやく検索したりするとき",
+        "title": "移動と検索"
+      },
+      "new": {
+        "desc": "予定やタスクをすばやく開始するとき",
+        "title": "新しいものを作成"
       },
       "window_tools": {
-        "title": "ウィンドウと管理ツール",
-        "desc": "ウィンドウ状態を調整するときや管理機能が必要なとき"
+        "desc": "ウィンドウ状態を調整するときや管理機能が必要なとき",
+        "title": "ウィンドウと管理ツール"
       }
-    },
-    "hero": {
-      "quickstart": {
-        "title": "よく使う機能を最初に",
-        "desc": "アプリを開いた直後に使うもの、F1を押したときに探すものを一番上に配置しています。"
-      },
-      "workflows": {
-        "title": "状況別にグループ化してすばやく発見",
-        "desc": "ショートカットは登録、移動、表示切替といった実際のワークフローに沿ってグループ化されているため、名前を知らなくても状況で見つけられます。"
-      },
-      "recovery": {
-        "title": "困ったときに最初に試すキー",
-        "desc": "メニューが消えたりロック状態がややこしくなったりしたときに最も必要なキーだけを掲載しています。"
-      },
-      "reference": {
-        "title": "カテゴリ別にすべてのショートカットを閲覧",
-        "desc": "すべてのショートカットを機能グループごとに整理。検索せずに一覧を見るのに適しています。"
-      },
-      "search": {
-        "title": "検索結果",
-        "desc": "キー名や機能名を入力すると、一致するショートカットがすぐに表示されます。"
-      }
-    },
-    "chrome": {
-      "eyebrow": "F1 ヘルプセンター",
-      "header_title": "ショートカットと機能をすばやく見つけるためのヘルプセンター",
-      "header_subtitle": "機能名、キー名、メニューの場所で検索し、最もよく使うものをすばやく見つけましょう。",
-      "badge_recovery": "コア復旧キー4個",
-      "badge_total": "ショートカット全{count}個",
-      "badge_search": "検索対応",
-      "search_placeholder": "例：ロック、ウィジェット、F11、Ctrl+Shift+1",
-      "search_examples": "検索例：メニューバー、カレンダー、ルーティン、強制ロック解除",
-      "sidebar_title": "閲覧",
-      "sidebar_hint": "左からセクションを選択するか、上のボックスで直接検索してください。",
-      "footer_hint": "検索は機能名、ショートカット、メニューの場所で行えます。",
-      "quickstart_section_title": "ここから始める",
-      "quickstart_section_desc": "新規ユーザーはここからすぐにコツをつかめます。",
-      "search_tips_title": "検索のヒント",
-      "search_tips_desc": "ヘルプはショートカットだけでなく、メニュー名や状況別キーワードでも検索できます。",
-      "tip_lock": "ロックが解除できないとき：「ロック」「復旧」「強制」で検索",
-      "tip_layout": "レイアウトを変更したいとき：「レイアウト」「プリセット」「Ctrl+Shift+1」で検索",
-      "tip_widget": "ウィジェット機能を探しているとき：「ウィジェット」「F12」で検索",
-      "recovery_primary_title": "最初に確認する復旧キー",
-      "recovery_primary_desc": "問題が発生したときに最初に試すべきキー。",
-      "recovery_secondary_title": "一緒に覚えておきたい便利なキー",
-      "recovery_secondary_desc": "ロックやウィンドウの状態を整理する際に一緒に必要になることが多いショートカット。",
-      "search_results_title": "検索結果",
-      "search_results_desc": "検索語を入力すると、ここにすぐ結果が表示されます。",
-      "search_results_count": "「{query}」の検索結果 {count}件",
-      "search_empty": "一致する結果がありません。\n機能名、キー名、メニュー名などより短いキーワードで再検索してください。",
-      "meta_menu_path": "メニューの場所：{value}",
-      "meta_aliases": "追加キー：{value}",
-      "meta_group": "分類：{value}"
     }
   },
   "splash": {
@@ -2887,12 +2741,14 @@
     "editor_template": "構成テンプレート",
     "editor_title": "ウィジェットスタイルを作成",
     "editor_width": "デフォルトの幅",
+    "empty_directive_filter": "No directives for this date.",
     "empty_panel": "この日付のアイテムはありません。",
     "empty_schedule": "予定なし",
     "empty_schedule_filter": "この日の予定はありません。",
     "empty_work": "作業項目なし",
     "empty_work_filter": "この日の作業はありません。",
     "filter_all": "すべて",
+    "filter_directive": "Directives",
     "filter_schedule": "スケジュール",
     "filter_work": "作業",
     "filtered_count_chip": "{count}/{total}",
@@ -2911,6 +2767,7 @@
     "hide_calendar": "カレンダーを非表示",
     "hide_tray": "Hide to tray",
     "item_count_chip": "{count}件",
+    "item_more_named": "Item actions: {name}",
     "layout_agenda_first": "予定を優先",
     "layout_dashboard": "横並びダッシュボード",
     "layout_magazine": "マガジンボード",
@@ -2934,6 +2791,7 @@
     "menu_priority": "優先度",
     "menu_realign": "ウィジェットを整列",
     "menu_refresh": "更新",
+    "menu_reopen": "Reopen",
     "menu_reserve_space": "画面スペースを確保",
     "month_calendar": "Choose a date from the month",
     "month_next": "翌月",
@@ -2976,6 +2834,8 @@
     "scale_tooltip_value": "スケール: {value}%",
     "schedule_title": "スケジュール",
     "schedule_type": "スケジュール",
+    "section_directive_no_deadline": "Directives without a deadline",
+    "section_directive_overdue": "Overdue directives",
     "section_directive_today": "ディレクティブ",
     "section_routine_today": "ルーティン",
     "section_today": "今日",

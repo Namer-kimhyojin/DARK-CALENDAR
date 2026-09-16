@@ -123,15 +123,7 @@
     "selection_hint": "Ctrl+Clic pour sélectionner",
     "sync_hint": "Sync Google",
     "today": "Auj.",
-    "weekdays": [
-      "Lun",
-      "Mar",
-      "Mer",
-      "Jeu",
-      "Ven",
-      "Sam",
-      "Dim"
-    ]
+    "weekdays": ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
   },
   "checklist_mgr": {
     "btn_add_item": "Ajouter",
@@ -970,6 +962,7 @@
   },
   "focus_selector": {
     "auto_pick": "Auto",
+    "auto_pick_no_tasks": "There are no tasks available for automatic selection.",
     "col_datetime": "Date/Heure",
     "col_duration": "Durée",
     "col_task": "Tâche",
@@ -989,12 +982,15 @@
     "no_tasks": "Aucun.",
     "pick_prompt": "Choisissez.",
     "select_done": "Choisir",
+    "select_no_selection": "Select a task from the list first.",
     "settings_hint": "Vous pouvez modifier le type de mode Focus et le comportement de Pomodoro ici.",
     "settings_saved": "Sauvé. Les nouvelles valeurs seront utilisées au prochain démarrage du mode Focus.",
     "tab_logs": "Journaux",
     "tab_settings": "Paramètres",
     "tab_tasks": "Tâches",
-    "title": "Choix Tâche"
+    "task_load_error": "Could not load tasks. Please try again.",
+    "title": "Choix Tâche",
+    "unsaved_settings_confirm": "You have unsaved Pomodoro settings. Discard them and close?"
   },
   "gcal": {
     "auto_healed_msg": "{count} événements problématiques ont été automatiquement corrigés et synchronisés avec votre calendrier.",
@@ -1535,13 +1531,7 @@
     "hint_record_jump": "Entrée ouvre l'élément. Maj+Entrée va à sa date.",
     "hint_run_command": "Entrée exécute la commande sélectionnée",
     "kw": {
-      "theme": [
-        "theme",
-        "dark",
-        "light",
-        "color",
-        "appearance"
-      ]
+      "theme": ["theme", "dark", "light", "color", "appearance"]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Appuyez sur Entrée pour ouvrir le résultat sélectionné",
@@ -1758,518 +1748,382 @@
     "yearly": "Annuel"
   },
   "shortcut": {
-    "title": "Centre d'aide Air Calendar",
-    "search": "Rechercher dans l'aide",
-    "search_hint": "Recherchez par nom de fonction, raccourci ou emplacement de menu.",
-    "topics": "Sujets d'aide",
+    "chrome": {
+      "badge_recovery": "4 touches de récupération essentielles",
+      "badge_search": "Recherche prise en charge",
+      "badge_total": "{count} raccourcis au total",
+      "eyebrow": "CENTRE D'AIDE F1",
+      "footer_hint": "La recherche fonctionne par nom de fonction, raccourci ou emplacement de menu.",
+      "header_subtitle": "Recherchez par nom de fonction, nom de touche ou emplacement de menu, et trouvez rapidement ce que vous utilisez le plus.",
+      "header_title": "Le centre d'aide pour trouver rapidement raccourcis et fonctions",
+      "meta_aliases": "Touches supplémentaires : {value}",
+      "meta_group": "Catégorie : {value}",
+      "meta_menu_path": "Emplacement du menu : {value}",
+      "quickstart_section_desc": "Les nouveaux utilisateurs peuvent commencer ici pour se familiariser rapidement.",
+      "quickstart_section_title": "Commencez ici",
+      "recovery_primary_desc": "Les touches à essayer en premier quand quelque chose ne va pas.",
+      "recovery_primary_title": "Touches de récupération à vérifier en premier",
+      "recovery_secondary_desc": "Raccourcis souvent nécessaires ensemble pour nettoyer l'état de verrouillage ou de fenêtre.",
+      "recovery_secondary_title": "Touches utiles à retenir en complément",
+      "search_empty": "Aucun résultat correspondant.\nEssayez un mot-clé plus court, comme un nom de fonction, de touche ou de menu.",
+      "search_examples": "Essayez de rechercher : barre de menu, calendrier, routine, forcer le déverrouillage",
+      "search_placeholder": "ex. verrouillage, widget, F11, Ctrl+Maj+1",
+      "search_results_count": "{count} résultats pour '{query}'",
+      "search_results_desc": "Tapez un terme de recherche pour voir les résultats apparaître ici immédiatement.",
+      "search_results_title": "Résultats de recherche",
+      "search_tips_desc": "L'aide est également consultable par noms de menu et mots-clés de situation, pas seulement par raccourcis.",
+      "search_tips_title": "Conseils de recherche",
+      "sidebar_hint": "Choisissez une section à gauche, ou recherchez directement avec la zone ci-dessus.",
+      "sidebar_title": "Parcourir",
+      "tip_layout": "Quand vous voulez changer la disposition : essayez `disposition`, `préréglage`, `Ctrl+Maj+1`",
+      "tip_lock": "Quand un verrouillage ne se libère pas : essayez `verrouillage`, `récupération`, `forcer`",
+      "tip_widget": "Pour rechercher des fonctions de widget : essayez `widget`, `F12`"
+    },
     "entries": {
-      "new_schedule": {
-        "label": "Ajouter un nouvel événement",
-        "description": "Ouvre directement la fenêtre de saisie d'événement.",
-        "menu_path": "Enregistrer > Nouvel événement",
-        "tags": [
-          "événement",
-          "ajouter",
-          "enregistrer"
-        ]
-      },
-      "new_routine": {
-        "label": "Enregistrer une routine",
-        "description": "Ajoute rapidement une routine de tâche récurrente.",
-        "menu_path": "Enregistrer > Routine",
-        "tags": [
-          "routine",
-          "tâche",
-          "récurrent"
-        ]
-      },
-      "new_directive": {
-        "label": "Enregistrer une directive",
-        "description": "Ouvre la fenêtre de saisie d'une directive ou d'un élément de coopération.",
-        "menu_path": "Enregistrer > Directive",
-        "tags": [
-          "directive",
-          "coopération"
-        ]
-      },
-      "checklist": {
-        "label": "Gérer la liste de contrôle",
-        "description": "Gère les modèles et la structure des éléments de la liste de contrôle.",
-        "menu_path": "Tâches > Gérer la liste de contrôle",
-        "tags": [
-          "liste de contrôle",
-          "modèle"
-        ]
-      },
-      "today": {
-        "label": "Aller à aujourd'hui",
-        "description": "Déplace instantanément la date sélectionnée à aujourd'hui.",
-        "menu_path": "Navigation",
-        "tags": [
-          "aujourd'hui",
-          "date"
-        ]
-      },
-      "prev_day": {
-        "label": "Jour précédent",
-        "description": "Se déplace un jour avant la date actuelle.",
-        "menu_path": "Navigation",
-        "tags": [
-          "précédent",
-          "date",
-          "gauche"
-        ]
-      },
-      "next_day": {
-        "label": "Jour suivant",
-        "description": "Se déplace un jour après la date actuelle.",
-        "menu_path": "Navigation",
-        "tags": [
-          "suivant",
-          "date",
-          "droite"
-        ]
-      },
-      "command_palette": {
-        "label": "Palette de commandes",
-        "description": "Ouvre la zone de recherche de commandes pour trouver une fonction instantanément.",
-        "menu_path": "Appel direct",
-        "tags": [
-          "recherche",
-          "commande",
-          "palette"
-        ]
-      },
-      "focus_mode": {
-        "label": "Basculer le mode focus",
-        "description": "Active ou désactive le mode focus.",
-        "menu_path": "Affichage > Mode focus",
-        "tags": [
-          "focus",
-          "pomodoro"
-        ]
-      },
-      "focus_pause": {
-        "label": "Mettre le focus en pause",
-        "description": "Met en pause ou reprend la session de focus en cours.",
-        "menu_path": "Mode focus",
-        "tags": [
-          "focus",
-          "pause"
-        ]
-      },
-      "lock_mode": {
-        "label": "Mode verrouillage",
-        "description": "Active ou désactive le mode de verrouillage du bureau.",
-        "menu_path": "Affichage > Mode verrouillage",
-        "tags": [
-          "verrouillage"
-        ]
-      },
-      "magnet_mode": {
-        "label": "Mode aimant",
-        "description": "Active le mode aimant, qui aide à aligner et à ajuster les panneaux.",
-        "menu_path": "Affichage > Mode aimant",
-        "tags": [
-          "aimant",
-          "panneau"
-        ]
-      },
       "away_lock": {
-        "label": "Verrouillage d'absence",
         "description": "Démarre immédiatement le mode de verrouillage d'absence.",
+        "label": "Verrouillage d'absence",
         "menu_path": "Affichage > Verrouillage d'absence",
-        "tags": [
-          "absence",
-          "verrouillage"
-        ]
-      },
-      "topbar": {
-        "label": "Basculer la barre supérieure",
-        "description": "Active ou désactive l'affichage de la barre de menu supérieure.",
-        "menu_path": "Affichage > Barre supérieure",
-        "tags": [
-          "barre de menu",
-          "barre supérieure",
-          "récupération"
-        ]
+        "tags": ["absence", "verrouillage"]
       },
       "cal_toolbar": {
-        "label": "Basculer la barre d'outils du calendrier",
         "description": "Masque ou réaffiche la barre d'outils du calendrier.",
+        "label": "Basculer la barre d'outils du calendrier",
         "menu_path": "Affichage > Barre d'outils du calendrier",
-        "tags": [
-          "calendrier",
-          "barre d'outils"
-        ]
-      },
-      "fullscreen": {
-        "label": "Basculer le plein écran",
-        "description": "Active ou désactive l'affichage en plein écran.",
-        "menu_path": "Affichage > Plein écran",
-        "tags": [
-          "plein écran"
-        ]
-      },
-      "save_layout": {
-        "label": "Enregistrer la disposition actuelle",
-        "description": "Enregistre la disposition actuelle des panneaux comme préréglage.",
-        "menu_path": "Affichage > Préréglages de disposition > Enregistrer",
-        "tags": [
-          "disposition",
-          "préréglage",
-          "enregistrer"
-        ]
-      },
-      "layout_1": {
-        "label": "Préréglage de disposition 1",
-        "description": "Applique la disposition ancrée à 4 panneaux par défaut.",
-        "menu_path": "Affichage > Préréglages de disposition",
-        "tags": [
-          "disposition",
-          "préréglage",
-          "ancré",
-          "1"
-        ]
-      },
-      "layout_2": {
-        "label": "Préréglage de disposition 2",
-        "description": "Applique une disposition centrée sur le calendrier.",
-        "menu_path": "Affichage > Préréglages de disposition",
-        "tags": [
-          "disposition",
-          "calendrier",
-          "2"
-        ]
-      },
-      "layout_3": {
-        "label": "Préréglage de disposition 3",
-        "description": "Applique une disposition centrée sur les tâches.",
-        "menu_path": "Affichage > Préréglages de disposition",
-        "tags": [
-          "disposition",
-          "tâche",
-          "3"
-        ]
-      },
-      "layout_4": {
-        "label": "Préréglage de disposition 4",
-        "description": "Applique une disposition en onglets divisés.",
-        "menu_path": "Affichage > Préréglages de disposition",
-        "tags": [
-          "disposition",
-          "onglet",
-          "divisé",
-          "4"
-        ]
-      },
-      "layout_5": {
-        "label": "Préréglage de disposition 5",
-        "description": "Applique une disposition flottante entièrement séparée.",
-        "menu_path": "Affichage > Préréglages de disposition",
-        "tags": [
-          "disposition",
-          "séparé",
-          "flottant",
-          "5"
-        ]
+        "tags": ["calendrier", "barre d'outils"]
       },
       "calendar_print": {
-        "label": "Imprimer le calendrier",
         "description": "Prévisualise et imprime le calendrier de la période actuelle ou choisie.",
+        "label": "Imprimer le calendrier",
         "menu_path": "Calendrier > Options > Imprimer",
-        "tags": [
-          "imprimer",
-          "imprimante",
-          "PDF"
-        ]
+        "tags": ["imprimer", "imprimante", "PDF"]
       },
-      "sync_gcal": {
-        "label": "Synchroniser Google Agenda",
-        "description": "Démarre immédiatement une synchronisation avec Google Agenda.",
-        "menu_path": "Système > Calendrier et synchronisation",
-        "tags": [
-          "google",
-          "synchronisation",
-          "calendrier",
-          "F5"
-        ]
-      },
-      "routine_mgr": {
-        "label": "Gestionnaire de routines",
-        "description": "Ouvre directement l'onglet du gestionnaire de routines.",
-        "menu_path": "Tâches > Aperçu des routines",
-        "tags": [
-          "routine",
-          "gérer"
-        ]
+      "checklist": {
+        "description": "Gère les modèles et la structure des éléments de la liste de contrôle.",
+        "label": "Gérer la liste de contrôle",
+        "menu_path": "Tâches > Gérer la liste de contrôle",
+        "tags": ["liste de contrôle", "modèle"]
       },
       "color_assign": {
-        "label": "Attribution automatique des couleurs",
         "description": "Attribue automatiquement des couleurs aux éléments sélectionnés.",
+        "label": "Attribution automatique des couleurs",
         "menu_path": "Tâches > Attribution automatique des couleurs",
-        "tags": [
-          "couleur",
-          "étiquette",
-          "automatique"
-        ]
+        "tags": ["couleur", "étiquette", "automatique"]
       },
-      "show_hide": {
-        "label": "Afficher/masquer la fenêtre",
-        "description": "Masque la fenêtre principale ou la réaffiche.",
-        "menu_path": "Contrôle de fenêtre",
-        "tags": [
-          "fenêtre",
-          "masquer",
-          "afficher",
-          "superposition"
-        ]
-      },
-      "widget_mode": {
-        "label": "Basculer le mode widget",
-        "description": "Ouvre le mode panneau widgets uniquement.",
-        "menu_path": "Affichage > Mode widgets uniquement",
-        "tags": [
-          "widget",
-          "panneau"
-        ]
-      },
-      "restore_pos": {
-        "label": "Restaurer la position de la fenêtre",
-        "description": "Restaure la fenêtre à une position sûre de l'écran.",
-        "menu_path": "Contrôle de fenêtre",
-        "tags": [
-          "fenêtre",
-          "restaurer",
-          "position"
-        ]
-      },
-      "opacity_up": {
-        "label": "Augmenter l'opacité",
-        "description": "Augmente l'opacité de la fenêtre.",
-        "menu_path": "Contrôle de fenêtre",
-        "tags": [
-          "opacité",
-          "plus clair"
-        ]
-      },
-      "opacity_down": {
-        "label": "Diminuer l'opacité",
-        "description": "Diminue l'opacité de la fenêtre.",
-        "menu_path": "Contrôle de fenêtre",
-        "tags": [
-          "opacité",
-          "plus sombre"
-        ]
-      },
-      "monitor_left": {
-        "label": "Déplacer vers l'écran précédent",
-        "description": "Déplace la fenêtre vers un autre écran.",
-        "menu_path": "Contrôle de fenêtre",
-        "tags": [
-          "écran",
-          "moniteur",
-          "gauche"
-        ]
-      },
-      "monitor_right": {
-        "label": "Déplacer vers l'écran suivant",
-        "description": "Déplace la fenêtre vers un autre écran.",
-        "menu_path": "Contrôle de fenêtre",
-        "tags": [
-          "écran",
-          "moniteur",
-          "droite"
-        ]
-      },
-      "help": {
-        "label": "Guide des raccourcis",
-        "description": "Ouvre le centre d'aide.",
-        "menu_path": "Système > Guide des raccourcis",
-        "tags": [
-          "aide",
-          "F1"
-        ]
+      "command_palette": {
+        "description": "Ouvre la zone de recherche de commandes pour trouver une fonction instantanément.",
+        "label": "Palette de commandes",
+        "menu_path": "Appel direct",
+        "tags": ["recherche", "commande", "palette"]
       },
       "delete": {
-        "label": "Supprimer l'élément sélectionné",
         "description": "Supprime l'événement ou l'élément actuellement sélectionné.",
+        "label": "Supprimer l'élément sélectionné",
         "menu_path": "État de sélection",
-        "tags": [
-          "supprimer",
-          "retirer"
-        ]
+        "tags": ["supprimer", "retirer"]
       },
       "escape": {
-        "label": "Effacer la sélection",
         "description": "Efface la sélection ou le focus actuel.",
+        "label": "Effacer la sélection",
         "menu_path": "État de sélection",
-        "tags": [
-          "désélectionner",
-          "annuler",
-          "échap"
-        ]
+        "tags": ["désélectionner", "annuler", "échap"]
+      },
+      "focus_mode": {
+        "description": "Active ou désactive le mode focus.",
+        "label": "Basculer le mode focus",
+        "menu_path": "Affichage > Mode focus",
+        "tags": ["focus", "pomodoro"]
+      },
+      "focus_pause": {
+        "description": "Met en pause ou reprend la session de focus en cours.",
+        "label": "Mettre le focus en pause",
+        "menu_path": "Mode focus",
+        "tags": ["focus", "pause"]
       },
       "force_unlock": {
-        "label": "Forcer le déverrouillage",
         "description": "Efface de force un état de verrouillage inattendu.",
+        "label": "Forcer le déverrouillage",
         "menu_path": "Récupération d'urgence",
-        "tags": [
-          "forcer",
-          "déverrouiller",
-          "récupération",
-          "urgence"
-        ]
+        "tags": ["forcer", "déverrouiller", "récupération", "urgence"]
+      },
+      "fullscreen": {
+        "description": "Active ou désactive l'affichage en plein écran.",
+        "label": "Basculer le plein écran",
+        "menu_path": "Affichage > Plein écran",
+        "tags": ["plein écran"]
+      },
+      "help": {
+        "description": "Ouvre le centre d'aide.",
+        "label": "Guide des raccourcis",
+        "menu_path": "Système > Guide des raccourcis",
+        "tags": ["aide", "F1"]
+      },
+      "layout_1": {
+        "description": "Applique la disposition ancrée à 4 panneaux par défaut.",
+        "label": "Préréglage de disposition 1",
+        "menu_path": "Affichage > Préréglages de disposition",
+        "tags": ["disposition", "préréglage", "ancré", "1"]
+      },
+      "layout_2": {
+        "description": "Applique une disposition centrée sur le calendrier.",
+        "label": "Préréglage de disposition 2",
+        "menu_path": "Affichage > Préréglages de disposition",
+        "tags": ["disposition", "calendrier", "2"]
+      },
+      "layout_3": {
+        "description": "Applique une disposition centrée sur les tâches.",
+        "label": "Préréglage de disposition 3",
+        "menu_path": "Affichage > Préréglages de disposition",
+        "tags": ["disposition", "tâche", "3"]
+      },
+      "layout_4": {
+        "description": "Applique une disposition en onglets divisés.",
+        "label": "Préréglage de disposition 4",
+        "menu_path": "Affichage > Préréglages de disposition",
+        "tags": ["disposition", "onglet", "divisé", "4"]
+      },
+      "layout_5": {
+        "description": "Applique une disposition flottante entièrement séparée.",
+        "label": "Préréglage de disposition 5",
+        "menu_path": "Affichage > Préréglages de disposition",
+        "tags": ["disposition", "séparé", "flottant", "5"]
+      },
+      "lock_mode": {
+        "description": "Active ou désactive le mode de verrouillage du bureau.",
+        "label": "Mode verrouillage",
+        "menu_path": "Affichage > Mode verrouillage",
+        "tags": ["verrouillage"]
+      },
+      "magnet_mode": {
+        "description": "Active le mode aimant, qui aide à aligner et à ajuster les panneaux.",
+        "label": "Mode aimant",
+        "menu_path": "Affichage > Mode aimant",
+        "tags": ["aimant", "panneau"]
+      },
+      "monitor_left": {
+        "description": "Déplace la fenêtre vers un autre écran.",
+        "label": "Déplacer vers l'écran précédent",
+        "menu_path": "Contrôle de fenêtre",
+        "tags": ["écran", "moniteur", "gauche"]
+      },
+      "monitor_right": {
+        "description": "Déplace la fenêtre vers un autre écran.",
+        "label": "Déplacer vers l'écran suivant",
+        "menu_path": "Contrôle de fenêtre",
+        "tags": ["écran", "moniteur", "droite"]
+      },
+      "new_directive": {
+        "description": "Ouvre la fenêtre de saisie d'une directive ou d'un élément de coopération.",
+        "label": "Enregistrer une directive",
+        "menu_path": "Enregistrer > Directive",
+        "tags": ["directive", "coopération"]
+      },
+      "new_routine": {
+        "description": "Ajoute rapidement une routine de tâche récurrente.",
+        "label": "Enregistrer une routine",
+        "menu_path": "Enregistrer > Routine",
+        "tags": ["routine", "tâche", "récurrent"]
+      },
+      "new_schedule": {
+        "description": "Ouvre directement la fenêtre de saisie d'événement.",
+        "label": "Ajouter un nouvel événement",
+        "menu_path": "Enregistrer > Nouvel événement",
+        "tags": ["événement", "ajouter", "enregistrer"]
+      },
+      "next_day": {
+        "description": "Se déplace un jour après la date actuelle.",
+        "label": "Jour suivant",
+        "menu_path": "Navigation",
+        "tags": ["suivant", "date", "droite"]
+      },
+      "opacity_down": {
+        "description": "Diminue l'opacité de la fenêtre.",
+        "label": "Diminuer l'opacité",
+        "menu_path": "Contrôle de fenêtre",
+        "tags": ["opacité", "plus sombre"]
+      },
+      "opacity_up": {
+        "description": "Augmente l'opacité de la fenêtre.",
+        "label": "Augmenter l'opacité",
+        "menu_path": "Contrôle de fenêtre",
+        "tags": ["opacité", "plus clair"]
+      },
+      "prev_day": {
+        "description": "Se déplace un jour avant la date actuelle.",
+        "label": "Jour précédent",
+        "menu_path": "Navigation",
+        "tags": ["précédent", "date", "gauche"]
+      },
+      "restore_pos": {
+        "description": "Restaure la fenêtre à une position sûre de l'écran.",
+        "label": "Restaurer la position de la fenêtre",
+        "menu_path": "Contrôle de fenêtre",
+        "tags": ["fenêtre", "restaurer", "position"]
+      },
+      "routine_mgr": {
+        "description": "Ouvre directement l'onglet du gestionnaire de routines.",
+        "label": "Gestionnaire de routines",
+        "menu_path": "Tâches > Aperçu des routines",
+        "tags": ["routine", "gérer"]
+      },
+      "save_layout": {
+        "description": "Enregistre la disposition actuelle des panneaux comme préréglage.",
+        "label": "Enregistrer la disposition actuelle",
+        "menu_path": "Affichage > Préréglages de disposition > Enregistrer",
+        "tags": ["disposition", "préréglage", "enregistrer"]
+      },
+      "show_hide": {
+        "description": "Masque la fenêtre principale ou la réaffiche.",
+        "label": "Afficher/masquer la fenêtre",
+        "menu_path": "Contrôle de fenêtre",
+        "tags": ["fenêtre", "masquer", "afficher", "superposition"]
+      },
+      "sync_gcal": {
+        "description": "Démarre immédiatement une synchronisation avec Google Agenda.",
+        "label": "Synchroniser Google Agenda",
+        "menu_path": "Système > Calendrier et synchronisation",
+        "tags": ["google", "synchronisation", "calendrier", "F5"]
+      },
+      "today": {
+        "description": "Déplace instantanément la date sélectionnée à aujourd'hui.",
+        "label": "Aller à aujourd'hui",
+        "menu_path": "Navigation",
+        "tags": ["aujourd'hui", "date"]
+      },
+      "topbar": {
+        "description": "Active ou désactive l'affichage de la barre de menu supérieure.",
+        "label": "Basculer la barre supérieure",
+        "menu_path": "Affichage > Barre supérieure",
+        "tags": ["barre de menu", "barre supérieure", "récupération"]
+      },
+      "widget_mode": {
+        "description": "Ouvre le mode panneau widgets uniquement.",
+        "label": "Basculer le mode widget",
+        "menu_path": "Affichage > Mode widgets uniquement",
+        "tags": ["widget", "panneau"]
       }
     },
     "groups": {
-      "register": {
-        "label": "Enregistrer",
-        "description": "Démarrez rapidement un nouvel événement, une routine ou une directive."
-      },
-      "navigate": {
-        "label": "Naviguer",
-        "description": "Déplacez-vous entre les dates et les sélections, ou appelez des fonctions instantanément."
-      },
-      "mode": {
-        "label": "Mode",
-        "description": "Contrôle les modes de travail comme le focus, l'aimant et le verrouillage."
-      },
-      "view": {
-        "label": "Affichage",
-        "description": "Couvre les barres d'outils, le plein écran et la disposition."
-      },
       "admin": {
-        "label": "Administration",
-        "description": "Ouvre les écrans de gestion et les outils de nettoyage automatisés."
-      },
-      "window": {
-        "label": "Fenêtre",
-        "description": "Ajuste le comportement de la fenêtre, comme la position, l'écran et l'opacité."
-      },
-      "system": {
-        "label": "Système",
-        "description": "Accédez à l'aide et aux fonctions de support système."
+        "description": "Ouvre les écrans de gestion et les outils de nettoyage automatisés.",
+        "label": "Administration"
       },
       "edit": {
-        "label": "Modifier",
-        "description": "Efface ou organise la sélection actuelle."
+        "description": "Efface ou organise la sélection actuelle.",
+        "label": "Modifier"
       },
       "emergency": {
-        "label": "Urgence",
-        "description": "Récupère de force d'un état de verrouillage inattendu."
+        "description": "Récupère de force d'un état de verrouillage inattendu.",
+        "label": "Urgence"
+      },
+      "mode": {
+        "description": "Contrôle les modes de travail comme le focus, l'aimant et le verrouillage.",
+        "label": "Mode"
+      },
+      "navigate": {
+        "description": "Déplacez-vous entre les dates et les sélections, ou appelez des fonctions instantanément.",
+        "label": "Naviguer"
+      },
+      "register": {
+        "description": "Démarrez rapidement un nouvel événement, une routine ou une directive.",
+        "label": "Enregistrer"
+      },
+      "system": {
+        "description": "Accédez à l'aide et aux fonctions de support système.",
+        "label": "Système"
+      },
+      "view": {
+        "description": "Couvre les barres d'outils, le plein écran et la disposition.",
+        "label": "Affichage"
+      },
+      "window": {
+        "description": "Ajuste le comportement de la fenêtre, comme la position, l'écran et l'opacité.",
+        "label": "Fenêtre"
+      }
+    },
+    "hero": {
+      "quickstart": {
+        "desc": "Nous mettons en avant ce que vous utiliserez juste après l'ouverture de l'application et ce que vous chercherez avec F1.",
+        "title": "Les fonctions les plus utilisées en premier"
+      },
+      "recovery": {
+        "desc": "Uniquement les touches dont vous avez le plus besoin quand le menu disparaît ou que l'état de verrouillage s'emmêle.",
+        "title": "Touches à essayer en premier en cas de blocage"
+      },
+      "reference": {
+        "desc": "Chaque raccourci organisé par groupe fonctionnel, idéal pour parcourir sans rechercher.",
+        "title": "Parcourez tous les raccourcis par catégorie"
+      },
+      "search": {
+        "desc": "Tapez un nom de touche ou de fonction pour voir immédiatement les raccourcis correspondants.",
+        "title": "Résultats de recherche"
+      },
+      "workflows": {
+        "desc": "Les raccourcis sont regroupés autour de flux de travail réels comme l'enregistrement, la navigation et le changement d'affichage, afin que vous puissiez les trouver par situation même sans connaître le nom.",
+        "title": "Regroupé par situation pour trouver plus vite"
+      }
+    },
+    "pages": {
+      "quickstart": {
+        "subtitle": "Quoi vérifier en premier et ce que vous utiliserez le plus",
+        "title": "Démarrage rapide"
+      },
+      "recovery": {
+        "subtitle": "Touches pour le verrouillage, les menus cachés et la récupération de fenêtre",
+        "title": "Récupération d'écran"
+      },
+      "reference": {
+        "subtitle": "Liste complète par catégorie",
+        "title": "Tous les raccourcis"
+      },
+      "workflows": {
+        "subtitle": "Raccourcis clés regroupés par situation",
+        "title": "Tâches courantes"
       }
     },
     "priority": {
-      "topbar": {
-        "badge": "Récupérer la barre de menu",
-        "note": "La première chose à vérifier quand la barre supérieure disparaît."
-      },
-      "magnet_mode": {
-        "badge": "Basculer l'aimant",
-        "note": "Bascule rapidement si les panneaux peuvent se déplacer et s'ajuster."
+      "force_unlock": {
+        "badge": "Récupération d'urgence",
+        "note": "Efface de force un état de verrouillage inattendu."
       },
       "lock_mode": {
         "badge": "Déverrouiller",
         "note": "Basculez directement depuis l'écran principal, même verrouillé."
       },
-      "force_unlock": {
-        "badge": "Récupération d'urgence",
-        "note": "Efface de force un état de verrouillage inattendu."
+      "magnet_mode": {
+        "badge": "Basculer l'aimant",
+        "note": "Bascule rapidement si les panneaux peuvent se déplacer et s'ajuster."
+      },
+      "topbar": {
+        "badge": "Récupérer la barre de menu",
+        "note": "La première chose à vérifier quand la barre supérieure disparaît."
       }
     },
-    "pages": {
-      "quickstart": {
-        "title": "Démarrage rapide",
-        "subtitle": "Quoi vérifier en premier et ce que vous utiliserez le plus"
-      },
-      "workflows": {
-        "title": "Tâches courantes",
-        "subtitle": "Raccourcis clés regroupés par situation"
-      },
-      "recovery": {
-        "title": "Récupération d'écran",
-        "subtitle": "Touches pour le verrouillage, les menus cachés et la récupération de fenêtre"
-      },
-      "reference": {
-        "title": "Tous les raccourcis",
-        "subtitle": "Liste complète par catégorie"
-      }
-    },
+    "search": "Rechercher dans l'aide",
+    "search_hint": "Recherchez par nom de fonction, raccourci ou emplacement de menu.",
+    "title": "Centre d'aide Air Calendar",
+    "topics": "Sujets d'aide",
     "workflows": {
-      "new": {
-        "title": "Créer quelque chose de nouveau",
-        "desc": "Pour démarrer rapidement un événement ou une tâche"
-      },
-      "navigate": {
-        "title": "Se déplacer et rechercher",
-        "desc": "Pour se déplacer entre les dates ou rechercher rapidement une fonction"
+      "focus_lock": {
+        "desc": "Pour contrôler l'état de focus ou de verrouillage",
+        "title": "Focus et verrouillage"
       },
       "layout": {
-        "title": "Écran et disposition",
-        "desc": "Pour changer l'apparence ou l'agencement des panneaux"
+        "desc": "Pour changer l'apparence ou l'agencement des panneaux",
+        "title": "Écran et disposition"
       },
-      "focus_lock": {
-        "title": "Focus et verrouillage",
-        "desc": "Pour contrôler l'état de focus ou de verrouillage"
+      "navigate": {
+        "desc": "Pour se déplacer entre les dates ou rechercher rapidement une fonction",
+        "title": "Se déplacer et rechercher"
+      },
+      "new": {
+        "desc": "Pour démarrer rapidement un événement ou une tâche",
+        "title": "Créer quelque chose de nouveau"
       },
       "window_tools": {
-        "title": "Outils de fenêtre et d'administration",
-        "desc": "Pour ajuster l'état de la fenêtre ou lorsqu'une fonction de gestion est nécessaire"
+        "desc": "Pour ajuster l'état de la fenêtre ou lorsqu'une fonction de gestion est nécessaire",
+        "title": "Outils de fenêtre et d'administration"
       }
-    },
-    "hero": {
-      "quickstart": {
-        "title": "Les fonctions les plus utilisées en premier",
-        "desc": "Nous mettons en avant ce que vous utiliserez juste après l'ouverture de l'application et ce que vous chercherez avec F1."
-      },
-      "workflows": {
-        "title": "Regroupé par situation pour trouver plus vite",
-        "desc": "Les raccourcis sont regroupés autour de flux de travail réels comme l'enregistrement, la navigation et le changement d'affichage, afin que vous puissiez les trouver par situation même sans connaître le nom."
-      },
-      "recovery": {
-        "title": "Touches à essayer en premier en cas de blocage",
-        "desc": "Uniquement les touches dont vous avez le plus besoin quand le menu disparaît ou que l'état de verrouillage s'emmêle."
-      },
-      "reference": {
-        "title": "Parcourez tous les raccourcis par catégorie",
-        "desc": "Chaque raccourci organisé par groupe fonctionnel, idéal pour parcourir sans rechercher."
-      },
-      "search": {
-        "title": "Résultats de recherche",
-        "desc": "Tapez un nom de touche ou de fonction pour voir immédiatement les raccourcis correspondants."
-      }
-    },
-    "chrome": {
-      "eyebrow": "CENTRE D'AIDE F1",
-      "header_title": "Le centre d'aide pour trouver rapidement raccourcis et fonctions",
-      "header_subtitle": "Recherchez par nom de fonction, nom de touche ou emplacement de menu, et trouvez rapidement ce que vous utilisez le plus.",
-      "badge_recovery": "4 touches de récupération essentielles",
-      "badge_total": "{count} raccourcis au total",
-      "badge_search": "Recherche prise en charge",
-      "search_placeholder": "ex. verrouillage, widget, F11, Ctrl+Maj+1",
-      "search_examples": "Essayez de rechercher : barre de menu, calendrier, routine, forcer le déverrouillage",
-      "sidebar_title": "Parcourir",
-      "sidebar_hint": "Choisissez une section à gauche, ou recherchez directement avec la zone ci-dessus.",
-      "footer_hint": "La recherche fonctionne par nom de fonction, raccourci ou emplacement de menu.",
-      "quickstart_section_title": "Commencez ici",
-      "quickstart_section_desc": "Les nouveaux utilisateurs peuvent commencer ici pour se familiariser rapidement.",
-      "search_tips_title": "Conseils de recherche",
-      "search_tips_desc": "L'aide est également consultable par noms de menu et mots-clés de situation, pas seulement par raccourcis.",
-      "tip_lock": "Quand un verrouillage ne se libère pas : essayez `verrouillage`, `récupération`, `forcer`",
-      "tip_layout": "Quand vous voulez changer la disposition : essayez `disposition`, `préréglage`, `Ctrl+Maj+1`",
-      "tip_widget": "Pour rechercher des fonctions de widget : essayez `widget`, `F12`",
-      "recovery_primary_title": "Touches de récupération à vérifier en premier",
-      "recovery_primary_desc": "Les touches à essayer en premier quand quelque chose ne va pas.",
-      "recovery_secondary_title": "Touches utiles à retenir en complément",
-      "recovery_secondary_desc": "Raccourcis souvent nécessaires ensemble pour nettoyer l'état de verrouillage ou de fenêtre.",
-      "search_results_title": "Résultats de recherche",
-      "search_results_desc": "Tapez un terme de recherche pour voir les résultats apparaître ici immédiatement.",
-      "search_results_count": "{count} résultats pour '{query}'",
-      "search_empty": "Aucun résultat correspondant.\nEssayez un mot-clé plus court, comme un nom de fonction, de touche ou de menu.",
-      "meta_menu_path": "Emplacement du menu : {value}",
-      "meta_aliases": "Touches supplémentaires : {value}",
-      "meta_group": "Catégorie : {value}"
     }
   },
   "splash": {
@@ -2887,12 +2741,14 @@
     "editor_template": "Modèle de composition",
     "editor_title": "Créer un style de widget",
     "editor_width": "Largeur par défaut",
+    "empty_directive_filter": "No directives for this date.",
     "empty_panel": "Aucun élément pour cette date.",
     "empty_schedule": "Pas d'horaire",
     "empty_schedule_filter": "Pas d'horaires pour cette date.",
     "empty_work": "Aucun élément de travail",
     "empty_work_filter": "Pas de travaux pour cette date.",
     "filter_all": "Tous",
+    "filter_directive": "Directives",
     "filter_schedule": "Calendrier",
     "filter_work": "Travail",
     "filtered_count_chip": "{count}/{total}",
@@ -2911,6 +2767,7 @@
     "hide_calendar": "Masquer le calendrier",
     "hide_tray": "Hide to tray",
     "item_count_chip": "{count} articles",
+    "item_more_named": "Item actions: {name}",
     "layout_agenda_first": "L’ordre du jour d’abord",
     "layout_dashboard": "Tableau de bord côte à côte",
     "layout_magazine": "Conseil des magazines",
@@ -2934,6 +2791,7 @@
     "menu_priority": "Priorité",
     "menu_realign": "Réaligner les widgets",
     "menu_refresh": "Rafraîchir",
+    "menu_reopen": "Reopen",
     "menu_reserve_space": "Réserver de l'espace sur l'écran",
     "month_calendar": "Choose a date from the month",
     "month_next": "Mois prochain",
@@ -2976,6 +2834,8 @@
     "scale_tooltip_value": "Échelle : {value} %",
     "schedule_title": "Calendrier",
     "schedule_type": "Calendrier",
+    "section_directive_no_deadline": "Directives without a deadline",
+    "section_directive_overdue": "Overdue directives",
     "section_directive_today": "Directives",
     "section_routine_today": "Routine",
     "section_today": "Aujourd'hui",

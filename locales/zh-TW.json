@@ -123,15 +123,7 @@
     "selection_hint": "Ctrl+點選進行多選",
     "sync_hint": "谷歌日曆同步",
     "today": "今天",
-    "weekdays": [
-      "週一",
-      "週二",
-      "週三",
-      "週四",
-      "週五",
-      "週六",
-      "週日"
-    ]
+    "weekdays": ["週一", "週二", "週三", "週四", "週五", "週六", "週日"]
   },
   "checklist_mgr": {
     "btn_add_item": "新增項目",
@@ -970,6 +962,7 @@
   },
   "focus_selector": {
     "auto_pick": "自動選擇",
+    "auto_pick_no_tasks": "There are no tasks available for automatic selection.",
     "col_datetime": "日期/時間",
     "col_duration": "期間",
     "col_task": "任務",
@@ -989,12 +982,15 @@
     "no_tasks": "沒有任務與此過濾器匹配。",
     "pick_prompt": "選擇要專注的任務。",
     "select_done": "選擇",
+    "select_no_selection": "Select a task from the list first.",
     "settings_hint": "您可以在此變更專注模式類型和番茄鐘行為。",
     "settings_saved": "已儲存。下次開始專注模式時將使用新值。",
     "tab_logs": "焦點日誌",
     "tab_settings": "設定",
     "tab_tasks": "任務選擇",
-    "title": "焦點任務選擇"
+    "task_load_error": "Could not load tasks. Please try again.",
+    "title": "焦點任務選擇",
+    "unsaved_settings_confirm": "You have unsaved Pomodoro settings. Discard them and close?"
   },
   "gcal": {
     "auto_healed_msg": "已自動修復{count}個有問題的行程並同步到您的行事曆。",
@@ -1535,13 +1531,7 @@
     "hint_record_jump": "Enter 開啟項目。Shift+Enter 移至其日期。",
     "hint_run_command": "Enter 執行選取的指令",
     "kw": {
-      "theme": [
-        "主題",
-        "深色",
-        "淺色",
-        "顏色",
-        "外觀"
-      ]
+      "theme": ["主題", "深色", "淺色", "顏色", "外觀"]
     },
     "nlp_preview": "新建：[{title}] - {date} {time}",
     "no_selection": "按 Enter 鍵開啟所選結果",
@@ -1758,518 +1748,382 @@
     "yearly": "每年"
   },
   "shortcut": {
-    "title": "Air Calendar 說明中心",
-    "search": "搜尋說明",
-    "search_hint": "依功能名稱、快速鍵或選單位置搜尋。",
-    "topics": "說明主題",
+    "chrome": {
+      "badge_recovery": "4 個核心復原按鍵",
+      "badge_search": "支援搜尋",
+      "badge_total": "共 {count} 個快速鍵",
+      "eyebrow": "F1 說明中心",
+      "footer_hint": "搜尋可依功能名稱、快速鍵或選單位置進行。",
+      "header_subtitle": "依功能名稱、按鍵名稱或選單位置搜尋，快速找到最常使用的內容。",
+      "header_title": "快速找到快速鍵與功能的說明中心",
+      "meta_aliases": "額外按鍵：{value}",
+      "meta_group": "分類：{value}",
+      "meta_menu_path": "選單位置：{value}",
+      "quickstart_section_desc": "新使用者可以從這裡開始，立即上手。",
+      "quickstart_section_title": "從這裡開始",
+      "recovery_primary_desc": "出現問題時應優先嘗試的按鍵。",
+      "recovery_primary_title": "應優先檢查的復原按鍵",
+      "recovery_secondary_desc": "整理鎖定或視窗狀態時經常需要一起用到的快速鍵。",
+      "recovery_secondary_title": "值得一併記住的實用按鍵",
+      "search_empty": "沒有相符的結果。\n請嘗試更短的關鍵字，例如功能名稱、按鍵名稱或選單名稱。",
+      "search_examples": "試試搜尋：選單列、行事曆、例行工作、強制解鎖",
+      "search_placeholder": "例如：鎖定、小工具、F11、Ctrl+Shift+1",
+      "search_results_count": "「{query}」的搜尋結果 {count} 筆",
+      "search_results_desc": "輸入搜尋字詞，即可立即在此看到結果。",
+      "search_results_title": "搜尋結果",
+      "search_tips_desc": "說明不僅可依快速鍵搜尋，也可依選單名稱與情境關鍵字搜尋。",
+      "search_tips_title": "搜尋提示",
+      "sidebar_hint": "在左側選擇一個區段，或直接使用上方欄位搜尋。",
+      "sidebar_title": "瀏覽",
+      "tip_layout": "想變更版面配置時：試試「版面配置」、「預設集」、「Ctrl+Shift+1」",
+      "tip_lock": "當鎖定無法解除時：試試「鎖定」、「復原」、「強制」",
+      "tip_widget": "尋找小工具功能時：試試「小工具」、「F12」"
+    },
     "entries": {
-      "new_schedule": {
-        "label": "新增行程",
-        "description": "直接開啟行程輸入視窗。",
-        "menu_path": "註冊 > 新增行程",
-        "tags": [
-          "行程",
-          "新增",
-          "註冊"
-        ]
-      },
-      "new_routine": {
-        "label": "註冊例行工作",
-        "description": "快速新增重複性的工作例行程序。",
-        "menu_path": "註冊 > 例行工作",
-        "tags": [
-          "例行工作",
-          "任務",
-          "重複"
-        ]
-      },
-      "new_directive": {
-        "label": "註冊指示事項",
-        "description": "開啟輸入指示或協作事項的視窗。",
-        "menu_path": "註冊 > 指示事項",
-        "tags": [
-          "指示",
-          "協作"
-        ]
-      },
-      "checklist": {
-        "label": "管理檢查清單",
-        "description": "管理檢查清單範本與項目結構。",
-        "menu_path": "任務 > 管理檢查清單",
-        "tags": [
-          "檢查清單",
-          "範本"
-        ]
-      },
-      "today": {
-        "label": "跳到今天",
-        "description": "立即將選取的日期移到今天。",
-        "menu_path": "導覽",
-        "tags": [
-          "今天",
-          "日期"
-        ]
-      },
-      "prev_day": {
-        "label": "前一天",
-        "description": "移到目前日期的前一天。",
-        "menu_path": "導覽",
-        "tags": [
-          "前一天",
-          "日期",
-          "左"
-        ]
-      },
-      "next_day": {
-        "label": "後一天",
-        "description": "移到目前日期的後一天。",
-        "menu_path": "導覽",
-        "tags": [
-          "後一天",
-          "日期",
-          "右"
-        ]
-      },
-      "command_palette": {
-        "label": "命令面板",
-        "description": "開啟命令搜尋框，立即找到功能。",
-        "menu_path": "直接呼叫",
-        "tags": [
-          "搜尋",
-          "命令",
-          "面板"
-        ]
-      },
-      "focus_mode": {
-        "label": "切換專注模式",
-        "description": "開啟或關閉專注模式。",
-        "menu_path": "檢視 > 專注模式",
-        "tags": [
-          "專注",
-          "番茄鐘"
-        ]
-      },
-      "focus_pause": {
-        "label": "暫停專注",
-        "description": "暫停或繼續目前的專注時段。",
-        "menu_path": "專注模式",
-        "tags": [
-          "專注",
-          "暫停"
-        ]
-      },
-      "lock_mode": {
-        "label": "鎖定模式",
-        "description": "開啟或關閉桌面鎖定模式。",
-        "menu_path": "檢視 > 鎖定模式",
-        "tags": [
-          "鎖定"
-        ]
-      },
-      "magnet_mode": {
-        "label": "磁吸模式",
-        "description": "切換有助於面板對齊與吸附的磁吸模式。",
-        "menu_path": "檢視 > 磁吸模式",
-        "tags": [
-          "磁吸",
-          "面板"
-        ]
-      },
       "away_lock": {
-        "label": "離開鎖定",
         "description": "立即啟動離開鎖定模式。",
+        "label": "離開鎖定",
         "menu_path": "檢視 > 離開鎖定",
-        "tags": [
-          "離開",
-          "鎖定"
-        ]
-      },
-      "topbar": {
-        "label": "切換頂端列",
-        "description": "切換上方選單列的顯示狀態。",
-        "menu_path": "檢視 > 頂端列",
-        "tags": [
-          "選單列",
-          "頂端列",
-          "復原"
-        ]
+        "tags": ["離開", "鎖定"]
       },
       "cal_toolbar": {
-        "label": "切換行事曆工具列",
         "description": "隱藏或重新顯示行事曆工具列。",
+        "label": "切換行事曆工具列",
         "menu_path": "檢視 > 行事曆工具列",
-        "tags": [
-          "行事曆",
-          "工具列"
-        ]
-      },
-      "fullscreen": {
-        "label": "切換全螢幕",
-        "description": "開啟或關閉全螢幕顯示。",
-        "menu_path": "檢視 > 全螢幕",
-        "tags": [
-          "全螢幕"
-        ]
-      },
-      "save_layout": {
-        "label": "儲存目前版面配置",
-        "description": "將目前的面板配置儲存為預設集。",
-        "menu_path": "檢視 > 版面配置預設集 > 儲存",
-        "tags": [
-          "版面配置",
-          "預設集",
-          "儲存"
-        ]
-      },
-      "layout_1": {
-        "label": "版面配置預設集 1",
-        "description": "套用預設的 4 面板固定版面配置。",
-        "menu_path": "檢視 > 版面配置預設集",
-        "tags": [
-          "版面配置",
-          "預設集",
-          "固定",
-          "1"
-        ]
-      },
-      "layout_2": {
-        "label": "版面配置預設集 2",
-        "description": "套用以行事曆為主的版面配置。",
-        "menu_path": "檢視 > 版面配置預設集",
-        "tags": [
-          "版面配置",
-          "行事曆",
-          "2"
-        ]
-      },
-      "layout_3": {
-        "label": "版面配置預設集 3",
-        "description": "套用以任務為主的版面配置。",
-        "menu_path": "檢視 > 版面配置預設集",
-        "tags": [
-          "版面配置",
-          "任務",
-          "3"
-        ]
-      },
-      "layout_4": {
-        "label": "版面配置預設集 4",
-        "description": "套用分割分頁版面配置。",
-        "menu_path": "檢視 > 版面配置預設集",
-        "tags": [
-          "版面配置",
-          "分頁",
-          "分割",
-          "4"
-        ]
-      },
-      "layout_5": {
-        "label": "版面配置預設集 5",
-        "description": "套用完全分離的浮動版面配置。",
-        "menu_path": "檢視 > 版面配置預設集",
-        "tags": [
-          "版面配置",
-          "分離",
-          "浮動",
-          "5"
-        ]
+        "tags": ["行事曆", "工具列"]
       },
       "calendar_print": {
-        "label": "列印行事曆",
         "description": "預覽並列印目前或所選期間的行事曆。",
+        "label": "列印行事曆",
         "menu_path": "行事曆 > 選項 > 列印",
-        "tags": [
-          "列印",
-          "印表機",
-          "PDF"
-        ]
+        "tags": ["列印", "印表機", "PDF"]
       },
-      "sync_gcal": {
-        "label": "同步 Google 日曆",
-        "description": "立即開始與 Google 日曆同步。",
-        "menu_path": "系統 > 行事曆與同步",
-        "tags": [
-          "google",
-          "同步",
-          "行事曆",
-          "F5"
-        ]
-      },
-      "routine_mgr": {
-        "label": "例行工作管理員",
-        "description": "直接開啟例行工作管理員分頁。",
-        "menu_path": "任務 > 例行工作總覽",
-        "tags": [
-          "例行工作",
-          "管理"
-        ]
+      "checklist": {
+        "description": "管理檢查清單範本與項目結構。",
+        "label": "管理檢查清單",
+        "menu_path": "任務 > 管理檢查清單",
+        "tags": ["檢查清單", "範本"]
       },
       "color_assign": {
-        "label": "自動配色",
         "description": "自動為所選項目指定顏色。",
+        "label": "自動配色",
         "menu_path": "任務 > 自動配色",
-        "tags": [
-          "顏色",
-          "標籤",
-          "自動"
-        ]
+        "tags": ["顏色", "標籤", "自動"]
       },
-      "show_hide": {
-        "label": "顯示/隱藏視窗",
-        "description": "隱藏主視窗或重新顯示。",
-        "menu_path": "視窗控制",
-        "tags": [
-          "視窗",
-          "隱藏",
-          "顯示",
-          "疊層"
-        ]
-      },
-      "widget_mode": {
-        "label": "切換小工具模式",
-        "description": "開啟僅顯示小工具的面板模式。",
-        "menu_path": "檢視 > 僅小工具模式",
-        "tags": [
-          "小工具",
-          "面板"
-        ]
-      },
-      "restore_pos": {
-        "label": "還原視窗位置",
-        "description": "將視窗還原到螢幕上的安全位置。",
-        "menu_path": "視窗控制",
-        "tags": [
-          "視窗",
-          "還原",
-          "位置"
-        ]
-      },
-      "opacity_up": {
-        "label": "提高不透明度",
-        "description": "提高視窗不透明度。",
-        "menu_path": "視窗控制",
-        "tags": [
-          "不透明度",
-          "更亮"
-        ]
-      },
-      "opacity_down": {
-        "label": "降低不透明度",
-        "description": "降低視窗不透明度。",
-        "menu_path": "視窗控制",
-        "tags": [
-          "不透明度",
-          "更暗"
-        ]
-      },
-      "monitor_left": {
-        "label": "移到上一個螢幕",
-        "description": "將視窗移到另一個螢幕。",
-        "menu_path": "視窗控制",
-        "tags": [
-          "螢幕",
-          "顯示器",
-          "左"
-        ]
-      },
-      "monitor_right": {
-        "label": "移到下一個螢幕",
-        "description": "將視窗移到另一個螢幕。",
-        "menu_path": "視窗控制",
-        "tags": [
-          "螢幕",
-          "顯示器",
-          "右"
-        ]
-      },
-      "help": {
-        "label": "快速鍵指南",
-        "description": "開啟說明中心。",
-        "menu_path": "系統 > 快速鍵指南",
-        "tags": [
-          "說明",
-          "F1"
-        ]
+      "command_palette": {
+        "description": "開啟命令搜尋框，立即找到功能。",
+        "label": "命令面板",
+        "menu_path": "直接呼叫",
+        "tags": ["搜尋", "命令", "面板"]
       },
       "delete": {
-        "label": "刪除所選項目",
         "description": "刪除目前選取的行程或項目。",
+        "label": "刪除所選項目",
         "menu_path": "選取狀態",
-        "tags": [
-          "刪除",
-          "移除"
-        ]
+        "tags": ["刪除", "移除"]
       },
       "escape": {
-        "label": "清除選取",
         "description": "清除目前的選取或焦點。",
+        "label": "清除選取",
         "menu_path": "選取狀態",
-        "tags": [
-          "取消選取",
-          "取消",
-          "escape"
-        ]
+        "tags": ["取消選取", "取消", "escape"]
+      },
+      "focus_mode": {
+        "description": "開啟或關閉專注模式。",
+        "label": "切換專注模式",
+        "menu_path": "檢視 > 專注模式",
+        "tags": ["專注", "番茄鐘"]
+      },
+      "focus_pause": {
+        "description": "暫停或繼續目前的專注時段。",
+        "label": "暫停專注",
+        "menu_path": "專注模式",
+        "tags": ["專注", "暫停"]
       },
       "force_unlock": {
-        "label": "強制解鎖",
         "description": "強制清除意外的鎖定狀態。",
+        "label": "強制解鎖",
         "menu_path": "緊急復原",
-        "tags": [
-          "強制",
-          "解鎖",
-          "復原",
-          "緊急"
-        ]
+        "tags": ["強制", "解鎖", "復原", "緊急"]
+      },
+      "fullscreen": {
+        "description": "開啟或關閉全螢幕顯示。",
+        "label": "切換全螢幕",
+        "menu_path": "檢視 > 全螢幕",
+        "tags": ["全螢幕"]
+      },
+      "help": {
+        "description": "開啟說明中心。",
+        "label": "快速鍵指南",
+        "menu_path": "系統 > 快速鍵指南",
+        "tags": ["說明", "F1"]
+      },
+      "layout_1": {
+        "description": "套用預設的 4 面板固定版面配置。",
+        "label": "版面配置預設集 1",
+        "menu_path": "檢視 > 版面配置預設集",
+        "tags": ["版面配置", "預設集", "固定", "1"]
+      },
+      "layout_2": {
+        "description": "套用以行事曆為主的版面配置。",
+        "label": "版面配置預設集 2",
+        "menu_path": "檢視 > 版面配置預設集",
+        "tags": ["版面配置", "行事曆", "2"]
+      },
+      "layout_3": {
+        "description": "套用以任務為主的版面配置。",
+        "label": "版面配置預設集 3",
+        "menu_path": "檢視 > 版面配置預設集",
+        "tags": ["版面配置", "任務", "3"]
+      },
+      "layout_4": {
+        "description": "套用分割分頁版面配置。",
+        "label": "版面配置預設集 4",
+        "menu_path": "檢視 > 版面配置預設集",
+        "tags": ["版面配置", "分頁", "分割", "4"]
+      },
+      "layout_5": {
+        "description": "套用完全分離的浮動版面配置。",
+        "label": "版面配置預設集 5",
+        "menu_path": "檢視 > 版面配置預設集",
+        "tags": ["版面配置", "分離", "浮動", "5"]
+      },
+      "lock_mode": {
+        "description": "開啟或關閉桌面鎖定模式。",
+        "label": "鎖定模式",
+        "menu_path": "檢視 > 鎖定模式",
+        "tags": ["鎖定"]
+      },
+      "magnet_mode": {
+        "description": "切換有助於面板對齊與吸附的磁吸模式。",
+        "label": "磁吸模式",
+        "menu_path": "檢視 > 磁吸模式",
+        "tags": ["磁吸", "面板"]
+      },
+      "monitor_left": {
+        "description": "將視窗移到另一個螢幕。",
+        "label": "移到上一個螢幕",
+        "menu_path": "視窗控制",
+        "tags": ["螢幕", "顯示器", "左"]
+      },
+      "monitor_right": {
+        "description": "將視窗移到另一個螢幕。",
+        "label": "移到下一個螢幕",
+        "menu_path": "視窗控制",
+        "tags": ["螢幕", "顯示器", "右"]
+      },
+      "new_directive": {
+        "description": "開啟輸入指示或協作事項的視窗。",
+        "label": "註冊指示事項",
+        "menu_path": "註冊 > 指示事項",
+        "tags": ["指示", "協作"]
+      },
+      "new_routine": {
+        "description": "快速新增重複性的工作例行程序。",
+        "label": "註冊例行工作",
+        "menu_path": "註冊 > 例行工作",
+        "tags": ["例行工作", "任務", "重複"]
+      },
+      "new_schedule": {
+        "description": "直接開啟行程輸入視窗。",
+        "label": "新增行程",
+        "menu_path": "註冊 > 新增行程",
+        "tags": ["行程", "新增", "註冊"]
+      },
+      "next_day": {
+        "description": "移到目前日期的後一天。",
+        "label": "後一天",
+        "menu_path": "導覽",
+        "tags": ["後一天", "日期", "右"]
+      },
+      "opacity_down": {
+        "description": "降低視窗不透明度。",
+        "label": "降低不透明度",
+        "menu_path": "視窗控制",
+        "tags": ["不透明度", "更暗"]
+      },
+      "opacity_up": {
+        "description": "提高視窗不透明度。",
+        "label": "提高不透明度",
+        "menu_path": "視窗控制",
+        "tags": ["不透明度", "更亮"]
+      },
+      "prev_day": {
+        "description": "移到目前日期的前一天。",
+        "label": "前一天",
+        "menu_path": "導覽",
+        "tags": ["前一天", "日期", "左"]
+      },
+      "restore_pos": {
+        "description": "將視窗還原到螢幕上的安全位置。",
+        "label": "還原視窗位置",
+        "menu_path": "視窗控制",
+        "tags": ["視窗", "還原", "位置"]
+      },
+      "routine_mgr": {
+        "description": "直接開啟例行工作管理員分頁。",
+        "label": "例行工作管理員",
+        "menu_path": "任務 > 例行工作總覽",
+        "tags": ["例行工作", "管理"]
+      },
+      "save_layout": {
+        "description": "將目前的面板配置儲存為預設集。",
+        "label": "儲存目前版面配置",
+        "menu_path": "檢視 > 版面配置預設集 > 儲存",
+        "tags": ["版面配置", "預設集", "儲存"]
+      },
+      "show_hide": {
+        "description": "隱藏主視窗或重新顯示。",
+        "label": "顯示/隱藏視窗",
+        "menu_path": "視窗控制",
+        "tags": ["視窗", "隱藏", "顯示", "疊層"]
+      },
+      "sync_gcal": {
+        "description": "立即開始與 Google 日曆同步。",
+        "label": "同步 Google 日曆",
+        "menu_path": "系統 > 行事曆與同步",
+        "tags": ["google", "同步", "行事曆", "F5"]
+      },
+      "today": {
+        "description": "立即將選取的日期移到今天。",
+        "label": "跳到今天",
+        "menu_path": "導覽",
+        "tags": ["今天", "日期"]
+      },
+      "topbar": {
+        "description": "切換上方選單列的顯示狀態。",
+        "label": "切換頂端列",
+        "menu_path": "檢視 > 頂端列",
+        "tags": ["選單列", "頂端列", "復原"]
+      },
+      "widget_mode": {
+        "description": "開啟僅顯示小工具的面板模式。",
+        "label": "切換小工具模式",
+        "menu_path": "檢視 > 僅小工具模式",
+        "tags": ["小工具", "面板"]
       }
     },
     "groups": {
-      "register": {
-        "label": "註冊",
-        "description": "快速開始新的行程、例行工作或指示事項。"
-      },
-      "navigate": {
-        "label": "導覽",
-        "description": "在日期與選取項目之間移動，或立即呼叫功能。"
-      },
-      "mode": {
-        "label": "模式",
-        "description": "控制專注、磁吸與鎖定等工作模式。"
-      },
-      "view": {
-        "label": "檢視",
-        "description": "涵蓋工具列、全螢幕與版面配置。"
-      },
       "admin": {
-        "label": "管理",
-        "description": "開啟管理畫面與自動整理工具。"
-      },
-      "window": {
-        "label": "視窗",
-        "description": "調整視窗行為，例如位置、螢幕與不透明度。"
-      },
-      "system": {
-        "label": "系統",
-        "description": "存取說明與系統支援功能。"
+        "description": "開啟管理畫面與自動整理工具。",
+        "label": "管理"
       },
       "edit": {
-        "label": "編輯",
-        "description": "清除或整理目前的選取項目。"
+        "description": "清除或整理目前的選取項目。",
+        "label": "編輯"
       },
       "emergency": {
-        "label": "緊急",
-        "description": "強制從意外的鎖定狀態復原。"
+        "description": "強制從意外的鎖定狀態復原。",
+        "label": "緊急"
+      },
+      "mode": {
+        "description": "控制專注、磁吸與鎖定等工作模式。",
+        "label": "模式"
+      },
+      "navigate": {
+        "description": "在日期與選取項目之間移動，或立即呼叫功能。",
+        "label": "導覽"
+      },
+      "register": {
+        "description": "快速開始新的行程、例行工作或指示事項。",
+        "label": "註冊"
+      },
+      "system": {
+        "description": "存取說明與系統支援功能。",
+        "label": "系統"
+      },
+      "view": {
+        "description": "涵蓋工具列、全螢幕與版面配置。",
+        "label": "檢視"
+      },
+      "window": {
+        "description": "調整視窗行為，例如位置、螢幕與不透明度。",
+        "label": "視窗"
+      }
+    },
+    "hero": {
+      "quickstart": {
+        "desc": "我們將開啟應用程式後會立即用到的內容，以及按 F1 時會查詢的內容放在最前面。",
+        "title": "最常用的功能優先顯示"
+      },
+      "recovery": {
+        "desc": "只列出選單消失或鎖定狀態混亂時最需要的按鍵。",
+        "title": "卡住時應優先嘗試的按鍵"
+      },
+      "reference": {
+        "desc": "每個快速鍵皆依功能群組整理，適合在不搜尋的情況下快速瀏覽。",
+        "title": "依類別瀏覽所有快速鍵"
+      },
+      "search": {
+        "desc": "輸入按鍵名稱或功能名稱，即可立即看到相符的快速鍵。",
+        "title": "搜尋結果"
+      },
+      "workflows": {
+        "desc": "快速鍵依照註冊、導覽、切換檢視等實際工作流程分組，即使不知道名稱，也能依情境找到。",
+        "title": "依情境分組，更快找到"
+      }
+    },
+    "pages": {
+      "quickstart": {
+        "subtitle": "應優先查看的內容，以及最常使用的功能",
+        "title": "快速上手"
+      },
+      "recovery": {
+        "subtitle": "用於鎖定、隱藏選單與視窗復原的按鍵",
+        "title": "畫面復原"
+      },
+      "reference": {
+        "subtitle": "依類別列出的完整清單",
+        "title": "所有快速鍵"
+      },
+      "workflows": {
+        "subtitle": "依情境分組的關鍵快速鍵",
+        "title": "常見工作"
       }
     },
     "priority": {
-      "topbar": {
-        "badge": "復原選單列",
-        "note": "頂端列消失時第一個要檢查的項目。"
-      },
-      "magnet_mode": {
-        "badge": "切換磁吸",
-        "note": "快速切換面板是否可以移動與吸附。"
+      "force_unlock": {
+        "badge": "緊急復原",
+        "note": "強制清除意外的鎖定狀態。"
       },
       "lock_mode": {
         "badge": "解鎖",
         "note": "即使在鎖定狀態下，也可直接從主畫面切換。"
       },
-      "force_unlock": {
-        "badge": "緊急復原",
-        "note": "強制清除意外的鎖定狀態。"
+      "magnet_mode": {
+        "badge": "切換磁吸",
+        "note": "快速切換面板是否可以移動與吸附。"
+      },
+      "topbar": {
+        "badge": "復原選單列",
+        "note": "頂端列消失時第一個要檢查的項目。"
       }
     },
-    "pages": {
-      "quickstart": {
-        "title": "快速上手",
-        "subtitle": "應優先查看的內容，以及最常使用的功能"
-      },
-      "workflows": {
-        "title": "常見工作",
-        "subtitle": "依情境分組的關鍵快速鍵"
-      },
-      "recovery": {
-        "title": "畫面復原",
-        "subtitle": "用於鎖定、隱藏選單與視窗復原的按鍵"
-      },
-      "reference": {
-        "title": "所有快速鍵",
-        "subtitle": "依類別列出的完整清單"
-      }
-    },
+    "search": "搜尋說明",
+    "search_hint": "依功能名稱、快速鍵或選單位置搜尋。",
+    "title": "Air Calendar 說明中心",
+    "topics": "說明主題",
     "workflows": {
-      "new": {
-        "title": "建立新內容",
-        "desc": "快速開始行程或任務時"
-      },
-      "navigate": {
-        "title": "移動與搜尋",
-        "desc": "在日期之間移動或快速搜尋功能時"
+      "focus_lock": {
+        "desc": "控制專注狀態或鎖定狀態時",
+        "title": "專注與鎖定"
       },
       "layout": {
-        "title": "畫面與版面配置",
-        "desc": "變更外觀或面板配置時"
+        "desc": "變更外觀或面板配置時",
+        "title": "畫面與版面配置"
       },
-      "focus_lock": {
-        "title": "專注與鎖定",
-        "desc": "控制專注狀態或鎖定狀態時"
+      "navigate": {
+        "desc": "在日期之間移動或快速搜尋功能時",
+        "title": "移動與搜尋"
+      },
+      "new": {
+        "desc": "快速開始行程或任務時",
+        "title": "建立新內容"
       },
       "window_tools": {
-        "title": "視窗與管理工具",
-        "desc": "調整視窗狀態或需要管理功能時"
+        "desc": "調整視窗狀態或需要管理功能時",
+        "title": "視窗與管理工具"
       }
-    },
-    "hero": {
-      "quickstart": {
-        "title": "最常用的功能優先顯示",
-        "desc": "我們將開啟應用程式後會立即用到的內容，以及按 F1 時會查詢的內容放在最前面。"
-      },
-      "workflows": {
-        "title": "依情境分組，更快找到",
-        "desc": "快速鍵依照註冊、導覽、切換檢視等實際工作流程分組，即使不知道名稱，也能依情境找到。"
-      },
-      "recovery": {
-        "title": "卡住時應優先嘗試的按鍵",
-        "desc": "只列出選單消失或鎖定狀態混亂時最需要的按鍵。"
-      },
-      "reference": {
-        "title": "依類別瀏覽所有快速鍵",
-        "desc": "每個快速鍵皆依功能群組整理，適合在不搜尋的情況下快速瀏覽。"
-      },
-      "search": {
-        "title": "搜尋結果",
-        "desc": "輸入按鍵名稱或功能名稱，即可立即看到相符的快速鍵。"
-      }
-    },
-    "chrome": {
-      "eyebrow": "F1 說明中心",
-      "header_title": "快速找到快速鍵與功能的說明中心",
-      "header_subtitle": "依功能名稱、按鍵名稱或選單位置搜尋，快速找到最常使用的內容。",
-      "badge_recovery": "4 個核心復原按鍵",
-      "badge_total": "共 {count} 個快速鍵",
-      "badge_search": "支援搜尋",
-      "search_placeholder": "例如：鎖定、小工具、F11、Ctrl+Shift+1",
-      "search_examples": "試試搜尋：選單列、行事曆、例行工作、強制解鎖",
-      "sidebar_title": "瀏覽",
-      "sidebar_hint": "在左側選擇一個區段，或直接使用上方欄位搜尋。",
-      "footer_hint": "搜尋可依功能名稱、快速鍵或選單位置進行。",
-      "quickstart_section_title": "從這裡開始",
-      "quickstart_section_desc": "新使用者可以從這裡開始，立即上手。",
-      "search_tips_title": "搜尋提示",
-      "search_tips_desc": "說明不僅可依快速鍵搜尋，也可依選單名稱與情境關鍵字搜尋。",
-      "tip_lock": "當鎖定無法解除時：試試「鎖定」、「復原」、「強制」",
-      "tip_layout": "想變更版面配置時：試試「版面配置」、「預設集」、「Ctrl+Shift+1」",
-      "tip_widget": "尋找小工具功能時：試試「小工具」、「F12」",
-      "recovery_primary_title": "應優先檢查的復原按鍵",
-      "recovery_primary_desc": "出現問題時應優先嘗試的按鍵。",
-      "recovery_secondary_title": "值得一併記住的實用按鍵",
-      "recovery_secondary_desc": "整理鎖定或視窗狀態時經常需要一起用到的快速鍵。",
-      "search_results_title": "搜尋結果",
-      "search_results_desc": "輸入搜尋字詞，即可立即在此看到結果。",
-      "search_results_count": "「{query}」的搜尋結果 {count} 筆",
-      "search_empty": "沒有相符的結果。\n請嘗試更短的關鍵字，例如功能名稱、按鍵名稱或選單名稱。",
-      "meta_menu_path": "選單位置：{value}",
-      "meta_aliases": "額外按鍵：{value}",
-      "meta_group": "分類：{value}"
     }
   },
   "splash": {
@@ -2887,12 +2741,14 @@
     "editor_template": "組合範本",
     "editor_title": "建立小工具樣式",
     "editor_width": "預設寬度",
+    "empty_directive_filter": "No directives for this date.",
     "empty_panel": "此日期沒有項目。",
     "empty_schedule": "無行程",
     "empty_schedule_filter": "此日期沒有行程。",
     "empty_work": "無工作項",
     "empty_work_filter": "此日期沒有工作。",
     "filter_all": "全部",
+    "filter_directive": "Directives",
     "filter_schedule": "行程",
     "filter_work": "工作",
     "filtered_count_chip": "{count}/{total}",
@@ -2911,6 +2767,7 @@
     "hide_calendar": "隱藏行事曆",
     "hide_tray": "Hide to tray",
     "item_count_chip": "{count}項",
+    "item_more_named": "Item actions: {name}",
     "layout_agenda_first": "行程優先",
     "layout_dashboard": "並排儀表板",
     "layout_magazine": "雜誌板",
@@ -2934,6 +2791,7 @@
     "menu_priority": "優先順序",
     "menu_realign": "重新排列小工具",
     "menu_refresh": "重新整理",
+    "menu_reopen": "Reopen",
     "menu_reserve_space": "預留螢幕空間",
     "month_calendar": "Choose a date from the month",
     "month_next": "下個月",
@@ -2976,6 +2834,8 @@
     "scale_tooltip_value": "縮放：{value}%",
     "schedule_title": "行程",
     "schedule_type": "行程",
+    "section_directive_no_deadline": "Directives without a deadline",
+    "section_directive_overdue": "Overdue directives",
     "section_directive_today": "指令",
     "section_routine_today": "例行",
     "section_today": "今天",

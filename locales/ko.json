@@ -123,15 +123,7 @@
     "selection_hint": "Ctrl+클릭 다중 선택",
     "sync_hint": "구글 캘린더 동기화",
     "today": "오늘",
-    "weekdays": [
-      "월",
-      "화",
-      "수",
-      "목",
-      "금",
-      "토",
-      "일"
-    ]
+    "weekdays": ["월", "화", "수", "목", "금", "토", "일"]
   },
   "checklist_mgr": {
     "btn_add_item": "항목 추가",
@@ -1539,13 +1531,7 @@
     "hint_record_jump": "Enter로 항목 열기. Shift+Enter로 날짜 이동.",
     "hint_run_command": "Enter로 명령어를 실행합니다",
     "kw": {
-      "theme": [
-        "테마",
-        "다크",
-        "라이트",
-        "색상",
-        "외형"
-      ]
+      "theme": ["테마", "다크", "라이트", "색상", "외형"]
     },
     "nlp_preview": "새 일정: [{title}] - {date} {time}",
     "no_selection": "Enter로 선택 결과 열기",
@@ -1762,547 +1748,382 @@
     "yearly": "연간"
   },
   "shortcut": {
-    "title": "Air Calendar 도움말 센터",
-    "search": "도움말 검색",
-    "search_hint": "기능 이름, 단축키 또는 메뉴 위치로 검색합니다.",
-    "topics": "도움말 주제",
+    "chrome": {
+      "badge_recovery": "핵심 복구 키 4개",
+      "badge_search": "검색 지원",
+      "badge_total": "전체 단축키 {count}개",
+      "eyebrow": "F1 HELP CENTER",
+      "footer_hint": "검색은 기능 이름, 단축키, 메뉴 위치 기준으로 동작합니다.",
+      "header_subtitle": "기능 이름, 키 이름, 메뉴 위치로 검색하고 자주 하는 작업부터 빠르게 찾아보세요.",
+      "header_title": "단축키와 기능을 바로 찾는 도움말 센터",
+      "meta_aliases": "추가 키: {value}",
+      "meta_group": "분류: {value}",
+      "meta_menu_path": "메뉴 위치: {value}",
+      "quickstart_section_desc": "처음 쓰는 사용자도 여기서 시작하면 바로 흐름을 잡을 수 있습니다.",
+      "quickstart_section_title": "바로 시작하기",
+      "recovery_primary_desc": "문제가 생겼을 때 가장 먼저 시도할 키입니다.",
+      "recovery_primary_title": "우선 확인할 복구 키",
+      "recovery_secondary_desc": "잠금이나 창 상태를 정리할 때 같이 자주 찾는 단축키입니다.",
+      "recovery_secondary_title": "함께 기억하면 좋은 보조 키",
+      "search_empty": "일치하는 결과가 없습니다.\n기능 이름, 키 이름, 메뉴 이름처럼 더 짧은 키워드로 다시 검색해 보세요.",
+      "search_examples": "검색 예시: 메뉴바, 캘린더, 루틴, 강제 잠금 해제",
+      "search_placeholder": "예: 잠금, 위젯, F11, Ctrl+Shift+1",
+      "search_results_count": "'{query}' 검색 결과 {count}개",
+      "search_results_desc": "검색어를 입력하면 여기에서 바로 결과를 보여줍니다.",
+      "search_results_title": "검색 결과",
+      "search_tips_desc": "도움말은 단축키뿐 아니라 메뉴 이름과 상황 키워드로도 검색됩니다.",
+      "search_tips_title": "검색 팁",
+      "sidebar_hint": "왼쪽에서 섹션을 고르고, 위 검색창으로 바로 찾을 수 있습니다.",
+      "sidebar_title": "탐색",
+      "tip_layout": "레이아웃을 바꾸고 싶을 때: `레이아웃`, `프리셋`, `Ctrl+Shift+1`",
+      "tip_lock": "잠금 상태가 풀리지 않을 때: `잠금`, `복구`, `강제`",
+      "tip_widget": "위젯 관련 기능을 찾을 때: `위젯`, `F12`"
+    },
     "entries": {
-      "new_schedule": {
-        "label": "새 일정 등록",
-        "description": "일정 입력 창을 바로 엽니다.",
-        "menu_path": "등록 > 새 일정",
-        "tags": [
-          "일정",
-          "추가",
-          "등록",
-          "schedule"
-        ]
-      },
-      "new_routine": {
-        "label": "루틴 등록",
-        "description": "반복 업무 루틴을 빠르게 추가합니다.",
-        "menu_path": "등록 > 루틴",
-        "tags": [
-          "루틴",
-          "업무",
-          "반복",
-          "routine"
-        ]
-      },
-      "new_directive": {
-        "label": "지시사항 등록",
-        "description": "지시나 협조 항목 입력 창을 엽니다.",
-        "menu_path": "등록 > 지시사항",
-        "tags": [
-          "지시",
-          "협조",
-          "directive"
-        ]
-      },
-      "checklist": {
-        "label": "체크리스트 관리",
-        "description": "체크리스트 템플릿과 항목 구성을 관리합니다.",
-        "menu_path": "작업 > 체크리스트 관리",
-        "tags": [
-          "체크리스트",
-          "템플릿",
-          "checklist"
-        ]
-      },
-      "today": {
-        "label": "오늘로 이동",
-        "description": "선택 날짜를 오늘로 즉시 이동합니다.",
-        "menu_path": "탐색",
-        "tags": [
-          "오늘",
-          "날짜",
-          "today"
-        ]
-      },
-      "prev_day": {
-        "label": "이전 날짜",
-        "description": "현재 기준 하루 전으로 이동합니다.",
-        "menu_path": "탐색",
-        "tags": [
-          "이전",
-          "날짜",
-          "left",
-          "prev"
-        ]
-      },
-      "next_day": {
-        "label": "다음 날짜",
-        "description": "현재 기준 하루 뒤로 이동합니다.",
-        "menu_path": "탐색",
-        "tags": [
-          "다음",
-          "날짜",
-          "right",
-          "next"
-        ]
-      },
-      "command_palette": {
-        "label": "커맨드 팔레트",
-        "description": "명령 검색창을 열어 기능을 바로 찾습니다.",
-        "menu_path": "직접 호출",
-        "tags": [
-          "검색",
-          "명령",
-          "팔레트",
-          "palette"
-        ]
-      },
-      "focus_mode": {
-        "label": "집중 모드 토글",
-        "description": "집중 모드를 켜거나 끕니다.",
-        "menu_path": "화면 > 집중 모드",
-        "tags": [
-          "집중",
-          "focus",
-          "pomodoro"
-        ]
-      },
-      "focus_pause": {
-        "label": "집중 일시정지",
-        "description": "집중 진행을 잠시 멈추거나 재개합니다.",
-        "menu_path": "집중 모드",
-        "tags": [
-          "집중",
-          "일시정지",
-          "pause"
-        ]
-      },
-      "lock_mode": {
-        "label": "잠금 모드",
-        "description": "데스크톱 잠금 모드를 전환합니다.",
-        "menu_path": "화면 > 잠금 모드",
-        "tags": [
-          "잠금",
-          "lock"
-        ]
-      },
-      "magnet_mode": {
-        "label": "자석 모드",
-        "description": "패널 정렬과 부착을 돕는 자석 모드를 전환합니다.",
-        "menu_path": "화면 > 자석 모드",
-        "tags": [
-          "자석",
-          "패널",
-          "magnet"
-        ]
-      },
       "away_lock": {
-        "label": "자리비움 잠금",
         "description": "자리비움 잠금을 즉시 시작합니다.",
+        "label": "자리비움 잠금",
         "menu_path": "화면 > 자리비움 잠금",
-        "tags": [
-          "자리비움",
-          "away",
-          "lock"
-        ]
-      },
-      "topbar": {
-        "label": "상단 바 토글",
-        "description": "상단 메뉴 바 표시 상태를 전환합니다.",
-        "menu_path": "화면 > 상단 바",
-        "tags": [
-          "메뉴바",
-          "상단 바",
-          "topbar",
-          "복구"
-        ]
+        "tags": ["자리비움", "away", "lock"]
       },
       "cal_toolbar": {
-        "label": "캘린더 툴바 토글",
         "description": "캘린더 툴바를 숨기거나 다시 표시합니다.",
+        "label": "캘린더 툴바 토글",
         "menu_path": "화면 > 캘린더 툴바",
-        "tags": [
-          "캘린더",
-          "툴바",
-          "toolbar"
-        ]
-      },
-      "fullscreen": {
-        "label": "전체화면 토글",
-        "description": "전체화면 표시를 전환합니다.",
-        "menu_path": "화면 > 전체화면",
-        "tags": [
-          "전체화면",
-          "fullscreen"
-        ]
-      },
-      "save_layout": {
-        "label": "현재 레이아웃 저장",
-        "description": "현재 패널 배치를 프리셋으로 저장합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋 > 저장",
-        "tags": [
-          "레이아웃",
-          "프리셋",
-          "저장",
-          "layout"
-        ]
-      },
-      "layout_1": {
-        "label": "레이아웃 프리셋 1",
-        "description": "기본 4패널 도킹 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
-        "tags": [
-          "레이아웃",
-          "프리셋",
-          "도킹",
-          "1"
-        ]
-      },
-      "layout_2": {
-        "label": "레이아웃 프리셋 2",
-        "description": "캘린더 중심 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
-        "tags": [
-          "레이아웃",
-          "캘린더",
-          "2"
-        ]
-      },
-      "layout_3": {
-        "label": "레이아웃 프리셋 3",
-        "description": "업무 중심 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
-        "tags": [
-          "레이아웃",
-          "업무",
-          "3"
-        ]
-      },
-      "layout_4": {
-        "label": "레이아웃 프리셋 4",
-        "description": "탭 분할 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
-        "tags": [
-          "레이아웃",
-          "탭",
-          "분할",
-          "4"
-        ]
-      },
-      "layout_5": {
-        "label": "레이아웃 프리셋 5",
-        "description": "분리형 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
-        "tags": [
-          "레이아웃",
-          "분리",
-          "부동",
-          "5"
-        ]
+        "tags": ["캘린더", "툴바", "toolbar"]
       },
       "calendar_print": {
-        "label": "캘린더 인쇄",
         "description": "현재 보기 또는 지정 기간의 캘린더를 미리보고 인쇄합니다.",
+        "label": "캘린더 인쇄",
         "menu_path": "캘린더 > 옵션 > 인쇄",
-        "tags": [
-          "인쇄",
-          "프린터",
-          "PDF",
-          "print"
-        ]
+        "tags": ["인쇄", "프린터", "PDF", "print"]
       },
-      "sync_gcal": {
-        "label": "구글 캘린더 동기화",
-        "description": "구글 캘린더 동기화를 바로 시작합니다.",
-        "menu_path": "시스템 > 캘린더 및 동기화",
-        "tags": [
-          "구글",
-          "동기화",
-          "캘린더",
-          "F5",
-          "sync"
-        ]
-      },
-      "routine_mgr": {
-        "label": "루틴 관리자",
-        "description": "루틴 관리자 탭을 바로 엽니다.",
-        "menu_path": "작업 > 루틴 현황",
-        "tags": [
-          "루틴",
-          "관리",
-          "routine"
-        ]
+      "checklist": {
+        "description": "체크리스트 템플릿과 항목 구성을 관리합니다.",
+        "label": "체크리스트 관리",
+        "menu_path": "작업 > 체크리스트 관리",
+        "tags": ["체크리스트", "템플릿", "checklist"]
       },
       "color_assign": {
-        "label": "색상 자동 지정",
         "description": "선택 항목에 색상을 자동으로 배정합니다.",
+        "label": "색상 자동 지정",
         "menu_path": "작업 > 색상 자동 지정",
-        "tags": [
-          "색상",
-          "태그",
-          "자동",
-          "color"
-        ]
+        "tags": ["색상", "태그", "자동", "color"]
       },
-      "show_hide": {
-        "label": "창 표시/숨기기",
-        "description": "메인 창을 숨기거나 다시 표시합니다.",
-        "menu_path": "창 제어",
-        "tags": [
-          "창",
-          "숨기기",
-          "보이기",
-          "overlay"
-        ]
-      },
-      "widget_mode": {
-        "label": "위젯 모드 전환",
-        "description": "위젯 전용 패널 모드를 엽니다.",
-        "menu_path": "화면 > 위젯 전용 모드",
-        "tags": [
-          "위젯",
-          "widget",
-          "panel"
-        ]
-      },
-      "restore_pos": {
-        "label": "창 위치 복원",
-        "description": "창을 안전한 화면 위치로 복원합니다.",
-        "menu_path": "창 제어",
-        "tags": [
-          "창",
-          "복원",
-          "위치",
-          "restore"
-        ]
-      },
-      "opacity_up": {
-        "label": "불투명도 증가",
-        "description": "창 불투명도를 올립니다.",
-        "menu_path": "창 제어",
-        "tags": [
-          "투명도",
-          "opacity",
-          "밝게"
-        ]
-      },
-      "opacity_down": {
-        "label": "불투명도 감소",
-        "description": "창 불투명도를 낮춥니다.",
-        "menu_path": "창 제어",
-        "tags": [
-          "투명도",
-          "opacity",
-          "낮춤"
-        ]
-      },
-      "monitor_left": {
-        "label": "이전 모니터로 이동",
-        "description": "창을 다른 모니터로 이동합니다.",
-        "menu_path": "창 제어",
-        "tags": [
-          "모니터",
-          "화면",
-          "left",
-          "display"
-        ]
-      },
-      "monitor_right": {
-        "label": "다음 모니터로 이동",
-        "description": "창을 다른 모니터로 이동합니다.",
-        "menu_path": "창 제어",
-        "tags": [
-          "모니터",
-          "화면",
-          "right",
-          "display"
-        ]
-      },
-      "help": {
-        "label": "단축키 안내",
-        "description": "도움말 센터를 엽니다.",
-        "menu_path": "시스템 > 단축키 안내",
-        "tags": [
-          "도움말",
-          "help",
-          "F1"
-        ]
+      "command_palette": {
+        "description": "명령 검색창을 열어 기능을 바로 찾습니다.",
+        "label": "커맨드 팔레트",
+        "menu_path": "직접 호출",
+        "tags": ["검색", "명령", "팔레트", "palette"]
       },
       "delete": {
-        "label": "선택 항목 삭제",
         "description": "현재 선택한 일정이나 항목을 삭제합니다.",
+        "label": "선택 항목 삭제",
         "menu_path": "선택 상태",
-        "tags": [
-          "삭제",
-          "지우기",
-          "delete"
-        ]
+        "tags": ["삭제", "지우기", "delete"]
       },
       "escape": {
-        "label": "선택 해제",
         "description": "현재 선택이나 포커스를 정리합니다.",
+        "label": "선택 해제",
         "menu_path": "선택 상태",
-        "tags": [
-          "선택 해제",
-          "취소",
-          "escape"
-        ]
+        "tags": ["선택 해제", "취소", "escape"]
+      },
+      "focus_mode": {
+        "description": "집중 모드를 켜거나 끕니다.",
+        "label": "집중 모드 토글",
+        "menu_path": "화면 > 집중 모드",
+        "tags": ["집중", "focus", "pomodoro"]
+      },
+      "focus_pause": {
+        "description": "집중 진행을 잠시 멈추거나 재개합니다.",
+        "label": "집중 일시정지",
+        "menu_path": "집중 모드",
+        "tags": ["집중", "일시정지", "pause"]
       },
       "force_unlock": {
-        "label": "강제 잠금 해제",
         "description": "예상치 못한 잠금 상태를 강제로 해제합니다.",
+        "label": "강제 잠금 해제",
         "menu_path": "긴급 복구",
-        "tags": [
-          "강제",
-          "잠금 해제",
-          "복구",
-          "emergency"
-        ]
+        "tags": ["강제", "잠금 해제", "복구", "emergency"]
+      },
+      "fullscreen": {
+        "description": "전체화면 표시를 전환합니다.",
+        "label": "전체화면 토글",
+        "menu_path": "화면 > 전체화면",
+        "tags": ["전체화면", "fullscreen"]
+      },
+      "help": {
+        "description": "도움말 센터를 엽니다.",
+        "label": "단축키 안내",
+        "menu_path": "시스템 > 단축키 안내",
+        "tags": ["도움말", "help", "F1"]
+      },
+      "layout_1": {
+        "description": "기본 4패널 도킹 배치를 적용합니다.",
+        "label": "레이아웃 프리셋 1",
+        "menu_path": "화면 > 레이아웃 프리셋",
+        "tags": ["레이아웃", "프리셋", "도킹", "1"]
+      },
+      "layout_2": {
+        "description": "캘린더 중심 배치를 적용합니다.",
+        "label": "레이아웃 프리셋 2",
+        "menu_path": "화면 > 레이아웃 프리셋",
+        "tags": ["레이아웃", "캘린더", "2"]
+      },
+      "layout_3": {
+        "description": "업무 중심 배치를 적용합니다.",
+        "label": "레이아웃 프리셋 3",
+        "menu_path": "화면 > 레이아웃 프리셋",
+        "tags": ["레이아웃", "업무", "3"]
+      },
+      "layout_4": {
+        "description": "탭 분할 배치를 적용합니다.",
+        "label": "레이아웃 프리셋 4",
+        "menu_path": "화면 > 레이아웃 프리셋",
+        "tags": ["레이아웃", "탭", "분할", "4"]
+      },
+      "layout_5": {
+        "description": "분리형 배치를 적용합니다.",
+        "label": "레이아웃 프리셋 5",
+        "menu_path": "화면 > 레이아웃 프리셋",
+        "tags": ["레이아웃", "분리", "부동", "5"]
+      },
+      "lock_mode": {
+        "description": "데스크톱 잠금 모드를 전환합니다.",
+        "label": "잠금 모드",
+        "menu_path": "화면 > 잠금 모드",
+        "tags": ["잠금", "lock"]
+      },
+      "magnet_mode": {
+        "description": "패널 정렬과 부착을 돕는 자석 모드를 전환합니다.",
+        "label": "자석 모드",
+        "menu_path": "화면 > 자석 모드",
+        "tags": ["자석", "패널", "magnet"]
+      },
+      "monitor_left": {
+        "description": "창을 다른 모니터로 이동합니다.",
+        "label": "이전 모니터로 이동",
+        "menu_path": "창 제어",
+        "tags": ["모니터", "화면", "left", "display"]
+      },
+      "monitor_right": {
+        "description": "창을 다른 모니터로 이동합니다.",
+        "label": "다음 모니터로 이동",
+        "menu_path": "창 제어",
+        "tags": ["모니터", "화면", "right", "display"]
+      },
+      "new_directive": {
+        "description": "지시나 협조 항목 입력 창을 엽니다.",
+        "label": "지시사항 등록",
+        "menu_path": "등록 > 지시사항",
+        "tags": ["지시", "협조", "directive"]
+      },
+      "new_routine": {
+        "description": "반복 업무 루틴을 빠르게 추가합니다.",
+        "label": "루틴 등록",
+        "menu_path": "등록 > 루틴",
+        "tags": ["루틴", "업무", "반복", "routine"]
+      },
+      "new_schedule": {
+        "description": "일정 입력 창을 바로 엽니다.",
+        "label": "새 일정 등록",
+        "menu_path": "등록 > 새 일정",
+        "tags": ["일정", "추가", "등록", "schedule"]
+      },
+      "next_day": {
+        "description": "현재 기준 하루 뒤로 이동합니다.",
+        "label": "다음 날짜",
+        "menu_path": "탐색",
+        "tags": ["다음", "날짜", "right", "next"]
+      },
+      "opacity_down": {
+        "description": "창 불투명도를 낮춥니다.",
+        "label": "불투명도 감소",
+        "menu_path": "창 제어",
+        "tags": ["투명도", "opacity", "낮춤"]
+      },
+      "opacity_up": {
+        "description": "창 불투명도를 올립니다.",
+        "label": "불투명도 증가",
+        "menu_path": "창 제어",
+        "tags": ["투명도", "opacity", "밝게"]
+      },
+      "prev_day": {
+        "description": "현재 기준 하루 전으로 이동합니다.",
+        "label": "이전 날짜",
+        "menu_path": "탐색",
+        "tags": ["이전", "날짜", "left", "prev"]
+      },
+      "restore_pos": {
+        "description": "창을 안전한 화면 위치로 복원합니다.",
+        "label": "창 위치 복원",
+        "menu_path": "창 제어",
+        "tags": ["창", "복원", "위치", "restore"]
+      },
+      "routine_mgr": {
+        "description": "루틴 관리자 탭을 바로 엽니다.",
+        "label": "루틴 관리자",
+        "menu_path": "작업 > 루틴 현황",
+        "tags": ["루틴", "관리", "routine"]
+      },
+      "save_layout": {
+        "description": "현재 패널 배치를 프리셋으로 저장합니다.",
+        "label": "현재 레이아웃 저장",
+        "menu_path": "화면 > 레이아웃 프리셋 > 저장",
+        "tags": ["레이아웃", "프리셋", "저장", "layout"]
+      },
+      "show_hide": {
+        "description": "메인 창을 숨기거나 다시 표시합니다.",
+        "label": "창 표시/숨기기",
+        "menu_path": "창 제어",
+        "tags": ["창", "숨기기", "보이기", "overlay"]
+      },
+      "sync_gcal": {
+        "description": "구글 캘린더 동기화를 바로 시작합니다.",
+        "label": "구글 캘린더 동기화",
+        "menu_path": "시스템 > 캘린더 및 동기화",
+        "tags": ["구글", "동기화", "캘린더", "F5", "sync"]
+      },
+      "today": {
+        "description": "선택 날짜를 오늘로 즉시 이동합니다.",
+        "label": "오늘로 이동",
+        "menu_path": "탐색",
+        "tags": ["오늘", "날짜", "today"]
+      },
+      "topbar": {
+        "description": "상단 메뉴 바 표시 상태를 전환합니다.",
+        "label": "상단 바 토글",
+        "menu_path": "화면 > 상단 바",
+        "tags": ["메뉴바", "상단 바", "topbar", "복구"]
+      },
+      "widget_mode": {
+        "description": "위젯 전용 패널 모드를 엽니다.",
+        "label": "위젯 모드 전환",
+        "menu_path": "화면 > 위젯 전용 모드",
+        "tags": ["위젯", "widget", "panel"]
       }
     },
     "groups": {
-      "register": {
-        "label": "등록",
-        "description": "새 일정, 루틴, 지시사항을 빠르게 시작합니다."
-      },
-      "navigate": {
-        "label": "이동",
-        "description": "날짜와 선택 흐름을 이동하거나 빠르게 호출합니다."
-      },
-      "mode": {
-        "label": "모드",
-        "description": "집중, 자석, 잠금 같은 작업 모드를 제어합니다."
-      },
-      "view": {
-        "label": "보기",
-        "description": "툴바, 전체화면, 레이아웃을 다룹니다."
-      },
       "admin": {
-        "label": "관리",
-        "description": "관리 화면과 자동 정리 도구를 엽니다."
-      },
-      "window": {
-        "label": "창",
-        "description": "창 위치, 모니터, 투명도 같은 창 동작을 조절합니다."
-      },
-      "system": {
-        "label": "시스템",
-        "description": "도움말과 시스템 보조 기능을 확인합니다."
+        "description": "관리 화면과 자동 정리 도구를 엽니다.",
+        "label": "관리"
       },
       "edit": {
-        "label": "편집",
-        "description": "현재 선택 항목을 정리하거나 해제합니다."
+        "description": "현재 선택 항목을 정리하거나 해제합니다.",
+        "label": "편집"
       },
       "emergency": {
-        "label": "긴급",
-        "description": "예상치 못한 잠금 상태를 강제로 복구합니다."
+        "description": "예상치 못한 잠금 상태를 강제로 복구합니다.",
+        "label": "긴급"
+      },
+      "mode": {
+        "description": "집중, 자석, 잠금 같은 작업 모드를 제어합니다.",
+        "label": "모드"
+      },
+      "navigate": {
+        "description": "날짜와 선택 흐름을 이동하거나 빠르게 호출합니다.",
+        "label": "이동"
+      },
+      "register": {
+        "description": "새 일정, 루틴, 지시사항을 빠르게 시작합니다.",
+        "label": "등록"
+      },
+      "system": {
+        "description": "도움말과 시스템 보조 기능을 확인합니다.",
+        "label": "시스템"
+      },
+      "view": {
+        "description": "툴바, 전체화면, 레이아웃을 다룹니다.",
+        "label": "보기"
+      },
+      "window": {
+        "description": "창 위치, 모니터, 투명도 같은 창 동작을 조절합니다.",
+        "label": "창"
+      }
+    },
+    "hero": {
+      "quickstart": {
+        "desc": "처음 앱을 열었을 때 바로 쓰는 기능과, F1을 눌렀을 때 당장 찾게 되는 기능을 먼저 배치했습니다.",
+        "title": "가장 자주 찾는 작업부터 바로 보이게"
+      },
+      "recovery": {
+        "desc": "메뉴가 사라졌거나 잠금 상태가 꼬였을 때 가장 먼저 봐야 하는 키만 따로 모았습니다.",
+        "title": "막혔을 때 먼저 눌러볼 키"
+      },
+      "reference": {
+        "desc": "모든 단축키를 기능 그룹별로 정리했습니다. 검색 없이 훑어볼 때 적합합니다.",
+        "title": "전체 단축키를 분류별로 보기"
+      },
+      "search": {
+        "desc": "키 이름이나 기능 이름을 입력하면 관련 단축키를 바로 보여줍니다.",
+        "title": "검색 결과"
+      },
+      "workflows": {
+        "desc": "등록, 이동, 화면 전환처럼 실제 사용 흐름 중심으로 묶었습니다. 이름을 몰라도 상황만 떠올리면 찾을 수 있게 구성했습니다.",
+        "title": "상황별로 묶어서 더 빨리 찾기"
+      }
+    },
+    "pages": {
+      "quickstart": {
+        "subtitle": "처음 찾는 기능과 가장 자주 쓰는 작업",
+        "title": "빠른 시작"
+      },
+      "recovery": {
+        "subtitle": "잠금, 메뉴 숨김, 창 복구 관련 키",
+        "title": "화면 복구"
+      },
+      "reference": {
+        "subtitle": "분류별 전체 목록",
+        "title": "전체 단축키"
+      },
+      "workflows": {
+        "subtitle": "상황별로 묶은 핵심 단축키",
+        "title": "자주 하는 작업"
       }
     },
     "priority": {
-      "topbar": {
-        "badge": "메뉴바 복구",
-        "note": "상단 바가 사라졌을 때 가장 먼저 확인하세요."
-      },
-      "magnet_mode": {
-        "badge": "자석 전환",
-        "note": "패널 이동과 부착 가능 상태를 빠르게 바꿉니다."
+      "force_unlock": {
+        "badge": "긴급 복구",
+        "note": "예상치 못한 잠금 상태를 강제로 해제합니다."
       },
       "lock_mode": {
         "badge": "고정 해제",
         "note": "잠금 상태에서도 메인 화면에서 바로 토글합니다."
       },
-      "force_unlock": {
-        "badge": "긴급 복구",
-        "note": "예상치 못한 잠금 상태를 강제로 해제합니다."
+      "magnet_mode": {
+        "badge": "자석 전환",
+        "note": "패널 이동과 부착 가능 상태를 빠르게 바꿉니다."
+      },
+      "topbar": {
+        "badge": "메뉴바 복구",
+        "note": "상단 바가 사라졌을 때 가장 먼저 확인하세요."
       }
     },
-    "pages": {
-      "quickstart": {
-        "title": "빠른 시작",
-        "subtitle": "처음 찾는 기능과 가장 자주 쓰는 작업"
-      },
-      "workflows": {
-        "title": "자주 하는 작업",
-        "subtitle": "상황별로 묶은 핵심 단축키"
-      },
-      "recovery": {
-        "title": "화면 복구",
-        "subtitle": "잠금, 메뉴 숨김, 창 복구 관련 키"
-      },
-      "reference": {
-        "title": "전체 단축키",
-        "subtitle": "분류별 전체 목록"
-      }
-    },
+    "search": "도움말 검색",
+    "search_hint": "기능 이름, 단축키 또는 메뉴 위치로 검색합니다.",
+    "title": "Air Calendar 도움말 센터",
+    "topics": "도움말 주제",
     "workflows": {
-      "new": {
-        "title": "새로 만들기",
-        "desc": "일정과 업무를 빠르게 시작할 때"
-      },
-      "navigate": {
-        "title": "이동과 탐색",
-        "desc": "날짜 이동과 기능 검색을 빠르게 처리할 때"
+      "focus_lock": {
+        "desc": "집중 상태나 잠금 상태를 제어할 때",
+        "title": "집중과 잠금"
       },
       "layout": {
-        "title": "화면과 레이아웃",
-        "desc": "보이는 방식과 패널 배치를 바꿀 때"
+        "desc": "보이는 방식과 패널 배치를 바꿀 때",
+        "title": "화면과 레이아웃"
       },
-      "focus_lock": {
-        "title": "집중과 잠금",
-        "desc": "집중 상태나 잠금 상태를 제어할 때"
+      "navigate": {
+        "desc": "날짜 이동과 기능 검색을 빠르게 처리할 때",
+        "title": "이동과 탐색"
+      },
+      "new": {
+        "desc": "일정과 업무를 빠르게 시작할 때",
+        "title": "새로 만들기"
       },
       "window_tools": {
-        "title": "창과 관리 도구",
-        "desc": "창 상태 조절이나 관리 기능이 필요할 때"
+        "desc": "창 상태 조절이나 관리 기능이 필요할 때",
+        "title": "창과 관리 도구"
       }
-    },
-    "hero": {
-      "quickstart": {
-        "title": "가장 자주 찾는 작업부터 바로 보이게",
-        "desc": "처음 앱을 열었을 때 바로 쓰는 기능과, F1을 눌렀을 때 당장 찾게 되는 기능을 먼저 배치했습니다."
-      },
-      "workflows": {
-        "title": "상황별로 묶어서 더 빨리 찾기",
-        "desc": "등록, 이동, 화면 전환처럼 실제 사용 흐름 중심으로 묶었습니다. 이름을 몰라도 상황만 떠올리면 찾을 수 있게 구성했습니다."
-      },
-      "recovery": {
-        "title": "막혔을 때 먼저 눌러볼 키",
-        "desc": "메뉴가 사라졌거나 잠금 상태가 꼬였을 때 가장 먼저 봐야 하는 키만 따로 모았습니다."
-      },
-      "reference": {
-        "title": "전체 단축키를 분류별로 보기",
-        "desc": "모든 단축키를 기능 그룹별로 정리했습니다. 검색 없이 훑어볼 때 적합합니다."
-      },
-      "search": {
-        "title": "검색 결과",
-        "desc": "키 이름이나 기능 이름을 입력하면 관련 단축키를 바로 보여줍니다."
-      }
-    },
-    "chrome": {
-      "eyebrow": "F1 HELP CENTER",
-      "header_title": "단축키와 기능을 바로 찾는 도움말 센터",
-      "header_subtitle": "기능 이름, 키 이름, 메뉴 위치로 검색하고 자주 하는 작업부터 빠르게 찾아보세요.",
-      "badge_recovery": "핵심 복구 키 4개",
-      "badge_total": "전체 단축키 {count}개",
-      "badge_search": "검색 지원",
-      "search_placeholder": "예: 잠금, 위젯, F11, Ctrl+Shift+1",
-      "search_examples": "검색 예시: 메뉴바, 캘린더, 루틴, 강제 잠금 해제",
-      "sidebar_title": "탐색",
-      "sidebar_hint": "왼쪽에서 섹션을 고르고, 위 검색창으로 바로 찾을 수 있습니다.",
-      "footer_hint": "검색은 기능 이름, 단축키, 메뉴 위치 기준으로 동작합니다.",
-      "quickstart_section_title": "바로 시작하기",
-      "quickstart_section_desc": "처음 쓰는 사용자도 여기서 시작하면 바로 흐름을 잡을 수 있습니다.",
-      "search_tips_title": "검색 팁",
-      "search_tips_desc": "도움말은 단축키뿐 아니라 메뉴 이름과 상황 키워드로도 검색됩니다.",
-      "tip_lock": "잠금 상태가 풀리지 않을 때: `잠금`, `복구`, `강제`",
-      "tip_layout": "레이아웃을 바꾸고 싶을 때: `레이아웃`, `프리셋`, `Ctrl+Shift+1`",
-      "tip_widget": "위젯 관련 기능을 찾을 때: `위젯`, `F12`",
-      "recovery_primary_title": "우선 확인할 복구 키",
-      "recovery_primary_desc": "문제가 생겼을 때 가장 먼저 시도할 키입니다.",
-      "recovery_secondary_title": "함께 기억하면 좋은 보조 키",
-      "recovery_secondary_desc": "잠금이나 창 상태를 정리할 때 같이 자주 찾는 단축키입니다.",
-      "search_results_title": "검색 결과",
-      "search_results_desc": "검색어를 입력하면 여기에서 바로 결과를 보여줍니다.",
-      "search_results_count": "'{query}' 검색 결과 {count}개",
-      "search_empty": "일치하는 결과가 없습니다.\n기능 이름, 키 이름, 메뉴 이름처럼 더 짧은 키워드로 다시 검색해 보세요.",
-      "meta_menu_path": "메뉴 위치: {value}",
-      "meta_aliases": "추가 키: {value}",
-      "meta_group": "분류: {value}"
     }
   },
   "splash": {
@@ -2920,15 +2741,15 @@
     "editor_template": "구성 템플릿",
     "editor_title": "위젯 스타일 만들기",
     "editor_width": "기본 너비",
+    "empty_directive_filter": "이 날짜에 지시·협조사항이 없습니다.",
     "empty_panel": "이 날짜에 항목이 없습니다.",
     "empty_schedule": "일정 없음",
     "empty_schedule_filter": "이 날짜에 일정이 없습니다.",
-    "empty_directive_filter": "이 날짜에 지시·협조사항이 없습니다.",
     "empty_work": "업무 없음",
     "empty_work_filter": "이 날짜에 업무가 없습니다.",
     "filter_all": "전체",
-    "filter_schedule": "일정",
     "filter_directive": "지시",
+    "filter_schedule": "일정",
     "filter_work": "업무",
     "filtered_count_chip": "{count}/{total}",
     "focus_list": "집중 목록",
@@ -2968,9 +2789,9 @@
     "menu_google_sync": "Google 동기화",
     "menu_individual_opacity": "불투명도",
     "menu_priority": "우선순위",
-    "menu_reopen": "다시 진행",
     "menu_realign": "위젯 재정렬",
     "menu_refresh": "새로고침",
+    "menu_reopen": "다시 진행",
     "menu_reserve_space": "화면 공간 확보",
     "month_calendar": "월간 날짜 선택",
     "month_next": "다음 달",
@@ -3013,9 +2834,9 @@
     "scale_tooltip_value": "배율: {value}%",
     "schedule_title": "일정",
     "schedule_type": "일정",
-    "section_directive_today": "지시/협조",
     "section_directive_no_deadline": "기한 없는 지시·협조",
     "section_directive_overdue": "기한 지난 지시·협조",
+    "section_directive_today": "지시/협조",
     "section_routine_today": "업무",
     "section_today": "오늘",
     "section_work_today": "오늘의 업무",

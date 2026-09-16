@@ -123,15 +123,7 @@
     "selection_hint": "Ctrl+klik voor meervoudige selectie",
     "sync_hint": "Synchronisatie",
     "today": "Vandaag",
-    "weekdays": [
-      "Ma",
-      "Di",
-      "Wo",
-      "Do",
-      "Vr",
-      "Za",
-      "Zo"
-    ]
+    "weekdays": ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"]
   },
   "checklist_mgr": {
     "btn_add_item": "Item toevoegen",
@@ -970,6 +962,7 @@
   },
   "focus_selector": {
     "auto_pick": "Auto Selecteren",
+    "auto_pick_no_tasks": "There are no tasks available for automatic selection.",
     "col_datetime": "Datum/tijd",
     "col_duration": "Duur",
     "col_task": "Taak",
@@ -989,12 +982,15 @@
     "no_tasks": "Nee tasks match this filter.",
     "pick_prompt": "Selecteren a task to focus on.",
     "select_done": "Selecteer",
+    "select_no_selection": "Select a task from the list first.",
     "settings_hint": "U kunt het type Focusmodus en het Pomodoro-gedrag hier wijzigen.",
     "settings_saved": "Saved. Nieuw values will be used next time Focus Modus starts.",
     "tab_logs": "Logs",
     "tab_settings": "Instellingen",
     "tab_tasks": "Taken",
-    "title": "Selecteer Taak"
+    "task_load_error": "Could not load tasks. Please try again.",
+    "title": "Selecteer Taak",
+    "unsaved_settings_confirm": "You have unsaved Pomodoro settings. Discard them and close?"
   },
   "gcal": {
     "auto_healed_msg": "{count} problematische afspraak(en) zijn automatisch opgelost en gesynchroniseerd met je agenda.",
@@ -1535,13 +1531,7 @@
     "hint_record_jump": "Enter opent het item. Shift+Enter gaat naar de datum.",
     "hint_run_command": "Enter voert het geselecteerde commando uit",
     "kw": {
-      "theme": [
-        "theme",
-        "dark",
-        "light",
-        "color",
-        "appearance"
-      ]
+      "theme": ["theme", "dark", "light", "color", "appearance"]
     },
     "nlp_preview": "Nieuw: [{title}] - {date} {time}",
     "no_selection": "Druk op Enter om het geselecteerde resultaat te openen",
@@ -1758,518 +1748,382 @@
     "yearly": "Jaarlijks"
   },
   "shortcut": {
-    "title": "Air Calendar Helpcentrum",
-    "search": "Help doorzoeken",
-    "search_hint": "Zoek op functienaam, sneltoets of menulocatie.",
-    "topics": "Helponderwerpen",
+    "chrome": {
+      "badge_recovery": "4 belangrijke herstel­toetsen",
+      "badge_search": "Zoeken ondersteund",
+      "badge_total": "{count} sneltoetsen in totaal",
+      "eyebrow": "F1 HELPCENTRUM",
+      "footer_hint": "Zoeken werkt op functienaam, sneltoets of menulocatie.",
+      "header_subtitle": "Zoek op functienaam, toetsnaam of menulocatie, en vind snel wat je het meest gebruikt.",
+      "header_title": "Het helpcentrum om snel sneltoetsen en functies te vinden",
+      "meta_aliases": "Extra toetsen: {value}",
+      "meta_group": "Categorie: {value}",
+      "meta_menu_path": "Menulocatie: {value}",
+      "quickstart_section_desc": "Nieuwe gebruikers kunnen hier beginnen om er meteen de slag van te krijgen.",
+      "quickstart_section_title": "Begin hier",
+      "recovery_primary_desc": "De toetsen om eerst te proberen als er iets misgaat.",
+      "recovery_primary_title": "Herstel­toetsen om eerst te controleren",
+      "recovery_secondary_desc": "Sneltoetsen die vaak samen nodig zijn bij het opruimen van vergrendel- of vensterstatus.",
+      "recovery_secondary_title": "Handige toetsen om daarnaast te onthouden",
+      "search_empty": "Geen overeenkomende resultaten.\nProbeer een kortere trefwoord, zoals een functienaam, toetsnaam of menunaam.",
+      "search_examples": "Probeer te zoeken naar: menubalk, kalender, routine, geforceerd ontgrendelen",
+      "search_placeholder": "bijv. vergrendelen, widget, F11, Ctrl+Shift+1",
+      "search_results_count": "{count} resultaten voor '{query}'",
+      "search_results_desc": "Typ een zoekterm om hier direct resultaten te zien verschijnen.",
+      "search_results_title": "Zoekresultaten",
+      "search_tips_desc": "Help is ook doorzoekbaar op menunamen en situatiegebonden trefwoorden, niet alleen sneltoetsen.",
+      "search_tips_title": "Zoektips",
+      "sidebar_hint": "Kies links een sectie, of zoek direct met het bovenstaande vak.",
+      "sidebar_title": "Bladeren",
+      "tip_layout": "Als je de lay-out wilt wijzigen: probeer `lay-out`, `voorinstelling`, `Ctrl+Shift+1`",
+      "tip_lock": "Als een vergrendeling niet loslaat: probeer `vergrendelen`, `herstel`, `forceren`",
+      "tip_widget": "Bij het zoeken naar widgetfuncties: probeer `widget`, `F12`"
+    },
     "entries": {
-      "new_schedule": {
-        "label": "Nieuwe afspraak toevoegen",
-        "description": "Opent direct het venster voor het invoeren van afspraken.",
-        "menu_path": "Registreren > Nieuwe afspraak",
-        "tags": [
-          "afspraak",
-          "toevoegen",
-          "registreren"
-        ]
-      },
-      "new_routine": {
-        "label": "Routine registreren",
-        "description": "Voegt snel een terugkerende taakroutine toe.",
-        "menu_path": "Registreren > Routine",
-        "tags": [
-          "routine",
-          "taak",
-          "terugkerend"
-        ]
-      },
-      "new_directive": {
-        "label": "Richtlijn registreren",
-        "description": "Opent het venster om een richtlijn of samenwerkingsitem in te voeren.",
-        "menu_path": "Registreren > Richtlijn",
-        "tags": [
-          "richtlijn",
-          "samenwerking"
-        ]
-      },
-      "checklist": {
-        "label": "Checklist beheren",
-        "description": "Beheert checklistsjablonen en itemstructuur.",
-        "menu_path": "Taken > Checklist beheren",
-        "tags": [
-          "checklist",
-          "sjabloon"
-        ]
-      },
-      "today": {
-        "label": "Naar vandaag springen",
-        "description": "Verplaatst de geselecteerde datum direct naar vandaag.",
-        "menu_path": "Navigatie",
-        "tags": [
-          "vandaag",
-          "datum"
-        ]
-      },
-      "prev_day": {
-        "label": "Vorige dag",
-        "description": "Gaat een dag vóór de huidige datum.",
-        "menu_path": "Navigatie",
-        "tags": [
-          "vorige",
-          "datum",
-          "links"
-        ]
-      },
-      "next_day": {
-        "label": "Volgende dag",
-        "description": "Gaat een dag na de huidige datum.",
-        "menu_path": "Navigatie",
-        "tags": [
-          "volgende",
-          "datum",
-          "rechts"
-        ]
-      },
-      "command_palette": {
-        "label": "Opdrachtpalet",
-        "description": "Opent het opdrachtzoekvak om direct een functie te vinden.",
-        "menu_path": "Directe oproep",
-        "tags": [
-          "zoeken",
-          "opdracht",
-          "palet"
-        ]
-      },
-      "focus_mode": {
-        "label": "Focusmodus schakelen",
-        "description": "Zet focusmodus aan of uit.",
-        "menu_path": "Beeld > Focusmodus",
-        "tags": [
-          "focus",
-          "pomodoro"
-        ]
-      },
-      "focus_pause": {
-        "label": "Focus pauzeren",
-        "description": "Pauzeert of hervat de huidige focussessie.",
-        "menu_path": "Focusmodus",
-        "tags": [
-          "focus",
-          "pauze"
-        ]
-      },
-      "lock_mode": {
-        "label": "Vergrendelmodus",
-        "description": "Zet de bureaubladvergrendeling aan of uit.",
-        "menu_path": "Beeld > Vergrendelmodus",
-        "tags": [
-          "vergrendelen"
-        ]
-      },
-      "magnet_mode": {
-        "label": "Magneetmodus",
-        "description": "Schakelt magneetmodus, die helpt bij het uitlijnen en vastklikken van panelen.",
-        "menu_path": "Beeld > Magneetmodus",
-        "tags": [
-          "magneet",
-          "paneel"
-        ]
-      },
       "away_lock": {
-        "label": "Afwezigheidsvergrendeling",
         "description": "Start onmiddellijk de afwezigheidsvergrendelmodus.",
+        "label": "Afwezigheidsvergrendeling",
         "menu_path": "Beeld > Afwezigheidsvergrendeling",
-        "tags": [
-          "afwezig",
-          "vergrendelen"
-        ]
-      },
-      "topbar": {
-        "label": "Bovenbalk schakelen",
-        "description": "Schakelt de zichtbaarheid van de bovenste menubalk.",
-        "menu_path": "Beeld > Bovenbalk",
-        "tags": [
-          "menubalk",
-          "bovenbalk",
-          "herstel"
-        ]
+        "tags": ["afwezig", "vergrendelen"]
       },
       "cal_toolbar": {
-        "label": "Kalenderwerkbalk schakelen",
         "description": "Verbergt of toont de kalenderwerkbalk opnieuw.",
+        "label": "Kalenderwerkbalk schakelen",
         "menu_path": "Beeld > Kalenderwerkbalk",
-        "tags": [
-          "kalender",
-          "werkbalk"
-        ]
-      },
-      "fullscreen": {
-        "label": "Volledig scherm schakelen",
-        "description": "Zet de weergave op volledig scherm aan of uit.",
-        "menu_path": "Beeld > Volledig scherm",
-        "tags": [
-          "volledig scherm"
-        ]
-      },
-      "save_layout": {
-        "label": "Huidige lay-out opslaan",
-        "description": "Slaat de huidige panelenindeling op als voorinstelling.",
-        "menu_path": "Beeld > Lay-outvoorinstellingen > Opslaan",
-        "tags": [
-          "lay-out",
-          "voorinstelling",
-          "opslaan"
-        ]
-      },
-      "layout_1": {
-        "label": "Lay-outvoorinstelling 1",
-        "description": "Past de standaard 4-panelen-lay-out toe.",
-        "menu_path": "Beeld > Lay-outvoorinstellingen",
-        "tags": [
-          "lay-out",
-          "voorinstelling",
-          "vastgezet",
-          "1"
-        ]
-      },
-      "layout_2": {
-        "label": "Lay-outvoorinstelling 2",
-        "description": "Past een kalendergerichte lay-out toe.",
-        "menu_path": "Beeld > Lay-outvoorinstellingen",
-        "tags": [
-          "lay-out",
-          "kalender",
-          "2"
-        ]
-      },
-      "layout_3": {
-        "label": "Lay-outvoorinstelling 3",
-        "description": "Past een taakgerichte lay-out toe.",
-        "menu_path": "Beeld > Lay-outvoorinstellingen",
-        "tags": [
-          "lay-out",
-          "taak",
-          "3"
-        ]
-      },
-      "layout_4": {
-        "label": "Lay-outvoorinstelling 4",
-        "description": "Past een gesplitste tabbladlay-out toe.",
-        "menu_path": "Beeld > Lay-outvoorinstellingen",
-        "tags": [
-          "lay-out",
-          "tabblad",
-          "gesplitst",
-          "4"
-        ]
-      },
-      "layout_5": {
-        "label": "Lay-outvoorinstelling 5",
-        "description": "Past een volledig gescheiden zwevende lay-out toe.",
-        "menu_path": "Beeld > Lay-outvoorinstellingen",
-        "tags": [
-          "lay-out",
-          "gescheiden",
-          "zwevend",
-          "5"
-        ]
+        "tags": ["kalender", "werkbalk"]
       },
       "calendar_print": {
-        "label": "Kalender afdrukken",
         "description": "Toont een voorbeeld en drukt de kalender af voor de huidige of gekozen periode.",
+        "label": "Kalender afdrukken",
         "menu_path": "Kalender > Opties > Afdrukken",
-        "tags": [
-          "afdrukken",
-          "printer",
-          "PDF"
-        ]
+        "tags": ["afdrukken", "printer", "PDF"]
       },
-      "sync_gcal": {
-        "label": "Google Agenda synchroniseren",
-        "description": "Start onmiddellijk een synchronisatie met Google Agenda.",
-        "menu_path": "Systeem > Kalender en synchronisatie",
-        "tags": [
-          "google",
-          "synchronisatie",
-          "kalender",
-          "F5"
-        ]
-      },
-      "routine_mgr": {
-        "label": "Routinebeheer",
-        "description": "Opent direct het tabblad voor routinebeheer.",
-        "menu_path": "Taken > Routine-overzicht",
-        "tags": [
-          "routine",
-          "beheren"
-        ]
+      "checklist": {
+        "description": "Beheert checklistsjablonen en itemstructuur.",
+        "label": "Checklist beheren",
+        "menu_path": "Taken > Checklist beheren",
+        "tags": ["checklist", "sjabloon"]
       },
       "color_assign": {
-        "label": "Automatische kleurtoewijzing",
         "description": "Wijst automatisch kleuren toe aan geselecteerde items.",
+        "label": "Automatische kleurtoewijzing",
         "menu_path": "Taken > Automatische kleurtoewijzing",
-        "tags": [
-          "kleur",
-          "label",
-          "automatisch"
-        ]
+        "tags": ["kleur", "label", "automatisch"]
       },
-      "show_hide": {
-        "label": "Venster tonen/verbergen",
-        "description": "Verbergt het hoofdvenster of toont het weer.",
-        "menu_path": "Vensterbediening",
-        "tags": [
-          "venster",
-          "verbergen",
-          "tonen",
-          "overlay"
-        ]
-      },
-      "widget_mode": {
-        "label": "Widgetmodus schakelen",
-        "description": "Opent alleen-widgetpaneelmodus.",
-        "menu_path": "Beeld > Alleen-widgetmodus",
-        "tags": [
-          "widget",
-          "paneel"
-        ]
-      },
-      "restore_pos": {
-        "label": "Vensterpositie herstellen",
-        "description": "Herstelt het venster naar een veilige schermpositie.",
-        "menu_path": "Vensterbediening",
-        "tags": [
-          "venster",
-          "herstellen",
-          "positie"
-        ]
-      },
-      "opacity_up": {
-        "label": "Dekking verhogen",
-        "description": "Verhoogt de vensterdekking.",
-        "menu_path": "Vensterbediening",
-        "tags": [
-          "dekking",
-          "helderder"
-        ]
-      },
-      "opacity_down": {
-        "label": "Dekking verlagen",
-        "description": "Verlaagt de vensterdekking.",
-        "menu_path": "Vensterbediening",
-        "tags": [
-          "dekking",
-          "donkerder"
-        ]
-      },
-      "monitor_left": {
-        "label": "Naar vorige monitor verplaatsen",
-        "description": "Verplaatst het venster naar een andere monitor.",
-        "menu_path": "Vensterbediening",
-        "tags": [
-          "monitor",
-          "scherm",
-          "links"
-        ]
-      },
-      "monitor_right": {
-        "label": "Naar volgende monitor verplaatsen",
-        "description": "Verplaatst het venster naar een andere monitor.",
-        "menu_path": "Vensterbediening",
-        "tags": [
-          "monitor",
-          "scherm",
-          "rechts"
-        ]
-      },
-      "help": {
-        "label": "Sneltoetsengids",
-        "description": "Opent het helpcentrum.",
-        "menu_path": "Systeem > Sneltoetsengids",
-        "tags": [
-          "help",
-          "F1"
-        ]
+      "command_palette": {
+        "description": "Opent het opdrachtzoekvak om direct een functie te vinden.",
+        "label": "Opdrachtpalet",
+        "menu_path": "Directe oproep",
+        "tags": ["zoeken", "opdracht", "palet"]
       },
       "delete": {
-        "label": "Geselecteerd item verwijderen",
         "description": "Verwijdert de momenteel geselecteerde afspraak of het item.",
+        "label": "Geselecteerd item verwijderen",
         "menu_path": "Selectiestatus",
-        "tags": [
-          "verwijderen",
-          "wissen"
-        ]
+        "tags": ["verwijderen", "wissen"]
       },
       "escape": {
-        "label": "Selectie wissen",
         "description": "Wist de huidige selectie of focus.",
+        "label": "Selectie wissen",
         "menu_path": "Selectiestatus",
-        "tags": [
-          "deselecteren",
-          "annuleren",
-          "escape"
-        ]
+        "tags": ["deselecteren", "annuleren", "escape"]
+      },
+      "focus_mode": {
+        "description": "Zet focusmodus aan of uit.",
+        "label": "Focusmodus schakelen",
+        "menu_path": "Beeld > Focusmodus",
+        "tags": ["focus", "pomodoro"]
+      },
+      "focus_pause": {
+        "description": "Pauzeert of hervat de huidige focussessie.",
+        "label": "Focus pauzeren",
+        "menu_path": "Focusmodus",
+        "tags": ["focus", "pauze"]
       },
       "force_unlock": {
-        "label": "Geforceerd ontgrendelen",
         "description": "Heft een onverwachte vergrendelstatus geforceerd op.",
+        "label": "Geforceerd ontgrendelen",
         "menu_path": "Noodherstel",
-        "tags": [
-          "forceren",
-          "ontgrendelen",
-          "herstel",
-          "noodgeval"
-        ]
+        "tags": ["forceren", "ontgrendelen", "herstel", "noodgeval"]
+      },
+      "fullscreen": {
+        "description": "Zet de weergave op volledig scherm aan of uit.",
+        "label": "Volledig scherm schakelen",
+        "menu_path": "Beeld > Volledig scherm",
+        "tags": ["volledig scherm"]
+      },
+      "help": {
+        "description": "Opent het helpcentrum.",
+        "label": "Sneltoetsengids",
+        "menu_path": "Systeem > Sneltoetsengids",
+        "tags": ["help", "F1"]
+      },
+      "layout_1": {
+        "description": "Past de standaard 4-panelen-lay-out toe.",
+        "label": "Lay-outvoorinstelling 1",
+        "menu_path": "Beeld > Lay-outvoorinstellingen",
+        "tags": ["lay-out", "voorinstelling", "vastgezet", "1"]
+      },
+      "layout_2": {
+        "description": "Past een kalendergerichte lay-out toe.",
+        "label": "Lay-outvoorinstelling 2",
+        "menu_path": "Beeld > Lay-outvoorinstellingen",
+        "tags": ["lay-out", "kalender", "2"]
+      },
+      "layout_3": {
+        "description": "Past een taakgerichte lay-out toe.",
+        "label": "Lay-outvoorinstelling 3",
+        "menu_path": "Beeld > Lay-outvoorinstellingen",
+        "tags": ["lay-out", "taak", "3"]
+      },
+      "layout_4": {
+        "description": "Past een gesplitste tabbladlay-out toe.",
+        "label": "Lay-outvoorinstelling 4",
+        "menu_path": "Beeld > Lay-outvoorinstellingen",
+        "tags": ["lay-out", "tabblad", "gesplitst", "4"]
+      },
+      "layout_5": {
+        "description": "Past een volledig gescheiden zwevende lay-out toe.",
+        "label": "Lay-outvoorinstelling 5",
+        "menu_path": "Beeld > Lay-outvoorinstellingen",
+        "tags": ["lay-out", "gescheiden", "zwevend", "5"]
+      },
+      "lock_mode": {
+        "description": "Zet de bureaubladvergrendeling aan of uit.",
+        "label": "Vergrendelmodus",
+        "menu_path": "Beeld > Vergrendelmodus",
+        "tags": ["vergrendelen"]
+      },
+      "magnet_mode": {
+        "description": "Schakelt magneetmodus, die helpt bij het uitlijnen en vastklikken van panelen.",
+        "label": "Magneetmodus",
+        "menu_path": "Beeld > Magneetmodus",
+        "tags": ["magneet", "paneel"]
+      },
+      "monitor_left": {
+        "description": "Verplaatst het venster naar een andere monitor.",
+        "label": "Naar vorige monitor verplaatsen",
+        "menu_path": "Vensterbediening",
+        "tags": ["monitor", "scherm", "links"]
+      },
+      "monitor_right": {
+        "description": "Verplaatst het venster naar een andere monitor.",
+        "label": "Naar volgende monitor verplaatsen",
+        "menu_path": "Vensterbediening",
+        "tags": ["monitor", "scherm", "rechts"]
+      },
+      "new_directive": {
+        "description": "Opent het venster om een richtlijn of samenwerkingsitem in te voeren.",
+        "label": "Richtlijn registreren",
+        "menu_path": "Registreren > Richtlijn",
+        "tags": ["richtlijn", "samenwerking"]
+      },
+      "new_routine": {
+        "description": "Voegt snel een terugkerende taakroutine toe.",
+        "label": "Routine registreren",
+        "menu_path": "Registreren > Routine",
+        "tags": ["routine", "taak", "terugkerend"]
+      },
+      "new_schedule": {
+        "description": "Opent direct het venster voor het invoeren van afspraken.",
+        "label": "Nieuwe afspraak toevoegen",
+        "menu_path": "Registreren > Nieuwe afspraak",
+        "tags": ["afspraak", "toevoegen", "registreren"]
+      },
+      "next_day": {
+        "description": "Gaat een dag na de huidige datum.",
+        "label": "Volgende dag",
+        "menu_path": "Navigatie",
+        "tags": ["volgende", "datum", "rechts"]
+      },
+      "opacity_down": {
+        "description": "Verlaagt de vensterdekking.",
+        "label": "Dekking verlagen",
+        "menu_path": "Vensterbediening",
+        "tags": ["dekking", "donkerder"]
+      },
+      "opacity_up": {
+        "description": "Verhoogt de vensterdekking.",
+        "label": "Dekking verhogen",
+        "menu_path": "Vensterbediening",
+        "tags": ["dekking", "helderder"]
+      },
+      "prev_day": {
+        "description": "Gaat een dag vóór de huidige datum.",
+        "label": "Vorige dag",
+        "menu_path": "Navigatie",
+        "tags": ["vorige", "datum", "links"]
+      },
+      "restore_pos": {
+        "description": "Herstelt het venster naar een veilige schermpositie.",
+        "label": "Vensterpositie herstellen",
+        "menu_path": "Vensterbediening",
+        "tags": ["venster", "herstellen", "positie"]
+      },
+      "routine_mgr": {
+        "description": "Opent direct het tabblad voor routinebeheer.",
+        "label": "Routinebeheer",
+        "menu_path": "Taken > Routine-overzicht",
+        "tags": ["routine", "beheren"]
+      },
+      "save_layout": {
+        "description": "Slaat de huidige panelenindeling op als voorinstelling.",
+        "label": "Huidige lay-out opslaan",
+        "menu_path": "Beeld > Lay-outvoorinstellingen > Opslaan",
+        "tags": ["lay-out", "voorinstelling", "opslaan"]
+      },
+      "show_hide": {
+        "description": "Verbergt het hoofdvenster of toont het weer.",
+        "label": "Venster tonen/verbergen",
+        "menu_path": "Vensterbediening",
+        "tags": ["venster", "verbergen", "tonen", "overlay"]
+      },
+      "sync_gcal": {
+        "description": "Start onmiddellijk een synchronisatie met Google Agenda.",
+        "label": "Google Agenda synchroniseren",
+        "menu_path": "Systeem > Kalender en synchronisatie",
+        "tags": ["google", "synchronisatie", "kalender", "F5"]
+      },
+      "today": {
+        "description": "Verplaatst de geselecteerde datum direct naar vandaag.",
+        "label": "Naar vandaag springen",
+        "menu_path": "Navigatie",
+        "tags": ["vandaag", "datum"]
+      },
+      "topbar": {
+        "description": "Schakelt de zichtbaarheid van de bovenste menubalk.",
+        "label": "Bovenbalk schakelen",
+        "menu_path": "Beeld > Bovenbalk",
+        "tags": ["menubalk", "bovenbalk", "herstel"]
+      },
+      "widget_mode": {
+        "description": "Opent alleen-widgetpaneelmodus.",
+        "label": "Widgetmodus schakelen",
+        "menu_path": "Beeld > Alleen-widgetmodus",
+        "tags": ["widget", "paneel"]
       }
     },
     "groups": {
-      "register": {
-        "label": "Registreren",
-        "description": "Start snel een nieuwe afspraak, routine of richtlijn."
-      },
-      "navigate": {
-        "label": "Navigeren",
-        "description": "Beweeg tussen datums en selecties, of roep functies direct op."
-      },
-      "mode": {
-        "label": "Modus",
-        "description": "Regelt werkmodi zoals focus, magneet en vergrendeling."
-      },
-      "view": {
-        "label": "Beeld",
-        "description": "Betreft werkbalken, volledig scherm en lay-out."
-      },
       "admin": {
-        "label": "Beheer",
-        "description": "Opent beheerschermen en geautomatiseerde opruimhulpmiddelen."
-      },
-      "window": {
-        "label": "Venster",
-        "description": "Past venstergedrag aan, zoals positie, monitor en dekking."
-      },
-      "system": {
-        "label": "Systeem",
-        "description": "Toegang tot help en systeemondersteuningsfuncties."
+        "description": "Opent beheerschermen en geautomatiseerde opruimhulpmiddelen.",
+        "label": "Beheer"
       },
       "edit": {
-        "label": "Bewerken",
-        "description": "Wist of organiseert de huidige selectie."
+        "description": "Wist of organiseert de huidige selectie.",
+        "label": "Bewerken"
       },
       "emergency": {
-        "label": "Noodgeval",
-        "description": "Herstelt geforceerd van een onverwachte vergrendelstatus."
+        "description": "Herstelt geforceerd van een onverwachte vergrendelstatus.",
+        "label": "Noodgeval"
+      },
+      "mode": {
+        "description": "Regelt werkmodi zoals focus, magneet en vergrendeling.",
+        "label": "Modus"
+      },
+      "navigate": {
+        "description": "Beweeg tussen datums en selecties, of roep functies direct op.",
+        "label": "Navigeren"
+      },
+      "register": {
+        "description": "Start snel een nieuwe afspraak, routine of richtlijn.",
+        "label": "Registreren"
+      },
+      "system": {
+        "description": "Toegang tot help en systeemondersteuningsfuncties.",
+        "label": "Systeem"
+      },
+      "view": {
+        "description": "Betreft werkbalken, volledig scherm en lay-out.",
+        "label": "Beeld"
+      },
+      "window": {
+        "description": "Past venstergedrag aan, zoals positie, monitor en dekking.",
+        "label": "Venster"
+      }
+    },
+    "hero": {
+      "quickstart": {
+        "desc": "We zetten bovenaan wat je direct na het openen van de app zult gebruiken, en wat je zult opzoeken bij F1.",
+        "title": "Meestgebruikte functies eerst"
+      },
+      "recovery": {
+        "desc": "Alleen de toetsen die je het meest nodig hebt als het menu verdwijnt of de vergrendelstatus in de war raakt.",
+        "title": "Toetsen om eerst te proberen als je vastzit"
+      },
+      "reference": {
+        "desc": "Elke sneltoets georganiseerd per functiegroep — goed om te scannen zonder te zoeken.",
+        "title": "Blader door alle sneltoetsen op categorie"
+      },
+      "search": {
+        "desc": "Typ een toetsnaam of functienaam om direct overeenkomende sneltoetsen te zien.",
+        "title": "Zoekresultaten"
+      },
+      "workflows": {
+        "desc": "Sneltoetsen zijn gegroepeerd rond echte workflows zoals registreren, navigeren en van weergave wisselen, zodat je ze op situatie kunt vinden, ook zonder de naam te kennen.",
+        "title": "Gegroepeerd op situatie voor sneller vinden"
+      }
+    },
+    "pages": {
+      "quickstart": {
+        "subtitle": "Wat je eerst moet controleren en wat je het meest zult gebruiken",
+        "title": "Snel starten"
+      },
+      "recovery": {
+        "subtitle": "Toetsen voor vergrendeling, verborgen menu's en vensterherstel",
+        "title": "Schermherstel"
+      },
+      "reference": {
+        "subtitle": "Volledige lijst per categorie",
+        "title": "Alle sneltoetsen"
+      },
+      "workflows": {
+        "subtitle": "Belangrijke sneltoetsen gegroepeerd op situatie",
+        "title": "Veelvoorkomende taken"
       }
     },
     "priority": {
-      "topbar": {
-        "badge": "Menubalk herstellen",
-        "note": "Het eerste om te controleren als de bovenbalk verdwijnt."
-      },
-      "magnet_mode": {
-        "badge": "Magneet schakelen",
-        "note": "Schakelt snel of panelen kunnen bewegen en vastklikken."
+      "force_unlock": {
+        "badge": "Noodherstel",
+        "note": "Heft een onverwachte vergrendelstatus geforceerd op."
       },
       "lock_mode": {
         "badge": "Ontgrendelen",
         "note": "Schakel direct vanaf het hoofdscherm, zelfs vergrendeld."
       },
-      "force_unlock": {
-        "badge": "Noodherstel",
-        "note": "Heft een onverwachte vergrendelstatus geforceerd op."
+      "magnet_mode": {
+        "badge": "Magneet schakelen",
+        "note": "Schakelt snel of panelen kunnen bewegen en vastklikken."
+      },
+      "topbar": {
+        "badge": "Menubalk herstellen",
+        "note": "Het eerste om te controleren als de bovenbalk verdwijnt."
       }
     },
-    "pages": {
-      "quickstart": {
-        "title": "Snel starten",
-        "subtitle": "Wat je eerst moet controleren en wat je het meest zult gebruiken"
-      },
-      "workflows": {
-        "title": "Veelvoorkomende taken",
-        "subtitle": "Belangrijke sneltoetsen gegroepeerd op situatie"
-      },
-      "recovery": {
-        "title": "Schermherstel",
-        "subtitle": "Toetsen voor vergrendeling, verborgen menu's en vensterherstel"
-      },
-      "reference": {
-        "title": "Alle sneltoetsen",
-        "subtitle": "Volledige lijst per categorie"
-      }
-    },
+    "search": "Help doorzoeken",
+    "search_hint": "Zoek op functienaam, sneltoets of menulocatie.",
+    "title": "Air Calendar Helpcentrum",
+    "topics": "Helponderwerpen",
     "workflows": {
-      "new": {
-        "title": "Iets nieuws maken",
-        "desc": "Bij het snel starten van een afspraak of taak"
-      },
-      "navigate": {
-        "title": "Bewegen en zoeken",
-        "desc": "Bij het bewegen tussen datums of snel zoeken naar een functie"
+      "focus_lock": {
+        "desc": "Bij het regelen van focusstatus of vergrendelstatus",
+        "title": "Focus en vergrendeling"
       },
       "layout": {
-        "title": "Scherm en lay-out",
-        "desc": "Bij het wijzigen van hoe dingen eruitzien of hoe panelen zijn gerangschikt"
+        "desc": "Bij het wijzigen van hoe dingen eruitzien of hoe panelen zijn gerangschikt",
+        "title": "Scherm en lay-out"
       },
-      "focus_lock": {
-        "title": "Focus en vergrendeling",
-        "desc": "Bij het regelen van focusstatus of vergrendelstatus"
+      "navigate": {
+        "desc": "Bij het bewegen tussen datums of snel zoeken naar een functie",
+        "title": "Bewegen en zoeken"
+      },
+      "new": {
+        "desc": "Bij het snel starten van een afspraak of taak",
+        "title": "Iets nieuws maken"
       },
       "window_tools": {
-        "title": "Venster- en beheertools",
-        "desc": "Bij het aanpassen van vensterstatus of wanneer een beheerfunctie nodig is"
+        "desc": "Bij het aanpassen van vensterstatus of wanneer een beheerfunctie nodig is",
+        "title": "Venster- en beheertools"
       }
-    },
-    "hero": {
-      "quickstart": {
-        "title": "Meestgebruikte functies eerst",
-        "desc": "We zetten bovenaan wat je direct na het openen van de app zult gebruiken, en wat je zult opzoeken bij F1."
-      },
-      "workflows": {
-        "title": "Gegroepeerd op situatie voor sneller vinden",
-        "desc": "Sneltoetsen zijn gegroepeerd rond echte workflows zoals registreren, navigeren en van weergave wisselen, zodat je ze op situatie kunt vinden, ook zonder de naam te kennen."
-      },
-      "recovery": {
-        "title": "Toetsen om eerst te proberen als je vastzit",
-        "desc": "Alleen de toetsen die je het meest nodig hebt als het menu verdwijnt of de vergrendelstatus in de war raakt."
-      },
-      "reference": {
-        "title": "Blader door alle sneltoetsen op categorie",
-        "desc": "Elke sneltoets georganiseerd per functiegroep — goed om te scannen zonder te zoeken."
-      },
-      "search": {
-        "title": "Zoekresultaten",
-        "desc": "Typ een toetsnaam of functienaam om direct overeenkomende sneltoetsen te zien."
-      }
-    },
-    "chrome": {
-      "eyebrow": "F1 HELPCENTRUM",
-      "header_title": "Het helpcentrum om snel sneltoetsen en functies te vinden",
-      "header_subtitle": "Zoek op functienaam, toetsnaam of menulocatie, en vind snel wat je het meest gebruikt.",
-      "badge_recovery": "4 belangrijke herstel­toetsen",
-      "badge_total": "{count} sneltoetsen in totaal",
-      "badge_search": "Zoeken ondersteund",
-      "search_placeholder": "bijv. vergrendelen, widget, F11, Ctrl+Shift+1",
-      "search_examples": "Probeer te zoeken naar: menubalk, kalender, routine, geforceerd ontgrendelen",
-      "sidebar_title": "Bladeren",
-      "sidebar_hint": "Kies links een sectie, of zoek direct met het bovenstaande vak.",
-      "footer_hint": "Zoeken werkt op functienaam, sneltoets of menulocatie.",
-      "quickstart_section_title": "Begin hier",
-      "quickstart_section_desc": "Nieuwe gebruikers kunnen hier beginnen om er meteen de slag van te krijgen.",
-      "search_tips_title": "Zoektips",
-      "search_tips_desc": "Help is ook doorzoekbaar op menunamen en situatiegebonden trefwoorden, niet alleen sneltoetsen.",
-      "tip_lock": "Als een vergrendeling niet loslaat: probeer `vergrendelen`, `herstel`, `forceren`",
-      "tip_layout": "Als je de lay-out wilt wijzigen: probeer `lay-out`, `voorinstelling`, `Ctrl+Shift+1`",
-      "tip_widget": "Bij het zoeken naar widgetfuncties: probeer `widget`, `F12`",
-      "recovery_primary_title": "Herstel­toetsen om eerst te controleren",
-      "recovery_primary_desc": "De toetsen om eerst te proberen als er iets misgaat.",
-      "recovery_secondary_title": "Handige toetsen om daarnaast te onthouden",
-      "recovery_secondary_desc": "Sneltoetsen die vaak samen nodig zijn bij het opruimen van vergrendel- of vensterstatus.",
-      "search_results_title": "Zoekresultaten",
-      "search_results_desc": "Typ een zoekterm om hier direct resultaten te zien verschijnen.",
-      "search_results_count": "{count} resultaten voor '{query}'",
-      "search_empty": "Geen overeenkomende resultaten.\nProbeer een kortere trefwoord, zoals een functienaam, toetsnaam of menunaam.",
-      "meta_menu_path": "Menulocatie: {value}",
-      "meta_aliases": "Extra toetsen: {value}",
-      "meta_group": "Categorie: {value}"
     }
   },
   "splash": {
@@ -2887,12 +2741,14 @@
     "editor_template": "Compositie sjabloon",
     "editor_title": "Maak een widgetstijl",
     "editor_width": "Standaard width",
+    "empty_directive_filter": "No directives for this date.",
     "empty_panel": "Geen items voor deze datum.",
     "empty_schedule": "Nee schedule",
     "empty_schedule_filter": "Nee schedules for this date.",
     "empty_work": "Nee work items",
     "empty_work_filter": "Nee work for this date.",
     "filter_all": "Alle",
+    "filter_directive": "Directives",
     "filter_schedule": "Schema",
     "filter_work": "Werk",
     "filtered_count_chip": "{count}/{total}",
@@ -2911,6 +2767,7 @@
     "hide_calendar": "Hide Kalender",
     "hide_tray": "Hide to tray",
     "item_count_chip": "{count} artikelen",
+    "item_more_named": "Item actions: {name}",
     "layout_agenda_first": "Agenda-eerst",
     "layout_dashboard": "Dashboard naast elkaar",
     "layout_magazine": "Tijdschriftbord",
@@ -2934,6 +2791,7 @@
     "menu_priority": "Prioriteit",
     "menu_realign": "Lijn widgets opnieuw uit",
     "menu_refresh": "Vernieuwen",
+    "menu_reopen": "Reopen",
     "menu_reserve_space": "Schermruimte reserveren",
     "month_calendar": "Choose a date from the month",
     "month_next": "Next Maand",
@@ -2976,6 +2834,8 @@
     "scale_tooltip_value": "Schaal: {value}%",
     "schedule_title": "Schema",
     "schedule_type": "Schema",
+    "section_directive_no_deadline": "Directives without a deadline",
+    "section_directive_overdue": "Overdue directives",
     "section_directive_today": "Richtlijnen",
     "section_routine_today": "Routine",
     "section_today": "Vandaag",
