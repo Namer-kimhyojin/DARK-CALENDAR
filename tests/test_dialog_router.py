@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import QApplication, QDialog, QWidget
 
 from calendar_app.infrastructure.google_sync.helpers import resolve_app_context
@@ -103,6 +104,21 @@ class DialogRouterTests(unittest.TestCase):
             host.open_task_dialog(123)
 
         self.assertEqual([(123, 0)], host.modify_calls)
+
+    def test_open_directive_dialog_forwards_selected_date(self):
+        host = _DialogHost()
+        self.addCleanup(host.close)
+        selected_date = QDate(2026, 9, 18)
+        _FakeDialog.last_kwargs = None
+
+        with patch(
+            "calendar_app.presentation.dialogs.directive_dialog.DirectiveDialog",
+            _FakeDialog,
+        ):
+            host.open_directive_dialog(initial_date=selected_date)
+
+        self.assertEqual(_FakeDialog.last_kwargs["initial_date"], selected_date)
+        self.assertIsNone(_FakeDialog.last_kwargs["task_id"])
 
     def test_modify_sync_is_queued_once_after_accept_with_move_context(self):
         host = _ModifyHost()

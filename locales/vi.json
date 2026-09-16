@@ -32,7 +32,14 @@
     "disabled": "Tắt",
     "enabled": "Bật",
     "msg": "Tự động khởi chạy khi khởi động đã ở trạng thái {status}.",
-    "registration_failed": "Hãy cho phép Air Calendar trong cài đặt Ứng dụng khởi động của Windows."
+    "open_settings": "Mở cài đặt Ứng dụng khởi động Windows",
+    "policy_instructions": "Hãy liên hệ quản trị viên hệ thống để thay đổi cài đặt này.",
+    "registration_blocked_by_policy": "Tổ chức hoặc chính sách Windows ngăn thay đổi ứng dụng khởi động.",
+    "registration_blocked_by_user": "Ứng dụng khởi động đã bị tắt trước đó trong Windows phải được người dùng bật lại.",
+    "registration_failed": "Hãy cho phép Air Calendar trong cài đặt Ứng dụng khởi động của Windows.",
+    "settings_instructions": "Trong Cài đặt Windows, mở Ứng dụng > Khởi động rồi bật Air Calendar.",
+    "settings_instructions_disable": "Trong Cài đặt Windows, mở Ứng dụng > Khởi động rồi tắt Air Calendar.",
+    "settings_open_failed": "Không thể mở cài đặt ứng dụng khởi động. Hãy mở Cài đặt > Ứng dụng > Khởi động."
   },
   "away_lock": {
     "admin_pw_placeholder": "Mật khẩu admin",
@@ -116,7 +123,15 @@
     "selection_hint": "Ctrl+Click để chọn nhiều lựa chọn",
     "sync_hint": "Đồng Bộ",
     "today": "Hôm Nay",
-    "weekdays": ["Thai", "Tba", "Ttư", "Tnăm", "Tsáu", "Tbảy", "CN"]
+    "weekdays": [
+      "Thai",
+      "Tba",
+      "Ttư",
+      "Tnăm",
+      "Tsáu",
+      "Tbảy",
+      "CN"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Thêm mục",
@@ -1520,7 +1535,13 @@
     "hint_record_jump": "Enter mở mục. Shift+Enter chuyển đến ngày của nó.",
     "hint_run_command": "Enter chạy lệnh đã chọn",
     "kw": {
-      "theme": ["chủ đề", "dark", "light", "màu", "appearance"]
+      "theme": [
+        "chủ đề",
+        "dark",
+        "light",
+        "màu",
+        "appearance"
+      ]
     },
     "nlp_preview": "Mới: [{title}] - {date} {time}",
     "no_selection": "Nhấn Enter để mở kết quả đã chọn",
@@ -1737,8 +1758,519 @@
     "yearly": "Hàng năm"
   },
   "shortcut": {
-    "content": "<h3>Hướng dẫn phím tắt</h3><hr><b>[Quản lý lịch]</b><br>• <b>Ctrl + N</b>: Thêm lịch mới<br>• <b>Ctrl + R</b>: Đăng ký thói quen<br>• <b>Ctrl + G</b>: Đăng ký chỉ thị<br>• <b>Ctrl + L</b>: Quản lý mẫu danh sách kiểm tra<br>• <b>Ctrl + Shift + L</b>: Chế độ khóa màn hình nền<br><br><b>[Thao tác màn hình]</b><br>• <b>Ctrl + Shift + B</b>: Hiện/ẩn thanh trên<br>• <b>Ctrl + M</b>: Bật/tắt chế độ nam châm<br>• <b>Ctrl + F</b>: Bật/tắt chế độ tập trung<br>• <b>F11</b>: Bật/tắt toàn màn hình<br>• <b>Ctrl + Alt + R</b>: Quản lý thói quen<br><br><b>[Bố cục cài sẵn]</b><br>• <b>Ctrl + Shift + 1</b>: Bố cục neo đầy đủ<br>• <b>Ctrl + Shift + 2</b>: Bố cục tập trung lịch<br>• <b>Ctrl + Shift + 3</b>: Bố cục tập trung nhiệm vụ<br>• <b>Ctrl + Shift + 4</b>: Bố cục tab chia đôi<br>• <b>Ctrl + Shift + 5</b>: Bố cục tách biệt hoàn toàn<br>• <b>Ctrl + Shift + S</b>: Lưu bố cục hiện tại<br><br><b>[Điều hướng]</b><br>• <b>Ctrl + Left/Right</b>: Ngày trước/sau<br>• <b>Ctrl + T</b>: Đi đến hôm nay<br>• <b>Delete</b>: Xóa lịch đã chọn<br>• <b>Esc</b>: Hủy chọn<br>• <b>F1</b>: Mở hướng dẫn phím tắt<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Phiên bản: {APP_VERSION}<br>Tác giả: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Hướng dẫn phím tắt Air Calendar"
+    "title": "Trung tâm trợ giúp Air Calendar",
+    "search": "Tìm kiếm trợ giúp",
+    "search_hint": "Tìm theo tên tính năng, phím tắt hoặc vị trí menu.",
+    "topics": "Chủ đề trợ giúp",
+    "entries": {
+      "new_schedule": {
+        "label": "Thêm lịch trình mới",
+        "description": "Mở trực tiếp cửa sổ nhập lịch trình.",
+        "menu_path": "Đăng ký > Lịch trình mới",
+        "tags": [
+          "lịch trình",
+          "thêm",
+          "đăng ký"
+        ]
+      },
+      "new_routine": {
+        "label": "Đăng ký thói quen",
+        "description": "Thêm nhanh một thói quen công việc lặp lại.",
+        "menu_path": "Đăng ký > Thói quen",
+        "tags": [
+          "thói quen",
+          "công việc",
+          "lặp lại"
+        ]
+      },
+      "new_directive": {
+        "label": "Đăng ký chỉ thị",
+        "description": "Mở cửa sổ nhập chỉ thị hoặc mục hợp tác.",
+        "menu_path": "Đăng ký > Chỉ thị",
+        "tags": [
+          "chỉ thị",
+          "hợp tác"
+        ]
+      },
+      "checklist": {
+        "label": "Quản lý danh sách kiểm tra",
+        "description": "Quản lý mẫu và cấu trúc mục của danh sách kiểm tra.",
+        "menu_path": "Công việc > Quản lý danh sách kiểm tra",
+        "tags": [
+          "danh sách kiểm tra",
+          "mẫu"
+        ]
+      },
+      "today": {
+        "label": "Nhảy đến hôm nay",
+        "description": "Di chuyển ngay lập tức ngày đã chọn đến hôm nay.",
+        "menu_path": "Điều hướng",
+        "tags": [
+          "hôm nay",
+          "ngày"
+        ]
+      },
+      "prev_day": {
+        "label": "Ngày trước",
+        "description": "Di chuyển đến một ngày trước ngày hiện tại.",
+        "menu_path": "Điều hướng",
+        "tags": [
+          "trước",
+          "ngày",
+          "trái"
+        ]
+      },
+      "next_day": {
+        "label": "Ngày sau",
+        "description": "Di chuyển đến một ngày sau ngày hiện tại.",
+        "menu_path": "Điều hướng",
+        "tags": [
+          "sau",
+          "ngày",
+          "phải"
+        ]
+      },
+      "command_palette": {
+        "label": "Bảng lệnh",
+        "description": "Mở hộp tìm kiếm lệnh để tìm tính năng ngay lập tức.",
+        "menu_path": "Gọi trực tiếp",
+        "tags": [
+          "tìm kiếm",
+          "lệnh",
+          "bảng"
+        ]
+      },
+      "focus_mode": {
+        "label": "Chuyển đổi chế độ tập trung",
+        "description": "Bật hoặc tắt chế độ tập trung.",
+        "menu_path": "Xem > Chế độ tập trung",
+        "tags": [
+          "tập trung",
+          "pomodoro"
+        ]
+      },
+      "focus_pause": {
+        "label": "Tạm dừng tập trung",
+        "description": "Tạm dừng hoặc tiếp tục phiên tập trung hiện tại.",
+        "menu_path": "Chế độ tập trung",
+        "tags": [
+          "tập trung",
+          "tạm dừng"
+        ]
+      },
+      "lock_mode": {
+        "label": "Chế độ khóa",
+        "description": "Bật hoặc tắt chế độ khóa màn hình nền.",
+        "menu_path": "Xem > Chế độ khóa",
+        "tags": [
+          "khóa"
+        ]
+      },
+      "magnet_mode": {
+        "label": "Chế độ nam châm",
+        "description": "Chuyển đổi chế độ nam châm, giúp căn chỉnh và ghim các bảng.",
+        "menu_path": "Xem > Chế độ nam châm",
+        "tags": [
+          "nam châm",
+          "bảng"
+        ]
+      },
+      "away_lock": {
+        "label": "Khóa khi vắng mặt",
+        "description": "Bắt đầu ngay chế độ khóa khi vắng mặt.",
+        "menu_path": "Xem > Khóa khi vắng mặt",
+        "tags": [
+          "vắng mặt",
+          "khóa"
+        ]
+      },
+      "topbar": {
+        "label": "Chuyển đổi thanh trên cùng",
+        "description": "Chuyển đổi hiển thị của thanh menu trên cùng.",
+        "menu_path": "Xem > Thanh trên cùng",
+        "tags": [
+          "thanh menu",
+          "thanh trên cùng",
+          "khôi phục"
+        ]
+      },
+      "cal_toolbar": {
+        "label": "Chuyển đổi thanh công cụ lịch",
+        "description": "Ẩn hoặc hiển thị lại thanh công cụ lịch.",
+        "menu_path": "Xem > Thanh công cụ lịch",
+        "tags": [
+          "lịch",
+          "thanh công cụ"
+        ]
+      },
+      "fullscreen": {
+        "label": "Chuyển đổi toàn màn hình",
+        "description": "Bật hoặc tắt hiển thị toàn màn hình.",
+        "menu_path": "Xem > Toàn màn hình",
+        "tags": [
+          "toàn màn hình"
+        ]
+      },
+      "save_layout": {
+        "label": "Lưu bố cục hiện tại",
+        "description": "Lưu cách sắp xếp bảng hiện tại làm cài đặt sẵn.",
+        "menu_path": "Xem > Cài đặt sẵn bố cục > Lưu",
+        "tags": [
+          "bố cục",
+          "cài đặt sẵn",
+          "lưu"
+        ]
+      },
+      "layout_1": {
+        "label": "Cài đặt sẵn bố cục 1",
+        "description": "Áp dụng bố cục ghép 4 bảng mặc định.",
+        "menu_path": "Xem > Cài đặt sẵn bố cục",
+        "tags": [
+          "bố cục",
+          "cài đặt sẵn",
+          "ghép",
+          "1"
+        ]
+      },
+      "layout_2": {
+        "label": "Cài đặt sẵn bố cục 2",
+        "description": "Áp dụng bố cục lấy lịch làm trung tâm.",
+        "menu_path": "Xem > Cài đặt sẵn bố cục",
+        "tags": [
+          "bố cục",
+          "lịch",
+          "2"
+        ]
+      },
+      "layout_3": {
+        "label": "Cài đặt sẵn bố cục 3",
+        "description": "Áp dụng bố cục lấy công việc làm trung tâm.",
+        "menu_path": "Xem > Cài đặt sẵn bố cục",
+        "tags": [
+          "bố cục",
+          "công việc",
+          "3"
+        ]
+      },
+      "layout_4": {
+        "label": "Cài đặt sẵn bố cục 4",
+        "description": "Áp dụng bố cục tab chia đôi.",
+        "menu_path": "Xem > Cài đặt sẵn bố cục",
+        "tags": [
+          "bố cục",
+          "tab",
+          "chia",
+          "4"
+        ]
+      },
+      "layout_5": {
+        "label": "Cài đặt sẵn bố cục 5",
+        "description": "Áp dụng bố cục nổi hoàn toàn tách biệt.",
+        "menu_path": "Xem > Cài đặt sẵn bố cục",
+        "tags": [
+          "bố cục",
+          "tách biệt",
+          "nổi",
+          "5"
+        ]
+      },
+      "calendar_print": {
+        "label": "In lịch",
+        "description": "Xem trước và in lịch cho giai đoạn hiện tại hoặc đã chọn.",
+        "menu_path": "Lịch > Tùy chọn > In",
+        "tags": [
+          "in",
+          "máy in",
+          "PDF"
+        ]
+      },
+      "sync_gcal": {
+        "label": "Đồng bộ Google Calendar",
+        "description": "Bắt đầu ngay việc đồng bộ với Google Calendar.",
+        "menu_path": "Hệ thống > Lịch và đồng bộ",
+        "tags": [
+          "google",
+          "đồng bộ",
+          "lịch",
+          "F5"
+        ]
+      },
+      "routine_mgr": {
+        "label": "Trình quản lý thói quen",
+        "description": "Mở trực tiếp tab trình quản lý thói quen.",
+        "menu_path": "Công việc > Tổng quan thói quen",
+        "tags": [
+          "thói quen",
+          "quản lý"
+        ]
+      },
+      "color_assign": {
+        "label": "Gán màu tự động",
+        "description": "Tự động gán màu cho các mục đã chọn.",
+        "menu_path": "Công việc > Gán màu tự động",
+        "tags": [
+          "màu",
+          "thẻ",
+          "tự động"
+        ]
+      },
+      "show_hide": {
+        "label": "Hiện/ẩn cửa sổ",
+        "description": "Ẩn cửa sổ chính hoặc hiển thị lại.",
+        "menu_path": "Điều khiển cửa sổ",
+        "tags": [
+          "cửa sổ",
+          "ẩn",
+          "hiện",
+          "lớp phủ"
+        ]
+      },
+      "widget_mode": {
+        "label": "Chuyển đổi chế độ widget",
+        "description": "Mở chế độ bảng chỉ hiển thị widget.",
+        "menu_path": "Xem > Chế độ chỉ widget",
+        "tags": [
+          "widget",
+          "bảng"
+        ]
+      },
+      "restore_pos": {
+        "label": "Khôi phục vị trí cửa sổ",
+        "description": "Khôi phục cửa sổ về vị trí an toàn trên màn hình.",
+        "menu_path": "Điều khiển cửa sổ",
+        "tags": [
+          "cửa sổ",
+          "khôi phục",
+          "vị trí"
+        ]
+      },
+      "opacity_up": {
+        "label": "Tăng độ mờ đục",
+        "description": "Tăng độ mờ đục của cửa sổ.",
+        "menu_path": "Điều khiển cửa sổ",
+        "tags": [
+          "độ mờ đục",
+          "sáng hơn"
+        ]
+      },
+      "opacity_down": {
+        "label": "Giảm độ mờ đục",
+        "description": "Giảm độ mờ đục của cửa sổ.",
+        "menu_path": "Điều khiển cửa sổ",
+        "tags": [
+          "độ mờ đục",
+          "tối hơn"
+        ]
+      },
+      "monitor_left": {
+        "label": "Di chuyển sang màn hình trước",
+        "description": "Di chuyển cửa sổ sang màn hình khác.",
+        "menu_path": "Điều khiển cửa sổ",
+        "tags": [
+          "màn hình",
+          "hiển thị",
+          "trái"
+        ]
+      },
+      "monitor_right": {
+        "label": "Di chuyển sang màn hình sau",
+        "description": "Di chuyển cửa sổ sang màn hình khác.",
+        "menu_path": "Điều khiển cửa sổ",
+        "tags": [
+          "màn hình",
+          "hiển thị",
+          "phải"
+        ]
+      },
+      "help": {
+        "label": "Hướng dẫn phím tắt",
+        "description": "Mở trung tâm trợ giúp.",
+        "menu_path": "Hệ thống > Hướng dẫn phím tắt",
+        "tags": [
+          "trợ giúp",
+          "F1"
+        ]
+      },
+      "delete": {
+        "label": "Xóa mục đã chọn",
+        "description": "Xóa lịch trình hoặc mục hiện đang được chọn.",
+        "menu_path": "Trạng thái lựa chọn",
+        "tags": [
+          "xóa",
+          "loại bỏ"
+        ]
+      },
+      "escape": {
+        "label": "Bỏ chọn",
+        "description": "Xóa lựa chọn hoặc tiêu điểm hiện tại.",
+        "menu_path": "Trạng thái lựa chọn",
+        "tags": [
+          "bỏ chọn",
+          "hủy",
+          "escape"
+        ]
+      },
+      "force_unlock": {
+        "label": "Buộc mở khóa",
+        "description": "Buộc xóa trạng thái khóa không mong muốn.",
+        "menu_path": "Khôi phục khẩn cấp",
+        "tags": [
+          "buộc",
+          "mở khóa",
+          "khôi phục",
+          "khẩn cấp"
+        ]
+      }
+    },
+    "groups": {
+      "register": {
+        "label": "Đăng ký",
+        "description": "Bắt đầu nhanh một lịch trình, thói quen hoặc chỉ thị mới."
+      },
+      "navigate": {
+        "label": "Điều hướng",
+        "description": "Di chuyển giữa các ngày và lựa chọn, hoặc gọi tính năng ngay lập tức."
+      },
+      "mode": {
+        "label": "Chế độ",
+        "description": "Kiểm soát các chế độ làm việc như tập trung, nam châm và khóa."
+      },
+      "view": {
+        "label": "Xem",
+        "description": "Bao gồm thanh công cụ, toàn màn hình và bố cục."
+      },
+      "admin": {
+        "label": "Quản trị",
+        "description": "Mở màn hình quản lý và công cụ dọn dẹp tự động."
+      },
+      "window": {
+        "label": "Cửa sổ",
+        "description": "Điều chỉnh hành vi cửa sổ như vị trí, màn hình và độ mờ đục."
+      },
+      "system": {
+        "label": "Hệ thống",
+        "description": "Truy cập trợ giúp và các tính năng hỗ trợ hệ thống."
+      },
+      "edit": {
+        "label": "Chỉnh sửa",
+        "description": "Xóa hoặc sắp xếp lựa chọn hiện tại."
+      },
+      "emergency": {
+        "label": "Khẩn cấp",
+        "description": "Buộc khôi phục từ trạng thái khóa không mong muốn."
+      }
+    },
+    "priority": {
+      "topbar": {
+        "badge": "Khôi phục thanh menu",
+        "note": "Điều đầu tiên cần kiểm tra khi thanh trên cùng biến mất."
+      },
+      "magnet_mode": {
+        "badge": "Chuyển đổi nam châm",
+        "note": "Chuyển đổi nhanh việc các bảng có thể di chuyển và ghim hay không."
+      },
+      "lock_mode": {
+        "badge": "Mở khóa",
+        "note": "Chuyển đổi trực tiếp từ màn hình chính, ngay cả khi đang khóa."
+      },
+      "force_unlock": {
+        "badge": "Khôi phục khẩn cấp",
+        "note": "Buộc xóa trạng thái khóa không mong muốn."
+      }
+    },
+    "pages": {
+      "quickstart": {
+        "title": "Bắt đầu nhanh",
+        "subtitle": "Những gì cần kiểm tra trước tiên và những gì bạn sẽ dùng nhiều nhất"
+      },
+      "workflows": {
+        "title": "Công việc thường gặp",
+        "subtitle": "Các phím tắt chính được nhóm theo tình huống"
+      },
+      "recovery": {
+        "title": "Khôi phục màn hình",
+        "subtitle": "Các phím để khóa, menu ẩn và khôi phục cửa sổ"
+      },
+      "reference": {
+        "title": "Tất cả phím tắt",
+        "subtitle": "Danh sách đầy đủ theo danh mục"
+      }
+    },
+    "workflows": {
+      "new": {
+        "title": "Tạo điều gì đó mới",
+        "desc": "Khi bắt đầu nhanh một lịch trình hoặc công việc"
+      },
+      "navigate": {
+        "title": "Di chuyển và tìm kiếm",
+        "desc": "Khi di chuyển giữa các ngày hoặc tìm kiếm nhanh một tính năng"
+      },
+      "layout": {
+        "title": "Màn hình và bố cục",
+        "desc": "Khi thay đổi cách hiển thị hoặc cách sắp xếp bảng"
+      },
+      "focus_lock": {
+        "title": "Tập trung và khóa",
+        "desc": "Khi kiểm soát trạng thái tập trung hoặc trạng thái khóa"
+      },
+      "window_tools": {
+        "title": "Công cụ cửa sổ và quản trị",
+        "desc": "Khi điều chỉnh trạng thái cửa sổ hoặc cần một tính năng quản lý"
+      }
+    },
+    "hero": {
+      "quickstart": {
+        "title": "Các tính năng dùng nhiều nhất được ưu tiên",
+        "desc": "Chúng tôi đặt lên đầu những gì bạn sẽ dùng ngay sau khi mở ứng dụng và những gì bạn sẽ tìm khi nhấn F1."
+      },
+      "workflows": {
+        "title": "Nhóm theo tình huống để tìm nhanh hơn",
+        "desc": "Các phím tắt được nhóm quanh các quy trình làm việc thực tế như đăng ký, điều hướng và chuyển đổi chế độ xem, để bạn có thể tìm theo tình huống ngay cả khi không biết tên."
+      },
+      "recovery": {
+        "title": "Các phím nên thử trước khi gặp khó khăn",
+        "desc": "Chỉ những phím bạn cần nhất khi menu biến mất hoặc trạng thái khóa bị rối."
+      },
+      "reference": {
+        "title": "Duyệt tất cả phím tắt theo danh mục",
+        "desc": "Mỗi phím tắt được sắp xếp theo nhóm chức năng — tốt để xem lướt mà không cần tìm kiếm."
+      },
+      "search": {
+        "title": "Kết quả tìm kiếm",
+        "desc": "Nhập tên phím hoặc tên tính năng để xem ngay các phím tắt phù hợp."
+      }
+    },
+    "chrome": {
+      "eyebrow": "TRUNG TÂM TRỢ GIÚP F1",
+      "header_title": "Trung tâm trợ giúp để tìm phím tắt và tính năng nhanh chóng",
+      "header_subtitle": "Tìm theo tên tính năng, tên phím hoặc vị trí menu, và nhanh chóng tìm thấy những gì bạn dùng nhiều nhất.",
+      "badge_recovery": "4 phím khôi phục cốt lõi",
+      "badge_total": "Tổng cộng {count} phím tắt",
+      "badge_search": "Hỗ trợ tìm kiếm",
+      "search_placeholder": "vd. khóa, widget, F11, Ctrl+Shift+1",
+      "search_examples": "Hãy thử tìm: thanh menu, lịch, thói quen, buộc mở khóa",
+      "sidebar_title": "Duyệt",
+      "sidebar_hint": "Chọn một phần bên trái, hoặc tìm kiếm trực tiếp bằng ô phía trên.",
+      "footer_hint": "Tìm kiếm hoạt động theo tên tính năng, phím tắt hoặc vị trí menu.",
+      "quickstart_section_title": "Bắt đầu tại đây",
+      "quickstart_section_desc": "Người dùng mới có thể bắt đầu tại đây để làm quen ngay lập tức.",
+      "search_tips_title": "Mẹo tìm kiếm",
+      "search_tips_desc": "Trợ giúp cũng có thể tìm theo tên menu và từ khóa tình huống, không chỉ phím tắt.",
+      "tip_lock": "Khi khóa không mở được: hãy thử `khóa`, `khôi phục`, `buộc`",
+      "tip_layout": "Khi muốn thay đổi bố cục: hãy thử `bố cục`, `cài đặt sẵn`, `Ctrl+Shift+1`",
+      "tip_widget": "Khi tìm tính năng widget: hãy thử `widget`, `F12`",
+      "recovery_primary_title": "Phím khôi phục cần kiểm tra trước tiên",
+      "recovery_primary_desc": "Các phím nên thử trước tiên khi có sự cố.",
+      "recovery_secondary_title": "Các phím hữu ích nên nhớ cùng",
+      "recovery_secondary_desc": "Các phím tắt thường cần dùng cùng nhau khi dọn dẹp trạng thái khóa hoặc cửa sổ.",
+      "search_results_title": "Kết quả tìm kiếm",
+      "search_results_desc": "Nhập một từ khóa tìm kiếm để xem ngay kết quả ở đây.",
+      "search_results_count": "{count} kết quả cho '{query}'",
+      "search_empty": "Không có kết quả phù hợp.\nHãy thử một từ khóa ngắn hơn, như tên tính năng, tên phím hoặc tên menu.",
+      "meta_menu_path": "Vị trí menu: {value}",
+      "meta_aliases": "Phím bổ sung: {value}",
+      "meta_group": "Danh mục: {value}"
+    }
   },
   "splash": {
     "initializing_db": "Đang khởi tạo cơ sở dữ liệu...",

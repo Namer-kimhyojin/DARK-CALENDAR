@@ -3,6 +3,8 @@
 
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.shared.color_utils import (
+    contrast_ratio,
+    contrasting_text_color,
     derive_text_palette,
     derive_ui_palette,
     hex_to_rgba,
@@ -45,10 +47,11 @@ def build_global_stylesheet(
         palette = derive_ui_palette(text_theme, panel_base_color, theme_color=theme_color)
 
     p = palette
+    accent_button_text = contrasting_text_color(theme_color)
     shape = get_ui_shape_tokens()
     global_task_radius = int(shape.get("global_task_button_radius", 0))
     drag_range_radius = int(shape.get("drag_range_cap_radius", 0))
-    _cell_border = "rgba(255,255,255,0.18)"
+    _cell_border = p["border"]
 
     return f"""
         /* Global Reset & Selection */
@@ -70,7 +73,7 @@ def build_global_stylesheet(
         }}
         ClickableCell[is_today="true"] {{
             background-color: {tc(0.04)};
-            border: 1.5px solid {tc(0.5)};
+            border: 2px solid {tc(0.5)};
         }}
         ClickableCell[selected_date="true"] {{
             background-color: {tc(0.10)};
@@ -160,8 +163,8 @@ def build_global_stylesheet(
 
         /* Task Buttons - Premium Look */
         DraggableTaskButton {{
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid {p["border_soft"]};
+            background-color: {p["task_btn_bg"]};
             color: {p["task_btn_text"]};
             font-family: {family};
             font-size: {base_pt}pt;
@@ -182,14 +185,14 @@ def build_global_stylesheet(
         DraggableTaskButton[selected="true"] {{
             border: 2px solid {tc(0.8)} !important;
             background-color: {tc(0.2)} !important;
-            color: #ffffff;
+            color: {p["text_primary"]};
             font-weight: 600;
         }}
 
         /* Form Inputs */
         QLineEdit, QComboBox, QSpinBox, QDateTimeEdit {{
-            background-color: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: {p["control_bg"]};
+            border: 1px solid {p["border_soft"]};
             border-radius: 6px;
             padding: 4px 8px;
             color: {p["text_primary"]};
@@ -198,7 +201,7 @@ def build_global_stylesheet(
         }}
         QLineEdit:focus, QComboBox:focus {{
             border: 1px solid {tc(0.8)};
-            background-color: rgba(255, 255, 255, 0.08);
+            background-color: {p["control_bg_hover"]};
         }}
 
         /* Scrollbars - Minimalist */
@@ -206,7 +209,7 @@ def build_global_stylesheet(
             border: none; background: transparent; width: 4px; margin: 0px;
         }}
         QScrollBar::handle:vertical {{
-            background: rgba(255,255,255,0.1); border-radius: 2px;
+            background: {p["scrollbar_handle"]}; border-radius: 2px;
         }}
         QScrollBar::handle:vertical:hover {{
             background: {tc(0.8)};
@@ -214,8 +217,8 @@ def build_global_stylesheet(
 
         /* Global Buttons & Dialogs */
         QPushButton {{
-            background-color: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background-color: {p["control_bg"]};
+            border: 1px solid {p["border"]};
             border-radius: 6px;
             padding: 5px 12px;
             color: {p["text_secondary"]};
@@ -224,23 +227,23 @@ def build_global_stylesheet(
             min-width: 60px;
         }}
         QPushButton:hover {{
-            background-color: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.25);
+            background-color: {p["control_bg_hover"]};
+            border-color: {p["border_strong"]};
             color: {p["text_primary"]};
         }}
         QPushButton:pressed {{
-            background-color: rgba(255, 255, 255, 0.05);
+            background-color: {p["control_bg_pressed"]};
         }}
         QPushButton:default, QPushButton[default="true"] {{
-            background-color: {tc(0.12)};
-            border: 1px solid {tc(0.55)};
-            color: {theme_color};
+            background-color: {theme_color};
+            border: 1px solid {theme_color};
+            color: {accent_button_text};
             font-weight: bold;
         }}
         QPushButton:default:hover, QPushButton[default="true"]:hover {{
-            background-color: {tc(0.20)};
+            background-color: {theme_color};
             border-color: {theme_color};
-            color: white;
+            color: {accent_button_text};
         }}
 
         QMessageBox, QDialog {{
@@ -337,10 +340,17 @@ def _build_app_menu_style(
     base = QColor(str(panel_base))
     if not base.isValid():
         base = QColor("#1c1c1c")
-    menu_bg = f"rgba({base.red()},{base.green()},{base.blue()},{max(210, int(242 * opacity))})"
     menu_color = text_pal["text_primary"]
-    menu_border = "rgba(255,255,255,0.12)"
-    sep_color = "rgba(255,255,255,0.10)"
+    is_light = text_theme == "light" or base.lightnessF() >= 0.58
+    if is_light:
+        menu_rgb = tuple(round(channel * 0.34 + 255 * 0.66) for channel in base.getRgb()[:3])
+    else:
+        menu_rgb = base.red(), base.green(), base.blue()
+    menu_bg = f"rgba({menu_rgb[0]},{menu_rgb[1]},{menu_rgb[2]},{max(232, int(250 * opacity))})"
+    neutral_rgb = "0,0,0" if is_light else "255,255,255"
+    menu_border = f"rgba({neutral_rgb},0.16)"
+    sep_color = f"rgba({neutral_rgb},0.10)"
+    checked_color = theme_color if contrast_ratio(theme_color, base) >= 4.5 else menu_color
     shape = get_ui_shape_tokens()
     app_menu_radius = int(shape.get("app_menu_radius", 0))
     app_menu_item_radius = int(shape.get("app_menu_item_radius", 0))
@@ -361,7 +371,7 @@ def _build_app_menu_style(
             color: {menu_color};
             border: 1px solid {_ta(120)};
         }}
-        QMenu::item:checked {{ color: {theme_color}; }}
+        QMenu::item:checked {{ color: {checked_color}; font-weight: 600; }}
         QMenu::separator {{ height: 1px; background: {sep_color}; margin: 4px 10px; }}
         QMenu::indicator {{
             subcontrol-origin: padding;

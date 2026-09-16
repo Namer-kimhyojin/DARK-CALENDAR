@@ -3,7 +3,7 @@
 import logging
 
 from PyQt6.QtCore import QModelIndex, QSortFilterProxyModel, Qt, QTimer
-from PyQt6.QtGui import QAction, QColor, QStandardItem, QStandardItemModel
+from PyQt6.QtGui import QAction, QBrush, QColor, QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -351,7 +351,10 @@ class BaseManagementDialog(QDialog):
             item.setData(row_meta.get("id"), Qt.ItemDataRole.UserRole)
             item.setData(row_meta, Qt.ItemDataRole.UserRole + 1)
             if col == self.status_column:
-                item.setBackground(_status_background(status_value))
+                item.setBackground(_status_background(status_value, tokens=self._ui_tokens))
+                item.setForeground(
+                    QBrush(_token_color(self._ui_tokens.get("text_primary"), "#101318"))
+                )
             items.append(item)
         self.model.appendRow(items)
 

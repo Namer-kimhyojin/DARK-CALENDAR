@@ -5,6 +5,9 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication, QMenu
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.shared.color_utils import contrast_safe_color
+from calendar_app.shared.icon_map import ICON
+from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.theme_settings import (
     get_opacity_factor,
     opacity_percent_label,
@@ -138,6 +141,7 @@ class ThemeActionsMixin:
         snapshot = build_theme_snapshot(self.settings)
         theme = snapshot.theme_color
         opacity = snapshot.opacity_factor
+        neutral_rgb = "0,0,0" if snapshot.text_theme == "light" else "255,255,255"
 
         def _ta(a):
             return _hex_to_rgba(theme, round(a / 255, 3))
@@ -157,7 +161,7 @@ class ThemeActionsMixin:
                 background: transparent;
             }}
             QSlider::groove:horizontal {{
-                height: 4px; background: rgba(255,255,255,{groove_alpha}); border-radius: 2px;
+                height: 4px; background: rgba({neutral_rgb},{groove_alpha}); border-radius: 2px;
             }}
             QSlider::handle:horizontal {{
                 background: {theme}; border: 2px solid {_ta(handle_border_alpha)};
@@ -165,13 +169,13 @@ class ThemeActionsMixin:
                 border-radius: 7px;
             }}
             QSlider::handle:horizontal:hover {{
-                background: white; border: 2px solid {theme};
+                background: {snapshot.text_palette["text_primary"]}; border: 2px solid {theme};
             }}
             QSlider::sub-page:horizontal {{
                 background: {_ta(sub_alpha)}; border-radius: 2px;
             }}
             QSlider::add-page:horizontal {{
-                background: rgba(255,255,255,{add_alpha}); border-radius: 2px;
+                background: rgba({neutral_rgb},{add_alpha}); border-radius: 2px;
             }}
             """,
         )
@@ -244,9 +248,11 @@ class ThemeActionsMixin:
     def apply_theme_settings(self, *, persist_opacity=True):
         """Apply saved theme settings across the UI."""
         from calendar_app.presentation.main_window.dock_factory import build_dock_manager_style
-        from calendar_app.presentation.main_window.top_bar_builder import build_top_bar_frame_style
+        from calendar_app.presentation.main_window.top_bar_builder import (
+            build_top_bar_frame_style,
+            build_top_bar_runtime_styles,
+        )
         from calendar_app.presentation.theme.style_builder import (
-            _hex_to_rgba,
             apply_top_menu_theme,
             build_global_stylesheet,
             build_tooltip_stylesheet,
@@ -265,17 +271,10 @@ class ThemeActionsMixin:
         if str(self.settings.value("text_theme", "dark") or "dark") == "auto":
             self._last_applied_system_text_theme = snapshot.text_theme
 
-        # Helper vars for inline overrides
-        def _ta(a):
-            return _hex_to_rgba(theme, round(a / 255, 3))
-
         _txt_primary = palette["text_primary"]
-        _txt_secondary = palette["text_secondary"]
-        _vline = "rgba(255,255,255,18)"
-        _hover_weak = "rgba(255,255,255,40)"
-        _search_bg = "rgba(255,255,255,10)"
-        _search_bg_hover = "rgba(255,255,255,14)"
-        _search_bg_focus = "rgba(255,255,255,20)"
+        self._tb_icon_color = _txt_primary
+        self._tb_icon_active_color = theme
+        topbar_styles = build_top_bar_runtime_styles(self.settings, size, theme)
 
         # Style resolution
         global_qss = build_global_stylesheet(family, size, theme, text_theme, panel_base, palette)
@@ -309,47 +308,24 @@ class ThemeActionsMixin:
         self._apply_slider_opacity_style()
 
         if hasattr(self, "search_edit"):
-            field_pt = max(8, size)
             search_style_changed = _set_stylesheet_if_changed(
                 self.search_edit,
-                f"""
-                QLineEdit {{
-                    background: {_search_bg}; border: 1px solid {_ta(80)};
-                    border-radius: 10px; padding: 4px 10px; color: {_txt_primary}; font-size: {field_pt}pt;
-                }}
-                QLineEdit:hover {{ border: 1px solid {_ta(128)}; background: {_search_bg_hover}; }}
-                QLineEdit:focus {{ border: 1px solid {theme}; background: {_search_bg_focus}; }}
-                """,
+                topbar_styles["search"],
             )
             if search_style_changed:
                 self.search_edit.style().unpolish(self.search_edit)
                 self.search_edit.style().polish(self.search_edit)
 
-        if hasattr(self, "magnet_btn"):
-            btn_pt = max(8, size - 1)
-            _set_stylesheet_if_changed(
-                self.magnet_btn,
-                f"""
-                QPushButton {{
-                    color: {_txt_secondary};
-                    background: transparent;
-                    border: 1px solid {_vline};
-                    border-radius: 6px;
-                    font-size: {btn_pt}pt;
-                    font-weight: bold;
-                    padding: 3px 8px;
-                    min-width: 62px;
-                }}
-                QPushButton:hover {{
-                    background: {_hover_weak};
-                }}
-                QPushButton:checked {{
-                    color: {_txt_primary};
-                    border: 1px solid {_ta(150)};
-                    background: {_ta(56)};
-                }}
-                """,
-            )
+        for attr in ("lock_label", "magnet_label"):
+            if getattr(self, attr, None) is not None:
+                _set_stylesheet_if_changed(getattr(self, attr), topbar_styles["label"])
+        if getattr(self, "top_bar_divider", None) is not None:
+            _set_stylesheet_if_changed(self.top_bar_divider, topbar_styles["divider"])
+        for attr in ("lock_btn", "magnet_btn"):
+            if getattr(self, attr, None) is not None:
+                _set_stylesheet_if_changed(getattr(self, attr), topbar_styles["mode_button"])
+        if getattr(self, "widget_mode_btn", None) is not None:
+            _set_stylesheet_if_changed(self.widget_mode_btn, topbar_styles["tool_button"])
 
         apply_top_menu_theme(
             self,
@@ -360,6 +336,32 @@ class ThemeActionsMixin:
             opacity_factor,
             persist_opacity=persist_opacity,
         )
+        from calendar_app.presentation.main_window.top_menus.common import (
+            refresh_top_menu_icons,
+        )
+
+        role_colors = {
+            "neutral": _txt_primary,
+            "accent": contrast_safe_color(theme, panel_base, minimum=3.0),
+            "warning": contrast_safe_color("#d39a2a", panel_base, minimum=3.0),
+            "danger": contrast_safe_color("#d25a66", panel_base, minimum=3.0),
+        }
+        refresh_top_menu_icons(self, role_colors)
+
+        if getattr(self, "sync_action_btn", None) is not None:
+            self.sync_action_btn.setIcon(_ic(ICON.SYNC, color=role_colors["accent"]))
+        if getattr(self, "widget_mode_btn", None) is not None:
+            self.widget_mode_btn.setIcon(_ic(ICON.WIDGET_MGR, color=_txt_primary))
+        if getattr(self, "lock_btn", None) is not None:
+            locked = bool(self.lock_btn.isChecked())
+            self.lock_btn.setIcon(
+                _ic(ICON.LOCK if locked else ICON.UNLOCK, color=theme if locked else _txt_primary)
+            )
+        if getattr(self, "magnet_btn", None) is not None:
+            magnet_enabled = bool(self.magnet_btn.isChecked())
+            self.magnet_btn.setIcon(
+                _ic(ICON.MAGNET if magnet_enabled else ICON.MAGNET_OFF, color=_txt_primary)
+            )
 
         try:
             from calendar_app.presentation.widgets.ui_components import _hover_info_popup

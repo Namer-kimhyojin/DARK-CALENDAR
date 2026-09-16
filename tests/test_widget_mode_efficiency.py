@@ -193,6 +193,37 @@ def test_board_calendar_defaults_visible_and_visibility_is_layout_scoped(workspa
     assert not widget.week_toggle_btn.isChecked()
 
 
+@pytest.mark.parametrize("layout", ["dashboard", "magazine"])
+def test_collapsing_board_calendar_reflows_and_restores_window_size(workspace, layout):
+    _, coordinator, widget = workspace
+    coordinator.controller.set_layout(layout)
+    widget.resize(760, 540)
+    _APP.processEvents()
+    expanded = widget.size()
+
+    widget.week_toggle_btn.click()
+    _APP.processEvents()
+
+    assert widget.cal_grid.isHidden()
+    assert widget.width() < expanded.width()
+    filter_pos = widget.container_layout.getItemPosition(
+        widget.container_layout.indexOf(widget.filter_section)
+    )
+    agenda_pos = widget.container_layout.getItemPosition(
+        widget.container_layout.indexOf(widget.agenda_section)
+    )
+    assert filter_pos[1] == 0
+    assert agenda_pos[1] == 0
+
+    widget.week_toggle_btn.click()
+    _APP.processEvents()
+
+    assert not widget.cal_grid.isHidden()
+    assert widget.width() == expanded.width()
+    assert widget.height() >= expanded.height()
+    assert widget.height() - expanded.height() <= 20
+
+
 @pytest.mark.parametrize(
     ("layout", "calendar_column", "content_column"),
     [("dashboard", 0, 1), ("magazine", 1, 0)],

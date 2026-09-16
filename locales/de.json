@@ -32,7 +32,14 @@
     "disabled": "Inaktiv",
     "enabled": "Aktiv",
     "msg": "Autostart ist nun {status}.",
-    "registration_failed": "Bitte erlauben Sie Air Calendar in den Windows-Einstellungen für Autostart-Apps."
+    "open_settings": "Windows-Einstellungen für Autostart-Apps öffnen",
+    "policy_instructions": "Wenden Sie sich an Ihren Systemadministrator, um diese Einstellung zu ändern.",
+    "registration_blocked_by_policy": "Ihre Organisation oder eine Windows-Richtlinie verhindert Änderungen an Autostart-Apps.",
+    "registration_blocked_by_user": "Eine zuvor in Windows deaktivierte Autostart-App muss vom Benutzer wieder aktiviert werden.",
+    "registration_failed": "Bitte erlauben Sie Air Calendar in den Windows-Einstellungen für Autostart-Apps.",
+    "settings_instructions": "Öffnen Sie in den Windows-Einstellungen Apps > Autostart und aktivieren Sie Air Calendar.",
+    "settings_instructions_disable": "Öffnen Sie in den Windows-Einstellungen Apps > Autostart und deaktivieren Sie Air Calendar.",
+    "settings_open_failed": "Die Windows-Einstellungen für Autostart-Apps konnten nicht geöffnet werden. Öffnen Sie Einstellungen > Apps > Autostart."
   },
   "away_lock": {
     "admin_pw_placeholder": "Admin-Passwort",
@@ -116,7 +123,15 @@
     "selection_hint": "Strg+Click zur Auswahl",
     "sync_hint": "Google-Sync",
     "today": "Heute",
-    "weekdays": ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    "weekdays": [
+      "Mo",
+      "Di",
+      "Mi",
+      "Do",
+      "Fr",
+      "Sa",
+      "So"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Hinzufügen",
@@ -1520,7 +1535,13 @@
     "hint_record_jump": "Enter öffnet den Eintrag. Shift+Enter springt zum Datum.",
     "hint_run_command": "Enter führt den ausgewählten Befehl aus",
     "kw": {
-      "theme": ["Thema", "Dunkel", "Hell", "Farbe", "Erscheinungsbild"]
+      "theme": [
+        "Thema",
+        "Dunkel",
+        "Hell",
+        "Farbe",
+        "Erscheinungsbild"
+      ]
     },
     "nlp_preview": "Neu: [{title}] - {date} {time}",
     "no_selection": "Drücken Sie die Eingabetaste, um das ausgewählte Ergebnis zu öffnen",
@@ -1737,8 +1758,519 @@
     "yearly": "Jährlich"
   },
   "shortcut": {
-    "content": "<h3>Tastenkombinationen</h3><hr><b>[Terminverwaltung]</b><br>• <b>Ctrl + N</b>: Neuen Termin hinzufügen<br>• <b>Ctrl + R</b>: Routine registrieren<br>• <b>Ctrl + G</b>: Anweisung registrieren<br>• <b>Ctrl + L</b>: Checklisten-Vorlagen verwalten<br>• <b>Ctrl + Shift + L</b>: Desktop-Sperrmodus<br><br><b>[Bildschirmoperationen]</b><br>• <b>Ctrl + Shift + B</b>: Obere Leiste anzeigen/ausblenden<br>• <b>Ctrl + M</b>: Magnetmodus umschalten<br>• <b>Ctrl + F</b>: Fokusmodus umschalten<br>• <b>F11</b>: Vollbild umschalten<br>• <b>Ctrl + Alt + R</b>: Routineverwaltung<br><br><b>[Layout-Vorlagen]</b><br>• <b>Ctrl + Shift + 1</b>: Vollständig angedocktes Layout<br>• <b>Ctrl + Shift + 2</b>: Kalender-Fokus-Layout<br>• <b>Ctrl + Shift + 3</b>: Aufgaben-Fokus-Layout<br>• <b>Ctrl + Shift + 4</b>: Tab-geteiltes Layout<br>• <b>Ctrl + Shift + 5</b>: Vollständig getrenntes Layout<br>• <b>Ctrl + Shift + S</b>: Aktuelles Layout speichern<br><br><b>[Navigation]</b><br>• <b>Ctrl + Left/Right</b>: Vorheriges/nächstes Datum<br>• <b>Ctrl + T</b>: Zum heutigen Tag springen<br>• <b>Delete</b>: Ausgewählten Termin löschen<br>• <b>Esc</b>: Auswahl aufheben<br>• <b>F1</b>: Tastenkombinationen öffnen<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Version: {APP_VERSION}<br>Autor: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Air Calendar Tastenkombinationen"
+    "title": "Air Calendar Hilfezentrum",
+    "search": "Hilfe durchsuchen",
+    "search_hint": "Suche nach Funktionsname, Tastenkombination oder Menüpfad.",
+    "topics": "Hilfethemen",
+    "entries": {
+      "new_schedule": {
+        "label": "Neuen Termin hinzufügen",
+        "description": "Öffnet direkt das Fenster zur Termineingabe.",
+        "menu_path": "Registrieren > Neuer Termin",
+        "tags": [
+          "Termin",
+          "hinzufügen",
+          "registrieren"
+        ]
+      },
+      "new_routine": {
+        "label": "Routine registrieren",
+        "description": "Fügt schnell eine wiederkehrende Aufgabenroutine hinzu.",
+        "menu_path": "Registrieren > Routine",
+        "tags": [
+          "Routine",
+          "Aufgabe",
+          "wiederkehrend"
+        ]
+      },
+      "new_directive": {
+        "label": "Anweisung registrieren",
+        "description": "Öffnet das Fenster zur Eingabe einer Anweisung oder eines Kooperationspunkts.",
+        "menu_path": "Registrieren > Anweisung",
+        "tags": [
+          "Anweisung",
+          "Kooperation"
+        ]
+      },
+      "checklist": {
+        "label": "Checkliste verwalten",
+        "description": "Verwaltet Checklistenvorlagen und die Struktur der Einträge.",
+        "menu_path": "Aufgaben > Checkliste verwalten",
+        "tags": [
+          "Checkliste",
+          "Vorlage"
+        ]
+      },
+      "today": {
+        "label": "Zu heute springen",
+        "description": "Bewegt das ausgewählte Datum sofort auf heute.",
+        "menu_path": "Navigation",
+        "tags": [
+          "heute",
+          "Datum"
+        ]
+      },
+      "prev_day": {
+        "label": "Vorheriger Tag",
+        "description": "Bewegt sich einen Tag vor das aktuelle Datum.",
+        "menu_path": "Navigation",
+        "tags": [
+          "zurück",
+          "Datum",
+          "links"
+        ]
+      },
+      "next_day": {
+        "label": "Nächster Tag",
+        "description": "Bewegt sich einen Tag nach dem aktuellen Datum.",
+        "menu_path": "Navigation",
+        "tags": [
+          "weiter",
+          "Datum",
+          "rechts"
+        ]
+      },
+      "command_palette": {
+        "label": "Befehlspalette",
+        "description": "Öffnet das Suchfeld, um eine Funktion sofort zu finden.",
+        "menu_path": "Direktaufruf",
+        "tags": [
+          "Suche",
+          "Befehl",
+          "Palette"
+        ]
+      },
+      "focus_mode": {
+        "label": "Fokusmodus umschalten",
+        "description": "Schaltet den Fokusmodus ein oder aus.",
+        "menu_path": "Ansicht > Fokusmodus",
+        "tags": [
+          "Fokus",
+          "Pomodoro"
+        ]
+      },
+      "focus_pause": {
+        "label": "Fokus pausieren",
+        "description": "Pausiert oder setzt die aktuelle Fokussitzung fort.",
+        "menu_path": "Fokusmodus",
+        "tags": [
+          "Fokus",
+          "Pause"
+        ]
+      },
+      "lock_mode": {
+        "label": "Sperrmodus",
+        "description": "Schaltet den Desktop-Sperrmodus ein oder aus.",
+        "menu_path": "Ansicht > Sperrmodus",
+        "tags": [
+          "sperren"
+        ]
+      },
+      "magnet_mode": {
+        "label": "Magnetmodus",
+        "description": "Schaltet den Magnetmodus um, der beim Ausrichten und Einrasten von Feldern hilft.",
+        "menu_path": "Ansicht > Magnetmodus",
+        "tags": [
+          "Magnet",
+          "Feld"
+        ]
+      },
+      "away_lock": {
+        "label": "Abwesenheitssperre",
+        "description": "Startet sofort den Abwesenheitssperr-Modus.",
+        "menu_path": "Ansicht > Abwesenheitssperre",
+        "tags": [
+          "abwesend",
+          "sperren"
+        ]
+      },
+      "topbar": {
+        "label": "Oberleiste umschalten",
+        "description": "Schaltet die Sichtbarkeit der oberen Menüleiste um.",
+        "menu_path": "Ansicht > Oberleiste",
+        "tags": [
+          "Menüleiste",
+          "Oberleiste",
+          "Wiederherstellung"
+        ]
+      },
+      "cal_toolbar": {
+        "label": "Kalender-Symbolleiste umschalten",
+        "description": "Blendet die Kalender-Symbolleiste ein oder aus.",
+        "menu_path": "Ansicht > Kalender-Symbolleiste",
+        "tags": [
+          "Kalender",
+          "Symbolleiste"
+        ]
+      },
+      "fullscreen": {
+        "label": "Vollbild umschalten",
+        "description": "Schaltet die Vollbildanzeige ein oder aus.",
+        "menu_path": "Ansicht > Vollbild",
+        "tags": [
+          "Vollbild"
+        ]
+      },
+      "save_layout": {
+        "label": "Aktuelles Layout speichern",
+        "description": "Speichert die aktuelle Feldanordnung als Voreinstellung.",
+        "menu_path": "Ansicht > Layout-Voreinstellungen > Speichern",
+        "tags": [
+          "Layout",
+          "Voreinstellung",
+          "speichern"
+        ]
+      },
+      "layout_1": {
+        "label": "Layout-Voreinstellung 1",
+        "description": "Wendet das standardmäßige 4-Felder-Layout an.",
+        "menu_path": "Ansicht > Layout-Voreinstellungen",
+        "tags": [
+          "Layout",
+          "Voreinstellung",
+          "angedockt",
+          "1"
+        ]
+      },
+      "layout_2": {
+        "label": "Layout-Voreinstellung 2",
+        "description": "Wendet ein kalenderorientiertes Layout an.",
+        "menu_path": "Ansicht > Layout-Voreinstellungen",
+        "tags": [
+          "Layout",
+          "Kalender",
+          "2"
+        ]
+      },
+      "layout_3": {
+        "label": "Layout-Voreinstellung 3",
+        "description": "Wendet ein aufgabenorientiertes Layout an.",
+        "menu_path": "Ansicht > Layout-Voreinstellungen",
+        "tags": [
+          "Layout",
+          "Aufgabe",
+          "3"
+        ]
+      },
+      "layout_4": {
+        "label": "Layout-Voreinstellung 4",
+        "description": "Wendet ein Layout mit geteilten Tabs an.",
+        "menu_path": "Ansicht > Layout-Voreinstellungen",
+        "tags": [
+          "Layout",
+          "Tab",
+          "geteilt",
+          "4"
+        ]
+      },
+      "layout_5": {
+        "label": "Layout-Voreinstellung 5",
+        "description": "Wendet ein vollständig getrenntes, frei schwebendes Layout an.",
+        "menu_path": "Ansicht > Layout-Voreinstellungen",
+        "tags": [
+          "Layout",
+          "getrennt",
+          "schwebend",
+          "5"
+        ]
+      },
+      "calendar_print": {
+        "label": "Kalender drucken",
+        "description": "Zeigt eine Vorschau und druckt den Kalender für den aktuellen oder einen gewählten Zeitraum.",
+        "menu_path": "Kalender > Optionen > Drucken",
+        "tags": [
+          "drucken",
+          "Drucker",
+          "PDF"
+        ]
+      },
+      "sync_gcal": {
+        "label": "Google Kalender synchronisieren",
+        "description": "Startet sofort eine Google-Kalender-Synchronisierung.",
+        "menu_path": "System > Kalender und Synchronisierung",
+        "tags": [
+          "Google",
+          "Synchronisierung",
+          "Kalender",
+          "F5"
+        ]
+      },
+      "routine_mgr": {
+        "label": "Routinen-Manager",
+        "description": "Öffnet direkt den Tab des Routinen-Managers.",
+        "menu_path": "Aufgaben > Routinenübersicht",
+        "tags": [
+          "Routine",
+          "verwalten"
+        ]
+      },
+      "color_assign": {
+        "label": "Automatische Farbzuweisung",
+        "description": "Weist den ausgewählten Elementen automatisch Farben zu.",
+        "menu_path": "Aufgaben > Automatische Farbzuweisung",
+        "tags": [
+          "Farbe",
+          "Tag",
+          "automatisch"
+        ]
+      },
+      "show_hide": {
+        "label": "Fenster ein-/ausblenden",
+        "description": "Blendet das Hauptfenster aus oder wieder ein.",
+        "menu_path": "Fenstersteuerung",
+        "tags": [
+          "Fenster",
+          "ausblenden",
+          "einblenden",
+          "Overlay"
+        ]
+      },
+      "widget_mode": {
+        "label": "Widget-Modus umschalten",
+        "description": "Öffnet den reinen Widget-Feldmodus.",
+        "menu_path": "Ansicht > Nur-Widget-Modus",
+        "tags": [
+          "Widget",
+          "Feld"
+        ]
+      },
+      "restore_pos": {
+        "label": "Fensterposition wiederherstellen",
+        "description": "Stellt das Fenster an einer sicheren Bildschirmposition wieder her.",
+        "menu_path": "Fenstersteuerung",
+        "tags": [
+          "Fenster",
+          "wiederherstellen",
+          "Position"
+        ]
+      },
+      "opacity_up": {
+        "label": "Deckkraft erhöhen",
+        "description": "Erhöht die Fensterdeckkraft.",
+        "menu_path": "Fenstersteuerung",
+        "tags": [
+          "Deckkraft",
+          "heller"
+        ]
+      },
+      "opacity_down": {
+        "label": "Deckkraft verringern",
+        "description": "Verringert die Fensterdeckkraft.",
+        "menu_path": "Fenstersteuerung",
+        "tags": [
+          "Deckkraft",
+          "dunkler"
+        ]
+      },
+      "monitor_left": {
+        "label": "Zum vorherigen Monitor verschieben",
+        "description": "Verschiebt das Fenster auf einen anderen Monitor.",
+        "menu_path": "Fenstersteuerung",
+        "tags": [
+          "Monitor",
+          "Bildschirm",
+          "links"
+        ]
+      },
+      "monitor_right": {
+        "label": "Zum nächsten Monitor verschieben",
+        "description": "Verschiebt das Fenster auf einen anderen Monitor.",
+        "menu_path": "Fenstersteuerung",
+        "tags": [
+          "Monitor",
+          "Bildschirm",
+          "rechts"
+        ]
+      },
+      "help": {
+        "label": "Tastenkombinationen-Übersicht",
+        "description": "Öffnet das Hilfezentrum.",
+        "menu_path": "System > Tastenkombinationen-Übersicht",
+        "tags": [
+          "Hilfe",
+          "F1"
+        ]
+      },
+      "delete": {
+        "label": "Ausgewähltes Element löschen",
+        "description": "Löscht den aktuell ausgewählten Termin oder das Element.",
+        "menu_path": "Auswahlstatus",
+        "tags": [
+          "löschen",
+          "entfernen"
+        ]
+      },
+      "escape": {
+        "label": "Auswahl aufheben",
+        "description": "Hebt die aktuelle Auswahl oder den Fokus auf.",
+        "menu_path": "Auswahlstatus",
+        "tags": [
+          "Auswahl aufheben",
+          "abbrechen",
+          "Escape"
+        ]
+      },
+      "force_unlock": {
+        "label": "Sperre erzwungen aufheben",
+        "description": "Hebt einen unerwarteten Sperrzustand zwangsweise auf.",
+        "menu_path": "Notfallwiederherstellung",
+        "tags": [
+          "erzwingen",
+          "entsperren",
+          "Wiederherstellung",
+          "Notfall"
+        ]
+      }
+    },
+    "groups": {
+      "register": {
+        "label": "Registrieren",
+        "description": "Schnell einen neuen Termin, eine Routine oder eine Anweisung starten."
+      },
+      "navigate": {
+        "label": "Navigieren",
+        "description": "Zwischen Terminen und Auswahlen wechseln oder Funktionen direkt aufrufen."
+      },
+      "mode": {
+        "label": "Modus",
+        "description": "Steuert Arbeitsmodi wie Fokus, Magnet und Sperre."
+      },
+      "view": {
+        "label": "Ansicht",
+        "description": "Betrifft Symbolleisten, Vollbild und Layout."
+      },
+      "admin": {
+        "label": "Verwaltung",
+        "description": "Öffnet Verwaltungsbildschirme und automatisierte Bereinigungswerkzeuge."
+      },
+      "window": {
+        "label": "Fenster",
+        "description": "Passt das Fensterverhalten an, z. B. Position, Monitor und Deckkraft."
+      },
+      "system": {
+        "label": "System",
+        "description": "Zugriff auf Hilfe- und Systemunterstützungsfunktionen."
+      },
+      "edit": {
+        "label": "Bearbeiten",
+        "description": "Hebt die aktuelle Auswahl auf oder organisiert sie."
+      },
+      "emergency": {
+        "label": "Notfall",
+        "description": "Erzwingt die Wiederherstellung aus einem unerwarteten Sperrzustand."
+      }
+    },
+    "priority": {
+      "topbar": {
+        "badge": "Menüleiste wiederherstellen",
+        "note": "Als Erstes prüfen, wenn die Oberleiste verschwindet."
+      },
+      "magnet_mode": {
+        "badge": "Magnet umschalten",
+        "note": "Schaltet schnell um, ob Felder sich bewegen und einrasten lassen."
+      },
+      "lock_mode": {
+        "badge": "Entsperren",
+        "note": "Direkt vom Hauptbildschirm umschalten, selbst im gesperrten Zustand."
+      },
+      "force_unlock": {
+        "badge": "Notfallwiederherstellung",
+        "note": "Hebt einen unerwarteten Sperrzustand zwangsweise auf."
+      }
+    },
+    "pages": {
+      "quickstart": {
+        "title": "Schnellstart",
+        "subtitle": "Was Sie zuerst prüfen sollten und am häufigsten nutzen werden"
+      },
+      "workflows": {
+        "title": "Häufige Aufgaben",
+        "subtitle": "Wichtige Tastenkombinationen nach Situation gruppiert"
+      },
+      "recovery": {
+        "title": "Bildschirmwiederherstellung",
+        "subtitle": "Tasten für Sperre, versteckte Menüs und Fensterwiederherstellung"
+      },
+      "reference": {
+        "title": "Alle Tastenkombinationen",
+        "subtitle": "Vollständige Liste nach Kategorie"
+      }
+    },
+    "workflows": {
+      "new": {
+        "title": "Etwas Neues erstellen",
+        "desc": "Beim schnellen Starten eines Termins oder einer Aufgabe"
+      },
+      "navigate": {
+        "title": "Bewegen und suchen",
+        "desc": "Beim Wechseln zwischen Terminen oder schnellem Suchen einer Funktion"
+      },
+      "layout": {
+        "title": "Bildschirm und Layout",
+        "desc": "Beim Ändern der Darstellung oder Anordnung der Felder"
+      },
+      "focus_lock": {
+        "title": "Fokus und Sperre",
+        "desc": "Beim Steuern des Fokus- oder Sperrstatus"
+      },
+      "window_tools": {
+        "title": "Fenster- und Verwaltungswerkzeuge",
+        "desc": "Beim Anpassen des Fensterstatus oder wenn eine Verwaltungsfunktion benötigt wird"
+      }
+    },
+    "hero": {
+      "quickstart": {
+        "title": "Die meistgenutzten Funktionen zuerst",
+        "desc": "Wir zeigen zuerst, was Sie direkt nach dem Öffnen der App und bei F1 nutzen werden."
+      },
+      "workflows": {
+        "title": "Nach Situation gruppiert für schnelleres Finden",
+        "desc": "Tastenkombinationen sind nach echten Arbeitsabläufen wie Registrieren, Navigieren und Ansichtswechsel gruppiert, damit Sie sie auch ohne Namen finden."
+      },
+      "recovery": {
+        "title": "Tasten, die Sie zuerst versuchen sollten",
+        "desc": "Nur die Tasten, die Sie am dringendsten brauchen, wenn das Menü verschwindet oder der Sperrstatus verworren ist."
+      },
+      "reference": {
+        "title": "Alle Tastenkombinationen nach Kategorie durchsuchen",
+        "desc": "Jede Tastenkombination nach Funktionsgruppe organisiert – gut zum Überfliegen ohne Suche."
+      },
+      "search": {
+        "title": "Suchergebnisse",
+        "desc": "Geben Sie einen Tastennamen oder Funktionsnamen ein, um passende Tastenkombinationen sofort zu sehen."
+      }
+    },
+    "chrome": {
+      "eyebrow": "F1 HILFEZENTRUM",
+      "header_title": "Das Hilfezentrum zum schnellen Finden von Tastenkombinationen und Funktionen",
+      "header_subtitle": "Suchen Sie nach Funktionsname, Tastenname oder Menüpfad und finden Sie schnell, was Sie am meisten nutzen.",
+      "badge_recovery": "4 zentrale Wiederherstellungstasten",
+      "badge_total": "{count} Tastenkombinationen insgesamt",
+      "badge_search": "Suche unterstützt",
+      "search_placeholder": "z. B. sperren, Widget, F11, Strg+Umschalt+1",
+      "search_examples": "Suchen Sie z. B.: Menüleiste, Kalender, Routine, Sperre aufheben",
+      "sidebar_title": "Durchsuchen",
+      "sidebar_hint": "Wählen Sie links einen Bereich oder suchen Sie direkt über das Feld oben.",
+      "footer_hint": "Die Suche funktioniert nach Funktionsname, Tastenkombination oder Menüpfad.",
+      "quickstart_section_title": "Hier beginnen",
+      "quickstart_section_desc": "Neue Benutzer können hier starten, um sich sofort zurechtzufinden.",
+      "search_tips_title": "Suchtipps",
+      "search_tips_desc": "Die Hilfe ist auch nach Menünamen und Situationsstichworten durchsuchbar, nicht nur nach Tastenkombinationen.",
+      "tip_lock": "Wenn sich eine Sperre nicht lösen lässt: versuchen Sie `Sperre`, `Wiederherstellung`, `erzwingen`",
+      "tip_layout": "Wenn Sie das Layout ändern möchten: versuchen Sie `Layout`, `Voreinstellung`, `Strg+Umschalt+1`",
+      "tip_widget": "Bei der Suche nach Widget-Funktionen: versuchen Sie `Widget`, `F12`",
+      "recovery_primary_title": "Zuerst zu prüfende Wiederherstellungstasten",
+      "recovery_primary_desc": "Die Tasten, die Sie zuerst versuchen sollten, wenn etwas schiefgeht.",
+      "recovery_secondary_title": "Praktische Tasten, die man sich zusätzlich merken sollte",
+      "recovery_secondary_desc": "Tastenkombinationen, die oft gemeinsam benötigt werden, um Sperr- oder Fensterstatus zu bereinigen.",
+      "search_results_title": "Suchergebnisse",
+      "search_results_desc": "Geben Sie einen Suchbegriff ein, um hier sofort Ergebnisse zu sehen.",
+      "search_results_count": "{count} Ergebnisse für '{query}'",
+      "search_empty": "Keine passenden Ergebnisse.\nVersuchen Sie ein kürzeres Stichwort, z. B. Funktionsname, Tastenname oder Menüname.",
+      "meta_menu_path": "Menüpfad: {value}",
+      "meta_aliases": "Weitere Tasten: {value}",
+      "meta_group": "Kategorie: {value}"
+    }
   },
   "splash": {
     "initializing_db": "Datenbank wird initialisiert...",

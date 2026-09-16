@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QDate, Qt
+from PyQt6.QtCore import QDate, QPoint, Qt
 from PyQt6.QtWidgets import QApplication, QCheckBox, QPushButton, QToolButton, QWidget
 import pytest
 
@@ -51,8 +51,11 @@ class Host(QWidget):
         self.open_task_dialog = Mock()
         self.open_modify_task_dialog = Mock()
         self.open_directive_dialog = Mock()
+        self.open_work_management_dialog = Mock()
         self.handle_task_status_changed = Mock(return_value=True)
         self.handle_directive_status_changed = Mock(return_value=True)
+        self.handle_task_priority_changed = Mock()
+        self.handle_directive_priority_changed = Mock()
 
 
 _APP = QApplication.instance() or QApplication([])
@@ -109,6 +112,38 @@ def test_list_buttons_route_task_and_directive_ids(workspace):
     host.open_directive_dialog.assert_called_once_with(task_id=3)
 
 
+def test_item_more_menu_routes_priority_change(workspace):
+    host, coordinator, widget = workspace
+    routine = next(item for item in widget._last_items if item.get("item_id") == 2)
+
+    def execute(menu, _position):
+        priority_menu = next(
+            action.menu() for action in menu.actions() if action.menu() is not None
+        )
+        return priority_menu.actions()[0]
+
+    with patch("calendar_app.presentation.widgets.unified_widget_mode.QMenu.exec", new=execute):
+        coordinator.controller.open_item_menu(routine, QPoint())
+
+    host.handle_task_priority_changed.assert_called_once_with(2, "urgent")
+
+
+def test_read_only_subscription_item_cannot_open_mutating_dialog(workspace):
+    host, coordinator, widget = workspace
+    read_only_item = {
+        "item_id": 99,
+        "source": "task",
+        "read_only": True,
+        "is_task": False,
+    }
+
+    coordinator.controller.open_item(read_only_item)
+
+    host.open_modify_task_dialog.assert_not_called()
+    assert widget.feedback_label.isVisible()
+    assert widget.feedback_label.text() == "읽기 전용 캘린더"
+
+
 def test_edit_dialog_temporarily_unpins_without_changing_saved_setting(workspace):
     host, coordinator, widget = workspace
     before = host.settings.value("widget_mode_always_top")
@@ -156,6 +191,18 @@ def test_complete_and_undo_preserve_original_status(workspace):
     assert any(item.get("item_id") == 2 for item in widget._last_items)
 
 
+def test_feedback_and_undo_are_cleared_when_context_changes(workspace):
+    _, coordinator, widget = workspace
+    widget.show_feedback("저장됨", undo=True)
+    coordinator.controller._undo_completion = ({"item_id": 2}, "pending")
+
+    widget.set_filter("schedule")
+
+    assert widget.feedback_label.isHidden()
+    assert widget.undo_btn.isHidden()
+    assert coordinator.controller._undo_completion is None
+
+
 def test_failed_completion_keeps_item_and_shows_no_false_success(workspace):
     host, coordinator, widget = workspace
     host.handle_task_status_changed.return_value = False
@@ -173,11 +220,74 @@ def test_work_add_uses_selected_date_and_correct_type(workspace):
     assert host.open_task_dialog.call_args.kwargs["initial_date"] == host.current_date
 
 
+def test_directive_add_uses_dedicated_dialog_instead_of_task_dialog(workspace):
+    host, _, widget = workspace
+    widget.set_filter("directive")
+    widget.add_btn.click()
+
+    host.open_directive_dialog.assert_called_once_with(initial_date=host.current_date)
+    host.open_task_dialog.assert_not_called()
+
+
+def test_text_without_time_never_routes_to_unsupported_directive_task_dialog(workspace):
+    host, coordinator, _ = workspace
+
+    coordinator.controller.handle_quick_add("검토 의견 전달")
+
+    host.open_directive_dialog.assert_called_once_with(initial_date=host.current_date)
+    host.open_task_dialog.assert_not_called()
+
+
+def test_work_and_directive_filters_are_independent(workspace):
+    _, _, widget = workspace
+
+    widget.set_filter("work")
+    work_titles = [
+        item["title"]
+        for item in widget._filter_items(widget._last_items)
+        if not item.get("is_section")
+    ]
+    assert "회의 자료 정리" in work_titles
+    assert "검토 의견 전달" not in work_titles
+
+    widget.set_filter("directive")
+    directive_titles = [
+        item["title"]
+        for item in widget._filter_items(widget._last_items)
+        if not item.get("is_section")
+    ]
+    assert "회의 자료 정리" not in directive_titles
+    assert "검토 의견 전달" in directive_titles
+
+
 def test_all_add_menu_offers_three_types(workspace):
     host, _, widget = workspace
     with patch("calendar_app.presentation.widgets.unified_widget_mode.QMenu.exec") as execute:
         widget.add_btn.click()
     execute.assert_called_once()
+
+
+def test_add_menu_exposes_directive_and_full_management(workspace):
+    host, _, widget = workspace
+    captured = {}
+
+    def execute(menu, _position):
+        captured["labels"] = [
+            action.text() for action in menu.actions() if not action.isSeparator()
+        ]
+        target = next(action for action in menu.actions() if "전체 업무" in action.text())
+        target.trigger()
+        return target
+
+    with patch("calendar_app.presentation.widgets.unified_widget_mode.QMenu.exec", new=execute):
+        widget.add_btn.click()
+
+    assert any("지시" in label and "추가" in label for label in captured["labels"])
+    assert any(
+        "지시" in label and "관리" in label or "현황" in label for label in captured["labels"]
+    )
+    assert any("전체 업무" in label for label in captured["labels"])
+    host.open_work_management_dialog.assert_called_once_with(start_tab="schedule")
 
 
 def test_date_navigation_changes_week_and_today(workspace):

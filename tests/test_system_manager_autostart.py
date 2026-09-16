@@ -68,6 +68,34 @@ class SystemManagerAutostartTests(unittest.TestCase):
         self.assertTrue(settings.values[system_manager._KEY])
         self.assertGreater(settings.synced, 0)
 
+    def test_packaged_state_preserves_user_and_policy_blocks(self):
+        expected_states = (
+            ("DISABLED_BY_USER", system_manager.AUTOSTART_DISABLED_BY_USER),
+            ("DISABLED_BY_POLICY", system_manager.AUTOSTART_DISABLED_BY_POLICY),
+            ("ENABLED_BY_POLICY", system_manager.AUTOSTART_ENABLED_BY_POLICY),
+        )
+
+        for task_state, expected in expected_states:
+            with (
+                self.subTest(task_state=task_state),
+                patch.object(
+                    system_manager,
+                    "_get_packaged_startup_task",
+                    return_value=_Task(task_state),
+                ),
+            ):
+                self.assertEqual(system_manager.get_autostart_state(), expected)
+
+    def test_packaged_state_reports_unavailable_when_task_lookup_fails(self):
+        with (
+            patch.object(system_manager, "_get_packaged_startup_task", return_value=None),
+            patch.object(system_manager, "_has_package_identity", return_value=True),
+        ):
+            self.assertEqual(
+                system_manager.get_autostart_state(),
+                system_manager.AUTOSTART_UNAVAILABLE,
+            )
+
     def test_legacy_enabled_preference_is_migrated_to_packaged_task(self):
         settings = _SettingsStub(
             {

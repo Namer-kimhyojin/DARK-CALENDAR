@@ -149,7 +149,7 @@ QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar::tab:hover {{
 QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar::tab:selected {{
     background: {accent_soft};
     color: {tab_text_active};
-    border: 1.5px solid {accent};
+    border: 2px solid {accent};
     margin-bottom: 8px;
 }}
 
@@ -254,7 +254,7 @@ QDialog#TaskEditorDialog QRadioButton#TaskDialogOptionCheck::indicator,
 QDialog#TaskEditorDialog QCheckBox#TaskDialogOptionCheck::indicator {{
     width: 16px;
     height: 16px;
-    border: 1.5px solid {border};
+    border: 2px solid {border};
     background-color: {surface_item};
 }}
 QDialog#TaskEditorDialog QRadioButton#TaskDialogOptionCheck::indicator:checked,
@@ -673,7 +673,7 @@ def build_settings_style_bundle(
             f"color: {text_secondary}; spacing: 8px; font-weight: 600; font-size: {max(13, base_font_px - 1)}px; "
             "}"
             "QCheckBox::indicator { "
-            f"border: 1.5px solid {t.get('check_indicator_border', border)}; "
+            f"border: 2px solid {t.get('check_indicator_border', border)}; "
             f"background-color: {t.get('check_indicator_bg', surface_bg)}; "
             "width: 16px; height: 16px; "
             "}"
@@ -829,10 +829,10 @@ def build_settings_swatch_style(color_str: str, tokens: dict | None = None) -> s
     border_strong = t.get("border_strong", "rgba(255,255,255,0.50)")
     return (
         "QPushButton { "
-        f"background-color: {color_str}; border-radius: 10px; border: 1.5px solid {border_css}; "
+        f"background-color: {color_str}; border-radius: 10px; border: 2px solid {border_css}; "
         "}"
         "QPushButton:hover { "
-        f"border: 1.5px solid {border_strong}; "
+        f"border: 2px solid {border_strong}; "
         "}"
     )
 

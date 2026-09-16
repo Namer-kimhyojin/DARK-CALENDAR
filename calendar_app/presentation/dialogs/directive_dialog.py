@@ -52,6 +52,12 @@ class DirectiveDialog(QDialog):
         super().__init__(parent)
         self.task_id = task_id
         self._saved_task_id = None
+        initial_date = kwargs.get("initial_date")
+        self.initial_date = (
+            initial_date
+            if isinstance(initial_date, QDate) and initial_date.isValid()
+            else QDate.currentDate()
+        )
 
         try:
             self._ui_tokens = get_dialog_theme_tokens()
@@ -128,7 +134,7 @@ class DirectiveDialog(QDialog):
 
         dt_input_row = QHBoxLayout()
         dt_input_row.setSpacing(6)
-        self.deadline_date = DatePickerWidget(QDate.currentDate())
+        self.deadline_date = DatePickerWidget(self.initial_date)
         self.deadline_date.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.deadline_date.setMinimumHeight(30)
         polish_calendar_popup(self.deadline_date)

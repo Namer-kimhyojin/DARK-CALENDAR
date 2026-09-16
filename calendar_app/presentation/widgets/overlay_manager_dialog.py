@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Overlay Widget Manager Dialog — 위젯 관리자.
 
 UI 토큰 기반 디자인:
@@ -105,7 +106,7 @@ def _load_tokens() -> dict:
         "text_secondary": str(tok.get("text_secondary", "")),
         "text_muted": str(tok.get("text_muted", "")),
         "text_faint": str(tok.get("text_faint", tok.get("text_muted", ""))),
-        "bg_main": str(tok.get("surface_bg", "")),
+        "bg_main": str(tok.get("floating_bg", tok.get("surface_bg", ""))),
         "bg_alt": str(tok.get("surface_alt", "")),
         "bg_item": str(tok.get("surface_item", "")),
         "bg_item_hover": str(tok.get("surface_hover", "")),
@@ -161,7 +162,7 @@ def _build_web_ui_stylesheet(tokens=None, metrics=None) -> str:
         "text_secondary": str(tokens.get("text_secondary", tokens.get("text_muted", ""))),
         "text_muted": str(tokens.get("text_muted", "")),
         "text_faint": str(tokens.get("text_faint", tokens.get("text_muted", ""))),
-        "bg_main": str(tokens.get("surface_bg", "")),
+        "bg_main": str(tokens.get("floating_bg", tokens.get("surface_bg", ""))),
         "bg_alt": str(tokens.get("surface_alt", "")),
         "bg_item": str(tokens.get("surface_item", "")),
         "bg_item_hover": str(tokens.get("surface_hover", "")),
@@ -230,7 +231,9 @@ def _build_manager_css(tok: dict) -> str:
         f"QLabel#countBadge {{ background: {tok['bg_item']}; color: {tok['text_muted']};"
         f" border: 1px solid {tok['border']}; border-radius: {min(r_sm, 10)}px;"
         f" font-size: 8pt; font-weight: 700; padding: 0 7px; min-height: 18px; }}"
-        f"QScrollArea {{ background: transparent; border: none; }}"
+        f"QScrollArea#widgetListScroll {{ background: {tok['bg_main']}; border: none; }}"
+        f"QWidget#widgetListViewport, QWidget#widgetListContainer {{"
+        f" background: {tok['bg_main']}; border: none; }}"
         f"QLabel#emptyLabel {{ color: {tok['text_faint']}; font-size: 10.5pt; padding: 48px; }}"
         f"QFrame#MgrFoot {{ border-top: 1px solid {tok['divider']}; background: {tok['bg_alt']}; }}"
         f"QLabel#overlayManagerHint {{ color: {tok['text_faint']}; font-size: 9pt;"
@@ -569,10 +572,13 @@ class OverlayManagerDialog(QDialog):
 
         # ── 스크롤 목록 ──
         self._scroll = QScrollArea()
+        self._scroll.setObjectName("widgetListScroll")
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll.viewport().setObjectName("widgetListViewport")
 
         self._list_container = QWidget()
+        self._list_container.setObjectName("widgetListContainer")
         self._list_lay = QVBoxLayout(self._list_container)
         self._list_lay.setContentsMargins(16, 4, 16, 10)
         self._list_lay.setSpacing(3)

@@ -168,6 +168,8 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.assertEqual(dialog.selected_base_hex(), "#e7f5ff")
         self.assertEqual(dialog.selected_point_hex(), "#1971c2")
         self.assertEqual(dialog.selected_text_theme(), "light")
+        self.assertEqual(dialog._row_primary.hex_value(), "#101318")
+        self.assertEqual(dialog._row_input_bg.hex_value(), "#ffffff")
 
     def test_style_family_cards_preview_only_the_current_mode_variant(self):
         dialog = PanelColorPickerDialog()

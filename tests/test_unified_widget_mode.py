@@ -149,6 +149,40 @@ class UnifiedWidgetModeTests(unittest.TestCase):
         self.assertNotIn("Done Routine", titles)
         self.assertNotIn("Done Directive", titles)
 
+    def test_today_includes_overdue_and_undated_directives(self):
+        today = QDate.currentDate()
+        today_text = today.toString("yyyy-MM-dd")
+        self.host.current_date = today
+        self.host._latest_calendar_range_data = {
+            "range_start": today.addDays(-30).toString("yyyy-MM-dd"),
+            "range_end": today.addDays(30).toString("yyyy-MM-dd"),
+            "rows": [],
+        }
+        self.host._latest_directive_data = {
+            "context_date": today_text,
+            "routine_rows": [],
+            "directive_rows": [
+                (21, "Due Today", "pending", "", today_text),
+                (22, "Overdue", "pending", "", today.addDays(-2).toString("yyyy-MM-dd")),
+                (23, "No Deadline", "pending", "", ""),
+                (24, "Future", "pending", "", today.addDays(2).toString("yyyy-MM-dd")),
+            ],
+        }
+        self.controller = uwm.UnifiedWidgetController(self.host)
+
+        self.controller.toggle_widget()
+        self.controller.refresh_data()
+
+        titles = [
+            item["title"]
+            for item in self.controller.widget._last_items
+            if not item.get("is_section")
+        ]
+        self.assertIn("Due Today", titles)
+        self.assertIn("Overdue", titles)
+        self.assertIn("No Deadline", titles)
+        self.assertNotIn("Future", titles)
+
     def test_set_target_date_uses_existing_cache_without_forcing_refresh(self):
         self.host._latest_calendar_range_data = {
             "range_start": "2026-03-01",

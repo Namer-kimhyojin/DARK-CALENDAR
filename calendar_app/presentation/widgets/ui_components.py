@@ -154,9 +154,15 @@ def _task_detail_card_style(tokens=None, shape=None):
     palette = _merged_ui_tokens(tokens)
     shape = dict(shape or get_ui_shape_tokens())
     radius = int(shape.get("task_title_radius", 6))
+    background = (
+        tokens.get("floating_bg", tokens.get("bg_alt", palette["bg_alt"]))
+        if tokens
+        else palette.get("floating_bg", palette["bg_alt"])
+    )
     return (
-        f"background-color: {palette['bg_alt']}; "
+        f"background-color: {background}; "
         f"color: {palette['text_secondary']}; "
+        f"border: 1px solid {palette['border_soft']}; "
         f"border-bottom-left-radius: {radius}px; "
         f"border-bottom-right-radius: {radius}px;"
     )
@@ -186,8 +192,14 @@ def _hover_info_popup_stylesheet(tokens=None, shape=None, settings=None):
     palette = _merged_ui_tokens(tokens, settings=settings)
     shape = dict(shape or get_ui_shape_tokens(settings=settings))
     radius = int(shape.get("tooltip_radius", 8))
+    background = (
+        tokens.get("floating_bg", tokens.get("bg_alt", palette["bg_alt"]))
+        if tokens
+        else palette.get("floating_bg", palette["bg_alt"])
+    )
     return (
-        f"QFrame {{ background-color: {palette['bg_alt']}; color: {palette['text_primary']}; "
+        f"QFrame {{ background-color: {background}; "
+        f"color: {palette['text_primary']}; "
         f"border: 1px solid {palette['accent_border']}; border-radius: {radius}px; }}"
     )
 
@@ -335,30 +347,18 @@ class HoverInfoPopup(QFrame):
         from PyQt6.QtCore import QSettings
 
         s = QSettings("kimhyojin", "Dark Calendar")
-        theme = get_theme_color(s)
-        text_theme = s.value("text_theme", "dark")
-        panel_base = s.value("panel_base_color", "#1c1c1c")
-        cache_key = f"{theme}|{text_theme}|{panel_base}"
+        palette = get_ui_tokens(settings=s)
+        cache_key = "|".join(
+            str(palette[key]) for key in ("accent", "floating_bg", "text_primary", "accent_border")
+        )
         if cache_key == self._last_theme:
             return
         self._last_theme = cache_key
 
-        c = QColor(theme)
-        if not c.isValid():
-            c = QColor("#4da6ff")
-        border = f"rgba({c.red()},{c.green()},{c.blue()},0.74)"
-
-        opacity_factor = get_opacity_factor(s)
-        pal = derive_ui_palette(text_theme, panel_base, opacity_factor)
-        pb = QColor(panel_base)
-        if not pb.isValid():
-            pb = QColor("#1c1c1c")
-        # Keep popup background tied to panel base only.
-        r = max(0, min(255, pb.red() + 4))
-        g = max(0, min(255, pb.green() + 4))
-        b = max(0, min(255, pb.blue() + 6))
-        bg = f"rgba({r},{g},{b},248)"
-        label_color = pal["text_primary"]
+        border = str(palette["accent_border"])
+        bg = str(palette["floating_bg"])
+        label_color = str(palette["text_primary"])
+        radius = int(get_ui_shape_tokens(settings=s).get("tooltip_radius", 8))
 
         self.setStyleSheet(f"""
             QFrame#hover_info_popup {{
@@ -368,7 +368,7 @@ class HoverInfoPopup(QFrame):
             QFrame#hover_info_card {{
                 background-color: {bg};
                 border: 1px solid {border};
-                border-radius: 0px;
+                border-radius: {radius}px;
             }}
             QLabel {{
                 color: {label_color};
@@ -990,14 +990,16 @@ class DraggableTaskButton(QFrame):
 
         if self._watermark_title:
             # Post-start multiday segments should never show text.
-            color = "rgba(255, 255, 255, 0.0)"
+            color = "transparent"
             base_pt = int(QSettings("kimhyojin", "Dark Calendar").value("font_size", 10))
             wm_pt = max(7, base_pt - 1)
             size_rule = f"font-size: {wm_pt}pt;"
+            weight = "600"
         else:
-            color = "#ffffff"
+            palette = _merged_ui_tokens()
+            color = palette["text_primary"]
             size_rule = ""
-        weight = "bold" if self._selected else "normal"
+            weight = "bold" if self._selected else "600"
         self.title_label.setStyleSheet(
             f"background: transparent; border: none; color: {color}; font-weight: {weight}; {size_rule}"
         )
@@ -1124,6 +1126,7 @@ class DraggableTaskButton(QFrame):
     def _apply_tag_frame_style(self):
         from PyQt6.QtGui import QColor
 
+        palette = _merged_ui_tokens()
         shape = get_ui_shape_tokens()
         task_title_radius = int(shape.get("task_title_radius", 0))
         task_outer_radius = int(shape.get("task_outer_radius", 0))
@@ -1134,7 +1137,7 @@ class DraggableTaskButton(QFrame):
         l_width = "0px" if l_open else "3px"
 
         # 湲곕낯 ?뚮쭏 ?뺣낫 媛?몄삤湲?
-        theme_color = get_theme_color()
+        theme_color = str(palette["accent"])
         theme_obj = QColor(str(theme_color))
         if not theme_obj.isValid():
             theme_obj = QColor("#4da6ff")
@@ -1145,10 +1148,10 @@ class DraggableTaskButton(QFrame):
         selected_border = f"rgba({theme_obj.red()}, {theme_obj.green()}, {theme_obj.blue()}, 180)"
 
         if not self._tag_color:
-            tag_line = "rgba(255, 255, 255, 0.25)"
-            base_bg = "rgba(255, 255, 255, 0.05)"
-            hover_bg = "rgba(255, 255, 255, 0.09)"
-            range_hover_bg = "rgba(255, 255, 255, 0.12)"
+            tag_line = palette["border_strong"]
+            base_bg = palette["bg_item"]
+            hover_bg = palette["bg_item_hover"]
+            range_hover_bg = palette["accent_soft"]
         else:
             tag_color_obj = QColor(self._tag_color)
             if tag_color_obj.isValid():
@@ -1159,9 +1162,9 @@ class DraggableTaskButton(QFrame):
                 selected_bg = f"rgba({(theme_obj.red() + tag_color_obj.red()) // 2}, {(theme_obj.green() + tag_color_obj.green()) // 2}, {(theme_obj.blue() + tag_color_obj.blue()) // 2}, 45)"
             else:
                 tag_line = self._tag_color
-                base_bg = "rgba(255, 255, 255, 0.03)"
-                hover_bg = "rgba(255, 255, 255, 0.06)"
-                range_hover_bg = "rgba(255, 255, 255, 0.09)"
+                base_bg = palette["bg_item"]
+                hover_bg = palette["bg_item_hover"]
+                range_hover_bg = palette["accent_soft"]
 
         hide_tag_strip = bool(self.property("hide_tag_strip"))
         left_border_color = tag_line if not hide_tag_strip else "transparent"
@@ -1173,7 +1176,7 @@ class DraggableTaskButton(QFrame):
             }}
             QFrame#taskTitleBar {{
                 background: {base_bg};
-                border: 0.5px solid rgba(255, 255, 255, 0.12);
+                border: 0.5px solid {palette["border_soft"]};
                 border-left: {left_border_width} solid {left_border_color};
                 border-top-left-radius: {l_rad};
                 border-bottom-left-radius: {l_rad};
@@ -1182,7 +1185,7 @@ class DraggableTaskButton(QFrame):
             }}
             DraggableTaskButton[hovered="true"] QFrame#taskTitleBar {{
                 background: {hover_bg};
-                border: 0.5px solid rgba(255, 255, 255, 0.22);
+                border: 0.5px solid {palette["border_strong"]};
             }}
             DraggableTaskButton[selected="true"] QFrame#taskTitleBar {{
                 background: {selected_bg};

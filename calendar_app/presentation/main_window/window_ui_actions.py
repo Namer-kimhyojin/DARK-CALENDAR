@@ -536,15 +536,21 @@ class MainWindowUiActionsMixin:
 
         current_text_theme = str(self.settings.value("text_theme", "dark"))
         _tpal = derive_text_palette(current_snapshot.text_theme, current_theme)
-        current_text_primary = str(
-            self.settings.value("custom_text_primary", _tpal["text_primary"])
-        )
-        current_text_secondary = str(
-            self.settings.value("custom_text_secondary", _tpal["text_secondary"])
-        )
-        current_text_muted = str(self.settings.value("custom_text_muted", _tpal["text_muted"]))
-        current_text_faint = str(self.settings.value("custom_text_faint", _tpal["text_faint"]))
-        current_input_bg = str(self.settings.value("custom_input_bg", "rgba(0,0,0,0.2)"))
+        if current_text_theme == "custom":
+            current_text_primary = str(
+                self.settings.value("custom_text_primary", _tpal["text_primary"])
+            )
+            current_text_secondary = str(
+                self.settings.value("custom_text_secondary", _tpal["text_secondary"])
+            )
+            current_text_muted = str(self.settings.value("custom_text_muted", _tpal["text_muted"]))
+            current_text_faint = str(self.settings.value("custom_text_faint", _tpal["text_faint"]))
+        else:
+            current_text_primary = str(_tpal["text_primary"])
+            current_text_secondary = str(_tpal["text_secondary"])
+            current_text_muted = str(_tpal["text_muted"])
+            current_text_faint = str(_tpal["text_faint"])
+        current_input_bg = str(current_snapshot.input_bg)
 
         app_font = QApplication.instance().font()
         current_font_family = str(self.settings.value("font_family", app_font.family()))
@@ -611,8 +617,9 @@ class MainWindowUiActionsMixin:
             self.slider.setValue(new_opacity)
             self.slider.blockSignals(False)
 
-        self.settings.setValue("text_theme", dlg.selected_text_theme())
-        if dlg.text_colors_changed():
+        selected_text_theme = dlg.selected_text_theme()
+        self.settings.setValue("text_theme", selected_text_theme)
+        if selected_text_theme == "custom":
             self.settings.setValue("custom_text_primary", dlg.text_primary_hex())
             self.settings.setValue("custom_text_secondary", dlg.text_secondary_hex())
             self.settings.setValue("custom_text_muted", dlg.text_muted_hex())

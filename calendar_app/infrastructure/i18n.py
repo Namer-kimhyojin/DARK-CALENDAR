@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 import logging
 from pathlib import Path
@@ -392,7 +393,8 @@ class I18nManager:
         if self._looks_broken_text(data):
             data = None
         if data is None:
-            data = default or key
+            # An explicit empty string is a valid fallback for optional UI text.
+            data = default if default is not None else key
 
         if isinstance(data, str) and kwargs:
             try:

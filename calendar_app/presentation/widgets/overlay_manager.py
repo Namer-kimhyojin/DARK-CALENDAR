@@ -35,10 +35,11 @@ from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import QDialog, QInputDialog, QLineEdit, QMenu, QMessageBox
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.main_window.top_menus.common import set_themed_icon
 from calendar_app.presentation.widgets.overlay_base import _overlay_menu_style
 from calendar_app.shared.icon_map import ICON
-from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.theme_snapshot import build_theme_snapshot
 
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QWidget as _QWidget
@@ -486,13 +487,16 @@ class OverlayWidgetManager:
             parent_menu.setStyleSheet(menu_style)
         parent_menu.clear()
         locked = bool(getattr(self._owner, "is_locked", False))
+        icon_color = getattr(self._owner, "_tb_icon_color", None)
+        if not icon_color:
+            icon_color = build_theme_snapshot(self._settings()).text_palette["text_primary"]
 
         # ── 위젯 관리자 (고정) ────────────────────────────────────────
         act_mgr = parent_menu.addAction(
             _se(t("widget_manager.open_manager", "위젯 관리자...")),
             lambda: self._open_manager_dialog(),
         )
-        act_mgr.setIcon(_ic(ICON.WIDGET_MGR))
+        set_themed_icon(act_mgr, ICON.WIDGET_MGR, icon_color)
         act_mgr.setEnabled(not locked)
 
         # ── 기존 인스턴스 목록 ────────────────────────────────────────
@@ -508,7 +512,7 @@ class OverlayWidgetManager:
                 # Apply matching monochromatic qtawesome icon to the created widget instance
                 info = _WIDGET_TYPES.get(wtype, {})
                 if "icon" in info:
-                    act_inst.setIcon(_ic(info["icon"]))
+                    set_themed_icon(act_inst, info["icon"], icon_color)
 
                 act_inst.setCheckable(True)
                 act_inst.setChecked(widget.is_enabled())
@@ -522,21 +526,21 @@ class OverlayWidgetManager:
             _se(t("widget_manager.menu_show_all", "모두 표시")),
             self.show_all,
         )
-        act_show_all.setIcon(_ic(ICON.SHOW))
+        set_themed_icon(act_show_all, ICON.SHOW, icon_color)
         act_show_all.setEnabled(not locked and any_instances)
 
         act_hide_all = parent_menu.addAction(
             _se(t("widget_manager.menu_hide_all", "모두 숨김")),
             self.hide_all,
         )
-        act_hide_all.setIcon(_ic(ICON.HIDE))
+        set_themed_icon(act_hide_all, ICON.HIDE, icon_color)
         act_hide_all.setEnabled(not locked and any_instances)
 
         act_del_all = parent_menu.addAction(
             _se(t("widget_manager.menu_delete_all", "모두 삭제...")),
             lambda: self._ui_remove_all_with_confirm(),
         )
-        act_del_all.setIcon(_ic(ICON.DELETE))
+        set_themed_icon(act_del_all, ICON.DELETE, icon_color, role="danger")
         act_del_all.setEnabled(not locked and any_instances)
 
         # ── 위젯 추가 ─────────────────────────────────────────────────
@@ -548,7 +552,7 @@ class OverlayWidgetManager:
                 lambda *_, wt=wtype: self._ui_add_instance(wt),
             )
             if "icon" in info:
-                act.setIcon(_ic(info["icon"]))
+                set_themed_icon(act, info["icon"], icon_color)
             act.setEnabled(not locked)
 
     def _ui_add_instance(self, widget_type: str):

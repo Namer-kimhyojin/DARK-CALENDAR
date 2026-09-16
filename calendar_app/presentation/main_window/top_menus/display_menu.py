@@ -5,10 +5,15 @@ from PyQt6.QtWidgets import QMenu, QToolButton
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key
-from calendar_app.presentation.main_window.top_menus.common import format_top_menu_button_text
+from calendar_app.presentation.main_window.top_menus.common import (
+    format_top_menu_button_text,
+    set_themed_icon,
+)
+from calendar_app.shared.color_utils import contrast_safe_color
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.theme_snapshot import build_theme_snapshot
 
 
 def _toggle_dock(app, dock_attr: str, visible: bool) -> None:
@@ -57,7 +62,9 @@ def _update_calendar_visibility_menu(app, menu: "QMenu", menu_style: str) -> Non
     - 하단에 "캘린더 관리..." 진입점 추가
     """
     menu.clear()
-    menu.setStyleSheet(menu_style)
+    menu.setStyleSheet(getattr(app, "_last_menu_style", "") or menu_style)
+    snapshot = build_theme_snapshot(app.settings)
+    neutral_icon = snapshot.text_palette["text_primary"]
     try:
         from calendar_app.infrastructure.db.calendar_repo import (
             is_calendar_row_read_only,
@@ -110,7 +117,11 @@ def _update_calendar_visibility_menu(app, menu: "QMenu", menu_style: str) -> Non
             if is_read_only
             else _TYPE_ICON.get(cal.get("type", "local"), ICON.ALL_SCHEDULES)
         )
-        cal_color = cal.get("color")
+        cal_color = contrast_safe_color(
+            cal.get("color") or neutral_icon,
+            snapshot.panel_base_color,
+            minimum=3.0,
+        )
         final_icon = _ic(type_icon, color=cal_color)
 
         act = menu.addAction(final_icon, cal.get("name") or cal.get("id") or "")
@@ -122,7 +133,7 @@ def _update_calendar_visibility_menu(app, menu: "QMenu", menu_style: str) -> Non
 
     menu.addSeparator()
     manage_act = menu.addAction(t("menu.calendar_manage", "캘린더 관리..."))
-    manage_act.setIcon(_ic(ICON.CHECKLIST))
+    set_themed_icon(manage_act, ICON.CHECKLIST, neutral_icon)
 
     def _open_manage():
         if hasattr(app, "open_gcal_settings_dialog"):
@@ -154,10 +165,11 @@ def _refresh_display_menu_i18n(self):
 
 
 def build_display_menu(self, top_bar, menu_btn_style, menu_style):
+    icon_color = getattr(self, "_tb_icon_color", "#f4f7fb")
     self.display_menu_btn = QToolButton()
 
     self.display_menu_btn.setText(format_top_menu_button_text(t("menu.display_btn", "화면")))
-    self.display_menu_btn.setIcon(_ic(ICON.SCREEN_MGMT))
+    set_themed_icon(self.display_menu_btn, ICON.SCREEN_MGMT, icon_color)
     self.display_menu_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
     self.display_menu_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -183,13 +195,13 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     self.refresh_layout_preset_labels = _refresh_layout_preset_labels
 
     act_tv = self.display_menu.addAction(_se(t("menu.toggle_view")), self.toggle_view_mode)
-    act_tv.setIcon(_ic(ICON.VIEW_CALENDAR))
+    set_themed_icon(act_tv, ICON.VIEW_CALENDAR, icon_color)
 
     self.panel_menu = self.display_menu.addMenu(_se(t("menu.panel_settings")))
-    self.panel_menu.setIcon(_ic(ICON.DISPLAY_STYLE))
+    set_themed_icon(self.panel_menu, ICON.DISPLAY_STYLE, icon_color)
 
     self.act_today = self.panel_menu.addAction(_se(t("menu.panel_today")))
-    self.act_today.setIcon(_ic(ICON.STATUS_TODAY))
+    set_themed_icon(self.act_today, ICON.STATUS_TODAY, icon_color)
     self.act_today.setCheckable(True)
 
     self.act_today.triggered.connect(
@@ -197,7 +209,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     )
 
     self.act_calendar = self.panel_menu.addAction(_se(t("menu.panel_calendar")))
-    self.act_calendar.setIcon(_ic(ICON.VIEW_CALENDAR))
+    set_themed_icon(self.act_calendar, ICON.VIEW_CALENDAR, icon_color)
     self.act_calendar.setCheckable(True)
 
     self.act_calendar.triggered.connect(
@@ -205,7 +217,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     )
 
     self.act_routine = self.panel_menu.addAction(_se(t("menu.panel_routine")))
-    self.act_routine.setIcon(_ic(ICON.ROUTINE))
+    set_themed_icon(self.act_routine, ICON.ROUTINE, icon_color)
     self.act_routine.setCheckable(True)
 
     self.act_routine.triggered.connect(
@@ -213,7 +225,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     )
 
     self.act_directive = self.panel_menu.addAction(_se(t("menu.panel_directive")))
-    self.act_directive.setIcon(_ic(ICON.DIRECTIVE))
+    set_themed_icon(self.act_directive, ICON.DIRECTIVE, icon_color)
     self.act_directive.setCheckable(True)
 
     self.act_directive.triggered.connect(
@@ -225,13 +237,13 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     self.display_window_menu = self.display_menu.addMenu(
         _se(t("menu.window_view_options", "화면 및 창"))
     )
-    self.display_window_menu.setIcon(_ic(ICON.SCREEN_MGMT))
+    set_themed_icon(self.display_window_menu, ICON.SCREEN_MGMT, icon_color)
     self.display_window_menu.setStyleSheet(menu_style)
 
     self.act_topbar = self.display_window_menu.addAction(
         f"{_se(t('menu.hide_topbar'))}\t{get_key('topbar')}"
     )
-    self.act_topbar.setIcon(_ic(ICON.HIDE))
+    set_themed_icon(self.act_topbar, ICON.HIDE, icon_color)
     self.act_topbar.setCheckable(True)
 
     self.act_topbar.setChecked(True)
@@ -241,7 +253,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     self.act_calendar_toolbar = self.display_window_menu.addAction(
         f"{_se(t('menu.hide_calendar_toolbar'))}\t{get_key('cal_toolbar')}"
     )
-    self.act_calendar_toolbar.setIcon(_ic(ICON.SCREEN_MGMT))
+    set_themed_icon(self.act_calendar_toolbar, ICON.SCREEN_MGMT, icon_color)
     self.act_calendar_toolbar.setCheckable(True)
 
     self.act_calendar_toolbar.setChecked(self._calendar_toolbar_visible_setting())
@@ -251,36 +263,36 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     act_fs = self.display_window_menu.addAction(
         f"{_se(t('menu.fullscreen'))}\t{get_key('fullscreen')}", self.toggle_fullscreen
     )
-    act_fs.setIcon(_ic(ICON.FULLSCREEN))
+    set_themed_icon(act_fs, ICON.FULLSCREEN, icon_color)
 
     self.display_mode_menu = self.display_menu.addMenu(
         _se(t("menu.focus_view_options", "집중 및 잠금"))
     )
-    self.display_mode_menu.setIcon(_ic(ICON.POMODORO))
+    set_themed_icon(self.display_mode_menu, ICON.POMODORO, icon_color)
     self.display_mode_menu.setStyleSheet(menu_style)
 
     act_fm = self.display_mode_menu.addAction(
         f"{_se(t('menu.focus_mode'))}\t{get_key('focus_mode')}", self.toggle_focus_mode
     )
-    act_fm.setIcon(_ic(ICON.POMODORO))
+    set_themed_icon(act_fm, ICON.POMODORO, icon_color)
 
     act_wm = self.display_mode_menu.addAction(
         f"{_se(t('menu.widget_mode_toggle', '위젯 전용 모드'))}\t{get_key('widget_mode', 'F12')}",
         self.toggle_widget_mode_panel,
     )
-    act_wm.setIcon(_ic(ICON.WIDGET_MGR))
+    set_themed_icon(act_wm, ICON.WIDGET_MGR, icon_color)
 
     self.instant_away_act = self.display_mode_menu.addAction(
         _se(t("menu.instant_away")), lambda: self.toggle_idle_lock(True, manual=True)
     )
-    self.instant_away_act.setIcon(_ic(ICON.LOCK))
+    set_themed_icon(self.instant_away_act, ICON.LOCK, icon_color)
 
     self.display_menu.addSeparator()
 
     self.calendar_visibility_menu = self.display_menu.addMenu(
         _se(t("menu.calendar_visibility", "캘린더 표시"))
     )
-    self.calendar_visibility_menu.setIcon(_ic(ICON.VIEW_CALENDAR))
+    set_themed_icon(self.calendar_visibility_menu, ICON.VIEW_CALENDAR, icon_color)
     self.calendar_visibility_menu.aboutToShow.connect(
         lambda: _update_calendar_visibility_menu(self, self.calendar_visibility_menu, menu_style)
     )
@@ -288,28 +300,28 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     self.display_menu.addSeparator()
 
     self.theme_mode_menu = self.display_menu.addMenu(_se(t("menu.theme_mode", "테마 모드")))
-    self.theme_mode_menu.setIcon(_ic(ICON.COLOR_PICKER))
+    set_themed_icon(self.theme_mode_menu, ICON.COLOR_PICKER, icon_color)
 
     current_mode = self.settings.value("text_theme", "dark")
 
     act_dark = self.theme_mode_menu.addAction(
         t("theme.dark_mode", "다크 모드"), lambda: self.change_text_theme("dark")
     )
-    act_dark.setIcon(_ic(ICON.THEME_DARK))
+    set_themed_icon(act_dark, ICON.THEME_DARK, icon_color)
     act_dark.setCheckable(True)
     act_dark.setChecked(current_mode == "dark")
 
     act_light = self.theme_mode_menu.addAction(
         t("theme.light_mode", "라이트 모드"), lambda: self.change_text_theme("light")
     )
-    act_light.setIcon(_ic(ICON.THEME_LIGHT))
+    set_themed_icon(act_light, ICON.THEME_LIGHT, icon_color)
     act_light.setCheckable(True)
     act_light.setChecked(current_mode == "light")
 
     act_auto = self.theme_mode_menu.addAction(
         t("theme.system_default", "시스템 기본"), self.set_system_default_theme
     )
-    act_auto.setIcon(_ic(ICON.THEME_AUTO))
+    set_themed_icon(act_auto, ICON.THEME_AUTO, icon_color)
     act_auto.setCheckable(True)
     act_auto.setChecked(current_mode == "auto")
 
@@ -317,7 +329,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
         _se(t("menu.ui_theme_open", "모양 설정...")),
         self.open_panel_background_color_dialog,
     )
-    act_theme.setIcon(_ic(ICON.COLOR_PICKER))
+    set_themed_icon(act_theme, ICON.COLOR_PICKER, icon_color)
 
     self.display_menu.addSeparator()
 
@@ -327,7 +339,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     )
 
     layout_menu = self.display_menu.addMenu(_se(t("menu.layout_presets")))
-    layout_menu.setIcon(_ic(ICON.DISPLAY_STYLE))
+    set_themed_icon(layout_menu, ICON.DISPLAY_STYLE, icon_color)
 
     layout_menu.setStyleSheet(menu_style)
 
@@ -343,7 +355,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     layout_menu.addSeparator()
 
     self.preset_load_menu = layout_menu.addMenu(_se(t("menu.load_preset")))
-    self.preset_load_menu.setIcon(_ic(ICON.PRESET_LOAD))
+    set_themed_icon(self.preset_load_menu, ICON.PRESET_LOAD, icon_color)
 
     self.preset_load_menu.aboutToShow.connect(self.preset_manager.update_load_menu)
 
@@ -352,17 +364,17 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     self.preset_save_menu = layout_menu.addMenu(
         f"{_se(t('menu.save_layout'))}\t{get_key('save_layout')}"
     )
-    self.preset_save_menu.setIcon(_ic(ICON.SAVE))
+    set_themed_icon(self.preset_save_menu, ICON.SAVE, icon_color)
 
     self.preset_save_menu.aboutToShow.connect(self.preset_manager.update_save_menu)
 
     self.preset_rename_menu = layout_menu.addMenu(_se(t("menu.rename_preset")))
-    self.preset_rename_menu.setIcon(_ic(ICON.EDIT))
+    set_themed_icon(self.preset_rename_menu, ICON.EDIT, icon_color)
 
     self.preset_rename_menu.aboutToShow.connect(self.preset_manager.update_rename_menu)
 
     self.preset_delete_menu = layout_menu.addMenu(_se(t("menu.delete_preset")))
-    self.preset_delete_menu.setIcon(_ic(ICON.DELETE))
+    set_themed_icon(self.preset_delete_menu, ICON.DELETE, "#d25a66", role="danger")
 
     self.preset_delete_menu.aboutToShow.connect(self.preset_manager.update_delete_menu)
 

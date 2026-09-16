@@ -42,6 +42,16 @@ class MonthRendererDateParsingTests(unittest.TestCase):
         self.assertEqual(start_date.toString("yyyy-MM-dd"), "2026-03-26")
         self.assertEqual(end_date.toString("yyyy-MM-dd"), "2026-03-26")
 
+    def test_widget_calendar_cache_includes_deduplicated_subscription_rows(self):
+        local = [{"id": 1, "name": "Local"}]
+        subscription = [{"id": 2, "name": "Subscription", "read_only": True}]
+
+        rows = month_renderer._widget_calendar_cache_rows(local, subscription)
+
+        self.assertEqual([1, 2], [row["id"] for row in rows])
+        rows[0]["name"] = "Changed"
+        self.assertEqual("Local", local[0]["name"])
+
 
 class DraggableTaskButtonRenderTests(unittest.TestCase):
     @classmethod

@@ -536,11 +536,17 @@ def get_key(shortcut_id: str, fallback: str = "") -> str:
 
 
 def get_shortcut_group_label(group: str, fallback: str = "") -> str:
-    return _GROUP_LABELS_KO.get(group, fallback or group)
+    from calendar_app.infrastructure.i18n import t
+
+    ko_fallback = _GROUP_LABELS_KO.get(group, fallback or group)
+    return t(f"shortcut.groups.{group}.label", ko_fallback)
 
 
 def get_shortcut_group_description(group: str, fallback: str = "") -> str:
-    return _GUIDE_GROUP_DESCRIPTIONS_KO.get(group, fallback)
+    from calendar_app.infrastructure.i18n import t
+
+    ko_fallback = _GUIDE_GROUP_DESCRIPTIONS_KO.get(group, fallback)
+    return t(f"shortcut.groups.{group}.description", ko_fallback)
 
 
 def _shortcut_group_entries(group: str) -> list[dict]:
@@ -555,34 +561,53 @@ def _shortcut_by_id(shortcut_id: str) -> dict | None:
 
 
 def get_shortcut_guide_entries() -> list[dict]:
+    from calendar_app.infrastructure.i18n import t
+
     entries: list[dict] = []
     for index, item in enumerate(SHORTCUTS):
-        help_meta = _SHORTCUT_HELP_META_KO.get(item["id"], {})
+        shortcut_id = str(item["id"])
+        help_meta = _SHORTCUT_HELP_META_KO.get(shortcut_id, {})
         aliases = [
             str(alias).strip() for alias in help_meta.get("aliases", []) if str(alias).strip()
         ]
-        tags = [str(tag).strip() for tag in help_meta.get("tags", []) if str(tag).strip()]
-        badge, note = _GUIDE_PRIORITY_META_KO.get(item["id"], ("", ""))
+        ko_tags = [str(tag).strip() for tag in help_meta.get("tags", []) if str(tag).strip()]
+        badge_ko, note_ko = _GUIDE_PRIORITY_META_KO.get(shortcut_id, ("", ""))
         entry = dict(item)
         entry["index"] = index
-        entry["description_ko"] = str(help_meta.get("description", "") or "")
-        entry["menu_path_ko"] = str(help_meta.get("menu_path", "") or "")
+
+        # Translated fields, each falling back to the bundled Korean copy when the
+        # active locale (or the bundled/fallback locale files) has no override yet.
+        ns = f"shortcut.entries.{shortcut_id}"
+        entry["label_ko"] = t(f"{ns}.label", str(item.get("label_ko") or ""))
+        entry["description_ko"] = t(
+            f"{ns}.description", str(help_meta.get("description", "") or "")
+        )
+        entry["menu_path_ko"] = t(f"{ns}.menu_path", str(help_meta.get("menu_path", "") or ""))
         entry["aliases"] = aliases
-        entry["tags_ko"] = tags
+        translated_tags = t(f"{ns}.tags", None)
+        entry["tags_ko"] = (
+            [str(tag).strip() for tag in translated_tags if str(tag).strip()]
+            if isinstance(translated_tags, list)
+            else ko_tags
+        )
         entry["group_label_ko"] = get_shortcut_group_label(str(item.get("group") or ""))
         entry["group_description_ko"] = get_shortcut_group_description(str(item.get("group") or ""))
-        entry["recovery"] = item["id"] in _GUIDE_PRIORITY_SHORTCUT_IDS
-        entry["priority_badge_ko"] = badge
-        entry["priority_note_ko"] = note
+        entry["recovery"] = shortcut_id in _GUIDE_PRIORITY_SHORTCUT_IDS
+        entry["priority_badge_ko"] = (
+            t(f"shortcut.priority.{shortcut_id}.badge", badge_ko) if badge_ko else ""
+        )
+        entry["priority_note_ko"] = (
+            t(f"shortcut.priority.{shortcut_id}.note", note_ko) if note_ko else ""
+        )
         search_parts = [
             str(item.get("id") or ""),
-            str(item.get("label_ko") or ""),
+            str(entry["label_ko"] or ""),
             str(item.get("key") or ""),
             entry["description_ko"],
             entry["menu_path_ko"],
             entry["group_label_ko"],
             " ".join(aliases),
-            " ".join(tags),
+            " ".join(entry["tags_ko"]),
         ]
         entry["search_text_ko"] = " ".join(part for part in search_parts if part).strip()
         entries.append(entry)

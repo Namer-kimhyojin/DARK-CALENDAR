@@ -522,7 +522,7 @@ def instantiate_routine(template_id, target_date):
     try:
         cur = conn.cursor()
 
-        # ?대? 議댁옱?섎㈃ 以묐났 ?앹꽦 諛⑹?
+        # 이미 존재하면 중복 생성 방지
 
         cur.execute(
             "SELECT id FROM routine_task WHERE template_id=? AND target_date=?",
@@ -609,7 +609,7 @@ def toggle_routine_step(step_id):
     try:
         cur = conn.cursor()
 
-        # 1. ?좉?
+        # 1. 조회
 
         cur.execute(
             """
@@ -657,7 +657,7 @@ def toggle_routine_step(step_id):
 
         is_all_done = 1 if total > 0 and total == comp else 0
 
-        # unified_task ?먮뒗 routine_task ?낅뜲?댄듃
+        # unified_task 또는 routine_task 업데이트
 
         cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='unified_task'")
 
@@ -748,7 +748,18 @@ def get_recent_directives(limit=200):
 
 
 def get_tasks_by_date(date_str):
-    """Fetch tasks for the given date from unified_task."""
+    """Fetch tasks touching the given date from unified_task.
+
+    Includes tasks whose deadline falls on that date, AND multi-day tasks
+    that span over that date — matching what the calendar's own "today"
+    views already show. Multi-day span is read from deadline..end_date
+    (the columns actually populated by the schedule editor) and, as a
+    fallback for callers that use it, period_start..period_end. Without
+    this, an in-progress multi-day item (e.g. a schedule running 9/15-10/5)
+    would silently disappear from focus-mode task pickers on any day other
+    than its exact deadline, even though the main calendar lists it as
+    today's item.
+    """
 
     conn = get_connection()
 
@@ -757,39 +768,10 @@ def get_tasks_by_date(date_str):
 
     tasks = []
 
+    seen_ids = set()
+
     try:
         cur = conn.cursor()
-
-        # unified_task 議고쉶
-
-        cur.execute(
-            """
-
-            SELECT id, name, priority, deadline, 'schedule' as type, status
-
-            FROM unified_task
-
-            WHERE date(substr(deadline, 1, 10)) = date(?)
-
-            ORDER BY priority DESC, deadline ASC
-
-        """,
-            (date_str,),
-        )
-
-        for row in cur.fetchall():
-            tasks.append(
-                {
-                    "id": row[0],
-                    "name": row[1],
-                    "priority": row[2] or "normal",
-                    "deadline": row[3],
-                    "type": "schedule",
-                    "is_completed": row[5] != "pending",
-                }
-            )
-
-        # unified_task 議고쉶
 
         cur.execute(
             """
@@ -800,21 +782,45 @@ def get_tasks_by_date(date_str):
 
             WHERE date(substr(deadline, 1, 10)) = date(?)
 
+               OR (
+
+                    end_date IS NOT NULL
+
+                    AND date(?) BETWEEN date(substr(deadline, 1, 10))
+
+                                     AND date(substr(end_date, 1, 10))
+
+               )
+
+               OR (
+
+                    period_start IS NOT NULL AND period_end IS NOT NULL
+
+                    AND date(?) BETWEEN date(substr(period_start, 1, 10))
+
+                                     AND date(substr(period_end, 1, 10))
+
+               )
+
             ORDER BY priority DESC, deadline ASC
 
         """,
-            (date_str,),
+            (date_str, date_str, date_str),
         )
 
         for row in cur.fetchall():
+            task_id = row[0]
+            if task_id in seen_ids:
+                continue
+            seen_ids.add(task_id)
             tasks.append(
                 {
-                    "id": row[0],
+                    "id": task_id,
                     "name": row[1],
                     "priority": row[2] or "normal",
                     "deadline": row[3],
-                    "type": row[4],
-                    "is_completed": row[5] == 1,
+                    "type": row[4] or "schedule",
+                    "is_completed": bool(row[5]),
                 }
             )
 
@@ -930,7 +936,7 @@ def get_incomplete_tasks():
     try:
         cur = conn.cursor()
 
-        # unified_task 議고쉶
+        # unified_task 조회
 
         cur.execute("""
 
@@ -956,7 +962,7 @@ def get_incomplete_tasks():
                 }
             )
 
-        # unified_task 議고쉶
+        # unified_task 조회
 
         cur.execute("""
 
@@ -1064,7 +1070,7 @@ def get_calendar_events(target_date_str):
     try:
         cur = conn.cursor()
 
-        # 1. ?쇰컲 일정 諛?기간 일정
+        # 1. 일반 일정 및 기간 일정
 
         try:
             cur.execute(

@@ -28,6 +28,9 @@ def initialize_overlay_app(app) -> None:
     app.autostart_act = None
     app.autostart_menu_act = None
     app.autostart_tray_act = None
+    app._autostart_settings_poll_timer = None
+    app._autostart_settings_poll_attempts = 0
+    app._autostart_settings_poll_target = None
     app.is_focus_mode = False
     app.is_fullscreen = False
     app._focus_saved_dock_visibility = None

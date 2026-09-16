@@ -88,9 +88,11 @@ class PomodoroSettingsPanel(QWidget):
         self._ui_tokens = get_dialog_theme_tokens()
         self._metrics = get_dialog_metric_tokens(apply_overrides=True)
         self._bundle = build_settings_style_bundle(self._ui_tokens, self._metrics)
+        self._dirty = False
 
         self._init_ui()
         self.load_values()
+        self._connect_dirty_tracking()
 
     @staticmethod
     def _safe_int(value, default: int, *, minimum: int, maximum: int) -> int:
@@ -345,6 +347,26 @@ class PomodoroSettingsPanel(QWidget):
         for widget in self._pomodoro_controls:
             widget.setEnabled(enabled)
 
+    def _connect_dirty_tracking(self):
+        # Settings silently applied only on next Focus Mode start; without
+        # this, a user who tweaks values then closes the dialog (or
+        # switches tabs) without clicking Save loses the change with no
+        # warning at all.
+        self.mode_combo.currentIndexChanged.connect(self._mark_dirty)
+        self.focus_minutes_spin.valueChanged.connect(self._mark_dirty)
+        self.short_break_minutes_spin.valueChanged.connect(self._mark_dirty)
+        self.long_break_minutes_spin.valueChanged.connect(self._mark_dirty)
+        self.long_break_every_spin.valueChanged.connect(self._mark_dirty)
+        self.daily_goal_cycles_spin.valueChanged.connect(self._mark_dirty)
+        self.auto_start_break_cb.toggled.connect(self._mark_dirty)
+        self.auto_start_focus_cb.toggled.connect(self._mark_dirty)
+
+    def _mark_dirty(self, *_args):
+        self._dirty = True
+
+    def is_dirty(self) -> bool:
+        return self._dirty
+
     def save_values(self):
         self.settings.setValue("focus_mode_type", self.mode_combo.currentData() or "pomodoro")
         self.settings.setValue("pomodoro_focus_minutes", self.focus_minutes_spin.value())
@@ -358,6 +380,7 @@ class PomodoroSettingsPanel(QWidget):
         self.settings.setValue("pomodoro_daily_goal_cycles", self.daily_goal_cycles_spin.value())
         if hasattr(self.settings, "sync"):
             self.settings.sync()
+        self._dirty = False
 
 
 class PomodoroSettingsDialog(QDialog):

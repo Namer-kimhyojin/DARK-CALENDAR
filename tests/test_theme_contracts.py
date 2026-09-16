@@ -378,9 +378,13 @@ class ThemeContractTests(unittest.TestCase):
         self.assertEqual(shared_tokens["accent"], snapshot.theme_color)
         self.assertEqual(dialog_tokens["accent"], snapshot.theme_color)
         self.assertEqual(shared_tokens["text_primary"], dialog_tokens["text_primary"])
-        self.assertEqual(shared_tokens["input_bg"], "#f7fbff")
-        self.assertEqual(dialog_tokens["input_bg"], "#f7fbff")
+        self.assertEqual(shared_tokens["input_bg"], "#ffffff")
+        self.assertEqual(dialog_tokens["input_bg"], "#ffffff")
         self.assertEqual(shared_tokens["bg_item"], dialog_tokens["surface_item"])
+
+        settings.setValue("text_theme", "custom")
+        custom_snapshot = build_theme_snapshot(settings=settings)
+        self.assertEqual(custom_snapshot.input_bg, "#f7fbff")
 
     def test_widget_mode_tokens_are_built_from_shared_theme_builder(self):
         settings = _FakeSettings()

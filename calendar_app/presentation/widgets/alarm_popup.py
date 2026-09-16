@@ -295,7 +295,7 @@ QPushButton#ConfirmBtn:pressed {{
 QToolButton#SnoozeBtn {{
     background: {bundle["card_surface"]};
     color: {bundle["text_primary"]};
-    border: 1.5px solid {bundle["card_border"]};
+    border: 2px solid {bundle["card_border"]};
     border-radius: {bundle["button_radius"]}px;
     font-family: 'Segoe UI Emoji', 'Malgun Gothic', 'Segoe UI', sans-serif;
     font-size: {bundle["text_pt"]}pt;
@@ -315,7 +315,7 @@ QToolButton#SnoozeBtn::menu-indicator {{
 QPushButton#DoneBtn {{
     background: transparent;
     color: {bundle["accent_ok"].name(QColor.NameFormat.HexRgb)};
-    border: 1.5px solid {bundle["accent_ok"].name(QColor.NameFormat.HexRgb)};
+    border: 2px solid {bundle["accent_ok"].name(QColor.NameFormat.HexRgb)};
     border-radius: {bundle["button_radius"]}px;
     font-family: 'Segoe UI Emoji', 'Malgun Gothic', 'Segoe UI', sans-serif;
     font-size: 11pt;

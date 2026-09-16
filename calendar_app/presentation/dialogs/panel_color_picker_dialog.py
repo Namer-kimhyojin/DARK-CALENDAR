@@ -35,7 +35,12 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
     get_dialog_token_overrides,
 )
-from calendar_app.shared.color_utils import _shift_rgb, derive_panel_palette, parse_hex_color
+from calendar_app.shared.color_utils import (
+    _shift_rgb,
+    derive_panel_palette,
+    derive_text_palette,
+    parse_hex_color,
+)
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.theme_settings import opacity_percent_label
@@ -387,6 +392,31 @@ def _accessible_text_palette(background: str) -> dict[str, str]:
         "secondary": _tone_for_minimum_contrast(bg.name(), anchor_hex, 4.5),
         "muted": _tone_for_minimum_contrast(bg.name(), anchor_hex, 3.0),
         "faint": _tone_for_minimum_contrast(bg.name(), anchor_hex, 2.0),
+    }
+
+
+def _semantic_preset_text_values(base_hex: str, accent_hex: str, mode: str) -> dict[str, str]:
+    """Use mode-neutral text roles; style families provide hue, not text tint."""
+
+    resolved_mode = "light" if mode == "light" else "dark"
+    palette = derive_text_palette(resolved_mode, accent_hex)
+
+    def _hex(role: str, fallback: str) -> str:
+        return parse_hex_color(str(palette.get(role, fallback)), fallback).name(
+            QColor.NameFormat.HexRgb
+        )
+
+    base_color = parse_hex_color(base_hex, "#1c1c1c")
+    return {
+        "primary": _hex("text_primary", "#101318" if resolved_mode == "light" else "#f4f7fb"),
+        "secondary": _hex("text_secondary", "#4a515b" if resolved_mode == "light" else "#c5cfda"),
+        "muted": _hex("text_muted", "#68717d" if resolved_mode == "light" else "#95a1ae"),
+        "faint": _hex("text_faint", "#8d96a1" if resolved_mode == "light" else "#6f7b88"),
+        "input": (
+            "#ffffff"
+            if resolved_mode == "light"
+            else _shift_rgb(base_color, -16).name(QColor.NameFormat.HexRgb)
+        ),
     }
 
 
@@ -2459,7 +2489,7 @@ class PanelColorPickerDialog(QDialog):
     # ------------------------------------------------------------------
     def _select_preset(self, idx: int, *, appearance_mode: str | None = None):
         self._selected_preset = idx
-        name_key, _, base, theme, text_dict = _PRESETS[idx]
+        name_key, _, base, theme, _text_dict = _PRESETS[idx]
         self._base_hex = base
         self._theme_hex = theme
         mode = _preset_mode_for_key(name_key)
@@ -2468,6 +2498,7 @@ class PanelColorPickerDialog(QDialog):
         self._text_theme = selected_mode
         self._accent_source = "family"
         self._rebuild_theme_context()
+        semantic_text = _semantic_preset_text_values(base, theme, mode)
 
         if mode in {"dark", "light"} and self._preset_filter_mode != mode:
             self._preset_filter_mode = mode
@@ -2485,10 +2516,10 @@ class PanelColorPickerDialog(QDialog):
         self._refresh_point_display()
 
         if hasattr(self, "_row_primary"):
-            self._row_primary.set_default(text_dict["primary"])
-            self._row_secondary.set_default(text_dict["secondary"])
-            self._row_muted.set_default(text_dict["muted"])
-            self._row_faint.set_default(text_dict["faint"])
+            self._row_primary.set_default(semantic_text["primary"])
+            self._row_secondary.set_default(semantic_text["secondary"])
+            self._row_muted.set_default(semantic_text["muted"])
+            self._row_faint.set_default(semantic_text["faint"])
 
         if hasattr(self, "_btn_apply_preset_text"):
             self._btn_apply_preset_text.setEnabled(True)
@@ -2814,7 +2845,8 @@ class PanelColorPickerDialog(QDialog):
         _, dark_key, light_key = family
         preset_key = light_key if resolved == "light" else dark_key
         preset_index = _PRESET_INDEX_BY_KEY[preset_key]
-        _, _, base, accent, text_dict = _PRESETS[preset_index]
+        _, _, base, accent, _text_dict = _PRESETS[preset_index]
+        semantic_text = _semantic_preset_text_values(base, accent, resolved)
         self._selected_preset = preset_index
         self._preset_filter_mode = resolved
         self._base_hex = base
@@ -2823,10 +2855,10 @@ class PanelColorPickerDialog(QDialog):
             self._point_hex = accent
             self._theme_hex = accent
 
-        self._row_primary.set_default(text_dict["primary"])
-        self._row_secondary.set_default(text_dict["secondary"])
-        self._row_muted.set_default(text_dict["muted"])
-        self._row_faint.set_default(text_dict["faint"])
+        self._row_primary.set_default(semantic_text["primary"])
+        self._row_secondary.set_default(semantic_text["secondary"])
+        self._row_muted.set_default(semantic_text["muted"])
+        self._row_faint.set_default(semantic_text["faint"])
         if self._text_source == "family":
             self._apply_preset_text_colors(refresh=False)
             for row in (
@@ -2940,26 +2972,12 @@ class PanelColorPickerDialog(QDialog):
         """Calculates and applies recommended text colors for the current background."""
         idx = self._selected_preset
         if idx is not None:
-            _, _, _, _, text_dict = _PRESETS[idx]
-            if "input" in text_dict:
-                input_color = text_dict["input"]
-            else:
-                base_color = QColor(self._base_hex)
-                if base_color.isValid() and base_color.lightnessF() > 0.55:
-                    input_color = "#ffffff"
-                else:
-                    input_color = (
-                        _shift_rgb(base_color, -16).name(QColor.NameFormat.HexRgb)
-                        if base_color.isValid()
-                        else "#0a0a0a"
-                    )
-            values = {
-                "primary": text_dict["primary"],
-                "secondary": text_dict["secondary"],
-                "muted": text_dict["muted"],
-                "faint": text_dict["faint"],
-                "input": text_dict.get("input", input_color),
-            }
+            name_key, _, base, accent, _text_dict = _PRESETS[idx]
+            values = _semantic_preset_text_values(
+                base,
+                accent,
+                _preset_mode_for_key(name_key),
+            )
         else:
             # Custom color logic
             c = QColor(self._base_hex)

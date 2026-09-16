@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PyQt6.QtCore import QSettings, Qt
+import logging
+
+from PyQt6.QtCore import QDate, QSettings, Qt
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -9,6 +11,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
     QPushButton,
     QRadioButton,
     QTabWidget,
@@ -30,6 +33,8 @@ from calendar_app.presentation.dialogs.focus_history_panel import FocusHistoryPa
 from calendar_app.presentation.dialogs.pomodoro_settings_dialog import PomodoroSettingsPanel
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
+
+logger = logging.getLogger(__name__)
 
 
 class FocusTaskSelectorDialog(QDialog):
@@ -97,6 +102,10 @@ class FocusTaskSelectorDialog(QDialog):
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet(
+            f"background: {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')}; "
+            "max-height: 1px; border: none;"
+        )
         main_layout.addWidget(sep)
 
         btn_layout = QHBoxLayout()
@@ -135,6 +144,7 @@ class FocusTaskSelectorDialog(QDialog):
             (t("focus_selector.filter_today_directives"), "today_and_directives", True),
             (t("focus_selector.filter_today"), "today", False),
             (t("focus_selector.filter_urgent"), "urgent", False),
+            (t("focus_selector.filter_incomplete"), "incomplete", False),
             (t("focus_selector.filter_all"), "all", False),
         ]:
             radio = QRadioButton(label)
@@ -154,8 +164,8 @@ class FocusTaskSelectorDialog(QDialog):
         layout.addLayout(filter_layout)
 
         self.task_list = QListWidget()
-        self.task_list.setAccessibleName(t("focus_selector.pick_prompt"))
-        self.task_list.setAccessibleDescription(t("focus_selector.select_done"))
+        self.task_list.setAccessibleName(t("focus_selector.tab_tasks", "Tasks"))
+        self.task_list.setAccessibleDescription(t("focus_selector.pick_prompt"))
         self.task_list.itemDoubleClicked.connect(self.on_task_selected)
 
         layout.addWidget(self.task_list)
@@ -259,11 +269,25 @@ class FocusTaskSelectorDialog(QDialog):
 
         selected_filter = self.filter_group.checkedButton().property("filter")
 
-        today_str = self.current_date.toString("yyyy-MM-dd")
+        # "Today" filters must mean the real calendar day, not whatever date
+        # the user happens to have selected/navigated to in the main
+        # calendar view (self.current_date) — otherwise "today" silently
+        # shifts to a different day after browsing to another month.
+        today_str = QDate.currentDate().toString("yyyy-MM-dd")
 
-        tasks = focus_usecases.get_filtered_focus_tasks(
-            legacy_focus_repo, selected_filter, today_str
-        )
+        try:
+            tasks = focus_usecases.get_filtered_focus_tasks(
+                legacy_focus_repo, selected_filter, today_str
+            )
+        except Exception:
+            logger.exception("Failed to load focus tasks")
+            tasks = []
+            self._notify_no_selection(
+                t(
+                    "focus_selector.task_load_error",
+                    "Failed to load tasks. Please try again.",
+                )
+            )
 
         for task in tasks:
             task_id = task.get("id")
@@ -298,6 +322,13 @@ class FocusTaskSelectorDialog(QDialog):
 
             self.task_list.addItem(empty)
 
+    def _notify_no_selection(self, message: str):
+        parent = self.parent()
+        if parent is not None and hasattr(parent, "show_toast"):
+            parent.show_toast(t("focus_selector.title"), message)
+        else:
+            QMessageBox.information(self, t("focus_selector.title"), message)
+
     def on_task_selected(self):
         item = self.task_list.currentItem()
 
@@ -307,17 +338,38 @@ class FocusTaskSelectorDialog(QDialog):
             self.selected_task_name = item.data(Qt.ItemDataRole.UserRole + 1)
 
             self.accept()
+            return
+
+        # Nothing selected (or only the "no tasks" placeholder is present) —
+        # clicking "Select" previously did nothing with no feedback at all.
+        self._notify_no_selection(
+            t(
+                "focus_selector.select_no_selection",
+                "Select a task from the list first.",
+            )
+        )
 
     def on_auto_select(self):
-        today_str = self.current_date.toString("yyyy-MM-dd")
+        today_str = QDate.currentDate().toString("yyyy-MM-dd")
 
-        current_tasks = focus_usecases.get_filtered_focus_tasks(legacy_focus_repo, "all", today_str)
-
-        task_id, task_name = focus_usecases.select_auto_focus_task(
-            legacy_focus_repo,
-            today_str,
-            fallback_tasks=current_tasks,
-        )
+        try:
+            current_tasks = focus_usecases.get_filtered_focus_tasks(
+                legacy_focus_repo, "all", today_str
+            )
+            task_id, task_name = focus_usecases.select_auto_focus_task(
+                legacy_focus_repo,
+                today_str,
+                fallback_tasks=current_tasks,
+            )
+        except Exception:
+            logger.exception("Failed to auto-select a focus task")
+            self._notify_no_selection(
+                t(
+                    "focus_selector.task_load_error",
+                    "Failed to load tasks. Please try again.",
+                )
+            )
+            return
 
         if task_id:
             self.selected_task_id = task_id
@@ -325,6 +377,49 @@ class FocusTaskSelectorDialog(QDialog):
             self.selected_task_name = task_name
 
             self.accept()
+            return
+
+        # No task anywhere to auto-pick — previously silent no-op.
+        self._notify_no_selection(
+            t(
+                "focus_selector.auto_pick_no_tasks",
+                "There is no task available to auto-select.",
+            )
+        )
+
+    def _has_unsaved_settings(self) -> bool:
+        panel = getattr(self, "pomodoro_settings_panel", None)
+        return bool(panel and panel.is_dirty())
+
+    def _confirm_discard_unsaved(self) -> bool:
+        if not self._has_unsaved_settings():
+            return True
+        reply = QMessageBox.question(
+            self,
+            t("focus_selector.title"),
+            t(
+                "focus_selector.unsaved_settings_confirm",
+                "You have unsaved Pomodoro settings changes. Discard them and close?",
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
+    def reject(self):
+        # Closing via Close button / Esc previously discarded unsaved
+        # Pomodoro settings silently.
+        if not self._confirm_discard_unsaved():
+            return
+        super().reject()
+
+    def closeEvent(self, event):
+        # Closing via the window's X button bypasses reject()/accept(),
+        # so it needs the same unsaved-changes guard.
+        if not self._confirm_discard_unsaved():
+            event.ignore()
+            return
+        super().closeEvent(event)
 
     def get_selected_task(self):
         return self.selected_task_id, self.selected_task_name

@@ -483,6 +483,27 @@ class AgendaItemWidget(QFrame):
             layout.addWidget(time_label, 0, Qt.AlignmentFlag.AlignVCenter)
         else:
             body.addWidget(time_label)
+        if item.get("item_id") and controller is not None:
+            more_btn = QToolButton(self)
+            more_btn.setObjectName("agenda_item_more")
+            more_btn.setText("⋯")
+            more_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            more_btn.setFixedSize(30, 30)
+            more_btn.setAccessibleName(
+                t("widget_mode.item_more_named", "항목 작업: {name}", name=title)
+            )
+            more_btn.setToolTip(more_btn.accessibleName())
+            more_btn.clicked.connect(
+                lambda _checked=False, anchor=more_btn: controller.open_item_menu(
+                    item, anchor.mapToGlobal(anchor.rect().bottomLeft())
+                )
+            )
+            layout.addWidget(more_btn, 0, Qt.AlignmentFlag.AlignTop)
+
+            self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            self.customContextMenuRequested.connect(
+                lambda pos: controller.open_item_menu(item, self.mapToGlobal(pos))
+            )
         self.setMinimumHeight(body.minimumSize().height() + density.vertical_margin * 2)
 
 
@@ -902,6 +923,9 @@ class UnifiedWidgetWindow(QWidget):
         self._filter_buttons: dict[str, QToolButton] = {}
         self._data_state = "ready"
         self._drag_offset = None
+        self._feedback_timer = QTimer(self)
+        self._feedback_timer.setSingleShot(True)
+        self._feedback_timer.timeout.connect(self.clear_feedback)
 
         self._build_ui()
         self._setup_refresh_timer()
@@ -1037,14 +1061,17 @@ class UnifiedWidgetWindow(QWidget):
             ("all", t("widget_mode.filter_all", "All")),
             ("schedule", t("widget_mode.filter_schedule", "Schedule")),
             ("work", t("widget_mode.filter_work", "Work")),
+            ("directive", t("widget_mode.filter_directive", "지시")),
         ):
             btn = QToolButton(self.container)
             btn.setObjectName("unified_filter_btn")
             btn.setCheckable(True)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setText(label)
+            btn.setMinimumWidth(0)
+            btn.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
             btn.clicked.connect(lambda _checked=False, m=mode: self._set_filter(m))
-            self.filter_row.addWidget(btn)
+            self.filter_row.addWidget(btn, 1)
             self._filter_buttons[mode] = btn
         self.filter_row.addStretch(1)
         self.week_toggle_btn = self._button(t("widget_mode.week_toggle", "주간"), self._toggle_week)
@@ -1138,12 +1165,18 @@ class UnifiedWidgetWindow(QWidget):
         self.controller.set_always_top(self.pin_btn.isChecked())
 
     def _toggle_week(self):
-        write_widget_calendar_visibility(
-            self.controller.main_window.settings,
-            self._active_layout_id or "stacked",
-            self.week_toggle_btn.isChecked(),
-        )
-        self.apply_selected_layout(force=True)
+        self.controller._save_geometry()
+        self.controller._restoring_geometry = True
+        try:
+            write_widget_calendar_visibility(
+                self.controller.main_window.settings,
+                self._active_layout_id or "stacked",
+                self.week_toggle_btn.isChecked(),
+            )
+            self.apply_selected_layout(force=True)
+        finally:
+            self.controller._restoring_geometry = False
+        self.controller._restore_geometry(preserve_position_if_new=True)
 
     def set_density(self, key):
         if key not in {density.key for density in DENSITIES}:
@@ -1163,6 +1196,8 @@ class UnifiedWidgetWindow(QWidget):
             self.controller._open_task_dialog("", default_task_type="routine")
         elif self._active_filter == "schedule":
             self.controller.open_quick_add_dialog()
+        elif self._active_filter == "directive":
+            self.controller._open_directive_dialog()
         else:
             menu = QMenu(self)
             for kind, label in (
@@ -1172,10 +1207,21 @@ class UnifiedWidgetWindow(QWidget):
             ):
                 menu.addAction(
                     label,
-                    lambda selected=kind: self.controller._open_task_dialog(
-                        "", default_task_type=selected
+                    lambda selected=kind: (
+                        self.controller._open_task_dialog("", default_task_type=selected)
+                        if selected != "directive"
+                        else self.controller._open_directive_dialog()
                     ),
                 )
+            menu.addSeparator()
+            menu.addAction(
+                t("menu.directive_status", "지시·협조 관리"),
+                lambda: self.controller.open_work_management("directive"),
+            )
+            menu.addAction(
+                t("menu.work_management", "전체 업무 관리"),
+                lambda: self.controller.open_work_management("schedule"),
+            )
             menu.exec(self.add_btn.mapToGlobal(self.add_btn.rect().bottomLeft()))
 
     def _pick_date(self):
@@ -1251,17 +1297,37 @@ class UnifiedWidgetWindow(QWidget):
             else self.width()
         )
         compact = target_width < 640 and layout_spec.layout_id in {"dashboard", "magazine"}
-        placements = (
-            get_widget_mode_layout("stacked").placements if compact else layout_spec.placements
+        calendar_supported = any(
+            section == "calendar" for section, *_placement in layout_spec.placements
         )
+        calendar_visible = calendar_supported and read_widget_calendar_visibility(
+            settings, layout_spec.layout_id
+        )
+        calendar_collapsed = calendar_supported and not calendar_visible
+        if calendar_collapsed:
+            placements = (
+                ("hero", 0, 0, 1, 1),
+                ("filters", 1, 0, 1, 1),
+                ("agenda", 2, 0, 1, 1),
+            )
+        else:
+            placements = (
+                get_widget_mode_layout("stacked").placements if compact else layout_spec.placements
+            )
         self._compact_layout = compact
         for section_name, row, column, row_span, column_span in placements:
             section = sections[section_name]
             self.container_layout.addWidget(section, row, column, row_span, column_span)
             section.setVisible(True)
-        for row, stretch in ((3, 1),) if compact else layout_spec.row_stretches:
+        active_row_stretches = (
+            ((2, 1),) if calendar_collapsed else ((3, 1),) if compact else layout_spec.row_stretches
+        )
+        active_column_stretches = (
+            ((0, 1),) if calendar_collapsed or compact else layout_spec.column_stretches
+        )
+        for row, stretch in active_row_stretches:
             self.container_layout.setRowStretch(row, stretch)
-        for column, stretch in ((0, 1),) if compact else layout_spec.column_stretches:
+        for column, stretch in active_column_stretches:
             self.container_layout.setColumnStretch(column, stretch)
 
         self.hero_layout.setContentsMargins(0, 8, 0, 8)
@@ -1278,11 +1344,10 @@ class UnifiedWidgetWindow(QWidget):
         )
         calendar_mode = "month" if layout_spec.layout_id in {"dashboard", "magazine"} else "week"
         self.cal_grid.set_display_mode(calendar_mode)
-        calendar_visible = read_widget_calendar_visibility(settings, layout_spec.layout_id)
         if not calendar_visible:
             self.cal_grid.hide()
         self.week_toggle_btn.setChecked(calendar_visible)
-        self.week_toggle_btn.setVisible(any(section == "calendar" for section, *_ in placements))
+        self.week_toggle_btn.setVisible(calendar_supported)
         if calendar_mode == "month":
             self.week_toggle_btn.setText(t("widget_mode.month_toggle", "월간"))
             self.week_toggle_btn.setToolTip(
@@ -1382,6 +1447,11 @@ class UnifiedWidgetWindow(QWidget):
                 color: {tokens["text_secondary"]}; font-size: {typography.secondary:.1f}pt; }}
             QFrame[completed="true"] QPushButton#agenda_item_title {{ color: {tokens["text_secondary"]}; text-decoration: line-through; }}
             QPushButton#agenda_item_title:hover {{ color: {tokens["accent"]}; }}
+            QToolButton#agenda_item_more {{ color: {tokens["text_secondary"]}; background: transparent;
+                border: 1px solid transparent; border-radius: 6px; font-size: {typography.control:.1f}pt; }}
+            QToolButton#agenda_item_more:hover, QToolButton#agenda_item_more:focus {{
+                color: {tokens["text_primary"]}; background: {tokens["section_bg_alt"]};
+                border: 1px solid {tokens["hero_border"]}; }}
             QToolButton:focus, QPushButton#agenda_item_title:focus {{ border: 2px solid {tokens["accent"]}; }}
             QToolButton#unified_action_btn {{ padding: 4px 8px; }}
             QToolButton[compactControl="true"] {{ padding: 2px; }}
@@ -1422,6 +1492,8 @@ class UnifiedWidgetWindow(QWidget):
         text = (
             t("widget_mode.add_work", "업무 추가")
             if self._active_filter == "work"
+            else t("widget_mode.add_directive", "지시·협조 추가")
+            if self._active_filter == "directive"
             else t("widget_mode.action_add_schedule", "일정 추가")
             if self._active_filter == "schedule"
             else t("widget_mode.add_any", "+ 추가")
@@ -1432,13 +1504,14 @@ class UnifiedWidgetWindow(QWidget):
 
     def _set_filter(self, mode: str) -> None:
         target = str(mode or "all").strip().lower()
-        if target not in {"all", "schedule", "work"}:
+        if target not in {"all", "schedule", "work", "directive"}:
             target = "all"
         if target == self._active_filter:
             self._sync_filter_buttons()
             return
         self._active_filter = target
         self.controller.main_window.settings.setValue("widget_mode_filter", target)
+        self.clear_feedback()
         self._sync_filter_buttons()
         self._last_render_key = None
         self.update_agenda(self._last_items)
@@ -1464,8 +1537,11 @@ class UnifiedWidgetWindow(QWidget):
                 continue
 
             item_kind = _safe_text(item.get("item_kind")).lower()
-            include = (self._active_filter == "schedule" and item_kind == "schedule") or (
-                self._active_filter == "work" and item_kind == "work"
+            source = _safe_text(item.get("source")).lower()
+            include = (
+                (self._active_filter == "schedule" and item_kind == "schedule")
+                or (self._active_filter == "work" and item_kind == "work" and source != "directive")
+                or (self._active_filter == "directive" and source == "directive")
             )
             if include:
                 buffered_items.append(dict(item))
@@ -1499,6 +1575,7 @@ class UnifiedWidgetWindow(QWidget):
             "all": t("widget_mode.filter_all", "전체"),
             "schedule": t("widget_mode.filter_schedule", "일정"),
             "work": t("widget_mode.filter_work", "업무"),
+            "directive": t("widget_mode.filter_directive", "지시"),
         }
         for mode, btn in self._filter_buttons.items():
             btn.setText(labels.get(mode, labels["all"]))
@@ -1556,6 +1633,8 @@ class UnifiedWidgetWindow(QWidget):
             self.agenda_header.setText(
                 t("widget_mode.filter_schedule", "Schedule")
                 if self._active_filter == "schedule"
+                else t("widget_mode.filter_directive", "지시")
+                if self._active_filter == "directive"
                 else t("widget_mode.filter_work", "Work")
             )
         self.hint_label.setText(
@@ -1595,6 +1674,8 @@ class UnifiedWidgetWindow(QWidget):
             empty_text = (
                 t("widget_mode.empty_schedule_filter", "No schedules for this date.")
                 if self._active_filter == "schedule"
+                else t("widget_mode.empty_directive_filter", "이 날짜에 지시·협조사항이 없습니다.")
+                if self._active_filter == "directive"
                 else t("widget_mode.empty_work_filter", "No work for this date.")
                 if self._active_filter == "work"
                 else t("widget_mode.empty_panel", "No items for this date.")
@@ -1624,6 +1705,11 @@ class UnifiedWidgetWindow(QWidget):
                     lambda _checked=False: self.controller._open_task_dialog(
                         "", default_task_type="routine"
                     )
+                )
+            elif self._active_filter == "directive":
+                action_label = t("widget_mode.add_directive", "지시·협조 추가")
+                add_action.clicked.connect(
+                    lambda _checked=False: self.controller._open_directive_dialog()
                 )
             else:
                 action_label = t("panel.empty.add_schedule", "일정 만들기")
@@ -1736,6 +1822,10 @@ class UnifiedWidgetWindow(QWidget):
         )
         menu.addSeparator()
 
+        directive_management_action = menu.addAction(t("menu.directive_status", "지시·협조 관리"))
+        work_management_action = menu.addAction(t("menu.work_management", "전체 업무 관리"))
+        menu.addSeparator()
+
         layout_menu = menu.addMenu(t("widget_mode.style_layout", "레이아웃"))
         current_layout = read_widget_mode_layout_id(self.controller.main_window.settings)
         for layout_spec in widget_mode_layouts():
@@ -1780,6 +1870,10 @@ class UnifiedWidgetWindow(QWidget):
                     self.controller.set_skin(editor.created_id)
                 elif editor.created_kind == "layout":
                     self.controller.set_layout(editor.created_id)
+        elif selected == directive_management_action:
+            self.controller.open_work_management("directive")
+        elif selected == work_management_action:
+            self.controller.open_work_management("schedule")
         elif selected == refresh_action:
             self.controller.force_refresh()
         elif selected == close_action:
@@ -1796,8 +1890,17 @@ class UnifiedWidgetWindow(QWidget):
 
     def show_feedback(self, text, *, undo=False):
         self.feedback_label.setText(text)
+        self.feedback_label.setAccessibleName(text)
         self.feedback_label.show()
         self.undo_btn.setVisible(undo)
+        self._feedback_timer.start(8000 if undo else 4500)
+
+    def clear_feedback(self) -> None:
+        self._feedback_timer.stop()
+        self.feedback_label.hide()
+        self.undo_btn.hide()
+        if hasattr(self, "controller"):
+            self.controller._undo_completion = None
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -1945,6 +2048,10 @@ class UnifiedWidgetController:
         item_id = int(item.get("item_id") or 0)
         if item_id <= 0:
             return
+        if item.get("read_only"):
+            if self.widget is not None:
+                self.widget.show_feedback(t("dialog.task.calendar_read_only", "읽기 전용 캘린더"))
+            return
         if item.get("source") == "directive":
             callback = getattr(self.main_window, "open_directive_dialog", None)
             if callback:
@@ -1952,6 +2059,103 @@ class UnifiedWidgetController:
         else:
             callback = getattr(self.main_window, "open_modify_task_dialog", None)
             if callback:
+                self._run_main_dialog(callback, item_id)
+
+    def open_item_menu(self, item, global_pos) -> None:
+        item_id = int(item.get("item_id") or 0)
+        if item_id <= 0 or self.widget is None:
+            return
+        read_only = bool(item.get("read_only"))
+        tokens = _widget_theme_tokens(self.main_window)
+        menu = QMenu(self.widget)
+        menu.setStyleSheet(_widget_mode_menu_stylesheet(tokens))
+        open_action = menu.addAction(
+            t(
+                "widget_mode.menu_edit_directive"
+                if item.get("source") == "directive"
+                else "widget_mode.menu_edit_task",
+                "열기/수정",
+            )
+        )
+        if read_only:
+            open_action.setText(t("dialog.task.calendar_read_only", "읽기 전용 캘린더"))
+            open_action.setEnabled(False)
+        completion_action = None
+        if item.get("is_task") and not read_only:
+            completion_action = menu.addAction(
+                t("widget_mode.menu_reopen", "다시 진행")
+                if item.get("completed")
+                else t(
+                    "widget_mode.menu_complete_directive"
+                    if item.get("source") == "directive"
+                    else "widget_mode.menu_complete_task",
+                    "완료 처리",
+                )
+            )
+
+        priority_actions = {}
+        delete_action = None
+        if not read_only:
+            menu.addSeparator()
+            priority_menu = menu.addMenu(t("widget_mode.menu_priority", "우선순위"))
+            for key, label in (
+                ("urgent", t("widget_mode.priority_urgent", "긴급")),
+                ("high", t("widget_mode.priority_high", "높음")),
+                ("normal", t("widget_mode.priority_normal", "보통")),
+                ("low", t("widget_mode.priority_low", "낮음")),
+            ):
+                priority_actions[priority_menu.addAction(label)] = key
+            menu.addSeparator()
+            delete_action = menu.addAction(
+                t(
+                    "widget_mode.menu_delete_directive"
+                    if item.get("source") == "directive"
+                    else "widget_mode.menu_delete_task",
+                    "삭제",
+                )
+            )
+
+        selected = menu.exec(global_pos)
+        if selected is None:
+            return
+        if selected == open_action:
+            self.open_item(item)
+        elif selected == completion_action:
+            self.set_item_completed(item, not bool(item.get("completed")))
+        elif selected == delete_action:
+            self._delete_item(item)
+        elif selected in priority_actions:
+            self._set_item_priority(item, priority_actions[selected])
+
+    def _set_item_priority(self, item, priority: str) -> None:
+        callback = getattr(
+            self.main_window,
+            "handle_directive_priority_changed"
+            if item.get("source") == "directive"
+            else "handle_task_priority_changed",
+            None,
+        )
+        if callable(callback):
+            callback(int(item["item_id"]), priority)
+            self.force_refresh()
+
+    def _delete_item(self, item) -> None:
+        item_id = int(item.get("item_id") or 0)
+        if item_id <= 0:
+            return
+        if item.get("source") == "directive":
+            callback = getattr(self.main_window, "delete_selected_directives", None)
+            if not callable(callback):
+                return
+            previous = set(getattr(self.main_window, "selected_directive_ids", set()))
+            try:
+                self.main_window.selected_directive_ids = {item_id}
+                self._run_main_dialog(callback)
+            finally:
+                self.main_window.selected_directive_ids = previous
+        else:
+            callback = getattr(self.main_window, "handle_task_deleted", None)
+            if callable(callback):
                 self._run_main_dialog(callback, item_id)
 
     def _write_status(self, item, status):
@@ -2021,7 +2225,9 @@ class UnifiedWidgetController:
         if self._restoring_geometry:
             return
         layout_id = self.widget.active_layout_id() if self.widget is not None else "stacked"
-        self.main_window.settings.setValue(self._layout_size_key(layout_id), size)
+        self.main_window.settings.setValue(
+            self._layout_size_key(layout_id, self._calendar_visible_for_layout(layout_id)), size
+        )
         self._save_geometry(size_override=size)
 
     def _save_geometry(self, *, size_override: QSize | None = None) -> None:
@@ -2041,13 +2247,24 @@ class UnifiedWidgetController:
         if size_override is not None:
             rect.setSize(size_override)
         raw = serialize_geometry(rect, available, screen_name)
-        self.main_window.settings.setValue(geometry_key(self.widget.active_layout_id()), raw)
+        layout_id = self.widget.active_layout_id()
+        self.main_window.settings.setValue(
+            geometry_key(
+                self._geometry_layout_id(layout_id, self._calendar_visible_for_layout(layout_id))
+            ),
+            raw,
+        )
 
-    def _restore_geometry(self) -> None:
+    def _restore_geometry(self, *, preserve_position_if_new: bool = False) -> None:
         if self.widget is None:
             return
         layout_id = self.widget.active_layout_id()
-        payload = deserialize_geometry(self.main_window.settings.value(geometry_key(layout_id)))
+        calendar_visible = self._calendar_visible_for_layout(layout_id)
+        payload = deserialize_geometry(
+            self.main_window.settings.value(
+                geometry_key(self._geometry_layout_id(layout_id, calendar_visible))
+            )
+        )
         screen_info = best_available_geometry(
             QApplication.screens(),
             screen_name=str(payload.get("screen") or "") if payload else "",
@@ -2059,8 +2276,14 @@ class UnifiedWidgetController:
             target = restore_rect(payload, available)
         else:
             stored_pos = self.main_window.settings.value(self.POSITION_KEY)
-            stored_size = self.saved_size_for_layout(get_widget_mode_layout(layout_id))
-            if isinstance(stored_pos, QPoint):
+            stored_size = self.saved_size_for_layout(
+                get_widget_mode_layout(layout_id), calendar_visible=calendar_visible
+            )
+            if preserve_position_if_new:
+                target = self.widget.geometry()
+                target.setSize(stored_size)
+                target = clamp_rect(target, available)
+            elif isinstance(stored_pos, QPoint):
                 target = legacy_rect(stored_pos, stored_size, available)
             else:
                 target = clamp_rect(
@@ -2092,16 +2315,39 @@ class UnifiedWidgetController:
             self._restoring_geometry = False
         self._save_geometry()
 
-    def _layout_size_key(self, layout_id: str) -> str:
-        return f"{self.SIZE_KEY}_{layout_id}"
+    def _calendar_visible_for_layout(self, layout_id: str) -> bool:
+        layout_spec = get_widget_mode_layout(layout_id)
+        if not any(section == "calendar" for section, *_ in layout_spec.placements):
+            return True
+        return read_widget_calendar_visibility(self.main_window.settings, layout_spec.layout_id)
 
-    def saved_size_for_layout(self, layout_spec) -> QSize:
-        stored = self.main_window.settings.value(self._layout_size_key(layout_spec.layout_id))
-        if stored is None and layout_spec.layout_id == "stacked":
+    @staticmethod
+    def _geometry_layout_id(layout_id: str, calendar_visible: bool) -> str:
+        return layout_id if calendar_visible else f"{layout_id}_calendar_hidden"
+
+    def _layout_size_key(self, layout_id: str, calendar_visible: bool = True) -> str:
+        suffix = "" if calendar_visible else "_calendar_hidden"
+        return f"{self.SIZE_KEY}_{layout_id}{suffix}"
+
+    def saved_size_for_layout(self, layout_spec, *, calendar_visible: bool | None = None) -> QSize:
+        if calendar_visible is None:
+            calendar_visible = self._calendar_visible_for_layout(layout_spec.layout_id)
+        stored = self.main_window.settings.value(
+            self._layout_size_key(layout_spec.layout_id, calendar_visible)
+        )
+        if stored is None and layout_spec.layout_id == "stacked" and calendar_visible:
             stored = self.main_window.settings.value(self.SIZE_KEY)
         if isinstance(stored, QSize) and stored.width() > 40 and stored.height() > 40:
             return stored
-        return QSize(*layout_spec.preferred_size)
+        width, height = layout_spec.preferred_size
+        if not calendar_visible and any(
+            section == "calendar" for section, *_ in layout_spec.placements
+        ):
+            if layout_spec.layout_id in {"dashboard", "magazine"}:
+                width = min(width, 420)
+            else:
+                height = max(360, height - 170)
+        return QSize(width, height)
 
     def set_skin(self, skin_id: str) -> None:
         write_widget_mode_skin_id(self.main_window.settings, skin_id)
@@ -2120,7 +2366,11 @@ class UnifiedWidgetController:
         write_widget_mode_layout_id(self.main_window.settings, layout_id)
         if self.widget is None:
             return
-        self.widget.apply_selected_layout(resize_to_layout=True)
+        self._restoring_geometry = True
+        try:
+            self.widget.apply_selected_layout(resize_to_layout=True)
+        finally:
+            self._restoring_geometry = False
         self._restore_geometry()
         self.widget._style_signature = None
         self.widget.apply_theme()
@@ -2136,10 +2386,23 @@ class UnifiedWidgetController:
     def open_quick_add_dialog(self) -> None:
         self._open_task_dialog("", default_task_type="schedule")
 
+    def _open_directive_dialog(self) -> None:
+        callback = getattr(self.main_window, "open_directive_dialog", None)
+        if callable(callback):
+            self._run_main_dialog(callback, initial_date=self._current_date())
+
+    def open_work_management(self, start_tab: str = "schedule") -> None:
+        callback = getattr(self.main_window, "open_work_management_dialog", None)
+        if callable(callback):
+            self._run_main_dialog(callback, start_tab=start_tab)
+
     def handle_quick_add(self, text: str) -> None:
         self._open_task_dialog(text)
 
     def _open_task_dialog(self, text: str, *, default_task_type: str = "directive") -> None:
+        if default_task_type == "directive":
+            self._open_directive_dialog()
+            return
         if not hasattr(self.main_window, "open_task_dialog"):
             return
         target_date = self._current_date()
@@ -2156,6 +2419,8 @@ class UnifiedWidgetController:
     def set_target_date(self, target: QDate) -> None:
         if not isinstance(target, QDate) or not target.isValid():
             return
+        if self.widget is not None:
+            self.widget.clear_feedback()
         self._sync_main_context_date(target)
         self._cache_refresh_pending = False
         self.refresh_data()
@@ -2287,6 +2552,8 @@ class UnifiedWidgetController:
                 )
 
         directive_items = []
+        overdue_directive_items = []
+        undated_directive_items = []
         done_statuses = {"done", "completed", "deferred", "canceled", "cancelled"}
         for row in cache.get("directive_rows", []) or []:
             if not isinstance(row, (tuple, list)) or len(row) < 5:
@@ -2296,19 +2563,24 @@ class UnifiedWidgetController:
             if status in done_statuses and not (completed and show_completed):
                 continue
             deadline_qd = _parse_qdate(row[4])
+            directive_item = {
+                "title": _safe_text(row[1]) or t("widget_mode.untitled", "Untitled"),
+                "time": "",
+                "is_task": True,
+                "item_kind": "work",
+                "item_id": row[0],
+                "source": "directive",
+                "status": status,
+                "completed": completed,
+            }
             if deadline_qd.isValid() and deadline_qd == target:
-                directive_items.append(
-                    {
-                        "title": _safe_text(row[1]) or t("widget_mode.untitled", "Untitled"),
-                        "time": "",
-                        "is_task": True,
-                        "item_kind": "work",
-                        "item_id": row[0],
-                        "source": "directive",
-                        "status": status,
-                        "completed": completed,
-                    }
-                )
+                directive_items.append(directive_item)
+            elif target == QDate.currentDate() and not completed:
+                if deadline_qd.isValid() and deadline_qd < target:
+                    directive_item["time"] = _format_compact_date_with_weekday(deadline_qd)
+                    overdue_directive_items.append(directive_item)
+                elif not deadline_qd.isValid():
+                    undated_directive_items.append(directive_item)
 
         if routine_items:
             items.append(
@@ -2328,6 +2600,24 @@ class UnifiedWidgetController:
                 }
             )
             items.extend(directive_items)
+        if overdue_directive_items:
+            items.append(
+                {
+                    "title": t("widget_mode.section_directive_overdue", "기한 지난 지시·협조"),
+                    "is_section": True,
+                    "section_kind": "work",
+                }
+            )
+            items.extend(overdue_directive_items)
+        if undated_directive_items:
+            items.append(
+                {
+                    "title": t("widget_mode.section_directive_no_deadline", "기한 없는 지시·협조"),
+                    "is_section": True,
+                    "section_kind": "work",
+                }
+            )
+            items.extend(undated_directive_items)
         return items
 
     def _schedule_items_for_date(self, target: QDate) -> list[dict[str, object]]:
@@ -2352,6 +2642,7 @@ class UnifiedWidgetController:
                     "item_kind": "schedule",
                     "item_id": row.get("id"),
                     "source": "task",
+                    "read_only": bool(row.get("read_only") or row.get("is_subscription")),
                 }
             )
         return items

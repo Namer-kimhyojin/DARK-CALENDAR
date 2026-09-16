@@ -154,6 +154,7 @@ def _accent_rgba(alpha: float, tokens=None):
 
 
 def _calendar_surface_style(tokens=None, shape=None):
+    provided_tokens = dict(tokens or {})
     tokens = _resolve_calendar_tokens(tokens=tokens)
     shape = _resolve_calendar_shape(shape=shape)
     surface_radius = int(shape.get("calendar_surface_radius", 8))
@@ -163,9 +164,12 @@ def _calendar_surface_style(tokens=None, shape=None):
     accent_hover = _accent_rgba(0.08, tokens)
     accent_selected = _accent_rgba(0.10, tokens)
     accent_selected_border = _accent_rgba(0.44, tokens)
+    content_bg = provided_tokens.get(
+        "content_bg", provided_tokens.get("bg_main", tokens.get("content_bg", tokens["bg_main"]))
+    )
     return f"""
         QFrame#calendar_surface {{
-            background-color: {tokens["bg_main"]};
+            background-color: {content_bg};
             border-radius: {surface_radius}px;
             border: 1px solid {tokens["divider"]};
         }}
@@ -180,7 +184,7 @@ def _calendar_surface_style(tokens=None, shape=None):
         }}
         ClickableCell[is_today="true"] {{
             background-color: {accent_soft};
-            border: 1.5px solid {accent};
+            border: 2px solid {accent};
         }}
         ClickableCell[selected_date="true"] {{
             background-color: {accent_selected};
@@ -795,6 +799,11 @@ def _task_date_range(task_row):
     task_row["_cached_start_qdate"] = start_date
     task_row["_cached_end_qdate"] = end_date
     return start_date, end_date
+
+
+def _widget_calendar_cache_rows(local_tasks, subscription_tasks):
+    """Return detached rows after the calendar has deduplicated its sources."""
+    return [dict(task) for task in [*(local_tasks or []), *(subscription_tasks or [])]]
 
 
 def _is_multi_day_task(task_row):
@@ -1883,11 +1892,6 @@ def render_calendar(app):
             range_end,
             hide_gcal_items=not gcal_enabled,
         )
-        app._latest_calendar_range_data = {
-            "range_start": range_start,
-            "range_end": range_end,
-            "rows": list(all_tasks or []),
-        }
         logger.debug("fetched %d tasks from repo", len(all_tasks))
         for task in all_tasks:
             if str(task.get("calendar_id") or "").startswith("ics::"):
@@ -1931,6 +1935,15 @@ def render_calendar(app):
                     continue
 
             unique_subs.append(sk)
+
+        # Publish the same deduplicated source set used by the visible calendar.
+        # Publishing before subscription merging made Google/ICS-only rows disappear
+        # from widget mode even though they were visible in the main calendar.
+        app._latest_calendar_range_data = {
+            "range_start": range_start,
+            "range_end": range_end,
+            "rows": _widget_calendar_cache_rows(all_tasks, unique_subs),
+        }
 
         filtered_all = [
             task for task in [*all_tasks, *unique_subs] if _task_matches_search(task, search_query)

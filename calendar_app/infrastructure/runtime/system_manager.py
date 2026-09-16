@@ -20,6 +20,13 @@ _RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 _RUN_VALUE_NAME = "DarkCalendar"
 _STARTUP_TASK_ID = "DarkCalendarStartup"
 
+AUTOSTART_ENABLED = "enabled"
+AUTOSTART_DISABLED = "disabled"
+AUTOSTART_DISABLED_BY_USER = "disabled_by_user"
+AUTOSTART_DISABLED_BY_POLICY = "disabled_by_policy"
+AUTOSTART_ENABLED_BY_POLICY = "enabled_by_policy"
+AUTOSTART_UNAVAILABLE = "unavailable"
+
 
 def _new_settings() -> QSettings:
     return QSettings(_ORG, _APP)
@@ -62,6 +69,16 @@ def _task_state_name(task) -> str:
 
 def _is_packaged_task_enabled(task) -> bool:
     return _task_state_name(task) in {"ENABLED", "ENABLED_BY_POLICY"}
+
+
+def _normalized_task_state(task) -> str:
+    return {
+        "ENABLED": AUTOSTART_ENABLED,
+        "DISABLED": AUTOSTART_DISABLED,
+        "DISABLED_BY_USER": AUTOSTART_DISABLED_BY_USER,
+        "DISABLED_BY_POLICY": AUTOSTART_DISABLED_BY_POLICY,
+        "ENABLED_BY_POLICY": AUTOSTART_ENABLED_BY_POLICY,
+    }.get(_task_state_name(task), AUTOSTART_UNAVAILABLE)
 
 
 def _enable_packaged_task(task) -> bool:
@@ -163,6 +180,22 @@ def is_autostart_enabled() -> bool:
         migrated = True
     _persist_status(settings, enabled, migrated=migrated)
     return enabled
+
+
+def get_autostart_state() -> str:
+    """Return the current Windows-backed state for user-facing diagnostics."""
+    task = _get_packaged_startup_task()
+    if task is not None:
+        return _normalized_task_state(task)
+
+    if _has_package_identity():
+        return AUTOSTART_UNAVAILABLE
+
+    if _is_frozen():
+        return AUTOSTART_ENABLED if _registry_autostart_enabled() else AUTOSTART_DISABLED
+
+    enabled = _new_settings().value(_KEY, False, type=bool)
+    return AUTOSTART_ENABLED if enabled else AUTOSTART_DISABLED
 
 
 def set_autostart(enabled: bool) -> bool:

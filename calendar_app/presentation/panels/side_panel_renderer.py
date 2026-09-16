@@ -848,9 +848,9 @@ def _build_panel_empty_state(message, action_label, action_handler):
             border: none;
         }}
         QPushButton#panel_empty_action {{
-            color: {tokens.get("text_muted", tokens.get("text_secondary", "#a8afbb"))};
-            background: transparent;
-            border: 1px solid {tokens.get("border_soft", "rgba(255,255,255,0.12)")};
+            color: {tokens.get("text_secondary", "#3f4650")};
+            background: {tokens.get("bg_item", "transparent")};
+            border: 1px solid {tokens.get("border", "rgba(0,0,0,0.16)")};
             border-radius: {tokens.get("button_radius", "8px")};
             padding: 4px 10px;
             font-weight: 500;

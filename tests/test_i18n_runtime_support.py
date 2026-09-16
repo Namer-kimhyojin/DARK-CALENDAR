@@ -89,6 +89,15 @@ def _render_locale_json(data, indent=0):
 
 
 class I18nRuntimeSupportTests(unittest.TestCase):
+    def test_empty_string_is_preserved_as_explicit_fallback(self):
+        manager = object.__new__(I18nManager)
+        manager.translations = {}
+        manager.bundled_translations = {}
+        manager.fallback_translations = {}
+
+        self.assertEqual("", manager.get("optional.missing", ""))
+        self.assertEqual("optional.missing", manager.get("optional.missing"))
+
     def test_manager_resolves_flat_dotted_keys_and_fallbacks(self):
         manager = object.__new__(I18nManager)
         manager.translations = {

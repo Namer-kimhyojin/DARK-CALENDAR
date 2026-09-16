@@ -6,7 +6,7 @@ import time
 
 from PyQt6.QtWidgets import QMessageBox
 
-from calendar_app.app_metadata import APP_AUTHOR, APP_EMAIL, APP_NAME, APP_VERSION
+from calendar_app.app_metadata import APP_AUTHOR, APP_EMAIL, APP_VERSION
 from calendar_app.infrastructure.i18n import (
     get_locale_display_name,
     i18n,
@@ -81,104 +81,6 @@ def route_dialog(app, dialog_key: str, *args, **kwargs):
 
 def _current_lang() -> str:
     return str(getattr(i18n, "lang", "en") or "en")
-
-
-def _default_shortcut_guide_title() -> str:
-    lang = _current_lang().lower()
-    if lang.startswith("ko"):
-        return f"{APP_NAME} 단축키 가이드"
-    if lang.startswith("ja"):
-        return f"{APP_NAME} ショートカットガイド"
-    if lang.startswith("th"):
-        return f"{APP_NAME} คู่มือปุ่มลัด"
-    if lang.startswith("zh"):
-        return f"{APP_NAME} 快捷键指南"
-    return f"{APP_NAME} Shortcut Guide"
-
-
-def _default_shortcut_guide_content() -> str:
-    lang = _current_lang().lower()
-
-    # Common Content Generator to avoid redundancy
-    def get_footer(v_label="버전", a_label="제작"):
-        return f"""
-            <hr>
-            <div style="color:#888; font-size:11px;">
-                <b>{APP_NAME}</b><br>
-                {v_label}: {APP_VERSION}<br>
-                {a_label}: {APP_AUTHOR} ({APP_EMAIL})
-            </div>
-        """
-
-    if lang.startswith("ko"):
-        return f"""
-            <h3>단축키 가이드</h3>
-            <hr>
-            <b>[일정 관리]</b><br>
-            • <b>Ctrl + N</b>: 새 일정 추가<br>
-            • <b>Ctrl + R</b>: 일반업무 등록<br>
-            • <b>Ctrl + D</b>: 지시사항 등록<br>
-            • <b>Ctrl + L</b>: 체크리스트 템플릿 관리<br>
-            • <b>Ctrl + Shift + L</b>: 바탕화면 고정 모드<br><br>
-
-            <b>[화면 조작]</b><br>
-            • <b>Ctrl + B</b>: 상단바 보이기/숨기기<br>
-            • <b>Ctrl + Alt + B</b>: 캘린더 기능바 보이기/숨기기<br>
-            • <b>Ctrl + M</b>: 자석 모드 토글<br>
-            • <b>Ctrl + F / Space</b>: 초집중 모드 토글<br>
-            • <b>Alt + W</b>: 즉시 자리비움 모드<br>
-            • <b>Ctrl + 0</b>: 창 위치/크기 복원<br>
-            • <b>F11</b>: 전체화면 토글<br>
-            • <b>Ctrl + Alt + R</b>: 일반업무 주간 대시보드<br><br>
-
-            <b>[레이아웃 프리셋]</b><br>
-            • <b>Ctrl + Shift + 1~5</b>: 저장된 레이아웃 불러오기<br>
-            • <b>Ctrl + Shift + S</b>: 현재 레이아웃 저장<br><br>
-
-            <b>[네비게이션 & 투명도]</b><br>
-            • <b>Ctrl + Left/Right</b>: 이전/다음 날짜 이동<br>
-            • <b>Ctrl + T</b>: 오늘 날짜로 이동<br>
-            • <b>Ctrl + [ / ]</b>: 투명도 조절 (내리기/올리기)<br>
-            • <b>Delete</b>: 선택한 일정 삭제<br>
-            • <b>Esc</b>: 선택 해제<br>
-            • <b>F1</b>: 단축키 가이드 열기
-            {get_footer()}
-        """.strip()
-
-    # Default (English)
-    return f"""
-        <h3>Shortcut Guide</h3>
-        <hr>
-        <b>[Schedule Management]</b><br>
-        • <b>Ctrl + N</b>: Add New Schedule<br>
-        • <b>Ctrl + R</b>: Register Routine<br>
-        • <b>Ctrl + D</b>: Register Directive<br>
-        • <b>Ctrl + L</b>: Manage Checklist Templates<br>
-        • <b>Ctrl + Shift + L</b>: Desktop Lock Mode<br><br>
-
-        <b>[Screen Operations]</b><br>
-        • <b>Ctrl + B</b>: Show/Hide Top Bar<br>
-        • <b>Ctrl + Alt + B</b>: Show/Hide Calendar Toolbar<br>
-        • <b>Ctrl + M</b>: Toggle Magnet Mode<br>
-        • <b>Ctrl + F / Space</b>: Toggle Focus Mode<br>
-        • <b>Alt + W</b>: Instant Away Mode<br>
-        • <b>Ctrl + 0</b>: Restore Window Position<br>
-        • <b>F11</b>: Toggle Fullscreen<br>
-        • <b>Ctrl + Alt + R</b>: Routine Weekly Dashboard<br><br>
-
-        <b>[Layout Presets]</b><br>
-        • <b>Ctrl + Shift + 1~5</b>: Load Layout Presets<br>
-        • <b>Ctrl + Shift + S</b>: Save Current Layout<br><br>
-
-        <b>[Navigation & Opacity]</b><br>
-        • <b>Ctrl + Left/Right</b>: Prev/Next Date<br>
-        • <b>Ctrl + T</b>: Jump to Today<br>
-        • <b>Ctrl + [ / ]</b>: Adjust Opacity (Down/Up)<br>
-        • <b>Delete</b>: Delete Selected Schedule<br>
-        • <b>Esc</b>: Clear Selection<br>
-        • <b>F1</b>: Open Shortcut Guide
-        {get_footer("Version", "Author")}
-    """.strip()
 
 
 def _default_calendar_help_title() -> str:
@@ -386,7 +288,7 @@ class DialogActionsMixin:
     # ------------------------------------------------------------------
     # Register dialogs
     # ------------------------------------------------------------------
-    def open_directive_dialog(self, checked=False, task_id=None):
+    def open_directive_dialog(self, checked=False, task_id=None, initial_date=None):
         from calendar_app.presentation.dialogs.directive_dialog import DirectiveDialog
 
         # triggered passes checked=False as first arg if no other args bound.
@@ -395,7 +297,7 @@ class DialogActionsMixin:
             # Likely called as open_directive_dialog(task_id)
             task_id = checked
 
-        dlg = DirectiveDialog(self, task_id=task_id)
+        dlg = DirectiveDialog(self, task_id=task_id, initial_date=initial_date)
         if dlg.exec():
             self.schedule_panel_refresh(right=True)
 
@@ -426,20 +328,18 @@ class DialogActionsMixin:
     # Help / Info
     # ------------------------------------------------------------------
     def show_shortcut_guide(self, checked=False):
-        from PyQt6.QtCore import Qt
+        if not self._acquire_dialog_guard("show_shortcut_guide"):
+            return
 
-        title = t("shortcut.title") or _default_shortcut_guide_title()
-        content = t("shortcut.content") or _default_shortcut_guide_content()
-        content = (
-            content.replace("{APP_VERSION}", APP_VERSION)
-            .replace("{APP_AUTHOR}", APP_AUTHOR)
-            .replace("{APP_EMAIL}", APP_EMAIL)
+        from calendar_app.presentation.dialogs.help_center_dialog import HelpCenterDialog
+
+        dialog = HelpCenterDialog(
+            self,
+            app_version=APP_VERSION,
+            app_author=APP_AUTHOR,
+            app_email=APP_EMAIL,
         )
-        msg = QMessageBox(self)
-        msg.setWindowTitle(title)
-        msg.setText(content)
-        msg.setTextFormat(Qt.TextFormat.RichText)
-        msg.exec()
+        dialog.exec()
 
     def show_calendar_help(self, checked=False):
         from PyQt6.QtCore import Qt

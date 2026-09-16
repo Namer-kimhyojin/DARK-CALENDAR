@@ -42,6 +42,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     install_common_dialog_style_filter,
 )
 from calendar_app.presentation.dialogs.dialog_token_editor_dialog import DialogTokenEditorDialog
+from calendar_app.presentation.dialogs.directive_dialog import DirectiveDialog
 from calendar_app.presentation.dialogs.focus_log_dialog import FocusLogDialog
 from calendar_app.presentation.dialogs.focus_task_selector import FocusTaskSelectorDialog
 from calendar_app.presentation.dialogs.gcal_settings_dialog import GCalSettingsDialog
@@ -117,6 +118,13 @@ class DialogEditorWidgetTests(unittest.TestCase):
         self.assertEqual(widget.displayFormat(), "yyyy-MM-dd")
         self.assertTrue(widget.calendarPopup())
         self.assertEqual(widget.property("controlAffordance"), "calendar")
+
+    def test_directive_dialog_uses_requested_initial_date(self):
+        selected_date = QDate(2026, 9, 18)
+        dialog = DirectiveDialog(initial_date=selected_date)
+        self.addCleanup(dialog.close)
+
+        self.assertEqual(dialog.deadline_date.date(), selected_date)
 
     def test_standard_message_box_receives_common_theme_on_show(self):
         install_common_dialog_style_filter(self._app)

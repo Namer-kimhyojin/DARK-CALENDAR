@@ -10,6 +10,32 @@ Finish theme/UI-token rollout without reintroducing raw runtime style drift.
   - compatibility notes that describe explicit hex color support generically
   - parser/transform compatibility code that converts legacy values
 
+## Light Mode Semantic Contract
+
+- Appearance mode defines luminance and contrast. Style families define hue only.
+- Light surfaces use a visible neutral hierarchy: shell, toolbar, item, hover, and input
+  must not differ only by alpha because alpha-only layers collapse at full opacity and
+  become unpredictable over desktop wallpaper.
+- Light-mode text, borders, scrollbars, and neutral icons use dark semantic roles.
+  Dark-mode roles use their light counterparts. Do not hardcode white translucent
+  borders or handles in shared runtime styles.
+- Navigation and action icons are rebuilt when the appearance mode changes. Active,
+  warning, and danger icons use their semantic role colors.
+- Calendar icons preserve the calendar identity color. If that color is below 3:1
+  contrast against the active surface, adjust its lightness while preserving its hue.
+  Calendar labels continue to use the normal text role rather than inheriting the
+  identity color.
+- A custom input background belongs only to the custom text theme. Light, dark, and
+  system modes derive their input surface from the current mode so a stale dark input
+  cannot leak into light mode.
+- User opacity controls the decorative shell. Calendar and panel reading surfaces use
+  `content_bg` with a minimum alpha, while tooltips and modal cards use `floating_bg`
+  with a stronger minimum alpha so wallpaper never determines text contrast.
+- Light-mode reading text uses opaque neutral roles. Do not use alpha-black for labels,
+  task titles, empty-state instructions, or other text that users must read.
+- Calendar task chips use neutral mode-aware text and a tinted identity-color surface.
+  Calendar identity remains on the leading strip; task titles must not be fixed white.
+
 ## Stage 1. Baseline
 - Identify hotspot files.
 - Separate `runtime style code` from `preset/template data`.
@@ -52,6 +78,8 @@ Exit criteria:
 - Run targeted UI-token regression tests.
 - Run full `pytest`.
 - Manually check major dialogs/widgets for dark/light/custom themes when needed.
+- For light-mode menu changes, verify dynamically rebuilt submenus and theme-switched
+  icons in addition to the root menu.
 
 Exit criteria:
 - targeted regressions pass

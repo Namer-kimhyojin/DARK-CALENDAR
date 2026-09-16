@@ -303,12 +303,19 @@ def build_theme_snapshot(
         accent_hex,
     )
 
-    default_input_bg = panel_palette.get("item_bg", "rgba(0, 0, 0, 0.2)")
-    resolved_input_bg = str(
-        input_bg
-        if input_bg is not None
-        else cfg.value("custom_input_bg", default_input_bg) or default_input_bg
+    default_input_bg = (
+        "#ffffff"
+        if resolved_text_theme == "light"
+        else panel_palette.get("item_bg", "rgba(0, 0, 0, 0.2)")
     )
+    if input_bg is not None:
+        resolved_input_bg = str(input_bg)
+    elif resolved_text_theme == "custom":
+        resolved_input_bg = str(cfg.value("custom_input_bg", default_input_bg) or default_input_bg)
+    else:
+        # A custom input color belongs to the custom text theme. Reusing an old
+        # dark input in light/auto mode creates an unreadable black field.
+        resolved_input_bg = str(default_input_bg)
 
     return ThemeSnapshot(
         theme_color=accent_hex,
@@ -373,6 +380,8 @@ def build_shared_ui_tokens(
         "bg_item": panel_pal["item_bg"],
         "bg_item_hover": panel_pal["item_hover_bg"],
         "bg_top": panel_pal["topbar_bg"],
+        "content_bg": panel_pal["content_bg"],
+        "floating_bg": panel_pal["floating_bg"],
         "success": success_hex,
         "warning": warning_hex,
         "danger": danger_hex,
@@ -403,7 +412,9 @@ def build_shared_ui_tokens(
         "spacing_md": "16px",
         "spacing_lg": "24px",
         "input_bg": snapshot.input_bg,
-        "input_border": "rgba(255, 255, 255, 0.1)",
+        "input_border": "rgba(0,0,0,0.12)"
+        if snapshot.text_theme == "light"
+        else "rgba(255,255,255,0.10)",
         "button_height": f"{metrics.get('button_height', 24)}px",
         "button_radius": f"{metrics.get('button_radius', metrics.get('field_radius', 8))}px",
         "button_padding_y": f"{metrics.get('button_padding_y', 4)}px",
@@ -485,6 +496,8 @@ def build_dialog_base_tokens(
         "surface_item": panel_palette.get("item_bg", "#1e1e26"),
         "surface_hover": panel_palette.get("surface_hover_bg", "#18181f"),
         "surface_top": panel_palette.get("topbar_bg", "#13131a"),
+        "content_bg": panel_palette.get("content_bg", panel_palette.get("surface_bg", "#16161b")),
+        "floating_bg": panel_palette.get("floating_bg", panel_palette.get("toolbar_bg", "#1c1c23")),
         "base_hex": base.name(QColor.NameFormat.HexRgb),
         "border_soft": _neutral(0.10),
         "border": _neutral(0.16),

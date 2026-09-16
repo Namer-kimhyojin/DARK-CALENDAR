@@ -74,7 +74,7 @@ class FocusCompletionDialog(QDialog):
         theme_color = tokens.get("accent", theme_color)
         accent_display = tokens.get("tab_text_active", theme_color)
         accent_text = tokens.get("accent_text", "#101318")
-        surface_bg = tokens.get("surface_bg", "#1e1e23")
+        surface_bg = tokens.get("floating_bg", tokens.get("surface_bg", "#1e1e23"))
         surface_item = tokens.get("surface_item", "#16161c")
         surface_hover = tokens.get("surface_hover", "#282832")
         text_primary = tokens.get("text_primary", "#f5f7fb")

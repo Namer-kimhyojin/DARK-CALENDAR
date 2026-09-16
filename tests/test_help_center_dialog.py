@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import unittest
 
@@ -30,6 +31,15 @@ class HelpCenterDialogTests(unittest.TestCase):
         self.assertEqual(dlg._page_indexes["search"], dlg.page_stack.currentIndex())
         self.assertIn("검색 결과", dlg.search_results_count.text())
         self.assertGreater(dlg.search_results_container_layout.count(), 1)
+
+    def test_alternate_shortcuts_are_separated_in_card_markup(self):
+        dlg = HelpCenterDialog()
+        self.addCleanup(dlg.close)
+
+        focus = dlg._entry_by_id["focus_mode"]
+        rendered = dlg._render_entry_keys_html(focus)
+
+        self.assertIn("&nbsp;/&nbsp;", rendered)
 
 
 if __name__ == "__main__":

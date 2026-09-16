@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.main_window.top_bar_menu_factory import build_top_left_menus
 from calendar_app.presentation.theme.style_builder import _scaled_pt, apply_top_menu_theme
-from calendar_app.shared.color_utils import derive_panel_palette, derive_ui_palette
+from calendar_app.shared.color_utils import derive_panel_palette, derive_ui_palette, hex_to_rgba
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
@@ -26,31 +26,80 @@ def _topbar_palette(settings):
 
 
 def build_top_bar_frame_style(settings, opacity_factor: float = 1.0):
-    _, panel_base, _ = get_theme_palette_inputs(settings)
+    text_theme, panel_base, _ = get_theme_palette_inputs(settings)
     pal_panel = derive_panel_palette(panel_base, opacity_factor)
-    border = "rgba(255, 255, 255, 0.05)"
+    border = "rgba(0,0,0,0.10)" if text_theme == "light" else "rgba(255,255,255,0.05)"
     return (
         f"background-color: {pal_panel['topbar_bg']}; "
         f"border-radius: 8px; border: 1px solid {border};"
     )
 
 
+def build_top_bar_runtime_styles(settings, size: int, theme_color: str) -> dict[str, str]:
+    """Return mode-aware styles for every persistent top-bar element."""
+    palette = _topbar_palette(settings)
+    field_pt = _scaled_pt(size, 0, 9)
+    button_pt = _scaled_pt(size, 0, 9)
+    accent_soft = hex_to_rgba(theme_color, 0.10)
+    accent_pressed = hex_to_rgba(theme_color, 0.18)
+    return {
+        "label": (f"color: {palette['text_secondary']}; background: transparent; border: none;"),
+        "divider": (
+            f"color: {palette['border_soft']}; background: {palette['border_soft']}; "
+            "max-width: 1px; margin: 2px 15px;"
+        ),
+        "mode_button": f"""
+            QPushButton {{
+                color: {palette["text_secondary"]}; background: transparent;
+                border: 1px solid transparent; border-radius: 6px;
+                font-size: {button_pt}pt; font-weight: 600; padding: 0;
+            }}
+            QPushButton:hover {{
+                color: {palette["text_primary"]}; background: {palette["control_bg_hover"]};
+                border-color: {palette["border_soft"]};
+            }}
+            QPushButton:checked {{
+                color: {palette["text_primary"]}; background: {accent_soft};
+                border-color: {hex_to_rgba(theme_color, 0.55)};
+            }}
+            QPushButton:pressed {{ background: {accent_pressed}; }}
+        """,
+        "search": f"""
+            QLineEdit {{
+                background: {palette["control_bg"]}; border: 1px solid {palette["border"]};
+                border-radius: 10px; padding: 4px 10px; color: {palette["text_primary"]};
+                font-size: {field_pt}pt;
+            }}
+            QLineEdit:hover {{
+                border-color: {palette["border_strong"]}; background: {palette["control_bg_hover"]};
+            }}
+            QLineEdit:focus {{
+                border-color: {theme_color}; background: {palette["control_bg_pressed"]};
+            }}
+        """,
+        "tool_button": f"""
+            QToolButton {{
+                color: {palette["text_secondary"]}; background: transparent; border: none;
+                border-radius: 8px; font-size: {button_pt}pt; font-weight: 600;
+            }}
+            QToolButton:hover {{
+                color: {palette["text_primary"]}; background: {palette["control_bg_hover"]};
+            }}
+        """,
+    }
+
+
 def setup_top_bar(self, _size, _theme, _ta):
     top_bar = QHBoxLayout()
     top_bar.setSpacing(5)
 
-    field_pt = _scaled_pt(_size, 0, 9)
     status_pt = _scaled_pt(_size, 0, 9)
     status_text_pt = _scaled_pt(_size, -1, 8)
-    icon_btn_pt = _scaled_pt(_size, 0, 9)
     _tb_pal = _topbar_palette(self.settings)
     _tb_text = _tb_pal["text_primary"]
-    _tb_text2 = _tb_pal["text_secondary"]
-    self._tb_icon_color = _tb_text  # text_primary is always a hex string; text_secondary is rgba (invalid for qtawesome)
+    self._tb_icon_color = _tb_text  # qtawesome icon colors use the semantic hex text token.
     self._tb_icon_active_color = _theme
-    _vline_color = "rgba(255,255,255,20)"
-    _hover_bg_weak = "rgba(255,255,255,30)"
-    _hover_bg_mid = "rgba(255,255,255,50)"
+    runtime_styles = build_top_bar_runtime_styles(self.settings, _size, _theme)
 
     effective_text_theme, effective_panel_base, effective_opacity = get_theme_palette_inputs(
         self.settings
@@ -76,7 +125,8 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.sync_status_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
     self.sync_status_lbl.setMinimumWidth(28)
     self.sync_status_lbl.setStyleSheet(
-        f"color: {_tb_text2}; font-size: {status_pt}pt; font-weight: bold; margin-right: 4px; background: transparent; border: none;"
+        runtime_styles["label"]
+        + f" font-size: {status_pt}pt; font-weight: bold; margin-right: 4px;"
     )
     top_bar.addWidget(self.sync_status_lbl, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -116,44 +166,22 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.sync_status_text_lbl.setAccessibleDescription(t("topbar.sync_checking"))
     self.sync_status_text_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
     self.sync_status_text_lbl.setStyleSheet(
-        f"color: {_tb_text2}; font-size: {status_text_pt}pt; font-weight: bold; margin-right: 8px; background: transparent; border: none;"
+        runtime_styles["label"]
+        + f" font-size: {status_text_pt}pt; font-weight: bold; margin-right: 8px;"
     )
     top_bar.addWidget(self.sync_status_text_lbl, alignment=Qt.AlignmentFlag.AlignCenter)
 
-    vline = QFrame()
-    vline.setFrameShape(QFrame.Shape.VLine)
-    vline.setStyleSheet(
-        f"color: {_vline_color}; background: {_vline_color}; max-width: 1px; margin: 2px 15px;"
-    )
-    top_bar.addWidget(vline)
+    self.top_bar_divider = QFrame()
+    self.top_bar_divider.setFrameShape(QFrame.Shape.VLine)
+    self.top_bar_divider.setStyleSheet(runtime_styles["divider"])
+    top_bar.addWidget(self.top_bar_divider)
 
     # Unified style for mode toggle buttons
-    _btn_style = f"""
-        QPushButton {{
-            color: {_tb_text2};
-            background: transparent;
-            border: none;
-            border-radius: 4px;
-            font-size: {icon_btn_pt}pt;
-            padding: 0;
-        }}
-        QPushButton:hover {{
-            background: {_hover_bg_weak};
-        }}
-        QPushButton:checked {{
-            color: {_theme};
-            background: {_ta(25)};
-            border: none;
-        }}
-        QPushButton:pressed {{
-            background: {_ta(40)};
-            border: none;
-        }}
-    """
+    _btn_style = runtime_styles["mode_button"]
 
     # -- Lock Mode Group --
     self.lock_label = QLabel(t("topbar.lock_mode"))
-    self.lock_label.setStyleSheet(f"color: {_tb_text2}; background: transparent; border: none;")
+    self.lock_label.setStyleSheet(runtime_styles["label"])
     top_bar.addWidget(self.lock_label, alignment=Qt.AlignmentFlag.AlignCenter)
     top_bar.addSpacing(2)
 
@@ -180,7 +208,7 @@ def setup_top_bar(self, _size, _theme, _ta):
 
     # -- Magnet Mode Group --
     self.magnet_label = QLabel(t("topbar.magnet_mode"))
-    self.magnet_label.setStyleSheet(f"color: {_tb_text2}; background: transparent; border: none;")
+    self.magnet_label.setStyleSheet(runtime_styles["label"])
     top_bar.addWidget(self.magnet_label, alignment=Qt.AlignmentFlag.AlignCenter)
     top_bar.addSpacing(2)
 
@@ -206,9 +234,6 @@ def setup_top_bar(self, _size, _theme, _ta):
 
     top_bar.addSpacing(10)
 
-    _search_bg = "rgba(255,255,255,10)"
-    _search_bg_hover = "rgba(255,255,255,14)"
-    _search_bg_focus = "rgba(255,255,255,20)"
     self.search_edit = QLineEdit()
     self.search_edit.setPlaceholderText(_se(t("topbar.search_placeholder", "Search schedule...")))
     self.search_edit.addAction(
@@ -222,16 +247,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.search_edit.setMinimumWidth(140)
     self.search_edit.setMaximumWidth(260)
     self.search_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-    self.search_edit.setStyleSheet(
-        f"""
-        QLineEdit {{
-            background: {_search_bg}; border: 1px solid {_ta(80)};
-            border-radius: 10px; padding: 4px 6px; color: {_tb_text}; font-size: {field_pt}pt;
-        }}
-        QLineEdit:hover {{ border: 1px solid {_ta(128)}; background: {_search_bg_hover}; }}
-        QLineEdit:focus {{ border: 1px solid {_theme}; background: {_search_bg_focus}; }}
-    """
-    )
+    self.search_edit.setStyleSheet(runtime_styles["search"])
     self.search_edit.textChanged.connect(self.handle_search_changed)
     top_bar.addWidget(self.search_edit, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -248,22 +264,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.widget_mode_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     self.widget_mode_btn.setMinimumSize(32, 32)
     self.widget_mode_btn.setMaximumSize(36, 36)
-    self.widget_mode_btn.setStyleSheet(
-        f"""
-        QToolButton {{
-            color: {_tb_text2};
-            background: transparent;
-            border: none;
-            border-radius: 11px;
-            font-size: {status_pt}pt;
-            font-weight: bold;
-        }}
-        QToolButton:hover {{
-            color: {_tb_text};
-            background: {_hover_bg_weak};
-        }}
-    """
-    )
+    self.widget_mode_btn.setStyleSheet(runtime_styles["tool_button"])
     self.widget_mode_btn.clicked.connect(self.toggle_widget_mode_panel)
     top_bar.addWidget(self.widget_mode_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 

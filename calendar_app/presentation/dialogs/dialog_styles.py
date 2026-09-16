@@ -274,7 +274,7 @@ FIXED_DIALOG_STYLE = """
     QCheckBox::indicator {
         width: 17px;
         height: 17px;
-        border: 1.5px solid #3a3a46;
+        border: 2px solid #3a3a46;
         background: #18181f;
         border-radius: 4px;
     }
@@ -290,7 +290,7 @@ FIXED_DIALOG_STYLE = """
     QRadioButton::indicator {
         width: 17px;
         height: 17px;
-        border: 1.5px solid #3a3a46;
+        border: 2px solid #3a3a46;
         background: #18181f;
         border-radius: 9px;
     }
@@ -1031,7 +1031,7 @@ QCheckBox, QRadioButton {{
 }}
 QCheckBox::indicator, QRadioButton::indicator {{
     background: {check_indicator_bg};
-    border: 1.5px solid {check_indicator_border};
+    border: 2px solid {check_indicator_border};
 }}
 QCheckBox::indicator:hover, QRadioButton::indicator:hover {{
     border-color: {accent_hex};
@@ -1397,6 +1397,14 @@ def _fit_dialog_text(dialog: QDialog):
         else:
             target_width = max(current.width(), hint.width())
             target_height = max(current.height(), hint.height())
+        # Word-wrapped labels give the layout height-for-width. On Windows the
+        # native window can never be shorter than heightForWidth(width), so a
+        # preferred height below it leaves the Qt geometry smaller than the
+        # native client area -> an unpainted white strip under the dialog.
+        if dialog.hasHeightForWidth():
+            hfw_height = dialog.heightForWidth(target_width)
+            if hfw_height > target_height:
+                target_height = hfw_height
         bounds = _available_dialog_bounds(dialog)
         if bounds is not None:
             max_width, max_height = bounds

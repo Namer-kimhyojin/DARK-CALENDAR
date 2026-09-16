@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Searchable F1 help center dialog."""
 
 from __future__ import annotations
@@ -37,6 +38,9 @@ from calendar_app.presentation.dialogs.dialog_styles import (
 class HelpCenterDialog(QDialog):
     """Intuitive, searchable keyboard help center."""
 
+    # (page_id, ko_label_fallback, ko_hint_fallback) -- actual display text is
+    # resolved through t("shortcut.pages.<id>.title"/".subtitle") at population time,
+    # so a translated locale overrides these Korean defaults automatically.
     _PAGE_ORDER = (
         ("quickstart", "빠른 시작", "처음 찾는 기능과 가장 자주 쓰는 작업"),
         ("workflows", "자주 하는 작업", "상황별로 묶은 핵심 단축키"),
@@ -65,18 +69,23 @@ class HelpCenterDialog(QDialog):
         "opacity_up",
         "opacity_down",
     )
+    # (workflow_id, ko_title_fallback, ko_desc_fallback, shortcut_ids) -- title/desc
+    # resolved through t("shortcut.workflows.<workflow_id>.title"/".desc").
     _WORKFLOW_SECTIONS = (
         (
+            "new",
             "새로 만들기",
             "일정과 업무를 빠르게 시작할 때",
             ("new_schedule", "new_routine", "new_directive", "checklist"),
         ),
         (
+            "navigate",
             "이동과 탐색",
             "날짜 이동과 기능 검색을 빠르게 처리할 때",
             ("today", "prev_day", "next_day", "command_palette"),
         ),
         (
+            "layout",
             "화면과 레이아웃",
             "보이는 방식과 패널 배치를 바꿀 때",
             (
@@ -93,11 +102,13 @@ class HelpCenterDialog(QDialog):
             ),
         ),
         (
+            "focus_lock",
             "집중과 잠금",
             "집중 상태나 잠금 상태를 제어할 때",
             ("focus_mode", "focus_pause", "magnet_mode", "lock_mode", "away_lock"),
         ),
         (
+            "window_tools",
             "창과 관리 도구",
             "창 상태 조절이나 관리 기능이 필요할 때",
             (
@@ -129,9 +140,25 @@ class HelpCenterDialog(QDialog):
 
     def _build_ui(self) -> None:
         tokens = get_dialog_theme_tokens(apply_overrides=True)
+        self._ui_tokens = tokens
         metrics = get_dialog_metric_tokens(apply_overrides=True)
         shell_radius = max(16, int(metrics.get("group_radius", 12)) + 4)
-        sidebar_width = 214
+        sidebar_width = 188
+        accent = tokens.get("accent", "#4da6ff")
+        accent_soft = tokens.get("accent_soft_bg", tokens.get("surface_hover", "transparent"))
+        accent_border = tokens.get("accent_soft_border", tokens.get("border", "transparent"))
+        text_primary = tokens.get("text_primary", "#101318")
+        text_secondary = tokens.get("text_secondary", "#3f4650")
+        text_muted = tokens.get("text_muted", "#68717d")
+        text_faint = tokens.get("text_faint", "#838b95")
+        surface_bg = tokens.get("floating_bg", tokens.get("surface_bg", "#f7f3ee"))
+        surface_alt = tokens.get("surface_alt", surface_bg)
+        surface_item = tokens.get("surface_item", surface_alt)
+        surface_hover = tokens.get("surface_hover", surface_item)
+        surface_top = tokens.get("surface_top", surface_alt)
+        border = tokens.get("border", "rgba(0,0,0,0.12)")
+        border_soft = tokens.get("border_soft", border)
+        input_bg = tokens.get("input_bg", surface_item)
 
         self.setObjectName("HelpCenterDialog")
         apply_dialog_title(self, t("shortcut.title", "Air Calendar 도움말 센터"))
@@ -140,27 +167,27 @@ class HelpCenterDialog(QDialog):
 
         apply_common_dialog_style(
             self,
-            minimum_width=900,
-            size=(1080, 720),
+            minimum_width=820,
+            size=(960, 640),
             extra_stylesheet=(
                 f"QFrame#helpCenterHeader {{"
-                f"background: rgba(10, 15, 25, 0.98);"
-                f"border: 1px solid rgba(77, 166, 255, 0.16);"
+                f"background: {surface_top};"
+                f"border: 1px solid {accent_border};"
                 f"border-radius: {shell_radius + 2}px;"
                 f"}}"
                 f"QLabel#helpCenterEyebrow {{"
-                f"color: #7db4ff;"
+                f"color: {accent};"
                 f"font-size: 11px;"
                 f"font-weight: 800;"
                 f"letter-spacing: 1px;"
                 f"}}"
                 f"QLabel#helpCenterTitle {{"
-                f"color: #f5f8ff;"
-                f"font-size: 26px;"
+                f"color: {text_primary};"
+                f"font-size: 20px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLabel#helpCenterSubtitle {{"
-                f"color: {tokens.get('text_faint', '#94a8c2')};"
+                f"color: {text_muted};"
                 f"font-size: 12px;"
                 f"}}"
                 f"QFrame#helpCenterBadge, QFrame#helpCenterBadgeAccent {{"
@@ -168,46 +195,46 @@ class HelpCenterDialog(QDialog):
                 f"padding: 0px;"
                 f"}}"
                 f"QFrame#helpCenterBadge {{"
-                f"background: rgba(255, 255, 255, 0.05);"
-                f"border: 1px solid rgba(255, 255, 255, 0.08);"
+                f"background: {surface_item};"
+                f"border: 1px solid {border_soft};"
                 f"}}"
                 f"QFrame#helpCenterBadgeAccent {{"
-                f"background: rgba(77, 166, 255, 0.14);"
-                f"border: 1px solid rgba(77, 166, 255, 0.24);"
+                f"background: {accent_soft};"
+                f"border: 1px solid {accent_border};"
                 f"}}"
                 f"QLabel#helpCenterBadgeText {{"
-                f"color: #d7e5f7;"
+                f"color: {text_secondary};"
                 f"font-size: 10px;"
                 f"font-weight: 700;"
                 f"}}"
                 f"QLabel#helpCenterBadgeTextAccent {{"
-                f"color: #e6f1ff;"
+                f"color: {text_primary};"
                 f"font-size: 10px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLineEdit#helpCenterSearch {{"
                 f"padding: 11px 14px;"
                 f"border-radius: {shell_radius - 2}px;"
-                f"background: rgba(6, 10, 18, 0.92);"
-                f"border: 1px solid rgba(77, 166, 255, 0.18);"
-                f"color: #f5f8ff;"
-                f"selection-background-color: rgba(77, 166, 255, 0.32);"
+                f"background: {input_bg};"
+                f"border: 1px solid {border};"
+                f"color: {text_primary};"
+                f"selection-background-color: {accent_soft};"
                 f"}}"
                 f"QLineEdit#helpCenterSearch:focus {{"
-                f"border: 2px solid rgba(77, 166, 255, 0.72);"
+                f"border: 2px solid {accent};"
                 f"}}"
                 f"QFrame#helpCenterSidebar {{"
-                f"background: rgba(10, 16, 28, 0.92);"
-                f"border: 1px solid rgba(255, 255, 255, 0.08);"
+                f"background: {surface_alt};"
+                f"border: 1px solid {border};"
                 f"border-radius: {shell_radius}px;"
                 f"}}"
                 f"QLabel#helpCenterSidebarTitle {{"
-                f"color: #f5f8ff;"
+                f"color: {text_primary};"
                 f"font-size: 14px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLabel#helpCenterSidebarHint {{"
-                f"color: {tokens.get('text_faint', '#8da1bc')};"
+                f"color: {text_muted};"
                 f"font-size: 11px;"
                 f"}}"
                 f"QListWidget#helpCenterNav {{"
@@ -216,23 +243,23 @@ class HelpCenterDialog(QDialog):
                 f"outline: none;"
                 f"}}"
                 f"QListWidget#helpCenterNav::item {{"
-                f"margin: 0px 0px 6px 0px;"
-                f"padding: 12px 14px;"
+                f"margin: 0px 0px 5px 0px;"
+                f"padding: 9px 12px;"
                 f"border-radius: {shell_radius - 2}px;"
-                f"color: #d8e5f5;"
-                f"background: rgba(255, 255, 255, 0.02);"
+                f"color: {text_secondary};"
+                f"background: {surface_item};"
                 f"}}"
                 f"QListWidget#helpCenterNav::item:selected {{"
-                f"color: #f5f8ff;"
-                f"background: rgba(77, 166, 255, 0.18);"
-                f"border: 1px solid rgba(77, 166, 255, 0.30);"
+                f"color: {text_primary};"
+                f"background: {accent_soft};"
+                f"border: 1px solid {accent_border};"
                 f"}}"
                 f"QListWidget#helpCenterNav::item:hover {{"
-                f"background: rgba(255, 255, 255, 0.05);"
+                f"background: {surface_hover};"
                 f"}}"
                 f"QFrame#helpCenterContent {{"
-                f"background: rgba(10, 16, 28, 0.76);"
-                f"border: 1px solid rgba(255, 255, 255, 0.06);"
+                f"background: {surface_bg};"
+                f"border: 1px solid {border_soft};"
                 f"border-radius: {shell_radius}px;"
                 f"}}"
                 f"QScrollArea#helpCenterScroll {{"
@@ -243,98 +270,101 @@ class HelpCenterDialog(QDialog):
                 f"background: transparent;"
                 f"}}"
                 f"QFrame#helpPageHero {{"
-                f"background: rgba(10, 15, 25, 0.98);"
-                f"border: 1px solid rgba(77, 166, 255, 0.14);"
+                f"background: {surface_top};"
+                f"border: 1px solid {accent_border};"
                 f"border-radius: {shell_radius}px;"
                 f"}}"
                 f"QLabel#helpPageEyebrow {{"
-                f"color: #7db4ff;"
+                f"color: {accent};"
                 f"font-size: 11px;"
                 f"font-weight: 800;"
                 f"letter-spacing: 1px;"
                 f"}}"
                 f"QLabel#helpPageTitle {{"
-                f"color: #f5f8ff;"
-                f"font-size: 22px;"
+                f"color: {text_primary};"
+                f"font-size: 18px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLabel#helpPageSubtitle {{"
-                f"color: #9fb3d1;"
+                f"color: {text_secondary};"
                 f"font-size: 12px;"
                 f"}}"
                 f"QFrame#helpSectionSurface {{"
-                f"background: rgba(255, 255, 255, 0.03);"
-                f"border: 1px solid rgba(255, 255, 255, 0.06);"
+                f"background: {surface_alt};"
+                f"border: 1px solid {border_soft};"
                 f"border-radius: {shell_radius - 2}px;"
                 f"}}"
                 f"QLabel#helpSectionTitle {{"
-                f"color: #f5f8ff;"
+                f"color: {text_primary};"
                 f"font-size: 16px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLabel#helpSectionDesc {{"
-                f"color: #8fa6c5;"
+                f"color: {text_muted};"
                 f"font-size: 11px;"
                 f"}}"
                 f"QFrame#helpShortcutCard, QFrame#helpShortcutCardAccent {{"
                 f"border-radius: {shell_radius - 4}px;"
                 f"}}"
                 f"QFrame#helpShortcutCard {{"
-                f"background: rgba(255, 255, 255, 0.03);"
-                f"border: 1px solid rgba(255, 255, 255, 0.06);"
+                f"background: {surface_item};"
+                f"border: 1px solid {border_soft};"
                 f"}}"
                 f"QFrame#helpShortcutCardAccent {{"
-                f"background: rgba(11, 18, 30, 0.96);"
-                f"border: 1px solid rgba(77, 166, 255, 0.18);"
+                f"background: {accent_soft};"
+                f"border: 1px solid {accent_border};"
                 f"}}"
                 f"QLabel#helpCardBadge {{"
-                f"color: #7db4ff;"
+                f"color: {accent};"
                 f"font-size: 10px;"
                 f"font-weight: 800;"
                 f"letter-spacing: 1px;"
                 f"}}"
                 f"QLabel#helpCardTitle {{"
-                f"color: #f5f8ff;"
-                f"font-size: 14px;"
+                f"color: {text_primary};"
+                f"font-size: 13px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLabel#helpCardDescription {{"
-                f"color: #9fb3d1;"
+                f"color: {text_secondary};"
                 f"font-size: 11px;"
                 f"}}"
                 f"QLabel#helpCardMeta {{"
-                f"color: #7f95b2;"
+                f"color: {text_muted};"
                 f"font-size: 10px;"
                 f"}}"
                 f"QLabel#helpCardKeys {{"
-                f"color: #e8f1ff;"
+                f"color: {text_primary};"
                 f"font-size: 11px;"
                 f"}}"
                 f"QLabel#helpFooterText {{"
-                f"color: {tokens.get('text_faint', '#8da1bc')};"
+                f"color: {text_faint};"
                 f"font-size: 11px;"
                 f"}}"
             ),
         )
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(18, 16, 18, 14)
-        root.setSpacing(12)
+        root.setContentsMargins(16, 14, 16, 12)
+        root.setSpacing(10)
 
         header = QFrame()
         header.setObjectName("helpCenterHeader")
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(22, 20, 22, 18)
-        header_layout.setSpacing(18)
+        header_layout.setContentsMargins(18, 14, 18, 14)
+        header_layout.setSpacing(14)
 
         header_left = QVBoxLayout()
         header_left.setSpacing(8)
-        eyebrow = QLabel("F1 HELP CENTER")
+        eyebrow = QLabel(t("shortcut.chrome.eyebrow", "F1 HELP CENTER"))
         eyebrow.setObjectName("helpCenterEyebrow")
-        title = QLabel("단축키와 기능을 바로 찾는 도움말 센터")
+        title = QLabel(t("shortcut.chrome.header_title", "단축키와 기능을 바로 찾는 도움말 센터"))
         title.setObjectName("helpCenterTitle")
         subtitle = QLabel(
-            "기능 이름, 키 이름, 메뉴 위치로 검색하고 자주 하는 작업부터 빠르게 찾아보세요."
+            t(
+                "shortcut.chrome.header_subtitle",
+                "기능 이름, 키 이름, 메뉴 위치로 검색하고 자주 하는 작업부터 빠르게 찾아보세요.",
+            )
         )
         subtitle.setObjectName("helpCenterSubtitle")
         subtitle.setWordWrap(True)
@@ -345,9 +375,19 @@ class HelpCenterDialog(QDialog):
         badge_row = QHBoxLayout()
         badge_row.setContentsMargins(0, 4, 0, 0)
         badge_row.setSpacing(8)
-        badge_row.addWidget(self._create_badge("핵심 복구 키 4개", accent=True))
-        badge_row.addWidget(self._create_badge(f"전체 단축키 {len(self._entries)}개"))
-        badge_row.addWidget(self._create_badge("검색 지원"))
+        badge_row.addWidget(
+            self._create_badge(t("shortcut.chrome.badge_recovery", "핵심 복구 키 4개"), accent=True)
+        )
+        badge_row.addWidget(
+            self._create_badge(
+                t(
+                    "shortcut.chrome.badge_total",
+                    "전체 단축키 {count}개",
+                    count=len(self._entries),
+                )
+            )
+        )
+        badge_row.addWidget(self._create_badge(t("shortcut.chrome.badge_search", "검색 지원")))
         badge_row.addStretch(1)
         header_left.addLayout(badge_row)
         header_layout.addLayout(header_left, 1)
@@ -361,11 +401,15 @@ class HelpCenterDialog(QDialog):
         self.search_input.setAccessibleDescription(
             t("shortcut.search_hint", "기능 이름, 단축키 또는 메뉴 위치로 검색합니다.")
         )
-        self.search_input.setPlaceholderText("예: 잠금, 위젯, F11, Ctrl+Shift+1")
+        self.search_input.setPlaceholderText(
+            t("shortcut.chrome.search_placeholder", "예: 잠금, 위젯, F11, Ctrl+Shift+1")
+        )
         self.search_input.textChanged.connect(self._on_search_text_changed)
         header_right.addWidget(self.search_input)
 
-        search_hint = QLabel("검색 예시: 메뉴바, 캘린더, 루틴, 강제 잠금 해제")
+        search_hint = QLabel(
+            t("shortcut.chrome.search_examples", "검색 예시: 메뉴바, 캘린더, 루틴, 강제 잠금 해제")
+        )
         search_hint.setObjectName("helpCenterSubtitle")
         search_hint.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         header_right.addWidget(search_hint)
@@ -374,18 +418,23 @@ class HelpCenterDialog(QDialog):
         root.addWidget(header)
 
         body = QHBoxLayout()
-        body.setSpacing(12)
+        body.setSpacing(10)
 
         sidebar = QFrame()
         sidebar.setObjectName("helpCenterSidebar")
         sidebar.setFixedWidth(sidebar_width)
         sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(14, 14, 14, 14)
-        sidebar_layout.setSpacing(10)
+        sidebar_layout.setContentsMargins(12, 12, 12, 12)
+        sidebar_layout.setSpacing(8)
 
-        sidebar_title = QLabel("탐색")
+        sidebar_title = QLabel(t("shortcut.chrome.sidebar_title", "탐색"))
         sidebar_title.setObjectName("helpCenterSidebarTitle")
-        sidebar_hint = QLabel("왼쪽에서 섹션을 고르고, 위 검색창으로 바로 찾을 수 있습니다.")
+        sidebar_hint = QLabel(
+            t(
+                "shortcut.chrome.sidebar_hint",
+                "왼쪽에서 섹션을 고르고, 위 검색창으로 바로 찾을 수 있습니다.",
+            )
+        )
         sidebar_hint.setObjectName("helpCenterSidebarHint")
         sidebar_hint.setWordWrap(True)
         sidebar_layout.addWidget(sidebar_title)
@@ -401,7 +450,7 @@ class HelpCenterDialog(QDialog):
         content = QFrame()
         content.setObjectName("helpCenterContent")
         content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(10, 10, 10, 10)
+        content_layout.setContentsMargins(8, 8, 8, 8)
         content_layout.setSpacing(0)
 
         self.page_stack = QStackedWidget()
@@ -436,7 +485,9 @@ class HelpCenterDialog(QDialog):
         self.page_stack.addWidget(self._build_search_page())
         self._page_indexes["search"] = 0
 
-        for page_id, label, hint in self._PAGE_ORDER:
+        for page_id, label_ko, hint_ko in self._PAGE_ORDER:
+            label = t(f"shortcut.pages.{page_id}.title", label_ko)
+            hint = t(f"shortcut.pages.{page_id}.subtitle", hint_ko)
             item = QListWidgetItem(label)
             item.setData(Qt.ItemDataRole.UserRole, page_id)
             item.setToolTip(hint)
@@ -458,7 +509,12 @@ class HelpCenterDialog(QDialog):
         self.search_input.setFocus()
 
     def _footer_text(self) -> str:
-        parts = ["검색은 기능 이름, 단축키, 메뉴 위치 기준으로 동작합니다."]
+        parts = [
+            t(
+                "shortcut.chrome.footer_hint",
+                "검색은 기능 이름, 단축키, 메뉴 위치 기준으로 동작합니다.",
+            )
+        ]
         version_label = self._app_version
         if version_label:
             parts.append(version_label)
@@ -499,8 +555,8 @@ class HelpCenterDialog(QDialog):
         frame = QFrame()
         frame.setObjectName("helpPageHero")
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(18, 18, 18, 16)
-        layout.setSpacing(8)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(6)
 
         eyebrow_label = QLabel(eyebrow)
         eyebrow_label.setObjectName("helpPageEyebrow")
@@ -519,8 +575,8 @@ class HelpCenterDialog(QDialog):
         frame = QFrame()
         frame.setObjectName("helpSectionSurface")
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(12)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(10)
 
         title_label = QLabel(title)
         title_label.setObjectName("helpSectionTitle")
@@ -536,26 +592,47 @@ class HelpCenterDialog(QDialog):
         layout.addWidget(
             self._create_page_hero(
                 "QUICK START",
-                "가장 자주 찾는 작업부터 바로 보이게",
-                "처음 앱을 열었을 때 바로 쓰는 기능과, F1을 눌렀을 때 당장 찾게 되는 기능을 먼저 배치했습니다.",
+                t(
+                    "shortcut.hero.quickstart.title",
+                    "가장 자주 찾는 작업부터 바로 보이게",
+                ),
+                t(
+                    "shortcut.hero.quickstart.desc",
+                    "처음 앱을 열었을 때 바로 쓰는 기능과, F1을 눌렀을 때 당장 찾게 되는 기능을 먼저 배치했습니다.",
+                ),
             )
         )
 
         section, section_layout = self._create_section(
-            "바로 시작하기",
-            "처음 쓰는 사용자도 여기서 시작하면 바로 흐름을 잡을 수 있습니다.",
+            t("shortcut.chrome.quickstart_section_title", "바로 시작하기"),
+            t(
+                "shortcut.chrome.quickstart_section_desc",
+                "처음 쓰는 사용자도 여기서 시작하면 바로 흐름을 잡을 수 있습니다.",
+            ),
         )
         section_layout.addLayout(self._create_cards_grid(self._QUICKSTART_IDS))
         layout.addWidget(section)
 
         hint_section, hint_layout = self._create_section(
-            "검색 팁",
-            "도움말은 단축키뿐 아니라 메뉴 이름과 상황 키워드로도 검색됩니다.",
+            t("shortcut.chrome.search_tips_title", "검색 팁"),
+            t(
+                "shortcut.chrome.search_tips_desc",
+                "도움말은 단축키뿐 아니라 메뉴 이름과 상황 키워드로도 검색됩니다.",
+            ),
         )
         tips = (
-            "잠금 상태가 풀리지 않을 때: `잠금`, `복구`, `강제`",
-            "레이아웃을 바꾸고 싶을 때: `레이아웃`, `프리셋`, `Ctrl+Shift+1`",
-            "위젯 관련 기능을 찾을 때: `위젯`, `F12`",
+            t(
+                "shortcut.chrome.tip_lock",
+                "잠금 상태가 풀리지 않을 때: `잠금`, `복구`, `강제`",
+            ),
+            t(
+                "shortcut.chrome.tip_layout",
+                "레이아웃을 바꾸고 싶을 때: `레이아웃`, `프리셋`, `Ctrl+Shift+1`",
+            ),
+            t(
+                "shortcut.chrome.tip_widget",
+                "위젯 관련 기능을 찾을 때: `위젯`, `F12`",
+            ),
         )
         for tip in tips:
             label = QLabel(tip)
@@ -571,12 +648,17 @@ class HelpCenterDialog(QDialog):
         layout.addWidget(
             self._create_page_hero(
                 "CORE FLOW",
-                "상황별로 묶어서 더 빨리 찾기",
-                "등록, 이동, 화면 전환처럼 실제 사용 흐름 중심으로 묶었습니다. 이름을 몰라도 상황만 떠올리면 찾을 수 있게 구성했습니다.",
+                t("shortcut.hero.workflows.title", "상황별로 묶어서 더 빨리 찾기"),
+                t(
+                    "shortcut.hero.workflows.desc",
+                    "등록, 이동, 화면 전환처럼 실제 사용 흐름 중심으로 묶었습니다. 이름을 몰라도 상황만 떠올리면 찾을 수 있게 구성했습니다.",
+                ),
             )
         )
 
-        for title, desc, shortcut_ids in self._WORKFLOW_SECTIONS:
+        for workflow_id, title_ko, desc_ko, shortcut_ids in self._WORKFLOW_SECTIONS:
+            title = t(f"shortcut.workflows.{workflow_id}.title", title_ko)
+            desc = t(f"shortcut.workflows.{workflow_id}.desc", desc_ko)
             section, section_layout = self._create_section(title, desc)
             for shortcut_id in shortcut_ids:
                 entry = self._entry_by_id.get(shortcut_id)
@@ -591,21 +673,30 @@ class HelpCenterDialog(QDialog):
         layout.addWidget(
             self._create_page_hero(
                 "RECOVERY",
-                "막혔을 때 먼저 눌러볼 키",
-                "메뉴가 사라졌거나 잠금 상태가 꼬였을 때 가장 먼저 봐야 하는 키만 따로 모았습니다.",
+                t("shortcut.hero.recovery.title", "막혔을 때 먼저 눌러볼 키"),
+                t(
+                    "shortcut.hero.recovery.desc",
+                    "메뉴가 사라졌거나 잠금 상태가 꼬였을 때 가장 먼저 봐야 하는 키만 따로 모았습니다.",
+                ),
             )
         )
 
         primary, primary_layout = self._create_section(
-            "우선 확인할 복구 키",
-            "문제가 생겼을 때 가장 먼저 시도할 키입니다.",
+            t("shortcut.chrome.recovery_primary_title", "우선 확인할 복구 키"),
+            t(
+                "shortcut.chrome.recovery_primary_desc",
+                "문제가 생겼을 때 가장 먼저 시도할 키입니다.",
+            ),
         )
         primary_layout.addLayout(self._create_cards_grid(self._RECOVERY_PRIMARY_IDS, accent=True))
         layout.addWidget(primary)
 
         secondary, secondary_layout = self._create_section(
-            "함께 기억하면 좋은 보조 키",
-            "잠금이나 창 상태를 정리할 때 같이 자주 찾는 단축키입니다.",
+            t("shortcut.chrome.recovery_secondary_title", "함께 기억하면 좋은 보조 키"),
+            t(
+                "shortcut.chrome.recovery_secondary_desc",
+                "잠금이나 창 상태를 정리할 때 같이 자주 찾는 단축키입니다.",
+            ),
         )
         for shortcut_id in self._RECOVERY_SECONDARY_IDS:
             entry = self._entry_by_id.get(shortcut_id)
@@ -620,8 +711,11 @@ class HelpCenterDialog(QDialog):
         layout.addWidget(
             self._create_page_hero(
                 "REFERENCE",
-                "전체 단축키를 분류별로 보기",
-                "모든 단축키를 기능 그룹별로 정리했습니다. 검색 없이 훑어볼 때 적합합니다.",
+                t("shortcut.hero.reference.title", "전체 단축키를 분류별로 보기"),
+                t(
+                    "shortcut.hero.reference.desc",
+                    "모든 단축키를 기능 그룹별로 정리했습니다. 검색 없이 훑어볼 때 적합합니다.",
+                ),
             )
         )
 
@@ -650,13 +744,19 @@ class HelpCenterDialog(QDialog):
         layout.addWidget(
             self._create_page_hero(
                 "SEARCH",
-                "검색 결과",
-                "키 이름이나 기능 이름을 입력하면 관련 단축키를 바로 보여줍니다.",
+                t("shortcut.hero.search.title", "검색 결과"),
+                t(
+                    "shortcut.hero.search.desc",
+                    "키 이름이나 기능 이름을 입력하면 관련 단축키를 바로 보여줍니다.",
+                ),
             )
         )
         self.search_results_section, self.search_results_layout = self._create_section(
-            "검색 결과",
-            "검색어를 입력하면 여기에서 바로 결과를 보여줍니다.",
+            t("shortcut.chrome.search_results_title", "검색 결과"),
+            t(
+                "shortcut.chrome.search_results_desc",
+                "검색어를 입력하면 여기에서 바로 결과를 보여줍니다.",
+            ),
         )
         self.search_results_count = QLabel("")
         self.search_results_count.setObjectName("helpCardMeta")
@@ -696,9 +796,9 @@ class HelpCenterDialog(QDialog):
         frame.setObjectName("helpShortcutCardAccent" if accent else "helpShortcutCard")
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(
-            14 if dense else 16, 13 if dense else 16, 14 if dense else 16, 12 if dense else 14
+            12 if dense else 14, 10 if dense else 13, 12 if dense else 14, 9 if dense else 12
         )
-        layout.setSpacing(8 if dense else 10)
+        layout.setSpacing(6 if dense else 8)
 
         top_row = QHBoxLayout()
         top_row.setContentsMargins(0, 0, 0, 0)
@@ -731,11 +831,25 @@ class HelpCenterDialog(QDialog):
         meta_lines: list[str] = []
         menu_path = str(entry.get("menu_path_ko") or "").strip()
         if menu_path:
-            meta_lines.append(f"메뉴 위치: {menu_path}")
+            meta_lines.append(
+                t("shortcut.chrome.meta_menu_path", "메뉴 위치: {value}", value=menu_path)
+            )
         aliases = [str(alias).strip() for alias in entry.get("aliases", []) if str(alias).strip()]
         if aliases:
-            meta_lines.append(f"추가 키: {', '.join(aliases)}")
-        meta_lines.append(f"분류: {entry.get('group_label_ko', '')}")
+            meta_lines.append(
+                t(
+                    "shortcut.chrome.meta_aliases",
+                    "추가 키: {value}",
+                    value=", ".join(aliases),
+                )
+            )
+        meta_lines.append(
+            t(
+                "shortcut.chrome.meta_group",
+                "분류: {value}",
+                value=entry.get("group_label_ko", ""),
+            )
+        )
         meta_label = QLabel("\n".join(meta_lines))
         meta_label.setObjectName("helpCardMeta")
         meta_label.setWordWrap(True)
@@ -749,7 +863,11 @@ class HelpCenterDialog(QDialog):
             parts.append(render_keycaps_html(alias, accent=accent))
         if len(parts) == 1:
             return parts[0]
-        separator = "<span style='color:#6f86a3; font-size:10px; padding:0 4px;'>or</span>"
+        separator_color = getattr(self, "_ui_tokens", {}).get("text_faint", "#838b95")
+        separator = (
+            f"<span style='color:{separator_color}; font-size:10px; padding:0 6px;'>"
+            "&nbsp;/&nbsp;</span>"
+        )
         return separator.join(parts)
 
     def _on_page_changed(
@@ -781,11 +899,21 @@ class HelpCenterDialog(QDialog):
                 widget.deleteLater()
 
         results = search_shortcut_guide_entries(query)
-        self.search_results_count.setText(f"'{query}' 검색 결과 {len(results)}개")
+        self.search_results_count.setText(
+            t(
+                "shortcut.chrome.search_results_count",
+                "'{query}' 검색 결과 {count}개",
+                query=query,
+                count=len(results),
+            )
+        )
 
         if not results:
             empty = QLabel(
-                "일치하는 결과가 없습니다.\n기능 이름, 키 이름, 메뉴 이름처럼 더 짧은 키워드로 다시 검색해 보세요."
+                t(
+                    "shortcut.chrome.search_empty",
+                    "일치하는 결과가 없습니다.\n기능 이름, 키 이름, 메뉴 이름처럼 더 짧은 키워드로 다시 검색해 보세요.",
+                )
             )
             empty.setObjectName("helpCardDescription")
             empty.setAlignment(Qt.AlignmentFlag.AlignCenter)

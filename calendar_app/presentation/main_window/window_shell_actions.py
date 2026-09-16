@@ -3,6 +3,8 @@
 
 import os
 
+from PyQt6.QtCore import QTimer, QUrl
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
 from calendar_app.infrastructure.i18n import t
@@ -507,6 +509,16 @@ class WindowShellActionsMixin:
         enabled = system_manager.is_autostart_enabled()
         new_state = bool(checked) if isinstance(checked, bool) else not enabled
         changed = system_manager.set_autostart(new_state)
+        actual_state = self._sync_autostart_action_state()
+        if not changed or actual_state != new_state:
+            self._show_autostart_settings_help(new_state)
+            return
+        status_text = t("autostart.enabled") if actual_state else t("autostart.disabled")
+        msg = t("autostart.msg").format(status=status_text)
+        QMessageBox.information(self, t("common.notification"), msg)
+
+    def _sync_autostart_action_state(self):
+        """Keep every auto-start action aligned with the current Windows state."""
         actual_state = system_manager.is_autostart_enabled()
         synced_actions = set()
         for attr_name in ("autostart_act", "autostart_menu_act", "autostart_tray_act"):
@@ -515,19 +527,102 @@ class WindowShellActionsMixin:
                 continue
             action.setChecked(actual_state)
             synced_actions.add(id(action))
-        if not changed or actual_state != new_state:
-            QMessageBox.warning(
-                self,
-                t("common.notification"),
-                t(
-                    "autostart.registration_failed",
-                    "Please allow Air Calendar in Windows Startup Apps settings.",
-                ),
+        return actual_state
+
+    def _show_autostart_settings_help(self, requested_enabled):
+        state = system_manager.get_autostart_state()
+        policy_blocked = state in {
+            system_manager.AUTOSTART_DISABLED_BY_POLICY,
+            system_manager.AUTOSTART_ENABLED_BY_POLICY,
+        }
+
+        if policy_blocked:
+            message = t(
+                "autostart.registration_blocked_by_policy",
+                "조직 또는 Windows 정책에서 시작 앱 변경을 제한하고 있습니다.",
             )
-            return
-        status_text = t("autostart.enabled") if actual_state else t("autostart.disabled")
-        msg = t("autostart.msg").format(status=status_text)
-        QMessageBox.information(self, t("common.notification"), msg)
+        elif state == system_manager.AUTOSTART_DISABLED_BY_USER and requested_enabled:
+            message = t(
+                "autostart.registration_blocked_by_user",
+                "이전에 Windows에서 꺼진 시작 앱은 사용자가 직접 다시 켜야 합니다.",
+            )
+        else:
+            message = t(
+                "autostart.registration_failed",
+                "Windows 시작 앱 설정에서 Air Calendar를 직접 허용해 주세요.",
+            )
+
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle(t("common.notification", "알림"))
+        box.setText(message)
+        if policy_blocked:
+            instructions = t(
+                "autostart.policy_instructions",
+                "이 설정은 시스템 관리자에게 문의해 주세요.",
+            )
+        else:
+            instructions = t(
+                "autostart.settings_instructions"
+                if requested_enabled
+                else "autostart.settings_instructions_disable",
+                "Windows 설정의 앱 > 시작 프로그램에서 Air Calendar를 켜 주세요."
+                if requested_enabled
+                else "Windows 설정의 앱 > 시작 프로그램에서 Air Calendar를 꺼 주세요.",
+            )
+        box.setInformativeText(instructions)
+
+        open_button = None
+        if not policy_blocked:
+            open_button = box.addButton(
+                t("autostart.open_settings", "Windows 시작 앱 설정 열기"),
+                QMessageBox.ButtonRole.ActionRole,
+            )
+            open_button.setObjectName("primary_btn")
+            box.setDefaultButton(open_button)
+        box.addButton(QMessageBox.StandardButton.Close)
+        box.exec()
+
+        if open_button is not None and box.clickedButton() is open_button:
+            self._open_windows_startup_settings(requested_enabled)
+
+    def _open_windows_startup_settings(self, requested_enabled=True):
+        opened = QDesktopServices.openUrl(QUrl("ms-settings:startupapps"))
+        if opened:
+            self._start_autostart_settings_polling(requested_enabled)
+            return True
+        QMessageBox.warning(
+            self,
+            t("common.notification", "알림"),
+            t(
+                "autostart.settings_open_failed",
+                "Windows 시작 앱 설정을 열지 못했습니다. 설정 > 앱 > 시작 프로그램을 열어 주세요.",
+            ),
+        )
+        return False
+
+    def _start_autostart_settings_polling(self, requested_enabled):
+        timer = getattr(self, "_autostart_settings_poll_timer", None)
+        if timer is None:
+            timer = QTimer(self)
+            timer.setInterval(750)
+            timer.timeout.connect(self._poll_autostart_settings_state)
+            self._autostart_settings_poll_timer = timer
+        self._autostart_settings_poll_attempts = 0
+        self._autostart_settings_poll_target = bool(requested_enabled)
+        timer.start()
+
+    def _poll_autostart_settings_state(self):
+        self._autostart_settings_poll_attempts = (
+            getattr(self, "_autostart_settings_poll_attempts", 0) + 1
+        )
+        enabled = self._sync_autostart_action_state()
+        timer = getattr(self, "_autostart_settings_poll_timer", None)
+        target = getattr(self, "_autostart_settings_poll_target", None)
+        if timer is not None and (
+            enabled is target or self._autostart_settings_poll_attempts >= 80
+        ):
+            timer.stop()
 
     # ------------------------------------------------------------------ #
     # 레이아웃 / 컬럼

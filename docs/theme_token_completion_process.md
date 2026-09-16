@@ -81,6 +81,29 @@ System appearance is resolved at runtime instead of rewriting the user's saved i
 - Handling an operating-system appearance event performs no `QSettings` write. Persistence occurs only when the user accepts the appearance dialog or performs another explicit settings action.
 - A runtime theme refresh redraws affected panels without notifying data-only consumers.
 
+### Light Mode Semantic Contract
+
+- Appearance mode owns luminance and contrast; style families own hue.
+- Light surfaces use a visible shell, toolbar, item, hover, and input hierarchy. Do not
+  rely on alpha-only layers because they collapse at full opacity and vary over desktop
+  wallpaper.
+- Light-mode text, borders, scrollbars, and neutral icons use dark semantic roles.
+  Dark mode uses the corresponding light roles.
+- Navigation and action icons are rebuilt when the appearance mode changes. Active,
+  warning, and danger icons keep their semantic role colors.
+- Calendar icons preserve each calendar's identity color. When that color is below 3:1
+  contrast against the menu surface, adjust its lightness while preserving its hue.
+  Calendar labels continue to use the normal text role.
+- A custom input background belongs only to the custom text theme. Light, Dark, and
+  System derive the input surface from the resolved mode so stale dark input colors do
+  not leak into light mode.
+- User opacity applies to decorative shell surfaces. Calendar and panel reading areas
+  use `content_bg`, while tooltips and modal cards use `floating_bg`; both enforce a
+  minimum opacity so wallpaper cannot determine text contrast.
+- Light-mode reading text uses opaque neutral roles. Calendar task chips use that text
+  over a subtle calendar-color tint and reserve the calendar identity color for the
+  leading strip instead of forcing every task title to white.
+
 ## Scope Rules
 - Runtime shell/style code must prefer shared semantic tokens and dialog metrics.
 - Inline raw color/QSS is allowed only for:

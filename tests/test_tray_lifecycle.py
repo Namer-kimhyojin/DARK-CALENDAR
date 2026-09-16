@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -8,6 +8,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMenu, QWidget
 
 from calendar_app.bootstrap import _finalize_runtime
+from calendar_app.infrastructure.runtime import system_manager
 from calendar_app.infrastructure.runtime.infra_wiring import (
     _create_tray_autostart_action,
     _set_overlay_visible,
@@ -199,6 +200,107 @@ def test_autostart_toggle_keeps_top_and_tray_actions_in_sync():
 
     assert host.autostart_menu_act.isChecked()
     assert host.autostart_tray_act.isChecked()
+
+
+def test_autostart_toggle_failure_offers_guided_windows_settings_flow():
+    class _Host(WindowShellActionsMixin, QWidget):
+        pass
+
+    host = _Host()
+    host.autostart_menu_act = QAction(host)
+    host.autostart_menu_act.setCheckable(True)
+    host.autostart_act = host.autostart_menu_act
+    host.autostart_tray_act = QAction(host)
+    host.autostart_tray_act.setCheckable(True)
+
+    with (
+        patch(
+            "calendar_app.presentation.main_window.window_shell_actions.system_manager."
+            "is_autostart_enabled",
+            side_effect=[False, False],
+        ),
+        patch(
+            "calendar_app.presentation.main_window.window_shell_actions.system_manager."
+            "set_autostart",
+            return_value=False,
+        ),
+        patch.object(host, "_show_autostart_settings_help") as show_help,
+    ):
+        host.toggle_autostart(True)
+
+    show_help.assert_called_once_with(True)
+    assert not host.autostart_menu_act.isChecked()
+    assert not host.autostart_tray_act.isChecked()
+
+
+def test_open_windows_startup_settings_starts_state_polling():
+    class _Host(WindowShellActionsMixin, QWidget):
+        pass
+
+    host = _Host()
+    with (
+        patch(
+            "calendar_app.presentation.main_window.window_shell_actions.QDesktopServices.openUrl",
+            return_value=True,
+        ) as open_url,
+        patch.object(host, "_start_autostart_settings_polling") as start_polling,
+    ):
+        assert host._open_windows_startup_settings(True) is True
+
+    assert open_url.call_args.args[0].toString() == "ms-settings:startupapps"
+    start_polling.assert_called_once_with(True)
+
+
+def test_user_blocked_autostart_dialog_opens_windows_settings_from_primary_action():
+    class _Host(WindowShellActionsMixin, QWidget):
+        pass
+
+    host = _Host()
+    box = MagicMock()
+    open_button = MagicMock()
+    box.addButton.side_effect = [open_button, object()]
+    box.clickedButton.return_value = open_button
+
+    with (
+        patch(
+            "calendar_app.presentation.main_window.window_shell_actions.system_manager."
+            "get_autostart_state",
+            return_value=system_manager.AUTOSTART_DISABLED_BY_USER,
+        ),
+        patch(
+            "calendar_app.presentation.main_window.window_shell_actions.QMessageBox",
+            return_value=box,
+        ),
+        patch.object(host, "_open_windows_startup_settings") as open_settings,
+    ):
+        host._show_autostart_settings_help(True)
+
+    box.setDefaultButton.assert_called_once_with(open_button)
+    open_settings.assert_called_once_with(True)
+
+
+def test_autostart_settings_polling_stops_after_windows_enables_task():
+    class _Timer:
+        def __init__(self):
+            self.stop_calls = 0
+
+        def stop(self):
+            self.stop_calls += 1
+
+    class _Host(WindowShellActionsMixin, QWidget):
+        pass
+
+    host = _Host()
+    timer = _Timer()
+    host._autostart_settings_poll_timer = timer
+    host._autostart_settings_poll_attempts = 0
+    host._autostart_settings_poll_target = True
+
+    with patch.object(host, "_sync_autostart_action_state", return_value=True):
+        host._poll_autostart_settings_state()
+
+    assert timer.stop_calls == 1
+    assert host._autostart_settings_poll_attempts == 1
 
 
 def test_confirmed_exit_marks_explicit_exit_before_closing_window():

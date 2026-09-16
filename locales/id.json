@@ -32,7 +32,14 @@
     "disabled": "Dinonaktifkan",
     "enabled": "Diaktifkan",
     "msg": "Peluncuran otomatis saat permulaan telah {status}.",
-    "registration_failed": "Izinkan Air Calendar di pengaturan Aplikasi Startup Windows."
+    "open_settings": "Buka pengaturan Aplikasi Startup Windows",
+    "policy_instructions": "Hubungi administrator sistem untuk mengubah pengaturan ini.",
+    "registration_blocked_by_policy": "Organisasi atau kebijakan Windows mencegah perubahan pada aplikasi startup.",
+    "registration_blocked_by_user": "Aplikasi startup yang sebelumnya dinonaktifkan di Windows harus diaktifkan kembali oleh pengguna.",
+    "registration_failed": "Izinkan Air Calendar di pengaturan Aplikasi Startup Windows.",
+    "settings_instructions": "Di Pengaturan Windows, buka Aplikasi > Startup lalu aktifkan Air Calendar.",
+    "settings_instructions_disable": "Di Pengaturan Windows, buka Aplikasi > Startup lalu nonaktifkan Air Calendar.",
+    "settings_open_failed": "Pengaturan aplikasi startup tidak dapat dibuka. Buka Pengaturan > Aplikasi > Startup."
   },
   "away_lock": {
     "admin_pw_placeholder": "Kata sandi admin",
@@ -116,7 +123,15 @@
     "selection_hint": "Ctrl+Klik untuk multi-pilihan",
     "sync_hint": "Sinkr. Google",
     "today": "Hari Ini",
-    "weekdays": ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
+    "weekdays": [
+      "Sen",
+      "Sel",
+      "Rab",
+      "Kam",
+      "Jum",
+      "Sab",
+      "Min"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Tambahkan Barang",
@@ -1520,7 +1535,13 @@
     "hint_record_jump": "Enter membuka item. Shift+Enter pindah ke tanggalnya.",
     "hint_run_command": "Enter menjalankan perintah yang dipilih",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Tekan Enter untuk membuka hasil yang dipilih",
@@ -1737,8 +1758,519 @@
     "yearly": "Tahunan"
   },
   "shortcut": {
-    "content": "<h3>Panduan Pintasan</h3><hr><b>[Manajemen Jadwal]</b><br>• <b>Ctrl + N</b>: Tambah jadwal baru<br>• <b>Ctrl + R</b>: Daftarkan rutin<br>• <b>Ctrl + G</b>: Daftarkan direktif<br>• <b>Ctrl + L</b>: Kelola template daftar periksa<br>• <b>Ctrl + Shift + L</b>: Mode kunci desktop<br><br><b>[Operasi Layar]</b><br>• <b>Ctrl + Shift + B</b>: Tampilkan/sembunyikan bilah atas<br>• <b>Ctrl + M</b>: Aktifkan/nonaktifkan mode magnet<br>• <b>Ctrl + F</b>: Aktifkan/nonaktifkan mode fokus<br>• <b>F11</b>: Aktifkan/nonaktifkan layar penuh<br>• <b>Ctrl + Alt + R</b>: Manajer rutin<br><br><b>[Tata Letak Prasetel]</b><br>• <b>Ctrl + Shift + 1</b>: Tata letak tertambat penuh<br>• <b>Ctrl + Shift + 2</b>: Tata letak fokus kalender<br>• <b>Ctrl + Shift + 3</b>: Tata letak fokus tugas<br>• <b>Ctrl + Shift + 4</b>: Tata letak tab terpisah<br>• <b>Ctrl + Shift + 5</b>: Tata letak terpisah penuh<br>• <b>Ctrl + Shift + S</b>: Simpan tata letak saat ini<br><br><b>[Navigasi]</b><br>• <b>Ctrl + Left/Right</b>: Tanggal sebelumnya/berikutnya<br>• <b>Ctrl + T</b>: Lompat ke hari ini<br>• <b>Delete</b>: Hapus jadwal yang dipilih<br>• <b>Esc</b>: Batalkan pilihan<br>• <b>F1</b>: Buka panduan pintasan<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Versi: {APP_VERSION}<br>Penulis: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Panduan Pintasan Air Calendar"
+    "title": "Pusat Bantuan Air Calendar",
+    "search": "Cari bantuan",
+    "search_hint": "Cari berdasarkan nama fitur, pintasan, atau lokasi menu.",
+    "topics": "Topik bantuan",
+    "entries": {
+      "new_schedule": {
+        "label": "Tambah jadwal baru",
+        "description": "Langsung membuka jendela entri jadwal.",
+        "menu_path": "Daftarkan > Jadwal baru",
+        "tags": [
+          "jadwal",
+          "tambah",
+          "daftarkan"
+        ]
+      },
+      "new_routine": {
+        "label": "Daftarkan rutinitas",
+        "description": "Dengan cepat menambahkan rutinitas tugas berulang.",
+        "menu_path": "Daftarkan > Rutinitas",
+        "tags": [
+          "rutinitas",
+          "tugas",
+          "berulang"
+        ]
+      },
+      "new_directive": {
+        "label": "Daftarkan arahan",
+        "description": "Membuka jendela untuk memasukkan arahan atau item kerja sama.",
+        "menu_path": "Daftarkan > Arahan",
+        "tags": [
+          "arahan",
+          "kerja sama"
+        ]
+      },
+      "checklist": {
+        "label": "Kelola daftar periksa",
+        "description": "Mengelola templat dan struktur item daftar periksa.",
+        "menu_path": "Tugas > Kelola daftar periksa",
+        "tags": [
+          "daftar periksa",
+          "templat"
+        ]
+      },
+      "today": {
+        "label": "Lompat ke hari ini",
+        "description": "Segera memindahkan tanggal yang dipilih ke hari ini.",
+        "menu_path": "Navigasi",
+        "tags": [
+          "hari ini",
+          "tanggal"
+        ]
+      },
+      "prev_day": {
+        "label": "Hari sebelumnya",
+        "description": "Berpindah satu hari sebelum tanggal saat ini.",
+        "menu_path": "Navigasi",
+        "tags": [
+          "sebelumnya",
+          "tanggal",
+          "kiri"
+        ]
+      },
+      "next_day": {
+        "label": "Hari berikutnya",
+        "description": "Berpindah satu hari setelah tanggal saat ini.",
+        "menu_path": "Navigasi",
+        "tags": [
+          "berikutnya",
+          "tanggal",
+          "kanan"
+        ]
+      },
+      "command_palette": {
+        "label": "Palet perintah",
+        "description": "Membuka kotak pencarian perintah untuk menemukan fitur secara instan.",
+        "menu_path": "Panggilan langsung",
+        "tags": [
+          "cari",
+          "perintah",
+          "palet"
+        ]
+      },
+      "focus_mode": {
+        "label": "Alihkan mode fokus",
+        "description": "Mengaktifkan atau menonaktifkan mode fokus.",
+        "menu_path": "Tampilan > Mode fokus",
+        "tags": [
+          "fokus",
+          "pomodoro"
+        ]
+      },
+      "focus_pause": {
+        "label": "Jeda fokus",
+        "description": "Menjeda atau melanjutkan sesi fokus saat ini.",
+        "menu_path": "Mode fokus",
+        "tags": [
+          "fokus",
+          "jeda"
+        ]
+      },
+      "lock_mode": {
+        "label": "Mode kunci",
+        "description": "Mengaktifkan atau menonaktifkan mode kunci desktop.",
+        "menu_path": "Tampilan > Mode kunci",
+        "tags": [
+          "kunci"
+        ]
+      },
+      "magnet_mode": {
+        "label": "Mode magnet",
+        "description": "Mengalihkan mode magnet, yang membantu menyelaraskan dan menempelkan panel.",
+        "menu_path": "Tampilan > Mode magnet",
+        "tags": [
+          "magnet",
+          "panel"
+        ]
+      },
+      "away_lock": {
+        "label": "Kunci saat tidak ada",
+        "description": "Segera memulai mode kunci saat tidak ada di tempat.",
+        "menu_path": "Tampilan > Kunci saat tidak ada",
+        "tags": [
+          "tidak ada",
+          "kunci"
+        ]
+      },
+      "topbar": {
+        "label": "Alihkan bilah atas",
+        "description": "Mengalihkan visibilitas bilah menu atas.",
+        "menu_path": "Tampilan > Bilah atas",
+        "tags": [
+          "bilah menu",
+          "bilah atas",
+          "pemulihan"
+        ]
+      },
+      "cal_toolbar": {
+        "label": "Alihkan bilah alat kalender",
+        "description": "Menyembunyikan atau menampilkan kembali bilah alat kalender.",
+        "menu_path": "Tampilan > Bilah alat kalender",
+        "tags": [
+          "kalender",
+          "bilah alat"
+        ]
+      },
+      "fullscreen": {
+        "label": "Alihkan layar penuh",
+        "description": "Mengaktifkan atau menonaktifkan tampilan layar penuh.",
+        "menu_path": "Tampilan > Layar penuh",
+        "tags": [
+          "layar penuh"
+        ]
+      },
+      "save_layout": {
+        "label": "Simpan tata letak saat ini",
+        "description": "Menyimpan susunan panel saat ini sebagai preset.",
+        "menu_path": "Tampilan > Preset tata letak > Simpan",
+        "tags": [
+          "tata letak",
+          "preset",
+          "simpan"
+        ]
+      },
+      "layout_1": {
+        "label": "Preset tata letak 1",
+        "description": "Menerapkan tata letak 4 panel berlabuh default.",
+        "menu_path": "Tampilan > Preset tata letak",
+        "tags": [
+          "tata letak",
+          "preset",
+          "berlabuh",
+          "1"
+        ]
+      },
+      "layout_2": {
+        "label": "Preset tata letak 2",
+        "description": "Menerapkan tata letak yang berpusat pada kalender.",
+        "menu_path": "Tampilan > Preset tata letak",
+        "tags": [
+          "tata letak",
+          "kalender",
+          "2"
+        ]
+      },
+      "layout_3": {
+        "label": "Preset tata letak 3",
+        "description": "Menerapkan tata letak yang berpusat pada tugas.",
+        "menu_path": "Tampilan > Preset tata letak",
+        "tags": [
+          "tata letak",
+          "tugas",
+          "3"
+        ]
+      },
+      "layout_4": {
+        "label": "Preset tata letak 4",
+        "description": "Menerapkan tata letak tab terbagi.",
+        "menu_path": "Tampilan > Preset tata letak",
+        "tags": [
+          "tata letak",
+          "tab",
+          "terbagi",
+          "4"
+        ]
+      },
+      "layout_5": {
+        "label": "Preset tata letak 5",
+        "description": "Menerapkan tata letak mengambang yang sepenuhnya terpisah.",
+        "menu_path": "Tampilan > Preset tata letak",
+        "tags": [
+          "tata letak",
+          "terpisah",
+          "mengambang",
+          "5"
+        ]
+      },
+      "calendar_print": {
+        "label": "Cetak kalender",
+        "description": "Melihat pratinjau dan mencetak kalender untuk periode saat ini atau yang dipilih.",
+        "menu_path": "Kalender > Opsi > Cetak",
+        "tags": [
+          "cetak",
+          "printer",
+          "PDF"
+        ]
+      },
+      "sync_gcal": {
+        "label": "Sinkronkan Google Kalender",
+        "description": "Segera memulai sinkronisasi dengan Google Kalender.",
+        "menu_path": "Sistem > Kalender dan sinkronisasi",
+        "tags": [
+          "google",
+          "sinkronisasi",
+          "kalender",
+          "F5"
+        ]
+      },
+      "routine_mgr": {
+        "label": "Pengelola rutinitas",
+        "description": "Langsung membuka tab pengelola rutinitas.",
+        "menu_path": "Tugas > Ringkasan rutinitas",
+        "tags": [
+          "rutinitas",
+          "kelola"
+        ]
+      },
+      "color_assign": {
+        "label": "Penetapan warna otomatis",
+        "description": "Secara otomatis menetapkan warna ke item yang dipilih.",
+        "menu_path": "Tugas > Penetapan warna otomatis",
+        "tags": [
+          "warna",
+          "label",
+          "otomatis"
+        ]
+      },
+      "show_hide": {
+        "label": "Tampilkan/sembunyikan jendela",
+        "description": "Menyembunyikan jendela utama atau menampilkannya kembali.",
+        "menu_path": "Kontrol jendela",
+        "tags": [
+          "jendela",
+          "sembunyikan",
+          "tampilkan",
+          "overlay"
+        ]
+      },
+      "widget_mode": {
+        "label": "Alihkan mode widget",
+        "description": "Membuka mode panel khusus widget.",
+        "menu_path": "Tampilan > Mode khusus widget",
+        "tags": [
+          "widget",
+          "panel"
+        ]
+      },
+      "restore_pos": {
+        "label": "Pulihkan posisi jendela",
+        "description": "Memulihkan jendela ke posisi layar yang aman.",
+        "menu_path": "Kontrol jendela",
+        "tags": [
+          "jendela",
+          "pulihkan",
+          "posisi"
+        ]
+      },
+      "opacity_up": {
+        "label": "Tingkatkan opasitas",
+        "description": "Meningkatkan opasitas jendela.",
+        "menu_path": "Kontrol jendela",
+        "tags": [
+          "opasitas",
+          "lebih terang"
+        ]
+      },
+      "opacity_down": {
+        "label": "Kurangi opasitas",
+        "description": "Mengurangi opasitas jendela.",
+        "menu_path": "Kontrol jendela",
+        "tags": [
+          "opasitas",
+          "lebih gelap"
+        ]
+      },
+      "monitor_left": {
+        "label": "Pindah ke monitor sebelumnya",
+        "description": "Memindahkan jendela ke monitor lain.",
+        "menu_path": "Kontrol jendela",
+        "tags": [
+          "monitor",
+          "layar",
+          "kiri"
+        ]
+      },
+      "monitor_right": {
+        "label": "Pindah ke monitor berikutnya",
+        "description": "Memindahkan jendela ke monitor lain.",
+        "menu_path": "Kontrol jendela",
+        "tags": [
+          "monitor",
+          "layar",
+          "kanan"
+        ]
+      },
+      "help": {
+        "label": "Panduan pintasan",
+        "description": "Membuka pusat bantuan.",
+        "menu_path": "Sistem > Panduan pintasan",
+        "tags": [
+          "bantuan",
+          "F1"
+        ]
+      },
+      "delete": {
+        "label": "Hapus item yang dipilih",
+        "description": "Menghapus jadwal atau item yang sedang dipilih.",
+        "menu_path": "Status pemilihan",
+        "tags": [
+          "hapus",
+          "buang"
+        ]
+      },
+      "escape": {
+        "label": "Hapus pilihan",
+        "description": "Menghapus pilihan atau fokus saat ini.",
+        "menu_path": "Status pemilihan",
+        "tags": [
+          "batalkan pilihan",
+          "batal",
+          "escape"
+        ]
+      },
+      "force_unlock": {
+        "label": "Paksa buka kunci",
+        "description": "Secara paksa menghapus status kunci yang tidak terduga.",
+        "menu_path": "Pemulihan darurat",
+        "tags": [
+          "paksa",
+          "buka kunci",
+          "pemulihan",
+          "darurat"
+        ]
+      }
+    },
+    "groups": {
+      "register": {
+        "label": "Daftarkan",
+        "description": "Segera mulai jadwal, rutinitas, atau arahan baru."
+      },
+      "navigate": {
+        "label": "Navigasi",
+        "description": "Berpindah antara tanggal dan pilihan, atau memanggil fitur secara instan."
+      },
+      "mode": {
+        "label": "Mode",
+        "description": "Mengontrol mode kerja seperti fokus, magnet, dan kunci."
+      },
+      "view": {
+        "label": "Tampilan",
+        "description": "Mencakup bilah alat, layar penuh, dan tata letak."
+      },
+      "admin": {
+        "label": "Administrasi",
+        "description": "Membuka layar manajemen dan alat pembersihan otomatis."
+      },
+      "window": {
+        "label": "Jendela",
+        "description": "Menyesuaikan perilaku jendela seperti posisi, monitor, dan opasitas."
+      },
+      "system": {
+        "label": "Sistem",
+        "description": "Akses bantuan dan fitur dukungan sistem."
+      },
+      "edit": {
+        "label": "Edit",
+        "description": "Menghapus atau mengatur pilihan saat ini."
+      },
+      "emergency": {
+        "label": "Darurat",
+        "description": "Secara paksa memulihkan dari status kunci yang tidak terduga."
+      }
+    },
+    "priority": {
+      "topbar": {
+        "badge": "Pulihkan bilah menu",
+        "note": "Hal pertama yang harus diperiksa saat bilah atas menghilang."
+      },
+      "magnet_mode": {
+        "badge": "Alihkan magnet",
+        "note": "Dengan cepat mengalihkan apakah panel dapat bergerak dan menempel."
+      },
+      "lock_mode": {
+        "badge": "Buka kunci",
+        "note": "Alihkan langsung dari layar utama, bahkan saat terkunci."
+      },
+      "force_unlock": {
+        "badge": "Pemulihan darurat",
+        "note": "Secara paksa menghapus status kunci yang tidak terduga."
+      }
+    },
+    "pages": {
+      "quickstart": {
+        "title": "Mulai cepat",
+        "subtitle": "Apa yang harus diperiksa dulu dan apa yang paling sering Anda gunakan"
+      },
+      "workflows": {
+        "title": "Tugas umum",
+        "subtitle": "Pintasan utama yang dikelompokkan berdasarkan situasi"
+      },
+      "recovery": {
+        "title": "Pemulihan layar",
+        "subtitle": "Tombol untuk kunci, menu tersembunyi, dan pemulihan jendela"
+      },
+      "reference": {
+        "title": "Semua pintasan",
+        "subtitle": "Daftar lengkap berdasarkan kategori"
+      }
+    },
+    "workflows": {
+      "new": {
+        "title": "Buat sesuatu yang baru",
+        "desc": "Saat memulai jadwal atau tugas dengan cepat"
+      },
+      "navigate": {
+        "title": "Bergerak dan mencari",
+        "desc": "Saat berpindah antar tanggal atau mencari fitur dengan cepat"
+      },
+      "layout": {
+        "title": "Layar dan tata letak",
+        "desc": "Saat mengubah tampilan atau susunan panel"
+      },
+      "focus_lock": {
+        "title": "Fokus dan kunci",
+        "desc": "Saat mengontrol status fokus atau status kunci"
+      },
+      "window_tools": {
+        "title": "Alat jendela dan administrasi",
+        "desc": "Saat menyesuaikan status jendela atau saat memerlukan fitur manajemen"
+      }
+    },
+    "hero": {
+      "quickstart": {
+        "title": "Fitur yang paling sering digunakan lebih dulu",
+        "desc": "Kami menempatkan di atas apa yang akan Anda gunakan segera setelah membuka aplikasi, dan apa yang akan Anda cari saat menekan F1."
+      },
+      "workflows": {
+        "title": "Dikelompokkan berdasarkan situasi untuk menemukan lebih cepat",
+        "desc": "Pintasan dikelompokkan seputar alur kerja nyata seperti mendaftar, bernavigasi, dan beralih tampilan, sehingga Anda dapat menemukannya berdasarkan situasi bahkan tanpa mengetahui namanya."
+      },
+      "recovery": {
+        "title": "Tombol untuk dicoba pertama kali saat mengalami masalah",
+        "desc": "Hanya tombol yang paling Anda butuhkan saat menu menghilang atau status kunci menjadi kacau."
+      },
+      "reference": {
+        "title": "Jelajahi semua pintasan berdasarkan kategori",
+        "desc": "Setiap pintasan diatur berdasarkan grup fungsi — bagus untuk memindai tanpa mencari."
+      },
+      "search": {
+        "title": "Hasil pencarian",
+        "desc": "Ketikkan nama tombol atau fitur untuk langsung melihat pintasan yang cocok."
+      }
+    },
+    "chrome": {
+      "eyebrow": "PUSAT BANTUAN F1",
+      "header_title": "Pusat bantuan untuk menemukan pintasan dan fitur dengan cepat",
+      "header_subtitle": "Cari berdasarkan nama fitur, nama tombol, atau lokasi menu, dan temukan dengan cepat apa yang paling sering Anda gunakan.",
+      "badge_recovery": "4 tombol pemulihan inti",
+      "badge_total": "Total {count} pintasan",
+      "badge_search": "Pencarian didukung",
+      "search_placeholder": "mis. kunci, widget, F11, Ctrl+Shift+1",
+      "search_examples": "Coba cari: bilah menu, kalender, rutinitas, paksa buka kunci",
+      "sidebar_title": "Jelajahi",
+      "sidebar_hint": "Pilih bagian di sebelah kiri, atau cari langsung menggunakan kotak di atas.",
+      "footer_hint": "Pencarian bekerja berdasarkan nama fitur, pintasan, atau lokasi menu.",
+      "quickstart_section_title": "Mulai di sini",
+      "quickstart_section_desc": "Pengguna baru dapat memulai di sini untuk langsung memahami cara kerjanya.",
+      "search_tips_title": "Tips pencarian",
+      "search_tips_desc": "Bantuan juga dapat dicari berdasarkan nama menu dan kata kunci situasional, tidak hanya pintasan.",
+      "tip_lock": "Saat kunci tidak terlepas: coba cari `kunci`, `pemulihan`, `paksa`",
+      "tip_layout": "Saat ingin mengubah tata letak: coba cari `tata letak`, `preset`, `Ctrl+Shift+1`",
+      "tip_widget": "Saat mencari fitur widget: coba cari `widget`, `F12`",
+      "recovery_primary_title": "Tombol pemulihan yang harus diperiksa dulu",
+      "recovery_primary_desc": "Tombol yang harus dicoba dulu saat ada yang tidak beres.",
+      "recovery_secondary_title": "Tombol berguna yang perlu diingat bersamaan",
+      "recovery_secondary_desc": "Pintasan yang sering diperlukan bersamaan saat membersihkan status kunci atau jendela.",
+      "search_results_title": "Hasil pencarian",
+      "search_results_desc": "Ketikkan istilah pencarian untuk melihat hasil muncul di sini secara instan.",
+      "search_results_count": "{count} hasil untuk '{query}'",
+      "search_empty": "Tidak ada hasil yang cocok.\nCoba kata kunci yang lebih pendek, seperti nama fitur, tombol, atau menu.",
+      "meta_menu_path": "Lokasi menu: {value}",
+      "meta_aliases": "Tombol tambahan: {value}",
+      "meta_group": "Kategori: {value}"
+    }
   },
   "splash": {
     "initializing_db": "Menginisialisasi database...",

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import unittest
 
@@ -9,6 +10,7 @@ from PyQt6.QtWidgets import QApplication, QDockWidget, QMainWindow, QWidget
 
 from calendar_app.infrastructure.runtime.keyboard_shortcuts import (
     get_key,
+    get_shortcut_guide_entries,
     register_all,
     search_shortcut_guide_entries,
 )
@@ -157,6 +159,19 @@ class KeyboardShortcutTests(unittest.TestCase):
         self.assertIn("focus_mode", focus_results)
         self.assertIn("widget_mode", widget_results)
         self.assertEqual("F12", get_key("widget_mode"))
+
+    def test_help_entries_do_not_expose_missing_priority_translation_keys(self):
+        entries = get_shortcut_guide_entries()
+        unresolved = [
+            entry["id"]
+            for entry in entries
+            if str(entry.get("priority_badge_ko") or "").startswith("shortcut.priority.")
+        ]
+
+        self.assertEqual([], unresolved)
+        focus = next(entry for entry in entries if entry["id"] == "focus_mode")
+        self.assertEqual("", focus["priority_badge_ko"])
+        self.assertEqual("", focus["priority_note_ko"])
 
     def test_layout_shortcuts_trigger_preset_handlers_with_real_key_input(self):
         host = _ShortcutHost()

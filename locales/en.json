@@ -32,7 +32,14 @@
     "disabled": "Disabled",
     "enabled": "Enabled",
     "msg": "Auto-launch on startup has been {status}.",
-    "registration_failed": "Please allow Air Calendar in Windows Startup Apps settings."
+    "open_settings": "Open Windows Startup Apps",
+    "policy_instructions": "Contact your system administrator to change this setting.",
+    "registration_blocked_by_policy": "Your organization or Windows policy prevents changes to startup apps.",
+    "registration_blocked_by_user": "A startup app previously disabled in Windows must be re-enabled by the user.",
+    "registration_failed": "Please allow Air Calendar in Windows Startup Apps settings.",
+    "settings_instructions": "In Windows Settings, open Apps > Startup and turn on Air Calendar.",
+    "settings_instructions_disable": "In Windows Settings, open Apps > Startup and turn off Air Calendar.",
+    "settings_open_failed": "Windows Startup Apps settings could not be opened. Open Settings > Apps > Startup."
   },
   "away_lock": {
     "admin_pw_placeholder": "Admin password",
@@ -116,7 +123,15 @@
     "selection_hint": "Ctrl+Click for multi-selection",
     "sync_hint": "Google Calendar sync",
     "today": "Today",
-    "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    "weekdays": [
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+      "Sun"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Add Item",
@@ -1520,7 +1535,13 @@
     "hint_record_jump": "Enter opens the item. Shift+Enter moves to its date.",
     "hint_run_command": "Enter runs the selected command",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Press Enter to open the selected result",
@@ -1737,8 +1758,519 @@
     "yearly": "Yearly"
   },
   "shortcut": {
-    "content": "<h3>Shortcut Guide</h3><hr><b>[Schedule Management]</b><br>• <b>Ctrl + N</b>: Add New Schedule<br>• <b>Ctrl + R</b>: Register Routine<br>• <b>Ctrl + D</b>: Register Directive<br>• <b>Ctrl + L</b>: Manage Checklist Templates<br>• <b>Ctrl + Shift + L</b>: Desktop Lock Mode<br><br><b>[Screen Operations]</b><br>• <b>Ctrl + B</b>: Show/Hide Top Bar<br>• <b>Ctrl + M</b>: Toggle Magnet Mode<br>• <b>Ctrl + F</b>: Toggle Focus Mode<br>• <b>Ctrl + Space</b>: Toggle Focus Mode<br>• <b>F11</b>: Toggle Fullscreen<br>• <b>Ctrl + Alt + R</b>: Routine Weekly Dashboard<br><br><b>[Layout Presets]</b><br>• <b>Ctrl + Shift + 1</b>: Full Docked Layout<br>• <b>Ctrl + Shift + 2</b>: Calendar Focused Layout<br>• <b>Ctrl + Shift + 3</b>: Task Focused Layout<br>• <b>Ctrl + Shift + 4</b>: Tab Split Layout<br>• <b>Ctrl + Shift + 5</b>: Full Detached Layout<br>• <b>Ctrl + Shift + S</b>: Save Current Layout<br><br><b>[Navigation]</b><br>• <b>Ctrl + Left/Right</b>: Prev/Next Date<br>• <b>Ctrl + T</b>: Jump to Today<br>• <b>Delete</b>: Delete Selected Schedule<br>• <b>Delete</b> (on date): Delete All Schedules on that Date<br>• <b>Esc</b>: Clear Selection<br>• <b>F1</b>: Open Shortcut Guide<br><hr><div style=\"color:#888; font-size:11px;\"><b>Air Calendar</b><br>Version: {APP_VERSION}<br>Author: {APP_AUTHOR} ({APP_EMAIL})</div>",
-    "title": "Air Calendar Shortcut Guide"
+    "title": "Air Calendar Help Center",
+    "search": "Search help",
+    "search_hint": "Search by feature name, shortcut, or menu location.",
+    "topics": "Help topics",
+    "entries": {
+      "new_schedule": {
+        "label": "Add new schedule",
+        "description": "Opens the schedule entry window directly.",
+        "menu_path": "Register > New schedule",
+        "tags": [
+          "schedule",
+          "add",
+          "register"
+        ]
+      },
+      "new_routine": {
+        "label": "Register routine",
+        "description": "Quickly adds a recurring work routine.",
+        "menu_path": "Register > Routine",
+        "tags": [
+          "routine",
+          "task",
+          "recurring"
+        ]
+      },
+      "new_directive": {
+        "label": "Register directive",
+        "description": "Opens the window for entering a directive or cooperation item.",
+        "menu_path": "Register > Directive",
+        "tags": [
+          "directive",
+          "cooperation"
+        ]
+      },
+      "checklist": {
+        "label": "Manage checklist",
+        "description": "Manages checklist templates and item structure.",
+        "menu_path": "Tasks > Manage checklist",
+        "tags": [
+          "checklist",
+          "template"
+        ]
+      },
+      "today": {
+        "label": "Jump to today",
+        "description": "Instantly moves the selected date to today.",
+        "menu_path": "Navigation",
+        "tags": [
+          "today",
+          "date"
+        ]
+      },
+      "prev_day": {
+        "label": "Previous day",
+        "description": "Moves one day before the current date.",
+        "menu_path": "Navigation",
+        "tags": [
+          "previous",
+          "date",
+          "left"
+        ]
+      },
+      "next_day": {
+        "label": "Next day",
+        "description": "Moves one day after the current date.",
+        "menu_path": "Navigation",
+        "tags": [
+          "next",
+          "date",
+          "right"
+        ]
+      },
+      "command_palette": {
+        "label": "Command palette",
+        "description": "Opens the command search box to find a feature instantly.",
+        "menu_path": "Direct call",
+        "tags": [
+          "search",
+          "command",
+          "palette"
+        ]
+      },
+      "focus_mode": {
+        "label": "Toggle focus mode",
+        "description": "Turns focus mode on or off.",
+        "menu_path": "View > Focus mode",
+        "tags": [
+          "focus",
+          "pomodoro"
+        ]
+      },
+      "focus_pause": {
+        "label": "Pause focus",
+        "description": "Pauses or resumes the current focus session.",
+        "menu_path": "Focus mode",
+        "tags": [
+          "focus",
+          "pause"
+        ]
+      },
+      "lock_mode": {
+        "label": "Lock mode",
+        "description": "Switches desktop lock mode on or off.",
+        "menu_path": "View > Lock mode",
+        "tags": [
+          "lock"
+        ]
+      },
+      "magnet_mode": {
+        "label": "Magnet mode",
+        "description": "Switches magnet mode, which helps align and snap panels.",
+        "menu_path": "View > Magnet mode",
+        "tags": [
+          "magnet",
+          "panel"
+        ]
+      },
+      "away_lock": {
+        "label": "Away lock",
+        "description": "Immediately starts away-lock mode.",
+        "menu_path": "View > Away lock",
+        "tags": [
+          "away",
+          "lock"
+        ]
+      },
+      "topbar": {
+        "label": "Toggle top bar",
+        "description": "Switches whether the top menu bar is shown.",
+        "menu_path": "View > Top bar",
+        "tags": [
+          "menu bar",
+          "top bar",
+          "recovery"
+        ]
+      },
+      "cal_toolbar": {
+        "label": "Toggle calendar toolbar",
+        "description": "Hides or shows the calendar toolbar again.",
+        "menu_path": "View > Calendar toolbar",
+        "tags": [
+          "calendar",
+          "toolbar"
+        ]
+      },
+      "fullscreen": {
+        "label": "Toggle fullscreen",
+        "description": "Switches fullscreen display on or off.",
+        "menu_path": "View > Fullscreen",
+        "tags": [
+          "fullscreen"
+        ]
+      },
+      "save_layout": {
+        "label": "Save current layout",
+        "description": "Saves the current panel arrangement as a preset.",
+        "menu_path": "View > Layout presets > Save",
+        "tags": [
+          "layout",
+          "preset",
+          "save"
+        ]
+      },
+      "layout_1": {
+        "label": "Layout preset 1",
+        "description": "Applies the default 4-panel docked layout.",
+        "menu_path": "View > Layout presets",
+        "tags": [
+          "layout",
+          "preset",
+          "docked",
+          "1"
+        ]
+      },
+      "layout_2": {
+        "label": "Layout preset 2",
+        "description": "Applies a calendar-first layout.",
+        "menu_path": "View > Layout presets",
+        "tags": [
+          "layout",
+          "calendar",
+          "2"
+        ]
+      },
+      "layout_3": {
+        "label": "Layout preset 3",
+        "description": "Applies a task-first layout.",
+        "menu_path": "View > Layout presets",
+        "tags": [
+          "layout",
+          "task",
+          "3"
+        ]
+      },
+      "layout_4": {
+        "label": "Layout preset 4",
+        "description": "Applies a split-tab layout.",
+        "menu_path": "View > Layout presets",
+        "tags": [
+          "layout",
+          "tab",
+          "split",
+          "4"
+        ]
+      },
+      "layout_5": {
+        "label": "Layout preset 5",
+        "description": "Applies a fully separated floating layout.",
+        "menu_path": "View > Layout presets",
+        "tags": [
+          "layout",
+          "separated",
+          "floating",
+          "5"
+        ]
+      },
+      "calendar_print": {
+        "label": "Print calendar",
+        "description": "Previews and prints the calendar for the current or a chosen period.",
+        "menu_path": "Calendar > Options > Print",
+        "tags": [
+          "print",
+          "printer",
+          "PDF"
+        ]
+      },
+      "sync_gcal": {
+        "label": "Sync Google Calendar",
+        "description": "Starts a Google Calendar sync immediately.",
+        "menu_path": "System > Calendar and sync",
+        "tags": [
+          "google",
+          "sync",
+          "calendar",
+          "F5"
+        ]
+      },
+      "routine_mgr": {
+        "label": "Routine manager",
+        "description": "Opens the routine manager tab directly.",
+        "menu_path": "Tasks > Routine overview",
+        "tags": [
+          "routine",
+          "manage"
+        ]
+      },
+      "color_assign": {
+        "label": "Auto color assignment",
+        "description": "Automatically assigns colors to the selected items.",
+        "menu_path": "Tasks > Auto color assignment",
+        "tags": [
+          "color",
+          "tag",
+          "auto"
+        ]
+      },
+      "show_hide": {
+        "label": "Show/hide window",
+        "description": "Hides the main window or shows it again.",
+        "menu_path": "Window control",
+        "tags": [
+          "window",
+          "hide",
+          "show",
+          "overlay"
+        ]
+      },
+      "widget_mode": {
+        "label": "Toggle widget mode",
+        "description": "Opens widget-only panel mode.",
+        "menu_path": "View > Widget-only mode",
+        "tags": [
+          "widget",
+          "panel"
+        ]
+      },
+      "restore_pos": {
+        "label": "Restore window position",
+        "description": "Restores the window to a safe screen position.",
+        "menu_path": "Window control",
+        "tags": [
+          "window",
+          "restore",
+          "position"
+        ]
+      },
+      "opacity_up": {
+        "label": "Increase opacity",
+        "description": "Raises the window opacity.",
+        "menu_path": "Window control",
+        "tags": [
+          "opacity",
+          "brighter"
+        ]
+      },
+      "opacity_down": {
+        "label": "Decrease opacity",
+        "description": "Lowers the window opacity.",
+        "menu_path": "Window control",
+        "tags": [
+          "opacity",
+          "dimmer"
+        ]
+      },
+      "monitor_left": {
+        "label": "Move to previous monitor",
+        "description": "Moves the window to a different monitor.",
+        "menu_path": "Window control",
+        "tags": [
+          "monitor",
+          "display",
+          "left"
+        ]
+      },
+      "monitor_right": {
+        "label": "Move to next monitor",
+        "description": "Moves the window to a different monitor.",
+        "menu_path": "Window control",
+        "tags": [
+          "monitor",
+          "display",
+          "right"
+        ]
+      },
+      "help": {
+        "label": "Shortcut guide",
+        "description": "Opens the help center.",
+        "menu_path": "System > Shortcut guide",
+        "tags": [
+          "help",
+          "F1"
+        ]
+      },
+      "delete": {
+        "label": "Delete selected item",
+        "description": "Deletes the currently selected schedule or item.",
+        "menu_path": "Selection state",
+        "tags": [
+          "delete",
+          "remove"
+        ]
+      },
+      "escape": {
+        "label": "Clear selection",
+        "description": "Clears the current selection or focus.",
+        "menu_path": "Selection state",
+        "tags": [
+          "deselect",
+          "cancel",
+          "escape"
+        ]
+      },
+      "force_unlock": {
+        "label": "Force unlock",
+        "description": "Forcibly clears an unexpected lock state.",
+        "menu_path": "Emergency recovery",
+        "tags": [
+          "force",
+          "unlock",
+          "recovery",
+          "emergency"
+        ]
+      }
+    },
+    "groups": {
+      "register": {
+        "label": "Register",
+        "description": "Quickly start a new schedule, routine, or directive."
+      },
+      "navigate": {
+        "label": "Navigate",
+        "description": "Move through dates and selections, or call features instantly."
+      },
+      "mode": {
+        "label": "Mode",
+        "description": "Controls work modes such as focus, magnet, and lock."
+      },
+      "view": {
+        "label": "View",
+        "description": "Covers toolbars, fullscreen, and layout."
+      },
+      "admin": {
+        "label": "Admin",
+        "description": "Opens management screens and automated cleanup tools."
+      },
+      "window": {
+        "label": "Window",
+        "description": "Adjusts window behavior such as position, monitor, and opacity."
+      },
+      "system": {
+        "label": "System",
+        "description": "Access help and system support features."
+      },
+      "edit": {
+        "label": "Edit",
+        "description": "Clears or organizes the current selection."
+      },
+      "emergency": {
+        "label": "Emergency",
+        "description": "Forcibly recovers from an unexpected lock state."
+      }
+    },
+    "priority": {
+      "topbar": {
+        "badge": "Recover menu bar",
+        "note": "The first thing to check when the top bar disappears."
+      },
+      "magnet_mode": {
+        "badge": "Toggle magnet",
+        "note": "Quickly switches whether panels can move and snap."
+      },
+      "lock_mode": {
+        "badge": "Unlock",
+        "note": "Toggle it right from the main screen, even while locked."
+      },
+      "force_unlock": {
+        "badge": "Emergency recovery",
+        "note": "Forcibly clears an unexpected lock state."
+      }
+    },
+    "pages": {
+      "quickstart": {
+        "title": "Quick start",
+        "subtitle": "What to look for first, and what you'll use most"
+      },
+      "workflows": {
+        "title": "Common tasks",
+        "subtitle": "Key shortcuts grouped by situation"
+      },
+      "recovery": {
+        "title": "Screen recovery",
+        "subtitle": "Keys for lock, hidden menus, and window recovery"
+      },
+      "reference": {
+        "title": "All shortcuts",
+        "subtitle": "Full list by category"
+      }
+    },
+    "workflows": {
+      "new": {
+        "title": "Create something new",
+        "desc": "When starting a schedule or task quickly"
+      },
+      "navigate": {
+        "title": "Move and search",
+        "desc": "When moving between dates or searching for a feature quickly"
+      },
+      "layout": {
+        "title": "Screen and layout",
+        "desc": "When changing how things look or how panels are arranged"
+      },
+      "focus_lock": {
+        "title": "Focus and lock",
+        "desc": "When controlling focus state or lock state"
+      },
+      "window_tools": {
+        "title": "Window and admin tools",
+        "desc": "When adjusting window state or need a management feature"
+      }
+    },
+    "hero": {
+      "quickstart": {
+        "title": "The most-used features come first",
+        "desc": "We put what you'll use right after opening the app, and what you'll reach for when pressing F1, at the very top."
+      },
+      "workflows": {
+        "title": "Grouped by situation for faster finding",
+        "desc": "Shortcuts are grouped around real workflows like registering, navigating, and switching views, so you can find them by situation even if you don't know the name."
+      },
+      "recovery": {
+        "title": "Keys to try first when you're stuck",
+        "desc": "Only the keys you need most when the menu disappears or the lock state gets tangled."
+      },
+      "reference": {
+        "title": "Browse all shortcuts by category",
+        "desc": "Every shortcut organized by function group — good for scanning without searching."
+      },
+      "search": {
+        "title": "Search results",
+        "desc": "Type a key name or feature name to see matching shortcuts right away."
+      }
+    },
+    "chrome": {
+      "eyebrow": "F1 HELP CENTER",
+      "header_title": "The help center for finding shortcuts and features fast",
+      "header_subtitle": "Search by feature name, key name, or menu location, and quickly find what you use most.",
+      "badge_recovery": "4 core recovery keys",
+      "badge_total": "{count} shortcuts total",
+      "badge_search": "Search supported",
+      "search_placeholder": "e.g. lock, widget, F11, Ctrl+Shift+1",
+      "search_examples": "Try searching: menu bar, calendar, routine, force unlock",
+      "sidebar_title": "Browse",
+      "sidebar_hint": "Pick a section on the left, or search directly using the box above.",
+      "footer_hint": "Search works by feature name, shortcut, or menu location.",
+      "quickstart_section_title": "Get started here",
+      "quickstart_section_desc": "New users can start here to get the hang of things right away.",
+      "search_tips_title": "Search tips",
+      "search_tips_desc": "Help is searchable by menu names and situational keywords too, not just shortcuts.",
+      "tip_lock": "When a lock won't release: try `lock`, `recovery`, `force`",
+      "tip_layout": "When you want to change the layout: try `layout`, `preset`, `Ctrl+Shift+1`",
+      "tip_widget": "When looking for widget features: try `widget`, `F12`",
+      "recovery_primary_title": "Recovery keys to check first",
+      "recovery_primary_desc": "The keys to try first when something goes wrong.",
+      "recovery_secondary_title": "Handy keys to remember alongside them",
+      "recovery_secondary_desc": "Shortcuts often needed together when cleaning up lock or window state.",
+      "search_results_title": "Search results",
+      "search_results_desc": "Type a search term to see results appear here right away.",
+      "search_results_count": "{count} results for '{query}'",
+      "search_empty": "No matching results.\nTry a shorter keyword, like a feature name, key name, or menu name.",
+      "meta_menu_path": "Menu location: {value}",
+      "meta_aliases": "Additional keys: {value}",
+      "meta_group": "Category: {value}"
+    }
   },
   "splash": {
     "initializing_db": "Initializing database...",
@@ -2358,10 +2890,12 @@
     "empty_panel": "No items for this date.",
     "empty_schedule": "No schedule",
     "empty_schedule_filter": "No schedules for this date.",
+    "empty_directive_filter": "No directives for this date.",
     "empty_work": "No work items",
     "empty_work_filter": "No work for this date.",
     "filter_all": "All",
     "filter_schedule": "Schedule",
+    "filter_directive": "Directives",
     "filter_work": "Work",
     "filtered_count_chip": "{count}/{total}",
     "focus_list": "Focus List",
@@ -2379,6 +2913,7 @@
     "hide_calendar": "Hide Calendar",
     "hide_tray": "Hide to tray",
     "item_count_chip": "{count} items",
+    "item_more_named": "Item actions: {name}",
     "layout_agenda_first": "Agenda First",
     "layout_dashboard": "Side-by-side Dashboard",
     "layout_magazine": "Magazine Board",
@@ -2400,6 +2935,7 @@
     "menu_google_sync": "Google Sync",
     "menu_individual_opacity": "Opacity",
     "menu_priority": "Priority",
+    "menu_reopen": "Reopen",
     "menu_realign": "Realign widgets",
     "menu_refresh": "Refresh",
     "menu_reserve_space": "Reserve screen space",
@@ -2445,6 +2981,8 @@
     "schedule_title": "Schedule",
     "schedule_type": "Schedule",
     "section_directive_today": "Directives",
+    "section_directive_no_deadline": "Directives without a deadline",
+    "section_directive_overdue": "Overdue directives",
     "section_routine_today": "Routine",
     "section_today": "Today",
     "section_work_today": "Today's work",
