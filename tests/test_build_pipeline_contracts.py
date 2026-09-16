@@ -172,6 +172,29 @@ class BuildPipelineContractTests(unittest.TestCase):
         self.assertIn("eventBand.hidden = !eventActive;", script)
         self.assertNotIn("setupEventModal", script)
 
+    def test_homepage_uses_air_calendar_brand_assets(self):
+        homepage = self._read("docs/index.html")
+        promo = self._read("docs/promo.html")
+        script = self._read("docs/app.js")
+
+        for legacy_label in (
+            "DARK CALENDAR FOR WINDOWS",
+            "SHARE DARK CALENDAR",
+            "GOOGLE → DARK",
+            "DARK → GOOGLE",
+        ):
+            self.assertNotIn(legacy_label, homepage)
+
+        self.assertIn("assets/og-air-calendar.png", homepage)
+        self.assertIn("calendar-sync-air-calendar.png", script)
+        for asset_name in (
+            "promo-air-calendar-landscape.png",
+            "promo-air-calendar-square.png",
+            "promo-air-calendar-story.png",
+        ):
+            self.assertIn(f"assets/{asset_name}", promo)
+            self.assertTrue((ROOT / "docs" / "assets" / asset_name).is_file())
+
 
 if __name__ == "__main__":
     unittest.main()
