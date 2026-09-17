@@ -552,7 +552,7 @@ class ThemeContractTests(unittest.TestCase):
 
         self.assertIn("background-color: rgba(9,19,29,230);", surface_qss)
         self.assertIn("border-radius: 15px;", surface_qss)
-        self.assertIn("background-color: rgba(9,19,29,230);", shell_qss)
+        self.assertIn("background-color: transparent;", shell_qss)
         self.assertIn("border-radius: 11px;", shell_qss)
         self.assertIn("border-radius: 9px;", bundle["today_btn"])
         self.assertIn("border-radius: 9px;", bundle["icon_btn"])
