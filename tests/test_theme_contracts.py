@@ -542,6 +542,7 @@ class ThemeContractTests(unittest.TestCase):
 
         surface_qss = _calendar_surface_style(tokens=tokens, shape=shape)
         shell_qss = _calendar_toolbar_shell_style(True, tokens=tokens, shape=shape)
+        collapsed_shell_qss = _calendar_toolbar_shell_style(False, tokens=tokens, shape=shape)
         bundle = _calendar_toolbar_style_bundle(tokens=tokens, shape=shape)
         detail_bundle = _subscription_detail_style_bundle(tokens=tokens, shape=shape)
         default_tokens = get_ui_tokens()
@@ -552,7 +553,9 @@ class ThemeContractTests(unittest.TestCase):
 
         self.assertIn("background-color: rgba(9,19,29,230);", surface_qss)
         self.assertIn("border-radius: 15px;", surface_qss)
-        self.assertIn("background-color: transparent;", shell_qss)
+        self.assertIn("background-color: rgba(9,19,29,230);", shell_qss)
+        self.assertNotIn("background-color: rgba(12,24,36,220);", shell_qss)
+        self.assertIn("background-color: transparent;", collapsed_shell_qss)
         self.assertIn("border-radius: 11px;", shell_qss)
         self.assertIn("border-radius: 9px;", bundle["today_btn"])
         self.assertIn("border-radius: 9px;", bundle["icon_btn"])

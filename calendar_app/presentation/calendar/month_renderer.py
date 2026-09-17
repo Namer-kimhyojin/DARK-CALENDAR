@@ -202,7 +202,7 @@ def _calendar_toolbar_shell_style(expanded: bool, tokens=None, shape=None):
     toolbar_radius = int(shape.get("calendar_toolbar_surface_radius", 8))
     return f"""
         QWidget#calendar_toolbar {{
-            background-color: transparent;
+            background-color: {tokens["bg_main"]};
             border-radius: {toolbar_radius}px;
             border: 1px solid {tokens["divider"]};
         }}
