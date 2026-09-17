@@ -176,6 +176,7 @@ class I18nRuntimeSupportTests(unittest.TestCase):
             "dialog.theme.preview.show_current_tip",
             "dialog.theme.reset_section",
             "dialog.theme.revert_all",
+            "splash.organizing_today",
             "calendar.opt_weekend_hidden",
             "calendar.opt_weekend_hidden_hint",
             "calendar.more_items",
@@ -207,6 +208,36 @@ class I18nRuntimeSupportTests(unittest.TestCase):
                 missing_by_locale[path.name] = missing
 
         self.assertFalse(missing_by_locale, msg=f"Locale coverage gaps: {missing_by_locale}")
+
+    def test_splash_headline_has_a_native_translation_for_every_locale(self):
+        expected_by_locale = {
+            "ar": "جارٍ تنظيم يومك",
+            "de": "Tagesplanung",
+            "en": "Planning today",
+            "es": "Organizando hoy",
+            "fr": "Votre journée",
+            "hi": "आज की तैयारी",
+            "id": "Menata hari ini",
+            "it": "Prepariamo oggi",
+            "ja": "今日を整えています",
+            "ko": "오늘을 정리하는 중",
+            "nl": "Vandaag plannen",
+            "pt": "Planejando hoje",
+            "ru": "Планируем день",
+            "th": "เตรียมวันนี้",
+            "tr": "Gün planlanıyor",
+            "vi": "Sắp xếp hôm nay",
+            "zh": "正在整理您今天的安排",
+            "zh-CN": "正在整理您今天的安排",
+            "zh-TW": "正在整理您今天的安排",
+        }
+
+        actual_by_locale = {}
+        for path in sorted(LOCALES_DIR.glob("*.json")):
+            data = json.loads(path.read_text(encoding="utf-8", errors="strict"))
+            actual_by_locale[path.stem] = _resolve_locale_value(data, "splash.organizing_today")
+
+        self.assertEqual(actual_by_locale, expected_by_locale)
 
     def test_en_and_ko_cover_recent_korean_locale_gap_keys(self):
         required_keys = [

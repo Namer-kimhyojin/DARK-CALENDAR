@@ -2132,6 +2132,7 @@
     "loading_labels": "ラベルを読み込み中...",
     "loading_ui_modules": "UIモジュールを読み込み中...",
     "migrating_data": "データを移行中...",
+    "organizing_today": "今日を整えています",
     "preparing_runtime": "ランタイムを準備中...",
     "ready": "準備完了！",
     "starting_ui": "UIを起動中..."

@@ -2132,6 +2132,7 @@
     "loading_labels": "레이블 로드 중...",
     "loading_ui_modules": "UI 모듈 로드 중...",
     "migrating_data": "데이터 마이그레이션 중...",
+    "organizing_today": "오늘을 정리하는 중",
     "preparing_runtime": "런타임 준비 중...",
     "ready": "준비 완료!",
     "starting_ui": "UI 시작 중..."

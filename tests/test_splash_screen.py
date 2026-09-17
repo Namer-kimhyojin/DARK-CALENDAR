@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -19,6 +20,17 @@ class SplashScreenTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._app = QApplication.instance() or QApplication([])
+
+    @patch(
+        "calendar_app.presentation.splash_screen.t",
+        return_value="Planning today",
+    )
+    def test_headline_uses_current_locale_translation(self, translate):
+        splash = SplashScreen()
+        self.addCleanup(splash.close)
+
+        self.assertEqual(splash._headline_text, "Planning today")
+        translate.assert_called_once_with("splash.organizing_today", "오늘을 정리하는 중")
 
     def test_progress_chases_target_in_steps(self):
         splash = SplashScreen()

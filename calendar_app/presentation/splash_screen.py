@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Splash screen shown on application startup."""
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from PyQt6.QtWidgets import QApplication, QWidget
 
 from calendar_app.app_metadata import APP_NAME, APP_VERSION_DISPLAY
 from calendar_app.app_paths import APP_ICON_PATH, APP_ICON_TOAST_PATH
+from calendar_app.infrastructure.i18n import t
 
 _COMPLETE_HOLD_MS = 100  # hold after reaching 100%
 _FADE_MS = 150  # fade-out duration
@@ -59,6 +61,7 @@ class SplashScreen(QWidget):
         self._center_on_screen()
 
         self._status_text = "Initializing..."
+        self._headline_text = t("splash.organizing_today", "오늘을 정리하는 중")
         self._progress = 0.0
         self._progress_anim = 0.0
         self._finish_requested = False
@@ -309,7 +312,7 @@ class SplashScreen(QWidget):
             250,
             28,
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            "오늘을 정리하는 중",
+            self._headline_text,
         )
 
         status_y = 224
