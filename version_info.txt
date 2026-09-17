@@ -16,14 +16,14 @@ VSVersionInfo(
         StringTable(
           '040904B0',
           [
-            StringStruct('CompanyName', 'Kim Hyojin'),
+            StringStruct('CompanyName', 'Zinz-Soft'),
             StringStruct('FileDescription', 'Air Calendar'),
             StringStruct('FileVersion', '3.7.4.0'),
             StringStruct('InternalName', 'DarkCalendar'),
             StringStruct('OriginalFilename', 'DarkCalendar.exe'),
             StringStruct('ProductName', 'Air Calendar'),
             StringStruct('ProductVersion', '3.7.4.0'),
-            StringStruct('LegalCopyright', '(c) Kim Hyojin')
+            StringStruct('LegalCopyright', '(c) Zinz-Soft')
           ]
         )
       ]

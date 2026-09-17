@@ -838,7 +838,7 @@ def _build_panel_empty_state(message, action_label, action_handler):
     frame.setStyleSheet(
         f"""
         QFrame#panel_empty_state {{
-            background: {tokens.get("surface_alt", tokens.get("bg_hover", "rgba(255,255,255,0.04)"))};
+            background: transparent;
             border: 1px solid {tokens.get("border_soft", "rgba(255,255,255,0.08)")};
             border-radius: {tokens.get("radius_md", "8px")};
         }}
@@ -849,7 +849,7 @@ def _build_panel_empty_state(message, action_label, action_handler):
         }}
         QPushButton#panel_empty_action {{
             color: {tokens.get("text_secondary", "#3f4650")};
-            background: {tokens.get("bg_item", "transparent")};
+            background: transparent;
             border: 1px solid {tokens.get("border", "rgba(0,0,0,0.16)")};
             border-radius: {tokens.get("button_radius", "8px")};
             padding: 4px 10px;

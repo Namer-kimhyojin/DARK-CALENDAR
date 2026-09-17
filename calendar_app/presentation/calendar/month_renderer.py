@@ -154,7 +154,6 @@ def _accent_rgba(alpha: float, tokens=None):
 
 
 def _calendar_surface_style(tokens=None, shape=None):
-    provided_tokens = dict(tokens or {})
     tokens = _resolve_calendar_tokens(tokens=tokens)
     shape = _resolve_calendar_shape(shape=shape)
     surface_radius = int(shape.get("calendar_surface_radius", 8))
@@ -164,12 +163,9 @@ def _calendar_surface_style(tokens=None, shape=None):
     accent_hover = _accent_rgba(0.08, tokens)
     accent_selected = _accent_rgba(0.10, tokens)
     accent_selected_border = _accent_rgba(0.44, tokens)
-    content_bg = provided_tokens.get(
-        "content_bg", provided_tokens.get("bg_main", tokens.get("content_bg", tokens["bg_main"]))
-    )
     return f"""
         QFrame#calendar_surface {{
-            background-color: {content_bg};
+            background-color: {tokens["bg_main"]};
             border-radius: {surface_radius}px;
             border: 1px solid {tokens["divider"]};
         }}
@@ -206,7 +202,7 @@ def _calendar_toolbar_shell_style(expanded: bool, tokens=None, shape=None):
     toolbar_radius = int(shape.get("calendar_toolbar_surface_radius", 8))
     return f"""
         QWidget#calendar_toolbar {{
-            background-color: {tokens["bg_top"]};
+            background-color: {tokens["bg_main"]};
             border-radius: {toolbar_radius}px;
             border: 1px solid {tokens["divider"]};
         }}
@@ -224,7 +220,10 @@ def _calendar_toolbar_style_bundle(tokens=None, shape=None):
     more_radius = int(shape.get("calendar_more_button_radius", 4))
     btn_txt = tokens["text_primary"]
     btn_subtxt = tokens["text_secondary"]
-    btn_bg = tokens["bg_item"]
+    # The toolbar already sits on the calendar's main surface. Keeping the
+    # resting controls transparent avoids stacking independently tinted alpha
+    # layers, which visibly changes their colour over a desktop wallpaper.
+    btn_bg = "transparent"
     btn_hover = tokens.get("bg_item_hover", tokens.get("bg_hover", btn_bg))
     btn_border = tokens["border"]
     btn_border_strong = tokens.get(

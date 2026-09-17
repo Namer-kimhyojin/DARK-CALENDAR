@@ -86,8 +86,14 @@ class PanelHelpControlTests(unittest.TestCase):
         action = items[0].findChild(QPushButton, "panel_empty_action")
         self.assertIsNotNone(action)
         self.assertGreaterEqual(action.minimumHeight(), 32)
-        self.assertIn("background: transparent", items[0].styleSheet())
-        self.assertIn("font-weight: 500", items[0].styleSheet())
+        stylesheet = items[0].styleSheet()
+        self.assertIn(
+            "QFrame#panel_empty_state {\n            background: transparent;", stylesheet
+        )
+        self.assertIn("QPushButton#panel_empty_action {\n            color:", stylesheet)
+        self.assertIn("background: transparent;", stylesheet)
+        self.assertNotIn("background: rgba(255,255,255", stylesheet)
+        self.assertIn("font-weight: 500", stylesheet)
         action.click()
         self.assertEqual(["create"], calls)
 

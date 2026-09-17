@@ -3,7 +3,7 @@
   <Identity Name="Kimhyojin.DarkCalendar" Publisher="CN=D8C69F65-7BB6-4038-9AF7-23C4D0C69EC3" Version="3.7.4.0" />
   <Properties>
     <DisplayName>Air Calendar</DisplayName>
-    <PublisherDisplayName>Kim,hyojin</PublisherDisplayName>
+    <PublisherDisplayName>Zinz-Soft</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Dependencies>

@@ -12,7 +12,7 @@ description = "Windows desktop calendar, task workspace, and overlay widgets"
 readme = "README.md"
 license = "GPL-3.0-only"
 authors = [
-    { name = "Kim Hyojin", email = "aplus.mylife@gmail.com" },
+    { name = "Zinz-Soft", email = "aplus.mylife@gmail.com" },
 ]
 requires-python = ">=3.12"
 dependencies = []   # runtime deps are managed via requirements.txt

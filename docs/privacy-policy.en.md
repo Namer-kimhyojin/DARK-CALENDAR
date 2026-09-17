@@ -2,7 +2,7 @@
 
 **Effective date: July 18, 2026**
 
-Air Calendar ("the App") is a Windows desktop calendar application developed and distributed by Hyojin Kim ("the Developer"). This policy explains how the App handles your information.
+Air Calendar ("the App") is a Windows desktop calendar application developed and distributed by Zinz-Soft ("the Developer"). This policy explains how the App handles your information.
 
 ## 1. Summary
 
