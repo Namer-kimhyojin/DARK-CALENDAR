@@ -145,7 +145,7 @@ def build_system_menu(self, top_bar, menu_btn_style="", menu_style=""):
     set_themed_icon(act_license, ICON.INFO, icon_color)
     self.sys_menu.addSeparator()
     act_exit = self.sys_menu.addAction(_se(t("menu.exit")), self.request_app_exit)
-    set_themed_icon(act_exit, ICON.CLOSE, "#d25a66", role="danger")
+    set_themed_icon(act_exit, ICON.CLOSE, icon_color)
 
     self.sys_menu_btn.setMenu(self.sys_menu)
     top_bar.addWidget(self.sys_menu_btn)
