@@ -160,11 +160,11 @@ def _task_detail_card_style(tokens=None, shape=None):
         else palette.get("floating_bg", palette["bg_alt"])
     )
     return (
-        f"background-color: {background}; "
+        f"QFrame#taskDetailCard {{ background-color: {background}; "
         f"color: {palette['text_secondary']}; "
         f"border: 1px solid {palette['border_soft']}; "
         f"border-bottom-left-radius: {radius}px; "
-        f"border-bottom-right-radius: {radius}px;"
+        f"border-bottom-right-radius: {radius}px; }}"
     )
 
 

@@ -62,6 +62,9 @@ class DraggableTaskButtonRenderTests(unittest.TestCase):
         btn = DraggableTaskButton(100, "Render Regression")
         self.assertEqual(btn.title_label.text(), "Render Regression")
         self.assertGreater(btn.title_bar.minimumHeight(), 0)
+        detail_style = btn.detail_container.styleSheet()
+        self.assertIn("QFrame#taskDetailCard {", detail_style)
+        self.assertNotRegex(detail_style, r"^\s*background-color:")
 
     def test_bottom_row_detail_card_opens_above_anchor(self):
         available = QRect(0, 0, 1920, 1040)

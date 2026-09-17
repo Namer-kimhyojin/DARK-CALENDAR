@@ -612,6 +612,7 @@ class ThemeContractTests(unittest.TestCase):
         self.assertEqual(chip_style["task_outer_radius"], 11)
         self.assertEqual(chip_style["task_title_radius"], 9)
         self.assertIn("rgba(", chip_style["selected_border"])
+        self.assertIn("QFrame#taskDetailCard {", detail_style)
         self.assertIn("background-color: rgba(12,24,36,220);", detail_style)
         self.assertIn("border-bottom-left-radius: 9px;", detail_style)
         self.assertIn("border-radius: 10px;", menu_style)
