@@ -2,13 +2,13 @@
   "use strict";
 
   const fallbackConfig = {
-    appVersion: "3.7.5",
+    appVersion: "3.7.6",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
     promotionKitUrl: "promo.html",
-    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.7.5",
-    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.7.5/LICENSE",
-    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.7.5/THIRD_PARTY_NOTICES.md",
+    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.7.6",
+    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.7.6/LICENSE",
+    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.7.6/THIRD_PARTY_NOTICES.md",
     eventUrl: "https://account.microsoft.com/billing/redeem?mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ",
     event: { enabled: true }
   };

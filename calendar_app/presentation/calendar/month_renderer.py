@@ -3,7 +3,7 @@ import datetime
 import html as _html_mod
 import logging
 
-from PyQt6.QtCore import QDate, QPoint, QSize, Qt
+from PyQt6.QtCore import QDate, QLocale, QPoint, QSize, Qt
 from PyQt6.QtGui import QAction, QBrush, QColor, QIcon, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -258,6 +258,18 @@ def _calendar_toolbar_style_bundle(tokens=None, shape=None):
                 background: {accent_soft_pressed};
                 border: 1px solid {accent_border};
             }}
+            QPushButton:disabled {{
+                color: {btn_subtxt};
+                background: {accent_soft};
+                border: 1px solid {btn_border};
+            }}
+        """,
+        "nav_group": f"""
+            QWidget#calendar_month_nav {{
+                background: {btn_bg};
+                border: 1px solid {btn_border};
+                border-radius: {date_radius}px;
+            }}
         """,
         "nav_btn": f"""
             QPushButton {{
@@ -267,18 +279,16 @@ def _calendar_toolbar_style_bundle(tokens=None, shape=None):
                 font-size: {_fpt(-1)};
                 border-radius: {button_radius}px;
                 padding: 3px 8px;
-                border: 1px solid {btn_border};
+                border: none;
                 min-width: 30px;
                 max-width: 30px;
             }}
             QPushButton:hover {{
                 color: {btn_txt};
                 background: {accent_soft};
-                border: 1px solid {btn_border_strong};
             }}
             QPushButton:pressed {{
                 background: {accent_soft_strong};
-                border: 1px solid {accent_border};
             }}
         """,
         "menu_btn": f"""
@@ -355,11 +365,25 @@ def _calendar_toolbar_style_bundle(tokens=None, shape=None):
                 margin: 4px 8px;
             }}
         """,
-        "date_label": (
-            f"color: {btn_txt}; font-weight: 700; font-size: {_fpt(1)}; "
-            f"padding: 2px 10px; border-radius: {date_radius}px; "
-            f"background: {btn_bg}; border: 1px solid {btn_border};"
-        ),
+        "date_label": f"""
+            QPushButton {{
+                color: {btn_txt};
+                font-weight: 700;
+                font-size: {_fpt(1)};
+                padding: 2px 14px;
+                border: none;
+                background: {btn_bg};
+                min-width: 108px;
+            }}
+            QPushButton:hover, QPushButton:open {{
+                background: {accent_soft};
+            }}
+            QPushButton::menu-indicator {{
+                image: none;
+                width: 0px;
+            }}
+        """,
+        "nav_divider": f"background: {divider}; border: none;",
         "selection_label": (
             f"color: {btn_subtxt}; padding: 2px 12px; "
             f"background: {accent_soft}; border: 1px solid {accent_border}; "
@@ -372,6 +396,25 @@ def _calendar_toolbar_style_bundle(tokens=None, shape=None):
             f"QPushButton:hover {{ background-color: {btn_hover}; color: {btn_txt}; }}"
         ),
     }
+
+
+def _format_toolbar_date(date: QDate, is_month_mode: bool) -> str:
+    """Return a compact, locale-aware title for the calendar toolbar."""
+    if is_month_mode:
+        month_name = QLocale().monthName(date.month(), QLocale.FormatType.LongFormat)
+        template = t("calendar.month_title", "{month_name} {year}")
+        try:
+            return str(template).format(
+                year=date.year(),
+                month=date.month(),
+                month_name=month_name,
+            )
+        except (KeyError, ValueError):
+            return f"{month_name} {date.year()}"
+
+    day_names = t("calendar.weekdays")
+    target_day_name = day_names[date.dayOfWeek() - 1]
+    return date.toString("yyyy.MM.dd") + f" ({target_day_name})"
 
 
 def _subscription_detail_style_bundle(tokens=None, shape=None):
@@ -1508,14 +1551,19 @@ def render_calendar(app):
 
     today_btn = QPushButton(t("calendar.today"))
     today_btn.setStyleSheet(today_btn_style)
-    today_btn.setMinimumWidth(58)
+    today_btn.setMinimumWidth(64)
+    today_btn.setAccessibleName(t("calendar.today"))
+    today_btn.setToolTip(t("calendar.today_hint", "오늘 날짜로 이동"))
     today_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     today_btn.clicked.connect(app.jump_to_today)
+    today_btn.setEnabled(app.current_date != QDate.currentDate())
 
     prev_btn = QPushButton()
     prev_btn.setIcon(_ic(ICON.NAV_PREV, color=_icon_color))
     prev_btn.setIconSize(QSize(14, 14))
     prev_btn.setStyleSheet(nav_btn_style)
+    prev_btn.setAccessibleName(t("calendar.previous_period", "이전 기간"))
+    prev_btn.setToolTip(prev_btn.accessibleName())
     prev_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     prev_btn.clicked.connect(app.prev_day)
 
@@ -1523,20 +1571,60 @@ def render_calendar(app):
     next_btn.setIcon(_ic(ICON.NAV_NEXT, color=_icon_color))
     next_btn.setIconSize(QSize(14, 14))
     next_btn.setStyleSheet(nav_btn_style)
+    next_btn.setAccessibleName(t("calendar.next_period", "다음 기간"))
+    next_btn.setToolTip(next_btn.accessibleName())
     next_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     next_btn.clicked.connect(app.next_day)
 
-    # ?쒖떆 ?뺤떇 ?좏깮 (?붽컙: '2026.03', 二쇨컙: '2026.03.01 (??')
-    if is_month_mode:
-        date_text = app.current_date.toString("yyyy.MM")
-    else:
-        day_names = t("calendar.weekdays")
-        target_day_name = day_names[app.current_date.dayOfWeek() - 1]
-        date_text = app.current_date.toString("yyyy.MM.dd") + f" ({target_day_name})"
+    date_text = _format_toolbar_date(app.current_date, is_month_mode)
 
-    date_lbl = QLabel(f"  {date_text}")
-    date_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-    date_lbl.setStyleSheet(toolbar_styles["date_label"])
+    date_btn = QPushButton(date_text)
+    date_btn.setAccessibleName(date_text)
+    date_btn.setToolTip(date_text)
+    date_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    date_btn.setStyleSheet(toolbar_styles["date_label"])
+
+    date_menu = QMenu(date_btn)
+    date_menu.setStyleSheet(dropdown_menu_style)
+
+    def _select_month(year, month):
+        day = min(app.current_date.day(), QDate(year, month, 1).daysInMonth())
+        app.current_date = QDate(year, month, day)
+        app.schedule_panel_refresh(left=True, center=True)
+
+    current_year = app.current_date.year()
+    current_month = app.current_date.month()
+    locale = QLocale()
+    for year in range(current_year - 1, current_year + 2):
+        year_menu = date_menu.addMenu(str(year))
+        for month in range(1, 13):
+            month_name = locale.monthName(month, QLocale.FormatType.LongFormat)
+            action = year_menu.addAction(month_name)
+            action.setCheckable(year == current_year)
+            action.setChecked(year == current_year and month == current_month)
+            action.triggered.connect(lambda _checked=False, y=year, m=month: _select_month(y, m))
+    date_btn.setMenu(date_menu)
+
+    nav_group = QWidget()
+    nav_group.setObjectName("calendar_month_nav")
+    nav_group.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+    nav_group.setStyleSheet(toolbar_styles["nav_group"])
+    nav_layout = QHBoxLayout(nav_group)
+    nav_layout.setContentsMargins(0, 0, 0, 0)
+    nav_layout.setSpacing(0)
+
+    def _nav_divider():
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.NoFrame)
+        divider.setFixedWidth(1)
+        divider.setStyleSheet(toolbar_styles["nav_divider"])
+        return divider
+
+    nav_layout.addWidget(prev_btn)
+    nav_layout.addWidget(_nav_divider())
+    nav_layout.addWidget(date_btn)
+    nav_layout.addWidget(_nav_divider())
+    nav_layout.addWidget(next_btn)
 
     # Determine display label for the current view mode
     display_name_map = {
@@ -1744,9 +1832,7 @@ def render_calendar(app):
     app.selection_status_lbl.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
 
     cal_toolbar.addWidget(today_btn)
-    cal_toolbar.addWidget(prev_btn)
-    cal_toolbar.addWidget(next_btn)
-    cal_toolbar.addWidget(date_lbl)
+    cal_toolbar.addWidget(nav_group)
 
     cal_toolbar.addStretch(1)  # 以묒븰 ?щ갚 ?뺣낫
     cal_toolbar.addWidget(app.selection_status_lbl)  # ?곗륫 ?덈궡 臾멸뎄 諛곗튂

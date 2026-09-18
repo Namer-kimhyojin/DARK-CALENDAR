@@ -31,6 +31,18 @@ class MonthRendererDateParsingTests(unittest.TestCase):
         self.assertTrue(qd.isValid())
         self.assertEqual(qd.toString("yyyy-MM-dd"), "2026-03-26")
 
+    def test_toolbar_month_title_uses_localized_template(self):
+        with patch.object(
+            month_renderer,
+            "t",
+            side_effect=lambda key, default=None: (
+                "{year}년 {month_name}" if key == "calendar.month_title" else default
+            ),
+        ):
+            title = month_renderer._format_toolbar_date(QDate(2026, 9, 17), True)
+
+        self.assertEqual(title, "2026년 9월")
+
     def test_task_date_range_falls_back_to_target_date(self):
         task = {
             "deadline": "",

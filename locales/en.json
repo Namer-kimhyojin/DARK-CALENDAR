@@ -106,7 +106,9 @@
     "add_hint": "Add Schedule",
     "date_cell_accessible": "{date} date cell",
     "help_hint": "Calendar Usage Guide",
+    "month_title": "{month_name} {year}",
     "more_items": "+ {count} more",
+    "next_period": "Next period",
     "opt_month": "Include Month label",
     "opt_week_start_monday": "Start week on Monday",
     "opt_week_start_tooltip": "Checked: weeks start on Monday. Unchecked: weeks start on Sunday.",
@@ -116,6 +118,7 @@
     "opt_weekend_hidden_hint": "{count} weekend event(s) are hidden. Enable weekend view to show them.",
     "options": "⚙️Options",
     "options_with_hidden": "{label} ({count})",
+    "previous_period": "Previous period",
     "range_create_help_title": "Create a multi-day event quickly",
     "range_create_hint": "Drag across empty date cells to create a multi-day all-day event.",
     "range_create_shift_hint": "You can also click the start date, then Shift+click the end date to register the same range.",
@@ -123,6 +126,7 @@
     "selection_hint": "Ctrl+Click for multi-selection",
     "sync_hint": "Google Calendar sync",
     "today": "Today",
+    "today_hint": "Go to today",
     "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
   },
   "checklist_mgr": {

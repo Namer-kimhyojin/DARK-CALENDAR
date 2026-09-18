@@ -106,7 +106,9 @@
     "add_hint": "일정 추가",
     "date_cell_accessible": "{date} 날짜 셀",
     "help_hint": "캘린더 사용 방법 안내",
+    "month_title": "{year}년 {month_name}",
     "more_items": "+ {count}개 더 보기",
+    "next_period": "다음 기간",
     "opt_month": "월 표기 포함",
     "opt_week_start_monday": "월요일부터 시작",
     "opt_week_start_tooltip": "체크 시 월요일부터, 해제 시 일요일부터 한 주를 시작합니다.",
@@ -116,6 +118,7 @@
     "opt_weekend_hidden_hint": "{count}개의 주말 일정이 숨겨져 있습니다. 주말 보기를 활성화하면 표시됩니다.",
     "options": "⚙️ 옵션",
     "options_with_hidden": "{label} ({count})",
+    "previous_period": "이전 기간",
     "range_create_help_title": "여러 날 일정 빠르게 만들기",
     "range_create_hint": "빈 영역을 드래그하면 여러 날의 종일 일정을 만들 수 있습니다.",
     "range_create_shift_hint": "시작 날짜를 클릭한 뒤 Shift+종료 날짜를 클릭해도 같은 범위를 등록할 수 있습니다.",
@@ -123,6 +126,7 @@
     "selection_hint": "Ctrl+클릭 다중 선택",
     "sync_hint": "구글 캘린더 동기화",
     "today": "오늘",
+    "today_hint": "오늘 날짜로 이동",
     "weekdays": ["월", "화", "수", "목", "금", "토", "일"]
   },
   "checklist_mgr": {
