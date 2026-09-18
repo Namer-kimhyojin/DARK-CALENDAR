@@ -38,6 +38,7 @@ class MockApp(QWidget):
         self.open_font_settings_dialog = lambda: None
         self.open_label_settings_dialog = lambda: None
         self.open_away_settings_dialog = lambda: None
+        self.open_daily_summary_dialog = lambda: None
         self.open_panel_background_color_dialog = lambda: None
         self.open_gcal_settings_dialog = lambda: None
         self.open_gcal_sync_issues_dialog = lambda: None
@@ -97,6 +98,17 @@ class TestSystemMenu(unittest.TestCase):
         open_source_texts = [action.text() for action in host.open_source_menu.actions()]
         self.assertIn(t("menu.release_source_code", "이 버전의 GitHub 소스"), open_source_texts)
         self.assertIn(t("menu.open_source_license", "GPLv3 오픈소스 라이선스"), open_source_texts)
+
+    def test_system_menu_exposes_daily_briefing_settings_recovery(self):
+        host = MockApp()
+        layout = QVBoxLayout()
+        build_system_menu(host, layout, "")
+
+        action_texts = [action.text() for action in host.sys_menu.actions()]
+        self.assertIn(
+            t("menu.daily_briefing_settings", "오늘 브리핑·노출 설정..."),
+            action_texts,
+        )
 
     def test_exit_icon_uses_the_same_neutral_color_role_as_other_menu_icons(self):
         host = MockApp()

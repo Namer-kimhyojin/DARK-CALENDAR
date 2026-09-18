@@ -18,10 +18,15 @@ brand strings. Changing `Package/Identity/Name` requires a separate Store
 product and breaks the existing package family, purchase entitlement, and
 automatic-update chain.
 
+The app, website, and ordinary author surfaces use the public brand `Zinz-Soft`.
+The manifest's technical `PublisherDisplayName` is the exception: it must remain
+`Kim,hyojin`, exactly matching the publisher display name registered for this
+existing Partner Center product, or package validation will reject the upload.
+
 For the existing Store product, always copy the identity values shown under
 Partner Center > Product management > Product identity. Rename the listing by
 reserving/selecting `Air Calendar` for every Store language, while keeping the
-manifest identity unchanged.
+manifest identity and registered publisher display name unchanged.
 
 ## Files
 

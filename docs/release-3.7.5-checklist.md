@@ -16,7 +16,7 @@
 - [x] A clean x64 executable payload is rebuilt from source rather than reusing an older payload.
 - [x] x64 MSIX, Store upload, corresponding-source ZIP, and SHA-256 files build successfully.
 - [x] Packaged payload passes locked-license, required-DLL, and sensitive-file verification.
-- [x] Package identity is `Kimhyojin.DarkCalendar`, version `3.7.5.0`, architecture `x64`; public display name and publisher are `Air Calendar` and `Zinz-Soft`.
+- [x] Package identity is `Kimhyojin.DarkCalendar`, version `3.7.5.0`, architecture `x64`; public display name is `Air Calendar`, while the Store-required `PublisherDisplayName` is `Kim,hyojin`.
 - [x] The Store upload contains exactly the rebuilt x64 MSIX with a matching SHA-256 hash.
 
 ## External release

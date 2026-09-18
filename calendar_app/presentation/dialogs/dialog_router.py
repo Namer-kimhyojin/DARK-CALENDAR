@@ -25,6 +25,7 @@ _DIALOG_ROUTE_MAP = {
     "routine_management_dialog": "open_routine_management_dialog",
     "gcal_settings_dialog": "open_gcal_settings_dialog",
     "gcal_sync_issues_dialog": "open_gcal_sync_issues_dialog",
+    "daily_summary_dialog": "open_daily_summary_dialog",
     "calendar_print_dialog": "open_calendar_print_dialog",
     "modify_task_dialog": "open_modify_task_dialog",
     "directive_dialog": "open_directive_dialog",
@@ -120,6 +121,16 @@ class DialogActionsMixin:
             return False
         self._dialog_guards[key] = now
         return True
+
+    def open_daily_summary_dialog(self, checked=False):
+        """Open the daily briefing settings manually, even when auto-display is disabled."""
+        if not self._acquire_dialog_guard("open_daily_summary_dialog"):
+            return None
+
+        from calendar_app.presentation.dialogs.daily_summary_dialog import DailySummaryDialog
+
+        dialog = DailySummaryDialog(parent=self, show_settings=True)
+        return dialog.exec()
 
     # ------------------------------------------------------------------
     # Schedule / Task dialogs

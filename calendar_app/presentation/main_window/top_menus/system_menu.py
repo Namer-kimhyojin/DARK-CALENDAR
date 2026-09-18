@@ -55,6 +55,11 @@ def build_system_menu(self, top_bar, menu_btn_style="", menu_style=""):
     set_themed_icon(act_label, ICON.COLOR_PICKER, icon_color)
     act_away = self.sys_menu.addAction(_se(t("menu.away_settings")), self.open_away_settings_dialog)
     set_themed_icon(act_away, ICON.BREAK_LONG, icon_color)
+    act_daily = self.sys_menu.addAction(
+        _se(t("menu.daily_briefing_settings", "오늘 브리핑·노출 설정...")),
+        self.open_daily_summary_dialog,
+    )
+    set_themed_icon(act_daily, ICON.STATUS_TODAY, icon_color)
     self.sys_menu.addSeparator()
 
     # ── 구글 캘린더 서브메뉴 ──────────────────────────────────────────────────

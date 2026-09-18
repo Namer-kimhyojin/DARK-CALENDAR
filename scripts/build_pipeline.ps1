@@ -123,6 +123,39 @@ function Get-HostArch {
 # Manifest helpers
 # ---------------------------------------------------------------------------
 
+$script:ExpectedStoreIdentityName = "Kimhyojin.DarkCalendar"
+$script:ExpectedStorePublisher = "CN=D8C69F65-7BB6-4038-9AF7-23C4D0C69EC3"
+$script:ExpectedStorePublisherDisplayName = "Kim,hyojin"
+$script:ExpectedStoreDisplayName = "Air Calendar"
+
+function Assert-StoreManifestContract {
+    param([Parameter(Mandatory)][string]$ManifestPath)
+
+    [xml]$xml = Get-Content -Path $ManifestPath -Encoding utf8
+    $ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
+    $ns.AddNamespace("f", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
+    $identity = $xml.SelectSingleNode("/f:Package/f:Identity", $ns)
+    $properties = $xml.SelectSingleNode("/f:Package/f:Properties", $ns)
+    if ($null -eq $identity -or $null -eq $properties) {
+        throw "Required Store manifest nodes are missing: $ManifestPath"
+    }
+
+    $actualPublisherDisplayName = [string]$properties.PublisherDisplayName
+    $actualDisplayName = [string]$properties.DisplayName
+    if ([string]$identity.Name -ne $script:ExpectedStoreIdentityName) {
+        throw "Store identity Name must be '$script:ExpectedStoreIdentityName', found '$([string]$identity.Name)'."
+    }
+    if ([string]$identity.Publisher -ne $script:ExpectedStorePublisher) {
+        throw "Store identity Publisher must be '$script:ExpectedStorePublisher', found '$([string]$identity.Publisher)'."
+    }
+    if ($actualPublisherDisplayName -ne $script:ExpectedStorePublisherDisplayName) {
+        throw "PublisherDisplayName must match Partner Center value '$script:ExpectedStorePublisherDisplayName', found '$actualPublisherDisplayName'."
+    }
+    if ($actualDisplayName -ne $script:ExpectedStoreDisplayName) {
+        throw "Store DisplayName must be '$script:ExpectedStoreDisplayName', found '$actualDisplayName'."
+    }
+}
+
 function Set-ManifestArchitecture {
     param(
         [Parameter(Mandatory)][string]$ManifestPath,
@@ -552,6 +585,8 @@ function Get-MsixIdentity {
         return [pscustomobject]@{
             Name = [string]$manifest.Package.Identity.Name
             Publisher = [string]$manifest.Package.Identity.Publisher
+            PublisherDisplayName = [string]$manifest.Package.Properties.PublisherDisplayName
+            DisplayName = [string]$manifest.Package.Properties.DisplayName
             Version = [string]$manifest.Package.Identity.Version
             Architecture = [string]$manifest.Package.Identity.ProcessorArchitecture
         }
@@ -593,6 +628,18 @@ function New-StoreUpload {
     }
 
     $thisIdentity = Get-MsixIdentity $ThisMsix
+    if ($thisIdentity.Name -ne $script:ExpectedStoreIdentityName) {
+        throw "Store upload identity Name must be '$script:ExpectedStoreIdentityName', found '$($thisIdentity.Name)'."
+    }
+    if ($thisIdentity.Publisher -ne $script:ExpectedStorePublisher) {
+        throw "Store upload Publisher must be '$script:ExpectedStorePublisher', found '$($thisIdentity.Publisher)'."
+    }
+    if ($thisIdentity.PublisherDisplayName -ne $script:ExpectedStorePublisherDisplayName) {
+        throw "Store upload PublisherDisplayName must match Partner Center value '$script:ExpectedStorePublisherDisplayName', found '$($thisIdentity.PublisherDisplayName)'."
+    }
+    if ($thisIdentity.DisplayName -ne $script:ExpectedStoreDisplayName) {
+        throw "Store upload DisplayName must be '$script:ExpectedStoreDisplayName', found '$($thisIdentity.DisplayName)'."
+    }
     $packageVersion = $thisIdentity.Version
     Assert-PackageVersionFormat $packageVersion
 
@@ -832,6 +879,7 @@ foreach ($chk in @(
 }
 
 Assert-DiskSpace -Path $projectRoot -MinimumGB 3
+Assert-StoreManifestContract -ManifestPath $manifestSource
 Test-PythonEnv -Python $venvPython
 Run-OrThrow -Exe $venvPython -Args @(
     $complianceScript,

@@ -52,6 +52,22 @@ class BuildPipelineContractTests(unittest.TestCase):
         self.assertIn('$x64.Architecture -ne "x64"', script)
         self.assertIn('$arm64.Architecture -ne "arm64"', script)
 
+    def test_store_build_enforces_partner_center_publisher_display_name(self):
+        script = self._read("scripts/build_pipeline.ps1")
+
+        self.assertIn(
+            '$script:ExpectedStorePublisherDisplayName = "Kim,hyojin"', script
+        )
+        self.assertIn("function Assert-StoreManifestContract", script)
+        self.assertIn(
+            "Assert-StoreManifestContract -ManifestPath $manifestSource", script
+        )
+        self.assertIn(
+            "$thisIdentity.PublisherDisplayName -ne "
+            "$script:ExpectedStorePublisherDisplayName",
+            script,
+        )
+
     def test_profile_reset_is_opt_in(self):
         script = self._read("scripts/build_pipeline.ps1")
 

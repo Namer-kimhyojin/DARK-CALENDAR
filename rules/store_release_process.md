@@ -11,6 +11,8 @@ Create a Windows Store upload package that:
 ## Product Identity Rule
 
 - Public product/display name: `Air Calendar`
+- Public brand/author name used in the app and website: `Zinz-Soft`
+- Store manifest `PublisherDisplayName`: `Kim,hyojin` (must exactly match Partner Center)
 - Existing Store identity: `Kimhyojin.DarkCalendar` (must not be renamed)
 - Existing packaged executable: `DarkCalendar.exe` (compatibility filename)
 - Existing startup task ID: `DarkCalendarStartup` (compatibility ID)

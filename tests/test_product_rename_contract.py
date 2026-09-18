@@ -58,7 +58,9 @@ def test_rebrand_keeps_existing_settings_and_store_update_identity():
     assert identity.attrib["Name"] == APP_PACKAGE_IDENTITY_NAME == "Kimhyojin.DarkCalendar"
     assert application.attrib["Executable"] == APP_EXECUTABLE_NAME == "DarkCalendar.exe"
     assert properties.find(f"{{{_FOUNDATION_NS}}}DisplayName").text == APP_NAME
-    assert properties.find(f"{{{_FOUNDATION_NS}}}PublisherDisplayName").text == "Zinz-Soft"
+    # Partner Center validates this technical manifest field against the
+    # immutable publisher display name registered for the existing product.
+    assert properties.find(f"{{{_FOUNDATION_NS}}}PublisherDisplayName").text == "Kim,hyojin"
     assert visual.attrib["DisplayName"] == APP_NAME
     assert startup.attrib["TaskId"] == "DarkCalendarStartup"
     assert startup.attrib["DisplayName"] == APP_NAME
