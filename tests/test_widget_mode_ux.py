@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QDate, QPoint, Qt
-from PyQt6.QtWidgets import QApplication, QCheckBox, QPushButton, QToolButton, QWidget
+from PyQt6.QtWidgets import QApplication, QCheckBox, QLabel, QPushButton, QToolButton, QWidget
 import pytest
 
 from calendar_app.presentation.dialogs.widget_customization_dialog import WidgetCustomizationDialog
@@ -586,6 +586,9 @@ def test_completed_items_can_be_shown_without_losing_original_status(workspace):
     completed = next(item for item in widget._last_items if item.get("item_id") == 3)
     assert completed["completed"] is True
     assert host.handle_directive_status_changed.call_args.args == (3, "completed")
+    badges = widget.scroll_content.findChildren(QLabel, "agenda_item_status")
+    assert any(badge.text() == "완료" for badge in badges)
+    assert widget.completed_btn.objectName() == "unified_footer_toggle"
 
 
 def test_return_to_main_works_when_mode_was_opened_from_hidden_host(workspace):

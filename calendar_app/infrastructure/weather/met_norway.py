@@ -42,6 +42,17 @@ def symbol_code_to_wmo(symbol_code: str) -> int:
     return 2
 
 
+def symbol_code_to_day_period(symbol_code: str) -> str:
+    """Preserve MET's day/night hint for weather illustration selection."""
+
+    symbol = str(symbol_code or "").strip().lower()
+    if symbol.endswith("_night"):
+        return "night"
+    if symbol.endswith("_polartwilight"):
+        return "twilight"
+    return "day"
+
+
 def _first_forecast_entry(payload: dict[str, Any]) -> dict[str, Any]:
     properties = payload.get("properties") or {}
     timeseries = properties.get("timeseries") or []
@@ -78,11 +89,13 @@ def parse_locationforecast(
             summary = period["summary"]
             break
 
+    symbol_code = str(summary.get("symbol_code") or "")
     return {
         "city": display_name,
         "temp": f"{temperature:.1f}".rstrip("0").rstrip("."),
         "unit": unit_label,
         "humidity": str(details.get("relative_humidity", "--")),
         "wind": str(details.get("wind_speed", "--")),
-        "_wmo": symbol_code_to_wmo(str(summary.get("symbol_code") or "")),
+        "_wmo": symbol_code_to_wmo(symbol_code),
+        "_day_period": symbol_code_to_day_period(symbol_code),
     }

@@ -5,6 +5,7 @@ import unittest
 from calendar_app.infrastructure.weather.geonames import find_city
 from calendar_app.infrastructure.weather.met_norway import (
     parse_locationforecast,
+    symbol_code_to_day_period,
     symbol_code_to_wmo,
 )
 
@@ -51,6 +52,7 @@ class WeatherProviderTests(unittest.TestCase):
         self.assertEqual(parsed["temp"], "68")
         self.assertEqual(parsed["unit"], "°F")
         self.assertEqual(parsed["_wmo"], 2)
+        self.assertEqual(parsed["_day_period"], "day")
         self.assertEqual(parsed["humidity"], "55.2")
         self.assertEqual(parsed["wind"], "3.4")
 
@@ -58,6 +60,11 @@ class WeatherProviderTests(unittest.TestCase):
         self.assertEqual(symbol_code_to_wmo("heavyrainandthunder_night"), 95)
         self.assertEqual(symbol_code_to_wmo("heavysnow_day"), 75)
         self.assertEqual(symbol_code_to_wmo("rainshowers_day"), 80)
+
+    def test_met_symbol_mapping_preserves_day_period(self):
+        self.assertEqual(symbol_code_to_day_period("clearsky_day"), "day")
+        self.assertEqual(symbol_code_to_day_period("clearsky_night"), "night")
+        self.assertEqual(symbol_code_to_day_period("clearsky_polartwilight"), "twilight")
 
     def test_weather_privacy_notice_matches_provider(self):
         root = Path(__file__).resolve().parents[1]

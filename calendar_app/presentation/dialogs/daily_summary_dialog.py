@@ -7,6 +7,7 @@ import re
 from PyQt6.QtCore import QDate, QEvent, QLocale, QSettings, QSize, Qt, QTime, QTimer
 from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import (
+    QApplication,
     QButtonGroup,
     QCheckBox,
     QDialog,
@@ -152,6 +153,23 @@ class DailySummaryDialog(QDialog):
         if show_settings:
             self._set_settings_open(True)
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._center_on_parent()
+
+    def _center_on_parent(self):
+        parent = self.parentWidget()
+        if parent is not None and parent.isVisible():
+            anchor = parent.frameGeometry()
+        else:
+            screen = QApplication.primaryScreen()
+            anchor = screen.availableGeometry() if screen else None
+        if anchor is None:
+            return
+        x = anchor.x() + (anchor.width() - self.width()) // 2
+        y = anchor.y() + (anchor.height() - self.height()) // 2
+        self.move(x, y)
+
     def _build_ui(self):
         tokens = self._ui_tokens
         accent = tokens.get("accent", "#4da6ff")
@@ -183,7 +201,9 @@ class DailySummaryDialog(QDialog):
         summary_layout = QVBoxLayout(self.summary_panel)
         summary_layout.setContentsMargins(26, 22, 26, 20)
         summary_layout.setSpacing(0)
-        self._build_summary_header(summary_layout, text_primary, text_secondary, text_muted, accent_display)
+        self._build_summary_header(
+            summary_layout, text_primary, text_secondary, text_muted, accent_display
+        )
 
         self.summary_scroll = QScrollArea()
         self.summary_scroll.setObjectName("dailySummaryContent")
@@ -408,7 +428,9 @@ class DailySummaryDialog(QDialog):
         )
         self.schedule_stat_value.setText(str(len(items)))
         if not items:
-            layout.addWidget(self._empty_item(t("dialog.daily.no_schedule", "오늘 예정된 일정이 없습니다.")))
+            layout.addWidget(
+                self._empty_item(t("dialog.daily.no_schedule", "오늘 예정된 일정이 없습니다."))
+            )
             return section
         for item in items:
             item_text = str(item).lstrip("• ").strip()
@@ -447,7 +469,9 @@ class DailySummaryDialog(QDialog):
         )
         self.routine_stat_value.setText(str(len(items)))
         if not items:
-            layout.addWidget(self._empty_item(t("dialog.daily.no_routines", "오늘 마감인 업무가 없습니다.")))
+            layout.addWidget(
+                self._empty_item(t("dialog.daily.no_routines", "오늘 마감인 업무가 없습니다."))
+            )
             return section
         for name, pct_text, tags_text in items:
             frame = QFrame()
@@ -484,7 +508,9 @@ class DailySummaryDialog(QDialog):
     def _build_summary_footer(self, layout, text_secondary, text_muted):
         divider = QFrame()
         divider.setFrameShape(QFrame.Shape.HLine)
-        divider.setStyleSheet(f"background:{self._ui_tokens.get('border_soft', 'rgba(0,0,0,0.10)')}; max-height:1px;")
+        divider.setStyleSheet(
+            f"background:{self._ui_tokens.get('border_soft', 'rgba(0,0,0,0.10)')}; max-height:1px;"
+        )
         layout.addWidget(divider)
         footer = QHBoxLayout()
         footer.setContentsMargins(0, 14, 0, 0)
@@ -523,9 +549,7 @@ class DailySummaryDialog(QDialog):
         title_row.addWidget(close_btn)
         layout.addLayout(title_row)
 
-        helper = QLabel(
-            t("dialog.daily.settings_help", "보여줄 내용과 자동 표시 시점을 정합니다.")
-        )
+        helper = QLabel(t("dialog.daily.settings_help", "보여줄 내용과 자동 표시 시점을 정합니다."))
         helper.setProperty("role", "helper")
         helper.setWordWrap(True)
         layout.addWidget(helper)
@@ -548,12 +572,16 @@ class DailySummaryDialog(QDialog):
 
         divider = QFrame()
         divider.setFrameShape(QFrame.Shape.HLine)
-        divider.setStyleSheet(f"background:{self._ui_tokens.get('border_soft', 'rgba(0,0,0,0.10)')}; max-height:1px;")
+        divider.setStyleSheet(
+            f"background:{self._ui_tokens.get('border_soft', 'rgba(0,0,0,0.10)')}; max-height:1px;"
+        )
         layout.addWidget(divider)
         layout.addSpacing(4)
 
         self.startup_toggle = self._switch(t("dialog.daily.startup_auto", "앱 시작 시 자동 표시"))
-        layout.addLayout(self._labeled_control_row(self.startup_toggle.accessibleName(), self.startup_toggle))
+        layout.addLayout(
+            self._labeled_control_row(self.startup_toggle.accessibleName(), self.startup_toggle)
+        )
 
         self.daily_toggle = self._switch(t("dialog.daily.daily_reminder", "매일 다시 알림"))
         self.time_edit = QTimeEdit()
@@ -566,17 +594,20 @@ class DailySummaryDialog(QDialog):
         reminder_widget = QWidget()
         reminder_widget.setLayout(reminder_controls)
         layout.addLayout(
-            self._labeled_control_row(t("dialog.daily.daily_reminder", "매일 다시 알림"), reminder_widget)
+            self._labeled_control_row(
+                t("dialog.daily.daily_reminder", "매일 다시 알림"), reminder_widget
+            )
         )
         self.daily_toggle.toggled.connect(self.time_edit.setEnabled)
 
-        self.weekend_checkbox = QCheckBox(
-            t("dialog.daily.hide_weekends", "주말에는 표시하지 않기")
-        )
+        self.weekend_checkbox = QCheckBox(t("dialog.daily.hide_weekends", "주말에는 표시하지 않기"))
         self.weekend_checkbox.setAccessibleName(self.weekend_checkbox.text())
         layout.addWidget(self.weekend_checkbox)
         weekend_help = QLabel(
-            t("dialog.daily.hide_weekends_help", "토요일과 일요일에는 브리핑을 자동으로 열지 않습니다.")
+            t(
+                "dialog.daily.hide_weekends_help",
+                "토요일과 일요일에는 브리핑을 자동으로 열지 않습니다.",
+            )
         )
         weekend_help.setProperty("role", "helper")
         weekend_help.setWordWrap(True)
@@ -684,11 +715,11 @@ class DailySummaryDialog(QDialog):
         self._dialog_settings.setValue(
             _SETTINGS_KEY_ROUTINE_MODE, self._selected_visibility_mode("routine")
         )
-        self._dialog_settings.setValue(_SETTINGS_KEY_STARTUP_ENABLED, self.startup_toggle.isChecked())
-        self._dialog_settings.setValue(_SETTINGS_KEY_DAILY_ENABLED, self.daily_toggle.isChecked())
         self._dialog_settings.setValue(
-            _SETTINGS_KEY_TIME, self.time_edit.time().toString("HH:mm")
+            _SETTINGS_KEY_STARTUP_ENABLED, self.startup_toggle.isChecked()
         )
+        self._dialog_settings.setValue(_SETTINGS_KEY_DAILY_ENABLED, self.daily_toggle.isChecked())
+        self._dialog_settings.setValue(_SETTINGS_KEY_TIME, self.time_edit.time().toString("HH:mm"))
         self._dialog_settings.setValue(
             _SETTINGS_KEY_HIDE_WEEKENDS, self.weekend_checkbox.isChecked()
         )
@@ -771,8 +802,13 @@ class DailySummaryDialog(QDialog):
 
     def eventFilter(self, watched, event):
         if watched in getattr(self, "_drag_targets", ()):
-            if event.type() == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
-                self._drag_origin = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            if (
+                event.type() == QEvent.Type.MouseButtonPress
+                and event.button() == Qt.MouseButton.LeftButton
+            ):
+                self._drag_origin = (
+                    event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+                )
                 return True
             if (
                 event.type() == QEvent.Type.MouseMove
@@ -844,9 +880,7 @@ def maybe_show_daily_summary(app, trigger: str = "startup") -> None:
     if settings is None:
         return
 
-    if trigger == "startup" and not _setting_bool(
-        settings, _SETTINGS_KEY_STARTUP_ENABLED, True
-    ):
+    if trigger == "startup" and not _setting_bool(settings, _SETTINGS_KEY_STARTUP_ENABLED, True):
         return
     if trigger == "daily" and not _setting_bool(settings, _SETTINGS_KEY_DAILY_ENABLED, True):
         return

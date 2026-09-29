@@ -15,6 +15,7 @@ import logging
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QFrame,
@@ -51,6 +52,7 @@ _TYPE_META: dict[str, tuple[str, str]] = {
     "countdown": ("⏳", QColor(248, 113, 113).name(QColor.NameFormat.HexRgb)),
     "dday": ("📆", QColor(52, 211, 153).name(QColor.NameFormat.HexRgb)),
     "text": ("✏️", QColor(148, 163, 184).name(QColor.NameFormat.HexRgb)),
+    "launcher_deck": ("⌨", QColor(96, 165, 250).name(QColor.NameFormat.HexRgb)),
 }
 
 
@@ -366,6 +368,7 @@ class WidgetCard(QFrame):
         on_rename,
         on_focus,
         on_reset,
+        on_duplicate,
         on_delete,
         on_settings,
         parent=None,
@@ -441,6 +444,12 @@ class WidgetCard(QFrame):
             tokens["text_muted"],
             tokens,
         )
+        btn_duplicate = _GhostBtn(
+            _ic(ICON.ADD, color=text_primary),
+            t("widget_manager.tip_duplicate", "복제"),
+            tokens["accent"],
+            tokens,
+        )
         btn_del = _GhostBtn(
             _ic(ICON.DELETE, color=text_primary),
             t("widget_manager.tip_delete", "삭제"),
@@ -449,9 +458,11 @@ class WidgetCard(QFrame):
         )
         btn_focus.clicked.connect(lambda: on_focus(iid))
         btn_reset.clicked.connect(lambda: on_reset(iid))
+        btn_duplicate.clicked.connect(lambda: on_duplicate(iid))
         btn_del.clicked.connect(lambda: on_delete(iid))
         root.addWidget(btn_focus)
         root.addWidget(btn_reset)
+        root.addWidget(btn_duplicate)
         root.addWidget(btn_del)
 
 
@@ -568,6 +579,21 @@ class OverlayManagerDialog(QDialog):
         sec_lay.addWidget(sec_lbl)
         sec_lay.addWidget(self._count_badge)
         sec_lay.addStretch()
+        self._snap_check = QCheckBox(t("widget_manager.snap_enabled", "가장자리와 위젯에 맞춤"))
+        settings_getter = getattr(self._mgr, "_settings", None)
+        manager_settings = settings_getter() if callable(settings_getter) else None
+        self._snap_check.setChecked(
+            manager_settings.value("overlay_snap_enabled", True, type=bool)
+            if manager_settings is not None
+            else True
+        )
+        if manager_settings is not None:
+            self._snap_check.toggled.connect(
+                lambda enabled, settings=manager_settings: settings.setValue(
+                    "overlay_snap_enabled", enabled
+                )
+            )
+        sec_lay.addWidget(self._snap_check)
         root.addWidget(sec)
 
         # ── 스크롤 목록 ──
@@ -654,6 +680,7 @@ class OverlayManagerDialog(QDialog):
                 on_rename=self._on_rename,
                 on_focus=self._on_focus,
                 on_reset=self._on_reset_pos,
+                on_duplicate=self._on_duplicate,
                 on_delete=self._on_delete,
                 on_settings=self._on_settings,
                 parent=self._list_container,
@@ -709,6 +736,12 @@ class OverlayManagerDialog(QDialog):
 
     def _on_delete(self, iid: str):
         self._mgr._ui_remove_with_confirm(iid, parent_widget=self)
+        self._populate()
+
+    def _on_duplicate(self, iid: str):
+        new_id = self._mgr.duplicate_instance(iid)
+        if new_id:
+            self._mgr.show_instance(new_id)
         self._populate()
 
     def _on_settings(self, iid: str):

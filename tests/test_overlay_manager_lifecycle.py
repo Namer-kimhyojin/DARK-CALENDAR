@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QSettings
+from PyQt6.QtCore import QPoint, QSettings
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from calendar_app.presentation.widgets.overlay_manager import OverlayWidgetManager
@@ -44,6 +44,49 @@ class OverlayManagerLifecycleTests(unittest.TestCase):
             self.manager.get_widget(first).pos(),
             self.manager.get_widget(second).pos(),
         )
+
+    def test_duplicate_copies_settings_and_offsets_position(self):
+        source_id = self.manager.add_instance("clock", "업무 시계")
+        source = self.manager.get_widget(source_id)
+        source._set("font_size", 47)
+        source._set("widget_shape", "capsule")
+        source.move(140, 160)
+        source.save_position()
+
+        copy_id = self.manager.duplicate_instance(source_id)
+        copied = self.manager.get_widget(copy_id)
+
+        self.assertIsNotNone(copy_id)
+        self.assertEqual(copied.font_size(), 47)
+        self.assertEqual(copied.widget_shape_id(), "capsule")
+        self.assertEqual(copied.pos(), QPoint(164, 184))
+
+    def test_snap_uses_screen_edge_and_can_be_disabled(self):
+        inst_id = self.manager.add_instance("clock")
+        widget = self.manager.get_widget(inst_id)
+        area = widget.screen().availableGeometry()
+        snapped = self.manager.snap_widget_position(
+            inst_id, QPoint(area.left() + 7, area.top() + 9)
+        )
+        self.assertEqual(snapped, QPoint(area.left(), area.top()))
+
+        self.settings.setValue("overlay_snap_enabled", False)
+        proposed = QPoint(area.left() + 7, area.top() + 9)
+        self.assertEqual(self.manager.snap_widget_position(inst_id, proposed), proposed)
+
+    def test_four_widget_shapes_produce_distinct_geometry_contracts(self):
+        inst_id = self.manager.add_instance("clock")
+        widget = self.manager.get_widget(inst_id)
+        widget.resize(180, 90)
+        widget._set_widget_shape("circle")
+        self.assertEqual(widget.width(), widget.height())
+        self.assertFalse(widget.mask().isEmpty())
+        widget._set_widget_shape("capsule")
+        self.assertGreaterEqual(widget.width(), widget.height() * 2)
+        widget._set_widget_shape("poster")
+        self.assertGreater(widget.height(), widget.width())
+        widget._set_widget_shape("card")
+        self.assertEqual(widget.widget_shape_id(), "card")
 
     def test_shutdown_save_round_trips_widget_settings_and_position(self):
         inst_id = self.manager.add_instance("clock")
@@ -105,6 +148,7 @@ class OverlayManagerLifecycleTests(unittest.TestCase):
                 "dday",
                 "text",
                 "weather",
+                "launcher_deck",
             ):
                 inst_id = self.manager.add_instance(widget_type)
                 widget = self.manager.get_widget(inst_id)

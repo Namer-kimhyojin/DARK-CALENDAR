@@ -9,6 +9,7 @@ from typing import Any
 from PyQt6.QtCore import QEasingCurve, QEvent, QPoint, QPropertyAnimation, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QKeyEvent
 from PyQt6.QtWidgets import (
+    QApplication,
     QFrame,
     QGraphicsDropShadowEffect,
     QLabel,
@@ -439,6 +440,31 @@ class CommandPalette(QWidget):
 
         self._refresh_runtime_data()
         self._apply_style()
+
+        app_instance = QApplication.instance()
+        if app_instance is not None:
+            # Qt.WindowType.ToolTip 팝업은 OS 레벨 창 활성화를 받지 않으므로
+            # (메인 창이 계속 활성 상태로 보임) focusWindowChanged 대신
+            # 앱 내부 포커스 위젯 변화(focusChanged)로 "다른 창 클릭"을 감지한다.
+            app_instance.focusChanged.connect(self._on_app_focus_changed)
+            # 완전히 다른 프로그램으로 전환(Alt+Tab 등)하는 경우는 내부 포커스
+            # 위젯이 그대로 남을 수 있어 applicationStateChanged로 보강한다.
+            app_instance.applicationStateChanged.connect(self._on_application_state_changed)
+
+    def _on_app_focus_changed(self, old, now) -> None:
+        """Dismiss the palette when Qt focus moves to a widget outside it."""
+        if not self.isVisible():
+            return
+        if now is not None and (now is self or self.isAncestorOf(now)):
+            return
+        self._close_with_animation()
+
+    def _on_application_state_changed(self, state) -> None:
+        """Dismiss the palette when the whole app loses focus (alt-tab to another app)."""
+        if not self.isVisible():
+            return
+        if state != Qt.ApplicationState.ApplicationActive:
+            self._close_with_animation()
 
     def _settings(self):
         return getattr(self.parent(), "settings", None)

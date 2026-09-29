@@ -142,6 +142,11 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             background: transparent;
             border: none;
         }}
+        QFrame#unified_filter_choices,
+        QFrame#unified_filter_actions {{
+            background: transparent;
+            border: none;
+        }}
         QFrame#unified_container[widgetLayout="dashboard"] QFrame#unified_agenda_section,
         QFrame#unified_container[widgetLayout="magazine"] QFrame#unified_agenda_section {{
             background: {tk.get("card_bg", tk["section_bg"])};
@@ -201,7 +206,8 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
         }}
         QToolButton#unified_action_btn,
         QToolButton#unified_primary_action,
-        QToolButton#unified_filter_btn {{
+        QToolButton#unified_filter_btn,
+        QToolButton#unified_filter_compact {{
             color: {tk.get("button_text", tk["text_secondary"])};
             background: {tk.get("button_bg", tk["section_bg"])};
             border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", "rgba(255,255,255,14)"))};
@@ -212,7 +218,8 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             letter-spacing: 0.2px;
         }}
         QToolButton#unified_action_btn:hover,
-        QToolButton#unified_filter_btn:hover {{
+        QToolButton#unified_filter_btn:hover,
+        QToolButton#unified_filter_compact:hover {{
             color: {tk.get("text_primary", "#ffffff")};
             background: {tk.get("button_hover", tk["section_bg_alt"])};
             border: 1px solid {tk.get("hero_border", tk["panel_border"])};
@@ -223,6 +230,26 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             font-size: 8.1pt;
         }}
         QToolButton#unified_filter_btn:checked {{
+            color: {tk.get("accent_deep", tk.get("text_primary", "#ffffff"))};
+            background: {tk.get("chip_bg", tk.get("hero_bg", tk["section_bg"]))};
+            border: 1px solid {tk.get("chip_border", tk.get("hero_border", tk["panel_border"]))};
+        }}
+        QToolButton#unified_filter_compact {{
+            text-align: left;
+            padding: 5px 10px;
+        }}
+        QToolButton#unified_footer_toggle {{
+            color: {tk.get("text_secondary", "#c0cade")};
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            padding: 4px 7px;
+        }}
+        QToolButton#unified_footer_toggle:hover {{
+            color: {tk.get("text_primary", "#ffffff")};
+            background: {tk.get("button_hover", tk["section_bg_alt"])};
+        }}
+        QToolButton#unified_footer_toggle:checked {{
             color: {tk.get("accent_deep", tk.get("text_primary", "#ffffff"))};
             background: {tk.get("chip_bg", tk.get("hero_bg", tk["section_bg"]))};
             border: 1px solid {tk.get("chip_border", tk.get("hero_border", tk["panel_border"]))};
@@ -292,6 +319,13 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             border: 1px solid {tk.get("card_border", tk.get("section_border_soft", "rgba(255,255,255,14)"))};
             border-radius: 18px;
         }}
+        QFrame#agenda_item_schedule:hover,
+        QFrame#agenda_item_task:hover {{
+            border: 1px solid {tk.get("hero_border", tk["panel_border"])};
+        }}
+        QFrame#agenda_item_task[completed="true"] {{
+            background: {tk.get("surface_alt", tk["section_bg_alt"])};
+        }}
         QFrame#agenda_item_marker_schedule {{
             background: {tk.get("accent_deep", tk.get("accent", "#4da6ff"))};
             border-radius: 5px;
@@ -322,6 +356,15 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             font-size: 7.8pt;
             font-weight: 700;
             background-clip: padding;
+        }}
+        QLabel#agenda_item_status {{
+            color: {tk.get("accent_deep", tk.get("text_secondary", "#c0cade"))};
+            background: {tk.get("chip_bg", tk.get("hero_bg", tk["section_bg"]))};
+            border: 1px solid {tk.get("chip_border", tk.get("hero_border", tk["panel_border"]))};
+            border-radius: 8px;
+            padding: 2px 6px;
+            font-size: 7.4pt;
+            font-weight: 700;
         }}
         QScrollArea#unified_scroll,
         QWidget#unified_scroll_viewport,
@@ -417,6 +460,7 @@ class AgendaItemWidget(QFrame):
     ):
         super().__init__(parent)
         self.setObjectName("agenda_item_task" if is_task else "agenda_item_schedule")
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
         density = read_widget_density(controller.main_window.settings if controller else None)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, density.vertical_margin, 10, density.vertical_margin)
@@ -483,6 +527,11 @@ class AgendaItemWidget(QFrame):
             layout.addWidget(time_label, 0, Qt.AlignmentFlag.AlignVCenter)
         else:
             body.addWidget(time_label)
+        if bool(item.get("completed")):
+            completed_badge = QLabel(t("status.completed", "완료"), self)
+            completed_badge.setObjectName("agenda_item_status")
+            completed_badge.setAccessibleName(t("status.completed", "완료"))
+            layout.addWidget(completed_badge, 0, Qt.AlignmentFlag.AlignVCenter)
         if item.get("item_id") and controller is not None:
             more_btn = QToolButton(self)
             more_btn.setObjectName("agenda_item_more")
@@ -921,6 +970,8 @@ class UnifiedWidgetWindow(QWidget):
         self._active_layout_id = ""
         self._active_filter = "all"
         self._filter_buttons: dict[str, QToolButton] = {}
+        self._compact_filter_actions = {}
+        self._filter_layout_mode = ""
         self._data_state = "ready"
         self._drag_offset = None
         self._feedback_timer = QTimer(self)
@@ -959,7 +1010,7 @@ class UnifiedWidgetWindow(QWidget):
             t("widget_mode.customize", "꾸미기"), self.open_customization
         )
         bar.addWidget(self.customize_btn)
-        self.more_btn = self._button("...", self._show_more_menu)
+        self.more_btn = self._button("⋯", self._show_more_menu)
         self.more_btn.setAccessibleName(t("widget_mode.more", "더 보기"))
         self.more_btn.setToolTip(self.more_btn.accessibleName())
         bar.addWidget(self.more_btn)
@@ -1053,9 +1104,15 @@ class UnifiedWidgetWindow(QWidget):
 
         self.filter_section = QFrame(self.container)
         self.filter_section.setObjectName("unified_filter_section")
-        self.filter_row = QHBoxLayout(self.filter_section)
+        self.filter_row = QGridLayout(self.filter_section)
         self.filter_row.setContentsMargins(0, 0, 0, 0)
         self.filter_row.setSpacing(6)
+
+        self.filter_choices = QFrame(self.filter_section)
+        self.filter_choices.setObjectName("unified_filter_choices")
+        filter_choices_row = QHBoxLayout(self.filter_choices)
+        filter_choices_row.setContentsMargins(0, 0, 0, 0)
+        filter_choices_row.setSpacing(6)
 
         for mode, label in (
             ("all", t("widget_mode.filter_all", "All")),
@@ -1063,21 +1120,49 @@ class UnifiedWidgetWindow(QWidget):
             ("work", t("widget_mode.filter_work", "Work")),
             ("directive", t("widget_mode.filter_directive", "지시")),
         ):
-            btn = QToolButton(self.container)
+            btn = QToolButton(self.filter_choices)
             btn.setObjectName("unified_filter_btn")
             btn.setCheckable(True)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setText(label)
-            btn.setMinimumWidth(0)
-            btn.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+            btn.setToolTip(label)
+            btn.setAccessibleName(label)
+            btn.setMinimumWidth(44)
+            btn.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
             btn.clicked.connect(lambda _checked=False, m=mode: self._set_filter(m))
-            self.filter_row.addWidget(btn, 1)
+            filter_choices_row.addWidget(btn, 1)
             self._filter_buttons[mode] = btn
-        self.filter_row.addStretch(1)
+
+        self.compact_filter_btn = self._button("", lambda: None)
+        self.compact_filter_btn.setObjectName("unified_filter_compact")
+        self.compact_filter_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.compact_filter_menu = QMenu(self.compact_filter_btn)
+        self.compact_filter_btn.setMenu(self.compact_filter_menu)
+        for mode, label in (
+            ("all", t("widget_mode.filter_all", "전체")),
+            ("schedule", t("widget_mode.filter_schedule", "일정")),
+            ("work", t("widget_mode.filter_work", "업무")),
+            ("directive", t("widget_mode.filter_directive", "지시")),
+        ):
+            action = self.compact_filter_menu.addAction(label)
+            action.setCheckable(True)
+            action.triggered.connect(lambda _checked=False, m=mode: self._set_filter(m))
+            self._compact_filter_actions[mode] = action
+
+        self.filter_actions = QFrame(self.filter_section)
+        self.filter_actions.setObjectName("unified_filter_actions")
+        filter_actions_row = QHBoxLayout(self.filter_actions)
+        filter_actions_row.setContentsMargins(0, 0, 0, 0)
+        filter_actions_row.setSpacing(6)
+        filter_actions_row.addStretch(1)
         self.week_toggle_btn = self._button(t("widget_mode.week_toggle", "주간"), self._toggle_week)
         self.week_toggle_btn.setCheckable(True)
-        self.filter_row.addWidget(self.week_toggle_btn)
-        self.filter_row.addWidget(self.add_btn)
+        filter_actions_row.addWidget(self.week_toggle_btn)
+        filter_actions_row.addWidget(self.add_btn)
+
+        self.filter_row.addWidget(self.filter_choices, 0, 0)
+        self.filter_row.addWidget(self.filter_actions, 0, 1)
+        self.filter_row.setColumnStretch(0, 1)
 
         self.agenda_section = QFrame(self.container)
         self.agenda_section.setObjectName("unified_agenda_section")
@@ -1087,7 +1172,7 @@ class UnifiedWidgetWindow(QWidget):
 
         self.agenda_header = QLabel(t("widget_mode.focus_list", "FOCUS LIST"), self.agenda_section)
         self.agenda_header.setObjectName("unified_section")
-        self.agenda_header.hide()
+        self.agenda_layout.addWidget(self.agenda_header)
 
         self.scroll = QScrollArea(self)
         self.scroll.setObjectName("unified_scroll")
@@ -1107,9 +1192,14 @@ class UnifiedWidgetWindow(QWidget):
         surface_layout.addWidget(self.container, 1)
         footer = QHBoxLayout()
         self.completed_btn = self._button(
-            t("widget_mode.show_completed", "완료 업무 보기"), self._toggle_completed
+            t("widget_mode.show_completed", "완료 포함"), self._toggle_completed
         )
+        self.completed_btn.setObjectName("unified_footer_toggle")
         self.completed_btn.setCheckable(True)
+        self.completed_btn.setToolTip(
+            t("widget_mode.show_completed_help", "완료된 업무와 지시·협조도 목록에 표시합니다.")
+        )
+        self.completed_btn.setAccessibleDescription(self.completed_btn.toolTip())
         self.completed_btn.setChecked(
             str(
                 self.controller.main_window.settings.value("widget_mode_show_completed", "false")
@@ -1148,6 +1238,7 @@ class UnifiedWidgetWindow(QWidget):
         self.apply_selected_layout(resize_to_layout=True)
         self.apply_theme()
         self._sync_filter_buttons()
+        self._apply_filter_responsive_layout()
 
     def _button(self, text, callback):
         button = QToolButton(self)
@@ -1377,6 +1468,7 @@ class UnifiedWidgetWindow(QWidget):
             self.resize(self.controller.saved_size_for_layout(layout_spec))
         self.container.updateGeometry()
         self.updateGeometry()
+        self._apply_filter_responsive_layout(self._responsive_filter_width())
 
     def apply_skin_layout(self, *, resize_to_layout: bool = False, force: bool = False) -> None:
         """Compatibility shim for callers from the initial combined skin/layout rollout."""
@@ -1429,6 +1521,7 @@ class UnifiedWidgetWindow(QWidget):
             QLabel#unified_clock {{ font-size: {typography.control:.1f}pt; font-weight: 500; letter-spacing: 0; }}
             QLabel#unified_empty {{ font-size: {typography.body:.1f}pt; }}
             QToolButton#unified_action_btn, QToolButton#unified_filter_btn,
+            QToolButton#unified_filter_compact, QToolButton#unified_footer_toggle,
             QToolButton#unified_primary_action {{ border-radius: 7px; letter-spacing: 0;
                 font-size: {typography.control:.1f}pt; font-weight: 500; }}
             QToolButton#unified_action_btn {{ background: transparent; border: 1px solid transparent; }}
@@ -1445,6 +1538,7 @@ class UnifiedWidgetWindow(QWidget):
             QLabel#agenda_item_title {{ font-size: {typography.title:.1f}pt; font-weight: {weight}; }}
             QLabel#agenda_item_time {{ background: transparent; border: none; padding: 0;
                 color: {tokens["text_secondary"]}; font-size: {typography.secondary:.1f}pt; }}
+            QLabel#agenda_item_status {{ font-size: {typography.secondary:.1f}pt; }}
             QFrame[completed="true"] QPushButton#agenda_item_title {{ color: {tokens["text_secondary"]}; text-decoration: line-through; }}
             QPushButton#agenda_item_title:hover {{ color: {tokens["accent"]}; }}
             QToolButton#agenda_item_more {{ color: {tokens["text_secondary"]}; background: transparent;
@@ -1456,7 +1550,9 @@ class UnifiedWidgetWindow(QWidget):
             QToolButton#unified_action_btn {{ padding: 4px 8px; }}
             QToolButton[compactControl="true"] {{ padding: 2px; }}
             QToolButton#unified_action_btn[datePicker="true"] {{
-                font-size: {typography.date:.1f}pt; }}
+                color: {tokens["text_primary"]}; background: {tokens["section_bg"]};
+                border: 1px solid {tokens["panel_border"]}; text-align: left;
+                padding: 4px 10px; font-size: {typography.date:.1f}pt; font-weight: 600; }}
             QToolButton#unified_action_btn:checked {{ border: 2px solid {tokens["accent"]}; color: {tokens["text_primary"]}; }}
             QCheckBox {{ color: {tokens["text_primary"]}; }}
             QCheckBox#agenda_complete {{ background: transparent; border: none; }}
@@ -1476,6 +1572,7 @@ class UnifiedWidgetWindow(QWidget):
         self.customize_btn.setIconSize(QSize(18, 18))
         self.customize_btn.setFixedWidth(32)
         self.more_btn.setFixedWidth(28)
+        self.compact_filter_menu.setStyleSheet(_widget_mode_menu_stylesheet(tokens))
         self.setWindowOpacity(1.0)
         self.cal_grid.set_theme_tokens(
             tokens,
@@ -1487,8 +1584,19 @@ class UnifiedWidgetWindow(QWidget):
         self._refresh_locale_texts()
 
     def _sync_filter_buttons(self) -> None:
+        labels = self._filter_labels()
         for mode, btn in self._filter_buttons.items():
             btn.setChecked(mode == self._active_filter)
+            btn.setText(labels[mode])
+            btn.setToolTip(labels[mode])
+            btn.setAccessibleName(labels[mode])
+        for mode, action in self._compact_filter_actions.items():
+            action.setText(labels[mode])
+            action.setChecked(mode == self._active_filter)
+        compact_label = labels.get(self._active_filter, labels["all"])
+        self.compact_filter_btn.setText(compact_label)
+        self.compact_filter_btn.setToolTip(compact_label)
+        self.compact_filter_btn.setAccessibleName(compact_label)
         text = (
             t("widget_mode.add_work", "업무 추가")
             if self._active_filter == "work"
@@ -1501,6 +1609,70 @@ class UnifiedWidgetWindow(QWidget):
         self.add_btn.setText(text)
         self.add_btn.setToolTip(text)
         self.add_btn.setAccessibleName(text)
+
+    @staticmethod
+    def _filter_labels() -> dict[str, str]:
+        return {
+            "all": t("widget_mode.filter_all", "전체"),
+            "schedule": t("widget_mode.filter_schedule", "일정"),
+            "work": t("widget_mode.filter_work", "업무"),
+            "directive": t("widget_mode.filter_directive", "지시"),
+        }
+
+    def _apply_filter_responsive_layout(self, width: int | None = None) -> None:
+        available_width = int(width or self.filter_section.width() or self.width())
+        board_column = self._active_layout_id in {"dashboard", "magazine"} and not getattr(
+            self, "_compact_layout", False
+        )
+        if available_width >= 520:
+            mode = "inline"
+        elif board_column or available_width < 360:
+            mode = "compact"
+        else:
+            mode = "stacked"
+        if mode == "stacked":
+            self.filter_row.setContentsMargins(0, 0, 0, 0)
+            self.filter_row.setSpacing(4)
+        else:
+            self.filter_row.setContentsMargins(0, 4, 0, 4)
+            self.filter_row.setSpacing(6)
+        self.agenda_header.setVisible(mode == "inline")
+        if mode == self._filter_layout_mode:
+            return
+        self._filter_layout_mode = mode
+        for widget in (self.filter_choices, self.compact_filter_btn, self.filter_actions):
+            self.filter_row.removeWidget(widget)
+        for index in range(2):
+            self.filter_row.setRowStretch(index, 0)
+            self.filter_row.setColumnStretch(index, 0)
+
+        if mode == "inline":
+            self.filter_choices.show()
+            self.compact_filter_btn.hide()
+            self.filter_row.addWidget(self.filter_choices, 0, 0)
+            self.filter_row.addWidget(self.filter_actions, 0, 1)
+            self.filter_row.setColumnStretch(0, 1)
+        elif mode == "stacked":
+            self.filter_choices.show()
+            self.compact_filter_btn.hide()
+            self.filter_row.addWidget(self.filter_choices, 0, 0, 1, 2)
+            self.filter_row.addWidget(self.filter_actions, 1, 0, 1, 2)
+        else:
+            self.filter_choices.hide()
+            self.compact_filter_btn.show()
+            self.filter_row.addWidget(self.compact_filter_btn, 0, 0)
+            self.filter_row.addWidget(self.filter_actions, 0, 1)
+            self.filter_row.setColumnStretch(0, 1)
+        self.filter_actions.show()
+        self.filter_section.updateGeometry()
+
+    def _responsive_filter_width(self) -> int:
+        board_column = self._active_layout_id in {"dashboard", "magazine"} and not getattr(
+            self, "_compact_layout", False
+        )
+        if board_column:
+            return max(0, self.filter_section.width())
+        return max(0, self.width() - 28)
 
     def _set_filter(self, mode: str) -> None:
         target = str(mode or "all").strip().lower()
@@ -1571,14 +1743,12 @@ class UnifiedWidgetWindow(QWidget):
         self.today_btn.setText(t("widget_mode.today", "오늘"))
         self.today_btn.setToolTip(t("widget_mode.today", "오늘"))
         self._sync_filter_buttons()
-        labels = {
-            "all": t("widget_mode.filter_all", "전체"),
-            "schedule": t("widget_mode.filter_schedule", "일정"),
-            "work": t("widget_mode.filter_work", "업무"),
-            "directive": t("widget_mode.filter_directive", "지시"),
-        }
-        for mode, btn in self._filter_buttons.items():
-            btn.setText(labels.get(mode, labels["all"]))
+        self.completed_btn.setText(t("widget_mode.show_completed", "완료 포함"))
+        self.completed_btn.setToolTip(
+            t("widget_mode.show_completed_help", "완료된 업무와 지시·협조도 목록에 표시합니다.")
+        )
+        self.completed_btn.setAccessibleName(self.completed_btn.text())
+        self.completed_btn.setAccessibleDescription(self.completed_btn.toolTip())
         self.update_header(self.controller._current_date())
         self.update_agenda(self._last_items)
 
@@ -1907,6 +2077,8 @@ class UnifiedWidgetWindow(QWidget):
         compact = self.width() < 640 and self._active_layout_id in {"dashboard", "magazine"}
         if hasattr(self, "_compact_layout") and compact != self._compact_layout:
             self.apply_selected_layout(force=True)
+        if hasattr(self, "filter_section"):
+            self._apply_filter_responsive_layout(self._responsive_filter_width())
         if not self.isMinimized() and self.isVisible():
             self.controller.save_size(self.size())
 
@@ -2296,6 +2468,10 @@ class UnifiedWidgetController:
         self._restoring_geometry = True
         try:
             self.widget.setGeometry(target)
+            # Layout changes can queue a stale size hint while a collapsed calendar is
+            # being expanded. Reapply the persisted size so the restored layout does
+            # not grow merely because its internal rows were rearranged.
+            self.widget.resize(target.size())
         finally:
             self._restoring_geometry = False
 

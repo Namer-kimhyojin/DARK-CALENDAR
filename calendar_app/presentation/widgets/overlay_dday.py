@@ -3,13 +3,22 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
 
-from PyQt6.QtCore import QDate, QPoint, Qt, QTimer
+from PyQt6.QtCore import QDate, QPoint, QSize, Qt, QTimer
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.widgets.moment_asset_packs import (
+    DEFAULT_MOMENT_ASSET_PACK_ID,
+    get_moment_asset_pack,
+    moment_asset_html,
+    moment_asset_packs,
+    moment_pack_icon,
+    moment_pack_preview_pixmap,
+)
 from calendar_app.presentation.widgets.overlay_base import (
     _DLG_SS,
     _apply_align_tags,
@@ -167,7 +176,9 @@ class OverlayDDayWidget(_BaseOverlayWidget):
     # Template Engine
     # ------------------------------------------------------------------
 
-    _DEFAULT_TEMPLATE = "{dday|size=36|bold}\n{label|size=13}  {date:%Y.%m.%d|size=11}"
+    _DEFAULT_TEMPLATE = (
+        "{art|size=56}\n{dday|size=36|bold}\n{label|size=13}  {date:%Y.%m.%d|size=11}"
+    )
 
     def _resolve_dd_template(
         self, template: str, dday_str: str, label: str, target_date: QDate | None
@@ -193,6 +204,17 @@ class OverlayDDayWidget(_BaseOverlayWidget):
         def _replace(m: re.Match) -> str:
             inner = m.group(1).split("|")
             key, hints = inner[0].strip(), inner[1:]
+            if key == "art":
+                px = 56
+                for hint in hints:
+                    if hint.startswith("size="):
+                        with contextlib.suppress(ValueError):
+                            px = int(hint[5:])
+                return moment_asset_html(
+                    self._selected_dialog_asset_pack(),
+                    self._selected_dialog_moment(),
+                    px,
+                )
             if key.startswith("date:") and target_date:
                 return _apply_span(target_date.toString(_strftime_to_qt(key[5:])), hints)
             return _apply_span(str(vals.get(key, "")), hints)
@@ -205,6 +227,37 @@ class OverlayDDayWidget(_BaseOverlayWidget):
 
     def _open_settings(self):
         extra = [
+            {
+                "key": "dday_asset_pack",
+                "label": t("widget.dday.asset_pack", "일러스트 팩:"),
+                "type": "combo",
+                "options": [
+                    (t(pack.label_key, pack.label_default), pack.pack_id)
+                    for pack in moment_asset_packs()
+                ],
+                "default": DEFAULT_MOMENT_ASSET_PACK_ID,
+            },
+            {
+                "key": "dday_moment",
+                "label": t("widget.dday.moment", "장면:"),
+                "type": "combo",
+                "options": [
+                    (t(f"widget.moment.{key}", label), key)
+                    for key, label in (
+                        ("birthday", "Birthday"),
+                        ("anniversary", "Anniversary"),
+                        ("deadline", "Deadline"),
+                        ("launch", "Launch"),
+                        ("travel", "Travel"),
+                        ("study", "Study"),
+                        ("health", "Health"),
+                        ("celebration", "Celebration"),
+                        ("calm", "Calm"),
+                        ("sparkle", "Sparkle"),
+                    )
+                ],
+                "default": "celebration",
+            },
             {
                 "key": "dd_label",
                 "label": t("widget.dday.name_label", "Label:"),
@@ -230,7 +283,7 @@ class OverlayDDayWidget(_BaseOverlayWidget):
             has_template=True,
             default_template=self._DEFAULT_TEMPLATE,
             template_hint=t(
-                "widget.dday.template_hint", "{dday}, {days}, {label}, {date:%Y.%m.%d}"
+                "widget.dday.template_hint", "{dday}, {days}, {label}, {date:%Y.%m.%d}, {art}"
             ),
             preview_render_fn=lambda tmpl: (
                 _preview(
@@ -240,17 +293,69 @@ class OverlayDDayWidget(_BaseOverlayWidget):
                 if hasattr(self, "_active_settings_widgets")
                 else ""
             ),
+            extra_basic_setup_fn=self._setup_moment_asset_preview,
         ):
             self._tick_dd()
+
+    def _selected_dialog_asset_pack(self) -> str:
+        combo = getattr(self, "_active_settings_widgets", {}).get("dday_asset_pack")
+        value = combo.currentData() if combo is not None and hasattr(combo, "currentData") else None
+        return get_moment_asset_pack(
+            value or self._get("dday_asset_pack", DEFAULT_MOMENT_ASSET_PACK_ID)
+        ).pack_id
+
+    def _selected_dialog_moment(self) -> str:
+        combo = getattr(self, "_active_settings_widgets", {}).get("dday_moment")
+        value = combo.currentData() if combo is not None and hasattr(combo, "currentData") else None
+        return str(value or self._get("dday_moment", "celebration"))
+
+    def _setup_moment_asset_preview(self, basic, dialog) -> None:
+        preview = QLabel(dialog)
+        preview.setObjectName("momentAssetPreview")
+        preview.setMinimumHeight(104)
+        preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        preview.setStyleSheet(
+            "QLabel#momentAssetPreview { background: rgba(127, 145, 168, 24); "
+            "border: 1px solid rgba(127, 145, 168, 56); border-radius: 12px; }"
+        )
+        basic.addWidget(preview)
+        pack_combo = self._active_settings_widgets["dday_asset_pack"]
+        moment_combo = self._active_settings_widgets["dday_moment"]
+        pack_combo.setIconSize(QSize(34, 34))
+        pack_combo.setMinimumHeight(44)
+        for index, pack in enumerate(moment_asset_packs()):
+            pack_combo.setItemIcon(index, moment_pack_icon(pack.pack_id))
+
+        def _refresh_preview() -> None:
+            preview.setPixmap(moment_pack_preview_pixmap(pack_combo.currentData(), QSize(300, 96)))
+
+        pack_combo.currentIndexChanged.connect(_refresh_preview)
+        moment_combo.currentIndexChanged.connect(_refresh_preview)
+        _refresh_preview()
 
     def _build_context_menu(self, menu: QMenu):
         menu.addAction(
             t("widget.dday.date_name_settings", "D-Day Settings..."), self._open_settings
         )
+        pack_menu = menu.addMenu(t("widget.dday.asset_pack", "일러스트 팩"))
+        current = get_moment_asset_pack(
+            self._get("dday_asset_pack", DEFAULT_MOMENT_ASSET_PACK_ID)
+        ).pack_id
+        for pack in moment_asset_packs():
+            action = pack_menu.addAction(
+                t(pack.label_key, pack.label_default),
+                lambda *_, selected=pack.pack_id: self._set_moment_pack(selected),
+            )
+            action.setCheckable(True)
+            action.setChecked(pack.pack_id == current)
         menu.addAction(
             t("widget.dday.clear_all", "Reset D-Day"),
             lambda: (self._set("dd_target_date", ""), self._set("dd_label", ""), self._tick_dd()),
         )
+
+    def _set_moment_pack(self, pack_id: str) -> None:
+        self._set("dday_asset_pack", get_moment_asset_pack(pack_id).pack_id)
+        self._refresh_face()
 
     def _on_double_click(self) -> bool:
         self._open_settings()

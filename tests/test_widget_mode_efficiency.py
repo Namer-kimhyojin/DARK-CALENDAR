@@ -45,6 +45,37 @@ def test_header_is_one_row_and_first_item_appears_above_window_midpoint(workspac
     assert widget.clock_label.isVisible()
 
 
+def test_filters_keep_meaning_across_inline_stacked_and_compact_widths(workspace):
+    _, _, widget = workspace
+
+    widget.resize(620, 660)
+    _APP.processEvents()
+    assert widget._filter_layout_mode == "inline"
+    assert widget.filter_choices.isVisible()
+    assert not widget.compact_filter_btn.isVisible()
+
+    widget.resize(420, 660)
+    _APP.processEvents()
+    assert widget._filter_layout_mode == "stacked"
+    choices_position = widget.filter_row.getItemPosition(
+        widget.filter_row.indexOf(widget.filter_choices)
+    )
+    actions_position = widget.filter_row.getItemPosition(
+        widget.filter_row.indexOf(widget.filter_actions)
+    )
+    assert choices_position[0] == 0
+    assert actions_position[0] == 1
+    assert all(button.text() != "..." for button in widget._filter_buttons.values())
+
+    widget.resize(350, 500)
+    _APP.processEvents()
+    assert widget._filter_layout_mode == "compact"
+    assert not widget.filter_choices.isVisible()
+    assert widget.compact_filter_btn.isVisible()
+    widget.set_filter("directive")
+    assert widget.compact_filter_btn.text() == widget._filter_labels()["directive"]
+
+
 def test_density_only_changes_spacing_and_retains_every_item(workspace):
     host, _, widget = workspace
     host.settings.setValue("widget_mode_font_size", 16)

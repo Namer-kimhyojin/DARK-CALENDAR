@@ -19,10 +19,21 @@ import os as _os
 import re as _re
 import time
 
-from PyQt6.QtCore import QDate, QEvent, QPoint, QRect, QSize, Qt, QTime
-from PyQt6.QtGui import QColor, QFont, QFontDatabase, QPainter, QPen
+from PyQt6.QtCore import QDate, QEvent, QPoint, QRect, QRectF, QSize, Qt, QTime
+from PyQt6.QtGui import (
+    QColor,
+    QFont,
+    QFontDatabase,
+    QIcon,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QPixmap,
+    QRegion,
+)
 from PyQt6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QDateEdit,
@@ -30,6 +41,7 @@ from PyQt6.QtWidgets import (
     QDialogButtonBox,
     QFontComboBox,
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLayout,
@@ -81,6 +93,11 @@ from calendar_app.presentation.widgets.overlay_measure_utils import (
 from calendar_app.presentation.widgets.overlay_template_validation import (
     normalize_widget_template_kind,
     validate_widget_template,
+)
+from calendar_app.presentation.widgets.widget_shapes import (
+    DEFAULT_WIDGET_SHAPE_ID,
+    get_widget_shape,
+    widget_shapes,
 )
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
@@ -1523,6 +1540,10 @@ class _BaseOverlayWidget(QWidget):
         preset = overlay_display_preset(self.display_preset_id())
         if preset is not None:
             sp.update(preset.style_params)
+        shape = get_widget_shape(self.widget_shape_id())
+        if shape.shape_id != "card":
+            sp["radius"] = shape.radius
+            sp["margins"] = list(shape.margins)
 
         # Ensure face has an object name for stylesheet scoping
         obj_name = self.face.objectName() or f"{kind}Face"
@@ -1543,6 +1564,7 @@ class _BaseOverlayWidget(QWidget):
         # Update dependent visual states
         self._update_grip_color()
         self._update_interaction_surface()
+        self._apply_shape_mask()
 
         return sp
 
@@ -1611,6 +1633,82 @@ class _BaseOverlayWidget(QWidget):
         if raw == CUSTOM_DISPLAY_PRESET_ID or overlay_display_preset(raw) is not None:
             return raw
         return CUSTOM_DISPLAY_PRESET_ID
+
+    def widget_shape_id(self) -> str:
+        return get_widget_shape(self._get("widget_shape", DEFAULT_WIDGET_SHAPE_ID)).shape_id
+
+    def _constrain_shape_size(self, width: int, height: int) -> tuple[int, int]:
+        shape = get_widget_shape(self.widget_shape_id())
+        width, height = max(80, int(width)), max(40, int(height))
+        if shape.shape_id == "circle":
+            side = max(width, height, 120)
+            return side, side
+        if shape.shape_id == "capsule":
+            return max(width, int(height * 2.0)), height
+        if shape.shape_id == "poster":
+            return width, max(height, int(round(width / float(shape.aspect_ratio or 0.72))))
+        return width, height
+
+    def _set_widget_shape(self, shape_id: str) -> None:
+        shape = get_widget_shape(shape_id)
+        previous_shape_id = self.widget_shape_id()
+        self._set("widget_shape", shape.shape_id)
+        if shape.shape_id == "card":
+            self._set("fixed_w", None)
+            self._set("fixed_h", None)
+            self._release_layout_constraints()
+            self._apply_and_resize()
+            self._apply_shape_mask()
+            self._refresh_face()
+            return
+        if previous_shape_id != shape.shape_id:
+            self._set("fixed_w", None)
+            self._set("fixed_h", None)
+            self._release_layout_constraints()
+            self._apply_and_resize()
+        hint = self.face.sizeHint() if not self.isVisible() else self.size()
+        base_width = max(120, hint.width())
+        base_height = max(60, hint.height())
+        if shape.shape_id == "circle":
+            base_width += 104
+            base_height += 104
+        width, height = self._constrain_shape_size(base_width, base_height)
+        self._set("fixed_w", width)
+        self._set("fixed_h", height)
+        self._apply_and_resize()
+        self._apply_shape_mask()
+        self._refresh_face()
+
+    def _apply_shape_mask(self) -> None:
+        if not hasattr(self, "owner") or self.width() <= 0 or self.height() <= 0:
+            return
+        shape_id = self.widget_shape_id()
+        if shape_id not in {"circle", "capsule"}:
+            self.clearMask()
+            return
+        if hasattr(self, "face"):
+            radius = max(1, min(self.width(), self.height()) // 2)
+            stylesheet = self.face.styleSheet()
+            rounded_stylesheet = _re.sub(
+                r"border-radius:\s*\d+px;",
+                f"border-radius: {radius}px;",
+                stylesheet,
+                count=1,
+            )
+            if rounded_stylesheet != stylesheet:
+                self.face.setStyleSheet(rounded_stylesheet)
+        path = QPainterPath()
+        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        if shape_id == "circle":
+            path.addEllipse(rect)
+        else:
+            radius = min(rect.width(), rect.height()) / 2.0
+            path.addRoundedRect(rect, radius, radius)
+        self.setMask(QRegion(path.toFillPolygon().toPolygon()))
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self._apply_shape_mask()
 
     def _display_preset_items(self) -> list[tuple[str, str]]:
         return [
@@ -2707,12 +2805,71 @@ class _BaseOverlayWidget(QWidget):
             appear, t("widget.common.section_display_presets", "DESIGN PRESETS")
         )
         display_preset_combo = self._make_display_preset_combo()
-        appear.addLayout(
-            self._make_labeled_row(
-                t("widget.common.display_preset", "Display style:"),
-                display_preset_combo,
+        display_preset_combo.setVisible(False)
+        preset_grid = QGridLayout()
+        preset_grid.setHorizontalSpacing(8)
+        preset_grid.setVerticalSpacing(8)
+        preset_group = QButtonGroup(dlg)
+        preset_group.setExclusive(True)
+        for index, preset in enumerate(overlay_display_presets()):
+            button = QToolButton(dlg)
+            button.setCheckable(True)
+            button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+            button.setIcon(self._display_preset_icon(preset))
+            button.setIconSize(QSize(138, 50))
+            button.setText(t(preset.label_key, preset.label_default).split(" · ")[0])
+            button.setMinimumSize(154, 82)
+            button.setProperty("presetId", preset.preset_id)
+            button.setStyleSheet(
+                "QToolButton { padding: 6px; border: 1px solid rgba(127,145,168,56); "
+                "border-radius: 10px; } QToolButton:checked { border: 2px solid #4da3ff; "
+                "background: #1c4da3ff; }"
             )
-        )
+            button.clicked.connect(
+                lambda _checked=False, pid=preset.preset_id: display_preset_combo.setCurrentIndex(
+                    display_preset_combo.findData(pid)
+                )
+            )
+            preset_group.addButton(button)
+            preset_grid.addWidget(button, index // 3, index % 3)
+            if preset.preset_id == self.display_preset_id():
+                button.setChecked(True)
+        appear.addLayout(preset_grid)
+        appear.addWidget(display_preset_combo)
+
+        self._add_divider(appear)
+        self._add_section_label(appear, t("widget.common.section_shape", "SHAPE"))
+        shape_combo = QComboBox(dlg)
+        shape_group = QButtonGroup(dlg)
+        shape_group.setExclusive(True)
+        shape_grid = QGridLayout()
+        current_shape = self.widget_shape_id()
+        for index, shape in enumerate(widget_shapes()):
+            label = t(shape.label_key, shape.label_default)
+            shape_combo.addItem(label, shape.shape_id)
+            button = QToolButton(dlg)
+            button.setText(label)
+            button.setCheckable(True)
+            button.setMinimumHeight(42)
+            button.setStyleSheet(
+                f"QToolButton {{ border: 1px solid rgba(127,145,168,64); "
+                f"border-radius: {20 if shape.shape_id in ('capsule', 'circle') else 8}px; "
+                "padding: 7px 12px; }} QToolButton:checked { border: 2px solid #4da3ff; "
+                "background: #1c4da3ff; }"
+            )
+            button.clicked.connect(
+                lambda _checked=False, sid=shape.shape_id: shape_combo.setCurrentIndex(
+                    shape_combo.findData(sid)
+                )
+            )
+            shape_group.addButton(button)
+            shape_grid.addWidget(button, 0, index)
+            if shape.shape_id == current_shape:
+                button.setChecked(True)
+                shape_combo.setCurrentIndex(index)
+        shape_combo.setVisible(False)
+        appear.addLayout(shape_grid)
+        appear.addWidget(shape_combo)
         self._add_divider(appear)
         self._add_section_label(appear, t("widget.common.section_colors", "Colors"))
         bg_btn = self._make_rgba_color_button(self.bg_color_rgba())
@@ -2802,6 +2959,7 @@ class _BaseOverlayWidget(QWidget):
             opacity_slider.setValue(100)
 
         display_preset_combo.currentIndexChanged.connect(_preview_display_preset)
+        original_shape_id = self.widget_shape_id()
 
         # -- Page 3: Advanced (Template) --
         template_editor = None
@@ -2911,6 +3069,8 @@ class _BaseOverlayWidget(QWidget):
                 if actual_values != expected_values:
                     selected_preset_id = CUSTOM_DISPLAY_PRESET_ID
             self._set("appearance_preset", selected_preset_id)
+            selected_shape_id = str(shape_combo.currentData() or DEFAULT_WIDGET_SHAPE_ID)
+            self._set("widget_shape", selected_shape_id)
 
             # Commit extra fields
             for key, w in self._active_settings_widgets.items():
@@ -2922,6 +3082,22 @@ class _BaseOverlayWidget(QWidget):
 
             # Apply
             self._apply_and_resize(refit=True)
+            if selected_shape_id == "card" and original_shape_id != "card":
+                self._set("fixed_w", None)
+                self._set("fixed_h", None)
+                self._release_layout_constraints()
+                self._apply_and_resize()
+            elif selected_shape_id != "card" and selected_shape_id != original_shape_id:
+                hint = self.face.sizeHint()
+                base_width = max(120, hint.width())
+                base_height = max(60, hint.height())
+                if selected_shape_id == "circle":
+                    base_width += 104
+                    base_height += 104
+                width, height = self._constrain_shape_size(base_width, base_height)
+                self._set("fixed_w", width)
+                self._set("fixed_h", height)
+                self._apply_and_resize()
             self._refresh_face()
             return True
         return False
@@ -2960,6 +3136,33 @@ class _BaseOverlayWidget(QWidget):
         selected = combo.findData(self.display_preset_id())
         combo.setCurrentIndex(max(0, selected))
         return combo
+
+    @staticmethod
+    def _display_preset_icon(preset: OverlayDisplayPreset) -> QIcon:
+        pixmap = QPixmap(138, 50)
+        bg_color, bg_alpha = _parse_rgba(preset.background_rgba)
+        text_color, text_alpha = _parse_rgba(preset.text_rgba)
+        border_color, border_alpha = _parse_rgba(preset.border_rgba)
+        bg_color.setAlpha(bg_alpha)
+        text_color.setAlpha(text_alpha)
+        border_color.setAlpha(border_alpha)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setBrush(bg_color)
+        pen = QPen(border_color)
+        pen.setWidth(max(1, int(preset.style_params.get("border_width", 1))))
+        painter.setPen(pen)
+        radius = min(18, int(preset.style_params.get("radius", 10)))
+        painter.drawRoundedRect(1, 1, 136, 48, radius, radius)
+        painter.setPen(text_color)
+        painter.setBrush(text_color)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawRoundedRect(18, 14, 74, 6, 3, 3)
+        painter.drawRoundedRect(18, 27, 48, 5, 2, 2)
+        painter.drawEllipse(106, 14, 18, 18)
+        painter.end()
+        return QIcon(pixmap)
 
     def _wrap_preview_html(
         self, html: str, align: str = "center", preview_size: QSize | None = None
@@ -3874,6 +4077,7 @@ class _BaseOverlayWidget(QWidget):
                     new_h = max(40, int(oh - delta.y()))
                     new_x = int(origin_pos.x() + (ow - new_w))
                     new_y = int(origin_pos.y() + (oh - new_h))
+                new_w, new_h = self._constrain_shape_size(new_w, new_h)
                 self._set("fixed_w", new_w)
                 self._set("fixed_h", new_h)
                 self.move(new_x, new_y)
@@ -3918,6 +4122,9 @@ class _BaseOverlayWidget(QWidget):
                 return True
             if self._drag_offset is not None:
                 self._drag_offset = None
+                snap_cb = getattr(self, "_overlay_manager_snap", None)
+                if callable(snap_cb):
+                    self.move(snap_cb(self.pos()))
                 self.save_position()
                 local = self.face.mapFromGlobal(event.globalPosition().toPoint())
                 self._update_hover_cursor(local)
@@ -3979,6 +4186,17 @@ class _BaseOverlayWidget(QWidget):
                 act.setCheckable(True)
                 act.setChecked(style_id == current_format)
 
+        shape_menu = menu.addMenu(t("widget.menu.shape", "Shape"))
+        shape_menu.setStyleSheet(self._menu_style())
+        current_shape = self.widget_shape_id()
+        for shape in widget_shapes():
+            act = shape_menu.addAction(
+                t(shape.label_key, shape.label_default),
+                lambda *_, selected=shape.shape_id: self._set_widget_shape(selected),
+            )
+            act.setCheckable(True)
+            act.setChecked(shape.shape_id == current_shape)
+
         menu.addSeparator()
         app_menu = menu.addMenu(t("widget.menu.appearance", "Appearance"))
         app_menu.setIcon(_ic(ICON.APPEARANCE))
@@ -4001,6 +4219,10 @@ class _BaseOverlayWidget(QWidget):
             t("widget.menu.reset_size", "Optimize size"), self._action_reset_size
         )
         act_size.setIcon(_ic(ICON.RESET_SIZE))
+        duplicate_cb = getattr(self, "_overlay_manager_duplicate", None)
+        if callable(duplicate_cb):
+            act_duplicate = menu.addAction(t("widget.menu.duplicate", "Duplicate"), duplicate_cb)
+            act_duplicate.setIcon(_ic(ICON.ADD))
         menu.addSeparator()
         act_hide = menu.addAction(t("widget.menu.hide", "Hide"), lambda: self.set_enabled(False))
         act_hide.setIcon(_ic(ICON.HIDE))

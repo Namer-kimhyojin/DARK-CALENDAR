@@ -3,9 +3,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
 
-from PyQt6.QtCore import QDate, QDateTime, QPoint, QRect, QRectF, Qt, QTimer
+from PyQt6.QtCore import QDate, QDateTime, QPoint, QRect, QRectF, QSize, Qt, QTimer
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter
 from PyQt6.QtWidgets import (
     QFrame,
@@ -18,6 +19,15 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.widgets.moment_asset_packs import (
+    DEFAULT_MOMENT_ASSET_PACK_ID,
+    get_moment_asset_pack,
+    moment_asset_html,
+    moment_asset_packs,
+    moment_pack_icon,
+    moment_pack_preview_pixmap,
+    season_moment_id,
+)
 from calendar_app.presentation.widgets.overlay_base import (
     _DLG_SS,
     _apply_align_tags,
@@ -601,7 +611,7 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
 
     # ------------------------------------------------------------------ template engine
 
-    _DEFAULT_TEMPLATE = "{weekday|size=13}\n{day|size=36|bold}\n{date|size=11}"
+    _DEFAULT_TEMPLATE = "{art|size=56}\n{weekday|size=13}\n{day|size=36|bold}\n{date|size=11}"
 
     def _resolve_dc_template(self, template: str, now_dt: QDateTime) -> str:
         from calendar_app.presentation.widgets.overlay_base import (
@@ -645,6 +655,17 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
         def _replace(m: re.Match) -> str:
             inner = m.group(1).split("|")
             key, hints = inner[0].strip(), inner[1:]
+            if key == "art":
+                px = 56
+                for hint in hints:
+                    if hint.startswith("size="):
+                        with contextlib.suppress(ValueError):
+                            px = int(hint[5:])
+                return moment_asset_html(
+                    self._selected_dialog_asset_pack(),
+                    season_moment_id(q.month()),
+                    px,
+                )
             if key.startswith("date:"):
                 val = now_dt.toString(_strftime_to_qt(key[5:]))
             elif key == "weekday:short":
@@ -662,24 +683,82 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
     def _open_settings(self):
         self._open_standard_settings_dialog(
             title=t("widget.datecard.settings_title", "Date Card Settings"),
+            extra_fields=[
+                {
+                    "key": "datecard_asset_pack",
+                    "label": t("widget.datecard.asset_pack", "일러스트 팩:"),
+                    "type": "combo",
+                    "options": [
+                        (t(pack.label_key, pack.label_default), pack.pack_id)
+                        for pack in moment_asset_packs()
+                    ],
+                    "default": DEFAULT_MOMENT_ASSET_PACK_ID,
+                }
+            ],
             has_template=True,
             default_template=self._DEFAULT_TEMPLATE,
             template_hint=t(
                 "widget.datecard.template_hint",
                 "{day}, {month}, {year}, {weekday}, {doy}, "
                 "{week_num}, {quarter}, {days_left_month}, "
-                "{days_in_month}, {yesterday}, {tomorrow}",
+                "{days_in_month}, {yesterday}, {tomorrow}, {art}",
             ),
             preview_render_fn=lambda tmpl: self._resolve_dc_template(
                 tmpl, QDateTime.currentDateTime()
             ),
+            extra_basic_setup_fn=self._setup_moment_asset_preview,
         )
+
+    def _selected_dialog_asset_pack(self) -> str:
+        combo = getattr(self, "_active_settings_widgets", {}).get("datecard_asset_pack")
+        if combo is not None and hasattr(combo, "currentData"):
+            return get_moment_asset_pack(combo.currentData()).pack_id
+        return get_moment_asset_pack(
+            self._get("datecard_asset_pack", DEFAULT_MOMENT_ASSET_PACK_ID)
+        ).pack_id
+
+    def _setup_moment_asset_preview(self, basic, dialog) -> None:
+        preview = QLabel(dialog)
+        preview.setObjectName("momentAssetPreview")
+        preview.setMinimumHeight(104)
+        preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        preview.setStyleSheet(
+            "QLabel#momentAssetPreview { background: rgba(127, 145, 168, 24); "
+            "border: 1px solid rgba(127, 145, 168, 56); border-radius: 12px; }"
+        )
+        basic.addWidget(preview)
+        combo = self._active_settings_widgets["datecard_asset_pack"]
+        combo.setIconSize(QSize(34, 34))
+        combo.setMinimumHeight(44)
+        for index, pack in enumerate(moment_asset_packs()):
+            combo.setItemIcon(index, moment_pack_icon(pack.pack_id))
+
+        def _refresh_preview() -> None:
+            preview.setPixmap(moment_pack_preview_pixmap(combo.currentData(), QSize(300, 96)))
+
+        combo.currentIndexChanged.connect(_refresh_preview)
+        _refresh_preview()
 
     def _build_context_menu(self, menu: QMenu):
         menu.addAction(
             t("widget.datecard.settings", "Date Card Settings..."),
             self._open_settings,
         )
+        pack_menu = menu.addMenu(t("widget.datecard.asset_pack", "일러스트 팩"))
+        current = get_moment_asset_pack(
+            self._get("datecard_asset_pack", DEFAULT_MOMENT_ASSET_PACK_ID)
+        ).pack_id
+        for pack in moment_asset_packs():
+            action = pack_menu.addAction(
+                t(pack.label_key, pack.label_default),
+                lambda *_, selected=pack.pack_id: self._set_moment_pack(selected),
+            )
+            action.setCheckable(True)
+            action.setChecked(pack.pack_id == current)
+
+    def _set_moment_pack(self, pack_id: str) -> None:
+        self._set("datecard_asset_pack", get_moment_asset_pack(pack_id).pack_id)
+        self._refresh_face()
 
     def _action_reset_position(self):
         self.center_on_owner()

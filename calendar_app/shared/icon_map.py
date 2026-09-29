@@ -190,6 +190,7 @@ class _IconKeys:
     WIDGET_DATECARD: str = "widget_datecard"
     WIDGET_DDAY: str = "widget_dday"
     WIDGET_TEXT: str = "widget_text"
+    WIDGET_LAUNCHER: str = "widget_launcher"
     FOLDER: str = "folder"
     AUTOSTART: str = "autostart"
     THEME_DARK: str = "theme_dark"
@@ -339,6 +340,7 @@ ICON_MAPPING: dict[str, tuple[str, str, str]] = {
     ICON.WIDGET_DATECARD: ("mdi6.calendar-today", "", "날짜 카드 위젯"),
     ICON.WIDGET_DDAY: ("mdi6.calendar-star", "", "D-Day 위젯"),
     ICON.WIDGET_TEXT: ("mdi6.text-box-outline", "", "텍스트 위젯"),
+    ICON.WIDGET_LAUNCHER: ("mdi6.keyboard-outline", "", "런처 덱 위젯"),
     ICON.FOLDER: ("fa6s.folder-open", "", "폴더 열기"),
     ICON.AUTOSTART: ("fa6s.rocket", "", "윈도우 시작 시 자동 실행"),
     ICON.THEME_DARK: ("fa6s.moon", "", "다크 모드"),

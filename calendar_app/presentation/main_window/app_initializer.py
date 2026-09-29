@@ -228,7 +228,14 @@ def _initialize_daily_summary(app) -> None:
         )
 
         app._daily_summary_timer = schedule_daily_summary_timer(app)
-        QTimer.singleShot(3000, lambda: maybe_show_daily_summary(app))
+
+        def _show_after_startup():
+            # 스플래시가 완전히 사라지고 메인 창이 자리 잡은 뒤에만 브리핑을 띄운다.
+            # first_paint 시점에 바로 열면 splash.finish()보다 먼저 실행되어
+            # 모달 dialog가 splash와 겹치며 부팅을 막을 수 있다.
+            QTimer.singleShot(400, lambda: maybe_show_daily_summary(app))
+
+        app.first_paint.connect(_show_after_startup)
     except Exception:
         logger.exception("Failed to initialize daily summary")
 

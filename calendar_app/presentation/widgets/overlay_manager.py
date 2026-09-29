@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 import weakref
 
 from PyQt6.QtCore import QPoint
-from PyQt6.QtWidgets import QDialog, QInputDialog, QLineEdit, QMenu, QMessageBox
+from PyQt6.QtWidgets import QApplication, QDialog, QInputDialog, QLineEdit, QMenu, QMessageBox
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.main_window.top_menus.common import set_themed_icon
@@ -106,6 +106,14 @@ _WIDGET_TYPES: dict[str, dict] = {
         "icon": ICON.WIDGET_TEXT,
         "default_offset": QPoint(-230, 560),
         "init_method": "_init_text_instance",
+    },
+    "launcher_deck": {
+        "label_key": "menu.widget_launcher_deck",
+        "label_default": "Launcher Deck",
+        "class": "OverlayLauncherDeckWidget",
+        "icon": ICON.WIDGET_LAUNCHER,
+        "default_offset": QPoint(-520, 120),
+        "init_method": "_init_launcher_deck_instance",
     },
 }
 
@@ -187,6 +195,7 @@ class OverlayWidgetManager:
             OverlayCountdownWidget,
             OverlayDateCardWidget,
             OverlayDDayWidget,
+            OverlayLauncherDeckWidget,
             OverlayStopwatchWidget,
             OverlayTextWidget,
             OverlayWeatherWidget,
@@ -200,6 +209,7 @@ class OverlayWidgetManager:
             "dday": OverlayDDayWidget,
             "text": OverlayTextWidget,
             "weather": OverlayWeatherWidget,
+            "launcher_deck": OverlayLauncherDeckWidget,
         }
         cls = cls_map.get(widget_type)
         if cls is None:
@@ -232,6 +242,22 @@ class OverlayWidgetManager:
         self._save()
         self._notify_listeners()
 
+    def _attach_widget_callbacks(self, widget, inst_id: str) -> None:
+        manager_ref = weakref.ref(self)
+        widget._overlay_manager_sync = lambda iid=inst_id, ref=manager_ref: (
+            (manager := ref()) and manager._sync_widget_enabled(iid)
+        )
+        widget._overlay_manager_remove = lambda iid=inst_id, ref=manager_ref: (
+            (manager := ref()) and manager._ui_remove_with_confirm(iid, parent_widget=None)
+        )
+        widget._overlay_manager_duplicate = lambda iid=inst_id, ref=manager_ref: (
+            (manager := ref()) and manager.duplicate_instance(iid)
+        )
+        widget._overlay_manager_snap = lambda pos, iid=inst_id, ref=manager_ref: (
+            manager.snap_widget_position(iid, pos) if (manager := ref()) else pos
+        )
+        widget._overlay_inst_id = inst_id
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -248,14 +274,7 @@ class OverlayWidgetManager:
             name = f"{type_label} {idx + 1}" if idx > 0 else type_label
 
         widget = self._create_widget(widget_type, inst_id)
-        _mgr_ref = weakref.ref(self)
-        widget._overlay_manager_sync = lambda iid=inst_id, _r=_mgr_ref: (
-            (m := _r()) and m._sync_widget_enabled(iid)
-        )
-        widget._overlay_manager_remove = lambda iid=inst_id, _r=_mgr_ref: (
-            (m := _r()) and m._ui_remove_with_confirm(iid, parent_widget=None)
-        )
-        widget._overlay_inst_id = inst_id
+        self._attach_widget_callbacks(widget, inst_id)
         widget.apply_initial_settings()
         widget.restore_position(self._default_offset_for_type(widget_type, idx))
 
@@ -264,6 +283,67 @@ class OverlayWidgetManager:
         self._save()
         self._notify_listeners()
         return inst_id
+
+    def duplicate_instance(self, inst_id: str) -> str | None:
+        """Duplicate one widget's persisted appearance/content and offset its position."""
+        source_meta = self._meta.get(inst_id)
+        source_widget = self._widgets.get(inst_id)
+        if source_meta is None or source_widget is None:
+            return None
+        copy_name = t(
+            "widget_manager.copy_name",
+            "{name} 복사본",
+            name=str(source_meta.get("name") or widget_type_label(source_meta["type"])),
+        )
+        new_id = self.add_instance(source_meta["type"], copy_name)
+        source_prefix = f"{self._settings_prefix(inst_id)}_"
+        destination_prefix = f"{self._settings_prefix(new_id)}_"
+        settings = self._settings()
+        for key in list(settings.allKeys()):
+            key_text = str(key)
+            if not key_text.startswith(source_prefix):
+                continue
+            suffix = key_text[len(source_prefix) :]
+            if suffix in {"pos_x", "pos_y"}:
+                continue
+            settings.setValue(f"{destination_prefix}{suffix}", settings.value(key_text))
+
+        copy_widget = self._widgets[new_id]
+        copy_widget.apply_initial_settings()
+        copy_widget.move(source_widget.pos() + QPoint(24, 24))
+        copy_widget.save_position()
+        if source_widget.is_enabled():
+            self.show_instance(new_id)
+        self._save()
+        self._notify_listeners()
+        return new_id
+
+    def snap_widget_position(self, inst_id: str, proposed: QPoint, threshold: int = 12) -> QPoint:
+        """Snap a moved widget to screen edges or neighboring widget edges."""
+        if not self._settings().value("overlay_snap_enabled", True, type=bool):
+            return QPoint(proposed)
+        widget = self._widgets.get(inst_id)
+        if widget is None:
+            return QPoint(proposed)
+        screen = widget.screen() or QApplication.screenAt(proposed) or QApplication.primaryScreen()
+        if screen is None:
+            return QPoint(proposed)
+        area = screen.availableGeometry()
+        width, height = widget.width(), widget.height()
+        x_candidates = [area.left(), area.right() - width + 1]
+        y_candidates = [area.top(), area.bottom() - height + 1]
+        for other_id, other in self._widgets.items():
+            if other_id == inst_id or not other.isVisible():
+                continue
+            rect = other.frameGeometry()
+            x_candidates.extend((rect.left(), rect.right() + 1, rect.left() - width))
+            y_candidates.extend((rect.top(), rect.bottom() + 1, rect.top() - height))
+
+        def _nearest(value: int, candidates: list[int]) -> int:
+            nearest = min(candidates, key=lambda candidate: abs(candidate - value))
+            return nearest if abs(nearest - value) <= max(1, int(threshold)) else value
+
+        return QPoint(_nearest(proposed.x(), x_candidates), _nearest(proposed.y(), y_candidates))
 
     def remove_instance(self, inst_id: str):
         """Hide and destroy the instance."""
@@ -689,15 +769,7 @@ class OverlayWidgetManager:
 
             try:
                 widget = self._create_widget(wtype, iid)
-                _mgr_ref = weakref.ref(self)
-                widget._overlay_manager_sync = lambda iid=iid, _r=_mgr_ref: (
-                    (m := _r()) and m._sync_widget_enabled(iid)
-                )
-                # Restore the right-click delete callback so 삭제 menu always appears.
-                widget._overlay_manager_remove = lambda iid=iid, _r=_mgr_ref: (
-                    (m := _r()) and m._ui_remove_with_confirm(iid, parent_widget=None)
-                )
-                widget._overlay_inst_id = iid
+                self._attach_widget_callbacks(widget, iid)
                 idx = self._instance_count_of(wtype)
                 widget.apply_initial_settings()
                 widget.restore_position(self._default_offset_for_type(wtype, idx))
