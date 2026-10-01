@@ -1051,6 +1051,14 @@ Run-OrThrow -Exe $venvPython -Args @(
 Write-Ok "copied ($assetCount manifest asset files, $($legalFiles.Count) notices, locked license bundle)"
 Write-Log "assets+manifest+notices OK — $assetCount assets / $($legalFiles.Count) notices / locked licenses"
 
+Run-OrThrow -Exe $venvPython -Args @(
+    (Join-Path $projectRoot "scripts\verify_release_runtime.py"),
+    "--source-root", $projectRoot,
+    "--payload-root", $appDir,
+    "--report", (Join-Path $projectRoot "release\runtime-input-match-$appVersion-$Arch.json")
+) -WorkingDirectory $projectRoot
+Write-Ok "frozen application implementation and resources match current build source"
+
 # ---------------------------------------------------------------------------
 # STEP 7 — Store payload sanitisation
 # ---------------------------------------------------------------------------

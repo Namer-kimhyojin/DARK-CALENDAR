@@ -27,6 +27,26 @@ Create a Windows Store upload package that:
 
 ## Native Build Rule
 
+## Current Development Inputs
+
+`run.bat` runs `.venv\Scripts\python.exe main.py` from the development directory.
+Local release builds read the current build directory, including uncommitted
+runtime changes. GitHub release builds read the pushed commit. Before creating
+an isolated build directory, capture all current application code, assets,
+translations and runtime entrypoints, including new files and deletions; do not
+select only the files changed by the most recent feature task.
+
+The release pipeline compares the frozen Python implementation and bundled
+assets/locales with its current source through `verify_release_runtime.py`.
+Any missing required module or changed implementation/resource stops packaging.
+Corresponding-source collection includes new application modules and resources
+even in a local build, while excluding unrelated untracked artifact folders.
+
+For an isolated directory, `-PythonExecutable <absolute-path>` can use the same
+verified interpreter as the development `run.bat` without linking `.venv` folders.
+
+## Native Architecture
+
 PyInstaller Store builds must stay native to the host architecture.
 
 - x64 host: build `x64`
@@ -58,7 +78,7 @@ build-release.bat -SkipMsix
 Preflight validation without changing version files or creating build output:
 
 ```bat
-build-release.bat -ValidateOnly -Version 3.7.8 -PackageVersion 3.7.8.0 -ReleaseDate 2026-10-01 -Channel Stable
+build-release.bat -ValidateOnly -Version 3.7.9 -PackageVersion 3.7.9.0 -ReleaseDate 2026-10-02 -Channel Stable
 ```
 
 ## Surface Support
@@ -78,12 +98,12 @@ build-release.bat -UploadOnly
 
 That creates:
 
-- `release\store\DarkCalendar-3.7.8.0-arm64_x64.msixupload`
+- `release\store\DarkCalendar-3.7.9.0-arm64_x64.msixupload`
 
 If only one native package is available, the scripts fall back to:
 
-- `release\store\DarkCalendar-3.7.8.0-x64.msixupload`
-- `release\store\DarkCalendar-3.7.8.0-arm64.msixupload`
+- `release\store\DarkCalendar-3.7.9.0-x64.msixupload`
+- `release\store\DarkCalendar-3.7.9.0-arm64.msixupload`
 
 ## Sanitized Payload Contents
 

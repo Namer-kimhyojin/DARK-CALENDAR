@@ -258,6 +258,14 @@ def _tracked_files(project_root: Path) -> list[Path]:
         raise RuntimeError(f"git ls-files failed: {message}")
     values = result.stdout.decode("utf-8", errors="strict").split("\0")
     files = {Path(value) for value in values if value}
+    # Local builds use current files, including runtime inputs not yet in Git.
+    # Keep corresponding source complete for that same working-directory build.
+    for directory, pattern in (("calendar_app", "*.py"), ("Assets", "*"), ("locales", "*.json")):
+        for source in project_root.joinpath(directory).rglob(pattern):
+            if source.is_file() and "__pycache__" not in source.parts:
+                if not source.resolve().is_relative_to(project_root.resolve()):
+                    raise RuntimeError(f"Runtime source leaves project directory: {source}")
+                files.add(source.relative_to(project_root))
     for relative in _REQUIRED_UNTRACKED_SOURCE_FILES:
         if project_root.joinpath(relative).is_file():
             files.add(relative)
