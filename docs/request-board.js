@@ -37,6 +37,14 @@
       wrong_password: "密码不匹配。", unauthorized: "管理员密码错误或会话已过期。请重新登录。", conflict: "内容已更改或此前的提交已处理。请先复制草稿，再重新打开请求。", not_found: "请求已删除或不存在。", rate_limited: "尝试次数过多，请稍后重试。", unavailable: "无法连接服务器。输入内容已保留，请稍后重试。", invalid_title: "标题应为3至100个字符。", invalid_body: "内容应为10至5,000个字符。", invalid_nickname: "昵称最多30个字符。", invalid_password: "密码应为8至128个字符。", invalid_request: "请检查输入内容。", too_large: "输入内容过大。", invalid_version: "版本最多30个字符。", invalid_platform: "使用环境最多60个字符。", invalid_reply: "回复最多3,000个字符。"
     }
   };
+  const imageCopy = {
+    ko: { imagesLabel: "이미지 첨부 (선택)", addImages: "이미지 선택", dropImages: "여기로 끌어놓거나 Ctrl+V로 붙여넣으세요.", imagesHelp: "PNG·JPG·WebP, 최대 3장 · 장당 5MB. 첨부 이미지는 공개되며 웹용으로 최적화됩니다.", attachedImage: "첨부 이미지", imageNumber: "이미지 {n}", removeImage: "제거", imageCount: "이미지 {n}장", imageProcessing: "이미지를 준비하고 있습니다…", too_many_images: "이미지는 최대 3장까지 첨부할 수 있습니다.", image_too_large: "이미지는 장당 5MB 이하로 선택하세요.", invalid_image: "정상적인 PNG·JPG·WebP 이미지를 선택하세요.", image_dimensions: "이미지가 너무 큽니다. 가로·세로 8,192px, 총 2,400만 픽셀 이내로 선택하세요.", image_unavailable: "이미지 저장소에 연결할 수 없습니다. 첨부 내용을 유지한 채 다시 시도해주세요." },
+    en: { imagesLabel: "Images (optional)", addImages: "Choose images", dropImages: "Drop images here or paste with Ctrl+V.", imagesHelp: "PNG, JPG or WebP. Up to 3 images, 5MB each. Images are public and optimized for the web.", attachedImage: "Attached image", imageNumber: "Image {n}", removeImage: "Remove", imageCount: "{n} images", imageProcessing: "Preparing images…", too_many_images: "Attach up to 3 images.", image_too_large: "Choose images no larger than 5MB each.", invalid_image: "Choose a valid PNG, JPG or WebP image.", image_dimensions: "Use images within 8,192px per side and 24 million pixels.", image_unavailable: "Image storage is unavailable. Your attachments are preserved; please try again." },
+    ja: { imagesLabel: "画像添付（任意）", addImages: "画像を選択", dropImages: "ここにドロップ、またはCtrl+Vで貼り付け。", imagesHelp: "PNG・JPG・WebP、最大3枚・1枚5MB。画像は公開され、ウェブ用に最適化されます。", attachedImage: "添付画像", imageNumber: "画像 {n}", removeImage: "取り除く", imageCount: "画像 {n}枚", imageProcessing: "画像を準備中…", too_many_images: "画像は最大3枚までです。", image_too_large: "1枚5MB以下の画像を選択してください。", invalid_image: "有効なPNG・JPG・WebPを選択してください。", image_dimensions: "各辺8,192px・合計2,400万ピクセル以内の画像を選択してください。", image_unavailable: "画像保存に接続できません。添付は保持されます。再試行してください。" },
+    zh: { imagesLabel: "图片附件（可选）", addImages: "选择图片", dropImages: "拖放图片或按Ctrl+V粘贴。", imagesHelp: "PNG、JPG、WebP，最多3张，每张5MB。图片公开并进行网页优化。", attachedImage: "附件图片", imageNumber: "图片 {n}", removeImage: "移除", imageCount: "{n}张图片", imageProcessing: "正在准备图片…", too_many_images: "最多添加3张图片。", image_too_large: "每张图片不能超过5MB。", invalid_image: "请选择有效的PNG、JPG或WebP图片。", image_dimensions: "图片每边不超过8,192px，总像素不超过2,400万。", image_unavailable: "无法连接图片存储。附件已保留，请重试。" }
+  };
+  Object.keys(imageCopy).forEach(language => Object.assign(copy[language], imageCopy[language]));
+  const pendingImages = [], removedImages = new Set(); let imageGeneration = 0, processingImages = false;
   const state = { api: root.dataset.api, language: "ko", version: "3.7.8", category: "all", status: "all", q: "", page: 1, data: null, ready: false, failed: false, detail: null, edit: null, key: null, token: null, expires: 0, notice: "" };
   const editor = $("[data-board-editor]"), form = $("[data-board-form]"), detail = $("[data-board-detail]"), adminForm = $("[data-board-admin-update]");
   let listController, searchTimer;
@@ -49,8 +57,9 @@
   function adminActive() { if (state.token && state.expires <= Date.now()) { state.token = null; state.expires = 0; } return Boolean(state.token); }
   async function api(path, options = {}) {
     const { admin, signal, ...request } = options;
-    request.headers = { ...(request.body ? { "Content-Type": "application/json" } : {}), ...(admin && state.token ? { Authorization: `Bearer ${state.token}` } : {}) };
-    request.signal = signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000);
+    const timeout = request.body instanceof FormData ? 60000 : 15000;
+    request.headers = { ...(request.body && !(request.body instanceof FormData) ? { "Content-Type": "application/json" } : {}), ...(admin && state.token ? { Authorization: `Bearer ${state.token}` } : {}) };
+    request.signal = signal ? AbortSignal.any([signal, AbortSignal.timeout(timeout)]) : AbortSignal.timeout(timeout);
     request.cache = "no-store";
     try {
       const result = await fetch(`${state.api}${path}`, request), data = await result.json();
@@ -68,6 +77,7 @@
     document.querySelectorAll("[data-board-placeholder]").forEach((el) => { el.placeholder = tr(el.dataset.boardPlaceholder); });
     document.querySelectorAll("[data-board-aria]").forEach((el) => { el.setAttribute("aria-label", tr(el.dataset.boardAria)); });
     renderList(); renderEditor(); renderDetail(); renderAdmin(); message(state.notice);
+    renderEditorImages();
   }
   function renderList() {
     const list = $("[data-board-list]"); list.replaceChildren();
@@ -87,6 +97,7 @@
         const button = node("button", "board-row"); button.type = "button";
         const content = node("span", "board-row-copy");
         content.append(node("strong", "board-row-title", item.title), node("span", "board-row-excerpt", item.body.replace(/\s+/gu, " ").slice(0, 100)));
+        if (item.images?.length) content.append(node("span", "board-row-attachments", `▧ ${tr("imageCount", { n: item.images.length })}`));
         button.append(content, badge(item.category), badge(item.status, true), node("time", "board-row-date", date(item.created_at)), node("span", "board-row-arrow", "↗"));
         button.addEventListener("click", () => openDetail(item.id)); list.append(button);
       }
@@ -122,7 +133,7 @@
   }
   function compose() {
     if (!state.ready) return;
-    state.edit = null; state.key = crypto.randomUUID(); form.reset(); $("[data-board-error]", form).textContent = "";
+    state.edit = null; state.key = crypto.randomUUID(); form.reset(); resetImages(); $("[data-board-error]", form).textContent = "";
     form.elements.appVersion.placeholder = state.version; renderEditor(); editor.showModal(); form.elements.title.focus();
   }
   function renderDetail() {
@@ -133,6 +144,14 @@
     $("[data-board-detail-meta]").textContent = `${item.nickname} · ${date(item.created_at)}${item.updated_at !== item.created_at ? ` · ${tr("updated")} ${date(item.updated_at)}` : ""}`;
     $("[data-board-detail-environment]").textContent = [item.app_version && `Air Calendar ${item.app_version}`, item.platform].filter(Boolean).join(" · ");
     $("[data-board-detail-body]").textContent = item.body; $("[data-board-detail-reply]").textContent = item.admin_reply || tr("noReply");
+    const gallery = $("[data-board-image-gallery]"); gallery.replaceChildren();
+    (item.images || []).forEach((image, index) => {
+      const button = node("button"), preview = node("img"), label = tr("imageNumber", { n: index + 1 }); button.type = "button";
+      preview.src = imageSource(image); preview.alt = label; preview.loading = "lazy";
+      button.append(preview, node("span", "", label)); button.addEventListener("click", () => {
+        const viewer = $("[data-board-image-viewer]"), full = $("[data-board-viewer-image]"); full.src = imageSource(image); full.alt = label; viewer.showModal();
+      }); gallery.append(button);
+    });
     adminForm.elements.status.value = item.status; adminForm.elements.reply.value = item.admin_reply; renderAdmin();
   }
   async function openDetail(id) {
@@ -145,12 +164,76 @@
     const active = adminActive(); $("[data-board-admin]").textContent = tr(active ? "logout" : "admin"); adminForm.hidden = !active;
   }
   async function submit(parent, operation) {
-    if (parent.dataset.busy) return;
+    if (parent.dataset.busy || (parent === form && processingImages)) return;
     parent.dataset.busy = "true"; $("[data-board-error]", parent).textContent = "";
     const buttons = Array.from(parent.querySelectorAll("button")); buttons.forEach((el) => { el.disabled = true; });
     try { await operation(); } catch (exception) { error(parent, exception); }
     finally { delete parent.dataset.busy; buttons.forEach((el) => { el.disabled = false; }); }
   }
+  const imageSource = image => `${state.api}/api/images/${encodeURIComponent(image.id)}`;
+  function resetImages() {
+    imageGeneration++; processingImages = false;
+    pendingImages.forEach(image => URL.revokeObjectURL(image.preview)); pendingImages.length = 0; removedImages.clear();
+    $("[data-board-image-picker]").value = ""; $("[data-board-submit]").disabled = false; renderEditorImages();
+  }
+  function renderEditorImages() {
+    const list = $("[data-board-upload-list]"); list.replaceChildren();
+    const retained = (state.edit?.images || []).filter(image => !removedImages.has(image.id));
+    const images = [...retained.map(image => ({ image, preview: imageSource(image) })), ...pendingImages];
+    images.forEach((entry, index) => {
+      const card = node("figure", "board-upload-card"), preview = node("img"), caption = node("figcaption"), remove = node("button", "", tr("removeImage"));
+      preview.src = entry.preview; preview.alt = tr("imageNumber", { n: index + 1 }); remove.type = "button";
+      remove.setAttribute("aria-label", `${tr("imageNumber", { n: index + 1 })} · ${tr("removeImage")}`);
+      remove.disabled = processingImages || Boolean(form.dataset.busy);
+      remove.addEventListener("click", () => {
+        if (processingImages || form.dataset.busy) return;
+        if (entry.image) removedImages.add(entry.image.id);
+        else { const position = pendingImages.indexOf(entry); if (position >= 0) pendingImages.splice(position, 1); URL.revokeObjectURL(entry.preview); }
+        renderEditorImages();
+      });
+      caption.append(node("span", "", tr("imageNumber", { n: index + 1 })), remove); card.append(preview, caption); list.append(card);
+    });
+    $("[data-board-upload-status]").textContent = processingImages ? tr("imageProcessing") : "";
+  }
+  async function prepareImage(file) {
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) throw { code: "invalid_image" };
+    if (!file.size || file.size > 5 * 1024 * 1024) throw { code: "image_too_large" };
+    let bitmap; try { bitmap = await createImageBitmap(file); } catch { throw { code: "invalid_image" }; }
+    try {
+      if (bitmap.width > 8192 || bitmap.height > 8192 || bitmap.width * bitmap.height > 24000000) throw { code: "image_dimensions" };
+      const scale = Math.min(1, 2048 / Math.max(bitmap.width, bitmap.height)), canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const encode = type => new Promise(resolve => canvas.toBlob(resolve, type, .9));
+      let blob = await encode(file.type === "image/png" ? "image/png" : "image/webp");
+      if (blob?.size > 5 * 1024 * 1024) blob = await encode("image/webp");
+      if (!blob) throw { code: "invalid_image" }; if (blob.size > 5 * 1024 * 1024) throw { code: "image_too_large" };
+      return new File([blob], `image-${crypto.randomUUID()}.${blob.type === "image/png" ? "png" : "webp"}`, { type: blob.type });
+    } finally { bitmap.close(); }
+  }
+  async function addImages(files) {
+    if (!files.length || form.dataset.busy || processingImages) return;
+    const retained = (state.edit?.images || []).filter(image => !removedImages.has(image.id)).length;
+    if (retained + pendingImages.length + files.length > 3) { error(form, { code: "too_many_images" }); return; }
+    processingImages = true; const generation = imageGeneration; $("[data-board-submit]").disabled = true;
+    $("[data-board-error]", form).textContent = ""; renderEditorImages();
+    try {
+      const prepared = [];
+      for (const file of files) prepared.push(await prepareImage(file));
+      if (generation !== imageGeneration) return;
+      prepared.forEach(file => pendingImages.push({ file, preview: URL.createObjectURL(file) }));
+    } catch (exception) { if (generation === imageGeneration) error(form, exception); }
+    finally { if (generation === imageGeneration) { processingImages = false; $("[data-board-submit]").disabled = false; renderEditorImages(); } }
+  }
+  $("[data-board-add-image]").addEventListener("click", () => { if (!processingImages && !form.dataset.busy) $("[data-board-image-picker]").click(); });
+  $("[data-board-image-picker]").addEventListener("change", event => { const files = Array.from(event.target.files); event.target.value = ""; addImages(files); });
+  editor.addEventListener("paste", event => { const files = Array.from(event.clipboardData?.files || []); if (files.length) { event.preventDefault(); addImages(files); } });
+  const dropZone = $("[data-board-drop]");
+  dropZone.addEventListener("dragover", event => { event.preventDefault(); dropZone.classList.add("dragging"); });
+  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragging"));
+  dropZone.addEventListener("drop", event => { event.preventDefault(); dropZone.classList.remove("dragging"); addImages(Array.from(event.dataTransfer?.files || [])); });
+  editor.addEventListener("close", resetImages);
+  $("[data-board-image-viewer]").addEventListener("close", () => $("[data-board-viewer-image]").removeAttribute("src"));
   document.querySelectorAll(".board-dialog [data-board-close]").forEach((button) => button.addEventListener("click", () => { if (!button.closest("dialog").querySelector("[data-busy]")) button.closest("dialog").close(); }));
   document.querySelectorAll(".board-dialog").forEach((dialog) => {
     dialog.addEventListener("cancel", (event) => { if (dialog.querySelector("[data-busy]")) event.preventDefault(); });
@@ -168,12 +251,15 @@
     const payload = Object.fromEntries(new FormData(form)); if (!payload.nickname.trim()) payload.nickname = tr("visitor");
     if (state.edit) payload.revision = state.edit.revision; else payload.idempotencyKey = state.key;
     const wasEdit = Boolean(state.edit), path = wasEdit ? `/api/requests/${state.edit.id}` : "/api/requests";
-    const result = await api(path, { method: wasEdit ? "PATCH" : "POST", body: JSON.stringify(payload) });
+    payload.removeImages = [...removedImages];
+    let body = JSON.stringify(payload);
+    if (pendingImages.length) { body = new FormData(); body.set("payload", JSON.stringify(payload)); pendingImages.forEach(image => body.append("images", image.file)); }
+    const result = await api(path, { method: wasEdit ? "PATCH" : "POST", body });
     editor.close(); form.reset(); state.page = 1; state.detail = result.item; message(wasEdit ? "edited" : "posted");
     loadList(); renderDetail(); if (!detail.open) detail.showModal();
   }); });
   $("[data-board-edit]").addEventListener("click", () => {
-    state.edit = { ...state.detail }; form.reset();
+    state.edit = { ...state.detail }; form.reset(); resetImages();
     for (const [key, value] of Object.entries({ title: state.edit.title, body: state.edit.body, nickname: state.edit.nickname, category: state.edit.category, appVersion: state.edit.app_version, platform: state.edit.platform })) form.elements[key].value = value;
     $("[data-board-error]", form).textContent = ""; detail.close(); renderEditor(); editor.showModal(); form.elements.title.focus();
   });

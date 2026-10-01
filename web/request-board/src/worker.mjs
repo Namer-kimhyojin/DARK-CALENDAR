@@ -1,4 +1,5 @@
 import { SCHEMA } from "./schema.mjs";
+import { ImageError, IMAGE_COUNT, requestWithImages } from "./images.mjs";
 
 const HOME = "https://namer-kimhyojin.github.io/DARK-CALENDAR/";
 const CATEGORIES = ["bug", "feature", "ui", "other"];
@@ -34,7 +35,7 @@ function field(value, min, max, code) {
 }
 export function validatePost(input, editing = false) {
   if (!input || typeof input !== "object" || Array.isArray(input)) fail(400, "invalid_request");
-  const allowed = ["title", "body", "nickname", "category", "appVersion", "platform", "password", "website", "idempotencyKey", "revision"];
+  const allowed = ["title", "body", "nickname", "category", "appVersion", "platform", "password", "website", "idempotencyKey", "revision", "removeImages"];
   if (Object.keys(input).some((key) => !allowed.includes(key))) fail(400, "invalid_request");
   if (input.website) fail(400, "invalid_request");
   const result = {
@@ -49,6 +50,9 @@ export function validatePost(input, editing = false) {
   if (!CATEGORIES.includes(result.category)) fail(400, "invalid_category");
   if (!editing && !/^[a-f0-9-]{36}$/i.test(input.idempotencyKey || "")) fail(400, "invalid_request");
   if (editing && (!Number.isSafeInteger(input.revision) || input.revision < 1)) fail(400, "invalid_request");
+  const removed = input.removeImages || [];
+  if (!Array.isArray(removed) || removed.length > IMAGE_COUNT || new Set(removed).size !== removed.length || removed.some(id => typeof id !== "string" || !/^[a-f0-9]{48}$/.test(id)) || (!editing && removed.length)) fail(400, "invalid_request");
+  result.removeImages = removed;
   return result;
 }
 function publicPost(row) {
@@ -116,13 +120,69 @@ async function findPost(db, id, privateFields = false) {
   if (!Number.isSafeInteger(id) || id < 1) fail(404, "not_found");
   const row = await db.prepare(`SELECT ${privateFields ? "*" : PUBLIC_COLUMNS} FROM board_requests WHERE id=?`).bind(id).first();
   if (!row) fail(404, "not_found");
-  return row;
+  return privateFields ? row : (await enrichPosts(db, [publicPost(row)]))[0];
 }
-async function repeatedPost(db, key, post, env) {
+async function enrichPosts(db, posts) {
+  if (!posts.length) return posts;
+  const images = await db.prepare(`SELECT id,request_id,content_type,size,width,height FROM board_images WHERE request_id IN (${posts.map(() => "?").join(",")}) ORDER BY position,id`).bind(...posts.map(post => post.id)).all();
+  return posts.map(post => ({ ...post, images: images.results.filter(image => image.request_id === post.id).map(({ request_id, ...image }) => ({ ...image, url: `/api/images/${image.id}` })) }));
+}
+async function imageRows(db, id) { return (await db.prepare("SELECT * FROM board_images WHERE request_id=? ORDER BY position,id").bind(id).all()).results; }
+async function contentInput(request) {
+  return (request.headers.get("Content-Type") || "").toLowerCase().startsWith("multipart/form-data;") ? requestWithImages(request) : { data: await inputJson(request), images: [] };
+}
+async function drainCleanup(env) {
+  if (!env.BUCKET) return;
+  try {
+    const rows = (await env.DB.prepare("SELECT object_key FROM board_image_cleanup WHERE ready_at<=? LIMIT 12").bind(Date.now()).all()).results;
+    if (!rows.length) return;
+    await env.BUCKET.delete(rows.map(row => row.object_key));
+    await env.DB.batch(rows.map(row => env.DB.prepare("DELETE FROM board_image_cleanup WHERE object_key=?").bind(row.object_key)));
+  } catch { /* Keep the durable cleanup queue for a subsequent request. */ }
+}
+async function stageImages(env, images) {
+  if (!images.length) return [];
+  if (!env.BUCKET) fail(503, "image_unavailable");
+  const staged = [];
+  for (const image of images) {
+    const id = randomHex(), objectKey = `request-board/images/${id}`;
+    const digest = hex(await crypto.subtle.digest("SHA-256", image.bytes));
+    staged.push({ ...image, id, objectKey, digest });
+  }
+  await env.DB.batch(staged.map(image => env.DB.prepare("INSERT INTO board_image_cleanup(object_key,ready_at) VALUES(?,?)").bind(image.objectKey, Date.now() + 3600000)));
+  try {
+    for (const image of staged) {
+      const stored = await env.BUCKET.put(image.objectKey, image.bytes, { httpMetadata: { contentType: image.type } });
+      if (!stored) fail(503, "image_unavailable");
+    }
+    return staged;
+  } catch (error) { await discardStaged(env, staged); throw error; }
+}
+async function discardStaged(env, staged) {
+  if (!staged.length) return;
+  await env.DB.batch(staged.map(image => env.DB.prepare("UPDATE board_image_cleanup SET ready_at=0 WHERE object_key=?").bind(image.objectKey)));
+  await drainCleanup(env);
+}
+function imageInsert(db, image, ownerExpression, owner, position) {
+  return db.prepare(`INSERT INTO board_images(id,request_id,object_key,content_type,size,width,height,digest,position,created_at) VALUES(?,${ownerExpression},?,?,?,?,?,?,?,?)`)
+    .bind(image.id, owner, image.objectKey, image.type, image.size, image.width, image.height, image.digest, position, new Date().toISOString());
+}
+async function deletePost(env, id) {
+  await env.DB.batch([
+    env.DB.prepare("INSERT OR REPLACE INTO board_image_cleanup(object_key,ready_at) SELECT object_key,0 FROM board_images WHERE request_id=?").bind(id),
+    env.DB.prepare("DELETE FROM board_images WHERE request_id=?").bind(id),
+    env.DB.prepare("DELETE FROM board_requests WHERE id=?").bind(id),
+  ]);
+  await drainCleanup(env);
+}
+async function repeatedPost(db, key, post, env, images) {
   const previous = await db.prepare("SELECT * FROM board_requests WHERE idempotency_key=?").bind(key).first();
   if (!previous) return null;
   if (previous.title !== post.title || previous.body !== post.body || previous.nickname !== post.nickname || previous.category !== post.category || previous.app_version !== post.appVersion || previous.platform !== post.platform || !equalSecret(await passwordHash(post.password, previous.password_salt, env.BOARD_PASSWORD_PEPPER), previous.password_hash)) fail(409, "conflict");
-  return publicPost(previous);
+  const attached = await imageRows(db, previous.id);
+  if (attached.length !== images.length) fail(409, "conflict");
+  for (let index = 0; index < images.length; index++) if (attached[index].digest !== hex(await crypto.subtle.digest("SHA-256", images[index].bytes))) fail(409, "conflict");
+  return (await enrichPosts(db, [publicPost(previous)]))[0];
 }
 async function route(request, env) {
   const url = new URL(request.url), path = url.pathname.replace(/\/$/, "");
@@ -139,8 +199,16 @@ async function route(request, env) {
   if (!path.startsWith("/api/")) fail(404, "not_found");
   if (!env.DB || !env.BOARD_PASSWORD_PEPPER || !/^[a-f0-9]{64}$/.test(env.ADMIN_PASSWORD_HASH || "")) fail(503, "unavailable");
   await initialize(env.DB);
+  await drainCleanup(env);
   const db = env.DB;
-  if (path === "/api/health" && request.method === "GET") return response({ service: "air-calendar-request-board", schemaVersion: 1, ready: true }, 200, origin);
+  if (path === "/api/health" && request.method === "GET") return response({ service: "air-calendar-request-board", schemaVersion: 2, ready: true, imagesReady: Boolean(env.BUCKET) }, 200, origin);
+  const imageId = /^\/api\/images\/([a-f0-9]{48})$/.exec(path)?.[1];
+  if (imageId && request.method === "GET") {
+    const row = await db.prepare("SELECT object_key,content_type FROM board_images WHERE id=?").bind(imageId).first();
+    if (!row) fail(404, "not_found"); if (!env.BUCKET) fail(503, "image_unavailable");
+    const image = await env.BUCKET.get(row.object_key); if (!image) fail(404, "not_found");
+    return new Response(image.body, { headers: { "Content-Type": row.content_type, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'; sandbox", "Content-Disposition": "inline", "Vary": "Origin", ...(origin ? { "Access-Control-Allow-Origin": origin } : {}) } });
+  }
   if (path === "/api/requests" && request.method === "GET") {
     const category = url.searchParams.get("category") || "all", status = url.searchParams.get("status") || "all";
     const q = (url.searchParams.get("q") || "").trim().slice(0, 100);
@@ -159,24 +227,30 @@ async function route(request, env) {
     ]);
     const stats = Object.fromEntries(STATUSES.map((key) => [key, 0]));
     results[2].results.forEach((row) => { stats[row.status] = row.count; });
-    return response({ items: results[0].results.map(publicPost), total: results[1].results[0].total, page, pageSize: 12, stats }, 200, origin);
+    return response({ items: await enrichPosts(db, results[0].results.map(publicPost)), total: results[1].results[0].total, page, pageSize: 12, stats }, 200, origin);
   }
   if (path === "/api/requests" && request.method === "POST") {
-    const data = await inputJson(request), post = validatePost(data);
+    const { data, images } = await contentInput(request), post = validatePost(data);
     await rateLimit(db, request, env, "create", 20, 3600);
-    const previous = await repeatedPost(db, data.idempotencyKey, post, env);
+    const previous = await repeatedPost(db, data.idempotencyKey, post, env, images);
     if (previous) return response({ item: previous }, 200, origin);
     const salt = randomHex(), digest = await passwordHash(post.password, salt, env.BOARD_PASSWORD_PEPPER), now = new Date().toISOString();
-    let inserted;
+    const staged = await stageImages(env, images);
     try {
-      inserted = await db.prepare("INSERT INTO board_requests(title,body,nickname,category,app_version,platform,password_salt,password_hash,idempotency_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING " + PUBLIC_COLUMNS)
-        .bind(post.title, post.body, post.nickname, post.category, post.appVersion, post.platform, salt, digest, data.idempotencyKey, now, now).first();
+      await db.batch([
+        db.prepare("INSERT INTO board_requests(title,body,nickname,category,app_version,platform,password_salt,password_hash,idempotency_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
+          .bind(post.title, post.body, post.nickname, post.category, post.appVersion, post.platform, salt, digest, data.idempotencyKey, now, now),
+        ...staged.map((image, index) => imageInsert(db, image, "(SELECT id FROM board_requests WHERE idempotency_key=?)", data.idempotencyKey, index)),
+        ...staged.map(image => db.prepare("DELETE FROM board_image_cleanup WHERE object_key=?").bind(image.objectKey)),
+      ]);
     } catch (error) {
-      const duplicate = await repeatedPost(db, data.idempotencyKey, post, env);
+      await discardStaged(env, staged);
+      const duplicate = await repeatedPost(db, data.idempotencyKey, post, env, images);
       if (duplicate) return response({ item: duplicate }, 200, origin);
       throw error;
     }
-    return response({ item: publicPost(inserted) }, 201, origin);
+    const inserted = await db.prepare(`SELECT ${PUBLIC_COLUMNS} FROM board_requests WHERE idempotency_key=?`).bind(data.idempotencyKey).first();
+    return response({ item: (await enrichPosts(db, [publicPost(inserted)]))[0] }, 201, origin);
   }
   if (path === "/api/admin/login" && request.method === "POST") {
     await rateLimit(db, request, env, "admin-login", 8, 900);
@@ -199,7 +273,7 @@ async function route(request, env) {
     await authorizeAdmin(request, db);
     await findPost(db, Number(adminId));
     if (request.method === "DELETE") {
-      await db.prepare("DELETE FROM board_requests WHERE id=?").bind(Number(adminId)).run();
+      await deletePost(env, Number(adminId));
       return response({ ok: true }, 200, origin);
     }
     const data = await inputJson(request);
@@ -213,17 +287,34 @@ async function route(request, env) {
     if (request.method === "GET") return response({ item: await findPost(db, Number(id)) }, 200, origin);
     if (["PATCH", "DELETE"].includes(request.method)) {
       await rateLimit(db, request, env, "edit-password", 30, 900);
-      const row = await findPost(db, Number(id), true), data = await inputJson(request);
+      const row = await findPost(db, Number(id), true), { data, images } = await contentInput(request);
       const password = field(data.password, 8, 128, "invalid_password");
       if (!equalSecret(await passwordHash(password, row.password_salt, env.BOARD_PASSWORD_PEPPER), row.password_hash)) fail(403, "wrong_password");
       if (request.method === "DELETE") {
-        await db.prepare("DELETE FROM board_requests WHERE id=?").bind(Number(id)).run();
+        await deletePost(env, Number(id));
         return response({ ok: true }, 200, origin);
       }
       const post = validatePost(data, true);
-      const result = await db.prepare("UPDATE board_requests SET title=?,body=?,nickname=?,category=?,app_version=?,platform=?,updated_at=?,revision=revision+1 WHERE id=? AND revision=?")
-        .bind(post.title, post.body, post.nickname, post.category, post.appVersion, post.platform, new Date().toISOString(), Number(id), data.revision).run();
-      if (result.meta.changes !== 1) fail(409, "conflict");
+      if (row.revision !== data.revision) fail(409, "conflict");
+      const current = await imageRows(db, Number(id)), removed = current.filter(image => post.removeImages.includes(image.id));
+      if (removed.length !== post.removeImages.length) fail(400, "invalid_request");
+      if (current.length - removed.length + images.length > IMAGE_COUNT) fail(400, "too_many_images");
+      const staged = await stageImages(env, images), retained = current.filter(image => !post.removeImages.includes(image.id)), guard = randomHex();
+      try {
+        await db.batch([
+          // A failed CHECK aborts the entire transaction before any image/content changes.
+          db.prepare("INSERT INTO board_revision_guard(token,matches) VALUES(?,(SELECT COUNT(*) FROM board_requests WHERE id=? AND revision=?))").bind(guard, Number(id), data.revision),
+          ...removed.map(image => db.prepare("INSERT OR REPLACE INTO board_image_cleanup(object_key,ready_at) VALUES(?,0)").bind(image.object_key)),
+          ...removed.map(image => db.prepare("DELETE FROM board_images WHERE id=? AND request_id=?").bind(image.id, Number(id))),
+          ...retained.map((image, index) => db.prepare("UPDATE board_images SET position=? WHERE id=?").bind(index, image.id)),
+          ...staged.map((image, index) => imageInsert(db, image, "?", Number(id), retained.length + index)),
+          ...staged.map(image => db.prepare("DELETE FROM board_image_cleanup WHERE object_key=?").bind(image.objectKey)),
+          db.prepare("UPDATE board_requests SET title=?,body=?,nickname=?,category=?,app_version=?,platform=?,updated_at=?,revision=revision+1 WHERE id=? AND revision=?")
+            .bind(post.title, post.body, post.nickname, post.category, post.appVersion, post.platform, new Date().toISOString(), Number(id), data.revision),
+          db.prepare("DELETE FROM board_revision_guard WHERE token=?").bind(guard),
+        ]);
+      } catch (error) { await discardStaged(env, staged); const latest = await findPost(db, Number(id), true); if (latest.revision !== data.revision) fail(409, "conflict"); throw error; }
+      await drainCleanup(env);
       return response({ item: await findPost(db, Number(id)) }, 200, origin);
     }
   }
@@ -235,7 +326,8 @@ export default {
     try { return await route(request, env); }
     catch (error) {
       const origin = request.headers.get("Origin"), allowed = origins(request, env).has(origin) ? origin : null;
-      return response({ error: error instanceof BoardError ? error.code : "unavailable" }, error instanceof BoardError ? error.status : 503, allowed, error.status === 429 ? { "Retry-After": "900" } : {});
+      const known = error instanceof BoardError || error instanceof ImageError;
+      return response({ error: known ? (error.code || error.message) : "unavailable" }, known ? error.status : 503, allowed, error.status === 429 ? { "Retry-After": "900" } : {});
     }
   },
 };

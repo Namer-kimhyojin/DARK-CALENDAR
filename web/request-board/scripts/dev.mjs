@@ -3,8 +3,9 @@ import { mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import worker, { sha256 } from "../src/worker.mjs";
 import { database } from "./sqlite-adapter.mjs";
+import { localBucket } from "./local-bucket.mjs";
 await mkdir(new URL("../.local/", import.meta.url), { recursive: true });
-const env = { DB: database(fileURLToPath(new URL("../.local/board.db", import.meta.url))), DEV_MODE: "true", BOARD_PASSWORD_PEPPER: "local-development-only-pepper", ADMIN_PASSWORD_HASH: await sha256("development-admin-only") };
+const env = { DB: database(fileURLToPath(new URL("../.local/board.db", import.meta.url))), BUCKET: localBucket(new URL("../.local/images/", import.meta.url)), DEV_MODE: "true", BOARD_PASSWORD_PEPPER: "local-development-only-pepper", ADMIN_PASSWORD_HASH: await sha256("development-admin-only") };
 const port = Number(process.env.PORT || 8787);
 createServer(async (incoming, outgoing) => {
   const chunks = []; for await (const chunk of incoming) chunks.push(chunk);

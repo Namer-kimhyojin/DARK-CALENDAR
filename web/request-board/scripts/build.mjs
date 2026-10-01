@@ -1,7 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { SCHEMA } from "../src/schema.mjs";
 const source = await readFile(new URL("../src/worker.mjs", import.meta.url), "utf8");
-const output = source.replace('import { SCHEMA } from "./schema.mjs";', `const SCHEMA = ${JSON.stringify(SCHEMA)};`);
+const images = (await readFile(new URL("../src/images.mjs", import.meta.url), "utf8")).replace(/^export /gm, "");
+const output = source.replace('import { SCHEMA } from "./schema.mjs";', `const SCHEMA = ${JSON.stringify(SCHEMA)};`).replace('import { ImageError, IMAGE_COUNT, requestWithImages } from "./images.mjs";', images);
 const directory = new URL("../dist/server/", import.meta.url);
 await mkdir(directory, { recursive: true });
 await writeFile(new URL("index.js", directory), output, "utf8");

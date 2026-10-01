@@ -6,6 +6,7 @@ export function database(path = ":memory:") {
     constructor(sql, values = []) { this.sql = sql; this.values = values; }
     bind(...values) { return new Statement(this.sql, values); }
     async first() { return sqlite.prepare(this.sql).get(...this.values) || null; }
+    async all() { return { success: true, results: sqlite.prepare(this.sql).all(...this.values) }; }
     async run() {
       const result = sqlite.prepare(this.sql).run(...this.values);
       return { success: true, meta: { changes: Number(result.changes), last_row_id: Number(result.lastInsertRowid) } };

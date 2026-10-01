@@ -1,6 +1,10 @@
 # Air Calendar request board
 
-The promotional homepage in `docs/` uses this anonymous request API. Production posts live in the Sites-managed D1 binding `DB`, independently of desktop calendars. Post passwords use salted PBKDF2-SHA256 (100,000 iterations) with a secret server pepper. Public responses exclude password material; SQL uses bound parameters.
+The promotional homepage in `docs/` uses this anonymous request API. Production posts live in the Sites-managed D1 binding `DB`, independently of desktop calendars. Images live in the Sites-managed R2 binding `BUCKET`. Post passwords use salted PBKDF2-SHA256 (100,000 iterations) with a secret server pepper. Public responses exclude password material; SQL uses bound parameters.
+
+Authors may attach up to three PNG/JPEG/WebP images of 5 MiB each. Create/edit accepts JSON for text-only operations or multipart `payload` JSON plus `images` file parts. Edits may send `removeImages` IDs belonging to that post. The server checks signatures, MIME types, dimensions (8,192 per side and 24 million pixels), counts and bounded request sizes. The homepage normalizes images through canvas, offers file/drop/paste previews, and displays a zoom viewer. Image responses are served through opaque IDs with fixed image MIME, `nosniff`, and no caching; private object keys are never exposed.
+
+Content, image metadata and revision guards commit in one D1 batch. Uploaded objects are staged in a durable cleanup queue before R2 writes; successful commits remove those entries. Rejected/interrupted uploads and post/image deletion retain cleanup entries until R2 deletion succeeds. A subsequent API request retries expired cleanup entries. Metadata removal immediately prevents public image access. Additive table creation preserves existing posts; neither D1 nor R2 is replaced during deployment.
 
 ## Development and verification
 
