@@ -127,7 +127,15 @@
     "sync_hint": "Sincronización Google",
     "today": "Hoy",
     "today_hint": "Ir a hoy",
-    "weekdays": ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+    "weekdays": [
+      "Lun",
+      "Mar",
+      "Mié",
+      "Jue",
+      "Vie",
+      "Sáb",
+      "Dom"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Añadir",
@@ -1558,7 +1566,13 @@
     "hint_record_jump": "Enter abre el elemento. Shift+Enter va a su fecha.",
     "hint_run_command": "Enter ejecuta el comando seleccionado",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Presione Enter para abrir el resultado seleccionado",
@@ -1811,223 +1825,359 @@
         "description": "Inicia de inmediato el modo de bloqueo por ausencia.",
         "label": "Bloqueo por ausencia",
         "menu_path": "Vista > Bloqueo por ausencia",
-        "tags": ["ausencia", "bloqueo"]
+        "tags": [
+          "ausencia",
+          "bloqueo"
+        ]
       },
       "cal_toolbar": {
         "description": "Oculta o muestra de nuevo la barra de herramientas del calendario.",
         "label": "Alternar barra de herramientas del calendario",
         "menu_path": "Vista > Barra de herramientas del calendario",
-        "tags": ["calendario", "barra de herramientas"]
+        "tags": [
+          "calendario",
+          "barra de herramientas"
+        ]
       },
       "calendar_print": {
         "description": "Muestra una vista previa e imprime el calendario del periodo actual o elegido.",
         "label": "Imprimir calendario",
         "menu_path": "Calendario > Opciones > Imprimir",
-        "tags": ["imprimir", "impresora", "PDF"]
+        "tags": [
+          "imprimir",
+          "impresora",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "Gestiona las plantillas y la estructura de elementos de la lista de verificación.",
         "label": "Gestionar lista de verificación",
         "menu_path": "Tareas > Gestionar lista de verificación",
-        "tags": ["lista de verificación", "plantilla"]
+        "tags": [
+          "lista de verificación",
+          "plantilla"
+        ]
       },
       "color_assign": {
         "description": "Asigna colores automáticamente a los elementos seleccionados.",
         "label": "Asignación automática de color",
         "menu_path": "Tareas > Asignación automática de color",
-        "tags": ["color", "etiqueta", "automático"]
+        "tags": [
+          "color",
+          "etiqueta",
+          "automático"
+        ]
       },
       "command_palette": {
         "description": "Abre el cuadro de búsqueda de comandos para encontrar una función al instante.",
         "label": "Paleta de comandos",
         "menu_path": "Llamada directa",
-        "tags": ["buscar", "comando", "paleta"]
+        "tags": [
+          "buscar",
+          "comando",
+          "paleta"
+        ]
       },
       "delete": {
         "description": "Elimina el evento o elemento actualmente seleccionado.",
         "label": "Eliminar elemento seleccionado",
         "menu_path": "Estado de selección",
-        "tags": ["eliminar", "quitar"]
+        "tags": [
+          "eliminar",
+          "quitar"
+        ]
       },
       "escape": {
         "description": "Borra la selección o el enfoque actual.",
         "label": "Borrar selección",
         "menu_path": "Estado de selección",
-        "tags": ["deseleccionar", "cancelar", "escape"]
+        "tags": [
+          "deseleccionar",
+          "cancelar",
+          "escape"
+        ]
       },
       "focus_mode": {
         "description": "Activa o desactiva el modo enfoque.",
         "label": "Alternar modo enfoque",
         "menu_path": "Vista > Modo enfoque",
-        "tags": ["enfoque", "pomodoro"]
+        "tags": [
+          "enfoque",
+          "pomodoro"
+        ]
       },
       "focus_pause": {
         "description": "Pausa o reanuda la sesión de enfoque actual.",
         "label": "Pausar enfoque",
         "menu_path": "Modo enfoque",
-        "tags": ["enfoque", "pausa"]
+        "tags": [
+          "enfoque",
+          "pausa"
+        ]
       },
       "force_unlock": {
         "description": "Elimina a la fuerza un estado de bloqueo inesperado.",
         "label": "Forzar desbloqueo",
         "menu_path": "Recuperación de emergencia",
-        "tags": ["forzar", "desbloquear", "recuperación", "emergencia"]
+        "tags": [
+          "forzar",
+          "desbloquear",
+          "recuperación",
+          "emergencia"
+        ]
       },
       "fullscreen": {
         "description": "Activa o desactiva la visualización en pantalla completa.",
         "label": "Alternar pantalla completa",
         "menu_path": "Vista > Pantalla completa",
-        "tags": ["pantalla completa"]
+        "tags": [
+          "pantalla completa"
+        ]
       },
       "help": {
         "description": "Abre el centro de ayuda.",
         "label": "Guía de atajos",
         "menu_path": "Sistema > Guía de atajos",
-        "tags": ["ayuda", "F1"]
+        "tags": [
+          "ayuda",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "Aplica el diseño acoplado de 4 paneles predeterminado.",
         "label": "Preajuste de diseño 1",
         "menu_path": "Vista > Preajustes de diseño",
-        "tags": ["diseño", "preajuste", "acoplado", "1"]
+        "tags": [
+          "diseño",
+          "preajuste",
+          "acoplado",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "Aplica un diseño centrado en el calendario.",
         "label": "Preajuste de diseño 2",
         "menu_path": "Vista > Preajustes de diseño",
-        "tags": ["diseño", "calendario", "2"]
+        "tags": [
+          "diseño",
+          "calendario",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "Aplica un diseño centrado en tareas.",
         "label": "Preajuste de diseño 3",
         "menu_path": "Vista > Preajustes de diseño",
-        "tags": ["diseño", "tarea", "3"]
+        "tags": [
+          "diseño",
+          "tarea",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "Aplica un diseño de pestañas divididas.",
         "label": "Preajuste de diseño 4",
         "menu_path": "Vista > Preajustes de diseño",
-        "tags": ["diseño", "pestaña", "dividido", "4"]
+        "tags": [
+          "diseño",
+          "pestaña",
+          "dividido",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "Aplica un diseño flotante completamente separado.",
         "label": "Preajuste de diseño 5",
         "menu_path": "Vista > Preajustes de diseño",
-        "tags": ["diseño", "separado", "flotante", "5"]
+        "tags": [
+          "diseño",
+          "separado",
+          "flotante",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "Activa o desactiva el modo de bloqueo de escritorio.",
         "label": "Modo bloqueo",
         "menu_path": "Vista > Modo bloqueo",
-        "tags": ["bloqueo"]
+        "tags": [
+          "bloqueo"
+        ]
       },
       "magnet_mode": {
         "description": "Activa el modo imán, que ayuda a alinear y ajustar paneles.",
         "label": "Modo imán",
         "menu_path": "Vista > Modo imán",
-        "tags": ["imán", "panel"]
+        "tags": [
+          "imán",
+          "panel"
+        ]
       },
       "monitor_left": {
         "description": "Mueve la ventana a otro monitor.",
         "label": "Mover al monitor anterior",
         "menu_path": "Control de ventana",
-        "tags": ["monitor", "pantalla", "izquierda"]
+        "tags": [
+          "monitor",
+          "pantalla",
+          "izquierda"
+        ]
       },
       "monitor_right": {
         "description": "Mueve la ventana a otro monitor.",
         "label": "Mover al siguiente monitor",
         "menu_path": "Control de ventana",
-        "tags": ["monitor", "pantalla", "derecha"]
+        "tags": [
+          "monitor",
+          "pantalla",
+          "derecha"
+        ]
       },
       "new_directive": {
         "description": "Abre la ventana para ingresar una directiva o un elemento de cooperación.",
         "label": "Registrar directiva",
         "menu_path": "Registrar > Directiva",
-        "tags": ["directiva", "cooperación"]
+        "tags": [
+          "directiva",
+          "cooperación"
+        ]
       },
       "new_routine": {
         "description": "Agrega rápidamente una rutina de tareas recurrente.",
         "label": "Registrar rutina",
         "menu_path": "Registrar > Rutina",
-        "tags": ["rutina", "tarea", "recurrente"]
+        "tags": [
+          "rutina",
+          "tarea",
+          "recurrente"
+        ]
       },
       "new_schedule": {
         "description": "Abre directamente la ventana de registro de eventos.",
         "label": "Agregar nuevo evento",
         "menu_path": "Registrar > Nuevo evento",
-        "tags": ["evento", "agregar", "registrar"]
+        "tags": [
+          "evento",
+          "agregar",
+          "registrar"
+        ]
       },
       "next_day": {
         "description": "Se mueve un día después de la fecha actual.",
         "label": "Día siguiente",
         "menu_path": "Navegación",
-        "tags": ["siguiente", "fecha", "derecha"]
+        "tags": [
+          "siguiente",
+          "fecha",
+          "derecha"
+        ]
       },
       "opacity_down": {
         "description": "Reduce la opacidad de la ventana.",
         "label": "Disminuir opacidad",
         "menu_path": "Control de ventana",
-        "tags": ["opacidad", "más oscuro"]
+        "tags": [
+          "opacidad",
+          "más oscuro"
+        ]
       },
       "opacity_up": {
         "description": "Aumenta la opacidad de la ventana.",
         "label": "Aumentar opacidad",
         "menu_path": "Control de ventana",
-        "tags": ["opacidad", "más claro"]
+        "tags": [
+          "opacidad",
+          "más claro"
+        ]
       },
       "prev_day": {
         "description": "Se mueve un día antes de la fecha actual.",
         "label": "Día anterior",
         "menu_path": "Navegación",
-        "tags": ["anterior", "fecha", "izquierda"]
+        "tags": [
+          "anterior",
+          "fecha",
+          "izquierda"
+        ]
       },
       "restore_pos": {
         "description": "Restaura la ventana a una posición segura de la pantalla.",
         "label": "Restaurar posición de ventana",
         "menu_path": "Control de ventana",
-        "tags": ["ventana", "restaurar", "posición"]
+        "tags": [
+          "ventana",
+          "restaurar",
+          "posición"
+        ]
       },
       "routine_mgr": {
         "description": "Abre directamente la pestaña del gestor de rutinas.",
         "label": "Gestor de rutinas",
         "menu_path": "Tareas > Resumen de rutinas",
-        "tags": ["rutina", "gestionar"]
+        "tags": [
+          "rutina",
+          "gestionar"
+        ]
       },
       "save_layout": {
         "description": "Guarda la disposición actual de paneles como preajuste.",
         "label": "Guardar diseño actual",
         "menu_path": "Vista > Preajustes de diseño > Guardar",
-        "tags": ["diseño", "preajuste", "guardar"]
+        "tags": [
+          "diseño",
+          "preajuste",
+          "guardar"
+        ]
       },
       "show_hide": {
         "description": "Oculta la ventana principal o la vuelve a mostrar.",
         "label": "Mostrar/ocultar ventana",
         "menu_path": "Control de ventana",
-        "tags": ["ventana", "ocultar", "mostrar", "superposición"]
+        "tags": [
+          "ventana",
+          "ocultar",
+          "mostrar",
+          "superposición"
+        ]
       },
       "sync_gcal": {
         "description": "Inicia de inmediato una sincronización con Google Calendar.",
         "label": "Sincronizar Google Calendar",
         "menu_path": "Sistema > Calendario y sincronización",
-        "tags": ["google", "sincronizar", "calendario", "F5"]
+        "tags": [
+          "google",
+          "sincronizar",
+          "calendario",
+          "F5"
+        ]
       },
       "today": {
         "description": "Mueve al instante la fecha seleccionada a hoy.",
         "label": "Ir a hoy",
         "menu_path": "Navegación",
-        "tags": ["hoy", "fecha"]
+        "tags": [
+          "hoy",
+          "fecha"
+        ]
       },
       "topbar": {
         "description": "Activa o desactiva la visualización de la barra de menú superior.",
         "label": "Alternar barra superior",
         "menu_path": "Vista > Barra superior",
-        "tags": ["barra de menú", "barra superior", "recuperación"]
+        "tags": [
+          "barra de menú",
+          "barra superior",
+          "recuperación"
+        ]
       },
       "widget_mode": {
         "description": "Abre el modo de panel solo de widgets.",
         "label": "Alternar modo widget",
         "menu_path": "Vista > Modo solo widgets",
-        "tags": ["widget", "panel"]
+        "tags": [
+          "widget",
+          "panel"
+        ]
       }
     },
     "groups": {
@@ -3092,9 +3242,16 @@
     "all_layouts": "Show all layouts",
     "back_to_main": "Volver al calendario",
     "background_opacity": "Background opacity",
+    "calendar_collapse": "Ocultar calendario",
+    "calendar_expand": "Mostrar calendario",
+    "calendar_visibility_help": "Muestra u oculta el calendario del diseño seleccionado. Los otros diseños conservan sus ajustes.",
     "close": "Cerrar widget",
     "color_picker": "Elija el color de acento del widget",
     "complete_named": "Change completion: {name}",
+    "completed_excluded": "Solo pendientes",
+    "completed_included": "Incluir completados",
+    "context_summary": "{date} · {filter} · {completed} · {count}/{total} elementos",
+    "customization_intro": "Cambia el diseño, la apariencia y los elementos visibles y revisa la vista previa. El widget no cambiará hasta aplicar.",
     "customize": "Customize",
     "density": "List density",
     "density_comfortable": "Comfortable",
@@ -3116,6 +3273,7 @@
     "editor_title": "Crear estilo de widget",
     "editor_width": "Ancho predeterminado",
     "empty_directive_filter": "No directives for this date.",
+    "empty_filter_context": "No hay elementos de este tipo. Hay {count} de otros tipos.",
     "empty_panel": "Sin elementos para esta fecha.",
     "empty_schedule": "Sin horario",
     "empty_schedule_filter": "No hay horarios para esta fecha.",
@@ -3136,6 +3294,65 @@
     "font_size": "Text size",
     "font_size_help": "Scales dates, controls, calendar, and list text together.",
     "font_weight": "Title weight",
+    "free_align": "Alinear",
+    "free_align_bottom": "Abajo",
+    "free_align_center_x": "Centro horizontal",
+    "free_align_center_y": "Centro vertical",
+    "free_align_left": "Izquierda",
+    "free_align_right": "Derecha",
+    "free_align_top": "Arriba",
+    "free_back": "Enviar al fondo",
+    "free_block_agenda": "Lista combinada",
+    "free_block_calendar": "Calendario",
+    "free_block_clock": "Reloj",
+    "free_block_date": "Fecha",
+    "free_block_filters": "Filtros de la lista combinada",
+    "free_current_items": "Elementos del widget actual",
+    "free_distribute_x": "Distribuir horizontalmente",
+    "free_distribute_y": "Distribuir verticalmente",
+    "free_editor_help": "Ctrl/Mayús+clic: selección múltiple · Supr: ocultar · Alt: desactivar ajuste",
+    "free_editor_intro": "Previsualiza la distribución con eventos de ejemplo. Usa Ctrl o Mayús para seleccionar varios elementos y cambia su tamaño desde las esquinas y los bordes.",
+    "free_example_items": "Eventos de ejemplo",
+    "free_export": "Exportar…",
+    "free_file_error": "No se pudo procesar el archivo de distribución.",
+    "free_file_filter": "Distribución del widget (*.airlayout.json *.json)",
+    "free_filter_heading": "Filtros de la lista combinada",
+    "free_fit": "Ajustar a la vista",
+    "free_front": "Traer al frente",
+    "free_guides": "Ajustar a elementos",
+    "free_import": "Importar…",
+    "free_layer": "Orden y bloqueo de elementos",
+    "free_layout_calendar_mode": "Vista del calendario",
+    "free_layout_canvas_height": "Alto del lienzo",
+    "free_layout_canvas_width": "Ancho del lienzo",
+    "free_layout_components": "Componentes",
+    "free_layout_edit": "Editar distribución…",
+    "free_layout_empty": "Selecciona un componente a la izquierda.",
+    "free_layout_height": "Alto",
+    "free_layout_intro": "Selecciona un componente y arrástralo para moverlo. Cambia su tamaño con el tirador inferior derecho. Es una muestra; el widget actual solo cambia al aplicar.",
+    "free_layout_redo": "Rehacer",
+    "free_layout_reset": "Empezar con un diseño",
+    "free_layout_snap": "Ajustar a la cuadrícula",
+    "free_layout_snap_help": "Ajusta a una cuadrícula de 8 píxeles. Mantén Alt para mover o cambiar el tamaño libremente. Las flechas mueven 1 píxel; Mayús+flecha mueve 10.",
+    "free_layout_title": "Editar distribución del widget",
+    "free_layout_transition_help": "Descarta el borrador de apariencia actual y abre el editor de distribución.",
+    "free_layout_undo": "Deshacer",
+    "free_layout_width": "Ancho",
+    "free_layout_x": "Posición horizontal",
+    "free_layout_y": "Posición vertical",
+    "free_live_preview": "Vista previa",
+    "free_lock": "Bloquear",
+    "free_locked_count": "{count} bloqueados",
+    "free_multi_selected": "{count} seleccionados",
+    "free_overlap": "{count} superposiciones · Ajusta el orden de los elementos.",
+    "free_preview": "Vista previa con eventos de ejemplo",
+    "free_status": "{visible} visibles · {width} × {height}px",
+    "free_tab_canvas": "Lienzo",
+    "free_tab_geometry": "Posición y tamaño",
+    "free_toggle_component": "Mostrar {name}",
+    "free_unlock": "Desbloquear",
+    "free_wysiwyg_intro": "Selecciona elementos directamente en el widget para moverlos, cambiar su tamaño y su aspecto. El widget actual no cambia hasta que apliques los cambios.",
+    "free_zoom": "Zoom",
     "header_caption": "Agenda del día seleccionado y trabajo.",
     "hero_eyebrow": "Widget de enfoque",
     "hide_calendar": "Ocultar calendario",
@@ -3155,6 +3372,7 @@
     "menu_always_top": "Siempre en la cima",
     "menu_complete_directive": "Marcar completo",
     "menu_complete_task": "Marcar completo",
+    "menu_date": "Navegación por fecha",
     "menu_delete_directive": "Borrar",
     "menu_delete_task": "Borrar",
     "menu_edit_directive": "Editar/Abrir",
@@ -3167,6 +3385,9 @@
     "menu_refresh": "Refrescar",
     "menu_reopen": "Reopen",
     "menu_reserve_space": "Reservar espacio en pantalla",
+    "menu_view": "Ajustes de vista",
+    "menu_window": "Gestión de ventana",
+    "menu_work": "Gestión del trabajo",
     "month_calendar": "Choose a date from the month",
     "month_next": "Mes próximo",
     "month_prev": "Mes anterior",
@@ -3186,7 +3407,24 @@
     "preferences_appearance": "Appearance",
     "preferences_layout": "Layout",
     "preferences_visibility": "Visibility",
+    "preset_builtin": "Distribuciones integradas",
+    "preset_custom": "Distribución personalizada",
+    "preset_delete": "Eliminar",
+    "preset_delete_confirm": "¿Eliminar la distribución «{name}»?",
+    "preset_draft_note": "Los cambios de preajustes también se guardan solo al aplicarlos.",
+    "preset_edit": "Editar distribución…",
+    "preset_error": "No se pudo guardar la distribución.",
+    "preset_invalid_name": "El nombre debe tener entre 1 y 80 caracteres y ser único.",
+    "preset_loaded": "Distribución cargada: {name}",
+    "preset_modified": "Distribución modificada",
+    "preset_name": "Nombre de la distribución",
+    "preset_rename": "Renombrar…",
+    "preset_save_as": "Guardar como nuevo preajuste…",
+    "preset_saved": "Nueva distribución",
+    "preset_select": "Seleccionar distribución guardada",
+    "preset_update": "Sobrescribir preajuste seleccionado",
     "preview": "Preview · Sample agenda",
+    "preview_directive": "Compartir comentarios de revisión",
     "preview_note": "Apply saves your changes. Cancel keeps your previous settings.",
     "preview_schedule": "Project meeting",
     "preview_work": "Prepare meeting notes",
@@ -3204,7 +3442,9 @@
     "return_main": "Main window",
     "routine_short": "Rutina",
     "save_failed": "Could not save. Please try again.",
+    "save_failed_named": "Error al guardar. Inténtalo de nuevo: “{name}”.",
     "saved_status": "Work status saved.",
+    "saved_status_named": "Guardado como {status}: “{name}”.",
     "scale_tooltip_value": "Scale: {value}%",
     "schedule_title": "Cronograma",
     "schedule_type": "Cronograma",
@@ -3248,7 +3488,10 @@
     "tomorrow": "Mañana",
     "undo": "Undo",
     "undone": "Previous status restored.",
+    "undone_named": "Estado anterior restaurado: “{name}”.",
     "untitled": "Intitulado",
+    "user_layouts": "Mis distribuciones",
+    "user_layouts_empty": "No hay distribuciones guardadas. Guarda un preajuste en el editor.",
     "week_toggle": "Week",
     "week_toggle_help": "Show or collapse the week strip",
     "widget_hint_actions": "Toca un día para reenfocarte",

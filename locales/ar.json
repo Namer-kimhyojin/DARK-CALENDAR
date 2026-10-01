@@ -127,7 +127,15 @@
     "sync_hint": "مزامنة",
     "today": "اليوم",
     "today_hint": "الانتقال إلى اليوم",
-    "weekdays": ["هنأ", "ثنإ", "عبرأ", "مخأ", "مجأ", "سبأ", "حدأ"]
+    "weekdays": [
+      "هنأ",
+      "ثنإ",
+      "عبرأ",
+      "مخأ",
+      "مجأ",
+      "سبأ",
+      "حدأ"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "إضافة عنصر",
@@ -1558,7 +1566,13 @@
     "hint_record_jump": "Enter لفتح العنصر. Shift+Enter للانتقال إلى تاريخه.",
     "hint_run_command": "Enter لتشغيل الأمر المحدد",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "جديد: [{title}] - {date} {time}",
     "no_selection": "اضغط على Enter لفتح النتيجة المحددة",
@@ -1811,223 +1825,359 @@
         "description": "يبدأ وضع قفل الغياب فورًا.",
         "label": "قفل الغياب",
         "menu_path": "عرض > قفل الغياب",
-        "tags": ["غياب", "قفل"]
+        "tags": [
+          "غياب",
+          "قفل"
+        ]
       },
       "cal_toolbar": {
         "description": "يخفي شريط أدوات التقويم أو يظهره مجددًا.",
         "label": "تبديل شريط أدوات التقويم",
         "menu_path": "عرض > شريط أدوات التقويم",
-        "tags": ["تقويم", "شريط أدوات"]
+        "tags": [
+          "تقويم",
+          "شريط أدوات"
+        ]
       },
       "calendar_print": {
         "description": "يعرض معاينة ويطبع التقويم للفترة الحالية أو المختارة.",
         "label": "طباعة التقويم",
         "menu_path": "التقويم > خيارات > طباعة",
-        "tags": ["طباعة", "طابعة", "PDF"]
+        "tags": [
+          "طباعة",
+          "طابعة",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "يدير قوالب قائمة التحقق وهيكل عناصرها.",
         "label": "إدارة قائمة التحقق",
         "menu_path": "المهام > إدارة قائمة التحقق",
-        "tags": ["قائمة تحقق", "قالب"]
+        "tags": [
+          "قائمة تحقق",
+          "قالب"
+        ]
       },
       "color_assign": {
         "description": "يعيّن ألوانًا تلقائيًا للعناصر المحددة.",
         "label": "تعيين اللون تلقائيًا",
         "menu_path": "المهام > تعيين اللون تلقائيًا",
-        "tags": ["لون", "وسم", "تلقائي"]
+        "tags": [
+          "لون",
+          "وسم",
+          "تلقائي"
+        ]
       },
       "command_palette": {
         "description": "يفتح مربع بحث الأوامر للعثور على ميزة فورًا.",
         "label": "لوحة الأوامر",
         "menu_path": "استدعاء مباشر",
-        "tags": ["بحث", "أمر", "لوحة"]
+        "tags": [
+          "بحث",
+          "أمر",
+          "لوحة"
+        ]
       },
       "delete": {
         "description": "يحذف الموعد أو العنصر المحدد حاليًا.",
         "label": "حذف العنصر المحدد",
         "menu_path": "حالة التحديد",
-        "tags": ["حذف", "إزالة"]
+        "tags": [
+          "حذف",
+          "إزالة"
+        ]
       },
       "escape": {
         "description": "يلغي التحديد أو التركيز الحالي.",
         "label": "إلغاء التحديد",
         "menu_path": "حالة التحديد",
-        "tags": ["إلغاء التحديد", "إلغاء", "escape"]
+        "tags": [
+          "إلغاء التحديد",
+          "إلغاء",
+          "escape"
+        ]
       },
       "focus_mode": {
         "description": "يفعّل أو يعطّل وضع التركيز.",
         "label": "تبديل وضع التركيز",
         "menu_path": "عرض > وضع التركيز",
-        "tags": ["تركيز", "بومودورو"]
+        "tags": [
+          "تركيز",
+          "بومودورو"
+        ]
       },
       "focus_pause": {
         "description": "يوقف أو يستأنف جلسة التركيز الحالية.",
         "label": "إيقاف التركيز مؤقتًا",
         "menu_path": "وضع التركيز",
-        "tags": ["تركيز", "إيقاف مؤقت"]
+        "tags": [
+          "تركيز",
+          "إيقاف مؤقت"
+        ]
       },
       "force_unlock": {
         "description": "يزيل قسرًا حالة قفل غير متوقعة.",
         "label": "إلغاء القفل قسرًا",
         "menu_path": "الاستعادة في حالات الطوارئ",
-        "tags": ["قسري", "إلغاء القفل", "استعادة", "طوارئ"]
+        "tags": [
+          "قسري",
+          "إلغاء القفل",
+          "استعادة",
+          "طوارئ"
+        ]
       },
       "fullscreen": {
         "description": "يفعّل أو يعطّل عرض ملء الشاشة.",
         "label": "تبديل ملء الشاشة",
         "menu_path": "عرض > ملء الشاشة",
-        "tags": ["ملء الشاشة"]
+        "tags": [
+          "ملء الشاشة"
+        ]
       },
       "help": {
         "description": "يفتح مركز المساعدة.",
         "label": "دليل الاختصارات",
         "menu_path": "النظام > دليل الاختصارات",
-        "tags": ["مساعدة", "F1"]
+        "tags": [
+          "مساعدة",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "يطبّق تخطيط الألواح الأربعة الافتراضي المثبت.",
         "label": "إعداد التخطيط المسبق 1",
         "menu_path": "عرض > إعدادات التخطيط المسبقة",
-        "tags": ["تخطيط", "إعداد مسبق", "مثبت", "1"]
+        "tags": [
+          "تخطيط",
+          "إعداد مسبق",
+          "مثبت",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "يطبّق تخطيطًا محوره التقويم.",
         "label": "إعداد التخطيط المسبق 2",
         "menu_path": "عرض > إعدادات التخطيط المسبقة",
-        "tags": ["تخطيط", "تقويم", "2"]
+        "tags": [
+          "تخطيط",
+          "تقويم",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "يطبّق تخطيطًا محوره المهام.",
         "label": "إعداد التخطيط المسبق 3",
         "menu_path": "عرض > إعدادات التخطيط المسبقة",
-        "tags": ["تخطيط", "مهمة", "3"]
+        "tags": [
+          "تخطيط",
+          "مهمة",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "يطبّق تخطيط علامات تبويب منقسمة.",
         "label": "إعداد التخطيط المسبق 4",
         "menu_path": "عرض > إعدادات التخطيط المسبقة",
-        "tags": ["تخطيط", "علامة تبويب", "منقسم", "4"]
+        "tags": [
+          "تخطيط",
+          "علامة تبويب",
+          "منقسم",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "يطبّق تخطيطًا عائمًا منفصلاً تمامًا.",
         "label": "إعداد التخطيط المسبق 5",
         "menu_path": "عرض > إعدادات التخطيط المسبقة",
-        "tags": ["تخطيط", "منفصل", "عائم", "5"]
+        "tags": [
+          "تخطيط",
+          "منفصل",
+          "عائم",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "يفعّل أو يعطّل وضع قفل سطح المكتب.",
         "label": "وضع القفل",
         "menu_path": "عرض > وضع القفل",
-        "tags": ["قفل"]
+        "tags": [
+          "قفل"
+        ]
       },
       "magnet_mode": {
         "description": "يبدّل وضع المغناطيس الذي يساعد على محاذاة الألواح والتقاطها.",
         "label": "وضع المغناطيس",
         "menu_path": "عرض > وضع المغناطيس",
-        "tags": ["مغناطيس", "لوحة"]
+        "tags": [
+          "مغناطيس",
+          "لوحة"
+        ]
       },
       "monitor_left": {
         "description": "ينقل النافذة إلى شاشة أخرى.",
         "label": "النقل إلى الشاشة السابقة",
         "menu_path": "التحكم بالنافذة",
-        "tags": ["شاشة", "عرض", "يسار"]
+        "tags": [
+          "شاشة",
+          "عرض",
+          "يسار"
+        ]
       },
       "monitor_right": {
         "description": "ينقل النافذة إلى شاشة أخرى.",
         "label": "النقل إلى الشاشة التالية",
         "menu_path": "التحكم بالنافذة",
-        "tags": ["شاشة", "عرض", "يمين"]
+        "tags": [
+          "شاشة",
+          "عرض",
+          "يمين"
+        ]
       },
       "new_directive": {
         "description": "يفتح نافذة إدخال توجيه أو بند تعاون.",
         "label": "تسجيل توجيه",
         "menu_path": "تسجيل > توجيه",
-        "tags": ["توجيه", "تعاون"]
+        "tags": [
+          "توجيه",
+          "تعاون"
+        ]
       },
       "new_routine": {
         "description": "يضيف بسرعة روتين مهام متكرر.",
         "label": "تسجيل روتين",
         "menu_path": "تسجيل > روتين",
-        "tags": ["روتين", "مهمة", "متكرر"]
+        "tags": [
+          "روتين",
+          "مهمة",
+          "متكرر"
+        ]
       },
       "new_schedule": {
         "description": "يفتح نافذة إدخال الموعد مباشرة.",
         "label": "إضافة موعد جديد",
         "menu_path": "تسجيل > موعد جديد",
-        "tags": ["موعد", "إضافة", "تسجيل"]
+        "tags": [
+          "موعد",
+          "إضافة",
+          "تسجيل"
+        ]
       },
       "next_day": {
         "description": "ينتقل إلى يوم بعد التاريخ الحالي.",
         "label": "اليوم التالي",
         "menu_path": "التنقل",
-        "tags": ["تالي", "تاريخ", "يمين"]
+        "tags": [
+          "تالي",
+          "تاريخ",
+          "يمين"
+        ]
       },
       "opacity_down": {
         "description": "يقلل عتامة النافذة.",
         "label": "تقليل العتامة",
         "menu_path": "التحكم بالنافذة",
-        "tags": ["عتامة", "أغمق"]
+        "tags": [
+          "عتامة",
+          "أغمق"
+        ]
       },
       "opacity_up": {
         "description": "يزيد عتامة النافذة.",
         "label": "زيادة العتامة",
         "menu_path": "التحكم بالنافذة",
-        "tags": ["عتامة", "أفتح"]
+        "tags": [
+          "عتامة",
+          "أفتح"
+        ]
       },
       "prev_day": {
         "description": "ينتقل إلى يوم قبل التاريخ الحالي.",
         "label": "اليوم السابق",
         "menu_path": "التنقل",
-        "tags": ["سابق", "تاريخ", "يسار"]
+        "tags": [
+          "سابق",
+          "تاريخ",
+          "يسار"
+        ]
       },
       "restore_pos": {
         "description": "يستعيد النافذة إلى موضع آمن على الشاشة.",
         "label": "استعادة موضع النافذة",
         "menu_path": "التحكم بالنافذة",
-        "tags": ["نافذة", "استعادة", "موضع"]
+        "tags": [
+          "نافذة",
+          "استعادة",
+          "موضع"
+        ]
       },
       "routine_mgr": {
         "description": "يفتح علامة تبويب مدير الروتين مباشرة.",
         "label": "مدير الروتين",
         "menu_path": "المهام > نظرة عامة على الروتين",
-        "tags": ["روتين", "إدارة"]
+        "tags": [
+          "روتين",
+          "إدارة"
+        ]
       },
       "save_layout": {
         "description": "يحفظ ترتيب الألواح الحالي كإعداد مسبق.",
         "label": "حفظ التخطيط الحالي",
         "menu_path": "عرض > إعدادات التخطيط المسبقة > حفظ",
-        "tags": ["تخطيط", "إعداد مسبق", "حفظ"]
+        "tags": [
+          "تخطيط",
+          "إعداد مسبق",
+          "حفظ"
+        ]
       },
       "show_hide": {
         "description": "يخفي النافذة الرئيسية أو يظهرها مجددًا.",
         "label": "إظهار/إخفاء النافذة",
         "menu_path": "التحكم بالنافذة",
-        "tags": ["نافذة", "إخفاء", "إظهار", "تراكب"]
+        "tags": [
+          "نافذة",
+          "إخفاء",
+          "إظهار",
+          "تراكب"
+        ]
       },
       "sync_gcal": {
         "description": "يبدأ مزامنة مع تقويم Google فورًا.",
         "label": "مزامنة تقويم Google",
         "menu_path": "النظام > التقويم والمزامنة",
-        "tags": ["google", "مزامنة", "تقويم", "F5"]
+        "tags": [
+          "google",
+          "مزامنة",
+          "تقويم",
+          "F5"
+        ]
       },
       "today": {
         "description": "ينقل التاريخ المحدد فورًا إلى اليوم.",
         "label": "الانتقال إلى اليوم",
         "menu_path": "التنقل",
-        "tags": ["اليوم", "تاريخ"]
+        "tags": [
+          "اليوم",
+          "تاريخ"
+        ]
       },
       "topbar": {
         "description": "يبدّل ظهور شريط القوائم العلوي.",
         "label": "تبديل الشريط العلوي",
         "menu_path": "عرض > الشريط العلوي",
-        "tags": ["شريط القوائم", "الشريط العلوي", "استعادة"]
+        "tags": [
+          "شريط القوائم",
+          "الشريط العلوي",
+          "استعادة"
+        ]
       },
       "widget_mode": {
         "description": "يفتح وضع اللوحة الخاص بالأدوات فقط.",
         "label": "تبديل وضع الأدوات",
         "menu_path": "عرض > وضع الأدوات فقط",
-        "tags": ["أداة", "لوحة"]
+        "tags": [
+          "أداة",
+          "لوحة"
+        ]
       }
     },
     "groups": {
@@ -3092,9 +3242,16 @@
     "all_layouts": "Show all layouts",
     "back_to_main": "العودة إلى التقويم",
     "background_opacity": "Background opacity",
+    "calendar_collapse": "إخفاء التقويم",
+    "calendar_expand": "إظهار التقويم",
+    "calendar_visibility_help": "إظهار تقويم التخطيط المحدد أو إخفاؤه. تحتفظ التخطيطات الأخرى بإعداداتها.",
     "close": "إغلاق القطعة",
     "color_picker": "اختر لون تمييز القطعة",
     "complete_named": "Change completion: {name}",
+    "completed_excluded": "غير المكتملة فقط",
+    "completed_included": "تضمين المكتملة",
+    "context_summary": "{date} · {filter} · {completed} · {count}/{total} عناصر",
+    "customization_intro": "غيّر التخطيط والمظهر والعناصر الظاهرة ثم راجع المعاينة. لن تتغير الأداة حتى تطبيق الإعدادات.",
     "customize": "Customize",
     "density": "List density",
     "density_comfortable": "Comfortable",
@@ -3116,6 +3273,7 @@
     "editor_title": "إنشاء نمط القطعة",
     "editor_width": "العرض الافتراضي",
     "empty_directive_filter": "No directives for this date.",
+    "empty_filter_context": "لا توجد عناصر من هذا النوع. الأنواع الأخرى بها {count} عناصر.",
     "empty_panel": "لا توجد عناصر لهذا التاريخ.",
     "empty_schedule": "لا يوجد جدول زمني",
     "empty_schedule_filter": "لا توجد جداول لهذا التاريخ.",
@@ -3136,6 +3294,65 @@
     "font_size": "Text size",
     "font_size_help": "Scales dates, controls, calendar, and list text together.",
     "font_weight": "Title weight",
+    "free_align": "محاذاة",
+    "free_align_bottom": "أسفل",
+    "free_align_center_x": "توسيط أفقي",
+    "free_align_center_y": "توسيط عمودي",
+    "free_align_left": "يسار",
+    "free_align_right": "يمين",
+    "free_align_top": "أعلى",
+    "free_back": "إرسال إلى الخلف",
+    "free_block_agenda": "القائمة الموحّدة",
+    "free_block_calendar": "التقويم",
+    "free_block_clock": "الساعة",
+    "free_block_date": "التاريخ",
+    "free_block_filters": "فلاتر القائمة الموحّدة",
+    "free_current_items": "عناصر الودجت الحالي",
+    "free_distribute_x": "توزيع أفقي",
+    "free_distribute_y": "توزيع عمودي",
+    "free_editor_help": "Ctrl/Shift+نقر: تحديد متعدد · Delete: إخفاء · Alt: تعطيل المحاذاة التلقائية",
+    "free_editor_intro": "عاين التخطيط بأحداث نموذجية. استخدم Ctrl أو Shift لتحديد عدة عناصر، وغيّر حجمها من الزوايا والحواف.",
+    "free_example_items": "أحداث نموذجية",
+    "free_export": "تصدير…",
+    "free_file_error": "تعذرت معالجة ملف التخطيط.",
+    "free_file_filter": "تخطيط الودجت (*.airlayout.json *.json)",
+    "free_filter_heading": "فلاتر القائمة الموحّدة",
+    "free_fit": "ملاءمة العرض",
+    "free_front": "إحضار إلى المقدمة",
+    "free_guides": "محاذاة تلقائية مع العناصر",
+    "free_import": "استيراد…",
+    "free_layer": "ترتيب العناصر وقفلها",
+    "free_layout_calendar_mode": "عرض التقويم",
+    "free_layout_canvas_height": "ارتفاع مساحة العمل",
+    "free_layout_canvas_width": "عرض مساحة العمل",
+    "free_layout_components": "المكوّنات",
+    "free_layout_edit": "تحرير التخطيط…",
+    "free_layout_empty": "اختر مكوّناً من القائمة.",
+    "free_layout_height": "الارتفاع",
+    "free_layout_intro": "اختر مكوّناً واسحبه لتحريكه. غيّر حجمه بالمقبض السفلي الأيمن. هذه معاينة تجريبية؛ لا تتغيّر الأداة الحالية إلا عند التطبيق.",
+    "free_layout_redo": "إعادة",
+    "free_layout_reset": "البدء من إعداد مسبق",
+    "free_layout_snap": "محاذاة إلى الشبكة",
+    "free_layout_snap_help": "المحاذاة إلى شبكة 8 بكسل. اضغط Alt للتحريك أو تغيير الحجم بحرية. تحرّك الأسهم بمقدار بكسل واحد، وShift مع الأسهم بمقدار 10 بكسل.",
+    "free_layout_title": "تحرير تخطيط الأداة",
+    "free_layout_transition_help": "تجاهل مسودة المظهر الحالية وافتح محرّر التخطيط.",
+    "free_layout_undo": "تراجع",
+    "free_layout_width": "العرض",
+    "free_layout_x": "الموضع الأفقي",
+    "free_layout_y": "الموضع العمودي",
+    "free_live_preview": "معاينة",
+    "free_lock": "قفل",
+    "free_locked_count": "{count} مقفل",
+    "free_multi_selected": "تم تحديد {count}",
+    "free_overlap": "{count} تداخلات · اضبط ترتيب العناصر.",
+    "free_preview": "معاينة أحداث نموذجية",
+    "free_status": "{visible} ظاهر · {width} × {height}px",
+    "free_tab_canvas": "مساحة العمل",
+    "free_tab_geometry": "الموضع والحجم",
+    "free_toggle_component": "إظهار {name}",
+    "free_unlock": "إلغاء القفل",
+    "free_wysiwyg_intro": "حدد العناصر مباشرة في الودجت لتحريكها وتغيير حجمها ومظهرها. لن يتغير الودجت الحالي حتى تطبق التعديلات.",
+    "free_zoom": "تكبير",
     "header_caption": "جدول أعمال اليوم المحدد والعمل",
     "hero_eyebrow": "القطعة التركيز",
     "hide_calendar": "إخفاء التقويم",
@@ -3155,6 +3372,7 @@
     "menu_always_top": "دائما في القمة",
     "menu_complete_directive": "وضع علامة كاملة",
     "menu_complete_task": "وضع علامة كاملة",
+    "menu_date": "التنقل بين التواريخ",
     "menu_delete_directive": "حذف",
     "menu_delete_task": "حذف",
     "menu_edit_directive": "تحرير/فتح",
@@ -3167,6 +3385,9 @@
     "menu_refresh": "تحديث",
     "menu_reopen": "Reopen",
     "menu_reserve_space": "حجز مساحة الشاشة",
+    "menu_view": "إعدادات العرض",
+    "menu_window": "إدارة النافذة",
+    "menu_work": "إدارة العمل",
     "month_calendar": "Choose a date from the month",
     "month_next": "الشهر المقبل",
     "month_prev": "الشهر السابق",
@@ -3186,7 +3407,24 @@
     "preferences_appearance": "Appearance",
     "preferences_layout": "Layout",
     "preferences_visibility": "Visibility",
+    "preset_builtin": "تخطيطات مدمجة",
+    "preset_custom": "تخطيط مخصص",
+    "preset_delete": "حذف",
+    "preset_delete_confirm": "هل تريد حذف التخطيط «{name}»؟",
+    "preset_draft_note": "تُحفظ تغييرات الإعدادات المسبقة أيضًا عند تطبيقها فقط.",
+    "preset_edit": "تعديل التخطيط…",
+    "preset_error": "تعذر حفظ التخطيط.",
+    "preset_invalid_name": "يجب أن يتكون الاسم من 1 إلى 80 حرفًا وألا يتكرر.",
+    "preset_loaded": "التخطيط المحمّل: {name}",
+    "preset_modified": "تخطيط معدل",
+    "preset_name": "اسم التخطيط",
+    "preset_rename": "إعادة تسمية…",
+    "preset_save_as": "حفظ كإعداد مسبق جديد…",
+    "preset_saved": "تخطيط جديد",
+    "preset_select": "اختر تخطيطًا محفوظًا",
+    "preset_update": "استبدال الإعداد المسبق المحدد",
     "preview": "Preview · Sample agenda",
+    "preview_directive": "مشاركة ملاحظات المراجعة",
     "preview_note": "Apply saves your changes. Cancel keeps your previous settings.",
     "preview_schedule": "Project meeting",
     "preview_work": "Prepare meeting notes",
@@ -3204,7 +3442,9 @@
     "return_main": "Main window",
     "routine_short": "روتين",
     "save_failed": "Could not save. Please try again.",
+    "save_failed_named": "فشل الحفظ. حاول مرة أخرى: «{name}».",
     "saved_status": "Work status saved.",
+    "saved_status_named": "تم الحفظ بالحالة {status}: «{name}».",
     "scale_tooltip_value": "Scale: {value}%",
     "schedule_title": "جدول",
     "schedule_type": "جدول",
@@ -3248,7 +3488,10 @@
     "tomorrow": "غدا",
     "undo": "Undo",
     "undone": "Previous status restored.",
+    "undone_named": "تمت استعادة الحالة السابقة: «{name}».",
     "untitled": "بدون عنوان",
+    "user_layouts": "تخطيطاتي",
+    "user_layouts_empty": "لا توجد تخطيطات محفوظة. احفظ إعدادًا مسبقًا في محرر التخطيط.",
     "week_toggle": "Week",
     "week_toggle_help": "Show or collapse the week strip",
     "widget_hint_actions": "اضغط على يوم لإعادة التركيز",

@@ -127,7 +127,15 @@
     "sync_hint": "Sincronização Google",
     "today": "Hoje",
     "today_hint": "Ir para hoje",
-    "weekdays": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+    "weekdays": [
+      "Seg",
+      "Ter",
+      "Qua",
+      "Qui",
+      "Sex",
+      "Sáb",
+      "Dom"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Adicionar Item",
@@ -1558,7 +1566,13 @@
     "hint_record_jump": "Enter abre o item. Shift+Enter vai para a data.",
     "hint_run_command": "Enter executa o comando selecionado",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "Naovo: [{title}] - {date} {time}",
     "no_selection": "Press Introduza to open the selected result",
@@ -1811,223 +1825,359 @@
         "description": "Inicia imediatamente o modo de bloqueio por ausência.",
         "label": "Bloqueio por ausência",
         "menu_path": "Exibir > Bloqueio por ausência",
-        "tags": ["ausência", "bloqueio"]
+        "tags": [
+          "ausência",
+          "bloqueio"
+        ]
       },
       "cal_toolbar": {
         "description": "Oculta ou mostra novamente a barra de ferramentas do calendário.",
         "label": "Alternar barra de ferramentas do calendário",
         "menu_path": "Exibir > Barra de ferramentas do calendário",
-        "tags": ["calendário", "barra de ferramentas"]
+        "tags": [
+          "calendário",
+          "barra de ferramentas"
+        ]
       },
       "calendar_print": {
         "description": "Visualiza e imprime o calendário do período atual ou escolhido.",
         "label": "Imprimir calendário",
         "menu_path": "Calendário > Opções > Imprimir",
-        "tags": ["imprimir", "impressora", "PDF"]
+        "tags": [
+          "imprimir",
+          "impressora",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "Gerencia modelos e a estrutura de itens do checklist.",
         "label": "Gerenciar checklist",
         "menu_path": "Tarefas > Gerenciar checklist",
-        "tags": ["checklist", "modelo"]
+        "tags": [
+          "checklist",
+          "modelo"
+        ]
       },
       "color_assign": {
         "description": "Atribui cores automaticamente aos itens selecionados.",
         "label": "Atribuição automática de cor",
         "menu_path": "Tarefas > Atribuição automática de cor",
-        "tags": ["cor", "etiqueta", "automático"]
+        "tags": [
+          "cor",
+          "etiqueta",
+          "automático"
+        ]
       },
       "command_palette": {
         "description": "Abre a caixa de busca de comandos para encontrar um recurso instantaneamente.",
         "label": "Paleta de comandos",
         "menu_path": "Chamada direta",
-        "tags": ["busca", "comando", "paleta"]
+        "tags": [
+          "busca",
+          "comando",
+          "paleta"
+        ]
       },
       "delete": {
         "description": "Exclui o evento ou item atualmente selecionado.",
         "label": "Excluir item selecionado",
         "menu_path": "Estado de seleção",
-        "tags": ["excluir", "remover"]
+        "tags": [
+          "excluir",
+          "remover"
+        ]
       },
       "escape": {
         "description": "Limpa a seleção ou o foco atual.",
         "label": "Limpar seleção",
         "menu_path": "Estado de seleção",
-        "tags": ["desmarcar", "cancelar", "escape"]
+        "tags": [
+          "desmarcar",
+          "cancelar",
+          "escape"
+        ]
       },
       "focus_mode": {
         "description": "Ativa ou desativa o modo foco.",
         "label": "Alternar modo foco",
         "menu_path": "Exibir > Modo foco",
-        "tags": ["foco", "pomodoro"]
+        "tags": [
+          "foco",
+          "pomodoro"
+        ]
       },
       "focus_pause": {
         "description": "Pausa ou retoma a sessão de foco atual.",
         "label": "Pausar foco",
         "menu_path": "Modo foco",
-        "tags": ["foco", "pausa"]
+        "tags": [
+          "foco",
+          "pausa"
+        ]
       },
       "force_unlock": {
         "description": "Limpa à força um estado de bloqueio inesperado.",
         "label": "Forçar desbloqueio",
         "menu_path": "Recuperação de emergência",
-        "tags": ["forçar", "desbloquear", "recuperação", "emergência"]
+        "tags": [
+          "forçar",
+          "desbloquear",
+          "recuperação",
+          "emergência"
+        ]
       },
       "fullscreen": {
         "description": "Ativa ou desativa a exibição em tela cheia.",
         "label": "Alternar tela cheia",
         "menu_path": "Exibir > Tela cheia",
-        "tags": ["tela cheia"]
+        "tags": [
+          "tela cheia"
+        ]
       },
       "help": {
         "description": "Abre a central de ajuda.",
         "label": "Guia de atalhos",
         "menu_path": "Sistema > Guia de atalhos",
-        "tags": ["ajuda", "F1"]
+        "tags": [
+          "ajuda",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "Aplica o layout padrão de 4 painéis ancorados.",
         "label": "Predefinição de layout 1",
         "menu_path": "Exibir > Predefinições de layout",
-        "tags": ["layout", "predefinição", "ancorado", "1"]
+        "tags": [
+          "layout",
+          "predefinição",
+          "ancorado",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "Aplica um layout centrado no calendário.",
         "label": "Predefinição de layout 2",
         "menu_path": "Exibir > Predefinições de layout",
-        "tags": ["layout", "calendário", "2"]
+        "tags": [
+          "layout",
+          "calendário",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "Aplica um layout centrado em tarefas.",
         "label": "Predefinição de layout 3",
         "menu_path": "Exibir > Predefinições de layout",
-        "tags": ["layout", "tarefa", "3"]
+        "tags": [
+          "layout",
+          "tarefa",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "Aplica um layout de abas divididas.",
         "label": "Predefinição de layout 4",
         "menu_path": "Exibir > Predefinições de layout",
-        "tags": ["layout", "aba", "dividido", "4"]
+        "tags": [
+          "layout",
+          "aba",
+          "dividido",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "Aplica um layout flutuante totalmente separado.",
         "label": "Predefinição de layout 5",
         "menu_path": "Exibir > Predefinições de layout",
-        "tags": ["layout", "separado", "flutuante", "5"]
+        "tags": [
+          "layout",
+          "separado",
+          "flutuante",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "Ativa ou desativa o modo de bloqueio da área de trabalho.",
         "label": "Modo bloqueio",
         "menu_path": "Exibir > Modo bloqueio",
-        "tags": ["bloqueio"]
+        "tags": [
+          "bloqueio"
+        ]
       },
       "magnet_mode": {
         "description": "Ativa o modo ímã, que ajuda a alinhar e encaixar painéis.",
         "label": "Modo ímã",
         "menu_path": "Exibir > Modo ímã",
-        "tags": ["ímã", "painel"]
+        "tags": [
+          "ímã",
+          "painel"
+        ]
       },
       "monitor_left": {
         "description": "Move a janela para outro monitor.",
         "label": "Mover para o monitor anterior",
         "menu_path": "Controle de janela",
-        "tags": ["monitor", "tela", "esquerda"]
+        "tags": [
+          "monitor",
+          "tela",
+          "esquerda"
+        ]
       },
       "monitor_right": {
         "description": "Move a janela para outro monitor.",
         "label": "Mover para o próximo monitor",
         "menu_path": "Controle de janela",
-        "tags": ["monitor", "tela", "direita"]
+        "tags": [
+          "monitor",
+          "tela",
+          "direita"
+        ]
       },
       "new_directive": {
         "description": "Abre a janela para inserir uma diretiva ou item de cooperação.",
         "label": "Registrar diretiva",
         "menu_path": "Registrar > Diretiva",
-        "tags": ["diretiva", "cooperação"]
+        "tags": [
+          "diretiva",
+          "cooperação"
+        ]
       },
       "new_routine": {
         "description": "Adiciona rapidamente uma rotina de tarefa recorrente.",
         "label": "Registrar rotina",
         "menu_path": "Registrar > Rotina",
-        "tags": ["rotina", "tarefa", "recorrente"]
+        "tags": [
+          "rotina",
+          "tarefa",
+          "recorrente"
+        ]
       },
       "new_schedule": {
         "description": "Abre diretamente a janela de registro de eventos.",
         "label": "Adicionar novo evento",
         "menu_path": "Registrar > Novo evento",
-        "tags": ["evento", "adicionar", "registrar"]
+        "tags": [
+          "evento",
+          "adicionar",
+          "registrar"
+        ]
       },
       "next_day": {
         "description": "Move-se um dia depois da data atual.",
         "label": "Próximo dia",
         "menu_path": "Navegação",
-        "tags": ["próximo", "data", "direita"]
+        "tags": [
+          "próximo",
+          "data",
+          "direita"
+        ]
       },
       "opacity_down": {
         "description": "Reduz a opacidade da janela.",
         "label": "Diminuir opacidade",
         "menu_path": "Controle de janela",
-        "tags": ["opacidade", "mais escura"]
+        "tags": [
+          "opacidade",
+          "mais escura"
+        ]
       },
       "opacity_up": {
         "description": "Aumenta a opacidade da janela.",
         "label": "Aumentar opacidade",
         "menu_path": "Controle de janela",
-        "tags": ["opacidade", "mais clara"]
+        "tags": [
+          "opacidade",
+          "mais clara"
+        ]
       },
       "prev_day": {
         "description": "Move-se um dia antes da data atual.",
         "label": "Dia anterior",
         "menu_path": "Navegação",
-        "tags": ["anterior", "data", "esquerda"]
+        "tags": [
+          "anterior",
+          "data",
+          "esquerda"
+        ]
       },
       "restore_pos": {
         "description": "Restaura a janela para uma posição segura da tela.",
         "label": "Restaurar posição da janela",
         "menu_path": "Controle de janela",
-        "tags": ["janela", "restaurar", "posição"]
+        "tags": [
+          "janela",
+          "restaurar",
+          "posição"
+        ]
       },
       "routine_mgr": {
         "description": "Abre diretamente a aba do gerenciador de rotinas.",
         "label": "Gerenciador de rotinas",
         "menu_path": "Tarefas > Visão geral de rotinas",
-        "tags": ["rotina", "gerenciar"]
+        "tags": [
+          "rotina",
+          "gerenciar"
+        ]
       },
       "save_layout": {
         "description": "Salva o arranjo atual dos painéis como predefinição.",
         "label": "Salvar layout atual",
         "menu_path": "Exibir > Predefinições de layout > Salvar",
-        "tags": ["layout", "predefinição", "salvar"]
+        "tags": [
+          "layout",
+          "predefinição",
+          "salvar"
+        ]
       },
       "show_hide": {
         "description": "Oculta a janela principal ou a exibe novamente.",
         "label": "Mostrar/ocultar janela",
         "menu_path": "Controle de janela",
-        "tags": ["janela", "ocultar", "mostrar", "sobreposição"]
+        "tags": [
+          "janela",
+          "ocultar",
+          "mostrar",
+          "sobreposição"
+        ]
       },
       "sync_gcal": {
         "description": "Inicia imediatamente uma sincronização com o Google Calendar.",
         "label": "Sincronizar Google Calendar",
         "menu_path": "Sistema > Calendário e sincronização",
-        "tags": ["google", "sincronização", "calendário", "F5"]
+        "tags": [
+          "google",
+          "sincronização",
+          "calendário",
+          "F5"
+        ]
       },
       "today": {
         "description": "Move instantaneamente a data selecionada para hoje.",
         "label": "Ir para hoje",
         "menu_path": "Navegação",
-        "tags": ["hoje", "data"]
+        "tags": [
+          "hoje",
+          "data"
+        ]
       },
       "topbar": {
         "description": "Ativa ou desativa a exibição da barra de menu superior.",
         "label": "Alternar barra superior",
         "menu_path": "Exibir > Barra superior",
-        "tags": ["barra de menu", "barra superior", "recuperação"]
+        "tags": [
+          "barra de menu",
+          "barra superior",
+          "recuperação"
+        ]
       },
       "widget_mode": {
         "description": "Abre o modo de painel somente widgets.",
         "label": "Alternar modo widget",
         "menu_path": "Exibir > Modo somente widgets",
-        "tags": ["widget", "painel"]
+        "tags": [
+          "widget",
+          "painel"
+        ]
       }
     },
     "groups": {
@@ -3092,9 +3242,16 @@
     "all_layouts": "Show all layouts",
     "back_to_main": "Voltar ao calendário",
     "background_opacity": "Background opacity",
+    "calendar_collapse": "Ocultar calendário",
+    "calendar_expand": "Mostrar calendário",
+    "calendar_visibility_help": "Mostra ou oculta o calendário do layout selecionado. Outros layouts mantêm suas configurações.",
     "close": "Fechar Widget",
     "color_picker": "Escolha a cor de destaque do widget",
     "complete_named": "Change completion: {name}",
+    "completed_excluded": "Apenas incompletos",
+    "completed_included": "Incluir concluídos",
+    "context_summary": "{date} · {filter} · {completed} · {count}/{total} itens",
+    "customization_intro": "Altere o layout, a aparência e os itens visíveis e confira a prévia. O widget só muda quando você aplicar.",
     "customize": "Customize",
     "density": "List density",
     "density_comfortable": "Comfortable",
@@ -3116,6 +3273,7 @@
     "editor_title": "Criar estilo de widget",
     "editor_width": "Padrao width",
     "empty_directive_filter": "No directives for this date.",
+    "empty_filter_context": "Não há itens deste tipo. Outros tipos têm {count} itens.",
     "empty_panel": "Sem itens para esta data.",
     "empty_schedule": "Nao cronograma",
     "empty_schedule_filter": "Nao cronogramas for this date.",
@@ -3136,6 +3294,65 @@
     "font_size": "Text size",
     "font_size_help": "Scales dates, controls, calendar, and list text together.",
     "font_weight": "Title weight",
+    "free_align": "Alinhar",
+    "free_align_bottom": "Abaixo",
+    "free_align_center_x": "Centro horizontal",
+    "free_align_center_y": "Centro vertical",
+    "free_align_left": "Esquerda",
+    "free_align_right": "Direita",
+    "free_align_top": "Acima",
+    "free_back": "Enviar para trás",
+    "free_block_agenda": "Lista combinada",
+    "free_block_calendar": "Calendário",
+    "free_block_clock": "Relógio",
+    "free_block_date": "Data",
+    "free_block_filters": "Filtros da lista combinada",
+    "free_current_items": "Itens do widget atual",
+    "free_distribute_x": "Distribuir horizontalmente",
+    "free_distribute_y": "Distribuir verticalmente",
+    "free_editor_help": "Ctrl/Shift+clique: seleção múltipla · Delete: ocultar · Alt: desativar ajuste",
+    "free_editor_intro": "Visualize a disposição com eventos de exemplo. Use Ctrl ou Shift para selecionar vários elementos e redimensione-os pelos cantos e bordas.",
+    "free_example_items": "Eventos de exemplo",
+    "free_export": "Exportar…",
+    "free_file_error": "Não foi possível processar o arquivo de disposição.",
+    "free_file_filter": "Disposição do widget (*.airlayout.json *.json)",
+    "free_filter_heading": "Filtros da lista combinada",
+    "free_fit": "Ajustar à visualização",
+    "free_front": "Trazer para a frente",
+    "free_guides": "Ajustar aos elementos",
+    "free_import": "Importar…",
+    "free_layer": "Ordem e bloqueio dos elementos",
+    "free_layout_calendar_mode": "Vista do calendário",
+    "free_layout_canvas_height": "Altura da área",
+    "free_layout_canvas_width": "Largura da área",
+    "free_layout_components": "Componentes",
+    "free_layout_edit": "Editar disposição…",
+    "free_layout_empty": "Selecione um componente à esquerda.",
+    "free_layout_height": "Altura",
+    "free_layout_intro": "Selecione um componente e arraste-o para o mover. Ajuste o tamanho com a pega no canto inferior direito. Esta é uma amostra; o widget atual só muda ao aplicar.",
+    "free_layout_redo": "Refazer",
+    "free_layout_reset": "Começar com uma predefinição",
+    "free_layout_snap": "Alinhar à grelha",
+    "free_layout_snap_help": "Alinhe a uma grelha de 8 píxeis. Prima Alt para mover ou redimensionar livremente. As setas movem 1 píxel; Shift+seta move 10 píxeis.",
+    "free_layout_title": "Editar disposição do widget",
+    "free_layout_transition_help": "Descarte o rascunho de aparência atual e abra o editor de disposição.",
+    "free_layout_undo": "Desfazer",
+    "free_layout_width": "Largura",
+    "free_layout_x": "Posição horizontal",
+    "free_layout_y": "Posição vertical",
+    "free_live_preview": "Prévia",
+    "free_lock": "Bloquear",
+    "free_locked_count": "{count} bloqueados",
+    "free_multi_selected": "{count} selecionados",
+    "free_overlap": "{count} sobreposições · Ajuste a ordem dos elementos.",
+    "free_preview": "Prévia com eventos de exemplo",
+    "free_status": "{visible} visíveis · {width} × {height}px",
+    "free_tab_canvas": "Área de trabalho",
+    "free_tab_geometry": "Posição e tamanho",
+    "free_toggle_component": "Mostrar {name}",
+    "free_unlock": "Desbloquear",
+    "free_wysiwyg_intro": "Selecione elementos diretamente no widget para movê-los, redimensioná-los e mudar sua aparência. O widget atual permanece igual até você aplicar as alterações.",
+    "free_zoom": "Zoom",
     "header_caption": "Selecioneed day agenda and work",
     "hero_eyebrow": "Widget de foco",
     "hide_calendar": "Hide Calendario",
@@ -3155,6 +3372,7 @@
     "menu_always_top": "Sempre no topo",
     "menu_complete_directive": "Mark Completo",
     "menu_complete_task": "Mark Completo",
+    "menu_date": "Navegação de data",
     "menu_delete_directive": "Eliminar",
     "menu_delete_task": "Eliminar",
     "menu_edit_directive": "Editar / Abrir",
@@ -3167,6 +3385,9 @@
     "menu_refresh": "Atualizar",
     "menu_reopen": "Reopen",
     "menu_reserve_space": "Reserve espaço na tela",
+    "menu_view": "Configurações de exibição",
+    "menu_window": "Gestão da janela",
+    "menu_work": "Gestão do trabalho",
     "month_calendar": "Choose a date from the month",
     "month_next": "Proximo Mes",
     "month_prev": "Anterior Mes",
@@ -3186,7 +3407,24 @@
     "preferences_appearance": "Appearance",
     "preferences_layout": "Layout",
     "preferences_visibility": "Visibility",
+    "preset_builtin": "Disposições integradas",
+    "preset_custom": "Disposição personalizada",
+    "preset_delete": "Excluir",
+    "preset_delete_confirm": "Excluir a disposição “{name}”?",
+    "preset_draft_note": "As alterações das predefinições também só são salvas ao aplicá-las.",
+    "preset_edit": "Editar disposição…",
+    "preset_error": "Não foi possível salvar a disposição.",
+    "preset_invalid_name": "O nome deve ter de 1 a 80 caracteres e ser único.",
+    "preset_loaded": "Disposição carregada: {name}",
+    "preset_modified": "Disposição modificada",
+    "preset_name": "Nome da disposição",
+    "preset_rename": "Renomear…",
+    "preset_save_as": "Salvar como nova predefinição…",
+    "preset_saved": "Nova disposição",
+    "preset_select": "Selecionar disposição salva",
+    "preset_update": "Substituir predefinição selecionada",
     "preview": "Preview · Sample agenda",
+    "preview_directive": "Compartilhar comentários da revisão",
     "preview_note": "Apply saves your changes. Cancel keeps your previous settings.",
     "preview_schedule": "Project meeting",
     "preview_work": "Prepare meeting notes",
@@ -3204,7 +3442,9 @@
     "return_main": "Main window",
     "routine_short": "Rotina",
     "save_failed": "Could not save. Please try again.",
+    "save_failed_named": "Falha ao salvar. Tente novamente: “{name}”.",
     "saved_status": "Work status saved.",
+    "saved_status_named": "Salvo como {status}: “{name}”.",
     "scale_tooltip_value": "Scale: {value}%",
     "schedule_title": "Cronograma",
     "schedule_type": "Cronograma",
@@ -3215,7 +3455,7 @@
     "section_today": "Hoje",
     "section_work_today": "Hoje's work",
     "show_all": "Show All",
-    "show_calendar": "Show Calendario",
+    "show_calendar": "Mostrar calendário",
     "show_clock": "Show clock",
     "show_completed": "Include completed",
     "show_completed_help": "Also show completed work and directives in the list.",
@@ -3248,7 +3488,10 @@
     "tomorrow": "Amanha",
     "undo": "Undo",
     "undone": "Previous status restored.",
+    "undone_named": "Estado anterior restaurado: “{name}”.",
     "untitled": "Sem título",
+    "user_layouts": "Minhas disposições",
+    "user_layouts_empty": "Nenhuma disposição salva. Salve uma predefinição no editor.",
     "week_toggle": "Week",
     "week_toggle_help": "Show or collapse the week strip",
     "widget_hint_actions": "Toque em um dia para focar novamente",

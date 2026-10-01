@@ -127,7 +127,15 @@
     "sync_hint": "गूगल सिंक",
     "today": "आज",
     "today_hint": "आज पर जाएँ",
-    "weekdays": ["सोम", "मंगल", "बुध", "गुरु", "शुक्र", "शनि", "रवि"]
+    "weekdays": [
+      "सोम",
+      "मंगल",
+      "बुध",
+      "गुरु",
+      "शुक्र",
+      "शनि",
+      "रवि"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "आइटम जोड़ें",
@@ -1558,7 +1566,13 @@
     "hint_record_jump": "Enter से आइटम खोलें। Shift+Enter से तारीख पर जाएं।",
     "hint_run_command": "Enter से चुना हुआ कमांड चलाएं",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "चयनित परिणाम खोलने के लिए Enter दबाएँ",
@@ -1811,223 +1825,359 @@
         "description": "तुरंत अनुपस्थिति लॉक मोड शुरू करता है।",
         "label": "अनुपस्थिति लॉक",
         "menu_path": "देखें > अनुपस्थिति लॉक",
-        "tags": ["अनुपस्थित", "लॉक"]
+        "tags": [
+          "अनुपस्थित",
+          "लॉक"
+        ]
       },
       "cal_toolbar": {
         "description": "कैलेंडर टूलबार को छुपाता है या फिर से दिखाता है।",
         "label": "कैलेंडर टूलबार टॉगल करें",
         "menu_path": "देखें > कैलेंडर टूलबार",
-        "tags": ["कैलेंडर", "टूलबार"]
+        "tags": [
+          "कैलेंडर",
+          "टूलबार"
+        ]
       },
       "calendar_print": {
         "description": "वर्तमान या चयनित अवधि के लिए कैलेंडर का पूर्वावलोकन करता है और प्रिंट करता है।",
         "label": "कैलेंडर प्रिंट करें",
         "menu_path": "कैलेंडर > विकल्प > प्रिंट",
-        "tags": ["प्रिंट", "प्रिंटर", "PDF"]
+        "tags": [
+          "प्रिंट",
+          "प्रिंटर",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "चेकलिस्ट टेम्पलेट और आइटम संरचना प्रबंधित करता है।",
         "label": "चेकलिस्ट प्रबंधित करें",
         "menu_path": "कार्य > चेकलिस्ट प्रबंधित करें",
-        "tags": ["चेकलिस्ट", "टेम्पलेट"]
+        "tags": [
+          "चेकलिस्ट",
+          "टेम्पलेट"
+        ]
       },
       "color_assign": {
         "description": "चयनित आइटम को स्वचालित रूप से रंग असाइन करता है।",
         "label": "स्वचालित रंग असाइनमेंट",
         "menu_path": "कार्य > स्वचालित रंग असाइनमेंट",
-        "tags": ["रंग", "टैग", "स्वचालित"]
+        "tags": [
+          "रंग",
+          "टैग",
+          "स्वचालित"
+        ]
       },
       "command_palette": {
         "description": "किसी फ़ीचर को तुरंत खोजने के लिए कमांड सर्च बॉक्स खोलता है।",
         "label": "कमांड पैलेट",
         "menu_path": "प्रत्यक्ष कॉल",
-        "tags": ["खोज", "कमांड", "पैलेट"]
+        "tags": [
+          "खोज",
+          "कमांड",
+          "पैलेट"
+        ]
       },
       "delete": {
         "description": "वर्तमान में चयनित शेड्यूल या आइटम को हटाता है।",
         "label": "चयनित आइटम हटाएं",
         "menu_path": "चयन स्थिति",
-        "tags": ["हटाएं", "निकालें"]
+        "tags": [
+          "हटाएं",
+          "निकालें"
+        ]
       },
       "escape": {
         "description": "वर्तमान चयन या फ़ोकस साफ़ करता है।",
         "label": "चयन साफ़ करें",
         "menu_path": "चयन स्थिति",
-        "tags": ["चयन रद्द करें", "रद्द करें", "escape"]
+        "tags": [
+          "चयन रद्द करें",
+          "रद्द करें",
+          "escape"
+        ]
       },
       "focus_mode": {
         "description": "फ़ोकस मोड को चालू या बंद करता है।",
         "label": "फ़ोकस मोड टॉगल करें",
         "menu_path": "देखें > फ़ोकस मोड",
-        "tags": ["फ़ोकस", "पोमोडोरो"]
+        "tags": [
+          "फ़ोकस",
+          "पोमोडोरो"
+        ]
       },
       "focus_pause": {
         "description": "वर्तमान फ़ोकस सत्र को रोकता या फिर से शुरू करता है।",
         "label": "फ़ोकस रोकें",
         "menu_path": "फ़ोकस मोड",
-        "tags": ["फ़ोकस", "रोकें"]
+        "tags": [
+          "फ़ोकस",
+          "रोकें"
+        ]
       },
       "force_unlock": {
         "description": "एक अप्रत्याशित लॉक स्थिति को बलपूर्वक साफ़ करता है।",
         "label": "बलपूर्वक अनलॉक करें",
         "menu_path": "आपातकालीन पुनर्प्राप्ति",
-        "tags": ["बलपूर्वक", "अनलॉक", "पुनर्प्राप्ति", "आपातकालीन"]
+        "tags": [
+          "बलपूर्वक",
+          "अनलॉक",
+          "पुनर्प्राप्ति",
+          "आपातकालीन"
+        ]
       },
       "fullscreen": {
         "description": "फ़ुलस्क्रीन डिस्प्ले को चालू या बंद करता है।",
         "label": "फ़ुलस्क्रीन टॉगल करें",
         "menu_path": "देखें > फ़ुलस्क्रीन",
-        "tags": ["फ़ुलस्क्रीन"]
+        "tags": [
+          "फ़ुलस्क्रीन"
+        ]
       },
       "help": {
         "description": "सहायता केंद्र खोलता है।",
         "label": "शॉर्टकट गाइड",
         "menu_path": "सिस्टम > शॉर्टकट गाइड",
-        "tags": ["सहायता", "F1"]
+        "tags": [
+          "सहायता",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "डिफ़ॉल्ट 4-पैनल डॉक किया गया लेआउट लागू करता है।",
         "label": "लेआउट प्रीसेट 1",
         "menu_path": "देखें > लेआउट प्रीसेट",
-        "tags": ["लेआउट", "प्रीसेट", "डॉक", "1"]
+        "tags": [
+          "लेआउट",
+          "प्रीसेट",
+          "डॉक",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "कैलेंडर-केंद्रित लेआउट लागू करता है।",
         "label": "लेआउट प्रीसेट 2",
         "menu_path": "देखें > लेआउट प्रीसेट",
-        "tags": ["लेआउट", "कैलेंडर", "2"]
+        "tags": [
+          "लेआउट",
+          "कैलेंडर",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "कार्य-केंद्रित लेआउट लागू करता है।",
         "label": "लेआउट प्रीसेट 3",
         "menu_path": "देखें > लेआउट प्रीसेट",
-        "tags": ["लेआउट", "कार्य", "3"]
+        "tags": [
+          "लेआउट",
+          "कार्य",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "विभाजित टैब लेआउट लागू करता है।",
         "label": "लेआउट प्रीसेट 4",
         "menu_path": "देखें > लेआउट प्रीसेट",
-        "tags": ["लेआउट", "टैब", "विभाजित", "4"]
+        "tags": [
+          "लेआउट",
+          "टैब",
+          "विभाजित",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "पूरी तरह से अलग तैरता हुआ लेआउट लागू करता है।",
         "label": "लेआउट प्रीसेट 5",
         "menu_path": "देखें > लेआउट प्रीसेट",
-        "tags": ["लेआउट", "अलग", "तैरता हुआ", "5"]
+        "tags": [
+          "लेआउट",
+          "अलग",
+          "तैरता हुआ",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "डेस्कटॉप लॉक मोड को चालू या बंद करता है।",
         "label": "लॉक मोड",
         "menu_path": "देखें > लॉक मोड",
-        "tags": ["लॉक"]
+        "tags": [
+          "लॉक"
+        ]
       },
       "magnet_mode": {
         "description": "मैग्नेट मोड टॉगल करता है, जो पैनल को संरेखित और स्नैप करने में मदद करता है।",
         "label": "मैग्नेट मोड",
         "menu_path": "देखें > मैग्नेट मोड",
-        "tags": ["मैग्नेट", "पैनल"]
+        "tags": [
+          "मैग्नेट",
+          "पैनल"
+        ]
       },
       "monitor_left": {
         "description": "विंडो को दूसरे मॉनिटर पर ले जाता है।",
         "label": "पिछले मॉनिटर पर जाएं",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["मॉनिटर", "डिस्प्ले", "बाएं"]
+        "tags": [
+          "मॉनिटर",
+          "डिस्प्ले",
+          "बाएं"
+        ]
       },
       "monitor_right": {
         "description": "विंडो को दूसरे मॉनिटर पर ले जाता है।",
         "label": "अगले मॉनिटर पर जाएं",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["मॉनिटर", "डिस्प्ले", "दाएं"]
+        "tags": [
+          "मॉनिटर",
+          "डिस्प्ले",
+          "दाएं"
+        ]
       },
       "new_directive": {
         "description": "निर्देश या सहयोग आइटम दर्ज करने के लिए विंडो खोलता है।",
         "label": "निर्देश रजिस्टर करें",
         "menu_path": "रजिस्टर करें > निर्देश",
-        "tags": ["निर्देश", "सहयोग"]
+        "tags": [
+          "निर्देश",
+          "सहयोग"
+        ]
       },
       "new_routine": {
         "description": "जल्दी से एक बार-बार होने वाला कार्य रूटीन जोड़ता है।",
         "label": "रूटीन रजिस्टर करें",
         "menu_path": "रजिस्टर करें > रूटीन",
-        "tags": ["रूटीन", "कार्य", "दोहराव"]
+        "tags": [
+          "रूटीन",
+          "कार्य",
+          "दोहराव"
+        ]
       },
       "new_schedule": {
         "description": "शेड्यूल एंट्री विंडो सीधे खोलता है।",
         "label": "नया शेड्यूल जोड़ें",
         "menu_path": "रजिस्टर करें > नया शेड्यूल",
-        "tags": ["शेड्यूल", "जोड़ें", "रजिस्टर"]
+        "tags": [
+          "शेड्यूल",
+          "जोड़ें",
+          "रजिस्टर"
+        ]
       },
       "next_day": {
         "description": "वर्तमान तिथि से एक दिन बाद जाता है।",
         "label": "अगला दिन",
         "menu_path": "नेविगेशन",
-        "tags": ["अगला", "तिथि", "दाएं"]
+        "tags": [
+          "अगला",
+          "तिथि",
+          "दाएं"
+        ]
       },
       "opacity_down": {
         "description": "विंडो की अपारदर्शिता घटाता है।",
         "label": "अपारदर्शिता घटाएं",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["अपारदर्शिता", "अधिक गहरा"]
+        "tags": [
+          "अपारदर्शिता",
+          "अधिक गहरा"
+        ]
       },
       "opacity_up": {
         "description": "विंडो की अपारदर्शिता बढ़ाता है।",
         "label": "अपारदर्शिता बढ़ाएं",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["अपारदर्शिता", "अधिक चमकीला"]
+        "tags": [
+          "अपारदर्शिता",
+          "अधिक चमकीला"
+        ]
       },
       "prev_day": {
         "description": "वर्तमान तिथि से एक दिन पहले जाता है।",
         "label": "पिछला दिन",
         "menu_path": "नेविगेशन",
-        "tags": ["पिछला", "तिथि", "बाएं"]
+        "tags": [
+          "पिछला",
+          "तिथि",
+          "बाएं"
+        ]
       },
       "restore_pos": {
         "description": "विंडो को स्क्रीन पर एक सुरक्षित स्थिति में पुनर्स्थापित करता है।",
         "label": "विंडो स्थिति पुनर्स्थापित करें",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["विंडो", "पुनर्स्थापित करें", "स्थिति"]
+        "tags": [
+          "विंडो",
+          "पुनर्स्थापित करें",
+          "स्थिति"
+        ]
       },
       "routine_mgr": {
         "description": "सीधे रूटीन मैनेजर टैब खोलता है।",
         "label": "रूटीन मैनेजर",
         "menu_path": "कार्य > रूटीन अवलोकन",
-        "tags": ["रूटीन", "प्रबंधित करें"]
+        "tags": [
+          "रूटीन",
+          "प्रबंधित करें"
+        ]
       },
       "save_layout": {
         "description": "वर्तमान पैनल व्यवस्था को प्रीसेट के रूप में सहेजता है।",
         "label": "वर्तमान लेआउट सहेजें",
         "menu_path": "देखें > लेआउट प्रीसेट > सहेजें",
-        "tags": ["लेआउट", "प्रीसेट", "सहेजें"]
+        "tags": [
+          "लेआउट",
+          "प्रीसेट",
+          "सहेजें"
+        ]
       },
       "show_hide": {
         "description": "मुख्य विंडो को छुपाता है या फिर से दिखाता है।",
         "label": "विंडो दिखाएं/छुपाएं",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["विंडो", "छुपाएं", "दिखाएं", "ओवरले"]
+        "tags": [
+          "विंडो",
+          "छुपाएं",
+          "दिखाएं",
+          "ओवरले"
+        ]
       },
       "sync_gcal": {
         "description": "तुरंत Google कैलेंडर के साथ सिंक शुरू करता है।",
         "label": "Google कैलेंडर सिंक करें",
         "menu_path": "सिस्टम > कैलेंडर और सिंक",
-        "tags": ["google", "सिंक", "कैलेंडर", "F5"]
+        "tags": [
+          "google",
+          "सिंक",
+          "कैलेंडर",
+          "F5"
+        ]
       },
       "today": {
         "description": "चयनित तिथि को तुरंत आज पर ले जाता है।",
         "label": "आज पर जाएं",
         "menu_path": "नेविगेशन",
-        "tags": ["आज", "तिथि"]
+        "tags": [
+          "आज",
+          "तिथि"
+        ]
       },
       "topbar": {
         "description": "ऊपरी मेनू बार की दृश्यता टॉगल करता है।",
         "label": "टॉप बार टॉगल करें",
         "menu_path": "देखें > टॉप बार",
-        "tags": ["मेनू बार", "टॉप बार", "पुनर्प्राप्ति"]
+        "tags": [
+          "मेनू बार",
+          "टॉप बार",
+          "पुनर्प्राप्ति"
+        ]
       },
       "widget_mode": {
         "description": "केवल-विजेट पैनल मोड खोलता है।",
         "label": "विजेट मोड टॉगल करें",
         "menu_path": "देखें > केवल-विजेट मोड",
-        "tags": ["विजेट", "पैनल"]
+        "tags": [
+          "विजेट",
+          "पैनल"
+        ]
       }
     },
     "groups": {
@@ -3092,9 +3242,16 @@
     "all_layouts": "Show all layouts",
     "back_to_main": "कैलेंडर पर वापस जाएं",
     "background_opacity": "Background opacity",
+    "calendar_collapse": "कैलेंडर छिपाएँ",
+    "calendar_expand": "कैलेंडर दिखाएँ",
+    "calendar_visibility_help": "चुने हुए लेआउट का कैलेंडर दिखाएँ या छिपाएँ। अन्य लेआउट की सेटिंग बनी रहेंगी।",
     "close": "विजेट बंद करें",
     "color_picker": "विजेट एक्सेंट रंग चुनें",
     "complete_named": "Change completion: {name}",
+    "completed_excluded": "केवल अधूरे",
+    "completed_included": "पूर्ण शामिल करें",
+    "context_summary": "{date} · {filter} · {completed} · {count}/{total} आइटम",
+    "customization_intro": "लेआउट, रूप और दिखने वाले आइटम बदलें, फिर पूर्वावलोकन देखें। लागू करने तक विजेट नहीं बदलेगा।",
     "customize": "Customize",
     "density": "List density",
     "density_comfortable": "Comfortable",
@@ -3116,6 +3273,7 @@
     "editor_title": "विजेट शैली बनाएं",
     "editor_width": "डिफ़ॉल्ट चौड़ाई",
     "empty_directive_filter": "No directives for this date.",
+    "empty_filter_context": "इस प्रकार के आइटम नहीं हैं। अन्य प्रकारों में {count} आइटम हैं।",
     "empty_panel": "इस तारीख के लिए कोई आइटम नहीं।",
     "empty_schedule": "कोई शेड्यूल नहीं",
     "empty_schedule_filter": "इस तिथि के लिए कोई कार्यक्रम नहीं है.",
@@ -3136,6 +3294,65 @@
     "font_size": "Text size",
     "font_size_help": "Scales dates, controls, calendar, and list text together.",
     "font_weight": "Title weight",
+    "free_align": "संरेखण",
+    "free_align_bottom": "नीचे",
+    "free_align_center_x": "क्षैतिज केंद्र",
+    "free_align_center_y": "लंबवत केंद्र",
+    "free_align_left": "बाएँ",
+    "free_align_right": "दाएँ",
+    "free_align_top": "ऊपर",
+    "free_back": "सबसे पीछे भेजें",
+    "free_block_agenda": "संयुक्त सूची",
+    "free_block_calendar": "कैलेंडर",
+    "free_block_clock": "घड़ी",
+    "free_block_date": "तारीख",
+    "free_block_filters": "संयुक्त सूची के फ़िल्टर",
+    "free_current_items": "वर्तमान विजेट के आइटम",
+    "free_distribute_x": "क्षैतिज अंतर बराबर करें",
+    "free_distribute_y": "लंबवत अंतर बराबर करें",
+    "free_editor_help": "Ctrl/Shift+क्लिक: कई घटक चुनें · Delete: छिपाएँ · Alt: संरेखण बंद करें",
+    "free_editor_intro": "उदाहरण इवेंट के साथ लेआउट का पूर्वावलोकन देखें। कई घटक चुनने के लिए Ctrl या Shift का उपयोग करें और कोनों व किनारों से उनका आकार बदलें।",
+    "free_example_items": "उदाहरण इवेंट",
+    "free_export": "निर्यात करें…",
+    "free_file_error": "लेआउट फ़ाइल को संसाधित नहीं किया जा सका।",
+    "free_file_filter": "विजेट लेआउट (*.airlayout.json *.json)",
+    "free_filter_heading": "संयुक्त सूची के फ़िल्टर",
+    "free_fit": "दृश्य में फ़िट करें",
+    "free_front": "सबसे आगे लाएँ",
+    "free_guides": "घटकों से संरेखित करें",
+    "free_import": "आयात करें…",
+    "free_layer": "घटकों का क्रम और लॉक",
+    "free_layout_calendar_mode": "कैलेंडर दृश्य",
+    "free_layout_canvas_height": "कैनवास की ऊँचाई",
+    "free_layout_canvas_width": "कैनवास की चौड़ाई",
+    "free_layout_components": "घटक",
+    "free_layout_edit": "लेआउट संपादित करें…",
+    "free_layout_empty": "बाईं ओर कोई घटक चुनें।",
+    "free_layout_height": "ऊँचाई",
+    "free_layout_intro": "किसी घटक को चुनें और खींचकर स्थान बदलें। नीचे दाएँ हैंडल से आकार बदलें। यह नमूना है; लागू करने तक मौजूदा विजेट नहीं बदलेगा।",
+    "free_layout_redo": "फिर से करें",
+    "free_layout_reset": "प्रीसेट से शुरू करें",
+    "free_layout_snap": "ग्रिड से संरेखित करें",
+    "free_layout_snap_help": "8 पिक्सेल के ग्रिड से संरेखित करें। स्वतंत्र रूप से स्थान या आकार बदलने के लिए Alt दबाएँ। तीर कुंजियाँ 1 पिक्सेल और Shift+तीर 10 पिक्सेल खिसकाते हैं।",
+    "free_layout_title": "विजेट का लेआउट संपादित करें",
+    "free_layout_transition_help": "मौजूदा रूप-रंग के ड्राफ़्ट को छोड़कर लेआउट संपादक खोलें।",
+    "free_layout_undo": "पूर्ववत करें",
+    "free_layout_width": "चौड़ाई",
+    "free_layout_x": "क्षैतिज स्थिति",
+    "free_layout_y": "लंबवत स्थिति",
+    "free_live_preview": "पूर्वावलोकन",
+    "free_lock": "लॉक करें",
+    "free_locked_count": "{count} लॉक हैं",
+    "free_multi_selected": "{count} चुने गए",
+    "free_overlap": "{count} ओवरलैप · घटकों का क्रम बदलें।",
+    "free_preview": "उदाहरण इवेंट का पूर्वावलोकन",
+    "free_status": "{visible} दिखाई दे रहे हैं · {width} × {height}px",
+    "free_tab_canvas": "कैनवस",
+    "free_tab_geometry": "स्थिति और आकार",
+    "free_toggle_component": "{name} दिखाएँ",
+    "free_unlock": "लॉक हटाएँ",
+    "free_wysiwyg_intro": "विजेट में घटकों को सीधे चुनकर उनकी स्थिति, आकार और रूप बदलें। लागू करने तक आपका वर्तमान विजेट नहीं बदलेगा।",
+    "free_zoom": "ज़ूम",
     "header_caption": "चयनित दिन का एजेंडा और कार्य",
     "hero_eyebrow": "फोकस विजेट",
     "hide_calendar": "कैलेंडर छिपाएँ",
@@ -3155,6 +3372,7 @@
     "menu_always_top": "हमेशा ऊपर",
     "menu_complete_directive": "पूर्ण चिह्नित करें",
     "menu_complete_task": "पूर्ण चिह्नित करें",
+    "menu_date": "तारीख नेविगेशन",
     "menu_delete_directive": "हटाएं",
     "menu_delete_task": "हटाएं",
     "menu_edit_directive": "संपादित करें/खोलें",
@@ -3167,6 +3385,9 @@
     "menu_refresh": "रीफ़्रेश करें",
     "menu_reopen": "Reopen",
     "menu_reserve_space": "स्क्रीन स्थान आरक्षित करें",
+    "menu_view": "दृश्य सेटिंग",
+    "menu_window": "विंडो प्रबंधन",
+    "menu_work": "कार्य प्रबंधन",
     "month_calendar": "Choose a date from the month",
     "month_next": "अगले महीने",
     "month_prev": "पिछला महीना",
@@ -3186,7 +3407,24 @@
     "preferences_appearance": "Appearance",
     "preferences_layout": "Layout",
     "preferences_visibility": "Visibility",
+    "preset_builtin": "बिल्ट-इन लेआउट",
+    "preset_custom": "कस्टम लेआउट",
+    "preset_delete": "हटाएँ",
+    "preset_delete_confirm": "क्या “{name}” लेआउट हटाना है?",
+    "preset_draft_note": "प्रीसेट के बदलाव भी लागू करने पर ही सहेजे जाते हैं।",
+    "preset_edit": "लेआउट संपादित करें…",
+    "preset_error": "लेआउट सहेजा नहीं जा सका।",
+    "preset_invalid_name": "नाम में 1–80 अक्षर होने चाहिए और वह किसी अन्य लेआउट जैसा नहीं होना चाहिए।",
+    "preset_loaded": "लोड किया गया लेआउट: {name}",
+    "preset_modified": "संशोधित लेआउट",
+    "preset_name": "लेआउट का नाम",
+    "preset_rename": "नाम बदलें…",
+    "preset_save_as": "नए प्रीसेट के रूप में सहेजें…",
+    "preset_saved": "नया लेआउट",
+    "preset_select": "सहेजा हुआ लेआउट चुनें",
+    "preset_update": "चुना हुआ प्रीसेट अधिलेखित करें",
     "preview": "Preview · Sample agenda",
+    "preview_directive": "समीक्षा की प्रतिक्रिया साझा करें",
     "preview_note": "Apply saves your changes. Cancel keeps your previous settings.",
     "preview_schedule": "Project meeting",
     "preview_work": "Prepare meeting notes",
@@ -3204,7 +3442,9 @@
     "return_main": "Main window",
     "routine_short": "दिनचर्या",
     "save_failed": "Could not save. Please try again.",
+    "save_failed_named": "सहेजना विफल रहा। फिर से प्रयास करें: “{name}”।",
     "saved_status": "Work status saved.",
+    "saved_status_named": "{status} के रूप में सहेजा गया: “{name}”।",
     "scale_tooltip_value": "Scale: {value}%",
     "schedule_title": "शेड्यूल",
     "schedule_type": "शेड्यूल",
@@ -3248,7 +3488,10 @@
     "tomorrow": "कल",
     "undo": "Undo",
     "undone": "Previous status restored.",
+    "undone_named": "पिछली स्थिति बहाल की गई: “{name}”।",
     "untitled": "शीर्षकहीन",
+    "user_layouts": "मेरे लेआउट",
+    "user_layouts_empty": "कोई लेआउट सहेजा नहीं गया है। लेआउट संपादक में प्रीसेट सहेजें।",
     "week_toggle": "Week",
     "week_toggle_help": "Show or collapse the week strip",
     "widget_hint_actions": "दोबारा फोकस करने के लिए एक दिन टैप करें",

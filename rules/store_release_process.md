@@ -58,7 +58,7 @@ build-release.bat -SkipMsix
 Preflight validation without changing version files or creating build output:
 
 ```bat
-build-release.bat -ValidateOnly -Version 3.5.0 -PackageVersion 3.5.0.0 -ReleaseDate 2026-07-13 -Channel Stable
+build-release.bat -ValidateOnly -Version 3.7.8 -PackageVersion 3.7.8.0 -ReleaseDate 2026-10-01 -Channel Stable
 ```
 
 ## Surface Support
@@ -78,12 +78,12 @@ build-release.bat -UploadOnly
 
 That creates:
 
-- `release\store\DarkCalendar-3.5.0.0-arm64_x64.msixupload`
+- `release\store\DarkCalendar-3.7.8.0-arm64_x64.msixupload`
 
 If only one native package is available, the scripts fall back to:
 
-- `release\store\DarkCalendar-3.5.0.0-x64.msixupload`
-- `release\store\DarkCalendar-3.5.0.0-arm64.msixupload`
+- `release\store\DarkCalendar-3.7.8.0-x64.msixupload`
+- `release\store\DarkCalendar-3.7.8.0-arm64.msixupload`
 
 ## Sanitized Payload Contents
 

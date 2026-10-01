@@ -127,7 +127,15 @@
     "sync_hint": "Đồng Bộ",
     "today": "Hôm Nay",
     "today_hint": "Đi đến hôm nay",
-    "weekdays": ["Thai", "Tba", "Ttư", "Tnăm", "Tsáu", "Tbảy", "CN"]
+    "weekdays": [
+      "Thai",
+      "Tba",
+      "Ttư",
+      "Tnăm",
+      "Tsáu",
+      "Tbảy",
+      "CN"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Thêm mục",
@@ -1558,7 +1566,13 @@
     "hint_record_jump": "Enter mở mục. Shift+Enter chuyển đến ngày của nó.",
     "hint_run_command": "Enter chạy lệnh đã chọn",
     "kw": {
-      "theme": ["chủ đề", "dark", "light", "màu", "appearance"]
+      "theme": [
+        "chủ đề",
+        "dark",
+        "light",
+        "màu",
+        "appearance"
+      ]
     },
     "nlp_preview": "Mới: [{title}] - {date} {time}",
     "no_selection": "Nhấn Enter để mở kết quả đã chọn",
@@ -1811,223 +1825,359 @@
         "description": "Bắt đầu ngay chế độ khóa khi vắng mặt.",
         "label": "Khóa khi vắng mặt",
         "menu_path": "Xem > Khóa khi vắng mặt",
-        "tags": ["vắng mặt", "khóa"]
+        "tags": [
+          "vắng mặt",
+          "khóa"
+        ]
       },
       "cal_toolbar": {
         "description": "Ẩn hoặc hiển thị lại thanh công cụ lịch.",
         "label": "Chuyển đổi thanh công cụ lịch",
         "menu_path": "Xem > Thanh công cụ lịch",
-        "tags": ["lịch", "thanh công cụ"]
+        "tags": [
+          "lịch",
+          "thanh công cụ"
+        ]
       },
       "calendar_print": {
         "description": "Xem trước và in lịch cho giai đoạn hiện tại hoặc đã chọn.",
         "label": "In lịch",
         "menu_path": "Lịch > Tùy chọn > In",
-        "tags": ["in", "máy in", "PDF"]
+        "tags": [
+          "in",
+          "máy in",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "Quản lý mẫu và cấu trúc mục của danh sách kiểm tra.",
         "label": "Quản lý danh sách kiểm tra",
         "menu_path": "Công việc > Quản lý danh sách kiểm tra",
-        "tags": ["danh sách kiểm tra", "mẫu"]
+        "tags": [
+          "danh sách kiểm tra",
+          "mẫu"
+        ]
       },
       "color_assign": {
         "description": "Tự động gán màu cho các mục đã chọn.",
         "label": "Gán màu tự động",
         "menu_path": "Công việc > Gán màu tự động",
-        "tags": ["màu", "thẻ", "tự động"]
+        "tags": [
+          "màu",
+          "thẻ",
+          "tự động"
+        ]
       },
       "command_palette": {
         "description": "Mở hộp tìm kiếm lệnh để tìm tính năng ngay lập tức.",
         "label": "Bảng lệnh",
         "menu_path": "Gọi trực tiếp",
-        "tags": ["tìm kiếm", "lệnh", "bảng"]
+        "tags": [
+          "tìm kiếm",
+          "lệnh",
+          "bảng"
+        ]
       },
       "delete": {
         "description": "Xóa lịch trình hoặc mục hiện đang được chọn.",
         "label": "Xóa mục đã chọn",
         "menu_path": "Trạng thái lựa chọn",
-        "tags": ["xóa", "loại bỏ"]
+        "tags": [
+          "xóa",
+          "loại bỏ"
+        ]
       },
       "escape": {
         "description": "Xóa lựa chọn hoặc tiêu điểm hiện tại.",
         "label": "Bỏ chọn",
         "menu_path": "Trạng thái lựa chọn",
-        "tags": ["bỏ chọn", "hủy", "escape"]
+        "tags": [
+          "bỏ chọn",
+          "hủy",
+          "escape"
+        ]
       },
       "focus_mode": {
         "description": "Bật hoặc tắt chế độ tập trung.",
         "label": "Chuyển đổi chế độ tập trung",
         "menu_path": "Xem > Chế độ tập trung",
-        "tags": ["tập trung", "pomodoro"]
+        "tags": [
+          "tập trung",
+          "pomodoro"
+        ]
       },
       "focus_pause": {
         "description": "Tạm dừng hoặc tiếp tục phiên tập trung hiện tại.",
         "label": "Tạm dừng tập trung",
         "menu_path": "Chế độ tập trung",
-        "tags": ["tập trung", "tạm dừng"]
+        "tags": [
+          "tập trung",
+          "tạm dừng"
+        ]
       },
       "force_unlock": {
         "description": "Buộc xóa trạng thái khóa không mong muốn.",
         "label": "Buộc mở khóa",
         "menu_path": "Khôi phục khẩn cấp",
-        "tags": ["buộc", "mở khóa", "khôi phục", "khẩn cấp"]
+        "tags": [
+          "buộc",
+          "mở khóa",
+          "khôi phục",
+          "khẩn cấp"
+        ]
       },
       "fullscreen": {
         "description": "Bật hoặc tắt hiển thị toàn màn hình.",
         "label": "Chuyển đổi toàn màn hình",
         "menu_path": "Xem > Toàn màn hình",
-        "tags": ["toàn màn hình"]
+        "tags": [
+          "toàn màn hình"
+        ]
       },
       "help": {
         "description": "Mở trung tâm trợ giúp.",
         "label": "Hướng dẫn phím tắt",
         "menu_path": "Hệ thống > Hướng dẫn phím tắt",
-        "tags": ["trợ giúp", "F1"]
+        "tags": [
+          "trợ giúp",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "Áp dụng bố cục ghép 4 bảng mặc định.",
         "label": "Cài đặt sẵn bố cục 1",
         "menu_path": "Xem > Cài đặt sẵn bố cục",
-        "tags": ["bố cục", "cài đặt sẵn", "ghép", "1"]
+        "tags": [
+          "bố cục",
+          "cài đặt sẵn",
+          "ghép",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "Áp dụng bố cục lấy lịch làm trung tâm.",
         "label": "Cài đặt sẵn bố cục 2",
         "menu_path": "Xem > Cài đặt sẵn bố cục",
-        "tags": ["bố cục", "lịch", "2"]
+        "tags": [
+          "bố cục",
+          "lịch",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "Áp dụng bố cục lấy công việc làm trung tâm.",
         "label": "Cài đặt sẵn bố cục 3",
         "menu_path": "Xem > Cài đặt sẵn bố cục",
-        "tags": ["bố cục", "công việc", "3"]
+        "tags": [
+          "bố cục",
+          "công việc",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "Áp dụng bố cục tab chia đôi.",
         "label": "Cài đặt sẵn bố cục 4",
         "menu_path": "Xem > Cài đặt sẵn bố cục",
-        "tags": ["bố cục", "tab", "chia", "4"]
+        "tags": [
+          "bố cục",
+          "tab",
+          "chia",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "Áp dụng bố cục nổi hoàn toàn tách biệt.",
         "label": "Cài đặt sẵn bố cục 5",
         "menu_path": "Xem > Cài đặt sẵn bố cục",
-        "tags": ["bố cục", "tách biệt", "nổi", "5"]
+        "tags": [
+          "bố cục",
+          "tách biệt",
+          "nổi",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "Bật hoặc tắt chế độ khóa màn hình nền.",
         "label": "Chế độ khóa",
         "menu_path": "Xem > Chế độ khóa",
-        "tags": ["khóa"]
+        "tags": [
+          "khóa"
+        ]
       },
       "magnet_mode": {
         "description": "Chuyển đổi chế độ nam châm, giúp căn chỉnh và ghim các bảng.",
         "label": "Chế độ nam châm",
         "menu_path": "Xem > Chế độ nam châm",
-        "tags": ["nam châm", "bảng"]
+        "tags": [
+          "nam châm",
+          "bảng"
+        ]
       },
       "monitor_left": {
         "description": "Di chuyển cửa sổ sang màn hình khác.",
         "label": "Di chuyển sang màn hình trước",
         "menu_path": "Điều khiển cửa sổ",
-        "tags": ["màn hình", "hiển thị", "trái"]
+        "tags": [
+          "màn hình",
+          "hiển thị",
+          "trái"
+        ]
       },
       "monitor_right": {
         "description": "Di chuyển cửa sổ sang màn hình khác.",
         "label": "Di chuyển sang màn hình sau",
         "menu_path": "Điều khiển cửa sổ",
-        "tags": ["màn hình", "hiển thị", "phải"]
+        "tags": [
+          "màn hình",
+          "hiển thị",
+          "phải"
+        ]
       },
       "new_directive": {
         "description": "Mở cửa sổ nhập chỉ thị hoặc mục hợp tác.",
         "label": "Đăng ký chỉ thị",
         "menu_path": "Đăng ký > Chỉ thị",
-        "tags": ["chỉ thị", "hợp tác"]
+        "tags": [
+          "chỉ thị",
+          "hợp tác"
+        ]
       },
       "new_routine": {
         "description": "Thêm nhanh một thói quen công việc lặp lại.",
         "label": "Đăng ký thói quen",
         "menu_path": "Đăng ký > Thói quen",
-        "tags": ["thói quen", "công việc", "lặp lại"]
+        "tags": [
+          "thói quen",
+          "công việc",
+          "lặp lại"
+        ]
       },
       "new_schedule": {
         "description": "Mở trực tiếp cửa sổ nhập lịch trình.",
         "label": "Thêm lịch trình mới",
         "menu_path": "Đăng ký > Lịch trình mới",
-        "tags": ["lịch trình", "thêm", "đăng ký"]
+        "tags": [
+          "lịch trình",
+          "thêm",
+          "đăng ký"
+        ]
       },
       "next_day": {
         "description": "Di chuyển đến một ngày sau ngày hiện tại.",
         "label": "Ngày sau",
         "menu_path": "Điều hướng",
-        "tags": ["sau", "ngày", "phải"]
+        "tags": [
+          "sau",
+          "ngày",
+          "phải"
+        ]
       },
       "opacity_down": {
         "description": "Giảm độ mờ đục của cửa sổ.",
         "label": "Giảm độ mờ đục",
         "menu_path": "Điều khiển cửa sổ",
-        "tags": ["độ mờ đục", "tối hơn"]
+        "tags": [
+          "độ mờ đục",
+          "tối hơn"
+        ]
       },
       "opacity_up": {
         "description": "Tăng độ mờ đục của cửa sổ.",
         "label": "Tăng độ mờ đục",
         "menu_path": "Điều khiển cửa sổ",
-        "tags": ["độ mờ đục", "sáng hơn"]
+        "tags": [
+          "độ mờ đục",
+          "sáng hơn"
+        ]
       },
       "prev_day": {
         "description": "Di chuyển đến một ngày trước ngày hiện tại.",
         "label": "Ngày trước",
         "menu_path": "Điều hướng",
-        "tags": ["trước", "ngày", "trái"]
+        "tags": [
+          "trước",
+          "ngày",
+          "trái"
+        ]
       },
       "restore_pos": {
         "description": "Khôi phục cửa sổ về vị trí an toàn trên màn hình.",
         "label": "Khôi phục vị trí cửa sổ",
         "menu_path": "Điều khiển cửa sổ",
-        "tags": ["cửa sổ", "khôi phục", "vị trí"]
+        "tags": [
+          "cửa sổ",
+          "khôi phục",
+          "vị trí"
+        ]
       },
       "routine_mgr": {
         "description": "Mở trực tiếp tab trình quản lý thói quen.",
         "label": "Trình quản lý thói quen",
         "menu_path": "Công việc > Tổng quan thói quen",
-        "tags": ["thói quen", "quản lý"]
+        "tags": [
+          "thói quen",
+          "quản lý"
+        ]
       },
       "save_layout": {
         "description": "Lưu cách sắp xếp bảng hiện tại làm cài đặt sẵn.",
         "label": "Lưu bố cục hiện tại",
         "menu_path": "Xem > Cài đặt sẵn bố cục > Lưu",
-        "tags": ["bố cục", "cài đặt sẵn", "lưu"]
+        "tags": [
+          "bố cục",
+          "cài đặt sẵn",
+          "lưu"
+        ]
       },
       "show_hide": {
         "description": "Ẩn cửa sổ chính hoặc hiển thị lại.",
         "label": "Hiện/ẩn cửa sổ",
         "menu_path": "Điều khiển cửa sổ",
-        "tags": ["cửa sổ", "ẩn", "hiện", "lớp phủ"]
+        "tags": [
+          "cửa sổ",
+          "ẩn",
+          "hiện",
+          "lớp phủ"
+        ]
       },
       "sync_gcal": {
         "description": "Bắt đầu ngay việc đồng bộ với Google Calendar.",
         "label": "Đồng bộ Google Calendar",
         "menu_path": "Hệ thống > Lịch và đồng bộ",
-        "tags": ["google", "đồng bộ", "lịch", "F5"]
+        "tags": [
+          "google",
+          "đồng bộ",
+          "lịch",
+          "F5"
+        ]
       },
       "today": {
         "description": "Di chuyển ngay lập tức ngày đã chọn đến hôm nay.",
         "label": "Nhảy đến hôm nay",
         "menu_path": "Điều hướng",
-        "tags": ["hôm nay", "ngày"]
+        "tags": [
+          "hôm nay",
+          "ngày"
+        ]
       },
       "topbar": {
         "description": "Chuyển đổi hiển thị của thanh menu trên cùng.",
         "label": "Chuyển đổi thanh trên cùng",
         "menu_path": "Xem > Thanh trên cùng",
-        "tags": ["thanh menu", "thanh trên cùng", "khôi phục"]
+        "tags": [
+          "thanh menu",
+          "thanh trên cùng",
+          "khôi phục"
+        ]
       },
       "widget_mode": {
         "description": "Mở chế độ bảng chỉ hiển thị widget.",
         "label": "Chuyển đổi chế độ widget",
         "menu_path": "Xem > Chế độ chỉ widget",
-        "tags": ["widget", "bảng"]
+        "tags": [
+          "widget",
+          "bảng"
+        ]
       }
     },
     "groups": {
@@ -3092,9 +3242,16 @@
     "all_layouts": "Show all layouts",
     "back_to_main": "Quay lại lịch",
     "background_opacity": "Background opacity",
+    "calendar_collapse": "Ẩn lịch",
+    "calendar_expand": "Hiện lịch",
+    "calendar_visibility_help": "Hiện hoặc ẩn lịch của bố cục đã chọn. Các bố cục khác giữ nguyên cài đặt.",
     "close": "Đóng tiện ích",
     "color_picker": "Chọn màu nhấn của widget",
     "complete_named": "Change completion: {name}",
+    "completed_excluded": "Chỉ chưa hoàn thành",
+    "completed_included": "Bao gồm đã hoàn thành",
+    "context_summary": "{date} · {filter} · {completed} · {count}/{total} mục",
+    "customization_intro": "Thay đổi bố cục, giao diện và mục hiển thị, rồi xem bản xem trước. Tiện ích không thay đổi trước khi áp dụng.",
     "customize": "Customize",
     "density": "List density",
     "density_comfortable": "Comfortable",
@@ -3116,6 +3273,7 @@
     "editor_title": "Tạo kiểu tiện ích",
     "editor_width": "Chiều rộng mặc định",
     "empty_directive_filter": "No directives for this date.",
+    "empty_filter_context": "Không có mục thuộc loại này. Các loại khác có {count} mục.",
     "empty_panel": "Không có mục nào cho ngày này.",
     "empty_schedule": "Không có lịch trình",
     "empty_schedule_filter": "Không có lịch trình cho ngày này.",
@@ -3136,6 +3294,65 @@
     "font_size": "Text size",
     "font_size_help": "Scales dates, controls, calendar, and list text together.",
     "font_weight": "Title weight",
+    "free_align": "Căn chỉnh",
+    "free_align_bottom": "Dưới",
+    "free_align_center_x": "Giữa theo chiều ngang",
+    "free_align_center_y": "Giữa theo chiều dọc",
+    "free_align_left": "Trái",
+    "free_align_right": "Phải",
+    "free_align_top": "Trên",
+    "free_back": "Đưa xuống dưới cùng",
+    "free_block_agenda": "Danh sách tổng hợp",
+    "free_block_calendar": "Lịch",
+    "free_block_clock": "Đồng hồ",
+    "free_block_date": "Ngày",
+    "free_block_filters": "Bộ lọc danh sách tổng hợp",
+    "free_current_items": "Các mục trong tiện ích hiện tại",
+    "free_distribute_x": "Dàn đều theo chiều ngang",
+    "free_distribute_y": "Dàn đều theo chiều dọc",
+    "free_editor_help": "Ctrl/Shift+nhấp: chọn nhiều · Delete: ẩn · Alt: tắt bám",
+    "free_editor_intro": "Xem trước bố cục bằng sự kiện mẫu. Dùng Ctrl hoặc Shift để chọn nhiều thành phần và kéo các góc, cạnh để đổi kích thước.",
+    "free_example_items": "Sự kiện mẫu",
+    "free_export": "Xuất…",
+    "free_file_error": "Không thể xử lý tệp bố cục.",
+    "free_file_filter": "Bố cục tiện ích (*.airlayout.json *.json)",
+    "free_filter_heading": "Bộ lọc danh sách tổng hợp",
+    "free_fit": "Vừa màn hình",
+    "free_front": "Đưa lên trên cùng",
+    "free_guides": "Bám theo thành phần",
+    "free_import": "Nhập…",
+    "free_layer": "Thứ tự và khóa thành phần",
+    "free_layout_calendar_mode": "Chế độ xem lịch",
+    "free_layout_canvas_height": "Chiều cao vùng vẽ",
+    "free_layout_canvas_width": "Chiều rộng vùng vẽ",
+    "free_layout_components": "Thành phần",
+    "free_layout_edit": "Chỉnh sửa bố cục…",
+    "free_layout_empty": "Chọn một thành phần ở bên trái.",
+    "free_layout_height": "Chiều cao",
+    "free_layout_intro": "Chọn thành phần rồi kéo để di chuyển. Thay đổi kích thước bằng tay nắm ở góc dưới bên phải. Đây là mẫu; tiện ích hiện tại chỉ thay đổi khi bạn áp dụng.",
+    "free_layout_redo": "Làm lại",
+    "free_layout_reset": "Bắt đầu từ mẫu",
+    "free_layout_snap": "Căn theo lưới",
+    "free_layout_snap_help": "Căn theo lưới 8 pixel. Giữ Alt để di chuyển hoặc đổi kích thước tự do. Phím mũi tên di chuyển 1 pixel; Shift+mũi tên di chuyển 10 pixel.",
+    "free_layout_title": "Chỉnh sửa bố cục tiện ích",
+    "free_layout_transition_help": "Hủy bản nháp giao diện hiện tại và mở trình chỉnh sửa bố cục.",
+    "free_layout_undo": "Hoàn tác",
+    "free_layout_width": "Chiều rộng",
+    "free_layout_x": "Vị trí ngang",
+    "free_layout_y": "Vị trí dọc",
+    "free_live_preview": "Xem trước",
+    "free_lock": "Khóa",
+    "free_locked_count": "Đã khóa {count}",
+    "free_multi_selected": "Đã chọn {count}",
+    "free_overlap": "{count} chỗ chồng lấp · Điều chỉnh thứ tự thành phần.",
+    "free_preview": "Xem trước sự kiện mẫu",
+    "free_status": "Hiển thị {visible} · {width} × {height}px",
+    "free_tab_canvas": "Khung vẽ",
+    "free_tab_geometry": "Vị trí và kích thước",
+    "free_toggle_component": "Hiển thị {name}",
+    "free_unlock": "Mở khóa",
+    "free_wysiwyg_intro": "Chọn trực tiếp các thành phần trong tiện ích để di chuyển, đổi kích thước và giao diện. Tiện ích hiện tại không thay đổi cho đến khi bạn áp dụng.",
+    "free_zoom": "Thu phóng",
     "header_caption": "Chương trình và công việc của ngày đã chọn",
     "hero_eyebrow": "Tiện ích tập trung",
     "hide_calendar": "Ẩn lịch",
@@ -3155,6 +3372,7 @@
     "menu_always_top": "Luôn đứng đầu",
     "menu_complete_directive": "Đánh dấu hoàn thành",
     "menu_complete_task": "Đánh dấu hoàn thành",
+    "menu_date": "Điều hướng ngày",
     "menu_delete_directive": "Xóa",
     "menu_delete_task": "Xóa",
     "menu_edit_directive": "Chỉnh sửa/Mở",
@@ -3167,6 +3385,9 @@
     "menu_refresh": "Làm mới",
     "menu_reopen": "Reopen",
     "menu_reserve_space": "Dự trữ không gian màn hình",
+    "menu_view": "Cài đặt hiển thị",
+    "menu_window": "Quản lý cửa sổ",
+    "menu_work": "Quản lý công việc",
     "month_calendar": "Choose a date from the month",
     "month_next": "Tháng tiếp theo",
     "month_prev": "Tháng trước",
@@ -3186,7 +3407,24 @@
     "preferences_appearance": "Appearance",
     "preferences_layout": "Layout",
     "preferences_visibility": "Visibility",
+    "preset_builtin": "Bố cục có sẵn",
+    "preset_custom": "Bố cục tùy chỉnh",
+    "preset_delete": "Xóa",
+    "preset_delete_confirm": "Xóa bố cục “{name}”?",
+    "preset_draft_note": "Các thay đổi của mẫu cũng chỉ được lưu khi bạn nhấn Áp dụng.",
+    "preset_edit": "Sửa bố cục…",
+    "preset_error": "Không thể lưu bố cục.",
+    "preset_invalid_name": "Tên phải có 1–80 ký tự và không trùng với bố cục khác.",
+    "preset_loaded": "Bố cục đã tải: {name}",
+    "preset_modified": "Bố cục đã sửa",
+    "preset_name": "Tên bố cục",
+    "preset_rename": "Đổi tên…",
+    "preset_save_as": "Lưu thành mẫu mới…",
+    "preset_saved": "Bố cục mới",
+    "preset_select": "Chọn bố cục đã lưu",
+    "preset_update": "Ghi đè mẫu đã chọn",
     "preview": "Preview · Sample agenda",
+    "preview_directive": "Chia sẻ ý kiến đánh giá",
     "preview_note": "Apply saves your changes. Cancel keeps your previous settings.",
     "preview_schedule": "Project meeting",
     "preview_work": "Prepare meeting notes",
@@ -3204,7 +3442,9 @@
     "return_main": "Main window",
     "routine_short": "Lịch trình",
     "save_failed": "Could not save. Please try again.",
+    "save_failed_named": "Lưu thất bại. Vui lòng thử lại: “{name}”.",
     "saved_status": "Work status saved.",
+    "saved_status_named": "Đã lưu với trạng thái {status}: “{name}”.",
     "scale_tooltip_value": "Tỷ lệ: {value}%",
     "schedule_title": "Lịch trình",
     "schedule_type": "Lịch trình",
@@ -3215,7 +3455,7 @@
     "section_today": "Hôm nay",
     "section_work_today": "Công việc hôm nay",
     "show_all": "Show All",
-    "show_calendar": "Hiển thị lịch",
+    "show_calendar": "Hiện lịch",
     "show_clock": "Show clock",
     "show_completed": "Include completed",
     "show_completed_help": "Also show completed work and directives in the list.",
@@ -3248,7 +3488,10 @@
     "tomorrow": "Ngày mai",
     "undo": "Undo",
     "undone": "Previous status restored.",
+    "undone_named": "Đã khôi phục trạng thái trước: “{name}”.",
     "untitled": "Không có tiêu đề",
+    "user_layouts": "Bố cục của tôi",
+    "user_layouts_empty": "Chưa có bố cục đã lưu. Hãy lưu mẫu trong trình chỉnh sửa bố cục.",
     "week_toggle": "Week",
     "week_toggle_help": "Show or collapse the week strip",
     "widget_hint_actions": "Nhấn vào một ngày để tập trung lại",

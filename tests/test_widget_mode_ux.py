@@ -260,6 +260,42 @@ def test_work_and_directive_filters_are_independent(workspace):
     assert "검토 의견 전달" in directive_titles
 
 
+@pytest.mark.parametrize("mode", ["schedule", "work", "directive"])
+def test_filters_keep_matching_unsectioned_items(workspace, mode):
+    _, _, widget = workspace
+    items = [
+        {"title": "schedule", "item_kind": "schedule", "source": "task"},
+        {"title": "work", "item_kind": "work", "source": "task"},
+        {"title": "directive", "item_kind": "work", "source": "directive"},
+    ]
+    widget.set_filter(mode)
+
+    assert [item["title"] for item in widget._filter_items(items)] == [mode]
+
+
+@pytest.mark.parametrize("mode", ["schedule", "work", "directive"])
+def test_filters_keep_mixed_unsectioned_items_without_empty_headings(workspace, mode):
+    _, _, widget = workspace
+    matched = {
+        "item_kind": "schedule" if mode == "schedule" else "work",
+        "source": "directive" if mode == "directive" else "task",
+    }
+    before = {"title": "before heading", **matched}
+    inside = {"title": "inside heading", **matched}
+    populated_heading = {"title": "matching section", "is_section": True}
+    items = [
+        before,
+        {"title": "empty leading section", "is_section": True},
+        {"title": "excluded", "item_kind": "other", "source": "task"},
+        populated_heading,
+        inside,
+        {"title": "empty trailing section", "is_section": True},
+    ]
+    widget.set_filter(mode)
+
+    assert widget._filter_items(items) == [before, populated_heading, inside]
+
+
 def test_all_add_menu_offers_three_types(workspace):
     host, _, widget = workspace
     with patch("calendar_app.presentation.widgets.unified_widget_mode.QMenu.exec") as execute:

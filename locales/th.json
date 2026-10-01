@@ -127,7 +127,15 @@
     "sync_hint": "ซิงค์ซะ",
     "today": "วันนี้",
     "today_hint": "ไปที่วันนี้",
-    "weekdays": ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."]
+    "weekdays": [
+      "จ.",
+      "อ.",
+      "พ.",
+      "พฤ.",
+      "ศ.",
+      "ส.",
+      "อา."
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "เพิ่มรายการ",
@@ -1558,7 +1566,13 @@
     "hint_record_jump": "Enter เปิดรายการ Shift+Enter ย้ายไปที่วันที่",
     "hint_run_command": "Enter เรียกใช้คำสั่งที่เลือก",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "ใหม่: [{title}] - {date} {time}",
     "no_selection": "กด Enter เพื่อเปิดผลลัพธ์ที่เลือก",
@@ -1811,223 +1825,359 @@
         "description": "เริ่มโหมดล็อกเมื่อไม่อยู่ทันที",
         "label": "ล็อกเมื่อไม่อยู่",
         "menu_path": "มุมมอง > ล็อกเมื่อไม่อยู่",
-        "tags": ["ไม่อยู่", "ล็อก"]
+        "tags": [
+          "ไม่อยู่",
+          "ล็อก"
+        ]
       },
       "cal_toolbar": {
         "description": "ซ่อนหรือแสดงแถบเครื่องมือปฏิทินอีกครั้ง",
         "label": "สลับแถบเครื่องมือปฏิทิน",
         "menu_path": "มุมมอง > แถบเครื่องมือปฏิทิน",
-        "tags": ["ปฏิทิน", "แถบเครื่องมือ"]
+        "tags": [
+          "ปฏิทิน",
+          "แถบเครื่องมือ"
+        ]
       },
       "calendar_print": {
         "description": "แสดงตัวอย่างและพิมพ์ปฏิทินสำหรับช่วงเวลาปัจจุบันหรือที่เลือก",
         "label": "พิมพ์ปฏิทิน",
         "menu_path": "ปฏิทิน > ตัวเลือก > พิมพ์",
-        "tags": ["พิมพ์", "เครื่องพิมพ์", "PDF"]
+        "tags": [
+          "พิมพ์",
+          "เครื่องพิมพ์",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "จัดการเทมเพลตและโครงสร้างรายการของรายการตรวจสอบ",
         "label": "จัดการรายการตรวจสอบ",
         "menu_path": "งาน > จัดการรายการตรวจสอบ",
-        "tags": ["รายการตรวจสอบ", "เทมเพลต"]
+        "tags": [
+          "รายการตรวจสอบ",
+          "เทมเพลต"
+        ]
       },
       "color_assign": {
         "description": "กำหนดสีให้กับรายการที่เลือกโดยอัตโนมัติ",
         "label": "การกำหนดสีอัตโนมัติ",
         "menu_path": "งาน > การกำหนดสีอัตโนมัติ",
-        "tags": ["สี", "แท็ก", "อัตโนมัติ"]
+        "tags": [
+          "สี",
+          "แท็ก",
+          "อัตโนมัติ"
+        ]
       },
       "command_palette": {
         "description": "เปิดกล่องค้นหาคำสั่งเพื่อค้นหาฟีเจอร์ได้ทันที",
         "label": "แผงคำสั่ง",
         "menu_path": "เรียกโดยตรง",
-        "tags": ["ค้นหา", "คำสั่ง", "แผง"]
+        "tags": [
+          "ค้นหา",
+          "คำสั่ง",
+          "แผง"
+        ]
       },
       "delete": {
         "description": "ลบกำหนดการหรือรายการที่เลือกอยู่ในปัจจุบัน",
         "label": "ลบรายการที่เลือก",
         "menu_path": "สถานะการเลือก",
-        "tags": ["ลบ", "เอาออก"]
+        "tags": [
+          "ลบ",
+          "เอาออก"
+        ]
       },
       "escape": {
         "description": "ล้างการเลือกหรือโฟกัสปัจจุบัน",
         "label": "ล้างการเลือก",
         "menu_path": "สถานะการเลือก",
-        "tags": ["ยกเลิกการเลือก", "ยกเลิก", "escape"]
+        "tags": [
+          "ยกเลิกการเลือก",
+          "ยกเลิก",
+          "escape"
+        ]
       },
       "focus_mode": {
         "description": "เปิดหรือปิดโหมดโฟกัส",
         "label": "สลับโหมดโฟกัส",
         "menu_path": "มุมมอง > โหมดโฟกัส",
-        "tags": ["โฟกัส", "โพโมโดโร"]
+        "tags": [
+          "โฟกัส",
+          "โพโมโดโร"
+        ]
       },
       "focus_pause": {
         "description": "หยุดหรือดำเนินการต่อเซสชันโฟกัสปัจจุบัน",
         "label": "หยุดโฟกัสชั่วคราว",
         "menu_path": "โหมดโฟกัส",
-        "tags": ["โฟกัส", "หยุดชั่วคราว"]
+        "tags": [
+          "โฟกัส",
+          "หยุดชั่วคราว"
+        ]
       },
       "force_unlock": {
         "description": "ล้างสถานะการล็อกที่ไม่คาดคิดโดยบังคับ",
         "label": "บังคับปลดล็อก",
         "menu_path": "การกู้คืนฉุกเฉิน",
-        "tags": ["บังคับ", "ปลดล็อก", "กู้คืน", "ฉุกเฉิน"]
+        "tags": [
+          "บังคับ",
+          "ปลดล็อก",
+          "กู้คืน",
+          "ฉุกเฉิน"
+        ]
       },
       "fullscreen": {
         "description": "เปิดหรือปิดการแสดงผลแบบเต็มหน้าจอ",
         "label": "สลับเต็มหน้าจอ",
         "menu_path": "มุมมอง > เต็มหน้าจอ",
-        "tags": ["เต็มหน้าจอ"]
+        "tags": [
+          "เต็มหน้าจอ"
+        ]
       },
       "help": {
         "description": "เปิดศูนย์ช่วยเหลือ",
         "label": "คู่มือแป้นพิมพ์ลัด",
         "menu_path": "ระบบ > คู่มือแป้นพิมพ์ลัด",
-        "tags": ["ช่วยเหลือ", "F1"]
+        "tags": [
+          "ช่วยเหลือ",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "ใช้เลย์เอาต์แบบ 4 แผงยึดติดเริ่มต้น",
         "label": "ค่าตั้งล่วงหน้าเลย์เอาต์ 1",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์",
-        "tags": ["เลย์เอาต์", "ค่าตั้งล่วงหน้า", "ยึดติด", "1"]
+        "tags": [
+          "เลย์เอาต์",
+          "ค่าตั้งล่วงหน้า",
+          "ยึดติด",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "ใช้เลย์เอาต์ที่เน้นปฏิทิน",
         "label": "ค่าตั้งล่วงหน้าเลย์เอาต์ 2",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์",
-        "tags": ["เลย์เอาต์", "ปฏิทิน", "2"]
+        "tags": [
+          "เลย์เอาต์",
+          "ปฏิทิน",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "ใช้เลย์เอาต์ที่เน้นงาน",
         "label": "ค่าตั้งล่วงหน้าเลย์เอาต์ 3",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์",
-        "tags": ["เลย์เอาต์", "งาน", "3"]
+        "tags": [
+          "เลย์เอาต์",
+          "งาน",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "ใช้เลย์เอาต์แท็บแบบแบ่งครึ่ง",
         "label": "ค่าตั้งล่วงหน้าเลย์เอาต์ 4",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์",
-        "tags": ["เลย์เอาต์", "แท็บ", "แบ่ง", "4"]
+        "tags": [
+          "เลย์เอาต์",
+          "แท็บ",
+          "แบ่ง",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "ใช้เลย์เอาต์แบบลอยที่แยกออกจากกันทั้งหมด",
         "label": "ค่าตั้งล่วงหน้าเลย์เอาต์ 5",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์",
-        "tags": ["เลย์เอาต์", "แยก", "ลอย", "5"]
+        "tags": [
+          "เลย์เอาต์",
+          "แยก",
+          "ลอย",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "เปิดหรือปิดโหมดล็อกเดสก์ท็อป",
         "label": "โหมดล็อก",
         "menu_path": "มุมมอง > โหมดล็อก",
-        "tags": ["ล็อก"]
+        "tags": [
+          "ล็อก"
+        ]
       },
       "magnet_mode": {
         "description": "สลับโหมดแม่เหล็กซึ่งช่วยจัดตำแหน่งและยึดแผงให้เข้าที่",
         "label": "โหมดแม่เหล็ก",
         "menu_path": "มุมมอง > โหมดแม่เหล็ก",
-        "tags": ["แม่เหล็ก", "แผง"]
+        "tags": [
+          "แม่เหล็ก",
+          "แผง"
+        ]
       },
       "monitor_left": {
         "description": "ย้ายหน้าต่างไปยังจออื่น",
         "label": "ย้ายไปจอก่อนหน้า",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["จอภาพ", "จอแสดงผล", "ซ้าย"]
+        "tags": [
+          "จอภาพ",
+          "จอแสดงผล",
+          "ซ้าย"
+        ]
       },
       "monitor_right": {
         "description": "ย้ายหน้าต่างไปยังจออื่น",
         "label": "ย้ายไปจอถัดไป",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["จอภาพ", "จอแสดงผล", "ขวา"]
+        "tags": [
+          "จอภาพ",
+          "จอแสดงผล",
+          "ขวา"
+        ]
       },
       "new_directive": {
         "description": "เปิดหน้าต่างสำหรับป้อนคำสั่งหรือรายการความร่วมมือ",
         "label": "ลงทะเบียนคำสั่ง",
         "menu_path": "ลงทะเบียน > คำสั่ง",
-        "tags": ["คำสั่ง", "ความร่วมมือ"]
+        "tags": [
+          "คำสั่ง",
+          "ความร่วมมือ"
+        ]
       },
       "new_routine": {
         "description": "เพิ่มกิจวัตรงานที่เกิดซ้ำได้อย่างรวดเร็ว",
         "label": "ลงทะเบียนกิจวัตร",
         "menu_path": "ลงทะเบียน > กิจวัตร",
-        "tags": ["กิจวัตร", "งาน", "เกิดซ้ำ"]
+        "tags": [
+          "กิจวัตร",
+          "งาน",
+          "เกิดซ้ำ"
+        ]
       },
       "new_schedule": {
         "description": "เปิดหน้าต่างป้อนกำหนดการโดยตรง",
         "label": "เพิ่มกำหนดการใหม่",
         "menu_path": "ลงทะเบียน > กำหนดการใหม่",
-        "tags": ["กำหนดการ", "เพิ่ม", "ลงทะเบียน"]
+        "tags": [
+          "กำหนดการ",
+          "เพิ่ม",
+          "ลงทะเบียน"
+        ]
       },
       "next_day": {
         "description": "ย้ายไปหนึ่งวันหลังวันที่ปัจจุบัน",
         "label": "วันถัดไป",
         "menu_path": "การนำทาง",
-        "tags": ["ถัดไป", "วันที่", "ขวา"]
+        "tags": [
+          "ถัดไป",
+          "วันที่",
+          "ขวา"
+        ]
       },
       "opacity_down": {
         "description": "ลดความทึบแสงของหน้าต่าง",
         "label": "ลดความทึบแสง",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["ความทึบแสง", "มืดลง"]
+        "tags": [
+          "ความทึบแสง",
+          "มืดลง"
+        ]
       },
       "opacity_up": {
         "description": "เพิ่มความทึบแสงของหน้าต่าง",
         "label": "เพิ่มความทึบแสง",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["ความทึบแสง", "สว่างขึ้น"]
+        "tags": [
+          "ความทึบแสง",
+          "สว่างขึ้น"
+        ]
       },
       "prev_day": {
         "description": "ย้ายไปหนึ่งวันก่อนวันที่ปัจจุบัน",
         "label": "วันก่อนหน้า",
         "menu_path": "การนำทาง",
-        "tags": ["ก่อนหน้า", "วันที่", "ซ้าย"]
+        "tags": [
+          "ก่อนหน้า",
+          "วันที่",
+          "ซ้าย"
+        ]
       },
       "restore_pos": {
         "description": "คืนค่าหน้าต่างไปยังตำแหน่งที่ปลอดภัยบนหน้าจอ",
         "label": "คืนค่าตำแหน่งหน้าต่าง",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["หน้าต่าง", "คืนค่า", "ตำแหน่ง"]
+        "tags": [
+          "หน้าต่าง",
+          "คืนค่า",
+          "ตำแหน่ง"
+        ]
       },
       "routine_mgr": {
         "description": "เปิดแท็บตัวจัดการกิจวัตรโดยตรง",
         "label": "ตัวจัดการกิจวัตร",
         "menu_path": "งาน > ภาพรวมกิจวัตร",
-        "tags": ["กิจวัตร", "จัดการ"]
+        "tags": [
+          "กิจวัตร",
+          "จัดการ"
+        ]
       },
       "save_layout": {
         "description": "บันทึกการจัดวางแผงปัจจุบันเป็นค่าตั้งล่วงหน้า",
         "label": "บันทึกเลย์เอาต์ปัจจุบัน",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์ > บันทึก",
-        "tags": ["เลย์เอาต์", "ค่าตั้งล่วงหน้า", "บันทึก"]
+        "tags": [
+          "เลย์เอาต์",
+          "ค่าตั้งล่วงหน้า",
+          "บันทึก"
+        ]
       },
       "show_hide": {
         "description": "ซ่อนหน้าต่างหลักหรือแสดงอีกครั้ง",
         "label": "แสดง/ซ่อนหน้าต่าง",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["หน้าต่าง", "ซ่อน", "แสดง", "โอเวอร์เลย์"]
+        "tags": [
+          "หน้าต่าง",
+          "ซ่อน",
+          "แสดง",
+          "โอเวอร์เลย์"
+        ]
       },
       "sync_gcal": {
         "description": "เริ่มการซิงค์กับ Google ปฏิทินทันที",
         "label": "ซิงค์ Google ปฏิทิน",
         "menu_path": "ระบบ > ปฏิทินและการซิงค์",
-        "tags": ["google", "ซิงค์", "ปฏิทิน", "F5"]
+        "tags": [
+          "google",
+          "ซิงค์",
+          "ปฏิทิน",
+          "F5"
+        ]
       },
       "today": {
         "description": "ย้ายวันที่ที่เลือกไปยังวันนี้ทันที",
         "label": "ไปที่วันนี้",
         "menu_path": "การนำทาง",
-        "tags": ["วันนี้", "วันที่"]
+        "tags": [
+          "วันนี้",
+          "วันที่"
+        ]
       },
       "topbar": {
         "description": "สลับการแสดงผลของแถบเมนูด้านบน",
         "label": "สลับแถบด้านบน",
         "menu_path": "มุมมอง > แถบด้านบน",
-        "tags": ["แถบเมนู", "แถบด้านบน", "กู้คืน"]
+        "tags": [
+          "แถบเมนู",
+          "แถบด้านบน",
+          "กู้คืน"
+        ]
       },
       "widget_mode": {
         "description": "เปิดโหมดแผงเฉพาะวิดเจ็ต",
         "label": "สลับโหมดวิดเจ็ต",
         "menu_path": "มุมมอง > โหมดเฉพาะวิดเจ็ต",
-        "tags": ["วิดเจ็ต", "แผง"]
+        "tags": [
+          "วิดเจ็ต",
+          "แผง"
+        ]
       }
     },
     "groups": {
@@ -3092,9 +3242,16 @@
     "all_layouts": "Show all layouts",
     "back_to_main": "กลับไปที่ปฏิทิน",
     "background_opacity": "Background opacity",
+    "calendar_collapse": "ซ่อนปฏิทิน",
+    "calendar_expand": "แสดงปฏิทิน",
+    "calendar_visibility_help": "แสดงหรือซ่อนปฏิทินของเค้าโครงที่เลือก เค้าโครงอื่นจะคงการตั้งค่าเดิม",
     "close": "ปิดวิดเจ็ต",
     "color_picker": "เลือกสีเน้นวิดเจ็ต",
     "complete_named": "Change completion: {name}",
+    "completed_excluded": "เฉพาะที่ยังไม่เสร็จ",
+    "completed_included": "รวมรายการที่เสร็จแล้ว",
+    "context_summary": "{date} · {filter} · {completed} · {count}/{total} รายการ",
+    "customization_intro": "เปลี่ยนเค้าโครง รูปลักษณ์ และรายการที่แสดง แล้วตรวจสอบตัวอย่าง วิดเจ็ตจะไม่เปลี่ยนจนกว่าจะนำไปใช้",
     "customize": "Customize",
     "density": "List density",
     "density_comfortable": "Comfortable",
@@ -3116,6 +3273,7 @@
     "editor_title": "สร้างสไตล์วิดเจ็ต",
     "editor_width": "ความกว้างเริ่มต้น",
     "empty_directive_filter": "No directives for this date.",
+    "empty_filter_context": "ไม่มีรายการประเภทนี้ ประเภทอื่นมี {count} รายการ",
     "empty_panel": "ไม่มีรายการสำหรับวันนี้",
     "empty_schedule": "ไม่มีกำหนดการ",
     "empty_schedule_filter": "ไม่มีกำหนดการสำหรับวันที่นี้",
@@ -3136,6 +3294,65 @@
     "font_size": "Text size",
     "font_size_help": "Scales dates, controls, calendar, and list text together.",
     "font_weight": "Title weight",
+    "free_align": "จัดแนว",
+    "free_align_bottom": "ล่าง",
+    "free_align_center_x": "กึ่งกลางแนวนอน",
+    "free_align_center_y": "กึ่งกลางแนวตั้ง",
+    "free_align_left": "ซ้าย",
+    "free_align_right": "ขวา",
+    "free_align_top": "บน",
+    "free_back": "ส่งไปไว้หลังสุด",
+    "free_block_agenda": "รายการรวม",
+    "free_block_calendar": "ปฏิทิน",
+    "free_block_clock": "นาฬิกา",
+    "free_block_date": "วันที่",
+    "free_block_filters": "ตัวกรองรายการรวม",
+    "free_current_items": "รายการในวิดเจ็ตปัจจุบัน",
+    "free_distribute_x": "เว้นระยะเท่ากันแนวนอน",
+    "free_distribute_y": "เว้นระยะเท่ากันแนวตั้ง",
+    "free_editor_help": "Ctrl/Shift+คลิก: เลือกหลายรายการ · Delete: ซ่อน · Alt: ปิดการจัดแนว",
+    "free_editor_intro": "ดูตัวอย่างการจัดวางด้วยกิจกรรมตัวอย่าง ใช้ Ctrl หรือ Shift เพื่อเลือกหลายองค์ประกอบ แล้วปรับขนาดจากมุมและขอบ",
+    "free_example_items": "กิจกรรมตัวอย่าง",
+    "free_export": "ส่งออก…",
+    "free_file_error": "ไม่สามารถประมวลผลไฟล์การจัดวางได้",
+    "free_file_filter": "การจัดวางวิดเจ็ต (*.airlayout.json *.json)",
+    "free_filter_heading": "ตัวกรองรายการรวม",
+    "free_fit": "พอดีกับหน้าจอ",
+    "free_front": "นำมาไว้หน้าสุด",
+    "free_guides": "จัดแนวตามองค์ประกอบ",
+    "free_import": "นำเข้า…",
+    "free_layer": "ลำดับและการล็อกองค์ประกอบ",
+    "free_layout_calendar_mode": "มุมมองปฏิทิน",
+    "free_layout_canvas_height": "ความสูงพื้นที่",
+    "free_layout_canvas_width": "ความกว้างพื้นที่",
+    "free_layout_components": "องค์ประกอบ",
+    "free_layout_edit": "แก้ไขการจัดวาง…",
+    "free_layout_empty": "เลือกองค์ประกอบทางด้านซ้าย",
+    "free_layout_height": "ความสูง",
+    "free_layout_intro": "เลือกองค์ประกอบแล้วลากเพื่อย้าย ปรับขนาดด้วยจุดจับที่มุมขวาล่าง นี่คือภาพตัวอย่าง วิดเจ็ตปัจจุบันจะเปลี่ยนเมื่อกดใช้เท่านั้น",
+    "free_layout_redo": "ทำซ้ำ",
+    "free_layout_reset": "เริ่มจากรูปแบบสำเร็จ",
+    "free_layout_snap": "จัดแนวตามตาราง",
+    "free_layout_snap_help": "จัดแนวตามตาราง 8 พิกเซล กด Alt ค้างไว้เพื่อย้ายหรือปรับขนาดอย่างอิสระ ปุ่มลูกศรย้าย 1 พิกเซล และ Shift+ลูกศรย้าย 10 พิกเซล",
+    "free_layout_title": "แก้ไขการจัดวางวิดเจ็ต",
+    "free_layout_transition_help": "ยกเลิกการปรับแต่งรูปลักษณ์ที่ยังไม่ได้ใช้ แล้วเปิดตัวแก้ไขการจัดวาง",
+    "free_layout_undo": "เลิกทำ",
+    "free_layout_width": "ความกว้าง",
+    "free_layout_x": "ตำแหน่งแนวนอน",
+    "free_layout_y": "ตำแหน่งแนวตั้ง",
+    "free_live_preview": "แสดงตัวอย่าง",
+    "free_lock": "ล็อก",
+    "free_locked_count": "ล็อก {count} รายการ",
+    "free_multi_selected": "เลือก {count} รายการ",
+    "free_overlap": "ซ้อนทับ {count} จุด · ปรับลำดับองค์ประกอบ",
+    "free_preview": "แสดงตัวอย่างกิจกรรม",
+    "free_status": "แสดง {visible} รายการ · {width} × {height}px",
+    "free_tab_canvas": "พื้นที่จัดวาง",
+    "free_tab_geometry": "ตำแหน่งและขนาด",
+    "free_toggle_component": "แสดง {name}",
+    "free_unlock": "ปลดล็อก",
+    "free_wysiwyg_intro": "เลือกองค์ประกอบในวิดเจ็ตโดยตรงเพื่อย้าย ปรับขนาด และเปลี่ยนรูปลักษณ์ วิดเจ็ตปัจจุบันจะไม่เปลี่ยนจนกว่าจะนำการเปลี่ยนแปลงไปใช้",
+    "free_zoom": "ซูม",
     "header_caption": "วาระวันและการทำงานที่เลือก",
     "hero_eyebrow": "วิดเจ็ตโฟกัส",
     "hide_calendar": "ซ่อนปฏิทิน",
@@ -3155,6 +3372,7 @@
     "menu_always_top": "อยู่ด้านบนเสมอ",
     "menu_complete_directive": "ทำเครื่องหมายว่าเสร็จสมบูรณ์",
     "menu_complete_task": "ทำเครื่องหมายว่าเสร็จสมบูรณ์",
+    "menu_date": "เปลี่ยนวันที่",
     "menu_delete_directive": "ลบ",
     "menu_delete_task": "ลบ",
     "menu_edit_directive": "แก้ไข/เปิด",
@@ -3167,6 +3385,9 @@
     "menu_refresh": "รีเฟรช",
     "menu_reopen": "Reopen",
     "menu_reserve_space": "จองพื้นที่หน้าจอ",
+    "menu_view": "ตั้งค่ามุมมอง",
+    "menu_window": "จัดการหน้าต่าง",
+    "menu_work": "จัดการงาน",
     "month_calendar": "Choose a date from the month",
     "month_next": "เดือนหน้า",
     "month_prev": "เดือนที่แล้ว",
@@ -3186,7 +3407,24 @@
     "preferences_appearance": "Appearance",
     "preferences_layout": "Layout",
     "preferences_visibility": "Visibility",
+    "preset_builtin": "การจัดวางในตัว",
+    "preset_custom": "การจัดวางที่กำหนดเอง",
+    "preset_delete": "ลบ",
+    "preset_delete_confirm": "ลบการจัดวาง “{name}” หรือไม่?",
+    "preset_draft_note": "การเปลี่ยนแปลงพรีเซ็ตจะบันทึกเมื่อกดนำไปใช้เท่านั้น",
+    "preset_edit": "แก้ไขการจัดวาง…",
+    "preset_error": "ไม่สามารถบันทึกการจัดวางได้",
+    "preset_invalid_name": "ชื่อต้องมี 1–80 ตัวอักษรและไม่ซ้ำกับการจัดวางอื่น",
+    "preset_loaded": "การจัดวางที่โหลด: {name}",
+    "preset_modified": "การจัดวางที่แก้ไข",
+    "preset_name": "ชื่อการจัดวาง",
+    "preset_rename": "เปลี่ยนชื่อ…",
+    "preset_save_as": "บันทึกเป็นพรีเซ็ตใหม่…",
+    "preset_saved": "การจัดวางใหม่",
+    "preset_select": "เลือกการจัดวางที่บันทึกไว้",
+    "preset_update": "เขียนทับพรีเซ็ตที่เลือก",
     "preview": "Preview · Sample agenda",
+    "preview_directive": "ส่งความคิดเห็นจากการตรวจสอบ",
     "preview_note": "Apply saves your changes. Cancel keeps your previous settings.",
     "preview_schedule": "Project meeting",
     "preview_work": "Prepare meeting notes",
@@ -3204,7 +3442,9 @@
     "return_main": "Main window",
     "routine_short": "กิจวัตรประจำวัน",
     "save_failed": "Could not save. Please try again.",
+    "save_failed_named": "บันทึกไม่สำเร็จ โปรดลองอีกครั้ง: “{name}”",
     "saved_status": "Work status saved.",
+    "saved_status_named": "บันทึกเป็น {status} แล้ว: “{name}”",
     "scale_tooltip_value": "สเกล: {value}%",
     "schedule_title": "ตารางเวลา",
     "schedule_type": "ตารางเวลา",
@@ -3248,7 +3488,10 @@
     "tomorrow": "พรุ่งนี้",
     "undo": "Undo",
     "undone": "Previous status restored.",
+    "undone_named": "คืนค่าสถานะก่อนหน้าแล้ว: “{name}”",
     "untitled": "ไม่มีชื่อ",
+    "user_layouts": "การจัดวางของฉัน",
+    "user_layouts_empty": "ยังไม่มีการจัดวางที่บันทึกไว้ บันทึกเป็นพรีเซ็ตในตัวแก้ไขการจัดวาง",
     "week_toggle": "Week",
     "week_toggle_help": "Show or collapse the week strip",
     "widget_hint_actions": "แตะวันเพื่อปรับโฟกัสใหม่",

@@ -224,6 +224,26 @@ manager.set_app_data_provider(lambda: {
 - 회귀 검증: `tests/test_widget_mode_ux.py`, `tests/test_unified_widget_mode.py`, `tests/test_widget_mode_coordinator.py`, `tests/test_widget_mode_geometry.py`.
 - 밀도/압축 헤더/타이포그래피 회귀 검증: `tests/test_widget_mode_efficiency.py` (설정 재로드, 초안 취소, 역할별 글자 비율, 큰 글꼴·작은 창 포함).
 
+### 자유 구성 편집
+
+- 프리셋은 `widget_mode_layout`에 유지합니다. 표시 방식은 별도 `widget_mode_layout_mode=preset|free`, 자유 구성은 `widget_mode_free_layout`의 version 1 JSON으로 저장합니다. 프리셋 선택은 자유 구성을 삭제하지 않습니다.
+- 모델과 검증: `widget_free_layout.py`. 캔버스 논리 좌표와 요소별 `enabled` / `[x,y,width,height]`, 선택적 8px 정렬 `snap`, `calendar_mode=week|month`를 저장합니다. version 1의 선택 필드 `order`(뒤에서 앞으로)와 요소별 `locked`를 지원하며 이전 파일의 누락값은 기본 순서·잠금 해제로 채웁니다. 알려지지 않은 요소·중복·유효하지 않은 버전/좌표는 거부하고 범위 밖 좌표는 캔버스 안으로 제한합니다. 읽기는 설정을 변경하지 않습니다.
+- 구성 요소는 날짜, 시계, 달력, 통합 목록 필터, 통합 목록, 일정 목록, 업무 목록, 지시·협조 목록입니다. 사용자가 선택하지 않은 요소를 강제로 표시하지 않습니다. 전체 해제와 의도한 겹침도 허용합니다.
+- `WidgetFreeLayoutEditorDialog`는 독립 초안과 실제 네이티브 위젯 렌더링을 사용합니다. 현재 위젯의 항목·선택 날짜·필터·시계 표시를 읽기 전용으로 반영하며 현재 항목이 없으면 빈 목록을 그대로 표시합니다. 캐시가 없는 호출에서만 예시 항목을 사용합니다. 미리보기는 원본 데이터 처리기·DB를 호출하지 않습니다.
+- 미리보기 위에서 선택·드래그 이동·8방향 크기 조절을 합니다. Ctrl·Shift 다중 선택, 빈 영역 드래그 선택, 선택/호버 윤곽, 선택 이름·잠금 배지를 제공합니다. 수치 입력·정렬·간격 맞춤·순서·잠금과 글꼴·스킨·불투명도는 공통 실행 취소/다시 실행 기록을 사용하며 적용 전 실제 설정/창 좌표를 변경하지 않습니다. 잠긴 요소는 이동·크기 조절·Delete 숨기기에서 제외합니다.
+- Alt는 격자·요소 맞춤을 건너뛰며 방향키는 1px, Shift+방향키는 10px 이동합니다. 10~200% 확대와 화면 맞춤은 편집 화면에만 적용합니다. 입력 위의 휠은 편집기 설정 영역을 스크롤합니다.
+- 구성 파일 `.airlayout.json`은 배치·요소 표시·순서·잠금만 저장하며 모양 설정은 포함하지 않습니다. 불러오기는 한 번의 초안 변경으로 기록합니다. 파일 크기 제한과 검증 후 원자적으로 저장하며 설정/원본 파일을 먼저 지우지 않습니다.
+- 사용자 프리셋은 `widget_layout_presets.py`에서 관리합니다. `widget_mode_user_layout_presets`의 version 1 JSON에 `{id,name,layout}` 목록을 저장하고 `widget_mode_user_layout_id`는 선택한 프리셋을 가리킵니다. 기본 grid 배치 레지스트리와 분리하며 각 `layout`은 자유 구성 검증을 통과해야 합니다. 색상·글꼴과 실제 데이터/창 위치는 프리셋에 포함하지 않습니다.
+- 이름은 앞뒤 공백을 정리한 1~80자, 대소문자 무시 중복 금지이며 ID는 UUID입니다. 최대 100개, JSON 2MiB를 제한합니다. 읽기·CRUD는 분리된 데이터를 반환하며 손상/미래 버전 읽기는 원본 설정을 덮어쓰지 않습니다.
+- 구성 편집기의 `내 배치`에서 새 저장·선택 프리셋 덮어쓰기·이름 변경·삭제를 합니다. 이 변경도 공통 실행 취소와 적용/취소 흐름에 포함합니다. `preset_id`로 명시적 프리셋 수정 화면을 열면 적용 시 그 프리셋의 배치를 갱신합니다. 새 이름으로 저장하거나 삭제한 경우 원래 프리셋을 다시 만들거나 덮어쓰지 않습니다.
+- 꾸미기의 `내 배치`는 썸네일 목록과 수정·이름 변경·삭제를 제공합니다. 중첩 구성 편집기 적용은 부모 초안에만 반영하고 부모 적용에서 영구 저장합니다. 기본 배치로 전환해도 사용자 프리셋 목록은 유지하며 선택 ID만 해제합니다. 프리셋 삭제는 현재 자유 구성 좌표를 지우지 않습니다.
+- 런타임 `FreeLayoutCanvas`는 저장 좌표의 비율로 배치합니다. 작은 창에서 데이터 요소 내용은 내부 스크롤, 날짜/시계는 글꼴 맞춤으로 표시하며 전체 내용은 도움말/접근성 이름에도 제공합니다. 좁은 창에 여러 열을 배치하면 각 요소의 조작부에 내부 스크롤이 필요할 수 있습니다.
+- 유형별 목록은 기존 캐시·원본 ID·처리기를 공유합니다. 통합 목록 필터는 통합 목록에만 적용합니다. 통합 목록과 유형별 목록을 함께 표시할 수 있으며 원본 데이터 복제나 별도 완료 저장은 하지 않습니다.
+- 자유 구성의 창 좌표·크기는 `free` 키로 분리합니다. 달력 요소의 표시 여부로 창 좌표 키를 바꾸지 않습니다. 꾸미기의 글꼴/색상/달력·시계 표시를 적용해도 명시적으로 프리셋을 선택하기 전에는 자유 구성을 유지합니다.
+- 주간 버튼은 동일 너비이며 요일/날짜를 별도 타이포그래피로 그립니다. 선택일은 은은한 배경과 짧은 강조선, 오늘은 점, 키보드 포커스는 윤곽선으로 구분하며 글자/배경 불투명도를 따릅니다.
+- 회귀: `test_widget_free_layout_model.py`, `test_widget_free_layout_editor.py`, `test_widget_free_layout_runtime.py`, `test_widget_week_strip.py`, `test_widget_layout_editor_canvas.py`, `test_widget_layout_editor_preview.py`, `test_widget_layout_editor_advanced.py`. 화면 검증: `scripts/validate_widget_free_layout.py`, `scripts/validate_widget_layout_editor_advanced.py`.
+- 프리셋 회귀: `test_widget_layout_presets.py`, `test_widget_layout_presets_editor.py`, `test_widget_layout_presets_controller.py`, `test_widget_layout_presets_customization.py`. 화면·임시 INI 재시작 검증: `scripts/validate_widget_layout_presets.py`.
+
 - 스킨 레지스트리: `presentation/widgets/widget_mode_skins.py`
 - 선택 설정: 색상 `QSettings["widget_mode_skin"]`, 배치 `QSettings["widget_mode_layout"]`
 - 색상 스킨은 `WidgetModeSkin`의 `base_theme`과 semantic token override만 정의합니다.

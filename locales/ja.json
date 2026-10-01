@@ -127,7 +127,15 @@
     "sync_hint": "Googleカレンダーの同期",
     "today": "今日",
     "today_hint": "今日に移動",
-    "weekdays": ["月", "火", "水", "木", "金", "土", "日"]
+    "weekdays": [
+      "月",
+      "火",
+      "水",
+      "木",
+      "金",
+      "土",
+      "日"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "アイテムの追加",
@@ -1558,7 +1566,13 @@
     "hint_record_jump": "Enterで項目を開く。Shift+Enterで日付に移動。",
     "hint_run_command": "Enterで選択したコマンドを実行します",
     "kw": {
-      "theme": ["テーマ", "ダーク", "ライト", "色", "外観"]
+      "theme": [
+        "テーマ",
+        "ダーク",
+        "ライト",
+        "色",
+        "外観"
+      ]
     },
     "nlp_preview": "新規: [{title}] - {date} {time}",
     "no_selection": "Enterキーで選択した結果を開きます",
@@ -1811,223 +1825,359 @@
         "description": "離席ロックモードを即座に開始します。",
         "label": "離席ロック",
         "menu_path": "表示 > 離席ロック",
-        "tags": ["離席", "ロック"]
+        "tags": [
+          "離席",
+          "ロック"
+        ]
       },
       "cal_toolbar": {
         "description": "カレンダーツールバーを非表示・再表示します。",
         "label": "カレンダーツールバー切替",
         "menu_path": "表示 > カレンダーツールバー",
-        "tags": ["カレンダー", "ツールバー"]
+        "tags": [
+          "カレンダー",
+          "ツールバー"
+        ]
       },
       "calendar_print": {
         "description": "現在または選択した期間のカレンダーをプレビューして印刷します。",
         "label": "カレンダーを印刷",
         "menu_path": "カレンダー > オプション > 印刷",
-        "tags": ["印刷", "プリンター", "PDF"]
+        "tags": [
+          "印刷",
+          "プリンター",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "チェックリストのテンプレートと項目構成を管理します。",
         "label": "チェックリストを管理",
         "menu_path": "タスク > チェックリスト管理",
-        "tags": ["チェックリスト", "テンプレート"]
+        "tags": [
+          "チェックリスト",
+          "テンプレート"
+        ]
       },
       "color_assign": {
         "description": "選択した項目に自動的に色を割り当てます。",
         "label": "自動カラー割り当て",
         "menu_path": "タスク > 自動カラー割り当て",
-        "tags": ["色", "タグ", "自動"]
+        "tags": [
+          "色",
+          "タグ",
+          "自動"
+        ]
       },
       "command_palette": {
         "description": "機能を瞬時に検索できるコマンド検索ボックスを開きます。",
         "label": "コマンドパレット",
         "menu_path": "直接呼び出し",
-        "tags": ["検索", "コマンド", "パレット"]
+        "tags": [
+          "検索",
+          "コマンド",
+          "パレット"
+        ]
       },
       "delete": {
         "description": "現在選択している予定または項目を削除します。",
         "label": "選択項目を削除",
         "menu_path": "選択状態",
-        "tags": ["削除", "消去"]
+        "tags": [
+          "削除",
+          "消去"
+        ]
       },
       "escape": {
         "description": "現在の選択またはフォーカスを解除します。",
         "label": "選択を解除",
         "menu_path": "選択状態",
-        "tags": ["選択解除", "キャンセル", "エスケープ"]
+        "tags": [
+          "選択解除",
+          "キャンセル",
+          "エスケープ"
+        ]
       },
       "focus_mode": {
         "description": "集中モードのオン・オフを切り替えます。",
         "label": "集中モード切替",
         "menu_path": "表示 > 集中モード",
-        "tags": ["集中", "ポモドーロ"]
+        "tags": [
+          "集中",
+          "ポモドーロ"
+        ]
       },
       "focus_pause": {
         "description": "現在の集中セッションを一時停止・再開します。",
         "label": "集中を一時停止",
         "menu_path": "集中モード",
-        "tags": ["集中", "一時停止"]
+        "tags": [
+          "集中",
+          "一時停止"
+        ]
       },
       "force_unlock": {
         "description": "予期しないロック状態を強制的に解除します。",
         "label": "強制ロック解除",
         "menu_path": "緊急復旧",
-        "tags": ["強制", "ロック解除", "復旧", "緊急"]
+        "tags": [
+          "強制",
+          "ロック解除",
+          "復旧",
+          "緊急"
+        ]
       },
       "fullscreen": {
         "description": "全画面表示のオン・オフを切り替えます。",
         "label": "全画面表示切替",
         "menu_path": "表示 > 全画面表示",
-        "tags": ["全画面"]
+        "tags": [
+          "全画面"
+        ]
       },
       "help": {
         "description": "ヘルプセンターを開きます。",
         "label": "ショートカットガイド",
         "menu_path": "システム > ショートカットガイド",
-        "tags": ["ヘルプ", "F1"]
+        "tags": [
+          "ヘルプ",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "デフォルトの4パネルドッキングレイアウトを適用します。",
         "label": "レイアウトプリセット1",
         "menu_path": "表示 > レイアウトプリセット",
-        "tags": ["レイアウト", "プリセット", "ドッキング", "1"]
+        "tags": [
+          "レイアウト",
+          "プリセット",
+          "ドッキング",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "カレンダー中心のレイアウトを適用します。",
         "label": "レイアウトプリセット2",
         "menu_path": "表示 > レイアウトプリセット",
-        "tags": ["レイアウト", "カレンダー", "2"]
+        "tags": [
+          "レイアウト",
+          "カレンダー",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "タスク中心のレイアウトを適用します。",
         "label": "レイアウトプリセット3",
         "menu_path": "表示 > レイアウトプリセット",
-        "tags": ["レイアウト", "タスク", "3"]
+        "tags": [
+          "レイアウト",
+          "タスク",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "分割タブレイアウトを適用します。",
         "label": "レイアウトプリセット4",
         "menu_path": "表示 > レイアウトプリセット",
-        "tags": ["レイアウト", "タブ", "分割", "4"]
+        "tags": [
+          "レイアウト",
+          "タブ",
+          "分割",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "完全に分離したフローティングレイアウトを適用します。",
         "label": "レイアウトプリセット5",
         "menu_path": "表示 > レイアウトプリセット",
-        "tags": ["レイアウト", "分離", "フローティング", "5"]
+        "tags": [
+          "レイアウト",
+          "分離",
+          "フローティング",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "デスクトップロックモードのオン・オフを切り替えます。",
         "label": "ロックモード",
         "menu_path": "表示 > ロックモード",
-        "tags": ["ロック"]
+        "tags": [
+          "ロック"
+        ]
       },
       "magnet_mode": {
         "description": "パネルの整列とスナップを助けるマグネットモードを切り替えます。",
         "label": "マグネットモード",
         "menu_path": "表示 > マグネットモード",
-        "tags": ["マグネット", "パネル"]
+        "tags": [
+          "マグネット",
+          "パネル"
+        ]
       },
       "monitor_left": {
         "description": "ウィンドウを別のモニターに移動します。",
         "label": "前のモニターへ移動",
         "menu_path": "ウィンドウ制御",
-        "tags": ["モニター", "ディスプレイ", "左"]
+        "tags": [
+          "モニター",
+          "ディスプレイ",
+          "左"
+        ]
       },
       "monitor_right": {
         "description": "ウィンドウを別のモニターに移動します。",
         "label": "次のモニターへ移動",
         "menu_path": "ウィンドウ制御",
-        "tags": ["モニター", "ディスプレイ", "右"]
+        "tags": [
+          "モニター",
+          "ディスプレイ",
+          "右"
+        ]
       },
       "new_directive": {
         "description": "指示事項や協力事項を入力するウィンドウを開きます。",
         "label": "指示事項を登録",
         "menu_path": "登録 > 指示事項",
-        "tags": ["指示", "協力"]
+        "tags": [
+          "指示",
+          "協力"
+        ]
       },
       "new_routine": {
         "description": "繰り返しのタスクルーティンをすばやく追加します。",
         "label": "ルーティンを登録",
         "menu_path": "登録 > ルーティン",
-        "tags": ["ルーティン", "タスク", "繰り返し"]
+        "tags": [
+          "ルーティン",
+          "タスク",
+          "繰り返し"
+        ]
       },
       "new_schedule": {
         "description": "予定入力ウィンドウを直接開きます。",
         "label": "新しい予定を追加",
         "menu_path": "登録 > 新しい予定",
-        "tags": ["予定", "追加", "登録"]
+        "tags": [
+          "予定",
+          "追加",
+          "登録"
+        ]
       },
       "next_day": {
         "description": "現在の日付の1日後に移動します。",
         "label": "翌日",
         "menu_path": "ナビゲーション",
-        "tags": ["次", "日付", "右"]
+        "tags": [
+          "次",
+          "日付",
+          "右"
+        ]
       },
       "opacity_down": {
         "description": "ウィンドウの不透明度を下げます。",
         "label": "不透明度を下げる",
         "menu_path": "ウィンドウ制御",
-        "tags": ["不透明度", "暗く"]
+        "tags": [
+          "不透明度",
+          "暗く"
+        ]
       },
       "opacity_up": {
         "description": "ウィンドウの不透明度を上げます。",
         "label": "不透明度を上げる",
         "menu_path": "ウィンドウ制御",
-        "tags": ["不透明度", "明るく"]
+        "tags": [
+          "不透明度",
+          "明るく"
+        ]
       },
       "prev_day": {
         "description": "現在の日付の1日前に移動します。",
         "label": "前日",
         "menu_path": "ナビゲーション",
-        "tags": ["前", "日付", "左"]
+        "tags": [
+          "前",
+          "日付",
+          "左"
+        ]
       },
       "restore_pos": {
         "description": "ウィンドウを安全な画面位置に復元します。",
         "label": "ウィンドウ位置を復元",
         "menu_path": "ウィンドウ制御",
-        "tags": ["ウィンドウ", "復元", "位置"]
+        "tags": [
+          "ウィンドウ",
+          "復元",
+          "位置"
+        ]
       },
       "routine_mgr": {
         "description": "ルーティンマネージャータブを直接開きます。",
         "label": "ルーティンマネージャー",
         "menu_path": "タスク > ルーティン概要",
-        "tags": ["ルーティン", "管理"]
+        "tags": [
+          "ルーティン",
+          "管理"
+        ]
       },
       "save_layout": {
         "description": "現在のパネル配置をプリセットとして保存します。",
         "label": "現在のレイアウトを保存",
         "menu_path": "表示 > レイアウトプリセット > 保存",
-        "tags": ["レイアウト", "プリセット", "保存"]
+        "tags": [
+          "レイアウト",
+          "プリセット",
+          "保存"
+        ]
       },
       "show_hide": {
         "description": "メインウィンドウを非表示にするか、再表示します。",
         "label": "ウィンドウ表示/非表示",
         "menu_path": "ウィンドウ制御",
-        "tags": ["ウィンドウ", "非表示", "表示", "オーバーレイ"]
+        "tags": [
+          "ウィンドウ",
+          "非表示",
+          "表示",
+          "オーバーレイ"
+        ]
       },
       "sync_gcal": {
         "description": "Googleカレンダーとの同期を即座に開始します。",
         "label": "Googleカレンダー同期",
         "menu_path": "システム > カレンダーと同期",
-        "tags": ["google", "同期", "カレンダー", "F5"]
+        "tags": [
+          "google",
+          "同期",
+          "カレンダー",
+          "F5"
+        ]
       },
       "today": {
         "description": "選択中の日付を即座に今日に移動します。",
         "label": "今日に移動",
         "menu_path": "ナビゲーション",
-        "tags": ["今日", "日付"]
+        "tags": [
+          "今日",
+          "日付"
+        ]
       },
       "topbar": {
         "description": "上部メニューバーの表示・非表示を切り替えます。",
         "label": "トップバー切替",
         "menu_path": "表示 > トップバー",
-        "tags": ["メニューバー", "トップバー", "復旧"]
+        "tags": [
+          "メニューバー",
+          "トップバー",
+          "復旧"
+        ]
       },
       "widget_mode": {
         "description": "ウィジェットのみのパネルモードを開きます。",
         "label": "ウィジェットモード切替",
         "menu_path": "表示 > ウィジェット専用モード",
-        "tags": ["ウィジェット", "パネル"]
+        "tags": [
+          "ウィジェット",
+          "パネル"
+        ]
       }
     },
     "groups": {
@@ -3092,9 +3242,16 @@
     "all_layouts": "Show all layouts",
     "back_to_main": "カレンダーに戻る",
     "background_opacity": "Background opacity",
+    "calendar_collapse": "カレンダーを隠す",
+    "calendar_expand": "カレンダーを表示",
+    "calendar_visibility_help": "選択した配置のカレンダーだけを表示・非表示にします。他の配置の設定は保持されます。",
     "close": "ウィジェットを閉じる",
     "color_picker": "ウィジェットのアクセントカラーを選択",
     "complete_named": "Change completion: {name}",
+    "completed_excluded": "未完了のみ",
+    "completed_included": "完了を含む",
+    "context_summary": "{date} · {filter} · {completed} · {count}/{total}件",
+    "customization_intro": "配置・外観・表示項目を変更し、プレビューで確認します。適用するまで現在のウィジェットは変わりません。",
     "customize": "Customize",
     "density": "List density",
     "density_comfortable": "Comfortable",
@@ -3116,6 +3273,7 @@
     "editor_title": "ウィジェットスタイルを作成",
     "editor_width": "デフォルトの幅",
     "empty_directive_filter": "No directives for this date.",
+    "empty_filter_context": "この種類の項目はありません。他の種類には{count}件あります。",
     "empty_panel": "この日付のアイテムはありません。",
     "empty_schedule": "予定なし",
     "empty_schedule_filter": "この日の予定はありません。",
@@ -3136,6 +3294,65 @@
     "font_size": "Text size",
     "font_size_help": "Scales dates, controls, calendar, and list text together.",
     "font_weight": "Title weight",
+    "free_align": "整列",
+    "free_align_bottom": "下揃え",
+    "free_align_center_x": "左右中央",
+    "free_align_center_y": "上下中央",
+    "free_align_left": "左揃え",
+    "free_align_right": "右揃え",
+    "free_align_top": "上揃え",
+    "free_back": "最背面へ",
+    "free_block_agenda": "統合リスト",
+    "free_block_calendar": "カレンダー",
+    "free_block_clock": "時計",
+    "free_block_date": "日付",
+    "free_block_filters": "統合リストのフィルター",
+    "free_current_items": "現在のウィジェットの項目",
+    "free_distribute_x": "横の間隔を均等に",
+    "free_distribute_y": "縦の間隔を均等に",
+    "free_editor_help": "Ctrl/Shift+クリック：複数選択 · Delete：非表示 · Alt：スナップ解除",
+    "free_editor_intro": "サンプル予定で配置を確認できます。CtrlまたはShiftで複数の要素を選択し、角や辺をドラッグしてサイズを調整してください。",
+    "free_example_items": "サンプル予定",
+    "free_export": "書き出し…",
+    "free_file_error": "配置ファイルを処理できませんでした。",
+    "free_file_filter": "ウィジェット配置 (*.airlayout.json *.json)",
+    "free_filter_heading": "統合リストのフィルター",
+    "free_fit": "画面に合わせる",
+    "free_front": "最前面へ",
+    "free_guides": "要素にスナップ",
+    "free_import": "読み込み…",
+    "free_layer": "要素の順序・ロック",
+    "free_layout_calendar_mode": "カレンダー表示",
+    "free_layout_canvas_height": "キャンバスの高さ",
+    "free_layout_canvas_width": "キャンバスの幅",
+    "free_layout_components": "構成要素",
+    "free_layout_edit": "構成を編集…",
+    "free_layout_empty": "左側で構成要素を選択してください。",
+    "free_layout_height": "高さ",
+    "free_layout_intro": "構成要素を選択してドラッグすると移動できます。右下のハンドルでサイズを調整します。これは例示画面です。適用するまで現在のウィジェットは変わりません。",
+    "free_layout_redo": "やり直す",
+    "free_layout_reset": "プリセットからやり直す",
+    "free_layout_snap": "グリッドに合わせる",
+    "free_layout_snap_help": "8ピクセルのグリッドに合わせます。Altを押すと自由に移動・サイズ調整できます。矢印キーで1ピクセル、Shift+矢印キーで10ピクセル移動します。",
+    "free_layout_title": "ウィジェットの構成を編集",
+    "free_layout_transition_help": "現在の外観設定の変更を破棄して、構成エディターを開きます。",
+    "free_layout_undo": "元に戻す",
+    "free_layout_width": "幅",
+    "free_layout_x": "横位置",
+    "free_layout_y": "縦位置",
+    "free_live_preview": "プレビュー",
+    "free_lock": "ロック",
+    "free_locked_count": "{count}個ロック中",
+    "free_multi_selected": "{count}個選択中",
+    "free_overlap": "{count}か所で重複 · 要素の順序を調整してください。",
+    "free_preview": "サンプル予定のプレビュー",
+    "free_status": "{visible}個表示 · {width} × {height}px",
+    "free_tab_canvas": "キャンバス",
+    "free_tab_geometry": "位置・サイズ",
+    "free_toggle_component": "{name}を表示",
+    "free_unlock": "ロック解除",
+    "free_wysiwyg_intro": "ウィジェット内の要素を直接選択し、位置・サイズ・見た目を変更できます。適用するまで現在のウィジェットは変わりません。",
+    "free_zoom": "ズーム",
     "header_caption": "選択した日の予定と作業",
     "hero_eyebrow": "フォーカスウィジェット",
     "hide_calendar": "カレンダーを非表示",
@@ -3155,6 +3372,7 @@
     "menu_always_top": "常に最前面",
     "menu_complete_directive": "完了にする",
     "menu_complete_task": "完了にする",
+    "menu_date": "日付の移動",
     "menu_delete_directive": "削除",
     "menu_delete_task": "削除",
     "menu_edit_directive": "編集/開く",
@@ -3167,6 +3385,9 @@
     "menu_refresh": "更新",
     "menu_reopen": "Reopen",
     "menu_reserve_space": "画面スペースを確保",
+    "menu_view": "表示設定",
+    "menu_window": "ウィンドウ管理",
+    "menu_work": "業務管理",
     "month_calendar": "Choose a date from the month",
     "month_next": "翌月",
     "month_prev": "前月",
@@ -3186,7 +3407,24 @@
     "preferences_appearance": "Appearance",
     "preferences_layout": "Layout",
     "preferences_visibility": "Visibility",
+    "preset_builtin": "標準の配置",
+    "preset_custom": "ユーザー配置",
+    "preset_delete": "削除",
+    "preset_delete_confirm": "配置「{name}」を削除しますか？",
+    "preset_draft_note": "プリセットの変更も、適用を押すまで保存されません。",
+    "preset_edit": "配置を編集…",
+    "preset_error": "配置を保存できませんでした。",
+    "preset_invalid_name": "名前は1～80文字で、他の配置と重複できません。",
+    "preset_loaded": "読み込んだ配置：{name}",
+    "preset_modified": "変更した配置",
+    "preset_name": "配置の名前",
+    "preset_rename": "名前を変更…",
+    "preset_save_as": "新しいプリセットとして保存…",
+    "preset_saved": "新しい配置",
+    "preset_select": "保存した配置を選択",
+    "preset_update": "選択したプリセットを上書き",
     "preview": "Preview · Sample agenda",
+    "preview_directive": "レビューの意見を共有",
     "preview_note": "Apply saves your changes. Cancel keeps your previous settings.",
     "preview_schedule": "Project meeting",
     "preview_work": "Prepare meeting notes",
@@ -3204,7 +3442,9 @@
     "return_main": "Main window",
     "routine_short": "ルーティン",
     "save_failed": "Could not save. Please try again.",
+    "save_failed_named": "保存できませんでした。もう一度お試しください：「{name}」",
     "saved_status": "Work status saved.",
+    "saved_status_named": "{status}として保存しました：「{name}」",
     "scale_tooltip_value": "スケール: {value}%",
     "schedule_title": "スケジュール",
     "schedule_type": "スケジュール",
@@ -3248,7 +3488,10 @@
     "tomorrow": "明日",
     "undo": "Undo",
     "undone": "Previous status restored.",
+    "undone_named": "以前の状態に戻しました：「{name}」",
     "untitled": "無題",
+    "user_layouts": "自分の配置",
+    "user_layouts_empty": "保存した配置はありません。構成エディターでプリセットを保存してください。",
     "week_toggle": "Week",
     "week_toggle_help": "Show or collapse the week strip",
     "widget_hint_actions": "日をタップして再フォーカス",

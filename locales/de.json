@@ -127,7 +127,15 @@
     "sync_hint": "Google-Sync",
     "today": "Heute",
     "today_hint": "Zum heutigen Datum",
-    "weekdays": ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    "weekdays": [
+      "Mo",
+      "Di",
+      "Mi",
+      "Do",
+      "Fr",
+      "Sa",
+      "So"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Hinzufügen",
@@ -1558,7 +1566,13 @@
     "hint_record_jump": "Enter öffnet den Eintrag. Shift+Enter springt zum Datum.",
     "hint_run_command": "Enter führt den ausgewählten Befehl aus",
     "kw": {
-      "theme": ["Thema", "Dunkel", "Hell", "Farbe", "Erscheinungsbild"]
+      "theme": [
+        "Thema",
+        "Dunkel",
+        "Hell",
+        "Farbe",
+        "Erscheinungsbild"
+      ]
     },
     "nlp_preview": "Neu: [{title}] - {date} {time}",
     "no_selection": "Drücken Sie die Eingabetaste, um das ausgewählte Ergebnis zu öffnen",
@@ -1811,223 +1825,359 @@
         "description": "Startet sofort den Abwesenheitssperr-Modus.",
         "label": "Abwesenheitssperre",
         "menu_path": "Ansicht > Abwesenheitssperre",
-        "tags": ["abwesend", "sperren"]
+        "tags": [
+          "abwesend",
+          "sperren"
+        ]
       },
       "cal_toolbar": {
         "description": "Blendet die Kalender-Symbolleiste ein oder aus.",
         "label": "Kalender-Symbolleiste umschalten",
         "menu_path": "Ansicht > Kalender-Symbolleiste",
-        "tags": ["Kalender", "Symbolleiste"]
+        "tags": [
+          "Kalender",
+          "Symbolleiste"
+        ]
       },
       "calendar_print": {
         "description": "Zeigt eine Vorschau und druckt den Kalender für den aktuellen oder einen gewählten Zeitraum.",
         "label": "Kalender drucken",
         "menu_path": "Kalender > Optionen > Drucken",
-        "tags": ["drucken", "Drucker", "PDF"]
+        "tags": [
+          "drucken",
+          "Drucker",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "Verwaltet Checklistenvorlagen und die Struktur der Einträge.",
         "label": "Checkliste verwalten",
         "menu_path": "Aufgaben > Checkliste verwalten",
-        "tags": ["Checkliste", "Vorlage"]
+        "tags": [
+          "Checkliste",
+          "Vorlage"
+        ]
       },
       "color_assign": {
         "description": "Weist den ausgewählten Elementen automatisch Farben zu.",
         "label": "Automatische Farbzuweisung",
         "menu_path": "Aufgaben > Automatische Farbzuweisung",
-        "tags": ["Farbe", "Tag", "automatisch"]
+        "tags": [
+          "Farbe",
+          "Tag",
+          "automatisch"
+        ]
       },
       "command_palette": {
         "description": "Öffnet das Suchfeld, um eine Funktion sofort zu finden.",
         "label": "Befehlspalette",
         "menu_path": "Direktaufruf",
-        "tags": ["Suche", "Befehl", "Palette"]
+        "tags": [
+          "Suche",
+          "Befehl",
+          "Palette"
+        ]
       },
       "delete": {
         "description": "Löscht den aktuell ausgewählten Termin oder das Element.",
         "label": "Ausgewähltes Element löschen",
         "menu_path": "Auswahlstatus",
-        "tags": ["löschen", "entfernen"]
+        "tags": [
+          "löschen",
+          "entfernen"
+        ]
       },
       "escape": {
         "description": "Hebt die aktuelle Auswahl oder den Fokus auf.",
         "label": "Auswahl aufheben",
         "menu_path": "Auswahlstatus",
-        "tags": ["Auswahl aufheben", "abbrechen", "Escape"]
+        "tags": [
+          "Auswahl aufheben",
+          "abbrechen",
+          "Escape"
+        ]
       },
       "focus_mode": {
         "description": "Schaltet den Fokusmodus ein oder aus.",
         "label": "Fokusmodus umschalten",
         "menu_path": "Ansicht > Fokusmodus",
-        "tags": ["Fokus", "Pomodoro"]
+        "tags": [
+          "Fokus",
+          "Pomodoro"
+        ]
       },
       "focus_pause": {
         "description": "Pausiert oder setzt die aktuelle Fokussitzung fort.",
         "label": "Fokus pausieren",
         "menu_path": "Fokusmodus",
-        "tags": ["Fokus", "Pause"]
+        "tags": [
+          "Fokus",
+          "Pause"
+        ]
       },
       "force_unlock": {
         "description": "Hebt einen unerwarteten Sperrzustand zwangsweise auf.",
         "label": "Sperre erzwungen aufheben",
         "menu_path": "Notfallwiederherstellung",
-        "tags": ["erzwingen", "entsperren", "Wiederherstellung", "Notfall"]
+        "tags": [
+          "erzwingen",
+          "entsperren",
+          "Wiederherstellung",
+          "Notfall"
+        ]
       },
       "fullscreen": {
         "description": "Schaltet die Vollbildanzeige ein oder aus.",
         "label": "Vollbild umschalten",
         "menu_path": "Ansicht > Vollbild",
-        "tags": ["Vollbild"]
+        "tags": [
+          "Vollbild"
+        ]
       },
       "help": {
         "description": "Öffnet das Hilfezentrum.",
         "label": "Tastenkombinationen-Übersicht",
         "menu_path": "System > Tastenkombinationen-Übersicht",
-        "tags": ["Hilfe", "F1"]
+        "tags": [
+          "Hilfe",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "Wendet das standardmäßige 4-Felder-Layout an.",
         "label": "Layout-Voreinstellung 1",
         "menu_path": "Ansicht > Layout-Voreinstellungen",
-        "tags": ["Layout", "Voreinstellung", "angedockt", "1"]
+        "tags": [
+          "Layout",
+          "Voreinstellung",
+          "angedockt",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "Wendet ein kalenderorientiertes Layout an.",
         "label": "Layout-Voreinstellung 2",
         "menu_path": "Ansicht > Layout-Voreinstellungen",
-        "tags": ["Layout", "Kalender", "2"]
+        "tags": [
+          "Layout",
+          "Kalender",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "Wendet ein aufgabenorientiertes Layout an.",
         "label": "Layout-Voreinstellung 3",
         "menu_path": "Ansicht > Layout-Voreinstellungen",
-        "tags": ["Layout", "Aufgabe", "3"]
+        "tags": [
+          "Layout",
+          "Aufgabe",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "Wendet ein Layout mit geteilten Tabs an.",
         "label": "Layout-Voreinstellung 4",
         "menu_path": "Ansicht > Layout-Voreinstellungen",
-        "tags": ["Layout", "Tab", "geteilt", "4"]
+        "tags": [
+          "Layout",
+          "Tab",
+          "geteilt",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "Wendet ein vollständig getrenntes, frei schwebendes Layout an.",
         "label": "Layout-Voreinstellung 5",
         "menu_path": "Ansicht > Layout-Voreinstellungen",
-        "tags": ["Layout", "getrennt", "schwebend", "5"]
+        "tags": [
+          "Layout",
+          "getrennt",
+          "schwebend",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "Schaltet den Desktop-Sperrmodus ein oder aus.",
         "label": "Sperrmodus",
         "menu_path": "Ansicht > Sperrmodus",
-        "tags": ["sperren"]
+        "tags": [
+          "sperren"
+        ]
       },
       "magnet_mode": {
         "description": "Schaltet den Magnetmodus um, der beim Ausrichten und Einrasten von Feldern hilft.",
         "label": "Magnetmodus",
         "menu_path": "Ansicht > Magnetmodus",
-        "tags": ["Magnet", "Feld"]
+        "tags": [
+          "Magnet",
+          "Feld"
+        ]
       },
       "monitor_left": {
         "description": "Verschiebt das Fenster auf einen anderen Monitor.",
         "label": "Zum vorherigen Monitor verschieben",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Monitor", "Bildschirm", "links"]
+        "tags": [
+          "Monitor",
+          "Bildschirm",
+          "links"
+        ]
       },
       "monitor_right": {
         "description": "Verschiebt das Fenster auf einen anderen Monitor.",
         "label": "Zum nächsten Monitor verschieben",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Monitor", "Bildschirm", "rechts"]
+        "tags": [
+          "Monitor",
+          "Bildschirm",
+          "rechts"
+        ]
       },
       "new_directive": {
         "description": "Öffnet das Fenster zur Eingabe einer Anweisung oder eines Kooperationspunkts.",
         "label": "Anweisung registrieren",
         "menu_path": "Registrieren > Anweisung",
-        "tags": ["Anweisung", "Kooperation"]
+        "tags": [
+          "Anweisung",
+          "Kooperation"
+        ]
       },
       "new_routine": {
         "description": "Fügt schnell eine wiederkehrende Aufgabenroutine hinzu.",
         "label": "Routine registrieren",
         "menu_path": "Registrieren > Routine",
-        "tags": ["Routine", "Aufgabe", "wiederkehrend"]
+        "tags": [
+          "Routine",
+          "Aufgabe",
+          "wiederkehrend"
+        ]
       },
       "new_schedule": {
         "description": "Öffnet direkt das Fenster zur Termineingabe.",
         "label": "Neuen Termin hinzufügen",
         "menu_path": "Registrieren > Neuer Termin",
-        "tags": ["Termin", "hinzufügen", "registrieren"]
+        "tags": [
+          "Termin",
+          "hinzufügen",
+          "registrieren"
+        ]
       },
       "next_day": {
         "description": "Bewegt sich einen Tag nach dem aktuellen Datum.",
         "label": "Nächster Tag",
         "menu_path": "Navigation",
-        "tags": ["weiter", "Datum", "rechts"]
+        "tags": [
+          "weiter",
+          "Datum",
+          "rechts"
+        ]
       },
       "opacity_down": {
         "description": "Verringert die Fensterdeckkraft.",
         "label": "Deckkraft verringern",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Deckkraft", "dunkler"]
+        "tags": [
+          "Deckkraft",
+          "dunkler"
+        ]
       },
       "opacity_up": {
         "description": "Erhöht die Fensterdeckkraft.",
         "label": "Deckkraft erhöhen",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Deckkraft", "heller"]
+        "tags": [
+          "Deckkraft",
+          "heller"
+        ]
       },
       "prev_day": {
         "description": "Bewegt sich einen Tag vor das aktuelle Datum.",
         "label": "Vorheriger Tag",
         "menu_path": "Navigation",
-        "tags": ["zurück", "Datum", "links"]
+        "tags": [
+          "zurück",
+          "Datum",
+          "links"
+        ]
       },
       "restore_pos": {
         "description": "Stellt das Fenster an einer sicheren Bildschirmposition wieder her.",
         "label": "Fensterposition wiederherstellen",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Fenster", "wiederherstellen", "Position"]
+        "tags": [
+          "Fenster",
+          "wiederherstellen",
+          "Position"
+        ]
       },
       "routine_mgr": {
         "description": "Öffnet direkt den Tab des Routinen-Managers.",
         "label": "Routinen-Manager",
         "menu_path": "Aufgaben > Routinenübersicht",
-        "tags": ["Routine", "verwalten"]
+        "tags": [
+          "Routine",
+          "verwalten"
+        ]
       },
       "save_layout": {
         "description": "Speichert die aktuelle Feldanordnung als Voreinstellung.",
         "label": "Aktuelles Layout speichern",
         "menu_path": "Ansicht > Layout-Voreinstellungen > Speichern",
-        "tags": ["Layout", "Voreinstellung", "speichern"]
+        "tags": [
+          "Layout",
+          "Voreinstellung",
+          "speichern"
+        ]
       },
       "show_hide": {
         "description": "Blendet das Hauptfenster aus oder wieder ein.",
         "label": "Fenster ein-/ausblenden",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Fenster", "ausblenden", "einblenden", "Overlay"]
+        "tags": [
+          "Fenster",
+          "ausblenden",
+          "einblenden",
+          "Overlay"
+        ]
       },
       "sync_gcal": {
         "description": "Startet sofort eine Google-Kalender-Synchronisierung.",
         "label": "Google Kalender synchronisieren",
         "menu_path": "System > Kalender und Synchronisierung",
-        "tags": ["Google", "Synchronisierung", "Kalender", "F5"]
+        "tags": [
+          "Google",
+          "Synchronisierung",
+          "Kalender",
+          "F5"
+        ]
       },
       "today": {
         "description": "Bewegt das ausgewählte Datum sofort auf heute.",
         "label": "Zu heute springen",
         "menu_path": "Navigation",
-        "tags": ["heute", "Datum"]
+        "tags": [
+          "heute",
+          "Datum"
+        ]
       },
       "topbar": {
         "description": "Schaltet die Sichtbarkeit der oberen Menüleiste um.",
         "label": "Oberleiste umschalten",
         "menu_path": "Ansicht > Oberleiste",
-        "tags": ["Menüleiste", "Oberleiste", "Wiederherstellung"]
+        "tags": [
+          "Menüleiste",
+          "Oberleiste",
+          "Wiederherstellung"
+        ]
       },
       "widget_mode": {
         "description": "Öffnet den reinen Widget-Feldmodus.",
         "label": "Widget-Modus umschalten",
         "menu_path": "Ansicht > Nur-Widget-Modus",
-        "tags": ["Widget", "Feld"]
+        "tags": [
+          "Widget",
+          "Feld"
+        ]
       }
     },
     "groups": {
@@ -3092,9 +3242,16 @@
     "all_layouts": "Show all layouts",
     "back_to_main": "Zurück zum Kalender",
     "background_opacity": "Background opacity",
+    "calendar_collapse": "Kalender ausblenden",
+    "calendar_expand": "Kalender anzeigen",
+    "calendar_visibility_help": "Kalender für das gewählte Layout anzeigen oder ausblenden. Andere Layouts behalten ihre Einstellungen.",
     "close": "Widget schließen",
     "color_picker": "Widget-Akzentfarbe wählen",
     "complete_named": "Change completion: {name}",
+    "completed_excluded": "Nur offene",
+    "completed_included": "Erledigte einschließen",
+    "context_summary": "{date} · {filter} · {completed} · {count}/{total} Einträge",
+    "customization_intro": "Layout, Darstellung und sichtbare Elemente ändern und in der Vorschau prüfen. Das Widget bleibt bis zum Anwenden unverändert.",
     "customize": "Customize",
     "density": "List density",
     "density_comfortable": "Comfortable",
@@ -3116,6 +3273,7 @@
     "editor_title": "Widget-Stil erstellen",
     "editor_width": "Standardbreite",
     "empty_directive_filter": "No directives for this date.",
+    "empty_filter_context": "Keine Einträge dieses Typs. Andere Typen haben {count} Einträge.",
     "empty_panel": "Keine Einträge für dieses Datum.",
     "empty_schedule": "Kein Termin",
     "empty_schedule_filter": "Keine Termine für dieses Datum.",
@@ -3136,6 +3294,65 @@
     "font_size": "Text size",
     "font_size_help": "Scales dates, controls, calendar, and list text together.",
     "font_weight": "Title weight",
+    "free_align": "Ausrichten",
+    "free_align_bottom": "Unten",
+    "free_align_center_x": "Horizontal zentrieren",
+    "free_align_center_y": "Vertikal zentrieren",
+    "free_align_left": "Links",
+    "free_align_right": "Rechts",
+    "free_align_top": "Oben",
+    "free_back": "Ganz nach hinten",
+    "free_block_agenda": "Gesamtliste",
+    "free_block_calendar": "Kalender",
+    "free_block_clock": "Uhr",
+    "free_block_date": "Datum",
+    "free_block_filters": "Filter der Gesamtliste",
+    "free_current_items": "Einträge des aktuellen Widgets",
+    "free_distribute_x": "Horizontal verteilen",
+    "free_distribute_y": "Vertikal verteilen",
+    "free_editor_help": "Strg/Umschalt+Klick: Mehrfachauswahl · Entf: ausblenden · Alt: Einrasten deaktivieren",
+    "free_editor_intro": "Prüfen Sie das Layout mit Beispielterminen. Wählen Sie mit Strg oder Umschalt mehrere Elemente aus und ändern Sie ihre Größe an Ecken und Kanten.",
+    "free_example_items": "Beispieltermine",
+    "free_export": "Exportieren…",
+    "free_file_error": "Die Layoutdatei konnte nicht verarbeitet werden.",
+    "free_file_filter": "Widget-Layout (*.airlayout.json *.json)",
+    "free_filter_heading": "Filter der Gesamtliste",
+    "free_fit": "Ansicht einpassen",
+    "free_front": "Ganz nach vorne",
+    "free_guides": "An Elementen einrasten",
+    "free_import": "Importieren…",
+    "free_layer": "Elementreihenfolge und Sperren",
+    "free_layout_calendar_mode": "Kalenderansicht",
+    "free_layout_canvas_height": "Höhe der Arbeitsfläche",
+    "free_layout_canvas_width": "Breite der Arbeitsfläche",
+    "free_layout_components": "Elemente",
+    "free_layout_edit": "Anordnung bearbeiten…",
+    "free_layout_empty": "Wählen Sie links ein Element aus.",
+    "free_layout_height": "Höhe",
+    "free_layout_intro": "Wählen Sie ein Element und ziehen Sie es an die gewünschte Position. Ändern Sie die Größe am Griff unten rechts. Dies ist ein Beispiel; das aktuelle Widget ändert sich erst beim Anwenden.",
+    "free_layout_redo": "Wiederholen",
+    "free_layout_reset": "Mit Vorlage neu beginnen",
+    "free_layout_snap": "Am Raster ausrichten",
+    "free_layout_snap_help": "Ausrichtung an einem 8-Pixel-Raster. Mit Alt frei verschieben oder skalieren. Pfeiltasten bewegen um 1 Pixel, Umschalt+Pfeiltaste um 10 Pixel.",
+    "free_layout_title": "Widget-Anordnung bearbeiten",
+    "free_layout_transition_help": "Verwerfen Sie den aktuellen Entwurf und öffnen Sie den Anordnungseditor.",
+    "free_layout_undo": "Rückgängig",
+    "free_layout_width": "Breite",
+    "free_layout_x": "Horizontale Position",
+    "free_layout_y": "Vertikale Position",
+    "free_live_preview": "Vorschau",
+    "free_lock": "Sperren",
+    "free_locked_count": "{count} gesperrt",
+    "free_multi_selected": "{count} ausgewählt",
+    "free_overlap": "{count} Überlappungen · Passen Sie die Elementreihenfolge an.",
+    "free_preview": "Vorschau mit Beispielterminen",
+    "free_status": "{visible} sichtbar · {width} × {height}px",
+    "free_tab_canvas": "Arbeitsfläche",
+    "free_tab_geometry": "Position und Größe",
+    "free_toggle_component": "{name} anzeigen",
+    "free_unlock": "Entsperren",
+    "free_wysiwyg_intro": "Wählen Sie Elemente direkt im Widget aus, um sie zu verschieben und ihre Größe und Gestaltung zu ändern. Ihr aktuelles Widget bleibt bis zum Anwenden unverändert.",
+    "free_zoom": "Zoom",
     "header_caption": "Termine und Arbeit des ausgewählten Tages",
     "hero_eyebrow": "Fokus-Widget",
     "hide_calendar": "Kalender ausblenden",
@@ -3155,6 +3372,7 @@
     "menu_always_top": "Immer im Vordergrund",
     "menu_complete_directive": "Als erledigt markieren",
     "menu_complete_task": "Als erledigt markieren",
+    "menu_date": "Datumsnavigation",
     "menu_delete_directive": "Löschen",
     "menu_delete_task": "Löschen",
     "menu_edit_directive": "Bearbeiten / Öffnen",
@@ -3167,6 +3385,9 @@
     "menu_refresh": "Aktualisieren",
     "menu_reopen": "Reopen",
     "menu_reserve_space": "Bildschirmplatz reservieren",
+    "menu_view": "Ansichtseinstellungen",
+    "menu_window": "Fensterverwaltung",
+    "menu_work": "Aufgabenverwaltung",
     "month_calendar": "Choose a date from the month",
     "month_next": "Nächster Monat",
     "month_prev": "Vorheriger Monat",
@@ -3186,7 +3407,24 @@
     "preferences_appearance": "Appearance",
     "preferences_layout": "Layout",
     "preferences_visibility": "Visibility",
+    "preset_builtin": "Integrierte Layouts",
+    "preset_custom": "Benutzerdefiniertes Layout",
+    "preset_delete": "Löschen",
+    "preset_delete_confirm": "Layout „{name}“ löschen?",
+    "preset_draft_note": "Auch Änderungen an Vorlagen werden erst beim Anwenden gespeichert.",
+    "preset_edit": "Layout bearbeiten…",
+    "preset_error": "Das Layout konnte nicht gespeichert werden.",
+    "preset_invalid_name": "Namen müssen 1–80 Zeichen lang und eindeutig sein.",
+    "preset_loaded": "Geladenes Layout: {name}",
+    "preset_modified": "Geändertes Layout",
+    "preset_name": "Layoutname",
+    "preset_rename": "Umbenennen…",
+    "preset_save_as": "Als neue Vorlage speichern…",
+    "preset_saved": "Neues Layout",
+    "preset_select": "Gespeichertes Layout auswählen",
+    "preset_update": "Ausgewählte Vorlage überschreiben",
     "preview": "Preview · Sample agenda",
+    "preview_directive": "Rückmeldung zur Prüfung teilen",
     "preview_note": "Apply saves your changes. Cancel keeps your previous settings.",
     "preview_schedule": "Project meeting",
     "preview_work": "Prepare meeting notes",
@@ -3204,7 +3442,9 @@
     "return_main": "Main window",
     "routine_short": "Routine",
     "save_failed": "Could not save. Please try again.",
+    "save_failed_named": "Speichern fehlgeschlagen. Bitte erneut versuchen: „{name}“.",
     "saved_status": "Work status saved.",
+    "saved_status_named": "Als {status} gespeichert: „{name}“.",
     "scale_tooltip_value": "Skalierung: {value} %",
     "schedule_title": "Termine",
     "schedule_type": "Termine",
@@ -3248,7 +3488,10 @@
     "tomorrow": "Morgen",
     "undo": "Undo",
     "undone": "Previous status restored.",
+    "undone_named": "Vorherigen Status wiederhergestellt: „{name}“.",
     "untitled": "Ohne Titel",
+    "user_layouts": "Meine Layouts",
+    "user_layouts_empty": "Keine gespeicherten Layouts. Speichern Sie im Layouteditor eine Vorlage.",
     "week_toggle": "Week",
     "week_toggle_help": "Show or collapse the week strip",
     "widget_hint_actions": "Auf einen Tag tippen, um neu zu fokussieren",

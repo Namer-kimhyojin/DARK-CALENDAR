@@ -165,7 +165,7 @@ class WidgetModeSkinTests(unittest.TestCase):
             skin.token_overrides["accent"] = "#111111"
 
     def test_user_skin_and_layout_are_persisted_and_reloadable(self):
-        with tempfile.TemporaryDirectory(dir=Path.cwd() / "tmp") as temp_dir:
+        with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "widget_styles.json"
             skin = create_user_widget_skin(
                 "Ocean Custom", base_theme="dark", accent="#336699", path=path

@@ -280,21 +280,21 @@ def test_board_layout_content_is_opposite_the_calendar(
     assert positions["agenda"][1] == content_column
 
 
-def test_week_dates_use_modern_card_states_instead_of_capsules(workspace):
+def test_week_dates_keep_native_interaction_with_distinct_weekday_and_number(workspace):
     host, coordinator, widget = workspace
     coordinator.controller.set_layout("stacked")
     widget.cal_grid.update_grid(host.current_date)
 
     states = [button.property("dateState") for button in widget.cal_grid._buttons]
     selected = widget.cal_grid._buttons[states.index("selected")]
-    stylesheet = selected.styleSheet()
-
-    assert "border-radius: 8px" in stylesheet
-    assert "border-bottom: 3px" in stylesheet
-    assert "qlineargradient" in stylesheet
-    assert "QToolButton:hover" in stylesheet
-    assert "QToolButton:focus" in stylesheet
-    assert "border-radius: 14px" not in stylesheet
+    assert selected._number == str(host.current_date.day())
+    assert selected._weekday
+    assert selected._selected
+    assert selected.accessibleName() == selected.toolTip()
+    assert selected.accessibleName()
+    target = widget.cal_grid._dates[0]
+    widget.cal_grid._buttons[0].click()
+    assert host.current_date == target
 
 
 def test_customize_icon_has_an_uncropped_dedicated_size(workspace):

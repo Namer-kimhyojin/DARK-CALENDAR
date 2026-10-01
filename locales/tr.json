@@ -127,7 +127,15 @@
     "sync_hint": "Senkronizasyon",
     "today": "Bugün",
     "today_hint": "Bugüne git",
-    "weekdays": ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]
+    "weekdays": [
+      "Pzt",
+      "Sal",
+      "Çar",
+      "Per",
+      "Cum",
+      "Cmt",
+      "Paz"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Öğe Ekle",
@@ -1558,7 +1566,13 @@
     "hint_record_jump": "Enter öğeyi açar. Shift+Enter tarihine gider.",
     "hint_run_command": "Enter seçilen komutu çalıştırır",
     "kw": {
-      "theme": ["tema", "dark", "light", "renk", "appearance"]
+      "theme": [
+        "tema",
+        "dark",
+        "light",
+        "renk",
+        "appearance"
+      ]
     },
     "nlp_preview": "Yeni: [{title}] - {date} {time}",
     "no_selection": "Seçilen sonucu açmak için Enter'a basın",
@@ -1811,223 +1825,359 @@
         "description": "Uzakta kilit modunu hemen başlatır.",
         "label": "Uzakta kilidi",
         "menu_path": "Görünüm > Uzakta kilidi",
-        "tags": ["uzakta", "kilit"]
+        "tags": [
+          "uzakta",
+          "kilit"
+        ]
       },
       "cal_toolbar": {
         "description": "Takvim araç çubuğunu gizler veya tekrar gösterir.",
         "label": "Takvim araç çubuğunu değiştir",
         "menu_path": "Görünüm > Takvim araç çubuğu",
-        "tags": ["takvim", "araç çubuğu"]
+        "tags": [
+          "takvim",
+          "araç çubuğu"
+        ]
       },
       "calendar_print": {
         "description": "Geçerli veya seçilen dönem için takvimi önizler ve yazdırır.",
         "label": "Takvimi yazdır",
         "menu_path": "Takvim > Seçenekler > Yazdır",
-        "tags": ["yazdır", "yazıcı", "PDF"]
+        "tags": [
+          "yazdır",
+          "yazıcı",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "Kontrol listesi şablonlarını ve öğe yapısını yönetir.",
         "label": "Kontrol listesini yönet",
         "menu_path": "Görevler > Kontrol listesini yönet",
-        "tags": ["kontrol listesi", "şablon"]
+        "tags": [
+          "kontrol listesi",
+          "şablon"
+        ]
       },
       "color_assign": {
         "description": "Seçilen öğelere otomatik olarak renk atar.",
         "label": "Otomatik renk ataması",
         "menu_path": "Görevler > Otomatik renk ataması",
-        "tags": ["renk", "etiket", "otomatik"]
+        "tags": [
+          "renk",
+          "etiket",
+          "otomatik"
+        ]
       },
       "command_palette": {
         "description": "Bir özelliği anında bulmak için komut arama kutusunu açar.",
         "label": "Komut paleti",
         "menu_path": "Doğrudan çağrı",
-        "tags": ["arama", "komut", "palet"]
+        "tags": [
+          "arama",
+          "komut",
+          "palet"
+        ]
       },
       "delete": {
         "description": "Şu anda seçili olan etkinliği veya öğeyi siler.",
         "label": "Seçili öğeyi sil",
         "menu_path": "Seçim durumu",
-        "tags": ["sil", "kaldır"]
+        "tags": [
+          "sil",
+          "kaldır"
+        ]
       },
       "escape": {
         "description": "Geçerli seçimi veya odağı temizler.",
         "label": "Seçimi temizle",
         "menu_path": "Seçim durumu",
-        "tags": ["seçimi kaldır", "iptal", "escape"]
+        "tags": [
+          "seçimi kaldır",
+          "iptal",
+          "escape"
+        ]
       },
       "focus_mode": {
         "description": "Odak modunu açar veya kapatır.",
         "label": "Odak modunu değiştir",
         "menu_path": "Görünüm > Odak modu",
-        "tags": ["odak", "pomodoro"]
+        "tags": [
+          "odak",
+          "pomodoro"
+        ]
       },
       "focus_pause": {
         "description": "Geçerli odak oturumunu duraklatır veya sürdürür.",
         "label": "Odağı duraklat",
         "menu_path": "Odak modu",
-        "tags": ["odak", "duraklat"]
+        "tags": [
+          "odak",
+          "duraklat"
+        ]
       },
       "force_unlock": {
         "description": "Beklenmeyen bir kilit durumunu zorla temizler.",
         "label": "Kilidi zorla aç",
         "menu_path": "Acil durum kurtarma",
-        "tags": ["zorla", "kilidi aç", "kurtarma", "acil durum"]
+        "tags": [
+          "zorla",
+          "kilidi aç",
+          "kurtarma",
+          "acil durum"
+        ]
       },
       "fullscreen": {
         "description": "Tam ekran görünümünü açar veya kapatır.",
         "label": "Tam ekranı değiştir",
         "menu_path": "Görünüm > Tam ekran",
-        "tags": ["tam ekran"]
+        "tags": [
+          "tam ekran"
+        ]
       },
       "help": {
         "description": "Yardım merkezini açar.",
         "label": "Kısayol kılavuzu",
         "menu_path": "Sistem > Kısayol kılavuzu",
-        "tags": ["yardım", "F1"]
+        "tags": [
+          "yardım",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "Varsayılan 4 panelli sabit düzeni uygular.",
         "label": "Düzen ön ayarı 1",
         "menu_path": "Görünüm > Düzen ön ayarları",
-        "tags": ["düzen", "ön ayar", "sabit", "1"]
+        "tags": [
+          "düzen",
+          "ön ayar",
+          "sabit",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "Takvim odaklı bir düzen uygular.",
         "label": "Düzen ön ayarı 2",
         "menu_path": "Görünüm > Düzen ön ayarları",
-        "tags": ["düzen", "takvim", "2"]
+        "tags": [
+          "düzen",
+          "takvim",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "Görev odaklı bir düzen uygular.",
         "label": "Düzen ön ayarı 3",
         "menu_path": "Görünüm > Düzen ön ayarları",
-        "tags": ["düzen", "görev", "3"]
+        "tags": [
+          "düzen",
+          "görev",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "Bölünmüş sekme düzeni uygular.",
         "label": "Düzen ön ayarı 4",
         "menu_path": "Görünüm > Düzen ön ayarları",
-        "tags": ["düzen", "sekme", "bölünmüş", "4"]
+        "tags": [
+          "düzen",
+          "sekme",
+          "bölünmüş",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "Tamamen ayrılmış, yüzen bir düzen uygular.",
         "label": "Düzen ön ayarı 5",
         "menu_path": "Görünüm > Düzen ön ayarları",
-        "tags": ["düzen", "ayrılmış", "yüzen", "5"]
+        "tags": [
+          "düzen",
+          "ayrılmış",
+          "yüzen",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "Masaüstü kilit modunu açar veya kapatır.",
         "label": "Kilit modu",
         "menu_path": "Görünüm > Kilit modu",
-        "tags": ["kilit"]
+        "tags": [
+          "kilit"
+        ]
       },
       "magnet_mode": {
         "description": "Panellerin hizalanmasına ve yapışmasına yardımcı olan mıknatıs modunu değiştirir.",
         "label": "Mıknatıs modu",
         "menu_path": "Görünüm > Mıknatıs modu",
-        "tags": ["mıknatıs", "panel"]
+        "tags": [
+          "mıknatıs",
+          "panel"
+        ]
       },
       "monitor_left": {
         "description": "Pencereyi başka bir monitöre taşır.",
         "label": "Önceki monitöre taşı",
         "menu_path": "Pencere kontrolü",
-        "tags": ["monitör", "ekran", "sol"]
+        "tags": [
+          "monitör",
+          "ekran",
+          "sol"
+        ]
       },
       "monitor_right": {
         "description": "Pencereyi başka bir monitöre taşır.",
         "label": "Sonraki monitöre taşı",
         "menu_path": "Pencere kontrolü",
-        "tags": ["monitör", "ekran", "sağ"]
+        "tags": [
+          "monitör",
+          "ekran",
+          "sağ"
+        ]
       },
       "new_directive": {
         "description": "Bir direktif veya iş birliği öğesi girmek için pencereyi açar.",
         "label": "Direktif kaydet",
         "menu_path": "Kaydet > Direktif",
-        "tags": ["direktif", "iş birliği"]
+        "tags": [
+          "direktif",
+          "iş birliği"
+        ]
       },
       "new_routine": {
         "description": "Tekrarlayan bir görev rutinini hızlıca ekler.",
         "label": "Rutin kaydet",
         "menu_path": "Kaydet > Rutin",
-        "tags": ["rutin", "görev", "tekrarlayan"]
+        "tags": [
+          "rutin",
+          "görev",
+          "tekrarlayan"
+        ]
       },
       "new_schedule": {
         "description": "Etkinlik giriş penceresini doğrudan açar.",
         "label": "Yeni etkinlik ekle",
         "menu_path": "Kaydet > Yeni etkinlik",
-        "tags": ["etkinlik", "ekle", "kaydet"]
+        "tags": [
+          "etkinlik",
+          "ekle",
+          "kaydet"
+        ]
       },
       "next_day": {
         "description": "Geçerli tarihten bir gün sonraya gider.",
         "label": "Sonraki gün",
         "menu_path": "Gezinme",
-        "tags": ["sonraki", "tarih", "sağ"]
+        "tags": [
+          "sonraki",
+          "tarih",
+          "sağ"
+        ]
       },
       "opacity_down": {
         "description": "Pencere saydamlığını azaltır.",
         "label": "Saydamlığı azalt",
         "menu_path": "Pencere kontrolü",
-        "tags": ["saydamlık", "daha koyu"]
+        "tags": [
+          "saydamlık",
+          "daha koyu"
+        ]
       },
       "opacity_up": {
         "description": "Pencere saydamlığını artırır.",
         "label": "Saydamlığı artır",
         "menu_path": "Pencere kontrolü",
-        "tags": ["saydamlık", "daha açık"]
+        "tags": [
+          "saydamlık",
+          "daha açık"
+        ]
       },
       "prev_day": {
         "description": "Geçerli tarihten bir gün önceye gider.",
         "label": "Önceki gün",
         "menu_path": "Gezinme",
-        "tags": ["önceki", "tarih", "sol"]
+        "tags": [
+          "önceki",
+          "tarih",
+          "sol"
+        ]
       },
       "restore_pos": {
         "description": "Pencereyi ekranda güvenli bir konuma geri yükler.",
         "label": "Pencere konumunu geri yükle",
         "menu_path": "Pencere kontrolü",
-        "tags": ["pencere", "geri yükle", "konum"]
+        "tags": [
+          "pencere",
+          "geri yükle",
+          "konum"
+        ]
       },
       "routine_mgr": {
         "description": "Rutin yöneticisi sekmesini doğrudan açar.",
         "label": "Rutin yöneticisi",
         "menu_path": "Görevler > Rutin genel bakış",
-        "tags": ["rutin", "yönet"]
+        "tags": [
+          "rutin",
+          "yönet"
+        ]
       },
       "save_layout": {
         "description": "Geçerli panel düzenini ön ayar olarak kaydeder.",
         "label": "Geçerli düzeni kaydet",
         "menu_path": "Görünüm > Düzen ön ayarları > Kaydet",
-        "tags": ["düzen", "ön ayar", "kaydet"]
+        "tags": [
+          "düzen",
+          "ön ayar",
+          "kaydet"
+        ]
       },
       "show_hide": {
         "description": "Ana pencereyi gizler veya tekrar gösterir.",
         "label": "Pencereyi göster/gizle",
         "menu_path": "Pencere kontrolü",
-        "tags": ["pencere", "gizle", "göster", "kaplama"]
+        "tags": [
+          "pencere",
+          "gizle",
+          "göster",
+          "kaplama"
+        ]
       },
       "sync_gcal": {
         "description": "Google Takvim ile senkronizasyonu hemen başlatır.",
         "label": "Google Takvim'i senkronize et",
         "menu_path": "Sistem > Takvim ve senkronizasyon",
-        "tags": ["google", "senkronizasyon", "takvim", "F5"]
+        "tags": [
+          "google",
+          "senkronizasyon",
+          "takvim",
+          "F5"
+        ]
       },
       "today": {
         "description": "Seçili tarihi anında bugüne taşır.",
         "label": "Bugüne git",
         "menu_path": "Gezinme",
-        "tags": ["bugün", "tarih"]
+        "tags": [
+          "bugün",
+          "tarih"
+        ]
       },
       "topbar": {
         "description": "Üst menü çubuğunun görünürlüğünü değiştirir.",
         "label": "Üst çubuğu değiştir",
         "menu_path": "Görünüm > Üst çubuk",
-        "tags": ["menü çubuğu", "üst çubuk", "kurtarma"]
+        "tags": [
+          "menü çubuğu",
+          "üst çubuk",
+          "kurtarma"
+        ]
       },
       "widget_mode": {
         "description": "Yalnızca widget panel modunu açar.",
         "label": "Widget modunu değiştir",
         "menu_path": "Görünüm > Yalnızca widget modu",
-        "tags": ["widget", "panel"]
+        "tags": [
+          "widget",
+          "panel"
+        ]
       }
     },
     "groups": {
@@ -3092,9 +3242,16 @@
     "all_layouts": "Show all layouts",
     "back_to_main": "Takvime dön",
     "background_opacity": "Background opacity",
+    "calendar_collapse": "Takvimi gizle",
+    "calendar_expand": "Takvimi göster",
+    "calendar_visibility_help": "Seçili düzenin takvimini gösterir veya gizler. Diğer düzenlerin ayarları korunur.",
     "close": "Widget'ı Kapat",
     "color_picker": "Widget Vurgu Rengini Seçin",
     "complete_named": "Change completion: {name}",
+    "completed_excluded": "Yalnızca tamamlanmamış",
+    "completed_included": "Tamamlananları dahil et",
+    "context_summary": "{date} · {filter} · {completed} · {count}/{total} öğe",
+    "customization_intro": "Düzeni, görünümü ve görünen öğeleri değiştirip önizlemeyi kontrol edin. Uygulayana kadar widget değişmez.",
     "customize": "Customize",
     "density": "List density",
     "density_comfortable": "Comfortable",
@@ -3116,6 +3273,7 @@
     "editor_title": "Widget stili oluştur",
     "editor_width": "Varsayılan genişlik",
     "empty_directive_filter": "No directives for this date.",
+    "empty_filter_context": "Bu türde öğe yok. Diğer türlerde {count} öğe var.",
     "empty_panel": "Bu tarih için öğe yok.",
     "empty_schedule": "Program yok",
     "empty_schedule_filter": "Bu tarih için program yok.",
@@ -3136,6 +3294,65 @@
     "font_size": "Text size",
     "font_size_help": "Scales dates, controls, calendar, and list text together.",
     "font_weight": "Title weight",
+    "free_align": "Hizala",
+    "free_align_bottom": "Alt",
+    "free_align_center_x": "Yatay merkez",
+    "free_align_center_y": "Dikey merkez",
+    "free_align_left": "Sol",
+    "free_align_right": "Sağ",
+    "free_align_top": "Üst",
+    "free_back": "En arkaya gönder",
+    "free_block_agenda": "Birleşik liste",
+    "free_block_calendar": "Takvim",
+    "free_block_clock": "Saat",
+    "free_block_date": "Tarih",
+    "free_block_filters": "Birleşik liste filtreleri",
+    "free_current_items": "Mevcut widget öğeleri",
+    "free_distribute_x": "Yatay aralıkları eşitle",
+    "free_distribute_y": "Dikey aralıkları eşitle",
+    "free_editor_help": "Ctrl/Shift+tıklama: çoklu seçim · Delete: gizle · Alt: hizalamayı kapat",
+    "free_editor_intro": "Örnek etkinliklerle düzeni önizleyin. Ctrl veya Shift ile birden fazla öğe seçin; köşelerden ve kenarlardan boyutlarını değiştirin.",
+    "free_example_items": "Örnek etkinlikler",
+    "free_export": "Dışa aktar…",
+    "free_file_error": "Düzen dosyası işlenemedi.",
+    "free_file_filter": "Widget düzeni (*.airlayout.json *.json)",
+    "free_filter_heading": "Birleşik liste filtreleri",
+    "free_fit": "Görünüme sığdır",
+    "free_front": "En öne getir",
+    "free_guides": "Öğelere hizala",
+    "free_import": "İçe aktar…",
+    "free_layer": "Öğe sırası ve kilitler",
+    "free_layout_calendar_mode": "Takvim görünümü",
+    "free_layout_canvas_height": "Tuval yüksekliği",
+    "free_layout_canvas_width": "Tuval genişliği",
+    "free_layout_components": "Bileşenler",
+    "free_layout_edit": "Düzeni düzenle…",
+    "free_layout_empty": "Soldan bir bileşen seçin.",
+    "free_layout_height": "Yükseklik",
+    "free_layout_intro": "Bir bileşen seçip sürükleyerek taşıyın. Sağ alt tutamaçla boyutlandırın. Bu bir örnektir; mevcut widget yalnızca uyguladığınızda değişir.",
+    "free_layout_redo": "Yinele",
+    "free_layout_reset": "Ön ayardan başla",
+    "free_layout_snap": "Izgaraya hizala",
+    "free_layout_snap_help": "8 piksellik ızgaraya hizalayın. Serbest taşıma veya boyutlandırma için Alt tuşunu basılı tutun. Ok tuşları 1 piksel, Shift+Ok 10 piksel taşır.",
+    "free_layout_title": "Widget düzenini düzenle",
+    "free_layout_transition_help": "Mevcut görünüm taslağını iptal edip düzen düzenleyicisini açın.",
+    "free_layout_undo": "Geri al",
+    "free_layout_width": "Genişlik",
+    "free_layout_x": "Yatay konum",
+    "free_layout_y": "Dikey konum",
+    "free_live_preview": "Önizleme",
+    "free_lock": "Kilitle",
+    "free_locked_count": "{count} kilitli",
+    "free_multi_selected": "{count} seçili",
+    "free_overlap": "{count} örtüşme · Öğe sırasını düzenleyin.",
+    "free_preview": "Örnek etkinlik önizlemesi",
+    "free_status": "{visible} görünür · {width} × {height}px",
+    "free_tab_canvas": "Tuval",
+    "free_tab_geometry": "Konum ve boyut",
+    "free_toggle_component": "{name} göster",
+    "free_unlock": "Kilidi aç",
+    "free_wysiwyg_intro": "Öğeleri taşımak, boyutlarını ve görünümlerini değiştirmek için doğrudan widget içinde seçin. Değişiklikleri uygulayana kadar mevcut widget değişmez.",
+    "free_zoom": "Yakınlaştırma",
     "header_caption": "Seçilen günün gündemi ve çalışması",
     "hero_eyebrow": "Odak Widget'ı",
     "hide_calendar": "Takvimi Gizle",
@@ -3155,6 +3372,7 @@
     "menu_always_top": "Her zaman zirvede",
     "menu_complete_directive": "Tamamlandı Olarak İşaretle",
     "menu_complete_task": "Tamamlandı Olarak İşaretle",
+    "menu_date": "Tarih gezinmesi",
     "menu_delete_directive": "Sil",
     "menu_delete_task": "Sil",
     "menu_edit_directive": "Düzenle/Aç",
@@ -3167,6 +3385,9 @@
     "menu_refresh": "Yenile",
     "menu_reopen": "Reopen",
     "menu_reserve_space": "Ekran alanı ayır",
+    "menu_view": "Görünüm ayarları",
+    "menu_window": "Pencere yönetimi",
+    "menu_work": "İş yönetimi",
     "month_calendar": "Choose a date from the month",
     "month_next": "Gelecek Ay",
     "month_prev": "Önceki Ay",
@@ -3186,7 +3407,24 @@
     "preferences_appearance": "Appearance",
     "preferences_layout": "Layout",
     "preferences_visibility": "Visibility",
+    "preset_builtin": "Yerleşik düzenler",
+    "preset_custom": "Özel düzen",
+    "preset_delete": "Sil",
+    "preset_delete_confirm": "“{name}” düzeni silinsin mi?",
+    "preset_draft_note": "Ön ayar değişiklikleri de yalnızca uyguladığınızda kaydedilir.",
+    "preset_edit": "Düzeni düzenle…",
+    "preset_error": "Düzen kaydedilemedi.",
+    "preset_invalid_name": "Ad 1–80 karakter içermeli ve benzersiz olmalıdır.",
+    "preset_loaded": "Yüklenen düzen: {name}",
+    "preset_modified": "Değiştirilen düzen",
+    "preset_name": "Düzen adı",
+    "preset_rename": "Yeniden adlandır…",
+    "preset_save_as": "Yeni ön ayar olarak kaydet…",
+    "preset_saved": "Yeni düzen",
+    "preset_select": "Kaydedilmiş düzen seç",
+    "preset_update": "Seçili ön ayarın üzerine yaz",
     "preview": "Preview · Sample agenda",
+    "preview_directive": "İnceleme geri bildirimini paylaş",
     "preview_note": "Apply saves your changes. Cancel keeps your previous settings.",
     "preview_schedule": "Project meeting",
     "preview_work": "Prepare meeting notes",
@@ -3204,7 +3442,9 @@
     "return_main": "Main window",
     "routine_short": "Rutin",
     "save_failed": "Could not save. Please try again.",
+    "save_failed_named": "Kaydetme başarısız. Tekrar deneyin: “{name}”.",
     "saved_status": "Work status saved.",
+    "saved_status_named": "{status} olarak kaydedildi: “{name}”.",
     "scale_tooltip_value": "Ölçek: %{value}",
     "schedule_title": "Takvim",
     "schedule_type": "Takvim",
@@ -3215,7 +3455,7 @@
     "section_today": "Bugün",
     "section_work_today": "Bugünkü çalışma",
     "show_all": "Show All",
-    "show_calendar": "Takvimi Göster",
+    "show_calendar": "Takvimi göster",
     "show_clock": "Show clock",
     "show_completed": "Include completed",
     "show_completed_help": "Also show completed work and directives in the list.",
@@ -3248,7 +3488,10 @@
     "tomorrow": "Yarın",
     "undo": "Undo",
     "undone": "Previous status restored.",
+    "undone_named": "Önceki durum geri yüklendi: “{name}”.",
     "untitled": "İsimsiz",
+    "user_layouts": "Düzenlerim",
+    "user_layouts_empty": "Kaydedilmiş düzen yok. Düzen düzenleyicisinde bir ön ayar kaydedin.",
     "week_toggle": "Week",
     "week_toggle_help": "Show or collapse the week strip",
     "widget_hint_actions": "Yeniden odaklanmak için bir güne dokunun",
