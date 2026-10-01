@@ -3,6 +3,7 @@
 
   const fallbackConfig = {
     appVersion: "3.7.8",
+    requestBoardApi: "https://air-calendar-requests.kimhj.chatgpt.site",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
     promotionKitUrl: "promo.html",
@@ -26,6 +27,7 @@
       metaDescription: "캘린더, 루틴, 집중 타이머와 바탕화면 위젯을 하나의 흐름으로 연결하는 Windows 데스크톱 앱 Air Calendar를 만나보세요.",
       skip: "본문으로 건너뛰기",
       navFeatures: "기능", navScreens: "제품 화면", navWorkflow: "사용 흐름", navFaq: "FAQ", navStore: "Store에서 보기",
+      navRequests: "사용자 요청",
       languageLabel: "언어 선택", menuOpen: "메뉴 열기", close: "닫기",
       heroEyebrow: "Windows 데스크톱 캘린더 & 업무 위젯",
       heroTitle: "일정과 할 일을<br><em>바탕화면 한 곳에.</em>",
@@ -79,6 +81,7 @@
       metaDescription: "Meet Air Calendar, a Windows desktop app that brings calendars, routines, focus timers, and desktop widgets into one seamless flow.",
       skip: "Skip to content",
       navFeatures: "Features", navScreens: "Product", navWorkflow: "Workflow", navFaq: "FAQ", navStore: "View in Store",
+      navRequests: "User requests",
       languageLabel: "Choose language", menuOpen: "Open menu", close: "Close",
       heroEyebrow: "Windows desktop calendar & productivity widgets",
       heroTitle: "Your schedule and tasks,<br><em>together on the desktop.</em>",
@@ -132,6 +135,7 @@
       metaDescription: "カレンダー、ルーティン、集中タイマー、デスクトップウィジェットを一つの流れにつなぐWindowsアプリ、Air Calendar。",
       skip: "本文へ移動",
       navFeatures: "機能", navScreens: "製品画面", navWorkflow: "使い方", navFaq: "FAQ", navStore: "Storeで見る",
+      navRequests: "ユーザーの要望",
       languageLabel: "言語を選択", menuOpen: "メニューを開く", close: "閉じる",
       heroEyebrow: "Windowsデスクトップカレンダー＆仕事ウィジェット",
       heroTitle: "予定とタスクを<br><em>デスクトップの一か所に。</em>",
@@ -185,6 +189,7 @@
       metaDescription: "Air Calendar 是一款 Windows 桌面应用，将日历、例行任务、专注计时器和桌面小组件整合为顺畅的工作流。",
       skip: "跳到正文",
       navFeatures: "功能", navScreens: "产品界面", navWorkflow: "使用流程", navFaq: "常见问题", navStore: "在 Store 查看",
+      navRequests: "用户请求",
       languageLabel: "选择语言", menuOpen: "打开菜单", close: "关闭",
       heroEyebrow: "Windows 桌面日历与效率小组件",
       heroTitle: "日程和任务<br><em>集中在桌面一处。</em>",
@@ -625,6 +630,8 @@
     updateScreen();
     updateShareLinks();
 
+    document.dispatchEvent(new CustomEvent("aircalendar:language", { detail: { language: currentLanguage } }));
+
     if (persist) {
       try {
         window.localStorage.setItem("dark-calendar-language", currentLanguage);
@@ -670,6 +677,7 @@
         // The visible site remains usable if structured data cannot be refreshed.
       }
     }
+    document.dispatchEvent(new CustomEvent("aircalendar:config", { detail: { appVersion: currentConfig.appVersion, requestBoardApi: currentConfig.requestBoardApi } }));
   }
 
   function setupHeader() {

@@ -30,7 +30,9 @@
   <link rel="icon" href="assets/app_icon.png">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="guide.css">
-  <script src="app.js" defer></script>
+  <script src="app.js?v=request-board-1" defer></script>
+  <link rel="stylesheet" href="request-board.css?v=1">
+  <script src="request-board.js?v=1" defer></script>
   <script type="application/ld+json" id="software-schema">
     {
       "@context": "https://schema.org",
@@ -74,6 +76,7 @@
         <a href="#google-sync" data-i18n="navGoogle">Google 연동</a>
         <a href="#workflow" data-i18n="navWorkflow">사용 흐름</a>
         <a href="#faq" data-i18n="navFaq">FAQ</a>
+        <a href="#requests" data-i18n="navRequests">사용자 요청</a>
       </nav>
 
       <div class="header-actions">
@@ -103,6 +106,7 @@
       <a href="#google-sync" data-i18n="navGoogle">Google 연동</a>
       <a href="#workflow" data-i18n="navWorkflow">사용 흐름</a>
       <a href="#faq" data-i18n="navFaq">FAQ</a>
+      <a href="#requests" data-i18n="navRequests">사용자 요청</a>
       <a data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&amp;gl=KR&amp;ocid=pdpshare" target="_blank" rel="noopener" data-i18n="navStore">Store에서 보기</a>
     </nav>
   </header>
@@ -443,6 +447,37 @@
       </div>
     </section>
 
+    <section class="request-board" id="requests" data-request-board data-api="https://air-calendar-requests.kimhj.chatgpt.site" aria-labelledby="request-board-title">
+      <div class="board-heading">
+        <div><p class="section-index">09 / COMMUNITY</p><h2 id="request-board-title" data-board-i18n="heading">더 나은 캘린더를<br><em>함께 만들어가요.</em></h2><p class="board-intro" data-board-i18n="intro">불편했던 점, 필요한 기능, 작은 아이디어까지. 여러분의 의견을 기다립니다.</p></div>
+        <button type="button" class="board-primary" data-board-compose disabled><span aria-hidden="true">＋</span><span data-board-i18n="write">수정 요청 작성</span></button>
+      </div>
+      <div class="board-summary" aria-label="요청 처리 현황" data-board-aria="summary">
+        <div><span class="board-dot received"></span><span data-board-i18n="received">접수됨</span><strong data-board-count="received">—</strong></div>
+        <div><span class="board-dot reviewing"></span><span data-board-i18n="inProgress">검토·반영 예정</span><strong data-board-count="progress">—</strong></div>
+        <div><span class="board-dot done"></span><span data-board-i18n="done">완료</span><strong data-board-count="done">—</strong></div>
+        <p data-board-i18n="noAccount">회원가입 없이 작성할 수 있어요.</p>
+      </div>
+      <div class="board-toolbar">
+        <div class="board-categories" role="group" aria-label="요청 유형" data-board-aria="categoryLabel">
+          <button type="button" class="active" data-board-category="all" aria-pressed="true" data-board-i18n="all">전체</button>
+          <button type="button" data-board-category="bug" aria-pressed="false" data-board-i18n="bug">오류 제보</button>
+          <button type="button" data-board-category="feature" aria-pressed="false" data-board-i18n="feature">기능 제안</button>
+          <button type="button" data-board-category="ui" aria-pressed="false" data-board-i18n="ui">UI / UX</button>
+          <button type="button" data-board-category="other" aria-pressed="false" data-board-i18n="other">기타</button>
+        </div>
+        <div class="board-search-tools">
+          <label class="board-search"><span aria-hidden="true">⌕</span><input type="search" maxlength="100" data-board-search aria-label="요청 검색" data-board-aria="search" placeholder="요청 검색" data-board-placeholder="search"></label>
+          <select data-board-status aria-label="처리 상태" data-board-aria="statusLabel"><option value="all" data-board-i18n="allStatuses">모든 상태</option><option value="received" data-board-i18n="received">접수됨</option><option value="reviewing" data-board-i18n="reviewing">검토 중</option><option value="planned" data-board-i18n="planned">반영 예정</option><option value="done" data-board-i18n="done">완료</option><option value="closed" data-board-i18n="closed">보류·종료</option></select>
+        </div>
+      </div>
+      <p class="board-live-status" data-board-live role="status" aria-live="polite"></p>
+      <div class="board-list" data-board-list aria-busy="true"><div class="board-empty"><span class="board-empty-icon" aria-hidden="true">…</span><h3 data-board-i18n="loading">요청을 불러오고 있습니다.</h3></div></div>
+      <div class="board-bottom"><p data-board-total></p><div class="board-pagination"><button type="button" data-board-prev disabled data-board-i18n="previous">이전</button><span data-board-page>1 / 1</span><button type="button" data-board-next disabled data-board-i18n="next">다음</button></div></div>
+      <div class="board-note"><p><span aria-hidden="true">↗</span> <span data-board-i18n="publicNote">등록한 내용은 공개됩니다. 개인정보·비밀번호·인증 키는 본문에 넣지 마세요.</span></p><button type="button" data-board-admin data-board-i18n="admin">관리자</button></div>
+      <noscript><p>게시판을 사용하려면 브라우저의 JavaScript를 활성화해주세요.</p></noscript>
+    </section>
+
     <section class="final-cta">
       <div class="cta-orbit" aria-hidden="true"><span></span><span></span><span></span></div>
       <p class="section-index">AIR CALENDAR FOR WINDOWS</p>
@@ -479,11 +514,35 @@
       <a data-config-link="sourceCodeUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR" target="_blank" rel="noopener">GitHub</a>
       <a data-config-link="promotionKitUrl" href="promo.html" data-i18n="footerPromotion">홍보 자료</a>
       <a href="#guides">English Guides</a>
+      <a href="#requests" data-i18n="navRequests">사용자 요청</a>
       <a href="privacy.html" data-i18n="footerPrivacy">개인정보처리방침</a>
       <a data-config-link="licenseUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.7.8/LICENSE" target="_blank" rel="noopener">GNU General Public License v3.0</a>
     </div>
     <p>© 2026 Zinz-Soft. <span data-i18n="footerRights">All rights reserved.</span></p>
   </footer>
+
+  <dialog class="board-dialog" data-board-editor aria-labelledby="board-editor-title">
+    <div class="board-dialog-header"><div><p class="board-eyebrow">AIR CALENDAR / FEEDBACK</p><h2 id="board-editor-title" data-board-editor-title>수정 요청 작성</h2></div><button type="button" class="board-close" data-board-close aria-label="닫기" data-board-aria="close">×</button></div>
+    <form data-board-form>
+      <div class="board-form-grid"><label><span data-board-i18n="categoryLabel">요청 유형</span><select name="category" required><option value="bug" data-board-i18n="bug">오류 제보</option><option value="feature" data-board-i18n="feature">기능 제안</option><option value="ui" data-board-i18n="ui">UI / UX</option><option value="other" data-board-i18n="other">기타</option></select></label><label><span data-board-i18n="nickname">닉네임 (선택)</span><input name="nickname" maxlength="30" autocomplete="nickname" placeholder="방문자" data-board-placeholder="visitor"></label></div>
+      <label><span data-board-i18n="titleLabel">제목</span><input name="title" required minlength="3" maxlength="100" placeholder="어떤 점을 개선하면 좋을까요?" data-board-placeholder="titlePlaceholder"></label>
+      <label><span data-board-i18n="bodyLabel">요청 내용</span><textarea name="body" required minlength="10" maxlength="5000" rows="7" placeholder="불편한 상황과 원하는 개선 내용을 알려주세요. 오류라면 재현 방법도 함께 적어주세요." data-board-placeholder="bodyPlaceholder"></textarea></label>
+      <div class="board-form-grid"><label><span data-board-i18n="version">앱 버전 (선택)</span><input name="appVersion" maxlength="30" placeholder="3.7.8"></label><label><span data-board-i18n="platform">사용 환경 (선택)</span><select name="platform"><option value="" data-board-i18n="selectOptional">선택하지 않음</option><option value="Windows 11">Windows 11</option><option value="Windows 10">Windows 10</option><option value="Other" data-board-i18n="other">기타</option></select></label></div>
+      <label><span data-board-i18n="editPassword">수정·삭제 비밀번호</span><input name="password" type="password" required minlength="8" maxlength="128" autocomplete="new-password"><small data-board-i18n="passwordHelp">8자 이상으로 설정하세요. 글을 수정·삭제할 때 필요하며, 비밀번호는 복구할 수 없습니다.</small></label>
+      <label class="board-honeypot" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
+      <p class="board-form-error" data-board-error role="alert"></p><p class="board-form-notice" data-board-i18n="formNotice">닉네임과 요청 내용은 게시판에 공개됩니다. 개인 일정이나 연락처를 포함하지 마세요.</p>
+      <div class="board-dialog-footer"><button type="button" class="board-secondary" data-board-close data-board-i18n="cancel">취소</button><button type="submit" class="board-primary" data-board-submit data-board-i18n="submit">요청 등록</button></div>
+    </form>
+  </dialog>
+  <dialog class="board-dialog board-detail" data-board-detail aria-labelledby="board-detail-title">
+    <div class="board-dialog-header"><p class="board-eyebrow" data-board-detail-number></p><button type="button" class="board-close" data-board-close aria-label="닫기" data-board-aria="close">×</button></div>
+    <div class="board-detail-badges" data-board-detail-badges></div><h2 id="board-detail-title"></h2><p class="board-detail-meta" data-board-detail-meta></p><p class="board-detail-environment" data-board-detail-environment></p><div class="board-detail-body" data-board-detail-body></div>
+    <div class="board-reply"><p class="board-eyebrow" data-board-i18n="replyHeading">개발자 답변</p><p data-board-detail-reply></p></div>
+    <form class="board-admin-update" data-board-admin-update hidden><label><span data-board-i18n="statusLabel">처리 상태</span><select name="status"><option value="received" data-board-i18n="received">접수됨</option><option value="reviewing" data-board-i18n="reviewing">검토 중</option><option value="planned" data-board-i18n="planned">반영 예정</option><option value="done" data-board-i18n="done">완료</option><option value="closed" data-board-i18n="closed">보류·종료</option></select></label><label><span data-board-i18n="replyHeading">개발자 답변</span><textarea name="reply" rows="3" maxlength="3000"></textarea></label><p class="board-form-error" data-board-error role="alert"></p><button class="board-primary" type="submit" data-board-i18n="saveStatus">상태·답변 저장</button></form>
+    <div class="board-dialog-footer"><button type="button" class="board-secondary" data-board-edit data-board-i18n="edit">수정</button><button type="button" class="board-danger" data-board-delete data-board-i18n="delete">삭제</button><button type="button" class="board-secondary board-footer-end" data-board-close data-board-i18n="close">닫기</button></div>
+  </dialog>
+  <dialog class="board-dialog board-small-dialog" data-board-delete-dialog aria-labelledby="board-delete-title"><div class="board-dialog-header"><h2 id="board-delete-title" data-board-i18n="deleteHeading">요청을 삭제할까요?</h2><button type="button" class="board-close" data-board-close aria-label="닫기" data-board-aria="close">×</button></div><p data-board-i18n="deleteHelp">삭제한 요청은 복구할 수 없습니다.</p><form data-board-delete-form><label data-board-delete-password-label><span data-board-i18n="editPassword">수정·삭제 비밀번호</span><input name="password" type="password" required minlength="8" maxlength="128" autocomplete="current-password"></label><p class="board-form-error" data-board-error role="alert"></p><div class="board-dialog-footer"><button type="button" class="board-secondary" data-board-close data-board-i18n="cancel">취소</button><button type="submit" class="board-danger" data-board-i18n="deleteConfirm">삭제하기</button></div></form></dialog>
+  <dialog class="board-dialog board-small-dialog" data-board-admin-dialog aria-labelledby="board-admin-title"><div class="board-dialog-header"><h2 id="board-admin-title" data-board-i18n="adminLogin">관리자 로그인</h2><button type="button" class="board-close" data-board-close aria-label="닫기" data-board-aria="close">×</button></div><form data-board-admin-form><label><span data-board-i18n="adminPassword">관리자 비밀번호</span><input name="password" type="password" required minlength="8" maxlength="128" autocomplete="current-password"></label><p class="board-form-error" data-board-error role="alert"></p><div class="board-dialog-footer"><button type="button" class="board-secondary" data-board-close data-board-i18n="cancel">취소</button><button type="submit" class="board-primary" data-board-i18n="login">로그인</button></div></form></dialog>
 
   <dialog class="lightbox" data-lightbox aria-labelledby="lightbox-title">
     <button type="button" class="lightbox-close" data-close-lightbox><span class="sr-only" data-i18n="close">닫기</span><span aria-hidden="true">×</span></button>
