@@ -1,0 +1,7 @@
+dist/
+.local/
+.env*
+*.db
+*.db-wal
+*.db-shm
+*.tar.gz
