@@ -1,157 +1,119 @@
 # -*- coding: utf-8 -*-
-"""Render representative launcher-deck arrays for visual QA."""
+"""Render KeyDeck (launcher deck v4) contact sheets and a studio capture for visual QA.
+
+Usage:
+    .venv\\Scripts\\python.exe scripts/render_launcher_deck_preview.py [--lang en] [--out DIR]
+
+Run with the default Windows platform plugin: the offscreen plugin has no font
+database, so Hangul legends would not render.
+"""
 
 from __future__ import annotations
 
-import os
+import argparse
 from pathlib import Path
+import sys
 
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-from PyQt6.QtCore import QSettings
-from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6.QtCore import QPointF, QSettings  # noqa: E402
+from PyQt6.QtGui import QColor, QPainter, QPixmap  # noqa: E402
+from PyQt6.QtWidgets import QApplication, QWidget  # noqa: E402
 
-from calendar_app.infrastructure.i18n import i18n, resolve_locale_file_path
-from calendar_app.presentation.widgets.launcher_deck_dialog import (
-    KeycapAppearanceDialog,
-    KeycapInteractionDialog,
-    LauncherDeckEditorDialog,
+from calendar_app.infrastructure.i18n import i18n, resolve_locale_file_path  # noqa: E402
+from calendar_app.presentation.widgets.keydeck import model  # noqa: E402
+from calendar_app.presentation.widgets.keydeck.renderer import (  # noqa: E402
+    KeyDeckRenderer,
+    KeyVisualState,
 )
-from calendar_app.presentation.widgets.launcher_deck_model import (
-    DECK_TEMPLATES,
-    new_key,
-    template_deck,
-)
-from calendar_app.presentation.widgets.launcher_keycap_assets import KEYCAP_ASSETS
-from calendar_app.presentation.widgets.overlay_launcher_deck import OverlayLauncherDeckWidget
 
 
 class _PreviewOwner(QWidget):
     def __init__(self):
         super().__init__()
-        self.settings = QSettings("codex_qa", "launcher_deck_preview")
+        self.settings = QSettings("codex_qa", "keydeck_preview")
         self.settings.clear()
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    app.setFont(QFont("Malgun Gothic", 9))
-    english_path = resolve_locale_file_path("en", prefer_user=False)
-    if english_path is not None:
-        english = i18n._load_locale_json(str(english_path), "en")
-        i18n.lang = "en"
-        i18n.translations = english
-        i18n.bundled_translations = {}
-        i18n.fallback_translations = english
-    output_dir = Path("artifacts/launcher-deck")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    owner = _PreviewOwner()
+def _use_language(lang: str) -> None:
+    path = resolve_locale_file_path(lang, prefer_user=False)
+    if path is None:
+        return
+    data = i18n._load_locale_json(str(path), lang)
+    i18n.lang = lang
+    i18n.translations = data
+    i18n.bundled_translations = {}
+    i18n.fallback_translations = data
 
-    for template_id, _key, _fallback, _factory in DECK_TEMPLATES:
-        owner.settings.clear()
-        widget = OverlayLauncherDeckWidget(owner)
-        widget._store_deck(template_deck(template_id))
-        widget._rebuild_keys()
-        widget._apply_and_resize()
-        widget.show()
-        widget.adjustSize()
-        app.processEvents()
-        widget.grab().save(str(output_dir / f"{template_id}.png"), "PNG")
-        widget.close()
 
-    owner.settings.clear()
-    custom_deck = template_deck("mixed_4x3")
-    assets = ("spark", "orbit", "grid", "waves", "circuit", "blossom", "pixels", "constellation")
-    icons = ("star", "bolt", "calendar", "play", "folder", "globe", "plus", "search")
-    colors = ("#6f9fe6ff", "#b593ecff", "#ef9b72ff", "#52c9b5ff")
-    for index, key in enumerate(custom_deck["keys"]):
-        key["asset_id"] = assets[index % len(assets)]
-        key["asset_opacity"] = 52
-        key["asset_scale"] = 118
-        key["icon"] = icons[index % len(icons)]
-        key["label_layout"] = "icon_left" if key["width"] > 1 else "icon_above"
-        key["custom_top"] = colors[index % len(colors)]
-        key["radius_override"] = (6, 12, 18, 24)[index % 4]
-        key["press_effect"] = ("depress", "ripple", "glow", "bounce")[index % 4]
-        key["hover_effect"] = ("lift", "glow", "pulse", "none")[index % 4]
-        key["interaction_mode"] = "toggle" if index in {0, 4, 6} else "action"
-        key["active"] = index in {0, 6}
-        key["enabled"] = index != 2
-    widget = OverlayLauncherDeckWidget(owner)
-    widget._store_deck(custom_deck)
-    widget._rebuild_keys()
-    widget._apply_and_resize()
-    widget.show()
-    app.processEvents()
-    widget.grab().save(str(output_dir / "customized-keycaps.png"), "PNG")
-    widget.close()
-
-    catalog_assets = [asset for asset in KEYCAP_ASSETS if asset.filename]
-    catalog_keys = []
-    catalog_styles = ("air_glass", "soft_clay", "arcade_glow", "mechanical_pbt")
-    for index, asset in enumerate(catalog_assets):
-        key = new_key(
-            asset.asset_id.replace("_", " ").upper(),
-            index // 5,
-            index % 5,
-            style=catalog_styles[index % len(catalog_styles)],
-            action_type="internal",
-            target="command_palette",
+def _sheet(template_id: str, scale: float = 1.0) -> QPixmap:
+    renders = []
+    for theme in model.THEMES:
+        deck = model.build_template_deck(template_id, theme.theme_id)
+        keys = deck["pages"][0]["keys"]
+        renderer = KeyDeckRenderer()
+        renderer.set_deck(deck, 0, scale=scale)
+        states = {
+            keys[0]["id"]: KeyVisualState(travel=1.0, led=1.0),
+            keys[1]["id"]: KeyVisualState(hover=True, travel=-0.07),
+        }
+        renders.append(renderer.render_pixmap(states, dpr=2.0))
+    columns = 4
+    cell_w = max(pixmap.width() for pixmap in renders) // 2 + 16
+    cell_h = max(pixmap.height() for pixmap in renders) // 2 + 16
+    rows = (len(renders) + columns - 1) // columns
+    sheet = QPixmap(cell_w * columns * 2, cell_h * rows * 2)
+    sheet.setDevicePixelRatio(2.0)
+    sheet.fill(QColor("#5b6472"))
+    painter = QPainter(sheet)
+    for index, pixmap in enumerate(renders):
+        painter.drawPixmap(
+            QPointF((index % columns) * cell_w + 8, (index // columns) * cell_h + 8), pixmap
         )
-        key["asset_id"] = asset.asset_id
-        key["asset_opacity"] = 62
-        key["asset_scale"] = 112
-        key["icon"] = "none"
-        key["font_scale"] = 72
-        catalog_keys.append(key)
-    catalog = {
-        "version": 2,
-        "columns": 5,
-        "rows": (len(catalog_keys) + 4) // 5,
-        "gap": 7,
-        "keys": catalog_keys,
-    }
-    widget = OverlayLauncherDeckWidget(owner)
-    widget._store_deck(catalog)
-    widget._rebuild_keys()
-    widget._apply_and_resize()
-    widget.show()
-    app.processEvents()
-    widget.grab().save(str(output_dir / "keycap-asset-catalog.png"), "PNG")
-    widget.close()
+    painter.end()
+    return sheet
 
-    editor = LauncherDeckEditorDialog(template_deck("mixed_4x3"))
-    editor._selected_ids = {editor._deck["keys"][0]["id"]}
-    editor._rebuild_canvas()
-    editor.show()
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--lang", default="ko")
+    parser.add_argument("--out", default="artifacts/launcher-deck")
+    args = parser.parse_args(argv)
+    app = QApplication.instance() or QApplication([])
+    _use_language(args.lang)
+    output_dir = Path(args.out)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for template_id, *_rest in model.TEMPLATES:
+        _sheet(template_id).save(str(output_dir / f"{template_id}.png"), "PNG")
+
+    from calendar_app.presentation.widgets.keydeck.studio import KeyDeckStudioDialog
+    from calendar_app.presentation.widgets.overlay_launcher_deck import OverlayLauncherDeckWidget
+
+    owner = _PreviewOwner()
+    widget = OverlayLauncherDeckWidget(owner)
+    widget._set("enabled", True)
+    widget.apply_initial_settings()
     app.processEvents()
-    editor.grab().save(str(output_dir / "array-editor.png"), "PNG")
-    editor.close()
-    designer = KeycapAppearanceDialog(custom_deck["keys"][0])
-    designer.show()
+    widget.grab().save(str(output_dir / "overlay.png"), "PNG")
+    keys = widget.deck()["pages"][0]["keys"]
+    studio = KeyDeckStudioDialog(widget.deck(), widget, key_id=keys[0]["id"])
+    studio.resize(1260, 800)
+    studio.show()
     app.processEvents()
-    designer.grab().save(str(output_dir / "keycap-designer.png"), "PNG")
-    scroll_bar = designer._controls_scroll.verticalScrollBar()
-    scroll_bar.setValue(scroll_bar.maximum())
+    for index, name in enumerate(("action", "insert", "legend", "cap")):
+        studio.key_inspector.tabs.setCurrentIndex(index)
+        app.processEvents()
+        studio.grab().save(str(output_dir / f"studio_{name}.png"), "PNG")
+    studio.canvas.select([])
     app.processEvents()
-    designer.grab().save(str(output_dir / "keycap-designer-assets.png"), "PNG")
-    designer.close()
-    interaction = KeycapInteractionDialog(custom_deck["keys"][0])
-    interaction.show()
-    app.processEvents()
-    interaction.grab().save(str(output_dir / "keycap-interaction-studio.png"), "PNG")
-    interaction._tabs.setCurrentIndex(2)
-    interaction._simulate("active")
-    app.processEvents()
-    interaction.grab().save(str(output_dir / "keycap-state-designer.png"), "PNG")
-    interaction._tabs.setCurrentIndex(3)
-    interaction._sound_combo.setCurrentIndex(interaction._sound_combo.findData("chime"))
-    app.processEvents()
-    interaction.grab().save(str(output_dir / "keycap-sound-media.png"), "PNG")
-    interaction.close()
+    studio.grab().save(str(output_dir / "studio_deck.png"), "PNG")
+    studio._dirty = False
+    studio.close()
+    widget.close()
     owner.settings.clear()
-    owner.close()
+    print(f"KeyDeck previews written to {output_dir.resolve()}")
     return 0
 
 

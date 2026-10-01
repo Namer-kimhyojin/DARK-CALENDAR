@@ -421,6 +421,29 @@ class GCalActionsMixin:
             self._wake_sync_timer.timeout.connect(self.sync_google_calendar_silent)
         self._wake_sync_timer.start(800)
 
+    def _silent_sync_waiting_for_auth(self):
+        """True when no saved token exists, so a silent (non-interactive) sync cannot sign in.
+
+        Without this guard every timer tick ran a worker that failed with ``auth_required``,
+        logged warnings and grew the failure backoff while the status bar already showed
+        "sign-in needed".  The check is a single file lookup, so the timers keep running and
+        the first tick after the user signs in syncs normally.
+        """
+        from calendar_app.app_paths import TOKEN_PATH
+
+        sync = getattr(self, "gcal_sync", None)
+        if (sync is not None and getattr(sync, "is_authenticated", False)) or os.path.exists(
+            TOKEN_PATH
+        ):
+            self._gcal_waiting_for_auth = False
+            return False
+
+        if not getattr(self, "_gcal_waiting_for_auth", False):
+            self._gcal_waiting_for_auth = True
+            logger.info("GCal auto-sync is waiting for Google sign-in (no saved token).")
+            self.update_sync_status()
+        return True
+
     def sync_google_calendar_silent(self):
         """조용한 자동 동기화 (알림창 띄우지 않음)"""
 
@@ -431,6 +454,9 @@ class GCalActionsMixin:
             from calendar_app.shared.background_worker import SyncWorker
 
             if self._sync_worker_running():
+                return
+
+            if self._silent_sync_waiting_for_auth():
                 return
 
             self._sync_worker = SyncWorker(self, silent=True)

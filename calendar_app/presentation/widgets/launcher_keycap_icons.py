@@ -71,6 +71,83 @@ KEYCAP_ICON_ASSETS = (
     KeycapIconAsset("focus", "widget.launcher.icon.focus", "집중", ICON.FOCUS_DONE),
     KeycapIconAsset("coffee", "widget.launcher.icon.coffee", "휴식", ICON.BREAK_SHORT),
     KeycapIconAsset("rocket", "widget.launcher.icon.rocket", "빠른 실행", ICON.AUTOSTART),
+    # 아래 항목은 ICON 매핑 대신 qtawesome 이름을 직접 사용한다 (KeyDeck 전용 글리프).
+    KeycapIconAsset("arrow_up", "widget.launcher.icon.arrow_up", "위쪽", "mdi6.arrow-up-bold"),
+    KeycapIconAsset(
+        "arrow_down", "widget.launcher.icon.arrow_down", "아래쪽", "mdi6.arrow-down-bold"
+    ),
+    KeycapIconAsset(
+        "arrow_left", "widget.launcher.icon.arrow_left", "왼쪽", "mdi6.arrow-left-bold"
+    ),
+    KeycapIconAsset(
+        "arrow_right", "widget.launcher.icon.arrow_right", "오른쪽", "mdi6.arrow-right-bold"
+    ),
+    KeycapIconAsset("copy", "widget.launcher.icon.copy", "복사", "mdi6.content-copy"),
+    KeycapIconAsset("paste", "widget.launcher.icon.paste", "붙여넣기", "mdi6.content-paste"),
+    KeycapIconAsset("cut", "widget.launcher.icon.cut", "잘라내기", "mdi6.content-cut"),
+    KeycapIconAsset("undo", "widget.launcher.icon.undo", "실행 취소", "mdi6.undo"),
+    KeycapIconAsset("redo", "widget.launcher.icon.redo", "다시 실행", "mdi6.redo"),
+    KeycapIconAsset("music", "widget.launcher.icon.music", "음악", "mdi6.music"),
+    KeycapIconAsset(
+        "play_pause", "widget.launcher.icon.play_pause", "재생/일시정지", "mdi6.play-pause"
+    ),
+    KeycapIconAsset("next_track", "widget.launcher.icon.next_track", "다음 곡", "mdi6.skip-next"),
+    KeycapIconAsset(
+        "prev_track", "widget.launcher.icon.prev_track", "이전 곡", "mdi6.skip-previous"
+    ),
+    KeycapIconAsset("volume_up", "widget.launcher.icon.volume_up", "볼륨 크게", "mdi6.volume-high"),
+    KeycapIconAsset("volume_mute", "widget.launcher.icon.volume_mute", "음소거", "mdi6.volume-off"),
+    KeycapIconAsset("mic", "widget.launcher.icon.mic", "마이크", "mdi6.microphone"),
+    KeycapIconAsset(
+        "mic_off", "widget.launcher.icon.mic_off", "마이크 끄기", "mdi6.microphone-off"
+    ),
+    KeycapIconAsset("camera", "widget.launcher.icon.camera", "카메라", "mdi6.camera-outline"),
+    KeycapIconAsset("video", "widget.launcher.icon.video", "영상", "mdi6.video-outline"),
+    KeycapIconAsset("mail", "widget.launcher.icon.mail", "메일", "mdi6.email-outline"),
+    KeycapIconAsset("chat", "widget.launcher.icon.chat", "채팅", "mdi6.chat-outline"),
+    KeycapIconAsset("phone", "widget.launcher.icon.phone", "전화", "mdi6.phone-outline"),
+    KeycapIconAsset("code", "widget.launcher.icon.code", "코드", "mdi6.code-braces"),
+    KeycapIconAsset("terminal", "widget.launcher.icon.terminal", "터미널", "mdi6.console"),
+    KeycapIconAsset("image", "widget.launcher.icon.image", "이미지", "mdi6.image-outline"),
+    KeycapIconAsset("chart", "widget.launcher.icon.chart", "차트", "mdi6.chart-line"),
+    KeycapIconAsset("home", "widget.launcher.icon.home", "홈", "mdi6.home-outline"),
+    KeycapIconAsset("user", "widget.launcher.icon.user", "사용자", "mdi6.account-outline"),
+    KeycapIconAsset("keyboard", "widget.launcher.icon.keyboard", "키보드", "mdi6.keyboard-outline"),
+    KeycapIconAsset("monitor", "widget.launcher.icon.monitor", "모니터", "mdi6.monitor"),
+    KeycapIconAsset(
+        "document", "widget.launcher.icon.document", "문서", "mdi6.file-document-outline"
+    ),
+    KeycapIconAsset(
+        "spreadsheet", "widget.launcher.icon.spreadsheet", "스프레드시트", "mdi6.file-excel-outline"
+    ),
+    KeycapIconAsset(
+        "slides", "widget.launcher.icon.slides", "프레젠테이션", "mdi6.file-powerpoint-outline"
+    ),
+    KeycapIconAsset(
+        "calculator", "widget.launcher.icon.calculator", "계산기", "mdi6.calculator-variant-outline"
+    ),
+    KeycapIconAsset("notebook", "widget.launcher.icon.notebook", "노트", "mdi6.notebook-outline"),
+    KeycapIconAsset("idea", "widget.launcher.icon.idea", "아이디어", "mdi6.lightbulb-outline"),
+    KeycapIconAsset("heart", "widget.launcher.icon.heart", "하트", "mdi6.heart-outline"),
+    KeycapIconAsset("fire", "widget.launcher.icon.fire", "불꽃", "mdi6.fire"),
+    KeycapIconAsset("game", "widget.launcher.icon.game", "게임", "mdi6.gamepad-variant-outline"),
+    KeycapIconAsset("headphones", "widget.launcher.icon.headphones", "헤드폰", "mdi6.headphones"),
+    KeycapIconAsset("power", "widget.launcher.icon.power", "전원", "mdi6.power"),
+    KeycapIconAsset("night", "widget.launcher.icon.night", "야간", "mdi6.weather-night"),
+    KeycapIconAsset("brightness", "widget.launcher.icon.brightness", "밝기", "mdi6.brightness-6"),
+    KeycapIconAsset(
+        "clipboard", "widget.launcher.icon.clipboard", "클립보드", "mdi6.clipboard-text-outline"
+    ),
+    KeycapIconAsset("translate", "widget.launcher.icon.translate", "번역", "mdi6.translate"),
+    KeycapIconAsset("printer", "widget.launcher.icon.printer", "프린터", "mdi6.printer-outline"),
+    KeycapIconAsset("map", "widget.launcher.icon.map", "지도", "mdi6.map-marker-outline"),
+    KeycapIconAsset("cart", "widget.launcher.icon.cart", "쇼핑", "mdi6.cart-outline"),
+    KeycapIconAsset("bookmark", "widget.launcher.icon.bookmark", "북마크", "mdi6.bookmark-outline"),
+    KeycapIconAsset("brush", "widget.launcher.icon.brush", "브러시", "mdi6.brush-outline"),
+    KeycapIconAsset(
+        "dashboard", "widget.launcher.icon.dashboard", "대시보드", "mdi6.view-dashboard-outline"
+    ),
+    KeycapIconAsset("layers", "widget.launcher.icon.layers", "레이어", "mdi6.layers-outline"),
 )
 _ICON_BY_ID = {asset.icon_id: asset for asset in KEYCAP_ICON_ASSETS}
 

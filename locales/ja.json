@@ -127,15 +127,7 @@
     "sync_hint": "Googleカレンダーの同期",
     "today": "今日",
     "today_hint": "今日に移動",
-    "weekdays": [
-      "月",
-      "火",
-      "水",
-      "木",
-      "金",
-      "土",
-      "日"
-    ]
+    "weekdays": ["月", "火", "水", "木", "金", "土", "日"]
   },
   "checklist_mgr": {
     "btn_add_item": "アイテムの追加",
@@ -1566,13 +1558,7 @@
     "hint_record_jump": "Enterで項目を開く。Shift+Enterで日付に移動。",
     "hint_run_command": "Enterで選択したコマンドを実行します",
     "kw": {
-      "theme": [
-        "テーマ",
-        "ダーク",
-        "ライト",
-        "色",
-        "外観"
-      ]
+      "theme": ["テーマ", "ダーク", "ライト", "色", "外観"]
     },
     "nlp_preview": "新規: [{title}] - {date} {time}",
     "no_selection": "Enterキーで選択した結果を開きます",
@@ -1825,359 +1811,223 @@
         "description": "離席ロックモードを即座に開始します。",
         "label": "離席ロック",
         "menu_path": "表示 > 離席ロック",
-        "tags": [
-          "離席",
-          "ロック"
-        ]
+        "tags": ["離席", "ロック"]
       },
       "cal_toolbar": {
         "description": "カレンダーツールバーを非表示・再表示します。",
         "label": "カレンダーツールバー切替",
         "menu_path": "表示 > カレンダーツールバー",
-        "tags": [
-          "カレンダー",
-          "ツールバー"
-        ]
+        "tags": ["カレンダー", "ツールバー"]
       },
       "calendar_print": {
         "description": "現在または選択した期間のカレンダーをプレビューして印刷します。",
         "label": "カレンダーを印刷",
         "menu_path": "カレンダー > オプション > 印刷",
-        "tags": [
-          "印刷",
-          "プリンター",
-          "PDF"
-        ]
+        "tags": ["印刷", "プリンター", "PDF"]
       },
       "checklist": {
         "description": "チェックリストのテンプレートと項目構成を管理します。",
         "label": "チェックリストを管理",
         "menu_path": "タスク > チェックリスト管理",
-        "tags": [
-          "チェックリスト",
-          "テンプレート"
-        ]
+        "tags": ["チェックリスト", "テンプレート"]
       },
       "color_assign": {
         "description": "選択した項目に自動的に色を割り当てます。",
         "label": "自動カラー割り当て",
         "menu_path": "タスク > 自動カラー割り当て",
-        "tags": [
-          "色",
-          "タグ",
-          "自動"
-        ]
+        "tags": ["色", "タグ", "自動"]
       },
       "command_palette": {
         "description": "機能を瞬時に検索できるコマンド検索ボックスを開きます。",
         "label": "コマンドパレット",
         "menu_path": "直接呼び出し",
-        "tags": [
-          "検索",
-          "コマンド",
-          "パレット"
-        ]
+        "tags": ["検索", "コマンド", "パレット"]
       },
       "delete": {
         "description": "現在選択している予定または項目を削除します。",
         "label": "選択項目を削除",
         "menu_path": "選択状態",
-        "tags": [
-          "削除",
-          "消去"
-        ]
+        "tags": ["削除", "消去"]
       },
       "escape": {
         "description": "現在の選択またはフォーカスを解除します。",
         "label": "選択を解除",
         "menu_path": "選択状態",
-        "tags": [
-          "選択解除",
-          "キャンセル",
-          "エスケープ"
-        ]
+        "tags": ["選択解除", "キャンセル", "エスケープ"]
       },
       "focus_mode": {
         "description": "集中モードのオン・オフを切り替えます。",
         "label": "集中モード切替",
         "menu_path": "表示 > 集中モード",
-        "tags": [
-          "集中",
-          "ポモドーロ"
-        ]
+        "tags": ["集中", "ポモドーロ"]
       },
       "focus_pause": {
         "description": "現在の集中セッションを一時停止・再開します。",
         "label": "集中を一時停止",
         "menu_path": "集中モード",
-        "tags": [
-          "集中",
-          "一時停止"
-        ]
+        "tags": ["集中", "一時停止"]
       },
       "force_unlock": {
         "description": "予期しないロック状態を強制的に解除します。",
         "label": "強制ロック解除",
         "menu_path": "緊急復旧",
-        "tags": [
-          "強制",
-          "ロック解除",
-          "復旧",
-          "緊急"
-        ]
+        "tags": ["強制", "ロック解除", "復旧", "緊急"]
       },
       "fullscreen": {
         "description": "全画面表示のオン・オフを切り替えます。",
         "label": "全画面表示切替",
         "menu_path": "表示 > 全画面表示",
-        "tags": [
-          "全画面"
-        ]
+        "tags": ["全画面"]
       },
       "help": {
         "description": "ヘルプセンターを開きます。",
         "label": "ショートカットガイド",
         "menu_path": "システム > ショートカットガイド",
-        "tags": [
-          "ヘルプ",
-          "F1"
-        ]
+        "tags": ["ヘルプ", "F1"]
       },
       "layout_1": {
         "description": "デフォルトの4パネルドッキングレイアウトを適用します。",
         "label": "レイアウトプリセット1",
         "menu_path": "表示 > レイアウトプリセット",
-        "tags": [
-          "レイアウト",
-          "プリセット",
-          "ドッキング",
-          "1"
-        ]
+        "tags": ["レイアウト", "プリセット", "ドッキング", "1"]
       },
       "layout_2": {
         "description": "カレンダー中心のレイアウトを適用します。",
         "label": "レイアウトプリセット2",
         "menu_path": "表示 > レイアウトプリセット",
-        "tags": [
-          "レイアウト",
-          "カレンダー",
-          "2"
-        ]
+        "tags": ["レイアウト", "カレンダー", "2"]
       },
       "layout_3": {
         "description": "タスク中心のレイアウトを適用します。",
         "label": "レイアウトプリセット3",
         "menu_path": "表示 > レイアウトプリセット",
-        "tags": [
-          "レイアウト",
-          "タスク",
-          "3"
-        ]
+        "tags": ["レイアウト", "タスク", "3"]
       },
       "layout_4": {
         "description": "分割タブレイアウトを適用します。",
         "label": "レイアウトプリセット4",
         "menu_path": "表示 > レイアウトプリセット",
-        "tags": [
-          "レイアウト",
-          "タブ",
-          "分割",
-          "4"
-        ]
+        "tags": ["レイアウト", "タブ", "分割", "4"]
       },
       "layout_5": {
         "description": "完全に分離したフローティングレイアウトを適用します。",
         "label": "レイアウトプリセット5",
         "menu_path": "表示 > レイアウトプリセット",
-        "tags": [
-          "レイアウト",
-          "分離",
-          "フローティング",
-          "5"
-        ]
+        "tags": ["レイアウト", "分離", "フローティング", "5"]
       },
       "lock_mode": {
         "description": "デスクトップロックモードのオン・オフを切り替えます。",
         "label": "ロックモード",
         "menu_path": "表示 > ロックモード",
-        "tags": [
-          "ロック"
-        ]
+        "tags": ["ロック"]
       },
       "magnet_mode": {
         "description": "パネルの整列とスナップを助けるマグネットモードを切り替えます。",
         "label": "マグネットモード",
         "menu_path": "表示 > マグネットモード",
-        "tags": [
-          "マグネット",
-          "パネル"
-        ]
+        "tags": ["マグネット", "パネル"]
       },
       "monitor_left": {
         "description": "ウィンドウを別のモニターに移動します。",
         "label": "前のモニターへ移動",
         "menu_path": "ウィンドウ制御",
-        "tags": [
-          "モニター",
-          "ディスプレイ",
-          "左"
-        ]
+        "tags": ["モニター", "ディスプレイ", "左"]
       },
       "monitor_right": {
         "description": "ウィンドウを別のモニターに移動します。",
         "label": "次のモニターへ移動",
         "menu_path": "ウィンドウ制御",
-        "tags": [
-          "モニター",
-          "ディスプレイ",
-          "右"
-        ]
+        "tags": ["モニター", "ディスプレイ", "右"]
       },
       "new_directive": {
         "description": "指示事項や協力事項を入力するウィンドウを開きます。",
         "label": "指示事項を登録",
         "menu_path": "登録 > 指示事項",
-        "tags": [
-          "指示",
-          "協力"
-        ]
+        "tags": ["指示", "協力"]
       },
       "new_routine": {
         "description": "繰り返しのタスクルーティンをすばやく追加します。",
         "label": "ルーティンを登録",
         "menu_path": "登録 > ルーティン",
-        "tags": [
-          "ルーティン",
-          "タスク",
-          "繰り返し"
-        ]
+        "tags": ["ルーティン", "タスク", "繰り返し"]
       },
       "new_schedule": {
         "description": "予定入力ウィンドウを直接開きます。",
         "label": "新しい予定を追加",
         "menu_path": "登録 > 新しい予定",
-        "tags": [
-          "予定",
-          "追加",
-          "登録"
-        ]
+        "tags": ["予定", "追加", "登録"]
       },
       "next_day": {
         "description": "現在の日付の1日後に移動します。",
         "label": "翌日",
         "menu_path": "ナビゲーション",
-        "tags": [
-          "次",
-          "日付",
-          "右"
-        ]
+        "tags": ["次", "日付", "右"]
       },
       "opacity_down": {
         "description": "ウィンドウの不透明度を下げます。",
         "label": "不透明度を下げる",
         "menu_path": "ウィンドウ制御",
-        "tags": [
-          "不透明度",
-          "暗く"
-        ]
+        "tags": ["不透明度", "暗く"]
       },
       "opacity_up": {
         "description": "ウィンドウの不透明度を上げます。",
         "label": "不透明度を上げる",
         "menu_path": "ウィンドウ制御",
-        "tags": [
-          "不透明度",
-          "明るく"
-        ]
+        "tags": ["不透明度", "明るく"]
       },
       "prev_day": {
         "description": "現在の日付の1日前に移動します。",
         "label": "前日",
         "menu_path": "ナビゲーション",
-        "tags": [
-          "前",
-          "日付",
-          "左"
-        ]
+        "tags": ["前", "日付", "左"]
       },
       "restore_pos": {
         "description": "ウィンドウを安全な画面位置に復元します。",
         "label": "ウィンドウ位置を復元",
         "menu_path": "ウィンドウ制御",
-        "tags": [
-          "ウィンドウ",
-          "復元",
-          "位置"
-        ]
+        "tags": ["ウィンドウ", "復元", "位置"]
       },
       "routine_mgr": {
         "description": "ルーティンマネージャータブを直接開きます。",
         "label": "ルーティンマネージャー",
         "menu_path": "タスク > ルーティン概要",
-        "tags": [
-          "ルーティン",
-          "管理"
-        ]
+        "tags": ["ルーティン", "管理"]
       },
       "save_layout": {
         "description": "現在のパネル配置をプリセットとして保存します。",
         "label": "現在のレイアウトを保存",
         "menu_path": "表示 > レイアウトプリセット > 保存",
-        "tags": [
-          "レイアウト",
-          "プリセット",
-          "保存"
-        ]
+        "tags": ["レイアウト", "プリセット", "保存"]
       },
       "show_hide": {
         "description": "メインウィンドウを非表示にするか、再表示します。",
         "label": "ウィンドウ表示/非表示",
         "menu_path": "ウィンドウ制御",
-        "tags": [
-          "ウィンドウ",
-          "非表示",
-          "表示",
-          "オーバーレイ"
-        ]
+        "tags": ["ウィンドウ", "非表示", "表示", "オーバーレイ"]
       },
       "sync_gcal": {
         "description": "Googleカレンダーとの同期を即座に開始します。",
         "label": "Googleカレンダー同期",
         "menu_path": "システム > カレンダーと同期",
-        "tags": [
-          "google",
-          "同期",
-          "カレンダー",
-          "F5"
-        ]
+        "tags": ["google", "同期", "カレンダー", "F5"]
       },
       "today": {
         "description": "選択中の日付を即座に今日に移動します。",
         "label": "今日に移動",
         "menu_path": "ナビゲーション",
-        "tags": [
-          "今日",
-          "日付"
-        ]
+        "tags": ["今日", "日付"]
       },
       "topbar": {
         "description": "上部メニューバーの表示・非表示を切り替えます。",
         "label": "トップバー切替",
         "menu_path": "表示 > トップバー",
-        "tags": [
-          "メニューバー",
-          "トップバー",
-          "復旧"
-        ]
+        "tags": ["メニューバー", "トップバー", "復旧"]
       },
       "widget_mode": {
         "description": "ウィジェットのみのパネルモードを開きます。",
         "label": "ウィジェットモード切替",
         "menu_path": "表示 > ウィジェット専用モード",
-        "tags": [
-          "ウィジェット",
-          "パネル"
-        ]
+        "tags": ["ウィジェット", "パネル"]
       }
     },
     "groups": {
@@ -2724,310 +2574,554 @@
     },
     "launcher": {
       "action": {
-        "hotkey": "Keyboard shortcut",
-        "internal": "Air Calendar command",
-        "open": "Open program / file",
-        "url": "Web address"
+        "app": "アプリ・ファイル・フォルダーを開く",
+        "command": "Air Calendar コマンド",
+        "hotkey": "ショートカットを送信",
+        "none": "動作なし",
+        "page": "ページ移動",
+        "text": "テキストスニペット",
+        "url": "Web アドレスを開く"
       },
-      "add_key": "+ Key",
-      "apply_pattern": "Apply combination",
-      "apply_template": "Use layout",
       "asset": {
-        "blocks": "Module blocks",
-        "blossom": "Blossom",
-        "chevrons": "Chevrons",
-        "circuit": "Circuit",
-        "confetti": "Confetti",
-        "constellation": "Constellation",
-        "custom": "My image",
-        "equalizer": "Equalizer",
-        "grid": "Grid",
-        "hexmesh": "Hex mesh",
-        "none": "None",
-        "orbit": "Orbit",
-        "pixels": "Pixel cross",
-        "portal": "Portal",
-        "prism": "Prism",
-        "rain": "Digital rain",
-        "rings": "Rhythm rings",
-        "scanlines": "Scan lines",
-        "spark": "Spark",
-        "speed": "Speed lines",
-        "sunburst": "Sunburst",
-        "target": "Target",
-        "waves": "Waves"
+        "blocks": "モジュールブロック",
+        "blossom": "ブロッサム",
+        "chevrons": "シェブロン",
+        "circuit": "サーキット",
+        "confetti": "紙吹雪",
+        "constellation": "星座",
+        "equalizer": "イコライザー",
+        "grid": "グリッド",
+        "hexmesh": "ヘックスメッシュ",
+        "none": "なし",
+        "orbit": "オービット",
+        "pixels": "ピクセルクロス",
+        "portal": "ポータル",
+        "prism": "プリズム",
+        "rain": "デジタルレイン",
+        "rings": "リズムリング",
+        "scanlines": "スキャンライン",
+        "spark": "スパーク",
+        "speed": "スピードライン",
+        "sunburst": "サンバースト",
+        "target": "ターゲット",
+        "waves": "ウェーブ"
       },
-      "asset_import_failed": "Check that the file is supported and no larger than 25 MB.",
-      "asset_import_failed_title": "Could not import asset",
-      "asset_playback": {
-        "active": "While active",
-        "always": "Always play",
-        "hover": "On hover",
-        "never": "First frame only",
-        "press": "While pressed"
+      "asset_import_failed": "対応形式で 25MB 以下のファイルか確認してください。",
+      "asset_import_failed_title": "ファイルを読み込めません",
+      "case": {
+        "acrylic": "アクリルサンドイッチ",
+        "anodized": "アルマイトアルミ",
+        "floating": "フローティング（ケースなし）",
+        "silver": "シルバーアルミ",
+        "walnut": "ウォールナット"
       },
-      "batch_style": "Batch styling",
-      "browse": "Browse",
-      "canvas": "Keycap canvas",
-      "choose_mosaic": "Choose image...",
-      "choose_target": "Choose a program or file",
-      "columns": "Columns",
+      "close_tip": "キーデッキを非表示 — 上部の「ウィジェット」メニューから再表示できます",
       "command": {
-        "command_palette": "Command palette",
-        "new_task": "New event",
-        "sync_google": "Google sync",
-        "today": "Go to today",
-        "widget_manager": "Widget manager"
+        "command_palette": "コマンドパレット",
+        "daily_summary": "今日のまとめ",
+        "focus_mode": "集中モード",
+        "new_task": "新しい予定",
+        "sync_google": "Google 同期",
+        "today": "今日へ移動",
+        "view_mode": "表示切り替え",
+        "widget_manager": "ウィジェットマネージャー"
       },
-      "delete_selected": "Delete",
-      "designer": {
-        "asset": "Asset",
-        "asset_opacity": "Asset opacity",
-        "asset_scale": "Asset size",
-        "assets": "Decal assets",
-        "base": "Base shape",
-        "border_color": "Border color",
-        "choose_color": "Choose color",
-        "choose_image": "Import image...",
-        "clear": "Clear custom design",
-        "colors": "Custom colors",
-        "content": "Icon and label",
-        "depth": "Depth",
-        "desc": "Combine colors, shape, icons, and decal assets to design the selected keys.",
-        "font_scale": "Text size",
-        "heading": "Design your own keycap",
-        "icon": "Icon",
-        "image_filter": "Images (*.png *.jpg *.jpeg *.webp *.bmp)",
-        "layout": "Content layout",
-        "open": "Detailed design...",
-        "preview": "Live preview",
-        "radius": "Corner radius",
-        "reset_style": "Reset to style defaults",
-        "search_asset": "Search assets",
-        "search_icon": "Search icons",
-        "side_color": "Side color",
-        "style": "Style",
-        "text_color": "Text color",
-        "title": "Keycap Designer",
-        "top_color": "Top color"
+      "empty_page": "空のページ・スタジオでキーを追加してください",
+      "fit": {
+        "contain": "全体表示",
+        "cover": "塗りつぶし",
+        "stretch": "引き伸ばし"
       },
-      "edit": "Edit keycap array...",
-      "editor_desc": "Choose a template, select one or more keys, then combine size, style, color, icons, and decal assets.",
-      "editor_drag_hint": "Drag to exchange key positions.",
-      "editor_heading": "Keycap array and actions",
-      "editor_title": "Edit Launcher Deck",
-      "effect": {
-        "bounce": "Tactile bounce",
-        "breathe": "Breathe",
-        "depress": "Physical press",
-        "flash": "Color flash",
-        "glow": "Glow",
-        "lift": "Gentle lift",
-        "none": "No effect",
-        "pulse": "Soft pulse",
-        "ring": "Status ring",
-        "ripple": "Expanding ripple",
-        "shake": "Horizontal shake",
-        "solid": "Solid highlight"
+      "hidden_message": "上部の「ウィジェット」メニューまたはウィジェットマネージャーから再表示できます。",
+      "hidden_title": "キーデッキを非表示にしました",
+      "hold_prefix": "長押し",
+      "hotkey": {
+        "desktop": "デスクトップを表示",
+        "prev_track": "前の曲",
+        "screenshot": "画面キャプチャ",
+        "switch_app": "アプリ切り替え"
       },
       "icon": {
-        "alarm": "Alarm",
-        "auto": "Automatic for action",
-        "bolt": "Bolt",
-        "broadcast": "Broadcast",
-        "calendar": "Calendar",
-        "check": "Complete",
-        "close": "Close",
-        "cloud": "Cloud",
-        "coffee": "Break",
-        "delete": "Delete",
-        "edit": "Edit",
-        "filter": "Filter",
-        "focus": "Focus",
-        "folder": "Folder",
-        "forward": "Forward",
+        "alarm": "アラーム",
+        "arrow_down": "下",
+        "arrow_left": "左",
+        "arrow_right": "右",
+        "arrow_up": "上",
+        "auto": "動作に合わせて自動",
+        "bolt": "稲妻",
+        "bookmark": "ブックマーク",
+        "brightness": "明るさ",
+        "broadcast": "配信",
+        "brush": "ブラシ",
+        "calculator": "電卓",
+        "calendar": "カレンダー",
+        "camera": "カメラ",
+        "cart": "ショッピング",
+        "chart": "チャート",
+        "chat": "チャット",
+        "check": "完了",
+        "clipboard": "クリップボード",
+        "close": "閉じる",
+        "cloud": "クラウド",
+        "code": "コード",
+        "coffee": "休憩",
+        "copy": "コピー",
+        "cut": "切り取り",
+        "dashboard": "ダッシュボード",
+        "delete": "削除",
+        "document": "ドキュメント",
+        "edit": "編集",
+        "filter": "フィルター",
+        "fire": "炎",
+        "focus": "集中",
+        "folder": "フォルダー",
+        "forward": "次へ",
+        "game": "ゲーム",
         "globe": "Web",
-        "info": "Info",
-        "link": "Link",
-        "lock": "Lock",
-        "memo": "Memo",
-        "none": "No icon",
-        "palette": "Palette",
-        "pause": "Pause",
-        "play": "Play",
-        "plus": "Add",
-        "repeat": "Repeat",
-        "rocket": "Quick launch",
-        "save": "Save",
-        "search": "Search",
-        "settings": "Settings",
-        "star": "Star",
-        "sync": "Sync",
-        "timer": "Timer",
-        "unlock": "Unlock",
-        "warning": "Warning"
+        "headphones": "ヘッドホン",
+        "heart": "ハート",
+        "home": "ホーム",
+        "idea": "アイデア",
+        "image": "画像",
+        "info": "情報",
+        "keyboard": "キーボード",
+        "layers": "レイヤー",
+        "link": "リンク",
+        "lock": "ロック",
+        "mail": "メール",
+        "map": "地図",
+        "memo": "メモ",
+        "mic": "マイク",
+        "mic_off": "マイクオフ",
+        "monitor": "モニター",
+        "music": "音楽",
+        "next_track": "次の曲",
+        "night": "夜間",
+        "none": "アイコンなし",
+        "notebook": "ノート",
+        "palette": "パレット",
+        "paste": "貼り付け",
+        "pause": "一時停止",
+        "phone": "電話",
+        "play": "実行",
+        "play_pause": "再生／一時停止",
+        "plus": "追加",
+        "power": "電源",
+        "prev_track": "前の曲",
+        "printer": "プリンター",
+        "redo": "やり直し",
+        "repeat": "繰り返し",
+        "rocket": "クイック起動",
+        "save": "保存",
+        "search": "検索",
+        "settings": "設定",
+        "slides": "プレゼンテーション",
+        "spreadsheet": "スプレッドシート",
+        "star": "星",
+        "sync": "同期",
+        "terminal": "ターミナル",
+        "timer": "タイマー",
+        "translate": "翻訳",
+        "undo": "元に戻す",
+        "unlock": "ロック解除",
+        "user": "ユーザー",
+        "video": "動画",
+        "volume_mute": "ミュート",
+        "volume_up": "音量を上げる",
+        "warning": "警告"
       },
-      "icon_pack": {
-        "glass": "Glass Line",
-        "ink": "Mono Ink",
-        "neon": "Neon Cyan",
-        "sunset": "Warm Sunset",
-        "violet": "Violet Glow"
+      "indicator": {
+        "bar": "ライトバー",
+        "dot": "インジケーター",
+        "none": "表示しない",
+        "ring": "ふちの光",
+        "switch": "ミニスイッチ"
       },
-      "icon_pack_label": "Icon pack",
-      "image_filter": "Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif *.svg)",
-      "interaction": {
-        "active_border": "Active border",
-        "active_effect": "Active effect",
-        "active_top": "Active surface",
-        "asset_playback": "Animated image",
-        "choose_sound": "Choose WAV file...",
-        "clear": "Reset feedback settings",
-        "desc": "Configure activation, motion, state colors, sound, and animated asset playback in one place.",
-        "disabled_text": "Disabled text",
-        "disabled_top": "Disabled surface",
-        "duration": "Result duration",
-        "enabled": "Enable this key",
-        "error_effect": "Error effect",
-        "heading": "Design every moment of the interaction",
-        "hover_effect": "Hover effect",
-        "indicator": "Show status indicator",
-        "long_press": "Long-press duration",
-        "mode": "Activation mode",
-        "mode_action": "Action button",
-        "mode_hold": "Active while held",
-        "mode_toggle": "On · off toggle",
-        "open": "Interaction and feedback...",
-        "preset": "Quick preset",
-        "press_effect": "Press effect",
-        "preview": "State preview",
-        "preview_sound": "Preview sound",
-        "reduce_motion": "Reduce motion",
-        "search_sound": "Search sounds",
-        "sound": "Feedback sound",
-        "sound_event": "Play sound",
-        "sound_file": "Custom sound",
-        "sound_filter": "WAV audio (*.wav)",
-        "speed": "Motion speed",
-        "state_note": "Toggle state is preserved when the widget is reopened.",
-        "success_effect": "Success effect",
-        "title": "Key Interaction Studio",
-        "trigger": "Activation trigger",
-        "trigger_double": "Double press",
-        "trigger_long": "Long press",
-        "trigger_press": "Immediately on press",
-        "trigger_release": "On release",
-        "volume": "Volume"
+      "insert": {
+        "color": "単色",
+        "gradient": "グラデーション",
+        "image": "自分の画像",
+        "none": "なし (透明)",
+        "panorama": "デッキパノラマ",
+        "pattern": "パターン"
       },
       "key": {
-        "app": "App {number}",
-        "command": "Command",
-        "design": "Design",
-        "favorites": "Favorites",
-        "folder": "Folder",
-        "generic": "Key",
-        "new_schedule": "New event",
-        "schedule": "Event",
-        "space": "SPACE",
-        "start_work": "Start work",
-        "sync": "Sync",
-        "today": "Today",
-        "tools": "Tools",
+        "app_1": "アプリ 1",
+        "app_2": "アプリ 2",
+        "app_3": "アプリ 3",
+        "app_4": "アプリ 4",
+        "app_5": "アプリ 5",
+        "app_6": "アプリ 6",
+        "command": "コマンド",
+        "command_palette": "コマンドパレット",
+        "copy": "コピー",
+        "cut": "切り取り",
+        "daily_summary": "今日のまとめ",
+        "design": "デザイン",
+        "down": "下",
+        "focus": "集中",
+        "folder": "フォルダー",
+        "kb_hangul": "Han/Eng",
+        "kb_hanja": "漢字",
+        "left": "左",
+        "mute": "ミュート",
+        "new_schedule": "新しい予定",
+        "next_track": "次の曲",
+        "paste": "貼り付け",
+        "play_pause": "再生",
+        "redo": "やり直し",
+        "right": "右",
+        "save": "保存",
+        "schedule": "予定",
+        "start_work": "仕事開始",
+        "summary": "まとめ",
+        "sync": "同期",
+        "today": "今日",
+        "undo": "元に戻す",
+        "up": "上",
+        "volume_down": "音量 -",
+        "volume_up": "音量 +",
         "web": "Web",
-        "work": "Work"
+        "web_1": "Web 1",
+        "web_2": "Web 2",
+        "web_3": "Web 3",
+        "widgets": "ウィジェット"
       },
-      "key_action": "Key action",
-      "key_name": "Key name",
-      "layout": {
-        "icon_above": "Icon above · label below",
-        "icon_left": "Icon left · label right",
-        "icon_only": "Icon only",
-        "text_only": "Label only"
+      "layouts": {
+        "applied": "レイアウトを適用しました。元に戻すには Ctrl+Z",
+        "apply_deck": "デッキ全体をこのレイアウトに置き換え",
+        "apply_page": "現在のページに適用",
+        "as_new_page": "新しいページとして追加",
+        "confirm_apply": "置き換える",
+        "confirm_deck": "今のデッキのすべてのページがこのレイアウトに置き換わります。続けますか？",
+        "confirm_page": "現在のページのキー {count} 個がこのレイアウトに置き換わります。続けますか？",
+        "confirm_title": "レイアウトを適用",
+        "delete": "削除",
+        "delete_confirm": "レイアウト「{name}」をマイレイアウトから削除しますか？書き出したファイルはそのまま残ります。",
+        "empty": "保存したレイアウトはまだありません。\n「現在のページを保存」で作るか、受け取った .keydeck ファイルを読み込むか、ここにドロップしてください。",
+        "error_empty": "キーが1つもないレイアウトです。",
+        "error_newer": "より新しい Air Calendar で作られたレイアウトです。アプリを更新してからもう一度お試しください。",
+        "error_not_layout": "KeyDeck レイアウトファイルではありません。",
+        "error_too_large": "ファイルが大きすぎます。48MB 以下のレイアウトのみ読み込めます。",
+        "error_unreadable": "ファイルを読み込めません。壊れているか KeyDeck レイアウトファイルではありません。",
+        "export": "ファイルに書き出す…",
+        "export_failed": "ファイルを保存できませんでした。",
+        "export_filter": "KeyDeck レイアウト (*.keydeck)",
+        "export_title": "レイアウトをファイルに書き出す",
+        "exported": "書き出しました: {path}",
+        "file_filter": "KeyDeck レイアウト (*.keydeck *.json)",
+        "heading": "レイアウト",
+        "import": "ファイルを読み込む…",
+        "import_confirm": "「{name}」({meta})\n\nこのレイアウトのキーを押すと、以下の動作が実行されます。信頼できる相手から受け取ったファイルだけを読み込んでください。",
+        "import_go": "読み込む",
+        "import_title": "レイアウトファイルを読み込む",
+        "imported": "レイアウト「{name}」を読み込みました。",
+        "meta_builtin": "標準 · キー {keys} 個 · 今のデッキのテーマで装飾",
+        "meta_deck": "デッキ全体 · {pages} ページ · キー {keys} 個",
+        "meta_page": "ページレイアウト · キー {keys} 個",
+        "meta_saved": "保存 {date}",
+        "nothing_to_save": "保存するキーがありません。",
+        "pick_hint": "左からレイアウトを選んでください。",
+        "rename": "名前を変更",
+        "save_deck": "デッキ全体を保存…",
+        "save_deck_tip": "すべてのページとケース・サイズ設定をまとめて保存します。",
+        "save_failed": "レイアウトを保存できませんでした。",
+        "save_name": "レイアウト名",
+        "save_page": "現在のページを保存…",
+        "save_page_tip": "このページのキー配置・見た目・動作をマイレイアウトに保存します。",
+        "save_title": "レイアウトを保存",
+        "saved": "レイアウト「{name}」を保存しました。",
+        "saved_hint": "レイアウト「{name}」を保存しました。「レイアウト」ボタンのマイレイアウトから読み込めます。",
+        "skipped": "見つからないか大きすぎて含まれなかった絵・音: {names}",
+        "subheading": "標準レイアウトを適用するか、自分で作ったページ・デッキを保存して .keydeck ファイルでやり取りできます。",
+        "tab_builtin": "標準レイアウト",
+        "tab_mine": "マイレイアウト",
+        "tab_mine_count": "マイレイアウト ({count})",
+        "targets": "開くアプリ・ファイル・Webアドレス:",
+        "title": "レイアウト",
+        "undo_hint": " スタジオでは Ctrl+Z で元に戻せます。"
       },
-      "mosaic_mode": "Mosaic image",
-      "mosaic_opacity": "Image opacity",
-      "mosaic_show_labels": "Show icons and labels",
-      "multi_select_hint": "Click keys one after another to select several. Detailed design also applies to every selected key.",
-      "pattern": {
-        "checker": "Checkerboard",
-        "flow": "Color flow",
-        "function_groups": "By function",
-        "hero": "Emphasize primary keys",
-        "row_groups": "By row",
-        "uniform": "One style"
+      "led": {
+        "breathe": "トグルオン中は呼吸",
+        "off": "オフ",
+        "reactive": "押すと点灯",
+        "static": "常時点灯"
       },
-      "preset": {
-        "accessible": "High contrast · reduced motion",
-        "apply": "Apply preset",
-        "balanced": "Balanced default",
-        "neon": "Neon performance",
-        "subtle": "Subtle and calm",
-        "tactile": "Tactile key feel"
+      "legend": {
+        "art": "絵のみ",
+        "caption": "絵 + 下に名前",
+        "center": "名前を大きく",
+        "corner": "角に文字",
+        "glyph": "アイコンのみ",
+        "stack": "アイコン＋名前"
       },
-      "replace_mosaic": "Replace image...",
-      "reset": "Reset to mixed layout",
-      "select_all": "All",
-      "selected_count": "{count} key(s) selected",
+      "material": {
+        "crystal": "クリスタル（透明）",
+        "frosted": "フロスト（半透明）",
+        "pudding": "プリン",
+        "smoke": "スモーク",
+        "solid": "ソリッド PBT"
+      },
+      "menu": {
+        "add_page": "ページを追加",
+        "delete": "キーデッキを削除...",
+        "edit_key": "「{name}」を編集...",
+        "exit_app": "Air Calendar を終了...",
+        "header": "ネームプレートを表示",
+        "hide": "キーデッキを非表示（閉じる）",
+        "layout_gallery": "レイアウトギャラリー (保存・読み込み・共有)...",
+        "pages": "ページ",
+        "reset_size": "標準サイズ（100%）",
+        "size": "サイズ",
+        "sound": "キーサウンド",
+        "studio": "KeyDeck スタジオを開く...",
+        "templates": "レイアウト",
+        "themes": "テーマ"
+      },
+      "mode": {
+        "tap": "1回押す",
+        "toggle": "オン/オフ (トグル)"
+      },
+      "new_key": "新しいキー",
+      "not_set": "未設定",
+      "page_default": "ページ {number}",
+      "page_main": "メイン",
+      "page_target": {
+        "next": "次のページ",
+        "prev": "前のページ"
+      },
+      "playback": {
+        "always": "常に再生",
+        "hover": "ホバー時に再生",
+        "never": "最初のフレームで固定"
+      },
+      "profile": {
+        "cylindrical": "Cherry · 標準",
+        "flat": "DSA · 低く平ら",
+        "low": "ロー · 薄いキー",
+        "mt3": "MT3 · 深いくぼみ",
+        "oem": "OEM · 一般的なキーボード",
+        "round": "丸型 · タイプライター",
+        "spherical": "SA · 高く丸い",
+        "xda": "XDA · 広い天面"
+      },
       "sound": {
-        "chime": "Air chime",
-        "crisp_click": "Crisp click",
-        "custom": "Custom WAV file",
-        "error": "Error alert",
-        "glass": "Glass tap",
-        "mechanical": "Mechanical key",
-        "none": "No sound",
-        "pop": "Light pop",
-        "pulse": "Digital pulse",
-        "soft_click": "Soft click",
-        "success": "Success chime",
-        "system": "System feedback sound",
-        "toggle_off": "Toggle off",
-        "toggle_on": "Toggle on",
-        "whoosh": "Soft whoosh"
+        "auto": "実際の打鍵音（スイッチ・キーキャップ・ケース反映）",
+        "chime": "エアチャイム",
+        "crisp_click": "クリスプクリック",
+        "custom": "自分の WAV ファイル",
+        "error": "エラー通知",
+        "glass": "グラスタップ",
+        "mechanical": "メカニカルキー",
+        "none": "サウンドなし",
+        "pop": "ライトポップ",
+        "pulse": "デジタルパルス",
+        "soft_click": "ソフトクリック",
+        "success": "成功チャイム",
+        "toggle_off": "トグルオフ",
+        "toggle_on": "トグルオン",
+        "whoosh": "ソフトウーシュ"
       },
-      "sound_event": {
-        "all": "Every state change",
-        "error": "On error",
-        "press": "On press",
-        "result": "On success or error",
-        "success": "On success"
+      "studio": {
+        "accent": "アクセントカラー",
+        "add_key": "+ キーを追加",
+        "add_page": "ページを追加 · タブをダブルクリック: 名前変更 · 右クリック: 複製・削除",
+        "add_page_short": "新しいページ",
+        "apply_close": "適用して閉じる",
+        "apply_tip": "変更を適用して閉じる（Ctrl+S）",
+        "big_2x2": "大型 2×2",
+        "browse_file": "ファイル…",
+        "browse_folder": "フォルダー…",
+        "cap_color": "キーキャップの色",
+        "case_color": "ケースの色",
+        "choose_folder": "フォルダーを選択",
+        "choose_image": "画像を読み込む…",
+        "choose_panorama": "パノラマ画像を選択…",
+        "choose_sound": "WAV ファイルを選択…",
+        "choose_target": "プログラムまたはファイルを選択",
+        "clear": "クリア",
+        "color_1": "色 1",
+        "color_2": "色 2",
+        "common_hotkeys": "よく使うキーから選ぶ…",
+        "copy_style": "スタイルをコピー（Ctrl+C）",
+        "deck_hint": "キーをクリックするとキー設定に切り替わります。空白をクリックするとこの画面に戻ります。",
+        "deck_name": "デッキ名",
+        "deck_title": "デッキ設定",
+        "delete": "削除（Delete）",
+        "delete_page": "ページを削除",
+        "delete_page_confirm": "ページ「{name}」とキー {count} 個を削除しますか？",
+        "delete_short": "削除",
+        "discard": "適用していない変更があります。どうしますか？",
+        "discard_close": "変更を破棄",
+        "discard_title": "未適用の変更",
+        "duplicate": "複製（Ctrl+D）",
+        "duplicate_page": "ページを複製",
+        "duplicate_short": "複製",
+        "empty_page": "キーがありません。「+ キーを追加」を押すか、アプリ・ファイル・リンクをドロップしてください",
+        "enabled": "キーを使う (オフにすると押しても反応しません)",
+        "export_page_layout": "レイアウトファイルに書き出す…",
+        "fit": "フィット",
+        "gap": "キーの間隔",
+        "glyph": "アイコン",
+        "glyph_color": "アイコンの色",
+        "glyph_same": "文字色と同じ",
+        "header": "上部に名前とページを表示",
+        "heading": "KeyDeck Studio",
+        "hold_hint": "補助動作を設定すると長押しで実行され、短く押すと基本動作が実行されます。",
+        "hotkey_empty": "キーの組み合わせを押して記録してください",
+        "hotkey_note": "デッキはフォーカスを奪わないため、作業中のウィンドウに送信されます。",
+        "hotkey_value": "送信するキー: {keys}",
+        "image_filter": "画像 (*.png *.jpg *.jpeg *.webp *.bmp *.gif *.svg)",
+        "indicator": "表示の形",
+        "keep_editing": "編集を続ける",
+        "key_size": "キーサイズ",
+        "label": "名前",
+        "label_placeholder": "キー名",
+        "layout": "配置",
+        "led": "キー下のライト",
+        "led_brightness": "ライトの明るさ",
+        "led_color": "ライトの色",
+        "led_mode": "点灯タイミング",
+        "legend_color": "文字色",
+        "legend_size": "サイズ",
+        "material": "素材",
+        "mode": "実行方式",
+        "mode_tap_hint": "押すたびに動作を1回実行します。",
+        "mode_toggle_hint": "押すとオンのまま押し込まれ、もう一度押すとオフになります。オン・オフどちらでも動作が実行され、下の表示で状態がわかります。",
+        "multi_hint": "複数のキーが選択されています。名前と動作はキーを 1 つだけ選択したときに編集できます。",
+        "multi_summary": "{count} 個のキーを選択中",
+        "no_image": "画像が選択されていません",
+        "none_hint": "押すと音と動きだけで、動作は実行されません。",
+        "offset_x": "横位置",
+        "offset_y": "縦位置",
+        "opacity": "濃さ",
+        "page_copy": "{name} のコピー",
+        "page_name": "名前",
+        "page_tabs_tip": "ダブルクリック: 名前変更 · 右クリック: 複製・削除 · ドラッグ: 並べ替え",
+        "panorama_applied": "パノラマをキー {count} 個に適用しました。元に戻すには Ctrl+Z",
+        "panorama_cleared": "パノラマを削除しました。使用していたキー {count} 個のインサートを空にしました。元に戻すには Ctrl+Z",
+        "panorama_empty": "クリックして画像を選ぶか、ここにドロップしてください",
+        "panorama_fit": "配置",
+        "panorama_hint": "1 枚の画像をデッキ全体に分けて差し込みます。キー間の隙間まで計算され、つながって見えます。",
+        "panorama_info": "{name} · {width}×{height}px · キー {count} 個で使用中",
+        "panorama_lowres": "元画像の解像度が低く、キー上でぼやけて見える場合があります。大きい画像をおすすめします。",
+        "panorama_missing": "画像ファイルが見つかりません。もう一度選択してください。",
+        "panorama_page": "このページ全体に適用",
+        "panorama_preview_hint": "ドラッグ: 位置 · Ctrl+ホイール: 拡大 · ダブルクリック: 中央へ · 画像をドロップして差し替え",
+        "panorama_replaced": "パノラマ画像を差し替えました。",
+        "panorama_unreadable": "画像を読み込めません。別のファイルを選択してください。",
+        "panorama_unused": "このページにはパノラマを使うキーがありません。「このページ全体に適用」を押すか、キーを選んでインサートを「デッキパノラマ」に変更してください。",
+        "panorama_zoom": "拡大",
+        "paste_after_copy": "コピー後すぐに貼り付け（Ctrl+V）",
+        "paste_style": "スタイルを貼り付け（Ctrl+V）",
+        "path_placeholder": "プログラム・ファイル・フォルダーのパス",
+        "pattern": "パターン",
+        "pick_color": "色を選択",
+        "playback": "アニメーション画像",
+        "preview_banner": "試用中 · キーを押してみてください · 終了は Esc",
+        "preview_empty": "このページには押せるキーがありません。先にキーを追加してください。",
+        "preview_hint": "ドラッグ: 位置・ダブルクリック: リセット・画像をドロップ",
+        "preview_mode": "押して試す",
+        "preview_sound": "試聴",
+        "preview_stop": "試用を終了",
+        "preview_tip": "編集の代わりに実物のように押して音と動きを確認します（動作は実行されません）。",
+        "profile": "キーキャップの形",
+        "redo": "やり直し",
+        "reduce_motion": "動きを減らす (アニメーションなしですぐ反応)",
+        "rename_page": "ページ名",
+        "rotate": "回転",
+        "save_page_layout": "マイレイアウトに保存…",
+        "script_blocked": "セキュリティのため、スクリプトファイル（.bat、.ps1 など）はキーに割り当てられません。",
+        "script_blocked_title": "使用できないファイル",
+        "search_glyph": "アイコンを検索",
+        "section_case": "ケース",
+        "section_deck": "デッキ名",
+        "section_feedback": "ライト · 音 · 動き",
+        "section_grid": "サイズ",
+        "section_hold": "長押し時（0.55 秒）",
+        "section_key": "名前",
+        "section_panorama": "パノラマ画像",
+        "section_press": "押したとき",
+        "section_shortcuts": "編集のコツを見る",
+        "shadow": "文字の影 (背景の上でも見やすく)",
+        "shortcuts": "• キーをクリック: 選択 · Ctrl/Shift+クリック: 複数選択 · 空いた所をドラッグ: 範囲選択\n• キーをドラッグ: 移動 · 選択したキーの右/下の点: サイズ変更\n• 矢印キー: 少しずつ移動 (Shift: 1マス) · Delete: 削除 · Ctrl+D: 複製\n• Ctrl+C/V: 見た目のコピー・貼り付け · Ctrl+Z/Y: 元に戻す・やり直し",
+        "sound": "音",
+        "sound_enabled": "押したときに音を鳴らす",
+        "sound_filter": "WAV オーディオ (*.wav)",
+        "start_on": "オンの状態で開始",
+        "status_idle": "キー {count} 個 · キーを押すと右側で編集できます。アプリ・ファイル・リンクをドロップすると新しいキーになります。",
+        "status_key": "'{name}' · {action} · サイズ {size} · ダブルクリック: 名前変更 · ドラッグ: 移動",
+        "status_multi": "{count} 個のキーを選択中・スタイルの変更は選択したすべてのキーに適用されます。",
+        "status_preview": "押し心地を試しています · キーを押して感触と音を確かめてください (動作は実行されません)。押したキーの設定が右に開くので、すぐに変更できます。終了は Esc",
+        "style_copied": "スタイルをコピーしました。別のキーを選択して Ctrl+V で貼り付けてください。",
+        "subheading": "透明なキーキャップに自分のアートを差し込み、押し心地と動作まで設計しましょう。",
+        "sublabel": "小さい文字",
+        "sublabel_placeholder": "例: Ctrl+C (空欄でも可)",
+        "switch": "押し心地 (スイッチ)",
+        "tab_action": "機能",
+        "tab_cap": "形・音",
+        "tab_insert": "絵",
+        "tab_legend": "文字",
+        "tall_2u": "縦 2u",
+        "target_filter": "プログラムとショートカット (*.exe *.lnk);;すべてのファイル (*.*)",
+        "templates": "レイアウト",
+        "templates_tip": "レイアウトギャラリー (Ctrl+L) · 標準レイアウトの適用 · マイレイアウトの保存・読み込み · ファイルで共有",
+        "test": "▶ 実行テスト",
+        "test_failed": "実行できませんでした。パスやアドレスを確認してください。",
+        "test_none": "実行する動作がまだありません。",
+        "test_ok": "実行しました: {action}",
+        "text_placeholder": "コピーするテキスト（署名、住所、よく使うフレーズ…）",
+        "theme_selected": "選択したキーにのみ適用",
+        "themes": "テーマ",
+        "title": "KeyDeck スタジオ",
+        "toggle_color": "オンの色",
+        "toggle_off": "オフ",
+        "toggle_on": "オン",
+        "undo": "元に戻す",
+        "unit": "キーの大きさ",
+        "unsaved": "未適用",
+        "url_warning": "http:// または https:// のアドレスのみ開けます。",
+        "volume": "音量",
+        "weight": "太さ",
+        "zoom": "拡大"
       },
-      "state": {
-        "active": "Active",
-        "disabled": "Disabled",
-        "error": "Error",
-        "ready": "Ready",
-        "success": "Success"
+      "switch": {
+        "clicky": "青軸 · カチッ",
+        "linear": "赤軸 · なめらか",
+        "silent": "黒軸 · 静か",
+        "tactile": "茶軸 · 引っかかり"
       },
-      "style": {
-        "air_glass": "Air Glass",
-        "arcade_glow": "Arcade Glow",
-        "default": "Launcher Deck",
-        "mechanical_pbt": "Mechanical PBT",
-        "minimal_mono": "Minimal Mono",
-        "soft_clay": "Soft Clay"
-      },
-      "tab": {
-        "behavior": "Behavior",
-        "media": "Sound · media",
-        "motion": "Motion",
-        "states": "States"
-      },
-      "target_filter": "Programs and shortcuts (*.exe *.lnk);;All files (*.*)",
-      "target_placeholder": "Program or file path, or https:// address",
       "template": {
-        "keyboard": "Keyboard cluster",
-        "mixed": "Mixed 4×3",
-        "regular": "Regular 3×3",
-        "rows": "Category rows",
-        "sidebar": "Sidebar tools",
-        "strip": "Command strip"
+        "command_bar": "コマンドバー",
+        "creator_mixed": "クリエイターミックス",
+        "edit_cluster": "編集クラスター",
+        "keyboard_60": "60% キーボード (61キー)",
+        "keyboard_full": "フルサイズキーボード (104キー)",
+        "keyboard_tkl": "テンキーレスキーボード (87キー)",
+        "macro_3x3": "マクロパッド 3×3",
+        "numpad": "テンキー",
+        "side_dock": "サイドドック",
+        "stream_5x3": "ストリームパッド 5×3"
       },
-      "templates": "Array templates",
-      "title": "LAUNCH DECK",
-      "unnamed_key": "New key",
-      "vertical_key": "Vertical 1×2",
-      "visual_system": "Visual system"
+      "template_confirm": "現在のページのキーを選択したレイアウトに置き換えます。続行しますか？",
+      "template_confirm_title": "レイアウトを変更",
+      "theme": {
+        "crystal_night": "Crystal Night",
+        "floating_glass": "Floating Glass",
+        "frost_paper": "Frost Paper",
+        "graphite_pbt": "Graphite PBT",
+        "pudding_pop": "Pudding Pop",
+        "smoke_neon": "Smoke Neon",
+        "walnut_studio": "Walnut Studio"
+      },
+      "title": "KEYDECK",
+      "unassigned_hint": "まだ動作がありません。右クリック → キーを編集で設定してください。",
+      "unnamed_key": "名前のないキー",
+      "weight": {
+        "bold": "太字",
+        "medium": "中",
+        "regular": "標準"
+      }
     },
     "menu": {
       "always_on_top": "常に手前に表示",

@@ -344,7 +344,9 @@ class WindowEventsMixin:
         if exit_without_tray:
             app = QApplication.instance()
             if app is not None:
-                app.quit()
+                from calendar_app.shared.app_lifecycle import finish_application_exit
+
+                finish_application_exit(app)
 
     def showEvent(self, event):
         super().showEvent(event)

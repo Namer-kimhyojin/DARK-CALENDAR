@@ -73,6 +73,7 @@ def initialize_overlay_app(app) -> None:
 
     app.gcal_sync = None
     app._gcal_sync_issue_count = 0
+    app._gcal_waiting_for_auth = False
     app._bg_workers = []
     app._sync_worker = None
     app._auth_worker = None

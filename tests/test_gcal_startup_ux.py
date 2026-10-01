@@ -146,6 +146,52 @@ class GCalStartupUxTests(unittest.TestCase):
         self.assertIn("인증", messages[0][1])
         self.assertIsNone(host._sync_worker)
 
+    def test_silent_sync_without_token_waits_without_worker_or_backoff(self):
+        host = _FakeGCalApp({"gcal_enabled": "true"})
+        self.addCleanup(host.close)
+        self.addCleanup(host.deleteLater)
+        host._gcal_sync_failures = 0
+
+        with (
+            patch(
+                "calendar_app.presentation.main_window.action_handlers_gcal.os.path.exists",
+                return_value=False,
+            ),
+            patch("calendar_app.shared.background_worker.SyncWorker") as worker_cls,
+            self.assertLogs(
+                "calendar_app.presentation.main_window.action_handlers_gcal", level="INFO"
+            ) as logs,
+        ):
+            for _ in range(3):
+                host.sync_google_calendar_silent()
+
+        worker_cls.assert_not_called()
+        self.assertIsNone(host._sync_worker)
+        self.assertTrue(host._gcal_waiting_for_auth)
+        self.assertEqual(host._gcal_sync_failures, 0)
+        self.assertEqual(host.status_updates, 1)
+        self.assertEqual(len(logs.records), 1)
+        self.assertEqual(logs.records[0].levelname, "INFO")
+
+    def test_silent_sync_resumes_once_token_exists(self):
+        host = _FakeGCalApp({"gcal_enabled": "true"})
+        self.addCleanup(host.close)
+        self.addCleanup(host.deleteLater)
+        host._gcal_waiting_for_auth = True
+
+        with (
+            patch(
+                "calendar_app.presentation.main_window.action_handlers_gcal.os.path.exists",
+                return_value=True,
+            ),
+            patch("calendar_app.shared.background_worker.SyncWorker") as worker_cls,
+        ):
+            host.sync_google_calendar_silent()
+
+        worker_cls.assert_called_once_with(host, silent=True)
+        worker_cls.return_value.start.assert_called_once_with()
+        self.assertFalse(host._gcal_waiting_for_auth)
+
 
 if __name__ == "__main__":
     unittest.main()

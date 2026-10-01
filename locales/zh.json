@@ -127,15 +127,7 @@
     "sync_hint": "谷歌日历同步",
     "today": "今天",
     "today_hint": "转到今天",
-    "weekdays": [
-      "周一",
-      "周二",
-      "周三",
-      "周四",
-      "周五",
-      "周六",
-      "周日"
-    ]
+    "weekdays": ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
   },
   "checklist_mgr": {
     "btn_add_item": "添加项目",
@@ -1566,13 +1558,7 @@
     "hint_record_jump": "Enter打开项目。Shift+Enter跳转到其日期。",
     "hint_run_command": "Enter执行选定命令",
     "kw": {
-      "theme": [
-        "theme",
-        "dark",
-        "light",
-        "color",
-        "appearance"
-      ]
+      "theme": ["theme", "dark", "light", "color", "appearance"]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Press Enter to open the selected result",
@@ -1825,359 +1811,223 @@
         "description": "立即启动离开锁定模式。",
         "label": "离开锁定",
         "menu_path": "视图 > 离开锁定",
-        "tags": [
-          "离开",
-          "锁定"
-        ]
+        "tags": ["离开", "锁定"]
       },
       "cal_toolbar": {
         "description": "隐藏或重新显示日历工具栏。",
         "label": "切换日历工具栏",
         "menu_path": "视图 > 日历工具栏",
-        "tags": [
-          "日历",
-          "工具栏"
-        ]
+        "tags": ["日历", "工具栏"]
       },
       "calendar_print": {
         "description": "预览并打印当前或所选期间的日历。",
         "label": "打印日历",
         "menu_path": "日历 > 选项 > 打印",
-        "tags": [
-          "打印",
-          "打印机",
-          "PDF"
-        ]
+        "tags": ["打印", "打印机", "PDF"]
       },
       "checklist": {
         "description": "管理检查清单模板和项目结构。",
         "label": "管理检查清单",
         "menu_path": "任务 > 管理检查清单",
-        "tags": [
-          "检查清单",
-          "模板"
-        ]
+        "tags": ["检查清单", "模板"]
       },
       "color_assign": {
         "description": "自动为所选项目分配颜色。",
         "label": "自动分配颜色",
         "menu_path": "任务 > 自动分配颜色",
-        "tags": [
-          "颜色",
-          "标签",
-          "自动"
-        ]
+        "tags": ["颜色", "标签", "自动"]
       },
       "command_palette": {
         "description": "打开命令搜索框以立即查找功能。",
         "label": "命令面板",
         "menu_path": "直接调用",
-        "tags": [
-          "搜索",
-          "命令",
-          "面板"
-        ]
+        "tags": ["搜索", "命令", "面板"]
       },
       "delete": {
         "description": "删除当前选中的日程或项目。",
         "label": "删除所选项目",
         "menu_path": "选择状态",
-        "tags": [
-          "删除",
-          "移除"
-        ]
+        "tags": ["删除", "移除"]
       },
       "escape": {
         "description": "清除当前选择或焦点。",
         "label": "清除选择",
         "menu_path": "选择状态",
-        "tags": [
-          "取消选择",
-          "取消",
-          "esc"
-        ]
+        "tags": ["取消选择", "取消", "esc"]
       },
       "focus_mode": {
         "description": "开启或关闭专注模式。",
         "label": "切换专注模式",
         "menu_path": "视图 > 专注模式",
-        "tags": [
-          "专注",
-          "番茄钟"
-        ]
+        "tags": ["专注", "番茄钟"]
       },
       "focus_pause": {
         "description": "暂停或恢复当前专注会话。",
         "label": "暂停专注",
         "menu_path": "专注模式",
-        "tags": [
-          "专注",
-          "暂停"
-        ]
+        "tags": ["专注", "暂停"]
       },
       "force_unlock": {
         "description": "强制清除意外的锁定状态。",
         "label": "强制解锁",
         "menu_path": "紧急恢复",
-        "tags": [
-          "强制",
-          "解锁",
-          "恢复",
-          "紧急"
-        ]
+        "tags": ["强制", "解锁", "恢复", "紧急"]
       },
       "fullscreen": {
         "description": "开启或关闭全屏显示。",
         "label": "切换全屏",
         "menu_path": "视图 > 全屏",
-        "tags": [
-          "全屏"
-        ]
+        "tags": ["全屏"]
       },
       "help": {
         "description": "打开帮助中心。",
         "label": "快捷键指南",
         "menu_path": "系统 > 快捷键指南",
-        "tags": [
-          "帮助",
-          "F1"
-        ]
+        "tags": ["帮助", "F1"]
       },
       "layout_1": {
         "description": "应用默认的4面板停靠布局。",
         "label": "布局预设 1",
         "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "预设",
-          "停靠",
-          "1"
-        ]
+        "tags": ["布局", "预设", "停靠", "1"]
       },
       "layout_2": {
         "description": "应用以日历为中心的布局。",
         "label": "布局预设 2",
         "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "日历",
-          "2"
-        ]
+        "tags": ["布局", "日历", "2"]
       },
       "layout_3": {
         "description": "应用以任务为中心的布局。",
         "label": "布局预设 3",
         "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "任务",
-          "3"
-        ]
+        "tags": ["布局", "任务", "3"]
       },
       "layout_4": {
         "description": "应用分屏标签布局。",
         "label": "布局预设 4",
         "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "标签",
-          "分屏",
-          "4"
-        ]
+        "tags": ["布局", "标签", "分屏", "4"]
       },
       "layout_5": {
         "description": "应用完全分离的浮动布局。",
         "label": "布局预设 5",
         "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "分离",
-          "浮动",
-          "5"
-        ]
+        "tags": ["布局", "分离", "浮动", "5"]
       },
       "lock_mode": {
         "description": "开启或关闭桌面锁定模式。",
         "label": "锁定模式",
         "menu_path": "视图 > 锁定模式",
-        "tags": [
-          "锁定"
-        ]
+        "tags": ["锁定"]
       },
       "magnet_mode": {
         "description": "切换磁吸模式，帮助面板对齐和吸附。",
         "label": "磁吸模式",
         "menu_path": "视图 > 磁吸模式",
-        "tags": [
-          "磁吸",
-          "面板"
-        ]
+        "tags": ["磁吸", "面板"]
       },
       "monitor_left": {
         "description": "将窗口移动到另一个显示器。",
         "label": "移动到上一个显示器",
         "menu_path": "窗口控制",
-        "tags": [
-          "显示器",
-          "屏幕",
-          "左"
-        ]
+        "tags": ["显示器", "屏幕", "左"]
       },
       "monitor_right": {
         "description": "将窗口移动到另一个显示器。",
         "label": "移动到下一个显示器",
         "menu_path": "窗口控制",
-        "tags": [
-          "显示器",
-          "屏幕",
-          "右"
-        ]
+        "tags": ["显示器", "屏幕", "右"]
       },
       "new_directive": {
         "description": "打开输入指示或协作事项的窗口。",
         "label": "注册指示事项",
         "menu_path": "注册 > 指示事项",
-        "tags": [
-          "指示",
-          "协作"
-        ]
+        "tags": ["指示", "协作"]
       },
       "new_routine": {
         "description": "快速添加重复性工作例程。",
         "label": "注册例行任务",
         "menu_path": "注册 > 例行任务",
-        "tags": [
-          "例行任务",
-          "任务",
-          "重复"
-        ]
+        "tags": ["例行任务", "任务", "重复"]
       },
       "new_schedule": {
         "description": "直接打开日程录入窗口。",
         "label": "添加新日程",
         "menu_path": "注册 > 新日程",
-        "tags": [
-          "日程",
-          "添加",
-          "注册"
-        ]
+        "tags": ["日程", "添加", "注册"]
       },
       "next_day": {
         "description": "移动到当前日期的后一天。",
         "label": "后一天",
         "menu_path": "导航",
-        "tags": [
-          "后",
-          "日期",
-          "右"
-        ]
+        "tags": ["后", "日期", "右"]
       },
       "opacity_down": {
         "description": "降低窗口不透明度。",
         "label": "降低不透明度",
         "menu_path": "窗口控制",
-        "tags": [
-          "不透明度",
-          "更暗"
-        ]
+        "tags": ["不透明度", "更暗"]
       },
       "opacity_up": {
         "description": "提高窗口不透明度。",
         "label": "增加不透明度",
         "menu_path": "窗口控制",
-        "tags": [
-          "不透明度",
-          "更亮"
-        ]
+        "tags": ["不透明度", "更亮"]
       },
       "prev_day": {
         "description": "移动到当前日期的前一天。",
         "label": "前一天",
         "menu_path": "导航",
-        "tags": [
-          "前",
-          "日期",
-          "左"
-        ]
+        "tags": ["前", "日期", "左"]
       },
       "restore_pos": {
         "description": "将窗口恢复到屏幕上的安全位置。",
         "label": "恢复窗口位置",
         "menu_path": "窗口控制",
-        "tags": [
-          "窗口",
-          "恢复",
-          "位置"
-        ]
+        "tags": ["窗口", "恢复", "位置"]
       },
       "routine_mgr": {
         "description": "直接打开例行任务管理器标签页。",
         "label": "例行任务管理器",
         "menu_path": "任务 > 例行任务概览",
-        "tags": [
-          "例行任务",
-          "管理"
-        ]
+        "tags": ["例行任务", "管理"]
       },
       "save_layout": {
         "description": "将当前面板排列保存为预设。",
         "label": "保存当前布局",
         "menu_path": "视图 > 布局预设 > 保存",
-        "tags": [
-          "布局",
-          "预设",
-          "保存"
-        ]
+        "tags": ["布局", "预设", "保存"]
       },
       "show_hide": {
         "description": "隐藏主窗口或重新显示。",
         "label": "显示/隐藏窗口",
         "menu_path": "窗口控制",
-        "tags": [
-          "窗口",
-          "隐藏",
-          "显示",
-          "叠加层"
-        ]
+        "tags": ["窗口", "隐藏", "显示", "叠加层"]
       },
       "sync_gcal": {
         "description": "立即开始与谷歌日历同步。",
         "label": "同步谷歌日历",
         "menu_path": "系统 > 日历与同步",
-        "tags": [
-          "谷歌",
-          "同步",
-          "日历",
-          "F5"
-        ]
+        "tags": ["谷歌", "同步", "日历", "F5"]
       },
       "today": {
         "description": "立即将所选日期移动到今天。",
         "label": "跳转到今天",
         "menu_path": "导航",
-        "tags": [
-          "今天",
-          "日期"
-        ]
+        "tags": ["今天", "日期"]
       },
       "topbar": {
         "description": "切换顶部菜单栏的显示状态。",
         "label": "切换顶栏",
         "menu_path": "视图 > 顶栏",
-        "tags": [
-          "菜单栏",
-          "顶栏",
-          "恢复"
-        ]
+        "tags": ["菜单栏", "顶栏", "恢复"]
       },
       "widget_mode": {
         "description": "打开仅显示小组件的面板模式。",
         "label": "切换小组件模式",
         "menu_path": "视图 > 仅小组件模式",
-        "tags": [
-          "小组件",
-          "面板"
-        ]
+        "tags": ["小组件", "面板"]
       }
     },
     "groups": {
@@ -2724,310 +2574,554 @@
     },
     "launcher": {
       "action": {
-        "hotkey": "Keyboard shortcut",
-        "internal": "Air Calendar command",
-        "open": "Open program / file",
-        "url": "Web address"
+        "app": "打开应用 · 文件 · 文件夹",
+        "command": "Air Calendar 命令",
+        "hotkey": "发送快捷键",
+        "none": "无动作",
+        "page": "切换页面",
+        "text": "文本片段",
+        "url": "打开网址"
       },
-      "add_key": "+ Key",
-      "apply_pattern": "Apply combination",
-      "apply_template": "Use layout",
       "asset": {
-        "blocks": "Module blocks",
-        "blossom": "Blossom",
-        "chevrons": "Chevrons",
-        "circuit": "Circuit",
-        "confetti": "Confetti",
-        "constellation": "Constellation",
-        "custom": "My image",
-        "equalizer": "Equalizer",
-        "grid": "Grid",
-        "hexmesh": "Hex mesh",
-        "none": "None",
-        "orbit": "Orbit",
-        "pixels": "Pixel cross",
-        "portal": "Portal",
-        "prism": "Prism",
-        "rain": "Digital rain",
-        "rings": "Rhythm rings",
-        "scanlines": "Scan lines",
-        "spark": "Spark",
-        "speed": "Speed lines",
-        "sunburst": "Sunburst",
-        "target": "Target",
-        "waves": "Waves"
+        "blocks": "模块方块",
+        "blossom": "花朵",
+        "chevrons": "V 形纹",
+        "circuit": "电路",
+        "confetti": "彩纸",
+        "constellation": "星座",
+        "equalizer": "均衡器",
+        "grid": "网格",
+        "hexmesh": "六边形网",
+        "none": "无",
+        "orbit": "轨道",
+        "pixels": "像素十字",
+        "portal": "传送门",
+        "prism": "棱镜",
+        "rain": "数字雨",
+        "rings": "律动圆环",
+        "scanlines": "扫描线",
+        "spark": "火花",
+        "speed": "速度线",
+        "sunburst": "旭日",
+        "target": "靶心",
+        "waves": "波浪"
       },
-      "asset_import_failed": "Check that the file is supported and no larger than 25 MB.",
-      "asset_import_failed_title": "Could not import asset",
-      "asset_playback": {
-        "active": "While active",
-        "always": "Always play",
-        "hover": "On hover",
-        "never": "First frame only",
-        "press": "While pressed"
+      "asset_import_failed": "请确认文件格式受支持且不超过 25MB。",
+      "asset_import_failed_title": "无法导入文件",
+      "case": {
+        "acrylic": "亚克力夹层",
+        "anodized": "阳极氧化铝",
+        "floating": "悬浮（无外壳）",
+        "silver": "银色铝合金",
+        "walnut": "胡桃木"
       },
-      "batch_style": "Batch styling",
-      "browse": "Browse",
-      "canvas": "Keycap canvas",
-      "choose_mosaic": "Choose image...",
-      "choose_target": "Choose a program or file",
-      "columns": "Columns",
+      "close_tip": "隐藏 KeyDeck — 可从顶部“小组件”菜单重新显示",
       "command": {
-        "command_palette": "Command palette",
-        "new_task": "New event",
-        "sync_google": "Google sync",
-        "today": "Go to today",
-        "widget_manager": "Widget manager"
+        "command_palette": "命令面板",
+        "daily_summary": "今日摘要",
+        "focus_mode": "专注模式",
+        "new_task": "新建日程",
+        "sync_google": "Google 同步",
+        "today": "转到今天",
+        "view_mode": "切换视图",
+        "widget_manager": "小组件管理器"
       },
-      "delete_selected": "Delete",
-      "designer": {
-        "asset": "Asset",
-        "asset_opacity": "Asset opacity",
-        "asset_scale": "Asset size",
-        "assets": "Decal assets",
-        "base": "Base shape",
-        "border_color": "Border color",
-        "choose_color": "Choose color",
-        "choose_image": "Import image...",
-        "clear": "Clear custom design",
-        "colors": "Custom colors",
-        "content": "Icon and label",
-        "depth": "Depth",
-        "desc": "Combine colors, shape, icons, and decal assets to design the selected keys.",
-        "font_scale": "Text size",
-        "heading": "Design your own keycap",
-        "icon": "Icon",
-        "image_filter": "Images (*.png *.jpg *.jpeg *.webp *.bmp)",
-        "layout": "Content layout",
-        "open": "Detailed design...",
-        "preview": "Live preview",
-        "radius": "Corner radius",
-        "reset_style": "Reset to style defaults",
-        "search_asset": "Search assets",
-        "search_icon": "Search icons",
-        "side_color": "Side color",
-        "style": "Style",
-        "text_color": "Text color",
-        "title": "Keycap Designer",
-        "top_color": "Top color"
+      "empty_page": "空页面 · 请在工作室中添加按键",
+      "fit": {
+        "contain": "适应",
+        "cover": "填充",
+        "stretch": "拉伸"
       },
-      "edit": "Edit keycap array...",
-      "editor_desc": "Choose a template, select one or more keys, then combine size, style, color, icons, and decal assets.",
-      "editor_drag_hint": "Drag to exchange key positions.",
-      "editor_heading": "Keycap array and actions",
-      "editor_title": "Edit Launcher Deck",
-      "effect": {
-        "bounce": "Tactile bounce",
-        "breathe": "Breathe",
-        "depress": "Physical press",
-        "flash": "Color flash",
-        "glow": "Glow",
-        "lift": "Gentle lift",
-        "none": "No effect",
-        "pulse": "Soft pulse",
-        "ring": "Status ring",
-        "ripple": "Expanding ripple",
-        "shake": "Horizontal shake",
-        "solid": "Solid highlight"
+      "hidden_message": "可从顶部“小组件”菜单或小组件管理器重新显示。",
+      "hidden_title": "已隐藏 KeyDeck",
+      "hold_prefix": "长按",
+      "hotkey": {
+        "desktop": "显示桌面",
+        "prev_track": "上一曲",
+        "screenshot": "屏幕截图",
+        "switch_app": "切换应用"
       },
       "icon": {
-        "alarm": "Alarm",
-        "auto": "Automatic for action",
-        "bolt": "Bolt",
-        "broadcast": "Broadcast",
-        "calendar": "Calendar",
-        "check": "Complete",
-        "close": "Close",
-        "cloud": "Cloud",
-        "coffee": "Break",
-        "delete": "Delete",
-        "edit": "Edit",
-        "filter": "Filter",
-        "focus": "Focus",
-        "folder": "Folder",
-        "forward": "Forward",
-        "globe": "Web",
-        "info": "Info",
-        "link": "Link",
-        "lock": "Lock",
-        "memo": "Memo",
-        "none": "No icon",
-        "palette": "Palette",
-        "pause": "Pause",
-        "play": "Play",
-        "plus": "Add",
-        "repeat": "Repeat",
-        "rocket": "Quick launch",
-        "save": "Save",
-        "search": "Search",
-        "settings": "Settings",
-        "star": "Star",
-        "sync": "Sync",
-        "timer": "Timer",
-        "unlock": "Unlock",
-        "warning": "Warning"
+        "alarm": "闹钟",
+        "arrow_down": "下",
+        "arrow_left": "左",
+        "arrow_right": "右",
+        "arrow_up": "上",
+        "auto": "按动作自动选择",
+        "bolt": "闪电",
+        "bookmark": "书签",
+        "brightness": "亮度",
+        "broadcast": "广播",
+        "brush": "画笔",
+        "calculator": "计算器",
+        "calendar": "日历",
+        "camera": "相机",
+        "cart": "购物",
+        "chart": "图表",
+        "chat": "聊天",
+        "check": "完成",
+        "clipboard": "剪贴板",
+        "close": "关闭",
+        "cloud": "云",
+        "code": "代码",
+        "coffee": "休息",
+        "copy": "复制",
+        "cut": "剪切",
+        "dashboard": "仪表板",
+        "delete": "删除",
+        "document": "文档",
+        "edit": "编辑",
+        "filter": "筛选",
+        "fire": "火焰",
+        "focus": "专注",
+        "folder": "文件夹",
+        "forward": "前进",
+        "game": "游戏",
+        "globe": "网页",
+        "headphones": "耳机",
+        "heart": "爱心",
+        "home": "主页",
+        "idea": "创意",
+        "image": "图片",
+        "info": "信息",
+        "keyboard": "键盘",
+        "layers": "图层",
+        "link": "链接",
+        "lock": "锁定",
+        "mail": "邮件",
+        "map": "地图",
+        "memo": "备忘",
+        "mic": "麦克风",
+        "mic_off": "关闭麦克风",
+        "monitor": "显示器",
+        "music": "音乐",
+        "next_track": "下一曲",
+        "night": "夜间",
+        "none": "无图标",
+        "notebook": "笔记本",
+        "palette": "调色板",
+        "paste": "粘贴",
+        "pause": "暂停",
+        "phone": "电话",
+        "play": "运行",
+        "play_pause": "播放/暂停",
+        "plus": "添加",
+        "power": "电源",
+        "prev_track": "上一曲",
+        "printer": "打印机",
+        "redo": "重做",
+        "repeat": "重复",
+        "rocket": "快速启动",
+        "save": "保存",
+        "search": "搜索",
+        "settings": "设置",
+        "slides": "演示文稿",
+        "spreadsheet": "电子表格",
+        "star": "星标",
+        "sync": "同步",
+        "terminal": "终端",
+        "timer": "计时器",
+        "translate": "翻译",
+        "undo": "撤销",
+        "unlock": "解锁",
+        "user": "用户",
+        "video": "视频",
+        "volume_mute": "静音",
+        "volume_up": "调高音量",
+        "warning": "警告"
       },
-      "icon_pack": {
-        "glass": "Glass Line",
-        "ink": "Mono Ink",
-        "neon": "Neon Cyan",
-        "sunset": "Warm Sunset",
-        "violet": "Violet Glow"
+      "indicator": {
+        "bar": "灯条",
+        "dot": "指示灯",
+        "none": "不显示",
+        "ring": "边缘光",
+        "switch": "迷你开关"
       },
-      "icon_pack_label": "Icon pack",
-      "image_filter": "Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif *.svg)",
-      "interaction": {
-        "active_border": "Active border",
-        "active_effect": "Active effect",
-        "active_top": "Active surface",
-        "asset_playback": "Animated image",
-        "choose_sound": "Choose WAV file...",
-        "clear": "Reset feedback settings",
-        "desc": "Configure activation, motion, state colors, sound, and animated asset playback in one place.",
-        "disabled_text": "Disabled text",
-        "disabled_top": "Disabled surface",
-        "duration": "Result duration",
-        "enabled": "Enable this key",
-        "error_effect": "Error effect",
-        "heading": "Design every moment of the interaction",
-        "hover_effect": "Hover effect",
-        "indicator": "Show status indicator",
-        "long_press": "Long-press duration",
-        "mode": "Activation mode",
-        "mode_action": "Action button",
-        "mode_hold": "Active while held",
-        "mode_toggle": "On · off toggle",
-        "open": "Interaction and feedback...",
-        "preset": "Quick preset",
-        "press_effect": "Press effect",
-        "preview": "State preview",
-        "preview_sound": "Preview sound",
-        "reduce_motion": "Reduce motion",
-        "search_sound": "Search sounds",
-        "sound": "Feedback sound",
-        "sound_event": "Play sound",
-        "sound_file": "Custom sound",
-        "sound_filter": "WAV audio (*.wav)",
-        "speed": "Motion speed",
-        "state_note": "Toggle state is preserved when the widget is reopened.",
-        "success_effect": "Success effect",
-        "title": "Key Interaction Studio",
-        "trigger": "Activation trigger",
-        "trigger_double": "Double press",
-        "trigger_long": "Long press",
-        "trigger_press": "Immediately on press",
-        "trigger_release": "On release",
-        "volume": "Volume"
+      "insert": {
+        "color": "纯色",
+        "gradient": "渐变",
+        "image": "我的图片",
+        "none": "无 (透明)",
+        "panorama": "键盘全景图",
+        "pattern": "图案"
       },
       "key": {
-        "app": "App {number}",
-        "command": "Command",
-        "design": "Design",
-        "favorites": "Favorites",
-        "folder": "Folder",
-        "generic": "Key",
-        "new_schedule": "New event",
-        "schedule": "Event",
-        "space": "SPACE",
-        "start_work": "Start work",
-        "sync": "Sync",
-        "today": "Today",
-        "tools": "Tools",
-        "web": "Web",
-        "work": "Work"
+        "app_1": "应用 1",
+        "app_2": "应用 2",
+        "app_3": "应用 3",
+        "app_4": "应用 4",
+        "app_5": "应用 5",
+        "app_6": "应用 6",
+        "command": "命令",
+        "command_palette": "命令面板",
+        "copy": "复制",
+        "cut": "剪切",
+        "daily_summary": "今日摘要",
+        "design": "设计",
+        "down": "下",
+        "focus": "专注",
+        "folder": "文件夹",
+        "kb_hangul": "韩/英",
+        "kb_hanja": "汉字",
+        "left": "左",
+        "mute": "静音",
+        "new_schedule": "新建日程",
+        "next_track": "下一曲",
+        "paste": "粘贴",
+        "play_pause": "播放",
+        "redo": "重做",
+        "right": "右",
+        "save": "保存",
+        "schedule": "日程",
+        "start_work": "开始工作",
+        "summary": "摘要",
+        "sync": "同步",
+        "today": "今天",
+        "undo": "撤销",
+        "up": "上",
+        "volume_down": "音量 -",
+        "volume_up": "音量 +",
+        "web": "网页",
+        "web_1": "网页 1",
+        "web_2": "网页 2",
+        "web_3": "网页 3",
+        "widgets": "小组件"
       },
-      "key_action": "Key action",
-      "key_name": "Key name",
-      "layout": {
-        "icon_above": "Icon above · label below",
-        "icon_left": "Icon left · label right",
-        "icon_only": "Icon only",
-        "text_only": "Label only"
+      "layouts": {
+        "applied": "已应用布局。按 Ctrl+Z 撤销",
+        "apply_deck": "用此布局替换整个键盘",
+        "apply_page": "应用到当前页面",
+        "as_new_page": "添加为新页面",
+        "confirm_apply": "替换",
+        "confirm_deck": "当前键盘的所有页面都会被此布局替换。要继续吗？",
+        "confirm_page": "当前页面的 {count} 个按键会被此布局替换。要继续吗？",
+        "confirm_title": "应用布局",
+        "delete": "删除",
+        "delete_confirm": "要从我的布局中删除“{name}”吗？已导出的文件会保留。",
+        "empty": "还没有保存的布局。\n使用“保存当前页面”创建，或导入收到的 .keydeck 文件，也可以拖放到这里。",
+        "error_empty": "此布局没有按键。",
+        "error_newer": "此布局由更新版本的 Air Calendar 创建。请更新应用后重试。",
+        "error_not_layout": "这不是 KeyDeck 布局文件。",
+        "error_too_large": "文件过大。只能导入 48MB 以下的布局。",
+        "error_unreadable": "无法读取文件。文件可能已损坏，或不是 KeyDeck 布局文件。",
+        "export": "导出为文件…",
+        "export_failed": "无法保存文件。",
+        "export_filter": "KeyDeck 布局 (*.keydeck)",
+        "export_title": "将布局导出为文件",
+        "exported": "已导出: {path}",
+        "file_filter": "KeyDeck 布局 (*.keydeck *.json)",
+        "heading": "布局",
+        "import": "导入文件…",
+        "import_confirm": "“{name}”({meta})\n\n按下此布局的按键会执行以下动作。请只导入来自可信来源的文件。",
+        "import_go": "导入",
+        "import_title": "导入布局文件",
+        "imported": "已导入布局“{name}”。",
+        "meta_builtin": "内置 · {keys} 个按键 · 使用当前键盘的主题",
+        "meta_deck": "整个键盘 · {pages} 页 · {keys} 个按键",
+        "meta_page": "页面布局 · {keys} 个按键",
+        "meta_saved": "保存于 {date}",
+        "nothing_to_save": "没有可保存的按键。",
+        "pick_hint": "请在左侧选择布局。",
+        "rename": "重命名",
+        "save_deck": "保存整个键盘…",
+        "save_deck_tip": "一次保存所有页面以及外壳和尺寸设置。",
+        "save_failed": "无法保存布局。",
+        "save_name": "布局名称",
+        "save_page": "保存当前页面…",
+        "save_page_tip": "将此页面的按键布局、外观和动作保存到我的布局。",
+        "save_title": "保存布局",
+        "saved": "已保存布局“{name}”。",
+        "saved_hint": "已保存布局“{name}”。可在“布局”按钮的我的布局中加载。",
+        "skipped": "因找不到或过大而未包含的图片/声音: {names}",
+        "subheading": "可以应用内置布局，或保存自己设计的页面和键盘，并通过 .keydeck 文件分享。",
+        "tab_builtin": "内置布局",
+        "tab_mine": "我的布局",
+        "tab_mine_count": "我的布局 ({count})",
+        "targets": "会打开的应用、文件和网址:",
+        "title": "布局",
+        "undo_hint": " 在工作室中可以按 Ctrl+Z 撤销。"
       },
-      "mosaic_mode": "Mosaic image",
-      "mosaic_opacity": "Image opacity",
-      "mosaic_show_labels": "Show icons and labels",
-      "multi_select_hint": "Click keys one after another to select several. Detailed design also applies to every selected key.",
-      "pattern": {
-        "checker": "Checkerboard",
-        "flow": "Color flow",
-        "function_groups": "By function",
-        "hero": "Emphasize primary keys",
-        "row_groups": "By row",
-        "uniform": "One style"
+      "led": {
+        "breathe": "切换开启时呼吸",
+        "off": "关闭",
+        "reactive": "按下时亮起",
+        "static": "常亮"
       },
-      "preset": {
-        "accessible": "High contrast · reduced motion",
-        "apply": "Apply preset",
-        "balanced": "Balanced default",
-        "neon": "Neon performance",
-        "subtle": "Subtle and calm",
-        "tactile": "Tactile key feel"
+      "legend": {
+        "art": "仅图片",
+        "caption": "图片 + 下方名称",
+        "center": "大号名称",
+        "corner": "角落文字",
+        "glyph": "仅图标",
+        "stack": "图标 + 名称"
       },
-      "replace_mosaic": "Replace image...",
-      "reset": "Reset to mixed layout",
-      "select_all": "All",
-      "selected_count": "{count} key(s) selected",
+      "material": {
+        "crystal": "水晶（透明）",
+        "frosted": "磨砂（半透明）",
+        "pudding": "布丁",
+        "smoke": "烟灰",
+        "solid": "实心 PBT"
+      },
+      "menu": {
+        "add_page": "添加页面",
+        "delete": "删除 KeyDeck...",
+        "edit_key": "编辑“{name}”...",
+        "exit_app": "退出 Air Calendar...",
+        "header": "显示铭牌",
+        "hide": "隐藏 KeyDeck（关闭）",
+        "layout_gallery": "布局库 (保存 · 加载 · 分享)...",
+        "pages": "页面",
+        "reset_size": "默认大小 (100%)",
+        "size": "大小",
+        "sound": "按键音效",
+        "studio": "打开 KeyDeck 工作室...",
+        "templates": "布局",
+        "themes": "主题"
+      },
+      "mode": {
+        "tap": "按一次",
+        "toggle": "开/关 (切换)"
+      },
+      "new_key": "新按键",
+      "not_set": "未设置",
+      "page_default": "页面 {number}",
+      "page_main": "主页",
+      "page_target": {
+        "next": "下一页",
+        "prev": "上一页"
+      },
+      "playback": {
+        "always": "始终播放",
+        "hover": "悬停时播放",
+        "never": "固定第一帧"
+      },
+      "profile": {
+        "cylindrical": "Cherry · 标准",
+        "flat": "DSA · 低而平",
+        "low": "矮 · 薄键",
+        "mt3": "MT3 · 深碟形",
+        "oem": "OEM · 普通键盘",
+        "round": "圆形 · 打字机",
+        "spherical": "SA · 高而圆",
+        "xda": "XDA · 宽顶面"
+      },
       "sound": {
-        "chime": "Air chime",
-        "crisp_click": "Crisp click",
-        "custom": "Custom WAV file",
-        "error": "Error alert",
-        "glass": "Glass tap",
-        "mechanical": "Mechanical key",
-        "none": "No sound",
-        "pop": "Light pop",
-        "pulse": "Digital pulse",
-        "soft_click": "Soft click",
-        "success": "Success chime",
-        "system": "System feedback sound",
-        "toggle_off": "Toggle off",
-        "toggle_on": "Toggle on",
-        "whoosh": "Soft whoosh"
+        "auto": "真实敲击声（反映轴体·键帽·外壳）",
+        "chime": "空灵钟声",
+        "crisp_click": "清脆点击",
+        "custom": "我的 WAV 文件",
+        "error": "错误提示",
+        "glass": "玻璃轻敲",
+        "mechanical": "机械键",
+        "none": "无声音",
+        "pop": "轻快啵声",
+        "pulse": "数字脉冲",
+        "soft_click": "柔和点击",
+        "success": "成功提示音",
+        "toggle_off": "关闭提示音",
+        "toggle_on": "开启提示音",
+        "whoosh": "柔和呼啸"
       },
-      "sound_event": {
-        "all": "Every state change",
-        "error": "On error",
-        "press": "On press",
-        "result": "On success or error",
-        "success": "On success"
+      "studio": {
+        "accent": "强调色",
+        "add_key": "+ 添加按键",
+        "add_page": "添加页面 · 双击标签: 重命名 · 右键: 复制/删除",
+        "add_page_short": "新页面",
+        "apply_close": "应用并关闭",
+        "apply_tip": "应用更改并关闭 (Ctrl+S)",
+        "big_2x2": "大号 2×2",
+        "browse_file": "文件…",
+        "browse_folder": "文件夹…",
+        "cap_color": "键帽颜色",
+        "case_color": "外壳颜色",
+        "choose_folder": "选择文件夹",
+        "choose_image": "加载图片…",
+        "choose_panorama": "选择全景图…",
+        "choose_sound": "选择 WAV 文件…",
+        "choose_target": "选择程序或文件",
+        "clear": "清除",
+        "color_1": "颜色 1",
+        "color_2": "颜色 2",
+        "common_hotkeys": "从常用快捷键中选择…",
+        "copy_style": "复制样式 (Ctrl+C)",
+        "deck_hint": "点击按键即可切换到按键设置。点击空白处可返回此界面。",
+        "deck_name": "键盘名称",
+        "deck_title": "键盘设置",
+        "delete": "删除 (Delete)",
+        "delete_page": "删除页面",
+        "delete_page_confirm": "要删除页面“{name}”及其 {count} 个按键吗？",
+        "delete_short": "删除",
+        "discard": "有尚未应用的更改。要怎么处理？",
+        "discard_close": "放弃更改",
+        "discard_title": "未应用的更改",
+        "duplicate": "复制 (Ctrl+D)",
+        "duplicate_page": "复制页面",
+        "duplicate_short": "复制",
+        "empty_page": "还没有按键。点击“+ 添加按键”或拖放应用、文件、链接",
+        "enabled": "启用按键 (关闭后按下无反应)",
+        "export_page_layout": "导出为布局文件…",
+        "fit": "适配",
+        "gap": "按键间距",
+        "glyph": "图标",
+        "glyph_color": "图标颜色",
+        "glyph_same": "与文字颜色相同",
+        "header": "在顶部显示名称和页面",
+        "heading": "KeyDeck Studio",
+        "hold_hint": "设置辅助动作后，长按时执行辅助动作，短按时执行基本动作。",
+        "hotkey_empty": "按下组合键进行录制",
+        "hotkey_note": "键盘不会抢占焦点，因此按键会发送到你正在使用的窗口。",
+        "hotkey_value": "要发送的按键：{keys}",
+        "image_filter": "图片 (*.png *.jpg *.jpeg *.webp *.bmp *.gif *.svg)",
+        "indicator": "标记样式",
+        "keep_editing": "继续编辑",
+        "key_size": "按键大小",
+        "label": "名称",
+        "label_placeholder": "按键名称",
+        "layout": "布局",
+        "led": "按键底光",
+        "led_brightness": "灯光亮度",
+        "led_color": "灯光颜色",
+        "led_mode": "亮起时机",
+        "legend_color": "文字颜色",
+        "legend_size": "大小",
+        "material": "材质",
+        "mode": "执行方式",
+        "mode_tap_hint": "每次按下执行一次动作。",
+        "mode_toggle_hint": "按下后保持开启并保持按下状态，再按一次关闭。开启和关闭时都会执行动作，下方的标记显示当前状态。",
+        "multi_hint": "已选择多个按键。名称和动作仅可在选择单个按键时编辑。",
+        "multi_summary": "已选择 {count} 个按键",
+        "no_image": "未选择图片",
+        "none_hint": "按下时只有声音和动效，不执行任何动作。",
+        "offset_x": "水平位置",
+        "offset_y": "垂直位置",
+        "opacity": "浓度",
+        "page_copy": "{name} 副本",
+        "page_name": "名称",
+        "page_tabs_tip": "双击: 重命名 · 右键: 复制/删除 · 拖动: 调整顺序",
+        "panorama_applied": "已将全景图应用到 {count} 个键。按 Ctrl+Z 撤销",
+        "panorama_cleared": "已移除全景图，并清空了使用它的 {count} 个键的嵌件。按 Ctrl+Z 撤销",
+        "panorama_empty": "点击选择图片，或将图片拖放到此处",
+        "panorama_fit": "布局",
+        "panorama_hint": "将一张图片分割嵌入整个键盘。会计算按键之间的间隙，使画面看起来连贯。",
+        "panorama_info": "{name} · {width}×{height}px · {count} 个键正在使用",
+        "panorama_lowres": "原图分辨率较低，在键上可能显得模糊。建议使用更大的图片。",
+        "panorama_missing": "找不到图片文件。请重新选择。",
+        "panorama_page": "应用到整个页面",
+        "panorama_preview_hint": "拖动: 位置 · Ctrl+滚轮: 缩放 · 双击: 居中 · 拖放图片以替换",
+        "panorama_replaced": "已更换全景图片。",
+        "panorama_unreadable": "无法读取此图片。请选择其他文件。",
+        "panorama_unused": "此页面没有使用全景图的键。请点击“应用到整个页面”，或选择键并将嵌件改为“键盘全景图”。",
+        "panorama_zoom": "缩放",
+        "paste_after_copy": "复制后立即粘贴 (Ctrl+V)",
+        "paste_style": "粘贴样式 (Ctrl+V)",
+        "path_placeholder": "程序 · 文件 · 文件夹路径",
+        "pattern": "图案",
+        "pick_color": "选择颜色",
+        "playback": "动态图片",
+        "preview_banner": "试按中 · 请按下按键 · 按 Esc 结束",
+        "preview_empty": "此页面没有可按的按键。请先添加按键。",
+        "preview_hint": "拖动：位置 · 双击：重置 · 拖放图片",
+        "preview_mode": "按键体验",
+        "preview_sound": "试听",
+        "preview_stop": "结束试按",
+        "preview_tip": "像真实键盘一样按下按键，确认声音和动效（不会执行动作）。",
+        "profile": "键帽形状",
+        "redo": "重做",
+        "reduce_motion": "减少动效 (无动画立即响应)",
+        "rename_page": "页面名称",
+        "rotate": "旋转",
+        "save_page_layout": "保存到我的布局…",
+        "script_blocked": "出于安全考虑，脚本文件（.bat、.ps1 等）无法关联到按键。",
+        "script_blocked_title": "无法使用的文件",
+        "search_glyph": "搜索图标",
+        "section_case": "外壳",
+        "section_deck": "键盘名称",
+        "section_feedback": "灯光 · 声音 · 动效",
+        "section_grid": "尺寸",
+        "section_hold": "长按时（0.55 秒）",
+        "section_key": "名称",
+        "section_panorama": "全景图",
+        "section_press": "按下时",
+        "section_shortcuts": "查看编辑技巧",
+        "shadow": "文字阴影 (在背景上也清晰)",
+        "shortcuts": "• 点击按键: 选择 · Ctrl/Shift+点击: 多选 · 在空白处拖动: 框选\n• 拖动按键: 移动 · 选中按键右侧/下方的点: 调整大小\n• 方向键: 微调位置 (Shift: 一格) · Delete: 删除 · Ctrl+D: 复制\n• Ctrl+C/V: 复制/粘贴外观 · Ctrl+Z/Y: 撤销/重做",
+        "sound": "声音",
+        "sound_enabled": "按下时发出声音",
+        "sound_filter": "WAV 音频 (*.wav)",
+        "start_on": "以开启状态开始",
+        "status_idle": "{count} 个按键 · 点击按键即可在右侧编辑。拖放应用、文件或链接即可新建按键。",
+        "status_key": "'{name}' · {action} · 大小 {size} · 双击: 重命名 · 拖动: 移动",
+        "status_multi": "已选择 {count} 个按键 · 样式更改将应用于所有选中的按键。",
+        "status_preview": "正在试按 · 按下按键感受手感和声音 (不会执行动作)。按下的按键设置会在右侧打开，可立即修改。按 Esc 结束",
+        "style_copied": "已复制样式。选择其他按键后按 Ctrl+V 粘贴。",
+        "subheading": "将自己的作品嵌入透明键帽，再设计按下的手感和动作。",
+        "sublabel": "小字",
+        "sublabel_placeholder": "例如 Ctrl+C (可留空)",
+        "switch": "手感 (轴体)",
+        "tab_action": "功能",
+        "tab_cap": "外观·声音",
+        "tab_insert": "图片",
+        "tab_legend": "文字",
+        "tall_2u": "竖向 2u",
+        "target_filter": "程序和快捷方式 (*.exe *.lnk);;所有文件 (*.*)",
+        "templates": "布局",
+        "templates_tip": "布局库 (Ctrl+L) · 应用内置布局 · 保存/加载我的布局 · 以文件分享",
+        "test": "▶ 测试执行",
+        "test_failed": "无法执行。请检查路径或地址。",
+        "test_none": "还没有可执行的动作。",
+        "test_ok": "已执行：{action}",
+        "text_placeholder": "要复制的文本（签名、地址、常用语句…）",
+        "theme_selected": "仅应用于选中的按键",
+        "themes": "主题",
+        "title": "KeyDeck 工作室",
+        "toggle_color": "开启颜色",
+        "toggle_off": "关",
+        "toggle_on": "开",
+        "undo": "撤销",
+        "unit": "按键大小",
+        "unsaved": "未应用",
+        "url_warning": "只能打开 http:// 或 https:// 地址。",
+        "volume": "音量",
+        "weight": "粗细",
+        "zoom": "缩放"
       },
-      "state": {
-        "active": "Active",
-        "disabled": "Disabled",
-        "error": "Error",
-        "ready": "Ready",
-        "success": "Success"
+      "switch": {
+        "clicky": "青轴 · 咔哒",
+        "linear": "红轴 · 顺滑",
+        "silent": "黑轴 · 安静",
+        "tactile": "茶轴 · 段落感"
       },
-      "style": {
-        "air_glass": "Air Glass",
-        "arcade_glow": "Arcade Glow",
-        "default": "Launcher Deck",
-        "mechanical_pbt": "Mechanical PBT",
-        "minimal_mono": "Minimal Mono",
-        "soft_clay": "Soft Clay"
-      },
-      "tab": {
-        "behavior": "Behavior",
-        "media": "Sound · media",
-        "motion": "Motion",
-        "states": "States"
-      },
-      "target_filter": "Programs and shortcuts (*.exe *.lnk);;All files (*.*)",
-      "target_placeholder": "Program or file path, or https:// address",
       "template": {
-        "keyboard": "Keyboard cluster",
-        "mixed": "Mixed 4×3",
-        "regular": "Regular 3×3",
-        "rows": "Category rows",
-        "sidebar": "Sidebar tools",
-        "strip": "Command strip"
+        "command_bar": "命令栏",
+        "creator_mixed": "创作者组合",
+        "edit_cluster": "编辑区",
+        "keyboard_60": "60% 键盘 (61键)",
+        "keyboard_full": "全尺寸键盘 (104键)",
+        "keyboard_tkl": "无数字键盘 (87键)",
+        "macro_3x3": "宏键盘 3×3",
+        "numpad": "数字小键盘",
+        "side_dock": "侧边栏",
+        "stream_5x3": "直播键盘 5×3"
       },
-      "templates": "Array templates",
-      "title": "LAUNCH DECK",
-      "unnamed_key": "New key",
-      "vertical_key": "Vertical 1×2",
-      "visual_system": "Visual system"
+      "template_confirm": "要将当前页面的按键替换为所选布局吗？",
+      "template_confirm_title": "更改布局",
+      "theme": {
+        "crystal_night": "Crystal Night",
+        "floating_glass": "Floating Glass",
+        "frost_paper": "Frost Paper",
+        "graphite_pbt": "Graphite PBT",
+        "pudding_pop": "Pudding Pop",
+        "smoke_neon": "Smoke Neon",
+        "walnut_studio": "Walnut Studio"
+      },
+      "title": "KEYDECK",
+      "unassigned_hint": "尚未设置动作。请右键点击 → 编辑按键进行设置。",
+      "unnamed_key": "未命名按键",
+      "weight": {
+        "bold": "粗体",
+        "medium": "中等",
+        "regular": "常规"
+      }
     },
     "menu": {
       "always_on_top": "始终置顶",

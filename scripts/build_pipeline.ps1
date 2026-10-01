@@ -4,6 +4,8 @@ param(
     [ValidateSet("auto", "x64", "arm64")]
     [string]$Arch = "auto",
 
+    [string]$PythonExecutable = "",
+
     [switch]$SkipMsix,
     [switch]$SkipUpload,
     [switch]$UploadOnly,
@@ -380,7 +382,7 @@ function Sync-AppVersion {
     ), "package version is $NewPackageVersion"
     [System.IO.File]::WriteAllText($partnerGuidePath, $partnerGuide, $utf8NoBom)
 
-    $releaseGuidePath = Join-Path $ProjectRoot "docs\store_release_process.md"
+    $releaseGuidePath = Join-Path $ProjectRoot "rules\store_release_process.md"
     $releaseGuide = Get-Content $releaseGuidePath -Raw -Encoding utf8
     $releaseGuide = $releaseGuide -replace (
         '-ValidateOnly -Version \d+\.\d+\.\d+ -PackageVersion \d+\.\d+\.\d+\.\d+ -ReleaseDate \d{4}-\d{2}-\d{2} -Channel'
@@ -729,6 +731,9 @@ function Flush-Log {
 
 $projectRoot    = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $venvPython     = Join-Path $projectRoot ".venv\Scripts\python.exe"
+if (-not [string]::IsNullOrWhiteSpace($PythonExecutable)) {
+    $venvPython = (Resolve-Path -LiteralPath $PythonExecutable).Path
+}
 $resetScript    = Join-Path $projectRoot "scripts\reset_release_state.py"
 $payloadScript  = Join-Path $projectRoot "build_store.py"
 $complianceScript = Join-Path $projectRoot "scripts\release_compliance.py"

@@ -304,6 +304,18 @@ class AwayLockMixin:
             if has_aux_overlays:
                 self.lock_pw_edit.clear()
 
+    @staticmethod
+    def _show_overlay_fullscreen(window) -> None:
+        """Full-screen an overlay; no-focus overlays must not be activated (Qt warns)."""
+        from PyQt6.QtCore import Qt as _Qt2
+
+        if window.windowFlags() & _Qt2.WindowType.WindowDoesNotAcceptFocus:
+            # showFullScreen() calls activateWindow(), which Qt rejects for these windows.
+            window.setWindowState(window.windowState() | _Qt2.WindowState.WindowFullScreen)
+            window.show()
+        else:
+            window.showFullScreen()
+
     def _ensure_password_entry_ready(self, *, force_activate=False):
         if not getattr(self, "is_away_locked", False) or not self._password_unlock_active():
             return False
@@ -687,7 +699,7 @@ class AwayLockMixin:
                 win = overlay.get("window")
                 if win is not None:
                     win.raise_()
-                    win.showFullScreen()
+                    self._show_overlay_fullscreen(win)
 
             _logger.info(
                 "[LOCK] locked. password_mode=%s overlay_count=%s manual=%s",

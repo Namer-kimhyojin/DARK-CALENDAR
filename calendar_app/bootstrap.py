@@ -442,9 +442,11 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
     window.show()
 
     def _handle_sigint(*_):
+        from calendar_app.shared.app_lifecycle import finish_application_exit
+
         window._exit_requested = True
         window.close()
-        app.quit()
+        finish_application_exit(app)
 
     signal.signal(signal.SIGINT, _handle_sigint)
     app._sigint_pump = QTimer()

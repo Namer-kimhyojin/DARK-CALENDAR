@@ -127,15 +127,7 @@
     "sync_hint": "Sinkr. Google",
     "today": "Hari Ini",
     "today_hint": "Ke hari ini",
-    "weekdays": [
-      "Sen",
-      "Sel",
-      "Rab",
-      "Kam",
-      "Jum",
-      "Sab",
-      "Min"
-    ]
+    "weekdays": ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
   },
   "checklist_mgr": {
     "btn_add_item": "Tambahkan Barang",
@@ -1566,13 +1558,7 @@
     "hint_record_jump": "Enter membuka item. Shift+Enter pindah ke tanggalnya.",
     "hint_run_command": "Enter menjalankan perintah yang dipilih",
     "kw": {
-      "theme": [
-        "theme",
-        "dark",
-        "light",
-        "color",
-        "appearance"
-      ]
+      "theme": ["theme", "dark", "light", "color", "appearance"]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Tekan Enter untuk membuka hasil yang dipilih",
@@ -1825,359 +1811,223 @@
         "description": "Segera memulai mode kunci saat tidak ada di tempat.",
         "label": "Kunci saat tidak ada",
         "menu_path": "Tampilan > Kunci saat tidak ada",
-        "tags": [
-          "tidak ada",
-          "kunci"
-        ]
+        "tags": ["tidak ada", "kunci"]
       },
       "cal_toolbar": {
         "description": "Menyembunyikan atau menampilkan kembali bilah alat kalender.",
         "label": "Alihkan bilah alat kalender",
         "menu_path": "Tampilan > Bilah alat kalender",
-        "tags": [
-          "kalender",
-          "bilah alat"
-        ]
+        "tags": ["kalender", "bilah alat"]
       },
       "calendar_print": {
         "description": "Melihat pratinjau dan mencetak kalender untuk periode saat ini atau yang dipilih.",
         "label": "Cetak kalender",
         "menu_path": "Kalender > Opsi > Cetak",
-        "tags": [
-          "cetak",
-          "printer",
-          "PDF"
-        ]
+        "tags": ["cetak", "printer", "PDF"]
       },
       "checklist": {
         "description": "Mengelola templat dan struktur item daftar periksa.",
         "label": "Kelola daftar periksa",
         "menu_path": "Tugas > Kelola daftar periksa",
-        "tags": [
-          "daftar periksa",
-          "templat"
-        ]
+        "tags": ["daftar periksa", "templat"]
       },
       "color_assign": {
         "description": "Secara otomatis menetapkan warna ke item yang dipilih.",
         "label": "Penetapan warna otomatis",
         "menu_path": "Tugas > Penetapan warna otomatis",
-        "tags": [
-          "warna",
-          "label",
-          "otomatis"
-        ]
+        "tags": ["warna", "label", "otomatis"]
       },
       "command_palette": {
         "description": "Membuka kotak pencarian perintah untuk menemukan fitur secara instan.",
         "label": "Palet perintah",
         "menu_path": "Panggilan langsung",
-        "tags": [
-          "cari",
-          "perintah",
-          "palet"
-        ]
+        "tags": ["cari", "perintah", "palet"]
       },
       "delete": {
         "description": "Menghapus jadwal atau item yang sedang dipilih.",
         "label": "Hapus item yang dipilih",
         "menu_path": "Status pemilihan",
-        "tags": [
-          "hapus",
-          "buang"
-        ]
+        "tags": ["hapus", "buang"]
       },
       "escape": {
         "description": "Menghapus pilihan atau fokus saat ini.",
         "label": "Hapus pilihan",
         "menu_path": "Status pemilihan",
-        "tags": [
-          "batalkan pilihan",
-          "batal",
-          "escape"
-        ]
+        "tags": ["batalkan pilihan", "batal", "escape"]
       },
       "focus_mode": {
         "description": "Mengaktifkan atau menonaktifkan mode fokus.",
         "label": "Alihkan mode fokus",
         "menu_path": "Tampilan > Mode fokus",
-        "tags": [
-          "fokus",
-          "pomodoro"
-        ]
+        "tags": ["fokus", "pomodoro"]
       },
       "focus_pause": {
         "description": "Menjeda atau melanjutkan sesi fokus saat ini.",
         "label": "Jeda fokus",
         "menu_path": "Mode fokus",
-        "tags": [
-          "fokus",
-          "jeda"
-        ]
+        "tags": ["fokus", "jeda"]
       },
       "force_unlock": {
         "description": "Secara paksa menghapus status kunci yang tidak terduga.",
         "label": "Paksa buka kunci",
         "menu_path": "Pemulihan darurat",
-        "tags": [
-          "paksa",
-          "buka kunci",
-          "pemulihan",
-          "darurat"
-        ]
+        "tags": ["paksa", "buka kunci", "pemulihan", "darurat"]
       },
       "fullscreen": {
         "description": "Mengaktifkan atau menonaktifkan tampilan layar penuh.",
         "label": "Alihkan layar penuh",
         "menu_path": "Tampilan > Layar penuh",
-        "tags": [
-          "layar penuh"
-        ]
+        "tags": ["layar penuh"]
       },
       "help": {
         "description": "Membuka pusat bantuan.",
         "label": "Panduan pintasan",
         "menu_path": "Sistem > Panduan pintasan",
-        "tags": [
-          "bantuan",
-          "F1"
-        ]
+        "tags": ["bantuan", "F1"]
       },
       "layout_1": {
         "description": "Menerapkan tata letak 4 panel berlabuh default.",
         "label": "Preset tata letak 1",
         "menu_path": "Tampilan > Preset tata letak",
-        "tags": [
-          "tata letak",
-          "preset",
-          "berlabuh",
-          "1"
-        ]
+        "tags": ["tata letak", "preset", "berlabuh", "1"]
       },
       "layout_2": {
         "description": "Menerapkan tata letak yang berpusat pada kalender.",
         "label": "Preset tata letak 2",
         "menu_path": "Tampilan > Preset tata letak",
-        "tags": [
-          "tata letak",
-          "kalender",
-          "2"
-        ]
+        "tags": ["tata letak", "kalender", "2"]
       },
       "layout_3": {
         "description": "Menerapkan tata letak yang berpusat pada tugas.",
         "label": "Preset tata letak 3",
         "menu_path": "Tampilan > Preset tata letak",
-        "tags": [
-          "tata letak",
-          "tugas",
-          "3"
-        ]
+        "tags": ["tata letak", "tugas", "3"]
       },
       "layout_4": {
         "description": "Menerapkan tata letak tab terbagi.",
         "label": "Preset tata letak 4",
         "menu_path": "Tampilan > Preset tata letak",
-        "tags": [
-          "tata letak",
-          "tab",
-          "terbagi",
-          "4"
-        ]
+        "tags": ["tata letak", "tab", "terbagi", "4"]
       },
       "layout_5": {
         "description": "Menerapkan tata letak mengambang yang sepenuhnya terpisah.",
         "label": "Preset tata letak 5",
         "menu_path": "Tampilan > Preset tata letak",
-        "tags": [
-          "tata letak",
-          "terpisah",
-          "mengambang",
-          "5"
-        ]
+        "tags": ["tata letak", "terpisah", "mengambang", "5"]
       },
       "lock_mode": {
         "description": "Mengaktifkan atau menonaktifkan mode kunci desktop.",
         "label": "Mode kunci",
         "menu_path": "Tampilan > Mode kunci",
-        "tags": [
-          "kunci"
-        ]
+        "tags": ["kunci"]
       },
       "magnet_mode": {
         "description": "Mengalihkan mode magnet, yang membantu menyelaraskan dan menempelkan panel.",
         "label": "Mode magnet",
         "menu_path": "Tampilan > Mode magnet",
-        "tags": [
-          "magnet",
-          "panel"
-        ]
+        "tags": ["magnet", "panel"]
       },
       "monitor_left": {
         "description": "Memindahkan jendela ke monitor lain.",
         "label": "Pindah ke monitor sebelumnya",
         "menu_path": "Kontrol jendela",
-        "tags": [
-          "monitor",
-          "layar",
-          "kiri"
-        ]
+        "tags": ["monitor", "layar", "kiri"]
       },
       "monitor_right": {
         "description": "Memindahkan jendela ke monitor lain.",
         "label": "Pindah ke monitor berikutnya",
         "menu_path": "Kontrol jendela",
-        "tags": [
-          "monitor",
-          "layar",
-          "kanan"
-        ]
+        "tags": ["monitor", "layar", "kanan"]
       },
       "new_directive": {
         "description": "Membuka jendela untuk memasukkan arahan atau item kerja sama.",
         "label": "Daftarkan arahan",
         "menu_path": "Daftarkan > Arahan",
-        "tags": [
-          "arahan",
-          "kerja sama"
-        ]
+        "tags": ["arahan", "kerja sama"]
       },
       "new_routine": {
         "description": "Dengan cepat menambahkan rutinitas tugas berulang.",
         "label": "Daftarkan rutinitas",
         "menu_path": "Daftarkan > Rutinitas",
-        "tags": [
-          "rutinitas",
-          "tugas",
-          "berulang"
-        ]
+        "tags": ["rutinitas", "tugas", "berulang"]
       },
       "new_schedule": {
         "description": "Langsung membuka jendela entri jadwal.",
         "label": "Tambah jadwal baru",
         "menu_path": "Daftarkan > Jadwal baru",
-        "tags": [
-          "jadwal",
-          "tambah",
-          "daftarkan"
-        ]
+        "tags": ["jadwal", "tambah", "daftarkan"]
       },
       "next_day": {
         "description": "Berpindah satu hari setelah tanggal saat ini.",
         "label": "Hari berikutnya",
         "menu_path": "Navigasi",
-        "tags": [
-          "berikutnya",
-          "tanggal",
-          "kanan"
-        ]
+        "tags": ["berikutnya", "tanggal", "kanan"]
       },
       "opacity_down": {
         "description": "Mengurangi opasitas jendela.",
         "label": "Kurangi opasitas",
         "menu_path": "Kontrol jendela",
-        "tags": [
-          "opasitas",
-          "lebih gelap"
-        ]
+        "tags": ["opasitas", "lebih gelap"]
       },
       "opacity_up": {
         "description": "Meningkatkan opasitas jendela.",
         "label": "Tingkatkan opasitas",
         "menu_path": "Kontrol jendela",
-        "tags": [
-          "opasitas",
-          "lebih terang"
-        ]
+        "tags": ["opasitas", "lebih terang"]
       },
       "prev_day": {
         "description": "Berpindah satu hari sebelum tanggal saat ini.",
         "label": "Hari sebelumnya",
         "menu_path": "Navigasi",
-        "tags": [
-          "sebelumnya",
-          "tanggal",
-          "kiri"
-        ]
+        "tags": ["sebelumnya", "tanggal", "kiri"]
       },
       "restore_pos": {
         "description": "Memulihkan jendela ke posisi layar yang aman.",
         "label": "Pulihkan posisi jendela",
         "menu_path": "Kontrol jendela",
-        "tags": [
-          "jendela",
-          "pulihkan",
-          "posisi"
-        ]
+        "tags": ["jendela", "pulihkan", "posisi"]
       },
       "routine_mgr": {
         "description": "Langsung membuka tab pengelola rutinitas.",
         "label": "Pengelola rutinitas",
         "menu_path": "Tugas > Ringkasan rutinitas",
-        "tags": [
-          "rutinitas",
-          "kelola"
-        ]
+        "tags": ["rutinitas", "kelola"]
       },
       "save_layout": {
         "description": "Menyimpan susunan panel saat ini sebagai preset.",
         "label": "Simpan tata letak saat ini",
         "menu_path": "Tampilan > Preset tata letak > Simpan",
-        "tags": [
-          "tata letak",
-          "preset",
-          "simpan"
-        ]
+        "tags": ["tata letak", "preset", "simpan"]
       },
       "show_hide": {
         "description": "Menyembunyikan jendela utama atau menampilkannya kembali.",
         "label": "Tampilkan/sembunyikan jendela",
         "menu_path": "Kontrol jendela",
-        "tags": [
-          "jendela",
-          "sembunyikan",
-          "tampilkan",
-          "overlay"
-        ]
+        "tags": ["jendela", "sembunyikan", "tampilkan", "overlay"]
       },
       "sync_gcal": {
         "description": "Segera memulai sinkronisasi dengan Google Kalender.",
         "label": "Sinkronkan Google Kalender",
         "menu_path": "Sistem > Kalender dan sinkronisasi",
-        "tags": [
-          "google",
-          "sinkronisasi",
-          "kalender",
-          "F5"
-        ]
+        "tags": ["google", "sinkronisasi", "kalender", "F5"]
       },
       "today": {
         "description": "Segera memindahkan tanggal yang dipilih ke hari ini.",
         "label": "Lompat ke hari ini",
         "menu_path": "Navigasi",
-        "tags": [
-          "hari ini",
-          "tanggal"
-        ]
+        "tags": ["hari ini", "tanggal"]
       },
       "topbar": {
         "description": "Mengalihkan visibilitas bilah menu atas.",
         "label": "Alihkan bilah atas",
         "menu_path": "Tampilan > Bilah atas",
-        "tags": [
-          "bilah menu",
-          "bilah atas",
-          "pemulihan"
-        ]
+        "tags": ["bilah menu", "bilah atas", "pemulihan"]
       },
       "widget_mode": {
         "description": "Membuka mode panel khusus widget.",
         "label": "Alihkan mode widget",
         "menu_path": "Tampilan > Mode khusus widget",
-        "tags": [
-          "widget",
-          "panel"
-        ]
+        "tags": ["widget", "panel"]
       }
     },
     "groups": {
@@ -2724,14 +2574,14 @@
     },
     "launcher": {
       "action": {
+        "app": "Open app · file · folder",
+        "command": "Air Calendar command",
         "hotkey": "Keyboard shortcut",
-        "internal": "Air Calendar command",
-        "open": "Open program / file",
+        "none": "No action",
+        "page": "Go to page",
+        "text": "Text snippet",
         "url": "Web address"
       },
-      "add_key": "+ Key",
-      "apply_pattern": "Apply combination",
-      "apply_template": "Use layout",
       "asset": {
         "blocks": "Module blocks",
         "blossom": "Blossom",
@@ -2739,7 +2589,6 @@
         "circuit": "Circuit",
         "confetti": "Confetti",
         "constellation": "Constellation",
-        "custom": "My image",
         "equalizer": "Equalizer",
         "grid": "Grid",
         "hexmesh": "Hex mesh",
@@ -2759,216 +2608,305 @@
       },
       "asset_import_failed": "Check that the file is supported and no larger than 25 MB.",
       "asset_import_failed_title": "Could not import asset",
-      "asset_playback": {
-        "active": "While active",
-        "always": "Always play",
-        "hover": "On hover",
-        "never": "First frame only",
-        "press": "While pressed"
+      "case": {
+        "acrylic": "Acrylic sandwich",
+        "anodized": "Anodized aluminum",
+        "floating": "Floating (no case)",
+        "silver": "Silver aluminum",
+        "walnut": "Walnut wood"
       },
-      "batch_style": "Batch styling",
-      "browse": "Browse",
-      "canvas": "Keycap canvas",
-      "choose_mosaic": "Choose image...",
-      "choose_target": "Choose a program or file",
-      "columns": "Columns",
+      "close_tip": "Hide KeyDeck — turn it back on from the Widgets menu at the top",
       "command": {
         "command_palette": "Command palette",
+        "daily_summary": "Daily summary",
+        "focus_mode": "Focus mode",
         "new_task": "New event",
         "sync_google": "Google sync",
         "today": "Go to today",
+        "view_mode": "Switch view",
         "widget_manager": "Widget manager"
       },
-      "delete_selected": "Delete",
-      "designer": {
-        "asset": "Asset",
-        "asset_opacity": "Asset opacity",
-        "asset_scale": "Asset size",
-        "assets": "Decal assets",
-        "base": "Base shape",
-        "border_color": "Border color",
-        "choose_color": "Choose color",
-        "choose_image": "Import image...",
-        "clear": "Clear custom design",
-        "colors": "Custom colors",
-        "content": "Icon and label",
-        "depth": "Depth",
-        "desc": "Combine colors, shape, icons, and decal assets to design the selected keys.",
-        "font_scale": "Text size",
-        "heading": "Design your own keycap",
-        "icon": "Icon",
-        "image_filter": "Images (*.png *.jpg *.jpeg *.webp *.bmp)",
-        "layout": "Content layout",
-        "open": "Detailed design...",
-        "preview": "Live preview",
-        "radius": "Corner radius",
-        "reset_style": "Reset to style defaults",
-        "search_asset": "Search assets",
-        "search_icon": "Search icons",
-        "side_color": "Side color",
-        "style": "Style",
-        "text_color": "Text color",
-        "title": "Keycap Designer",
-        "top_color": "Top color"
+      "empty_page": "Empty page · add keys in the studio",
+      "fit": {
+        "contain": "Fit",
+        "cover": "Fill",
+        "stretch": "Stretch"
       },
-      "edit": "Edit keycap array...",
-      "editor_desc": "Choose a template, select one or more keys, then combine size, style, color, icons, and decal assets.",
-      "editor_drag_hint": "Drag to exchange key positions.",
-      "editor_heading": "Keycap array and actions",
-      "editor_title": "Edit Launcher Deck",
-      "effect": {
-        "bounce": "Tactile bounce",
-        "breathe": "Breathe",
-        "depress": "Physical press",
-        "flash": "Color flash",
-        "glow": "Glow",
-        "lift": "Gentle lift",
-        "none": "No effect",
-        "pulse": "Soft pulse",
-        "ring": "Status ring",
-        "ripple": "Expanding ripple",
-        "shake": "Horizontal shake",
-        "solid": "Solid highlight"
+      "hidden_message": "Turn it back on from the Widgets menu at the top or the widget manager.",
+      "hidden_title": "KeyDeck hidden",
+      "hold_prefix": "Hold",
+      "hotkey": {
+        "desktop": "Show desktop",
+        "prev_track": "Previous track",
+        "screenshot": "Screen capture",
+        "switch_app": "Switch apps"
       },
       "icon": {
         "alarm": "Alarm",
+        "arrow_down": "Down",
+        "arrow_left": "Left",
+        "arrow_right": "Right",
+        "arrow_up": "Up",
         "auto": "Automatic for action",
         "bolt": "Bolt",
+        "bookmark": "Bookmark",
+        "brightness": "Brightness",
         "broadcast": "Broadcast",
+        "brush": "Brush",
+        "calculator": "Calculator",
         "calendar": "Calendar",
+        "camera": "Camera",
+        "cart": "Shopping",
+        "chart": "Chart",
+        "chat": "Chat",
         "check": "Complete",
+        "clipboard": "Clipboard",
         "close": "Close",
         "cloud": "Cloud",
+        "code": "Code",
         "coffee": "Break",
+        "copy": "Copy",
+        "cut": "Cut",
+        "dashboard": "Dashboard",
         "delete": "Delete",
+        "document": "Document",
         "edit": "Edit",
         "filter": "Filter",
+        "fire": "Fire",
         "focus": "Focus",
         "folder": "Folder",
         "forward": "Forward",
+        "game": "Game",
         "globe": "Web",
+        "headphones": "Headphones",
+        "heart": "Heart",
+        "home": "Home",
+        "idea": "Idea",
+        "image": "Image",
         "info": "Info",
+        "keyboard": "Keyboard",
+        "layers": "Layers",
         "link": "Link",
         "lock": "Lock",
+        "mail": "Mail",
+        "map": "Map",
         "memo": "Memo",
+        "mic": "Microphone",
+        "mic_off": "Mute microphone",
+        "monitor": "Monitor",
+        "music": "Music",
+        "next_track": "Next track",
+        "night": "Night",
         "none": "No icon",
+        "notebook": "Notebook",
         "palette": "Palette",
+        "paste": "Paste",
         "pause": "Pause",
+        "phone": "Phone",
         "play": "Play",
+        "play_pause": "Play/pause",
         "plus": "Add",
+        "power": "Power",
+        "prev_track": "Previous track",
+        "printer": "Printer",
+        "redo": "Redo",
         "repeat": "Repeat",
         "rocket": "Quick launch",
         "save": "Save",
         "search": "Search",
         "settings": "Settings",
+        "slides": "Presentation",
+        "spreadsheet": "Spreadsheet",
         "star": "Star",
         "sync": "Sync",
+        "terminal": "Terminal",
         "timer": "Timer",
+        "translate": "Translate",
+        "undo": "Undo",
         "unlock": "Unlock",
+        "user": "User",
+        "video": "Video",
+        "volume_mute": "Mute",
+        "volume_up": "Volume up",
         "warning": "Warning"
       },
-      "icon_pack": {
-        "glass": "Glass Line",
-        "ink": "Mono Ink",
-        "neon": "Neon Cyan",
-        "sunset": "Warm Sunset",
-        "violet": "Violet Glow"
+      "indicator": {
+        "bar": "Light bar",
+        "dot": "Indicator",
+        "none": "None",
+        "ring": "Edge glow",
+        "switch": "Mini switch"
       },
-      "icon_pack_label": "Icon pack",
-      "image_filter": "Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif *.svg)",
-      "interaction": {
-        "active_border": "Active border",
-        "active_effect": "Active effect",
-        "active_top": "Active surface",
-        "asset_playback": "Animated image",
-        "choose_sound": "Choose WAV file...",
-        "clear": "Reset feedback settings",
-        "desc": "Configure activation, motion, state colors, sound, and animated asset playback in one place.",
-        "disabled_text": "Disabled text",
-        "disabled_top": "Disabled surface",
-        "duration": "Result duration",
-        "enabled": "Enable this key",
-        "error_effect": "Error effect",
-        "heading": "Design every moment of the interaction",
-        "hover_effect": "Hover effect",
-        "indicator": "Show status indicator",
-        "long_press": "Long-press duration",
-        "mode": "Activation mode",
-        "mode_action": "Action button",
-        "mode_hold": "Active while held",
-        "mode_toggle": "On · off toggle",
-        "open": "Interaction and feedback...",
-        "preset": "Quick preset",
-        "press_effect": "Press effect",
-        "preview": "State preview",
-        "preview_sound": "Preview sound",
-        "reduce_motion": "Reduce motion",
-        "search_sound": "Search sounds",
-        "sound": "Feedback sound",
-        "sound_event": "Play sound",
-        "sound_file": "Custom sound",
-        "sound_filter": "WAV audio (*.wav)",
-        "speed": "Motion speed",
-        "state_note": "Toggle state is preserved when the widget is reopened.",
-        "success_effect": "Success effect",
-        "title": "Key Interaction Studio",
-        "trigger": "Activation trigger",
-        "trigger_double": "Double press",
-        "trigger_long": "Long press",
-        "trigger_press": "Immediately on press",
-        "trigger_release": "On release",
-        "volume": "Volume"
+      "insert": {
+        "color": "Solid",
+        "gradient": "Gradient",
+        "image": "My image",
+        "none": "None (clear)",
+        "panorama": "Deck panorama",
+        "pattern": "Pattern"
       },
       "key": {
-        "app": "App {number}",
+        "app_1": "App 1",
+        "app_2": "App 2",
+        "app_3": "App 3",
+        "app_4": "App 4",
+        "app_5": "App 5",
+        "app_6": "App 6",
         "command": "Command",
+        "command_palette": "Command palette",
+        "copy": "Copy",
+        "cut": "Cut",
+        "daily_summary": "Daily summary",
         "design": "Design",
-        "favorites": "Favorites",
+        "down": "Down",
+        "focus": "Focus",
         "folder": "Folder",
-        "generic": "Key",
+        "kb_hangul": "Han/Eng",
+        "kb_hanja": "Hanja",
+        "left": "Left",
+        "mute": "Mute",
         "new_schedule": "New event",
+        "next_track": "Next",
+        "paste": "Paste",
+        "play_pause": "Play",
+        "redo": "Redo",
+        "right": "Right",
+        "save": "Save",
         "schedule": "Event",
-        "space": "SPACE",
         "start_work": "Start work",
+        "summary": "Summary",
         "sync": "Sync",
         "today": "Today",
-        "tools": "Tools",
+        "undo": "Undo",
+        "up": "Up",
+        "volume_down": "Vol -",
+        "volume_up": "Vol +",
         "web": "Web",
-        "work": "Work"
+        "web_1": "Web 1",
+        "web_2": "Web 2",
+        "web_3": "Web 3",
+        "widgets": "Widgets"
       },
-      "key_action": "Key action",
-      "key_name": "Key name",
-      "layout": {
-        "icon_above": "Icon above · label below",
-        "icon_left": "Icon left · label right",
-        "icon_only": "Icon only",
-        "text_only": "Label only"
+      "layouts": {
+        "applied": "Layout applied. Press Ctrl+Z to undo.",
+        "apply_deck": "Replace the whole deck with this",
+        "apply_page": "Apply to current page",
+        "as_new_page": "Add as new page",
+        "confirm_apply": "Replace",
+        "confirm_deck": "Every page of the current deck will be replaced by this layout. Continue?",
+        "confirm_page": "The {count} keys on the current page will be replaced by this layout. Continue?",
+        "confirm_title": "Apply layout",
+        "delete": "Delete",
+        "delete_confirm": "Delete the layout '{name}' from My layouts? Files you exported stay where they are.",
+        "empty": "No saved layouts yet.\nUse 'Save current page', import a .keydeck file you received, or drop it here.",
+        "error_empty": "This layout has no keys.",
+        "error_newer": "This layout was made with a newer Air Calendar. Update the app and try again.",
+        "error_not_layout": "This is not a KeyDeck layout file.",
+        "error_too_large": "The file is too large. Only layouts up to 48 MB can be imported.",
+        "error_unreadable": "The file can't be read. It may be damaged or not a KeyDeck layout file.",
+        "export": "Export to file…",
+        "export_failed": "The file could not be saved.",
+        "export_filter": "KeyDeck layouts (*.keydeck)",
+        "export_title": "Export layout to file",
+        "exported": "Exported: {path}",
+        "file_filter": "KeyDeck layouts (*.keydeck *.json)",
+        "heading": "Layouts",
+        "import": "Import file…",
+        "import_confirm": "'{name}' ({meta})\n\nPressing this layout's keys runs the actions below. Only import files from sources you trust.",
+        "import_go": "Import",
+        "import_title": "Import layout file",
+        "imported": "Imported the layout '{name}'.",
+        "meta_builtin": "Built-in · {keys} keys · styled with your current theme",
+        "meta_deck": "Whole deck · {pages} pages · {keys} keys",
+        "meta_page": "Page layout · {keys} keys",
+        "meta_saved": "saved {date}",
+        "nothing_to_save": "There are no keys to save.",
+        "pick_hint": "Pick a layout on the left.",
+        "rename": "Rename",
+        "save_deck": "Save whole deck…",
+        "save_deck_tip": "Saves every page plus the case and size settings at once.",
+        "save_failed": "The layout could not be saved.",
+        "save_name": "Layout name",
+        "save_page": "Save current page…",
+        "save_page_tip": "Saves this page's key arrangement, look and actions to My layouts.",
+        "save_title": "Save layout",
+        "saved": "Saved the layout '{name}'.",
+        "saved_hint": "Saved the layout '{name}'. Load it from My layouts under the 'Layouts' button.",
+        "skipped": "Pictures/sounds left out (missing or too large): {names}",
+        "subheading": "Apply a built-in layout, or save pages and decks you designed and share them as .keydeck files.",
+        "tab_builtin": "Built-in",
+        "tab_mine": "My layouts",
+        "tab_mine_count": "My layouts ({count})",
+        "targets": "Apps, files and web addresses it opens:",
+        "title": "Layouts",
+        "undo_hint": " In the studio you can undo with Ctrl+Z."
       },
-      "mosaic_mode": "Mosaic image",
-      "mosaic_opacity": "Image opacity",
-      "mosaic_show_labels": "Show icons and labels",
-      "multi_select_hint": "Click keys one after another to select several. Detailed design also applies to every selected key.",
-      "pattern": {
-        "checker": "Checkerboard",
-        "flow": "Color flow",
-        "function_groups": "By function",
-        "hero": "Emphasize primary keys",
-        "row_groups": "By row",
-        "uniform": "One style"
+      "led": {
+        "breathe": "Breathe while toggled on",
+        "off": "Off",
+        "reactive": "Lights when pressed",
+        "static": "Always on"
       },
-      "preset": {
-        "accessible": "High contrast · reduced motion",
-        "apply": "Apply preset",
-        "balanced": "Balanced default",
-        "neon": "Neon performance",
-        "subtle": "Subtle and calm",
-        "tactile": "Tactile key feel"
+      "legend": {
+        "art": "Picture only",
+        "caption": "Picture + caption",
+        "center": "Large name",
+        "corner": "Corner legend",
+        "glyph": "Icon only",
+        "stack": "Icon + name"
       },
-      "replace_mosaic": "Replace image...",
-      "reset": "Reset to mixed layout",
-      "select_all": "All",
-      "selected_count": "{count} key(s) selected",
+      "material": {
+        "crystal": "Crystal (clear)",
+        "frosted": "Frosted (translucent)",
+        "pudding": "Pudding",
+        "smoke": "Smoke",
+        "solid": "Solid PBT"
+      },
+      "menu": {
+        "add_page": "Add page",
+        "delete": "Delete KeyDeck...",
+        "edit_key": "Edit '{name}'...",
+        "exit_app": "Quit Air Calendar...",
+        "header": "Show name plate",
+        "hide": "Hide KeyDeck (close)",
+        "layout_gallery": "Layout gallery (save · load · share)...",
+        "pages": "Pages",
+        "reset_size": "Default size (100%)",
+        "size": "Size",
+        "sound": "Key sounds",
+        "studio": "Open KeyDeck Studio...",
+        "templates": "Layouts",
+        "themes": "Themes"
+      },
+      "mode": {
+        "tap": "Press once",
+        "toggle": "On/off (toggle)"
+      },
+      "new_key": "New key",
+      "not_set": "Not set",
+      "page_default": "Page {number}",
+      "page_main": "Main",
+      "page_target": {
+        "next": "Next page",
+        "prev": "Previous page"
+      },
+      "playback": {
+        "always": "Always play",
+        "hover": "Play on hover",
+        "never": "Hold first frame"
+      },
+      "profile": {
+        "cylindrical": "Cherry · standard",
+        "flat": "DSA · low & flat",
+        "low": "Low · slim key",
+        "mt3": "MT3 · deep dish",
+        "oem": "OEM · typical keyboard",
+        "round": "Round · typewriter",
+        "spherical": "SA · tall & round",
+        "xda": "XDA · wide top"
+      },
       "sound": {
+        "auto": "Real keystroke (switch, keycap & case)",
         "chime": "Air chime",
         "crisp_click": "Crisp click",
         "custom": "Custom WAV file",
@@ -2980,54 +2918,210 @@
         "pulse": "Digital pulse",
         "soft_click": "Soft click",
         "success": "Success chime",
-        "system": "System feedback sound",
         "toggle_off": "Toggle off",
         "toggle_on": "Toggle on",
         "whoosh": "Soft whoosh"
       },
-      "sound_event": {
-        "all": "Every state change",
-        "error": "On error",
-        "press": "On press",
-        "result": "On success or error",
-        "success": "On success"
+      "studio": {
+        "accent": "Accent color",
+        "add_key": "+ Add key",
+        "add_page": "Add page · Double-click a tab: rename · Right-click: duplicate/delete",
+        "add_page_short": "New page",
+        "apply_close": "Apply and close",
+        "apply_tip": "Apply changes and close (Ctrl+S)",
+        "big_2x2": "Large 2×2",
+        "browse_file": "File…",
+        "browse_folder": "Folder…",
+        "cap_color": "Keycap colour",
+        "case_color": "Case color",
+        "choose_folder": "Choose folder",
+        "choose_image": "Load image…",
+        "choose_panorama": "Choose panorama image…",
+        "choose_sound": "Choose WAV file…",
+        "choose_target": "Choose a program or file",
+        "clear": "Clear",
+        "color_1": "Color 1",
+        "color_2": "Color 2",
+        "common_hotkeys": "Pick a common shortcut…",
+        "copy_style": "Copy style (Ctrl+C)",
+        "deck_hint": "Click a key to edit it. Click an empty area to come back here.",
+        "deck_name": "Deck name",
+        "deck_title": "Deck settings",
+        "delete": "Delete (Delete)",
+        "delete_page": "Delete page",
+        "delete_page_confirm": "Delete page '{name}' and its {count} keys?",
+        "delete_short": "Delete",
+        "discard": "You have changes that were not applied. What would you like to do?",
+        "discard_close": "Discard changes",
+        "discard_title": "Unapplied changes",
+        "duplicate": "Duplicate (Ctrl+D)",
+        "duplicate_page": "Duplicate page",
+        "duplicate_short": "Duplicate",
+        "empty_page": "No keys yet. Press '+ Add key' or drop an app, file or link here",
+        "enabled": "Key enabled (off = ignores presses)",
+        "export_page_layout": "Export as layout file…",
+        "fit": "Fit",
+        "gap": "Key spacing",
+        "glyph": "Icon",
+        "glyph_color": "Icon color",
+        "glyph_same": "Same as text",
+        "header": "Show name and pages on top",
+        "heading": "KeyDeck Studio",
+        "hold_hint": "When a hold action is set it runs on a long press; a short press runs the main action.",
+        "hotkey_empty": "Press a key combination to record it",
+        "hotkey_note": "The deck never takes focus, so keys go to the window you are working in.",
+        "hotkey_value": "Keys to send: {keys}",
+        "image_filter": "Images (*.png *.jpg *.jpeg *.webp *.bmp *.gif *.svg)",
+        "indicator": "Marker",
+        "keep_editing": "Keep editing",
+        "key_size": "Key size",
+        "label": "Name",
+        "label_placeholder": "Key name",
+        "layout": "Layout",
+        "led": "Underglow",
+        "led_brightness": "Light brightness",
+        "led_color": "Light colour",
+        "led_mode": "Lights up",
+        "legend_color": "Text color",
+        "legend_size": "Size",
+        "material": "Material",
+        "mode": "Behavior",
+        "mode_tap_hint": "Runs the action once every time you press it.",
+        "mode_toggle_hint": "Press to latch it on, press again to turn it off. The action runs both times, and the marker below shows whether it is on or off.",
+        "multi_hint": "Several keys are selected. Name and action can be edited with a single key selected.",
+        "multi_summary": "{count} keys selected",
+        "no_image": "No image selected",
+        "none_hint": "Pressing gives sound and motion only; nothing is run.",
+        "offset_x": "Horizontal",
+        "offset_y": "Vertical",
+        "opacity": "Strength",
+        "page_copy": "{name} copy",
+        "page_name": "Name",
+        "page_tabs_tip": "Double-click: rename · Right-click: duplicate/delete · Drag: reorder",
+        "panorama_applied": "Panorama applied to {count} keys. Press Ctrl+Z to undo.",
+        "panorama_cleared": "Panorama removed; the insert of {count} keys that used it was cleared. Press Ctrl+Z to undo.",
+        "panorama_empty": "Click to choose an image, or drop one here",
+        "panorama_fit": "Framing",
+        "panorama_hint": "Split one image across the whole deck. Gaps between keys are accounted for so it reads as one picture.",
+        "panorama_info": "{name} · {width}×{height}px · used by {count} keys",
+        "panorama_lowres": "The picture is small and may look blurry on the keys. A larger image is recommended.",
+        "panorama_missing": "The image file can't be found. Please choose it again.",
+        "panorama_page": "Apply to this page",
+        "panorama_preview_hint": "Drag: position · Ctrl+wheel: zoom · Double-click: centre · Drop an image to replace",
+        "panorama_replaced": "Panorama image replaced.",
+        "panorama_unreadable": "This image can't be read. Please choose another file.",
+        "panorama_unused": "No key on this page shows the panorama. Press 'Apply to this page' or select keys and set their insert to 'Deck panorama'.",
+        "panorama_zoom": "Zoom",
+        "paste_after_copy": "Paste right after copying (Ctrl+V)",
+        "paste_style": "Paste style (Ctrl+V)",
+        "path_placeholder": "Program · file · folder path",
+        "pattern": "Pattern",
+        "pick_color": "Choose color",
+        "playback": "Animated image",
+        "preview_banner": "Trying keys · Press a key · Esc to finish",
+        "preview_empty": "There are no keys on this page to press. Add a key first.",
+        "preview_hint": "Drag: position · Double-click: reset · Drop an image",
+        "preview_mode": "Try pressing",
+        "preview_sound": "Preview",
+        "preview_stop": "Stop trying",
+        "preview_tip": "Press keys like the real deck to check sound and motion (actions are not run).",
+        "profile": "Keycap shape",
+        "redo": "Redo",
+        "reduce_motion": "Reduce motion (react instantly)",
+        "rename_page": "Page name",
+        "rotate": "Rotate",
+        "save_page_layout": "Save to My layouts…",
+        "script_blocked": "For security, script files (.bat, .ps1 and similar) cannot be linked to keys.",
+        "script_blocked_title": "File cannot be used",
+        "search_glyph": "Search icons",
+        "section_case": "Case",
+        "section_deck": "Deck name",
+        "section_feedback": "Light · sound · motion",
+        "section_grid": "Size",
+        "section_hold": "On hold (0.55 s)",
+        "section_key": "Name",
+        "section_panorama": "Panorama image",
+        "section_press": "On press",
+        "section_shortcuts": "Show editing tips",
+        "shadow": "Label shadow (readable on any picture)",
+        "shortcuts": "• Click a key: select · Ctrl/Shift+click: select several · Drag on empty space: box select\n• Drag a key: move · Dots on the right/bottom of a selected key: resize\n• Arrow keys: nudge (Shift: one cell) · Delete: remove · Ctrl+D: duplicate\n• Ctrl+C/V: copy/paste look · Ctrl+Z/Y: undo/redo",
+        "sound": "Sound",
+        "sound_enabled": "Play a sound when pressed",
+        "sound_filter": "WAV audio (*.wav)",
+        "start_on": "Start switched on",
+        "status_idle": "{count} keys · Click a key to style it on the right. Drop an app, file or link to make a new key.",
+        "status_key": "'{name}' · {action} · size {size} · Double-click: rename · Drag: move",
+        "status_multi": "{count} keys selected · style changes apply to all of them.",
+        "status_preview": "Trying keys · Press keys to feel and hear them (actions don't run). The pressed key's settings open on the right so you can change them right away. Press Esc to finish.",
+        "style_copied": "Style copied. Select other keys and press Ctrl+V to paste.",
+        "subheading": "Slide your own art into clear keycaps, then tune how each press feels and what it does.",
+        "sublabel": "Small text",
+        "sublabel_placeholder": "e.g. Ctrl+C (optional)",
+        "switch": "Feel (switch)",
+        "tab_action": "Action",
+        "tab_cap": "Look & sound",
+        "tab_insert": "Picture",
+        "tab_legend": "Label",
+        "tall_2u": "Tall 2u",
+        "target_filter": "Programs and shortcuts (*.exe *.lnk);;All files (*.*)",
+        "templates": "Layouts",
+        "templates_tip": "Layout gallery (Ctrl+L) · apply built-in layouts · save and load your own · share as files",
+        "test": "▶ Test run",
+        "test_failed": "Could not run it. Check the path or address.",
+        "test_none": "There is no action to run yet.",
+        "test_ok": "Ran: {action}",
+        "text_placeholder": "Text to copy (signature, address, frequent phrases…)",
+        "theme_selected": "Apply to selected keys only",
+        "themes": "Themes",
+        "title": "KeyDeck Studio",
+        "toggle_color": "On colour",
+        "toggle_off": "Off",
+        "toggle_on": "On",
+        "undo": "Undo",
+        "unit": "Key size",
+        "unsaved": "not applied",
+        "url_warning": "Only http:// or https:// addresses can be opened.",
+        "volume": "Volume",
+        "weight": "Weight",
+        "zoom": "Zoom"
       },
-      "state": {
-        "active": "Active",
-        "disabled": "Disabled",
-        "error": "Error",
-        "ready": "Ready",
-        "success": "Success"
+      "switch": {
+        "clicky": "Blue · clicky",
+        "linear": "Red · smooth",
+        "silent": "Black · quiet",
+        "tactile": "Brown · tactile bump"
       },
-      "style": {
-        "air_glass": "Air Glass",
-        "arcade_glow": "Arcade Glow",
-        "default": "Launcher Deck",
-        "mechanical_pbt": "Mechanical PBT",
-        "minimal_mono": "Minimal Mono",
-        "soft_clay": "Soft Clay"
-      },
-      "tab": {
-        "behavior": "Behavior",
-        "media": "Sound · media",
-        "motion": "Motion",
-        "states": "States"
-      },
-      "target_filter": "Programs and shortcuts (*.exe *.lnk);;All files (*.*)",
-      "target_placeholder": "Program or file path, or https:// address",
       "template": {
-        "keyboard": "Keyboard cluster",
-        "mixed": "Mixed 4×3",
-        "regular": "Regular 3×3",
-        "rows": "Category rows",
-        "sidebar": "Sidebar tools",
-        "strip": "Command strip"
+        "command_bar": "Command bar",
+        "creator_mixed": "Creator mix",
+        "edit_cluster": "Edit cluster",
+        "keyboard_60": "60% keyboard (61 keys)",
+        "keyboard_full": "Full-size keyboard (104 keys)",
+        "keyboard_tkl": "Tenkeyless keyboard (87 keys)",
+        "macro_3x3": "Macro pad 3×3",
+        "numpad": "Numpad",
+        "side_dock": "Side dock",
+        "stream_5x3": "Stream pad 5×3"
       },
-      "templates": "Array templates",
-      "title": "LAUNCH DECK",
-      "unnamed_key": "New key",
-      "vertical_key": "Vertical 1×2",
-      "visual_system": "Visual system"
+      "template_confirm": "Replace the keys on this page with the selected layout?",
+      "template_confirm_title": "Change layout",
+      "theme": {
+        "crystal_night": "Crystal Night",
+        "floating_glass": "Floating Glass",
+        "frost_paper": "Frost Paper",
+        "graphite_pbt": "Graphite PBT",
+        "pudding_pop": "Pudding Pop",
+        "smoke_neon": "Smoke Neon",
+        "walnut_studio": "Walnut Studio"
+      },
+      "title": "KEYDECK",
+      "unassigned_hint": "No action yet. Right-click → Edit key to assign one.",
+      "unnamed_key": "Unnamed key",
+      "weight": {
+        "bold": "Bold",
+        "medium": "Medium",
+        "regular": "Regular"
+      }
     },
     "menu": {
       "always_on_top": "Selalu di atas",

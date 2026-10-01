@@ -4,6 +4,7 @@
 import contextlib
 import logging
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from calendar_app.app_metadata import APP_NAME
@@ -17,6 +18,7 @@ from calendar_app.presentation.main_window.refresh_scheduler import RefreshSched
 from calendar_app.presentation.main_window.routine_actions import RoutineActionsMixin
 from calendar_app.presentation.main_window.theme_actions import ThemeActionsMixin
 from calendar_app.presentation.main_window.window_shell_actions import WindowShellActionsMixin
+from calendar_app.shared.app_lifecycle import finish_application_exit, mark_app_exiting
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +87,19 @@ def _detached_process_started(result) -> bool:
     return bool(result)
 
 
+class _ExitConfirmationBox(QMessageBox):
+    """Exit prompt that is never hidden behind always-on-top desktop widgets."""
+
+    def showEvent(self, event):  # noqa: N802
+        super().showEvent(event)
+        # 트레이에서 종료하면 메인 창이 숨겨져 있어 확인창이 뒤로 가거나 가려질 수 있다.
+        self.raise_()
+        self.activateWindow()
+
+
 def _build_exit_confirmation_box(parent) -> QMessageBox:
-    box = QMessageBox(parent)
+    box = _ExitConfirmationBox(parent)
+    box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
     box.setIcon(QMessageBox.Icon.Question)
     box.setWindowTitle(t("app.exit_title", "종료 안내"))
     box.setText(
@@ -131,6 +144,7 @@ class ActionHandlersMixin(
 
         self._is_shutting_down = True
         self._shutdown_in_progress = True
+        mark_app_exiting(QApplication.instance())
         logger.info("Shutting down background workers...")
 
         def _is_running(w) -> bool:
@@ -276,6 +290,7 @@ class ActionHandlersMixin(
             return
 
         self._exit_requested = True
+        mark_app_exiting(QApplication.instance())
         self.shutdown_background_workers()
         tray_icon = getattr(self, "tray_icon", None)
         if tray_icon is not None:
@@ -286,7 +301,8 @@ class ActionHandlersMixin(
         app = QApplication.instance()
         self.close()
         if app is not None:
-            app.quit()
+            # 트레이와 메인 창이 이미 닫혔으므로 어떤 창이 닫기를 거부해도 반드시 종료한다.
+            finish_application_exit(app)
 
     def set_language(self, lang_code):
         import os
@@ -368,7 +384,7 @@ class ActionHandlersMixin(
         logger.info("Application restarting after graceful shutdown")
         self.close()
         if app is not None:
-            app.quit()
+            finish_application_exit(app)
 
     def _restart_application_for_locale_tools(self):
         import os
@@ -420,7 +436,7 @@ class ActionHandlersMixin(
         logger.info("Application restarting from locale tools after graceful shutdown")
         self.close()
         if app is not None:
-            app.quit()
+            finish_application_exit(app)
 
     def open_locale_override_folder(self):
         from PyQt6.QtCore import QUrl

@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 import os
 import unittest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QEvent, QPoint, Qt
+from PyQt6.QtCore import QEvent, QPoint, Qt, qInstallMessageHandler
 from PyQt6.QtGui import QKeyEvent, QShortcut
 from PyQt6.QtWidgets import QApplication, QFrame, QLabel, QLineEdit, QWidget
 
@@ -291,6 +292,42 @@ class AwayLockTests(unittest.TestCase):
         self.assertEqual(settings.value("away_default_message"), "<p>Original default</p>")
         self.assertIn("Updated message", settings.value("away_message"))
         self.assertEqual(parent.alarm_worker.updated_minutes, 7)
+
+    def _capture_qt_messages(self):
+        messages = []
+        previous = qInstallMessageHandler(lambda _mode, _ctx, msg: messages.append(msg))
+        self.addCleanup(qInstallMessageHandler, previous)
+        return messages
+
+    def test_no_focus_overlay_goes_fullscreen_without_activation_warning(self):
+        messages = self._capture_qt_messages()
+        window = QWidget(
+            None,
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.Window
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.WindowDoesNotAcceptFocus,
+        )
+        window.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
+        self.addCleanup(window.deleteLater)
+        self.addCleanup(window.close)
+
+        AwayLockMixin._show_overlay_fullscreen(window)
+        QApplication.processEvents()
+
+        self.assertTrue(window.isVisible())
+        self.assertTrue(window.windowState() & Qt.WindowState.WindowFullScreen)
+        self.assertFalse([msg for msg in messages if "requestActivate" in msg])
+
+    def test_focusable_overlay_still_uses_show_fullscreen(self):
+        window = QWidget(None, Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
+        self.addCleanup(window.deleteLater)
+        self.addCleanup(window.close)
+
+        AwayLockMixin._show_overlay_fullscreen(window)
+        QApplication.processEvents()
+
+        self.assertTrue(window.isFullScreen())
 
 
 if __name__ == "__main__":

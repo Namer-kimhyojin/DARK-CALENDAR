@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Bundled decal assets for launcher-deck keycaps."""
+"""Bundled insert-pattern decals (white line art) for KeyDeck keycaps."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-
-from PyQt6.QtGui import QPixmap
 
 from calendar_app.app_paths import get_resource_path
 
@@ -62,44 +60,9 @@ def keycap_asset_ids() -> set[str]:
     return set(_ASSET_BY_ID)
 
 
-def crop_mosaic_pixmap(source: QPixmap, deck: dict, key: dict) -> QPixmap:
-    """Crop one key's grid-relative portion from a deck-wide source image."""
-    if source.isNull():
-        return source
-    columns = max(1, int(deck.get("columns", 1) or 1))
-    rows = max(1, int(deck.get("rows", 1) or 1))
-    deck_aspect = columns / rows
-    source_aspect = source.width() / max(1, source.height())
-    crop_x = 0.0
-    crop_y = 0.0
-    crop_w = float(source.width())
-    crop_h = float(source.height())
-    if source_aspect > deck_aspect:
-        crop_w = crop_h * deck_aspect
-        crop_x = (source.width() - crop_w) / 2.0
-    else:
-        crop_h = crop_w / deck_aspect
-        crop_y = (source.height() - crop_h) / 2.0
-    column = max(0, int(key.get("column", 0)))
-    row = max(0, int(key.get("row", 0)))
-    key_w = max(1, int(key.get("width", 1)))
-    key_h = max(1, int(key.get("height", 1)))
-    left = crop_x + crop_w * column / columns
-    top = crop_y + crop_h * row / rows
-    width = crop_w * min(key_w, max(1, columns - column)) / columns
-    height = crop_h * min(key_h, max(1, rows - row)) / rows
-    return source.copy(
-        max(0, int(round(left))),
-        max(0, int(round(top))),
-        max(1, int(round(width))),
-        max(1, int(round(height))),
-    )
-
-
 __all__ = [
     "KEYCAP_ASSETS",
     "KeycapAsset",
-    "crop_mosaic_pixmap",
     "keycap_asset",
     "keycap_asset_ids",
 ]
