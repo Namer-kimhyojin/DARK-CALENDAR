@@ -170,7 +170,7 @@
     const wasEdit = Boolean(state.edit), path = wasEdit ? `/api/requests/${state.edit.id}` : "/api/requests";
     const result = await api(path, { method: wasEdit ? "PATCH" : "POST", body: JSON.stringify(payload) });
     editor.close(); form.reset(); state.page = 1; state.detail = result.item; message(wasEdit ? "edited" : "posted");
-    await loadList(); renderDetail(); if (!detail.open) detail.showModal();
+    loadList(); renderDetail(); if (!detail.open) detail.showModal();
   }); });
   $("[data-board-edit]").addEventListener("click", () => {
     state.edit = { ...state.detail }; form.reset();
@@ -184,7 +184,7 @@
   });
   $("[data-board-delete-form]").addEventListener("submit", (event) => { event.preventDefault(); const deletion = event.currentTarget; submit(deletion, async () => {
     const active = adminActive(); await api(`/api/${active ? "admin/" : ""}requests/${state.detail.id}`, { method: "DELETE", admin: active, body: JSON.stringify({ password: deletion.elements.password.value }) });
-    $("[data-board-delete-dialog]").close(); state.detail = null; message("deleted"); await loadList();
+    $("[data-board-delete-dialog]").close(); state.detail = null; message("deleted"); loadList();
   }); });
   $("[data-board-admin]").addEventListener("click", async () => {
     if (adminActive()) {
@@ -198,7 +198,7 @@
   }); });
   adminForm.addEventListener("submit", (event) => { event.preventDefault(); submit(adminForm, async () => {
     const result = await api(`/api/admin/requests/${state.detail.id}`, { method: "PATCH", admin: true, body: JSON.stringify(Object.fromEntries(new FormData(adminForm))) });
-    state.detail = result.item; renderDetail(); message("statusSaved"); await loadList();
+    state.detail = result.item; renderDetail(); message("statusSaved"); loadList();
   }); });
   document.addEventListener("aircalendar:language", localize);
   document.addEventListener("aircalendar:config", (event) => {
