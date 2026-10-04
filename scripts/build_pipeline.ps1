@@ -955,15 +955,21 @@ if ($effectiveResetState) {
 Write-Step 4 $TOTAL_STEPS "Clean previous output"
 Write-Log "[step 4] clean"
 
-# Kill any running DarkCalendar process that may lock build output
-$killed = Get-Process -Name "DarkCalendar" -ErrorAction SilentlyContinue
-if ($killed) {
-    $killed | Stop-Process -Force
-    Write-Info "stopped DarkCalendar.exe (was running)"
-    Start-Sleep -Milliseconds 800
+# Only a process running from this build output can lock these directories.
+# Keep installed Store apps and other development checkouts running.
+$outputPrefix = [System.IO.Path]::GetFullPath($distRoot).TrimEnd('\') + '\'
+$outputProcesses = @(Get-CimInstance Win32_Process -Filter "Name='DarkCalendar.exe'" |
+    Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($outputPrefix, [StringComparison]::OrdinalIgnoreCase) })
+if ($outputProcesses.Count) {
+    throw "Close the app running from $distRoot before rebuilding. Installed Store apps are not stopped."
 }
 
 foreach ($dir in @($distRoot, $buildRoot)) {
+    $resolvedOutput = [System.IO.Path]::GetFullPath($dir)
+    $projectPrefix = [System.IO.Path]::GetFullPath($projectRoot).TrimEnd('\') + '\'
+    if (-not $resolvedOutput.StartsWith($projectPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to clean output outside the build project: $resolvedOutput"
+    }
     if (-not (Test-Path $dir)) { continue }
     $attempt = 0
     $removed = $false
