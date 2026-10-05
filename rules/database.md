@@ -36,7 +36,7 @@ def _migrate_v3(conn):
 ```sql
 CREATE TABLE calendar (
     id              TEXT PRIMARY KEY,   -- "gcal::primary", "local::메모", "ics::hash"
-    type            TEXT NOT NULL,      -- 'gcal' | 'local' | 'shared' | 'ics'
+    type            TEXT NOT NULL,      -- 'gcal' | 'local' | 'shared' | 'ics' | 'outlook' | 'caldav'
     name            TEXT,
     color           TEXT,
     is_default      INTEGER DEFAULT 0,
@@ -90,6 +90,15 @@ SHARED_DB_PATH   # C:\Users\Public\DarkCalendar\shared.db (PC공유 캘린더)
 ```
 
 ## 레포지토리 진입점
+
+Outlook 연결은 기존 Google 필드를 재사용하지 않습니다. `infrastructure/calendar_sync/repository.py`가
+`calendar_sync_calendar`, `calendar_sync_event`, `calendar_sync_delete_queue`, `calendar_sync_issue`를
+추가로 생성합니다. 기존 테이블 DDL은 변경하지 않습니다. 일정 삭제/캘린더 이동 트리거는
+연결된 일정만 기록하며, 연결 기록의 ETag와 비교해 충돌을 보존합니다.
+CalDAV도 같은 계약을 사용합니다. iCloud·네이버 어댑터는 `infrastructure/caldav_sync/`에 있습니다.
+서비스·계정·원격 캘린더를 분리하며 삭제 대기는 `(calendar_id,event_id)` 복합 키입니다.
+기존 연결 기록의 `remote_name`은 `ALTER TABLE`로 추가해 사용자 지정 캘린더 이름을 보존합니다.
+네이버 캘린더와 쓰기 권한이 없는 CalDAV 캘린더는 `access_role='reader'`로 저장합니다.
 
 - `infrastructure/db/db_repository.py` — 통합 레포지토리 진입점 (대부분의 코드는 여기서 임포트)
 - 레포지토리를 직접 임포트할 때는 `infrastructure/db/` 하위 모듈에서 직접 가져옵니다:

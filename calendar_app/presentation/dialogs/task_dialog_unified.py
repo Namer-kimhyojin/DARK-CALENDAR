@@ -2095,6 +2095,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
         try:
             from calendar_app.infrastructure.db.calendar_repo import (
                 get_default_calendar,
+                is_calendar_row_read_only,
                 list_calendars,
             )
 
@@ -2104,7 +2105,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
             for i, cal in enumerate(calendars):
                 # ICS 및 GCal reader는 쓰기 불가 → 비활성화
-                is_readonly = cal.get("type") == "ics"
+                is_readonly = is_calendar_row_read_only(cal)
                 icon = _TYPE_ICON.get(cal.get("type", "local"), "📁")
                 label = f"{icon} {cal['name']}"
                 self.calendar_combo.addItem(label, cal["id"])
@@ -2114,7 +2115,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
                     item = model.item(i)
                     if item:
                         item.setEnabled(False)
-                if cal["id"] == default_id:
+                if cal["id"] == default_id and not is_readonly:
                     default_index = i
 
             # 캘린더가 한 개도 없으면 기본 로컬 캘린더를 자동 생성 후 추가
@@ -2135,6 +2136,16 @@ class UnifiedTaskDialog(BaseTaskDialog):
         except Exception:
             self.calendar_combo.addItem("📁 기본", None)
 
+        selected_item = self.calendar_combo.model().item(default_index)
+        if selected_item and not selected_item.isEnabled():
+            default_index = next(
+                (
+                    i
+                    for i in range(self.calendar_combo.count())
+                    if self.calendar_combo.model().item(i).isEnabled()
+                ),
+                -1,
+            )
         self.calendar_combo.setCurrentIndex(default_index)
         cal_row.addWidget(self.calendar_combo, 1)
         layout.addLayout(cal_row)

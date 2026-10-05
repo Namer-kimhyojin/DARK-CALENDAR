@@ -27,6 +27,7 @@ class ActionHandlersMixin(
     AwayLockMixin,
     ThemeActionsMixin,
     RefreshSchedulerMixin,
+    CalendarSyncActionsMixin,  # 공통 동기화 진입점과 상태, GCalActionsMixin 앞
     GCalActionsMixin,
     DialogActionsMixin,   # ← dialog_router.py
     TaskActionsMixin,     # ← 반드시 DialogActionsMixin 뒤
@@ -37,6 +38,15 @@ class ActionHandlersMixin(
 1. 기능 단위로 별도 `*_actions.py` 또는 `*_mixin.py` 파일 작성
 2. `action_handlers.py`의 `ActionHandlersMixin` 상속 목록에 추가
 3. MRO 충돌 여부 확인 — 특히 `DialogActionsMixin`은 `TaskActionsMixin` 앞에 위치해야 함
+
+### 서비스 공통 동기화
+
+- 공통 버튼·F5·트레이·KeyDeck은 `sync_calendars()`와 `CalendarSyncCoordinator`를 사용합니다.
+- `CalendarSyncActionsMixin`은 `GCalActionsMixin` 앞에서 공통 상태와 ICS 갱신을 담당합니다. Google 전용 API 호출은 기존 GCal mixin과 엔진을 유지합니다.
+- 캘린더 전체 관리와 문제 확인은 `open_calendar_sync_hub(section=...)`로 연결합니다. 서비스 세부 설정을 닫으면 기존 허브로 돌아갑니다.
+- 새 일정·수정·이동은 `wake_calendar_sync()`로 Outlook·iCloud를 800ms 묶어서 갱신합니다. Google은 기존 개별 push 큐를 유지합니다. 삭제 대기열의 기존 `wake_gcal_sync()` 호출은 공통 서비스 갱신으로 연결됩니다.
+- 자동 갱신은 서비스별 켜짐·연결·선택·작업 중·오류 상태를 확인합니다. 수동 동기화는 자동 갱신 일시정지 중에도 사용할 수 있습니다.
+- ICS 네트워크 작업은 `IcsSyncWorker`에서 실행하며 중복 실행을 막고, 종료 시 협력 중단과 스레드 DB 연결 정리를 수행합니다.
 
 ## 앱 상태 변수 초기화
 

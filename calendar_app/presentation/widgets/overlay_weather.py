@@ -8,7 +8,9 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 import json
 import logging
+import math
 import re
+import time
 
 from PyQt6.QtCore import QPoint, QSize, Qt, QTimer, QUrl, QUrlQuery
 from PyQt6.QtNetwork import QNetworkReply, QNetworkRequest
@@ -31,7 +33,9 @@ from calendar_app.presentation.widgets.overlay_base import (
     _BaseOverlayWidget,
     _GripFrame,
     _inject_global_lh,
+    _parse_rgba,
     _protect_align_tags,
+    _rgba_css,
 )
 from calendar_app.presentation.widgets.weather_asset_packs import (
     DEFAULT_WEATHER_ASSET_PACK_ID,
@@ -51,7 +55,7 @@ def _weather_icon_b64(wmo_code: int, color: str, size: int) -> str:
 
 
 _NETWORK_TIMEOUT_MS = 10_000  # abort reply after 10 s
-_APP_HOMEPAGE = "https://namer-kimhyojin.github.io/dark_calendar/"
+_APP_HOMEPAGE = "https://namer-kimhyojin.github.io/DARK-CALENDAR/"
 _MET_USER_AGENT = f"AirCalendar/{APP_VERSION} {_APP_HOMEPAGE}".encode("utf-8", errors="strict")
 
 _WEATHER_DESC = {
@@ -114,9 +118,16 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._network_manager = get_network_manager()
         # Note: Finished signal will be handled via per-request reply finished.
         self._refresh_timer = QTimer(self)
-        self._refresh_timer.timeout.connect(self.request_update)
+        self._refresh_timer.timeout.connect(self._scheduled_update)
         self._pending_replies: list[QNetworkReply] = []
         self._runtime_active = False
+        self._retry_timer = QTimer(self)
+        self._retry_timer.setSingleShot(True)
+        self._retry_timer.timeout.connect(self.request_update)
+        self._failure_count = 0
+        self._request_key: tuple[str, str] | None = None
+        self._status_text = ""
+        self._rate_limited_until = 0.0
 
         self._weather_data: dict = {
             "city": "---",
@@ -178,25 +189,51 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._source_label.setOpenExternalLinks(True)
         layout.addWidget(self._source_label)
 
+        self._status_label = QLabel("", frame)
+        self._status_label.setObjectName("weatherStatus")
+        self._status_label.setTextFormat(Qt.TextFormat.PlainText)
+        self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._status_label.setWordWrap(True)
+        layout.addWidget(self._status_label)
+
         return frame
 
     def request_update(self) -> None:
         """Fetch the latest MET Norway forecast for the configured city."""
-        # Clean up old replies
-        for r in self._pending_replies:
-            if r.isRunning():
-                r.abort()
-            r.deleteLater()
-        self._pending_replies.clear()
-
-        location = self._get("location", "Seoul")
+        if not self._runtime_active:
+            return
+        remaining = self._rate_limited_until - time.monotonic()
+        if remaining > 0:
+            self._retry_timer.start(math.ceil(remaining * 1000))
+            return
+        location = str(self._get("location", "Seoul") or "").strip()
+        request_key = (location, str(self._get("unit", "celsius")))
+        if self._pending_replies and request_key == self._request_key:
+            return
+        if request_key != self._request_key:
+            self._cancel_pending_replies()
+            self._failure_count = 0
+            self._weather_data.update(
+                city=location,
+                temp="--",
+                error="",
+                _wmo=-1,
+                unit="°F" if request_key[1] == "fahrenheit" else "°C",
+            )
+        self._request_key = request_key
+        self._retry_timer.stop()
+        self._status_text = t("widget.weather.loading", "날씨를 불러오는 중…")
+        self._refresh_face()
 
         # 인스턴스별 캐시 키 사용 (_get/_set 이용 → prefix 자동 적용)
         cached_loc = self._get("resolved_name", "")
-        lat = self._get("lat", 0.0, type_=float)
-        lon = self._get("lon", 0.0, type_=float)
+        try:
+            lat = float(self._get("lat"))
+            lon = float(self._get("lon"))
+        except (TypeError, ValueError, OverflowError):
+            lat = lon = math.nan
 
-        if location != cached_loc or lat == 0.0:
+        if location != cached_loc or not (-90 <= lat <= 90 and -180 <= lon <= 180):
             self._geocode_location(location)
             return
 
@@ -204,29 +241,49 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         display_name = self._get("display_name", location)
         self._fetch_weather(lat, lon, display_name)
 
+    def _scheduled_update(self) -> None:
+        if not self._retry_timer.isActive():
+            self.request_update()
+
     def _watch_reply(self, reply: QNetworkReply) -> None:
         """타임아웃 타이머 연결 — 10 s 초과 시 abort."""
-        timer = QTimer(self)
+        timer = QTimer(reply)
         timer.setSingleShot(True)
         timer.timeout.connect(lambda r=reply: r.abort() if not r.isFinished() else None)
         reply.finished.connect(timer.stop)
         timer.start(_NETWORK_TIMEOUT_MS)
 
-    def _show_error(self, msg: str) -> None:
+    def _cancel_pending_replies(self) -> None:
+        replies = list(self._pending_replies)
+        self._pending_replies.clear()
+        for reply in replies:
+            if reply.isRunning():
+                reply.abort()
+            reply.deleteLater()
+
+    def _show_error(self, msg: str, *, retry_seconds: int | None = None) -> None:
         self._weather_data["error"] = msg
-        self._weather_data["city"] = msg
-        self._weather_data["temp"] = "⚠"
-        self._weather_data["_wmo"] = -1
-        self._weather_data["_day_period"] = "day"
+        self._status_text = msg
+        if self._weather_data.get("temp") != "--":
+            self._status_text = t("widget.weather.stale", "이전 날씨 표시 · {error}", error=msg)
+        if retry_seconds is not None and self._runtime_active:
+            self._failure_count += 1
+            delay = max(retry_seconds, min(60 * 2 ** min(self._failure_count - 1, 4), 900))
+            self._retry_timer.start(delay * 1000)
+            self._status_text += " · " + t(
+                "widget.weather.retry_in", "{min}분 후 재시도", min=math.ceil(delay / 60)
+            )
         self._refresh_face()
 
     def _geocode_location(self, name: str) -> None:
         """Resolve a city using the bundled GeoNames dataset."""
-        city = find_city(name)
+        try:
+            city = find_city(name)
+        except (UnicodeError, ValueError):
+            city = None
         if city is None:
             logger.warning("Local GeoNames lookup failed for: %s", name)
             self._show_error(t("weather.error.location_not_found", "위치를 찾을 수 없습니다"))
-            self._refresh_face()
             return
 
         lat = round(city.latitude, 4)
@@ -242,6 +299,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         unit = "fahrenheit" if self._get("unit") == "fahrenheit" else "celsius"
 
         if self._restore_weather_cache(lat, lon, display_name, unit, require_fresh=True):
+            self._status_text = t("widget.weather.cached", "저장된 최신 날씨")
             self._refresh_face()
             return
 
@@ -253,7 +311,13 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         request = QNetworkRequest(url)
         request.setRawHeader(b"User-Agent", _MET_USER_AGENT)
         request.setRawHeader(b"Accept", b"application/geo+json, application/json")
-        last_modified = str(self._get("met_cache_last_modified", "") or "").strip()
+        # Validators belong to this exact forecast and unit, not to another city.
+        cache_matches = self._restore_weather_cache(
+            lat, lon, display_name, unit, require_fresh=False
+        )
+        last_modified = (
+            str(self._get("met_cache_last_modified", "") or "").strip() if cache_matches else ""
+        )
         if last_modified:
             request.setRawHeader(
                 b"If-Modified-Since", last_modified.encode("utf-8", errors="replace")
@@ -276,21 +340,20 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         lat: float,
         lon: float,
     ) -> None:
-        if reply in self._pending_replies:
-            self._pending_replies.remove(reply)
-
-        if (
-            not self._runtime_active
-            and reply.error() == QNetworkReply.NetworkError.OperationCanceledError
-        ):
+        if reply not in self._pending_replies or not self._runtime_active:
             reply.deleteLater()
             return
+        self._pending_replies.remove(reply)
 
         status = reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute)
+        error_message = ""
+        retry_seconds = 60
         if status == 304:
-            self._store_response_headers(reply)
-            if not self._restore_weather_cache(lat, lon, display_name, unit, require_fresh=False):
-                self._show_error(t("weather.error.network", "네트워크 오류"))
+            if self._restore_weather_cache(lat, lon, display_name, unit, require_fresh=False):
+                self._store_response_headers(reply)
+            else:
+                self._set("met_cache_last_modified", "")
+                error_message = t("weather.error.parse_failed", "데이터 파싱 오류")
         elif reply.error() == QNetworkReply.NetworkError.NoError:
             try:
                 data = json.loads(reply.readAll().data().decode("utf-8", errors="replace"))
@@ -300,16 +363,39 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
                 self._store_response_headers(reply)
             except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
                 logger.warning("MET Norway response parse failed: %s", exc)
-                if not self._restore_weather_cache(
-                    lat, lon, display_name, unit, require_fresh=False
-                ):
-                    self._show_error(t("weather.error.parse_failed", "데이터 파싱 오류"))
+                error_message = t("weather.error.parse_failed", "데이터 파싱 오류")
         elif reply.error() == QNetworkReply.NetworkError.OperationCanceledError:
-            if not self._restore_weather_cache(lat, lon, display_name, unit, require_fresh=False):
-                self._show_error(t("weather.error.timeout", "요청 시간 초과"))
+            error_message = t("weather.error.timeout", "요청 시간 초과")
+        elif status == 403:
+            error_message = t("weather.error.denied", "날씨 서비스 접근이 거부되었습니다")
+            retry_seconds = None
+        elif status == 429:
+            error_message = t("weather.error.busy", "날씨 서비스 요청이 많아 대기 중입니다")
+            retry_after = bytes(reply.rawHeader(b"Retry-After")).decode("utf-8", errors="replace")
+            try:
+                retry_seconds = max(900, int(retry_after))
+            except ValueError:
+                try:
+                    retry_at = parsedate_to_datetime(retry_after)
+                    retry_seconds = max(
+                        900, math.ceil((retry_at - datetime.now(UTC)).total_seconds())
+                    )
+                except (TypeError, ValueError, OverflowError):
+                    retry_seconds = 900
+            retry_seconds = min(retry_seconds, 86400)
+            self._rate_limited_until = time.monotonic() + retry_seconds
         else:
-            if not self._restore_weather_cache(lat, lon, display_name, unit, require_fresh=False):
-                self._show_error(t("weather.error.network", "네트워크 오류"))
+            error_message = t("weather.error.network", "네트워크 오류")
+        if error_message:
+            logger.warning("Weather request failed: status=%s error=%s", status, reply.error().name)
+            self._restore_weather_cache(lat, lon, display_name, unit, require_fresh=False)
+            self._show_error(error_message, retry_seconds=retry_seconds)
+        else:
+            self._failure_count = 0
+            self._retry_timer.stop()
+            self._status_text = t(
+                "widget.weather.updated", "{time} 업데이트", time=datetime.now().strftime("%H:%M")
+            )
         reply.deleteLater()
         self._refresh_face()
 
@@ -334,9 +420,12 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         last_modified = (
             bytes(reply.rawHeader(b"Last-Modified")).decode("utf-8", errors="replace").strip()
         )
-        if expires:
+        if expires or reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute) != 304:
             self._set("met_cache_expires", expires)
-        if last_modified:
+        if (
+            last_modified
+            or reply.attribute(QNetworkRequest.Attribute.HttpStatusCodeAttribute) != 304
+        ):
             self._set("met_cache_last_modified", last_modified)
 
     def _restore_weather_cache(
@@ -353,6 +442,8 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             return False
         try:
             cache = json.loads(raw_cache)
+            if not isinstance(cache, dict):
+                return False
             if round(float(cache.get("lat")), 4) != round(float(lat), 4):
                 return False
             if round(float(cache.get("lon")), 4) != round(float(lon), 4):
@@ -371,17 +462,35 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             weather = cache.get("weather")
             if not isinstance(weather, dict):
                 return False
+            if not math.isfinite(float(weather.get("temp"))):
+                return False
+            int(weather.get("_wmo"))
             weather["city"] = display_name
+            weather["error"] = ""
             self._weather_data.update(weather)
             return True
         except (json.JSONDecodeError, TypeError, ValueError, OverflowError):
             return False
 
-    def _update_refresh_interval(self) -> None:
-        minutes = self._get("refresh_interval", 30, type_=int)
+    def _refresh_minutes(self) -> int:
+        raw = self._get("refresh_interval", 30)
+        # Older settings saved the whole (translated label, minutes) combo item.
+        value = raw[-1] if isinstance(raw, (tuple, list)) and len(raw) == 2 else raw
+        try:
+            minutes = int(value) if not isinstance(value, bool) else 30
+        except (TypeError, ValueError, OverflowError):
+            minutes = 30
         if minutes not in {5, 10, 30, 60, 120}:
             minutes = 30
+        if type(raw) is not int or raw != minutes:
             self._set("refresh_interval", minutes)
+        return minutes
+
+    def _update_refresh_interval(self) -> None:
+        minutes = self._refresh_minutes()
+        if not self._runtime_active:
+            self._refresh_timer.stop()
+            return
         self._refresh_timer.start(minutes * 60 * 1000)
 
     def _set_runtime_active(self, active: bool) -> None:
@@ -393,9 +502,8 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
                 QTimer.singleShot(0, self.request_update)
             return
         self._refresh_timer.stop()
-        for reply in list(self._pending_replies):
-            if reply.isRunning():
-                reply.abort()
+        self._retry_timer.stop()
+        self._cancel_pending_replies()
 
     def _weather_code_to_text(self, code: int) -> str:
         # Simplified WMO codes
@@ -440,13 +548,27 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
 
         source_names = t("widget.weather.source_attribution", "MET Norway · GeoNames")
         source_html = source_names.replace(
-            "MET Norway", f'<a href="{MET_LICENSE_URL}">MET Norway</a>'
-        ).replace("GeoNames", f'<a href="{GEONAMES_LICENSE_URL}">GeoNames</a>')
+            "MET Norway", f'<a href="{MET_LICENSE_URL}" style="color:#aab4c3">MET Norway</a>'
+        ).replace(
+            "GeoNames", f'<a href="{GEONAMES_LICENSE_URL}" style="color:#aab4c3">GeoNames</a>'
+        )
         self._source_label.setText(source_html)
         self._source_label.setStyleSheet(
             "font-size: 8px; color: rgba(170,180,195,180); background: transparent;"
         )
         self._source_label.setVisible(True)
+        self._status_label.setText(self._status_text)
+        # Keep successful compact/custom layouts at their original height.
+        # Loading and errors remain visible even when {error} is absent from the template.
+        self._status_label.setVisible(
+            bool(self._weather_data.get("error"))
+            or self._status_text == t("widget.weather.loading", "날씨를 불러오는 중…")
+        )
+        status_color = _rgba_css(*_parse_rgba(self.text_color_rgba()))
+        self._status_label.setStyleSheet(
+            f"font-size: 9px; color: {status_color}; background: transparent;"
+        )
+        self.face.setToolTip(self._status_text)
 
     def _refresh_face(self) -> None:
         """Re-render widget after data update."""
@@ -498,6 +620,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
 
     def _open_settings(self) -> None:
         """Show standardized settings dialog with schema-based fields."""
+        self._refresh_minutes()
         extra = [
             {
                 "key": "weather_asset_pack",
@@ -529,9 +652,9 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             {
                 "key": "refresh_interval",
                 "label": t("widget.weather.refresh_interval", "Refresh:"),
-                "type": "int_combo",
+                "type": "combo",
                 "options": [
-                    (t("widget.weather.refresh_min", f"Every {m} min", min=m), m)
+                    (t("widget.weather.refresh_every", "매 {min}분", min=m), m)
                     for m in (5, 10, 30, 60, 120)
                 ],
                 "default": 30,
@@ -606,6 +729,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._refresh_face()
 
     def _build_context_menu(self, menu: QMenu) -> None:
+        menu.addAction(t("widget.weather.refresh_now", "날씨 다시 불러오기"), self.request_update)
         menu.addAction(
             t("widget.weather.settings", "Weather Settings..."),
             self._open_settings,

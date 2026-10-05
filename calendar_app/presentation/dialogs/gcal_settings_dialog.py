@@ -100,6 +100,14 @@ _COMMON_TIMEZONES = [
 
 
 class GCalSettingsDialog(QDialog):
+    def _open_other_services(self):
+        if self.parent_app is not None:
+            from PyQt6.QtCore import QTimer
+
+            self.reject()
+            if not self.property("syncHubChild"):
+                QTimer.singleShot(0, self.parent_app.open_calendar_sync_hub)
+
     def __init__(self, parent=None, initial_tab: str | None = None):
         super().__init__(parent)
         self.parent_app = parent
@@ -109,7 +117,7 @@ class GCalSettingsDialog(QDialog):
             if parent is not None and hasattr(parent, "settings")
             else QSettings(APP_VENDOR, APP_NAME)
         )
-        apply_dialog_title(self, t("gcal_settings.title", "캘린더 및 동기화 설정"))
+        apply_dialog_title(self, t("sync_unified.google_settings", "Google Calendar 세부 설정"))
         self.setAccessibleName(self.windowTitle())
         self.setSizeGripEnabled(True)
         self.setMinimumSize(820, 560)
@@ -320,6 +328,11 @@ class GCalSettingsDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(16)
 
+        other_services = QPushButton(t("sync_unified.back", "전체 캘린더 설정으로"))
+        self._apply_section_button_style(other_services, "secondary")
+        other_services.clicked.connect(self._open_other_services)
+        layout.addWidget(other_services)
+
         card = self._make_card(t("gcal_settings.sync_title", "연결 설정"))
         cl = card.layout()
 
@@ -493,6 +506,8 @@ class GCalSettingsDialog(QDialog):
         # ② 이름 및 타입 정보 (유연한 레이아웃)
         _TYPE_LABEL = {
             "gcal": t("gcal_settings.type_gcal", "Google Calendar"),
+            "outlook": t("outlook.type", "Outlook / Microsoft 365"),
+            "caldav": t("caldav.type", "CalDAV"),
             "ics": t("gcal_settings.type_ics", "ICS 구독"),
             "local": t("gcal_settings.type_local", "로컬"),
         }
@@ -684,6 +699,14 @@ class GCalSettingsDialog(QDialog):
         del_btn.setIconSize(QSize(18, 18))
         self._set_icon_button_accessibility(del_btn, t("gcal_settings.col_delete", "삭제"))
         del_btn.setStyleSheet(self._calendar_row_action_button_style("danger"))
+        if cal_type in {"outlook", "caldav"}:
+            del_btn.setEnabled(False)
+            del_btn.setToolTip(
+                t(
+                    "outlook.managed_calendar",
+                    "연결 설정에서 캘린더 선택을 해제하세요. 기존 일정은 보존됩니다.",
+                )
+            )
 
         def _on_del(_=None, cid=cal_id, cname=cal["name"]):
             self._delete_calendar(cid, cname)

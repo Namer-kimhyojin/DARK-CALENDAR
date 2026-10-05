@@ -102,6 +102,42 @@
     "confirm": "पुष्टि करें",
     "ok": "ठीक है"
   },
+  "caldav": {
+    "cancel_delete": "Cancel deletion and keep service event",
+    "connect": "Verify connection and find calendars",
+    "connected": "Connected. Select calendars and save.",
+    "connecting": "Verifying account and finding calendars...",
+    "connection": "1. Connect account",
+    "delete_pending": "Deletion pending: {attempts}/5 attempts",
+    "disconnecting": "Disconnecting...",
+    "help": "Service authentication guide",
+    "icloud_guide": "iCloud: enable two-factor authentication and generate an app-specific password. Personal events support two-way sync.",
+    "icloud_user": "Apple Account email",
+    "idle": "Connect your account, then select calendars and save.",
+    "keep_remote": "Apply service version",
+    "last_success": "Last successful sync: {time}",
+    "menu": "Connect iCloud / Naver...",
+    "naver": "Naver",
+    "naver_guide": "Naver: read-only import. With two-step verification, use an application password. Windows connections may be restricted by service policy.",
+    "naver_user": "Naver ID",
+    "not_connected": "Not connected",
+    "password": "App-specific password",
+    "privacy": "Your password is encrypted for this Windows user. Disconnecting preserves existing events.",
+    "problems": "3. Review issues",
+    "refresh": "Refresh list",
+    "refreshed": "List refreshed. Review your selection and save.",
+    "refreshing": "Refreshing calendar list...",
+    "save": "Save selection",
+    "scope": "Range: past 120 days to next 400 days. Recurring events and invitations are view-only. Deselecting stops sync. Events are not copied between services automatically.",
+    "selection": "2. Choose calendars",
+    "service": "Calendar service",
+    "show_password": "Show entered password",
+    "syncing": "Synchronizing events...",
+    "title": "iCloud / Naver calendar connection",
+    "two_way": "Two-way",
+    "type": "CalDAV",
+    "username": "Account"
+  },
   "calendar": {
     "add_hint": "शेड्यूल जोड़ें",
     "date_cell_accessible": "{date} date cell",
@@ -127,7 +163,15 @@
     "sync_hint": "गूगल सिंक",
     "today": "आज",
     "today_hint": "आज पर जाएँ",
-    "weekdays": ["सोम", "मंगल", "बुध", "गुरु", "शुक्र", "शनि", "रवि"]
+    "weekdays": [
+      "सोम",
+      "मंगल",
+      "बुध",
+      "गुरु",
+      "शुक्र",
+      "शनि",
+      "रवि"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "आइटम जोड़ें",
@@ -1543,6 +1587,58 @@
   "meta": {
     "language_name": "हिन्दी (Hindi)"
   },
+  "outlook": {
+    "auto_sync": "Automatically synchronize every 5 minutes",
+    "calendar_selection": "Choose calendars to synchronize",
+    "cancel_delete": "Cancel deletion and keep Outlook event",
+    "client_id": "Application (client) ID",
+    "client_id_hint": "Client ID from Entra app registration (not a secret)",
+    "close": "Close",
+    "delete_issue": "Deletion pending / {attempts} of 5 attempts / {kind}",
+    "disconnect": "Disconnect",
+    "issue": "Event #{id}: {kind}",
+    "issue_conflict": "Changed on both sides; choose a version",
+    "issue_delete_conflict": "Deletion paused because Outlook content changed",
+    "issue_deleted": "Deleted in Outlook; local event preserved",
+    "issue_meeting": "Edit online meeting descriptions in Outlook",
+    "issue_move": "Calendar move unsupported; return to the original calendar",
+    "issue_read_only": "Calendar has no write permission",
+    "issue_recurrence": "Recurrence rule editing unsupported",
+    "keep_local": "Conflict: keep my changes",
+    "keep_remote": "Conflict: use Outlook version",
+    "login": "Sign in with Microsoft",
+    "managed_calendar": "Deselect this calendar in connection settings. Existing events are preserved.",
+    "menu": "Connect Outlook / Microsoft 365...",
+    "not_connected": "No Microsoft account connected.",
+    "pending": "Pending",
+    "read_only": "Read only",
+    "retry_delete": "Retry selected deletion",
+    "save_calendars": "Save calendar selection",
+    "scope": "View: 120 days back to 400 days ahead. Recurring events appear as individual occurrences.\nRemotely deleted events are preserved locally and listed as issues.\nRecurrence rules, cross-service moves and invitation responses are not supported in this phase.",
+    "setup_guide": "Open Microsoft app registration guide",
+    "setup_intro": "Connect a personal Outlook or work/school account.\nAn administrator must register the integration app first. No client secret is needed.",
+    "setup_steps": "App registration: organizational and personal Microsoft accounts\nPlatform: Mobile and desktop / Redirect URI: http://localhost\nGraph delegated permissions: Calendars.ReadWrite, User.Read",
+    "status_access": "Calendar access was lost. Check sign-in and calendar selection.",
+    "status_auth": "Microsoft sign-in is required. Check permission consent and organization policies.",
+    "status_client": "Enter a valid application (client) ID.",
+    "status_completed": "Sync completed",
+    "status_connected": "Signed in. Select calendars and save.",
+    "status_dependency": "The Microsoft sign-in module is unavailable. Install the requirements.txt dependencies.",
+    "status_disconnect_first": "Disconnect before changing the client ID.",
+    "status_disconnected": "Disconnected. Existing events are preserved.",
+    "status_failed": "Unable to complete the operation. Error code: {code}",
+    "status_idle": "Sign in, select calendars and save your selection.",
+    "status_login": "Complete Microsoft sign-in in your browser. Waiting up to 2 minutes.",
+    "status_network": "Check your network connection and try again.",
+    "status_saved": "Calendar selection saved.",
+    "status_sync": "Synchronizing Outlook events...",
+    "summary": "Imported {imported} / Updated {updated} / Created {created} / Deleted {deleted} / Issues {issues}",
+    "sync_now": "Sync now",
+    "tab_account": "Account connection",
+    "tab_sync": "Calendars and sync issues",
+    "title": "Outlook / Microsoft 365 sync",
+    "type": "Outlook / Microsoft 365"
+  },
   "palette": {
     "accessible_hint": "Usage guidance",
     "accessible_results": "Search results",
@@ -1558,7 +1654,13 @@
     "hint_record_jump": "Enter से आइटम खोलें। Shift+Enter से तारीख पर जाएं।",
     "hint_run_command": "Enter से चुना हुआ कमांड चलाएं",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "चयनित परिणाम खोलने के लिए Enter दबाएँ",
@@ -1811,223 +1913,362 @@
         "description": "तुरंत अनुपस्थिति लॉक मोड शुरू करता है।",
         "label": "अनुपस्थिति लॉक",
         "menu_path": "देखें > अनुपस्थिति लॉक",
-        "tags": ["अनुपस्थित", "लॉक"]
+        "tags": [
+          "अनुपस्थित",
+          "लॉक"
+        ]
       },
       "cal_toolbar": {
         "description": "कैलेंडर टूलबार को छुपाता है या फिर से दिखाता है।",
         "label": "कैलेंडर टूलबार टॉगल करें",
         "menu_path": "देखें > कैलेंडर टूलबार",
-        "tags": ["कैलेंडर", "टूलबार"]
+        "tags": [
+          "कैलेंडर",
+          "टूलबार"
+        ]
       },
       "calendar_print": {
         "description": "वर्तमान या चयनित अवधि के लिए कैलेंडर का पूर्वावलोकन करता है और प्रिंट करता है।",
         "label": "कैलेंडर प्रिंट करें",
         "menu_path": "कैलेंडर > विकल्प > प्रिंट",
-        "tags": ["प्रिंट", "प्रिंटर", "PDF"]
+        "tags": [
+          "प्रिंट",
+          "प्रिंटर",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "चेकलिस्ट टेम्पलेट और आइटम संरचना प्रबंधित करता है।",
         "label": "चेकलिस्ट प्रबंधित करें",
         "menu_path": "कार्य > चेकलिस्ट प्रबंधित करें",
-        "tags": ["चेकलिस्ट", "टेम्पलेट"]
+        "tags": [
+          "चेकलिस्ट",
+          "टेम्पलेट"
+        ]
       },
       "color_assign": {
         "description": "चयनित आइटम को स्वचालित रूप से रंग असाइन करता है।",
         "label": "स्वचालित रंग असाइनमेंट",
         "menu_path": "कार्य > स्वचालित रंग असाइनमेंट",
-        "tags": ["रंग", "टैग", "स्वचालित"]
+        "tags": [
+          "रंग",
+          "टैग",
+          "स्वचालित"
+        ]
       },
       "command_palette": {
         "description": "किसी फ़ीचर को तुरंत खोजने के लिए कमांड सर्च बॉक्स खोलता है।",
         "label": "कमांड पैलेट",
         "menu_path": "प्रत्यक्ष कॉल",
-        "tags": ["खोज", "कमांड", "पैलेट"]
+        "tags": [
+          "खोज",
+          "कमांड",
+          "पैलेट"
+        ]
       },
       "delete": {
         "description": "वर्तमान में चयनित शेड्यूल या आइटम को हटाता है।",
         "label": "चयनित आइटम हटाएं",
         "menu_path": "चयन स्थिति",
-        "tags": ["हटाएं", "निकालें"]
+        "tags": [
+          "हटाएं",
+          "निकालें"
+        ]
       },
       "escape": {
         "description": "वर्तमान चयन या फ़ोकस साफ़ करता है।",
         "label": "चयन साफ़ करें",
         "menu_path": "चयन स्थिति",
-        "tags": ["चयन रद्द करें", "रद्द करें", "escape"]
+        "tags": [
+          "चयन रद्द करें",
+          "रद्द करें",
+          "escape"
+        ]
       },
       "focus_mode": {
         "description": "फ़ोकस मोड को चालू या बंद करता है।",
         "label": "फ़ोकस मोड टॉगल करें",
         "menu_path": "देखें > फ़ोकस मोड",
-        "tags": ["फ़ोकस", "पोमोडोरो"]
+        "tags": [
+          "फ़ोकस",
+          "पोमोडोरो"
+        ]
       },
       "focus_pause": {
         "description": "वर्तमान फ़ोकस सत्र को रोकता या फिर से शुरू करता है।",
         "label": "फ़ोकस रोकें",
         "menu_path": "फ़ोकस मोड",
-        "tags": ["फ़ोकस", "रोकें"]
+        "tags": [
+          "फ़ोकस",
+          "रोकें"
+        ]
       },
       "force_unlock": {
         "description": "एक अप्रत्याशित लॉक स्थिति को बलपूर्वक साफ़ करता है।",
         "label": "बलपूर्वक अनलॉक करें",
         "menu_path": "आपातकालीन पुनर्प्राप्ति",
-        "tags": ["बलपूर्वक", "अनलॉक", "पुनर्प्राप्ति", "आपातकालीन"]
+        "tags": [
+          "बलपूर्वक",
+          "अनलॉक",
+          "पुनर्प्राप्ति",
+          "आपातकालीन"
+        ]
       },
       "fullscreen": {
         "description": "फ़ुलस्क्रीन डिस्प्ले को चालू या बंद करता है।",
         "label": "फ़ुलस्क्रीन टॉगल करें",
         "menu_path": "देखें > फ़ुलस्क्रीन",
-        "tags": ["फ़ुलस्क्रीन"]
+        "tags": [
+          "फ़ुलस्क्रीन"
+        ]
       },
       "help": {
         "description": "सहायता केंद्र खोलता है।",
         "label": "शॉर्टकट गाइड",
         "menu_path": "सिस्टम > शॉर्टकट गाइड",
-        "tags": ["सहायता", "F1"]
+        "tags": [
+          "सहायता",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "डिफ़ॉल्ट 4-पैनल डॉक किया गया लेआउट लागू करता है।",
         "label": "लेआउट प्रीसेट 1",
         "menu_path": "देखें > लेआउट प्रीसेट",
-        "tags": ["लेआउट", "प्रीसेट", "डॉक", "1"]
+        "tags": [
+          "लेआउट",
+          "प्रीसेट",
+          "डॉक",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "कैलेंडर-केंद्रित लेआउट लागू करता है।",
         "label": "लेआउट प्रीसेट 2",
         "menu_path": "देखें > लेआउट प्रीसेट",
-        "tags": ["लेआउट", "कैलेंडर", "2"]
+        "tags": [
+          "लेआउट",
+          "कैलेंडर",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "कार्य-केंद्रित लेआउट लागू करता है।",
         "label": "लेआउट प्रीसेट 3",
         "menu_path": "देखें > लेआउट प्रीसेट",
-        "tags": ["लेआउट", "कार्य", "3"]
+        "tags": [
+          "लेआउट",
+          "कार्य",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "विभाजित टैब लेआउट लागू करता है।",
         "label": "लेआउट प्रीसेट 4",
         "menu_path": "देखें > लेआउट प्रीसेट",
-        "tags": ["लेआउट", "टैब", "विभाजित", "4"]
+        "tags": [
+          "लेआउट",
+          "टैब",
+          "विभाजित",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "पूरी तरह से अलग तैरता हुआ लेआउट लागू करता है।",
         "label": "लेआउट प्रीसेट 5",
         "menu_path": "देखें > लेआउट प्रीसेट",
-        "tags": ["लेआउट", "अलग", "तैरता हुआ", "5"]
+        "tags": [
+          "लेआउट",
+          "अलग",
+          "तैरता हुआ",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "डेस्कटॉप लॉक मोड को चालू या बंद करता है।",
         "label": "लॉक मोड",
         "menu_path": "देखें > लॉक मोड",
-        "tags": ["लॉक"]
+        "tags": [
+          "लॉक"
+        ]
       },
       "magnet_mode": {
         "description": "मैग्नेट मोड टॉगल करता है, जो पैनल को संरेखित और स्नैप करने में मदद करता है।",
         "label": "मैग्नेट मोड",
         "menu_path": "देखें > मैग्नेट मोड",
-        "tags": ["मैग्नेट", "पैनल"]
+        "tags": [
+          "मैग्नेट",
+          "पैनल"
+        ]
       },
       "monitor_left": {
         "description": "विंडो को दूसरे मॉनिटर पर ले जाता है।",
         "label": "पिछले मॉनिटर पर जाएं",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["मॉनिटर", "डिस्प्ले", "बाएं"]
+        "tags": [
+          "मॉनिटर",
+          "डिस्प्ले",
+          "बाएं"
+        ]
       },
       "monitor_right": {
         "description": "विंडो को दूसरे मॉनिटर पर ले जाता है।",
         "label": "अगले मॉनिटर पर जाएं",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["मॉनिटर", "डिस्प्ले", "दाएं"]
+        "tags": [
+          "मॉनिटर",
+          "डिस्प्ले",
+          "दाएं"
+        ]
       },
       "new_directive": {
         "description": "निर्देश या सहयोग आइटम दर्ज करने के लिए विंडो खोलता है।",
         "label": "निर्देश रजिस्टर करें",
         "menu_path": "रजिस्टर करें > निर्देश",
-        "tags": ["निर्देश", "सहयोग"]
+        "tags": [
+          "निर्देश",
+          "सहयोग"
+        ]
       },
       "new_routine": {
         "description": "जल्दी से एक बार-बार होने वाला कार्य रूटीन जोड़ता है।",
         "label": "रूटीन रजिस्टर करें",
         "menu_path": "रजिस्टर करें > रूटीन",
-        "tags": ["रूटीन", "कार्य", "दोहराव"]
+        "tags": [
+          "रूटीन",
+          "कार्य",
+          "दोहराव"
+        ]
       },
       "new_schedule": {
         "description": "शेड्यूल एंट्री विंडो सीधे खोलता है।",
         "label": "नया शेड्यूल जोड़ें",
         "menu_path": "रजिस्टर करें > नया शेड्यूल",
-        "tags": ["शेड्यूल", "जोड़ें", "रजिस्टर"]
+        "tags": [
+          "शेड्यूल",
+          "जोड़ें",
+          "रजिस्टर"
+        ]
       },
       "next_day": {
         "description": "वर्तमान तिथि से एक दिन बाद जाता है।",
         "label": "अगला दिन",
         "menu_path": "नेविगेशन",
-        "tags": ["अगला", "तिथि", "दाएं"]
+        "tags": [
+          "अगला",
+          "तिथि",
+          "दाएं"
+        ]
       },
       "opacity_down": {
         "description": "विंडो की अपारदर्शिता घटाता है।",
         "label": "अपारदर्शिता घटाएं",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["अपारदर्शिता", "अधिक गहरा"]
+        "tags": [
+          "अपारदर्शिता",
+          "अधिक गहरा"
+        ]
       },
       "opacity_up": {
         "description": "विंडो की अपारदर्शिता बढ़ाता है।",
         "label": "अपारदर्शिता बढ़ाएं",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["अपारदर्शिता", "अधिक चमकीला"]
+        "tags": [
+          "अपारदर्शिता",
+          "अधिक चमकीला"
+        ]
       },
       "prev_day": {
         "description": "वर्तमान तिथि से एक दिन पहले जाता है।",
         "label": "पिछला दिन",
         "menu_path": "नेविगेशन",
-        "tags": ["पिछला", "तिथि", "बाएं"]
+        "tags": [
+          "पिछला",
+          "तिथि",
+          "बाएं"
+        ]
       },
       "restore_pos": {
         "description": "विंडो को स्क्रीन पर एक सुरक्षित स्थिति में पुनर्स्थापित करता है।",
         "label": "विंडो स्थिति पुनर्स्थापित करें",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["विंडो", "पुनर्स्थापित करें", "स्थिति"]
+        "tags": [
+          "विंडो",
+          "पुनर्स्थापित करें",
+          "स्थिति"
+        ]
       },
       "routine_mgr": {
         "description": "सीधे रूटीन मैनेजर टैब खोलता है।",
         "label": "रूटीन मैनेजर",
         "menu_path": "कार्य > रूटीन अवलोकन",
-        "tags": ["रूटीन", "प्रबंधित करें"]
+        "tags": [
+          "रूटीन",
+          "प्रबंधित करें"
+        ]
       },
       "save_layout": {
         "description": "वर्तमान पैनल व्यवस्था को प्रीसेट के रूप में सहेजता है।",
         "label": "वर्तमान लेआउट सहेजें",
         "menu_path": "देखें > लेआउट प्रीसेट > सहेजें",
-        "tags": ["लेआउट", "प्रीसेट", "सहेजें"]
+        "tags": [
+          "लेआउट",
+          "प्रीसेट",
+          "सहेजें"
+        ]
       },
       "show_hide": {
         "description": "मुख्य विंडो को छुपाता है या फिर से दिखाता है।",
         "label": "विंडो दिखाएं/छुपाएं",
         "menu_path": "विंडो नियंत्रण",
-        "tags": ["विंडो", "छुपाएं", "दिखाएं", "ओवरले"]
+        "tags": [
+          "विंडो",
+          "छुपाएं",
+          "दिखाएं",
+          "ओवरले"
+        ]
       },
       "sync_gcal": {
-        "description": "तुरंत Google कैलेंडर के साथ सिंक शुरू करता है।",
-        "label": "Google कैलेंडर सिंक करें",
-        "menu_path": "सिस्टम > कैलेंडर और सिंक",
-        "tags": ["google", "सिंक", "कैलेंडर", "F5"]
+        "description": "Start synchronization for all connected calendars.",
+        "label": "Sync all connected calendars",
+        "menu_path": "System > Calendars and sync",
+        "tags": [
+          "Google",
+          "Outlook",
+          "iCloud",
+          "Naver",
+          "ICS",
+          "F5",
+          "sync"
+        ]
       },
       "today": {
         "description": "चयनित तिथि को तुरंत आज पर ले जाता है।",
         "label": "आज पर जाएं",
         "menu_path": "नेविगेशन",
-        "tags": ["आज", "तिथि"]
+        "tags": [
+          "आज",
+          "तिथि"
+        ]
       },
       "topbar": {
         "description": "ऊपरी मेनू बार की दृश्यता टॉगल करता है।",
         "label": "टॉप बार टॉगल करें",
         "menu_path": "देखें > टॉप बार",
-        "tags": ["मेनू बार", "टॉप बार", "पुनर्प्राप्ति"]
+        "tags": [
+          "मेनू बार",
+          "टॉप बार",
+          "पुनर्प्राप्ति"
+        ]
       },
       "widget_mode": {
         "description": "केवल-विजेट पैनल मोड खोलता है।",
         "label": "विजेट मोड टॉगल करें",
         "menu_path": "देखें > केवल-विजेट मोड",
-        "tags": ["विजेट", "पैनल"]
+        "tags": [
+          "विजेट",
+          "पैनल"
+        ]
       }
     },
     "groups": {
@@ -2186,6 +2427,120 @@
     "status_confirmed": "की पुष्टि",
     "status_tentative": "अंदाज़न"
   },
+  "sync_ui": {
+    "access_lost": "Access to a selected calendar was lost. Existing events were preserved. Refresh and select calendars again.",
+    "auth": "Authentication expired or the password is incorrect. Reconnect your account.",
+    "auto_off": "Automatic sync off",
+    "auto_on": "Automatic sync on",
+    "busy": "This account is already syncing. Wait for completion.",
+    "cancelled": "The operation was cancelled. Existing events are preserved.",
+    "changed": "The remote event changed first. Sync again and compare both versions.",
+    "compare_hint": "Select a conflict to compare your changes with the service version.",
+    "configure": "Connect / settings",
+    "conflict": "Edited on both sides. Compare and choose a version.",
+    "connected": "Connected",
+    "create_conflict": "Another event uses the same creation identifier. Creation was held without overwriting the original.",
+    "credentials": "Enter your account and app-specific password.",
+    "delete_conflict": "The remote event changed before deletion. Deletion was held.",
+    "dependency": "A sync component is missing. Reinstall the latest application.",
+    "discovery": "Calendar locations were not found. Check the account and service CalDAV support.",
+    "duplicate": "Duplicate event responses were received. Sync was stopped for safety.",
+    "etag": "The service did not return event version information. The update was held. Sync again.",
+    "event_name": "Enter an event title and sync again.",
+    "event_range": "The end must be after the start. Check the event date and time.",
+    "event_read_only": "Recurring events and invitations are view-only. Edit or delete them in the original service.",
+    "event_time": "The event date or timezone could not be read. Check its original time settings.",
+    "failed": "The operation could not be completed. Existing events are preserved. Check account settings and try again.",
+    "google_capability": "Two-way events; shared calendars depend on permissions",
+    "google_problems": "Google sync issues",
+    "hub_intro": "Connect a service and choose calendars to import. Each account syncs independently. Events are not copied between services automatically.",
+    "hub_note": "Disconnecting or deselecting calendars does not delete original service events. Review conflicts and failures in each service's settings.",
+    "hub_title": "Calendars / accounts and synchronization",
+    "icloud_capability": "Two-way personal events; app-specific password",
+    "ics_fetch": "Could not refresh this subscription. Check its URL and your internet connection, then sync again.",
+    "incomplete": "Some event responses were missing. This sync was stopped. Try again.",
+    "invalid_data": "The service returned invalid event data. This sync was not applied.",
+    "invalid_response": "The service response could not be read. Check the account and service status.",
+    "invalid_timezone": "Select a valid timezone, for example Asia/Seoul.",
+    "local": "My changes",
+    "login": "Reconnect your account. Automatic sync does not open a sign-in window.",
+    "move": "Moving a linked event between calendars is unsupported. Restore its original calendar or make a copy.",
+    "naver_capability": "Read-only; service policy may restrict connections",
+    "network": "Check your internet connection. Existing events are preserved. Retry when connected.",
+    "no_calendars": "No accessible calendars were found. Create a calendar or check sharing permissions.",
+    "not_connected": "Not connected",
+    "other_services": "Connect Outlook / iCloud / Naver",
+    "outlook_capability": "Two-way events; Microsoft app registration required initially",
+    "permission": "Calendar access was denied. Check account permissions and service support.",
+    "protection": "Windows credential encryption failed. Check your Windows user environment.",
+    "rate_limit": "The service request limit was reached. Automatic retry intervals have increased. Try again later.",
+    "read_only": "This calendar is read-only. Edit events in the original service.",
+    "reconnect": "Reconnect required",
+    "recurrence": "Recurring event data could not be read. Check recurrence settings in the service.",
+    "recurrence_edit": "Configure recurrence rules in the original service.",
+    "remote": "Service version",
+    "remote_deleted": "This event was deleted in the service. The local copy was preserved.",
+    "save_timezone": "Save timezone",
+    "server": "The service is temporarily unavailable. Events are preserved and sync will retry later.",
+    "stale_conflict": "The event changed again after comparison. Sync again and compare the latest versions.",
+    "timezone": "Shared timezone",
+    "timezone_hint": "Timezone changes apply from the next synchronization.",
+    "timezone_saved": "Timezone saved. Changes apply from the next synchronization.",
+    "too_many": "Too many occurrences were requested. Check recurrence limits in the service.",
+    "unsafe": "An untrusted server address was returned. The connection was stopped.",
+    "unsupported_service": "The service does not allow this connection method. Check its support policy.",
+    "wait_timezone": "Wait for the current synchronization to finish before changing the timezone.",
+    "working": "Working...",
+    "identity_changed": "इस सर्वर पते पर अब दूसरा कार्यक्रम है। बदलाव रोक दिए गए हैं। मूल सेवा में कार्यक्रम जाँचें।"
+  },
+  "sync_unified": {
+    "add_ics": "Add ICS subscription",
+    "add_local": "Add local calendar",
+    "attention": "Sync needs attention",
+    "auto": "Automatic sync",
+    "auto_pause": "Turn all automatic sync off",
+    "auto_resume": "Turn all automatic sync on",
+    "back": "Back to all calendar settings",
+    "calendar_hint": "Manage visibility, colors and the default save destination for all calendars. Change remote sync selection in its service settings.",
+    "calendar_name": "Calendar name",
+    "calendar_save_failed": "Could not save these settings. Try again.",
+    "calendar_saved": "Calendar settings updated.",
+    "calendars": "All calendars",
+    "color": "Change color",
+    "connected_count": "{count} connected",
+    "default": "Set as default save destination",
+    "default_marker": "Default",
+    "exists": "This calendar is already registered.",
+    "google_settings": "Google Calendar settings",
+    "ics": "ICS subscriptions",
+    "ics_capability": "Shared subscription URL · read-only",
+    "ics_failed": "ICS subscriptions could not be refreshed. Check subscription URLs in All calendars and sync again.",
+    "ics_url": "Calendar subscription URL",
+    "inactive": "Sync deselected",
+    "invalid_ics": "Enter an HTTP or HTTPS calendar subscription URL.",
+    "issue_count": "{count} issues need attention",
+    "issues": "All sync issues",
+    "issues_hint": "Select a service to compare conflicts or review failed operations. Other services can keep syncing.",
+    "local": "Local",
+    "local_only": "Local mode",
+    "menu": "Calendars and sync",
+    "no_issues": "No sync issues need attention.",
+    "open_issue": "Review and resolve in selected service",
+    "refresh_subscription": "Sync ICS subscriptions again",
+    "remove_calendar": "Remove from local list",
+    "remove_confirm": "Remove this calendar from the list? Existing events remain as local copies. Service originals will not be deleted.",
+    "rename": "Rename",
+    "review_issues": "Review issues",
+    "running": "Syncing {count}",
+    "select_first": "Select calendars to import and save your selection.",
+    "service_settings": "Service selection and settings",
+    "services": "Services and sync",
+    "shared": "Shared on this PC",
+    "show_calendar": "Show in calendar views",
+    "subscription_active": "Sync this ICS subscription",
+    "sync_all": "Sync all connected calendars",
+    "welcome": "Use local calendars immediately. Connect Google, Outlook, iCloud, Naver or ICS calendars whenever you need them."
+  },
   "system_msg": {
     "already_running": "डार्क कैलेंडर पहले से चल रहा है।",
     "lang_saved_msg": "भाषा सेटिंग सहेजी गईं.\nपरिवर्तन लागू करने के लिए ऐप पुनः प्रारंभ होगा.",
@@ -2299,7 +2654,9 @@
       "location_not_found": "स्थान नहीं मिला",
       "network": "नेटवर्क त्रुटि",
       "parse_failed": "डेटा पार्स त्रुटि",
-      "timeout": "अनुरोध का समय समाप्त हो गया"
+      "timeout": "अनुरोध का समय समाप्त हो गया",
+      "busy": "मौसम सेवा व्यस्त है; फिर से प्रयास की प्रतीक्षा",
+      "denied": "मौसम सेवा तक पहुँच अस्वीकृत"
     }
   },
   "weekday": {
@@ -3269,7 +3626,14 @@
       "template_hint": "Variables: {city} {temp} {unit} {desc} {icon}",
       "unit": "इकाई:",
       "unit_c": "सेल्सियस (डिग्री सेल्सियस)",
-      "unit_f": "फ़ारेनहाइट (°F)"
+      "unit_f": "फ़ारेनहाइट (°F)",
+      "cached": "हाल में सहेजा गया मौसम",
+      "loading": "मौसम लोड हो रहा है…",
+      "refresh_every": "हर {min} मिनट",
+      "refresh_now": "मौसम फिर से लोड करें",
+      "retry_in": "{min} मिनट में फिर प्रयास",
+      "stale": "पिछला मौसम दिखाया जा रहा है · {error}",
+      "updated": "{time} पर अपडेट हुआ"
     }
   },
   "widget_manager": {

@@ -42,6 +42,10 @@ class MockApp(QWidget):
         self.open_panel_background_color_dialog = lambda: None
         self.open_gcal_settings_dialog = lambda: None
         self.open_gcal_sync_issues_dialog = lambda: None
+        self.sync_calendars = lambda: None
+        self.open_calendar_sync_hub = lambda: None
+        self.open_calendar_management = lambda: None
+        self.open_calendar_sync_issues = lambda: None
         self.toggle_autostart = lambda: None
         self.show_shortcut_guide = lambda: None
         self.request_app_exit = lambda: None

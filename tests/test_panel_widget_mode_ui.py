@@ -47,6 +47,12 @@ class _FakeApp(QWidget):
     def sync_google_calendar(self):
         self.sync_calls += 1
 
+    def sync_calendars(self):
+        self.sync_calls += 1
+
+    def open_calendar_management(self):
+        pass
+
     def schedule_panel_refresh(self, left=False, center=False, right=False, delay_ms=0):
         self.panel_refresh_requests.append(
             {

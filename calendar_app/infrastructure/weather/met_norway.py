@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 MET_FORECAST_ENDPOINT = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
@@ -54,7 +55,11 @@ def symbol_code_to_day_period(symbol_code: str) -> str:
 
 
 def _first_forecast_entry(payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ValueError("forecast must be an object")
     properties = payload.get("properties") or {}
+    if not isinstance(properties, dict):
+        raise ValueError("properties must be an object")
     timeseries = properties.get("timeseries") or []
     if not isinstance(timeseries, list) or not timeseries:
         raise KeyError("properties.timeseries")
@@ -71,11 +76,20 @@ def parse_locationforecast(
 
     entry = _first_forecast_entry(payload)
     data = entry.get("data") or {}
-    details = (data.get("instant") or {}).get("details") or {}
+    if not isinstance(data, dict):
+        raise ValueError("data must be an object")
+    instant = data.get("instant") or {}
+    if not isinstance(instant, dict):
+        raise ValueError("instant must be an object")
+    details = instant.get("details") or {}
+    if not isinstance(details, dict):
+        raise ValueError("details must be an object")
     if "air_temperature" not in details:
         raise KeyError("air_temperature")
 
     temperature = float(details["air_temperature"])
+    if not math.isfinite(temperature):
+        raise ValueError("air_temperature must be finite")
     if unit == "fahrenheit":
         temperature = temperature * 9 / 5 + 32
         unit_label = "°F"
@@ -85,7 +99,7 @@ def parse_locationforecast(
     summary: dict[str, Any] = {}
     for period_key in ("next_1_hours", "next_6_hours", "next_12_hours"):
         period = data.get(period_key) or {}
-        if period.get("summary"):
+        if isinstance(period, dict) and isinstance(period.get("summary"), dict):
             summary = period["summary"]
             break
 

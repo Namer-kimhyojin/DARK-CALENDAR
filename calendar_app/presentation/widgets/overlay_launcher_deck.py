@@ -53,7 +53,7 @@ SCRIPT_SUFFIXES = frozenset(
 _COMMAND_HANDLERS = {
     "new_task": "open_task_dialog",
     "today": "jump_to_today",
-    "sync_google": "sync_google_calendar",
+    "sync_google": "sync_calendars",
     "command_palette": "show_command_palette",
     "focus_mode": "toggle_focus_mode",
     "view_mode": "toggle_view_mode",

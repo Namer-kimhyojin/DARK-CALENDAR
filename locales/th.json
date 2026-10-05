@@ -102,6 +102,42 @@
     "confirm": "ยืนยัน",
     "ok": "ตกลง"
   },
+  "caldav": {
+    "cancel_delete": "Cancel deletion and keep service event",
+    "connect": "Verify connection and find calendars",
+    "connected": "Connected. Select calendars and save.",
+    "connecting": "Verifying account and finding calendars...",
+    "connection": "1. Connect account",
+    "delete_pending": "Deletion pending: {attempts}/5 attempts",
+    "disconnecting": "Disconnecting...",
+    "help": "Service authentication guide",
+    "icloud_guide": "iCloud: enable two-factor authentication and generate an app-specific password. Personal events support two-way sync.",
+    "icloud_user": "Apple Account email",
+    "idle": "Connect your account, then select calendars and save.",
+    "keep_remote": "Apply service version",
+    "last_success": "Last successful sync: {time}",
+    "menu": "Connect iCloud / Naver...",
+    "naver": "Naver",
+    "naver_guide": "Naver: read-only import. With two-step verification, use an application password. Windows connections may be restricted by service policy.",
+    "naver_user": "Naver ID",
+    "not_connected": "Not connected",
+    "password": "App-specific password",
+    "privacy": "Your password is encrypted for this Windows user. Disconnecting preserves existing events.",
+    "problems": "3. Review issues",
+    "refresh": "Refresh list",
+    "refreshed": "List refreshed. Review your selection and save.",
+    "refreshing": "Refreshing calendar list...",
+    "save": "Save selection",
+    "scope": "Range: past 120 days to next 400 days. Recurring events and invitations are view-only. Deselecting stops sync. Events are not copied between services automatically.",
+    "selection": "2. Choose calendars",
+    "service": "Calendar service",
+    "show_password": "Show entered password",
+    "syncing": "Synchronizing events...",
+    "title": "iCloud / Naver calendar connection",
+    "two_way": "Two-way",
+    "type": "CalDAV",
+    "username": "Account"
+  },
   "calendar": {
     "add_hint": "เพิ่มกำหนดการ",
     "date_cell_accessible": "{date} date cell",
@@ -127,7 +163,15 @@
     "sync_hint": "ซิงค์ซะ",
     "today": "วันนี้",
     "today_hint": "ไปที่วันนี้",
-    "weekdays": ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."]
+    "weekdays": [
+      "จ.",
+      "อ.",
+      "พ.",
+      "พฤ.",
+      "ศ.",
+      "ส.",
+      "อา."
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "เพิ่มรายการ",
@@ -1543,6 +1587,58 @@
   "meta": {
     "language_name": "ไทย (Thai)"
   },
+  "outlook": {
+    "auto_sync": "Automatically synchronize every 5 minutes",
+    "calendar_selection": "Choose calendars to synchronize",
+    "cancel_delete": "Cancel deletion and keep Outlook event",
+    "client_id": "Application (client) ID",
+    "client_id_hint": "Client ID from Entra app registration (not a secret)",
+    "close": "Close",
+    "delete_issue": "Deletion pending / {attempts} of 5 attempts / {kind}",
+    "disconnect": "Disconnect",
+    "issue": "Event #{id}: {kind}",
+    "issue_conflict": "Changed on both sides; choose a version",
+    "issue_delete_conflict": "Deletion paused because Outlook content changed",
+    "issue_deleted": "Deleted in Outlook; local event preserved",
+    "issue_meeting": "Edit online meeting descriptions in Outlook",
+    "issue_move": "Calendar move unsupported; return to the original calendar",
+    "issue_read_only": "Calendar has no write permission",
+    "issue_recurrence": "Recurrence rule editing unsupported",
+    "keep_local": "Conflict: keep my changes",
+    "keep_remote": "Conflict: use Outlook version",
+    "login": "Sign in with Microsoft",
+    "managed_calendar": "Deselect this calendar in connection settings. Existing events are preserved.",
+    "menu": "Connect Outlook / Microsoft 365...",
+    "not_connected": "No Microsoft account connected.",
+    "pending": "Pending",
+    "read_only": "Read only",
+    "retry_delete": "Retry selected deletion",
+    "save_calendars": "Save calendar selection",
+    "scope": "View: 120 days back to 400 days ahead. Recurring events appear as individual occurrences.\nRemotely deleted events are preserved locally and listed as issues.\nRecurrence rules, cross-service moves and invitation responses are not supported in this phase.",
+    "setup_guide": "Open Microsoft app registration guide",
+    "setup_intro": "Connect a personal Outlook or work/school account.\nAn administrator must register the integration app first. No client secret is needed.",
+    "setup_steps": "App registration: organizational and personal Microsoft accounts\nPlatform: Mobile and desktop / Redirect URI: http://localhost\nGraph delegated permissions: Calendars.ReadWrite, User.Read",
+    "status_access": "Calendar access was lost. Check sign-in and calendar selection.",
+    "status_auth": "Microsoft sign-in is required. Check permission consent and organization policies.",
+    "status_client": "Enter a valid application (client) ID.",
+    "status_completed": "Sync completed",
+    "status_connected": "Signed in. Select calendars and save.",
+    "status_dependency": "The Microsoft sign-in module is unavailable. Install the requirements.txt dependencies.",
+    "status_disconnect_first": "Disconnect before changing the client ID.",
+    "status_disconnected": "Disconnected. Existing events are preserved.",
+    "status_failed": "Unable to complete the operation. Error code: {code}",
+    "status_idle": "Sign in, select calendars and save your selection.",
+    "status_login": "Complete Microsoft sign-in in your browser. Waiting up to 2 minutes.",
+    "status_network": "Check your network connection and try again.",
+    "status_saved": "Calendar selection saved.",
+    "status_sync": "Synchronizing Outlook events...",
+    "summary": "Imported {imported} / Updated {updated} / Created {created} / Deleted {deleted} / Issues {issues}",
+    "sync_now": "Sync now",
+    "tab_account": "Account connection",
+    "tab_sync": "Calendars and sync issues",
+    "title": "Outlook / Microsoft 365 sync",
+    "type": "Outlook / Microsoft 365"
+  },
   "palette": {
     "accessible_hint": "Usage guidance",
     "accessible_results": "Search results",
@@ -1558,7 +1654,13 @@
     "hint_record_jump": "Enter เปิดรายการ Shift+Enter ย้ายไปที่วันที่",
     "hint_run_command": "Enter เรียกใช้คำสั่งที่เลือก",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "ใหม่: [{title}] - {date} {time}",
     "no_selection": "กด Enter เพื่อเปิดผลลัพธ์ที่เลือก",
@@ -1811,223 +1913,362 @@
         "description": "เริ่มโหมดล็อกเมื่อไม่อยู่ทันที",
         "label": "ล็อกเมื่อไม่อยู่",
         "menu_path": "มุมมอง > ล็อกเมื่อไม่อยู่",
-        "tags": ["ไม่อยู่", "ล็อก"]
+        "tags": [
+          "ไม่อยู่",
+          "ล็อก"
+        ]
       },
       "cal_toolbar": {
         "description": "ซ่อนหรือแสดงแถบเครื่องมือปฏิทินอีกครั้ง",
         "label": "สลับแถบเครื่องมือปฏิทิน",
         "menu_path": "มุมมอง > แถบเครื่องมือปฏิทิน",
-        "tags": ["ปฏิทิน", "แถบเครื่องมือ"]
+        "tags": [
+          "ปฏิทิน",
+          "แถบเครื่องมือ"
+        ]
       },
       "calendar_print": {
         "description": "แสดงตัวอย่างและพิมพ์ปฏิทินสำหรับช่วงเวลาปัจจุบันหรือที่เลือก",
         "label": "พิมพ์ปฏิทิน",
         "menu_path": "ปฏิทิน > ตัวเลือก > พิมพ์",
-        "tags": ["พิมพ์", "เครื่องพิมพ์", "PDF"]
+        "tags": [
+          "พิมพ์",
+          "เครื่องพิมพ์",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "จัดการเทมเพลตและโครงสร้างรายการของรายการตรวจสอบ",
         "label": "จัดการรายการตรวจสอบ",
         "menu_path": "งาน > จัดการรายการตรวจสอบ",
-        "tags": ["รายการตรวจสอบ", "เทมเพลต"]
+        "tags": [
+          "รายการตรวจสอบ",
+          "เทมเพลต"
+        ]
       },
       "color_assign": {
         "description": "กำหนดสีให้กับรายการที่เลือกโดยอัตโนมัติ",
         "label": "การกำหนดสีอัตโนมัติ",
         "menu_path": "งาน > การกำหนดสีอัตโนมัติ",
-        "tags": ["สี", "แท็ก", "อัตโนมัติ"]
+        "tags": [
+          "สี",
+          "แท็ก",
+          "อัตโนมัติ"
+        ]
       },
       "command_palette": {
         "description": "เปิดกล่องค้นหาคำสั่งเพื่อค้นหาฟีเจอร์ได้ทันที",
         "label": "แผงคำสั่ง",
         "menu_path": "เรียกโดยตรง",
-        "tags": ["ค้นหา", "คำสั่ง", "แผง"]
+        "tags": [
+          "ค้นหา",
+          "คำสั่ง",
+          "แผง"
+        ]
       },
       "delete": {
         "description": "ลบกำหนดการหรือรายการที่เลือกอยู่ในปัจจุบัน",
         "label": "ลบรายการที่เลือก",
         "menu_path": "สถานะการเลือก",
-        "tags": ["ลบ", "เอาออก"]
+        "tags": [
+          "ลบ",
+          "เอาออก"
+        ]
       },
       "escape": {
         "description": "ล้างการเลือกหรือโฟกัสปัจจุบัน",
         "label": "ล้างการเลือก",
         "menu_path": "สถานะการเลือก",
-        "tags": ["ยกเลิกการเลือก", "ยกเลิก", "escape"]
+        "tags": [
+          "ยกเลิกการเลือก",
+          "ยกเลิก",
+          "escape"
+        ]
       },
       "focus_mode": {
         "description": "เปิดหรือปิดโหมดโฟกัส",
         "label": "สลับโหมดโฟกัส",
         "menu_path": "มุมมอง > โหมดโฟกัส",
-        "tags": ["โฟกัส", "โพโมโดโร"]
+        "tags": [
+          "โฟกัส",
+          "โพโมโดโร"
+        ]
       },
       "focus_pause": {
         "description": "หยุดหรือดำเนินการต่อเซสชันโฟกัสปัจจุบัน",
         "label": "หยุดโฟกัสชั่วคราว",
         "menu_path": "โหมดโฟกัส",
-        "tags": ["โฟกัส", "หยุดชั่วคราว"]
+        "tags": [
+          "โฟกัส",
+          "หยุดชั่วคราว"
+        ]
       },
       "force_unlock": {
         "description": "ล้างสถานะการล็อกที่ไม่คาดคิดโดยบังคับ",
         "label": "บังคับปลดล็อก",
         "menu_path": "การกู้คืนฉุกเฉิน",
-        "tags": ["บังคับ", "ปลดล็อก", "กู้คืน", "ฉุกเฉิน"]
+        "tags": [
+          "บังคับ",
+          "ปลดล็อก",
+          "กู้คืน",
+          "ฉุกเฉิน"
+        ]
       },
       "fullscreen": {
         "description": "เปิดหรือปิดการแสดงผลแบบเต็มหน้าจอ",
         "label": "สลับเต็มหน้าจอ",
         "menu_path": "มุมมอง > เต็มหน้าจอ",
-        "tags": ["เต็มหน้าจอ"]
+        "tags": [
+          "เต็มหน้าจอ"
+        ]
       },
       "help": {
         "description": "เปิดศูนย์ช่วยเหลือ",
         "label": "คู่มือแป้นพิมพ์ลัด",
         "menu_path": "ระบบ > คู่มือแป้นพิมพ์ลัด",
-        "tags": ["ช่วยเหลือ", "F1"]
+        "tags": [
+          "ช่วยเหลือ",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "ใช้เลย์เอาต์แบบ 4 แผงยึดติดเริ่มต้น",
         "label": "ค่าตั้งล่วงหน้าเลย์เอาต์ 1",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์",
-        "tags": ["เลย์เอาต์", "ค่าตั้งล่วงหน้า", "ยึดติด", "1"]
+        "tags": [
+          "เลย์เอาต์",
+          "ค่าตั้งล่วงหน้า",
+          "ยึดติด",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "ใช้เลย์เอาต์ที่เน้นปฏิทิน",
         "label": "ค่าตั้งล่วงหน้าเลย์เอาต์ 2",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์",
-        "tags": ["เลย์เอาต์", "ปฏิทิน", "2"]
+        "tags": [
+          "เลย์เอาต์",
+          "ปฏิทิน",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "ใช้เลย์เอาต์ที่เน้นงาน",
         "label": "ค่าตั้งล่วงหน้าเลย์เอาต์ 3",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์",
-        "tags": ["เลย์เอาต์", "งาน", "3"]
+        "tags": [
+          "เลย์เอาต์",
+          "งาน",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "ใช้เลย์เอาต์แท็บแบบแบ่งครึ่ง",
         "label": "ค่าตั้งล่วงหน้าเลย์เอาต์ 4",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์",
-        "tags": ["เลย์เอาต์", "แท็บ", "แบ่ง", "4"]
+        "tags": [
+          "เลย์เอาต์",
+          "แท็บ",
+          "แบ่ง",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "ใช้เลย์เอาต์แบบลอยที่แยกออกจากกันทั้งหมด",
         "label": "ค่าตั้งล่วงหน้าเลย์เอาต์ 5",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์",
-        "tags": ["เลย์เอาต์", "แยก", "ลอย", "5"]
+        "tags": [
+          "เลย์เอาต์",
+          "แยก",
+          "ลอย",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "เปิดหรือปิดโหมดล็อกเดสก์ท็อป",
         "label": "โหมดล็อก",
         "menu_path": "มุมมอง > โหมดล็อก",
-        "tags": ["ล็อก"]
+        "tags": [
+          "ล็อก"
+        ]
       },
       "magnet_mode": {
         "description": "สลับโหมดแม่เหล็กซึ่งช่วยจัดตำแหน่งและยึดแผงให้เข้าที่",
         "label": "โหมดแม่เหล็ก",
         "menu_path": "มุมมอง > โหมดแม่เหล็ก",
-        "tags": ["แม่เหล็ก", "แผง"]
+        "tags": [
+          "แม่เหล็ก",
+          "แผง"
+        ]
       },
       "monitor_left": {
         "description": "ย้ายหน้าต่างไปยังจออื่น",
         "label": "ย้ายไปจอก่อนหน้า",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["จอภาพ", "จอแสดงผล", "ซ้าย"]
+        "tags": [
+          "จอภาพ",
+          "จอแสดงผล",
+          "ซ้าย"
+        ]
       },
       "monitor_right": {
         "description": "ย้ายหน้าต่างไปยังจออื่น",
         "label": "ย้ายไปจอถัดไป",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["จอภาพ", "จอแสดงผล", "ขวา"]
+        "tags": [
+          "จอภาพ",
+          "จอแสดงผล",
+          "ขวา"
+        ]
       },
       "new_directive": {
         "description": "เปิดหน้าต่างสำหรับป้อนคำสั่งหรือรายการความร่วมมือ",
         "label": "ลงทะเบียนคำสั่ง",
         "menu_path": "ลงทะเบียน > คำสั่ง",
-        "tags": ["คำสั่ง", "ความร่วมมือ"]
+        "tags": [
+          "คำสั่ง",
+          "ความร่วมมือ"
+        ]
       },
       "new_routine": {
         "description": "เพิ่มกิจวัตรงานที่เกิดซ้ำได้อย่างรวดเร็ว",
         "label": "ลงทะเบียนกิจวัตร",
         "menu_path": "ลงทะเบียน > กิจวัตร",
-        "tags": ["กิจวัตร", "งาน", "เกิดซ้ำ"]
+        "tags": [
+          "กิจวัตร",
+          "งาน",
+          "เกิดซ้ำ"
+        ]
       },
       "new_schedule": {
         "description": "เปิดหน้าต่างป้อนกำหนดการโดยตรง",
         "label": "เพิ่มกำหนดการใหม่",
         "menu_path": "ลงทะเบียน > กำหนดการใหม่",
-        "tags": ["กำหนดการ", "เพิ่ม", "ลงทะเบียน"]
+        "tags": [
+          "กำหนดการ",
+          "เพิ่ม",
+          "ลงทะเบียน"
+        ]
       },
       "next_day": {
         "description": "ย้ายไปหนึ่งวันหลังวันที่ปัจจุบัน",
         "label": "วันถัดไป",
         "menu_path": "การนำทาง",
-        "tags": ["ถัดไป", "วันที่", "ขวา"]
+        "tags": [
+          "ถัดไป",
+          "วันที่",
+          "ขวา"
+        ]
       },
       "opacity_down": {
         "description": "ลดความทึบแสงของหน้าต่าง",
         "label": "ลดความทึบแสง",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["ความทึบแสง", "มืดลง"]
+        "tags": [
+          "ความทึบแสง",
+          "มืดลง"
+        ]
       },
       "opacity_up": {
         "description": "เพิ่มความทึบแสงของหน้าต่าง",
         "label": "เพิ่มความทึบแสง",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["ความทึบแสง", "สว่างขึ้น"]
+        "tags": [
+          "ความทึบแสง",
+          "สว่างขึ้น"
+        ]
       },
       "prev_day": {
         "description": "ย้ายไปหนึ่งวันก่อนวันที่ปัจจุบัน",
         "label": "วันก่อนหน้า",
         "menu_path": "การนำทาง",
-        "tags": ["ก่อนหน้า", "วันที่", "ซ้าย"]
+        "tags": [
+          "ก่อนหน้า",
+          "วันที่",
+          "ซ้าย"
+        ]
       },
       "restore_pos": {
         "description": "คืนค่าหน้าต่างไปยังตำแหน่งที่ปลอดภัยบนหน้าจอ",
         "label": "คืนค่าตำแหน่งหน้าต่าง",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["หน้าต่าง", "คืนค่า", "ตำแหน่ง"]
+        "tags": [
+          "หน้าต่าง",
+          "คืนค่า",
+          "ตำแหน่ง"
+        ]
       },
       "routine_mgr": {
         "description": "เปิดแท็บตัวจัดการกิจวัตรโดยตรง",
         "label": "ตัวจัดการกิจวัตร",
         "menu_path": "งาน > ภาพรวมกิจวัตร",
-        "tags": ["กิจวัตร", "จัดการ"]
+        "tags": [
+          "กิจวัตร",
+          "จัดการ"
+        ]
       },
       "save_layout": {
         "description": "บันทึกการจัดวางแผงปัจจุบันเป็นค่าตั้งล่วงหน้า",
         "label": "บันทึกเลย์เอาต์ปัจจุบัน",
         "menu_path": "มุมมอง > ค่าตั้งล่วงหน้าเลย์เอาต์ > บันทึก",
-        "tags": ["เลย์เอาต์", "ค่าตั้งล่วงหน้า", "บันทึก"]
+        "tags": [
+          "เลย์เอาต์",
+          "ค่าตั้งล่วงหน้า",
+          "บันทึก"
+        ]
       },
       "show_hide": {
         "description": "ซ่อนหน้าต่างหลักหรือแสดงอีกครั้ง",
         "label": "แสดง/ซ่อนหน้าต่าง",
         "menu_path": "การควบคุมหน้าต่าง",
-        "tags": ["หน้าต่าง", "ซ่อน", "แสดง", "โอเวอร์เลย์"]
+        "tags": [
+          "หน้าต่าง",
+          "ซ่อน",
+          "แสดง",
+          "โอเวอร์เลย์"
+        ]
       },
       "sync_gcal": {
-        "description": "เริ่มการซิงค์กับ Google ปฏิทินทันที",
-        "label": "ซิงค์ Google ปฏิทิน",
-        "menu_path": "ระบบ > ปฏิทินและการซิงค์",
-        "tags": ["google", "ซิงค์", "ปฏิทิน", "F5"]
+        "description": "Start synchronization for all connected calendars.",
+        "label": "Sync all connected calendars",
+        "menu_path": "System > Calendars and sync",
+        "tags": [
+          "Google",
+          "Outlook",
+          "iCloud",
+          "Naver",
+          "ICS",
+          "F5",
+          "sync"
+        ]
       },
       "today": {
         "description": "ย้ายวันที่ที่เลือกไปยังวันนี้ทันที",
         "label": "ไปที่วันนี้",
         "menu_path": "การนำทาง",
-        "tags": ["วันนี้", "วันที่"]
+        "tags": [
+          "วันนี้",
+          "วันที่"
+        ]
       },
       "topbar": {
         "description": "สลับการแสดงผลของแถบเมนูด้านบน",
         "label": "สลับแถบด้านบน",
         "menu_path": "มุมมอง > แถบด้านบน",
-        "tags": ["แถบเมนู", "แถบด้านบน", "กู้คืน"]
+        "tags": [
+          "แถบเมนู",
+          "แถบด้านบน",
+          "กู้คืน"
+        ]
       },
       "widget_mode": {
         "description": "เปิดโหมดแผงเฉพาะวิดเจ็ต",
         "label": "สลับโหมดวิดเจ็ต",
         "menu_path": "มุมมอง > โหมดเฉพาะวิดเจ็ต",
-        "tags": ["วิดเจ็ต", "แผง"]
+        "tags": [
+          "วิดเจ็ต",
+          "แผง"
+        ]
       }
     },
     "groups": {
@@ -2186,6 +2427,120 @@
     "status_confirmed": "ยืนยันแล้ว",
     "status_tentative": "เบื้องต้น"
   },
+  "sync_ui": {
+    "access_lost": "Access to a selected calendar was lost. Existing events were preserved. Refresh and select calendars again.",
+    "auth": "Authentication expired or the password is incorrect. Reconnect your account.",
+    "auto_off": "Automatic sync off",
+    "auto_on": "Automatic sync on",
+    "busy": "This account is already syncing. Wait for completion.",
+    "cancelled": "The operation was cancelled. Existing events are preserved.",
+    "changed": "The remote event changed first. Sync again and compare both versions.",
+    "compare_hint": "Select a conflict to compare your changes with the service version.",
+    "configure": "Connect / settings",
+    "conflict": "Edited on both sides. Compare and choose a version.",
+    "connected": "Connected",
+    "create_conflict": "Another event uses the same creation identifier. Creation was held without overwriting the original.",
+    "credentials": "Enter your account and app-specific password.",
+    "delete_conflict": "The remote event changed before deletion. Deletion was held.",
+    "dependency": "A sync component is missing. Reinstall the latest application.",
+    "discovery": "Calendar locations were not found. Check the account and service CalDAV support.",
+    "duplicate": "Duplicate event responses were received. Sync was stopped for safety.",
+    "etag": "The service did not return event version information. The update was held. Sync again.",
+    "event_name": "Enter an event title and sync again.",
+    "event_range": "The end must be after the start. Check the event date and time.",
+    "event_read_only": "Recurring events and invitations are view-only. Edit or delete them in the original service.",
+    "event_time": "The event date or timezone could not be read. Check its original time settings.",
+    "failed": "The operation could not be completed. Existing events are preserved. Check account settings and try again.",
+    "google_capability": "Two-way events; shared calendars depend on permissions",
+    "google_problems": "Google sync issues",
+    "hub_intro": "Connect a service and choose calendars to import. Each account syncs independently. Events are not copied between services automatically.",
+    "hub_note": "Disconnecting or deselecting calendars does not delete original service events. Review conflicts and failures in each service's settings.",
+    "hub_title": "Calendars / accounts and synchronization",
+    "icloud_capability": "Two-way personal events; app-specific password",
+    "ics_fetch": "Could not refresh this subscription. Check its URL and your internet connection, then sync again.",
+    "incomplete": "Some event responses were missing. This sync was stopped. Try again.",
+    "invalid_data": "The service returned invalid event data. This sync was not applied.",
+    "invalid_response": "The service response could not be read. Check the account and service status.",
+    "invalid_timezone": "Select a valid timezone, for example Asia/Seoul.",
+    "local": "My changes",
+    "login": "Reconnect your account. Automatic sync does not open a sign-in window.",
+    "move": "Moving a linked event between calendars is unsupported. Restore its original calendar or make a copy.",
+    "naver_capability": "Read-only; service policy may restrict connections",
+    "network": "Check your internet connection. Existing events are preserved. Retry when connected.",
+    "no_calendars": "No accessible calendars were found. Create a calendar or check sharing permissions.",
+    "not_connected": "Not connected",
+    "other_services": "Connect Outlook / iCloud / Naver",
+    "outlook_capability": "Two-way events; Microsoft app registration required initially",
+    "permission": "Calendar access was denied. Check account permissions and service support.",
+    "protection": "Windows credential encryption failed. Check your Windows user environment.",
+    "rate_limit": "The service request limit was reached. Automatic retry intervals have increased. Try again later.",
+    "read_only": "This calendar is read-only. Edit events in the original service.",
+    "reconnect": "Reconnect required",
+    "recurrence": "Recurring event data could not be read. Check recurrence settings in the service.",
+    "recurrence_edit": "Configure recurrence rules in the original service.",
+    "remote": "Service version",
+    "remote_deleted": "This event was deleted in the service. The local copy was preserved.",
+    "save_timezone": "Save timezone",
+    "server": "The service is temporarily unavailable. Events are preserved and sync will retry later.",
+    "stale_conflict": "The event changed again after comparison. Sync again and compare the latest versions.",
+    "timezone": "Shared timezone",
+    "timezone_hint": "Timezone changes apply from the next synchronization.",
+    "timezone_saved": "Timezone saved. Changes apply from the next synchronization.",
+    "too_many": "Too many occurrences were requested. Check recurrence limits in the service.",
+    "unsafe": "An untrusted server address was returned. The connection was stopped.",
+    "unsupported_service": "The service does not allow this connection method. Check its support policy.",
+    "wait_timezone": "Wait for the current synchronization to finish before changing the timezone.",
+    "working": "Working...",
+    "identity_changed": "ที่อยู่เซิร์ฟเวอร์นี้มีรายการนัดหมายอื่นอยู่ในขณะนี้ จึงพักการเปลี่ยนแปลงไว้ โปรดตรวจสอบรายการในบริการเดิม"
+  },
+  "sync_unified": {
+    "add_ics": "Add ICS subscription",
+    "add_local": "Add local calendar",
+    "attention": "Sync needs attention",
+    "auto": "Automatic sync",
+    "auto_pause": "Turn all automatic sync off",
+    "auto_resume": "Turn all automatic sync on",
+    "back": "Back to all calendar settings",
+    "calendar_hint": "Manage visibility, colors and the default save destination for all calendars. Change remote sync selection in its service settings.",
+    "calendar_name": "Calendar name",
+    "calendar_save_failed": "Could not save these settings. Try again.",
+    "calendar_saved": "Calendar settings updated.",
+    "calendars": "All calendars",
+    "color": "Change color",
+    "connected_count": "{count} connected",
+    "default": "Set as default save destination",
+    "default_marker": "Default",
+    "exists": "This calendar is already registered.",
+    "google_settings": "Google Calendar settings",
+    "ics": "ICS subscriptions",
+    "ics_capability": "Shared subscription URL · read-only",
+    "ics_failed": "ICS subscriptions could not be refreshed. Check subscription URLs in All calendars and sync again.",
+    "ics_url": "Calendar subscription URL",
+    "inactive": "Sync deselected",
+    "invalid_ics": "Enter an HTTP or HTTPS calendar subscription URL.",
+    "issue_count": "{count} issues need attention",
+    "issues": "All sync issues",
+    "issues_hint": "Select a service to compare conflicts or review failed operations. Other services can keep syncing.",
+    "local": "Local",
+    "local_only": "Local mode",
+    "menu": "Calendars and sync",
+    "no_issues": "No sync issues need attention.",
+    "open_issue": "Review and resolve in selected service",
+    "refresh_subscription": "Sync ICS subscriptions again",
+    "remove_calendar": "Remove from local list",
+    "remove_confirm": "Remove this calendar from the list? Existing events remain as local copies. Service originals will not be deleted.",
+    "rename": "Rename",
+    "review_issues": "Review issues",
+    "running": "Syncing {count}",
+    "select_first": "Select calendars to import and save your selection.",
+    "service_settings": "Service selection and settings",
+    "services": "Services and sync",
+    "shared": "Shared on this PC",
+    "show_calendar": "Show in calendar views",
+    "subscription_active": "Sync this ICS subscription",
+    "sync_all": "Sync all connected calendars",
+    "welcome": "Use local calendars immediately. Connect Google, Outlook, iCloud, Naver or ICS calendars whenever you need them."
+  },
   "system_msg": {
     "already_running": "โปรแกรมกำลังทำงานอยู่",
     "lang_saved_msg": "บันทึกการตั้งค่าภาษาแล้ว\nแอปจะรีสตาร์ทเพื่อใช้การเปลี่ยนแปลง",
@@ -2299,7 +2654,9 @@
       "location_not_found": "ไม่พบตำแหน่ง",
       "network": "ข้อผิดพลาดของเครือข่าย",
       "parse_failed": "ข้อผิดพลาดในการแยกวิเคราะห์ข้อมูล",
-      "timeout": "คำขอหมดเวลา"
+      "timeout": "คำขอหมดเวลา",
+      "busy": "บริการสภาพอากาศไม่ว่าง กำลังรอลองใหม่",
+      "denied": "การเข้าถึงบริการสภาพอากาศถูกปฏิเสธ"
     }
   },
   "weekday": {
@@ -3269,7 +3626,14 @@
       "template_hint": "ตัวแปร: {city} {temp} {unit} {desc} {icon}",
       "unit": "หน่วย:",
       "unit_c": "เซลเซียส (°C)",
-      "unit_f": "ฟาเรนไฮต์ (°F)"
+      "unit_f": "ฟาเรนไฮต์ (°F)",
+      "cached": "สภาพอากาศล่าสุดที่บันทึกไว้",
+      "loading": "กำลังโหลดสภาพอากาศ…",
+      "refresh_every": "ทุก {min} นาที",
+      "refresh_now": "โหลดสภาพอากาศใหม่",
+      "retry_in": "ลองใหม่ใน {min} นาที",
+      "stale": "แสดงสภาพอากาศก่อนหน้า · {error}",
+      "updated": "อัปเดตเมื่อ {time}"
     }
   },
   "widget_manager": {

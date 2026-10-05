@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
-    QBrush,
     QColor,
     QFont,
     QFontMetrics,
@@ -18,7 +17,7 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from calendar_app.app_metadata import APP_NAME, APP_VERSION_DISPLAY
-from calendar_app.app_paths import APP_ICON_PATH, APP_ICON_TOAST_PATH
+from calendar_app.app_paths import APP_ICON_PATH, APP_ICON_TOAST_PATH, get_resource_path
 from calendar_app.infrastructure.i18n import t
 
 _COMPLETE_HOLD_MS = 100  # hold after reaching 100%
@@ -37,8 +36,8 @@ class SplashScreen(QWidget):
     RADIUS = 18
     finished = pyqtSignal()
 
-    BG_COLOR_START = QColor(18, 19, 24)
-    BG_COLOR_END = QColor(8, 9, 12)
+    BG_COLOR_START = QColor("#111D2B")
+    BG_COLOR_END = QColor("#111D2B")
     NAME_COLOR = QColor(250, 250, 250)
     META_COLOR = QColor(164, 170, 184, 210)
     FONT_FAMILY = "Malgun Gothic"
@@ -75,7 +74,9 @@ class SplashScreen(QWidget):
         self._glow_pulse = 0.0
         self._glow_direction = 1
 
-        self._icon = QPixmap(APP_ICON_TOAST_PATH)
+        self._icon = QPixmap(get_resource_path("Assets/splash_icon.png"))
+        if self._icon.isNull():
+            self._icon = QPixmap(APP_ICON_TOAST_PATH)
         if self._icon.isNull():
             self._icon = QPixmap(APP_ICON_PATH)
 
@@ -117,7 +118,7 @@ class SplashScreen(QWidget):
         self._anim_timer = QTimer(self)
         self._anim_timer.setInterval(16)  # ~60 FPS
         self._anim_timer.timeout.connect(self._pulse_glow)
-        self._anim_timer.start()
+        # Static identity: repaint only when startup progress changes.
 
     def _pulse_glow(self) -> None:
         """Update glow pulse level for continuous background animation."""
@@ -225,178 +226,44 @@ class SplashScreen(QWidget):
     def _paint(self, painter: QPainter) -> None:
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-
-        outer_rect = QRectF(0, 0, self.W, self.H)
-        bg_path = QPainterPath()
-        bg_path.addRoundedRect(outer_rect, self.RADIUS, self.RADIUS)
-        painter.setClipPath(bg_path)
-
-        bg_grad = QLinearGradient(0, 0, self.W, self.H)
-        bg_grad.setColorAt(0.0, self.BG_COLOR_START)
-        bg_grad.setColorAt(0.56, QColor(13, 15, 22))
-        bg_grad.setColorAt(1.0, self.BG_COLOR_END)
-        painter.fillPath(bg_path, bg_grad)
-
-        side_grad = QLinearGradient(0, 0, self.W, 0)
-        side_grad.setColorAt(0.0, QColor(255, 42, 117, 38))
-        side_grad.setColorAt(0.42, QColor(42, 213, 255, 20))
-        side_grad.setColorAt(1.0, QColor(255, 255, 255, 0))
-        painter.fillPath(bg_path, side_grad)
-
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(255, 255, 255, 8))
-        painter.drawRoundedRect(QRectF(18, 18, self.W - 36, self.H - 36), 14, 14)
-
-        painter.setBrush(QColor(9, 10, 15, 205))
-        painter.drawRoundedRect(QRectF(20, 20, self.W - 40, self.H - 40), 13, 13)
-
-        painter.setClipping(False)
-        border_path = QPainterPath()
-        border_path.addRoundedRect(
-            self.rect().toRectF().adjusted(0.5, 0.5, -0.5, -0.5),
-            self.RADIUS,
-            self.RADIUS,
-        )
-        border_grad = QLinearGradient(0, 0, self.W, self.H)
-        border_grad.setColorAt(0.0, QColor(255, 255, 255, 48))
-        border_grad.setColorAt(0.55, QColor(115, 120, 255, 22))
-        border_grad.setColorAt(1.0, QColor(255, 255, 255, 8))
+        background = QPainterPath()
+        background.addRoundedRect(QRectF(0, 0, self.W, self.H), self.RADIUS, self.RADIUS)
+        painter.fillPath(background, QColor("#111D2B"))
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.setPen(QPen(QBrush(QColor(0, 0, 0, 170)), 1.0))
-        painter.drawPath(border_path)
-        painter.setPen(QPen(QBrush(border_grad), 1.0))
-        painter.drawPath(border_path)
+        painter.setPen(QPen(QColor("#293B4B"), 1.0))
+        painter.drawRoundedRect(QRectF(0.5, 0.5, self.W - 1, self.H - 1), self.RADIUS, self.RADIUS)
 
-        content_x = 48
-        title_x = content_x + 62
-        top_y = 54
-        icon_size = 46
         if not self._icon.isNull():
-            painter.setOpacity(self._icon_opacity)
-            painter.drawPixmap(
-                content_x, top_y + int(self._icon_offset), icon_size, icon_size, self._icon
+            # The symbol has transparent margins; the displayed mark is 82px tall.
+            painter.drawPixmap(212, 35, 136, 136, self._icon)
+        painter.setPen(self.NAME_COLOR)
+        painter.setFont(QFont("Segoe UI", 25, QFont.Weight.DemiBold))
+        painter.drawText(QRectF(32, 166, self.W - 64, 44), Qt.AlignmentFlag.AlignCenter, APP_NAME)
+
+        painter.setFont(QFont(self.FONT_FAMILY, 10))
+        painter.setPen(QColor("#A8BAC6"))
+        metrics = QFontMetrics(painter.font())
+        headline = metrics.elidedText(self._headline_text, Qt.TextElideMode.ElideRight, 440)
+        painter.drawText(QRectF(60, 214, 440, 24), Qt.AlignmentFlag.AlignCenter, headline)
+
+        bar_x, bar_y, bar_w, bar_h = 140, 254, 280, 3
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor("#304353"))
+        painter.drawRoundedRect(QRectF(bar_x, bar_y, bar_w, bar_h), 1.5, 1.5)
+        if self._progress_anim > 0:
+            painter.setBrush(QColor("#43CDB9"))
+            painter.drawRoundedRect(
+                QRectF(bar_x, bar_y, bar_w * self._progress_anim, bar_h), 1.5, 1.5
             )
 
-        painter.setOpacity(self._text_opacity)
-        text_y_offset = int(self._text_offset)
-
-        font_name = QFont(self.FONT_FAMILY, 22, QFont.Weight.DemiBold)
-        painter.setFont(font_name)
-        painter.setPen(self.NAME_COLOR)
+        painter.setPen(QColor("#A8BAC6"))
+        painter.setFont(QFont(self.FONT_FAMILY, 9))
+        status = QFontMetrics(painter.font()).elidedText(
+            self._status_text, Qt.TextElideMode.ElideRight, 440
+        )
+        painter.drawText(QRectF(60, 271, 440, 22), Qt.AlignmentFlag.AlignCenter, status)
+        painter.setPen(QColor("#7F94A5"))
+        painter.setFont(QFont("Segoe UI", 8))
         painter.drawText(
-            title_x,
-            top_y + 2 + text_y_offset,
-            230,
-            34,
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            APP_NAME,
+            QRectF(32, 307, self.W - 64, 18), Qt.AlignmentFlag.AlignCenter, APP_VERSION_DISPLAY
         )
-
-        font_small = QFont(self.FONT_FAMILY, 9)
-        painter.setFont(font_small)
-        painter.setPen(self.META_COLOR)
-        painter.drawText(
-            title_x,
-            top_y + 44 + text_y_offset,
-            230,
-            22,
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            APP_VERSION_DISPLAY,
-        )
-
-        painter.setPen(QColor(207, 213, 226, 230))
-        painter.setFont(QFont(self.FONT_FAMILY, 12, QFont.Weight.Medium))
-        painter.drawText(
-            content_x,
-            152 + text_y_offset,
-            250,
-            28,
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            self._headline_text,
-        )
-
-        status_y = 224
-        bar_x = content_x
-        bar_w = 286
-        font_status = QFont(self.FONT_FAMILY, 9)
-        painter.setFont(font_status)
-        painter.setPen(QColor(158, 165, 181, 210))
-        metrics = QFontMetrics(font_status)
-        elided_text = metrics.elidedText(
-            self._status_text,
-            Qt.TextElideMode.ElideRight,
-            bar_w,
-        )
-        painter.drawText(
-            bar_x,
-            status_y,
-            bar_w,
-            20,
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-            elided_text,
-        )
-
-        percent = f"{int(round(self._progress_anim * 100)):d}%"
-        painter.setPen(QColor(205, 212, 226, 230))
-        painter.drawText(
-            bar_x + bar_w - 54,
-            status_y,
-            54,
-            20,
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
-            percent,
-        )
-
-        painter.setOpacity(1.0)
-        bar_y = status_y + 30
-        bar_h = 6
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(255, 255, 255, 18))
-        painter.drawRoundedRect(QRectF(bar_x, bar_y, bar_w, bar_h), 3, 3)
-
-        fill_w = int(bar_w * self._progress_anim)
-        if fill_w > 0:
-            painter.setBrush(self._make_accent_grad(bar_x, bar_w))
-            painter.drawRoundedRect(QRectF(bar_x, bar_y, fill_w, bar_h), 3, 3)
-
-        panel_rect = QRectF(364, 56, 144, 210)
-        painter.setBrush(QColor(16, 18, 26, 238))
-        painter.setPen(QPen(QColor(255, 255, 255, 32), 1.0))
-        painter.drawRoundedRect(panel_rect, 12, 12)
-
-        painter.setPen(QColor(237, 240, 248, 232))
-        painter.setFont(QFont(self.FONT_FAMILY, 10, QFont.Weight.DemiBold))
-        painter.drawText(382, 76, 104, 18, Qt.AlignmentFlag.AlignLeft, "Startup")
-
-        painter.setPen(QColor(155, 163, 181, 210))
-        painter.setFont(QFont(self.FONT_FAMILY, 8))
-        painter.drawText(382, 98, 104, 18, Qt.AlignmentFlag.AlignLeft, "calendar view")
-
-        day_names = ["M", "T", "W", "T", "F"]
-        painter.setFont(QFont(self.FONT_FAMILY, 7, QFont.Weight.Medium))
-        for index, day_name in enumerate(day_names):
-            x = 382 + index * 20
-            painter.setPen(QColor(133, 143, 164, 210))
-            painter.drawText(x, 126, 18, 14, Qt.AlignmentFlag.AlignHCenter, day_name)
-
-        grid_top = 148
-        for row in range(3):
-            for col in range(5):
-                x = 382 + col * 20
-                y = grid_top + row * 22
-                active = (row * 5 + col) / 14.0 <= self._progress_anim
-                if active:
-                    cell_grad = QLinearGradient(x, y, x + 18, y + 18)
-                    cell_grad.setColorAt(0.0, QColor(255, 42, 117, 210))
-                    cell_grad.setColorAt(1.0, QColor(42, 213, 255, 190))
-                    painter.setBrush(cell_grad)
-                    painter.setPen(Qt.PenStyle.NoPen)
-                else:
-                    painter.setBrush(QColor(255, 255, 255, 13))
-                    painter.setPen(QPen(QColor(255, 255, 255, 16), 1.0))
-                painter.drawRoundedRect(QRectF(x, y, 16, 16), 4, 4)
-
-        pulse_x = 382 + (self._glow_pulse * 92)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(42, 213, 255, 120))
-        painter.drawRoundedRect(QRectF(pulse_x, 236, 24, 3), 1.5, 1.5)

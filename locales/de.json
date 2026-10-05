@@ -102,6 +102,42 @@
     "confirm": "Bestätigen",
     "ok": "OK"
   },
+  "caldav": {
+    "cancel_delete": "Cancel deletion and keep service event",
+    "connect": "Verify connection and find calendars",
+    "connected": "Connected. Select calendars and save.",
+    "connecting": "Verifying account and finding calendars...",
+    "connection": "1. Connect account",
+    "delete_pending": "Deletion pending: {attempts}/5 attempts",
+    "disconnecting": "Disconnecting...",
+    "help": "Service authentication guide",
+    "icloud_guide": "iCloud: enable two-factor authentication and generate an app-specific password. Personal events support two-way sync.",
+    "icloud_user": "Apple Account email",
+    "idle": "Connect your account, then select calendars and save.",
+    "keep_remote": "Apply service version",
+    "last_success": "Last successful sync: {time}",
+    "menu": "Connect iCloud / Naver...",
+    "naver": "Naver",
+    "naver_guide": "Naver: read-only import. With two-step verification, use an application password. Windows connections may be restricted by service policy.",
+    "naver_user": "Naver ID",
+    "not_connected": "Not connected",
+    "password": "App-specific password",
+    "privacy": "Your password is encrypted for this Windows user. Disconnecting preserves existing events.",
+    "problems": "3. Review issues",
+    "refresh": "Refresh list",
+    "refreshed": "List refreshed. Review your selection and save.",
+    "refreshing": "Refreshing calendar list...",
+    "save": "Save selection",
+    "scope": "Range: past 120 days to next 400 days. Recurring events and invitations are view-only. Deselecting stops sync. Events are not copied between services automatically.",
+    "selection": "2. Choose calendars",
+    "service": "Calendar service",
+    "show_password": "Show entered password",
+    "syncing": "Synchronizing events...",
+    "title": "iCloud / Naver calendar connection",
+    "two_way": "Two-way",
+    "type": "CalDAV",
+    "username": "Account"
+  },
   "calendar": {
     "add_hint": "Termin hinzufügen",
     "date_cell_accessible": "{date} date cell",
@@ -127,7 +163,15 @@
     "sync_hint": "Google-Sync",
     "today": "Heute",
     "today_hint": "Zum heutigen Datum",
-    "weekdays": ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    "weekdays": [
+      "Mo",
+      "Di",
+      "Mi",
+      "Do",
+      "Fr",
+      "Sa",
+      "So"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Hinzufügen",
@@ -1543,6 +1587,58 @@
   "meta": {
     "language_name": "Deutsch (German)"
   },
+  "outlook": {
+    "auto_sync": "Automatically synchronize every 5 minutes",
+    "calendar_selection": "Choose calendars to synchronize",
+    "cancel_delete": "Cancel deletion and keep Outlook event",
+    "client_id": "Application (client) ID",
+    "client_id_hint": "Client ID from Entra app registration (not a secret)",
+    "close": "Close",
+    "delete_issue": "Deletion pending / {attempts} of 5 attempts / {kind}",
+    "disconnect": "Disconnect",
+    "issue": "Event #{id}: {kind}",
+    "issue_conflict": "Changed on both sides; choose a version",
+    "issue_delete_conflict": "Deletion paused because Outlook content changed",
+    "issue_deleted": "Deleted in Outlook; local event preserved",
+    "issue_meeting": "Edit online meeting descriptions in Outlook",
+    "issue_move": "Calendar move unsupported; return to the original calendar",
+    "issue_read_only": "Calendar has no write permission",
+    "issue_recurrence": "Recurrence rule editing unsupported",
+    "keep_local": "Conflict: keep my changes",
+    "keep_remote": "Conflict: use Outlook version",
+    "login": "Sign in with Microsoft",
+    "managed_calendar": "Deselect this calendar in connection settings. Existing events are preserved.",
+    "menu": "Connect Outlook / Microsoft 365...",
+    "not_connected": "No Microsoft account connected.",
+    "pending": "Pending",
+    "read_only": "Read only",
+    "retry_delete": "Retry selected deletion",
+    "save_calendars": "Save calendar selection",
+    "scope": "View: 120 days back to 400 days ahead. Recurring events appear as individual occurrences.\nRemotely deleted events are preserved locally and listed as issues.\nRecurrence rules, cross-service moves and invitation responses are not supported in this phase.",
+    "setup_guide": "Open Microsoft app registration guide",
+    "setup_intro": "Connect a personal Outlook or work/school account.\nAn administrator must register the integration app first. No client secret is needed.",
+    "setup_steps": "App registration: organizational and personal Microsoft accounts\nPlatform: Mobile and desktop / Redirect URI: http://localhost\nGraph delegated permissions: Calendars.ReadWrite, User.Read",
+    "status_access": "Calendar access was lost. Check sign-in and calendar selection.",
+    "status_auth": "Microsoft sign-in is required. Check permission consent and organization policies.",
+    "status_client": "Enter a valid application (client) ID.",
+    "status_completed": "Sync completed",
+    "status_connected": "Signed in. Select calendars and save.",
+    "status_dependency": "The Microsoft sign-in module is unavailable. Install the requirements.txt dependencies.",
+    "status_disconnect_first": "Disconnect before changing the client ID.",
+    "status_disconnected": "Disconnected. Existing events are preserved.",
+    "status_failed": "Unable to complete the operation. Error code: {code}",
+    "status_idle": "Sign in, select calendars and save your selection.",
+    "status_login": "Complete Microsoft sign-in in your browser. Waiting up to 2 minutes.",
+    "status_network": "Check your network connection and try again.",
+    "status_saved": "Calendar selection saved.",
+    "status_sync": "Synchronizing Outlook events...",
+    "summary": "Imported {imported} / Updated {updated} / Created {created} / Deleted {deleted} / Issues {issues}",
+    "sync_now": "Sync now",
+    "tab_account": "Account connection",
+    "tab_sync": "Calendars and sync issues",
+    "title": "Outlook / Microsoft 365 sync",
+    "type": "Outlook / Microsoft 365"
+  },
   "palette": {
     "accessible_hint": "Usage guidance",
     "accessible_results": "Search results",
@@ -1558,7 +1654,13 @@
     "hint_record_jump": "Enter öffnet den Eintrag. Shift+Enter springt zum Datum.",
     "hint_run_command": "Enter führt den ausgewählten Befehl aus",
     "kw": {
-      "theme": ["Thema", "Dunkel", "Hell", "Farbe", "Erscheinungsbild"]
+      "theme": [
+        "Thema",
+        "Dunkel",
+        "Hell",
+        "Farbe",
+        "Erscheinungsbild"
+      ]
     },
     "nlp_preview": "Neu: [{title}] - {date} {time}",
     "no_selection": "Drücken Sie die Eingabetaste, um das ausgewählte Ergebnis zu öffnen",
@@ -1811,223 +1913,362 @@
         "description": "Startet sofort den Abwesenheitssperr-Modus.",
         "label": "Abwesenheitssperre",
         "menu_path": "Ansicht > Abwesenheitssperre",
-        "tags": ["abwesend", "sperren"]
+        "tags": [
+          "abwesend",
+          "sperren"
+        ]
       },
       "cal_toolbar": {
         "description": "Blendet die Kalender-Symbolleiste ein oder aus.",
         "label": "Kalender-Symbolleiste umschalten",
         "menu_path": "Ansicht > Kalender-Symbolleiste",
-        "tags": ["Kalender", "Symbolleiste"]
+        "tags": [
+          "Kalender",
+          "Symbolleiste"
+        ]
       },
       "calendar_print": {
         "description": "Zeigt eine Vorschau und druckt den Kalender für den aktuellen oder einen gewählten Zeitraum.",
         "label": "Kalender drucken",
         "menu_path": "Kalender > Optionen > Drucken",
-        "tags": ["drucken", "Drucker", "PDF"]
+        "tags": [
+          "drucken",
+          "Drucker",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "Verwaltet Checklistenvorlagen und die Struktur der Einträge.",
         "label": "Checkliste verwalten",
         "menu_path": "Aufgaben > Checkliste verwalten",
-        "tags": ["Checkliste", "Vorlage"]
+        "tags": [
+          "Checkliste",
+          "Vorlage"
+        ]
       },
       "color_assign": {
         "description": "Weist den ausgewählten Elementen automatisch Farben zu.",
         "label": "Automatische Farbzuweisung",
         "menu_path": "Aufgaben > Automatische Farbzuweisung",
-        "tags": ["Farbe", "Tag", "automatisch"]
+        "tags": [
+          "Farbe",
+          "Tag",
+          "automatisch"
+        ]
       },
       "command_palette": {
         "description": "Öffnet das Suchfeld, um eine Funktion sofort zu finden.",
         "label": "Befehlspalette",
         "menu_path": "Direktaufruf",
-        "tags": ["Suche", "Befehl", "Palette"]
+        "tags": [
+          "Suche",
+          "Befehl",
+          "Palette"
+        ]
       },
       "delete": {
         "description": "Löscht den aktuell ausgewählten Termin oder das Element.",
         "label": "Ausgewähltes Element löschen",
         "menu_path": "Auswahlstatus",
-        "tags": ["löschen", "entfernen"]
+        "tags": [
+          "löschen",
+          "entfernen"
+        ]
       },
       "escape": {
         "description": "Hebt die aktuelle Auswahl oder den Fokus auf.",
         "label": "Auswahl aufheben",
         "menu_path": "Auswahlstatus",
-        "tags": ["Auswahl aufheben", "abbrechen", "Escape"]
+        "tags": [
+          "Auswahl aufheben",
+          "abbrechen",
+          "Escape"
+        ]
       },
       "focus_mode": {
         "description": "Schaltet den Fokusmodus ein oder aus.",
         "label": "Fokusmodus umschalten",
         "menu_path": "Ansicht > Fokusmodus",
-        "tags": ["Fokus", "Pomodoro"]
+        "tags": [
+          "Fokus",
+          "Pomodoro"
+        ]
       },
       "focus_pause": {
         "description": "Pausiert oder setzt die aktuelle Fokussitzung fort.",
         "label": "Fokus pausieren",
         "menu_path": "Fokusmodus",
-        "tags": ["Fokus", "Pause"]
+        "tags": [
+          "Fokus",
+          "Pause"
+        ]
       },
       "force_unlock": {
         "description": "Hebt einen unerwarteten Sperrzustand zwangsweise auf.",
         "label": "Sperre erzwungen aufheben",
         "menu_path": "Notfallwiederherstellung",
-        "tags": ["erzwingen", "entsperren", "Wiederherstellung", "Notfall"]
+        "tags": [
+          "erzwingen",
+          "entsperren",
+          "Wiederherstellung",
+          "Notfall"
+        ]
       },
       "fullscreen": {
         "description": "Schaltet die Vollbildanzeige ein oder aus.",
         "label": "Vollbild umschalten",
         "menu_path": "Ansicht > Vollbild",
-        "tags": ["Vollbild"]
+        "tags": [
+          "Vollbild"
+        ]
       },
       "help": {
         "description": "Öffnet das Hilfezentrum.",
         "label": "Tastenkombinationen-Übersicht",
         "menu_path": "System > Tastenkombinationen-Übersicht",
-        "tags": ["Hilfe", "F1"]
+        "tags": [
+          "Hilfe",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "Wendet das standardmäßige 4-Felder-Layout an.",
         "label": "Layout-Voreinstellung 1",
         "menu_path": "Ansicht > Layout-Voreinstellungen",
-        "tags": ["Layout", "Voreinstellung", "angedockt", "1"]
+        "tags": [
+          "Layout",
+          "Voreinstellung",
+          "angedockt",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "Wendet ein kalenderorientiertes Layout an.",
         "label": "Layout-Voreinstellung 2",
         "menu_path": "Ansicht > Layout-Voreinstellungen",
-        "tags": ["Layout", "Kalender", "2"]
+        "tags": [
+          "Layout",
+          "Kalender",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "Wendet ein aufgabenorientiertes Layout an.",
         "label": "Layout-Voreinstellung 3",
         "menu_path": "Ansicht > Layout-Voreinstellungen",
-        "tags": ["Layout", "Aufgabe", "3"]
+        "tags": [
+          "Layout",
+          "Aufgabe",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "Wendet ein Layout mit geteilten Tabs an.",
         "label": "Layout-Voreinstellung 4",
         "menu_path": "Ansicht > Layout-Voreinstellungen",
-        "tags": ["Layout", "Tab", "geteilt", "4"]
+        "tags": [
+          "Layout",
+          "Tab",
+          "geteilt",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "Wendet ein vollständig getrenntes, frei schwebendes Layout an.",
         "label": "Layout-Voreinstellung 5",
         "menu_path": "Ansicht > Layout-Voreinstellungen",
-        "tags": ["Layout", "getrennt", "schwebend", "5"]
+        "tags": [
+          "Layout",
+          "getrennt",
+          "schwebend",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "Schaltet den Desktop-Sperrmodus ein oder aus.",
         "label": "Sperrmodus",
         "menu_path": "Ansicht > Sperrmodus",
-        "tags": ["sperren"]
+        "tags": [
+          "sperren"
+        ]
       },
       "magnet_mode": {
         "description": "Schaltet den Magnetmodus um, der beim Ausrichten und Einrasten von Feldern hilft.",
         "label": "Magnetmodus",
         "menu_path": "Ansicht > Magnetmodus",
-        "tags": ["Magnet", "Feld"]
+        "tags": [
+          "Magnet",
+          "Feld"
+        ]
       },
       "monitor_left": {
         "description": "Verschiebt das Fenster auf einen anderen Monitor.",
         "label": "Zum vorherigen Monitor verschieben",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Monitor", "Bildschirm", "links"]
+        "tags": [
+          "Monitor",
+          "Bildschirm",
+          "links"
+        ]
       },
       "monitor_right": {
         "description": "Verschiebt das Fenster auf einen anderen Monitor.",
         "label": "Zum nächsten Monitor verschieben",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Monitor", "Bildschirm", "rechts"]
+        "tags": [
+          "Monitor",
+          "Bildschirm",
+          "rechts"
+        ]
       },
       "new_directive": {
         "description": "Öffnet das Fenster zur Eingabe einer Anweisung oder eines Kooperationspunkts.",
         "label": "Anweisung registrieren",
         "menu_path": "Registrieren > Anweisung",
-        "tags": ["Anweisung", "Kooperation"]
+        "tags": [
+          "Anweisung",
+          "Kooperation"
+        ]
       },
       "new_routine": {
         "description": "Fügt schnell eine wiederkehrende Aufgabenroutine hinzu.",
         "label": "Routine registrieren",
         "menu_path": "Registrieren > Routine",
-        "tags": ["Routine", "Aufgabe", "wiederkehrend"]
+        "tags": [
+          "Routine",
+          "Aufgabe",
+          "wiederkehrend"
+        ]
       },
       "new_schedule": {
         "description": "Öffnet direkt das Fenster zur Termineingabe.",
         "label": "Neuen Termin hinzufügen",
         "menu_path": "Registrieren > Neuer Termin",
-        "tags": ["Termin", "hinzufügen", "registrieren"]
+        "tags": [
+          "Termin",
+          "hinzufügen",
+          "registrieren"
+        ]
       },
       "next_day": {
         "description": "Bewegt sich einen Tag nach dem aktuellen Datum.",
         "label": "Nächster Tag",
         "menu_path": "Navigation",
-        "tags": ["weiter", "Datum", "rechts"]
+        "tags": [
+          "weiter",
+          "Datum",
+          "rechts"
+        ]
       },
       "opacity_down": {
         "description": "Verringert die Fensterdeckkraft.",
         "label": "Deckkraft verringern",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Deckkraft", "dunkler"]
+        "tags": [
+          "Deckkraft",
+          "dunkler"
+        ]
       },
       "opacity_up": {
         "description": "Erhöht die Fensterdeckkraft.",
         "label": "Deckkraft erhöhen",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Deckkraft", "heller"]
+        "tags": [
+          "Deckkraft",
+          "heller"
+        ]
       },
       "prev_day": {
         "description": "Bewegt sich einen Tag vor das aktuelle Datum.",
         "label": "Vorheriger Tag",
         "menu_path": "Navigation",
-        "tags": ["zurück", "Datum", "links"]
+        "tags": [
+          "zurück",
+          "Datum",
+          "links"
+        ]
       },
       "restore_pos": {
         "description": "Stellt das Fenster an einer sicheren Bildschirmposition wieder her.",
         "label": "Fensterposition wiederherstellen",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Fenster", "wiederherstellen", "Position"]
+        "tags": [
+          "Fenster",
+          "wiederherstellen",
+          "Position"
+        ]
       },
       "routine_mgr": {
         "description": "Öffnet direkt den Tab des Routinen-Managers.",
         "label": "Routinen-Manager",
         "menu_path": "Aufgaben > Routinenübersicht",
-        "tags": ["Routine", "verwalten"]
+        "tags": [
+          "Routine",
+          "verwalten"
+        ]
       },
       "save_layout": {
         "description": "Speichert die aktuelle Feldanordnung als Voreinstellung.",
         "label": "Aktuelles Layout speichern",
         "menu_path": "Ansicht > Layout-Voreinstellungen > Speichern",
-        "tags": ["Layout", "Voreinstellung", "speichern"]
+        "tags": [
+          "Layout",
+          "Voreinstellung",
+          "speichern"
+        ]
       },
       "show_hide": {
         "description": "Blendet das Hauptfenster aus oder wieder ein.",
         "label": "Fenster ein-/ausblenden",
         "menu_path": "Fenstersteuerung",
-        "tags": ["Fenster", "ausblenden", "einblenden", "Overlay"]
+        "tags": [
+          "Fenster",
+          "ausblenden",
+          "einblenden",
+          "Overlay"
+        ]
       },
       "sync_gcal": {
-        "description": "Startet sofort eine Google-Kalender-Synchronisierung.",
-        "label": "Google Kalender synchronisieren",
-        "menu_path": "System > Kalender und Synchronisierung",
-        "tags": ["Google", "Synchronisierung", "Kalender", "F5"]
+        "description": "Start synchronization for all connected calendars.",
+        "label": "Sync all connected calendars",
+        "menu_path": "System > Calendars and sync",
+        "tags": [
+          "Google",
+          "Outlook",
+          "iCloud",
+          "Naver",
+          "ICS",
+          "F5",
+          "sync"
+        ]
       },
       "today": {
         "description": "Bewegt das ausgewählte Datum sofort auf heute.",
         "label": "Zu heute springen",
         "menu_path": "Navigation",
-        "tags": ["heute", "Datum"]
+        "tags": [
+          "heute",
+          "Datum"
+        ]
       },
       "topbar": {
         "description": "Schaltet die Sichtbarkeit der oberen Menüleiste um.",
         "label": "Oberleiste umschalten",
         "menu_path": "Ansicht > Oberleiste",
-        "tags": ["Menüleiste", "Oberleiste", "Wiederherstellung"]
+        "tags": [
+          "Menüleiste",
+          "Oberleiste",
+          "Wiederherstellung"
+        ]
       },
       "widget_mode": {
         "description": "Öffnet den reinen Widget-Feldmodus.",
         "label": "Widget-Modus umschalten",
         "menu_path": "Ansicht > Nur-Widget-Modus",
-        "tags": ["Widget", "Feld"]
+        "tags": [
+          "Widget",
+          "Feld"
+        ]
       }
     },
     "groups": {
@@ -2186,6 +2427,120 @@
     "status_confirmed": "Bestätigt",
     "status_tentative": "Vorläufig"
   },
+  "sync_ui": {
+    "access_lost": "Access to a selected calendar was lost. Existing events were preserved. Refresh and select calendars again.",
+    "auth": "Authentication expired or the password is incorrect. Reconnect your account.",
+    "auto_off": "Automatic sync off",
+    "auto_on": "Automatic sync on",
+    "busy": "This account is already syncing. Wait for completion.",
+    "cancelled": "The operation was cancelled. Existing events are preserved.",
+    "changed": "The remote event changed first. Sync again and compare both versions.",
+    "compare_hint": "Select a conflict to compare your changes with the service version.",
+    "configure": "Connect / settings",
+    "conflict": "Edited on both sides. Compare and choose a version.",
+    "connected": "Connected",
+    "create_conflict": "Another event uses the same creation identifier. Creation was held without overwriting the original.",
+    "credentials": "Enter your account and app-specific password.",
+    "delete_conflict": "The remote event changed before deletion. Deletion was held.",
+    "dependency": "A sync component is missing. Reinstall the latest application.",
+    "discovery": "Calendar locations were not found. Check the account and service CalDAV support.",
+    "duplicate": "Duplicate event responses were received. Sync was stopped for safety.",
+    "etag": "The service did not return event version information. The update was held. Sync again.",
+    "event_name": "Enter an event title and sync again.",
+    "event_range": "The end must be after the start. Check the event date and time.",
+    "event_read_only": "Recurring events and invitations are view-only. Edit or delete them in the original service.",
+    "event_time": "The event date or timezone could not be read. Check its original time settings.",
+    "failed": "The operation could not be completed. Existing events are preserved. Check account settings and try again.",
+    "google_capability": "Two-way events; shared calendars depend on permissions",
+    "google_problems": "Google sync issues",
+    "hub_intro": "Connect a service and choose calendars to import. Each account syncs independently. Events are not copied between services automatically.",
+    "hub_note": "Disconnecting or deselecting calendars does not delete original service events. Review conflicts and failures in each service's settings.",
+    "hub_title": "Calendars / accounts and synchronization",
+    "icloud_capability": "Two-way personal events; app-specific password",
+    "ics_fetch": "Could not refresh this subscription. Check its URL and your internet connection, then sync again.",
+    "incomplete": "Some event responses were missing. This sync was stopped. Try again.",
+    "invalid_data": "The service returned invalid event data. This sync was not applied.",
+    "invalid_response": "The service response could not be read. Check the account and service status.",
+    "invalid_timezone": "Select a valid timezone, for example Asia/Seoul.",
+    "local": "My changes",
+    "login": "Reconnect your account. Automatic sync does not open a sign-in window.",
+    "move": "Moving a linked event between calendars is unsupported. Restore its original calendar or make a copy.",
+    "naver_capability": "Read-only; service policy may restrict connections",
+    "network": "Check your internet connection. Existing events are preserved. Retry when connected.",
+    "no_calendars": "No accessible calendars were found. Create a calendar or check sharing permissions.",
+    "not_connected": "Not connected",
+    "other_services": "Connect Outlook / iCloud / Naver",
+    "outlook_capability": "Two-way events; Microsoft app registration required initially",
+    "permission": "Calendar access was denied. Check account permissions and service support.",
+    "protection": "Windows credential encryption failed. Check your Windows user environment.",
+    "rate_limit": "The service request limit was reached. Automatic retry intervals have increased. Try again later.",
+    "read_only": "This calendar is read-only. Edit events in the original service.",
+    "reconnect": "Reconnect required",
+    "recurrence": "Recurring event data could not be read. Check recurrence settings in the service.",
+    "recurrence_edit": "Configure recurrence rules in the original service.",
+    "remote": "Service version",
+    "remote_deleted": "This event was deleted in the service. The local copy was preserved.",
+    "save_timezone": "Save timezone",
+    "server": "The service is temporarily unavailable. Events are preserved and sync will retry later.",
+    "stale_conflict": "The event changed again after comparison. Sync again and compare the latest versions.",
+    "timezone": "Shared timezone",
+    "timezone_hint": "Timezone changes apply from the next synchronization.",
+    "timezone_saved": "Timezone saved. Changes apply from the next synchronization.",
+    "too_many": "Too many occurrences were requested. Check recurrence limits in the service.",
+    "unsafe": "An untrusted server address was returned. The connection was stopped.",
+    "unsupported_service": "The service does not allow this connection method. Check its support policy.",
+    "wait_timezone": "Wait for the current synchronization to finish before changing the timezone.",
+    "working": "Working...",
+    "identity_changed": "Unter dieser Serveradresse liegt jetzt ein anderer Termin. Änderungen wurden angehalten. Prüfen Sie den Termin im ursprünglichen Dienst."
+  },
+  "sync_unified": {
+    "add_ics": "Add ICS subscription",
+    "add_local": "Add local calendar",
+    "attention": "Sync needs attention",
+    "auto": "Automatic sync",
+    "auto_pause": "Turn all automatic sync off",
+    "auto_resume": "Turn all automatic sync on",
+    "back": "Back to all calendar settings",
+    "calendar_hint": "Manage visibility, colors and the default save destination for all calendars. Change remote sync selection in its service settings.",
+    "calendar_name": "Calendar name",
+    "calendar_save_failed": "Could not save these settings. Try again.",
+    "calendar_saved": "Calendar settings updated.",
+    "calendars": "All calendars",
+    "color": "Change color",
+    "connected_count": "{count} connected",
+    "default": "Set as default save destination",
+    "default_marker": "Default",
+    "exists": "This calendar is already registered.",
+    "google_settings": "Google Calendar settings",
+    "ics": "ICS subscriptions",
+    "ics_capability": "Shared subscription URL · read-only",
+    "ics_failed": "ICS subscriptions could not be refreshed. Check subscription URLs in All calendars and sync again.",
+    "ics_url": "Calendar subscription URL",
+    "inactive": "Sync deselected",
+    "invalid_ics": "Enter an HTTP or HTTPS calendar subscription URL.",
+    "issue_count": "{count} issues need attention",
+    "issues": "All sync issues",
+    "issues_hint": "Select a service to compare conflicts or review failed operations. Other services can keep syncing.",
+    "local": "Local",
+    "local_only": "Local mode",
+    "menu": "Calendars and sync",
+    "no_issues": "No sync issues need attention.",
+    "open_issue": "Review and resolve in selected service",
+    "refresh_subscription": "Sync ICS subscriptions again",
+    "remove_calendar": "Remove from local list",
+    "remove_confirm": "Remove this calendar from the list? Existing events remain as local copies. Service originals will not be deleted.",
+    "rename": "Rename",
+    "review_issues": "Review issues",
+    "running": "Syncing {count}",
+    "select_first": "Select calendars to import and save your selection.",
+    "service_settings": "Service selection and settings",
+    "services": "Services and sync",
+    "shared": "Shared on this PC",
+    "show_calendar": "Show in calendar views",
+    "subscription_active": "Sync this ICS subscription",
+    "sync_all": "Sync all connected calendars",
+    "welcome": "Use local calendars immediately. Connect Google, Outlook, iCloud, Naver or ICS calendars whenever you need them."
+  },
   "system_msg": {
     "already_running": "Läuft bereits.",
     "lang_saved_msg": "Auswahl gespeichert.\nNeu start nötig.",
@@ -2299,7 +2654,9 @@
       "location_not_found": "Ort nicht gefunden",
       "network": "Netzwerkfehler",
       "parse_failed": "Datenanalysefehler",
-      "timeout": "Zeitüberschreitung der Anfrage"
+      "timeout": "Zeitüberschreitung der Anfrage",
+      "busy": "Wetterdienst ausgelastet; erneuter Versuch folgt",
+      "denied": "Zugriff auf den Wetterdienst verweigert"
     }
   },
   "weekday": {
@@ -3269,7 +3626,14 @@
       "template_hint": "Variablen: {city} {temp} {unit} {desc} {icon}",
       "unit": "Einheit:",
       "unit_c": "Celsius (°C)",
-      "unit_f": "Fahrenheit (°F)"
+      "unit_f": "Fahrenheit (°F)",
+      "cached": "Neueste gespeicherte Wetterdaten",
+      "loading": "Wetter wird geladen…",
+      "refresh_every": "Alle {min} Min.",
+      "refresh_now": "Wetter neu laden",
+      "retry_in": "Erneuter Versuch in {min} Min.",
+      "stale": "Vorheriges Wetter wird angezeigt · {error}",
+      "updated": "Aktualisiert: {time}"
     }
   },
   "widget_manager": {

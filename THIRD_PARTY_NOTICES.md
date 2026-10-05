@@ -18,8 +18,13 @@ This summary does not replace the bundled license texts.
 | google-auth | 2.48.0 | Apache-2.0 | <https://github.com/googleapis/google-auth-library-python> |
 | httplib2 | 0.31.2 | MIT | <https://github.com/httplib2/httplib2> |
 | requests-oauthlib | 2.0.0 | ISC | <https://github.com/requests/requests-oauthlib> |
+| Microsoft Authentication Library for Python | 1.39.0 | MIT | <https://github.com/AzureAD/microsoft-authentication-library-for-python> |
+| PyJWT | 2.15.1 | MIT | <https://github.com/jpadilla/pyjwt> |
 | tzdata | 2026.3 | Apache-2.0; IANA timezone data terms also apply | <https://github.com/python/tzdata> |
 | icalendar | 7.2.0 | BSD-family license | <https://github.com/collective/icalendar> |
+| recurring-ical-events | 3.8.2 | LGPL-3.0-or-later | <https://github.com/niccokunzmann/python-recurring-ical-events> |
+| x-wr-timezone | 2.0.1 | LGPL-3.0-or-later | <https://github.com/niccokunzmann/x-wr-timezone> |
+| Click | 8.5.0 | BSD-3-Clause | <https://github.com/pallets/click> |
 | Python/WinRT runtime and Windows.ApplicationModel projection | 3.2.1 | MIT | <https://github.com/pywinrt/pywinrt> |
 | typing_extensions | 4.15.0 | PSF-2.0 | <https://github.com/python/typing_extensions> |
 | pywin32 | 311 | PSF-style licenses | <https://github.com/mhammond/pywin32> |
@@ -32,7 +37,7 @@ All transitive Python packages and their exact versions are recorded in the payl
 
 The free edition of PyQt6 is GPLv3. Air Calendar is therefore distributed as a GPLv3-covered work. The complete corresponding-source release asset mirrors the exact PyQt6 source and the applicable QtBase source, along with the application source and the remaining locked Python source distributions.
 
-Air Calendar 3.7.10 uses the native Windows notification sound API. Qt Multimedia and its FFmpeg runtime, along with unused Qt PDF and SVG image plugins, are intentionally excluded from the release payload.
+Air Calendar 3.8.0 uses the native Windows notification sound API. Qt Multimedia and its FFmpeg runtime, along with unused Qt PDF and SVG image plugins, are intentionally excluded from the release payload.
 
 ## QtAwesome bundled fonts
 

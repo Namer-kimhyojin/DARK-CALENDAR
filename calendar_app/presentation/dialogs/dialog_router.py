@@ -24,6 +24,11 @@ _DIALOG_ROUTE_MAP = {
     "directive_management_dialog": "open_directive_management_dialog",
     "routine_management_dialog": "open_routine_management_dialog",
     "gcal_settings_dialog": "open_gcal_settings_dialog",
+    "calendar_sync_hub": "open_calendar_sync_hub",
+    "calendar_management": "open_calendar_management",
+    "calendar_sync_issues": "open_calendar_sync_issues",
+    "outlook_settings_dialog": "open_outlook_settings_dialog",
+    "caldav_settings_dialog": "open_caldav_settings_dialog",
     "gcal_sync_issues_dialog": "open_gcal_sync_issues_dialog",
     "daily_summary_dialog": "open_daily_summary_dialog",
     "calendar_print_dialog": "open_calendar_print_dialog",
@@ -108,6 +113,34 @@ def _default_calendar_help_content() -> str:
 
 class DialogActionsMixin:
     """Mixin providing dialog-opening action methods for the main window."""
+
+    def open_calendar_sync_hub(self, checked=False, section="services"):
+        from calendar_app.presentation.dialogs.calendar_sync_hub import open_calendar_sync_hub
+
+        if self._acquire_dialog_guard("calendar_sync_hub"):
+            return open_calendar_sync_hub(self, section)
+
+    def open_calendar_management(self, checked=False):
+        return self.open_calendar_sync_hub(section="calendars")
+
+    def open_calendar_sync_issues(self, checked=False):
+        return self.open_calendar_sync_hub(section="issues")
+
+    def open_outlook_settings_dialog(self, checked=False):
+        from calendar_app.presentation.main_window.outlook_sync_controller import (
+            open_outlook_settings,
+        )
+
+        if self._acquire_dialog_guard("outlook_settings"):
+            return open_outlook_settings(self)
+
+    def open_caldav_settings_dialog(self, checked=False, service="icloud"):
+        from calendar_app.presentation.main_window.caldav_sync_controller import (
+            open_caldav_settings,
+        )
+
+        if self._acquire_dialog_guard("caldav_settings"):
+            return open_caldav_settings(self, service)
 
     # ------------------------------------------------------------------
     # Guard: prevent duplicate dialogs opened within 500ms
@@ -240,12 +273,13 @@ class DialogActionsMixin:
 
             result = dlg.exec()
             self._refresh_all_panels()
-            if (
-                result == QDialog.DialogCode.Accepted
-                and getattr(dlg, "post_commit_gcal_delete_queued", False)
-                and hasattr(self, "wake_gcal_sync")
-            ):
-                self.wake_gcal_sync()
+            if result == QDialog.DialogCode.Accepted and task_type != "routine":
+                if hasattr(self, "wake_calendar_sync"):
+                    self.wake_calendar_sync()
+                if getattr(dlg, "post_commit_gcal_delete_queued", False) and hasattr(
+                    self, "wake_gcal_sync"
+                ):
+                    self.wake_gcal_sync()
             if (
                 result == QDialog.DialogCode.Accepted
                 and task_type != "routine"

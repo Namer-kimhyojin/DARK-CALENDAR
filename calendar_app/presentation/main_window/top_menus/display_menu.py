@@ -136,8 +136,7 @@ def _update_calendar_visibility_menu(app, menu: "QMenu", menu_style: str) -> Non
     set_themed_icon(manage_act, ICON.CHECKLIST, neutral_icon)
 
     def _open_manage():
-        if hasattr(app, "open_gcal_settings_dialog"):
-            app.open_gcal_settings_dialog(initial_tab="calendar")
+        app.open_calendar_management()
 
     manage_act.triggered.connect(_open_manage)
 

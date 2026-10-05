@@ -102,6 +102,42 @@
     "confirm": "确认",
     "ok": "确定"
   },
+  "caldav": {
+    "cancel_delete": "Cancel deletion and keep service event",
+    "connect": "Verify connection and find calendars",
+    "connected": "Connected. Select calendars and save.",
+    "connecting": "Verifying account and finding calendars...",
+    "connection": "1. Connect account",
+    "delete_pending": "Deletion pending: {attempts}/5 attempts",
+    "disconnecting": "Disconnecting...",
+    "help": "Service authentication guide",
+    "icloud_guide": "iCloud: enable two-factor authentication and generate an app-specific password. Personal events support two-way sync.",
+    "icloud_user": "Apple Account email",
+    "idle": "Connect your account, then select calendars and save.",
+    "keep_remote": "Apply service version",
+    "last_success": "Last successful sync: {time}",
+    "menu": "Connect iCloud / Naver...",
+    "naver": "Naver",
+    "naver_guide": "Naver: read-only import. With two-step verification, use an application password. Windows connections may be restricted by service policy.",
+    "naver_user": "Naver ID",
+    "not_connected": "Not connected",
+    "password": "App-specific password",
+    "privacy": "Your password is encrypted for this Windows user. Disconnecting preserves existing events.",
+    "problems": "3. Review issues",
+    "refresh": "Refresh list",
+    "refreshed": "List refreshed. Review your selection and save.",
+    "refreshing": "Refreshing calendar list...",
+    "save": "Save selection",
+    "scope": "Range: past 120 days to next 400 days. Recurring events and invitations are view-only. Deselecting stops sync. Events are not copied between services automatically.",
+    "selection": "2. Choose calendars",
+    "service": "Calendar service",
+    "show_password": "Show entered password",
+    "syncing": "Synchronizing events...",
+    "title": "iCloud / Naver calendar connection",
+    "two_way": "Two-way",
+    "type": "CalDAV",
+    "username": "Account"
+  },
   "calendar": {
     "add_hint": "添加时间表",
     "date_cell_accessible": "{date} date cell",
@@ -127,7 +163,15 @@
     "sync_hint": "谷歌日历同步",
     "today": "今天",
     "today_hint": "转到今天",
-    "weekdays": ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+    "weekdays": [
+      "周一",
+      "周二",
+      "周三",
+      "周四",
+      "周五",
+      "周六",
+      "周日"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "添加项目",
@@ -1543,6 +1587,58 @@
   "meta": {
     "language_name": "中文 (Chinese)"
   },
+  "outlook": {
+    "auto_sync": "Automatically synchronize every 5 minutes",
+    "calendar_selection": "Choose calendars to synchronize",
+    "cancel_delete": "Cancel deletion and keep Outlook event",
+    "client_id": "Application (client) ID",
+    "client_id_hint": "Client ID from Entra app registration (not a secret)",
+    "close": "Close",
+    "delete_issue": "Deletion pending / {attempts} of 5 attempts / {kind}",
+    "disconnect": "Disconnect",
+    "issue": "Event #{id}: {kind}",
+    "issue_conflict": "Changed on both sides; choose a version",
+    "issue_delete_conflict": "Deletion paused because Outlook content changed",
+    "issue_deleted": "Deleted in Outlook; local event preserved",
+    "issue_meeting": "Edit online meeting descriptions in Outlook",
+    "issue_move": "Calendar move unsupported; return to the original calendar",
+    "issue_read_only": "Calendar has no write permission",
+    "issue_recurrence": "Recurrence rule editing unsupported",
+    "keep_local": "Conflict: keep my changes",
+    "keep_remote": "Conflict: use Outlook version",
+    "login": "Sign in with Microsoft",
+    "managed_calendar": "Deselect this calendar in connection settings. Existing events are preserved.",
+    "menu": "Connect Outlook / Microsoft 365...",
+    "not_connected": "No Microsoft account connected.",
+    "pending": "Pending",
+    "read_only": "Read only",
+    "retry_delete": "Retry selected deletion",
+    "save_calendars": "Save calendar selection",
+    "scope": "View: 120 days back to 400 days ahead. Recurring events appear as individual occurrences.\nRemotely deleted events are preserved locally and listed as issues.\nRecurrence rules, cross-service moves and invitation responses are not supported in this phase.",
+    "setup_guide": "Open Microsoft app registration guide",
+    "setup_intro": "Connect a personal Outlook or work/school account.\nAn administrator must register the integration app first. No client secret is needed.",
+    "setup_steps": "App registration: organizational and personal Microsoft accounts\nPlatform: Mobile and desktop / Redirect URI: http://localhost\nGraph delegated permissions: Calendars.ReadWrite, User.Read",
+    "status_access": "Calendar access was lost. Check sign-in and calendar selection.",
+    "status_auth": "Microsoft sign-in is required. Check permission consent and organization policies.",
+    "status_client": "Enter a valid application (client) ID.",
+    "status_completed": "Sync completed",
+    "status_connected": "Signed in. Select calendars and save.",
+    "status_dependency": "The Microsoft sign-in module is unavailable. Install the requirements.txt dependencies.",
+    "status_disconnect_first": "Disconnect before changing the client ID.",
+    "status_disconnected": "Disconnected. Existing events are preserved.",
+    "status_failed": "Unable to complete the operation. Error code: {code}",
+    "status_idle": "Sign in, select calendars and save your selection.",
+    "status_login": "Complete Microsoft sign-in in your browser. Waiting up to 2 minutes.",
+    "status_network": "Check your network connection and try again.",
+    "status_saved": "Calendar selection saved.",
+    "status_sync": "Synchronizing Outlook events...",
+    "summary": "Imported {imported} / Updated {updated} / Created {created} / Deleted {deleted} / Issues {issues}",
+    "sync_now": "Sync now",
+    "tab_account": "Account connection",
+    "tab_sync": "Calendars and sync issues",
+    "title": "Outlook / Microsoft 365 sync",
+    "type": "Outlook / Microsoft 365"
+  },
   "palette": {
     "accessible_hint": "Usage guidance",
     "accessible_results": "Search results",
@@ -1558,7 +1654,13 @@
     "hint_record_jump": "Enter打开项目。Shift+Enter跳转到其日期。",
     "hint_run_command": "Enter执行选定命令",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Press Enter to open the selected result",
@@ -1811,223 +1913,362 @@
         "description": "立即启动离开锁定模式。",
         "label": "离开锁定",
         "menu_path": "视图 > 离开锁定",
-        "tags": ["离开", "锁定"]
+        "tags": [
+          "离开",
+          "锁定"
+        ]
       },
       "cal_toolbar": {
         "description": "隐藏或重新显示日历工具栏。",
         "label": "切换日历工具栏",
         "menu_path": "视图 > 日历工具栏",
-        "tags": ["日历", "工具栏"]
+        "tags": [
+          "日历",
+          "工具栏"
+        ]
       },
       "calendar_print": {
         "description": "预览并打印当前或所选期间的日历。",
         "label": "打印日历",
         "menu_path": "日历 > 选项 > 打印",
-        "tags": ["打印", "打印机", "PDF"]
+        "tags": [
+          "打印",
+          "打印机",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "管理检查清单模板和项目结构。",
         "label": "管理检查清单",
         "menu_path": "任务 > 管理检查清单",
-        "tags": ["检查清单", "模板"]
+        "tags": [
+          "检查清单",
+          "模板"
+        ]
       },
       "color_assign": {
         "description": "自动为所选项目分配颜色。",
         "label": "自动分配颜色",
         "menu_path": "任务 > 自动分配颜色",
-        "tags": ["颜色", "标签", "自动"]
+        "tags": [
+          "颜色",
+          "标签",
+          "自动"
+        ]
       },
       "command_palette": {
         "description": "打开命令搜索框以立即查找功能。",
         "label": "命令面板",
         "menu_path": "直接调用",
-        "tags": ["搜索", "命令", "面板"]
+        "tags": [
+          "搜索",
+          "命令",
+          "面板"
+        ]
       },
       "delete": {
         "description": "删除当前选中的日程或项目。",
         "label": "删除所选项目",
         "menu_path": "选择状态",
-        "tags": ["删除", "移除"]
+        "tags": [
+          "删除",
+          "移除"
+        ]
       },
       "escape": {
         "description": "清除当前选择或焦点。",
         "label": "清除选择",
         "menu_path": "选择状态",
-        "tags": ["取消选择", "取消", "esc"]
+        "tags": [
+          "取消选择",
+          "取消",
+          "esc"
+        ]
       },
       "focus_mode": {
         "description": "开启或关闭专注模式。",
         "label": "切换专注模式",
         "menu_path": "视图 > 专注模式",
-        "tags": ["专注", "番茄钟"]
+        "tags": [
+          "专注",
+          "番茄钟"
+        ]
       },
       "focus_pause": {
         "description": "暂停或恢复当前专注会话。",
         "label": "暂停专注",
         "menu_path": "专注模式",
-        "tags": ["专注", "暂停"]
+        "tags": [
+          "专注",
+          "暂停"
+        ]
       },
       "force_unlock": {
         "description": "强制清除意外的锁定状态。",
         "label": "强制解锁",
         "menu_path": "紧急恢复",
-        "tags": ["强制", "解锁", "恢复", "紧急"]
+        "tags": [
+          "强制",
+          "解锁",
+          "恢复",
+          "紧急"
+        ]
       },
       "fullscreen": {
         "description": "开启或关闭全屏显示。",
         "label": "切换全屏",
         "menu_path": "视图 > 全屏",
-        "tags": ["全屏"]
+        "tags": [
+          "全屏"
+        ]
       },
       "help": {
         "description": "打开帮助中心。",
         "label": "快捷键指南",
         "menu_path": "系统 > 快捷键指南",
-        "tags": ["帮助", "F1"]
+        "tags": [
+          "帮助",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "应用默认的4面板停靠布局。",
         "label": "布局预设 1",
         "menu_path": "视图 > 布局预设",
-        "tags": ["布局", "预设", "停靠", "1"]
+        "tags": [
+          "布局",
+          "预设",
+          "停靠",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "应用以日历为中心的布局。",
         "label": "布局预设 2",
         "menu_path": "视图 > 布局预设",
-        "tags": ["布局", "日历", "2"]
+        "tags": [
+          "布局",
+          "日历",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "应用以任务为中心的布局。",
         "label": "布局预设 3",
         "menu_path": "视图 > 布局预设",
-        "tags": ["布局", "任务", "3"]
+        "tags": [
+          "布局",
+          "任务",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "应用分屏标签布局。",
         "label": "布局预设 4",
         "menu_path": "视图 > 布局预设",
-        "tags": ["布局", "标签", "分屏", "4"]
+        "tags": [
+          "布局",
+          "标签",
+          "分屏",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "应用完全分离的浮动布局。",
         "label": "布局预设 5",
         "menu_path": "视图 > 布局预设",
-        "tags": ["布局", "分离", "浮动", "5"]
+        "tags": [
+          "布局",
+          "分离",
+          "浮动",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "开启或关闭桌面锁定模式。",
         "label": "锁定模式",
         "menu_path": "视图 > 锁定模式",
-        "tags": ["锁定"]
+        "tags": [
+          "锁定"
+        ]
       },
       "magnet_mode": {
         "description": "切换磁吸模式，帮助面板对齐和吸附。",
         "label": "磁吸模式",
         "menu_path": "视图 > 磁吸模式",
-        "tags": ["磁吸", "面板"]
+        "tags": [
+          "磁吸",
+          "面板"
+        ]
       },
       "monitor_left": {
         "description": "将窗口移动到另一个显示器。",
         "label": "移动到上一个显示器",
         "menu_path": "窗口控制",
-        "tags": ["显示器", "屏幕", "左"]
+        "tags": [
+          "显示器",
+          "屏幕",
+          "左"
+        ]
       },
       "monitor_right": {
         "description": "将窗口移动到另一个显示器。",
         "label": "移动到下一个显示器",
         "menu_path": "窗口控制",
-        "tags": ["显示器", "屏幕", "右"]
+        "tags": [
+          "显示器",
+          "屏幕",
+          "右"
+        ]
       },
       "new_directive": {
         "description": "打开输入指示或协作事项的窗口。",
         "label": "注册指示事项",
         "menu_path": "注册 > 指示事项",
-        "tags": ["指示", "协作"]
+        "tags": [
+          "指示",
+          "协作"
+        ]
       },
       "new_routine": {
         "description": "快速添加重复性工作例程。",
         "label": "注册例行任务",
         "menu_path": "注册 > 例行任务",
-        "tags": ["例行任务", "任务", "重复"]
+        "tags": [
+          "例行任务",
+          "任务",
+          "重复"
+        ]
       },
       "new_schedule": {
         "description": "直接打开日程录入窗口。",
         "label": "添加新日程",
         "menu_path": "注册 > 新日程",
-        "tags": ["日程", "添加", "注册"]
+        "tags": [
+          "日程",
+          "添加",
+          "注册"
+        ]
       },
       "next_day": {
         "description": "移动到当前日期的后一天。",
         "label": "后一天",
         "menu_path": "导航",
-        "tags": ["后", "日期", "右"]
+        "tags": [
+          "后",
+          "日期",
+          "右"
+        ]
       },
       "opacity_down": {
         "description": "降低窗口不透明度。",
         "label": "降低不透明度",
         "menu_path": "窗口控制",
-        "tags": ["不透明度", "更暗"]
+        "tags": [
+          "不透明度",
+          "更暗"
+        ]
       },
       "opacity_up": {
         "description": "提高窗口不透明度。",
         "label": "增加不透明度",
         "menu_path": "窗口控制",
-        "tags": ["不透明度", "更亮"]
+        "tags": [
+          "不透明度",
+          "更亮"
+        ]
       },
       "prev_day": {
         "description": "移动到当前日期的前一天。",
         "label": "前一天",
         "menu_path": "导航",
-        "tags": ["前", "日期", "左"]
+        "tags": [
+          "前",
+          "日期",
+          "左"
+        ]
       },
       "restore_pos": {
         "description": "将窗口恢复到屏幕上的安全位置。",
         "label": "恢复窗口位置",
         "menu_path": "窗口控制",
-        "tags": ["窗口", "恢复", "位置"]
+        "tags": [
+          "窗口",
+          "恢复",
+          "位置"
+        ]
       },
       "routine_mgr": {
         "description": "直接打开例行任务管理器标签页。",
         "label": "例行任务管理器",
         "menu_path": "任务 > 例行任务概览",
-        "tags": ["例行任务", "管理"]
+        "tags": [
+          "例行任务",
+          "管理"
+        ]
       },
       "save_layout": {
         "description": "将当前面板排列保存为预设。",
         "label": "保存当前布局",
         "menu_path": "视图 > 布局预设 > 保存",
-        "tags": ["布局", "预设", "保存"]
+        "tags": [
+          "布局",
+          "预设",
+          "保存"
+        ]
       },
       "show_hide": {
         "description": "隐藏主窗口或重新显示。",
         "label": "显示/隐藏窗口",
         "menu_path": "窗口控制",
-        "tags": ["窗口", "隐藏", "显示", "叠加层"]
+        "tags": [
+          "窗口",
+          "隐藏",
+          "显示",
+          "叠加层"
+        ]
       },
       "sync_gcal": {
-        "description": "立即开始与谷歌日历同步。",
-        "label": "同步谷歌日历",
-        "menu_path": "系统 > 日历与同步",
-        "tags": ["谷歌", "同步", "日历", "F5"]
+        "description": "Start synchronization for all connected calendars.",
+        "label": "Sync all connected calendars",
+        "menu_path": "System > Calendars and sync",
+        "tags": [
+          "Google",
+          "Outlook",
+          "iCloud",
+          "Naver",
+          "ICS",
+          "F5",
+          "sync"
+        ]
       },
       "today": {
         "description": "立即将所选日期移动到今天。",
         "label": "跳转到今天",
         "menu_path": "导航",
-        "tags": ["今天", "日期"]
+        "tags": [
+          "今天",
+          "日期"
+        ]
       },
       "topbar": {
         "description": "切换顶部菜单栏的显示状态。",
         "label": "切换顶栏",
         "menu_path": "视图 > 顶栏",
-        "tags": ["菜单栏", "顶栏", "恢复"]
+        "tags": [
+          "菜单栏",
+          "顶栏",
+          "恢复"
+        ]
       },
       "widget_mode": {
         "description": "打开仅显示小组件的面板模式。",
         "label": "切换小组件模式",
         "menu_path": "视图 > 仅小组件模式",
-        "tags": ["小组件", "面板"]
+        "tags": [
+          "小组件",
+          "面板"
+        ]
       }
     },
     "groups": {
@@ -2186,6 +2427,120 @@
     "status_confirmed": "Confirmed",
     "status_tentative": "Tentative"
   },
+  "sync_ui": {
+    "access_lost": "Access to a selected calendar was lost. Existing events were preserved. Refresh and select calendars again.",
+    "auth": "Authentication expired or the password is incorrect. Reconnect your account.",
+    "auto_off": "Automatic sync off",
+    "auto_on": "Automatic sync on",
+    "busy": "This account is already syncing. Wait for completion.",
+    "cancelled": "The operation was cancelled. Existing events are preserved.",
+    "changed": "The remote event changed first. Sync again and compare both versions.",
+    "compare_hint": "Select a conflict to compare your changes with the service version.",
+    "configure": "Connect / settings",
+    "conflict": "Edited on both sides. Compare and choose a version.",
+    "connected": "Connected",
+    "create_conflict": "Another event uses the same creation identifier. Creation was held without overwriting the original.",
+    "credentials": "Enter your account and app-specific password.",
+    "delete_conflict": "The remote event changed before deletion. Deletion was held.",
+    "dependency": "A sync component is missing. Reinstall the latest application.",
+    "discovery": "Calendar locations were not found. Check the account and service CalDAV support.",
+    "duplicate": "Duplicate event responses were received. Sync was stopped for safety.",
+    "etag": "The service did not return event version information. The update was held. Sync again.",
+    "event_name": "Enter an event title and sync again.",
+    "event_range": "The end must be after the start. Check the event date and time.",
+    "event_read_only": "Recurring events and invitations are view-only. Edit or delete them in the original service.",
+    "event_time": "The event date or timezone could not be read. Check its original time settings.",
+    "failed": "The operation could not be completed. Existing events are preserved. Check account settings and try again.",
+    "google_capability": "Two-way events; shared calendars depend on permissions",
+    "google_problems": "Google sync issues",
+    "hub_intro": "Connect a service and choose calendars to import. Each account syncs independently. Events are not copied between services automatically.",
+    "hub_note": "Disconnecting or deselecting calendars does not delete original service events. Review conflicts and failures in each service's settings.",
+    "hub_title": "Calendars / accounts and synchronization",
+    "icloud_capability": "Two-way personal events; app-specific password",
+    "ics_fetch": "Could not refresh this subscription. Check its URL and your internet connection, then sync again.",
+    "incomplete": "Some event responses were missing. This sync was stopped. Try again.",
+    "invalid_data": "The service returned invalid event data. This sync was not applied.",
+    "invalid_response": "The service response could not be read. Check the account and service status.",
+    "invalid_timezone": "Select a valid timezone, for example Asia/Seoul.",
+    "local": "My changes",
+    "login": "Reconnect your account. Automatic sync does not open a sign-in window.",
+    "move": "Moving a linked event between calendars is unsupported. Restore its original calendar or make a copy.",
+    "naver_capability": "Read-only; service policy may restrict connections",
+    "network": "Check your internet connection. Existing events are preserved. Retry when connected.",
+    "no_calendars": "No accessible calendars were found. Create a calendar or check sharing permissions.",
+    "not_connected": "Not connected",
+    "other_services": "Connect Outlook / iCloud / Naver",
+    "outlook_capability": "Two-way events; Microsoft app registration required initially",
+    "permission": "Calendar access was denied. Check account permissions and service support.",
+    "protection": "Windows credential encryption failed. Check your Windows user environment.",
+    "rate_limit": "The service request limit was reached. Automatic retry intervals have increased. Try again later.",
+    "read_only": "This calendar is read-only. Edit events in the original service.",
+    "reconnect": "Reconnect required",
+    "recurrence": "Recurring event data could not be read. Check recurrence settings in the service.",
+    "recurrence_edit": "Configure recurrence rules in the original service.",
+    "remote": "Service version",
+    "remote_deleted": "This event was deleted in the service. The local copy was preserved.",
+    "save_timezone": "Save timezone",
+    "server": "The service is temporarily unavailable. Events are preserved and sync will retry later.",
+    "stale_conflict": "The event changed again after comparison. Sync again and compare the latest versions.",
+    "timezone": "Shared timezone",
+    "timezone_hint": "Timezone changes apply from the next synchronization.",
+    "timezone_saved": "Timezone saved. Changes apply from the next synchronization.",
+    "too_many": "Too many occurrences were requested. Check recurrence limits in the service.",
+    "unsafe": "An untrusted server address was returned. The connection was stopped.",
+    "unsupported_service": "The service does not allow this connection method. Check its support policy.",
+    "wait_timezone": "Wait for the current synchronization to finish before changing the timezone.",
+    "working": "Working...",
+    "identity_changed": "此服务器地址现在对应另一个日程，已暂停修改。请在原服务中检查日程。"
+  },
+  "sync_unified": {
+    "add_ics": "Add ICS subscription",
+    "add_local": "Add local calendar",
+    "attention": "Sync needs attention",
+    "auto": "Automatic sync",
+    "auto_pause": "Turn all automatic sync off",
+    "auto_resume": "Turn all automatic sync on",
+    "back": "Back to all calendar settings",
+    "calendar_hint": "Manage visibility, colors and the default save destination for all calendars. Change remote sync selection in its service settings.",
+    "calendar_name": "Calendar name",
+    "calendar_save_failed": "Could not save these settings. Try again.",
+    "calendar_saved": "Calendar settings updated.",
+    "calendars": "All calendars",
+    "color": "Change color",
+    "connected_count": "{count} connected",
+    "default": "Set as default save destination",
+    "default_marker": "Default",
+    "exists": "This calendar is already registered.",
+    "google_settings": "Google Calendar settings",
+    "ics": "ICS subscriptions",
+    "ics_capability": "Shared subscription URL · read-only",
+    "ics_failed": "ICS subscriptions could not be refreshed. Check subscription URLs in All calendars and sync again.",
+    "ics_url": "Calendar subscription URL",
+    "inactive": "Sync deselected",
+    "invalid_ics": "Enter an HTTP or HTTPS calendar subscription URL.",
+    "issue_count": "{count} issues need attention",
+    "issues": "All sync issues",
+    "issues_hint": "Select a service to compare conflicts or review failed operations. Other services can keep syncing.",
+    "local": "Local",
+    "local_only": "Local mode",
+    "menu": "Calendars and sync",
+    "no_issues": "No sync issues need attention.",
+    "open_issue": "Review and resolve in selected service",
+    "refresh_subscription": "Sync ICS subscriptions again",
+    "remove_calendar": "Remove from local list",
+    "remove_confirm": "Remove this calendar from the list? Existing events remain as local copies. Service originals will not be deleted.",
+    "rename": "Rename",
+    "review_issues": "Review issues",
+    "running": "Syncing {count}",
+    "select_first": "Select calendars to import and save your selection.",
+    "service_settings": "Service selection and settings",
+    "services": "Services and sync",
+    "shared": "Shared on this PC",
+    "show_calendar": "Show in calendar views",
+    "subscription_active": "Sync this ICS subscription",
+    "sync_all": "Sync all connected calendars",
+    "welcome": "Use local calendars immediately. Connect Google, Outlook, iCloud, Naver or ICS calendars whenever you need them."
+  },
   "system_msg": {
     "already_running": "黑暗日历已在运行。\n\n请检查任务栏中的托盘图标。",
     "lang_saved_msg": "语言设置已保存。\n将重启应用以应用更改。",
@@ -2299,7 +2654,9 @@
       "location_not_found": "Location not found",
       "network": "Network error",
       "parse_failed": "Data parse error",
-      "timeout": "Request timed out"
+      "timeout": "Request timed out",
+      "busy": "天气服务繁忙，等待重试",
+      "denied": "天气服务访问被拒绝"
     }
   },
   "weekday": {
@@ -3269,7 +3626,14 @@
       "template_hint": "Variables: {city} {temp} {unit} {desc} {icon}",
       "unit": "Unit:",
       "unit_c": "Celsius (°C)",
-      "unit_f": "Fahrenheit (°F)"
+      "unit_f": "Fahrenheit (°F)",
+      "cached": "最新缓存天气",
+      "loading": "正在加载天气…",
+      "refresh_every": "每 {min} 分钟",
+      "refresh_now": "重新加载天气",
+      "retry_in": "{min} 分钟后重试",
+      "stale": "显示上次天气 · {error}",
+      "updated": "{time} 更新"
     }
   },
   "widget_manager": {

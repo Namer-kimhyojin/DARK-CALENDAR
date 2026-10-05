@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QSizePolicy,
     QToolButton,
@@ -135,8 +136,8 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.sync_action_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     self.sync_action_btn.setIcon(_ic(ICON.SYNC, color=_theme))
     self.sync_action_btn.setIconSize(QSize(18, 18))
-    self.sync_action_btn.setToolTip(t("topbar.sync_now"))
-    self.sync_action_btn.setAccessibleName(t("topbar.sync_now"))
+    self.sync_action_btn.setToolTip(t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"))
+    self.sync_action_btn.setAccessibleName(t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"))
     self.sync_action_btn.setAccessibleDescription(t("topbar.sync_checking"))
     self.sync_action_btn.setMinimumSize(32, 32)
     self.sync_action_btn.setMaximumSize(36, 36)
@@ -157,7 +158,20 @@ def setup_top_bar(self, _size, _theme, _ta):
         }}
     """
     )
-    self.sync_action_btn.clicked.connect(self.sync_google_calendar)
+    self.sync_action_btn.clicked.connect(self.sync_calendars)
+    sync_menu = QMenu(self.sync_action_btn)
+    sync_menu.addAction(
+        t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"), self.sync_calendars
+    )
+    sync_menu.addAction(
+        t("sync_ui.hub_title", "캘린더 · 계정 및 동기화"), self.open_calendar_sync_hub
+    )
+    sync_menu.addAction(
+        t("sync_unified.issues", "전체 동기화 문제"), self.open_calendar_sync_issues
+    )
+    self.sync_action_btn.setMenu(sync_menu)
+    self.sync_action_btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+    self.sync_action_btn.setMaximumWidth(48)
     top_bar.addWidget(self.sync_action_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
     self.sync_status_text_lbl = QLabel(t("topbar.sync_waiting"))

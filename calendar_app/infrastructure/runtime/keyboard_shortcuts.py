@@ -182,8 +182,8 @@ SHORTCUTS: list[dict] = [
         "id": "sync_gcal",
         "key": "F5",
         "group": "system",
-        "label_ko": "구글 캘린더 동기화",
-        "action": "sync_google_calendar",
+        "label_ko": "모든 캘린더 동기화",
+        "action": "sync_calendars",
     },
     {
         "id": "routine_mgr",
@@ -464,9 +464,9 @@ _SHORTCUT_HELP_META_KO: dict[str, dict] = {
         "tags": ["인쇄", "프린터", "PDF", "print"],
     },
     "sync_gcal": {
-        "description": "구글 캘린더 동기화를 바로 시작합니다.",
+        "description": "연결된 모든 캘린더의 동기화를 바로 시작합니다.",
         "menu_path": "시스템 > 캘린더 및 동기화",
-        "tags": ["구글", "동기화", "캘린더", "F5", "sync"],
+        "tags": ["Google", "Outlook", "iCloud", "네이버", "ICS", "동기화", "캘린더", "F5", "sync"],
     },
     "routine_mgr": {
         "description": "루틴 관리자 탭을 바로 엽니다.",

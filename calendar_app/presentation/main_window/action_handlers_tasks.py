@@ -97,6 +97,8 @@ class TaskActionsMixin:
     def handle_task_added(self, task_data):
         # routine(일반업무)는 GCal 동기화 대상 아님 — schedule만 push
         _is_schedule = (task_data or {}).get("type", "schedule") != "routine"
+        if task_data and _is_schedule and hasattr(self, "wake_calendar_sync"):
+            self.wake_calendar_sync()
         if task_data and _is_schedule and self.settings.value("gcal_enabled", "true") == "true":
             gcal_push_queue.enqueue(self, task_data, create_if_missing=True)
         self.schedule_panel_refresh(left=True, center=True, right=True)
@@ -187,6 +189,8 @@ class TaskActionsMixin:
             changed, copied_ids = ddm.handle_task_drop(
                 self, task_id_list, target_date, target_time, action
             )
+            if changed > 0 and hasattr(self, "wake_calendar_sync"):
+                self.wake_calendar_sync()
 
             blocked_readonly_ids = list(getattr(self, "_last_drop_blocked_readonly_ids", []) or [])
             if blocked_readonly_ids and hasattr(self, "show_toast"):
@@ -244,6 +248,8 @@ class TaskActionsMixin:
     def handle_task_rename_requested(self, task_id, new_name):
         task = task_usecases.rename_task(db_task, task_id, new_name)
         if task:
+            if hasattr(self, "wake_calendar_sync"):
+                self.wake_calendar_sync()
             if self.settings.value("gcal_enabled", "true") == "true":
                 gcal_push_queue.enqueue(self, task, create_if_missing=True)
 
@@ -577,6 +583,8 @@ class TaskActionsMixin:
         """일정 리사이즈 후 종료 시간을 갱신."""
         task = task_usecases.resize_task_and_get_sync_payload(db_task, task_id, minutes)
         if task:
+            if hasattr(self, "wake_calendar_sync"):
+                self.wake_calendar_sync()
             gcal_push_queue.enqueue(self, task, create_if_missing=True)
             self.selected_task_ids.clear()
             self.update_task_selection_status()

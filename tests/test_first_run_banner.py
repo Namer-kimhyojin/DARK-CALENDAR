@@ -33,7 +33,7 @@ class _FakeHost(QWidget):
     def open_task_dialog(self):
         self.calls.append("schedule")
 
-    def open_gcal_settings_dialog(self):
+    def open_calendar_sync_hub(self):
         self.calls.append("calendar")
 
     def show_shortcut_guide(self):

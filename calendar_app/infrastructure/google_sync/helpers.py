@@ -202,6 +202,8 @@ def sync_task_to_google(
         or str((fresh or {}).get("gcal_target_calendar_id") or "").strip()
         or str((fresh or {}).get("gcal_source_calendar_id") or "").strip()
     )
+    if effective_calendar_id.split("::", 1)[0].lower() in {"outlook", "caldav"}:
+        return SyncTaskResult(event_id=None, success=True, error_kind="skipped_non_gcal")
     # Explicit non-gcal namespace task(local::/ics::/etc) should not fallback-push to default Google calendar.
     if (
         effective_calendar_id

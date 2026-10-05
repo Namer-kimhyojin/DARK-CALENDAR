@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>캘린더 연결 안내 | Air Calendar</title>
+  <meta name="description" content="Air Calendar 3.8.0의 Google, Outlook, iCloud, 네이버, ICS 연결 방법과 지원 범위, 충돌 해결 안내입니다.">
+  <link rel="canonical" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide.html">
+  <link rel="icon" href="assets/app_icon.png"><link rel="stylesheet" href="styles.css">
+  <style>
+    .guide{max-width:1000px;margin:auto;padding:36px 24px 80px;line-height:1.8}.guide header{display:flex;justify-content:space-between;gap:20px;margin-bottom:48px}.guide a{color:var(--accent)}.guide h1{font-size:clamp(30px,6vw,48px);line-height:1.2;margin:16px 0 24px}.guide h2{font-size:24px;margin:44px 0 16px}.guide h3{margin:20px 0 8px}.guide p,.guide li{color:var(--muted)}.guide ol,.guide ul{padding-left:24px}.guide section{padding:24px;border:1px solid var(--border);border-radius:20px;margin:24px 0}.guide section h2{margin-top:0}.guide img{width:100%;border-radius:20px;margin:24px 0}.guide .notice{border-left:3px solid var(--accent);padding-left:18px}.guide nav{display:flex;flex-wrap:wrap;gap:12px 24px}.guide code{overflow-wrap:anywhere}.guide footer{margin-top:48px;font-size:14px;color:var(--muted)}
+  </style>
+</head>
+<body><main class="guide">
+  <header><a href="index.html">← Air Calendar</a><a href="#en">English summary</a></header>
+  <p class="eyebrow">AIR CALENDAR 3.8.0 · CONNECTION GUIDE</p>
+  <h1>여러 캘린더를<br>하나의 흐름으로.</h1>
+  <p>시스템 메뉴의 <strong>캘린더 및 동기화 → 캘린더 통합 설정</strong>에서 서비스 연결, 캘린더 관리, 확인할 문제를 함께 관리합니다. 로컬 캘린더는 외부 계정 없이 사용할 수 있습니다.</p>
+  <img src="assets/sync-unified-hero.png" width="1920" height="1080" alt="여러 캘린더의 통합 연결을 표현한 홍보 이미지">
+  <nav aria-label="서비스 연결 안내"><a href="#google">Google</a><a href="#outlook">Outlook</a><a href="#icloud">iCloud</a><a href="#naver">네이버</a><a href="#ics">ICS</a><a href="#resolve">문제 해결</a></nav>
+  <h2>연결 → 선택 → 동기화 → 확인</h2>
+  <ol><li>서비스 카드에서 <strong>연결 설정</strong>을 엽니다.</li><li>인증을 마친 뒤 가져올 캘린더를 선택하고 저장합니다.</li><li><strong>지금 동기화</strong>로 확인한 후 자동 동기화를 켭니다. F5로 연결된 서비스를 함께 동기화할 수 있습니다.</li><li><strong>캘린더 관리</strong>에서 표시·이름·색상·기본 캘린더를 정하고, <strong>확인할 문제</strong>에서 충돌과 실패를 처리합니다.</li></ol>
+  <section id="google"><h2>Google Calendar</h2><p>일정 조회·생성·수정·삭제를 지원합니다. 현재 배포판은 사용자가 준비한 데스크톱 OAuth 인증 파일을 사용하는 방식입니다.</p><ol><li>Google Cloud에서 Calendar API를 활성화하고 데스크톱 앱 OAuth 클라이언트를 준비합니다.</li><li>Google 연결 설정에서 인증 JSON 파일을 선택하고 브라우저에서 로그인·권한 승인을 마칩니다.</li><li>동기화할 캘린더를 선택하고 저장합니다.</li></ol><p><a href="index.html#google-sync">홈페이지의 Google 인증 준비 상세 안내</a></p></section>
+  <section id="outlook"><h2>Outlook · Microsoft 365</h2><p>개인 Microsoft 계정과 회사·학교 계정의 일정 조회·생성·수정·삭제를 지원합니다. 현재 공용 로그인 앱 등록 전이므로 <strong>관리자가 준비한 캘린더 연동용 클라이언트 ID</strong>가 필요합니다. Store 제출 자동화 앱의 ID·비밀 키를 넣지 않습니다.</p><ol><li>관리자가 Entra에 개인 계정·모든 조직 계정을 지원하는 앱을 등록합니다.</li><li>모바일·데스크톱 플랫폼에 <code>http://localhost</code>를 추가하고 Microsoft Graph 위임 권한 <code>Calendars.ReadWrite</code>, <code>User.Read</code>를 설정합니다. 비밀 키는 필요하지 않습니다.</li><li>Outlook 연결 설정에 클라이언트 ID를 입력하고 Microsoft 로그인 후 캘린더를 선택합니다. 조직의 관리자 동의·MFA 정책이 적용될 수 있습니다.</li></ol><p><a href="https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app" rel="noopener">Microsoft 앱 등록 안내</a></p></section>
+  <section id="icloud"><h2>iCloud · CalDAV</h2><p>쓰기 권한이 있는 개인 일정의 조회·생성·수정·삭제를 지원합니다. Apple 계정 이메일과 <strong>앱 전용 암호</strong>를 사용합니다.</p><ol><li>이중 인증이 설정된 Apple 계정에서 앱 전용 암호를 발급합니다.</li><li>iCloud 연결 설정에 이메일과 앱 전용 암호를 입력하고 <strong>연결 확인 · 캘린더 찾기</strong>를 누릅니다.</li><li>캘린더를 선택하고 저장한 뒤 동기화합니다.</li></ol><p>Apple 계정의 기본 암호를 변경하면 앱 전용 암호도 취소되어 다시 발급해야 할 수 있습니다. <a href="https://support.apple.com/en-us/102654" rel="noopener">Apple 앱 전용 암호 안내</a></p></section>
+  <section id="naver"><h2>네이버 · CalDAV</h2><p><strong>읽기 전용 연결</strong>입니다. Windows에서의 연결 가능 여부는 네이버 서비스 정책에 따릅니다. 양방향 쓰기를 보장하거나 플랫폼 제한을 우회하지 않습니다.</p><ol><li>네이버 연결 설정에 ID와 인증용 암호를 입력합니다. 2단계 인증을 사용하는 개인 ID는 애플리케이션 비밀번호를 사용합니다.</li><li>연결 확인 후 가져올 캘린더를 선택합니다.</li><li>일정 수정·삭제는 네이버 원본 서비스에서 수행합니다.</li></ol><p>2단계 인증을 사용하는 단체 ID는 애플리케이션 비밀번호를 지원하지 않아 연결할 수 없습니다. <a href="https://help.naver.com/service/5620/contents/2426?lang=ko&amp;osType=COMMONOS" rel="noopener">네이버 공식 연결 안내</a></p></section>
+  <section id="ics"><h2>ICS 구독</h2><p>공휴일·공개 일정 등 ICS 주소를 입력해 <strong>읽기 전용</strong>으로 가져옵니다. 캘린더 관리에서 구독을 추가하고 표시·새로고침을 관리합니다. 비공개 일정 주소는 비밀번호처럼 보호하세요.</p></section>
+  <section id="resolve"><h2>충돌과 실패가 생겼을 때</h2><ul><li>양쪽에서 일정이 바뀌면 자동으로 덮어쓰지 않고 문제 목록에서 비교 후 선택합니다.</li><li>네트워크 오류·권한 거부·잘못된 응답은 정상적인 빈 캘린더로 처리하지 않습니다.</li><li>CalDAV는 변경된 일정 본문을 우선 내려받고, 일정 주소 변경은 UID와 기존 주소의 삭제 여부를 확인한 뒤 복구합니다.</li><li>읽기 전용 캘린더, CalDAV의 반복·초대 일정은 원본 서비스에서 수정합니다. Outlook의 전체 반복 시리즈 편집과 초대 응답, 서비스 간 자동 복사는 현재 지원 범위에 포함되지 않습니다.</li><li>연결 해제·캘린더 선택 해제는 원격 원본을 삭제하지 않습니다. Microsoft 서버의 앱 접근 권한 철회는 계정 관리 화면에서 별도로 수행합니다.</li></ul><p class="notice">서비스별 실제 계정의 인증·서버 정책에 따라 연결 결과가 달라질 수 있습니다. 인증 암호는 앱의 숨김 입력란에만 입력하고 게시판에 올리지 마세요. 오류는 비밀정보를 제거한 화면과 함께 <a href="index.html#requests">사용자 요청 게시판</a>에 알려주세요.</p></section>
+  <section id="en" lang="en"><h2>Connected calendars, one workflow</h2><p>Open System → Calendars &amp; sync → Unified calendar settings. Connect a service, choose calendars, sync, then review any issues. Google uses a desktop OAuth file; Outlook currently requires an administrator-provided calendar app client ID. iCloud uses an Apple app-specific password. Naver and ICS are read-only; Naver availability depends on its platform policy. Recurrence, invitation and cross-service editing have limits.</p><p>Credentials are encrypted for the current Windows user. Disconnecting does not delete events on the remote service. Local calendars work without an external account.</p></section>
+  <footer>2026-10-05 · <a href="privacy.html">개인정보처리방침</a> · <a href="index.html#calendar-sync">기능 소개</a></footer>
+</main></body></html>

@@ -44,7 +44,7 @@ class _Owner(QWidget):
     def jump_to_today(self):
         self.calls.append("today")
 
-    def sync_google_calendar(self):
+    def sync_calendars(self):
         self.calls.append("sync_google")
 
     def show_command_palette(self):

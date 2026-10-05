@@ -2,14 +2,14 @@
   "use strict";
 
   const fallbackConfig = {
-    appVersion: "3.7.10",
+    appVersion: "3.8.0",
     requestBoardApi: "https://air-calendar-requests.kimhj.chatgpt.site",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
     promotionKitUrl: "promo.html",
-    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.7.10",
-    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.7.10/LICENSE",
-    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.7.10/THIRD_PARTY_NOTICES.md",
+    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.8.0",
+    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.8.0/LICENSE",
+    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.8.0/THIRD_PARTY_NOTICES.md",
     eventUrl: "https://account.microsoft.com/billing/redeem?mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ",
     event: { enabled: true }
   };
@@ -499,6 +499,159 @@
     Object.assign(translations[locale], copy);
   });
 
+  const unifiedSyncTranslations = {
+  "ko": {
+    "navGoogle": "캘린더 연동",
+    "featureGoogleTitle": "서비스 통합 동기화",
+    "featureGoogleBody": "Google·Outlook·iCloud와 네이버·ICS 조회를 한곳에서",
+    "featureCalendarTypesTitle": "여섯 가지 캘린더 유형",
+    "featureCalendarTypesBody": "로컬·Google·공유·ICS·Outlook·CalDAV 관리",
+    "tabSyncSmall": "Unified calendar sync",
+    "faqTwoQ": "외부 캘린더 연결은 필수인가요?",
+    "faqTwoA": "아닙니다. 계정 없이 로컬 캘린더와 위젯을 사용하고, 필요할 때만 Google·Outlook·iCloud·네이버·ICS를 연결할 수 있습니다. 서비스별 인증 준비와 지원 범위가 다릅니다.",
+    "faqFiveA": "기본 데이터는 로컬에 저장됩니다. Google·Microsoft·Apple·네이버·ICS·날씨 등 사용자가 켠 외부 기능만 해당 제공자와 직접 통신합니다.",
+    "privacyBody": "로컬 저장을 기본으로 합니다. Google·Microsoft·Apple·네이버 캘린더, 날씨, ICS는 사용자가 연결한 기능에 한해 해당 서비스와 직접 통신합니다. 앱에는 개발자 분석 서버가 없습니다.",
+    "unifiedTitle": "여러 캘린더를<br><em>하나의 흐름으로.</em>",
+    "unifiedLead": "Google·Outlook·iCloud·네이버·ICS를 한곳에서 선택하고 관리하세요. 서비스별로 동기화하며, 서로 다른 서비스 사이에 일정을 자동 복사하지 않습니다.",
+    "unifiedImageAlt": "다양한 캘린더가 Air Calendar의 한 흐름으로 연결되는 모습",
+    "serviceGoogle": "양방향 일정 · 데스크톱 OAuth 인증 파일 필요",
+    "serviceOutlook": "양방향 일정 · 최초 캘린더용 Microsoft 앱 등록 필요",
+    "serviceIcloud": "개인 일정 양방향 · Apple 앱 전용 암호 사용",
+    "serviceNaver": "읽기 전용 · 서비스의 CalDAV 연결 정책에 따름",
+    "serviceIcs": "읽기 전용 구독 · 공휴일과 공개 일정 피드",
+    "unifiedStep1": "서비스 연결",
+    "unifiedStep1Body": "통합 설정에서 필요한 계정만 연결합니다.",
+    "unifiedStep2": "캘린더 선택",
+    "unifiedStep2Body": "가져올 캘린더와 자동 갱신을 정합니다.",
+    "unifiedStep3": "함께 동기화",
+    "unifiedStep3Body": "상단 버튼이나 F5로 연결된 캘린더를 갱신합니다.",
+    "unifiedStep4": "문제 해결",
+    "unifiedStep4Body": "충돌 내용을 비교하고, 실패한 서비스만 다시 확인합니다.",
+    "unifiedManage": "연결·목록·문제, 한곳에서.",
+    "unifiedManageBody": "서비스 상태와 전체 캘린더, 확인할 문제를 이어진 탭에서 관리합니다.",
+    "unifiedProtect": "양쪽의 변경을 보존합니다.",
+    "unifiedProtectBody": "동시에 수정한 일정은 비교 후 선택합니다. 원격 변경이 있는 삭제는 보류하고 로컬 사본을 보호합니다.",
+    "unifiedEfficient": "CalDAV 변경분만 다운로드.",
+    "unifiedEfficientBody": "변경되지 않은 본문은 캐시로 재사용하고, UID가 기록된 일정은 서버 주소가 바뀌어도 연결을 복구합니다.",
+    "unifiedLimit": "외부 서비스는 계정 준비와 권한이 필요하며 호환성은 서비스 정책에 따릅니다. 네이버·ICS·권한 없는 캘린더와 반복/초대 일정의 편집은 제한됩니다. 로컬 캘린더는 계정 없이 사용할 수 있습니다.",
+    "unifiedGuide": "서비스별 연결 안내와 지원 범위",
+    "unifiedGoogleGuide": "Google 연결 상세 안내 보기"
+  },
+  "en": {
+    "navGoogle": "Calendar sync",
+    "featureGoogleTitle": "Unified calendar sync",
+    "featureGoogleBody": "Google, Outlook, iCloud and read-only Naver/ICS in one place",
+    "featureCalendarTypesTitle": "Six calendar types",
+    "featureCalendarTypesBody": "Local, Google, shared, ICS, Outlook and CalDAV",
+    "tabSyncSmall": "Unified calendar sync",
+    "faqTwoQ": "Do I need an external calendar account?",
+    "faqTwoA": "No. Local calendars and widgets work without an account. Connect Google, Outlook, iCloud, Naver or ICS only when needed. Authentication preparation and support differ by service.",
+    "faqFiveA": "Data is local by default. Only enabled Google, Microsoft, Apple, Naver, ICS and weather features communicate directly with their providers.",
+    "privacyBody": "Local storage comes first. Connected Google, Microsoft, Apple, Naver, ICS and weather features communicate directly with the chosen provider. The app has no developer analytics server.",
+    "unifiedTitle": "Your calendars.<br><em>One connected flow.</em>",
+    "unifiedLead": "Select and manage Google, Outlook, iCloud, Naver and ICS together. Sync stays within each connected service; events are not automatically copied between services.",
+    "unifiedImageAlt": "Colorful calendars connected around the Air Calendar identity",
+    "serviceGoogle": "Two-way events · desktop OAuth credential file required",
+    "serviceOutlook": "Two-way events · calendar app registration required initially",
+    "serviceIcloud": "Two-way personal events · Apple app-specific password",
+    "serviceNaver": "Read-only · subject to Naver's CalDAV connection policy",
+    "serviceIcs": "Read-only subscriptions · holidays and public event feeds",
+    "unifiedStep1": "Connect",
+    "unifiedStep1Body": "Connect only the accounts you need in unified settings.",
+    "unifiedStep2": "Choose calendars",
+    "unifiedStep2Body": "Select calendars and decide on automatic refresh.",
+    "unifiedStep3": "Sync together",
+    "unifiedStep3Body": "Use the top button or F5 to refresh connected calendars.",
+    "unifiedStep4": "Resolve issues",
+    "unifiedStep4Body": "Compare conflicts and review the service that failed.",
+    "unifiedManage": "Connections, calendars, issues.",
+    "unifiedManageBody": "Move between service status, all calendars and issues in connected tabs.",
+    "unifiedProtect": "Keep both sides of a change.",
+    "unifiedProtectBody": "Compare concurrent edits before choosing. Changed remote events pause deletion and local copies are protected.",
+    "unifiedEfficient": "Download CalDAV changes.",
+    "unifiedEfficientBody": "Reuse unchanged content from the cache and recover changed server URLs for events with a recorded UID.",
+    "unifiedLimit": "External services require account setup and permissions. Compatibility follows each provider's policy. Naver, ICS and calendars without write access are read-only; recurring and invitation edits are limited. Local calendars work without an account.",
+    "unifiedGuide": "Connection guide and supported scope",
+    "unifiedGoogleGuide": "Show detailed Google connection guide"
+  },
+  "ja": {
+    "navGoogle": "カレンダー連携",
+    "featureGoogleTitle": "統合カレンダー同期",
+    "featureGoogleBody": "Google・Outlook・iCloudとNaver・ICSの閲覧を一か所で",
+    "featureCalendarTypesTitle": "6種類のカレンダー",
+    "featureCalendarTypesBody": "ローカル・Google・共有・ICS・Outlook・CalDAV",
+    "tabSyncSmall": "Unified calendar sync",
+    "faqTwoQ": "外部アカウントは必須ですか？",
+    "faqTwoA": "いいえ。ローカルカレンダーとウィジェットはアカウントなしで使えます。必要なときだけ外部サービスを接続できます。認証準備と対応範囲はサービスごとに異なります。",
+    "faqFiveA": "基本データはローカル保存です。有効にしたGoogle・Microsoft・Apple・Naver・ICS・天気機能だけが各提供元と直接通信します。",
+    "privacyBody": "ローカル保存を基本に、接続した外部機能だけが各サービスと直接通信します。アプリに開発者の分析サーバーはありません。",
+    "unifiedTitle": "複数のカレンダーを<br><em>ひとつの流れに。</em>",
+    "unifiedLead": "Google・Outlook・iCloud・Naver・ICSを一か所で選択・管理。同期は各サービス内で行い、別サービスへ予定を自動コピーしません。",
+    "unifiedImageAlt": "Air Calendarを中心にさまざまなカレンダーがつながる図",
+    "serviceGoogle": "双方向の予定 · デスクトップOAuth認証ファイルが必要",
+    "serviceOutlook": "双方向の予定 · 初回にカレンダー用アプリ登録が必要",
+    "serviceIcloud": "個人予定の双方向同期 · Appleアプリ用パスワード",
+    "serviceNaver": "閲覧専用 · NaverのCalDAV接続方針に従います",
+    "serviceIcs": "閲覧専用の購読 · 祝日と公開予定フィード",
+    "unifiedStep1": "サービス接続",
+    "unifiedStep1Body": "統合設定で必要なアカウントだけ接続。",
+    "unifiedStep2": "カレンダー選択",
+    "unifiedStep2Body": "取得するカレンダーと自動更新を選択。",
+    "unifiedStep3": "まとめて同期",
+    "unifiedStep3Body": "上部ボタンやF5で接続先を更新。",
+    "unifiedStep4": "問題の解決",
+    "unifiedStep4Body": "競合を比較し、失敗したサービスを確認。",
+    "unifiedManage": "接続・一覧・問題を一か所で。",
+    "unifiedManageBody": "サービス状態、全カレンダー、問題を連続したタブで管理。",
+    "unifiedProtect": "両方の変更を保護。",
+    "unifiedProtectBody": "同時編集は比較して選択。遠隔の変更がある削除は保留し、ローカルコピーを保護。",
+    "unifiedEfficient": "CalDAVの変更分を取得。",
+    "unifiedEfficientBody": "変更のない内容はキャッシュを再利用。UIDを記録した予定はサーバーURLの変更後も再接続。",
+    "unifiedLimit": "外部サービスにはアカウント準備と権限が必要です。互換性は各サービスの方針に従います。Naver・ICS・書き込み権限のないカレンダーは閲覧専用で、繰り返し・招待予定の編集も制限されます。",
+    "unifiedGuide": "サービス別接続ガイドと対応範囲",
+    "unifiedGoogleGuide": "Googleの詳細な接続ガイドを見る"
+  },
+  "zh": {
+    "navGoogle": "日历同步",
+    "featureGoogleTitle": "统一日历同步",
+    "featureGoogleBody": "统一管理Google、Outlook、iCloud及只读Naver和ICS",
+    "featureCalendarTypesTitle": "六种日历类型",
+    "featureCalendarTypesBody": "本地、Google、共享、ICS、Outlook和CalDAV",
+    "tabSyncSmall": "Unified calendar sync",
+    "faqTwoQ": "必须连接外部账号吗？",
+    "faqTwoA": "不需要。本地日历与小组件无需账号。可按需连接外部服务，各服务的认证准备和支持范围不同。",
+    "faqFiveA": "数据默认保存在本地。只有启用的Google、Microsoft、Apple、Naver、ICS及天气功能才直接与提供者通信。",
+    "privacyBody": "默认本地存储，只有连接的外部功能才直接与对应服务通信。应用没有开发者分析服务器。",
+    "unifiedTitle": "多个日历，<br><em>同一个工作流。</em>",
+    "unifiedLead": "统一选择和管理Google、Outlook、iCloud、Naver与ICS。同步仅在各连接服务内进行，不会自动跨服务复制事件。",
+    "unifiedImageAlt": "围绕Air Calendar连接的多彩日历",
+    "serviceGoogle": "双向事件 · 需要桌面OAuth凭据文件",
+    "serviceOutlook": "双向事件 · 首次需注册日历应用",
+    "serviceIcloud": "个人事件双向同步 · Apple应用专用密码",
+    "serviceNaver": "只读 · 遵循Naver的CalDAV连接政策",
+    "serviceIcs": "只读订阅 · 节假日及公开事件源",
+    "unifiedStep1": "连接服务",
+    "unifiedStep1Body": "在统一设置中按需连接账号。",
+    "unifiedStep2": "选择日历",
+    "unifiedStep2Body": "选择要获取的日历与自动更新。",
+    "unifiedStep3": "一起同步",
+    "unifiedStep3Body": "使用顶部按钮或F5更新连接的日历。",
+    "unifiedStep4": "解决问题",
+    "unifiedStep4Body": "比较冲突并检查失败的服务。",
+    "unifiedManage": "连接、列表、问题，一处管理。",
+    "unifiedManageBody": "通过连续的标签页管理服务状态、所有日历和问题。",
+    "unifiedProtect": "保留双方的更改。",
+    "unifiedProtectBody": "同时编辑后先比较再选择。远程更改会暂停删除，并保护本地副本。",
+    "unifiedEfficient": "只下载CalDAV更改内容。",
+    "unifiedEfficientBody": "重用未更改的缓存内容；已记录UID的事件可在服务器地址改变后恢复连接。",
+    "unifiedLimit": "外部服务需准备账号并授予权限，兼容性遵循服务政策。Naver、ICS及无写权限日历为只读；重复与邀请事件编辑受限。本地日历无需账号。",
+    "unifiedGuide": "各服务连接指南及支持范围",
+    "unifiedGoogleGuide": "查看Google详细连接指南"
+  }
+};
+  Object.entries(unifiedSyncTranslations).forEach(([locale, copy]) => Object.assign(translations[locale], copy));
+  Object.entries({ko: "필요한 서비스만 선택", en: "Connect only what you need", ja: "必要なサービスだけ接続", zh: "仅连接需要的服务"}).forEach(([locale, value]) => { translations[locale].trustGoogle = value; });
+
   const screens = {
     ko: {
       main: { image: "assets/screenshots/main-dashboard.png", alt: "Air Calendar 월간 캘린더와 업무 패널 화면", kicker: "CALENDAR WORKSPACE", title: "달력과 실행 목록 사이의 거리를 없앴습니다.", description: "월간 캘린더 오른쪽에 이번 주 일정, 루틴, 디렉티브가 이어집니다. 날짜를 확인한 자리에서 해야 할 일을 바로 선택할 수 있습니다.", points: ["멀티데이 일정과 드래그 범위 선택", "오늘·이번 주 패널 전환", "루틴과 실행 항목 분리 관리"] },
@@ -526,7 +679,11 @@
     }
   };
 
-  const richTextKeys = new Set(["heroTitle", "desktopTitle", "featuresTitle", "atlasTitle", "exploreTitle", "googleTitle", "workflowTitle", "privacyTitle", "faqTitle", "ctaTitle", "shareTitle"]);
+  Object.entries(unifiedSyncTranslations).forEach(([locale, copy]) => {
+    screens[locale].sync = { image: `assets/screenshots/sync-services-${locale}.png`, alt: copy.unifiedManage, kicker: 'UNIFIED CALENDAR SYNC', title: copy.unifiedManage, description: copy.unifiedLead, points: [copy.unifiedProtect, copy.unifiedEfficient, copy.unifiedStep4] };
+  });
+
+  const richTextKeys = new Set(["unifiedTitle", "heroTitle", "desktopTitle", "featuresTitle", "atlasTitle", "exploreTitle", "googleTitle", "workflowTitle", "privacyTitle", "faqTitle", "ctaTitle", "shareTitle"]);
   let currentLanguage = "ko";
   let currentScreen = "main";
   let currentConfig = fallbackConfig;

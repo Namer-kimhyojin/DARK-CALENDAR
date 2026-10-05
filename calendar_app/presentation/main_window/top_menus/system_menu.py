@@ -62,17 +62,26 @@ def build_system_menu(self, top_bar, menu_btn_style="", menu_style=""):
     set_themed_icon(act_daily, ICON.STATUS_TODAY, icon_color)
     self.sys_menu.addSeparator()
 
-    # ── 구글 캘린더 서브메뉴 ──────────────────────────────────────────────────
-    self.gcal_menu = self.sys_menu.addMenu(_se(t("menu.gcal_submenu", "캘린더 및 동기화")))
-    set_themed_icon(self.gcal_menu, ICON.GCAL, icon_color)
+    # Compatibility attribute names remain; all common actions are provider-neutral.
+    self.gcal_menu = self.sys_menu.addMenu(_se(t("sync_unified.menu", "캘린더 및 동기화")))
+    set_themed_icon(self.gcal_menu, ICON.SYNC, icon_color)
     self.gcal_menu.setStyleSheet(menu_style)
+    sync_all = self.gcal_menu.addAction(
+        _se(t("sync_unified.sync_all", "연결된 모든 캘린더 동기화")), self.sync_calendars
+    )
+    set_themed_icon(sync_all, ICON.SYNC, icon_color)
+
     self.gcal_settings_act = self.gcal_menu.addAction(
-        _se(t("menu.sync_account", "캘린더 통합 설정...")), self.open_gcal_settings_dialog
+        _se(t("sync_ui.hub_title", "캘린더 · 계정 및 동기화")), self.open_calendar_sync_hub
     )
     set_themed_icon(self.gcal_settings_act, ICON.SYNC_SETTINGS, icon_color)
+    manage_act = self.gcal_menu.addAction(
+        _se(t("sync_unified.calendars", "전체 캘린더")), self.open_calendar_management
+    )
+    set_themed_icon(manage_act, ICON.CHECKLIST, icon_color)
     self.gcal_sync_issues_act = self.gcal_menu.addAction(
-        _se(t("menu.sync_issues", "동기화 문제 보기")),
-        self.open_gcal_sync_issues_dialog,
+        _se(t("sync_unified.issues", "전체 동기화 문제")),
+        self.open_calendar_sync_issues,
     )
     set_themed_icon(
         self.gcal_sync_issues_act,

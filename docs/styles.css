@@ -2346,3 +2346,25 @@ h2 em {
     transition-duration: 0.01ms !important;
   }
 }
+
+.sync-overview { display: grid; grid-template-columns: 1.2fr 1fr; border: 1px solid var(--line); border-radius: 24px; overflow: hidden; }
+.sync-overview-art { min-width: 0; margin: 0; background: #e8edf1; display: flex; align-items: center; }
+.sync-overview-art img { display: block; width: 100%; height: auto; }
+.sync-service-list { padding: 18px 32px; }
+.sync-service-list article { display: flex; gap: 16px; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--line); }
+.sync-service-list article:last-child { border-bottom: 0; }
+.sync-service-list h3 { margin: 0 0 7px; font-size: 17px; }
+.sync-service-list p { color: var(--muted); line-height: 1.7; font-size: 13px; margin: 0; }
+.service-dot { width: 12px; height: 12px; flex: 0 0 12px; border-radius: 50%; }
+.google-dot { background: #efa877; } .outlook-dot { background: #77b5ed; } .icloud-dot { background: #b6a0ed; } .naver-dot { background: #74c39b; } .ics-dot { background: #efc66e; }
+.sync-steps { display: grid; grid-template-columns: repeat(4, 1fr); list-style: none; padding: 0; margin: 42px 0 0; gap: 24px; }
+.sync-steps li { padding: 24px 0; border-top: 1px solid var(--line); min-width: 0; }
+.sync-steps span { font-size: 12px; color: var(--accent); letter-spacing: .12em; }
+.sync-steps h3 { margin: 20px 0 10px; font-size: 19px; }
+.sync-steps p, .sync-compatibility { color: var(--muted); font-size: 14px; line-height: 1.8; }
+.sync-compatibility { margin: 26px 0 24px; max-width: 940px; }
+.sync-google-details { padding-top: 20px; padding-bottom: 64px; }
+.sync-google-details > summary { padding: 25px 0; border-top: 1px solid var(--line); color: var(--text); font-size: 18px; cursor: pointer; }
+.sync-google-details[open] > summary { margin-bottom: 44px; }
+@media (max-width: 900px) { .sync-overview { grid-template-columns: 1fr; } .sync-steps { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .sync-service-list { padding: 10px 22px; } .sync-steps { gap: 12px 24px; } .sync-steps h3 { font-size: 17px; } .sync-google-details > summary { font-size: 16px; } }

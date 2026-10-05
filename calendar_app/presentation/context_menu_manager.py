@@ -134,16 +134,17 @@ def show_center_context_menu(app, pos):
     )
     act_today.setIcon(icon(ICON.GOTO_TODAY))
 
-    gcal_menu = menu.addMenu(t("context_menu.sync_google", default="Google Calendar"))
-    gcal_menu.setIcon(icon(ICON.GCAL))
+    gcal_menu = menu.addMenu(t("sync_unified.menu", "캘린더 및 동기화"))
+    gcal_menu.setIcon(icon(ICON.SYNC))
     act_sync_now = gcal_menu.addAction(
-        t("context_menu.sync_now", default="Sync Now"), app.sync_google_calendar
+        t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"), app.sync_calendars
     )
     act_sync_now.setIcon(icon(ICON.SYNC))
     act_sync_cfg = gcal_menu.addAction(
-        t("context_menu.sync_settings", default="Sync Settings"), app.open_gcal_settings_dialog
+        t("sync_ui.hub_title", "캘린더 · 계정 및 동기화"), app.open_calendar_sync_hub
     )
     act_sync_cfg.setIcon(icon(ICON.SYNC_SETTINGS))
+    gcal_menu.addAction(t("sync_unified.issues", "전체 동기화 문제"), app.open_calendar_sync_issues)
 
     screen_menu = menu.addMenu(t("context_menu.screen_mgmt", default="Screen Management"))
     screen_menu.setIcon(icon(ICON.SCREEN_MGMT))

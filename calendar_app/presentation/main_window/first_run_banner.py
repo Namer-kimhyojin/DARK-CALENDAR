@@ -62,8 +62,8 @@ def build_first_run_banner(app) -> QFrame | None:
     title.setObjectName("firstRunTitle")
     body = QLabel(
         t(
-            "welcome.body",
-            "로컬 일정은 바로 사용할 수 있고, 필요할 때 Google 캘린더를 연결할 수 있습니다.",
+            "sync_unified.welcome",
+            "로컬 일정은 바로 사용할 수 있고, 필요할 때 Google·Outlook·iCloud·네이버 또는 ICS 캘린더를 연결할 수 있습니다.",
         )
     )
     body.setObjectName("firstRunBody")
@@ -97,7 +97,7 @@ def build_first_run_banner(app) -> QFrame | None:
         (
             "ghost_btn",
             t("welcome.connect_calendar", "캘린더 연결"),
-            app.open_gcal_settings_dialog,
+            app.open_calendar_sync_hub,
         ),
         (
             "ghost_btn",

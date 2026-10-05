@@ -1791,8 +1791,7 @@ def render_calendar(app):
         manage_act._cal_vis_action = True
 
         def _open_manage():
-            if hasattr(app, "open_gcal_settings_dialog"):
-                app.open_gcal_settings_dialog(initial_tab="calendar")
+            app.open_calendar_management()
 
         manage_act.triggered.connect(_open_manage)
         opt_menu.addAction(manage_act)
@@ -1812,10 +1811,10 @@ def render_calendar(app):
     sync_btn = QPushButton()
     sync_btn.setIcon(_ic(ICON.SYNC, color=_icon_color))
     sync_btn.setIconSize(QSize(15, 15))
-    sync_btn.setToolTip(t("calendar.sync_hint"))
+    sync_btn.setToolTip(t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"))
     sync_btn.setStyleSheet(icon_btn_style)
     sync_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    sync_btn.clicked.connect(app.sync_google_calendar)
+    sync_btn.clicked.connect(app.sync_calendars)
 
     # 선택 상태 ?쒖떆 ?쇰꺼 (캘린더?대컮 ?곗륫 諛곗튂)
     from PyQt6.QtGui import QFont as _QFont

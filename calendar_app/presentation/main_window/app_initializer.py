@@ -75,6 +75,15 @@ def initialize_overlay_app(app) -> None:
     app._gcal_sync_issue_count = 0
     app._gcal_waiting_for_auth = False
     app._bg_workers = []
+    app._outlook_sync_controller = None
+    app.outlook_sync_timer = None
+    app._caldav_sync_controllers = {}
+    app._calendar_sync_coordinator = None
+    app._wake_sync_timer = None
+    app.icloud_sync_timer = None
+    app.naver_sync_timer = None
+    app.icloud_startup_sync_timer = None
+    app.naver_startup_sync_timer = None
     app._sync_worker = None
     app._auth_worker = None
     app._is_shutting_down = False
@@ -124,6 +133,22 @@ def initialize_overlay_app(app) -> None:
 
     app.generate_today_routines()
     app.init_gcal_sync_timer()
+    from calendar_app.presentation.main_window.outlook_sync_controller import OutlookSyncController
+
+    app._outlook_sync_controller = OutlookSyncController(app)
+    app.outlook_sync_timer = app._outlook_sync_controller.timer
+    from calendar_app.presentation.main_window.caldav_sync_controller import CalDAVSyncController
+
+    for service in ("icloud", "naver"):
+        controller = CalDAVSyncController(app, service)
+        app._caldav_sync_controllers[service] = controller
+        setattr(app, service + "_sync_timer", controller.timer)
+        setattr(app, service + "_startup_sync_timer", controller.startup_timer)
+    from calendar_app.presentation.main_window.calendar_sync_coordinator import (
+        CalendarSyncCoordinator,
+    )
+
+    app._calendar_sync_coordinator = CalendarSyncCoordinator(app)
     _initialize_alarm_checker(app)
     _initialize_daily_summary(app)
 

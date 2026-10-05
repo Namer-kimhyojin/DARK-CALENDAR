@@ -102,6 +102,42 @@
     "confirm": "Konfirmasi",
     "ok": "OKE"
   },
+  "caldav": {
+    "cancel_delete": "Cancel deletion and keep service event",
+    "connect": "Verify connection and find calendars",
+    "connected": "Connected. Select calendars and save.",
+    "connecting": "Verifying account and finding calendars...",
+    "connection": "1. Connect account",
+    "delete_pending": "Deletion pending: {attempts}/5 attempts",
+    "disconnecting": "Disconnecting...",
+    "help": "Service authentication guide",
+    "icloud_guide": "iCloud: enable two-factor authentication and generate an app-specific password. Personal events support two-way sync.",
+    "icloud_user": "Apple Account email",
+    "idle": "Connect your account, then select calendars and save.",
+    "keep_remote": "Apply service version",
+    "last_success": "Last successful sync: {time}",
+    "menu": "Connect iCloud / Naver...",
+    "naver": "Naver",
+    "naver_guide": "Naver: read-only import. With two-step verification, use an application password. Windows connections may be restricted by service policy.",
+    "naver_user": "Naver ID",
+    "not_connected": "Not connected",
+    "password": "App-specific password",
+    "privacy": "Your password is encrypted for this Windows user. Disconnecting preserves existing events.",
+    "problems": "3. Review issues",
+    "refresh": "Refresh list",
+    "refreshed": "List refreshed. Review your selection and save.",
+    "refreshing": "Refreshing calendar list...",
+    "save": "Save selection",
+    "scope": "Range: past 120 days to next 400 days. Recurring events and invitations are view-only. Deselecting stops sync. Events are not copied between services automatically.",
+    "selection": "2. Choose calendars",
+    "service": "Calendar service",
+    "show_password": "Show entered password",
+    "syncing": "Synchronizing events...",
+    "title": "iCloud / Naver calendar connection",
+    "two_way": "Two-way",
+    "type": "CalDAV",
+    "username": "Account"
+  },
   "calendar": {
     "add_hint": "Tambah Acara",
     "date_cell_accessible": "{date} date cell",
@@ -127,7 +163,15 @@
     "sync_hint": "Sinkr. Google",
     "today": "Hari Ini",
     "today_hint": "Ke hari ini",
-    "weekdays": ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"]
+    "weekdays": [
+      "Sen",
+      "Sel",
+      "Rab",
+      "Kam",
+      "Jum",
+      "Sab",
+      "Min"
+    ]
   },
   "checklist_mgr": {
     "btn_add_item": "Tambahkan Barang",
@@ -1543,6 +1587,58 @@
   "meta": {
     "language_name": "Bahasa Indonesia (Indonesian)"
   },
+  "outlook": {
+    "auto_sync": "Automatically synchronize every 5 minutes",
+    "calendar_selection": "Choose calendars to synchronize",
+    "cancel_delete": "Cancel deletion and keep Outlook event",
+    "client_id": "Application (client) ID",
+    "client_id_hint": "Client ID from Entra app registration (not a secret)",
+    "close": "Close",
+    "delete_issue": "Deletion pending / {attempts} of 5 attempts / {kind}",
+    "disconnect": "Disconnect",
+    "issue": "Event #{id}: {kind}",
+    "issue_conflict": "Changed on both sides; choose a version",
+    "issue_delete_conflict": "Deletion paused because Outlook content changed",
+    "issue_deleted": "Deleted in Outlook; local event preserved",
+    "issue_meeting": "Edit online meeting descriptions in Outlook",
+    "issue_move": "Calendar move unsupported; return to the original calendar",
+    "issue_read_only": "Calendar has no write permission",
+    "issue_recurrence": "Recurrence rule editing unsupported",
+    "keep_local": "Conflict: keep my changes",
+    "keep_remote": "Conflict: use Outlook version",
+    "login": "Sign in with Microsoft",
+    "managed_calendar": "Deselect this calendar in connection settings. Existing events are preserved.",
+    "menu": "Connect Outlook / Microsoft 365...",
+    "not_connected": "No Microsoft account connected.",
+    "pending": "Pending",
+    "read_only": "Read only",
+    "retry_delete": "Retry selected deletion",
+    "save_calendars": "Save calendar selection",
+    "scope": "View: 120 days back to 400 days ahead. Recurring events appear as individual occurrences.\nRemotely deleted events are preserved locally and listed as issues.\nRecurrence rules, cross-service moves and invitation responses are not supported in this phase.",
+    "setup_guide": "Open Microsoft app registration guide",
+    "setup_intro": "Connect a personal Outlook or work/school account.\nAn administrator must register the integration app first. No client secret is needed.",
+    "setup_steps": "App registration: organizational and personal Microsoft accounts\nPlatform: Mobile and desktop / Redirect URI: http://localhost\nGraph delegated permissions: Calendars.ReadWrite, User.Read",
+    "status_access": "Calendar access was lost. Check sign-in and calendar selection.",
+    "status_auth": "Microsoft sign-in is required. Check permission consent and organization policies.",
+    "status_client": "Enter a valid application (client) ID.",
+    "status_completed": "Sync completed",
+    "status_connected": "Signed in. Select calendars and save.",
+    "status_dependency": "The Microsoft sign-in module is unavailable. Install the requirements.txt dependencies.",
+    "status_disconnect_first": "Disconnect before changing the client ID.",
+    "status_disconnected": "Disconnected. Existing events are preserved.",
+    "status_failed": "Unable to complete the operation. Error code: {code}",
+    "status_idle": "Sign in, select calendars and save your selection.",
+    "status_login": "Complete Microsoft sign-in in your browser. Waiting up to 2 minutes.",
+    "status_network": "Check your network connection and try again.",
+    "status_saved": "Calendar selection saved.",
+    "status_sync": "Synchronizing Outlook events...",
+    "summary": "Imported {imported} / Updated {updated} / Created {created} / Deleted {deleted} / Issues {issues}",
+    "sync_now": "Sync now",
+    "tab_account": "Account connection",
+    "tab_sync": "Calendars and sync issues",
+    "title": "Outlook / Microsoft 365 sync",
+    "type": "Outlook / Microsoft 365"
+  },
   "palette": {
     "accessible_hint": "Usage guidance",
     "accessible_results": "Search results",
@@ -1558,7 +1654,13 @@
     "hint_record_jump": "Enter membuka item. Shift+Enter pindah ke tanggalnya.",
     "hint_run_command": "Enter menjalankan perintah yang dipilih",
     "kw": {
-      "theme": ["theme", "dark", "light", "color", "appearance"]
+      "theme": [
+        "theme",
+        "dark",
+        "light",
+        "color",
+        "appearance"
+      ]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Tekan Enter untuk membuka hasil yang dipilih",
@@ -1811,223 +1913,362 @@
         "description": "Segera memulai mode kunci saat tidak ada di tempat.",
         "label": "Kunci saat tidak ada",
         "menu_path": "Tampilan > Kunci saat tidak ada",
-        "tags": ["tidak ada", "kunci"]
+        "tags": [
+          "tidak ada",
+          "kunci"
+        ]
       },
       "cal_toolbar": {
         "description": "Menyembunyikan atau menampilkan kembali bilah alat kalender.",
         "label": "Alihkan bilah alat kalender",
         "menu_path": "Tampilan > Bilah alat kalender",
-        "tags": ["kalender", "bilah alat"]
+        "tags": [
+          "kalender",
+          "bilah alat"
+        ]
       },
       "calendar_print": {
         "description": "Melihat pratinjau dan mencetak kalender untuk periode saat ini atau yang dipilih.",
         "label": "Cetak kalender",
         "menu_path": "Kalender > Opsi > Cetak",
-        "tags": ["cetak", "printer", "PDF"]
+        "tags": [
+          "cetak",
+          "printer",
+          "PDF"
+        ]
       },
       "checklist": {
         "description": "Mengelola templat dan struktur item daftar periksa.",
         "label": "Kelola daftar periksa",
         "menu_path": "Tugas > Kelola daftar periksa",
-        "tags": ["daftar periksa", "templat"]
+        "tags": [
+          "daftar periksa",
+          "templat"
+        ]
       },
       "color_assign": {
         "description": "Secara otomatis menetapkan warna ke item yang dipilih.",
         "label": "Penetapan warna otomatis",
         "menu_path": "Tugas > Penetapan warna otomatis",
-        "tags": ["warna", "label", "otomatis"]
+        "tags": [
+          "warna",
+          "label",
+          "otomatis"
+        ]
       },
       "command_palette": {
         "description": "Membuka kotak pencarian perintah untuk menemukan fitur secara instan.",
         "label": "Palet perintah",
         "menu_path": "Panggilan langsung",
-        "tags": ["cari", "perintah", "palet"]
+        "tags": [
+          "cari",
+          "perintah",
+          "palet"
+        ]
       },
       "delete": {
         "description": "Menghapus jadwal atau item yang sedang dipilih.",
         "label": "Hapus item yang dipilih",
         "menu_path": "Status pemilihan",
-        "tags": ["hapus", "buang"]
+        "tags": [
+          "hapus",
+          "buang"
+        ]
       },
       "escape": {
         "description": "Menghapus pilihan atau fokus saat ini.",
         "label": "Hapus pilihan",
         "menu_path": "Status pemilihan",
-        "tags": ["batalkan pilihan", "batal", "escape"]
+        "tags": [
+          "batalkan pilihan",
+          "batal",
+          "escape"
+        ]
       },
       "focus_mode": {
         "description": "Mengaktifkan atau menonaktifkan mode fokus.",
         "label": "Alihkan mode fokus",
         "menu_path": "Tampilan > Mode fokus",
-        "tags": ["fokus", "pomodoro"]
+        "tags": [
+          "fokus",
+          "pomodoro"
+        ]
       },
       "focus_pause": {
         "description": "Menjeda atau melanjutkan sesi fokus saat ini.",
         "label": "Jeda fokus",
         "menu_path": "Mode fokus",
-        "tags": ["fokus", "jeda"]
+        "tags": [
+          "fokus",
+          "jeda"
+        ]
       },
       "force_unlock": {
         "description": "Secara paksa menghapus status kunci yang tidak terduga.",
         "label": "Paksa buka kunci",
         "menu_path": "Pemulihan darurat",
-        "tags": ["paksa", "buka kunci", "pemulihan", "darurat"]
+        "tags": [
+          "paksa",
+          "buka kunci",
+          "pemulihan",
+          "darurat"
+        ]
       },
       "fullscreen": {
         "description": "Mengaktifkan atau menonaktifkan tampilan layar penuh.",
         "label": "Alihkan layar penuh",
         "menu_path": "Tampilan > Layar penuh",
-        "tags": ["layar penuh"]
+        "tags": [
+          "layar penuh"
+        ]
       },
       "help": {
         "description": "Membuka pusat bantuan.",
         "label": "Panduan pintasan",
         "menu_path": "Sistem > Panduan pintasan",
-        "tags": ["bantuan", "F1"]
+        "tags": [
+          "bantuan",
+          "F1"
+        ]
       },
       "layout_1": {
         "description": "Menerapkan tata letak 4 panel berlabuh default.",
         "label": "Preset tata letak 1",
         "menu_path": "Tampilan > Preset tata letak",
-        "tags": ["tata letak", "preset", "berlabuh", "1"]
+        "tags": [
+          "tata letak",
+          "preset",
+          "berlabuh",
+          "1"
+        ]
       },
       "layout_2": {
         "description": "Menerapkan tata letak yang berpusat pada kalender.",
         "label": "Preset tata letak 2",
         "menu_path": "Tampilan > Preset tata letak",
-        "tags": ["tata letak", "kalender", "2"]
+        "tags": [
+          "tata letak",
+          "kalender",
+          "2"
+        ]
       },
       "layout_3": {
         "description": "Menerapkan tata letak yang berpusat pada tugas.",
         "label": "Preset tata letak 3",
         "menu_path": "Tampilan > Preset tata letak",
-        "tags": ["tata letak", "tugas", "3"]
+        "tags": [
+          "tata letak",
+          "tugas",
+          "3"
+        ]
       },
       "layout_4": {
         "description": "Menerapkan tata letak tab terbagi.",
         "label": "Preset tata letak 4",
         "menu_path": "Tampilan > Preset tata letak",
-        "tags": ["tata letak", "tab", "terbagi", "4"]
+        "tags": [
+          "tata letak",
+          "tab",
+          "terbagi",
+          "4"
+        ]
       },
       "layout_5": {
         "description": "Menerapkan tata letak mengambang yang sepenuhnya terpisah.",
         "label": "Preset tata letak 5",
         "menu_path": "Tampilan > Preset tata letak",
-        "tags": ["tata letak", "terpisah", "mengambang", "5"]
+        "tags": [
+          "tata letak",
+          "terpisah",
+          "mengambang",
+          "5"
+        ]
       },
       "lock_mode": {
         "description": "Mengaktifkan atau menonaktifkan mode kunci desktop.",
         "label": "Mode kunci",
         "menu_path": "Tampilan > Mode kunci",
-        "tags": ["kunci"]
+        "tags": [
+          "kunci"
+        ]
       },
       "magnet_mode": {
         "description": "Mengalihkan mode magnet, yang membantu menyelaraskan dan menempelkan panel.",
         "label": "Mode magnet",
         "menu_path": "Tampilan > Mode magnet",
-        "tags": ["magnet", "panel"]
+        "tags": [
+          "magnet",
+          "panel"
+        ]
       },
       "monitor_left": {
         "description": "Memindahkan jendela ke monitor lain.",
         "label": "Pindah ke monitor sebelumnya",
         "menu_path": "Kontrol jendela",
-        "tags": ["monitor", "layar", "kiri"]
+        "tags": [
+          "monitor",
+          "layar",
+          "kiri"
+        ]
       },
       "monitor_right": {
         "description": "Memindahkan jendela ke monitor lain.",
         "label": "Pindah ke monitor berikutnya",
         "menu_path": "Kontrol jendela",
-        "tags": ["monitor", "layar", "kanan"]
+        "tags": [
+          "monitor",
+          "layar",
+          "kanan"
+        ]
       },
       "new_directive": {
         "description": "Membuka jendela untuk memasukkan arahan atau item kerja sama.",
         "label": "Daftarkan arahan",
         "menu_path": "Daftarkan > Arahan",
-        "tags": ["arahan", "kerja sama"]
+        "tags": [
+          "arahan",
+          "kerja sama"
+        ]
       },
       "new_routine": {
         "description": "Dengan cepat menambahkan rutinitas tugas berulang.",
         "label": "Daftarkan rutinitas",
         "menu_path": "Daftarkan > Rutinitas",
-        "tags": ["rutinitas", "tugas", "berulang"]
+        "tags": [
+          "rutinitas",
+          "tugas",
+          "berulang"
+        ]
       },
       "new_schedule": {
         "description": "Langsung membuka jendela entri jadwal.",
         "label": "Tambah jadwal baru",
         "menu_path": "Daftarkan > Jadwal baru",
-        "tags": ["jadwal", "tambah", "daftarkan"]
+        "tags": [
+          "jadwal",
+          "tambah",
+          "daftarkan"
+        ]
       },
       "next_day": {
         "description": "Berpindah satu hari setelah tanggal saat ini.",
         "label": "Hari berikutnya",
         "menu_path": "Navigasi",
-        "tags": ["berikutnya", "tanggal", "kanan"]
+        "tags": [
+          "berikutnya",
+          "tanggal",
+          "kanan"
+        ]
       },
       "opacity_down": {
         "description": "Mengurangi opasitas jendela.",
         "label": "Kurangi opasitas",
         "menu_path": "Kontrol jendela",
-        "tags": ["opasitas", "lebih gelap"]
+        "tags": [
+          "opasitas",
+          "lebih gelap"
+        ]
       },
       "opacity_up": {
         "description": "Meningkatkan opasitas jendela.",
         "label": "Tingkatkan opasitas",
         "menu_path": "Kontrol jendela",
-        "tags": ["opasitas", "lebih terang"]
+        "tags": [
+          "opasitas",
+          "lebih terang"
+        ]
       },
       "prev_day": {
         "description": "Berpindah satu hari sebelum tanggal saat ini.",
         "label": "Hari sebelumnya",
         "menu_path": "Navigasi",
-        "tags": ["sebelumnya", "tanggal", "kiri"]
+        "tags": [
+          "sebelumnya",
+          "tanggal",
+          "kiri"
+        ]
       },
       "restore_pos": {
         "description": "Memulihkan jendela ke posisi layar yang aman.",
         "label": "Pulihkan posisi jendela",
         "menu_path": "Kontrol jendela",
-        "tags": ["jendela", "pulihkan", "posisi"]
+        "tags": [
+          "jendela",
+          "pulihkan",
+          "posisi"
+        ]
       },
       "routine_mgr": {
         "description": "Langsung membuka tab pengelola rutinitas.",
         "label": "Pengelola rutinitas",
         "menu_path": "Tugas > Ringkasan rutinitas",
-        "tags": ["rutinitas", "kelola"]
+        "tags": [
+          "rutinitas",
+          "kelola"
+        ]
       },
       "save_layout": {
         "description": "Menyimpan susunan panel saat ini sebagai preset.",
         "label": "Simpan tata letak saat ini",
         "menu_path": "Tampilan > Preset tata letak > Simpan",
-        "tags": ["tata letak", "preset", "simpan"]
+        "tags": [
+          "tata letak",
+          "preset",
+          "simpan"
+        ]
       },
       "show_hide": {
         "description": "Menyembunyikan jendela utama atau menampilkannya kembali.",
         "label": "Tampilkan/sembunyikan jendela",
         "menu_path": "Kontrol jendela",
-        "tags": ["jendela", "sembunyikan", "tampilkan", "overlay"]
+        "tags": [
+          "jendela",
+          "sembunyikan",
+          "tampilkan",
+          "overlay"
+        ]
       },
       "sync_gcal": {
-        "description": "Segera memulai sinkronisasi dengan Google Kalender.",
-        "label": "Sinkronkan Google Kalender",
-        "menu_path": "Sistem > Kalender dan sinkronisasi",
-        "tags": ["google", "sinkronisasi", "kalender", "F5"]
+        "description": "Start synchronization for all connected calendars.",
+        "label": "Sync all connected calendars",
+        "menu_path": "System > Calendars and sync",
+        "tags": [
+          "Google",
+          "Outlook",
+          "iCloud",
+          "Naver",
+          "ICS",
+          "F5",
+          "sync"
+        ]
       },
       "today": {
         "description": "Segera memindahkan tanggal yang dipilih ke hari ini.",
         "label": "Lompat ke hari ini",
         "menu_path": "Navigasi",
-        "tags": ["hari ini", "tanggal"]
+        "tags": [
+          "hari ini",
+          "tanggal"
+        ]
       },
       "topbar": {
         "description": "Mengalihkan visibilitas bilah menu atas.",
         "label": "Alihkan bilah atas",
         "menu_path": "Tampilan > Bilah atas",
-        "tags": ["bilah menu", "bilah atas", "pemulihan"]
+        "tags": [
+          "bilah menu",
+          "bilah atas",
+          "pemulihan"
+        ]
       },
       "widget_mode": {
         "description": "Membuka mode panel khusus widget.",
         "label": "Alihkan mode widget",
         "menu_path": "Tampilan > Mode khusus widget",
-        "tags": ["widget", "panel"]
+        "tags": [
+          "widget",
+          "panel"
+        ]
       }
     },
     "groups": {
@@ -2186,6 +2427,120 @@
     "status_confirmed": "Dikonfirmasi",
     "status_tentative": "Bisa berubah"
   },
+  "sync_ui": {
+    "access_lost": "Access to a selected calendar was lost. Existing events were preserved. Refresh and select calendars again.",
+    "auth": "Authentication expired or the password is incorrect. Reconnect your account.",
+    "auto_off": "Automatic sync off",
+    "auto_on": "Automatic sync on",
+    "busy": "This account is already syncing. Wait for completion.",
+    "cancelled": "The operation was cancelled. Existing events are preserved.",
+    "changed": "The remote event changed first. Sync again and compare both versions.",
+    "compare_hint": "Select a conflict to compare your changes with the service version.",
+    "configure": "Connect / settings",
+    "conflict": "Edited on both sides. Compare and choose a version.",
+    "connected": "Connected",
+    "create_conflict": "Another event uses the same creation identifier. Creation was held without overwriting the original.",
+    "credentials": "Enter your account and app-specific password.",
+    "delete_conflict": "The remote event changed before deletion. Deletion was held.",
+    "dependency": "A sync component is missing. Reinstall the latest application.",
+    "discovery": "Calendar locations were not found. Check the account and service CalDAV support.",
+    "duplicate": "Duplicate event responses were received. Sync was stopped for safety.",
+    "etag": "The service did not return event version information. The update was held. Sync again.",
+    "event_name": "Enter an event title and sync again.",
+    "event_range": "The end must be after the start. Check the event date and time.",
+    "event_read_only": "Recurring events and invitations are view-only. Edit or delete them in the original service.",
+    "event_time": "The event date or timezone could not be read. Check its original time settings.",
+    "failed": "The operation could not be completed. Existing events are preserved. Check account settings and try again.",
+    "google_capability": "Two-way events; shared calendars depend on permissions",
+    "google_problems": "Google sync issues",
+    "hub_intro": "Connect a service and choose calendars to import. Each account syncs independently. Events are not copied between services automatically.",
+    "hub_note": "Disconnecting or deselecting calendars does not delete original service events. Review conflicts and failures in each service's settings.",
+    "hub_title": "Calendars / accounts and synchronization",
+    "icloud_capability": "Two-way personal events; app-specific password",
+    "ics_fetch": "Could not refresh this subscription. Check its URL and your internet connection, then sync again.",
+    "incomplete": "Some event responses were missing. This sync was stopped. Try again.",
+    "invalid_data": "The service returned invalid event data. This sync was not applied.",
+    "invalid_response": "The service response could not be read. Check the account and service status.",
+    "invalid_timezone": "Select a valid timezone, for example Asia/Seoul.",
+    "local": "My changes",
+    "login": "Reconnect your account. Automatic sync does not open a sign-in window.",
+    "move": "Moving a linked event between calendars is unsupported. Restore its original calendar or make a copy.",
+    "naver_capability": "Read-only; service policy may restrict connections",
+    "network": "Check your internet connection. Existing events are preserved. Retry when connected.",
+    "no_calendars": "No accessible calendars were found. Create a calendar or check sharing permissions.",
+    "not_connected": "Not connected",
+    "other_services": "Connect Outlook / iCloud / Naver",
+    "outlook_capability": "Two-way events; Microsoft app registration required initially",
+    "permission": "Calendar access was denied. Check account permissions and service support.",
+    "protection": "Windows credential encryption failed. Check your Windows user environment.",
+    "rate_limit": "The service request limit was reached. Automatic retry intervals have increased. Try again later.",
+    "read_only": "This calendar is read-only. Edit events in the original service.",
+    "reconnect": "Reconnect required",
+    "recurrence": "Recurring event data could not be read. Check recurrence settings in the service.",
+    "recurrence_edit": "Configure recurrence rules in the original service.",
+    "remote": "Service version",
+    "remote_deleted": "This event was deleted in the service. The local copy was preserved.",
+    "save_timezone": "Save timezone",
+    "server": "The service is temporarily unavailable. Events are preserved and sync will retry later.",
+    "stale_conflict": "The event changed again after comparison. Sync again and compare the latest versions.",
+    "timezone": "Shared timezone",
+    "timezone_hint": "Timezone changes apply from the next synchronization.",
+    "timezone_saved": "Timezone saved. Changes apply from the next synchronization.",
+    "too_many": "Too many occurrences were requested. Check recurrence limits in the service.",
+    "unsafe": "An untrusted server address was returned. The connection was stopped.",
+    "unsupported_service": "The service does not allow this connection method. Check its support policy.",
+    "wait_timezone": "Wait for the current synchronization to finish before changing the timezone.",
+    "working": "Working...",
+    "identity_changed": "Alamat server ini kini berisi acara lain. Perubahan ditunda. Periksa acara di layanan asalnya."
+  },
+  "sync_unified": {
+    "add_ics": "Add ICS subscription",
+    "add_local": "Add local calendar",
+    "attention": "Sync needs attention",
+    "auto": "Automatic sync",
+    "auto_pause": "Turn all automatic sync off",
+    "auto_resume": "Turn all automatic sync on",
+    "back": "Back to all calendar settings",
+    "calendar_hint": "Manage visibility, colors and the default save destination for all calendars. Change remote sync selection in its service settings.",
+    "calendar_name": "Calendar name",
+    "calendar_save_failed": "Could not save these settings. Try again.",
+    "calendar_saved": "Calendar settings updated.",
+    "calendars": "All calendars",
+    "color": "Change color",
+    "connected_count": "{count} connected",
+    "default": "Set as default save destination",
+    "default_marker": "Default",
+    "exists": "This calendar is already registered.",
+    "google_settings": "Google Calendar settings",
+    "ics": "ICS subscriptions",
+    "ics_capability": "Shared subscription URL · read-only",
+    "ics_failed": "ICS subscriptions could not be refreshed. Check subscription URLs in All calendars and sync again.",
+    "ics_url": "Calendar subscription URL",
+    "inactive": "Sync deselected",
+    "invalid_ics": "Enter an HTTP or HTTPS calendar subscription URL.",
+    "issue_count": "{count} issues need attention",
+    "issues": "All sync issues",
+    "issues_hint": "Select a service to compare conflicts or review failed operations. Other services can keep syncing.",
+    "local": "Local",
+    "local_only": "Local mode",
+    "menu": "Calendars and sync",
+    "no_issues": "No sync issues need attention.",
+    "open_issue": "Review and resolve in selected service",
+    "refresh_subscription": "Sync ICS subscriptions again",
+    "remove_calendar": "Remove from local list",
+    "remove_confirm": "Remove this calendar from the list? Existing events remain as local copies. Service originals will not be deleted.",
+    "rename": "Rename",
+    "review_issues": "Review issues",
+    "running": "Syncing {count}",
+    "select_first": "Select calendars to import and save your selection.",
+    "service_settings": "Service selection and settings",
+    "services": "Services and sync",
+    "shared": "Shared on this PC",
+    "show_calendar": "Show in calendar views",
+    "subscription_active": "Sync this ICS subscription",
+    "sync_all": "Sync all connected calendars",
+    "welcome": "Use local calendars immediately. Connect Google, Outlook, iCloud, Naver or ICS calendars whenever you need them."
+  },
   "system_msg": {
     "already_running": "Aplikasi sudah berjalan.",
     "lang_saved_msg": "Pengaturan bahasa disimpan.\nAplikasi akan dimulai ulang untuk menerapkan perubahan.",
@@ -2299,7 +2654,9 @@
       "location_not_found": "Lokasi tidak ditemukan",
       "network": "Kesalahan jaringan",
       "parse_failed": "Kesalahan penguraian data",
-      "timeout": "Waktu permintaan habis"
+      "timeout": "Waktu permintaan habis",
+      "busy": "Layanan cuaca sibuk; menunggu percobaan ulang",
+      "denied": "Akses ke layanan cuaca ditolak"
     }
   },
   "weekday": {
@@ -3269,7 +3626,14 @@
       "template_hint": "Variables: {city} {temp} {unit} {desc} {icon}",
       "unit": "Satuan:",
       "unit_c": "Celcius (°C)",
-      "unit_f": "Fahrenheit (°F)"
+      "unit_f": "Fahrenheit (°F)",
+      "cached": "Cuaca tersimpan terbaru",
+      "loading": "Memuat cuaca…",
+      "refresh_every": "Setiap {min} menit",
+      "refresh_now": "Muat ulang cuaca",
+      "retry_in": "Coba lagi dalam {min} menit",
+      "stale": "Menampilkan cuaca sebelumnya · {error}",
+      "updated": "Diperbarui: {time}"
     }
   },
   "widget_manager": {

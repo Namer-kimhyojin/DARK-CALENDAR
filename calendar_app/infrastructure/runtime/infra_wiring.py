@@ -295,13 +295,28 @@ def init_tray_icon(app):
 
     # --- 5. Service & Sync ---
     act_gsync = _create_action(
-        app, t("tray.sync_google"), app.sync_google_calendar, None, tray_menu
+        app,
+        t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"),
+        app.sync_calendars,
+        None,
+        tray_menu,
     )
     act_gsync.setIcon(_ic(ICON.SYNC))
     act_gissues = _create_action(
-        app, t("tray.google_issues"), app.open_gcal_sync_issues_dialog, None, tray_menu
+        app,
+        t("sync_unified.issues", "전체 동기화 문제"),
+        app.open_calendar_sync_issues,
+        None,
+        tray_menu,
     )
     act_gissues.setIcon(_ic(ICON.WARNING))
+    _create_action(
+        app,
+        t("sync_ui.hub_title", "캘린더 · 계정 및 동기화"),
+        app.open_calendar_sync_hub,
+        None,
+        tray_menu,
+    )
 
     opacity_menu = tray_menu.addMenu(_se(t("tray.opacity")))
     opacity_menu.setIcon(_ic(ICON.OPACITY))

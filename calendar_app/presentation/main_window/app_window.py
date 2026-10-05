@@ -51,9 +51,8 @@ class OverlayApp(MainWindowUiActionsMixin, ActionHandlersMixin, WindowEventsMixi
             self.settings.setValue("panel_base_color", "#fefefe")
             if hasattr(self, "apply_theme_settings"):
                 self.apply_theme_settings()
-        elif cmd_id == "sync_google":
-            if hasattr(self, "refresh_gcal_sync_state"):
-                self.refresh_gcal_sync_state(force_push=True)
+        elif cmd_id in {"sync_google", "sync_calendars"}:
+            self.sync_calendars()
         elif cmd_id == "toggle_routine":
             if hasattr(self, "routine_dock"):
                 self.routine_dock.setVisible(not self.routine_dock.isVisible())

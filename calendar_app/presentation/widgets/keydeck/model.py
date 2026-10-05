@@ -49,7 +49,7 @@ ACTION_TYPES: tuple[Option, ...] = (
 COMMANDS: tuple[Option, ...] = (
     ("new_task", "widget.launcher.command.new_task", "새 일정"),
     ("today", "widget.launcher.command.today", "오늘로 이동"),
-    ("sync_google", "widget.launcher.command.sync_google", "Google 동기화"),
+    ("sync_google", "sync_unified.sync_all", "연결된 모든 캘린더 동기화"),
     ("command_palette", "widget.launcher.command.command_palette", "명령 팔레트"),
     ("widget_manager", "widget.launcher.command.widget_manager", "위젯 관리자"),
     ("focus_mode", "widget.launcher.command.focus_mode", "집중 모드"),

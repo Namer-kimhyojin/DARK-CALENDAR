@@ -77,6 +77,7 @@ class ActionHandlersMixin(
     AwayLockMixin,
     ThemeActionsMixin,
     RefreshSchedulerMixin,
+    CalendarSyncActionsMixin,  # 공통 상태/수동 동기화, GCalActionsMixin 앞
     GCalActionsMixin,
     DialogActionsMixin,   # dialog_router.py
     TaskActionsMixin,     # 반드시 DialogActionsMixin 뒤
@@ -163,7 +164,7 @@ pytest tests/test_encoding_policy.py tests/test_encoding_utils.py
 - 컬럼 추가/변경은 `ALTER TABLE` 마이그레이션으로 처리합니다.
 - `gcal_subscription` 테이블은 삭제하거나 rename하지 않습니다.
 - `calendar` 테이블 마이그레이션은 `calendar_repo.migrate_from_gcal_subscription()`이 담당합니다.
-- 캘린더 타입은 `gcal` | `local` | `shared` | `ics`입니다.
+- 캘린더 타입은 `gcal` | `local` | `shared` | `ics` | `outlook` | `caldav`입니다. CalDAV 연결에서는 네이버와 권한 없는 캘린더를 읽기 전용으로 처리합니다.
 - Shared DB 경로는 `C:\Users\Public\DarkCalendar\shared.db`입니다.
 
 ---
@@ -227,7 +228,7 @@ act.setIcon(_ic(ICON.SETTINGS, color=text_primary_hex))
 - 관리 객체: `app.overlay_manager` (`OverlayWidgetManager`)
 - 인스턴스 저장: `QSettings["overlay_instances"]`
 - 설정 prefix: `oi_<inst_id>_`
-- 종류: `clock`, `stopwatch`, `date_card`, `countdown`, `dday`, `text`, `weather`
+- 종류: `clock`, `stopwatch`, `date_card`, `countdown`, `dday`, `text`, `weather`, `launcher_deck`
 - 텍스트 템플릿 갱신: fast 100ms, med 1s, slow 60s
 
 i18n:
@@ -269,6 +270,9 @@ python scripts/run_encoding_guard.py
 
 | 파일 | 내용 |
 |---|---|
+| [rules/dialog_ui.md](rules/dialog_ui.md) | 다이얼로그·아이콘 상세 구현 |
+| [rules/store_release_process.md](rules/store_release_process.md) | 빌드·배포 절차 |
+| [rules/theme_token_completion_process.md](rules/theme_token_completion_process.md) | 테마·외관 설정 계약 |
 | [rules/encoding.md](rules/encoding.md) | 인코딩 정책 |
 | [rules/architecture.md](rules/architecture.md) | 레이어 구조, mixin, 상태 초기화 |
 | [rules/database.md](rules/database.md) | 스키마 변경, 마이그레이션 |
@@ -279,7 +283,7 @@ python scripts/run_encoding_guard.py
 | [rules/i18n.md](rules/i18n.md) | 번역 키와 로케일 |
 | [rules/panel_selection.md](rules/panel_selection.md) | 패널 선택과 키보드 처리 |
 
-현재 진행 상태는 [TASKS.md](TASKS.md)를 참고합니다.
+현재 진행 상태는 [TASKS.md](TASKS.md), 전체 문서 목록과 역할은 [docs/README.md](docs/README.md)를 참고합니다. 관련 주제의 규칙만 먼저 읽고, 과거 계획과 배포 기록은 필요할 때 확인합니다.
 
 ---
 

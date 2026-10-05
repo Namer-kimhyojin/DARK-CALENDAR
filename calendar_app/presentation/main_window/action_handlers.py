@@ -13,6 +13,7 @@ from calendar_app.presentation.dialogs.dialog_router import DialogActionsMixin
 from calendar_app.presentation.main_window.action_handlers_gcal import GCalActionsMixin
 from calendar_app.presentation.main_window.action_handlers_tasks import TaskActionsMixin
 from calendar_app.presentation.main_window.away_lock_actions import AwayLockMixin
+from calendar_app.presentation.main_window.calendar_sync_actions import CalendarSyncActionsMixin
 from calendar_app.presentation.main_window.calendar_view_actions import CalendarViewActionsMixin
 from calendar_app.presentation.main_window.refresh_scheduler import RefreshSchedulerMixin
 from calendar_app.presentation.main_window.routine_actions import RoutineActionsMixin
@@ -23,6 +24,11 @@ from calendar_app.shared.app_lifecycle import finish_application_exit, mark_app_
 logger = logging.getLogger(__name__)
 
 _SHUTDOWN_TIMER_ATTRS = (
+    "icloud_sync_timer",
+    "naver_sync_timer",
+    "icloud_startup_sync_timer",
+    "naver_startup_sync_timer",
+    "outlook_sync_timer",
     "gcal_sync_timer",
     "gcal_quick_sync_timer",
     "gcal_sleep_timer",
@@ -121,6 +127,7 @@ class ActionHandlersMixin(
     AwayLockMixin,
     ThemeActionsMixin,
     RefreshSchedulerMixin,
+    CalendarSyncActionsMixin,
     GCalActionsMixin,
     DialogActionsMixin,
     TaskActionsMixin,
@@ -144,6 +151,9 @@ class ActionHandlersMixin(
 
         self._is_shutting_down = True
         self._shutdown_in_progress = True
+        coordinator = getattr(self, "_calendar_sync_coordinator", None)
+        if coordinator:
+            coordinator.stop()
         mark_app_exiting(QApplication.instance())
         logger.info("Shutting down background workers...")
 

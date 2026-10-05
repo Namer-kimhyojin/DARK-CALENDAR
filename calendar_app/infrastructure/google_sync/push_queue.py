@@ -49,6 +49,11 @@ logger = logging.getLogger(__name__)
 DEDUP_WINDOW_SECS: float = 1.0
 
 
+def _auto_sync_enabled(app):
+    settings = getattr(app, "settings", None)
+    return settings is None or settings.value("sync_google_auto", True, type=bool)
+
+
 class GcalPushQueue:
     """Serialised, deduplicated push queue for Google Calendar sync."""
 
@@ -84,6 +89,8 @@ class GcalPushQueue:
         """
         if getattr(app, "_is_shutting_down", False):
             logger.debug("push_queue: enqueue ignored during application shutdown")
+            return
+        if not _auto_sync_enabled(app):
             return
         self._ensure_started(app)
 
@@ -199,6 +206,8 @@ class GcalPushQueue:
                 task_id = (task_data or {}).get("id")
 
             try:
+                if not _auto_sync_enabled(app) or getattr(app, "_is_shutting_down", False):
+                    continue
                 from calendar_app.infrastructure.google_sync.helpers import (
                     sync_task_to_google,
                 )

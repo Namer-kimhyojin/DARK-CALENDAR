@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Generate all app & store icons from a single master PNG.
 
@@ -102,13 +103,12 @@ def _save_ico(img, path: Path, dry_run: bool) -> None:
     from PIL import Image
 
     sizes = [16, 24, 32, 48, 64, 128, 256]
-    frames = [img.resize((s, s), Image.LANCZOS) for s in sizes]
     label = f"  {path.relative_to(ROOT)}  (ICO {sizes})"
     if dry_run:
         print(f"[dry] {label}")
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    frames[0].save(path, format="ICO", sizes=[(s, s) for s in sizes], append_images=frames[1:])
+    img.resize((256, 256), Image.LANCZOS).save(path, format="ICO", sizes=[(s, s) for s in sizes])
     print(f"  OK  {label}")
 
 
@@ -154,7 +154,7 @@ def generate(master: Path, dry_run: bool) -> None:
 
 
 def main() -> None:
-    default_master = ROOT / "app_icon_original_highres_master.png"
+    default_master = ROOT / "Assets" / "branding" / "air-calendar-a1-master.png"
 
     parser = argparse.ArgumentParser(
         description="Generate all app & store icons from a master PNG.",

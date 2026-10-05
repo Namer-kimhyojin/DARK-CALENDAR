@@ -202,6 +202,11 @@ def resolve_task_target_calendar_id(task, default_calendar_id: str | None = None
     default_calendar_id 가 None 이면 DB 기본 gcal 캘린더를 자동으로 사용한다.
     """
     task = task or {}
+    cal_id = str(task.get("calendar_id") or "").strip()
+    # A task explicitly owned by another remote provider must never be routed to
+    # Google through stale fields left by a prior calendar move.
+    if cal_id.split("::", 1)[0].lower() in {"outlook", "caldav"}:
+        return None
     raw = task.get("gcal_target_calendar_id") or task.get("gcal_source_calendar_id")
     if raw:
         return normalize_calendar_id(raw)

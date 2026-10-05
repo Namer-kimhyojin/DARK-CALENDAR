@@ -36,6 +36,7 @@ class GCalActionsMixin:
 
     def _release_sync_worker(self, *args):
         self._sync_worker = None
+        self.update_sync_status()
 
     def _auth_worker_running(self):
         worker = getattr(self, "_auth_worker", None)
@@ -127,7 +128,11 @@ class GCalActionsMixin:
 
         quick_interval_ms = self._effective_quick_sync_interval_ms()
 
-        if enabled and interval_mins > 0:
+        if (
+            enabled
+            and self.settings.value("sync_google_auto", True, type=bool)
+            and interval_mins > 0
+        ):
             self.gcal_sync_timer.start(interval_mins * 60 * 1000)
 
             self.gcal_quick_sync_timer.start(quick_interval_ms)
@@ -152,7 +157,11 @@ class GCalActionsMixin:
     def _reset_gcal_failure_backoff(self):
         self._gcal_sync_failures = 0
 
-        if is_gcal_enabled(self.settings) and hasattr(self, "gcal_quick_sync_timer"):
+        if (
+            is_gcal_enabled(self.settings)
+            and self.settings.value("sync_google_auto", True, type=bool)
+            and hasattr(self, "gcal_quick_sync_timer")
+        ):
             self.gcal_quick_sync_timer.start(self._effective_quick_sync_interval_ms())
 
     def _increase_gcal_failure_backoff(self):
@@ -160,7 +169,11 @@ class GCalActionsMixin:
 
         failures = self._gcal_sync_failures
 
-        if is_gcal_enabled(self.settings) and hasattr(self, "gcal_quick_sync_timer"):
+        if (
+            is_gcal_enabled(self.settings)
+            and self.settings.value("sync_google_auto", True, type=bool)
+            and hasattr(self, "gcal_quick_sync_timer")
+        ):
             if failures >= 4:
                 # 연속 4회 이상 실패 → quick timer 및 sleep poll timer 완전 정지
 
@@ -450,6 +463,9 @@ class GCalActionsMixin:
         if getattr(self, "_is_shutting_down", False):
             return
 
+        if not self.settings.value("sync_google_auto", True, type=bool):
+            return
+
         if is_gcal_enabled(self.settings):
             from calendar_app.shared.background_worker import SyncWorker
 
@@ -547,10 +563,14 @@ class GCalActionsMixin:
 
     def _on_sync_finished(self, success, message):
         """동기화 완료 후 콜백 (자동/일반)"""
+        coordinator = getattr(self, "_calendar_sync_coordinator", None)
+        if coordinator:
+            coordinator.record_google_result(
+                success, getattr(self, "_last_gcal_sync_outcome", None) == "skipped"
+            )
         self.update_sync_status()
         if success:
             self._handle_gcal_sync_success()
-            self._sync_ics_calendars()
             self.schedule_panel_refresh(center=True)
         else:
             outcome = getattr(self, "_last_gcal_sync_outcome", None)
@@ -579,6 +599,11 @@ class GCalActionsMixin:
     def _on_sync_finished_manual(self, success, message):
         """수동 동기화 완료 후 콜백"""
         stats = getattr(self, "_last_gcal_sync_stats", {}) or {}
+        coordinator = getattr(self, "_calendar_sync_coordinator", None)
+        if coordinator:
+            coordinator.record_google_result(
+                success, getattr(self, "_last_gcal_sync_outcome", None) == "skipped"
+            )
         if success:
             self._handle_gcal_sync_success()
         self.update_sync_status()
@@ -687,15 +712,20 @@ class GCalActionsMixin:
 
             logging.getLogger(__name__).warning(f"ICS sync error: {e}")
 
-    def open_gcal_settings_dialog(self, initial_tab: str | None = None):
+    def open_gcal_settings_dialog(self, initial_tab: str | None = None, from_sync_hub=False):
         from calendar_app.presentation.dialogs.gcal_settings_dialog import GCalSettingsDialog
 
         dlg = GCalSettingsDialog(self, initial_tab=initial_tab)
+        dlg.setProperty("syncHubChild", from_sync_hub)
 
         if dlg.exec():
             self.refresh_gcal_sync_state(authenticate_silently=True)
 
             self.schedule_panel_refresh(center=True)
+
+        coordinator = getattr(self, "_calendar_sync_coordinator", None)
+        if coordinator:
+            coordinator.refresh()
 
     def open_gcal_sync_issues_dialog(self, checked=False):
         from calendar_app.presentation.dialogs.gcal_sync_issues_dialog import GCalSyncIssuesDialog

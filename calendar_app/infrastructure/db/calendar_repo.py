@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 calendar_repo.py — calendar 테이블 CRUD + 마이그레이션 헬퍼
 
@@ -122,6 +123,8 @@ def is_calendar_row_read_only(calendar_row: dict | None) -> bool:
     cal_type = str(calendar_row.get("type") or "").strip().lower()
     if cal_type == "ics":
         return True
+    if cal_type in {"outlook", "caldav"}:
+        return str(calendar_row.get("access_role") or "reader").lower() not in {"owner", "writer"}
     if cal_type == "gcal":
         # access_role 이 있으면 is_active 와 무관하게 역할만으로 판단
         own_role = str(calendar_row.get("access_role") or "").strip().lower()
@@ -188,6 +191,7 @@ def get_writable_calendars() -> list[dict]:
         SELECT * FROM calendar
         WHERE type != 'ics'
           AND (type != 'gcal' OR is_active = 1)
+          AND (type NOT IN ('outlook', 'caldav') OR access_role IN ('owner', 'writer'))
         ORDER BY sort_order, name
     """)
     cols = [d[0] for d in cur.description]

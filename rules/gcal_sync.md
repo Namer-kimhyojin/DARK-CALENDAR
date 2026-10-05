@@ -96,3 +96,11 @@ def _get_default_gcal_id(app) -> str:
 
 `presentation/dialogs/gcal_settings_dialog.py` — 5탭 설정 다이얼로그.
 탭 구조를 변경할 때는 탭 인덱스에 의존하는 코드가 없는지 확인해야 합니다.
+
+## 공통 동기화 UI와 호환 경계
+
+- 상단·트레이·캘린더 툴바·명령 팔레트의 공통 동기화는 `sync_calendars()`를 호출합니다. Google 전용 설정은 통합 허브에서 엽니다.
+- 저장된 단축키 ID `sync_gcal`와 KeyDeck 명령 ID `sync_google`는 유지하고 공통 실행으로 연결합니다.
+- `sync_google_auto`는 자동 타이머·일정 저장 후 개별 push 큐를 함께 제어합니다. 꺼져 있어도 `gcal_enabled`와 계정 정보를 제거하지 않으며 명시적 수동 동기화는 가능합니다.
+- 공통 상태는 인증·계정·선택·작업·오류를 서비스별로 집계합니다. ICS 갱신은 Google 성공 콜백에 종속시키지 않습니다.
+- 시간대 저장 키 `gcal_timezone`은 기존 설정 호환을 위해 유지하며 Google·Outlook·CalDAV·공통 ICS 워커가 읽습니다.
