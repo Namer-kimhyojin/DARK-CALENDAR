@@ -1,6 +1,11 @@
 week_start,channel,campaign_id,post_url,impressions,engagements,link_clicks,store_page_views,store_acquisitions,notes
-2026-08-31,Naver Blog,dc-2026-naver-launch,,,,,,
-2026-08-31,LinkedIn,dc-2026-linkedin-launch,,,,,,
-2026-08-31,X or Threads,dc-2026-x-launch,,,,,,
-2026-08-31,Community,dc-2026-community-launch,,,,,,
+2026-08-31,Naver Blog,dc-2026-naver-launch,,,,,,,
+2026-08-31,LinkedIn,dc-2026-linkedin-launch,,,,,,,
+2026-08-31,X or Threads,dc-2026-x-launch,,,,,,,
+2026-08-31,Community,dc-2026-community-launch,,,,,,,
 2026-10-02,Owned SEO,aircal-20261002-seo-local-calendar,https://namer-kimhyojin.github.io/DARK-CALENDAR/offline-desktop-calendar-windows/,,,,,,Unobserved baseline; review attributed Store views and acquisitions after 7 and 14 days
+2026-10-05,Owned SEO,aircal-seo-desktop-calendar,https://namer-kimhyojin.github.io/DARK-CALENDAR/desktop-calendar-widget-windows/,,,,,,Existing campaign registered for measurement; original ID preserved; acquisition data unavailable
+2026-10-05,Owned SEO,aircal-seo-google-overlay,https://namer-kimhyojin.github.io/DARK-CALENDAR/google-calendar-desktop-overlay/,,,,,,Existing campaign registered for measurement; original ID preserved; acquisition data unavailable
+2026-10-05,Owned SEO,aircal-seo-dday-widget,https://namer-kimhyojin.github.io/DARK-CALENDAR/dday-countdown-widget-windows/,,,,,,Existing campaign registered for measurement; original ID preserved; acquisition data unavailable
+2026-10-05,Owned SEO,aircal-seo-pomodoro,https://namer-kimhyojin.github.io/DARK-CALENDAR/pomodoro-calendar-workflow/,,,,,,Existing campaign registered for measurement; original ID preserved; acquisition data unavailable
+2026-10-05,Owned Website,aircal-20261005-owned-home,https://namer-kimhyojin.github.io/DARK-CALENDAR/,,,,,,Homepage attribution added; review Store campaign views and acquisitions on October 12 and October 19; no observed values yet

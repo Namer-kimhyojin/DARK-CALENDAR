@@ -651,6 +651,15 @@
       event: { ...fallbackConfig.event, ...(config.event || {}) }
     };
 
+    const storeCampaign = document.body.dataset.storeCid;
+    if (storeCampaign) {
+      const storeUrl = new URL(currentConfig.microsoftStoreUrl);
+      if (!storeUrl.searchParams.has("cid")) {
+        storeUrl.searchParams.set("cid", storeCampaign);
+      }
+      currentConfig.microsoftStoreUrl = storeUrl.href;
+    }
+
     document.querySelectorAll("[data-config-link]").forEach((node) => {
       const value = currentConfig[node.dataset.configLink];
       if (value) node.setAttribute("href", value);
