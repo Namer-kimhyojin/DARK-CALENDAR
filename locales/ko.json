@@ -163,15 +163,7 @@
     "sync_hint": "구글 캘린더 동기화",
     "today": "오늘",
     "today_hint": "오늘 날짜로 이동",
-    "weekdays": [
-      "월",
-      "화",
-      "수",
-      "목",
-      "금",
-      "토",
-      "일"
-    ]
+    "weekdays": ["월", "화", "수", "목", "금", "토", "일"]
   },
   "checklist_mgr": {
     "btn_add_item": "항목 추가",
@@ -1654,13 +1646,7 @@
     "hint_record_jump": "Enter로 항목 열기. Shift+Enter로 날짜 이동.",
     "hint_run_command": "Enter로 명령어를 실행합니다",
     "kw": {
-      "theme": [
-        "테마",
-        "다크",
-        "라이트",
-        "색상",
-        "외형"
-      ]
+      "theme": ["테마", "다크", "라이트", "색상", "외형"]
     },
     "nlp_preview": "새 일정: [{title}] - {date} {time}",
     "no_selection": "Enter로 선택 결과 열기",
@@ -1913,390 +1899,223 @@
         "description": "자리비움 잠금을 즉시 시작합니다.",
         "label": "자리비움 잠금",
         "menu_path": "화면 > 자리비움 잠금",
-        "tags": [
-          "자리비움",
-          "away",
-          "lock"
-        ]
+        "tags": ["자리비움", "away", "lock"]
       },
       "cal_toolbar": {
         "description": "캘린더 툴바를 숨기거나 다시 표시합니다.",
         "label": "캘린더 툴바 토글",
         "menu_path": "화면 > 캘린더 툴바",
-        "tags": [
-          "캘린더",
-          "툴바",
-          "toolbar"
-        ]
+        "tags": ["캘린더", "툴바", "toolbar"]
       },
       "calendar_print": {
         "description": "현재 보기 또는 지정 기간의 캘린더를 미리보고 인쇄합니다.",
         "label": "캘린더 인쇄",
         "menu_path": "캘린더 > 옵션 > 인쇄",
-        "tags": [
-          "인쇄",
-          "프린터",
-          "PDF",
-          "print"
-        ]
+        "tags": ["인쇄", "프린터", "PDF", "print"]
       },
       "checklist": {
         "description": "체크리스트 템플릿과 항목 구성을 관리합니다.",
         "label": "체크리스트 관리",
         "menu_path": "작업 > 체크리스트 관리",
-        "tags": [
-          "체크리스트",
-          "템플릿",
-          "checklist"
-        ]
+        "tags": ["체크리스트", "템플릿", "checklist"]
       },
       "color_assign": {
         "description": "선택 항목에 색상을 자동으로 배정합니다.",
         "label": "색상 자동 지정",
         "menu_path": "작업 > 색상 자동 지정",
-        "tags": [
-          "색상",
-          "태그",
-          "자동",
-          "color"
-        ]
+        "tags": ["색상", "태그", "자동", "color"]
       },
       "command_palette": {
         "description": "명령 검색창을 열어 기능을 바로 찾습니다.",
         "label": "커맨드 팔레트",
         "menu_path": "직접 호출",
-        "tags": [
-          "검색",
-          "명령",
-          "팔레트",
-          "palette"
-        ]
+        "tags": ["검색", "명령", "팔레트", "palette"]
       },
       "delete": {
         "description": "현재 선택한 일정이나 항목을 삭제합니다.",
         "label": "선택 항목 삭제",
         "menu_path": "선택 상태",
-        "tags": [
-          "삭제",
-          "지우기",
-          "delete"
-        ]
+        "tags": ["삭제", "지우기", "delete"]
       },
       "escape": {
         "description": "현재 선택이나 포커스를 정리합니다.",
         "label": "선택 해제",
         "menu_path": "선택 상태",
-        "tags": [
-          "선택 해제",
-          "취소",
-          "escape"
-        ]
+        "tags": ["선택 해제", "취소", "escape"]
       },
       "focus_mode": {
         "description": "집중 모드를 켜거나 끕니다.",
         "label": "집중 모드 토글",
         "menu_path": "화면 > 집중 모드",
-        "tags": [
-          "집중",
-          "focus",
-          "pomodoro"
-        ]
+        "tags": ["집중", "focus", "pomodoro"]
       },
       "focus_pause": {
         "description": "집중 진행을 잠시 멈추거나 재개합니다.",
         "label": "집중 일시정지",
         "menu_path": "집중 모드",
-        "tags": [
-          "집중",
-          "일시정지",
-          "pause"
-        ]
+        "tags": ["집중", "일시정지", "pause"]
       },
       "force_unlock": {
         "description": "예상치 못한 잠금 상태를 강제로 해제합니다.",
         "label": "강제 잠금 해제",
         "menu_path": "긴급 복구",
-        "tags": [
-          "강제",
-          "잠금 해제",
-          "복구",
-          "emergency"
-        ]
+        "tags": ["강제", "잠금 해제", "복구", "emergency"]
       },
       "fullscreen": {
         "description": "전체화면 표시를 전환합니다.",
         "label": "전체화면 토글",
         "menu_path": "화면 > 전체화면",
-        "tags": [
-          "전체화면",
-          "fullscreen"
-        ]
+        "tags": ["전체화면", "fullscreen"]
       },
       "help": {
         "description": "도움말 센터를 엽니다.",
         "label": "단축키 안내",
         "menu_path": "시스템 > 단축키 안내",
-        "tags": [
-          "도움말",
-          "help",
-          "F1"
-        ]
+        "tags": ["도움말", "help", "F1"]
       },
       "layout_1": {
         "description": "기본 4패널 도킹 배치를 적용합니다.",
         "label": "레이아웃 프리셋 1",
         "menu_path": "화면 > 레이아웃 프리셋",
-        "tags": [
-          "레이아웃",
-          "프리셋",
-          "도킹",
-          "1"
-        ]
+        "tags": ["레이아웃", "프리셋", "도킹", "1"]
       },
       "layout_2": {
         "description": "캘린더 중심 배치를 적용합니다.",
         "label": "레이아웃 프리셋 2",
         "menu_path": "화면 > 레이아웃 프리셋",
-        "tags": [
-          "레이아웃",
-          "캘린더",
-          "2"
-        ]
+        "tags": ["레이아웃", "캘린더", "2"]
       },
       "layout_3": {
         "description": "업무 중심 배치를 적용합니다.",
         "label": "레이아웃 프리셋 3",
         "menu_path": "화면 > 레이아웃 프리셋",
-        "tags": [
-          "레이아웃",
-          "업무",
-          "3"
-        ]
+        "tags": ["레이아웃", "업무", "3"]
       },
       "layout_4": {
         "description": "탭 분할 배치를 적용합니다.",
         "label": "레이아웃 프리셋 4",
         "menu_path": "화면 > 레이아웃 프리셋",
-        "tags": [
-          "레이아웃",
-          "탭",
-          "분할",
-          "4"
-        ]
+        "tags": ["레이아웃", "탭", "분할", "4"]
       },
       "layout_5": {
         "description": "분리형 배치를 적용합니다.",
         "label": "레이아웃 프리셋 5",
         "menu_path": "화면 > 레이아웃 프리셋",
-        "tags": [
-          "레이아웃",
-          "분리",
-          "부동",
-          "5"
-        ]
+        "tags": ["레이아웃", "분리", "부동", "5"]
       },
       "lock_mode": {
         "description": "데스크톱 잠금 모드를 전환합니다.",
         "label": "잠금 모드",
         "menu_path": "화면 > 잠금 모드",
-        "tags": [
-          "잠금",
-          "lock"
-        ]
+        "tags": ["잠금", "lock"]
       },
       "magnet_mode": {
         "description": "패널 정렬과 부착을 돕는 자석 모드를 전환합니다.",
         "label": "자석 모드",
         "menu_path": "화면 > 자석 모드",
-        "tags": [
-          "자석",
-          "패널",
-          "magnet"
-        ]
+        "tags": ["자석", "패널", "magnet"]
       },
       "monitor_left": {
         "description": "창을 다른 모니터로 이동합니다.",
         "label": "이전 모니터로 이동",
         "menu_path": "창 제어",
-        "tags": [
-          "모니터",
-          "화면",
-          "left",
-          "display"
-        ]
+        "tags": ["모니터", "화면", "left", "display"]
       },
       "monitor_right": {
         "description": "창을 다른 모니터로 이동합니다.",
         "label": "다음 모니터로 이동",
         "menu_path": "창 제어",
-        "tags": [
-          "모니터",
-          "화면",
-          "right",
-          "display"
-        ]
+        "tags": ["모니터", "화면", "right", "display"]
       },
       "new_directive": {
         "description": "지시나 협조 항목 입력 창을 엽니다.",
         "label": "지시사항 등록",
         "menu_path": "등록 > 지시사항",
-        "tags": [
-          "지시",
-          "협조",
-          "directive"
-        ]
+        "tags": ["지시", "협조", "directive"]
       },
       "new_routine": {
         "description": "반복 업무 루틴을 빠르게 추가합니다.",
         "label": "루틴 등록",
         "menu_path": "등록 > 루틴",
-        "tags": [
-          "루틴",
-          "업무",
-          "반복",
-          "routine"
-        ]
+        "tags": ["루틴", "업무", "반복", "routine"]
       },
       "new_schedule": {
         "description": "일정 입력 창을 바로 엽니다.",
         "label": "새 일정 등록",
         "menu_path": "등록 > 새 일정",
-        "tags": [
-          "일정",
-          "추가",
-          "등록",
-          "schedule"
-        ]
+        "tags": ["일정", "추가", "등록", "schedule"]
       },
       "next_day": {
         "description": "현재 기준 하루 뒤로 이동합니다.",
         "label": "다음 날짜",
         "menu_path": "탐색",
-        "tags": [
-          "다음",
-          "날짜",
-          "right",
-          "next"
-        ]
+        "tags": ["다음", "날짜", "right", "next"]
       },
       "opacity_down": {
         "description": "창 불투명도를 낮춥니다.",
         "label": "불투명도 감소",
         "menu_path": "창 제어",
-        "tags": [
-          "투명도",
-          "opacity",
-          "낮춤"
-        ]
+        "tags": ["투명도", "opacity", "낮춤"]
       },
       "opacity_up": {
         "description": "창 불투명도를 올립니다.",
         "label": "불투명도 증가",
         "menu_path": "창 제어",
-        "tags": [
-          "투명도",
-          "opacity",
-          "밝게"
-        ]
+        "tags": ["투명도", "opacity", "밝게"]
       },
       "prev_day": {
         "description": "현재 기준 하루 전으로 이동합니다.",
         "label": "이전 날짜",
         "menu_path": "탐색",
-        "tags": [
-          "이전",
-          "날짜",
-          "left",
-          "prev"
-        ]
+        "tags": ["이전", "날짜", "left", "prev"]
       },
       "restore_pos": {
         "description": "창을 안전한 화면 위치로 복원합니다.",
         "label": "창 위치 복원",
         "menu_path": "창 제어",
-        "tags": [
-          "창",
-          "복원",
-          "위치",
-          "restore"
-        ]
+        "tags": ["창", "복원", "위치", "restore"]
       },
       "routine_mgr": {
         "description": "루틴 관리자 탭을 바로 엽니다.",
         "label": "루틴 관리자",
         "menu_path": "작업 > 루틴 현황",
-        "tags": [
-          "루틴",
-          "관리",
-          "routine"
-        ]
+        "tags": ["루틴", "관리", "routine"]
       },
       "save_layout": {
         "description": "현재 패널 배치를 프리셋으로 저장합니다.",
         "label": "현재 레이아웃 저장",
         "menu_path": "화면 > 레이아웃 프리셋 > 저장",
-        "tags": [
-          "레이아웃",
-          "프리셋",
-          "저장",
-          "layout"
-        ]
+        "tags": ["레이아웃", "프리셋", "저장", "layout"]
       },
       "show_hide": {
         "description": "메인 창을 숨기거나 다시 표시합니다.",
         "label": "창 표시/숨기기",
         "menu_path": "창 제어",
-        "tags": [
-          "창",
-          "숨기기",
-          "보이기",
-          "overlay"
-        ]
+        "tags": ["창", "숨기기", "보이기", "overlay"]
       },
       "sync_gcal": {
         "description": "연결된 모든 캘린더의 동기화를 바로 시작합니다.",
         "label": "연결된 모든 캘린더 동기화",
         "menu_path": "시스템 > 캘린더 및 동기화",
-        "tags": [
-          "Google",
-          "Outlook",
-          "iCloud",
-          "Naver",
-          "ICS",
-          "F5",
-          "sync"
-        ]
+        "tags": ["Google", "Outlook", "iCloud", "Naver", "ICS", "F5", "sync"]
       },
       "today": {
         "description": "선택 날짜를 오늘로 즉시 이동합니다.",
         "label": "오늘로 이동",
         "menu_path": "탐색",
-        "tags": [
-          "오늘",
-          "날짜",
-          "today"
-        ]
+        "tags": ["오늘", "날짜", "today"]
       },
       "topbar": {
         "description": "상단 메뉴 바 표시 상태를 전환합니다.",
         "label": "상단 바 토글",
         "menu_path": "화면 > 상단 바",
-        "tags": [
-          "메뉴바",
-          "상단 바",
-          "topbar",
-          "복구"
-        ]
+        "tags": ["메뉴바", "상단 바", "topbar", "복구"]
       },
       "widget_mode": {
         "description": "위젯 전용 패널 모드를 엽니다.",
         "label": "위젯 모드 전환",
         "menu_path": "화면 > 위젯 전용 모드",
-        "tags": [
-          "위젯",
-          "widget",
-          "panel"
-        ]
+        "tags": ["위젯", "widget", "panel"]
       }
     },
     "groups": {
@@ -2486,6 +2305,7 @@
     "hub_title": "캘린더 · 계정 및 동기화",
     "icloud_capability": "개인 일정 양방향 · 앱 전용 암호 사용",
     "ics_fetch": "구독을 갱신하지 못했습니다. 주소와 인터넷 연결을 확인하고 다시 동기화하세요.",
+    "identity_changed": "서버 주소에 다른 일정이 연결되어 수정을 보류했습니다. 원래 서비스의 일정을 확인하세요.",
     "incomplete": "일부 일정의 응답이 누락되어 이번 동기화를 중단했습니다. 다시 시도하세요.",
     "invalid_data": "서비스에서 올바르지 않은 일정 데이터를 받았습니다. 이번 동기화는 반영하지 않았습니다.",
     "invalid_response": "서비스 응답을 해석할 수 없습니다. 계정과 서비스 상태를 확인하세요.",
@@ -2518,8 +2338,7 @@
     "unsafe": "신뢰할 수 없는 서버 주소가 반환되어 연결을 중단했습니다.",
     "unsupported_service": "서비스에서 이 연결 방식을 허용하지 않습니다. 해당 서비스의 지원 정책을 확인하세요.",
     "wait_timezone": "진행 중인 동기화가 끝난 뒤 시간대를 변경하세요.",
-    "working": "작업 중...",
-    "identity_changed": "서버 주소에 다른 일정이 연결되어 수정을 보류했습니다. 원래 서비스의 일정을 확인하세요."
+    "working": "작업 중..."
   },
   "sync_unified": {
     "add_ics": "ICS 구독 추가",

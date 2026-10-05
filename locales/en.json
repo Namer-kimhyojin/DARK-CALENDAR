@@ -163,15 +163,7 @@
     "sync_hint": "Google Calendar sync",
     "today": "Today",
     "today_hint": "Go to today",
-    "weekdays": [
-      "Mon",
-      "Tue",
-      "Wed",
-      "Thu",
-      "Fri",
-      "Sat",
-      "Sun"
-    ]
+    "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
   },
   "checklist_mgr": {
     "btn_add_item": "Add Item",
@@ -1654,13 +1646,7 @@
     "hint_record_jump": "Enter opens the item. Shift+Enter moves to its date.",
     "hint_run_command": "Enter runs the selected command",
     "kw": {
-      "theme": [
-        "theme",
-        "dark",
-        "light",
-        "color",
-        "appearance"
-      ]
+      "theme": ["theme", "dark", "light", "color", "appearance"]
     },
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Press Enter to open the selected result",
@@ -1913,362 +1899,223 @@
         "description": "Immediately starts away-lock mode.",
         "label": "Away lock",
         "menu_path": "View > Away lock",
-        "tags": [
-          "away",
-          "lock"
-        ]
+        "tags": ["away", "lock"]
       },
       "cal_toolbar": {
         "description": "Hides or shows the calendar toolbar again.",
         "label": "Toggle calendar toolbar",
         "menu_path": "View > Calendar toolbar",
-        "tags": [
-          "calendar",
-          "toolbar"
-        ]
+        "tags": ["calendar", "toolbar"]
       },
       "calendar_print": {
         "description": "Previews and prints the calendar for the current or a chosen period.",
         "label": "Print calendar",
         "menu_path": "Calendar > Options > Print",
-        "tags": [
-          "print",
-          "printer",
-          "PDF"
-        ]
+        "tags": ["print", "printer", "PDF"]
       },
       "checklist": {
         "description": "Manages checklist templates and item structure.",
         "label": "Manage checklist",
         "menu_path": "Tasks > Manage checklist",
-        "tags": [
-          "checklist",
-          "template"
-        ]
+        "tags": ["checklist", "template"]
       },
       "color_assign": {
         "description": "Automatically assigns colors to the selected items.",
         "label": "Auto color assignment",
         "menu_path": "Tasks > Auto color assignment",
-        "tags": [
-          "color",
-          "tag",
-          "auto"
-        ]
+        "tags": ["color", "tag", "auto"]
       },
       "command_palette": {
         "description": "Opens the command search box to find a feature instantly.",
         "label": "Command palette",
         "menu_path": "Direct call",
-        "tags": [
-          "search",
-          "command",
-          "palette"
-        ]
+        "tags": ["search", "command", "palette"]
       },
       "delete": {
         "description": "Deletes the currently selected schedule or item.",
         "label": "Delete selected item",
         "menu_path": "Selection state",
-        "tags": [
-          "delete",
-          "remove"
-        ]
+        "tags": ["delete", "remove"]
       },
       "escape": {
         "description": "Clears the current selection or focus.",
         "label": "Clear selection",
         "menu_path": "Selection state",
-        "tags": [
-          "deselect",
-          "cancel",
-          "escape"
-        ]
+        "tags": ["deselect", "cancel", "escape"]
       },
       "focus_mode": {
         "description": "Turns focus mode on or off.",
         "label": "Toggle focus mode",
         "menu_path": "View > Focus mode",
-        "tags": [
-          "focus",
-          "pomodoro"
-        ]
+        "tags": ["focus", "pomodoro"]
       },
       "focus_pause": {
         "description": "Pauses or resumes the current focus session.",
         "label": "Pause focus",
         "menu_path": "Focus mode",
-        "tags": [
-          "focus",
-          "pause"
-        ]
+        "tags": ["focus", "pause"]
       },
       "force_unlock": {
         "description": "Forcibly clears an unexpected lock state.",
         "label": "Force unlock",
         "menu_path": "Emergency recovery",
-        "tags": [
-          "force",
-          "unlock",
-          "recovery",
-          "emergency"
-        ]
+        "tags": ["force", "unlock", "recovery", "emergency"]
       },
       "fullscreen": {
         "description": "Switches fullscreen display on or off.",
         "label": "Toggle fullscreen",
         "menu_path": "View > Fullscreen",
-        "tags": [
-          "fullscreen"
-        ]
+        "tags": ["fullscreen"]
       },
       "help": {
         "description": "Opens the help center.",
         "label": "Shortcut guide",
         "menu_path": "System > Shortcut guide",
-        "tags": [
-          "help",
-          "F1"
-        ]
+        "tags": ["help", "F1"]
       },
       "layout_1": {
         "description": "Applies the default 4-panel docked layout.",
         "label": "Layout preset 1",
         "menu_path": "View > Layout presets",
-        "tags": [
-          "layout",
-          "preset",
-          "docked",
-          "1"
-        ]
+        "tags": ["layout", "preset", "docked", "1"]
       },
       "layout_2": {
         "description": "Applies a calendar-first layout.",
         "label": "Layout preset 2",
         "menu_path": "View > Layout presets",
-        "tags": [
-          "layout",
-          "calendar",
-          "2"
-        ]
+        "tags": ["layout", "calendar", "2"]
       },
       "layout_3": {
         "description": "Applies a task-first layout.",
         "label": "Layout preset 3",
         "menu_path": "View > Layout presets",
-        "tags": [
-          "layout",
-          "task",
-          "3"
-        ]
+        "tags": ["layout", "task", "3"]
       },
       "layout_4": {
         "description": "Applies a split-tab layout.",
         "label": "Layout preset 4",
         "menu_path": "View > Layout presets",
-        "tags": [
-          "layout",
-          "tab",
-          "split",
-          "4"
-        ]
+        "tags": ["layout", "tab", "split", "4"]
       },
       "layout_5": {
         "description": "Applies a fully separated floating layout.",
         "label": "Layout preset 5",
         "menu_path": "View > Layout presets",
-        "tags": [
-          "layout",
-          "separated",
-          "floating",
-          "5"
-        ]
+        "tags": ["layout", "separated", "floating", "5"]
       },
       "lock_mode": {
         "description": "Switches desktop lock mode on or off.",
         "label": "Lock mode",
         "menu_path": "View > Lock mode",
-        "tags": [
-          "lock"
-        ]
+        "tags": ["lock"]
       },
       "magnet_mode": {
         "description": "Switches magnet mode, which helps align and snap panels.",
         "label": "Magnet mode",
         "menu_path": "View > Magnet mode",
-        "tags": [
-          "magnet",
-          "panel"
-        ]
+        "tags": ["magnet", "panel"]
       },
       "monitor_left": {
         "description": "Moves the window to a different monitor.",
         "label": "Move to previous monitor",
         "menu_path": "Window control",
-        "tags": [
-          "monitor",
-          "display",
-          "left"
-        ]
+        "tags": ["monitor", "display", "left"]
       },
       "monitor_right": {
         "description": "Moves the window to a different monitor.",
         "label": "Move to next monitor",
         "menu_path": "Window control",
-        "tags": [
-          "monitor",
-          "display",
-          "right"
-        ]
+        "tags": ["monitor", "display", "right"]
       },
       "new_directive": {
         "description": "Opens the window for entering a directive or cooperation item.",
         "label": "Register directive",
         "menu_path": "Register > Directive",
-        "tags": [
-          "directive",
-          "cooperation"
-        ]
+        "tags": ["directive", "cooperation"]
       },
       "new_routine": {
         "description": "Quickly adds a recurring work routine.",
         "label": "Register routine",
         "menu_path": "Register > Routine",
-        "tags": [
-          "routine",
-          "task",
-          "recurring"
-        ]
+        "tags": ["routine", "task", "recurring"]
       },
       "new_schedule": {
         "description": "Opens the schedule entry window directly.",
         "label": "Add new schedule",
         "menu_path": "Register > New schedule",
-        "tags": [
-          "schedule",
-          "add",
-          "register"
-        ]
+        "tags": ["schedule", "add", "register"]
       },
       "next_day": {
         "description": "Moves one day after the current date.",
         "label": "Next day",
         "menu_path": "Navigation",
-        "tags": [
-          "next",
-          "date",
-          "right"
-        ]
+        "tags": ["next", "date", "right"]
       },
       "opacity_down": {
         "description": "Lowers the window opacity.",
         "label": "Decrease opacity",
         "menu_path": "Window control",
-        "tags": [
-          "opacity",
-          "dimmer"
-        ]
+        "tags": ["opacity", "dimmer"]
       },
       "opacity_up": {
         "description": "Raises the window opacity.",
         "label": "Increase opacity",
         "menu_path": "Window control",
-        "tags": [
-          "opacity",
-          "brighter"
-        ]
+        "tags": ["opacity", "brighter"]
       },
       "prev_day": {
         "description": "Moves one day before the current date.",
         "label": "Previous day",
         "menu_path": "Navigation",
-        "tags": [
-          "previous",
-          "date",
-          "left"
-        ]
+        "tags": ["previous", "date", "left"]
       },
       "restore_pos": {
         "description": "Restores the window to a safe screen position.",
         "label": "Restore window position",
         "menu_path": "Window control",
-        "tags": [
-          "window",
-          "restore",
-          "position"
-        ]
+        "tags": ["window", "restore", "position"]
       },
       "routine_mgr": {
         "description": "Opens the routine manager tab directly.",
         "label": "Routine manager",
         "menu_path": "Tasks > Routine overview",
-        "tags": [
-          "routine",
-          "manage"
-        ]
+        "tags": ["routine", "manage"]
       },
       "save_layout": {
         "description": "Saves the current panel arrangement as a preset.",
         "label": "Save current layout",
         "menu_path": "View > Layout presets > Save",
-        "tags": [
-          "layout",
-          "preset",
-          "save"
-        ]
+        "tags": ["layout", "preset", "save"]
       },
       "show_hide": {
         "description": "Hides the main window or shows it again.",
         "label": "Show/hide window",
         "menu_path": "Window control",
-        "tags": [
-          "window",
-          "hide",
-          "show",
-          "overlay"
-        ]
+        "tags": ["window", "hide", "show", "overlay"]
       },
       "sync_gcal": {
         "description": "Start synchronization for all connected calendars.",
         "label": "Sync all connected calendars",
         "menu_path": "System > Calendars and sync",
-        "tags": [
-          "Google",
-          "Outlook",
-          "iCloud",
-          "Naver",
-          "ICS",
-          "F5",
-          "sync"
-        ]
+        "tags": ["Google", "Outlook", "iCloud", "Naver", "ICS", "F5", "sync"]
       },
       "today": {
         "description": "Instantly moves the selected date to today.",
         "label": "Jump to today",
         "menu_path": "Navigation",
-        "tags": [
-          "today",
-          "date"
-        ]
+        "tags": ["today", "date"]
       },
       "topbar": {
         "description": "Switches whether the top menu bar is shown.",
         "label": "Toggle top bar",
         "menu_path": "View > Top bar",
-        "tags": [
-          "menu bar",
-          "top bar",
-          "recovery"
-        ]
+        "tags": ["menu bar", "top bar", "recovery"]
       },
       "widget_mode": {
         "description": "Opens widget-only panel mode.",
         "label": "Toggle widget mode",
         "menu_path": "View > Widget-only mode",
-        "tags": [
-          "widget",
-          "panel"
-        ]
+        "tags": ["widget", "panel"]
       }
     },
     "groups": {
@@ -2458,6 +2305,7 @@
     "hub_title": "Calendars / accounts and synchronization",
     "icloud_capability": "Two-way personal events; app-specific password",
     "ics_fetch": "Could not refresh this subscription. Check its URL and your internet connection, then sync again.",
+    "identity_changed": "A different event now occupies this server address. Changes are paused. Check the event in its original service.",
     "incomplete": "Some event responses were missing. This sync was stopped. Try again.",
     "invalid_data": "The service returned invalid event data. This sync was not applied.",
     "invalid_response": "The service response could not be read. Check the account and service status.",
@@ -2490,8 +2338,7 @@
     "unsafe": "An untrusted server address was returned. The connection was stopped.",
     "unsupported_service": "The service does not allow this connection method. Check its support policy.",
     "wait_timezone": "Wait for the current synchronization to finish before changing the timezone.",
-    "working": "Working...",
-    "identity_changed": "A different event now occupies this server address. Changes are paused. Check the event in its original service."
+    "working": "Working..."
   },
   "sync_unified": {
     "add_ics": "Add ICS subscription",
