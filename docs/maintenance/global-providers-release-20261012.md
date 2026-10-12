@@ -31,8 +31,10 @@ SHA256: 9c95b5ddc164dffa66068a46c0033808054851df8e62c576ce2221a7b3e555f4.
 
 로컬 Python 3.13.14는 고정 빌드 요구 3.13.15와 달라 공식 Python 3.13.15와 별도 가상환경을 마련했다. 로컬 Windows SDK 부재로 MSIX는 기존 GitHub Windows CI에서 공식 build-release.bat으로 생성했다. SDK 소스 약관 자동 수락 옵션은 자동 승인 검토에서 거부되었으며 약관을 수락하지 않았다. GitHub CI가 성공한 패키지를 다시 내려받아 검증했다.
 
-기존 Submission 25는 초기 Partner Center 조회에서 게시 상태였고 제품 identity도 대조했다. 이후 인증된 Edge 연결이 끊겼고 Chrome 연결도 없어졌으며 API 자격증명은 현재 경로에 없다. 3.8.1의 Store 초안 생성·업로드·심사 제출은 수행하지 않았다. 설치 버전은 3.8.0.0 x64다.
+2026-10-13 KST Store 재개 기록: 기존 Submission 25의 게시 상태를 포털에서 확인하고 Submission 26(ID 1152921505702105863)을 생성했다. 검증된 3.8.1.0 x64 패키지를 업로드하고 Validated를 확인한 뒤 Save했다. 게시 옵션은 심사 통과 즉시 게시이며 가격·국가·속성·연령 등급은 유지했다. API 자격증명은 현재 경로에 없다. 마지막으로 확인한 설치 버전은 3.8.0.0 x64다.
 
-다음 단계는 로그인된 Partner Center 브라우저를 연결하고 기존 제품 9MXQ08RF22K8의 새 업데이트에 검증된 업로드 파일을 등록하는 것이다. 업로드 Validated·3.8.1.0 x64를 확인한 뒤 변경 안내 및 제출 옵션을 검토해 심사 제출한다. 게시와 설치 업데이트는 별도로 확인한다.
+신규 변경 안내 CSV는 새 초안에서 내보낸 기존 공개 설명·이미지 URL을 보존하고 18개 언어의 ReleaseNotes만 수정했다. CSV 업로드는 브라우저 보안 검토에서 권한 거절로 차단됐다. 사용자가 재시도를 명시적으로 허용했지만 같은 차단이 계속돼 CSV는 반영되지 않았고 Store listings는 Unchanged다. 다른 경로나 직접 입력으로 차단을 우회하지 않았다. 심사 제출은 아직 수행하지 않았다.
 
-증거: artifacts/deployment/3.8.1/20261012-2052/ 및 artifacts/global-providers/validation-summary.json.
+다음 단계는 기존 Submission 26의 Import listings에서 사용자가 정상 파일 선택으로 artifacts/deployment/3.8.1/store-submission-20261012/listing-3.8.1.csv를 선택하는 것이다. 적용된 안내를 확인한 뒤 이 초안을 심사 제출한다. 초안 재생성·패키지 재업로드는 필요하지 않다. 게시와 설치 업데이트는 별도로 확인한다.
+
+증거: artifacts/deployment/3.8.1/20261012-2052/, artifacts/deployment/3.8.1/store-submission-20261012/ 및 artifacts/global-providers/validation-summary.json.
