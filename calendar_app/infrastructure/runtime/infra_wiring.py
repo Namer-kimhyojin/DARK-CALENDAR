@@ -393,28 +393,45 @@ def _set_overlay_visible(app, visible: bool, *, refresh: bool = False) -> None:
         app.is_visible = app.isVisible()
         if refresh and hasattr(app, "_refresh_all_panels"):
             app._refresh_all_panels()
+        app.raise_()
+        app.activateWindow()
         return
 
     app.hide()
     app.is_visible = False
 
 
+def _return_to_main_from_widget_mode(app) -> bool:
+    """Treat a tray restore request as explicit navigation to the calendar."""
+    if not getattr(app, "is_widget_mode_active", lambda: False)():
+        return False
+    coordinator = getattr(app, "_widget_mode_coordinator", None)
+    return_to_main = getattr(coordinator, "return_to_main", None)
+    if callable(return_to_main):
+        return_to_main()
+    else:
+        stop_widget_mode = getattr(app, "stop_widget_mode", None)
+        if callable(stop_widget_mode):
+            stop_widget_mode()
+        _set_overlay_visible(app, True, refresh=True)
+    return True
+
+
 def _handle_tray_activation(app, reason: QSystemTrayIcon.ActivationReason) -> None:
-    """Handle tray icon click events."""
-    if reason in (
+    """Toggle on a single click and always reveal on a double click."""
+    if reason not in (
         QSystemTrayIcon.ActivationReason.Trigger,
         QSystemTrayIcon.ActivationReason.DoubleClick,
     ):
-        if hasattr(app, "is_widget_mode_active") and app.is_widget_mode_active():
-            if hasattr(app, "stop_widget_mode"):
-                app.stop_widget_mode()
-            return
-        if app.isVisible():
-            _set_overlay_visible(app, False)
-        else:
-            _set_overlay_visible(app, True, refresh=True)
-            app.activateWindow()
-            app.raise_()
+        return
+    if _return_to_main_from_widget_mode(app):
+        return
+    should_reveal = (
+        reason == QSystemTrayIcon.ActivationReason.DoubleClick
+        or app.isMinimized()
+        or not app.isVisible()
+    )
+    _set_overlay_visible(app, should_reveal, refresh=should_reveal)
 
 
 def _toggle_lock_via_shortcut(app):
@@ -431,7 +448,9 @@ def init_shortcuts(app):
 
 def toggle_overlay(app) -> None:
     """Toggle main-window visibility using the actual Qt window state."""
-    _set_overlay_visible(app, not app.isVisible())
+    if _return_to_main_from_widget_mode(app):
+        return
+    _set_overlay_visible(app, app.isMinimized() or not app.isVisible())
 
 
 def toggle_fullscreen(app) -> None:

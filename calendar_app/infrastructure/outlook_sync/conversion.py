@@ -55,9 +55,14 @@ def to_graph(task, local_zone="Asia/Seoul"):
 
 def from_graph(event, local_zone="Asia/Seoul"):
     all_day = bool(event.get("isAllDay"))
-    start = _datetime(event["start"]["dateTime"], "UTC")
-    end = _datetime(event["end"]["dateTime"], "UTC")
-    zone = ZoneInfo(local_zone)
+    try:
+        start = _datetime(event["start"]["dateTime"], "UTC")
+        end = _datetime(event["end"]["dateTime"], "UTC")
+        zone = ZoneInfo(local_zone)
+    except (KeyError, TypeError) as exc:
+        raise OutlookError("invalid_event_time") from exc
+    if end < start or (all_day and end.astimezone(zone).date() <= start.astimezone(zone).date()):
+        raise OutlookError("invalid_event_range")
     if all_day:
         # Graph UTC preference expresses original midnight as a UTC instant.
         start_text = start.astimezone(zone).date().isoformat()
@@ -68,16 +73,31 @@ def from_graph(event, local_zone="Asia/Seoul"):
             for v in (start, end)
         ]
     # bodyPreview is plain text; do not interpret external HTML in task widgets.
+    body, location = event.get("body"), event.get("location")
+    body = {} if body is None else body
+    location = {} if location is None else location
+    if not isinstance(body, dict) or not isinstance(location, dict):
+        raise OutlookError("invalid_graph_response")
+    if any(
+        value is not None and not isinstance(value, str)
+        for value in (
+            event.get("subject"),
+            event.get("bodyPreview"),
+            body.get("content"),
+            location.get("displayName"),
+        )
+    ):
+        raise OutlookError("invalid_graph_response")
     return {
         "name": event.get("subject") or "(Untitled)",
         "deadline": start_text,
         "end_date": end_text,
         "all_day": int(all_day),
         "description": (
-            (event.get("body") or {}).get("content")
-            if str((event.get("body") or {}).get("contentType", "")).lower() == "text"
+            body.get("content")
+            if str(body.get("contentType", "")).lower() == "text"
             else event.get("bodyPreview")
         )
         or "",
-        "location": (event.get("location") or {}).get("displayName") or "",
+        "location": location.get("displayName") or "",
     }

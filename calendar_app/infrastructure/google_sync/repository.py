@@ -52,16 +52,109 @@ def get_connection():
 
 
 def _lookup_row_raw_calendar_ids(row):
-    ids = []
-    source_calendar_id = _normalize_calendar_id(row["gcal_source_calendar_id"])
-    target_calendar_id = _normalize_calendar_id(row["gcal_target_calendar_id"])
-    if source_calendar_id:
-        ids.append(source_calendar_id)
-    if target_calendar_id and target_calendar_id not in ids:
-        ids.append(target_calendar_id)
-    if not ids:
-        ids.append(_resolved_primary_calendar_id())
-    return ids
+    """Return the remote owner, rather than a pending move destination.
+
+    Event IDs are unique within one calendar. An empty route is not a second
+    primary-calendar link, and a requested target is not proof of a remote move.
+    """
+    for field in ("gcal_source_calendar_id", "gcal_target_calendar_id"):
+        calendar_id = str(row.get(field) or "").strip()
+        if calendar_id:
+            return [_normalize_calendar_id(calendar_id)]
+    explicit_calendar_id = str(row.get("calendar_id") or "").strip()
+    if explicit_calendar_id.startswith("gcal::"):
+        calendar_id = explicit_calendar_id[len("gcal::") :].strip()
+        if calendar_id:
+            return [_normalize_calendar_id(calendar_id)]
+    return [_resolved_primary_calendar_id()]
+
+
+def gcal_row_matches_calendar(row, calendar_id, *, resolved_primary_id=None):
+    expected = _canonical_lookup_calendar_id(calendar_id, resolved_primary_id)
+    return any(
+        _canonical_lookup_calendar_id(raw_id, resolved_primary_id) == expected
+        for raw_id in _lookup_row_raw_calendar_ids(row)
+    )
+
+
+def has_primary_calendar_alias_references():
+    """Whether unresolved routes could be reinterpreted under a different account."""
+    conn = get_connection()
+    if conn is None:
+        raise RuntimeError("calendar_ambiguous")
+    return any(
+        conn.execute(query).fetchone()[0]
+        for query in (
+            "SELECT EXISTS(SELECT 1 FROM calendar WHERE id='gcal::primary' "
+            "OR (type='gcal' AND trim(gcal_calendar_id)='primary'))",
+            "SELECT EXISTS(SELECT 1 FROM unified_task WHERE calendar_id='gcal::primary' "
+            "OR trim(gcal_source_calendar_id)='primary' OR trim(gcal_target_calendar_id)='primary')",
+            "SELECT EXISTS(SELECT 1 FROM gcal_delete_queue WHERE trim(gcal_calendar_id)='primary')",
+        )
+    )
+
+
+def migrate_primary_calendar_alias(real_primary_id, *, preserve_alias_preferences=False):
+    """Replace the account alias atomically without unlinking any events or deletes."""
+    real_primary_id = str(real_primary_id or "").strip()
+    if not real_primary_id or real_primary_id == "primary":
+        return False
+    conn = get_connection()
+    if not conn:
+        return False
+    destination_id = f"gcal::{real_primary_id}"
+    savepoint = "gcal_primary_alias_migration"
+    try:
+        conn.execute(f"SAVEPOINT {savepoint}")
+        alias = conn.execute("SELECT * FROM calendar WHERE id='gcal::primary'").fetchone()
+        destination = conn.execute(
+            "SELECT * FROM calendar WHERE id=?", (destination_id,)
+        ).fetchone()
+        if not alias or not destination:
+            conn.execute(f"RELEASE SAVEPOINT {savepoint}")
+            return False
+        if preserve_alias_preferences:
+            conn.execute(
+                "UPDATE calendar SET is_active=?, is_visible=?, color=?, sort_order=? WHERE id=?",
+                (
+                    alias["is_active"],
+                    alias["is_visible"],
+                    alias["color"],
+                    alias["sort_order"],
+                    destination_id,
+                ),
+            )
+        if alias["is_default"]:
+            conn.execute("UPDATE calendar SET is_default=1 WHERE id=?", (destination_id,))
+        conn.execute(
+            """
+            UPDATE unified_task
+            SET calendar_id=CASE WHEN calendar_id='gcal::primary' THEN ? ELSE calendar_id END,
+                gcal_source_calendar_id=CASE WHEN trim(gcal_source_calendar_id)='primary'
+                    THEN ? ELSE gcal_source_calendar_id END,
+                gcal_target_calendar_id=CASE WHEN trim(gcal_target_calendar_id)='primary'
+                    THEN ? ELSE gcal_target_calendar_id END
+            WHERE calendar_id='gcal::primary'
+               OR trim(gcal_source_calendar_id)='primary'
+               OR trim(gcal_target_calendar_id)='primary'
+            """,
+            (destination_id, real_primary_id, real_primary_id),
+        )
+        conn.execute(
+            "UPDATE gcal_delete_queue SET gcal_calendar_id=? WHERE trim(gcal_calendar_id)='primary'",
+            (real_primary_id,),
+        )
+        conn.execute("DELETE FROM calendar WHERE id='gcal::primary'")
+        conn.execute(f"RELEASE SAVEPOINT {savepoint}")
+        return True
+    except Exception:
+        logger.exception("Failed to migrate the primary calendar alias; all links were preserved")
+        try:
+            conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+            conn.execute(f"RELEASE SAVEPOINT {savepoint}")
+        except Exception:
+            logger.exception("Failed to roll back the primary alias migration")
+        return False
 
 
 def _lookup_row_priority(row, canonical_calendar_id):
@@ -107,7 +200,7 @@ def cleanup_duplicate_gcal_rows():
         cur.execute(
             """
             SELECT id, gcal_event_id, gcal_source_calendar_id, gcal_target_calendar_id,
-                   gcal_sync_mode, calendar_id
+                   gcal_sync_mode, calendar_id, gcal_dirty
             FROM unified_task
             WHERE gcal_event_id IS NOT NULL
               AND trim(gcal_event_id) != ''
@@ -131,6 +224,9 @@ def cleanup_duplicate_gcal_rows():
         for key, dup_rows in grouped.items():
             unique_rows = {int(row["id"]): row for row in dup_rows}
             if len(unique_rows) <= 1:
+                continue
+            if any(int(row.get("gcal_dirty") or 0) for row in unique_rows.values()):
+                # A duplicate identity is insufficient evidence to discard an unsent edit.
                 continue
             canonical_calendar_id = key.split("::", 1)[0]
             keep_row = _choose_lookup_row(list(unique_rows.values()), canonical_calendar_id)
@@ -312,6 +408,8 @@ def insert_gcal_event_to_unified(
 ):
     """새로운 Google Calendar 이벤트를 unified_task에 추가합니다."""
     conn = get_connection()
+    if not conn:
+        return False
     if conn and gcal_id:
         try:
             cur = conn.cursor()
@@ -328,24 +426,12 @@ def insert_gcal_event_to_unified(
             matches = [dict(row) for row in cur.fetchall()]
             row = None
             if matches:
-                exact_matches = []
-                for match in matches:
-                    match_ids = {
-                        _canonical_lookup_calendar_id(match.get("gcal_source_calendar_id")),
-                        _canonical_lookup_calendar_id(match.get("gcal_target_calendar_id")),
-                    }
-                    explicit_calendar_id = str(match.get("calendar_id") or "").strip()
-                    if explicit_calendar_id.startswith("gcal::"):
-                        match_ids.add(
-                            _canonical_lookup_calendar_id(explicit_calendar_id[len("gcal::") :])
-                        )
-                    if normalized_source in match_ids:
-                        exact_matches.append(match)
-                candidate_rows = exact_matches or matches
-                # BUG-P01: always pick the best row via _choose_lookup_row regardless
-                # of how many candidates exist. Previously, multiple non-exact matches
-                # fell through to a new insert, creating duplicate local rows.
-                row = _choose_lookup_row(candidate_rows, normalized_source)
+                exact_matches = [
+                    match
+                    for match in matches
+                    if gcal_row_matches_calendar(match, normalized_source)
+                ]
+                row = _choose_lookup_row(exact_matches, normalized_source)
             if row:
                 updated = update_task_from_gcal(
                     "unified_task",
@@ -368,6 +454,7 @@ def insert_gcal_event_to_unified(
             logger.error(f"Error upserting gcal unified event: {e}")
             if commit:
                 conn.rollback()
+            return False
 
     task_data = {
         "name": summary,
@@ -392,8 +479,7 @@ def insert_gcal_event_to_unified(
         "gcal_remote_updated_at": remote_updated_at,
         "calendar_id": f"gcal::{source_calendar_id}" if source_calendar_id else None,
     }
-    # task_repo.create_unified_task also commits, but we cannot easily make it optional without editing it too.
-    # However, it only creates a few tasks per sync (the rest are updates).
+    # Honor the calendar pull transaction; token advancement follows its commit.
     return task_repo.create_unified_task(task_data, commit=commit)
 
 

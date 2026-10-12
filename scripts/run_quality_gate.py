@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Run the app-wide quality gate for major regression surfaces."""
 
 from __future__ import annotations
@@ -9,8 +10,14 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
 PYTEST = [PYTHON, "-m", "pytest", "-q"]
+SOURCE_PATHS = [path.name for path in sorted(ROOT.glob("*.py"))] + [
+    "calendar_app",
+    "infrastructure",
+    "scripts",
+    "tests",
+]
 CHECKS: list[tuple[str, list[str]]] = [
-    ("Compile Python files", [PYTHON, "-m", "compileall", "-q", "."]),
+    ("Compile Python files", [PYTHON, "-m", "compileall", "-q", *SOURCE_PATHS]),
     (
         "Run core management and sync-helper tests",
         [

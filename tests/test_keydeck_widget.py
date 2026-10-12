@@ -250,7 +250,7 @@ class KeyDeckWidgetTests(unittest.TestCase):
 
     def test_resizing_zooms_the_deck_instead_of_fitting_fonts(self):
         self.widget._fit_font_to_size(900, 700, live=True)
-        self.assertEqual(self.widget.width(), 900)
+        self.assertEqual(self.widget.size(), self.widget._canvas.renderer.geometry.size())
         self.widget._fit_font_to_size(900, 700)
         self.assertGreater(self.widget.deck()["scale"], 100)
         self.assertIsNone(self.widget._normalized_fixed_dimension("fixed_w"))

@@ -8,6 +8,7 @@ import logging
 from PyQt6.QtCore import QDate, QSettings, Qt, QTimer
 
 from calendar_app.app_metadata import APP_NAME
+from calendar_app.application.calendar_provider_catalog import CALDAV_SERVICES
 from calendar_app.infrastructure.google_sync.common import ensure_gcal_startup_defaults
 from calendar_app.presentation.main_window.ui_builder import setup_idle_lock_ui, setup_main_ui
 from calendar_app.preset_manager import PresetManager
@@ -47,6 +48,7 @@ def initialize_overlay_app(app) -> None:
     app.cal_show_month = app.settings.value("cal_show_month", False, type=bool)
     app.cal_show_weekday = app.settings.value("cal_show_weekday", False, type=bool)
     app.view_mode_state = app.settings.value("view_mode_state", "monthly", type=str)
+    app.cal_week_layout = app.settings.value("cal_week_layout", "time", type=str)
     app.setMouseTracking(True)
     app.preset_manager = PresetManager(app)
     app.selected_task_ids = set()
@@ -78,6 +80,9 @@ def initialize_overlay_app(app) -> None:
     app._outlook_sync_controller = None
     app.outlook_sync_timer = None
     app._caldav_sync_controllers = {}
+    for service in CALDAV_SERVICES:
+        setattr(app, service + "_sync_timer", None)
+        setattr(app, service + "_startup_sync_timer", None)
     app._calendar_sync_coordinator = None
     app._wake_sync_timer = None
     app.icloud_sync_timer = None
@@ -115,10 +120,11 @@ def initialize_overlay_app(app) -> None:
 
     app.is_locked = app.settings.value("is_locked", False, type=bool)
     last_date_str = app.settings.value("last_working_date")
-    if last_date_str:
-        app.current_date = QDate.fromString(last_date_str, Qt.DateFormat.ISODate)
-    else:
-        app.current_date = QDate.currentDate()
+    app.current_date = QDate.currentDate()
+    if isinstance(last_date_str, str):
+        saved_date = QDate.fromString(last_date_str, Qt.DateFormat.ISODate)
+        if saved_date.isValid():
+            app.current_date = saved_date
 
     setup_main_ui(app)
     setup_idle_lock_ui(app)
@@ -139,7 +145,7 @@ def initialize_overlay_app(app) -> None:
     app.outlook_sync_timer = app._outlook_sync_controller.timer
     from calendar_app.presentation.main_window.caldav_sync_controller import CalDAVSyncController
 
-    for service in ("icloud", "naver"):
+    for service in CALDAV_SERVICES:
         controller = CalDAVSyncController(app, service)
         app._caldav_sync_controllers[service] = controller
         setattr(app, service + "_sync_timer", controller.timer)

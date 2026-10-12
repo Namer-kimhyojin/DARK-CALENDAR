@@ -26,6 +26,7 @@ from calendar_app.app_metadata import APP_NAME
 from calendar_app.app_paths import APP_ICON_PATH
 from calendar_app.domain.i18n import set_translator as set_domain_translator
 from calendar_app.infrastructure.i18n import t
+from calendar_app.shared.value_parsers import as_int
 
 set_domain_translator(t)
 
@@ -92,9 +93,14 @@ def _acquire_single_instance_lock() -> tuple[bool, QSharedMemory]:
 def _apply_saved_font(app: QApplication, build_ui_font) -> None:
     settings = QSettings("kimhyojin", "Dark Calendar")
     family = settings.value("font_family", "Segoe UI")
-    size = settings.value("font_size", 10, type=int)
+    if not isinstance(family, str) or not family.strip():
+        family = "Segoe UI"
+        settings.setValue("font_family", family)
+    raw_size = settings.value("font_size", 10)
+    size = as_int(raw_size, 10, maximum=256)
     if size <= 0:
         size = 10
+    if raw_size != size:
         settings.setValue("font_size", size)
     app.setFont(build_ui_font(family, size))
 

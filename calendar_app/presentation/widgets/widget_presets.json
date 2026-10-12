@@ -71,7 +71,7 @@
     {
       "label_key": "widget.stopwatch.preset_tenths",
       "label_default": "Tenths Focus",
-      "template": "{elapsed|size=30|bold}.{tenths|size=22|bold|color=accent}\n{status|size=10|color=muted}"
+      "template": "{if hours > 0}{hours|size=30|bold}:{/if}{minutes|size=30|bold}:{seconds|size=30|bold}.{tenths|size=22|bold|color=accent}\n{status|size=10|color=muted}"
     },
     {
       "label_key": "widget.stopwatch.preset_minimal",
@@ -227,7 +227,7 @@
     {
       "label_key": "widget.datecard.preset_tomorrow",
       "label_default": "Tomorrow",
-      "template": "{tomorrow|size=18|bold}\n{weekday|size=12|color=muted}"
+      "template": "{tomorrow|size=22|bold}"
     }
   ],
   "text": [
@@ -296,7 +296,7 @@
     {
       "label_key": "widget.weather.preset_default",
       "label_default": "Default",
-      "template": "{icon|size=32}\n{temp|size=24|bold}{unit}\n{city|size=11|color=muted}"
+      "template": "{icon|size=64}\n{temp|size=28|bold}{unit|size=14}\n{city|size=12|color=muted}"
     },
     {
       "label_key": "widget.weather.preset_temp_only",
@@ -311,7 +311,7 @@
     {
       "label_key": "widget.weather.preset_full",
       "label_default": "Full Info",
-      "template": "{city|size=13|bold}\n{icon|size=22} {temp|size=22|bold}{unit|size=13}\n{desc|size=11|color=muted}\n💧 {humidity}  💨 {wind|size=11|color=muted}"
+      "template": "{city|size=13|bold}\n{icon|size=22} {temp|size=22|bold}{unit|size=13}\n{desc|size=11|color=muted}\n{humidity|size=11|color=muted}%  ·  {wind|size=11|color=muted} m/s"
     },
     {
       "label_key": "widget.weather.preset_compact_inline",
@@ -331,12 +331,67 @@
     {
       "label_key": "widget.weather.preset_wind_humidity",
       "label_default": "Wind & Humidity",
-      "template": "{icon|size=24}  {temp|size=28|bold}{unit|size=15}\n💨 {wind|size=12|color=muted}  💧 {humidity|size=12|color=muted}\n{city|size=10|color=muted}"
+      "template": "{icon|size=24}  {temp|size=28|bold}{unit|size=15}\n{wind|size=12|color=muted} m/s  ·  {humidity|size=12|color=muted}%\n{city|size=10|color=muted}"
     },
     {
       "label_key": "widget.weather.preset_minimal_icon",
       "label_default": "Minimal Icon",
       "template": "{icon|size=40}"
+    },
+    {
+      "label_key": "widget.weather.preset_daily_card",
+      "label_default": "Daily Card",
+      "template": "{city|size=14|bold}\n{icon|size=56}  {temp|size=30|bold}{unit|size=14}\n{desc|size=12|color=muted}\n{humidity|size=11|color=muted}%"
+    },
+    {
+      "label_key": "widget.weather.preset_horizontal_bar",
+      "label_default": "Horizontal Bar",
+      "template": "{icon|size=40}  {city|size=13|bold}  {temp|size=24|bold}{unit|size=12}"
+    },
+    {
+      "label_key": "widget.weather.preset_wide_weather",
+      "label_default": "Wide Weather",
+      "template": "{city|size=16|bold}  {icon|size=48}  {temp|size=30|bold}{unit|size=14}\n{desc|size=12|color=muted}  ·  {humidity|size=12|color=muted}%  ·  {wind|size=12|color=muted} m/s"
+    },
+    {
+      "label_key": "widget.weather.preset_hero_icon",
+      "label_default": "Hero Icon",
+      "template": "{icon|size=104}\n{temp|size=36|bold}{unit|size=16}\n{city|size=12|color=muted}"
+    },
+    {
+      "label_key": "widget.weather.preset_night_card",
+      "label_default": "Night Card",
+      "template": "{city|size=12|color=faint}\n{icon|size=72}\n{temp|size=32|bold}{unit|size=14}\n{desc|size=11|color=muted}"
+    },
+    {
+      "label_key": "widget.weather.preset_travel_city",
+      "label_default": "Travel City",
+      "template": "{city|size=24|bold|color=accent}\n{icon|size=48}  {temp|size=26|bold}{unit|size=14}\n{desc|size=12|color=muted}"
+    },
+    {
+      "label_key": "widget.weather.preset_humidity_focus",
+      "label_default": "Humidity Focus",
+      "template": "{humidity|size=40|bold}%\n{icon|size=32}  {temp|size=20|bold}{unit|size=12}\n{city|size=12|color=muted}"
+    },
+    {
+      "label_key": "widget.weather.preset_wind_focus",
+      "label_default": "Wind Focus",
+      "template": "{wind|size=38|bold} m/s\n{icon|size=36}  {temp|size=20|bold}{unit|size=12}\n{city|size=12|color=muted}"
+    },
+    {
+      "label_key": "widget.weather.preset_rain_focus",
+      "label_default": "Weather Conditions",
+      "template": "{icon|size=88}\n{desc|size=20|bold}\n{city|size=12|color=muted}  {temp|size=18|bold}{unit|size=11}"
+    },
+    {
+      "label_key": "widget.weather.preset_temperature_badge",
+      "label_default": "Temperature Badge",
+      "template": "{icon|size=32}  {temp|size=48|bold}{unit|size=22}"
+    },
+    {
+      "label_key": "widget.weather.preset_mini_dashboard",
+      "label_default": "Mini Dashboard",
+      "template": "{city|size=13|bold}  {desc|size=11|color=muted}\n{icon|size=48}  {temp|size=28|bold}{unit|size=14}\n{humidity|size=12|color=muted}%  ·  {wind|size=12|color=muted} m/s"
     }
   ]
 }

@@ -113,6 +113,12 @@ class RefreshSchedulerMixin:
         )
 
     def _flush_scheduled_refresh(self):
+        # A queued timer start can arrive after shutdown stopped every timer.
+        # Discard its pending work before touching panels or data consumers.
+        if getattr(self, "_is_shutting_down", False):
+            self._pending_refresh = {"left": False, "center": False, "right": False}
+            self._pending_data_consumer_refresh = False
+            return
         self._ensure_refresh_scheduler()
         pending = dict(self._pending_refresh)
         notify_data_consumers = self._pending_data_consumer_refresh

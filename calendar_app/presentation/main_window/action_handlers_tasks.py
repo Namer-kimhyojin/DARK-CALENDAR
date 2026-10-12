@@ -669,9 +669,12 @@ class TaskActionsMixin:
         self._run_worker(worker, on_finished)
 
     def clear_task_selection(self):
-        if not self.selected_task_ids:
+        selected_directives = getattr(self, "selected_directive_ids", None)
+        if not self.selected_task_ids and not selected_directives:
             return
         self.selected_task_ids.clear()
+        if selected_directives is not None:
+            selected_directives.clear()
         self._update_selection_visuals()
 
     def show_event_detail(self, task_id, task_name, deadline, priority, end_date):

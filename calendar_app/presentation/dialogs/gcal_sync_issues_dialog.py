@@ -34,6 +34,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
     set_footer_loading,
 )
+from calendar_app.presentation.dialogs.sync_feedback import sync_error_message
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 
@@ -460,6 +461,18 @@ class GCalSyncIssuesDialog(QDialog):
             return "-", "-"
 
         raw_msg = str(error_raw).lower()
+        if "calendar_move_local_state" in raw_msg:
+            return t("gcal_focus.move_local_state_label", "이동 연결 저장 필요"), t(
+                "gcal.treatments.pending_retry", "재시도 대기"
+            )
+        if "calendar_move_unconfirmed" in raw_msg:
+            return t("gcal_focus.move_unconfirmed_label", "이동 확인 필요"), t(
+                "gcal.treatments.pending_retry", "재시도 대기"
+            )
+        if "calendar_move" in raw_msg:
+            return t("gcal_focus.move_failed_label", "캘린더 이동 실패"), t(
+                "gcal.treatments.pending_retry", "재시도 대기"
+            )
         if "remote_newer_than_local" in raw_msg:
             return t("gcal.errors.remote_newer_than_local", "서버 버전 우선"), t(
                 "gcal.treatments.mirrored", "데이터 동기화"
@@ -891,6 +904,15 @@ class GCalSyncIssuesDialog(QDialog):
                 "마지막 오류와 Google 캘린더 권한을 확인한 뒤 '재시도'를 누르세요. "
                 "항목은 자동 삭제되지 않으며 진단 목록에 계속 보존됩니다.",
             )
+        elif "calendar_move" in raw:
+            move_code = (
+                "calendar_move_local_state"
+                if "calendar_move_local_state" in raw
+                else "calendar_move_unconfirmed"
+                if "calendar_move_unconfirmed" in raw
+                else "calendar_move"
+            )
+            html_content = sync_error_message(move_code)
         elif raw == "remote_orphan":
             html_content = t(
                 "gcal.guidance.remote_orphan",

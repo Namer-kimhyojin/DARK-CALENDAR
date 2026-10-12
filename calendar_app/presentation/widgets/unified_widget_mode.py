@@ -7,6 +7,7 @@ from PyQt6.QtCore import (
     QEvent,
     QLocale,
     QPoint,
+    QRect,
     QSize,
     Qt,
     QTime,
@@ -34,7 +35,6 @@ from PyQt6.QtWidgets import (
     QMenu,
     QPushButton,
     QScrollArea,
-    QSizeGrip,
     QSizePolicy,
     QToolButton,
     QVBoxLayout,
@@ -90,6 +90,11 @@ from calendar_app.presentation.widgets.widget_mode_typography import (
 from calendar_app.presentation.widgets.widget_mode_visibility import (
     read_widget_calendar_visibility,
     write_widget_calendar_visibility,
+)
+from calendar_app.presentation.widgets.widget_placement import (
+    PlacementSizeGrip,
+    WidgetPlacementDialog,
+    drag_distance_reached,
 )
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
@@ -969,6 +974,7 @@ class CompactCalendarGrid(QWidget):
 class UnifiedWidgetWindow(QWidget):
     def __init__(self, controller):
         super().__init__(None)
+        self.setProperty("airCalendarOverlayWindow", True)
         self.controller = controller
         settings = controller.main_window.settings
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
@@ -996,6 +1002,10 @@ class UnifiedWidgetWindow(QWidget):
         self._filter_layout_signature = None
         self._data_state = "ready"
         self._drag_offset = None
+        self._placement_origin = None
+        self._last_placement = None
+        self._placement_drag_active = False
+        self._placement_press_global = None
         self._feedback_timer = QTimer(self)
         self._feedback_timer.setSingleShot(True)
         self._feedback_timer.timeout.connect(self._expire_feedback)
@@ -1021,6 +1031,16 @@ class UnifiedWidgetWindow(QWidget):
         bar.setContentsMargins(0, 0, 0, 0)
         bar.setSpacing(2)
         self.toolbar.installEventFilter(self)
+        self.toolbar.setMouseTracking(True)
+        self.toolbar.setToolTip(
+            t(
+                "widget.placement.move_help",
+                "빈 상단 영역을 끌어 이동하세요. 우클릭에서 위치·크기를 조정할 수 있습니다.",
+            )
+        )
+        self.toolbar.setCursor(Qt.CursorShape.OpenHandCursor)
+        if self.placement_is_locked():
+            self.toolbar.setCursor(Qt.CursorShape.ArrowCursor)
         self.restore_btn = self._button(
             t("widget_mode.return_main", "메인 화면으로"), self.controller.return_to_main
         )
@@ -1240,7 +1260,11 @@ class UnifiedWidgetWindow(QWidget):
         footer.addWidget(self.undo_btn)
         footer.addWidget(self.count_chip)
         footer.addWidget(self.clock_label)
-        self.size_grip = QSizeGrip(self)
+        self.size_grip = PlacementSizeGrip(self)
+        self.size_grip.setEnabled(not self.placement_is_locked())
+        self.size_grip.editStarted.connect(self._begin_placement_edit)
+        self.size_grip.editFinished.connect(self._finish_placement_edit)
+        self.size_grip.editCanceled.connect(self._cancel_placement_edit)
         footer.addWidget(self.size_grip)
         surface_layout.addLayout(footer)
         self.feedback_label = QLabel(self)
@@ -1377,20 +1401,132 @@ class UnifiedWidgetWindow(QWidget):
 
     def eventFilter(self, watched, event):
         if watched is self.toolbar:
+            if self.placement_is_locked():
+                return super().eventFilter(watched, event)
             if (
                 event.type() == QEvent.Type.MouseButtonPress
                 and event.button() == Qt.MouseButton.LeftButton
             ):
                 self._drag_offset = event.globalPosition().toPoint() - self.pos()
+                self._placement_press_global = event.globalPosition().toPoint()
+                self._placement_drag_active = False
+                self._begin_placement_edit()
                 return True
             if event.type() == QEvent.Type.MouseMove and self._drag_offset is not None:
+                if not event.buttons() & Qt.MouseButton.LeftButton:
+                    self._cancel_placement_edit()
+                    return True
+                if not self._placement_drag_active:
+                    if not drag_distance_reached(
+                        self._placement_press_global, event.globalPosition().toPoint()
+                    ):
+                        return True
+                    self._placement_drag_active = True
+                    self.toolbar.setCursor(Qt.CursorShape.ClosedHandCursor)
                 self.move(event.globalPosition().toPoint() - self._drag_offset)
                 return True
-            if event.type() == QEvent.Type.MouseButtonRelease and self._drag_offset is not None:
+            if (
+                event.type() == QEvent.Type.MouseButtonRelease
+                and event.button() == Qt.MouseButton.LeftButton
+                and self._drag_offset is not None
+            ):
                 self._drag_offset = None
-                self.controller.save_position(self.pos())
+                if self._placement_drag_active:
+                    settings = self.controller.main_window.settings
+                    if (
+                        settings.value("widget_mode_snap_enabled", True, type=bool)
+                        and not event.modifiers() & Qt.KeyboardModifier.AltModifier
+                    ):
+                        screen = QApplication.screenAt(self.geometry().center()) or self.screen()
+                        if screen is not None:
+                            area = screen.availableGeometry()
+                            x, y = self.x(), self.y()
+                            for value in (area.left(), area.right() - self.width() + 1):
+                                if abs(value - x) <= 12:
+                                    x = value
+                                    break
+                            for value in (area.top(), area.bottom() - self.height() + 1):
+                                if abs(value - y) <= 12:
+                                    y = value
+                                    break
+                            self.move(x, y)
+                    self._finish_placement_edit()
+                else:
+                    self._placement_origin = None
+                self.toolbar.setCursor(Qt.CursorShape.OpenHandCursor)
+                self._placement_drag_active = False
                 return True
         return super().eventFilter(watched, event)
+
+    def placement_is_locked(self):
+        return self.controller.main_window.settings.value(
+            "widget_mode_placement_locked", False, type=bool
+        )
+
+    def _set_placement_locked(self, locked):
+        self._cancel_placement_edit()
+        self.controller.main_window.settings.setValue("widget_mode_placement_locked", bool(locked))
+        self.size_grip.setEnabled(not locked)
+        self.toolbar.setCursor(
+            Qt.CursorShape.ArrowCursor if locked else Qt.CursorShape.OpenHandCursor
+        )
+
+    def _begin_placement_edit(self):
+        self._placement_origin = (self.active_layout_id(), QRect(self.geometry()))
+
+    def _finish_placement_edit(self):
+        state = self._placement_origin
+        self._placement_origin = None
+        if state is not None and state[1] != self.geometry():
+            self._last_placement = state
+            self.controller.save_position(self.pos())
+            self.controller.save_size(self.size())
+
+    def _cancel_placement_edit(self):
+        state = self._placement_origin
+        self._placement_origin = None
+        self._drag_offset = None
+        self._placement_drag_active = False
+        self.toolbar.setCursor(Qt.CursorShape.OpenHandCursor)
+        self.size_grip.cancel_edit()
+        if (
+            state is not None
+            and state[0] == self.active_layout_id()
+            and state[1] != self.geometry()
+        ):
+            self.setGeometry(state[1])
+            self.controller.save_position(self.pos())
+            self.controller.save_size(self.size())
+
+    def _undo_placement(self):
+        state = self._last_placement
+        self._last_placement = None
+        if state is not None and state[0] == self.active_layout_id():
+            self.setGeometry(state[1])
+            self.controller.save_position(self.pos())
+            self.controller.save_size(self.size())
+
+    def _open_placement_dialog(self):
+        settings = self.controller.main_window.settings
+        dialog = WidgetPlacementDialog(
+            self,
+            locked=self.placement_is_locked(),
+            snap=settings.value("widget_mode_snap_enabled", True, type=bool),
+        )
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._begin_placement_edit()
+            self.setGeometry(dialog.placement_rect())
+            self._finish_placement_edit()
+            self._set_placement_locked(dialog.lock.isChecked())
+            settings.setValue("widget_mode_snap_enabled", dialog.snap.isChecked())
+        dialog.deleteLater()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape and self._placement_origin is not None:
+            self._cancel_placement_edit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def active_layout_id(self) -> str:
         return "free" if self._free_layout_active else self._active_layout_id
@@ -1576,7 +1712,10 @@ class UnifiedWidgetWindow(QWidget):
         settings = self.controller.main_window.settings
         opacities = read_widget_opacities(settings)
         family = str(settings.value("widget_mode_font_family", QApplication.font().family()))
-        weight = int(settings.value("widget_mode_font_weight", 500))
+        try:
+            weight = int(settings.value("widget_mode_font_weight", 500))
+        except (TypeError, ValueError, OverflowError):
+            weight = 500
         weight = weight if weight in {400, 500, 600, 700} else 500
         typography = read_widget_typography(settings)
         signature = (
@@ -2391,6 +2530,17 @@ class UnifiedWidgetWindow(QWidget):
 
         editor_action = menu.addAction(t("widget_mode.editor_title", "위젯 스타일 만들기"))
         menu.addSection(t("widget_mode.menu_window", "창 관리"))
+        menu.addAction(t("widget.placement.title", "위치·크기 조정"), self._open_placement_dialog)
+        placement_lock = menu.addAction(t("widget.placement.lock", "위치·크기 고정"))
+        placement_lock.setCheckable(True)
+        placement_lock.setChecked(self.placement_is_locked())
+        placement_lock.toggled.connect(self._set_placement_locked)
+        undo_placement = menu.addAction(
+            t("widget.placement.undo", "최근 배치 되돌리기"), self._undo_placement
+        )
+        undo_placement.setEnabled(
+            self._last_placement is not None and self._last_placement[0] == self.active_layout_id()
+        )
         close_action = menu.addAction(t("widget_mode.return_main", "메인 화면으로"))
         hide_action = menu.addAction(t("widget_mode.hide_tray", "트레이로 숨기기"))
         recover_action = menu.addAction(t("widget_mode.recover_position", "화면 안으로 이동"))

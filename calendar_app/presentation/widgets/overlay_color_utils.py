@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Color utility helpers extracted from overlay_base."""
 
 from __future__ import annotations
@@ -12,11 +13,15 @@ def _parse_rgba(
     """Return (QColor-without-alpha, alpha 0-255) from a stored color string."""
     s = str(raw or "").strip()
     if len(s) == 9 and s.startswith("#"):  # #AARRGGBB
-        alpha = int(s[1:3], 16)
-        rgb = "#" + s[3:]
-        c = QColor(rgb)
-        if c.isValid():
-            return c, alpha
+        try:
+            alpha = int(s[1:3], 16)
+        except ValueError:
+            pass
+        else:
+            rgb = "#" + s[3:]
+            c = QColor(rgb)
+            if c.isValid():
+                return c, alpha
     c = QColor(s)
     if c.isValid():
         return c, fallback_alpha

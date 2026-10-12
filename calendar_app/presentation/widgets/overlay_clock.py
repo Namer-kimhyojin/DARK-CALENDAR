@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import re
 
-from PyQt6.QtCore import QDateTime, QPoint, Qt, QTimer
+from PyQt6.QtCore import QDateTime, QLocale, QPoint, Qt, QTimer
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout
 
@@ -139,9 +139,16 @@ class OverlayClockWidget(_BaseOverlayWidget):
         if raw is None or str(raw) == "None":
             return None
         try:
-            return int(raw)
-        except (ValueError, TypeError):
+            offset = int(raw)
+        except (ValueError, TypeError, OverflowError):
             return None
+        from PyQt6.QtCore import QTimeZone
+
+        return (
+            offset
+            if QTimeZone.MinUtcOffsetSecs <= offset * 60 <= QTimeZone.MaxUtcOffsetSecs
+            else None
+        )
 
     def _now_tz(self) -> QDateTime:
         offset = self._tz_offset_minutes()
@@ -195,25 +202,27 @@ class OverlayClockWidget(_BaseOverlayWidget):
         tz_suffix = f"  [{tz_lbl}]" if tz_lbl else ""
 
         if style == "retro":
-            self._time_label.setText(now.toString("hh:mm:ss"))
-            self._ampm_label.setText(now.toString("AP") + tz_suffix)
+            self._time_label.setText(
+                now.toString(_strftime_to_qt("%I:%M:%S", hour=now.time().hour()))
+            )
+            self._ampm_label.setText(QLocale().toString(now, "AP") + tz_suffix)
             self._split_bottom.setText("")
             self._date_label.setText("")
         elif style == "split":
             self._time_label.setText(now.toString("HH:mm"))
-            self._split_bottom.setText(now.toString(":ss  ddd") + tz_suffix)
+            self._split_bottom.setText(QLocale().toString(now, ":ss  ddd") + tz_suffix)
             self._ampm_label.setText("")
             self._date_label.setText("")
         elif style == "multiline":
             fmt = self._display_format()
             self._time_label.setText(now.toString(fmt))
-            self._date_label.setText(now.toString("yyyy.MM.dd  ddd") + tz_suffix)
+            self._date_label.setText(QLocale().toString(now, "yyyy.MM.dd  ddd") + tz_suffix)
             self._ampm_label.setText("")
             self._split_bottom.setText("")
         elif style == "digital":
             fmt = self._display_format()
             self._time_label.setText(now.toString(fmt))
-            self._date_label.setText(now.toString("ddd  yyyy-MM-dd") + tz_suffix)
+            self._date_label.setText(QLocale().toString(now, "ddd  yyyy-MM-dd") + tz_suffix)
             self._ampm_label.setText("")
             self._split_bottom.setText("")
         elif style == "glass":
@@ -282,7 +291,7 @@ class OverlayClockWidget(_BaseOverlayWidget):
         template = _protect_align_tags(template)
 
         ctx = {
-            "weekday": now_dt.toString("dddd"),
+            "weekday": QLocale().toString(now_dt, "dddd"),
             "date": now_dt.toString("yyyy.MM.dd"),
             "tz_label": tz_label or t("widget.clock.tz.local_short", "Local"),
         }
@@ -293,17 +302,21 @@ class OverlayClockWidget(_BaseOverlayWidget):
             key, hints = inner[0].strip(), inner[1:]
 
             if key.startswith("time:"):
-                val = now_dt.toString(_strftime_to_qt(key[5:]))
+                val = QLocale().toString(
+                    now_dt, _strftime_to_qt(key[5:], hour=now_dt.time().hour())
+                )
             elif key == "time":
                 val = now_dt.toString("HH:mm:ss")
             elif key.startswith("date:"):
-                val = now_dt.toString(_strftime_to_qt(key[5:]))
+                val = QLocale().toString(
+                    now_dt, _strftime_to_qt(key[5:], hour=now_dt.time().hour())
+                )
             elif key == "date":
                 val = now_dt.toString("yyyy.MM.dd")
             elif key == "weekday":
-                val = now_dt.toString("dddd")
+                val = QLocale().toString(now_dt, "dddd")
             elif key == "weekday:short":
-                val = now_dt.toString("ddd")
+                val = QLocale().toString(now_dt, "ddd")
             elif key == "tz_label":
                 val = tz_label or t("widget.clock.tz.local_short", "Local")
             else:
@@ -350,6 +363,16 @@ class OverlayClockWidget(_BaseOverlayWidget):
 
     def _build_context_menu(self, menu: QMenu):
         menu.addAction(t("widget.clock.settings", "Clock Settings..."), self._open_settings)
+        zones = menu.addMenu(t("widget.usage.timezone", "시간대 빠른 선택"))
+        current = self._tz_offset_minutes()
+        for label, offset, _hint in self._timezone_items():
+            action = zones.addAction(label, lambda *_, selected=offset: self._set_tz(selected))
+            action.setCheckable(True)
+            action.setChecked(current == offset)
+
+    def _on_double_click(self) -> bool:
+        self._open_settings()
+        return True
 
     def _action_reset_position(self):
         self.center_on_owner()

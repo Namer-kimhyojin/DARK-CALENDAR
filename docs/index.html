@@ -30,7 +30,7 @@
   <link rel="icon" href="assets/app_icon.png">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="guide.css">
-  <script src="app.js?v=3.8.0-sync" defer></script>
+  <script src="app.js?v=3.8.1-sync" defer></script>
   <link rel="stylesheet" href="request-board.css?v=3">
   <script src="request-board.js?v=3" defer></script>
   <script type="application/ld+json" id="software-schema">
@@ -41,10 +41,10 @@
       "description": "A customizable Windows desktop calendar with movable and resizable widgets, focus tools, unified Google/Outlook/iCloud sync and read-only Naver/ICS connections.",
       "applicationCategory": "ProductivityApplication",
       "operatingSystem": "Windows 10, Windows 11",
-      "softwareVersion": "3.8.0",
+      "softwareVersion": "3.8.1",
       "url": "https://namer-kimhyojin.github.io/DARK-CALENDAR/",
       "downloadUrl": "https://apps.microsoft.com/detail/9mxq08rf22k8?cid=aircal-20261005-owned-home",
-      "license": "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.8.0/LICENSE",
+      "license": "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.8.1/LICENSE",
       "image": "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/og-air-calendar.png",
       "screenshot": [
         "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/screenshots/main-dashboard.png",
@@ -126,7 +126,7 @@
           </a>
           <a class="button button-quiet" href="#desktop-custom"><span data-i18n="heroSecondary">맞춤 기능 둘러보기</span><span aria-hidden="true">↓</span></a>
         </div>
-        <p class="hero-meta"><span data-i18n="heroPaid">Microsoft Store 유료 앱</span><span aria-hidden="true">·</span><span>v<span data-config-text="appVersion">3.8.0</span></span><span aria-hidden="true">·</span><span>GPLv3</span></p>
+        <p class="hero-meta"><span data-i18n="heroPaid">Microsoft Store 유료 앱</span><span aria-hidden="true">·</span><span>v<span data-config-text="appVersion">3.8.1</span></span><span aria-hidden="true">·</span><span>GPLv3</span></p>
       </div>
 
       <div class="hero-visual" aria-label="Air Calendar product preview" data-i18n-aria="heroVisualLabel">
@@ -448,7 +448,7 @@
           <a class="text-link" href="privacy.html"><span data-i18n="privacyLink">개인정보 처리 방식 자세히 보기</span><span aria-hidden="true">↗</span></a>
         </article>
         <article class="detail-card"><span>LOCAL</span><h3 data-i18n="detailLocalTitle">로컬 데이터 저장</h3><p data-i18n="detailLocalBody">일정, 업무, 설정은 기본적으로 사용자 PC 안에 머뭅니다.</p></article>
-        <article class="detail-card"><span>GPLv3</span><h3 data-i18n="detailSourceTitle">공개된 전체 소스</h3><p data-i18n="detailSourceBody">배포 버전과 같은 태그의 전체 대응 소스와 라이선스를 GitHub에서 제공합니다.</p><a data-config-link="releaseSourceUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.8.0" target="_blank" rel="noopener" data-i18n="detailSourceLink">버전별 소스 보기 ↗</a></article>
+        <article class="detail-card"><span>GPLv3</span><h3 data-i18n="detailSourceTitle">공개된 전체 소스</h3><p data-i18n="detailSourceBody">배포 버전과 같은 태그의 전체 대응 소스와 라이선스를 GitHub에서 제공합니다.</p><a data-config-link="releaseSourceUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v3.8.1" target="_blank" rel="noopener" data-i18n="detailSourceLink">버전별 소스 보기 ↗</a></article>
         <article class="detail-card"><span>19 LANG</span><h3 data-i18n="detailLangTitle">19개 언어 인터페이스</h3><p data-i18n="detailLangBody">한국어를 기본으로 영어, 일본어, 중국어 등 다양한 언어 전환을 지원합니다.</p></article>
       </div>
     </section>
@@ -550,7 +550,7 @@
       <a href="#guides">English Guides</a>
       <a href="#requests" data-i18n="navRequests">사용자 요청</a>
       <a href="privacy.html" data-i18n="footerPrivacy">개인정보처리방침</a>
-      <a data-config-link="licenseUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.8.0/LICENSE" target="_blank" rel="noopener">GNU General Public License v3.0</a>
+      <a data-config-link="licenseUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v3.8.1/LICENSE" target="_blank" rel="noopener">GNU General Public License v3.0</a>
     </div>
     <p>© 2026 Zinz-Soft. <span data-i18n="footerRights">All rights reserved.</span></p>
   </footer>
@@ -562,7 +562,7 @@
       <label><span data-board-i18n="titleLabel">제목</span><input name="title" required minlength="3" maxlength="100" placeholder="어떤 점을 개선하면 좋을까요?" data-board-placeholder="titlePlaceholder"></label>
       <label><span data-board-i18n="bodyLabel">요청 내용</span><textarea name="body" required minlength="10" maxlength="5000" rows="7" placeholder="불편한 상황과 원하는 개선 내용을 알려주세요. 오류라면 재현 방법도 함께 적어주세요." data-board-placeholder="bodyPlaceholder"></textarea></label>
       <fieldset class="board-upload"><legend data-board-i18n="imagesLabel">이미지 첨부 (선택)</legend><div class="board-upload-zone" data-board-drop><button type="button" class="board-secondary" data-board-add-image><span aria-hidden="true">＋</span><span data-board-i18n="addImages">이미지 선택</span></button><span data-board-i18n="dropImages">여기로 끌어놓거나 Ctrl+V로 붙여넣으세요.</span><input type="file" accept="image/png,image/jpeg,image/webp" multiple hidden data-board-image-picker></div><p class="board-upload-help" data-board-i18n="imagesHelp">PNG·JPG·WebP, 최대 3장 · 장당 5MB. 첨부 이미지는 공개되며 웹용으로 최적화됩니다.</p><div class="board-upload-list" data-board-upload-list></div><p class="board-upload-status" data-board-upload-status role="status" aria-live="polite"></p></fieldset>
-      <div class="board-form-grid"><label><span data-board-i18n="version">앱 버전 (선택)</span><input name="appVersion" maxlength="30" placeholder="3.8.0"></label><label><span data-board-i18n="platform">사용 환경 (선택)</span><select name="platform"><option value="" data-board-i18n="selectOptional">선택하지 않음</option><option value="Windows 11">Windows 11</option><option value="Windows 10">Windows 10</option><option value="Other" data-board-i18n="other">기타</option></select></label></div>
+      <div class="board-form-grid"><label><span data-board-i18n="version">앱 버전 (선택)</span><input name="appVersion" maxlength="30" placeholder="3.8.1"></label><label><span data-board-i18n="platform">사용 환경 (선택)</span><select name="platform"><option value="" data-board-i18n="selectOptional">선택하지 않음</option><option value="Windows 11">Windows 11</option><option value="Windows 10">Windows 10</option><option value="Other" data-board-i18n="other">기타</option></select></label></div>
       <label><span data-board-i18n="editPassword">수정·삭제 비밀번호</span><input name="password" type="password" required minlength="8" maxlength="128" autocomplete="new-password"><small data-board-i18n="passwordHelp">8자 이상으로 설정하세요. 글을 수정·삭제할 때 필요하며, 비밀번호는 복구할 수 없습니다.</small></label>
       <label class="board-honeypot" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
       <p class="board-form-error" data-board-error role="alert"></p><p class="board-form-notice" data-board-i18n="formNotice">닉네임과 요청 내용은 게시판에 공개됩니다. 개인 일정이나 연락처를 포함하지 마세요.</p>

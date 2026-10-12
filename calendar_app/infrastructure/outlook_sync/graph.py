@@ -7,6 +7,7 @@ import uuid
 import requests
 
 from calendar_app.application.calendar_sync_contract import RemoteCalendarError
+from calendar_app.infrastructure.calendar_sync.http_retry import retry_after_seconds
 
 from .auth import OutlookError
 
@@ -14,8 +15,9 @@ BASE = "https://graph.microsoft.com/v1.0"
 
 
 class GraphError(RemoteCalendarError):
-    def __init__(self, status: int):
+    def __init__(self, status: int, retry_after=None):
         super().__init__(status)
+        self.retry_after = retry_after
         self.args = (f"graph_http_{status}",)
 
 
@@ -55,30 +57,49 @@ class GraphClient:
         except requests.RequestException as exc:
             raise OutlookError("network_unavailable") from exc
         if response.status_code >= 300:
-            raise GraphError(response.status_code)
+            raise GraphError(
+                response.status_code,
+                retry_after_seconds(response.headers.get("Retry-After")),
+            )
         if response.status_code == 204:
             return {}
         try:
             data = response.json()
-            if "@odata.etag" in data:
-                data["etag"] = data["@odata.etag"]
-            if "transactionId" in data:
-                data["transaction_id"] = data["transactionId"]
-            if "isCancelled" in data:
-                data["cancelled"] = data["isCancelled"]
-            for event in data.get("value", []):
-                if "@odata.etag" in event:
-                    event["etag"] = event["@odata.etag"]
-                if "transactionId" in event:
-                    event["transaction_id"] = event["transactionId"]
-                if "isCancelled" in event:
-                    event["cancelled"] = event["isCancelled"]
-            return data
         except ValueError as exc:
             raise OutlookError("invalid_graph_response") from exc
+        if not isinstance(data, dict):
+            raise OutlookError("invalid_graph_response")
+        values = data.get("value", [])
+        if not isinstance(values, list) or any(not isinstance(item, dict) for item in values):
+            raise OutlookError("invalid_graph_response")
+        for event in [data, *values]:
+            if any(
+                key in event and not isinstance(event[key], bool)
+                for key in ("isCancelled", "isAllDay")
+            ):
+                raise OutlookError("invalid_graph_response")
+            if "@odata.etag" in event:
+                revision = event["@odata.etag"]
+                if (
+                    not isinstance(revision, str)
+                    or not revision.strip()
+                    or "\r" in revision
+                    or "\n" in revision
+                ):
+                    raise OutlookError("invalid_graph_response")
+                event["etag"] = event["@odata.etag"]
+            if "transactionId" in event:
+                if event["transactionId"] is not None and not isinstance(
+                    event["transactionId"], str
+                ):
+                    raise OutlookError("invalid_graph_response")
+                event["transaction_id"] = event["transactionId"]
+            if "isCancelled" in event:
+                event["cancelled"] = event["isCancelled"]
+        return data
 
     def collection(self, path, params=None):
-        result, seen = [], set()
+        result, seen, identities = [], set(), set()
         for _ in range(1000):
             if path in seen:
                 raise OutlookError("pagination_loop")
@@ -86,20 +107,49 @@ class GraphClient:
             page = self.request("GET", path, params=params)
             if not isinstance(page.get("value"), list):
                 raise OutlookError("invalid_graph_response")
+            for item in page["value"]:
+                identifier = item.get("id")
+                if not isinstance(identifier, str) or not identifier.strip():
+                    raise OutlookError("invalid_graph_response")
+                if identifier in identities:
+                    raise OutlookError("duplicate_remote_event")
+                identities.add(identifier)
             result.extend(page["value"])
             path = page.get("@odata.nextLink")
+            if path is not None and not isinstance(path, str):
+                raise OutlookError("invalid_graph_response")
             if not path:
                 return result
             params = None
         raise OutlookError("pagination_limit")
 
     def profile(self):
-        return self.request(
+        profile = self.request(
             "GET", "/me", params={"$select": "id,displayName,mail,userPrincipalName"}
         )
+        identifier = profile.get("id")
+        if (
+            not isinstance(identifier, str)
+            or not identifier.strip()
+            or any(
+                profile.get(key) is not None and not isinstance(profile[key], str)
+                for key in ("mail", "userPrincipalName", "displayName")
+            )
+        ):
+            raise OutlookError("invalid_graph_response")
+        return profile
 
     def calendars(self):
-        return self.collection("/me/calendars")
+        calendars = self.collection("/me/calendars")
+        if any(
+            not isinstance(calendar.get("name"), str)
+            or not isinstance(calendar.get("canEdit", False), bool)
+            for calendar in calendars
+        ):
+            raise OutlookError("invalid_graph_response")
+        for calendar in calendars:
+            calendar["can_edit"] = calendar.get("canEdit", False)
+        return calendars
 
     def events(self, calendar, start, end):
         return self.collection(
@@ -108,21 +158,39 @@ class GraphClient:
         )
 
     def event(self, event_id):
-        return self.request("GET", f"/me/events/{quote(event_id, safe='')}")
+        return self._event_response(
+            self.request("GET", f"/me/events/{quote(event_id, safe='')}"), event_id
+        )
 
     def create(self, calendar, payload, transaction_id):
-        return self.request(
-            "POST",
-            f"/me/calendars/{quote(calendar, safe='')}/events",
-            payload={**payload, "transactionId": str(uuid.UUID(transaction_id))},
+        return self._event_response(
+            self.request(
+                "POST",
+                f"/me/calendars/{quote(calendar, safe='')}/events",
+                payload={**payload, "transactionId": str(uuid.UUID(transaction_id))},
+            )
         )
 
     def update(self, event_id, payload, etag):
         if not etag:
             raise OutlookError("etag_required")
-        return self.request(
-            "PATCH", f"/me/events/{quote(event_id, safe='')}", payload=payload, etag=etag
+        return self._event_response(
+            self.request(
+                "PATCH", f"/me/events/{quote(event_id, safe='')}", payload=payload, etag=etag
+            ),
+            event_id,
         )
+
+    @staticmethod
+    def _event_response(event, expected_id=None):
+        identifier = event.get("id")
+        if (
+            not isinstance(identifier, str)
+            or not identifier.strip()
+            or (expected_id is not None and identifier != expected_id)
+        ):
+            raise OutlookError("invalid_graph_response")
+        return event
 
     def delete(self, event_id, etag):
         if not etag:

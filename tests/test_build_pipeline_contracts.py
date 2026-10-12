@@ -55,16 +55,11 @@ class BuildPipelineContractTests(unittest.TestCase):
     def test_store_build_enforces_partner_center_publisher_display_name(self):
         script = self._read("scripts/build_pipeline.ps1")
 
-        self.assertIn(
-            '$script:ExpectedStorePublisherDisplayName = "Kim,hyojin"', script
-        )
+        self.assertIn('$script:ExpectedStorePublisherDisplayName = "Kim,hyojin"', script)
         self.assertIn("function Assert-StoreManifestContract", script)
+        self.assertIn("Assert-StoreManifestContract -ManifestPath $manifestSource", script)
         self.assertIn(
-            "Assert-StoreManifestContract -ManifestPath $manifestSource", script
-        )
-        self.assertIn(
-            "$thisIdentity.PublisherDisplayName -ne "
-            "$script:ExpectedStorePublisherDisplayName",
+            "$thisIdentity.PublisherDisplayName -ne $script:ExpectedStorePublisherDisplayName",
             script,
         )
 

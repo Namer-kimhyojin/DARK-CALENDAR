@@ -18,7 +18,39 @@ PROFILES = {
         "writable": False,
         "help": "https://help.naver.com/service/5620/contents/2426?lang=ko&osType=COMMONOS",
     },
+    "yahoo": {
+        "url": "https://caldav.calendar.yahoo.com/",
+        "writable": True,
+        "help": "https://help.yahoo.com/kb/SLN4707.html",
+    },
+    "zoho": {
+        "url": "https://calendar.zoho.com/.well-known/caldav",
+        "writable": True,
+        "help": "https://www.zoho.com/calendar/help/setup-caldav-sync.html",
+    },
+    "fastmail": {
+        "url": "https://caldav.fastmail.com/",
+        "writable": True,
+        "help": "https://www.fastmail.help/hc/en-us/articles/1500000278342-Server-names-and-ports",
+    },
 }
+
+ZOHO_HOSTS = (
+    "calendar.zoho.com",
+    "calendar.zoho.eu",
+    "calendar.zoho.in",
+    "calendar.zoho.com.au",
+    "calendar.zoho.jp",
+    "calendar.zoho.com.cn",
+    "calendar.zohocloud.ca",
+    "calendar.zoho.sa",
+)
+
+
+def server_urls(service):
+    if service == "zoho":
+        return tuple("https://" + host + "/.well-known/caldav" for host in ZOHO_HOSTS)
+    return (PROFILES[service]["url"],)
 
 
 def validate_url(service, url):
@@ -28,7 +60,9 @@ def validate_url(service, url):
         valid_host = (
             (host == "caldav.icloud.com" or bool(re.fullmatch(r"p\d+-caldav\.icloud\.com", host)))
             if service == "icloud"
-            else service == "naver" and host == "caldav.calendar.naver.com"
+            else host in ZOHO_HOSTS
+            if service == "zoho"
+            else service in PROFILES and host == urlparse(PROFILES[service]["url"]).hostname
         )
         if (
             not valid_host

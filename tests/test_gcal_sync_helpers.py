@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
 import sqlite3
 from types import SimpleNamespace
@@ -299,7 +300,7 @@ class GCalSyncHelperTests(TestCase):
         self.assertEqual(app.gcal_sync.create_calls, 1)
         persist_mock.assert_called_once_with(task_data, "replacement-id")
 
-    def test_not_found_update_recovers_by_searching_accessible_calendars_before_create(self):
+    def test_not_found_update_preserves_ambiguous_source_without_cross_calendar_modification(self):
         app = SimpleNamespace(
             settings=SimpleNamespace(gcal_enabled=True, gcal_calendar_id="primary"),
             gcal_sync=FakeSyncService(
@@ -324,14 +325,12 @@ class GCalSyncHelperTests(TestCase):
         ) as mark_mock:
             result = gcal_sync_helpers.sync_task_to_google(app, task_data, create_if_missing=True)
 
-        self.assertTrue(result.success)
-        self.assertTrue(result.auto_healed)
+        self.assertFalse(result.success)
+        self.assertEqual(result.error_kind, "calendar_ambiguous")
         self.assertEqual(result.event_id, "evt-team")
         self.assertEqual(app.gcal_sync.create_calls, 0)
-        self.assertEqual(app.gcal_sync.update_calendar_ids, ["primary", "team-cal"])
-        _, kwargs = mark_mock.call_args
-        self.assertEqual(kwargs["source_calendar_id"], "team-cal")
-        self.assertEqual(kwargs["target_calendar_id"], "team-cal")
+        self.assertEqual(app.gcal_sync.update_calendar_ids, ["primary"])
+        mark_mock.assert_not_called()
 
     def test_not_found_update_without_explicit_calendar_does_not_create_duplicate(self):
         app = SimpleNamespace(
@@ -495,7 +494,7 @@ class GCalSyncHelperTests(TestCase):
 
         self.assertTrue(changed)
         detach_mock.assert_not_called()
-        clear_queue_mock.assert_called_once_with()
+        clear_queue_mock.assert_not_called()
         self.assertEqual(app.settings.data["gcal_sync_token::old-cal"], "")
         self.assertEqual(app.settings.data["gcal_sync_token::new-cal"], "")
         self.assertEqual(app.settings.data["gcal_sync_token_fails::old-cal"], 0)
@@ -654,8 +653,11 @@ class GCalSyncHelperTests(TestCase):
         archive_mock.assert_called_once_with(42, reason="remote_deleted")
 
     def test_insert_gcal_event_to_unified_carries_source_calendar_fields(self):
+        cursor = SimpleNamespace(execute=lambda *args: None, fetchall=lambda: [])
         with (
-            patch.object(repository, "get_connection", return_value=None),
+            patch.object(
+                repository, "get_connection", return_value=SimpleNamespace(cursor=lambda: cursor)
+            ),
             patch.object(
                 repository.task_repo, "create_unified_task", return_value=99
             ) as create_mock,
@@ -754,7 +756,8 @@ class GCalSyncHelperTests(TestCase):
             )
             success = engine.sync_google_calendar(app, silent=True)
 
-        self.assertTrue(success)
+        self.assertFalse(success)
+        self.assertEqual(app._last_gcal_sync_outcome, engine.SYNC_OUTCOME_FAILED)
         self.assertEqual(app.settings.data["gcal_sync_token::primary"], "old-token")
         self.assertEqual(app._last_gcal_sync_stats["pull_apply_failures"], 1)
 
@@ -1062,12 +1065,14 @@ class GCalSyncHelperTests(TestCase):
             patch.object(gcal_service, "HAS_GOOGLE_API", True),
             patch.object(gcal_service.os.path, "exists", side_effect=fake_exists),
             patch.object(gcal_service, "build", return_value=object()),
-            patch("builtins.open", side_effect=OSError("disk full")),
-            patch.object(gcal_service, "InstalledAppFlow") as flow_mock,
+            patch(
+                "calendar_app.infrastructure.google_sync.token_store.save_token_json",
+                side_effect=OSError("disk full"),
+            ),
+            patch.object(gcal_service, "load_desktop_client_config", return_value={}),
+            patch.object(gcal_service, "run_desktop_auth", return_value=FakeCreds()),
+            patch.object(gcal_service, "InstalledAppFlow"),
         ):
-            flow_mock.from_client_secrets_file.return_value.run_local_server.return_value = (
-                FakeCreds()
-            )
             ok = svc.authenticate(parent_widget=None, interactive=True)
 
         self.assertFalse(ok)
@@ -1481,7 +1486,7 @@ class GCalSyncHelperTests(TestCase):
         self.assertEqual(fail_mock.call_args.args[0], 1)
         self.assertIn("[auth_expired_401]", fail_mock.call_args.args[1])
 
-    def test_sync_fetch_404_deactivates_missing_calendar_and_succeeds(self):
+    def test_sync_fetch_404_reports_failure_without_changing_calendar_choices(self):
         class FakeSettings:
             def __init__(self):
                 self.data = {
@@ -1538,8 +1543,9 @@ class GCalSyncHelperTests(TestCase):
         ):
             ok = engine.sync_google_calendar(app, silent=True)
 
-        self.assertTrue(ok)
-        self.assertEqual(app._last_gcal_sync_outcome, engine.SYNC_OUTCOME_SUCCESS)
+        self.assertFalse(ok)
+        self.assertEqual(app._last_gcal_sync_outcome, engine.SYNC_OUTCOME_FAILED)
+        self.assertEqual(app._last_gcal_sync_stats["pull_fetch_failures"], 1)
         deactivate_mock.assert_called_once_with(app, "removed-cal")
 
     def test_sync_fetch_401_sets_failed_outcome(self):
@@ -1603,7 +1609,7 @@ class GCalSyncHelperTests(TestCase):
 
         self.assertFalse(ok)
         self.assertEqual(app._last_gcal_sync_outcome, engine.SYNC_OUTCOME_FAILED)
-        self.assertEqual(app._last_gcal_sync_error, "fetch")
+        self.assertEqual(app._last_gcal_sync_error, "login_required")
         self.assertEqual(app._last_gcal_sync_stats["pull_fetch_failures"], 1)
         push_mock.assert_not_called()
 
@@ -1686,17 +1692,17 @@ class GCalSyncHelperTests(TestCase):
             patch.object(engine.gcal_db_adapter, "update_task_from_gcal", return_value=False),
         ):
             ok1 = engine.sync_google_calendar(app, silent=True)
-            self.assertTrue(ok1)
+            self.assertFalse(ok1)
             self.assertEqual(app.settings.data["gcal_sync_token::primary"], "old-token")
             self.assertEqual(app.settings.data["gcal_apply_fail_streak::primary"], 1)
 
             ok2 = engine.sync_google_calendar(app, silent=True)
-            self.assertTrue(ok2)
+            self.assertFalse(ok2)
             self.assertEqual(app.settings.data["gcal_sync_token::primary"], "old-token")
             self.assertEqual(app.settings.data["gcal_apply_fail_streak::primary"], 2)
 
             ok3 = engine.sync_google_calendar(app, silent=True)
-            self.assertTrue(ok3)
+            self.assertFalse(ok3)
 
         self.assertEqual(app.settings.data["gcal_sync_token::primary"], "")
         self.assertEqual(app.settings.data["gcal_apply_fail_streak::primary"], 0)
@@ -1775,7 +1781,7 @@ class GCalSyncHelperTests(TestCase):
             ids,
         )
 
-    def test_deactivate_missing_gcal_calendar_hides_calendar(self):
+    def test_inaccessible_gcal_calendar_preserves_visibility_and_import_choices(self):
         class FakeSettings:
             def __init__(self):
                 self.data = {}
@@ -1807,7 +1813,7 @@ class GCalSyncHelperTests(TestCase):
         ):
             engine._deactivate_missing_gcal_calendar(app, gcal_id)
 
-        active_mock.assert_called_once_with(cal_db_id, False)
-        visible_mock.assert_called_once_with(cal_db_id, False)
-        self.assertEqual("", app.settings.data.get(f"gcal_sync_token::{gcal_id}"))
-        self.assertEqual(0, app.settings.data.get(f"gcal_sync_token_fails::{gcal_id}"))
+        active_mock.assert_not_called()
+        visible_mock.assert_not_called()
+        self.assertNotIn(f"gcal_sync_token::{gcal_id}", app.settings.data)
+        self.assertNotIn(f"gcal_sync_token_fails::{gcal_id}", app.settings.data)

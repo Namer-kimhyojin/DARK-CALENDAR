@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Run encoding guard checks used by both local and CI workflows."""
 
 from __future__ import annotations
@@ -8,8 +9,14 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
+SOURCE_PATHS = [path.name for path in sorted(ROOT.glob("*.py"))] + [
+    "calendar_app",
+    "infrastructure",
+    "scripts",
+    "tests",
+]
 CHECKS: list[tuple[str, list[str]]] = [
-    ("Compile Python files", [PYTHON, "-m", "compileall", "-q", "."]),
+    ("Compile Python files", [PYTHON, "-m", "compileall", "-q", *SOURCE_PATHS]),
     (
         "Run encoding policy tests",
         [

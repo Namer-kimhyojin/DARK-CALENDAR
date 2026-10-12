@@ -3,6 +3,7 @@
 
 import json
 import logging
+import math
 import time
 
 from PyQt6.QtCore import QDateTime, Qt, QTimer
@@ -17,6 +18,7 @@ from calendar_app.presentation.theme.style_builder import (
 from calendar_app.shared.color_utils import derive_text_palette, parse_hex_color
 from calendar_app.shared.theme_settings import get_opacity_byte, set_opacity_byte
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
+from calendar_app.shared.value_parsers import as_int
 
 logger = logging.getLogger(__name__)
 
@@ -161,9 +163,11 @@ class MainWindowUiActionsMixin:
 
     def _ensure_stopwatch_timer(self):
         if getattr(self, "_stopwatch_timer", None) is None:
-            self._stopwatch_elapsed_ms = float(
-                self.settings.value("stopwatch_elapsed_ms", 0.0) or 0.0
-            )
+            try:
+                elapsed = float(self.settings.value("stopwatch_elapsed_ms", 0.0) or 0.0)
+            except (TypeError, ValueError, OverflowError):
+                elapsed = 0.0
+            self._stopwatch_elapsed_ms = max(0.0, elapsed) if math.isfinite(elapsed) else 0.0
             self._stopwatch_running = self.settings.value("stopwatch_running", False, type=bool)
             self._stopwatch_started_at = time.monotonic() if self._stopwatch_running else None
             self._stopwatch_timer = QTimer(self)
@@ -531,8 +535,12 @@ class MainWindowUiActionsMixin:
         current_base = current_snapshot.panel_base_color
         current_theme = current_snapshot.theme_color
         current_opacity = get_opacity_byte(self.settings, persist_normalized=True)
-        current_border_opacity = int(self.settings.value("last_border_opacity", 80, type=int))
-        current_text_opacity = int(self.settings.value("last_text_opacity", 255, type=int))
+        current_border_opacity = as_int(
+            self.settings.value("last_border_opacity", 80), 80, minimum=0, maximum=255
+        )
+        current_text_opacity = as_int(
+            self.settings.value("last_text_opacity", 255), 255, minimum=0, maximum=255
+        )
 
         current_text_theme = str(self.settings.value("text_theme", "dark"))
         _tpal = derive_text_palette(current_snapshot.text_theme, current_theme)
@@ -554,10 +562,12 @@ class MainWindowUiActionsMixin:
 
         app_font = QApplication.instance().font()
         current_font_family = str(self.settings.value("font_family", app_font.family()))
-        current_font_size = int(
-            self.settings.value(
-                "font_size", app_font.pointSize() if app_font.pointSize() > 0 else 10
-            )
+        default_font_size = app_font.pointSize() if app_font.pointSize() > 0 else 10
+        current_font_size = as_int(
+            self.settings.value("font_size", default_font_size),
+            default_font_size,
+            minimum=1,
+            maximum=256,
         )
 
         dlg = PanelColorPickerDialog(

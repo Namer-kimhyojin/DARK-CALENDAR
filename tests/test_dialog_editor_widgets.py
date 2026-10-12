@@ -363,7 +363,7 @@ class DialogEditorWidgetTests(unittest.TestCase):
             _FakeFileDialog.instances[0].file_mode, _FakeFileDialog.FileMode.ExistingFile
         )
 
-    def test_gcal_status_meta_resolves_primary_alias_to_real_calendar_name(self):
+    def test_gcal_status_meta_shows_account_and_import_count(self):
         class _CalendarListApi:
             def get(self, calendarId):
                 self.calendar_id = calendarId
@@ -398,13 +398,15 @@ class DialogEditorWidgetTests(unittest.TestCase):
         self.addCleanup(_safe_close, parent)
 
         dialog.cal_id_edit.setText("primary")
+        dialog._calendar_choices = parent.gcal_sync.list_accessible_calendars()
+        dialog._calendar_import_selection = {"gcal::family": True, "gcal::primary": True}
         dialog._refresh_meta()
 
         self.assertEqual(dialog.account_meta[1].text(), "aplus.mylife@gmail.com")
-        self.assertEqual(dialog.calendar_meta[1].text(), "이차진자님")
-        self.assertEqual(dialog.calendar_meta[1].toolTip(), "aplus.mylife@gmail.com")
+        self.assertEqual(dialog.calendar_meta[1].text(), "2개")
+        self.assertIn("메인 캘린더", dialog.calendar_meta[1].toolTip())
 
-    def test_gcal_status_meta_hides_unresolved_primary_alias(self):
+    def test_gcal_status_meta_keeps_import_count_independent_of_primary_alias(self):
         class _CalendarListApi:
             def get(self, calendarId):
                 raise RuntimeError("primary not available")
@@ -435,67 +437,47 @@ class DialogEditorWidgetTests(unittest.TestCase):
 
         dialog.cal_id_edit.setText("primary")
         dialog._calendar_choices = []
+        dialog._calendar_import_selection = {}
         dialog._refresh_meta()
 
-        self.assertEqual(dialog.calendar_meta[1].text(), "-")
-        self.assertEqual(dialog.calendar_meta[1].toolTip(), "")
+        self.assertEqual(dialog.calendar_meta[1].text(), "0개")
+        self.assertIn("화면 표시 여부", dialog.calendar_meta[1].toolTip())
 
-    def test_gcal_calendar_row_uses_fixed_action_button_styles_and_smaller_name_font(self):
-        class _DummyParent(QWidget):
+    def test_gcal_import_list_is_visible_and_routes_to_main_manager(self):
+        class Parent(QWidget):
             def __init__(self):
                 super().__init__()
-                self.settings = QSettings("CodexTests", "GCalSettingsDialogCalendarRowStyle")
+                self.settings = QSettings("CodexTests", "GCalCommonManagerRoute")
 
-        parent = _DummyParent()
-        dialog = GCalSettingsDialog(parent=parent)
+        parent = Parent()
+        dialog = GCalSettingsDialog(parent=parent, initial_tab="calendar")
         self.addCleanup(_safe_close, dialog)
         self.addCleanup(_safe_close, parent)
-
-        row = dialog._make_calendar_row_widget(
-            {
-                "id": "local::family",
-                "name": "아주 긴 캘린더 이름 테스트",
-                "type": "local",
-                "color": "#4da6ff",
-                "is_default": 0,
-                "is_visible": 1,
-            }
-        )
-        self.addCleanup(_safe_close, row)
-
-        name_lbl = row.findChild(QLabel, "calendarNameLabel")
-        default_btn = row.findChild(QPushButton, "calendarDefaultButton")
-        vis_btn = row.findChild(QPushButton, "calendarVisibilityButton")
-        edit_btn = row.findChild(QPushButton, "calendarEditButton")
-        del_btn = row.findChild(QPushButton, "calendarDeleteButton")
-
-        self.assertIsNotNone(name_lbl)
-        self.assertIsNotNone(default_btn)
-        self.assertIsNotNone(vis_btn)
-        self.assertIsNotNone(edit_btn)
-        self.assertIsNotNone(del_btn)
-        self.assertIn("font-size: 13px", name_lbl.styleSheet())
-        self.assertIn("min-width: 40px", default_btn.styleSheet())
-        self.assertIn("#1e2536", default_btn.styleSheet())
-        self.assertIn("rgba(77, 166, 255, 0.16)", vis_btn.styleSheet())
-        self.assertIn("#1e2536", edit_btn.styleSheet())
-        self.assertIn("rgba(210, 90, 102, 0.16)", del_btn.styleSheet())
-        for button in (default_btn, vis_btn, edit_btn, del_btn):
-            self.assertTrue(button.accessibleName())
-            self.assertEqual(button.accessibleDescription(), button.accessibleName())
+        dialog.show()
+        QApplication.processEvents()
+        self.assertFalse(dialog.cal_id_edit.isVisible())
+        self.assertFalse(dialog.calendar_choice_combo.isVisible())
+        self.assertTrue(dialog.import_list.isVisible())
+        self.assertTrue(dialog.load_calendars_btn.isVisible())
+        self.assertEqual(len(dialog._nav_btns), 5)
+        self.assertTrue(dialog.calendar_choice_combo.accessibleName())
+        dialog.setProperty("syncHubChild", True)
+        dialog._open_other_services()
+        self.assertTrue(dialog.property("returnToCalendars"))
 
     def test_gcal_run_auth_auto_refreshes_google_calendar_list(self):
         class _SyncStub:
             def __init__(self):
                 self.is_authenticated = False
                 self.service = None
+                self._pending_token_json = None
 
-            def authenticate(self, _parent):
+            def authenticate(self, **kwargs):
                 self.is_authenticated = True
                 self.service = object()
                 return True
 
-            def list_accessible_calendars(self):
+            def list_accessible_calendars(self, **kwargs):
                 return [
                     {
                         "id": "aplus.mylife@gmail.com",
@@ -529,13 +511,17 @@ class DialogEditorWidgetTests(unittest.TestCase):
             patch.object(
                 dialog,
                 "_refresh_google_calendar_list",
-                side_effect=lambda _=None, *, notify=True, show_empty_message=True: (
+                side_effect=lambda _=None, *, notify=True, show_empty_message=True, calendars=None: (
                     refresh_calls.append((notify, show_empty_message))
                 ),
             ),
             patch("calendar_app.presentation.dialogs.gcal_settings_dialog.QMessageBox.information"),
         ):
             dialog.run_auth()
+            for _ in range(200):
+                QTest.qWait(10)
+                if dialog._auth_worker is None:
+                    break
 
         self.assertTrue(dialog.enable_cb.isChecked())
         self.assertIs(parent.gcal_sync, sync_stub)

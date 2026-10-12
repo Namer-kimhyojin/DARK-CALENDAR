@@ -58,6 +58,7 @@ class _FloatingWidgetBase(QWidget):
 
     def __init__(self, app: QWidget, title: str, icon_text: str):
         super().__init__(None)
+        self.setProperty("airCalendarOverlayWindow", True)
         self._app = app
         self._title = title
         self._icon_text = icon_text
@@ -540,7 +541,7 @@ class _FloatingWidgetBase(QWidget):
         key = self._opacity_setting_key()
         try:
             value = int(self._app.settings.value(key, 100))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             value = 100
         return max(30, min(100, value))
 

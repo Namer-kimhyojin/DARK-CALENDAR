@@ -3,18 +3,26 @@
 
 from __future__ import annotations
 
-import contextlib
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
+from html import escape
 import json
 import logging
 import math
-import re
 import time
 
 from PyQt6.QtCore import QPoint, QSize, Qt, QTimer, QUrl, QUrlQuery
 from PyQt6.QtNetwork import QNetworkReply, QNetworkRequest
-from PyQt6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout
+from PyQt6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QFrame,
+    QLabel,
+    QMenu,
+    QPushButton,
+    QTabWidget,
+    QVBoxLayout,
+)
 
 from calendar_app.app_metadata import APP_VERSION
 from calendar_app.infrastructure.i18n import t
@@ -26,17 +34,19 @@ from calendar_app.infrastructure.weather.met_norway import (
     MET_LICENSE_URL,
     parse_locationforecast,
 )
+from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
+from calendar_app.presentation.dialogs.dialog_styles import (
+    apply_common_dialog_style,
+    build_dialog_footer,
+)
 from calendar_app.presentation.widgets.overlay_base import (
     _DLG_SS,
-    _apply_align_tags,
-    _apply_span,
     _BaseOverlayWidget,
     _GripFrame,
-    _inject_global_lh,
     _parse_rgba,
-    _protect_align_tags,
     _rgba_css,
 )
+from calendar_app.presentation.widgets.overlay_template_utils import _preview_base_size
 from calendar_app.presentation.widgets.weather_asset_packs import (
     DEFAULT_WEATHER_ASSET_PACK_ID,
     get_weather_asset_pack,
@@ -44,6 +54,10 @@ from calendar_app.presentation.widgets.weather_asset_packs import (
     weather_asset_packs,
     weather_pack_icon,
     weather_pack_preview_pixmap,
+)
+from calendar_app.presentation.widgets.weather_template import (
+    render_weather_template,
+    scale_weather_preview_images,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,6 +71,36 @@ def _weather_icon_b64(wmo_code: int, color: str, size: int) -> str:
 _NETWORK_TIMEOUT_MS = 10_000  # abort reply after 10 s
 _APP_HOMEPAGE = "https://namer-kimhyojin.github.io/DARK-CALENDAR/"
 _MET_USER_AGENT = f"AirCalendar/{APP_VERSION} {_APP_HOMEPAGE}".encode("utf-8", errors="strict")
+
+
+def _weather_source_html() -> str:
+    """Keep provider credits accessible without adding a permanent widget footer."""
+    policy = escape(t("widget.weather.sources_policy", "이용 안내"))
+    forecast = escape(t("widget.weather.forecast_source", "날씨 데이터"))
+    location = escape(t("widget.weather.location_source", "도시 위치 데이터"))
+    license_label = escape(t("widget.weather.sources_license", "데이터 라이선스"))
+    changes = escape(
+        t(
+            "widget.weather.sources_changes",
+            "Air Calendar는 도시 검색과 날씨 표시를 위해 데이터를 추출하고 단위·표시 형식을 변환합니다.",
+        )
+    )
+    disclaimer = escape(
+        t(
+            "widget.weather.sources_disclaimer",
+            "제공 데이터는 정확성·최신성·완전성을 보증하지 않습니다.",
+        )
+    )
+    return (
+        f'<p><b>{forecast}</b><br><a href="{MET_FORECAST_ENDPOINT}">MET Norway</a>'
+        f' · <a href="{MET_LICENSE_URL}">{policy}</a></p>'
+        f'<p><b>{location}</b><br><a href="{GEONAMES_LICENSE_URL}">GeoNames</a>'
+        f' · <a href="https://download.geonames.org/export/dump/readme.txt">{policy}</a></p>'
+        f'<p>{license_label}: <a href="https://creativecommons.org/licenses/by/4.0/">'
+        "Creative Commons Attribution 4.0 (CC BY 4.0)</a></p>"
+        f"<p>{changes}</p><p>{disclaimer}</p>"
+    )
+
 
 _WEATHER_DESC = {
     0: "Clear Sky",
@@ -105,7 +149,9 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
     _STYLE_I18N_PREFIX = "widget.weather"
 
     _TEMPLATE_KEY = "weather_template"
-    _DEFAULT_TEMPLATE = "{icon|size=64}\n{temp|size=24|bold}{unit}\n{city|size=11|color=muted}"
+    _DEFAULT_TEMPLATE = (
+        "{icon|size=64}\n{temp|size=28|bold}{unit|size=14}\n{city|size=12|color=muted}"
+    )
 
     _DLG_SS = _DLG_SS
 
@@ -148,7 +194,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         return self._PREFIX
 
     def _default_font_size(self) -> int:
-        # Compact default: icon is size+6, temp is size+2, so 11pt → icon 17pt
+        # Template text and illustrations share the same 24-point reference.
         return 11
 
     # ------------------------------------------------------------------
@@ -181,13 +227,6 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._template_label.setTextFormat(Qt.TextFormat.RichText)
         self._template_label.setVisible(False)
         layout.addWidget(self._template_label)
-
-        self._source_label = QLabel("", frame)
-        self._source_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._source_label.setTextFormat(Qt.TextFormat.RichText)
-        self._source_label.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
-        self._source_label.setOpenExternalLinks(True)
-        layout.addWidget(self._source_label)
 
         self._status_label = QLabel("", frame)
         self._status_label.setObjectName("weatherStatus")
@@ -361,7 +400,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
                 self._update_weather_data(data, display_name, unit)
                 self._store_weather_cache(lat, lon, display_name, unit)
                 self._store_response_headers(reply)
-            except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError, OverflowError) as exc:
                 logger.warning("MET Norway response parse failed: %s", exc)
                 error_message = t("weather.error.parse_failed", "데이터 파싱 오류")
         elif reply.error() == QNetworkReply.NetworkError.OperationCanceledError:
@@ -534,8 +573,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         """Apply unified styling then render current weather to template."""
         self._apply_base_appearance()
 
-        # We always render to the template label for maximum layout flexibility.
-        # This resolves the report of scaling issues by using the base class engine.
+        # Text and illustration sizes both follow the current fitted font size.
         html = self._resolve_weather_template(
             self._get("weather_template", self._DEFAULT_TEMPLATE), self._weather_data
         )
@@ -546,17 +584,6 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             if label:
                 label.setVisible(False)
 
-        source_names = t("widget.weather.source_attribution", "MET Norway · GeoNames")
-        source_html = source_names.replace(
-            "MET Norway", f'<a href="{MET_LICENSE_URL}" style="color:#aab4c3">MET Norway</a>'
-        ).replace(
-            "GeoNames", f'<a href="{GEONAMES_LICENSE_URL}" style="color:#aab4c3">GeoNames</a>'
-        )
-        self._source_label.setText(source_html)
-        self._source_label.setStyleSheet(
-            "font-size: 8px; color: rgba(170,180,195,180); background: transparent;"
-        )
-        self._source_label.setVisible(True)
         self._status_label.setText(self._status_text)
         # Keep successful compact/custom layouts at their original height.
         # Loading and errors remain visible even when {error} is absent from the template.
@@ -575,48 +602,111 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._apply_and_resize()
 
     def _resolve_weather_template(
-        self, template: str, data: dict, *, asset_pack_id: str | None = None
+        self,
+        template: str,
+        data: dict,
+        *,
+        asset_pack_id: str | None = None,
+        base_font_size: int | None = None,
     ) -> str:
-        """Resolve variables and tags in weather template."""
-        template = _inject_global_lh(template)
-        template = _protect_align_tags(template)
-        template = _BaseOverlayWidget._process_conditionals(template, data)
-
-        wmo = int(data.get("_wmo", 0))
-        day_period = str(data.get("_day_period", "day") or "day")
+        """Render escaped weather values with proportional illustration sizing."""
         selected_pack_id = asset_pack_id or str(
             self._get("weather_asset_pack", DEFAULT_WEATHER_ASSET_PACK_ID)
         )
-        # text_color_rgba() → "#rrggbb" hex 추출 (베이스 클래스 표준 메서드)
-        rgba = self.text_color_rgba()
-        icon_color = rgba[:7] if rgba and rgba.startswith("#") and len(rgba) >= 7 else "#4db8ff"
+        color, _ = _parse_rgba(self.text_color_rgba())
+        return render_weather_template(
+            template,
+            data,
+            asset_pack_id=selected_pack_id,
+            base_font_size=self._template_render_font_size()
+            if base_font_size is None
+            else base_font_size,
+            icon_color=color.name(),
+            resolve_text_sizes=False,
+        )
 
-        def _replace(m: re.Match) -> str:
-            inner = m.group(1).split("|")
-            key, hints = inner[0].strip(), inner[1:]
+    def _current_weather_design_id(self) -> str:
+        """A custom edit must not keep a stale 'selected theme' indicator."""
+        from calendar_app.presentation.widgets.weather_designs import weather_designs
 
-            # {icon} 또는 {icon|size=N} → mdi6 아이콘 <img> 태그
-            if key == "icon":
-                # size= 힌트 파싱
-                px = 32
-                for h in hints:
-                    if h.startswith("size="):
-                        with contextlib.suppress(ValueError):
-                            px = int(h[5:])
-                img = weather_asset_html(
-                    selected_pack_id,
-                    wmo,
-                    day_period,
-                    px,
-                    color=icon_color,
-                )
-                return img if img else _apply_span(str(data.get("desc", "")), hints)
+        template = str(self._get("weather_template", self._DEFAULT_TEMPLATE))
+        asset_pack = get_weather_asset_pack(
+            self._get("weather_asset_pack", DEFAULT_WEATHER_ASSET_PACK_ID)
+        ).pack_id
+        for design in weather_designs():
+            if (
+                design.template == template
+                and design.asset_pack_id == asset_pack
+                and design.appearance_preset_id == self.display_preset_id()
+                and design.shape == self.widget_shape_id()
+            ):
+                return design.design_id
+        return ""
 
-            val = str(data.get(key, ""))
-            return _apply_span(val, hints)
+    def _wrap_preview_html(
+        self,
+        html: str,
+        align: str = "center",
+        preview_size: QSize | None = None,
+        *,
+        base_size: int | None = None,
+    ) -> str:
+        preview_size = preview_size or QSize(320, 240)
+        html = scale_weather_preview_images(html, base_size or _preview_base_size(preview_size))
+        return super()._wrap_preview_html(
+            html,
+            align=align,
+            preview_size=preview_size,
+            base_size=base_size,
+        )
 
-        result = re.sub(r"\{([^}]+)\}", _replace, template)
-        return _apply_align_tags(result)
+    def _open_design_gallery(self) -> None:
+        from calendar_app.presentation.widgets.weather_design_dialog import (
+            WeatherDesignGalleryDialog,
+        )
+
+        dialog = WeatherDesignGalleryDialog(
+            self._weather_data,
+            self,
+            current_design_id=self._current_weather_design_id(),
+            current_asset_pack=get_weather_asset_pack(
+                self._get("weather_asset_pack", DEFAULT_WEATHER_ASSET_PACK_ID)
+            ).pack_id,
+            current_appearance=self.display_preset_id(),
+        )
+        try:
+            if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_design:
+                self._apply_weather_design(dialog.selected_design.design_id)
+        finally:
+            dialog.deleteLater()
+
+    def _apply_weather_design(self, design_id: str) -> None:
+        """Commit a complete design to this instance, retaining its weather/location."""
+        from calendar_app.presentation.widgets.weather_designs import weather_design
+
+        design = weather_design(design_id)
+        if design is None:
+            return
+        original_shape = self.widget_shape_id()
+        self._store_display_preset(design.appearance_preset_id)
+        self._set("weather_template", design.template)
+        self._set("weather_asset_pack", design.asset_pack_id)
+        self._set("weather_design_id", design.design_id)
+        width = self._normalized_fixed_dimension("fixed_w")
+        height = self._normalized_fixed_dimension("fixed_h")
+        if original_shape != design.shape or (
+            design.shape != "card" and (width is None or height is None)
+        ):
+            if original_shape == design.shape:
+                self._apply_and_resize()
+            self._set_widget_shape(design.shape)
+        else:
+            if width is not None and height is not None:
+                width, height = self._constrain_shape_size(width, height)
+                self._set("fixed_w", width)
+                self._set("fixed_h", height)
+        self._last_content_reset = None
+        self._apply_and_resize(refit=True)
 
     def _open_settings(self) -> None:
         """Show standardized settings dialog with schema-based fields."""
@@ -668,7 +758,8 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             has_template=True,
             default_template=self._DEFAULT_TEMPLATE,
             template_hint=t(
-                "widget.weather.template_hint", "Variables: {city} {temp} {unit} {desc} {icon}"
+                "widget.weather.template_hint",
+                "Variables: {city} {temp} {unit} {desc} {icon} {humidity} {wind}",
             ),
             preview_render_fn=lambda tmpl: self._resolve_weather_template(
                 tmpl,
@@ -676,6 +767,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
                 asset_pack_id=self._selected_dialog_asset_pack(),
             ),
             extra_basic_setup_fn=self._setup_weather_asset_preview,
+            extra_dialog_setup_fn=self._setup_weather_design_draft,
         ):
             # Special post-acceptance logic for weather widget
             self._update_refresh_interval()
@@ -690,6 +782,12 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         ).pack_id
 
     def _setup_weather_asset_preview(self, basic, dialog) -> None:
+        designs = QPushButton(t("widget.weather.design_gallery", "날씨 디자인 고르기…"), dialog)
+        designs.setObjectName("ghost_btn")
+        designs.setProperty("weatherDesignGallery", True)
+        designs.setAutoDefault(False)
+        designs.setMinimumHeight(40)
+        basic.addWidget(designs)
         preview_title = QLabel(t("widget.weather.asset_preview", "일러스트 미리보기"), dialog)
         preview_title.setStyleSheet("font-weight: 600; margin-top: 8px;")
         basic.addWidget(preview_title)
@@ -722,6 +820,104 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
 
         combo.currentIndexChanged.connect(_refresh_preview)
         _refresh_preview()
+        sources = QPushButton(t("widget.weather.sources_title", "날씨 데이터 출처"), dialog)
+        sources.setObjectName("ghost_btn")
+        sources.setProperty("weatherSources", True)
+        sources.setAutoDefault(False)
+        sources.clicked.connect(lambda checked=False: self._show_data_sources(dialog))
+        basic.addWidget(sources)
+
+    def _setup_weather_design_draft(self, dialog, controls: dict) -> None:
+        """Gallery selections inside Settings stay in its draft until Save."""
+        from calendar_app.presentation.widgets.weather_design_dialog import (
+            WeatherDesignGalleryDialog,
+        )
+        from calendar_app.presentation.widgets.weather_designs import weather_designs
+
+        tabs = dialog.findChild(QTabWidget)
+        if tabs is not None:
+            tabs.setCurrentIndex(0)
+        footer = dialog.findChild(QDialogButtonBox)
+        if footer is not None:
+            save = footer.button(QDialogButtonBox.StandardButton.Ok)
+            cancel = footer.button(QDialogButtonBox.StandardButton.Cancel)
+            if save is not None:
+                save.setText(t("common.save", "저장"))
+                save.setObjectName("primary_btn")
+            if cancel is not None:
+                cancel.setText(t("common.cancel", "취소"))
+                cancel.setObjectName("ghost_btn")
+
+        button = next(
+            button
+            for button in dialog.findChildren(QPushButton)
+            if button.property("weatherDesignGallery")
+        )
+
+        def choose_design() -> None:
+            appearance = str(controls["display_preset_combo"].currentData() or "custom")
+            asset_pack = self._selected_dialog_asset_pack()
+            shape = str(controls["shape_combo"].currentData() or "card")
+            template = controls["template_editor"].toPlainText()
+            current_id = next(
+                (
+                    design.design_id
+                    for design in weather_designs()
+                    if design.template == template
+                    and design.asset_pack_id == asset_pack
+                    and design.appearance_preset_id == appearance
+                    and design.shape == shape
+                ),
+                "",
+            )
+            gallery = WeatherDesignGalleryDialog(
+                self._weather_data,
+                dialog,
+                current_design_id=current_id,
+                current_asset_pack=asset_pack,
+                current_appearance=appearance,
+            )
+            try:
+                if gallery.exec() != QDialog.DialogCode.Accepted or not gallery.selected_design:
+                    return
+                design = gallery.selected_design
+                for combo, value in (
+                    (self._active_settings_widgets["weather_asset_pack"], design.asset_pack_id),
+                    (controls["display_preset_combo"], design.appearance_preset_id),
+                    (controls["shape_combo"], design.shape),
+                ):
+                    index = combo.findData(value)
+                    if index >= 0:
+                        combo.setCurrentIndex(index)
+                controls["template_editor"].setPlainText(design.template)
+            finally:
+                gallery.deleteLater()
+
+        button.clicked.connect(choose_design)
+
+    def _show_data_sources(self, parent=None) -> None:
+        """Read-only credits, shared by the context menu and weather settings."""
+        dialog = QDialog(parent if parent is not None else self)
+        apply_dialog_title(dialog, t("widget.weather.sources_title", "날씨 데이터 출처"))
+        apply_common_dialog_style(dialog, minimum_width=480)
+        root = QVBoxLayout(dialog)
+        body = QLabel(_weather_source_html(), dialog)
+        body.setObjectName("weatherDataSources")
+        body.setTextFormat(Qt.TextFormat.RichText)
+        body.setWordWrap(True)
+        body.setTextInteractionFlags(
+            Qt.TextInteractionFlag.LinksAccessibleByMouse
+            | Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        body.setOpenExternalLinks(True)
+        root.addWidget(body)
+        footer, close, _ = build_dialog_footer(t("common.close", "닫기"), cancel_label=None)
+        close.clicked.connect(dialog.accept)
+        root.addLayout(footer)
+        try:
+            dialog.exec()
+        finally:
+            dialog.deleteLater()
 
     def _set_weather_asset_pack(self, pack_id: str) -> None:
         normalized = get_weather_asset_pack(pack_id).pack_id
@@ -731,8 +927,15 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
     def _build_context_menu(self, menu: QMenu) -> None:
         menu.addAction(t("widget.weather.refresh_now", "날씨 다시 불러오기"), self.request_update)
         menu.addAction(
+            t("widget.weather.design_gallery", "날씨 디자인 고르기…"), self._open_design_gallery
+        )
+        menu.addAction(
             t("widget.weather.settings", "Weather Settings..."),
             self._open_settings,
+        )
+        menu.addAction(
+            t("widget.weather.sources_title", "날씨 데이터 출처"),
+            lambda checked=False: self._show_data_sources(),
         )
         pack_menu = menu.addMenu(t("widget.weather.asset_pack", "일러스트 팩"))
         current_pack = get_weather_asset_pack(
@@ -749,6 +952,10 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
     # ------------------------------------------------------------------
     # Startup — identical pattern to OverlayClockWidget
     # ------------------------------------------------------------------
+
+    def _on_double_click(self) -> bool:
+        self._open_settings()
+        return True
 
     def apply_initial_settings(self) -> None:
         self._apply_and_resize()

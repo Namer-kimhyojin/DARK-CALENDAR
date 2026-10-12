@@ -8,9 +8,13 @@ from dataclasses import dataclass
 import functools
 
 from PyQt6.QtCore import QBuffer, QIODevice, QRect, QSize, Qt
-from PyQt6.QtGui import QIcon, QPainter, QPixmap
+from PyQt6.QtGui import QColor, QIcon, QImage, QPainter, QPixmap
 
 from calendar_app.app_paths import get_resource_path
+from calendar_app.presentation.widgets.weather_vector_art import (
+    VECTOR_WEATHER_PACK_IDS,
+    render_weather_vector,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +26,7 @@ class WeatherAssetPack:
 
 
 DEFAULT_WEATHER_ASSET_PACK_ID = "air_soft"
+MAX_WEATHER_ART_SIZE = 1536
 
 _PACKS = (
     WeatherAssetPack(
@@ -46,6 +51,42 @@ _PACKS = (
         "classic",
         "widget.weather.asset_pack_classic",
         "Classic · Original icons",
+        None,
+    ),
+    WeatherAssetPack(
+        "outline_weather",
+        "widget.weather.asset_pack_outline_weather",
+        "Outline · 선으로 그린 날씨",
+        None,
+    ),
+    WeatherAssetPack(
+        "neon_weather",
+        "widget.weather.asset_pack_neon_weather",
+        "Neon · 빛나는 네온",
+        None,
+    ),
+    WeatherAssetPack(
+        "flat_weather",
+        "widget.weather.asset_pack_flat_weather",
+        "Flat · 또렷한 컬러",
+        None,
+    ),
+    WeatherAssetPack(
+        "pixel_weather",
+        "widget.weather.asset_pack_pixel_weather",
+        "Pixel · 픽셀 아트",
+        None,
+    ),
+    WeatherAssetPack(
+        "orbit_weather",
+        "widget.weather.asset_pack_orbit_weather",
+        "Orbit · 궤도 배지",
+        None,
+    ),
+    WeatherAssetPack(
+        "vintage_weather",
+        "widget.weather.asset_pack_vintage_weather",
+        "Vintage · 빈티지 삽화",
         None,
     ),
 )
@@ -107,11 +148,31 @@ def get_weather_asset_pack(pack_id: object) -> WeatherAssetPack:
     return _PACK_BY_ID.get(normalized, _PACK_BY_ID[DEFAULT_WEATHER_ASSET_PACK_ID])
 
 
+def _safe_size(value: object, default: int = 96) -> int:
+    try:
+        return max(16, min(int(value), MAX_WEATHER_ART_SIZE))
+    except (TypeError, ValueError, OverflowError):
+        return default
+
+
+def _safe_wmo(value: object) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError, OverflowError):
+        return -1
+
+
+def _safe_color(value: object) -> str:
+    color = QColor(str(value or "#4db8ff"))
+    return color.name() if color.isValid() else "#4db8ff"
+
+
 def weather_condition_id(wmo_code: int, day_period: str = "day") -> str:
     """Collapse WMO values into the authored illustration slots."""
 
     period = str(day_period or "day").strip().lower()
     is_night = period == "night"
+    wmo_code = _safe_wmo(wmo_code)
     if wmo_code in {0, 1}:
         return "clear_night" if is_night else "clear_day"
     if wmo_code == 2:
@@ -145,6 +206,7 @@ def _load_sprite(pack_id: str) -> QPixmap:
     return QPixmap(get_resource_path("weather", pack.filename))
 
 
+@functools.lru_cache(maxsize=42)
 def _sprite_cell(pack_id: str, condition_id: str) -> QPixmap:
     sprite = _load_sprite(pack_id)
     if sprite.isNull():
@@ -155,14 +217,45 @@ def _sprite_cell(pack_id: str, condition_id: str) -> QPixmap:
     right = round((column + 1) * sprite.width() / 4)
     top = round(row * sprite.height() / 4)
     bottom = round((row + 1) * sprite.height() / 4)
-    return sprite.copy(QRect(left, top, right - left, bottom - top))
+    return _trim_transparent(sprite.copy(QRect(left, top, right - left, bottom - top)))
 
 
-def _classic_pixmap(wmo_code: int, color: str, size: int) -> QPixmap:
+def _trim_transparent(cell: QPixmap) -> QPixmap:
+    """Fit authored art rather than its mostly empty sprite cell, retaining soft edges."""
+    if cell.isNull():
+        return cell
+    image = cell.toImage().convertToFormat(QImage.Format.Format_Alpha8)
+    pointer = image.constBits()
+    if pointer is None:
+        return cell
+    alpha = pointer.asstring(image.sizeInBytes())
+    stride, width, height = image.bytesPerLine(), image.width(), image.height()
+    left, top, right, bottom = width, height, -1, -1
+    for y in range(height):
+        row = alpha[y * stride : y * stride + width]
+        first = next((x for x, opacity in enumerate(row) if opacity > 4), None)
+        if first is None:
+            continue
+        last = width - 1 - next(x for x, opacity in enumerate(reversed(row)) if opacity > 4)
+        left, right = min(left, first), max(right, last)
+        top, bottom = min(top, y), max(bottom, y)
+    if right < left:
+        return cell
+    padding = max(2, round(max(right - left + 1, bottom - top + 1) * 0.035))
+    rect = QRect(left, top, right - left + 1, bottom - top + 1)
+    rect = rect.adjusted(-padding, -padding, padding, padding).intersected(cell.rect())
+    return cell.copy(rect)
+
+
+def _classic_pixmap(wmo_code: int, color: str, size: int, day_period: str = "day") -> QPixmap:
     try:
         import qtawesome as qta
 
         icon_name = _CLASSIC_ICON_MAP.get(wmo_code, _CLASSIC_ICON_FALLBACK)
+        if day_period == "night" and wmo_code in {0, 1, 2}:
+            icon_name = (
+                "mdi6.weather-night" if wmo_code in {0, 1} else "mdi6.weather-night-partly-cloudy"
+            )
         return qta.icon(icon_name, color=color).pixmap(size, size)
     except Exception:
         return QPixmap()
@@ -177,12 +270,19 @@ def weather_asset_pixmap(
     color: str = "#4db8ff",
 ) -> QPixmap:
     pack = get_weather_asset_pack(pack_id)
-    target_size = max(16, min(int(size), 320))
+    target_size = _safe_size(size)
+    wmo_code = _safe_wmo(wmo_code)
+    color = _safe_color(color)
+    period = str(day_period or "day").strip().lower()
+    if pack.pack_id in VECTOR_WEATHER_PACK_IDS:
+        return render_weather_vector(
+            pack.pack_id, weather_condition_id(wmo_code, period), target_size, day_period=period
+        )
     if pack.pack_id == "classic":
-        return _classic_pixmap(wmo_code, color, target_size)
+        return _classic_pixmap(wmo_code, color, target_size, period)
     cell = _sprite_cell(pack.pack_id, weather_condition_id(wmo_code, day_period))
     if cell.isNull():
-        return _classic_pixmap(wmo_code, color, target_size)
+        return _classic_pixmap(wmo_code, color, target_size, period)
     scaled = cell.scaled(
         QSize(target_size, target_size),
         Qt.AspectRatioMode.KeepAspectRatio,
@@ -209,6 +309,21 @@ def weather_asset_html(
     *,
     color: str = "#4db8ff",
 ) -> str:
+    """Return the same data-URL image contract at a bounded, normalized resolution."""
+    pack = get_weather_asset_pack(pack_id)
+    return _weather_asset_html_cached(
+        pack.pack_id,
+        _safe_wmo(wmo_code),
+        str(day_period or "day").strip().lower(),
+        _safe_size(size),
+        _safe_color(color),
+    )
+
+
+@functools.lru_cache(maxsize=64)
+def _weather_asset_html_cached(
+    pack_id: str, wmo_code: int, day_period: str, size: int, color: str
+) -> str:
     pixmap = weather_asset_pixmap(pack_id, wmo_code, day_period, size, color=color)
     if pixmap.isNull():
         return ""
@@ -219,7 +334,7 @@ def weather_asset_html(
         return ""
     png_b64 = base64.b64encode(bytes(buffer.data())).decode("utf-8", errors="strict")
     buffer.close()
-    rendered_size = max(16, min(int(size), 320))
+    rendered_size = size
     return (
         f'<img src="data:image/png;base64,{png_b64}" '
         f'width="{rendered_size}" height="{rendered_size}" />'
@@ -227,6 +342,12 @@ def weather_asset_html(
 
 
 def weather_pack_preview_pixmap(pack_id: object, size: QSize) -> QPixmap:
+    if not isinstance(size, QSize):
+        size = QSize(300, 104)
+    size = QSize(
+        max(1, min(size.width(), MAX_WEATHER_ART_SIZE)),
+        max(1, min(size.height(), MAX_WEATHER_ART_SIZE)),
+    )
     canvas = QPixmap(size)
     canvas.fill(Qt.GlobalColor.transparent)
     painter = QPainter(canvas)
@@ -251,6 +372,7 @@ def weather_pack_icon(pack_id: object) -> QIcon:
 
 __all__ = [
     "DEFAULT_WEATHER_ASSET_PACK_ID",
+    "MAX_WEATHER_ART_SIZE",
     "WeatherAssetPack",
     "get_weather_asset_pack",
     "weather_asset_html",

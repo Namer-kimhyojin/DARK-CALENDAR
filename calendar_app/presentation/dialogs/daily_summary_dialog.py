@@ -131,10 +131,19 @@ class DailySummaryDialog(QDialog):
         self._settings_open = False
         self._settings_overlay_mode = False
         self._visibility_buttons: dict[str, dict[str, QPushButton]] = {}
+        self._priority_guard_active = False
+        self._priority_raise_timer = QTimer(self)
+        self._priority_raise_timer.setSingleShot(True)
+        self._priority_raise_timer.timeout.connect(self._raise_above_widgets)
         apply_dialog_title(self, t("dialog.daily.title", "오늘의 일정 & 마감 업무"))
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.Dialog
+            | Qt.WindowType.WindowStaysOnTopHint
+        )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setModal(True)
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.setSizeGripEnabled(False)
         self._ui_tokens = get_dialog_theme_tokens(
             theme_color=self._theme_color,
@@ -156,6 +165,28 @@ class DailySummaryDialog(QDialog):
     def showEvent(self, event):
         super().showEvent(event)
         self._center_on_parent()
+        self._priority_guard_active = True
+        application = QApplication.instance()
+        if application is not None:
+            application.installEventFilter(self)
+        self.raise_()
+        self.activateWindow()
+        if not self._settings_open:
+            self.ok_btn.setFocus(Qt.FocusReason.OtherFocusReason)
+        self._priority_raise_timer.start(0)
+
+    def hideEvent(self, event):
+        self._priority_guard_active = False
+        self._priority_raise_timer.stop()
+        application = QApplication.instance()
+        if application is not None:
+            application.removeEventFilter(self)
+        super().hideEvent(event)
+
+    def _raise_above_widgets(self):
+        # Restore z-order only in response to our widgets; never repeatedly steal focus.
+        if self._priority_guard_active and self.isVisible():
+            self.raise_()
 
     def _center_on_parent(self):
         parent = self.parentWidget()
@@ -801,6 +832,16 @@ class DailySummaryDialog(QDialog):
         self.move(x, y)
 
     def eventFilter(self, watched, event):
+        if (
+            self._priority_guard_active
+            and isinstance(watched, QWidget)
+            and watched.isWindow()
+            and watched.property("airCalendarOverlayWindow")
+            and event.type()
+            in (QEvent.Type.Show, QEvent.Type.ZOrderChange, QEvent.Type.WindowActivate)
+            and not self._priority_raise_timer.isActive()
+        ):
+            self._priority_raise_timer.start(0)
         if watched in getattr(self, "_drag_targets", ()):
             if (
                 event.type() == QEvent.Type.MouseButtonPress

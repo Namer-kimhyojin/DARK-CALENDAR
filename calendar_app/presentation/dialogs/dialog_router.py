@@ -114,7 +114,7 @@ def _default_calendar_help_content() -> str:
 class DialogActionsMixin:
     """Mixin providing dialog-opening action methods for the main window."""
 
-    def open_calendar_sync_hub(self, checked=False, section="services"):
+    def open_calendar_sync_hub(self, checked=False, section="calendars"):
         from calendar_app.presentation.dialogs.calendar_sync_hub import open_calendar_sync_hub
 
         if self._acquire_dialog_guard("calendar_sync_hub"):

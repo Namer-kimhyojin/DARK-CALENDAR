@@ -1,6 +1,10 @@
+# -*- coding: utf-8 -*-
+import json
 from pathlib import Path
 import re
 import unittest
+
+from calendar_app.presentation.widgets.overlay_template_validation import validate_widget_template
 
 ROOT = Path(__file__).resolve().parents[1]
 HOTSPOT_PATTERN = re.compile(r"setStyleSheet\(|#[0-9A-Fa-f]{3,8}|rgba\(")
@@ -13,7 +17,7 @@ INLINE_COLOR_HEX_PATTERN = re.compile(r"color:\s*#[0-9A-Fa-f]{3,8}")
 
 class ThemeTokenGuardrailTests(unittest.TestCase):
     def test_completion_process_document_exists(self):
-        process_doc = ROOT / "docs" / "theme_token_completion_process.md"
+        process_doc = ROOT / "rules" / "theme_token_completion_process.md"
         self.assertTrue(process_doc.exists())
         text = process_doc.read_text(encoding="utf-8", errors="strict")
         self.assertIn("Stage 1. Baseline", text)
@@ -62,7 +66,9 @@ class ThemeTokenGuardrailTests(unittest.TestCase):
     def test_overlay_base_template_literal_policy_is_confined(self):
         path = ROOT / "calendar_app" / "presentation" / "widgets" / "overlay_base.py"
         lines = path.read_text(encoding="utf-8", errors="strict").splitlines()
-        allowed_colors = {"muted", "accent", "warning"}
+        allowed_colors = {"muted", "accent", "warning", "faint"}
+        for color in allowed_colors:
+            self.assertFalse(validate_widget_template("clock", "{time|color=" + color + "}"))
         allowed_line_markers = (
             '"template":',
             "grammar_token",
@@ -95,19 +101,32 @@ class ThemeTokenGuardrailTests(unittest.TestCase):
 
     def test_locale_examples_drop_fixed_preview_hex_and_hex_placeholder_copy(self):
         locale_dir = ROOT / "locales"
+        # Explicit user-authored hex colors remain supported by the template
+        # validator. Its correction message is compatibility copy, not a preset
+        # or example; every other locale string keeps the original prohibition.
+        diagnostic_key = ("widget", "preset", "issue_invalid_color")
+        self.assertFalse(validate_widget_template("clock", "{time|color=#123456}"))
+
+        def locale_strings(value, keys=()):
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    yield from locale_strings(child, keys + (key,))
+            elif isinstance(value, str):
+                yield keys, value
+
         for path in locale_dir.glob("*.json"):
             text = path.read_text(encoding="utf-8", errors="strict")
-            for line in text.splitlines():
-                if '"preview_empty"' not in line:
-                    continue
-                self.assertIsNone(
-                    INLINE_COLOR_HEX_PATTERN.search(line),
-                    f"{path.name} still contains a preview_empty inline hex color",
-                )
-            self.assertIsNone(
-                HEX_PLACEHOLDER_PATTERN.search(text),
-                f"{path.name} still contains a raw hex placeholder string",
-            )
+            for keys, value in locale_strings(json.loads(text)):
+                if keys[-1] == "preview_empty":
+                    self.assertIsNone(
+                        INLINE_COLOR_HEX_PATTERN.search(value),
+                        f"{path.name} still contains a preview_empty inline hex color",
+                    )
+                if keys != diagnostic_key:
+                    self.assertIsNone(
+                        HEX_PLACEHOLDER_PATTERN.search(value),
+                        f"{path.name}:{'.'.join(keys)} still contains a raw hex placeholder string",
+                    )
 
     def test_dialog_token_editor_copy_drops_raw_hex_placeholder(self):
         path = ROOT / "calendar_app" / "presentation" / "dialogs" / "dialog_token_editor_dialog.py"

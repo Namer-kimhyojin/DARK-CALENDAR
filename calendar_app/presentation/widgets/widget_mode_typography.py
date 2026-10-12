@@ -34,7 +34,7 @@ def read_widget_typography(settings) -> WidgetTypography:
 
     try:
         preference = int(settings.value(FONT_SIZE_KEY, 12)) if settings is not None else 12
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         preference = 12
     preference = max(10, min(18, preference))
     progress = (preference - 10) / 8

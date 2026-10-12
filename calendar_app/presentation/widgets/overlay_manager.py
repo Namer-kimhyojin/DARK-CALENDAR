@@ -256,6 +256,16 @@ class OverlayWidgetManager:
         widget._overlay_manager_snap = lambda pos, iid=inst_id, ref=manager_ref: (
             manager.snap_widget_position(iid, pos) if (manager := ref()) else pos
         )
+        widget._overlay_manager_snap_setting = lambda ref=manager_ref: (
+            manager._settings().value("overlay_snap_enabled", True, type=bool)
+            if (manager := ref())
+            else True
+        )
+        widget._overlay_manager_set_snap = lambda enabled, ref=manager_ref: (
+            manager._settings().setValue("overlay_snap_enabled", bool(enabled))
+            if (manager := ref())
+            else None
+        )
         widget._overlay_inst_id = inst_id
 
     # ------------------------------------------------------------------
@@ -325,7 +335,11 @@ class OverlayWidgetManager:
         widget = self._widgets.get(inst_id)
         if widget is None:
             return QPoint(proposed)
-        screen = widget.screen() or QApplication.screenAt(proposed) or QApplication.primaryScreen()
+        screen = (
+            QApplication.screenAt(proposed + QPoint(widget.width() // 2, widget.height() // 2))
+            or widget.screen()
+            or QApplication.primaryScreen()
+        )
         if screen is None:
             return QPoint(proposed)
         area = screen.availableGeometry()
@@ -336,8 +350,21 @@ class OverlayWidgetManager:
             if other_id == inst_id or not other.isVisible():
                 continue
             rect = other.frameGeometry()
-            x_candidates.extend((rect.left(), rect.right() + 1, rect.left() - width))
-            y_candidates.extend((rect.top(), rect.bottom() + 1, rect.top() - height))
+            # A distant widget must not pull this one along an unrelated axis.
+            if (
+                proposed.y() <= rect.bottom() + threshold
+                and proposed.y() + height >= rect.top() - threshold
+            ):
+                x_candidates.extend(
+                    (rect.left(), rect.right() + 1, rect.left() - width, rect.right() - width + 1)
+                )
+            if (
+                proposed.x() <= rect.right() + threshold
+                and proposed.x() + width >= rect.left() - threshold
+            ):
+                y_candidates.extend(
+                    (rect.top(), rect.bottom() + 1, rect.top() - height, rect.bottom() - height + 1)
+                )
 
         def _nearest(value: int, candidates: list[int]) -> int:
             nearest = min(candidates, key=lambda candidate: abs(candidate - value))
@@ -733,7 +760,7 @@ class OverlayWidgetManager:
         for item in items:
             iid = item.get("id", "")
             wtype = item.get("type", "")
-            if not isinstance(iid, str) or wtype not in _WIDGET_TYPES:
+            if not isinstance(iid, str) or not isinstance(wtype, str) or wtype not in _WIDGET_TYPES:
                 needs_repair = True
                 continue
             parts = iid.rsplit("_", 1)

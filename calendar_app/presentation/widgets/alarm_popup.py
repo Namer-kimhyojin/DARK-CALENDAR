@@ -404,7 +404,14 @@ class AlarmPopupWindow(QWidget):
         self._accent = self._pick_accent()
 
         _settings = QSettings("kimhyojin", "Dark Calendar")
-        self._default_snooze = int(_settings.value("alarm/default_snooze", _SNOOZE_DEFAULT_MINUTES))
+        try:
+            self._default_snooze = int(
+                _settings.value("alarm/default_snooze", _SNOOZE_DEFAULT_MINUTES)
+            )
+        except (TypeError, ValueError, OverflowError):
+            self._default_snooze = _SNOOZE_DEFAULT_MINUTES
+        if not 1 <= self._default_snooze <= (2**31 - 1) // 60_000:
+            self._default_snooze = _SNOOZE_DEFAULT_MINUTES
 
         self._build_ui()
         self.setFixedWidth(_popup_width())

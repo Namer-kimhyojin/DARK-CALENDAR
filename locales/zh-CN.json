@@ -163,15 +163,35 @@
     "sync_hint": "谷歌日历同步",
     "today": "今天",
     "today_hint": "转到今天",
-    "weekdays": [
-      "周一",
-      "周二",
-      "周三",
-      "周四",
-      "周五",
-      "周六",
-      "周日"
-    ]
+    "weekdays": ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+  },
+  "calendar_controls": {
+    "default_accessible": "Default calendar for new events",
+    "default_badge": "Save new events here",
+    "default_hint": "The calendar selected when creating a new event.",
+    "default_label": "Save new events to",
+    "display_count": "Visible {count}/{total}",
+    "display_hint": "Changes appear immediately in the calendar and event lists. Hiding a calendar keeps its sync and default save settings.",
+    "display_title": "Calendars shown on the main screen",
+    "hidden_badge": "Hidden",
+    "hidden_default_hint": "Events in this calendar are currently hidden on the main screen.",
+    "manage": "Manage",
+    "no_writable": "No writable calendar"
+  },
+  "calendar_list_default": {
+    "accessible": "{name}: Use as the default calendar for new events",
+    "choose": "Default save",
+    "display_section": "Calendar visibility",
+    "intro": "Choose Default save in the list to set the calendar for new events.",
+    "saved": "New events will be saved to ‘{name}’ by default."
+  },
+  "calendar_management_tabs": {
+    "ics_hint": "Subscribe to external calendars by URL for read-only events. Visibility and automatic refresh can be set separately.",
+    "ics_tab": "ICS subscriptions",
+    "local_hint": "Add calendars stored on this PC and manage their names, colors, visibility and default save destination.",
+    "local_tab": "Local calendars",
+    "manage_ics": "Manage ICS subscription",
+    "manage_local": "Manage local calendar"
   },
   "checklist_mgr": {
     "btn_add_item": "添加项目",
@@ -680,6 +700,10 @@
       "assignee_placeholder": "例如：张三 经理",
       "auto_end": "自动维护结束时间",
       "calendar": "日历",
+      "calendar_import_paused": "Import paused",
+      "calendar_import_paused_owner_hint": "Importing new events is paused. Existing events keep their calendar and sync edits. Turn import on to select this calendar as a new save destination.",
+      "calendar_paused": "Sync paused",
+      "calendar_paused_owner_hint": "Sync is paused for this calendar. Existing events keep their calendar, but it cannot be selected as a new save destination.",
       "calendar_read_only": "只读日历",
       "cancel_btn": "❌ 取消",
       "category_label": "🏷️类别/标签",
@@ -1222,6 +1246,51 @@
       "sync_skipped_or_failed": "同步失败或已跳过"
     }
   },
+  "gcal_focus": {
+    "auto_sync": "Automatically sync Google Calendar",
+    "auto_sync_help": "Sync periodically and send changes after editing events. You can still sync manually from the main screen when this is off.",
+    "connect_account": "Connect Google account",
+    "connection_help": "Connect your account to import events and sync changes from the Google calendars you select.",
+    "connection_title": "Google account connection",
+    "default_changed": "New events will be saved to '{name}' because import was turned off for the previous default. Change this on the main calendar.",
+    "default_import_warning": "Default save calendar: turning import off changes the default save destination.",
+    "disconnect": "Disconnect",
+    "import_accessible": "Import events from {name}",
+    "import_count": "{count} calendars",
+    "import_help": "Choose calendars to import. Read-only calendars can be imported too. Click Save settings to apply your changes.",
+    "import_meta": "Importing",
+    "import_meta_help": "Number of calendars selected to import from Google. Set display preferences separately on the main calendar.",
+    "import_pause_help": "Turning off import stops receiving new Google changes. Existing events remain, and edits are sent while Google automatic sync is enabled or when you sync manually.",
+    "import_save_failed": "Could not save the import selection. Check that a writable default save calendar is available and try again.",
+    "import_title": "Calendars to import from Google",
+    "import_toggle": "Import",
+    "list_loaded": "Found {count} calendars. Choose the calendars to import and save your settings.",
+    "main_calendar_help": "Set event visibility, colors, and the default calendar for new events on the main calendar. Turning import off keeps events already received.",
+    "main_calendar_title": "Display and default calendar",
+    "manage_main": "Open main calendar management",
+    "move_failed_help": "Could not move the event to the selected calendar. The destination is preserved. Check your connection and edit permissions for both calendars, then sync again.",
+    "move_failed_label": "Calendar move failed",
+    "move_local_state_help": "The move in Google was confirmed, but the app could not save its link. Sync again with the same destination to restore the link.",
+    "move_local_state_label": "Move link needs saving",
+    "move_unconfirmed_help": "Could not confirm the moved event in the selected calendar. No new copy was created and the destination is preserved. Check the event's location and permissions in Google, then sync again.",
+    "move_unconfirmed_label": "Move confirmation needed",
+    "nav_calendars": "Calendars to import",
+    "nav_connection": "Account connection",
+    "nav_help": "Setup help",
+    "nav_issues": "Troubleshooting",
+    "nav_sync": "Sync settings",
+    "no_calendars": "No Google calendars registered. Connect your account and refresh the list.",
+    "readonly": "Import events · Read-only",
+    "reconnect_account": "Connect a different account",
+    "refresh_calendars": "Refresh list",
+    "saved_state": "Sync changes take effect after saving.",
+    "service_name": "Google Calendar",
+    "setup_note": "After connecting, choose the calendars to sync under Calendars to import.",
+    "sync_disabled": "Sync off",
+    "timezone_details": "Time zone · Advanced settings",
+    "unsaved": "Your changes have not been saved yet.",
+    "writable": "Import events · Editable"
+  },
   "gcal_settings": {
     "account_tip": "如果连接的帐户发生更改，可能需要重新进行身份验证才能安全刷新日历绑定。",
     "add_ics": "+ 工业控制系统",
@@ -1234,7 +1303,23 @@
     "advanced_show": "显示高级",
     "advanced_summary": "推荐的默认值对于大多数用户来说效果很好。",
     "advanced_title": "同步行为",
+    "auth_browser_return": "Return to Air Calendar to check the sign-in result.",
+    "auth_cancel": "Cancel sign-in",
+    "auth_cancelling": "Cancelling sign-in…",
+    "auth_error_browser": "Could not open the sign-in browser. Check the Windows default browser setting and try again.",
+    "auth_error_cancelled": "Google sign-in was cancelled. Your existing connection was kept.",
+    "auth_error_client_invalid": "This is not a valid Google OAuth file. Download the JSON for a 'Desktop app' client from Google Cloud again.",
+    "auth_error_client_missing": "The OAuth file was not found. Download and select the JSON for a 'Desktop app' OAuth client from Google Cloud.",
+    "auth_error_client_type": "This OAuth file is for a web application. In Google Cloud, create an OAuth client with the 'Desktop app' type and select its downloaded JSON file. A web client can cause redirect_uri_mismatch.",
+    "auth_error_denied": "Google sign-in was denied or consent was cancelled. Check your account and OAuth app access permissions and try again.",
+    "auth_error_failed": "Could not complete Google sign-in. Check your network connection and desktop OAuth file and try again.",
+    "auth_error_listener": "Could not open the local sign-in callback address. Check your security software and firewall settings and try again.",
+    "auth_error_modules": "Could not load the Google Calendar sign-in components. Update the app and try again.",
+    "auth_error_redirect": "Google rejected the callback address (redirect_uri_mismatch). Select an OAuth JSON file created for a 'Desktop app' in Google Cloud.",
+    "auth_error_timeout": "No sign-in response was received within 3 minutes. If the browser shows redirect_uri_mismatch, check that your OAuth file is for a 'Desktop app', then try again.",
+    "auth_error_token_write": "Could not save sign-in information. Check free space and write access to the app data folder. Your existing connection was kept.",
     "auth_success": "Google 身份验证已成功完成。",
+    "auth_waiting": "Complete sign-in in your browser. Waiting for up to 3 minutes. If the browser shows an error, cancel sign-in and check your OAuth file.",
     "authenticate": "认证",
     "badge_default": "默认日历",
     "browse": "浏览",
@@ -1388,6 +1473,36 @@
     "type_gcal": "Google 日历",
     "type_ics": "ICS 订阅",
     "type_local": "本地"
+  },
+  "gcal_ux": {
+    "cancelling": "Cancelling the operation. Your existing connection and events are preserved.",
+    "connect_help": "Prepare an OAuth file and connect your Google account. You can then choose calendars to import.",
+    "connected_help": "Your connected account is preserved. Reconnect with the same account to review permissions. Choose calendars to import in the next section.",
+    "connected_next": "Your Google account is connected. Choose calendars to import and save your settings.",
+    "connection_review": "Review connection",
+    "credentials_details": "OAuth file and connection help",
+    "disconnecting": "Disconnecting Google. Please wait until the operation finishes.",
+    "feedback": "Connection and synchronization guidance",
+    "file_copy_failed": "The OAuth file could not be saved in the app. Check access to the file and app data folder, then select it again.",
+    "loading": "Checking your Google calendar list. Your existing choices are preserved.",
+    "metadata_unavailable": "The saved calendar list could not be read. Your choices are preserved. Reload the list before saving.",
+    "query_cancelled": "Calendar lookup cancelled. Your existing connection and choices are preserved.",
+    "reconnect": "Reconnect account",
+    "review_connection": "Review connection",
+    "review_file": "Review OAuth file",
+    "saved": "Settings saved. Your changes have been applied.",
+    "setup_help": "How to prepare the OAuth file",
+    "sync_busy": "Google synchronization is in progress. You can change settings when it finishes.",
+    "unsaved": "Changes apply after saving. Closing cancels unsaved changes."
+  },
+  "global_caldav": {
+    "capability": "个人日程双向同步 · 重复及邀请日程只读",
+    "email": "完整的账户邮箱地址",
+    "fastmail_guide": "Fastmail：请生成具有 CalDAV 权限的应用密码。套餐须支持外部日历客户端。",
+    "server": "账户数据中心服务器",
+    "title": "连接 CalDAV 账户",
+    "yahoo_guide": "Yahoo Calendar：请为 Yahoo 账户生成应用密码。不支持 Yahoo! JAPAN 账户。",
+    "zoho_guide": "Zoho Calendar：先在网页设置中选择用于 CalDAV 的日历，再选择账户数据中心服务器。启用双重认证时请使用应用密码。"
   },
   "help": {
     "content": "<h3>如何使用日历</h3>\n        <hr>\n        <b>1) 添加时间表</b><br>\n        双击日期或 <b>Ctrl + N</b><br><br>\n\n        <b>2) 修改日程</b><br>\n        双击时间表编辑详细信息<br><br>\n\n        <b>3) 移动/复制时间表</b><br>\n        拖动：移动，<b>Shift + 拖动</b>：复制<br><br>\n\n        <b>4) 删除日程</b><br>\n        选择日程并按<b>删除</b><br>\n        在某个日期按<b>删除</b>可清除当天的所有日程安排。",
@@ -1654,13 +1769,7 @@
     "hint_record_jump": "Enter打开项目。Shift+Enter跳转到其日期。",
     "hint_run_command": "Enter执行选定命令",
     "kw": {
-      "theme": [
-        "主题",
-        "深色",
-        "浅色",
-        "颜色",
-        "外观"
-      ]
+      "theme": ["主题", "深色", "浅色", "颜色", "外观"]
     },
     "nlp_preview": "新建：[{title}] - {date} {time}",
     "no_selection": "按 Enter 键打开所选结果",
@@ -1836,6 +1945,24 @@
     "normal": "普通的",
     "urgent": "紧迫的"
   },
+  "provider_ui": {
+    "auth_password": "Authentication password",
+    "cancel_work": "Request stop",
+    "cancelled": "Operation stopped. Existing events and connections are preserved.",
+    "cancelling": "Stop requested. The operation will stop after the current response finishes.",
+    "connected": "Your account is connected.",
+    "module_missing": "Sign-in is unavailable. Update the app, then connect again.",
+    "naver_password_hint": "Check the authentication guide for the password type required by your account.",
+    "password_hint": "Enter an app-specific password instead of your normal sign-in password.",
+    "save_sync": "Save selection and sync",
+    "selection_count": "Selected {selected} · Saved {saved}",
+    "selection_help": "Check the calendars to import. Read-only calendars can also be imported.",
+    "server_details": "Server and connection details",
+    "server_info": "The server address is configured for this service automatically.\n{url}",
+    "technical_setup": "App registration and setup guide",
+    "unsaved": "Selection changes take effect after saving.",
+    "wait": "Service request limit: try again in {seconds} seconds."
+  },
   "recurrence": {
     "base_date": "基准日期：{date}",
     "btn_finish": "结束",
@@ -1913,362 +2040,223 @@
         "description": "立即启动离开锁定模式。",
         "label": "离开锁定",
         "menu_path": "视图 > 离开锁定",
-        "tags": [
-          "离开",
-          "锁定"
-        ]
+        "tags": ["离开", "锁定"]
       },
       "cal_toolbar": {
         "description": "隐藏或重新显示日历工具栏。",
         "label": "切换日历工具栏",
         "menu_path": "视图 > 日历工具栏",
-        "tags": [
-          "日历",
-          "工具栏"
-        ]
+        "tags": ["日历", "工具栏"]
       },
       "calendar_print": {
         "description": "预览并打印当前或所选期间的日历。",
         "label": "打印日历",
         "menu_path": "日历 > 选项 > 打印",
-        "tags": [
-          "打印",
-          "打印机",
-          "PDF"
-        ]
+        "tags": ["打印", "打印机", "PDF"]
       },
       "checklist": {
         "description": "管理检查清单模板和项目结构。",
         "label": "管理检查清单",
         "menu_path": "任务 > 管理检查清单",
-        "tags": [
-          "检查清单",
-          "模板"
-        ]
+        "tags": ["检查清单", "模板"]
       },
       "color_assign": {
         "description": "自动为所选项目分配颜色。",
         "label": "自动分配颜色",
         "menu_path": "任务 > 自动分配颜色",
-        "tags": [
-          "颜色",
-          "标签",
-          "自动"
-        ]
+        "tags": ["颜色", "标签", "自动"]
       },
       "command_palette": {
         "description": "打开命令搜索框以立即查找功能。",
         "label": "命令面板",
         "menu_path": "直接调用",
-        "tags": [
-          "搜索",
-          "命令",
-          "面板"
-        ]
+        "tags": ["搜索", "命令", "面板"]
       },
       "delete": {
         "description": "删除当前选中的日程或项目。",
         "label": "删除所选项目",
         "menu_path": "选择状态",
-        "tags": [
-          "删除",
-          "移除"
-        ]
+        "tags": ["删除", "移除"]
       },
       "escape": {
         "description": "清除当前选择或焦点。",
         "label": "清除选择",
         "menu_path": "选择状态",
-        "tags": [
-          "取消选择",
-          "取消",
-          "esc"
-        ]
+        "tags": ["取消选择", "取消", "esc"]
       },
       "focus_mode": {
         "description": "开启或关闭专注模式。",
         "label": "切换专注模式",
         "menu_path": "视图 > 专注模式",
-        "tags": [
-          "专注",
-          "番茄钟"
-        ]
+        "tags": ["专注", "番茄钟"]
       },
       "focus_pause": {
         "description": "暂停或恢复当前专注会话。",
         "label": "暂停专注",
         "menu_path": "专注模式",
-        "tags": [
-          "专注",
-          "暂停"
-        ]
+        "tags": ["专注", "暂停"]
       },
       "force_unlock": {
         "description": "强制清除意外的锁定状态。",
         "label": "强制解锁",
         "menu_path": "紧急恢复",
-        "tags": [
-          "强制",
-          "解锁",
-          "恢复",
-          "紧急"
-        ]
+        "tags": ["强制", "解锁", "恢复", "紧急"]
       },
       "fullscreen": {
         "description": "开启或关闭全屏显示。",
         "label": "切换全屏",
         "menu_path": "视图 > 全屏",
-        "tags": [
-          "全屏"
-        ]
+        "tags": ["全屏"]
       },
       "help": {
         "description": "打开帮助中心。",
         "label": "快捷键指南",
         "menu_path": "系统 > 快捷键指南",
-        "tags": [
-          "帮助",
-          "F1"
-        ]
+        "tags": ["帮助", "F1"]
       },
       "layout_1": {
         "description": "应用默认的4面板停靠布局。",
         "label": "布局预设 1",
         "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "预设",
-          "停靠",
-          "1"
-        ]
+        "tags": ["布局", "预设", "停靠", "1"]
       },
       "layout_2": {
         "description": "应用以日历为中心的布局。",
         "label": "布局预设 2",
         "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "日历",
-          "2"
-        ]
+        "tags": ["布局", "日历", "2"]
       },
       "layout_3": {
         "description": "应用以任务为中心的布局。",
         "label": "布局预设 3",
         "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "任务",
-          "3"
-        ]
+        "tags": ["布局", "任务", "3"]
       },
       "layout_4": {
         "description": "应用分屏标签布局。",
         "label": "布局预设 4",
         "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "标签",
-          "分屏",
-          "4"
-        ]
+        "tags": ["布局", "标签", "分屏", "4"]
       },
       "layout_5": {
         "description": "应用完全分离的浮动布局。",
         "label": "布局预设 5",
         "menu_path": "视图 > 布局预设",
-        "tags": [
-          "布局",
-          "分离",
-          "浮动",
-          "5"
-        ]
+        "tags": ["布局", "分离", "浮动", "5"]
       },
       "lock_mode": {
         "description": "开启或关闭桌面锁定模式。",
         "label": "锁定模式",
         "menu_path": "视图 > 锁定模式",
-        "tags": [
-          "锁定"
-        ]
+        "tags": ["锁定"]
       },
       "magnet_mode": {
         "description": "切换磁吸模式，帮助面板对齐和吸附。",
         "label": "磁吸模式",
         "menu_path": "视图 > 磁吸模式",
-        "tags": [
-          "磁吸",
-          "面板"
-        ]
+        "tags": ["磁吸", "面板"]
       },
       "monitor_left": {
         "description": "将窗口移动到另一个显示器。",
         "label": "移动到上一个显示器",
         "menu_path": "窗口控制",
-        "tags": [
-          "显示器",
-          "屏幕",
-          "左"
-        ]
+        "tags": ["显示器", "屏幕", "左"]
       },
       "monitor_right": {
         "description": "将窗口移动到另一个显示器。",
         "label": "移动到下一个显示器",
         "menu_path": "窗口控制",
-        "tags": [
-          "显示器",
-          "屏幕",
-          "右"
-        ]
+        "tags": ["显示器", "屏幕", "右"]
       },
       "new_directive": {
         "description": "打开输入指示或协作事项的窗口。",
         "label": "注册指示事项",
         "menu_path": "注册 > 指示事项",
-        "tags": [
-          "指示",
-          "协作"
-        ]
+        "tags": ["指示", "协作"]
       },
       "new_routine": {
         "description": "快速添加重复性工作例程。",
         "label": "注册例行任务",
         "menu_path": "注册 > 例行任务",
-        "tags": [
-          "例行任务",
-          "任务",
-          "重复"
-        ]
+        "tags": ["例行任务", "任务", "重复"]
       },
       "new_schedule": {
         "description": "直接打开日程录入窗口。",
         "label": "添加新日程",
         "menu_path": "注册 > 新日程",
-        "tags": [
-          "日程",
-          "添加",
-          "注册"
-        ]
+        "tags": ["日程", "添加", "注册"]
       },
       "next_day": {
         "description": "移动到当前日期的后一天。",
         "label": "后一天",
         "menu_path": "导航",
-        "tags": [
-          "后",
-          "日期",
-          "右"
-        ]
+        "tags": ["后", "日期", "右"]
       },
       "opacity_down": {
         "description": "降低窗口不透明度。",
         "label": "降低不透明度",
         "menu_path": "窗口控制",
-        "tags": [
-          "不透明度",
-          "更暗"
-        ]
+        "tags": ["不透明度", "更暗"]
       },
       "opacity_up": {
         "description": "提高窗口不透明度。",
         "label": "增加不透明度",
         "menu_path": "窗口控制",
-        "tags": [
-          "不透明度",
-          "更亮"
-        ]
+        "tags": ["不透明度", "更亮"]
       },
       "prev_day": {
         "description": "移动到当前日期的前一天。",
         "label": "前一天",
         "menu_path": "导航",
-        "tags": [
-          "前",
-          "日期",
-          "左"
-        ]
+        "tags": ["前", "日期", "左"]
       },
       "restore_pos": {
         "description": "将窗口恢复到屏幕上的安全位置。",
         "label": "恢复窗口位置",
         "menu_path": "窗口控制",
-        "tags": [
-          "窗口",
-          "恢复",
-          "位置"
-        ]
+        "tags": ["窗口", "恢复", "位置"]
       },
       "routine_mgr": {
         "description": "直接打开例行任务管理器标签页。",
         "label": "例行任务管理器",
         "menu_path": "任务 > 例行任务概览",
-        "tags": [
-          "例行任务",
-          "管理"
-        ]
+        "tags": ["例行任务", "管理"]
       },
       "save_layout": {
         "description": "将当前面板排列保存为预设。",
         "label": "保存当前布局",
         "menu_path": "视图 > 布局预设 > 保存",
-        "tags": [
-          "布局",
-          "预设",
-          "保存"
-        ]
+        "tags": ["布局", "预设", "保存"]
       },
       "show_hide": {
         "description": "隐藏主窗口或重新显示。",
         "label": "显示/隐藏窗口",
         "menu_path": "窗口控制",
-        "tags": [
-          "窗口",
-          "隐藏",
-          "显示",
-          "叠加层"
-        ]
+        "tags": ["窗口", "隐藏", "显示", "叠加层"]
       },
       "sync_gcal": {
         "description": "Start synchronization for all connected calendars.",
         "label": "Sync all connected calendars",
         "menu_path": "System > Calendars and sync",
-        "tags": [
-          "Google",
-          "Outlook",
-          "iCloud",
-          "Naver",
-          "ICS",
-          "F5",
-          "sync"
-        ]
+        "tags": ["Google", "Outlook", "iCloud", "Naver", "ICS", "F5", "sync"]
       },
       "today": {
         "description": "立即将所选日期移动到今天。",
         "label": "跳转到今天",
         "menu_path": "导航",
-        "tags": [
-          "今天",
-          "日期"
-        ]
+        "tags": ["今天", "日期"]
       },
       "topbar": {
         "description": "切换顶部菜单栏的显示状态。",
         "label": "切换顶栏",
         "menu_path": "视图 > 顶栏",
-        "tags": [
-          "菜单栏",
-          "顶栏",
-          "恢复"
-        ]
+        "tags": ["菜单栏", "顶栏", "恢复"]
       },
       "widget_mode": {
         "description": "打开仅显示小组件的面板模式。",
         "label": "切换小组件模式",
         "menu_path": "视图 > 仅小组件模式",
-        "tags": [
-          "小组件",
-          "面板"
-        ]
+        "tags": ["小组件", "面板"]
       }
     },
     "groups": {
@@ -2427,12 +2415,156 @@
     "status_confirmed": "已确认",
     "status_tentative": "暂定"
   },
+  "sync_disclosures": {
+    "additional_accounts": "Connect another account",
+    "additional_accounts_hint": "Outlook · iCloud · Naver",
+    "close_common_settings": "Hide common settings",
+    "common_settings": "Common settings",
+    "common_settings_hint": "Time zone and automatic synchronization settings for all connections.",
+    "hide_services": "Hide services",
+    "show_services": "Show services"
+  },
+  "sync_google": {
+    "apply_failed": "Imported events could not be applied in the app. Existing events and pending changes were preserved. Check the event data and local storage, then sync again.",
+    "database_failed": "Sync stopped because imported events could not be saved in the app. Existing events and pending changes were preserved. Check free storage and write access to the app data folder, then sync again.",
+    "fetch_failed": "Events could not be retrieved from Google Calendar. Check the internet connection and access to the selected calendars, then sync again. Existing events were preserved.",
+    "invalid_datetime": "Import stopped because a Google event date or time could not be interpreted. Existing events and pending changes were preserved. Check event dates and times in Google Calendar, then sync again."
+  },
+  "sync_recovery": {
+    "auth_hint": "Sign in again in connection settings.",
+    "connect_hint": "Connect your account to choose the calendars to import.",
+    "finished": "Sync completed. Your latest events are updated.",
+    "finished_issues": "Sync finished. Review items needing attention in Troubleshooting.",
+    "finished_unconfirmed": "The operation ended. Check the last update record and connection status.",
+    "import_paused": "Importing new events is off. Changes to existing events can still be synced.",
+    "paused": "Paused",
+    "paused_hint": "Your account connection is preserved. Resume sync in connection settings.",
+    "progress": "View progress",
+    "reconnect": "Reconnect",
+    "resume": "Resume sync",
+    "retry_hint": "Existing events are preserved. Check the cause, then sync again.",
+    "review": "Review pending items",
+    "review_hint": "Review pending events and recovery options in Troubleshooting.",
+    "select": "Choose calendars to import",
+    "wait_hint": "The service has limited requests. You can try again in {seconds} seconds."
+  },
+  "sync_redesign": {
+    "account_ready": "Choose which calendars to sync and which events to display.",
+    "address_copied": "Subscription address copied.",
+    "advanced": "Timezone · Automatic refresh",
+    "appearance_section": "Name and color",
+    "auto_refresh": "Refresh automatically",
+    "calendar_count": "{count} calendars",
+    "calendar_intro": "Select a calendar to choose how it appears and where new events are saved.",
+    "calendars_tab": "My calendars",
+    "check_needed": "Needs attention",
+    "connect_account": "Connect account",
+    "connection_settings": "Connection settings",
+    "connections_hint": "Connect an account or subscribe by address to bring in events.",
+    "connections_tab": "Connections and subscriptions",
+    "copy_address": "Copy address",
+    "current_default": "Default calendar for new events",
+    "default_badge": "New event default",
+    "default_hint": "This is the calendar selected when you create a new event.",
+    "display_section": "Display and save",
+    "display_timezone": "Calendar display timezone",
+    "fetch_busy": "Refreshing subscriptions…",
+    "fix_settings": "How to fix · Open settings",
+    "footer_hint": "Display and subscription changes are saved immediately.",
+    "google_hint": "Connect your Google events and shared calendars.",
+    "google_name_hint": "Rename this calendar in Google Calendar.",
+    "hidden_badge": "Hidden",
+    "hide_address": "Hide address",
+    "icloud_hint": "Connect events from Apple Calendar.",
+    "ics_auto_off_hint": "Automatic refresh is off for all ICS subscriptions. You can refresh this one below.",
+    "ics_empty": "Add an ICS address to import events. No Google sign-in is needed.",
+    "ics_hint": "Bring in shared events and holidays. Read-only access with no Google sign-in.",
+    "ics_paused": "Subscription refresh is paused. Resume it in My calendars.",
+    "ics_schedule": "Automatic refresh fetches new events every hour.",
+    "ics_title": "Subscribe by address",
+    "inactive_default": "Select this calendar in its connection settings first.",
+    "issue_guidance": "Your existing events are preserved. Sync again or check connection settings and subscription addresses.",
+    "issues_hint": "Select a connection with an issue to see the next step.",
+    "issues_tab": "Troubleshoot",
+    "issues_tab_count": "Troubleshoot ({count})",
+    "last_fetched": "Last refreshed: {time}",
+    "last_updated": "Last refreshed {time}",
+    "make_default": "Use for new events by default",
+    "manage_subscriptions": "Manage subscriptions",
+    "more_services": "Connect another service",
+    "naver_hint": "Import supported calendars with read-only access.",
+    "never_updated": "No events have been fetched yet.",
+    "no_issues": "There are no issues to resolve. Your connected calendars are ready to use.",
+    "not_connected": "Not connected",
+    "not_fetched": "No events have been fetched yet.",
+    "not_selected_badge": "Not selected for sync",
+    "outlook_hint": "Connect events from your Microsoft account.",
+    "overview": "{total} calendars · {visible} shown",
+    "paused_badge": "Refresh paused",
+    "private_address": "Private subscription address",
+    "readonly_default": "New events cannot be saved to a read-only calendar.",
+    "refresh": "Refresh",
+    "refresh_subscription": "Refresh this subscription now",
+    "remove_local": "Remove local calendar",
+    "remove_local_confirm": "Remove '{name}'? Existing events will remain as local copies.",
+    "remove_local_hint": "Existing events remain as local copies when you remove this calendar.",
+    "remove_subscription_hint": "Unsubscribing preserves the original calendar and the events already fetched.",
+    "resume_before_refresh": "Enable 'Refresh this subscription' first.",
+    "retry": "Sync again",
+    "retry_started": "Refreshing subscriptions with issues.",
+    "select_calendar": "Select a calendar",
+    "service_settings": "Choose calendars · Connection settings",
+    "show_address": "Show address",
+    "subscribe_url": "Subscribe by address",
+    "subscription_active": "Refresh this subscription",
+    "subscription_active_hint": "Included in automatic refresh. Choose whether its events appear separately above.",
+    "subscription_add": "Add subscription",
+    "subscription_add_title": "Subscribe to a calendar by address",
+    "subscription_address": "Subscription address: {address}",
+    "subscription_address_help": "Enter an iCal or ICS subscription address, rather than a calendar webpage. HTTP, HTTPS, and webcal addresses are supported.",
+    "subscription_address_invalid": "Check the address format. Use a subscription address beginning with HTTP, HTTPS, or webcal.",
+    "subscription_address_label": "1. Subscription address (required)",
+    "subscription_address_placeholder": "https://… or webcal://… subscription address",
+    "subscription_address_too_long": "The address is too long to paste. Copy the subscription address again from your calendar service.",
+    "subscription_address_valid": "The address format is valid. The connection result will be available after the subscription is fetched.",
+    "subscription_behavior": "Read only · No Google sign-in needed\nWith automatic sync enabled, the app checks for updates every hour while running.",
+    "subscription_clipboard_empty": "No address has been copied. First copy the subscription address from your calendar service.",
+    "subscription_edit_hint": "Changing the address keeps your current events, color, and display settings. Events update after the new feed loads successfully.",
+    "subscription_edit_title": "Edit subscription address and name",
+    "subscription_find_address": "Where can I find a subscription address?",
+    "subscription_guide_google": "In Google Calendar on the web, open Settings → choose your calendar → Integrate calendar, then copy the Secret address in iCal format. Public calendars can use the Public address in iCal format.",
+    "subscription_guide_icloud": "In iCloud Calendar on the web, choose calendar sharing → Public Calendar → Copy Link. You can also use webcal addresses.",
+    "subscription_guide_outlook": "In Outlook web settings, open Calendar → Shared calendars → Publish a calendar, then copy the ICS link. Publishing may be unavailable due to your organization's policy.",
+    "subscription_intro": "Bring in events using an iCal or ICS address copied from your calendar service.",
+    "subscription_name_help": "Choose a name you can easily recognize in Air Calendar. You can change it later.",
+    "subscription_name_label": "2. Calendar name (required)",
+    "subscription_name_placeholder": "For example: Family events, Company holidays",
+    "subscription_paste": "Paste",
+    "subscription_paste_accessible": "Paste the copied subscription address",
+    "subscription_paused_hint": "Refresh is paused. Events already fetched remain visible.",
+    "subscription_private_address": "Anyone who knows a private subscription address can view its events. Keep your private address to yourself.",
+    "subscription_required_fields": "Enter a subscription address and calendar name to continue.",
+    "subscription_save": "Save changes",
+    "subscription_section": "Subscription refresh",
+    "subscriptions_count": "{count} subscriptions",
+    "sync_available": "Sync the latest events from your connected calendars.",
+    "sync_now": "Sync now",
+    "sync_unavailable": "Connect a service or wait for the current refresh to finish.",
+    "unselected_hint": "This calendar is excluded from syncing. Select it in the connection settings to use it as the save location for new events.",
+    "unsubscribe": "Unsubscribe",
+    "unsubscribe_confirm": "Unsubscribe from '{name}'? Refresh will stop and the subscription will be removed from the list. Events already fetched will remain as local copies. The original calendar will be preserved.",
+    "wait_for_refresh": "Wait for the current subscription refresh to finish.",
+    "workspace_title": "Calendar management"
+  },
   "sync_ui": {
     "access_lost": "Access to a selected calendar was lost. Existing events were preserved. Refresh and select calendars again.",
+    "account_mismatch": "The connected account differs from the account linked to existing events. Reconnect the original account and review the calendar list. Existing events and unsent changes are preserved.",
+    "account_unverified": "Could not verify the account's primary calendar after sign-in. Your previous connection is preserved. Check your network and Google Calendar permissions, then sign in again.",
     "auth": "Authentication expired or the password is incorrect. Reconnect your account.",
     "auto_off": "Automatic sync off",
     "auto_on": "Automatic sync on",
     "busy": "This account is already syncing. Wait for completion.",
+    "calendar_timezone": "A subscribed event uses an unrecognized time zone. Check its time zone or subscription URL in the original calendar service. Existing events are preserved.",
     "cancelled": "The operation was cancelled. Existing events are preserved.",
     "changed": "The remote event changed first. Sync again and compare both versions.",
     "compare_hint": "Select a conflict to compare your changes with the service version.",
@@ -2458,6 +2590,7 @@
     "hub_title": "Calendars / accounts and synchronization",
     "icloud_capability": "Two-way personal events; app-specific password",
     "ics_fetch": "Could not refresh this subscription. Check its URL and your internet connection, then sync again.",
+    "identity_changed": "此服务器地址现在对应另一个日程，已暂停修改。请在原服务中检查日程。",
     "incomplete": "Some event responses were missing. This sync was stopped. Try again.",
     "invalid_data": "The service returned invalid event data. This sync was not applied.",
     "invalid_response": "The service response could not be read. Check the account and service status.",
@@ -2471,6 +2604,7 @@
     "not_connected": "Not connected",
     "other_services": "Connect Outlook / iCloud / Naver",
     "outlook_capability": "Two-way events; Microsoft app registration required initially",
+    "partial": "Some events need attention after sync. Review pending items in the Troubleshooting tab.",
     "permission": "Calendar access was denied. Check account permissions and service support.",
     "protection": "Windows credential encryption failed. Check your Windows user environment.",
     "rate_limit": "The service request limit was reached. Automatic retry intervals have increased. Try again later.",
@@ -2480,6 +2614,7 @@
     "recurrence_edit": "Configure recurrence rules in the original service.",
     "remote": "Service version",
     "remote_deleted": "This event was deleted in the service. The local copy was preserved.",
+    "remote_event": "An event from the service has an invalid format, so importing it was paused. Check its dates and times in the original service, then sync again.",
     "save_timezone": "Save timezone",
     "server": "The service is temporarily unavailable. Events are preserved and sync will retry later.",
     "stale_conflict": "The event changed again after comparison. Sync again and compare the latest versions.",
@@ -2490,12 +2625,12 @@
     "unsafe": "An untrusted server address was returned. The connection was stopped.",
     "unsupported_service": "The service does not allow this connection method. Check its support policy.",
     "wait_timezone": "Wait for the current synchronization to finish before changing the timezone.",
-    "working": "Working...",
-    "identity_changed": "此服务器地址现在对应另一个日程，已暂停修改。请在原服务中检查日程。"
+    "working": "Working..."
   },
   "sync_unified": {
     "add_ics": "Add ICS subscription",
     "add_local": "Add local calendar",
+    "all_services": "All services",
     "attention": "Sync needs attention",
     "auto": "Automatic sync",
     "auto_pause": "Turn all automatic sync off",
@@ -2510,28 +2645,53 @@
     "connected_count": "{count} connected",
     "default": "Set as default save destination",
     "default_marker": "Default",
+    "edit_ics": "修改订阅地址",
     "exists": "This calendar is already registered.",
+    "filter_service": "Filter by service",
+    "google_busy": "Wait for the current Google operation to finish, then try again.",
+    "google_calendar_scope": "Choose the Google write destination here. Manage local and ICS calendars, visibility, colors and the default save destination in All calendars.",
+    "google_loading": "Checking Google calendar information. Closing this window cancels the operation.",
+    "google_query_failed": "Could not load Google calendar information. Check your network and account permissions, then try again.",
+    "google_readonly_target": "Events cannot be saved to a read-only calendar. Choose a calendar with write permission.",
     "google_settings": "Google Calendar settings",
+    "google_target_missing": "Account access succeeded, but the selected calendar was not found. Select it again from the list.",
+    "google_write_target": "Google write destination",
     "ics": "ICS subscriptions",
+    "ics_access_denied": "订阅访问被拒绝。请检查共享设置或生成新的 ICS 地址，然后修改订阅地址。",
+    "ics_add_hint": "Import events from a subscription URL as read-only. Google sign-in is not required.",
     "ics_capability": "Shared subscription URL · read-only",
+    "ics_empty": "尚未注册订阅。请添加 ICS 地址，无需登录 Google。",
     "ics_failed": "ICS subscriptions could not be refreshed. Check subscription URLs in All calendars and sync again.",
+    "ics_not_found": "订阅地址不存在或已过期。请获取最新 ICS 地址并修改订阅地址。",
+    "ics_rate_limited": "订阅服务器已限制请求。已有日程已保留，请稍后重新同步。",
+    "ics_server_error": "订阅服务器出现临时错误。已有日程已保留，请稍后重新同步。",
+    "ics_too_large": "The subscription file is too large. Reduce its event range in the original service and try again.",
     "ics_url": "Calendar subscription URL",
+    "ics_url_hint": "HTTP, HTTPS and webcal URLs are supported.",
     "inactive": "Sync deselected",
-    "invalid_ics": "Enter an HTTP or HTTPS calendar subscription URL.",
+    "invalid_ics": "Enter an HTTP, HTTPS or webcal calendar subscription URL.",
     "issue_count": "{count} issues need attention",
     "issues": "All sync issues",
     "issues_hint": "Select a service to compare conflicts or review failed operations. Other services can keep syncing.",
     "local": "Local",
     "local_only": "Local mode",
+    "manage_all": "Manage all calendars",
+    "manage_ics": "添加 · 管理订阅",
     "menu": "Calendars and sync",
+    "name_required": "Enter a calendar name.",
+    "no_calendar_matches": "No calendars to display. Check your search and service filter, or add a calendar.",
     "no_issues": "No sync issues need attention.",
     "open_issue": "Review and resolve in selected service",
+    "read_only_hint": "This calendar is read-only. Edit its events in the original service. It cannot be a default save destination.",
+    "refresh_started": "Refreshing the selected subscription.",
     "refresh_subscription": "Sync ICS subscriptions again",
     "remove_calendar": "Remove from local list",
     "remove_confirm": "Remove this calendar from the list? Existing events remain as local copies. Service originals will not be deleted.",
     "rename": "Rename",
     "review_issues": "Review issues",
     "running": "Syncing {count}",
+    "search_calendars": "Search calendar names",
+    "select_calendar_hint": "Select a calendar to manage its visibility, color, default destination and subscription.",
     "select_first": "Select calendars to import and save your selection.",
     "service_settings": "Service selection and settings",
     "services": "Services and sync",
@@ -2539,7 +2699,10 @@
     "show_calendar": "Show in calendar views",
     "subscription_active": "Sync this ICS subscription",
     "sync_all": "Sync all connected calendars",
-    "welcome": "Use local calendars immediately. Connect Google, Outlook, iCloud, Naver or ICS calendars whenever you need them."
+    "sync_not_started": "Could not start sync. Check the connection and any operations in progress.",
+    "sync_started_services": "Sync started: {services}",
+    "welcome": "Use local calendars immediately. Connect Google, Outlook, iCloud, Naver or ICS calendars whenever you need them.",
+    "writable_hint": "You can save events in this calendar and choose it as your default destination."
   },
   "system_msg": {
     "already_running": "黑暗日历已在运行。\n\n请检查任务栏中的托盘图标。",
@@ -2651,13 +2814,31 @@
       "storm": "雷暴"
     },
     "error": {
+      "busy": "天气服务繁忙，等待重试",
+      "denied": "天气服务访问被拒绝",
       "location_not_found": "找不到位置",
       "network": "网络错误",
       "parse_failed": "数据解析错误",
-      "timeout": "请求超时",
-      "busy": "天气服务繁忙，等待重试",
-      "denied": "天气服务访问被拒绝"
+      "timeout": "请求超时"
     }
+  },
+  "week_planner": {
+    "accessible_help": "Click or drag an empty time to add an event. Drag events to move them, and drag their bottom edge to resize. Use the arrow keys to select an event and Enter to open it.",
+    "accessible_name": "Weekly time grid",
+    "all_day": "All day",
+    "create_hint": "Click or drag an empty time to add an event.",
+    "current_time": "Current time",
+    "current_time_hint": "Keep the selected date and scroll to the current time of day.",
+    "duration": "{minutes} min",
+    "help": "How to use",
+    "open": "Open event",
+    "read_only": "Read only",
+    "recurring_hint": "Change recurring events in the event editor.",
+    "recurring_title": "Recurring event",
+    "time_view": "Time grid",
+    "toggle_hint": "Switch between the time grid and the date list.",
+    "untitled": "Untitled",
+    "work_start_hint": "Scroll to 9:00 AM."
   },
   "weekday": {
     "fri": "五",
@@ -3463,13 +3644,88 @@
       "template_confirm": "要将当前页面的按键替换为所选布局吗？",
       "template_confirm_title": "更改布局",
       "theme": {
+        "arctic_glass": "Arctic Glass",
+        "aurora_glass": "Aurora Glass",
+        "cobalt_arcade": "Cobalt Arcade",
+        "copper_dusk": "Copper Dusk",
+        "cream_typewriter": "Cream Typewriter",
         "crystal_night": "Crystal Night",
+        "cyber_pulse": "Cyber Pulse",
+        "desert_sand": "Desert Sand",
         "floating_glass": "Floating Glass",
+        "forest_sage": "Forest Sage",
         "frost_paper": "Frost Paper",
         "graphite_pbt": "Graphite PBT",
+        "lavender_mist": "Lavender Mist",
+        "midnight_navy": "Midnight Navy",
+        "ocean_blue": "Ocean Blue",
+        "olive_workshop": "Olive Workshop",
+        "porcelain": "Porcelain",
         "pudding_pop": "Pudding Pop",
+        "sakura_bloom": "Sakura Bloom",
+        "slate": "Slate",
         "smoke_neon": "Smoke Neon",
+        "synthwave": "Synthwave",
+        "terminal_green": "Terminal Green",
         "walnut_studio": "Walnut Studio"
+      },
+      "theme_category": {
+        "glass": "Glass",
+        "minimal": "Minimal",
+        "nature": "Nature",
+        "neon": "Neon",
+        "pastel": "Pastel",
+        "retro": "Retro"
+      },
+      "theme_description": {
+        "arctic_glass": "Cool silver with thin, frost-tinted keycaps",
+        "aurora_glass": "Glass keycaps filled with mint and violet auroras",
+        "cobalt_arcade": "Round cobalt keys with yellow arcade buttons",
+        "copper_dusk": "A copper-toned case with deep vintage keycaps",
+        "cream_typewriter": "Classic typewriter styling with round cream keys",
+        "crystal_night": "Transparent crystal keycaps in a deep night case",
+        "cyber_pulse": "Thin floating keycaps with reactive three-color neon",
+        "desert_sand": "Sand-colored PBT with terracotta accent keys",
+        "floating_glass": "Low glass keycaps floating without a case",
+        "forest_sage": "Calm sage keycaps on a forest-toned wood case",
+        "frost_paper": "Soft paper pastels under translucent keycaps",
+        "graphite_pbt": "Matte graphite with a vivid orange accent",
+        "lavender_mist": "Low pudding keycaps wrapped in lavender light",
+        "midnight_navy": "Deep navy with champagne-gold accent keys",
+        "ocean_blue": "Translucent ocean keycaps with teal gradients",
+        "olive_workshop": "Olive keycaps with warm brass accents",
+        "porcelain": "Clean ivory tones with broad porcelain-like keycaps",
+        "pudding_pop": "Rounded pudding keycaps in playful pastels",
+        "sakura_bloom": "Cherry-blossom gradients on deep, rounded keycaps",
+        "slate": "Thin slate keycaps with restrained sage accents",
+        "smoke_neon": "Smoked keycaps lit by pink and cyan neon",
+        "synthwave": "Tall smoked keycaps in a pink and purple nightscape",
+        "terminal_green": "Green legends and lighting on a dark terminal palette",
+        "walnut_studio": "Walnut wood with warm ivory keycaps"
+      },
+      "themes": {
+        "affected": "Applies to {count} keys",
+        "all": "All themes",
+        "apply": "Apply theme",
+        "category": "Theme category",
+        "count": "{shown} / {total} themes",
+        "current": "Current theme: {name}",
+        "custom": "Custom",
+        "empty": "No themes match. Try another search or select all themes.",
+        "empty_preview": "This page is empty, so a sample layout is shown. Sample keys will not be added.",
+        "heading": "Find a theme for your KeyDeck",
+        "hint": "Choose a theme to preview your current layout. Your deck changes only when you apply it.",
+        "list": "Theme list",
+        "open_tip": "Theme gallery · Search, preview and choose where to apply",
+        "preserve": "Layouts, labels, actions and your images are preserved. Undo the theme with Ctrl+Z.",
+        "preview": "Current page preview",
+        "scope": "Apply to",
+        "scope_deck": "Entire deck",
+        "scope_page": "Current page",
+        "scope_selection": "Selected keys ({count})",
+        "search": "Search theme names or styles",
+        "select_keys": "Select keys on the current page first.",
+        "title": "Theme gallery"
       },
       "title": "KEYDECK",
       "unassigned_hint": "尚未设置动作。请右键点击 → 编辑按键进行设置。",
@@ -3523,6 +3779,28 @@
       "none": "None · Text only",
       "paper_seasons": "Paper Seasons · Layered paper"
     },
+    "placement": {
+      "aspect": "Keep aspect ratio",
+      "gesture_help": "Shift: keep ratio · Alt: bypass snapping · Right-click: undo last placement",
+      "heading": "A comfortable place, a size that fits",
+      "height": "Height",
+      "help": "Drag freely or enter precise values below. Changes are saved when you apply them.",
+      "keydeck_note": "KeyDeck scales while preserving the shape of its keys.",
+      "lock": "Lock position and size",
+      "lock_help": "Only moving and resizing are locked. Widget buttons and content remain usable.",
+      "move_help": "Drag an empty part of the header to move. Right-click to adjust position and size.",
+      "resize": "Resize",
+      "resize_help": "Drag the corner to resize.",
+      "revert": "Restore opening values",
+      "screen": "Fit within screen",
+      "snap": "Snap to nearby edges",
+      "step_help": "Arrow keys: 1px · Shift+arrow keys: 10px",
+      "title": "Position and size",
+      "undo": "Undo last placement",
+      "width": "Width",
+      "x": "Horizontal position",
+      "y": "Vertical position"
+    },
     "preset": {
       "add": "另存为新预设",
       "apply": "应用",
@@ -3532,6 +3810,20 @@
       "empty_template": "请先输入模板。",
       "invalid_preview": "Fix the template syntax to display a preview.",
       "invalid_template": "Check the template syntax:\n{details}",
+      "issue_invalid_alignment": "Use left, center, or right for alignment.",
+      "issue_invalid_color": "Check the color alias or #RRGGBB format.",
+      "issue_invalid_condition": "Check the variable, comparison operator, and value.",
+      "issue_invalid_condition_variable": "This widget does not support this condition variable.",
+      "issue_invalid_line_height": "Use a positive number for line height.",
+      "issue_invalid_size": "Use a number, ratio, or base for the size.",
+      "issue_nested_condition": "Nested conditions are not supported.",
+      "issue_unbalanced_brace": "Match the opening and closing braces.",
+      "issue_unclosed_condition": "Add {/if} to close the condition.",
+      "issue_unexpected_else": "An if condition must precede else.",
+      "issue_unexpected_end_if": "An if condition must precede /if.",
+      "issue_unknown_hint": "This style option is not supported.",
+      "issue_unknown_variable": "This widget does not support this variable.",
+      "issue_unknown_widget": "Check the widget type.",
       "kind_builtin": "内置",
       "kind_user": "用户",
       "legacy_copy_suffix": "(User copy)",
@@ -3539,10 +3831,26 @@
       "name_exists": "该名称的用户预设已存在。",
       "name_label": "名称:",
       "name_title": "预设名称",
+      "preview_failed": "Unable to display the preview. Check the variables and formats.",
       "rename": "重命名",
       "select_hint": "选择预设",
+      "syntax_issue": "At {{{token}}}: {reason}",
       "update": "更新预设",
       "warning_title": "预设"
+    },
+    "shadow": {
+      "blur": "Softness",
+      "color": "Shadow color",
+      "distance": "Distance",
+      "enabled": "Enable text shadow",
+      "hint": "Adds a shadow to text while preserving the background and border.",
+      "off": "Off",
+      "opacity": "Strength",
+      "preview": "Today's schedule",
+      "settings": "Shadow settings…",
+      "soft": "Subtle",
+      "strong": "Strong",
+      "title": "Text shadow"
     },
     "shape": {
       "capsule": "Capsule",
@@ -3602,37 +3910,166 @@
         "tag": "标签 - 内联标签"
       }
     },
+    "usage": {
+      "copy_date": "Copy today's date",
+      "copy_text": "Copy displayed text",
+      "timezone": "Quick time zone",
+      "undo_reset": "Undo reset"
+    },
     "weather": {
       "asset_pack": "Illustration pack:",
       "asset_pack_air_soft": "Air Soft · Soft 3D",
       "asset_pack_classic": "Classic · Original icons",
+      "asset_pack_flat_weather": "Flat · Clear colors",
       "asset_pack_help": "Artwork changes automatically for the current weather and time of day.",
       "asset_pack_mono_atmosphere": "Mono Atmosphere · Crisp minimal",
+      "asset_pack_neon_weather": "Neon · Glowing weather",
+      "asset_pack_orbit_weather": "Orbit · Orbital badges",
+      "asset_pack_outline_weather": "Outline · Line art",
       "asset_pack_paper_weather": "Paper Weather · Layered paper",
+      "asset_pack_pixel_weather": "Pixel · Pixel art",
+      "asset_pack_vintage_weather": "Vintage · Engraved illustrations",
       "asset_preview": "Illustration preview",
+      "cached": "最新缓存天气",
+      "design": {
+        "amber_bulletin": "Amber Bulletin",
+        "aurora_panel": "Aurora Panel",
+        "candy_cloud": "Candy Cloud",
+        "clear_line": "Clear Line",
+        "contrast_card": "Contrast Card",
+        "coral_coast": "Coral Coast",
+        "crystal_band": "Crystal Band",
+        "cyan_pulse": "Cyan Pulse",
+        "desert_note": "Desert Note",
+        "gold_observatory": "Gold Observatory",
+        "ivory_ledger": "Ivory Ledger",
+        "moon_glass": "Moon Glass",
+        "night_signal": "Night Signal",
+        "ocean_window": "Ocean Window",
+        "paper_weather": "Paper Weather",
+        "pixel_board": "Pixel Board",
+        "quiet_mono": "Quiet Mono",
+        "sage_card": "Sage Card",
+        "soft_capsule": "Soft Capsule",
+        "soft_cloud": "Soft Cloud",
+        "sticker_weather": "Sticker Weather",
+        "temperature_type": "Temperature Type",
+        "terminal_station": "Terminal Station",
+        "violet_orbit": "Violet Orbit"
+      },
+      "design_category": {
+        "editorial": "Editorial",
+        "glass": "Glass",
+        "minimal": "Minimal",
+        "nature": "Nature",
+        "neon": "Neon and digital",
+        "playful": "Pop and illustration"
+      },
+      "design_description": {
+        "amber_bulletin": "An amber poster with pixel weather illustrations",
+        "aurora_panel": "Weather and humidity on a violet glass panel",
+        "candy_cloud": "A coral circular badge with playful flat clouds",
+        "clear_line": "A single line of weather with a transparent background",
+        "contrast_card": "Strong contrast and bold flat illustrations",
+        "coral_coast": "A horizontal information card in warm coastal colors",
+        "crystal_band": "Fine outline icons on a light horizontal capsule",
+        "cyan_pulse": "Bright cyan neon illustrations on a crisp night card",
+        "desert_note": "A sandy weather note with vintage illustrations",
+        "gold_observatory": "A classic observation badge with a golden border",
+        "ivory_ledger": "A warm weather record with information aligned to the left",
+        "moon_glass": "Orbit illustrations inside a round glass face",
+        "night_signal": "Glowing weather illustrations on a dark horizontal face",
+        "ocean_window": "A vertical blue glass window with soft 3D weather",
+        "paper_weather": "Layered paper illustrations on a vertical poster",
+        "pixel_board": "A compact pixel information board inspired by game screens",
+        "quiet_mono": "A restrained monochrome card focused on temperature",
+        "sage_card": "A quiet forest-colored card with fine outline icons",
+        "soft_capsule": "Soft 3D weather and temperature side by side on a light capsule",
+        "soft_cloud": "Soft 3D clouds on a calm vertical glass card",
+        "sticker_weather": "A light card centered on a large paper illustration",
+        "temperature_type": "Large clear temperature figures with a small city caption",
+        "terminal_station": "A small weather station in green monospace type",
+        "violet_orbit": "Orbit weather illustrations on a violet circular face"
+      },
+      "design_gallery": "Choose weather design…",
+      "designs": {
+        "all": "All designs",
+        "apply": "Apply design",
+        "category": "Design category",
+        "count": "{shown} / {total} designs",
+        "current": "Current design: {name}",
+        "custom": "Custom",
+        "empty": "No designs match. Try another search or category.",
+        "heading": "A new way to display the weather",
+        "hint": "Preview illustrations, layouts and appearance together. Your widget changes only when you apply a design.",
+        "list": "Weather design list",
+        "preserve": "Your city, temperature units, refresh interval and screen position are preserved.",
+        "preview": "Design preview",
+        "preview_note": "Saved weather is shown on a sample background. Resize the actual widget after applying.",
+        "search": "Search design names or styles",
+        "title": "Weather design gallery"
+      },
       "error": {
         "location_not_found": "找不到位置",
         "network": "网络错误",
         "parse_failed": "数据解析错误",
         "timeout": "请求超时"
       },
+      "forecast_source": "Weather data",
+      "loading": "正在加载天气…",
       "location": "位置：",
       "location_placeholder": "北京",
+      "location_source": "City location data",
+      "preset_city_focus": "City Focus",
+      "preset_compact_inline": "Compact Inline",
+      "preset_daily_card": "Daily Card",
+      "preset_default": "Default",
+      "preset_desc_card": "Desc Card",
+      "preset_full": "Full Info",
+      "preset_hero_icon": "Hero Illustration",
+      "preset_horizontal_bar": "Horizontal Bar",
+      "preset_humidity_focus": "Humidity Focus",
+      "preset_icon_temp": "Icon + Temp",
+      "preset_mini_dashboard": "Mini Dashboard",
+      "preset_minimal_icon": "Minimal Icon",
+      "preset_night_card": "Night Card",
+      "preset_rain_focus": "Weather Conditions",
+      "preset_temp_only": "Temp Only",
+      "preset_temperature_badge": "Temperature Badge",
+      "preset_travel_city": "Travel City",
+      "preset_wide_weather": "Wide Weather",
+      "preset_wind_focus": "Wind Focus",
+      "preset_wind_humidity": "Wind & Humidity",
+      "refresh_every": "每 {min} 分钟",
       "refresh_interval": "刷新：",
       "refresh_min": "分钟",
+      "refresh_now": "重新加载天气",
+      "retry_in": "{min} 分钟后重试",
       "settings": "天气设置...",
       "settings_title": "天气设置",
       "source_attribution": "MET 挪威 · 地名",
-      "template_hint": "变量：{city} {temp} {unit} {desc} {icon}",
+      "sources_changes": "Air Calendar extracts data for city lookup and weather display, and converts units and display formats.",
+      "sources_disclaimer": "The data is provided without a warranty of accuracy, timeliness or completeness.",
+      "sources_license": "Data license",
+      "sources_policy": "Terms of use",
+      "sources_title": "Weather data sources",
+      "stale": "显示上次天气 · {error}",
+      "style": {
+        "banner": "Banner · Left accent",
+        "compact": "Compact · Smaller padding",
+        "default": "Default · Card",
+        "glass": "Glass · Transparent look",
+        "minimal": "Minimal · No border",
+        "neon": "Neon · Thick border",
+        "outlined": "Outlined · No background",
+        "pill": "Pill · Rounded corners",
+        "retro": "Retro · Double border",
+        "sticky": "Sticky · Note style"
+      },
+      "template_hint": "Variables: {city} {temp} {unit} {desc} {icon} {humidity} {wind}",
       "unit": "单位：",
       "unit_c": "摄氏度（°C）",
       "unit_f": "华氏度（°F）",
-      "cached": "最新缓存天气",
-      "loading": "正在加载天气…",
-      "refresh_every": "每 {min} 分钟",
-      "refresh_now": "重新加载天气",
-      "retry_in": "{min} 分钟后重试",
-      "stale": "显示上次天气 · {error}",
       "updated": "{time} 更新"
     }
   },

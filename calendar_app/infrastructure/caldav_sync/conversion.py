@@ -2,6 +2,7 @@
 """iCalendar conversion; recurring resources and invitations are view-only."""
 
 from datetime import UTC, date, datetime, timedelta
+from math import ceil
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
@@ -53,7 +54,7 @@ def to_task_component(event, zone="Asia/Seoul"):
             )
         )
         all_day = type(start) is date
-        if (type(end) is date) != all_day or end < start:
+        if (type(end) is date) != all_day or end <= start:
             raise ValueError
         if all_day:
             deadline, finish = start.isoformat(), (end - timedelta(days=1)).isoformat()
@@ -83,6 +84,24 @@ def to_task_component(event, zone="Asia/Seoul"):
 def records(href, etag, data, start=None, end=None, zone="Asia/Seoul"):
     calendar = parse(data)
     components = calendar.walk("VEVENT")
+    # An unresolved TZID is not a floating wall time. Reject the complete
+    # resource before its values can be interpreted in the user's local zone.
+    for component in components:
+        for key in ("DTSTART", "DTEND", "RECURRENCE-ID", "RDATE", "EXDATE"):
+            properties = component.get(key)
+            if properties is None:
+                continue
+            if not isinstance(properties, list):
+                properties = [properties]
+            for prop in properties:
+                if not prop.params.get("TZID"):
+                    continue
+                for item in getattr(prop, "dts", [prop]):
+                    values = item.dt if isinstance(item.dt, tuple) else (item.dt,)
+                    if any(
+                        isinstance(value, datetime) and value.tzinfo is None for value in values
+                    ):
+                        raise CalendarSyncError("invalid_event_time")
     recurring = len(components) > 1 or any(
         e.get("RRULE") or e.get("RDATE") or e.get("RECURRENCE-ID") for e in components
     )
@@ -98,11 +117,35 @@ def records(href, etag, data, start=None, end=None, zone="Asia/Seoul"):
                 continue
             frequency = str(rule.get("FREQ", [""])[0]).upper()
             per_day = {"SECONDLY": 86400, "MINUTELY": 1440, "HOURLY": 24}.get(frequency, 1)
-            estimate = days * per_day
-            for key in ("BYHOUR", "BYMINUTE", "BYSECOND"):
+            interval = int(rule.get("INTERVAL", [1])[0])
+            if interval < 1:
+                raise CalendarSyncError("invalid_recurrence")
+            estimate = ceil(days * per_day / interval)
+            # Keep the interval and daily filter bounds independent: an interval
+            # can align with a filter, so dividing by both would undercount.
+            filtering = {
+                "SECONDLY": (("BYHOUR", 24), ("BYMINUTE", 60), ("BYSECOND", 60)),
+                "MINUTELY": (("BYHOUR", 24), ("BYMINUTE", 60)),
+                "HOURLY": (("BYHOUR", 24),),
+            }.get(frequency, ())
+            filtered_per_day = per_day
+            for key, cardinality in filtering:
+                values = rule.get(key)
+                if values:
+                    filtered_per_day = filtered_per_day // cardinality * len(set(values))
+            estimate = min(estimate, ceil(days * filtered_per_day))
+            expanding = {
+                "SECONDLY": (),
+                "MINUTELY": ("BYSECOND",),
+                "HOURLY": ("BYMINUTE", "BYSECOND"),
+            }.get(frequency, ("BYHOUR", "BYMINUTE", "BYSECOND"))
+            for key in expanding:
                 estimate *= max(1, len(rule.get(key, [])))
-            if rule.get("COUNT"):
-                estimate = min(estimate, int(rule["COUNT"][0]))
+            if "COUNT" in rule:
+                counts = rule["COUNT"]
+                if len(counts) != 1 or int(counts[0]) < 1:
+                    raise CalendarSyncError("invalid_recurrence")
+                estimate = min(estimate, int(counts[0]))
             if estimate > MAX_OCCURRENCES:
                 raise CalendarSyncError("too_many_events")
         try:

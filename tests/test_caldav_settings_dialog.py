@@ -175,7 +175,16 @@ def test_conflict_screen_compares_content_and_applies_only_selected_service(ui):
 def test_hub_lists_all_services_and_opens_google(ui):
     app, host, path = ui
     hub = CalendarSyncHub(host)
-    assert set(hub.labels) == {"google", "outlook", "icloud", "naver", "ics"}
+    assert set(hub.labels) == {
+        "google",
+        "outlook",
+        "icloud",
+        "naver",
+        "yahoo",
+        "zoho",
+        "fastmail",
+        "ics",
+    }
     hub._open("google")
     host.open_gcal_settings_dialog.assert_called_once()
     hub.close()

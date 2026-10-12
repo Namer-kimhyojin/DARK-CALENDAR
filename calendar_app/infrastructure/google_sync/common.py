@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Shared primitives for Google sync modules."""
 
 from __future__ import annotations
@@ -68,6 +69,11 @@ def is_gcal_enabled(settings, default: bool | None = None) -> bool:
     return _coerce_bool_setting(explicit, default=bool(default) if default is not None else False)
 
 
+def is_gcal_import_selection_configured(settings) -> bool:
+    """Distinguish an explicit import draft from old permission-based flags."""
+    return _coerce_bool_setting(_setting_value(settings, "gcal_import_selection_configured", False))
+
+
 def ensure_gcal_startup_defaults(settings, *, suppress_first_run_prompt: bool = True) -> bool:
     """Persist non-invasive defaults for startup UX.
 
@@ -88,38 +94,76 @@ def ensure_gcal_startup_defaults(settings, *, suppress_first_run_prompt: bool = 
     return is_gcal_enabled(settings, default=enabled)
 
 
-def get_default_gcal_calendar_id() -> str:
-    """DB의 기본 캘린더(is_default=1) 중 gcal 타입의 gcal_calendar_id 를 반환한다.
+def get_default_gcal_calendar_id(settings=None) -> str:
+    """Resolve a Google service fallback, with the usable DB default taking priority.
 
-    - gcal 기본 캘린더가 있으면 그 gcal_calendar_id 반환
-    - 없으면 "primary" 반환 (Google API 호환 fallback)
+    This does not assign calendar ownership to tasks or redefine Google's
+    ``primary`` identity. A non-Google app default keeps its own save route.
     """
     try:
         from calendar_app.infrastructure.db.calendar_repo import (
+            can_calendar_be_default,
             get_default_calendar,
             list_calendars,
         )
 
-        # 1순위: is_default=1 인 gcal 캘린더
         default_cal = get_default_calendar()
-        if default_cal and default_cal.get("type") == "gcal":
+        if (
+            default_cal
+            and default_cal.get("type") == "gcal"
+            and _coerce_bool_setting(default_cal.get("is_default"))
+            and can_calendar_be_default(default_cal)
+        ):
             gcal_id = str(default_cal.get("gcal_calendar_id") or "").strip()
-            if gcal_id and gcal_id != "primary":
+            if gcal_id:
                 return gcal_id
-        # 2순위: gcal 캘린더 중 첫 번째 writable (is_active=1)
-        for cal in list_calendars(include_inactive=False):
-            if cal.get("type") == "gcal":
+        rows = list_calendars(include_inactive=True)
+        legacy_id = str(_setting_value(settings, "gcal_calendar_id", "") or "").strip()
+        if legacy_id:
+            known = next(
+                (
+                    row
+                    for row in rows
+                    if row.get("type") == "gcal"
+                    and str(row.get("gcal_calendar_id") or "").strip() == legacy_id
+                ),
+                None,
+            )
+            # A pre-migration actual ID remains compatible, while a known
+            # unavailable or read-only calendar cannot become the fallback.
+            if known is None or can_calendar_be_default(known):
+                return legacy_id
+        for cal in rows:
+            if cal.get("type") == "gcal" and can_calendar_be_default(cal):
                 gcal_id = str(cal.get("gcal_calendar_id") or "").strip()
-                if gcal_id and gcal_id != "primary":
+                if gcal_id:
                     return gcal_id
     except Exception:
-        pass
+        logger.exception("Failed to resolve the default Google calendar")
+        raw = str(_setting_value(settings, "gcal_calendar_id", "") or "").strip()
+        if raw:
+            return raw
     return "primary"
 
 
 def normalize_calendar_id(calendar_id) -> str:
     value = str(calendar_id or "").strip()
     return value or "primary"
+
+
+def google_create_idempotency_key(task) -> str | None:
+    """Keep one create identity across edits and sync-error timestamp updates."""
+    task_id = task.get("id")
+    if not task_id:
+        return None
+    created = (
+        str(task.get("created_at") or "")
+        .replace("-", "")
+        .replace(":", "")
+        .replace(" ", "")
+        .replace("T", "")[:14]
+    )
+    return f"task{task_id}{created}" if created else f"task{task_id}"
 
 
 def _default_primary_summary() -> str:
@@ -205,7 +249,13 @@ def resolve_task_target_calendar_id(task, default_calendar_id: str | None = None
     cal_id = str(task.get("calendar_id") or "").strip()
     # A task explicitly owned by another remote provider must never be routed to
     # Google through stale fields left by a prior calendar move.
-    if cal_id.split("::", 1)[0].lower() in {"outlook", "caldav"}:
+    namespace = cal_id.split("::", 1)[0].strip().lower()
+    if namespace in {"outlook", "caldav"}:
+        return None
+    if "::" in cal_id and namespace != "gcal" and not str(task.get("gcal_event_id") or "").strip():
+        # Source/target metadata can survive a calendar move. Without a linked
+        # Google event, explicit local ownership must never create a new remote
+        # event merely because that metadata remains in the row.
         return None
     raw = task.get("gcal_target_calendar_id") or task.get("gcal_source_calendar_id")
     if raw:

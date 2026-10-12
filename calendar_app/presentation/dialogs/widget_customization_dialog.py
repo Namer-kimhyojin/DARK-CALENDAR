@@ -65,6 +65,7 @@ from calendar_app.presentation.widgets.widget_mode_skins import (
     widget_mode_layouts,
     widget_mode_skins,
 )
+from calendar_app.presentation.widgets.widget_mode_typography import read_widget_typography
 from calendar_app.presentation.widgets.widget_mode_visibility import (
     read_widget_calendar_visibility,
     write_widget_calendar_visibility,
@@ -492,12 +493,12 @@ class WidgetCustomizationDialog(QDialog):
             (
                 self.font_size,
                 self.font_size.setValue,
-                int(self.draft.value("widget_mode_font_size", 12)),
+                read_widget_typography(self.draft).preference,
             ),
             (
                 self.font_weight,
                 self.font_weight.setCurrentIndex,
-                self.font_weight.findData(int(self.draft.value("widget_mode_font_weight", 500))),
+                self.font_weight.findData(self._font_weight_preference()),
             ),
             (self.text_opacity, self.text_opacity.setValue, read_widget_opacities(self.draft)[0]),
             (
@@ -517,6 +518,13 @@ class WidgetCustomizationDialog(QDialog):
             button.show()
         self.all_layouts_btn.hide()
         self.layout_buttons[read_widget_mode_layout_id(self.draft)].setFocus()
+
+    def _font_weight_preference(self):
+        try:
+            weight = int(self.draft.value("widget_mode_font_weight", 500))
+        except (TypeError, ValueError, OverflowError):
+            weight = 500
+        return weight if weight in (400, 500, 600, 700) else 500
 
     @staticmethod
     def _layout_icon(spec):
@@ -593,7 +601,7 @@ class WidgetCustomizationDialog(QDialog):
         form.addRow(t("widget_mode.font_family", "글꼴"), font_family_row)
         self.font_size = QSpinBox(tab)
         self.font_size.setRange(10, 18)
-        self.font_size.setValue(int(self.draft.value("widget_mode_font_size", 12)))
+        self.font_size.setValue(read_widget_typography(self.draft).preference)
         self.font_size.valueChanged.connect(
             lambda value: self._change("widget_mode_font_size", value)
         )
@@ -616,9 +624,7 @@ class WidgetCustomizationDialog(QDialog):
             (700, "bold", "굵게"),
         ):
             self.font_weight.addItem(t(f"widget_mode.font_{key}", label), value)
-        self.font_weight.setCurrentIndex(
-            max(0, self.font_weight.findData(int(self.draft.value("widget_mode_font_weight", 500))))
-        )
+        self.font_weight.setCurrentIndex(self.font_weight.findData(self._font_weight_preference()))
         self.font_weight.setAccessibleName(t("widget_mode.font_weight", "제목 굵기"))
         self.font_weight.currentIndexChanged.connect(
             lambda: self._change("widget_mode_font_weight", self.font_weight.currentData())

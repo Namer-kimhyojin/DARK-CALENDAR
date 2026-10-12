@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Shared payload validation/normalization for unified task flows."""
 
 from __future__ import annotations
@@ -65,9 +66,9 @@ def _normalize_datetime(value: Any) -> tuple[str | None, bool]:
     text = str(value).strip()
     if not text:
         return None, True
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
         try:
-            dt = datetime.strptime(text[:19] if fmt.endswith("%S") else text[:16], fmt)
+            dt = datetime.strptime(text, fmt)
             return dt.strftime("%Y-%m-%d %H:%M:%S"), True
         except ValueError:
             continue
@@ -81,7 +82,7 @@ def _normalize_date(value: Any) -> tuple[str | None, bool]:
     if not text:
         return None, True
     try:
-        dt = datetime.strptime(text[:10], "%Y-%m-%d")
+        dt = datetime.fromisoformat(text)
         return dt.strftime("%Y-%m-%d"), True
     except ValueError:
         return None, False
@@ -93,11 +94,13 @@ def _coerce_positive_int(value: Any, *, allow_none: bool = True) -> tuple[int | 
     text = str(value).strip()
     if not text:
         return (None, True) if allow_none else (None, False)
+    if isinstance(value, bool):
+        return None, False
     try:
         iv = int(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None, False
-    if iv <= 0:
+    if iv <= 0 or iv > 2**63 - 1 or (isinstance(value, float) and value != iv):
         return None, False
     return iv, True
 
@@ -122,6 +125,19 @@ def normalize_task_payload(
     def _set(field: str, value: Any):
         normalized[field] = value
         handled.add(field)
+
+    def _set_boolean(field: str):
+        value = raw.get(field)
+        if isinstance(value, str):
+            text = value.strip().lower()
+            if text in {"", "0", "false", "no", "off", "none", "null"}:
+                value = False
+            elif text in {"1", "true", "yes", "on"}:
+                value = True
+            else:
+                issues.append(TaskValidationIssue(field, "invalid_bool", "Invalid boolean."))
+                value = False
+        _set(field, 1 if bool(value) else 0)
 
     # name (required on create / optional on update when present)
     if (not is_update) or ("name" in raw):
@@ -226,15 +242,15 @@ def normalize_task_payload(
 
     # all_day + completion booleans
     if (not is_update) or ("all_day" in raw):
-        _set("all_day", 1 if bool(raw.get("all_day")) else 0)
+        _set_boolean("all_day")
 
     if not is_update:
         if "is_completed" in raw:
-            _set("is_completed", 1 if bool(raw.get("is_completed")) else 0)
+            _set_boolean("is_completed")
         else:
             _set("is_completed", 1 if normalized.get("status") == "completed" else 0)
     elif "is_completed" in raw:
-        _set("is_completed", 1 if bool(raw.get("is_completed")) else 0)
+        _set_boolean("is_completed")
 
     # series metadata
     for field in ("series_order", "series_total"):

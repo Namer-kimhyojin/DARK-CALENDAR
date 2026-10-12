@@ -5,14 +5,16 @@ calendar_repo.py — calendar 테이블 CRUD + 마이그레이션 헬퍼
 calendar.id 형식:
   "gcal::{google_calendar_id}"   — Google Calendar 연동
   "local::{slug}"                — 로컬 전용
-  "ics::{url_hash}"              — ICS URL 구독 (read-only)
+  "ics::{url_hash}[::unique]"    — ICS 구독 (read-only, 주소 변경 후에도 ID 유지)
 """
 
 from datetime import datetime
 import hashlib
 import logging
 import re
+import sqlite3
 
+from calendar_app.application.calendar_sync_contract import CalendarSyncError
 from calendar_app.infrastructure.db.database_unified import db_manager
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.shared.calendar_defaults import DEFAULT_CALENDAR_COLOR
@@ -160,42 +162,34 @@ def is_calendar_read_only(calendar_id: str | None) -> bool:
     return is_calendar_row_read_only(get_calendar(cal_key))
 
 
+def can_calendar_be_default(calendar_row: dict | None) -> bool:
+    """A hidden calendar may be the default, but an unavailable one may not."""
+    if not isinstance(calendar_row, dict):
+        return False
+    if str(calendar_row.get("type") or "").lower() not in {
+        "local",
+        "shared",
+        "gcal",
+        "outlook",
+        "caldav",
+    }:
+        return False
+    return _to_bool(calendar_row.get("is_active"), default=True) and not is_calendar_row_read_only(
+        calendar_row
+    )
+
+
 def get_default_calendar() -> dict | None:
-    """is_default=1 인 캘린더를 반환합니다. 없으면 첫 번째 캘린더를 반환합니다."""
-    conn = db_manager.get_connection()
-    if conn is None:
-        return None
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM calendar WHERE is_default = 1 LIMIT 1")
-    row = cur.fetchone()
-    if not row:
-        cur.execute("SELECT * FROM calendar ORDER BY sort_order, name LIMIT 1")
-        row = cur.fetchone()
-    if not row:
-        return None
-    cols = [d[0] for d in cur.description]
-    return dict(zip(cols, row, strict=False))
+    """Return the usable default, with a writable fallback for stale preferences."""
+    writable = [row for row in list_calendars() if can_calendar_be_default(row)]
+    return next((row for row in writable if _to_bool(row.get("is_default"))), None) or next(
+        iter(writable), None
+    )
 
 
 def get_writable_calendars() -> list[dict]:
-    """쓰기 가능한 캘린더만 반환.
-    - ICS 구독(read-only) 제외
-    - GCal reader 전용(is_active=0) 제외 — is_active는 import 시 accessRole 기준으로 설정됨
-    - 로컬/공유 캘린더는 항상 포함
-    """
-    conn = db_manager.get_connection()
-    if conn is None:
-        return []
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT * FROM calendar
-        WHERE type != 'ics'
-          AND (type != 'gcal' OR is_active = 1)
-          AND (type NOT IN ('outlook', 'caldav') OR access_role IN ('owner', 'writer'))
-        ORDER BY sort_order, name
-    """)
-    cols = [d[0] for d in cur.description]
-    return [dict(zip(cols, row, strict=False)) for row in cur.fetchall()]
+    """Return active calendars with actual write permission, including hidden ones."""
+    return [row for row in list_calendars() if can_calendar_be_default(row)]
 
 
 # ---------------------------------------------------------------------------
@@ -304,18 +298,72 @@ def set_calendar_default(calendar_id: str) -> bool:
     if conn is None:
         logger.error("set_calendar_default: DB 연결 실패")
         return False
-    cur = conn.cursor()
+    saved = False
     try:
-        cur.execute("SELECT id FROM calendar WHERE id = ?", (calendar_id,))
-        if not cur.fetchone():
-            logger.error(f"set_calendar_default: calendar not found: {calendar_id}")
+        conn.execute("SAVEPOINT calendar_default_change")
+        saved = True
+        if not can_calendar_be_default(get_calendar(calendar_id)):
+            conn.execute("RELEASE SAVEPOINT calendar_default_change")
+            logger.warning("set_calendar_default: unavailable calendar: %s", calendar_id)
             return False
-        cur.execute("UPDATE calendar SET is_default = 0")
-        cur.execute("UPDATE calendar SET is_default = 1 WHERE id = ?", (calendar_id,))
-        conn.commit()
+        conn.execute(
+            "UPDATE calendar SET is_default = CASE WHEN id = ? THEN 1 ELSE 0 END", (calendar_id,)
+        )
+        conn.execute("RELEASE SAVEPOINT calendar_default_change")
         return True
     except Exception as e:
+        if saved:
+            conn.execute("ROLLBACK TO SAVEPOINT calendar_default_change")
+            conn.execute("RELEASE SAVEPOINT calendar_default_change")
         logger.error(f"set_calendar_default failed: {e}")
+        return False
+
+
+def set_google_calendar_import_selection(selection: dict[str, bool]) -> bool:
+    """Atomically save Google import choices and preserve a usable default."""
+    conn = db_manager.get_connection()
+    if conn is None:
+        return False
+    saved = False
+    try:
+        conn.execute("SAVEPOINT google_calendar_import_selection")
+        saved = True
+        for calendar_id, active in selection.items():
+            row = get_calendar(calendar_id)
+            if not row or row.get("type") != "gcal":
+                raise ValueError("Invalid Google calendar import selection")
+            conn.execute(
+                "UPDATE calendar SET is_active = ? WHERE id = ?",
+                (int(_to_bool(active)), calendar_id),
+            )
+        rows = list_calendars()
+        defaults = [row for row in rows if _to_bool(row.get("is_default"))]
+        valid_default = next((row for row in defaults if can_calendar_be_default(row)), None)
+        if len(defaults) != 1 or valid_default is None:
+            eligible = [row for row in rows if can_calendar_be_default(row)]
+            fallback = (
+                valid_default
+                or next((row for row in eligible if row.get("type") == "local"), None)
+                or next(
+                    iter(eligible),
+                    None,
+                )
+            )
+            if not fallback and defaults:
+                # Preserve every row and import flag if no safe save destination exists.
+                raise ValueError("No writable calendar available for the default")
+            if fallback:
+                conn.execute(
+                    "UPDATE calendar SET is_default = CASE WHEN id = ? THEN 1 ELSE 0 END",
+                    (fallback["id"],),
+                )
+        conn.execute("RELEASE SAVEPOINT google_calendar_import_selection")
+        return True
+    except (sqlite3.Error, ValueError):
+        if saved:
+            conn.execute("ROLLBACK TO SAVEPOINT google_calendar_import_selection")
+            conn.execute("RELEASE SAVEPOINT google_calendar_import_selection")
+        logger.exception("Failed to save Google calendar import selection")
         return False
 
 
@@ -420,6 +468,49 @@ def update_ics_last_fetched(calendar_id: str) -> bool:
     except Exception as e:
         logger.error(f"update_ics_last_fetched failed: {e}")
         return False
+
+
+def update_ics_subscription(calendar_id: str, name: str, url: str) -> bool:
+    """Replace an ICS address without resetting identity, display settings or cached events."""
+    from calendar_app.infrastructure.ics.subscriptions import normalize_subscription_url
+
+    url = normalize_subscription_url(url)
+    name = name.strip()
+    conn = db_manager.get_connection()
+    if conn is None or not name:
+        return False
+    saved = False
+    try:
+        conn.execute("SAVEPOINT ics_subscription_edit")
+        saved = True
+        cursor = conn.execute(
+            "UPDATE calendar SET ics_url=ics_url WHERE id=? AND type='ics'", (calendar_id,)
+        )
+        if not cursor.rowcount:
+            conn.execute("RELEASE SAVEPOINT ics_subscription_edit")
+            return False
+        for (other_url,) in conn.execute(
+            "SELECT ics_url FROM calendar WHERE type='ics' AND id<>?", (calendar_id,)
+        ):
+            try:
+                duplicate = normalize_subscription_url(other_url) == url
+            except ValueError:
+                duplicate = False
+            if duplicate:
+                raise CalendarSyncError("duplicate_subscription")
+        conn.execute(
+            """UPDATE calendar SET name=?,
+               ics_last_fetched=CASE WHEN ics_url=? THEN ics_last_fetched ELSE NULL END,
+               ics_url=? WHERE id=? AND type='ics'""",
+            (name, url, url, calendar_id),
+        )
+        conn.execute("RELEASE SAVEPOINT ics_subscription_edit")
+        return True
+    except (sqlite3.Error, CalendarSyncError):
+        if saved:
+            conn.execute("ROLLBACK TO SAVEPOINT ics_subscription_edit")
+            conn.execute("RELEASE SAVEPOINT ics_subscription_edit")
+        raise
 
 
 def delete_calendar(calendar_id: str) -> bool:

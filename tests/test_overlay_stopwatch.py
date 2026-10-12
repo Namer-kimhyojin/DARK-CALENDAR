@@ -48,8 +48,10 @@ class OverlayStopwatchTextTests(unittest.TestCase):
 
         running_html = widget._resolve_sw_template("{status_icon} {status}", 1234, True)
         paused_html = widget._resolve_sw_template("{status_icon} {status}", 1234, False)
-        self.assertIn(f"> {t('widget.stopwatch.status_run', 'RUN')}", running_html)
-        self.assertIn(f"[] {t('widget.stopwatch.status_stop', 'STOP')}", paused_html)
+        self.assertIn("▶", running_html)
+        self.assertIn(t("widget.stopwatch.status_run", "RUN"), running_html)
+        self.assertIn("Ⅱ", paused_html)
+        self.assertIn(t("widget.stopwatch.status_stop", "STOP"), paused_html)
 
     def test_stopwatch_uses_fixed_font_for_display(self):
         widget = OverlayStopwatchWidget(self.owner)

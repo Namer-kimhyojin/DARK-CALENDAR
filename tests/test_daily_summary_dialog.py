@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QSettings, Qt, QTime
+from PyQt6.QtCore import QEvent, QSettings, Qt, QTime
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from calendar_app.presentation.dialogs import daily_summary_dialog as daily
@@ -68,10 +68,16 @@ class DailySummaryDialogTests(unittest.TestCase):
             parent.settings.value(daily._SETTINGS_KEY_ROUTINE_MODE),
             daily._MODE_WHEN_AVAILABLE,
         )
-        self.assertFalse(daily._setting_bool(parent.settings, daily._SETTINGS_KEY_STARTUP_ENABLED, True))
-        self.assertTrue(daily._setting_bool(parent.settings, daily._SETTINGS_KEY_DAILY_ENABLED, False))
+        self.assertFalse(
+            daily._setting_bool(parent.settings, daily._SETTINGS_KEY_STARTUP_ENABLED, True)
+        )
+        self.assertTrue(
+            daily._setting_bool(parent.settings, daily._SETTINGS_KEY_DAILY_ENABLED, False)
+        )
         self.assertEqual(parent.settings.value(daily._SETTINGS_KEY_TIME), "09:30")
-        self.assertTrue(daily._setting_bool(parent.settings, daily._SETTINGS_KEY_HIDE_WEEKENDS, False))
+        self.assertTrue(
+            daily._setting_bool(parent.settings, daily._SETTINGS_KEY_HIDE_WEEKENDS, False)
+        )
         self.assertFalse(dialog._settings_open)
         self.assertFalse(dialog.has_visible_sections)
 
@@ -88,8 +94,12 @@ class DailySummaryDialogTests(unittest.TestCase):
 
         dialog.disable_auto_btn.click()
 
-        self.assertFalse(daily._setting_bool(parent.settings, daily._SETTINGS_KEY_STARTUP_ENABLED, True))
-        self.assertFalse(daily._setting_bool(parent.settings, daily._SETTINGS_KEY_DAILY_ENABLED, True))
+        self.assertFalse(
+            daily._setting_bool(parent.settings, daily._SETTINGS_KEY_STARTUP_ENABLED, True)
+        )
+        self.assertFalse(
+            daily._setting_bool(parent.settings, daily._SETTINGS_KEY_DAILY_ENABLED, True)
+        )
 
     def test_manual_entry_can_open_settings_when_automatic_display_is_disabled(self):
         parent = _SettingsParent("DailySummaryManualRecovery")
@@ -139,14 +149,61 @@ class DailySummaryDialogTests(unittest.TestCase):
             parent.settings.setValue(daily._SETTINGS_KEY_STARTUP_ENABLED, True)
             daily.maybe_show_daily_summary(parent, trigger="startup")
             self.assertEqual(_FakeDialog.executed, 1)
-            self.assertEqual(
-                parent.settings.value(daily._SETTINGS_KEY_LAST_SHOWN), "2026-09-18"
-            )
+            self.assertEqual(parent.settings.value(daily._SETTINGS_KEY_LAST_SHOWN), "2026-09-18")
 
             parent.settings.setValue(daily._SETTINGS_KEY_LAST_SHOWN, "")
             parent.settings.setValue(daily._SETTINGS_KEY_DAILY_ENABLED, False)
             daily.maybe_show_daily_summary(parent, trigger="daily")
             self.assertEqual(_FakeDialog.executed, 1)
+
+    def test_briefing_stays_above_late_restored_widgets_and_releases_priority_on_close(self):
+        parent = _SettingsParent("DailySummaryWindowPriority")
+        self.addCleanup(parent.settings.clear)
+        self.addCleanup(parent.close)
+        widget = QWidget(None, Qt.WindowType.Tool | Qt.WindowType.WindowStaysOnTopHint)
+        widget.setProperty("airCalendarOverlayWindow", True)
+        self.addCleanup(widget.close)
+        original_flags = widget.windowFlags()
+        with (
+            patch.object(daily.DailySummaryDialog, "_load_schedule", return_value=["• 일정"]),
+            patch.object(daily.DailySummaryDialog, "_load_due_routines", return_value=[]),
+        ):
+            dialog = daily.DailySummaryDialog(parent=parent)
+        self.addCleanup(dialog.close)
+        # The parent is hidden, as it is after restoring widget-only mode.
+        dialog.show()
+        QApplication.processEvents()
+        self.assertTrue(dialog.windowFlags() & Qt.WindowType.WindowStaysOnTopHint)
+        self.assertEqual(dialog.windowModality(), Qt.WindowModality.ApplicationModal)
+        self.assertTrue(dialog._priority_guard_active)
+        self.assertTrue(dialog.ok_btn.isEnabled())
+        with patch.object(dialog, "raise_") as raise_dialog:
+            widget.show()
+            QApplication.processEvents()
+            self.assertGreaterEqual(raise_dialog.call_count, 1)
+            # Showing a native tool also delivers activation/z-order events.
+            # Drain them before checking that one burst is coalesced.
+            QApplication.processEvents()
+            raise_dialog.reset_mock()
+            for _ in range(12):
+                QApplication.sendEvent(widget, QEvent(QEvent.Type.ZOrderChange))
+            self.assertTrue(dialog._priority_raise_timer.isActive())
+            QApplication.processEvents()
+            self.assertEqual(raise_dialog.call_count, 1)
+            # The guard does not alter a widget's flags or persisted settings.
+            self.assertEqual(widget.windowFlags(), original_flags)
+            unrelated = QWidget()
+            QApplication.sendEvent(unrelated, QEvent(QEvent.Type.ZOrderChange))
+            QApplication.processEvents()
+            self.assertEqual(raise_dialog.call_count, 1)
+            unrelated.close()
+            dialog.ok_btn.click()
+            QApplication.sendEvent(widget, QEvent(QEvent.Type.ZOrderChange))
+            QApplication.processEvents()
+            self.assertEqual(raise_dialog.call_count, 1)
+        self.assertFalse(dialog._priority_guard_active)
+        self.assertFalse(dialog._priority_raise_timer.isActive())
+        self.assertFalse(dialog.isVisible())
 
 
 if __name__ == "__main__":

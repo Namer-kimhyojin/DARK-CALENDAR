@@ -3,12 +3,13 @@
 
 from __future__ import annotations
 
-import contextlib
+from html import escape
 import re
 
-from PyQt6.QtCore import QDate, QDateTime, QPoint, QRect, QRectF, QSize, Qt, QTimer
+from PyQt6.QtCore import QDate, QDateTime, QLocale, QPoint, QRect, QRectF, QSize, Qt, QTimer
 from PyQt6.QtGui import QBrush, QColor, QFont, QPainter
 from PyQt6.QtWidgets import (
+    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -21,11 +22,14 @@ from PyQt6.QtWidgets import (
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.widgets.moment_asset_packs import (
     DEFAULT_MOMENT_ASSET_PACK_ID,
+    EMPTY_MOMENT_ART,
     get_moment_asset_pack,
+    moment_art_size,
     moment_asset_html,
     moment_asset_packs,
     moment_pack_icon,
     moment_pack_preview_pixmap,
+    remove_empty_moment_rows,
     season_moment_id,
 )
 from calendar_app.presentation.widgets.overlay_base import (
@@ -496,7 +500,7 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
 
     def _update_basic_display(self, now: QDateTime):
         style = self.display_style()
-        w = now.toString("dddd")
+        w = QLocale().toString(now, "dddd")
         d = now.toString("dd")
         dt = now.toString("yyyy.MM.dd")
         doy = f"D+{now.date().dayOfYear()}"
@@ -623,13 +627,14 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
         template = _protect_align_tags(template)
 
         q = now_dt.date()
+        locale = QLocale()
         _en = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
         # ---- base values
         vals: dict[str, str] = {
-            "weekday": now_dt.toString("dddd"),
+            "weekday": locale.toString(now_dt, "dddd"),
             "day": now_dt.toString("d"),
-            "month": now_dt.toString("M"),
+            "month": locale.toString(now_dt, "MMMM"),
             "year": now_dt.toString("yyyy"),
             "doy": f"D+{q.dayOfYear()}",
             "date": now_dt.toString("yyyy.MM.dd"),
@@ -650,33 +655,35 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
                 num_vals[k] = int(stripped)
             else:
                 num_vals[k] = v
+        num_vals["month"] = q.month()
         template = self._process_conditionals(template, num_vals)
 
         def _replace(m: re.Match) -> str:
             inner = m.group(1).split("|")
             key, hints = inner[0].strip(), inner[1:]
             if key == "art":
-                px = 56
-                for hint in hints:
-                    if hint.startswith("size="):
-                        with contextlib.suppress(ValueError):
-                            px = int(hint[5:])
-                return moment_asset_html(
+                image = moment_asset_html(
                     self._selected_dialog_asset_pack(),
                     season_moment_id(q.month()),
-                    px,
+                    moment_art_size(hints, self._template_render_font_size()),
+                )
+                return (
+                    _apply_span(image, [h for h in hints if not h.strip().startswith("size=")])
+                    if image
+                    else EMPTY_MOMENT_ART
                 )
             if key.startswith("date:"):
-                val = now_dt.toString(_strftime_to_qt(key[5:]))
+                val = locale.toString(now_dt, _strftime_to_qt(key[5:]))
             elif key == "weekday:short":
-                val = now_dt.toString("ddd")
+                val = locale.toString(now_dt, "ddd")
             elif key == "weekday:en":
                 val = _en[(q.dayOfWeek() - 1) % 7]
             else:
                 val = str(vals.get(key, ""))
-            return _apply_span(val, hints)
+            return _apply_span(escape(val), hints)
 
-        return _apply_align_tags(re.sub(r"\{([^}]+)\}", _replace, template))
+        resolved = re.sub(r"\{([^}]+)\}", _replace, template)
+        return _apply_align_tags(remove_empty_moment_rows(resolved))
 
     # ------------------------------------------------------------------ settings
 
@@ -710,7 +717,12 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
         )
 
     def _selected_dialog_asset_pack(self) -> str:
-        combo = getattr(self, "_active_settings_widgets", {}).get("datecard_asset_pack")
+        fields = (
+            getattr(self, "_active_settings_widgets", {})
+            if self._template_preview_base_size is not None
+            else {}
+        )
+        combo = fields.get("datecard_asset_pack")
         if combo is not None and hasattr(combo, "currentData"):
             return get_moment_asset_pack(combo.currentData()).pack_id
         return get_moment_asset_pack(
@@ -744,6 +756,10 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
             t("widget.datecard.settings", "Date Card Settings..."),
             self._open_settings,
         )
+        menu.addAction(
+            t("widget.usage.copy_date", "오늘 날짜 복사"),
+            lambda: QApplication.clipboard().setText(QDate.currentDate().toString("yyyy-MM-dd")),
+        )
         pack_menu = menu.addMenu(t("widget.datecard.asset_pack", "일러스트 팩"))
         current = get_moment_asset_pack(
             self._get("datecard_asset_pack", DEFAULT_MOMENT_ASSET_PACK_ID)
@@ -762,6 +778,10 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
 
     def _action_reset_position(self):
         self.center_on_owner()
+
+    def _on_double_click(self) -> bool:
+        self._open_settings()
+        return True
 
     def apply_initial_settings(self):
         self._tick()

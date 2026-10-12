@@ -3,21 +3,24 @@
 
 from __future__ import annotations
 
-import contextlib
+from html import escape
 import re
 
-from PyQt6.QtCore import QDate, QPoint, QSize, Qt, QTimer
+from PyQt6.QtCore import QDate, QLocale, QPoint, QSize, Qt, QTimer
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.widgets.moment_asset_packs import (
     DEFAULT_MOMENT_ASSET_PACK_ID,
+    EMPTY_MOMENT_ART,
     get_moment_asset_pack,
+    moment_art_size,
     moment_asset_html,
     moment_asset_packs,
     moment_pack_icon,
     moment_pack_preview_pixmap,
+    remove_empty_moment_rows,
 )
 from calendar_app.presentation.widgets.overlay_base import (
     _DLG_SS,
@@ -71,6 +74,7 @@ class OverlayDDayWidget(_BaseOverlayWidget):
         self._subtitle_label = QLabel(t("widget.dday.no_target_hint", "Set date"), frame)
         self._subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._subtitle_label.setWordWrap(True)
+        self._subtitle_label.setTextFormat(Qt.TextFormat.PlainText)
 
         self._template_label = QLabel("", frame)
         self._template_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -102,7 +106,7 @@ class OverlayDDayWidget(_BaseOverlayWidget):
         self, target_date: QDate | None = None, label: str | None = None
     ) -> tuple[str, str]:
         target = target_date if target_date is not None else self._dd_target_date()
-        if target is None:
+        if target is None or not target.isValid():
             return "D-?", t("widget.dday.no_target_hint", "Set date")
 
         delta = QDate.currentDate().daysTo(target)
@@ -128,6 +132,7 @@ class OverlayDDayWidget(_BaseOverlayWidget):
                 self._dd_target_date(),
             )
             self._set_template_label(html)
+            self._update_template_word_wrap(html)
             self._dday_label.setVisible(False)
             self._subtitle_label.setVisible(False)
         else:
@@ -136,6 +141,27 @@ class OverlayDDayWidget(_BaseOverlayWidget):
             self._subtitle_label.setVisible(True)
             self._dday_label.setText(dday_str)
             self._subtitle_label.setText(subtitle)
+
+    def _update_template_word_wrap(self, html: str) -> None:
+        """Let compact content use its natural width without overflowing the screen."""
+        fixed = self._get("fixed_w") not in (None, "", "None") and self._get("fixed_h") not in (
+            None,
+            "",
+            "None",
+        )
+        multiline = bool(
+            re.search(r"<br\s*/?>|[\r\n]|</(?:div|p|li)>\s*<(?:div|p|li)\b", html, re.IGNORECASE)
+        )
+        wrap = fixed or self._measuring or self.widget_shape_id() != "card" or multiline
+        self._template_label.setWordWrap(wrap)
+        if not wrap:
+            margins = self.face.layout().contentsMargins() if hasattr(self, "face") else None
+            padding = margins.left() + margins.right() if margins is not None else 40
+            # QWidget.adjustSize() caps top-level natural windows at two thirds
+            # of the screen. Keep some room for frame and shadow chrome.
+            safe_width = int(self._screen_bounds()[0] * 0.6)
+            if self._template_label.sizeHint().width() + padding > safe_width:
+                self._template_label.setWordWrap(True)
 
     def _apply_appearance(self) -> None:
         self._apply_base_appearance()
@@ -191,35 +217,47 @@ class OverlayDDayWidget(_BaseOverlayWidget):
         template = _inject_global_lh(template)
         template = _protect_align_tags(template)
 
+        if target_date is not None and not target_date.isValid():
+            target_date = None
         delta = QDate.currentDate().daysTo(target_date) if target_date else 0
         vals = {
             "dday": dday_str,
             "label": label,
-            "days": abs(int(delta)),
-            "sign": "" if delta == 0 else ("-" if delta > 0 else "+"),
+            "days": abs(int(delta)) if target_date else "?",
+            "sign": ("" if delta == 0 else ("-" if delta > 0 else "+")) if target_date else "-",
+            "date": target_date.toString("yyyy.MM.dd") if target_date else "?",
             "date_short": target_date.toString("M.d") if target_date else "?",
         }
-        template = self._process_conditionals(template, vals)
+        condition_values = dict(vals)
+        condition_values["days"] = abs(int(delta))
+        template = self._process_conditionals(template, condition_values)
 
         def _replace(m: re.Match) -> str:
             inner = m.group(1).split("|")
             key, hints = inner[0].strip(), inner[1:]
             if key == "art":
-                px = 56
-                for hint in hints:
-                    if hint.startswith("size="):
-                        with contextlib.suppress(ValueError):
-                            px = int(hint[5:])
-                return moment_asset_html(
+                image = moment_asset_html(
                     self._selected_dialog_asset_pack(),
                     self._selected_dialog_moment(),
-                    px,
+                    moment_art_size(hints, self._template_render_font_size()),
                 )
-            if key.startswith("date:") and target_date:
-                return _apply_span(target_date.toString(_strftime_to_qt(key[5:])), hints)
-            return _apply_span(str(vals.get(key, "")), hints)
+                return (
+                    _apply_span(image, [h for h in hints if not h.strip().startswith("size=")])
+                    if image
+                    else EMPTY_MOMENT_ART
+                )
+            if key.startswith("date:"):
+                value = (
+                    QLocale().toString(target_date, _strftime_to_qt(key[5:]))
+                    if target_date
+                    else "?"
+                )
+                return _apply_span(escape(value), hints)
+            value = vals.get(key, "")
+            return _apply_span(escape(str(value if value is not None else "")), hints)
 
-        return _apply_align_tags(re.sub(r"\{([^}]+)\}", _replace, template))
+        resolved = re.sub(r"\{([^}]+)\}", _replace, template)
+        return _apply_align_tags(remove_empty_moment_rows(resolved))
 
     # ------------------------------------------------------------------
     # Settings
@@ -298,14 +336,24 @@ class OverlayDDayWidget(_BaseOverlayWidget):
             self._tick_dd()
 
     def _selected_dialog_asset_pack(self) -> str:
-        combo = getattr(self, "_active_settings_widgets", {}).get("dday_asset_pack")
+        fields = (
+            getattr(self, "_active_settings_widgets", {})
+            if self._template_preview_base_size is not None
+            else {}
+        )
+        combo = fields.get("dday_asset_pack")
         value = combo.currentData() if combo is not None and hasattr(combo, "currentData") else None
         return get_moment_asset_pack(
             value or self._get("dday_asset_pack", DEFAULT_MOMENT_ASSET_PACK_ID)
         ).pack_id
 
     def _selected_dialog_moment(self) -> str:
-        combo = getattr(self, "_active_settings_widgets", {}).get("dday_moment")
+        fields = (
+            getattr(self, "_active_settings_widgets", {})
+            if self._template_preview_base_size is not None
+            else {}
+        )
+        combo = fields.get("dday_moment")
         value = combo.currentData() if combo is not None and hasattr(combo, "currentData") else None
         return str(value or self._get("dday_moment", "celebration"))
 
@@ -348,9 +396,13 @@ class OverlayDDayWidget(_BaseOverlayWidget):
             )
             action.setCheckable(True)
             action.setChecked(pack.pack_id == current)
-        menu.addAction(
+        self._add_reversible_reset_action(
+            menu,
             t("widget.dday.clear_all", "Reset D-Day"),
+            ("dd_target_date", "dd_label"),
             lambda: (self._set("dd_target_date", ""), self._set("dd_label", ""), self._tick_dd()),
+            self._tick_dd,
+            enabled=self._dd_target_date() is not None or bool(self._get("dd_label", "")),
         )
 
     def _set_moment_pack(self, pack_id: str) -> None:

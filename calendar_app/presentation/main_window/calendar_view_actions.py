@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Calendar/panel/context-menu view action mixin."""
 
 from PyQt6.QtCore import QDate
@@ -209,6 +210,7 @@ class CalendarViewActionsMixin:
         font_size = common_bits[-1]
         return (
             str(getattr(self, "view_mode_state", "")),
+            str(getattr(self, "cal_week_layout", "time")),
             self.current_date.toString("yyyy-MM-dd")
             if isinstance(getattr(self, "current_date", None), QDate)
             else "",

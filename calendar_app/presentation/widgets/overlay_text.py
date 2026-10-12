@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from html import escape as _escape_html
 import re as _re
 
 from PyQt6.QtCore import QDateTime, QPoint, Qt
@@ -63,44 +64,42 @@ class OverlayTextWidget(_BaseOverlayWidget):
     # Template engine logic
     # ------------------------------------------------------------------
 
-    _FAST_VARS = frozenset(["{stopwatch", "{time"])
-    _MED_VARS = frozenset(["{countdown"])
+    _FAST_VARS = frozenset(["stopwatch", "time"])
+    _MED_VARS = frozenset(["countdown"])
     _SLOW_VARS = frozenset(
         [
-            "{dday",
-            "{day_of_year}",
-            "{weekday}",
-            "{date",
-            "{task_count}",
-            "{directive_count}",
-            "{next_event}",
-            "{custom_var}",
+            "dday",
+            "day_of_year",
+            "weekday",
+            "date",
+            "task_count",
+            "directive_count",
+            "next_event",
+            "custom_var",
         ]
     )
-    _ALL_DYNAMIC = frozenset(
-        [
-            "{if ",
-            "{stopwatch",
-            "{time",
-            "{countdown",
-            "{dday",
-            "{day_of_year}",
-            "{weekday}",
-            "{date",
-            "{task_count}",
-            "{directive_count}",
-            "{next_event}",
-            "{custom_var}",
-        ]
-    )
+    _ALL_DYNAMIC = _FAST_VARS | _MED_VARS | _SLOW_VARS
+    _DYNAMIC_TOKEN_RE = _re.compile(r"\{\s*([a-z_]\w*)\s*(?=[:|}])")
+    _CONDITION_VARIABLE_RE = _re.compile(r"\{\s*if\s+([a-z_]\w*)(?=[:\s])")
+    _CONDITION_START_RE = _re.compile(r"\{\s*if\s+")
+
+    @classmethod
+    def _template_variables(cls, raw: str) -> frozenset[str]:
+        """Detect styled variables and condition inputs using the same names."""
+        return frozenset(
+            match.group(1)
+            for pattern in (cls._DYNAMIC_TOKEN_RE, cls._CONDITION_VARIABLE_RE)
+            for match in pattern.finditer(raw)
+            if match.group(1) in cls._ALL_DYNAMIC
+        )
 
     def refresh_tier(self) -> str:
-        raw = self._label_text()
-        if any(v in raw for v in self._FAST_VARS):
+        variables = self._template_variables(self._label_text())
+        if variables & self._FAST_VARS:
             return "fast"
-        if any(v in raw for v in self._MED_VARS):
+        if variables & self._MED_VARS:
             return "med"
-        if any(v in raw for v in self._SLOW_VARS):
+        if variables & self._SLOW_VARS:
             return "slow"
         return "none"
 
@@ -110,7 +109,7 @@ class OverlayTextWidget(_BaseOverlayWidget):
 
     def _is_template(self) -> bool:
         raw = self._label_text()
-        return any(v in raw for v in self._ALL_DYNAMIC)
+        return bool(self._template_variables(raw) or self._CONDITION_START_RE.search(raw))
 
     def resolve_template(
         self,
@@ -154,14 +153,20 @@ class OverlayTextWidget(_BaseOverlayWidget):
                 m2 = self._RE_UTC_OFFSET.match(s)
                 if m2:
                     sign = 1 if m2.group(1) == "+" else -1
-                    h, mn = int(m2.group(2)), int(m2.group(3) or 0)
+                    try:
+                        h, mn = int(m2.group(2)), int(m2.group(3) or 0)
+                    except (ValueError, OverflowError):
+                        return now
+                    if mn > 59 or h > 14 or (h == 14 and mn != 0):
+                        return now
                     offset_mins = sign * (h * 60 + mn)
             if offset_mins is None:
                 return now
             return QDateTime.currentDateTime().toTimeZone(QTimeZone(offset_mins * 60))
 
         def _strftime_compat(fmt: str, dt: QDateTime | None = None) -> str:
-            return (dt or now).toString(_strftime_to_qt(fmt))
+            selected = dt or now
+            return selected.toString(_strftime_to_qt(fmt, hour=selected.time().hour()))
 
         eval_ctx = {
             "task_count": _ad.get("task_count", 0),
@@ -170,13 +175,31 @@ class OverlayTextWidget(_BaseOverlayWidget):
             "stopwatch": stopwatch_text,
             "day_of_year": qdate.dayOfYear(),
         }
+
+        def _widget_value(widget, getter_name: str, fallback: str) -> str:
+            getter = getattr(widget, getter_name, None)
+            if getter is None:
+                return fallback
+            try:
+                value = getter()
+            except (AttributeError, RuntimeError, TypeError, ValueError):
+                return fallback
+            return str(value) if value is not None else fallback
+
+        countdown_values = {}
+        stopwatch_values = {}
+        dday_values = {}
         for inst_id, widget in _reg.items():
             if hasattr(widget, "get_remaining_text"):
-                eval_ctx[f"countdown:{inst_id}"] = widget.get_remaining_text()
+                countdown_values[inst_id] = _widget_value(widget, "get_remaining_text", "--:--:--")
+                eval_ctx[f"countdown:{inst_id}"] = countdown_values[inst_id]
             if hasattr(widget, "get_elapsed_text"):
-                eval_ctx[f"stopwatch:{inst_id}"] = widget.get_elapsed_text()
+                stopwatch_values[inst_id] = _widget_value(widget, "get_elapsed_text", "00:00.0")
+                eval_ctx[f"stopwatch:{inst_id}"] = stopwatch_values[inst_id]
             if hasattr(widget, "get_dday_text"):
-                eval_ctx[f"dday:{inst_id}"] = widget.get_dday_text()
+                dday_values[inst_id] = _widget_value(widget, "get_dday_text", "D-?")
+                eval_ctx[f"dday:{inst_id}"] = dday_values[inst_id]
+        eval_ctx["dday"] = next(iter(dday_values.values()), "D-?")
 
         raw = self._process_conditionals(raw, eval_ctx)
 
@@ -188,6 +211,7 @@ class OverlayTextWidget(_BaseOverlayWidget):
                 if pipe_idx != -1
                 else (inner, [])
             )
+            var_expr = var_expr.strip()
 
             colon = var_expr.find(":")
             name, arg = (var_expr[:colon], var_expr[colon + 1 :]) if colon != -1 else (var_expr, "")
@@ -195,12 +219,15 @@ class OverlayTextWidget(_BaseOverlayWidget):
 
             if name == "time":
                 if arg.startswith("tz="):
-                    parts = arg[3:].split(":", 1)
-                    tz_id, fmt = (
-                        (parts[0], parts[1] or "%H:%M:%S")
-                        if len(parts) == 2
-                        else (parts[0], "%H:%M:%S")
+                    timezone_spec = arg[3:]
+                    offset_spec = _re.fullmatch(
+                        r"(UTC[+-]\d+(?::\d+)?)(?::(.*))?", timezone_spec, _re.IGNORECASE
                     )
+                    if offset_spec:
+                        tz_id, fmt = offset_spec.group(1), offset_spec.group(2) or "%H:%M:%S"
+                    else:
+                        tz_id, separator, fmt = timezone_spec.partition(":")
+                        fmt = fmt if separator and fmt else "%H:%M:%S"
                     val = _strftime_compat(fmt, _resolve_tz_dt(tz_id))
                 else:
                     val = _strftime_compat(arg or "%H:%M:%S")
@@ -218,12 +245,7 @@ class OverlayTextWidget(_BaseOverlayWidget):
             elif name == "day_of_year":
                 val = f"D+{qdate.dayOfYear()}"
             elif name == "dday":
-                w = (
-                    _reg.get(arg)
-                    if arg
-                    else next((x for x in _reg.values() if hasattr(x, "get_dday_text")), None)
-                )
-                val = w.get_dday_text() if (w and hasattr(w, "get_dday_text")) else "D-?"
+                val = dday_values.get(arg, "D-?") if arg else eval_ctx["dday"]
             elif name == "countdown":
                 parts = arg.split(":", 1)
                 inst_id = parts[0]
@@ -231,22 +253,12 @@ class OverlayTextWidget(_BaseOverlayWidget):
                 if inst_id == "hm":
                     inst_id = ""
 
-                target = _reg.get(inst_id) if inst_id.startswith("countdown_") else None
-                rem = (
-                    target.get_remaining_text()
-                    if (target and hasattr(target, "get_remaining_text"))
-                    else countdown_remaining
-                )
+                rem = countdown_values.get(inst_id, countdown_remaining)
                 if sub_fmt == "hm" and rem and ":" in rem:
                     rem = rem.rsplit(":", 1)[0]
                 val = rem or "--:--:--"
             elif name == "stopwatch":
-                w = _reg.get(arg) if arg.startswith("stopwatch_") else None
-                val = (
-                    w.get_elapsed_text()
-                    if (w and hasattr(w, "get_elapsed_text"))
-                    else (stopwatch_text or "00:00.0")
-                )
+                val = stopwatch_values.get(arg, stopwatch_text or "00:00.0")
             elif name == "task_count":
                 val = str(_ad.get("task_count", 0))
             elif name == "directive_count":
@@ -256,7 +268,9 @@ class OverlayTextWidget(_BaseOverlayWidget):
             elif name == "custom_var":
                 val = str(_ad.get(f"custom_var_{arg}" if arg else "custom_var", arg or ""))
 
-            return _apply_span(val if val is not None else var_expr, hints)
+            return _apply_span(
+                _escape_html(val if val is not None else var_expr, quote=False), hints
+            )
 
         result = _re.sub(r"\{([^}]+)\}", _replace, raw)
         return _apply_align_tags(result)
@@ -416,6 +430,15 @@ class OverlayTextWidget(_BaseOverlayWidget):
             t("widget_text.settings_menu", "Text/Template Widget Settings..."),
             self._open_settings,
         )
+        menu.addAction(t("widget.usage.copy_text", "표시된 내용 복사"), self._copy_displayed_text)
+
+    def _copy_displayed_text(self):
+        from PyQt6.QtGui import QTextDocument
+        from PyQt6.QtWidgets import QApplication
+
+        document = QTextDocument()
+        document.setHtml(self._text_label.text())
+        QApplication.clipboard().setText(document.toPlainText())
 
     def _on_double_click(self) -> bool:
         self._open_settings()

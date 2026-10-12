@@ -5,8 +5,10 @@ import sqlite3
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from PyQt6.QtCore import QObject, QSettings, pyqtSignal
-from PyQt6.QtWidgets import QApplication, QLabel, QToolButton, QWidget
+from PyQt6.QtCore import QObject, QPoint, QSettings, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QIcon, QPalette
+from PyQt6.QtTest import QTest
+from PyQt6.QtWidgets import QApplication, QLabel, QScrollArea, QToolButton, QVBoxLayout, QWidget
 import pytest
 
 from calendar_app.infrastructure.calendar_sync.repository import CalendarSyncRepository
@@ -108,6 +110,87 @@ def test_common_dispatch_uses_all_connected_selected_providers(ui):
     assert ui.coordinator.sync() == ["google"]  # remote workers already running
 
 
+@pytest.mark.parametrize("theme,base", [("dark", "#0d1b2e"), ("light", "#fafafa")])
+def test_toolbar_warning_style_clears_on_local_status_and_theme_refresh(
+    ui, monkeypatch, theme, base
+):
+    from calendar_app.presentation.main_window.action_handlers_gcal import GCalActionsMixin
+    from calendar_app.shared.icon_map import ICON
+
+    ui.host.settings.setValue("text_theme", theme)
+    ui.host.settings.setValue("panel_base_color", base)
+    ui.host.sync_status_text_lbl.setStyleSheet("color: #ff9d4d; font-weight: bold;")
+    capture = Mock(return_value=QIcon())
+    monkeypatch.setattr(module, "icon", capture)
+    for state in ui.coordinator.states.values():
+        state.update(connected=False, busy=False, issues=0, error="")
+    ui.coordinator.states["google"].update(connected=True, issues=1)
+    ui.coordinator._paint_status()
+    assert capture.call_args.args[0] == ICON.WARNING
+    warning_color = capture.call_args.kwargs["color"]
+    ui.coordinator.states["google"].update(connected=False, issues=0)
+    ui.coordinator._paint_status()
+    ui.host.sync_status_text_lbl.ensurePolished()
+    assert capture.call_args.args[0] == ICON.SYNC_SETTINGS
+    assert capture.call_args.kwargs["color"] != warning_color
+    assert not ui.host.sync_status_text_lbl.font().bold()
+    assert (
+        ui.host.sync_status_text_lbl.palette().color(QPalette.ColorRole.WindowText).name()
+        != "#ff9d4d"
+    )
+    before = ui.host.sync_status_text_lbl.styleSheet()
+    refresh = Mock()
+    monkeypatch.setattr(ui.coordinator, "refresh", refresh)
+    ui.host.update_sync_status = lambda refresh_issue_count=True: (
+        CalendarSyncActionsMixin.update_sync_status(ui.host, refresh_issue_count)
+    )
+    GCalActionsMixin.refresh_sync_status_theme(ui.host)
+    refresh.assert_called_once_with(False)
+    assert ui.host.sync_status_text_lbl.styleSheet() == before
+
+
+def test_toolbar_hub_remains_open_after_sync_action(ui, monkeypatch):
+    from calendar_app.presentation.main_window import top_bar_builder
+
+    monkeypatch.setattr(top_bar_builder, "build_top_left_menus", lambda *args: None)
+    monkeypatch.setattr(top_bar_builder, "apply_top_menu_theme", lambda *args, **kwargs: None)
+    observations = []
+
+    def open_hub(checked=False):
+        hub = CalendarSyncHub(ui.host)
+
+        def run_sync():
+            hub._run_sync()
+            observations.append(
+                (hub.isVisible(), ui.host.top_bar_frame.isVisible(), bool(hub.sync_feedback.text()))
+            )
+
+        QTimer.singleShot(20, run_sync)
+        QTimer.singleShot(80, hub.reject)
+        hub.exec()
+
+    ui.host.open_calendar_sync_hub = open_hub
+    for name in (
+        "toggle_lock_mode",
+        "toggle_magnet_mode",
+        "handle_search_changed",
+        "toggle_widget_mode_panel",
+    ):
+        setattr(ui.host, name, Mock())
+    top_bar_builder.setup_top_bar(ui.host, 10, "#4da6ff", lambda value: "#4da6ff")
+    layout = QVBoxLayout(ui.host)
+    layout.addWidget(ui.host.top_bar_frame)
+    ui.host.resize(850, 150)
+    ui.host.show()
+    ui.qapp.processEvents()
+    QTest.mouseClick(ui.host.sync_action_btn, Qt.MouseButton.LeftButton)
+    assert observations == [(True, True, True)]
+    ui.host.sync_google_calendar.assert_called_once_with(silent=True)
+    for controller in ui.coordinator.controllers().values():
+        controller.start.assert_called_once_with("sync")
+    assert ui.host.top_bar_frame.isVisible()
+
+
 def test_one_provider_failure_does_not_block_others(ui):
     ui.host.sync_google_calendar.side_effect = RuntimeError("synthetic")
     assert ui.coordinator.sync() == ["outlook", "icloud", "naver"]
@@ -151,7 +234,9 @@ def test_google_disabled_does_not_mask_icloud_status(ui):
     ui.host.settings.setValue("gcal_enabled", "false")
     ui.host.settings.setValue("sync_google_last_error", "operation_failed")
     ui.coordinator.refresh()
-    assert not ui.coordinator.states["google"]["connected"]
+    assert ui.coordinator.states["google"]["connected"]
+    assert ui.coordinator.states["google"]["paused"]
+    assert not ui.coordinator.states["google"]["can_sync"]
     assert not ui.coordinator.states["google"]["error"]
     assert "iCloud" in ui.host.sync_action_btn.toolTip()
     assert ui.coordinator.states["icloud"]["can_sync"]
@@ -206,7 +291,7 @@ def test_hub_tabs_selection_navigation_and_partial_errors(ui):
     ui.host._caldav_sync_controllers["naver"].status = "remote_http_403"
     ui.coordinator.refresh()
     hub = CalendarSyncHub(ui.host, "issues")
-    assert hub.tabs.count() == 3 and hub.tabs.currentIndex() == 2
+    assert hub.tabs.count() == 5 and hub.tabs.currentWidget() is hub.section_pages["issues"]
     assert hub.issue_list.count() == 1
     assert hub.sync_buttons["icloud"].isEnabled()
     hub._open("google", "calendars")
@@ -216,7 +301,7 @@ def test_hub_tabs_selection_navigation_and_partial_errors(ui):
     hub._open("google", "issues")
     ui.host.open_gcal_sync_issues_dialog.assert_called_once()
     hub._open("ics")
-    assert hub.tabs.currentIndex() == 1
+    assert hub.tabs.currentWidget() is hub.section_pages["ics"]
     hub.close()
 
 
@@ -234,8 +319,8 @@ def test_calendar_manager_blocks_readonly_default_and_remote_removal(ui, monkeyp
     monkeypatch.setattr(manager.calendar_repo, "delete_calendar", remove)
     page = manager.CalendarManagerPage(ui.host, ui.coordinator, Mock())
     select_calendar(page, ui.keys["naver"])
-    assert not page.default.isEnabled() and not page.remove.isEnabled()
-    page._default()
+    assert not page.default_controls[ui.keys["naver"]].isEnabled() and not page.remove.isEnabled()
+    page._default(ui.keys["naver"])
     page._remove()
     default.assert_not_called()
     remove.assert_not_called()
@@ -264,11 +349,121 @@ def test_ics_busy_blocks_subscription_deactivation_and_removal(ui, monkeypatch):
     page = manager.CalendarManagerPage(ui.host, ui.coordinator, Mock())
     select_calendar(page, "ics::fixture")
     assert not page.remove.isEnabled() and not page.subscription_active.isEnabled()
+    assert not page.edit_subscription.isEnabled()
     page._remove()
     page._subscription_active(False)
     remove.assert_not_called()
     active.assert_not_called()
     page.close()
+
+
+def test_ics_empty_card_explains_how_to_register_without_google(ui):
+    hub = CalendarSyncHub(ui.host)
+    assert "Google" in hub.labels["ics"].text()
+    assert not hub.sync_buttons["ics"].isEnabled()
+    hub.close()
+
+
+def test_edit_subscription_dialog_prefills_and_validates(ui):
+    from PyQt6.QtWidgets import QDialog
+
+    from calendar_app.presentation.dialogs.ics_subscription_dialog import IcsSubscriptionDialog
+
+    calendar = {"name": "Holidays", "ics_url": "https://example.invalid/old.ics"}
+    dialog = IcsSubscriptionDialog(ui.host, calendar=calendar)
+    assert dialog.name.text() == "Holidays"
+    assert dialog.url.text() == calendar["ics_url"]
+    dialog.url.setText("file:///invalid.ics")
+    dialog.accept()
+    assert dialog.result() != QDialog.DialogCode.Accepted
+    dialog.url.setText("webcal://EXAMPLE.invalid:443/new.ics?key=A%2FB")
+    dialog.accept()
+    assert dialog.subscription_url == "https://example.invalid/new.ics?key=A%2FB"
+    assert calendar["ics_url"] == "https://example.invalid/old.ics"
+    dialog.close()
+
+
+@pytest.mark.parametrize("active", [True, False])
+def test_save_subscription_fetches_only_edited_active_calendar(ui, monkeypatch, active):
+    with sqlite3.connect(ui.path) as conn:
+        conn.execute("ALTER TABLE calendar ADD COLUMN ics_last_fetched TEXT")
+        conn.execute(
+            "INSERT INTO calendar(id,type,name,ics_url,is_active) VALUES('ics::fixture','ics','Holidays','https://example.invalid/old.ics',?)",
+            (int(active),),
+        )
+    from calendar_app.infrastructure.db import database_unified
+
+    conn = sqlite3.connect(ui.path)
+    monkeypatch.setattr(database_unified.db_manager, "get_connection", lambda: conn)
+    fetch = Mock(return_value=True)
+    monkeypatch.setattr(ui.coordinator, "sync_ics", fetch)
+    try:
+        ui.coordinator.refresh()
+        page = manager.CalendarManagerPage(ui.host, ui.coordinator, Mock())
+        select_calendar(page, "ics::fixture")
+        assert page.edit_subscription.isEnabled()
+        assert page._save_subscription(page.current(), "Updated", "https://example.invalid/new.ics")
+        assert page.current()["name"] == "Updated"
+        assert page.current()["ics_url"] == "https://example.invalid/new.ics"
+        assert page.current()["id"] == "ics::fixture"
+        if active:
+            fetch.assert_called_once_with(force=True, calendar_ids=["ics::fixture"])
+        else:
+            fetch.assert_not_called()
+        page.close()
+    finally:
+        conn.close()
+
+
+def test_edit_subscription_rejects_invalid_or_duplicate_url_in_ui(ui, monkeypatch):
+    from calendar_app.application.calendar_sync_contract import CalendarSyncError
+
+    page = manager.CalendarManagerPage(ui.host, ui.coordinator, Mock())
+    calendar = {"id": "ics::fixture", "type": "ics"}
+    save = Mock(side_effect=ValueError("invalid_subscription_url"))
+    monkeypatch.setattr(manager.calendar_repo, "update_ics_subscription", save)
+    assert not page._save_subscription(calendar, "Name", "file:///private")
+    assert page.feedback.text()
+    save.side_effect = CalendarSyncError("duplicate_subscription")
+    assert not page._save_subscription(calendar, "Name", "https://example.invalid/feed.ics")
+    assert page.feedback.text()
+    ui.coordinator.states["ics"]["busy"] = True
+    save.reset_mock()
+    assert not page._save_subscription(calendar, "Name", "https://example.invalid/feed.ics")
+    save.assert_not_called()
+    register = Mock()
+    monkeypatch.setattr(manager.calendar_repo, "upsert_calendar", register)
+    assert not page._register_ics("Name", "https://example.invalid/feed.ics")
+    register.assert_not_called()
+    page.close()
+
+
+def test_readding_original_url_does_not_overwrite_edited_subscription(ui, monkeypatch):
+    url = "https://example.invalid/old.ics"
+    key = manager.calendar_repo.make_ics_id(url)
+    edited = {"id": key, "type": "ics", "ics_url": "https://example.invalid/new.ics"}
+    monkeypatch.setattr(manager.calendar_repo, "list_calendars", lambda **k: [edited])
+    monkeypatch.setattr(
+        manager.calendar_repo, "get_calendar", lambda k: edited if k == key else None
+    )
+    save = Mock(return_value=True)
+    monkeypatch.setattr(manager.calendar_repo, "upsert_calendar", save)
+    monkeypatch.setattr(ui.coordinator, "sync_ics", Mock(return_value=True))
+    page = manager.CalendarManagerPage(ui.host, ui.coordinator, Mock())
+    assert page._register_ics("Original URL", url)
+    assert save.call_args.args[0] != key
+    assert save.call_args.kwargs["ics_url"] == url
+    page.close()
+
+
+def test_ics_http_diagnostic_survives_settings_roundtrip_and_targeted_retry(ui):
+    ui.coordinator._ics_result({"a": (0, 0, "ics_access_denied"), "b": (0, 0, "ics_not_found")})
+    assert ui.host.settings.value("sync_ics_error_codes") == {
+        "a": "ics_access_denied",
+        "b": "ics_not_found",
+    }
+    ui.coordinator._ics_result({"a": (1, 0, None)})
+    assert ui.host.settings.value("sync_ics_error_codes") == {"b": "ics_not_found"}
 
 
 def test_ics_worker_isolates_subscription_failure_and_closes_thread_db(ui, monkeypatch):
@@ -298,6 +493,109 @@ def test_ics_failed_ids_have_no_raw_error_or_url_and_no_false_success(ui):
     assert ui.host.settings.value("sync_ics_issue_count", type=int) == 1
     assert not ui.host.settings.value("sync_ics_last_success")
     ui.host.schedule_panel_refresh.assert_called_once()
+
+
+def test_targeted_ics_retry_keeps_other_subscription_errors(ui):
+    ui.host.settings.setValue(
+        "sync_ics_error_codes", {"a": "network_unavailable", "b": "invalid_calendar_data"}
+    )
+    ui.coordinator._ics_result({"a": (1, 0, None)})
+    assert ui.host.settings.value("sync_ics_error_codes") == {"b": "invalid_calendar_data"}
+    assert ui.host.settings.value("sync_ics_failed_ids") == ["b"]
+    assert not ui.host.settings.value("sync_ics_last_success")
+
+
+def test_selected_ics_refresh_does_not_fetch_other_subscriptions(ui, monkeypatch):
+    with sqlite3.connect(ui.path) as conn:
+        conn.executemany(
+            "INSERT INTO calendar(id,type,name,ics_url) VALUES(?,'ics',?,?)",
+            [
+                ("ics::a", "A", "https://a.invalid/feed.ics"),
+                ("ics::b", "B", "https://b.invalid/feed.ics"),
+            ],
+        )
+    monkeypatch.setattr(module.IcsSyncWorker, "start", lambda self: None)
+    assert ui.coordinator.sync_ics(force=True, calendar_ids=["ics::b"])
+    assert [c["id"] for c in ui.coordinator.ics_worker.calendars] == ["ics::b"]
+
+
+def test_ics_cancellation_before_start_never_fetches(ui, monkeypatch):
+    from calendar_app.infrastructure.ics import ics_fetcher
+
+    fetch = Mock()
+    monkeypatch.setattr(ics_fetcher, "fetch_and_sync", fetch)
+    worker = module.IcsSyncWorker([{"id": "a", "ics_url": "https://a.invalid"}], ui.host)
+    worker.requestInterruption()
+    worker.run()
+    fetch.assert_not_called()
+    assert worker.is_cancelled()
+
+
+def test_calendar_metadata_change_refreshes_ui_without_status_change(ui):
+    changed = Mock()
+    ui.coordinator.changed.connect(changed)
+    with sqlite3.connect(ui.path) as conn:
+        conn.execute("UPDATE calendar SET name='Renamed' WHERE type='local'")
+    ui.coordinator.refresh()
+    changed.assert_called_once()
+    assert any(c["name"] == "Renamed" for c in ui.coordinator.calendar_rows)
+
+
+def test_calendar_controls_remain_reachable_in_small_window_with_long_copy(ui):
+    hub = CalendarSyncHub(ui.host, section="local")
+    hub.resize(640, 500)
+    hub.show()
+    page = hub.local_manager
+    page.selection_info.setText("A longer translated calendar description. " * 25)
+    ui.qapp.processEvents()
+    scroll = hub.findChild(QScrollArea, "SyncLocal")
+    assert page.calendars.height() >= 120
+    assert scroll.verticalScrollBar().maximum() > 0
+    scroll.ensureWidgetVisible(page.remove)
+    ui.qapp.processEvents()
+    position = page.remove.mapTo(scroll.viewport(), QPoint(0, 0))
+    assert 0 <= position.y() < scroll.viewport().height()
+    assert position.y() + page.remove.height() <= scroll.viewport().height()
+    hub.close()
+
+
+def test_manager_duplicate_webcal_url_preserves_existing_subscription(ui, monkeypatch):
+    existing = [
+        {"id": "ics::original", "type": "ics", "ics_url": "https://EXAMPLE.invalid:443/feed.ics"}
+    ]
+    monkeypatch.setattr(manager.calendar_repo, "list_calendars", lambda **kwargs: existing)
+    save = Mock()
+    monkeypatch.setattr(manager.calendar_repo, "upsert_calendar", save)
+    page = manager.CalendarManagerPage(ui.host, ui.coordinator, Mock())
+    assert not page._register_ics("Duplicate", "webcal://example.invalid/feed.ics#fragment")
+    save.assert_not_called()
+    page.close()
+
+
+def test_calendar_database_failure_restores_toggle_and_shows_recovery(ui, monkeypatch):
+    def fail(*args):
+        raise sqlite3.OperationalError("locked")
+
+    monkeypatch.setattr(manager.calendar_repo, "set_calendar_visible", fail)
+    page = manager.CalendarManagerPage(ui.host, ui.coordinator, Mock())
+    select_calendar(page, "local::fixture")
+    page.visible.click()
+    assert page.visible.isChecked()
+    assert page.feedback.text()
+    ui.host.schedule_panel_refresh.assert_not_called()
+    page.close()
+
+
+def test_removed_or_paused_subscription_error_does_not_mark_toolbar_failed(ui):
+    with sqlite3.connect(ui.path) as conn:
+        conn.execute(
+            "INSERT INTO calendar(id,type,name,is_active,ics_url) VALUES('ics::paused','ics','Paused',0,'https://a.invalid')"
+        )
+    ui.host.settings.setValue("sync_ics_failed_ids", ["ics::paused", "ics::removed"])
+    ui.host.settings.setValue("sync_ics_last_error", "ics_fetch_failed")
+    ui.coordinator.refresh()
+    assert ui.coordinator.states["ics"]["issues"] == 0
+    assert not ui.coordinator.states["ics"]["error"]
 
 
 def test_mixin_mro_routes_common_status_and_ics_before_google():
@@ -401,7 +699,7 @@ def test_ics_issue_navigation_selects_failed_subscription(ui):
     ui.coordinator.refresh()
     hub = CalendarSyncHub(ui.host)
     hub._open("ics", "issues")
-    assert hub.tabs.currentIndex() == 1
-    assert hub.calendar_manager.current()["id"] == "ics::fixture"
-    assert hub.calendar_manager.subscription_info.text()
+    assert hub.tabs.currentWidget() is hub.section_pages["ics"]
+    assert hub.ics_manager.current()["id"] == "ics::fixture"
+    assert hub.ics_manager.subscription_info.text()
     hub.close()

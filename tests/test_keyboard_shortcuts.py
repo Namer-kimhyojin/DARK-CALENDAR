@@ -4,7 +4,7 @@ import unittest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QDockWidget, QMainWindow, QWidget
 
@@ -105,9 +105,16 @@ class KeyboardShortcutTests(unittest.TestCase):
     def setUpClass(cls):
         cls._app = QApplication.instance() or QApplication([])
 
+    def _dispose_host(self, host):
+        for shortcut in host._global_shortcuts:
+            shortcut.setEnabled(False)
+        host.close()
+        host.deleteLater()
+        self._app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
     def test_register_all_attaches_ctrl_k_to_main_window(self):
         host = _ShortcutHost()
-        self.addCleanup(host.close)
+        self.addCleanup(self._dispose_host, host)
 
         register_all(host)
 
@@ -125,7 +132,7 @@ class KeyboardShortcutTests(unittest.TestCase):
 
     def test_register_all_replaces_existing_shortcuts_instead_of_duplication(self):
         host = _ShortcutHost()
-        self.addCleanup(host.close)
+        self.addCleanup(self._dispose_host, host)
 
         register_all(host)
         first_count = len(host._global_shortcuts)
@@ -137,7 +144,7 @@ class KeyboardShortcutTests(unittest.TestCase):
 
     def test_register_all_exposes_widget_mode_and_all_layout_presets(self):
         host = _ShortcutHost()
-        self.addCleanup(host.close)
+        self.addCleanup(self._dispose_host, host)
 
         register_all(host)
         keys = {sc.key().toString() for sc in host._global_shortcuts}
@@ -175,7 +182,7 @@ class KeyboardShortcutTests(unittest.TestCase):
 
     def test_layout_shortcuts_trigger_preset_handlers_with_real_key_input(self):
         host = _ShortcutHost()
-        self.addCleanup(host.close)
+        self.addCleanup(self._dispose_host, host)
 
         register_all(host)
         host.show()

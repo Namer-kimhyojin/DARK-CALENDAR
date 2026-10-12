@@ -28,7 +28,7 @@ def _cells(keys):
 class KeyDeckTemplateTests(unittest.TestCase):
     def test_every_template_and_theme_builds_a_valid_overlap_free_deck(self):
         self.assertEqual(len(m.TEMPLATES), 10)
-        self.assertEqual(len(m.THEMES), 7)
+        self.assertEqual(len(m.THEMES), 24)
         for template_id, *_rest in m.TEMPLATES:
             for theme in m.THEMES:
                 deck = m.build_template_deck(template_id, theme.theme_id)

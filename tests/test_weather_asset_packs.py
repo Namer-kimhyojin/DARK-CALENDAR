@@ -26,13 +26,25 @@ class WeatherAssetPackTests(unittest.TestCase):
         super().setUpClass()
         cls._app = QApplication.instance() or QApplication([])
 
-    def test_registry_contains_three_bundled_art_packs_and_classic_fallback(self):
+    def test_registry_contains_bundled_art_classic_and_six_vector_families(self):
         pack_ids = [pack.pack_id for pack in weather_asset_packs()]
 
         self.assertEqual(len(pack_ids), len(set(pack_ids)))
+        self.assertEqual(len(pack_ids), 10)
         self.assertEqual(DEFAULT_WEATHER_ASSET_PACK_ID, "air_soft")
         self.assertTrue(
             {"air_soft", "paper_weather", "mono_atmosphere", "classic"} <= set(pack_ids)
+        )
+        self.assertTrue(
+            {
+                "outline_weather",
+                "neon_weather",
+                "flat_weather",
+                "pixel_weather",
+                "orbit_weather",
+                "vintage_weather",
+            }
+            <= set(pack_ids)
         )
         self.assertEqual(get_weather_asset_pack("missing").pack_id, "air_soft")
 

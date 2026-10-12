@@ -9,7 +9,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from calendar_app.infrastructure.db import database_unified
+from calendar_app.application.calendar_sync_contract import CalendarSyncError
+from calendar_app.infrastructure.db import calendar_repo, database_unified
 from calendar_app.infrastructure.ics import ics_fetcher
 
 URL = "https://example.invalid/calendar.ics"
@@ -59,6 +60,38 @@ def rows(conn):
     return conn.execute(
         "SELECT gcal_event_id,name FROM unified_task ORDER BY gcal_event_id"
     ).fetchall()
+
+
+def test_slow_stream_timeout_preserves_existing_snapshot(snapshot, monkeypatch):
+    conn, sync = snapshot
+    assert sync(feed(event("one")))[2] is None
+    before = rows(conn)
+    clock = iter([0, 1, 46])
+    monkeypatch.setattr(ics_fetcher.time, "monotonic", lambda: next(clock))
+    assert sync(feed(event("two")))[2] == "network_unavailable"
+    assert rows(conn) == before
+
+
+def test_cancellation_during_stream_read_preserves_snapshot(snapshot, monkeypatch):
+    conn, sync = snapshot
+    assert sync(feed(event("one")))[2] is None
+    before = rows(conn)
+    stopped = []
+
+    class Stream(BytesIO):
+        def read1(self, size):
+            data = super().read1(size)
+            stopped.append(True)
+            return data
+
+    monkeypatch.setattr(
+        ics_fetcher.urllib.request, "urlopen", lambda *args, **kwargs: Stream(feed(event("two")))
+    )
+    assert (
+        ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul", cancelled=lambda: bool(stopped))[2]
+        == "cancelled"
+    )
+    assert rows(conn) == before
 
 
 def test_failed_row_rolls_back_updates_and_deletions(snapshot):
@@ -235,3 +268,148 @@ def test_real_database_schema_accepts_atomic_ics_snapshot(tmp_path, monkeypatch)
         assert ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul") == (0, 1, None)
     finally:
         database_unified.db_manager.close_connection()
+
+
+@pytest.mark.parametrize(
+    "status,code",
+    [
+        (401, "ics_access_denied"),
+        (403, "ics_access_denied"),
+        (404, "ics_not_found"),
+        (410, "ics_not_found"),
+        (429, "ics_rate_limited"),
+        (500, "ics_server_error"),
+        (503, "ics_server_error"),
+        (400, "ics_fetch_failed"),
+    ],
+)
+def test_http_failure_has_actionable_code_and_preserves_snapshot(
+    snapshot, monkeypatch, caplog, status, code
+):
+    from urllib.error import HTTPError
+
+    conn, sync = snapshot
+    assert sync(feed(event("one")))[2] is None
+    before = conn.execute("SELECT ics_last_fetched FROM calendar").fetchone()[0]
+    body = BytesIO(b"synthetic-private-key")
+    failure = HTTPError(
+        URL + "?token=synthetic-private-key", status, "synthetic-private-key", {}, body
+    )
+    monkeypatch.setattr(ics_fetcher.urllib.request, "urlopen", Mock(side_effect=failure))
+    assert ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul") == (0, 0, code)
+    assert rows(conn) == [("one", "Original")]
+    assert conn.execute("SELECT ics_last_fetched FROM calendar").fetchone()[0] == before
+    assert body.closed
+    assert "synthetic-private-key" not in caplog.text
+
+
+def test_sparse_hourly_recurrence_is_not_rejected_as_dense(snapshot, monkeypatch):
+    conn, sync = snapshot
+    monkeypatch.setattr(ics_fetcher, "_now", lambda: datetime(2026, 10, 5, tzinfo=UTC))
+    assert (
+        sync(feed(event("series", extra="RRULE:FREQ=HOURLY;INTERVAL=24;BYHOUR=10\r\n")))[2] is None
+    )
+    assert 390 <= len(rows(conn)) <= 403
+
+
+def test_zero_recurrence_interval_preserves_snapshot(snapshot):
+    conn, sync = snapshot
+    sync(feed(event("one")))
+    assert (
+        sync(feed(event("series", extra="RRULE:FREQ=DAILY;INTERVAL=0\r\n")))[2]
+        == "invalid_recurrence"
+    )
+    assert rows(conn) == [("one", "Original")]
+
+
+@pytest.fixture
+def editable_snapshot(snapshot):
+    conn, sync = snapshot
+    for definition in ("name TEXT", "color TEXT", "is_visible INTEGER", "sort_order INTEGER"):
+        conn.execute("ALTER TABLE calendar ADD COLUMN " + definition)
+    conn.execute("UPDATE calendar SET name='Original',color='#123456',is_visible=0,sort_order=7")
+    conn.commit()
+    sync(feed(event("one")))
+    return conn, sync
+
+
+def test_edit_subscription_preserves_id_preferences_and_events_until_new_fetch(
+    editable_snapshot, monkeypatch
+):
+    conn, sync = editable_snapshot
+    new_url = "https://example.invalid/new.ics?key=A%2FB"
+    assert calendar_repo.update_ics_subscription(KEY, "Changed", new_url)
+    assert conn.execute(
+        "SELECT id,name,color,is_visible,sort_order,ics_last_fetched FROM calendar"
+    ).fetchone() == (
+        KEY,
+        "Changed",
+        "#123456",
+        0,
+        7,
+        None,
+    )
+    assert rows(conn) == [("one", "Original")]
+    assert sync(feed(event("one", "Stale")))[2] == "calendar_access_lost"
+    monkeypatch.setattr(
+        ics_fetcher.urllib.request, "urlopen", Mock(side_effect=OSError("synthetic"))
+    )
+    assert ics_fetcher.fetch_and_sync(KEY, new_url, "Asia/Seoul")[2] is not None
+    assert rows(conn) == [("one", "Original")]
+    monkeypatch.setattr(
+        ics_fetcher.urllib.request,
+        "urlopen",
+        lambda *a, **k: BytesIO(feed(event("one", "Current"))),
+    )
+    assert ics_fetcher.fetch_and_sync(KEY, new_url, "Asia/Seoul") == (1, 0, None)
+    assert rows(conn) == [("one", "Current")]
+
+
+def test_name_only_edit_preserves_last_success_and_paused_state(editable_snapshot):
+    conn, _ = editable_snapshot
+    fetched = conn.execute("SELECT ics_last_fetched FROM calendar").fetchone()[0]
+    conn.execute("UPDATE calendar SET is_active=0")
+    conn.commit()
+    assert calendar_repo.update_ics_subscription(KEY, "Renamed", URL)
+    assert conn.execute("SELECT is_active,ics_last_fetched FROM calendar").fetchone() == (
+        0,
+        fetched,
+    )
+
+
+def test_edit_duplicate_address_rolls_back_only_its_changes(editable_snapshot):
+    conn, _ = editable_snapshot
+    conn.execute(
+        "INSERT INTO calendar(id,type,ics_url,is_active) VALUES('ics::other','ics','webcal://EXAMPLE.invalid:443/other.ics',0)"
+    )
+    conn.commit()
+    conn.execute("INSERT INTO unified_task(name,type) VALUES('Pending local','schedule')")
+    with pytest.raises(CalendarSyncError, match="duplicate_subscription"):
+        calendar_repo.update_ics_subscription(KEY, "Changed", "https://example.invalid/other.ics")
+    assert conn.execute("SELECT name,ics_url FROM calendar WHERE id=?", (KEY,)).fetchone() == (
+        "Original",
+        URL,
+    )
+    assert (None, "Pending local") in rows(conn)
+    assert conn.in_transaction
+    conn.rollback()
+
+
+def test_edit_database_failure_rolls_back_preferences(editable_snapshot):
+    conn, _ = editable_snapshot
+    before = conn.execute("SELECT * FROM calendar").fetchone()
+    conn.execute(
+        "CREATE TRIGGER fail_edit BEFORE UPDATE OF name ON calendar BEGIN SELECT RAISE(ABORT,'synthetic'); END"
+    )
+    with pytest.raises(sqlite3.Error):
+        calendar_repo.update_ics_subscription(KEY, "Changed", "https://example.invalid/new.ics")
+    assert conn.execute("SELECT * FROM calendar").fetchone() == before
+    assert rows(conn) == [("one", "Original")]
+
+
+def test_edit_cannot_convert_another_calendar_type(editable_snapshot):
+    conn, _ = editable_snapshot
+    conn.execute("UPDATE calendar SET type='local'")
+    conn.commit()
+    assert not calendar_repo.update_ics_subscription(KEY, "Changed", URL)
+    assert conn.execute("SELECT type,name FROM calendar").fetchone() == ("local", "Original")

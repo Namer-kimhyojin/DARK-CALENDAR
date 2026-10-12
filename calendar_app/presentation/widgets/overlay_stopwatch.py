@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-import contextlib
+from html import escape
+import math
 import re
 import time
 
@@ -86,31 +87,41 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
     # Data Logic
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _finite_nonnegative(raw) -> float | None:
+        try:
+            number = float(raw)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        return number if math.isfinite(number) and number >= 0 else None
+
     def _sw_elapsed_ms(self) -> float:
-        base = float(self._get("sw_elapsed_ms", 0.0) or 0.0)
+        base = self._finite_nonnegative(self._get("sw_elapsed_ms", 0.0)) or 0.0
         if self._get("sw_running", False, type_=bool):
-            started = self._get("sw_started_mono")
-            started_boot = self._get("sw_started_boot_epoch")
-            if started is not None:
-                with contextlib.suppress(TypeError, ValueError):
-                    current_mono = time.monotonic()
-                    started_mono = float(started)
-                    current_boot = time.time() - current_mono
-                    same_boot = (
-                        started_boot is not None and abs(current_boot - float(started_boot)) < 5.0
-                    )
-                    if same_boot and current_mono >= started_mono:
-                        return base + (current_mono - started_mono) * 1000.0
-            started_wall = self._get("sw_started_wall")
+            started = self._finite_nonnegative(self._get("sw_started_mono"))
+            started_boot = self._finite_nonnegative(self._get("sw_started_boot_epoch"))
+            current_mono = time.monotonic()
+            current_boot = time.time() - current_mono
+            if (
+                started is not None
+                and started_boot is not None
+                and abs(current_boot - started_boot) < 5.0
+                and current_mono >= started
+            ):
+                elapsed = base + (current_mono - started) * 1000.0
+                return elapsed if math.isfinite(elapsed) else base
+            started_wall = self._finite_nonnegative(self._get("sw_started_wall"))
             if started_wall is not None:
-                with contextlib.suppress(TypeError, ValueError):
-                    base += max(0.0, (time.time() - float(started_wall)) * 1000.0)
+                elapsed = base + max(0.0, (time.time() - started_wall) * 1000.0)
+                if math.isfinite(elapsed):
+                    base = elapsed
         return base
 
     def _sw_running(self) -> bool:
         return self._get("sw_running", False, type_=bool)
 
     def _format_elapsed(self, ms: float) -> str:
+        ms = self._finite_nonnegative(ms) or 0.0
         total_s = max(0.0, ms) / 1000.0
         h, rem = divmod(total_s, 3600)
         m, s = divmod(rem, 60)
@@ -233,6 +244,7 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
         template = _inject_global_lh(template)
         template = _protect_align_tags(template)
 
+        elapsed_ms = self._finite_nonnegative(elapsed_ms) or 0.0
         total_s = max(0.0, elapsed_ms) / 1000.0
         h, rem = divmod(total_s, 3600)
         m, s = divmod(rem, 60)
@@ -252,14 +264,31 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
             "status": t("widget.stopwatch.status_run", "RUN")
             if running
             else t("widget.stopwatch.status_stop", "STOP"),
-            "status_icon": ">" if running else "[]",
+            "status_icon": "▶" if running else ("Ⅱ" if elapsed_ms > 0 else "■"),
         }
         template = self._process_conditionals(template, vals)
+        # Punctuation between styled digits uses the same size and weight.
+        # Without this, a large timer has tiny colons at the label's base size.
+        template = re.sub(
+            r"(\{(?:hours|minutes|seconds)(\|[^}]+)?\})([:.])(?=\{(?:minutes|seconds|tenths)(?:\||\}))",
+            lambda match: (
+                match.group(1) + _apply_span(match.group(3), (match.group(2) or "").split("|")[1:])
+            ),
+            template,
+        )
 
         def _replace(m2: re.Match) -> str:
             inner = m2.group(1).split("|")
             key, hints = inner[0].strip(), inner[1:]
-            return _apply_span(str(vals.get(key, "")), hints)
+            value = vals.get(key, "")
+            if key in ("minutes", "seconds"):
+                value = f"{value:02d}"
+            elif key == "status_icon":
+                # The fixed timer font may lack transport symbols. Windows'
+                # normal UI font has these simple geometric glyphs.
+                family = QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont).family()
+                value = f"<span style=\"font-family:'{escape(family, quote=True)}'\">{value}</span>"
+            return _apply_span(str(value), hints)
 
         return _apply_align_tags(re.sub(r"\{([^}]+)\}", _replace, template))
 
@@ -290,6 +319,7 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
             base_size = self.font_size()
         html, lh_css = _extract_global_lh(html, base_size)
         scaled_html = _scale_template_html(html, base_size)
+        scaled_html = self._resolve_template_color_aliases(scaled_html)
         fg_c, fg_a = _parse_rgba(self.text_color_rgba())
         fg_css = _rgba_css(fg_c, fg_a)
         mono = (
@@ -328,7 +358,20 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
             else t("widget.stopwatch.start", "Start"),
             self.toggle_running,
         )
-        menu.addAction(t("widget.stopwatch.reset", "Reset"), self.reset_sw)
+        self._add_reversible_reset_action(
+            menu,
+            t("widget.stopwatch.reset", "Reset"),
+            (
+                "sw_elapsed_ms",
+                "sw_running",
+                "sw_started_mono",
+                "sw_started_wall",
+                "sw_started_boot_epoch",
+            ),
+            self.reset_sw,
+            self._tick_sw,
+            enabled=running or self._sw_elapsed_ms() > 0,
+        )
 
     def _on_double_click(self) -> bool:
         self.toggle_running()

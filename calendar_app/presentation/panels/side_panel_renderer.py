@@ -1477,7 +1477,7 @@ def load_left_panel(app):
     for task in rows:
         t_id = task["id"]
         name = task["name"]
-        deadline = task["deadline"]
+        deadline = task.get("deadline") or task.get("target_date") or ""
         priority = task["priority"]
         location = task.get("location")
         assignee = task.get("assignee")

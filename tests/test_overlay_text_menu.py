@@ -63,7 +63,7 @@ class OverlayTextMenuTests(unittest.TestCase):
         widget._open_settings = lambda *args, **kwargs: called.append(True)
         widget._build_context_menu(menu)
         non_separator = [action for action in menu.actions() if not action.isSeparator()]
-        self.assertEqual(len(non_separator), 1)
+        self.assertEqual(len(non_separator), 2)
         non_separator[0].trigger()
         self.assertEqual(called, [True])
 

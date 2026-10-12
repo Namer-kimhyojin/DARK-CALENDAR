@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -343,6 +344,9 @@ class GCalSyncIntegrationTests(TemporaryDatabaseTestCase):
         self.assertEqual(1, deleted)
         self.assertIsNone(task_repo.get_unified_task(primary_row_id))
         self.assertIsNotNone(task_repo.get_unified_task(real_row_id))
+        app.gcal_sync.list_accessible_calendars = lambda: [
+            {"id": "owner@example.com", "primary": True, "accessRole": "owner"},
+        ]
 
         with (
             patch.object(engine, "_process_google_delete_queue", return_value=(0, 0)),

@@ -127,6 +127,10 @@ class ThemeActionsMixin:
 
         self._apply_slider_opacity_style()
 
+        from calendar_app.presentation.calendar.month_renderer import refresh_week_planner_theme
+
+        refresh_week_planner_theme(self)
+
     def finalize_opacity_change(self):
         for widget in QApplication.allWidgets():
             if isinstance(widget, QMenu):
@@ -348,8 +352,6 @@ class ThemeActionsMixin:
         }
         refresh_top_menu_icons(self, role_colors)
 
-        if getattr(self, "sync_action_btn", None) is not None:
-            self.sync_action_btn.setIcon(_ic(ICON.SYNC, color=role_colors["accent"]))
         if getattr(self, "widget_mode_btn", None) is not None:
             self.widget_mode_btn.setIcon(_ic(ICON.WIDGET_MGR, color=_txt_primary))
         if getattr(self, "lock_btn", None) is not None:

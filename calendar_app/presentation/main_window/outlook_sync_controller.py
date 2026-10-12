@@ -2,13 +2,16 @@
 """UI-thread coordinator with isolated DB connections in background workers."""
 
 from datetime import datetime
+from math import ceil
 import sqlite3
+from time import monotonic
 
-from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, QThread, QTimer, pyqtSignal
 
 from calendar_app.app_paths import DB_PATH, get_app_data_dir
 from calendar_app.application.calendar_sync_contract import CalendarSyncError
 from calendar_app.infrastructure.calendar_sync.engine import CalendarSyncEngine
+from calendar_app.infrastructure.calendar_sync.http_retry import MAX_RETRY_AFTER_SECONDS
 from calendar_app.infrastructure.calendar_sync.repository import CalendarSyncRepository
 from calendar_app.infrastructure.outlook_sync.auth import MicrosoftAuth
 from calendar_app.infrastructure.outlook_sync.graph import GraphClient
@@ -23,8 +26,10 @@ class OutlookWorker(QThread):
         self.operation, self.client_id, self.account = operation, client_id, account
         self.home_id = home_id
         self.local_zone = local_zone
+        self.retry_after = None
 
     def run(self):
+        client = None
         try:
             if self.operation == "disconnect":
                 import uuid
@@ -45,6 +50,8 @@ class OutlookWorker(QThread):
             if self.operation != "login" and account != self.account:
                 raise CalendarSyncError("account_mismatch")
             calendars = client.calendars()
+            if self.isInterruptionRequested():
+                return
             if self.operation == "login":
                 self.result.emit(
                     self.operation,
@@ -87,12 +94,23 @@ class OutlookWorker(QThread):
             finally:
                 conn.close()
         except CalendarSyncError as exc:
+            self.retry_after = getattr(exc, "retry_after", None)
             self.failed.emit(str(exc))
         except ImportError:
             self.failed.emit("dependency_unavailable")
         except Exception:
             # Do not expose OAuth responses, user data or secrets through logs/UI.
             self.failed.emit("operation_failed")
+        finally:
+            if client is not None:
+                try:
+                    try:
+                        client.headers.clear()
+                    finally:
+                        client.session.close()
+                except Exception:
+                    # Cleanup must not leak a second exception out of QThread.run.
+                    pass
 
 
 class OutlookSyncController(QObject):
@@ -107,7 +125,9 @@ class OutlookSyncController(QObject):
         self.available = []
         self.summary = {}
         self.failures = 0
+        self._retry_not_before = 0.0
         self.timer = QTimer(app)
+        self.timer.setTimerType(Qt.TimerType.PreciseTimer)
         self.timer.setInterval(5 * 60 * 1000)
         self.timer.timeout.connect(self.sync)
         self.timer.start()
@@ -117,9 +137,21 @@ class OutlookSyncController(QObject):
     def busy(self):
         return self.worker is not None
 
+    @property
+    def retry_remaining_seconds(self):
+        return max(0, ceil(self._retry_not_before - monotonic()))
+
     def start(self, operation):
         if self.busy or getattr(self.app, "_is_shutting_down", False):
             return False
+        if operation in {"sync", "refresh"} and monotonic() < self._retry_not_before:
+            self.timer.setInterval(max(1, ceil((self._retry_not_before - monotonic()) * 1000)))
+            self.status = self.settings.value("outlook_last_error", self.status, type=str)
+            self.changed.emit()
+            return False
+        if operation in {"sync", "refresh"} and self._retry_not_before:
+            self._retry_not_before = 0.0
+            self.timer.setInterval(5 * 60 * 1000)
         client_id = self.settings.value("outlook_client_id", "", type=str)
         if not client_id:
             self.status = "client_id_required"
@@ -140,7 +172,15 @@ class OutlookSyncController(QObject):
         worker.result.connect(self._result)
         worker.failed.connect(self._failed)
         worker.finished.connect(self._finished)
-        worker.start()
+        try:
+            worker.start()
+        except Exception:
+            self.worker = None
+            if worker in self.app._bg_workers:
+                self.app._bg_workers.remove(worker)
+            worker.deleteLater()
+            self._failed("operation_failed")
+            return False
         self.changed.emit()
         return True
 
@@ -163,6 +203,7 @@ class OutlookSyncController(QObject):
     def _apply_result(self, operation, result):
         self.settings.remove("outlook_last_error")
         self.failures = 0
+        self._retry_not_before = 0.0
         self.timer.setInterval(5 * 60 * 1000)
         if operation == "login":
             previous = self.settings.value("outlook_account_id", "", type=str)
@@ -192,10 +233,11 @@ class OutlookSyncController(QObject):
             self.available = result["calendars"]
         else:
             self.summary = result
-            self.settings.setValue(
-                "outlook_last_success", datetime.now().astimezone().isoformat(timespec="seconds")
-            )
-            self.app.schedule_panel_refresh(left=True, center=True, right=True)
+            if not result.get("issues"):
+                self.settings.setValue(
+                    "outlook_last_success",
+                    datetime.now().astimezone().isoformat(timespec="seconds"),
+                )
         self.status = (
             "connected"
             if operation == "login"
@@ -203,18 +245,36 @@ class OutlookSyncController(QObject):
             if operation == "disconnect"
             else "refreshed"
             if operation == "refresh"
+            else "completed_with_issues"
+            if result.get("issues")
             else "completed"
         )
+        self.app.schedule_panel_refresh(left=True, center=True, right=True)
         self.changed.emit()
 
     def _failed(self, code):
         if getattr(self.app, "_is_shutting_down", False):
             return
+        if code == "cancelled" or (
+            self.worker and getattr(self.worker, "isInterruptionRequested", lambda: False)() is True
+        ):
+            self.status = "cancelled"
+            if self.worker and self.worker.operation in {"sync", "refresh"}:
+                self.app.schedule_panel_refresh(left=True, center=True, right=True)
+            self.changed.emit()
+            return
         self.status = code
         self.settings.setValue("outlook_last_error", code)
         self.failures += 1
-        self.timer.setInterval(min(60, 5 * 2 ** min(self.failures, 4)) * 60 * 1000)
-        if self.worker and self.worker.operation == "sync":
+        retry_after = getattr(self.worker, "retry_after", None)
+        if type(retry_after) is int and retry_after > 0:
+            self._retry_not_before = max(
+                self._retry_not_before, monotonic() + min(retry_after, MAX_RETRY_AFTER_SECONDS)
+            )
+        delay = min(60, 5 * 2 ** min(self.failures, 4)) * 60 * 1000
+        remaining = max(0, ceil((self._retry_not_before - monotonic()) * 1000))
+        self.timer.setInterval(max(delay, remaining))
+        if self.worker and self.worker.operation in {"sync", "refresh"}:
             # Earlier calendars may already have committed before a later failure.
             self.app.schedule_panel_refresh(left=True, center=True, right=True)
         self.changed.emit()
@@ -223,8 +283,10 @@ class OutlookSyncController(QObject):
         worker = self.sender()
         if worker in self.app._bg_workers:
             self.app._bg_workers.remove(worker)
-        self.worker = None
-        worker.deleteLater()
+        if worker is self.worker:
+            self.worker = None
+        if worker:
+            worker.deleteLater()
         self.changed.emit()
 
 

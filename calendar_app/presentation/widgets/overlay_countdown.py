@@ -105,7 +105,7 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
 
     def _cd_remaining(self, target_dt: QDateTime | None = None) -> tuple[str, str]:
         target = target_dt if target_dt is not None else self._cd_target_dt()
-        if target is None:
+        if target is None or not target.isValid():
             return "--:--:--", t("widget.countdown.no_target_hint", "Right-click -> Set target")
         now = QDateTime.currentDateTime()
         secs = now.secsTo(target)
@@ -221,7 +221,7 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
     _DEFAULT_TEMPLATE = "{remaining|size=24|bold}\n{target|size=11}"
 
     def _resolve_cd_template(
-        self, template: str, remaining: str, target_dt: QDateTime | None
+        self, template: str, remaining: str | None, target_dt: QDateTime | None
     ) -> str:
         from calendar_app.presentation.widgets.overlay_base import (
             _inject_global_lh,
@@ -230,9 +230,22 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
 
         template = _inject_global_lh(template)
         template = _protect_align_tags(template)
+        template = re.sub(
+            r"(\{(?:hours|minutes|seconds)(\|[^}]+)?\})([:.])(?=\{(?:minutes|seconds)(?:\||\}))",
+            lambda match: (
+                match.group(1) + _apply_span(match.group(3), (match.group(2) or "").split("|")[1:])
+            ),
+            template,
+        )
+        template = re.sub(
+            r"D-(?=\{days(\|[^}]+)?\})",
+            lambda match: _apply_span("D-", (match.group(1) or "").split("|")[1:]),
+            template,
+        )
 
         secs = 0
-        if target_dt is not None:
+        has_target = target_dt is not None and target_dt.isValid()
+        if has_target:
             secs = max(0, QDateTime.currentDateTime().secsTo(target_dt))
         elif remaining and remaining not in ("--:--:--", "∞", "00:00:00"):
             parts = remaining.split(":")
@@ -241,22 +254,38 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
         days, rem = divmod(secs, 86400)
         hours, rem = divmod(rem, 3600)
         mins, seconds = divmod(rem, 60)
+        no_target = not has_target and (
+            target_dt is not None or remaining in (None, "", "--:--:--", "∞")
+        )
         vals = {
-            "remaining": remaining or "∞",
+            "remaining": "--:--:--" if no_target else remaining,
             "hours": hours,
             "minutes": mins,
             "seconds": seconds,
             "days": days,
-            "target": target_dt.toString("yyyy-MM-dd HH:mm") if target_dt else "",
+            "target": target_dt.toString("yyyy-MM-dd HH:mm") if has_target else "",
         }
         template = self._process_conditionals(template, vals)
 
         def _replace(m: re.Match) -> str:
             inner = m.group(1).split("|")
             key, hints = inner[0].strip(), inner[1:]
-            if key.startswith("target:") and target_dt:
-                return _apply_span(target_dt.toString(_strftime_to_qt(key[7:])), hints)
-            return _apply_span(str(vals.get(key, "")), hints)
+            if key.startswith("target:") or key == "target":
+                if has_target:
+                    value = target_dt.toString(
+                        _strftime_to_qt(key[7:], hour=target_dt.time().hour())
+                        if key.startswith("target:")
+                        else "yyyy-MM-dd HH:mm"
+                    )
+                else:
+                    value = t("widget.countdown.set_target", "Set target")
+            elif no_target and key in ("days", "hours", "minutes", "seconds"):
+                value = "--"
+            elif key in ("hours", "minutes", "seconds"):
+                value = f"{vals[key]:02d}"
+            else:
+                value = vals.get(key, "")
+            return _apply_span(str(value), hints)
 
         return _apply_align_tags(re.sub(r"\{([^}]+)\}", _replace, template))
 
@@ -265,8 +294,9 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
     # ------------------------------------------------------------------
 
     def _open_settings(self):
-        cur_iso = self._get("cd_target_iso", "")
-        cur_date, cur_time = cur_iso.split("T") if "T" in cur_iso else (cur_iso, "00:00")
+        target = self._cd_target_dt()
+        cur_date = target.date().toString("yyyy-MM-dd") if target is not None else ""
+        cur_time = target.time().toString("HH:mm") if target is not None else "00:00"
 
         extra = [
             {
@@ -375,9 +405,13 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
 
     def _build_context_menu(self, menu: QMenu):
         menu.addAction(t("widget.countdown.settings", "Countdown Settings..."), self._open_settings)
-        menu.addAction(
+        self._add_reversible_reset_action(
+            menu,
             t("widget.countdown.clear_target", "Clear target"),
+            ("cd_target_iso",),
             lambda: (self._set("cd_target_iso", ""), self._tick_cd()),
+            self._tick_cd,
+            enabled=self._cd_target_dt() is not None,
         )
 
     def _on_double_click(self) -> bool:

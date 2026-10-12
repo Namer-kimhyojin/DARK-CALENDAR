@@ -68,7 +68,6 @@ from calendar_app.presentation.widgets.keydeck.model import (
     settle_layout,
     suggest_panorama_fit,
 )
-from calendar_app.presentation.widgets.keydeck.renderer import render_deck_thumbnail
 from calendar_app.presentation.widgets.keydeck.resources import (
     glyph_pixmap,
     has_transparency,
@@ -76,6 +75,7 @@ from calendar_app.presentation.widgets.keydeck.resources import (
 )
 from calendar_app.presentation.widgets.keydeck.studio_canvas import StudioCanvas
 from calendar_app.presentation.widgets.keydeck.studio_inspector import DeckInspector, KeyInspector
+from calendar_app.presentation.widgets.keydeck.theme_dialog import ThemeGalleryDialog
 from calendar_app.shared.app_lifecycle import is_app_exiting
 
 _UNDO_LIMIT = 80
@@ -339,11 +339,12 @@ class KeyDeckStudioDialog(QDialog):
             ),
         )
         toolbar.addWidget(self.template_button)
-        self.theme_button = self._tool(t("widget.launcher.studio.themes", "테마"), "palette", None)
-        self.theme_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        theme_menu = QMenu(self.theme_button)
-        theme_menu.aboutToShow.connect(lambda: self._fill_theme_menu(theme_menu))
-        self.theme_button.setMenu(theme_menu)
+        self.theme_button = self._tool(
+            t("widget.launcher.studio.themes", "테마"),
+            "palette",
+            self.open_theme_gallery,
+            t("widget.launcher.themes.open_tip", "테마 갤러리 · 검색·미리보기·적용 범위 선택"),
+        )
         toolbar.addWidget(self.theme_button)
         self.add_key_button = QPushButton(t("widget.launcher.studio.add_key", "+ 키 추가"), self)
         self.add_key_button.setObjectName("primary_btn")
@@ -1252,37 +1253,46 @@ class KeyDeckStudioDialog(QDialog):
         self._mark_dirty()
         self._load_page(self.deck["page"], [])
 
-    def _fill_theme_menu(self, menu: QMenu) -> None:
-        menu.clear()
+    def open_theme_gallery(self) -> None:
+        """Choose a theme without editing the studio draft until confirmation."""
+        if is_app_exiting():
+            return
         selection = set(self.canvas.selection)
-        for theme in THEMES:
-            preview = deepcopy(self.deck)
-            apply_theme(preview, theme.theme_id)
-            icon = QIcon(render_deck_thumbnail(preview, preview["page"], 88, 56, 2.0))
-            action = menu.addAction(
-                icon,
-                str(t(theme.label_key, theme.label_default)),
-                lambda *_, tid=theme.theme_id: self._apply_theme(tid),
-            )
-            action.setCheckable(True)
-            action.setChecked(self.deck["theme"] == theme.theme_id)
-        if selection:
-            menu.addSeparator()
-            scoped = menu.addMenu(t("widget.launcher.studio.theme_selected", "선택한 키에만 적용"))
-            for theme in THEMES:
-                scoped.addAction(
-                    str(t(theme.label_key, theme.label_default)),
-                    lambda *_, tid=theme.theme_id: self._apply_theme(tid, selection),
-                )
-        menu.setStyleSheet("QMenu::item { padding: 6px 18px 6px 8px; } QMenu { icon-size: 88px; }")
+        dialog = ThemeGalleryDialog(self.deck, self, key_ids=selection)
+        try:
+            if (
+                dialog.exec() == QDialog.DialogCode.Accepted
+                and dialog.request is not None
+                and not is_app_exiting()
+            ):
+                theme_id, scope = dialog.request
+                if scope == "selection":
+                    if selection:
+                        self._apply_theme(theme_id, selection)
+                elif scope in {"deck", "page"}:
+                    self._apply_theme(theme_id, page_only=scope == "page")
+        finally:
+            dialog.deleteLater()
 
-    def _apply_theme(self, theme_id: str, key_ids: set[str] | None = None) -> None:
+    def _apply_theme(
+        self, theme_id: str, key_ids: set[str] | None = None, *, page_only: bool = False
+    ) -> None:
+        if theme_id not in {theme.theme_id for theme in THEMES}:
+            return
+        if key_ids is not None:
+            key_ids = set(key_ids) & {key["id"] for key in self.current_keys()}
+            if not key_ids:
+                return
+        candidate = deepcopy(self.deck)
+        page_index = self.deck["page"] if page_only or key_ids is not None else None
+        apply_theme(candidate, theme_id, page_index=page_index, key_ids=key_ids)
+        if page_index is not None:
+            candidate["theme"] = CUSTOM_THEME_ID
+        if candidate == self.deck:
+            return
         self._push_undo("")
-        if key_ids:
-            apply_theme(self.deck, theme_id, page_index=self.deck["page"], key_ids=set(key_ids))
-            self.deck["theme"] = "custom"
-        else:
-            apply_theme(self.deck, theme_id)
+        apply_theme(self.deck, theme_id, page_index=page_index, key_ids=key_ids)
+        self.deck["theme"] = candidate["theme"]
         self._mark_dirty()
         self.canvas.refresh()
         self._reload_inspector()

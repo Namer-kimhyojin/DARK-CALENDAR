@@ -5,12 +5,13 @@ from unittest.mock import MagicMock, patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QApplication, QMainWindow, QMenu, QWidget
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMenu, QSystemTrayIcon, QWidget
 
 from calendar_app.bootstrap import _finalize_runtime
 from calendar_app.infrastructure.runtime import system_manager
 from calendar_app.infrastructure.runtime.infra_wiring import (
     _create_tray_autostart_action,
+    _handle_tray_activation,
     _set_overlay_visible,
     init_tray_icon,
     toggle_overlay,
@@ -32,6 +33,8 @@ class _FakeOverlay:
         self.show_normal_calls = 0
         self.hide_calls = 0
         self.refresh_calls = 0
+        self.raise_calls = 0
+        self.activate_calls = 0
 
     def isVisible(self):
         return self._visible
@@ -54,6 +57,12 @@ class _FakeOverlay:
 
     def _refresh_all_panels(self):
         self.refresh_calls += 1
+
+    def raise_(self):
+        self.raise_calls += 1
+
+    def activateWindow(self):
+        self.activate_calls += 1
 
 
 class _FakeTrayIcon:
@@ -86,6 +95,28 @@ class _TrayLifecycleWindow(WindowEventsMixin, QMainWindow):
 _QT_APP = QApplication.instance() or QApplication([])
 
 
+class _ActivationWindow(QMainWindow):
+    """Use real Qt visibility/minimization with observable activation calls."""
+
+    def __init__(self):
+        super().__init__()
+        self.is_visible = False
+        self.refresh_calls = 0
+        self.raise_calls = 0
+        self.activate_calls = 0
+
+    def _refresh_all_panels(self):
+        self.refresh_calls += 1
+
+    def raise_(self):
+        self.raise_calls += 1
+        super().raise_()
+
+    def activateWindow(self):
+        self.activate_calls += 1
+        super().activateWindow()
+
+
 def test_toggle_overlay_uses_actual_window_visibility_instead_of_stale_flag():
     overlay = _FakeOverlay(visible=True)
     overlay.is_visible = False
@@ -113,6 +144,121 @@ def test_show_transition_restores_minimized_window_and_refreshes_once():
     assert overlay.show_calls == 0
     assert overlay.refresh_calls == 1
     assert overlay.is_visible is True
+    assert overlay.raise_calls == 1
+    assert overlay.activate_calls == 1
+
+
+def test_tray_trigger_restores_real_qt_minimized_window():
+    window = _ActivationWindow()
+    try:
+        window.showMinimized()
+        QApplication.processEvents()
+        assert window.isVisible() and window.isMinimized()
+
+        _handle_tray_activation(window, QSystemTrayIcon.ActivationReason.Trigger)
+
+        assert window.isVisible() and not window.isMinimized()
+        assert window.is_visible is True
+        assert window.refresh_calls == 1
+        assert window.raise_calls == window.activate_calls == 1
+    finally:
+        window.close()
+
+
+def test_menu_toggle_restores_real_qt_minimized_window_and_activates():
+    window = _ActivationWindow()
+    try:
+        window.showMinimized()
+        QApplication.processEvents()
+
+        toggle_overlay(window)
+
+        assert window.isVisible() and not window.isMinimized()
+        assert window.is_visible is True
+        assert window.raise_calls == window.activate_calls == 1
+    finally:
+        window.close()
+
+
+def test_tray_trigger_then_double_click_keeps_real_qt_window_visible():
+    window = _ActivationWindow()
+    try:
+        _handle_tray_activation(window, QSystemTrayIcon.ActivationReason.Trigger)
+        _handle_tray_activation(window, QSystemTrayIcon.ActivationReason.DoubleClick)
+        _handle_tray_activation(window, QSystemTrayIcon.ActivationReason.DoubleClick)
+
+        assert window.isVisible() and not window.isMinimized()
+        assert window.is_visible is True
+        assert window.raise_calls == window.activate_calls == 3
+    finally:
+        window.close()
+
+
+def test_tray_single_click_preserves_regular_show_hide_toggle():
+    window = _ActivationWindow()
+    try:
+        _handle_tray_activation(window, QSystemTrayIcon.ActivationReason.Trigger)
+        assert window.isVisible()
+
+        _handle_tray_activation(window, QSystemTrayIcon.ActivationReason.Trigger)
+        assert not window.isVisible()
+        assert window.is_visible is False
+        assert window.raise_calls == window.activate_calls == 1
+    finally:
+        window.close()
+
+
+def test_tray_context_activation_does_not_change_visibility():
+    window = _ActivationWindow()
+    try:
+        _handle_tray_activation(window, QSystemTrayIcon.ActivationReason.Context)
+
+        assert not window.isVisible()
+        assert window.raise_calls == window.activate_calls == 0
+    finally:
+        window.close()
+
+
+def test_tray_widget_restore_uses_explicit_return_to_main():
+    window = _ActivationWindow()
+    coordinator = MagicMock()
+    window._widget_mode_coordinator = coordinator
+    window.is_widget_mode_active = lambda: True
+    window.stop_widget_mode = MagicMock()
+    try:
+        _handle_tray_activation(window, QSystemTrayIcon.ActivationReason.Trigger)
+
+        coordinator.return_to_main.assert_called_once_with()
+        window.stop_widget_mode.assert_not_called()
+    finally:
+        window.close()
+
+
+def test_widget_restore_fallback_reveals_hidden_main_window():
+    window = _ActivationWindow()
+    window.is_widget_mode_active = lambda: True
+    window.stop_widget_mode = MagicMock()
+    try:
+        _handle_tray_activation(window, QSystemTrayIcon.ActivationReason.Trigger)
+
+        window.stop_widget_mode.assert_called_once_with()
+        assert window.isVisible() and not window.isMinimized()
+        assert window.raise_calls == window.activate_calls == 1
+    finally:
+        window.close()
+
+
+def test_menu_widget_restore_uses_explicit_return_to_main():
+    window = _ActivationWindow()
+    coordinator = MagicMock()
+    window._widget_mode_coordinator = coordinator
+    window.is_widget_mode_active = lambda: True
+    try:
+        toggle_overlay(window)
+
+        coordinator.return_to_main.assert_called_once_with()
+    finally:
+        window.close()
 
 
 def test_regular_close_hides_to_tray_without_entering_shutdown():

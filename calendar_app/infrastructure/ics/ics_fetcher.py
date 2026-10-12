@@ -2,18 +2,64 @@
 """Bounded, validated and atomic read-only ICS subscription snapshots."""
 
 from datetime import UTC, date, datetime, timedelta
+from http.client import HTTPException
 import logging
 import sqlite3
+import time
 import urllib.error
 from urllib.parse import quote
 import urllib.request
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from calendar_app.application.calendar_sync_contract import CalendarSyncError
+from calendar_app.infrastructure.ics.subscriptions import normalize_subscription_url
 
 logger = logging.getLogger("IcsFetcher")
 MAX_FEED_BYTES = 8 * 1024 * 1024
 MAX_EVENTS = 10000
+MAX_FETCH_SECONDS = 45
+
+
+def _read_feed(response, cancelled, deadline):
+    """Check cancellation between socket reads, including slowly streamed feeds."""
+    headers = getattr(response, "headers", None) or {}
+    status = getattr(response, "status", None)
+    if status is None and hasattr(response, "getcode"):
+        status = response.getcode()
+    # A subscription is a full snapshot. A range response must never determine
+    # which cached events are absent, even if its body ends with END:VCALENDAR.
+    if status == 206 or headers.get("Content-Range") is not None:
+        raise CalendarSyncError("ics_fetch_failed")
+    declared_length = headers.get("Content-Length")
+    if declared_length is not None:
+        try:
+            declared_length = int(declared_length)
+            if declared_length < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise CalendarSyncError("network_unavailable") from None
+        if declared_length > MAX_FEED_BYTES:
+            raise CalendarSyncError("response_too_large")
+    payload = bytearray()
+    read = getattr(response, "read1", response.read)
+    while len(payload) <= MAX_FEED_BYTES:
+        _check(cancelled)
+        if time.monotonic() >= deadline:
+            raise CalendarSyncError("network_unavailable")
+        chunk = read(min(65536, MAX_FEED_BYTES + 1 - len(payload)))
+        _check(cancelled)
+        if time.monotonic() >= deadline:
+            raise CalendarSyncError("network_unavailable")
+        if not chunk:
+            # HTTPResponse.read1() can reach EOF on a truncated body without
+            # raising IncompleteRead, unlike a single unbounded read().
+            if declared_length is not None and len(payload) != declared_length:
+                raise CalendarSyncError("network_unavailable")
+            return bytes(payload)
+        payload.extend(chunk)
+        if len(payload) > MAX_FEED_BYTES:
+            raise CalendarSyncError("response_too_large")
+    raise CalendarSyncError("response_too_large")
 
 
 def _now():
@@ -34,6 +80,33 @@ def _check(cancelled):
         raise CalendarSyncError("cancelled")
 
 
+def _validate_timezones(event):
+    """An unresolved TZID is not a floating time; retain the previous snapshot."""
+    for key in ("DTSTART", "DTEND", "RECURRENCE-ID", "RDATE", "EXDATE"):
+        properties = event.get(key)
+        if properties is None:
+            continue
+        if not isinstance(properties, list):
+            properties = [properties]
+        for prop in properties:
+            if not prop.params.get("TZID"):
+                continue
+            for item in getattr(prop, "dts", [prop]):
+                values = item.dt if isinstance(item.dt, tuple) else (item.dt,)
+                if any(isinstance(value, datetime) and value.tzinfo is None for value in values):
+                    raise CalendarSyncError("invalid_calendar_timezone")
+
+
+def _event_identity(value):
+    if not isinstance(value, date):
+        raise CalendarSyncError("invalid_recurrence")
+    return (
+        value.astimezone(UTC).isoformat()
+        if isinstance(value, datetime) and value.tzinfo
+        else value.isoformat()
+    )
+
+
 def _snapshot(raw, icalendar, zone, cancelled):
     """Validate the whole feed before any database write or missing-event deletion."""
     envelope = raw.strip().removeprefix(b"\xef\xbb\xbf").upper()
@@ -51,6 +124,7 @@ def _snapshot(raw, icalendar, zone, cancelled):
         uid = str(event.get("UID", "")).strip()
         if not uid:
             raise CalendarSyncError("invalid_calendar_data")
+        _validate_timezones(event)
         if str(event.get("STATUS", "")).upper() != "CANCELLED":
             _event_dates(event, zone)
         groups.setdefault(uid, []).append(event)
@@ -60,26 +134,73 @@ def _snapshot(raw, icalendar, zone, cancelled):
     rows = {}
     for uid, events in groups.items():
         _check(cancelled)
-        recurring = any(e.get("RRULE") or e.get("RDATE") or e.get("RECURRENCE-ID") for e in events)
+        recurring = any(
+            e.get("RRULE") or e.get("RDATE") or e.get("EXDATE") or e.get("RECURRENCE-ID")
+            for e in events
+        )
         if len(events) > 1 and not recurring:
             raise CalendarSyncError("duplicate_remote_event")
         if recurring:
             masters = [e for e in events if not e.get("RECURRENCE-ID")]
-            identities = [str(e.get("RECURRENCE-ID")) for e in events if e.get("RECURRENCE-ID")]
+            identities = [
+                _event_identity(e["RECURRENCE-ID"].dt) for e in events if e.get("RECURRENCE-ID")
+            ]
             if len(masters) > 1 or len(set(identities)) != len(identities):
                 raise CalendarSyncError("duplicate_remote_event")
+            if masters and masters[0].get("DTSTART") is not None:
+                original = masters[0]["DTSTART"].dt
+                for event in events:
+                    rid = event.get("RECURRENCE-ID")
+                    if rid is None:
+                        continue
+                    value = rid.dt
+                    if (type(value) is date) != (type(original) is date) or (
+                        isinstance(value, datetime)
+                        and isinstance(original, datetime)
+                        and (value.tzinfo is None) != (original.tzinfo is None)
+                    ):
+                        raise CalendarSyncError("invalid_recurrence")
             # Reject dense recurrences before the library materializes their occurrences.
             for event in events:
                 rule = event.get("RRULE")
                 if not rule:
                     continue
+                if "COUNT" in rule and "UNTIL" in rule:
+                    raise CalendarSyncError("invalid_recurrence")
                 frequency = str(rule.get("FREQ", [""])[0]).upper()
                 per_day = {"SECONDLY": 86400, "MINUTELY": 1440, "HOURLY": 24}.get(frequency, 1)
-                estimate = ((end - start).days + 2) * per_day
-                for key in ("BYHOUR", "BYMINUTE", "BYSECOND"):
+                interval = int(rule.get("INTERVAL", [1])[0])
+                if interval < 1:
+                    raise CalendarSyncError("invalid_recurrence")
+                window_days = (end - start).days + 2
+                estimate = (window_days * per_day + interval - 1) // interval
+                # Filters bound the units per day independently of INTERVAL. Taking
+                # the smaller bound avoids counting a sparse filter as an expansion,
+                # without dividing twice when the filter aligns with the interval.
+                filtering = {
+                    "SECONDLY": (("BYHOUR", 24), ("BYMINUTE", 60), ("BYSECOND", 60)),
+                    "MINUTELY": (("BYHOUR", 24), ("BYMINUTE", 60)),
+                    "HOURLY": (("BYHOUR", 24),),
+                }.get(frequency, ())
+                filtered_per_day = per_day
+                for key, cardinality in filtering:
+                    values = rule.get(key)
+                    if values:
+                        filtered_per_day = filtered_per_day // cardinality * len(set(values))
+                estimate = min(estimate, window_days * filtered_per_day)
+                # Only finer units expand a rule's density.
+                expanding = {
+                    "SECONDLY": (),
+                    "MINUTELY": ("BYSECOND",),
+                    "HOURLY": ("BYMINUTE", "BYSECOND"),
+                }.get(frequency, ("BYHOUR", "BYMINUTE", "BYSECOND"))
+                for key in expanding:
                     estimate *= max(1, len(rule.get(key, [])))
-                if rule.get("COUNT"):
-                    estimate = min(estimate, int(rule["COUNT"][0]))
+                if "COUNT" in rule:
+                    counts = rule["COUNT"]
+                    if len(counts) != 1 or int(counts[0]) < 1:
+                        raise CalendarSyncError("invalid_recurrence")
+                    estimate = min(estimate, int(counts[0]))
                 if estimate > MAX_EVENTS:
                     raise CalendarSyncError("too_many_events")
             import recurring_ical_events
@@ -108,16 +229,11 @@ def _snapshot(raw, icalendar, zone, cancelled):
                 rid = event.get("RECURRENCE-ID")
                 if not rid:
                     raise CalendarSyncError("invalid_recurrence")
-                value = rid.dt
-                identity = (
-                    value.astimezone(UTC).isoformat()
-                    if isinstance(value, datetime) and value.tzinfo
-                    else value.isoformat()
-                )
+                identity = _event_identity(rid.dt)
                 event_id += "#aircal-rid=" + quote(identity, safe="")
             if event_id in rows:
                 raise CalendarSyncError("duplicate_remote_event")
-            deadline, finish, all_day = _event_dates(event, zone)
+            deadline, finish, all_day = _event_dates(event, zone, expanded=recurring)
             rows[event_id] = (
                 str(event.get("SUMMARY", "")),
                 deadline,
@@ -129,7 +245,7 @@ def _snapshot(raw, icalendar, zone, cancelled):
     return rows
 
 
-def _event_dates(event, zone):
+def _event_dates(event, zone, *, expanded=False):
     start = event.get("DTSTART")
     end = event.get("DTEND")
     duration = event.get("DURATION")
@@ -140,7 +256,7 @@ def _event_dates(event, zone):
         raise CalendarSyncError("invalid_event_time")
     if duration is not None:
         delta = duration.dt
-        if not isinstance(delta, timedelta) or delta < timedelta(0):
+        if not isinstance(delta, timedelta) or delta <= timedelta(0):
             raise CalendarSyncError("invalid_event_time")
         if type(value) is date and (delta.seconds or delta.microseconds or not delta.days):
             raise CalendarSyncError("invalid_event_time")
@@ -151,7 +267,9 @@ def _event_dates(event, zone):
         finish = end.dt
         if (type(finish) is date) != (type(value) is date) or finish < value:
             raise CalendarSyncError("invalid_event_time")
-        if type(value) is date and finish == value:
+        # The recurrence library adds a zero-length DTEND to valid point events
+        # that originally have neither DTEND nor DURATION. Only allow it there.
+        if finish == value and (type(value) is date or not expanded):
             raise CalendarSyncError("invalid_event_time")
     return _parse_dt(start, end, zone)
 
@@ -161,6 +279,10 @@ def fetch_and_sync(
 ) -> tuple[int, int, str | None]:
     """Return counts only after committing an entire validated subscription snapshot."""
     try:
+        fetch_url = normalize_subscription_url(ics_url)
+    except ValueError:
+        return 0, 0, "invalid_subscription_url"
+    try:
         zone = ZoneInfo(local_zone) if local_zone else None
     except (ZoneInfoNotFoundError, ValueError):
         return 0, 0, "invalid_timezone"
@@ -169,15 +291,33 @@ def fetch_and_sync(
         return 0, 0, "dependency_unavailable"
     try:
         _check(cancelled)
-        req = urllib.request.Request(ics_url, headers={"User-Agent": "AirCalendar/1.0 ICS-Fetcher"})
+        req = urllib.request.Request(
+            fetch_url, headers={"User-Agent": "AirCalendar/1.0 ICS-Fetcher"}
+        )
+        deadline = time.monotonic() + MAX_FETCH_SECONDS
         with urllib.request.urlopen(req, timeout=15) as resp:
-            raw = resp.read(MAX_FEED_BYTES + 1)
+            raw = _read_feed(resp, cancelled, deadline)
         _check(cancelled)
         if len(raw) > MAX_FEED_BYTES:
             raise CalendarSyncError("response_too_large")
     except CalendarSyncError as exc:
         return 0, 0, str(exc)
-    except urllib.error.URLError:
+    except urllib.error.HTTPError as exc:
+        # Never expose the URL, response body or reason (feeds can contain access keys).
+        if exc.code in {401, 403}:
+            code = "ics_access_denied"
+        elif exc.code in {404, 410}:
+            code = "ics_not_found"
+        elif exc.code == 429:
+            code = "ics_rate_limited"
+        elif 500 <= exc.code <= 599:
+            code = "ics_server_error"
+        else:
+            code = "ics_fetch_failed"
+        exc.close()
+        logger.warning("ICS HTTP failure for calendar %s (%s)", calendar_id, code)
+        return 0, 0, code
+    except (urllib.error.URLError, HTTPException, OSError):
         logger.warning("ICS fetch failed for calendar %s", calendar_id)
         return 0, 0, "network_unavailable"
     except Exception:
@@ -195,7 +335,11 @@ def fetch_and_sync(
 
     from calendar_app.infrastructure.db.database_unified import db_manager
 
-    conn = db_manager.get_connection()
+    try:
+        conn = db_manager.get_connection()
+    except Exception:
+        logger.warning("ICS database unavailable for calendar %s", calendar_id)
+        return 0, 0, "operation_failed"
     if not conn:
         return 0, 0, "operation_failed"
     saved = False
@@ -234,6 +378,10 @@ def fetch_and_sync(
             """,
                 (values[0], calendar_id, *values[1:], uid, calendar_id),
             )
+            if cursor.rowcount != 1:
+                # A protected local-owned row with the same remote identity was
+                # not updated. Do not delete other cached events or mark success.
+                raise CalendarSyncError("duplicate_remote_event")
             upserted += cursor.rowcount
         existing = conn.execute(
             """

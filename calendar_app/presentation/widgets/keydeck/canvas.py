@@ -163,6 +163,7 @@ class KeyDeckCanvas(QWidget):
         self._fade_t = 0.0
         self._wheel_accum = 0
         self._live_box: QSize | None = None
+        self._live_scale: float | None = None
         self._geometry_overrides: dict = {}
         self._mouse_inside = False
         self._armed_at = 0.0
@@ -219,8 +220,21 @@ class KeyDeckCanvas(QWidget):
     def set_live_box(self, size: QSize | None) -> None:
         """Preview a zoom while the overlay is being resized (None = deck scale)."""
         self._live_box = QSize(size) if size is not None else None
+        self._live_scale = None
         if self._deck is not None:
             self._relayout()
+            self.update()
+
+    def set_live_scale(self, scale: float | None) -> None:
+        """Preview an exact deck zoom without changing its stored data or key runtime."""
+        normalized = max(0.6, min(2.2, float(scale))) if scale is not None else None
+        if self._live_scale == normalized and self._live_box is None:
+            return
+        self._live_scale = normalized
+        self._live_box = None
+        if self._deck is not None:
+            self._relayout()
+            self.updateGeometry()
             self.update()
 
     def fitted_scale(self, width: int, height: int) -> float:
@@ -231,7 +245,9 @@ class KeyDeckCanvas(QWidget):
     def _relayout(self) -> None:
         deck = self._deck
         args = dict(self._geometry_overrides)
-        if self._live_box is not None and "scale" not in args:
+        if self._live_scale is not None and "scale" not in args:
+            args["scale"] = self._live_scale
+        elif self._live_box is not None and "scale" not in args:
             args["scale"] = fit_scale(
                 deck, deck["page"], self._live_box.width(), self._live_box.height(), **args
             )

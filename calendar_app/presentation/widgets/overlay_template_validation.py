@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 import re
 
 _WIDGET_KIND_ALIASES = {
@@ -36,7 +37,7 @@ _VARIABLE_RULES = {
         "variants": {},
     },
     "dday": {
-        "plain": {"dday", "days", "sign", "label", "date", "date_short"},
+        "plain": {"dday", "days", "sign", "label", "date", "date_short", "art"},
         "formatted": {"date"},
         "variants": {},
     },
@@ -54,12 +55,13 @@ _VARIABLE_RULES = {
             "days_in_month",
             "yesterday",
             "tomorrow",
+            "art",
         },
         "formatted": {"date"},
         "variants": {"weekday": {"short", "en"}},
     },
     "weather": {
-        "plain": {"city", "temp", "unit", "desc", "icon", "humidity", "wind"},
+        "plain": {"city", "temp", "unit", "desc", "icon", "humidity", "wind", "error"},
         "formatted": set(),
         "variants": {},
     },
@@ -88,7 +90,7 @@ _CONDITION_VARIABLES = {
     "stopwatch": set(_VARIABLE_RULES["stopwatch"]["plain"]),
     "countdown": set(_VARIABLE_RULES["countdown"]["plain"]),
     "dday": {"dday", "days", "sign", "label", "date_short"},
-    "datecard": set(_VARIABLE_RULES["datecard"]["plain"]),
+    "datecard": set(_VARIABLE_RULES["datecard"]["plain"]) - {"art"},
     "weather": set(_VARIABLE_RULES["weather"]["plain"]),
     "text": {
         "task_count",
@@ -145,6 +147,15 @@ def _issue(code: str, token: str, detail: str) -> TemplateSyntaxIssue:
     return TemplateSyntaxIssue(code=code, token=token, detail=detail)
 
 
+def _finite_hint_value(raw: str) -> float | None:
+    """Reject numeric overflow before the renderer converts or rounds a hint."""
+    try:
+        value = float(raw.removesuffix("pt").removesuffix("x").removesuffix("%"))
+    except (ValueError, OverflowError):
+        return None
+    return value if math.isfinite(value) else None
+
+
 def _validate_style_hints(token: str, hints: list[str]) -> list[TemplateSyntaxIssue]:
     issues: list[TemplateSyntaxIssue] = []
     for raw_hint in hints:
@@ -153,7 +164,9 @@ def _validate_style_hints(token: str, hints: list[str]) -> list[TemplateSyntaxIs
             continue
         if hint.startswith("size="):
             value = hint[5:].strip()
-            if _SIZE_RE.fullmatch(value):
+            if _SIZE_RE.fullmatch(value) and (
+                value == "base" or _finite_hint_value(value) is not None
+            ):
                 continue
             issues.append(_issue("invalid_size", token, f"invalid size hint '{hint}'"))
             continue
@@ -167,7 +180,8 @@ def _validate_style_hints(token: str, hints: list[str]) -> list[TemplateSyntaxIs
             value = hint.split("=", 1)[1].strip()
             if (
                 _LINE_HEIGHT_RE.fullmatch(value)
-                and float(value.removesuffix("pt").removesuffix("x").removesuffix("%")) > 0
+                and (number := _finite_hint_value(value)) is not None
+                and number > 0
             ):
                 continue
             issues.append(
@@ -229,13 +243,13 @@ def validate_widget_template(
     else_seen = False
     for match in matches:
         token = match.group(1).strip()
-        if token.startswith("if "):
+        if re.match(r"^if\s+", token):
             if conditional_open:
                 issues.append(
                     _issue("nested_condition", token, "nested conditions are not supported")
                 )
                 continue
-            condition = token[3:].strip()
+            condition = token[2:].strip()
             parsed = _CONDITION_RE.fullmatch(condition)
             if parsed is None:
                 issues.append(_issue("invalid_condition", token, "invalid condition expression"))

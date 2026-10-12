@@ -831,11 +831,16 @@ class BaseTaskDialog(QDialog):
         from PyQt6.QtCore import QSettings
 
         settings = QSettings("DarkCalendar", "TaskDialog")
-        default_alarms = settings.value("default_alarms", "10,60")  # 기본값 10분, 1시간
-        if isinstance(default_alarms, str):
-            default_alarms = [int(x.strip()) for x in default_alarms.split(",") if x.strip()]
-        else:
-            default_alarms = []
+        saved_alarms = settings.value("default_alarms", "10,60")  # 기본값 10분, 1시간
+        default_alarms = set()
+        if isinstance(saved_alarms, str):
+            for value in saved_alarms.split(","):
+                try:
+                    minutes = int(value.strip())
+                except ValueError:
+                    continue
+                if minutes in self.alarm_opts.values():
+                    default_alarms.add(minutes)
 
         for index, (text, mins) in enumerate(self.alarm_opts.items()):
             cb = QCheckBox(text)

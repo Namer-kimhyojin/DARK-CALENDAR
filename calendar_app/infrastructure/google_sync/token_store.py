@@ -12,6 +12,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
+import tempfile
 
 from calendar_app.app_paths import TOKEN_PATH
 
@@ -59,8 +60,17 @@ def save_token_json(token_json: str, token_path: str | None = None) -> None:
             payload = raw
     else:
         payload = raw
-    with open(path, "wb") as fh:
-        fh.write(payload)
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb", dir=os.path.dirname(os.path.abspath(path)), delete=False
+        ) as fh:
+            temp_path = fh.name
+            fh.write(payload)
+        os.replace(temp_path, path)
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
 
 
 def load_token_json(token_path: str | None = None) -> str | None:

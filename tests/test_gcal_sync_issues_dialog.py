@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 from calendar_app.infrastructure.db import task_repo
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.gcal_sync_issues_dialog import GCalSyncIssuesDialog
+from calendar_app.presentation.dialogs.sync_feedback import sync_error_message
 from tests.support import TemporaryDatabaseTestCase
 
 
@@ -183,6 +184,76 @@ class GCalSyncIssuesDialogTests(TemporaryDatabaseTestCase):
         )
         self.assertEqual(int(queue_row.get("retry_count") or 0), 0)
         self.assertIsNone(queue_row.get("last_error"))
+
+    def test_pending_moves_have_friendly_retry_labels(self):
+        cases = (
+            ("network:calendar_move_failed", "gcal_focus.move_failed_label", "캘린더 이동 실패"),
+            (
+                "calendar_move_unconfirmed:calendar_move_destination_unconfirmed",
+                "gcal_focus.move_unconfirmed_label",
+                "이동 확인 필요",
+            ),
+            (
+                "calendar_move_local_state:calendar_move_local_state_not_saved",
+                "gcal_focus.move_local_state_label",
+                "이동 연결 저장 필요",
+            ),
+        )
+        for raw, key, fallback in cases:
+            with self.subTest(error=raw):
+                self.assertEqual(
+                    GCalSyncIssuesDialog._map_error_to_friendly(None, raw),
+                    (t(key, fallback), t("gcal.treatments.pending_retry", "재시도 대기")),
+                )
+
+    def test_pending_move_guidance_does_not_claim_recovery_or_change_destination(self):
+        cases = (
+            ("network:calendar_move_failed", "calendar_move"),
+            (
+                "calendar_move_unconfirmed:calendar_move_destination_unconfirmed",
+                "calendar_move_unconfirmed",
+            ),
+            (
+                "calendar_move_local_state:calendar_move_local_state_not_saved",
+                "calendar_move_local_state",
+            ),
+        )
+        expected = {}
+        for raw, code in cases:
+            task_id = task_repo.create_unified_task(
+                {
+                    "name": code,
+                    "type": "schedule",
+                    "deadline": "2026-10-07 09:00:00",
+                    "calendar_id": "gcal::team",
+                    "gcal_event_id": "event-" + code,
+                    "gcal_source_calendar_id": "family",
+                    "gcal_target_calendar_id": "team",
+                    "gcal_sync_error": raw,
+                    "gcal_dirty": 1,
+                }
+            )
+            self.assertIsNotNone(task_id)
+            expected[task_id] = code
+
+        dialog = GCalSyncIssuesDialog(None)
+        self.addCleanup(dialog.close)
+        self.assertEqual(dialog.table.rowCount(), len(expected))
+        for row in range(dialog.table.rowCount()):
+            meta = dialog.table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+            with self.subTest(error=meta["raw_error"]):
+                self.assertEqual(meta["type"], "task")
+                self.assertEqual(meta["status"], t("gcal.issues_retry_scheduled", "재시도 예정"))
+                dialog.table.setCurrentCell(row, 0)
+                self.assertEqual(
+                    dialog.guidance_text.toPlainText(), sync_error_message(expected[meta["id"]])
+                )
+                self.assertTrue(dialog.retry_btn.isEnabled())
+                task = task_repo.get_unified_task(meta["id"])
+                self.assertEqual(task["calendar_id"], "gcal::team")
+                self.assertEqual(task["gcal_source_calendar_id"], "family")
+                self.assertEqual(task["gcal_target_calendar_id"], "team")
+                self.assertEqual(task["gcal_dirty"], 1)
 
 
 if __name__ == "__main__":

@@ -163,15 +163,35 @@
     "sync_hint": "Sincronização Google",
     "today": "Hoje",
     "today_hint": "Ir para hoje",
-    "weekdays": [
-      "Seg",
-      "Ter",
-      "Qua",
-      "Qui",
-      "Sex",
-      "Sáb",
-      "Dom"
-    ]
+    "weekdays": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+  },
+  "calendar_controls": {
+    "default_accessible": "Default calendar for new events",
+    "default_badge": "Save new events here",
+    "default_hint": "The calendar selected when creating a new event.",
+    "default_label": "Save new events to",
+    "display_count": "Visible {count}/{total}",
+    "display_hint": "Changes appear immediately in the calendar and event lists. Hiding a calendar keeps its sync and default save settings.",
+    "display_title": "Calendars shown on the main screen",
+    "hidden_badge": "Hidden",
+    "hidden_default_hint": "Events in this calendar are currently hidden on the main screen.",
+    "manage": "Manage",
+    "no_writable": "No writable calendar"
+  },
+  "calendar_list_default": {
+    "accessible": "{name}: Use as the default calendar for new events",
+    "choose": "Default save",
+    "display_section": "Calendar visibility",
+    "intro": "Choose Default save in the list to set the calendar for new events.",
+    "saved": "New events will be saved to ‘{name}’ by default."
+  },
+  "calendar_management_tabs": {
+    "ics_hint": "Subscribe to external calendars by URL for read-only events. Visibility and automatic refresh can be set separately.",
+    "ics_tab": "ICS subscriptions",
+    "local_hint": "Add calendars stored on this PC and manage their names, colors, visibility and default save destination.",
+    "local_tab": "Local calendars",
+    "manage_ics": "Manage ICS subscription",
+    "manage_local": "Manage local calendar"
   },
   "checklist_mgr": {
     "btn_add_item": "Adicionar Item",
@@ -680,6 +700,10 @@
       "assignee_placeholder": "por exemplo, John Doe",
       "auto_end": "Manter duração",
       "calendar": "Calendario",
+      "calendar_import_paused": "Import paused",
+      "calendar_import_paused_owner_hint": "Importing new events is paused. Existing events keep their calendar and sync edits. Turn import on to select this calendar as a new save destination.",
+      "calendar_paused": "Sync paused",
+      "calendar_paused_owner_hint": "Sync is paused for this calendar. Existing events keep their calendar, but it cannot be selected as a new save destination.",
       "calendar_read_only": "Read-only calendario",
       "cancel_btn": "❌ Cancelar",
       "category_label": "🏷️ Etiquetas",
@@ -1222,6 +1246,51 @@
       "sync_skipped_or_failed": "A sincronização falhou ou foi ignorada"
     }
   },
+  "gcal_focus": {
+    "auto_sync": "Automatically sync Google Calendar",
+    "auto_sync_help": "Sync periodically and send changes after editing events. You can still sync manually from the main screen when this is off.",
+    "connect_account": "Connect Google account",
+    "connection_help": "Connect your account to import events and sync changes from the Google calendars you select.",
+    "connection_title": "Google account connection",
+    "default_changed": "New events will be saved to '{name}' because import was turned off for the previous default. Change this on the main calendar.",
+    "default_import_warning": "Default save calendar: turning import off changes the default save destination.",
+    "disconnect": "Disconnect",
+    "import_accessible": "Import events from {name}",
+    "import_count": "{count} calendars",
+    "import_help": "Choose calendars to import. Read-only calendars can be imported too. Click Save settings to apply your changes.",
+    "import_meta": "Importing",
+    "import_meta_help": "Number of calendars selected to import from Google. Set display preferences separately on the main calendar.",
+    "import_pause_help": "Turning off import stops receiving new Google changes. Existing events remain, and edits are sent while Google automatic sync is enabled or when you sync manually.",
+    "import_save_failed": "Could not save the import selection. Check that a writable default save calendar is available and try again.",
+    "import_title": "Calendars to import from Google",
+    "import_toggle": "Import",
+    "list_loaded": "Found {count} calendars. Choose the calendars to import and save your settings.",
+    "main_calendar_help": "Set event visibility, colors, and the default calendar for new events on the main calendar. Turning import off keeps events already received.",
+    "main_calendar_title": "Display and default calendar",
+    "manage_main": "Open main calendar management",
+    "move_failed_help": "Could not move the event to the selected calendar. The destination is preserved. Check your connection and edit permissions for both calendars, then sync again.",
+    "move_failed_label": "Calendar move failed",
+    "move_local_state_help": "The move in Google was confirmed, but the app could not save its link. Sync again with the same destination to restore the link.",
+    "move_local_state_label": "Move link needs saving",
+    "move_unconfirmed_help": "Could not confirm the moved event in the selected calendar. No new copy was created and the destination is preserved. Check the event's location and permissions in Google, then sync again.",
+    "move_unconfirmed_label": "Move confirmation needed",
+    "nav_calendars": "Calendars to import",
+    "nav_connection": "Account connection",
+    "nav_help": "Setup help",
+    "nav_issues": "Troubleshooting",
+    "nav_sync": "Sync settings",
+    "no_calendars": "No Google calendars registered. Connect your account and refresh the list.",
+    "readonly": "Import events · Read-only",
+    "reconnect_account": "Connect a different account",
+    "refresh_calendars": "Refresh list",
+    "saved_state": "Sync changes take effect after saving.",
+    "service_name": "Google Calendar",
+    "setup_note": "After connecting, choose the calendars to sync under Calendars to import.",
+    "sync_disabled": "Sync off",
+    "timezone_details": "Time zone · Advanced settings",
+    "unsaved": "Your changes have not been saved yet.",
+    "writable": "Import events · Editable"
+  },
   "gcal_settings": {
     "account_tip": "Se a conta conectada for alterada, poderá ser necessária uma nova autenticação para atualizar com segurança as vinculações do calendário.",
     "add_ics": "+ ICS",
@@ -1234,7 +1303,23 @@
     "advanced_show": "Mostrar avançado",
     "advanced_summary": "Os padrões recomendados funcionam bem para a maioria dos usuários.",
     "advanced_title": "Comportamento de sincronização",
+    "auth_browser_return": "Return to Air Calendar to check the sign-in result.",
+    "auth_cancel": "Cancel sign-in",
+    "auth_cancelling": "Cancelling sign-in…",
+    "auth_error_browser": "Could not open the sign-in browser. Check the Windows default browser setting and try again.",
+    "auth_error_cancelled": "Google sign-in was cancelled. Your existing connection was kept.",
+    "auth_error_client_invalid": "This is not a valid Google OAuth file. Download the JSON for a 'Desktop app' client from Google Cloud again.",
+    "auth_error_client_missing": "The OAuth file was not found. Download and select the JSON for a 'Desktop app' OAuth client from Google Cloud.",
+    "auth_error_client_type": "This OAuth file is for a web application. In Google Cloud, create an OAuth client with the 'Desktop app' type and select its downloaded JSON file. A web client can cause redirect_uri_mismatch.",
+    "auth_error_denied": "Google sign-in was denied or consent was cancelled. Check your account and OAuth app access permissions and try again.",
+    "auth_error_failed": "Could not complete Google sign-in. Check your network connection and desktop OAuth file and try again.",
+    "auth_error_listener": "Could not open the local sign-in callback address. Check your security software and firewall settings and try again.",
+    "auth_error_modules": "Could not load the Google Calendar sign-in components. Update the app and try again.",
+    "auth_error_redirect": "Google rejected the callback address (redirect_uri_mismatch). Select an OAuth JSON file created for a 'Desktop app' in Google Cloud.",
+    "auth_error_timeout": "No sign-in response was received within 3 minutes. If the browser shows redirect_uri_mismatch, check that your OAuth file is for a 'Desktop app', then try again.",
+    "auth_error_token_write": "Could not save sign-in information. Check free space and write access to the app data folder. Your existing connection was kept.",
     "auth_success": "Autenticação do Google concluída com sucesso.",
+    "auth_waiting": "Complete sign-in in your browser. Waiting for up to 3 minutes. If the browser shows an error, cancel sign-in and check your OAuth file.",
     "authenticate": "Autenticar",
     "badge_default": "Padrao Calendario",
     "browse": "Navegar",
@@ -1388,6 +1473,36 @@
     "type_gcal": "Google Calendario",
     "type_ics": "Assinatura ICS",
     "type_local": "Local"
+  },
+  "gcal_ux": {
+    "cancelling": "Cancelling the operation. Your existing connection and events are preserved.",
+    "connect_help": "Prepare an OAuth file and connect your Google account. You can then choose calendars to import.",
+    "connected_help": "Your connected account is preserved. Reconnect with the same account to review permissions. Choose calendars to import in the next section.",
+    "connected_next": "Your Google account is connected. Choose calendars to import and save your settings.",
+    "connection_review": "Review connection",
+    "credentials_details": "OAuth file and connection help",
+    "disconnecting": "Disconnecting Google. Please wait until the operation finishes.",
+    "feedback": "Connection and synchronization guidance",
+    "file_copy_failed": "The OAuth file could not be saved in the app. Check access to the file and app data folder, then select it again.",
+    "loading": "Checking your Google calendar list. Your existing choices are preserved.",
+    "metadata_unavailable": "The saved calendar list could not be read. Your choices are preserved. Reload the list before saving.",
+    "query_cancelled": "Calendar lookup cancelled. Your existing connection and choices are preserved.",
+    "reconnect": "Reconnect account",
+    "review_connection": "Review connection",
+    "review_file": "Review OAuth file",
+    "saved": "Settings saved. Your changes have been applied.",
+    "setup_help": "How to prepare the OAuth file",
+    "sync_busy": "Google synchronization is in progress. You can change settings when it finishes.",
+    "unsaved": "Changes apply after saving. Closing cancels unsaved changes."
+  },
+  "global_caldav": {
+    "capability": "Personal events: two-way · Recurring/invitation events: read-only",
+    "email": "Full account email address",
+    "fastmail_guide": "Fastmail: generate an app password with CalDAV access. Your plan must support external calendar clients.",
+    "server": "Account data center server",
+    "title": "Connect a CalDAV account",
+    "yahoo_guide": "Yahoo Calendar: generate an app password for your Yahoo account. Yahoo! JAPAN accounts are not supported.",
+    "zoho_guide": "Zoho Calendar: enable calendars for CalDAV in the web settings first. Select your account data center server. Use an app password when two-factor authentication is enabled."
   },
   "help": {
     "content": "<h3>Como usar o Calendário</h3>\n        <h>\n        <b>1) Adicionar programação</b><br>\n        Clique duas vezes em uma data ou <b>Ctrl + N</b><br><br>\n\n        <b>2) Modificar programação</b><br>\n        Clique duas vezes em uma programação para editar os detalhes<br><br>\n\n        <b>3) Mover/Copiar Programação</b><br>\n        Arrastar: Mover, <b>Shift + Arrastar</b>: Copiar<br><br>\n\n        <b>4) Excluir programação</b><br>\n        Selecione a programação e pressione <b>Excluir</b><br>\n        Pressione <b>Excluir</b> em uma data para limpar todas as programações daquele dia.",
@@ -1654,13 +1769,7 @@
     "hint_record_jump": "Enter abre o item. Shift+Enter vai para a data.",
     "hint_run_command": "Enter executa o comando selecionado",
     "kw": {
-      "theme": [
-        "theme",
-        "dark",
-        "light",
-        "color",
-        "appearance"
-      ]
+      "theme": ["theme", "dark", "light", "color", "appearance"]
     },
     "nlp_preview": "Naovo: [{title}] - {date} {time}",
     "no_selection": "Press Introduza to open the selected result",
@@ -1836,6 +1945,24 @@
     "normal": "Naormal",
     "urgent": "Urgente"
   },
+  "provider_ui": {
+    "auth_password": "Authentication password",
+    "cancel_work": "Request stop",
+    "cancelled": "Operation stopped. Existing events and connections are preserved.",
+    "cancelling": "Stop requested. The operation will stop after the current response finishes.",
+    "connected": "Your account is connected.",
+    "module_missing": "Sign-in is unavailable. Update the app, then connect again.",
+    "naver_password_hint": "Check the authentication guide for the password type required by your account.",
+    "password_hint": "Enter an app-specific password instead of your normal sign-in password.",
+    "save_sync": "Save selection and sync",
+    "selection_count": "Selected {selected} · Saved {saved}",
+    "selection_help": "Check the calendars to import. Read-only calendars can also be imported.",
+    "server_details": "Server and connection details",
+    "server_info": "The server address is configured for this service automatically.\n{url}",
+    "technical_setup": "App registration and setup guide",
+    "unsaved": "Selection changes take effect after saving.",
+    "wait": "Service request limit: try again in {seconds} seconds."
+  },
   "recurrence": {
     "base_date": "Ref : {date}",
     "btn_finish": "Terminar",
@@ -1913,362 +2040,223 @@
         "description": "Inicia imediatamente o modo de bloqueio por ausência.",
         "label": "Bloqueio por ausência",
         "menu_path": "Exibir > Bloqueio por ausência",
-        "tags": [
-          "ausência",
-          "bloqueio"
-        ]
+        "tags": ["ausência", "bloqueio"]
       },
       "cal_toolbar": {
         "description": "Oculta ou mostra novamente a barra de ferramentas do calendário.",
         "label": "Alternar barra de ferramentas do calendário",
         "menu_path": "Exibir > Barra de ferramentas do calendário",
-        "tags": [
-          "calendário",
-          "barra de ferramentas"
-        ]
+        "tags": ["calendário", "barra de ferramentas"]
       },
       "calendar_print": {
         "description": "Visualiza e imprime o calendário do período atual ou escolhido.",
         "label": "Imprimir calendário",
         "menu_path": "Calendário > Opções > Imprimir",
-        "tags": [
-          "imprimir",
-          "impressora",
-          "PDF"
-        ]
+        "tags": ["imprimir", "impressora", "PDF"]
       },
       "checklist": {
         "description": "Gerencia modelos e a estrutura de itens do checklist.",
         "label": "Gerenciar checklist",
         "menu_path": "Tarefas > Gerenciar checklist",
-        "tags": [
-          "checklist",
-          "modelo"
-        ]
+        "tags": ["checklist", "modelo"]
       },
       "color_assign": {
         "description": "Atribui cores automaticamente aos itens selecionados.",
         "label": "Atribuição automática de cor",
         "menu_path": "Tarefas > Atribuição automática de cor",
-        "tags": [
-          "cor",
-          "etiqueta",
-          "automático"
-        ]
+        "tags": ["cor", "etiqueta", "automático"]
       },
       "command_palette": {
         "description": "Abre a caixa de busca de comandos para encontrar um recurso instantaneamente.",
         "label": "Paleta de comandos",
         "menu_path": "Chamada direta",
-        "tags": [
-          "busca",
-          "comando",
-          "paleta"
-        ]
+        "tags": ["busca", "comando", "paleta"]
       },
       "delete": {
         "description": "Exclui o evento ou item atualmente selecionado.",
         "label": "Excluir item selecionado",
         "menu_path": "Estado de seleção",
-        "tags": [
-          "excluir",
-          "remover"
-        ]
+        "tags": ["excluir", "remover"]
       },
       "escape": {
         "description": "Limpa a seleção ou o foco atual.",
         "label": "Limpar seleção",
         "menu_path": "Estado de seleção",
-        "tags": [
-          "desmarcar",
-          "cancelar",
-          "escape"
-        ]
+        "tags": ["desmarcar", "cancelar", "escape"]
       },
       "focus_mode": {
         "description": "Ativa ou desativa o modo foco.",
         "label": "Alternar modo foco",
         "menu_path": "Exibir > Modo foco",
-        "tags": [
-          "foco",
-          "pomodoro"
-        ]
+        "tags": ["foco", "pomodoro"]
       },
       "focus_pause": {
         "description": "Pausa ou retoma a sessão de foco atual.",
         "label": "Pausar foco",
         "menu_path": "Modo foco",
-        "tags": [
-          "foco",
-          "pausa"
-        ]
+        "tags": ["foco", "pausa"]
       },
       "force_unlock": {
         "description": "Limpa à força um estado de bloqueio inesperado.",
         "label": "Forçar desbloqueio",
         "menu_path": "Recuperação de emergência",
-        "tags": [
-          "forçar",
-          "desbloquear",
-          "recuperação",
-          "emergência"
-        ]
+        "tags": ["forçar", "desbloquear", "recuperação", "emergência"]
       },
       "fullscreen": {
         "description": "Ativa ou desativa a exibição em tela cheia.",
         "label": "Alternar tela cheia",
         "menu_path": "Exibir > Tela cheia",
-        "tags": [
-          "tela cheia"
-        ]
+        "tags": ["tela cheia"]
       },
       "help": {
         "description": "Abre a central de ajuda.",
         "label": "Guia de atalhos",
         "menu_path": "Sistema > Guia de atalhos",
-        "tags": [
-          "ajuda",
-          "F1"
-        ]
+        "tags": ["ajuda", "F1"]
       },
       "layout_1": {
         "description": "Aplica o layout padrão de 4 painéis ancorados.",
         "label": "Predefinição de layout 1",
         "menu_path": "Exibir > Predefinições de layout",
-        "tags": [
-          "layout",
-          "predefinição",
-          "ancorado",
-          "1"
-        ]
+        "tags": ["layout", "predefinição", "ancorado", "1"]
       },
       "layout_2": {
         "description": "Aplica um layout centrado no calendário.",
         "label": "Predefinição de layout 2",
         "menu_path": "Exibir > Predefinições de layout",
-        "tags": [
-          "layout",
-          "calendário",
-          "2"
-        ]
+        "tags": ["layout", "calendário", "2"]
       },
       "layout_3": {
         "description": "Aplica um layout centrado em tarefas.",
         "label": "Predefinição de layout 3",
         "menu_path": "Exibir > Predefinições de layout",
-        "tags": [
-          "layout",
-          "tarefa",
-          "3"
-        ]
+        "tags": ["layout", "tarefa", "3"]
       },
       "layout_4": {
         "description": "Aplica um layout de abas divididas.",
         "label": "Predefinição de layout 4",
         "menu_path": "Exibir > Predefinições de layout",
-        "tags": [
-          "layout",
-          "aba",
-          "dividido",
-          "4"
-        ]
+        "tags": ["layout", "aba", "dividido", "4"]
       },
       "layout_5": {
         "description": "Aplica um layout flutuante totalmente separado.",
         "label": "Predefinição de layout 5",
         "menu_path": "Exibir > Predefinições de layout",
-        "tags": [
-          "layout",
-          "separado",
-          "flutuante",
-          "5"
-        ]
+        "tags": ["layout", "separado", "flutuante", "5"]
       },
       "lock_mode": {
         "description": "Ativa ou desativa o modo de bloqueio da área de trabalho.",
         "label": "Modo bloqueio",
         "menu_path": "Exibir > Modo bloqueio",
-        "tags": [
-          "bloqueio"
-        ]
+        "tags": ["bloqueio"]
       },
       "magnet_mode": {
         "description": "Ativa o modo ímã, que ajuda a alinhar e encaixar painéis.",
         "label": "Modo ímã",
         "menu_path": "Exibir > Modo ímã",
-        "tags": [
-          "ímã",
-          "painel"
-        ]
+        "tags": ["ímã", "painel"]
       },
       "monitor_left": {
         "description": "Move a janela para outro monitor.",
         "label": "Mover para o monitor anterior",
         "menu_path": "Controle de janela",
-        "tags": [
-          "monitor",
-          "tela",
-          "esquerda"
-        ]
+        "tags": ["monitor", "tela", "esquerda"]
       },
       "monitor_right": {
         "description": "Move a janela para outro monitor.",
         "label": "Mover para o próximo monitor",
         "menu_path": "Controle de janela",
-        "tags": [
-          "monitor",
-          "tela",
-          "direita"
-        ]
+        "tags": ["monitor", "tela", "direita"]
       },
       "new_directive": {
         "description": "Abre a janela para inserir uma diretiva ou item de cooperação.",
         "label": "Registrar diretiva",
         "menu_path": "Registrar > Diretiva",
-        "tags": [
-          "diretiva",
-          "cooperação"
-        ]
+        "tags": ["diretiva", "cooperação"]
       },
       "new_routine": {
         "description": "Adiciona rapidamente uma rotina de tarefa recorrente.",
         "label": "Registrar rotina",
         "menu_path": "Registrar > Rotina",
-        "tags": [
-          "rotina",
-          "tarefa",
-          "recorrente"
-        ]
+        "tags": ["rotina", "tarefa", "recorrente"]
       },
       "new_schedule": {
         "description": "Abre diretamente a janela de registro de eventos.",
         "label": "Adicionar novo evento",
         "menu_path": "Registrar > Novo evento",
-        "tags": [
-          "evento",
-          "adicionar",
-          "registrar"
-        ]
+        "tags": ["evento", "adicionar", "registrar"]
       },
       "next_day": {
         "description": "Move-se um dia depois da data atual.",
         "label": "Próximo dia",
         "menu_path": "Navegação",
-        "tags": [
-          "próximo",
-          "data",
-          "direita"
-        ]
+        "tags": ["próximo", "data", "direita"]
       },
       "opacity_down": {
         "description": "Reduz a opacidade da janela.",
         "label": "Diminuir opacidade",
         "menu_path": "Controle de janela",
-        "tags": [
-          "opacidade",
-          "mais escura"
-        ]
+        "tags": ["opacidade", "mais escura"]
       },
       "opacity_up": {
         "description": "Aumenta a opacidade da janela.",
         "label": "Aumentar opacidade",
         "menu_path": "Controle de janela",
-        "tags": [
-          "opacidade",
-          "mais clara"
-        ]
+        "tags": ["opacidade", "mais clara"]
       },
       "prev_day": {
         "description": "Move-se um dia antes da data atual.",
         "label": "Dia anterior",
         "menu_path": "Navegação",
-        "tags": [
-          "anterior",
-          "data",
-          "esquerda"
-        ]
+        "tags": ["anterior", "data", "esquerda"]
       },
       "restore_pos": {
         "description": "Restaura a janela para uma posição segura da tela.",
         "label": "Restaurar posição da janela",
         "menu_path": "Controle de janela",
-        "tags": [
-          "janela",
-          "restaurar",
-          "posição"
-        ]
+        "tags": ["janela", "restaurar", "posição"]
       },
       "routine_mgr": {
         "description": "Abre diretamente a aba do gerenciador de rotinas.",
         "label": "Gerenciador de rotinas",
         "menu_path": "Tarefas > Visão geral de rotinas",
-        "tags": [
-          "rotina",
-          "gerenciar"
-        ]
+        "tags": ["rotina", "gerenciar"]
       },
       "save_layout": {
         "description": "Salva o arranjo atual dos painéis como predefinição.",
         "label": "Salvar layout atual",
         "menu_path": "Exibir > Predefinições de layout > Salvar",
-        "tags": [
-          "layout",
-          "predefinição",
-          "salvar"
-        ]
+        "tags": ["layout", "predefinição", "salvar"]
       },
       "show_hide": {
         "description": "Oculta a janela principal ou a exibe novamente.",
         "label": "Mostrar/ocultar janela",
         "menu_path": "Controle de janela",
-        "tags": [
-          "janela",
-          "ocultar",
-          "mostrar",
-          "sobreposição"
-        ]
+        "tags": ["janela", "ocultar", "mostrar", "sobreposição"]
       },
       "sync_gcal": {
         "description": "Start synchronization for all connected calendars.",
         "label": "Sync all connected calendars",
         "menu_path": "System > Calendars and sync",
-        "tags": [
-          "Google",
-          "Outlook",
-          "iCloud",
-          "Naver",
-          "ICS",
-          "F5",
-          "sync"
-        ]
+        "tags": ["Google", "Outlook", "iCloud", "Naver", "ICS", "F5", "sync"]
       },
       "today": {
         "description": "Move instantaneamente a data selecionada para hoje.",
         "label": "Ir para hoje",
         "menu_path": "Navegação",
-        "tags": [
-          "hoje",
-          "data"
-        ]
+        "tags": ["hoje", "data"]
       },
       "topbar": {
         "description": "Ativa ou desativa a exibição da barra de menu superior.",
         "label": "Alternar barra superior",
         "menu_path": "Exibir > Barra superior",
-        "tags": [
-          "barra de menu",
-          "barra superior",
-          "recuperação"
-        ]
+        "tags": ["barra de menu", "barra superior", "recuperação"]
       },
       "widget_mode": {
         "description": "Abre o modo de painel somente widgets.",
         "label": "Alternar modo widget",
         "menu_path": "Exibir > Modo somente widgets",
-        "tags": [
-          "widget",
-          "painel"
-        ]
+        "tags": ["widget", "painel"]
       }
     },
     "groups": {
@@ -2427,12 +2415,156 @@
     "status_confirmed": "Confirmared",
     "status_tentative": "Provisório"
   },
+  "sync_disclosures": {
+    "additional_accounts": "Connect another account",
+    "additional_accounts_hint": "Outlook · iCloud · Naver",
+    "close_common_settings": "Hide common settings",
+    "common_settings": "Common settings",
+    "common_settings_hint": "Time zone and automatic synchronization settings for all connections.",
+    "hide_services": "Hide services",
+    "show_services": "Show services"
+  },
+  "sync_google": {
+    "apply_failed": "Imported events could not be applied in the app. Existing events and pending changes were preserved. Check the event data and local storage, then sync again.",
+    "database_failed": "Sync stopped because imported events could not be saved in the app. Existing events and pending changes were preserved. Check free storage and write access to the app data folder, then sync again.",
+    "fetch_failed": "Events could not be retrieved from Google Calendar. Check the internet connection and access to the selected calendars, then sync again. Existing events were preserved.",
+    "invalid_datetime": "Import stopped because a Google event date or time could not be interpreted. Existing events and pending changes were preserved. Check event dates and times in Google Calendar, then sync again."
+  },
+  "sync_recovery": {
+    "auth_hint": "Sign in again in connection settings.",
+    "connect_hint": "Connect your account to choose the calendars to import.",
+    "finished": "Sync completed. Your latest events are updated.",
+    "finished_issues": "Sync finished. Review items needing attention in Troubleshooting.",
+    "finished_unconfirmed": "The operation ended. Check the last update record and connection status.",
+    "import_paused": "Importing new events is off. Changes to existing events can still be synced.",
+    "paused": "Paused",
+    "paused_hint": "Your account connection is preserved. Resume sync in connection settings.",
+    "progress": "View progress",
+    "reconnect": "Reconnect",
+    "resume": "Resume sync",
+    "retry_hint": "Existing events are preserved. Check the cause, then sync again.",
+    "review": "Review pending items",
+    "review_hint": "Review pending events and recovery options in Troubleshooting.",
+    "select": "Choose calendars to import",
+    "wait_hint": "The service has limited requests. You can try again in {seconds} seconds."
+  },
+  "sync_redesign": {
+    "account_ready": "Choose which calendars to sync and which events to display.",
+    "address_copied": "Subscription address copied.",
+    "advanced": "Timezone · Automatic refresh",
+    "appearance_section": "Name and color",
+    "auto_refresh": "Refresh automatically",
+    "calendar_count": "{count} calendars",
+    "calendar_intro": "Select a calendar to choose how it appears and where new events are saved.",
+    "calendars_tab": "My calendars",
+    "check_needed": "Needs attention",
+    "connect_account": "Connect account",
+    "connection_settings": "Connection settings",
+    "connections_hint": "Connect an account or subscribe by address to bring in events.",
+    "connections_tab": "Connections and subscriptions",
+    "copy_address": "Copy address",
+    "current_default": "Default calendar for new events",
+    "default_badge": "New event default",
+    "default_hint": "This is the calendar selected when you create a new event.",
+    "display_section": "Display and save",
+    "display_timezone": "Calendar display timezone",
+    "fetch_busy": "Refreshing subscriptions…",
+    "fix_settings": "How to fix · Open settings",
+    "footer_hint": "Display and subscription changes are saved immediately.",
+    "google_hint": "Connect your Google events and shared calendars.",
+    "google_name_hint": "Rename this calendar in Google Calendar.",
+    "hidden_badge": "Hidden",
+    "hide_address": "Hide address",
+    "icloud_hint": "Connect events from Apple Calendar.",
+    "ics_auto_off_hint": "Automatic refresh is off for all ICS subscriptions. You can refresh this one below.",
+    "ics_empty": "Add an ICS address to import events. No Google sign-in is needed.",
+    "ics_hint": "Bring in shared events and holidays. Read-only access with no Google sign-in.",
+    "ics_paused": "Subscription refresh is paused. Resume it in My calendars.",
+    "ics_schedule": "Automatic refresh fetches new events every hour.",
+    "ics_title": "Subscribe by address",
+    "inactive_default": "Select this calendar in its connection settings first.",
+    "issue_guidance": "Your existing events are preserved. Sync again or check connection settings and subscription addresses.",
+    "issues_hint": "Select a connection with an issue to see the next step.",
+    "issues_tab": "Troubleshoot",
+    "issues_tab_count": "Troubleshoot ({count})",
+    "last_fetched": "Last refreshed: {time}",
+    "last_updated": "Last refreshed {time}",
+    "make_default": "Use for new events by default",
+    "manage_subscriptions": "Manage subscriptions",
+    "more_services": "Connect another service",
+    "naver_hint": "Import supported calendars with read-only access.",
+    "never_updated": "No events have been fetched yet.",
+    "no_issues": "There are no issues to resolve. Your connected calendars are ready to use.",
+    "not_connected": "Not connected",
+    "not_fetched": "No events have been fetched yet.",
+    "not_selected_badge": "Not selected for sync",
+    "outlook_hint": "Connect events from your Microsoft account.",
+    "overview": "{total} calendars · {visible} shown",
+    "paused_badge": "Refresh paused",
+    "private_address": "Private subscription address",
+    "readonly_default": "New events cannot be saved to a read-only calendar.",
+    "refresh": "Refresh",
+    "refresh_subscription": "Refresh this subscription now",
+    "remove_local": "Remove local calendar",
+    "remove_local_confirm": "Remove '{name}'? Existing events will remain as local copies.",
+    "remove_local_hint": "Existing events remain as local copies when you remove this calendar.",
+    "remove_subscription_hint": "Unsubscribing preserves the original calendar and the events already fetched.",
+    "resume_before_refresh": "Enable 'Refresh this subscription' first.",
+    "retry": "Sync again",
+    "retry_started": "Refreshing subscriptions with issues.",
+    "select_calendar": "Select a calendar",
+    "service_settings": "Choose calendars · Connection settings",
+    "show_address": "Show address",
+    "subscribe_url": "Subscribe by address",
+    "subscription_active": "Refresh this subscription",
+    "subscription_active_hint": "Included in automatic refresh. Choose whether its events appear separately above.",
+    "subscription_add": "Add subscription",
+    "subscription_add_title": "Subscribe to a calendar by address",
+    "subscription_address": "Subscription address: {address}",
+    "subscription_address_help": "Enter an iCal or ICS subscription address, rather than a calendar webpage. HTTP, HTTPS, and webcal addresses are supported.",
+    "subscription_address_invalid": "Check the address format. Use a subscription address beginning with HTTP, HTTPS, or webcal.",
+    "subscription_address_label": "1. Subscription address (required)",
+    "subscription_address_placeholder": "https://… or webcal://… subscription address",
+    "subscription_address_too_long": "The address is too long to paste. Copy the subscription address again from your calendar service.",
+    "subscription_address_valid": "The address format is valid. The connection result will be available after the subscription is fetched.",
+    "subscription_behavior": "Read only · No Google sign-in needed\nWith automatic sync enabled, the app checks for updates every hour while running.",
+    "subscription_clipboard_empty": "No address has been copied. First copy the subscription address from your calendar service.",
+    "subscription_edit_hint": "Changing the address keeps your current events, color, and display settings. Events update after the new feed loads successfully.",
+    "subscription_edit_title": "Edit subscription address and name",
+    "subscription_find_address": "Where can I find a subscription address?",
+    "subscription_guide_google": "In Google Calendar on the web, open Settings → choose your calendar → Integrate calendar, then copy the Secret address in iCal format. Public calendars can use the Public address in iCal format.",
+    "subscription_guide_icloud": "In iCloud Calendar on the web, choose calendar sharing → Public Calendar → Copy Link. You can also use webcal addresses.",
+    "subscription_guide_outlook": "In Outlook web settings, open Calendar → Shared calendars → Publish a calendar, then copy the ICS link. Publishing may be unavailable due to your organization's policy.",
+    "subscription_intro": "Bring in events using an iCal or ICS address copied from your calendar service.",
+    "subscription_name_help": "Choose a name you can easily recognize in Air Calendar. You can change it later.",
+    "subscription_name_label": "2. Calendar name (required)",
+    "subscription_name_placeholder": "For example: Family events, Company holidays",
+    "subscription_paste": "Paste",
+    "subscription_paste_accessible": "Paste the copied subscription address",
+    "subscription_paused_hint": "Refresh is paused. Events already fetched remain visible.",
+    "subscription_private_address": "Anyone who knows a private subscription address can view its events. Keep your private address to yourself.",
+    "subscription_required_fields": "Enter a subscription address and calendar name to continue.",
+    "subscription_save": "Save changes",
+    "subscription_section": "Subscription refresh",
+    "subscriptions_count": "{count} subscriptions",
+    "sync_available": "Sync the latest events from your connected calendars.",
+    "sync_now": "Sync now",
+    "sync_unavailable": "Connect a service or wait for the current refresh to finish.",
+    "unselected_hint": "This calendar is excluded from syncing. Select it in the connection settings to use it as the save location for new events.",
+    "unsubscribe": "Unsubscribe",
+    "unsubscribe_confirm": "Unsubscribe from '{name}'? Refresh will stop and the subscription will be removed from the list. Events already fetched will remain as local copies. The original calendar will be preserved.",
+    "wait_for_refresh": "Wait for the current subscription refresh to finish.",
+    "workspace_title": "Calendar management"
+  },
   "sync_ui": {
     "access_lost": "Access to a selected calendar was lost. Existing events were preserved. Refresh and select calendars again.",
+    "account_mismatch": "The connected account differs from the account linked to existing events. Reconnect the original account and review the calendar list. Existing events and unsent changes are preserved.",
+    "account_unverified": "Could not verify the account's primary calendar after sign-in. Your previous connection is preserved. Check your network and Google Calendar permissions, then sign in again.",
     "auth": "Authentication expired or the password is incorrect. Reconnect your account.",
     "auto_off": "Automatic sync off",
     "auto_on": "Automatic sync on",
     "busy": "This account is already syncing. Wait for completion.",
+    "calendar_timezone": "A subscribed event uses an unrecognized time zone. Check its time zone or subscription URL in the original calendar service. Existing events are preserved.",
     "cancelled": "The operation was cancelled. Existing events are preserved.",
     "changed": "The remote event changed first. Sync again and compare both versions.",
     "compare_hint": "Select a conflict to compare your changes with the service version.",
@@ -2458,6 +2590,7 @@
     "hub_title": "Calendars / accounts and synchronization",
     "icloud_capability": "Two-way personal events; app-specific password",
     "ics_fetch": "Could not refresh this subscription. Check its URL and your internet connection, then sync again.",
+    "identity_changed": "Outro evento agora ocupa este endereço do servidor. As alterações foram pausadas. Verifique o evento no serviço original.",
     "incomplete": "Some event responses were missing. This sync was stopped. Try again.",
     "invalid_data": "The service returned invalid event data. This sync was not applied.",
     "invalid_response": "The service response could not be read. Check the account and service status.",
@@ -2471,6 +2604,7 @@
     "not_connected": "Not connected",
     "other_services": "Connect Outlook / iCloud / Naver",
     "outlook_capability": "Two-way events; Microsoft app registration required initially",
+    "partial": "Some events need attention after sync. Review pending items in the Troubleshooting tab.",
     "permission": "Calendar access was denied. Check account permissions and service support.",
     "protection": "Windows credential encryption failed. Check your Windows user environment.",
     "rate_limit": "The service request limit was reached. Automatic retry intervals have increased. Try again later.",
@@ -2480,6 +2614,7 @@
     "recurrence_edit": "Configure recurrence rules in the original service.",
     "remote": "Service version",
     "remote_deleted": "This event was deleted in the service. The local copy was preserved.",
+    "remote_event": "An event from the service has an invalid format, so importing it was paused. Check its dates and times in the original service, then sync again.",
     "save_timezone": "Save timezone",
     "server": "The service is temporarily unavailable. Events are preserved and sync will retry later.",
     "stale_conflict": "The event changed again after comparison. Sync again and compare the latest versions.",
@@ -2490,12 +2625,12 @@
     "unsafe": "An untrusted server address was returned. The connection was stopped.",
     "unsupported_service": "The service does not allow this connection method. Check its support policy.",
     "wait_timezone": "Wait for the current synchronization to finish before changing the timezone.",
-    "working": "Working...",
-    "identity_changed": "Outro evento agora ocupa este endereço do servidor. As alterações foram pausadas. Verifique o evento no serviço original."
+    "working": "Working..."
   },
   "sync_unified": {
     "add_ics": "Add ICS subscription",
     "add_local": "Add local calendar",
+    "all_services": "All services",
     "attention": "Sync needs attention",
     "auto": "Automatic sync",
     "auto_pause": "Turn all automatic sync off",
@@ -2510,28 +2645,53 @@
     "connected_count": "{count} connected",
     "default": "Set as default save destination",
     "default_marker": "Default",
+    "edit_ics": "Editar URL da assinatura",
     "exists": "This calendar is already registered.",
+    "filter_service": "Filter by service",
+    "google_busy": "Wait for the current Google operation to finish, then try again.",
+    "google_calendar_scope": "Choose the Google write destination here. Manage local and ICS calendars, visibility, colors and the default save destination in All calendars.",
+    "google_loading": "Checking Google calendar information. Closing this window cancels the operation.",
+    "google_query_failed": "Could not load Google calendar information. Check your network and account permissions, then try again.",
+    "google_readonly_target": "Events cannot be saved to a read-only calendar. Choose a calendar with write permission.",
     "google_settings": "Google Calendar settings",
+    "google_target_missing": "Account access succeeded, but the selected calendar was not found. Select it again from the list.",
+    "google_write_target": "Google write destination",
     "ics": "ICS subscriptions",
+    "ics_access_denied": "Acesso negado. Confira o compartilhamento ou gere uma nova URL ICS e edite a URL da assinatura.",
+    "ics_add_hint": "Import events from a subscription URL as read-only. Google sign-in is not required.",
     "ics_capability": "Shared subscription URL · read-only",
+    "ics_empty": "Nenhuma assinatura. Adicione uma URL ICS; não é necessário entrar no Google.",
     "ics_failed": "ICS subscriptions could not be refreshed. Check subscription URLs in All calendars and sync again.",
+    "ics_not_found": "URL não encontrada ou expirada. Obtenha a URL ICS atual e edite a URL da assinatura.",
+    "ics_rate_limited": "O servidor limitou as solicitações. Os eventos existentes foram preservados. Aguarde e sincronize novamente.",
+    "ics_server_error": "Erro temporário no servidor da assinatura. Os eventos existentes foram preservados. Aguarde e sincronize novamente.",
+    "ics_too_large": "The subscription file is too large. Reduce its event range in the original service and try again.",
     "ics_url": "Calendar subscription URL",
+    "ics_url_hint": "HTTP, HTTPS and webcal URLs are supported.",
     "inactive": "Sync deselected",
-    "invalid_ics": "Enter an HTTP or HTTPS calendar subscription URL.",
+    "invalid_ics": "Enter an HTTP, HTTPS or webcal calendar subscription URL.",
     "issue_count": "{count} issues need attention",
     "issues": "All sync issues",
     "issues_hint": "Select a service to compare conflicts or review failed operations. Other services can keep syncing.",
     "local": "Local",
     "local_only": "Local mode",
+    "manage_all": "Manage all calendars",
+    "manage_ics": "Adicionar · gerenciar assinaturas",
     "menu": "Calendars and sync",
+    "name_required": "Enter a calendar name.",
+    "no_calendar_matches": "No calendars to display. Check your search and service filter, or add a calendar.",
     "no_issues": "No sync issues need attention.",
     "open_issue": "Review and resolve in selected service",
+    "read_only_hint": "This calendar is read-only. Edit its events in the original service. It cannot be a default save destination.",
+    "refresh_started": "Refreshing the selected subscription.",
     "refresh_subscription": "Sync ICS subscriptions again",
     "remove_calendar": "Remove from local list",
     "remove_confirm": "Remove this calendar from the list? Existing events remain as local copies. Service originals will not be deleted.",
     "rename": "Rename",
     "review_issues": "Review issues",
     "running": "Syncing {count}",
+    "search_calendars": "Search calendar names",
+    "select_calendar_hint": "Select a calendar to manage its visibility, color, default destination and subscription.",
     "select_first": "Select calendars to import and save your selection.",
     "service_settings": "Service selection and settings",
     "services": "Services and sync",
@@ -2539,7 +2699,10 @@
     "show_calendar": "Show in calendar views",
     "subscription_active": "Sync this ICS subscription",
     "sync_all": "Sync all connected calendars",
-    "welcome": "Use local calendars immediately. Connect Google, Outlook, iCloud, Naver or ICS calendars whenever you need them."
+    "sync_not_started": "Could not start sync. Check the connection and any operations in progress.",
+    "sync_started_services": "Sync started: {services}",
+    "welcome": "Use local calendars immediately. Connect Google, Outlook, iCloud, Naver or ICS calendars whenever you need them.",
+    "writable_hint": "You can save events in this calendar and choose it as your default destination."
   },
   "system_msg": {
     "already_running": "Já em execução.",
@@ -2651,13 +2814,31 @@
       "storm": "Tempestade"
     },
     "error": {
+      "busy": "Serviço de meteorologia ocupado; aguardando nova tentativa",
+      "denied": "Acesso ao serviço de meteorologia negado",
       "location_not_found": "Local não encontrado",
       "network": "Erro de rede",
       "parse_failed": "Erro de análise de dados",
-      "timeout": "A solicitação expirou",
-      "busy": "Serviço de meteorologia ocupado; aguardando nova tentativa",
-      "denied": "Acesso ao serviço de meteorologia negado"
+      "timeout": "A solicitação expirou"
     }
+  },
+  "week_planner": {
+    "accessible_help": "Click or drag an empty time to add an event. Drag events to move them, and drag their bottom edge to resize. Use the arrow keys to select an event and Enter to open it.",
+    "accessible_name": "Weekly time grid",
+    "all_day": "All day",
+    "create_hint": "Click or drag an empty time to add an event.",
+    "current_time": "Current time",
+    "current_time_hint": "Keep the selected date and scroll to the current time of day.",
+    "duration": "{minutes} min",
+    "help": "How to use",
+    "open": "Open event",
+    "read_only": "Read only",
+    "recurring_hint": "Change recurring events in the event editor.",
+    "recurring_title": "Recurring event",
+    "time_view": "Time grid",
+    "toggle_hint": "Switch between the time grid and the date list.",
+    "untitled": "Untitled",
+    "work_start_hint": "Scroll to 9:00 AM."
   },
   "weekday": {
     "fri": "Sex",
@@ -3463,13 +3644,88 @@
       "template_confirm": "Replace the keys on this page with the selected layout?",
       "template_confirm_title": "Change layout",
       "theme": {
+        "arctic_glass": "Arctic Glass",
+        "aurora_glass": "Aurora Glass",
+        "cobalt_arcade": "Cobalt Arcade",
+        "copper_dusk": "Copper Dusk",
+        "cream_typewriter": "Cream Typewriter",
         "crystal_night": "Crystal Night",
+        "cyber_pulse": "Cyber Pulse",
+        "desert_sand": "Desert Sand",
         "floating_glass": "Floating Glass",
+        "forest_sage": "Forest Sage",
         "frost_paper": "Frost Paper",
         "graphite_pbt": "Graphite PBT",
+        "lavender_mist": "Lavender Mist",
+        "midnight_navy": "Midnight Navy",
+        "ocean_blue": "Ocean Blue",
+        "olive_workshop": "Olive Workshop",
+        "porcelain": "Porcelain",
         "pudding_pop": "Pudding Pop",
+        "sakura_bloom": "Sakura Bloom",
+        "slate": "Slate",
         "smoke_neon": "Smoke Neon",
+        "synthwave": "Synthwave",
+        "terminal_green": "Terminal Green",
         "walnut_studio": "Walnut Studio"
+      },
+      "theme_category": {
+        "glass": "Glass",
+        "minimal": "Minimal",
+        "nature": "Nature",
+        "neon": "Neon",
+        "pastel": "Pastel",
+        "retro": "Retro"
+      },
+      "theme_description": {
+        "arctic_glass": "Cool silver with thin, frost-tinted keycaps",
+        "aurora_glass": "Glass keycaps filled with mint and violet auroras",
+        "cobalt_arcade": "Round cobalt keys with yellow arcade buttons",
+        "copper_dusk": "A copper-toned case with deep vintage keycaps",
+        "cream_typewriter": "Classic typewriter styling with round cream keys",
+        "crystal_night": "Transparent crystal keycaps in a deep night case",
+        "cyber_pulse": "Thin floating keycaps with reactive three-color neon",
+        "desert_sand": "Sand-colored PBT with terracotta accent keys",
+        "floating_glass": "Low glass keycaps floating without a case",
+        "forest_sage": "Calm sage keycaps on a forest-toned wood case",
+        "frost_paper": "Soft paper pastels under translucent keycaps",
+        "graphite_pbt": "Matte graphite with a vivid orange accent",
+        "lavender_mist": "Low pudding keycaps wrapped in lavender light",
+        "midnight_navy": "Deep navy with champagne-gold accent keys",
+        "ocean_blue": "Translucent ocean keycaps with teal gradients",
+        "olive_workshop": "Olive keycaps with warm brass accents",
+        "porcelain": "Clean ivory tones with broad porcelain-like keycaps",
+        "pudding_pop": "Rounded pudding keycaps in playful pastels",
+        "sakura_bloom": "Cherry-blossom gradients on deep, rounded keycaps",
+        "slate": "Thin slate keycaps with restrained sage accents",
+        "smoke_neon": "Smoked keycaps lit by pink and cyan neon",
+        "synthwave": "Tall smoked keycaps in a pink and purple nightscape",
+        "terminal_green": "Green legends and lighting on a dark terminal palette",
+        "walnut_studio": "Walnut wood with warm ivory keycaps"
+      },
+      "themes": {
+        "affected": "Applies to {count} keys",
+        "all": "All themes",
+        "apply": "Apply theme",
+        "category": "Theme category",
+        "count": "{shown} / {total} themes",
+        "current": "Current theme: {name}",
+        "custom": "Custom",
+        "empty": "No themes match. Try another search or select all themes.",
+        "empty_preview": "This page is empty, so a sample layout is shown. Sample keys will not be added.",
+        "heading": "Find a theme for your KeyDeck",
+        "hint": "Choose a theme to preview your current layout. Your deck changes only when you apply it.",
+        "list": "Theme list",
+        "open_tip": "Theme gallery · Search, preview and choose where to apply",
+        "preserve": "Layouts, labels, actions and your images are preserved. Undo the theme with Ctrl+Z.",
+        "preview": "Current page preview",
+        "scope": "Apply to",
+        "scope_deck": "Entire deck",
+        "scope_page": "Current page",
+        "scope_selection": "Selected keys ({count})",
+        "search": "Search theme names or styles",
+        "select_keys": "Select keys on the current page first.",
+        "title": "Theme gallery"
       },
       "title": "KEYDECK",
       "unassigned_hint": "No action yet. Right-click → Edit key to assign one.",
@@ -3523,6 +3779,28 @@
       "none": "None · Text only",
       "paper_seasons": "Paper Seasons · Layered paper"
     },
+    "placement": {
+      "aspect": "Keep aspect ratio",
+      "gesture_help": "Shift: keep ratio · Alt: bypass snapping · Right-click: undo last placement",
+      "heading": "A comfortable place, a size that fits",
+      "height": "Height",
+      "help": "Drag freely or enter precise values below. Changes are saved when you apply them.",
+      "keydeck_note": "KeyDeck scales while preserving the shape of its keys.",
+      "lock": "Lock position and size",
+      "lock_help": "Only moving and resizing are locked. Widget buttons and content remain usable.",
+      "move_help": "Drag an empty part of the header to move. Right-click to adjust position and size.",
+      "resize": "Resize",
+      "resize_help": "Drag the corner to resize.",
+      "revert": "Restore opening values",
+      "screen": "Fit within screen",
+      "snap": "Snap to nearby edges",
+      "step_help": "Arrow keys: 1px · Shift+arrow keys: 10px",
+      "title": "Position and size",
+      "undo": "Undo last placement",
+      "width": "Width",
+      "x": "Horizontal position",
+      "y": "Vertical position"
+    },
     "preset": {
       "add": "Salvar como novo",
       "apply": "Aplicar",
@@ -3532,6 +3810,20 @@
       "empty_template": "Introduza a template first.",
       "invalid_preview": "Fix the template syntax to display a preview.",
       "invalid_template": "Check the template syntax:\n{details}",
+      "issue_invalid_alignment": "Use left, center, or right for alignment.",
+      "issue_invalid_color": "Check the color alias or #RRGGBB format.",
+      "issue_invalid_condition": "Check the variable, comparison operator, and value.",
+      "issue_invalid_condition_variable": "This widget does not support this condition variable.",
+      "issue_invalid_line_height": "Use a positive number for line height.",
+      "issue_invalid_size": "Use a number, ratio, or base for the size.",
+      "issue_nested_condition": "Nested conditions are not supported.",
+      "issue_unbalanced_brace": "Match the opening and closing braces.",
+      "issue_unclosed_condition": "Add {/if} to close the condition.",
+      "issue_unexpected_else": "An if condition must precede else.",
+      "issue_unexpected_end_if": "An if condition must precede /if.",
+      "issue_unknown_hint": "This style option is not supported.",
+      "issue_unknown_variable": "This widget does not support this variable.",
+      "issue_unknown_widget": "Check the widget type.",
       "kind_builtin": "Integrado",
       "kind_user": "Usuário",
       "legacy_copy_suffix": "(User copy)",
@@ -3539,10 +3831,26 @@
       "name_exists": "Já existe uma predefinição de usuário com esse nome.",
       "name_label": "Nome:",
       "name_title": "Nome do preset",
+      "preview_failed": "Unable to display the preview. Check the variables and formats.",
       "rename": "Renomear",
       "select_hint": "Escolher preset",
+      "syntax_issue": "At {{{token}}}: {reason}",
       "update": "Atualizar preset",
       "warning_title": "Predefinido"
+    },
+    "shadow": {
+      "blur": "Softness",
+      "color": "Shadow color",
+      "distance": "Distance",
+      "enabled": "Enable text shadow",
+      "hint": "Adds a shadow to text while preserving the background and border.",
+      "off": "Off",
+      "opacity": "Strength",
+      "preview": "Today's schedule",
+      "settings": "Shadow settings…",
+      "soft": "Subtle",
+      "strong": "Strong",
+      "title": "Text shadow"
     },
     "shape": {
       "capsule": "Capsule",
@@ -3602,37 +3910,166 @@
         "tag": "Tags - rótulos embutidos"
       }
     },
+    "usage": {
+      "copy_date": "Copy today's date",
+      "copy_text": "Copy displayed text",
+      "timezone": "Quick time zone",
+      "undo_reset": "Undo reset"
+    },
     "weather": {
       "asset_pack": "Illustration pack:",
       "asset_pack_air_soft": "Air Soft · Soft 3D",
       "asset_pack_classic": "Classic · Original icons",
+      "asset_pack_flat_weather": "Flat · Clear colors",
       "asset_pack_help": "Artwork changes automatically for the current weather and time of day.",
       "asset_pack_mono_atmosphere": "Mono Atmosphere · Crisp minimal",
+      "asset_pack_neon_weather": "Neon · Glowing weather",
+      "asset_pack_orbit_weather": "Orbit · Orbital badges",
+      "asset_pack_outline_weather": "Outline · Line art",
       "asset_pack_paper_weather": "Paper Weather · Layered paper",
+      "asset_pack_pixel_weather": "Pixel · Pixel art",
+      "asset_pack_vintage_weather": "Vintage · Engraved illustrations",
       "asset_preview": "Illustration preview",
+      "cached": "Último clima salvo",
+      "design": {
+        "amber_bulletin": "Amber Bulletin",
+        "aurora_panel": "Aurora Panel",
+        "candy_cloud": "Candy Cloud",
+        "clear_line": "Clear Line",
+        "contrast_card": "Contrast Card",
+        "coral_coast": "Coral Coast",
+        "crystal_band": "Crystal Band",
+        "cyan_pulse": "Cyan Pulse",
+        "desert_note": "Desert Note",
+        "gold_observatory": "Gold Observatory",
+        "ivory_ledger": "Ivory Ledger",
+        "moon_glass": "Moon Glass",
+        "night_signal": "Night Signal",
+        "ocean_window": "Ocean Window",
+        "paper_weather": "Paper Weather",
+        "pixel_board": "Pixel Board",
+        "quiet_mono": "Quiet Mono",
+        "sage_card": "Sage Card",
+        "soft_capsule": "Soft Capsule",
+        "soft_cloud": "Soft Cloud",
+        "sticker_weather": "Sticker Weather",
+        "temperature_type": "Temperature Type",
+        "terminal_station": "Terminal Station",
+        "violet_orbit": "Violet Orbit"
+      },
+      "design_category": {
+        "editorial": "Editorial",
+        "glass": "Glass",
+        "minimal": "Minimal",
+        "nature": "Nature",
+        "neon": "Neon and digital",
+        "playful": "Pop and illustration"
+      },
+      "design_description": {
+        "amber_bulletin": "An amber poster with pixel weather illustrations",
+        "aurora_panel": "Weather and humidity on a violet glass panel",
+        "candy_cloud": "A coral circular badge with playful flat clouds",
+        "clear_line": "A single line of weather with a transparent background",
+        "contrast_card": "Strong contrast and bold flat illustrations",
+        "coral_coast": "A horizontal information card in warm coastal colors",
+        "crystal_band": "Fine outline icons on a light horizontal capsule",
+        "cyan_pulse": "Bright cyan neon illustrations on a crisp night card",
+        "desert_note": "A sandy weather note with vintage illustrations",
+        "gold_observatory": "A classic observation badge with a golden border",
+        "ivory_ledger": "A warm weather record with information aligned to the left",
+        "moon_glass": "Orbit illustrations inside a round glass face",
+        "night_signal": "Glowing weather illustrations on a dark horizontal face",
+        "ocean_window": "A vertical blue glass window with soft 3D weather",
+        "paper_weather": "Layered paper illustrations on a vertical poster",
+        "pixel_board": "A compact pixel information board inspired by game screens",
+        "quiet_mono": "A restrained monochrome card focused on temperature",
+        "sage_card": "A quiet forest-colored card with fine outline icons",
+        "soft_capsule": "Soft 3D weather and temperature side by side on a light capsule",
+        "soft_cloud": "Soft 3D clouds on a calm vertical glass card",
+        "sticker_weather": "A light card centered on a large paper illustration",
+        "temperature_type": "Large clear temperature figures with a small city caption",
+        "terminal_station": "A small weather station in green monospace type",
+        "violet_orbit": "Orbit weather illustrations on a violet circular face"
+      },
+      "design_gallery": "Choose weather design…",
+      "designs": {
+        "all": "All designs",
+        "apply": "Apply design",
+        "category": "Design category",
+        "count": "{shown} / {total} designs",
+        "current": "Current design: {name}",
+        "custom": "Custom",
+        "empty": "No designs match. Try another search or category.",
+        "heading": "A new way to display the weather",
+        "hint": "Preview illustrations, layouts and appearance together. Your widget changes only when you apply a design.",
+        "list": "Weather design list",
+        "preserve": "Your city, temperature units, refresh interval and screen position are preserved.",
+        "preview": "Design preview",
+        "preview_note": "Saved weather is shown on a sample background. Resize the actual widget after applying.",
+        "search": "Search design names or styles",
+        "title": "Weather design gallery"
+      },
       "error": {
         "location_not_found": "Local não encontrado",
         "network": "Erro de rede",
         "parse_failed": "Erro de análise de dados",
         "timeout": "A solicitação expirou"
       },
+      "forecast_source": "Weather data",
+      "loading": "Carregando o clima…",
       "location": "Localização:",
       "location_placeholder": "Seul",
+      "location_source": "City location data",
+      "preset_city_focus": "City Focus",
+      "preset_compact_inline": "Compact Inline",
+      "preset_daily_card": "Daily Card",
+      "preset_default": "Default",
+      "preset_desc_card": "Desc Card",
+      "preset_full": "Full Info",
+      "preset_hero_icon": "Hero Illustration",
+      "preset_horizontal_bar": "Horizontal Bar",
+      "preset_humidity_focus": "Humidity Focus",
+      "preset_icon_temp": "Icon + Temp",
+      "preset_mini_dashboard": "Mini Dashboard",
+      "preset_minimal_icon": "Minimal Icon",
+      "preset_night_card": "Night Card",
+      "preset_rain_focus": "Weather Conditions",
+      "preset_temp_only": "Temp Only",
+      "preset_temperature_badge": "Temperature Badge",
+      "preset_travel_city": "Travel City",
+      "preset_wide_weather": "Wide Weather",
+      "preset_wind_focus": "Wind Focus",
+      "preset_wind_humidity": "Wind & Humidity",
+      "refresh_every": "A cada {min} min",
       "refresh_interval": "Atualizar:",
       "refresh_min": "min",
+      "refresh_now": "Recarregar o clima",
+      "retry_in": "Tentar novamente em {min} min",
       "settings": "Weather Definicoes...",
       "settings_title": "Weather Definicoes",
       "source_attribution": "MET Noruega · GeoNames",
-      "template_hint": "Variables: {city} {temp} {unit} {desc} {icon}",
+      "sources_changes": "Air Calendar extracts data for city lookup and weather display, and converts units and display formats.",
+      "sources_disclaimer": "The data is provided without a warranty of accuracy, timeliness or completeness.",
+      "sources_license": "Data license",
+      "sources_policy": "Terms of use",
+      "sources_title": "Weather data sources",
+      "stale": "Exibindo o clima anterior · {error}",
+      "style": {
+        "banner": "Banner · Left accent",
+        "compact": "Compact · Smaller padding",
+        "default": "Default · Card",
+        "glass": "Glass · Transparent look",
+        "minimal": "Minimal · No border",
+        "neon": "Neon · Thick border",
+        "outlined": "Outlined · No background",
+        "pill": "Pill · Rounded corners",
+        "retro": "Retro · Double border",
+        "sticky": "Sticky · Note style"
+      },
+      "template_hint": "Variables: {city} {temp} {unit} {desc} {icon} {humidity} {wind}",
       "unit": "Unidade:",
       "unit_c": "Celsius (°C)",
       "unit_f": "Fahoraenheit (°F)",
-      "cached": "Último clima salvo",
-      "loading": "Carregando o clima…",
-      "refresh_every": "A cada {min} min",
-      "refresh_now": "Recarregar o clima",
-      "retry_in": "Tentar novamente em {min} min",
-      "stale": "Exibindo o clima anterior · {error}",
       "updated": "Atualizado: {time}"
     }
   },

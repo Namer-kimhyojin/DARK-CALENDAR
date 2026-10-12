@@ -68,7 +68,7 @@ def file_stamp(path: str) -> tuple[int, int] | None:
         return None
     try:
         stat = os.stat(path)
-    except OSError:
+    except (OSError, ValueError):
         return None
     return (stat.st_mtime_ns, stat.st_size)
 

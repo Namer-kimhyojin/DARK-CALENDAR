@@ -10,6 +10,10 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.dialogs.sync_feedback import (
+    google_sync_error_code,
+    sync_error_message,
+)
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 
@@ -19,8 +23,26 @@ _SYNC_OUTCOME_FAILED = "failed"
 _SYNC_OUTCOME_SKIPPED = "skipped"
 
 
+def _sync_failure_message(app):
+    """Show the diagnosed cause without exposing worker tracebacks or API payloads."""
+    sync = getattr(app, "gcal_sync", None)
+    code = getattr(app, "_last_gcal_sync_error", None) or getattr(sync, "last_error_kind", None)
+    return sync_error_message(
+        google_sync_error_code(code, getattr(sync, "last_error_status", None))
+    )
+
+
 class GCalActionsMixin:
     def _sync_worker_running(self):
+        if self._auth_worker_running():
+            return True
+
+        for job in getattr(self, "_bg_workers", []):
+            try:
+                if getattr(job, "provider", None) == "google" and job.isRunning():
+                    return True
+            except RuntimeError:
+                continue
         worker = getattr(self, "_sync_worker", None)
 
         if worker is None:
@@ -54,8 +76,10 @@ class GCalActionsMixin:
 
     def _release_auth_worker(self, *args):
         self._auth_worker = None
+        self.update_sync_status()
 
     def _on_auth_finished(self, success, message):
+        self.update_gcal_sync_timer()
         self.update_sync_status()
 
         if not success:
@@ -110,7 +134,12 @@ class GCalActionsMixin:
         self.update_gcal_sync_timer()
 
     def update_gcal_sync_timer(self):
-        interval_mins = int(self.settings.value("gcal_sync_interval", "10"))
+        try:
+            interval_mins = int(self.settings.value("gcal_sync_interval", "10"))
+        except (TypeError, ValueError):
+            interval_mins = 10
+        # Preserve the legacy zero interval while bounding Qt's millisecond timer.
+        interval_mins = max(0, min(240, interval_mins))
 
         enabled = is_gcal_enabled(self.settings)
 
@@ -122,7 +151,7 @@ class GCalActionsMixin:
         except (TypeError, ValueError):
             quick_interval_secs = 30
 
-        quick_interval_secs = max(5, quick_interval_secs)
+        quick_interval_secs = max(5, min(300, quick_interval_secs))
 
         self._gcal_quick_interval_secs = quick_interval_secs
 
@@ -216,15 +245,22 @@ class GCalActionsMixin:
     def refresh_gcal_sync_state(self, authenticate_silently=True):
         """구글 동기화 상태 갱신 (백그라운드 워커 사용)"""
 
+        if not is_gcal_enabled(self.settings):
+            return self.refresh_gcal_sync_state_internal(authenticate_silently=False)
+
+        if self._auth_worker_running():
+            return False
+
+        sync = getattr(self, "gcal_sync", None)
+        if sync and getattr(sync, "is_authenticated", False):
+            return self.refresh_gcal_sync_state_internal(authenticate_silently=False)
+
         import os
 
         from calendar_app.app_paths import TOKEN_PATH
         from calendar_app.shared.background_worker import AuthWorker
 
         if authenticate_silently and os.path.exists(TOKEN_PATH):
-            if self._auth_worker_running():
-                return
-
             worker = AuthWorker(self)
 
             self._auth_worker = worker
@@ -245,29 +281,20 @@ class GCalActionsMixin:
 
         enabled = is_gcal_enabled(self.settings)
 
-        _raw_cal = str(self.settings.value("gcal_calendar_id", "") or "").strip()
-        if not _raw_cal or _raw_cal == "primary":
-            from calendar_app.infrastructure.google_sync.common import get_default_gcal_calendar_id
-
-            _raw_cal = get_default_gcal_calendar_id()
-        cal_id = _raw_cal
-
-        tz = self.settings.value("gcal_timezone", "Asia/Seoul")
-
         if not enabled:
-            if hasattr(self, "gcal_sync") and self.gcal_sync:
-                self.gcal_sync.is_authenticated = False
-
-                self.gcal_sync.service = None
-
-            self.gcal_sync = None
-
+            # Pausing sync preserves the connection; explicit disconnect owns cleanup.
             if update_ui:
                 self.update_gcal_sync_timer()
 
                 self.update_sync_status()
 
             return False
+
+        from calendar_app.infrastructure.google_sync.common import get_default_gcal_calendar_id
+
+        cal_id = get_default_gcal_calendar_id(self.settings)
+
+        tz = self.settings.value("gcal_timezone", "Asia/Seoul")
 
         try:
             import os
@@ -380,13 +407,17 @@ class GCalActionsMixin:
 
         self.settings.setValue("gcal_enabled", "true" if enabled else "false")
 
-        authenticated = self.refresh_gcal_sync_state(authenticate_silently=enabled)
+        self.refresh_gcal_sync_state(authenticate_silently=enabled)
+        sync = getattr(self, "gcal_sync", None)
+        authenticated = bool(
+            sync and getattr(sync, "is_authenticated", False) and not self._auth_worker_running()
+        )
 
         # Keep UI/data visibility consistent with integration state immediately.
         if hasattr(self, "schedule_panel_refresh"):
             self.schedule_panel_refresh(left=True, center=True)
 
-        if enabled and hasattr(self, "sync_google_calendar_silent"):
+        if enabled and authenticated and hasattr(self, "sync_google_calendar_silent"):
             from PyQt6.QtCore import QTimer
 
             QTimer.singleShot(300, self.sync_google_calendar_silent)
@@ -487,22 +518,22 @@ class GCalActionsMixin:
 
     def sync_google_calendar(self, silent=False):
         if getattr(self, "_is_shutting_down", False):
-            return
+            return False
 
         if not silent:
             setup_state = self._manual_sync_setup_state()
             if setup_state == "disabled":
                 self.notify_gcal_setup_needed(disabled=True)
-                return
+                return False
             if setup_state == "not_configured":
                 self.notify_gcal_setup_needed(disabled=False)
-                return
+                return False
 
         if not is_gcal_enabled(self.settings):
             if not silent:
                 self.notify_gcal_setup_needed(disabled=True)
 
-            return
+            return False
 
         if not hasattr(self, "gcal_sync") or self.gcal_sync is None:
             self.refresh_gcal_sync_state(authenticate_silently=True)
@@ -517,7 +548,7 @@ class GCalActionsMixin:
                     t("gcal.sync_already_running", "이미 구글 동기화가 진행 중입니다."),
                 )
 
-            return
+            return False
 
         self._sync_worker = SyncWorker(self, silent=silent)
 
@@ -530,6 +561,7 @@ class GCalActionsMixin:
         self._sync_worker.start()
 
         self.update_sync_status()
+        return True
 
     def _handle_gcal_sync_success(self):
         """GCal 동기화 성공 시 공통 처리 (자동/수동 공유).
@@ -577,7 +609,13 @@ class GCalActionsMixin:
             if outcome == "skipped":
                 logger.debug("GCal sync skipped: %s", message)
             else:
+                if getattr(self, "_last_gcal_sync_changed_any", False):
+                    self.schedule_panel_refresh(
+                        left=getattr(self, "_last_gcal_sync_refresh_left", False),
+                        center=True,
+                    )
                 self._increase_gcal_failure_backoff()
+                message = _sync_failure_message(self)
 
                 if outcome == _SYNC_OUTCOME_FAILED:
                     logger.warning("GCal Sync Failure: %s", message)
@@ -618,6 +656,15 @@ class GCalActionsMixin:
             ):
                 win.load_rows()
 
+        if (
+            not success
+            and getattr(self, "_last_gcal_sync_outcome", None) != _SYNC_OUTCOME_SKIPPED
+            and getattr(self, "_last_gcal_sync_changed_any", False)
+        ):
+            self.schedule_panel_refresh(
+                left=getattr(self, "_last_gcal_sync_refresh_left", False), center=True
+            )
+
         if success:
             if (
                 stats.get("push_failures")
@@ -655,6 +702,7 @@ class GCalActionsMixin:
 
             self._increase_gcal_failure_backoff()
 
+            message = _sync_failure_message(self)
             QMessageBox.warning(self, t("gcal.sync_failed", "Sync Failed"), message)
 
             self._show_sync_issue_popup(message)
@@ -692,25 +740,11 @@ class GCalActionsMixin:
         popup.show()
 
     def _sync_ics_calendars(self):
-        """ICS 구독 캘린더를 백그라운드에서 fetch하여 DB에 저장합니다."""
-
-        if getattr(self, "_is_shutting_down", False):
-            return
-
-        try:
-            from calendar_app.infrastructure.ics.ics_fetcher import sync_all_ics_calendars
-
-            results = sync_all_ics_calendars()
-
-            if any(r[0] > 0 or r[1] > 0 for r in results.values()) and hasattr(
-                self, "schedule_panel_refresh"
-            ):
-                self.schedule_panel_refresh(center=True)
-
-        except Exception as e:
-            import logging
-
-            logging.getLogger(__name__).warning(f"ICS sync error: {e}")
+        """Legacy entry point delegates to the common background worker."""
+        coordinator = getattr(self, "_calendar_sync_coordinator", None)
+        if coordinator:
+            return coordinator.sync_ics()
+        return None
 
     def open_gcal_settings_dialog(self, initial_tab: str | None = None, from_sync_hub=False):
         from calendar_app.presentation.dialogs.gcal_settings_dialog import GCalSettingsDialog
@@ -726,6 +760,7 @@ class GCalActionsMixin:
         coordinator = getattr(self, "_calendar_sync_coordinator", None)
         if coordinator:
             coordinator.refresh()
+        return dlg.property("returnToCalendars") is True
 
     def open_gcal_sync_issues_dialog(self, checked=False):
         from calendar_app.presentation.dialogs.gcal_sync_issues_dialog import GCalSyncIssuesDialog

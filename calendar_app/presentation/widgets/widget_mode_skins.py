@@ -216,6 +216,10 @@ def _read_user_style_document(path: Path) -> dict[str, object]:
         return {"version": 1, "skins": [], "layouts": []}
     if not isinstance(payload, dict):
         return {"version": 1, "skins": [], "layouts": []}
+    for collection in ("skins", "layouts"):
+        if not isinstance(payload.get(collection, []), list):
+            logger.warning("Invalid widget-mode %s collection; ignoring it", collection)
+            payload[collection] = []
     return payload
 
 
@@ -239,7 +243,7 @@ def load_user_widget_styles(path: Path | None = None) -> tuple[int, int]:
             layout = WidgetModeLayout(**raw)
             register_widget_mode_layout(layout, replace=True)
             loaded_layouts += 1
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             logger.warning("Ignoring invalid user widget layout", exc_info=True)
     for raw in document.get("skins", []):
         if not isinstance(raw, dict):

@@ -41,6 +41,7 @@ from calendar_app.presentation.widgets.keydeck.model import (
 )
 from calendar_app.presentation.widgets.keydeck.renderer import DeckGeometry
 from calendar_app.presentation.widgets.overlay_base import _BaseOverlayWidget, _GripFrame
+from calendar_app.presentation.widgets.widget_placement import resize_region_at
 from calendar_app.shared.app_lifecycle import is_app_exiting
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
@@ -76,6 +77,7 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
     def __init__(self, owner):
         self._deck_data: dict | None = None
         self._canvas: KeyDeckCanvas | None = None
+        self._live_scale_percent: int | None = None
         self._studio = None
         super().__init__(owner)
         # 실물 매크로 패드처럼 창이 포커스를 가져가지 않아야 단축키가 작업 중인 앱으로 간다.
@@ -221,25 +223,40 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
 
     # -- resize = zoom ------------------------------------------------------------
 
+    def _resize_corner_at(self, local_pos: QPoint) -> str | None:
+        geometry = self._canvas.renderer.geometry if self._canvas is not None else None
+        margin = int(geometry.margin) if geometry is not None else 0
+        return resize_region_at(
+            local_pos,
+            self.face.rect(),
+            corner_size=max(30, margin + 16),
+            edge_width=margin + 12,
+        )
+
     def _fit_font_to_size(self, target_w, target_h, *, live: bool = False):
         canvas = self._canvas
         if canvas is None or self._deck_data is None:
             return
+        requested_size = QSize(max(1, int(target_w)), max(1, int(target_h)))
+        scale = canvas.fitted_scale(requested_size.width(), requested_size.height())
+        percent = max(60, min(220, int(round(scale * 100))))
+        if not live and self._live_scale_percent is not None and requested_size == self.size():
+            # Rounded geometry can differ from the mathematical aspect ratio by a pixel.
+            # Commit the preview zoom rather than shrinking it again on mouse release.
+            percent = self._live_scale_percent
         if live:
-            self._release_layout_constraints()
-            canvas.set_live_box(QSize(int(target_w), int(target_h)))
-            self.resize(int(target_w), int(target_h))
+            self._live_scale_percent = percent
+            canvas.set_live_scale(percent / 100.0)
+            self._fit_window()
             return
-        scale = canvas.fitted_scale(int(target_w), int(target_h))
-        canvas.set_live_box(None)
-        self._set("fixed_w", None)
-        self._set("fixed_h", None)
-        self._set_scale(int(round(scale * 100)))
+        self._set_scale(percent)
 
     def _set_scale(self, percent: int) -> None:
         if self._deck_data is None:
             return
         self._deck_data["scale"] = max(60, min(220, int(percent)))
+        self._live_scale_percent = None
+        self._canvas.set_live_scale(None)
         self._set("fixed_w", None)
         self._set("fixed_h", None)
         self._canvas.refresh()
@@ -247,10 +264,26 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         self._fit_window()
 
     def _fit_window(self) -> None:
+        """Keep window, input surface and painted deck bounds identical at every zoom."""
+        canvas = self._canvas
+        if canvas is None or canvas.renderer.geometry is None:
+            return
         self._release_layout_constraints()
-        self._force_resize()
-        if self.isVisible():
-            self.adjustSize()
+        self.face.setProperty("_resize_inset", max(7, int(canvas.renderer.geometry.margin) - 4))
+        self.resize(canvas.renderer.geometry.size())
+        self.face.update()
+        for layout in (self.layout(), self.face.layout()):
+            if layout is not None:
+                layout.invalidate()
+                layout.activate()
+
+    def _force_resize(self):
+        # KeyDeck uses its own zoom geometry even before the hidden window is first shown.
+        self._fit_window()
+
+    def _show_with_correct_size(self):
+        super()._show_with_correct_size()
+        self._fit_window()
 
     # -- persistence ----------------------------------------------------------------
 
@@ -291,6 +324,8 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             deck["scale"] = max(60, int(deck["scale"] * factor))
 
     def _apply_deck(self, deck: dict) -> None:
+        self._live_scale_percent = None
+        self._canvas.set_live_scale(None)
         self._deck_data = normalize_deck(deck)
         self._fit_scale_to_screen(self._deck_data)
         self._save_timer.stop()
@@ -314,17 +349,9 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             ):
                 if canvas.is_pressing():
                     return False
-                in_corner = (
-                    self._resize_corner_at(
-                        self.face.mapFromGlobal(event.globalPosition().toPoint())
-                    )
-                    is not None
-                )
-                # 닫기·설정 버튼은 모서리 리사이즈 영역과 겹쳐도 버튼이 우선이다.
-                control = canvas.header_control_at(event.position())
-                interactive = bool(control) or (
-                    not in_corner and canvas.is_interactive_at(event.position())
-                )
+                # Keys and header controls remain usable even where a floating/small
+                # deck's outer key cells overlap the shared resize border bands.
+                interactive = canvas.is_interactive_at(event.position())
                 if etype in (QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonDblClick):
                     if event.button() == Qt.MouseButton.LeftButton and interactive:
                         return False
@@ -332,6 +359,10 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
                     event.buttons() & Qt.MouseButton.LeftButton
                 ):
                     if interactive:
+                        self.face.hover_grip = False
+                        self.face.grip_corner = None
+                        self.face.update()
+                        self.unsetCursor()
                         return False
                     canvas.update_hover(QPoint(-10000, -10000))
         return super().eventFilter(watched, event)
@@ -676,6 +707,7 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         always_on_top.setIcon(_ic(ICON.ALWAYS_ON_TOP))
         always_on_top.setCheckable(True)
         always_on_top.setChecked(self.always_on_top())
+        self._add_placement_actions(menu)
         reset_position = menu.addAction(
             t("widget.menu.reset_position", "위치 초기화"), self._action_reset_position
         )

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Theme and stylesheet builders for presentation layer."""
 
+import math
+
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.shared.color_utils import (
     contrast_ratio,
@@ -23,8 +25,20 @@ def _hue_shifted_rgba(hex_color, hue_shift, alpha):
     return hue_shifted_rgba(hex_color, hue_shift, alpha)
 
 
+def _font_points(raw):
+    """Recover malformed numeric settings before producing Qt font CSS."""
+    try:
+        points = float(raw)
+    except (TypeError, ValueError, OverflowError):
+        return 10
+    if not math.isfinite(points) or points <= 0:
+        return 10
+    points = min(500.0, points)
+    return int(points) if points.is_integer() else points
+
+
 def _scaled_pt(base_pt=10, delta=0, minimum=8):
-    safe_base = max(10, base_pt if base_pt > 0 else 10)
+    safe_base = max(10, _font_points(base_pt))
     return max(minimum, safe_base + delta)
 
 
@@ -37,8 +51,7 @@ def build_global_stylesheet(
     palette=None,
 ):
     """Generates the comprehensive application stylesheet with modern aesthetics."""
-    if base_pt is None or base_pt <= 0:
-        base_pt = 10
+    base_pt = _font_points(base_pt)
 
     def tc(a):
         return _hex_to_rgba(theme_color, a)
@@ -259,8 +272,7 @@ def build_global_stylesheet(
 def build_tooltip_stylesheet(
     base_pt=10, theme_color="#4da6ff", text_theme="dark", panel_base_color="#1c1c1c", palette=None
 ):
-    if base_pt is None or base_pt <= 0:
-        base_pt = 10
+    base_pt = _font_points(base_pt)
     if palette is None:
         palette = derive_ui_palette(text_theme, panel_base_color, theme_color=theme_color)
 
@@ -336,7 +348,13 @@ def _build_app_menu_style(
         persist_opacity=persist_opacity,
     )
     panel_base = panel_base_color or effective_base
-    opacity = effective_opacity if opacity_factor is None else float(opacity_factor)
+    try:
+        opacity = effective_opacity if opacity_factor is None else float(opacity_factor)
+    except (TypeError, ValueError, OverflowError):
+        opacity = effective_opacity
+    if not math.isfinite(opacity):
+        opacity = effective_opacity
+    opacity = max(0.0, min(1.0, opacity))
     base = QColor(str(panel_base))
     if not base.isValid():
         base = QColor("#1c1c1c")
@@ -394,9 +412,8 @@ def apply_top_menu_theme(
     persist_opacity=True,
 ):
     if base_pt is None:
-        base_pt = self.settings.value("font_size", 10, type=int)
-    if not base_pt or base_pt <= 0:
-        base_pt = 10
+        base_pt = self.settings.value("font_size", 10)
+    base_pt = _font_points(base_pt)
     if theme_color is None:
         theme_color = self.settings.value("theme_color", "#4da6ff")
     if text_theme is None:
@@ -468,7 +485,7 @@ def apply_top_menu_theme(
 
             snapshot = build_theme_snapshot(_owner.settings)
             fresh_style = _build_app_menu_style(
-                _owner.settings.value("font_size", 10, type=int) or 10,
+                _font_points(_owner.settings.value("font_size", 10)),
                 snapshot.theme_color,
                 snapshot.text_theme,
                 panel_base_color=snapshot.panel_base_color,

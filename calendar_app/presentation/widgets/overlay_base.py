@@ -15,6 +15,7 @@ import contextlib
 import functools
 import html as _html
 import json
+import math
 import os as _os
 import re as _re
 import time
@@ -39,7 +40,6 @@ from PyQt6.QtWidgets import (
     QDateEdit,
     QDialog,
     QDialogButtonBox,
-    QFontComboBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -53,7 +53,6 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QSlider,
-    QSpinBox,
     QSplitter,
     QTimeEdit,
     QToolButton,
@@ -90,9 +89,28 @@ from calendar_app.presentation.widgets.overlay_display_presets import (
 from calendar_app.presentation.widgets.overlay_measure_utils import (
     _measure_face_size_precise,
 )
+from calendar_app.presentation.widgets.overlay_shadow import (
+    TextShadowControls,
+    TextShadowDialog,
+    apply_text_shadow,
+    read_text_shadow,
+    store_text_shadow,
+)
 from calendar_app.presentation.widgets.overlay_template_validation import (
     normalize_widget_template_kind,
     validate_widget_template,
+)
+from calendar_app.presentation.widgets.widget_placement import (
+    NoWheelComboBox,
+    NoWheelFontComboBox,
+    NoWheelSlider,
+    NoWheelSpinBox,
+    WidgetPlacementDialog,
+    anchor_resize_rect,
+    drag_distance_reached,
+    resize_cursor,
+    resize_rect,
+    resize_region_at,
 )
 from calendar_app.presentation.widgets.widget_shapes import (
     DEFAULT_WIDGET_SHAPE_ID,
@@ -193,6 +211,8 @@ _STRFTIME_TO_QT: dict[str, str] = {
     "%n": "M",
     "%d": "dd",
     "%H": "HH",
+    "%I": "hh",
+    "%p": "AP",
     "%M": "mm",
     "%S": "ss",
     "%A": "dddd",
@@ -202,12 +222,16 @@ _STRFTIME_TO_QT: dict[str, str] = {
 }
 
 
-def _strftime_to_qt(fmt: str) -> str:
+def _strftime_to_qt(fmt: str, *, hour: int | None = None) -> str:
     """Convert a Python strftime format string to a Qt date/time format string.
 
     Only common tokens are converted; unknown tokens are left unchanged.
     """
     result = fmt
+    if hour is not None:
+        # Qt's hh is 24-hour unless AP appears in the same format. Template
+        # presets often put the AM/PM token on a separate line.
+        result = result.replace("%I", f"'{int(hour) % 12 or 12:02d}'")
     for py_tok, qt_tok in _STRFTIME_TO_QT.items():
         result = result.replace(py_tok, qt_tok)
     return result
@@ -485,7 +509,7 @@ _PRESET_FALLBACK: dict = {
         {
             "label_key": "widget.stopwatch.preset_tenths",
             "label_default": "Tenths Focus",
-            "template": "{elapsed|size=30|bold}.{tenths|size=22|bold|color=accent}\n{status|size=10|color=muted}",
+            "template": "{if hours > 0}{hours|size=30|bold}:{/if}{minutes|size=30|bold}:{seconds|size=30|bold}.{tenths|size=22|bold|color=accent}\n{status|size=10|color=muted}",
         },
         {
             "label_key": "widget.stopwatch.preset_minimal",
@@ -641,7 +665,7 @@ _PRESET_FALLBACK: dict = {
         {
             "label_key": "widget.datecard.preset_tomorrow",
             "label_default": "Tomorrow",
-            "template": "{tomorrow|size=18|bold}\n{weekday|size=12|color=muted}",
+            "template": "{tomorrow|size=22|bold}",
         },
     ],
     "text": [
@@ -710,7 +734,7 @@ _PRESET_FALLBACK: dict = {
         {
             "label_key": "widget.weather.preset_default",
             "label_default": "Default",
-            "template": "{icon|size=32}\n{temp|size=24|bold}{unit}\n{city|size=11|color=muted}",
+            "template": "{icon|size=64}\n{temp|size=28|bold}{unit|size=14}\n{city|size=12|color=muted}",
         },
         {
             "label_key": "widget.weather.preset_temp_only",
@@ -725,7 +749,7 @@ _PRESET_FALLBACK: dict = {
         {
             "label_key": "widget.weather.preset_full",
             "label_default": "Full Info",
-            "template": "{city|size=13|bold}\n{icon|size=22} {temp|size=22|bold}{unit|size=13}\n{desc|size=11|color=muted}\n💧 {humidity}  💨 {wind|size=11|color=muted}",
+            "template": "{city|size=13|bold}\n{icon|size=22} {temp|size=22|bold}{unit|size=13}\n{desc|size=11|color=muted}\n{humidity|size=11|color=muted}%  ·  {wind|size=11|color=muted} m/s",
         },
         {
             "label_key": "widget.weather.preset_compact_inline",
@@ -745,12 +769,67 @@ _PRESET_FALLBACK: dict = {
         {
             "label_key": "widget.weather.preset_wind_humidity",
             "label_default": "Wind & Humidity",
-            "template": "{icon|size=24}  {temp|size=28|bold}{unit|size=15}\n💨 {wind|size=12|color=muted}  💧 {humidity|size=12|color=muted}\n{city|size=10|color=muted}",
+            "template": "{icon|size=24}  {temp|size=28|bold}{unit|size=15}\n{wind|size=12|color=muted} m/s  ·  {humidity|size=12|color=muted}%\n{city|size=10|color=muted}",
         },
         {
             "label_key": "widget.weather.preset_minimal_icon",
             "label_default": "Minimal Icon",
             "template": "{icon|size=40}",
+        },
+        {
+            "label_key": "widget.weather.preset_daily_card",
+            "label_default": "Daily Card",
+            "template": "{city|size=14|bold}\n{icon|size=56}  {temp|size=30|bold}{unit|size=14}\n{desc|size=12|color=muted}\n{humidity|size=11|color=muted}%",
+        },
+        {
+            "label_key": "widget.weather.preset_horizontal_bar",
+            "label_default": "Horizontal Bar",
+            "template": "{icon|size=40}  {city|size=13|bold}  {temp|size=24|bold}{unit|size=12}",
+        },
+        {
+            "label_key": "widget.weather.preset_wide_weather",
+            "label_default": "Wide Weather",
+            "template": "{city|size=16|bold}  {icon|size=48}  {temp|size=30|bold}{unit|size=14}\n{desc|size=12|color=muted}  ·  {humidity|size=12|color=muted}%  ·  {wind|size=12|color=muted} m/s",
+        },
+        {
+            "label_key": "widget.weather.preset_hero_icon",
+            "label_default": "Hero Icon",
+            "template": "{icon|size=104}\n{temp|size=36|bold}{unit|size=16}\n{city|size=12|color=muted}",
+        },
+        {
+            "label_key": "widget.weather.preset_night_card",
+            "label_default": "Night Card",
+            "template": "{city|size=12|color=faint}\n{icon|size=72}\n{temp|size=32|bold}{unit|size=14}\n{desc|size=11|color=muted}",
+        },
+        {
+            "label_key": "widget.weather.preset_travel_city",
+            "label_default": "Travel City",
+            "template": "{city|size=24|bold|color=accent}\n{icon|size=48}  {temp|size=26|bold}{unit|size=14}\n{desc|size=12|color=muted}",
+        },
+        {
+            "label_key": "widget.weather.preset_humidity_focus",
+            "label_default": "Humidity Focus",
+            "template": "{humidity|size=40|bold}%\n{icon|size=32}  {temp|size=20|bold}{unit|size=12}\n{city|size=12|color=muted}",
+        },
+        {
+            "label_key": "widget.weather.preset_wind_focus",
+            "label_default": "Wind Focus",
+            "template": "{wind|size=38|bold} m/s\n{icon|size=36}  {temp|size=20|bold}{unit|size=12}\n{city|size=12|color=muted}",
+        },
+        {
+            "label_key": "widget.weather.preset_rain_focus",
+            "label_default": "Weather Conditions",
+            "template": "{icon|size=88}\n{desc|size=20|bold}\n{city|size=12|color=muted}  {temp|size=18|bold}{unit|size=11}",
+        },
+        {
+            "label_key": "widget.weather.preset_temperature_badge",
+            "label_default": "Temperature Badge",
+            "template": "{icon|size=32}  {temp|size=48|bold}{unit|size=22}",
+        },
+        {
+            "label_key": "widget.weather.preset_mini_dashboard",
+            "label_default": "Mini Dashboard",
+            "template": "{city|size=13|bold}  {desc|size=11|color=muted}\n{icon|size=48}  {temp|size=28|bold}{unit|size=14}\n{humidity|size=12|color=muted}%  ·  {wind|size=12|color=muted} m/s",
         },
     ],
 }
@@ -836,6 +915,8 @@ def _get_widget_presets(widget_type: str, translate_fn, default_template: str = 
             continue
         if _tmpl == "__DEFAULT__":
             _tmpl = default_template
+        if validate_widget_template(_kind, _tmpl):
+            continue
         _result.append((_label, _tmpl))
     return _result
 
@@ -939,9 +1020,9 @@ class _FontPickerDialog(QDialog):
         layout = QVBoxLayout(self)
 
         row = QHBoxLayout()
-        self._combo = QFontComboBox(self)
+        self._combo = NoWheelFontComboBox(self)
         self._combo.setCurrentFont(QFont(family))
-        self._spin = QSpinBox(self)
+        self._spin = NoWheelSpinBox(self)
         self._spin.setRange(6, 400)
         self._spin.setValue(size)
         row.addWidget(self._combo, 1)
@@ -981,7 +1062,7 @@ class _SliderAction(QWidget):
         lbl = QLabel(label)
         lbl.setMinimumWidth(90)
         layout.addWidget(lbl)
-        self._slider = QSlider(Qt.Orientation.Horizontal)
+        self._slider = NoWheelSlider(Qt.Orientation.Horizontal)
         self._slider.setRange(lo, hi)
         self._slider.setValue(value)
         self._val_label = QLabel(str(value))
@@ -1302,16 +1383,16 @@ def _apply_span(value: str, hints: list[str]) -> str:
             if raw == "base":
                 styles.append("font-size:RATIO:1.0_TMPLREF_pt")
             elif raw.endswith("x"):
-                with contextlib.suppress(ValueError):
+                with contextlib.suppress(ValueError, OverflowError):
                     styles.append(f"font-size:RATIO:{float(raw[:-1])}_TMPLREF_pt")
             elif raw.endswith("%"):
-                with contextlib.suppress(ValueError):
+                with contextlib.suppress(ValueError, OverflowError):
                     styles.append(f"font-size:RATIO:{float(raw[:-1]) / 100.0}_TMPLREF_pt")
             elif raw.startswith(("+", "-")) and raw[1:].lstrip(".").isdigit():
-                with contextlib.suppress(ValueError):
+                with contextlib.suppress(ValueError, OverflowError):
                     styles.append(f"font-size:DELTA:{int(float(raw))}_TMPLREF_pt")
             else:
-                with contextlib.suppress(ValueError):
+                with contextlib.suppress(ValueError, OverflowError):
                     styles.append(f"font-size:REF:{int(raw)}_TMPLREF_pt")
         elif h.startswith(("line=", "line_height=", "lh=")):
             raw = h.split("=", 1)[1].strip()
@@ -1368,8 +1449,6 @@ from calendar_app.presentation.widgets.overlay_template_utils import (  # noqa: 
 # Grip frame
 # ---------------------------------------------------------------------------
 
-_RESIZE_GRIP = 22  # px corner resize zone
-
 
 class _GripFrame(QFrame):
     """QFrame subclass that paints a resize-grip indicator.
@@ -1395,27 +1474,49 @@ class _GripFrame(QFrame):
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         alpha = 215 if self.show_grip else 110
         w, h = self.width(), self.height()
-        margin, arm = 7, 10
+        margin, arm = max(7, int(self.property("_resize_inset") or 7)), 10
         grip_color = self.property("_grip_color")
         if not isinstance(grip_color, QColor):
             grip_color = QColor(255, 255, 255)
-        frame_rect = self.rect().adjusted(3, 3, -3, -3)
+        frame_rect = self.rect().adjusted(margin - 4, margin - 4, 4 - margin, 4 - margin)
+        shape = self.property("_resize_shape") or "card"
 
-        color_frame = QColor(grip_color)
-        color_frame.setAlpha(210 if self.show_grip else 120)
-        color_frame_pen = QPen(color_frame, 1.0 if self.show_grip else 0.9)
-        color_frame_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-
-        p.setPen(color_frame_pen)
-        p.drawRoundedRect(frame_rect, 10, 10)
+        if self.show_grip:
+            color_frame = QColor(grip_color)
+            color_frame.setAlpha(100)
+            p.setPen(QPen(color_frame, 1.0))
+            if shape == "circle":
+                p.drawEllipse(frame_rect)
+            else:
+                radius = min(w, h) / 2 - 3 if shape == "capsule" else 10
+                p.drawRoundedRect(QRectF(frame_rect), radius, radius)
 
         def _draw_corner(corner: str, strong: bool = False):
             local_color = QColor(grip_color)
-            local_color.setAlpha(245 if strong else alpha)
-            color_pen = QPen(local_color, 2.2 if strong else 1.8)
+            local_color.setAlpha((245 if self.show_grip else 170) if strong else alpha)
+            color_pen = QPen(local_color, 2.2 if strong and self.show_grip else 1.8)
             color_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
 
             p.setPen(color_pen)
+            if "_" not in corner:
+                if corner in {"top", "bottom"}:
+                    y = margin if corner == "top" else h - margin
+                    p.drawLine(w // 2 - arm, y, w // 2 + arm, y)
+                else:
+                    x = margin if corner == "left" else w - margin
+                    p.drawLine(x, h // 2 - arm, x, h // 2 + arm)
+                return
+            if shape in {"circle", "capsule"}:
+                radius = min(w, h) / 2 - margin
+                center_x = w / 2
+                if shape == "capsule":
+                    center_x = margin + radius if "left" in corner else w - margin - radius
+                arc_rect = QRectF(center_x - radius, h / 2 - radius, radius * 2, radius * 2)
+                angle = {"top_left": 135, "top_right": 45, "bottom_left": 225, "bottom_right": 315}[
+                    corner
+                ]
+                p.drawArc(arc_rect, (angle - 8) * 16, 16 * 16)
+                return
             if corner == "top_left":
                 p.drawLine(margin, margin + arm, margin, margin)
                 p.drawLine(margin, margin, margin + arm, margin)
@@ -1430,8 +1531,18 @@ class _GripFrame(QFrame):
                 p.drawLine(w - margin, h - margin - arm, w - margin, h - margin)
 
         active_corner = self.grip_corner if (self.show_grip or self.hover_grip) else None
-        for corner in ("top_left", "top_right", "bottom_left", "bottom_right"):
-            _draw_corner(corner, strong=(corner == active_corner))
+        for corner in (
+            "top_left",
+            "top_right",
+            "bottom_left",
+            "bottom_right",
+            "top",
+            "bottom",
+            "left",
+            "right",
+        ):
+            if self.show_grip or corner == active_corner:
+                _draw_corner(corner, strong=(corner == active_corner))
         p.end()
 
 
@@ -1467,14 +1578,18 @@ class _BaseOverlayWidget(QWidget):
 
     def __init__(self, owner):
         flags = Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint
-        always_on_top = owner.settings.value(
-            f"{self._settings_prefix()}_always_on_top",
-            True,
-            type=bool,
-        )
+        try:
+            always_on_top = owner.settings.value(
+                f"{self._settings_prefix()}_always_on_top",
+                True,
+                type=bool,
+            )
+        except (TypeError, ValueError, OverflowError):
+            always_on_top = True
         if always_on_top:
             flags |= Qt.WindowType.WindowStaysOnTopHint
         super().__init__(None, flags)
+        self.setProperty("airCalendarOverlayWindow", True)
         self.owner = owner
         self._drag_offset: QPoint | None = None
         self._resize_origin_global: QPoint | None = None
@@ -1486,10 +1601,16 @@ class _BaseOverlayWidget(QWidget):
         self._resize_corner: str | None = None
         self._resizing: bool = False
         self._interaction_locked: bool = False
+        self._placement_origin = None
+        self._last_placement = None
+        self._last_content_reset = None
+        self._gesture_press_global = None
+        self._gesture_active = False
         self._measuring: bool = False
         self._last_fit_size: tuple[int, int] = (0, 0)
         self._last_live_scale_apply_at: float = 0.0
         self._last_live_fit_at: float = 0.0
+        self._template_preview_base_size: int | None = None
         self._initialize_display_preset()
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
@@ -1499,8 +1620,10 @@ class _BaseOverlayWidget(QWidget):
         self.face = self._build_face()
         outer.addWidget(self.face)
 
+        self.face.setMouseTracking(True)
         self.face.installEventFilter(self)
         for child in self.face.findChildren(QWidget):
+            child.setMouseTracking(True)
             child.installEventFilter(self)
 
     # -- abstract-ish interface --
@@ -1558,6 +1681,14 @@ class _BaseOverlayWidget(QWidget):
 
         # Apply margins from style params
         margins = sp.get("margins", [18, 10, 18, 10])
+        shadow = read_text_shadow(self._get)
+        if kind != "launcher_deck":
+            margins = [max(margin, shadow.padding) for margin in margins]
+            for label in self.face.findChildren(QLabel):
+                apply_text_shadow(label, shadow)
+            grid = getattr(self, "_grid_widget", None)
+            if grid is not None:
+                apply_text_shadow(grid, shadow)
         if self.face.layout():
             self.face.layout().setContentsMargins(*margins)
 
@@ -1579,7 +1710,15 @@ class _BaseOverlayWidget(QWidget):
     def _get(self, key, default=None, type_=None):
         full = f"{self._pref()}_{key}"
         if type_ is not None:
-            return self._s().value(full, default, type=type_)
+            try:
+                if type_ in (int, float):
+                    # Qt can silently convert an infinite double to INT_MIN.
+                    # Python conversions make corrupt numeric values recoverable.
+                    value = type_(self._s().value(full, default))
+                    return value if type_ is int or math.isfinite(value) else default
+                return self._s().value(full, default, type=type_)
+            except (TypeError, ValueError, OverflowError):
+                return default
         return self._s().value(full, default)
 
     def _set(self, key, val):
@@ -1683,6 +1822,8 @@ class _BaseOverlayWidget(QWidget):
         if not hasattr(self, "owner") or self.width() <= 0 or self.height() <= 0:
             return
         shape_id = self.widget_shape_id()
+        if hasattr(self, "face"):
+            self.face.setProperty("_resize_shape", shape_id)
         if shape_id not in {"circle", "capsule"}:
             self.clearMask()
             return
@@ -1710,6 +1851,11 @@ class _BaseOverlayWidget(QWidget):
         super().resizeEvent(event)
         self._apply_shape_mask()
 
+    def hideEvent(self, event) -> None:  # noqa: N802
+        if getattr(self, "_placement_origin", None) is not None:
+            self._cancel_placement_gesture()
+        super().hideEvent(event)
+
     def _display_preset_items(self) -> list[tuple[str, str]]:
         return [
             (preset.preset_id, t(preset.label_key, preset.label_default))
@@ -1725,11 +1871,31 @@ class _BaseOverlayWidget(QWidget):
 
     def _screen_bounds(self) -> tuple[int, int]:
         app = QApplication.instance()
-        screen = app.primaryScreen() if app is not None else None
+        screen = self.screen() if app is not None else None
+        if screen is None and app is not None:
+            screen = app.primaryScreen()
         if screen is None:
             return 1600, 900
         rect = screen.availableGeometry()
         return max(320, rect.width()), max(240, rect.height())
+
+    def _fixed_size_limits(self) -> tuple[int, int]:
+        screen_w, screen_h = self._screen_bounds()
+        return int(screen_w * 0.9), int(screen_h * 0.85)
+
+    def _bounded_shape_size(self, width: int, height: int) -> tuple[int, int]:
+        width, height = self._constrain_shape_size(width, height)
+        max_width, max_height = self._fixed_size_limits()
+        if self.widget_shape_id() != "card":
+            while width > max_width or height > max_height:
+                scale = min(max_width / width, max_height / height)
+                bounded = max(1, int(width * scale)), max(1, int(height * scale))
+                constrained = self._constrain_shape_size(*bounded)
+                if constrained == (width, height):
+                    return bounded  # An unusually small screen can override a shape minimum.
+                width, height = constrained
+            return width, height
+        return min(width, max_width), min(height, max_height)
 
     def _normalized_fixed_dimension(self, key: str) -> int | None:
         raw = self._get(key, None)
@@ -1737,11 +1903,21 @@ class _BaseOverlayWidget(QWidget):
             return None
         try:
             value = int(raw)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             self._set(key, None)
             return None
-        screen_w, screen_h = self._screen_bounds()
-        max_value = int(screen_w * 0.9) if key.endswith("_w") else int(screen_h * 0.85)
+        max_width, max_height = self._fixed_size_limits()
+        if self.widget_shape_id() != "card":
+            try:
+                width, height = int(self._get("fixed_w")), int(self._get("fixed_h"))
+            except (TypeError, ValueError, OverflowError):
+                pass
+            else:
+                width, height = self._bounded_shape_size(width, height)
+                self._set("fixed_w", width)
+                self._set("fixed_h", height)
+                return width if key.endswith("_w") else height
+        max_value = max_width if key.endswith("_w") else max_height
         if value < 40:
             value = 40
         if value > max_value:
@@ -2086,7 +2262,7 @@ class _BaseOverlayWidget(QWidget):
             built_in_presets
         )
 
-        combo = QComboBox(parent)
+        combo = NoWheelComboBox(parent)
         combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         combo.setToolTip(t("widget.preset.select_hint", "Select a preset"))
 
@@ -2202,7 +2378,24 @@ class _BaseOverlayWidget(QWidget):
         lbl.setWordWrap(True)
         lbl.setTextFormat(Qt.TextFormat.RichText)
         lbl.setObjectName("previewCard")
-        lbl.setStyleSheet(_overlay_preview_card_inline_style())
+        # Widget text can be white even inside a light settings dialog. Composite
+        # its actual background over the same desktop sample used by thumbnails.
+        background, alpha = _parse_rgba(self.bg_color_rgba())
+        desktop = QColor("#14212e")
+        blended = QColor(
+            *[
+                round(source * alpha / 255 + sample * (1 - alpha / 255))
+                for source, sample in zip(
+                    background.getRgb()[:3], desktop.getRgb()[:3], strict=True
+                )
+            ]
+        )
+        border, border_alpha = _parse_rgba(self.border_color_rgba())
+        lbl.setStyleSheet(
+            f"QLabel#previewCard {{ background: {blended.name()}; "
+            f"border: 1px solid {_rgba_css(border, border_alpha)}; "
+            "border-radius: 12px; padding: 14px; }"
+        )
         lbl.setMinimumHeight(100)
         return lbl
 
@@ -2441,16 +2634,24 @@ class _BaseOverlayWidget(QWidget):
         )
 
     def _build_preset_manager(
-        self, parent, editor, built_in_presets: list[tuple[str, str]]
+        self, parent, editor, built_in_presets: list[tuple[str, str]], *, preview_icon_fn=None
     ) -> dict:
         wrapper = QVBoxLayout()
         wrapper.setSpacing(8)
 
-        preset_combo = QComboBox(parent)
+        preset_combo = NoWheelComboBox(parent)
         preset_combo.setObjectName("presetCombo")
         preset_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         preset_combo.setToolTip(t("widget.preset.select_hint", "Select a preset"))
-        preset_combo.setMinimumHeight(34)
+        preset_combo.setMinimumHeight(64 if preview_icon_fn else 34)
+        preset_combo.setMaxVisibleItems(6)
+        if preview_icon_fn:
+            preset_combo.setIconSize(QSize(104, 56))
+            # The shared form stylesheet caps ordinary combo boxes at 34px.
+            # Override only the height so the native thumbnail is not cropped.
+            preset_combo.setStyleSheet(
+                "QComboBox#presetCombo { min-height: 56px; max-height: 56px; }"
+            )
         wrapper.addWidget(preset_combo)
 
         top_row = QHBoxLayout()
@@ -2462,18 +2663,13 @@ class _BaseOverlayWidget(QWidget):
             btn.setFixedHeight(30)
             top_row.addWidget(btn)
         top_row.addStretch()
-        wrapper.addLayout(top_row)
-
-        bottom_row = QHBoxLayout()
-        bottom_row.setSpacing(6)
-        bottom_row.addStretch()
         rename_btn = QPushButton(t("widget.preset.rename", "Rename"), parent)
         delete_btn = QPushButton(t("widget.preset.delete", "Delete"), parent)
         for btn in (rename_btn, delete_btn):
             btn.setObjectName("presetBtn")
-            btn.setFixedHeight(28)
-            bottom_row.addWidget(btn)
-        wrapper.addLayout(bottom_row)
+            btn.setFixedHeight(30)
+            top_row.addWidget(btn)
+        wrapper.addLayout(top_row)
 
         built_in_presets, built_in_names = _preset_logic.normalize_built_in_presets(
             built_in_presets
@@ -2536,6 +2732,7 @@ class _BaseOverlayWidget(QWidget):
                 builtin_label=t("widget.preset.kind_builtin", "Built-in"),
                 user_label=t("widget.preset.kind_user", "User"),
             )
+            refresh_icons()
 
             target_idx = 0
             if select_name:
@@ -2556,6 +2753,13 @@ class _BaseOverlayWidget(QWidget):
                 _sync_buttons()
             else:
                 _apply_selected_preset()
+
+        def refresh_icons():
+            if not callable(preview_icon_fn):
+                return
+            for index in range(1, preset_combo.count()):
+                template = str(preset_combo.itemData(index, Qt.ItemDataRole.UserRole + 2) or "")
+                preset_combo.setItemIcon(index, preview_icon_fn(template))
 
         def _sync_buttons():
             has_selection = current_index() > 0 and bool(current_name())
@@ -2641,6 +2845,7 @@ class _BaseOverlayWidget(QWidget):
             "layout": wrapper,
             "combo": preset_combo,
             "refresh": refresh_combo,
+            "refresh_icons": refresh_icons,
             "sync": _sync_buttons,
             "original_template": original_template,
             "buttons": {
@@ -2682,13 +2887,13 @@ class _BaseOverlayWidget(QWidget):
 
     def _make_font_combo(self, initial_family: str):
         """Return a QFontComboBox initialized with the current family."""
-        combo = QFontComboBox()
+        combo = NoWheelFontComboBox()
         combo.setCurrentFont(QFont(initial_family))
         return combo
 
     def _make_font_size_spin(self, initial_size: int):
         """Return a QSpinBox for font size."""
-        spin = QSpinBox()
+        spin = NoWheelSpinBox()
         spin.setRange(6, 500)
         spin.setValue(initial_size)
         spin.setSuffix(" pt")
@@ -2706,7 +2911,7 @@ class _BaseOverlayWidget(QWidget):
                 w.setPlaceholderText(f["placeholder"])
             return w
         elif ftype == "combo":
-            w = QComboBox()
+            w = NoWheelComboBox()
             for label, data in f.get("options", []):
                 w.addItem(label, data)
             idx = w.findData(val)
@@ -2714,7 +2919,7 @@ class _BaseOverlayWidget(QWidget):
                 w.setCurrentIndex(idx)
             return w
         elif ftype == "int_combo":
-            w = QComboBox()
+            w = NoWheelComboBox()
             for v in f.get("options", []):
                 w.addItem(str(v), v)
             idx = w.findData(val)
@@ -2723,7 +2928,7 @@ class _BaseOverlayWidget(QWidget):
             return w
         elif ftype == "bool":
             w = QCheckBox()
-            w.setChecked(bool(val))
+            w.setChecked(str(val).strip().lower() in {"true", "1", "yes"})
             return w
         elif ftype == "date":
             w = DatePickerWidget()
@@ -2770,6 +2975,7 @@ class _BaseOverlayWidget(QWidget):
         min_width: int = 700,
         min_height: int = 560,
         extra_basic_setup_fn: callable = None,
+        extra_dialog_setup_fn: callable = None,
     ):
         """Generic settings dialog with Style, Appearance, and optional Advanced tabs."""
         dlg, outer, tabs = self._create_tabbed_settings_dialog(title, min_width, min_height)
@@ -2839,7 +3045,7 @@ class _BaseOverlayWidget(QWidget):
 
         self._add_divider(appear)
         self._add_section_label(appear, t("widget.common.section_shape", "SHAPE"))
-        shape_combo = QComboBox(dlg)
+        shape_combo = NoWheelComboBox(dlg)
         shape_group = QButtonGroup(dlg)
         shape_group.setExclusive(True)
         shape_grid = QGridLayout()
@@ -2854,7 +3060,7 @@ class _BaseOverlayWidget(QWidget):
             button.setStyleSheet(
                 f"QToolButton {{ border: 1px solid rgba(127,145,168,64); "
                 f"border-radius: {20 if shape.shape_id in ('capsule', 'circle') else 8}px; "
-                "padding: 7px 12px; }} QToolButton:checked { border: 2px solid #4da3ff; "
+                "padding: 7px 12px; } QToolButton:checked { border: 2px solid #4da3ff; "
                 "background: #1c4da3ff; }"
             )
             button.clicked.connect(
@@ -2880,12 +3086,17 @@ class _BaseOverlayWidget(QWidget):
         appear.addLayout(self._make_labeled_row(t("widget.common.text_color", "Text:"), fg_btn))
 
         self._add_divider(appear)
+        self._add_section_label(appear, t("widget.shadow.title", "글자 그림자"))
+        shadow_controls = TextShadowControls(read_text_shadow(self._get), dlg)
+        appear.addWidget(shadow_controls)
+
+        self._add_divider(appear)
         self._add_section_label(appear, t("widget.common.section_transparency", "TRANSPARENCY"))
 
         # ── 배경 불투명도 ──
         _, _cur_bg_alpha = _parse_rgba(self.bg_color_rgba(), fallback_alpha=214)
         _bg_pct = int(round(_cur_bg_alpha * 100 / 255))
-        bg_alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        bg_alpha_slider = NoWheelSlider(Qt.Orientation.Horizontal)
         bg_alpha_slider.setRange(0, 100)
         bg_alpha_slider.setValue(_bg_pct)
         bg_alpha_val_lbl = QLabel(f"{_bg_pct}%")
@@ -2898,7 +3109,7 @@ class _BaseOverlayWidget(QWidget):
         # ── 테두리 불투명도 ──
         _, _cur_bd_alpha = _parse_rgba(self.border_color_rgba(), fallback_alpha=32)
         _bd_pct = int(round(_cur_bd_alpha * 100 / 255))
-        bd_alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        bd_alpha_slider = NoWheelSlider(Qt.Orientation.Horizontal)
         bd_alpha_slider.setRange(0, 100)
         bd_alpha_slider.setValue(_bd_pct)
         bd_alpha_val_lbl = QLabel(f"{_bd_pct}%")
@@ -2913,7 +3124,7 @@ class _BaseOverlayWidget(QWidget):
         # ── 글씨 불투명도 ──
         _, _cur_txt_alpha = _parse_rgba(self.text_color_rgba(), fallback_alpha=255)
         _txt_pct = int(round(_cur_txt_alpha * 100 / 255))
-        txt_alpha_slider = QSlider(Qt.Orientation.Horizontal)
+        txt_alpha_slider = NoWheelSlider(Qt.Orientation.Horizontal)
         txt_alpha_slider.setRange(0, 100)
         txt_alpha_slider.setValue(_txt_pct)
         txt_alpha_val_lbl = QLabel(f"{_txt_pct}%")
@@ -2926,7 +3137,7 @@ class _BaseOverlayWidget(QWidget):
         appear.addLayout(_txt_row)
 
         # (Overall window opacity — hidden from main tab; kept for context-menu compat)
-        opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        opacity_slider = NoWheelSlider(Qt.Orientation.Horizontal)
         opacity_slider.setRange(10, 100)
         opacity_slider.setValue(int(self.widget_opacity() * 100))
         opacity_slider.setVisible(False)  # not shown; value preserved on accept
@@ -3011,7 +3222,27 @@ class _BaseOverlayWidget(QWidget):
             )
             template_editor = template_result["editor"]
 
-        if dlg.exec() == QDialog.DialogCode.Accepted:
+        if extra_dialog_setup_fn:
+            extra_dialog_setup_fn(
+                dlg,
+                {
+                    "template_editor": template_editor,
+                    "display_preset_combo": display_preset_combo,
+                    "shape_combo": shape_combo,
+                    "size_spin": size_spin,
+                },
+            )
+
+        dialog_fields = self._active_settings_widgets
+        try:
+            dialog_result = dlg.exec()
+        finally:
+            # Dialog drafts must never remain the live renderer's data source.
+            self._active_settings_widgets = {}
+            if template_editor is not None:
+                template_result["preview_timer"].stop()
+        if dialog_result == QDialog.DialogCode.Accepted:
+            self._last_content_reset = None
             # Commit Style
             self._set("display_style", style_combo.currentData())
             selected_preset_id = str(display_preset_combo.currentData() or CUSTOM_DISPLAY_PRESET_ID)
@@ -3043,6 +3274,7 @@ class _BaseOverlayWidget(QWidget):
             self._set("font_family", new_font_family)
             self._set("font_size", size_spin.value())
             self._set("widget_opacity", opacity_slider.value())
+            store_text_shadow(self._set, shadow_controls.values())
 
             selected_preset = overlay_display_preset(selected_preset_id)
             if selected_preset is not None:
@@ -3073,7 +3305,7 @@ class _BaseOverlayWidget(QWidget):
             self._set("widget_shape", selected_shape_id)
 
             # Commit extra fields
-            for key, w in self._active_settings_widgets.items():
+            for key, w in dialog_fields.items():
                 self._set(key, self._get_field_value(w))
 
             # Commit Template
@@ -3111,9 +3343,7 @@ class _BaseOverlayWidget(QWidget):
         ]
 
     def _make_style_combo(self, parent=None):
-        from PyQt6.QtWidgets import QComboBox as _QComboBox
-
-        combo = _QComboBox(parent)
+        combo = NoWheelComboBox(parent)
         current = self.display_style()
         selected_index = 0
         for index, (style_id, style_label) in enumerate(self._style_items()):
@@ -3124,9 +3354,7 @@ class _BaseOverlayWidget(QWidget):
         return combo
 
     def _make_display_preset_combo(self, parent=None):
-        from PyQt6.QtWidgets import QComboBox as _QComboBox
-
-        combo = _QComboBox(parent)
+        combo = NoWheelComboBox(parent)
         combo.addItem(
             t("widget.display_preset.custom", "Custom appearance"),
             CUSTOM_DISPLAY_PRESET_ID,
@@ -3164,10 +3392,74 @@ class _BaseOverlayWidget(QWidget):
         painter.end()
         return QIcon(pixmap)
 
-    def _wrap_preview_html(
-        self, html: str, align: str = "center", preview_size: QSize | None = None
+    def _template_render_font_size(self) -> int:
+        return self._template_preview_base_size or self.font_size()
+
+    def _template_preset_icon(self, template: str, render_preview) -> QIcon:
+        from calendar_app.presentation.widgets.widget_preset_preview import template_preview_pixmap
+
+        if validate_widget_template(self._widget_preset_kind(), template):
+            return QIcon()
+        try:
+            html = self._render_template_preview(
+                render_preview, template, QSize(104, 56), base_size=24
+            )
+            params = _style_params_for(
+                self._settings_prefix().replace("overlay_", ""), self.display_style()
+            )
+            preset = overlay_display_preset(self.display_preset_id())
+            if preset is not None:
+                params.update(preset.style_params)
+            shape = get_widget_shape(self.widget_shape_id())
+            if shape.shape_id != "card":
+                params.update(radius=shape.radius, margins=list(shape.margins))
+            margins = params.get("margins", [18, 10, 18, 10])
+            bg, bg_a = _parse_rgba(self.bg_color_rgba())
+            bd, bd_a = _parse_rgba(self.border_color_rgba())
+            fg, fg_a = _parse_rgba(self.text_color_rgba())
+
+            def face_style(radius):
+                resolved = dict(params)
+                if radius is not None:
+                    resolved["radius"] = radius
+                return _build_face_ss("presetPreviewFace", resolved, bg, bg_a, bd, bd_a, fg, fg_a)
+
+            return QIcon(
+                template_preview_pixmap(
+                    html,
+                    QSize(104, 56),
+                    font=QFont(self.font_family(), 24),
+                    margins=margins,
+                    shape_id=shape.shape_id,
+                    face_style=face_style,
+                    dpr=self.devicePixelRatioF(),
+                )
+            )
+        except Exception:
+            # A failed custom thumbnail must not interrupt editing or selecting presets.
+            return QIcon()
+
+    def _render_template_preview(
+        self, render, template: str, size: QSize, *, base_size=None
     ) -> str:
-        preview_pt = _preview_base_size(preview_size or QSize(320, 240))
+        preview_font = base_size or _preview_base_size(size)
+        original = self._template_preview_base_size
+        self._template_preview_base_size = preview_font
+        try:
+            html = render(template)
+        finally:
+            self._template_preview_base_size = original
+        return self._wrap_preview_html(html, preview_size=size, base_size=preview_font)
+
+    def _wrap_preview_html(
+        self,
+        html: str,
+        align: str = "center",
+        preview_size: QSize | None = None,
+        *,
+        base_size: int | None = None,
+    ) -> str:
+        preview_pt = base_size or _preview_base_size(preview_size or QSize(320, 240))
         scaled = _scale_template_html(html, preview_pt)
         scaled = self._resolve_template_color_aliases(scaled)
         fg_c, fg_a = _parse_rgba(self.text_color_rgba())
@@ -3271,7 +3563,12 @@ class _BaseOverlayWidget(QWidget):
         editor.setPlaceholderText(placeholder)
         editor.setPlainText(current_template)
 
-        preset_manager = self._build_preset_manager(tab_page, editor, presets)
+        preset_manager = self._build_preset_manager(
+            tab_page,
+            editor,
+            presets,
+            preview_icon_fn=lambda template: self._template_preset_icon(template, render_preview),
+        )
         tab_outer.addLayout(preset_manager["layout"])
 
         self._add_divider(tab_outer)
@@ -3288,7 +3585,7 @@ class _BaseOverlayWidget(QWidget):
         editor_cap.setObjectName("previewCaption")
         editor_wrap_lay.addWidget(editor_cap)
         editor.setParent(editor_wrap)
-        editor.setMinimumHeight(320)
+        editor.setMinimumHeight(240)
         editor_wrap_lay.addWidget(editor, 1)
         splitter.addWidget(editor_wrap)
 
@@ -3308,10 +3605,12 @@ class _BaseOverlayWidget(QWidget):
         preview_page_lay.setContentsMargins(0, 0, 0, 0)
         preview_page_lay.setSpacing(6)
         preview_lbl = self._make_preview_card(preview_page)
-        preview_lbl.setMinimumHeight(320)
+        preview_lbl.setMinimumHeight(240)
         preview_page_lay.addWidget(preview_lbl, 1)
         preview_meta = QLabel(preview_page)
         preview_meta.setObjectName("previewMeta")
+        preview_meta.setWordWrap(True)
+        preview_meta.setTextFormat(Qt.TextFormat.PlainText)
         preview_page_lay.addWidget(preview_meta)
         preview_tabs.addTab(preview_page, t("widget.common.preview_caption", "Preview"))
 
@@ -3462,16 +3761,34 @@ class _BaseOverlayWidget(QWidget):
                         preview_size=preview_lbl.size(),
                     )
                 )
-                preview_meta.setText(issues[0].summary())
+                preview_meta.setText(
+                    t(
+                        "widget.preset.syntax_issue",
+                        "오류 위치: {{{token}}} · {reason}",
+                        token=issues[0].token,
+                        reason=t("widget.preset.issue_" + issues[0].code, issues[0].detail),
+                    )
+                )
                 return
-            html = render_preview(template)
-            preview_lbl.setText(self._wrap_preview_html(html, preview_size=preview_lbl.size()))
-            meta = render_meta() if callable(render_meta) else ""
-            preview_meta.setText(meta or "")
+            try:
+                preview_lbl.setText(
+                    self._render_template_preview(render_preview, template, preview_lbl.size())
+                )
+                meta = render_meta() if callable(render_meta) else ""
+                preview_meta.setText(meta or "")
+            except Exception:
+                preview_lbl.setText("")
+                preview_meta.setText(
+                    t(
+                        "widget.preset.preview_failed",
+                        "미리보기를 표시할 수 없습니다. 변수와 표시 형식을 확인해주세요.",
+                    )
+                )
 
         editor.textChanged.connect(lambda: preview_timer.start())
         for signal in refresh_signals or []:
             signal.connect(lambda *_args: preview_timer.start())
+            signal.connect(lambda *_args: preset_manager["refresh_icons"]())
         preview_timer.timeout.connect(_update_preview)
         preview_lbl.resizeEvent = lambda event, _orig=preview_lbl.resizeEvent: (
             _orig(event),
@@ -3502,7 +3819,7 @@ class _BaseOverlayWidget(QWidget):
             return ""
         default = getattr(self, "_DEFAULT_TEMPLATE", "")
         val = self._get(self._TEMPLATE_KEY, default)
-        return str(val if val not in (None, "") else default)
+        return str(default if val is None else val)
 
     def _is_template_mode(self) -> bool:
         """Return True when a non-empty template string is stored."""
@@ -3513,10 +3830,10 @@ class _BaseOverlayWidget(QWidget):
     _RE_COND_PARSE = _re.compile(r"^([\w:.-]+)\s*(==|!=|<=|>=|<|>)\s*(.+)$")
     _RE_DURATION = _re.compile(r"^(\d+(?:\.\d+)?)(h|m|s)$")
     _RE_COND_BLOCK = _re.compile(
-        r"\{if\s+([^}]+)\}"  # {if condition}
+        r"\{\s*if\s+([^}]+)\}"  # {if condition}
         r"(.*?)"  # true branch
-        r"(?:\{else\}(.*?))?"  # optional {else} branch
-        r"\{/if\}",
+        r"(?:\{\s*else\s*\}(.*?))?"  # optional {else} branch
+        r"\{\s*/if\s*\}",
         _re.DOTALL,
     )
 
@@ -3547,7 +3864,7 @@ class _BaseOverlayWidget(QWidget):
                 parts = lhs.split(":")
                 try:
                     secs = sum(
-                        int(p) * f for p, f in zip(reversed(parts), [1, 60, 3600], strict=False)
+                        float(p) * f for p, f in zip(reversed(parts), [1, 60, 3600], strict=False)
                     )
                     lhs = float(secs)
                 except (ValueError, TypeError):
@@ -3636,7 +3953,10 @@ class _BaseOverlayWidget(QWidget):
         if px is None or py is None:
             target = self.owner.frameGeometry().topRight() + default_offset
         else:
-            target = QPoint(int(px), int(py))
+            try:
+                target = QPoint(int(px), int(py))
+            except (TypeError, ValueError, OverflowError):
+                target = self.owner.frameGeometry().topRight() + default_offset
         self.move(self._clamp_restored_position(target))
 
     def _clamp_restored_position(self, target: QPoint) -> QPoint:
@@ -3725,39 +4045,167 @@ class _BaseOverlayWidget(QWidget):
         """고정 모드 시 드래그/리사이즈 비활성화."""
         self._interaction_locked = locked
         if locked:
-            self._drag_offset = None
-            self._resize_origin_global = None
+            self._cancel_placement_gesture()
             self.unsetCursor()
+
+    def placement_is_locked(self) -> bool:
+        return self._interaction_locked or self._get("placement_locked", False, type_=bool)
+
+    def _capture_placement(self):
+        deck = getattr(self, "_deck_data", None)
+        return {
+            "rect": QRect(self.geometry()),
+            "settings": {
+                key: (self._setting_exists(key), self._get(key))
+                for key in ("fixed_w", "fixed_h", "font_size")
+            },
+            "scale": deck.get("scale") if isinstance(deck, dict) else None,
+        }
+
+    def _restore_placement(self, state):
+        self._clear_placement_gesture()
+        for key, (exists, value) in state["settings"].items():
+            if exists:
+                self._set(key, value)
+            else:
+                self._s().remove(f"{self._pref()}_{key}")
+        if state["scale"] is not None:
+            self._set_scale(state["scale"])
+        else:
+            self._apply_and_resize()
+            self.resize(state["rect"].size())
+        self.move(state["rect"].topLeft())
+        self.save_position()
+
+    def _clear_placement_gesture(self):
+        if QWidget.keyboardGrabber() is self:
+            self.releaseKeyboard()
+        self._drag_offset = None
+        self._resize_origin_global = None
+        self._resize_origin_pos = None
+        self._resize_corner = None
+        self._resizing = False
+        self._gesture_press_global = None
+        self._gesture_active = False
+        self._placement_origin = None
+        self.face.show_grip = False
+        self.face.hover_grip = False
+        self.face.grip_corner = None
+        self.face.update()
+        self.unsetCursor()
+
+    def _cancel_placement_gesture(self):
+        state = self._placement_origin
+        active = self._gesture_active
+        self._clear_placement_gesture()
+        if state is not None and active:
+            self._restore_placement(state)
+
+    def _undo_placement(self):
+        state = self._last_placement
+        if state is not None:
+            self._last_placement = None
+            self._restore_placement(state)
+
+    def _add_placement_actions(self, menu):
+        adjust = menu.addAction(
+            t("widget.placement.title", "위치·크기 조정"), self._open_placement_dialog
+        )
+        adjust.setEnabled(not self._interaction_locked)
+        lock = menu.addAction(t("widget.placement.lock", "위치·크기 고정"))
+        lock.setCheckable(True)
+        lock.setChecked(self._get("placement_locked", False, type_=bool))
+        lock.setEnabled(not self._interaction_locked)
+        lock.toggled.connect(self._set_placement_locked)
+        undo = menu.addAction(
+            t("widget.placement.undo", "최근 배치 되돌리기"), self._undo_placement
+        )
+        undo.setEnabled(self._last_placement is not None and not self._interaction_locked)
+
+    def _add_reversible_reset_action(self, menu, label, keys, reset, refresh, *, enabled=True):
+        """Provide a local one-step recovery without interrupting users with a modal."""
+
+        def perform_reset():
+            state = {key: (self._setting_exists(key), self._get(key)) for key in keys}
+            reset()
+            self._last_content_reset = (state, refresh)
+
+        action = menu.addAction(label, perform_reset)
+        action.setEnabled(enabled)
+        if self._last_content_reset is not None:
+            menu.addAction(
+                t("widget.usage.undo_reset", "초기화 되돌리기"), self._undo_content_reset
+            )
+
+    def _undo_content_reset(self):
+        record = self._last_content_reset
+        if record is None:
+            return
+        self._last_content_reset = None
+        state, refresh = record
+        for key, (exists, value) in state.items():
+            if exists:
+                self._set(key, value)
+            else:
+                self._s().remove(f"{self._pref()}_{key}")
+        refresh()
+
+    def _set_placement_locked(self, locked):
+        if locked:
+            self._cancel_placement_gesture()
+        self._set("placement_locked", bool(locked))
+
+    def _open_placement_dialog(self):
+        if self._interaction_locked:
+            return
+        get_snap = getattr(self, "_overlay_manager_snap_setting", None)
+        dialog = WidgetPlacementDialog(
+            self,
+            locked=self._get("placement_locked", False, type_=bool),
+            snap=get_snap() if callable(get_snap) else True,
+            proportional=isinstance(getattr(self, "_deck_data", None), dict),
+        )
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            rect = dialog.placement_rect()
+            state = self._capture_placement()
+            if rect.size() != self.size():
+                width, height = self._constrain_shape_size(rect.width(), rect.height())
+                self._set("fixed_w", width)
+                self._set("fixed_h", height)
+                self._capture_resize_content_metrics()
+                self._fit_font_to_size(width, height)
+            self.move(rect.topLeft())
+            self.save_position()
+            if self.geometry() != state["rect"]:
+                self._last_placement = state
+            self._set_placement_locked(dialog.lock.isChecked())
+            set_snap = getattr(self, "_overlay_manager_set_snap", None)
+            if callable(set_snap):
+                set_snap(dialog.snap.isChecked())
+        dialog.deleteLater()
 
     # -- resize zone --
 
     def _resize_corner_at(self, local_pos: QPoint) -> str | None:
-        right = self.face.width() - _RESIZE_GRIP
-        bottom = self.face.height() - _RESIZE_GRIP
-        left_hit = local_pos.x() <= _RESIZE_GRIP
-        right_hit = local_pos.x() >= right
-        top_hit = local_pos.y() <= _RESIZE_GRIP
-        bottom_hit = local_pos.y() >= bottom
-        if top_hit and left_hit:
-            return "top_left"
-        if top_hit and right_hit:
-            return "top_right"
-        if bottom_hit and left_hit:
-            return "bottom_left"
-        if bottom_hit and right_hit:
-            return "bottom_right"
-        return None
+        """Keep the existing entry point while supporting all eight resize regions."""
+        return resize_region_at(local_pos, self.face.rect(), shape=self.widget_shape_id())
+
+    def _resize_keeps_aspect(self) -> bool:
+        return (
+            isinstance(getattr(self, "_deck_data", None), dict) or self.widget_shape_id() != "card"
+        )
 
     def _update_hover_cursor(self, local_pos: QPoint):
+        if self.placement_is_locked():
+            self.unsetCursor()
+            self.face.hover_grip = False
+            self.face.grip_corner = None
+            self.face.update()
+            return
         corner = self._resize_corner_at(local_pos)
-        if corner in {"top_left", "bottom_right"}:
-            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
-        elif corner in {"top_right", "bottom_left"}:
-            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
-        else:
-            self.setCursor(Qt.CursorShape.SizeAllCursor)
-        if not self.face.hover_grip or self.face.grip_corner != corner:
-            self.face.hover_grip = True
+        self.setCursor(resize_cursor(corner) if corner else Qt.CursorShape.OpenHandCursor)
+        if self.face.hover_grip != bool(corner) or self.face.grip_corner != corner:
+            self.face.hover_grip = bool(corner)
             self.face.grip_corner = corner
             self.face.update()
 
@@ -3873,7 +4321,9 @@ class _BaseOverlayWidget(QWidget):
         """Fit the font directly to the current content space of the widget box."""
         if live:
             self._release_layout_constraints()
-            self.resize(int(target_w), int(target_h))
+            # KeyDeck fits its window to the rendered case, including zoom limits.
+            if not isinstance(getattr(self, "_deck_data", None), dict):
+                self.resize(int(target_w), int(target_h))
             now = time.monotonic()
             if (now - self._last_live_fit_at) >= (1.0 / 60.0):
                 self._last_live_fit_at = now
@@ -3990,13 +4440,16 @@ class _BaseOverlayWidget(QWidget):
 
         if etype == QEvent.Type.MouseButtonPress:
             btn = event.button()
-            if self._interaction_locked:
+            if self.placement_is_locked():
                 if btn == Qt.MouseButton.RightButton:
                     self._show_context_menu(event.globalPosition().toPoint())
                     event.accept()
                     return True
                 return False  # 드래그/리사이즈 차단, 자식 위젯에 전달
             if btn == Qt.MouseButton.LeftButton:
+                self._placement_origin = self._capture_placement()
+                self._gesture_press_global = event.globalPosition().toPoint()
+                self._gesture_active = False
                 local = self.face.mapFromGlobal(event.globalPosition().toPoint())
                 corner = self._resize_corner_at(local)
                 if corner:
@@ -4010,16 +4463,15 @@ class _BaseOverlayWidget(QWidget):
                     self._last_fit_size = (0, 0)
                     self._last_live_scale_apply_at = 0.0
                     self._last_live_fit_at = 0.0
-                    self._release_layout_constraints()
                     self._update_hover_cursor(local)
-                    self.face.show_grip = True
+                    self.face.show_grip = False
                     self.face.grip_corner = corner
                     self.face.update()
                 else:
                     self._drag_offset = (
                         event.globalPosition().toPoint() - self.frameGeometry().topLeft()
                     )
-                    self.setCursor(Qt.CursorShape.ClosedHandCursor)
+                    self.setCursor(Qt.CursorShape.OpenHandCursor)
                 event.accept()
                 return True
             if btn == Qt.MouseButton.RightButton:
@@ -4033,21 +4485,28 @@ class _BaseOverlayWidget(QWidget):
             if self._resize_origin_global is not None and not (
                 event.buttons() & Qt.MouseButton.LeftButton
             ):
-                self._resize_origin_global = None
-                self._resize_origin_pos = None
-                self._resize_corner = None
-                self._resizing = False
-                self.face.show_grip = False
-                self.face.update()
+                self._cancel_placement_gesture()
                 self._refresh_face()
                 self._update_hover_cursor(local)
                 event.accept()
                 return True
             if self._drag_offset is not None and not (event.buttons() & Qt.MouseButton.LeftButton):
-                self._drag_offset = None
+                self._cancel_placement_gesture()
                 self._update_hover_cursor(local)
                 event.accept()
                 return True
+
+            if self._gesture_press_global is not None and not self._gesture_active:
+                if not drag_distance_reached(
+                    self._gesture_press_global, event.globalPosition().toPoint()
+                ):
+                    event.accept()
+                    return True
+                self._gesture_active = True
+                # Non-focusing KeyDeck windows still need Escape during placement.
+                # Release in every completion/cancellation path without changing focus.
+                if QWidget.keyboardGrabber() is None:
+                    self.grabKeyboard()
 
             if (
                 self._resize_origin_global is not None
@@ -4057,31 +4516,29 @@ class _BaseOverlayWidget(QWidget):
                 ow, oh = self._resize_origin_size
                 origin_pos = self._resize_origin_pos or self.pos()
                 corner = self._resize_corner or "bottom_right"
-                if corner == "bottom_right":
-                    new_x = origin_pos.x()
-                    new_y = origin_pos.y()
-                    new_w = max(80, int(ow + delta.x()))
-                    new_h = max(40, int(oh + delta.y()))
-                elif corner == "bottom_left":
-                    new_w = max(80, int(ow - delta.x()))
-                    new_h = max(40, int(oh + delta.y()))
-                    new_x = int(origin_pos.x() + (ow - new_w))
-                    new_y = origin_pos.y()
-                elif corner == "top_right":
-                    new_w = max(80, int(ow + delta.x()))
-                    new_h = max(40, int(oh - delta.y()))
-                    new_x = origin_pos.x()
-                    new_y = int(origin_pos.y() + (oh - new_h))
-                else:
-                    new_w = max(80, int(ow - delta.x()))
-                    new_h = max(40, int(oh - delta.y()))
-                    new_x = int(origin_pos.x() + (ow - new_w))
-                    new_y = int(origin_pos.y() + (oh - new_h))
-                new_w, new_h = self._constrain_shape_size(new_w, new_h)
+                origin = QRect(origin_pos, QSize(ow, oh))
+                requested = resize_rect(
+                    origin,
+                    delta,
+                    corner,
+                    proportional=(
+                        self._resize_keeps_aspect()
+                        or bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+                    ),
+                    max_size=(
+                        None
+                        if isinstance(getattr(self, "_deck_data", None), dict)
+                        else self._fixed_size_limits()
+                    ),
+                )
+                new_w, new_h = self._constrain_shape_size(requested.width(), requested.height())
+                if not isinstance(getattr(self, "_deck_data", None), dict):
+                    new_w, new_h = self._bounded_shape_size(new_w, new_h)
+                self.face.show_grip = True
                 self._set("fixed_w", new_w)
                 self._set("fixed_h", new_h)
-                self.move(new_x, new_y)
                 self._scale_font_with_box(new_w, new_h, live=True)
+                self.move(anchor_resize_rect(origin, self.size(), corner).topLeft())
                 event.accept()
                 return True
             if self._drag_offset is not None and event.buttons() & Qt.MouseButton.LeftButton:
@@ -4092,18 +4549,24 @@ class _BaseOverlayWidget(QWidget):
 
             self._update_hover_cursor(local)
 
-        if etype == QEvent.Type.Enter:
-            self.face.hover_grip = True
+        if etype == QEvent.Type.Enter and not self._gesture_active:
+            self.face.hover_grip = False
             self.face.grip_corner = None
             self.face.update()
 
-        if etype == QEvent.Type.MouseButtonRelease:
+        if etype == QEvent.Type.MouseButtonRelease and event.button() == Qt.MouseButton.LeftButton:
+            state = self._placement_origin
+            if state is not None and not self._gesture_active:
+                self._clear_placement_gesture()
+                self._update_hover_cursor(self.face.mapFromGlobal(event.globalPosition().toPoint()))
+                event.accept()
+                return True
             if self._resize_origin_global is not None:
                 final_w = int(self._get("fixed_w", self.width()) or self.width())
                 final_h = int(self._get("fixed_h", self.height()) or self.height())
                 corner = self._resize_corner or "bottom_right"
                 origin_pos = self._resize_origin_pos or self.pos()
-                anchor = self._anchor_point_for_corner(corner, origin_pos, self._resize_origin_size)
+                origin = QRect(origin_pos, QSize(*self._resize_origin_size))
                 self._resize_origin_global = None
                 self._resize_origin_pos = None
                 self._resize_corner = None
@@ -4111,11 +4574,14 @@ class _BaseOverlayWidget(QWidget):
                 self.face.show_grip = False
                 self.face.update()
                 self._apply_appearance()
-                self._refresh_face()  # tick???????占쎈Ŧ????????????????影?占쏀맮?耀붾굝????????硫멸킐??????????????????耀붾굝?????????? ????????占쎄뭐???饔낅떽???????
+                self._refresh_face()  # Refresh timed content after the resize preview.
                 self._release_layout_constraints()
                 self._fit_font_to_size(final_w, final_h)
-                self.move(self._position_from_anchor(corner, anchor, (final_w, final_h)))
+                self.move(anchor_resize_rect(origin, self.size(), corner).topLeft())
                 self.save_position()
+                if state is not None and self.geometry() != state["rect"]:
+                    self._last_placement = state
+                self._clear_placement_gesture()
                 local = self.face.mapFromGlobal(event.globalPosition().toPoint())
                 self._update_hover_cursor(local)
                 event.accept()
@@ -4123,15 +4589,20 @@ class _BaseOverlayWidget(QWidget):
             if self._drag_offset is not None:
                 self._drag_offset = None
                 snap_cb = getattr(self, "_overlay_manager_snap", None)
-                if callable(snap_cb):
+                if callable(snap_cb) and not event.modifiers() & Qt.KeyboardModifier.AltModifier:
                     self.move(snap_cb(self.pos()))
                 self.save_position()
+                if state is not None and self.geometry() != state["rect"]:
+                    self._last_placement = state
+                self._clear_placement_gesture()
                 local = self.face.mapFromGlobal(event.globalPosition().toPoint())
                 self._update_hover_cursor(local)
             event.accept()
             return True
 
         if etype == QEvent.Type.Leave:
+            if self._gesture_active:
+                return False
             self.unsetCursor()
             if self.face.hover_grip:
                 self.face.hover_grip = False
@@ -4142,7 +4613,22 @@ class _BaseOverlayWidget(QWidget):
         if etype == QEvent.Type.MouseButtonDblClick and event.button() == Qt.MouseButton.LeftButton:
             return self._on_double_click()
 
+        if (
+            etype == QEvent.Type.KeyPress
+            and event.key() == Qt.Key.Key_Escape
+            and self._placement_origin is not None
+        ):
+            self._cancel_placement_gesture()
+            return True
+
         return super().eventFilter(watched, event)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape and self._placement_origin is not None:
+            self._cancel_placement_gesture()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def _on_double_click(self) -> bool:
         return False
@@ -4211,6 +4697,7 @@ class _BaseOverlayWidget(QWidget):
         aot.setCheckable(True)
         aot.setChecked(self.always_on_top())
 
+        self._add_placement_actions(menu)
         act_pos = menu.addAction(
             t("widget.menu.reset_position", "Reset position"), self._action_reset_position
         )
@@ -4261,11 +4748,30 @@ class _BaseOverlayWidget(QWidget):
         )
         act_op.setIcon(_ic(ICON.OPACITY))
 
+        if self._settings_prefix() != "overlay_launcher_deck":
+            shadow_action = menu.addAction(t("widget.shadow.enabled", "글자 그림자 사용"))
+            shadow_action.setCheckable(True)
+            shadow_action.setChecked(read_text_shadow(self._get).enabled)
+            shadow_action.toggled.connect(self._set_text_shadow_enabled)
+            menu.addAction(
+                t("widget.shadow.settings", "그림자 설정…"), self._action_open_shadow_dialog
+            )
+
         menu.addSeparator()
         act_rc = menu.addAction(
             t("widget.menu.reset_colors", "Reset colors"), self._action_reset_colors
         )
         act_rc.setIcon(_ic(ICON.REFRESH))
+
+    def _set_text_shadow_enabled(self, enabled):
+        self._set("text_shadow_enabled", enabled)
+        self._apply_and_resize(refit=True)
+
+    def _action_open_shadow_dialog(self):
+        dialog = TextShadowDialog(read_text_shadow(self._get), self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            store_text_shadow(self._set, dialog.controls.values())
+            self._apply_and_resize(refit=True)
 
     def _action_font(self):
         dlg = _FontPickerDialog(self.font_family(), self.font_size(), self)
@@ -4309,7 +4815,6 @@ class _BaseOverlayWidget(QWidget):
             QDialogButtonBox,
             QHBoxLayout,
             QLabel,
-            QSlider,
             QVBoxLayout,
         )
 
@@ -4327,7 +4832,7 @@ class _BaseOverlayWidget(QWidget):
             row = QHBoxLayout()
             lbl = QLabel(label_text)
             lbl.setMinimumWidth(100)
-            slider = QSlider(Qt.Orientation.Horizontal)
+            slider = NoWheelSlider(Qt.Orientation.Horizontal)
             slider.setRange(0, range_max)
             slider.setValue(initial)
             val_lbl = QLabel(str(initial))

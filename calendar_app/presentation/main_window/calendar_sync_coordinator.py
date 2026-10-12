@@ -4,33 +4,63 @@
 from datetime import datetime
 from pathlib import Path
 import sqlite3
+import threading
 
 from PyQt6.QtCore import QMetaObject, QObject, Qt, QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt6.QtWidgets import QApplication
 
 from calendar_app.app_paths import DB_PATH, TOKEN_PATH
+from calendar_app.application.calendar_provider_catalog import (
+    CALDAV_SERVICES,
+    PROVIDER_NAMES,
+    PROVIDERS,
+    account_provider,
+)
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
-from calendar_app.presentation.dialogs.sync_feedback import sync_error_message
+from calendar_app.infrastructure.ics.subscriptions import ICS_ERRORS, subscription_errors
+from calendar_app.presentation.dialogs.sync_feedback import (
+    google_sync_error_code,
+    sync_error_message,
+)
+from calendar_app.presentation.dialogs.sync_recovery import requires_account_reconnection
+from calendar_app.presentation.main_window.top_bar_builder import build_sync_toolbar_styles
 from calendar_app.shared.icon_map import ICON, icon
 
-PROVIDERS = ("google", "outlook", "icloud", "naver", "ics")
-_NORMAL = {"idle", "connected", "disconnected", "completed", "selection_saved", "refreshed"}
+_NORMAL = {
+    "idle",
+    "connected",
+    "disconnected",
+    "completed",
+    "completed_with_issues",
+    "selection_saved",
+    "refreshed",
+    "cancelled",
+}
 
 
 def provider_name(provider):
-    return {
-        "google": "Google Calendar",
-        "outlook": "Outlook · Microsoft 365",
-        "icloud": "iCloud",
-        "naver": t("caldav.naver", "네이버"),
-        "ics": t("sync_unified.ics", "ICS 구독"),
-    }[provider]
+    if provider == "naver":
+        return t("caldav.naver", "네이버")
+    if provider == "ics":
+        return t("sync_unified.ics", "ICS 구독")
+    return PROVIDER_NAMES[provider]
 
 
 def provider_status(state):
     if state["busy"]:
         return t("sync_ui.working", "작업 중...")
+    if state.get("paused"):
+        return t(
+            "sync_recovery.paused_hint",
+            "계정 연결은 유지됩니다. 연결 설정에서 동기화를 다시 켜세요.",
+        )
+    if state.get("retry_remaining"):
+        return t(
+            "sync_recovery.wait_hint",
+            "서비스 요청 제한으로 {seconds}초 후 다시 시도할 수 있습니다.",
+            seconds=state["retry_remaining"],
+        )
     if state.get("error"):
         return sync_error_message(state["error"])
     if not state["connected"]:
@@ -53,6 +83,14 @@ class IcsSyncWorker(QThread):
         super().__init__(parent)
         self.calendars = calendars
         self.local_zone = local_zone
+        self._cancelled = threading.Event()
+
+    def requestInterruption(self):
+        self._cancelled.set()
+        super().requestInterruption()
+
+    def is_cancelled(self):
+        return self._cancelled.is_set() or self.isInterruptionRequested()
 
     def run(self):
         results = {}
@@ -60,14 +98,14 @@ class IcsSyncWorker(QThread):
             from calendar_app.infrastructure.ics.ics_fetcher import fetch_and_sync
 
             for calendar in self.calendars:
-                if self.isInterruptionRequested():
+                if self.is_cancelled():
                     break
                 try:
                     results[calendar["id"]] = fetch_and_sync(
                         calendar["id"],
                         calendar["ics_url"],
                         local_zone=self.local_zone,
-                        cancelled=self.isInterruptionRequested,
+                        cancelled=self.is_cancelled,
                     )
                 except Exception:
                     results[calendar["id"]] = (0, 0, "operation_failed")
@@ -121,13 +159,7 @@ class CalendarSyncCoordinator(QObject):
                     "SELECT account_id,local_id,is_active FROM calendar_sync_calendar c JOIN calendar v ON v.id=c.local_id"
                 ):
                     account = row["account_id"]
-                    self.calendar_providers[row["local_id"]] = (
-                        "naver"
-                        if account.startswith("caldav::naver::")
-                        else "icloud"
-                        if account.startswith("caldav::icloud::")
-                        else "outlook"
-                    )
+                    self.calendar_providers[row["local_id"]] = account_provider(account)
                     if row["is_active"]:
                         selected[account] = selected.get(account, 0) + 1
                 if {"calendar_sync_issue", "calendar_sync_event", "unified_task"} <= tables:
@@ -162,7 +194,11 @@ class CalendarSyncCoordinator(QObject):
         if getattr(self.app, "_is_shutting_down", False):
             return
         counts, selected = {}, {}
+        previous_rows = self.calendar_rows
+        previous_providers = self.calendar_providers.copy()
+        previous_issues = self.issue_rows
         try:
+            self.calendar_providers = {}
             counts, selected, self.issue_rows = self._metadata()
             self.calendar_rows = self._calendars()
             self.calendar_providers.update(
@@ -181,6 +217,9 @@ class CalendarSyncCoordinator(QObject):
                     + task_repo.count_gcal_sync_conflicts()
                 )
         except (sqlite3.Error, OSError, RuntimeError):
+            self.calendar_rows = previous_rows
+            self.calendar_providers = previous_providers
+            self.issue_rows = previous_issues
             # Keep previous issues when metadata temporarily cannot be read.
             counts = {
                 s.get("account", ""): s["issues"]
@@ -191,7 +230,7 @@ class CalendarSyncCoordinator(QObject):
         google = getattr(self.app, "gcal_sync", None)
         enabled = is_gcal_enabled(self.settings)
         authenticated = bool(google and getattr(google, "is_authenticated", False))
-        connected = enabled and (authenticated or Path(TOKEN_PATH).exists())
+        connected = authenticated or Path(TOKEN_PATH).exists()
         waiting = (
             enabled and not authenticated and getattr(self.app, "_gcal_waiting_for_auth", False)
         )
@@ -199,19 +238,46 @@ class CalendarSyncCoordinator(QObject):
             getattr(self.app, "_gcal_sync_in_progress", False)
             or self._worker_running("_sync_worker")
             or self._worker_running("_auth_worker")
+            or any(
+                getattr(worker, "provider", None) == "google" and self._is_worker_running(worker)
+                for worker in getattr(self.app, "_bg_workers", [])
+            )
+        )
+        google_error = (
+            "login_required"
+            if waiting
+            else self.settings.value("sync_google_last_error", "", type=str)
+            if enabled
+            else ""
+        )
+        google_selected = sum(
+            bool(c.get("is_active", 1)) for c in self.calendar_rows if c.get("type") == "gcal"
+        )
+        google_has_calendars = any(c.get("type") == "gcal" for c in self.calendar_rows)
+        google_needs_selection = bool(
+            connected
+            and enabled
+            and self.settings.value("gcal_import_selection_configured", False, type=bool)
+            and not google_has_calendars
         )
         states = {
             "google": {
                 "connected": connected,
                 "busy": busy,
-                "auto": self.settings.value("sync_google_auto", True, type=bool),
+                "auto": enabled and self.settings.value("sync_google_auto", True, type=bool),
+                "paused": connected and not enabled,
+                "selected": google_selected,
+                "import_paused": google_has_calendars and not google_selected,
+                "needs_selection": google_needs_selection,
                 "issues": int(getattr(self.app, "_gcal_sync_issue_count", 0)),
-                "can_sync": connected and not waiting,
-                "error": "login_required"
-                if waiting
-                else self.settings.value("sync_google_last_error", "", type=str)
-                if enabled
-                else "",
+                "can_sync": bool(
+                    connected
+                    and enabled
+                    and not waiting
+                    and not google_needs_selection
+                    and not requires_account_reconnection(google_error)
+                ),
+                "error": google_error,
                 "last_success": self.settings.value("last_successful_sync", "", type=str),
             }
         }
@@ -219,6 +285,20 @@ class CalendarSyncCoordinator(QObject):
             prefix = "outlook_" if key == "outlook" else "caldav_" + key + "_"
             account = self.settings.value(prefix + "account_id", "", type=str)
             status = controller.status if controller else "idle"
+            provider_error = (
+                (
+                    status
+                    if status not in _NORMAL
+                    else self.settings.value(prefix + "last_error", "", type=str)
+                )
+                if not (controller and controller.busy)
+                else ""
+            )
+            issue_count = counts.get(account, 0)
+            summary = getattr(controller, "summary", {})
+            if status == "completed_with_issues" and isinstance(summary, dict):
+                issue_count = max(issue_count, int(summary.get("issues") or 0))
+            retry_remaining = getattr(controller, "retry_remaining_seconds", 0) if controller else 0
             states[key] = {
                 "account": account,
                 "connected": bool(account),
@@ -226,28 +306,52 @@ class CalendarSyncCoordinator(QObject):
                 "auto": self.settings.value(prefix + "enabled", False, type=bool),
                 "selected": selected.get(account, 0),
                 "needs_selection": bool(account) and not selected.get(account),
-                "issues": counts.get(account, 0),
-                "can_sync": bool(account and controller and selected.get(account)),
-                "error": status
-                if status not in _NORMAL and not (controller and controller.busy)
-                else "",
+                "issues": issue_count,
+                "can_sync": bool(
+                    account
+                    and controller
+                    and selected.get(account)
+                    and not retry_remaining
+                    and not requires_account_reconnection(provider_error)
+                ),
+                "retry_remaining": retry_remaining,
+                "cancelled": status == "cancelled",
+                "error": provider_error,
                 "last_success": self.settings.value(prefix + "last_success", "", type=str),
             }
+        all_ics = [c for c in self.calendar_rows if c.get("type") == "ics"]
         ics = [
             c
             for c in self.calendar_rows
             if c.get("type") == "ics" and c.get("is_active", 1) and c.get("ics_url")
         ]
+        errors = subscription_errors(self.settings)
+        failed = [c["id"] for c in ics if c["id"] in errors]
         states["ics"] = {
-            "connected": bool(ics),
+            "connected": bool(all_ics),
             "busy": self.ics_worker is not None,
             "auto": self.settings.value("sync_ics_auto", True, type=bool),
-            "issues": self.settings.value("sync_ics_issue_count", 0, type=int) if ics else 0,
+            "selected": len(ics),
+            "total": len(all_ics),
+            "needs_selection": bool(all_ics) and not ics,
+            "issues": len(failed),
             "can_sync": bool(ics),
-            "error": self.settings.value("sync_ics_last_error", "", type=str) if ics else "",
+            "error": "ics_fetch_failed"
+            if failed
+            else (
+                "operation_failed"
+                if ics
+                and self.settings.value("sync_ics_last_error", "", type=str) == "operation_failed"
+                else ""
+            ),
             "last_success": self.settings.value("sync_ics_last_success", "", type=str),
         }
-        changed = states != self.states
+        changed = (
+            states != self.states
+            or previous_rows != self.calendar_rows
+            or previous_providers != self.calendar_providers
+            or previous_issues != self.issue_rows
+        )
         self.states = states
         self._paint_status()
         if changed:
@@ -255,6 +359,10 @@ class CalendarSyncCoordinator(QObject):
 
     def _worker_running(self, attribute):
         worker = getattr(self.app, attribute, None)
+        return self._is_worker_running(worker)
+
+    @staticmethod
+    def _is_worker_running(worker):
         try:
             return bool(worker and worker.isRunning())
         except RuntimeError:
@@ -273,8 +381,8 @@ class CalendarSyncCoordinator(QObject):
                 continue
             try:
                 if key == "google":
-                    self.app.sync_google_calendar(silent=True)
-                    started.append(key)
+                    if self.app.sync_google_calendar(silent=True) is not False:
+                        started.append(key)
                 elif key == "ics":
                     if self.sync_ics(force=True):
                         started.append(key)
@@ -289,7 +397,7 @@ class CalendarSyncCoordinator(QObject):
                 if key == "google":
                     self.settings.setValue("sync_google_last_error", "operation_failed")
                 elif key == "ics":
-                    self.settings.setValue("sync_ics_last_error", "ics_fetch_failed")
+                    self.settings.setValue("sync_ics_last_error", "operation_failed")
                 else:
                     self.controllers()[key].status = "operation_failed"
         self.refresh()
@@ -302,7 +410,7 @@ class CalendarSyncCoordinator(QObject):
             "google": "sync_google_auto",
             "outlook": "outlook_enabled",
             "icloud": "caldav_icloud_enabled",
-            "naver": "caldav_naver_enabled",
+            **{service: "caldav_" + service + "_enabled" for service in CALDAV_SERVICES},
             "ics": "sync_ics_auto",
         }[provider]
         self.settings.setValue(key, bool(enabled))
@@ -326,7 +434,11 @@ class CalendarSyncCoordinator(QObject):
         if getattr(self.app, "_is_shutting_down", False):
             return
         self.refresh(refresh_issues=False)
-        for key in ("google", "outlook", "icloud") if include_google else ("outlook", "icloud"):
+        for key in (
+            (("google",) if include_google else ())
+            + ("outlook",)
+            + tuple(service for service in CALDAV_SERVICES if service != "naver")
+        ):
             state = self.states.get(key, {})
             if (
                 not state.get("auto")
@@ -348,16 +460,24 @@ class CalendarSyncCoordinator(QObject):
                 )
         self.refresh(refresh_issues=False)
 
-    def sync_ics(self, force=False):
+    def sync_ics(self, force=False, calendar_ids=None):
         if self.ics_worker or getattr(self.app, "_is_shutting_down", False):
             return False
         if not force and not self.settings.value("sync_ics_auto", True, type=bool):
             return False
-        calendars = [
-            c
-            for c in self._calendars()
-            if c.get("type") == "ics" and c.get("is_active", 1) and c.get("ics_url")
-        ]
+        try:
+            calendars = [
+                c
+                for c in self._calendars()
+                if c.get("type") == "ics"
+                and c.get("is_active", 1)
+                and c.get("ics_url")
+                and (calendar_ids is None or c["id"] in calendar_ids)
+            ]
+        except (sqlite3.Error, OSError, RuntimeError):
+            self.settings.setValue("sync_ics_last_error", "operation_failed")
+            self.refresh(refresh_issues=False)
+            return False
         if not calendars:
             return False
         worker = IcsSyncWorker(
@@ -367,39 +487,102 @@ class CalendarSyncCoordinator(QObject):
         self.app._bg_workers.append(worker)
         worker.result.connect(self._ics_result)
         worker.finished.connect(self._ics_finished)
-        worker.start()
+        try:
+            worker.start()
+        except Exception:
+            self.ics_worker = None
+            self.app._bg_workers.remove(worker)
+            worker.deleteLater()
+            self.settings.setValue("sync_ics_last_error", "operation_failed")
+            self.refresh(refresh_issues=False)
+            return False
         self.refresh(refresh_issues=False)
         return True
 
     def _ics_result(self, results):
         if getattr(self.app, "_is_shutting_down", False):
             return
-        if self.ics_worker and self.ics_worker.isInterruptionRequested():
+        if self.ics_worker and self.ics_worker.is_cancelled():
+            if any(row[0] or row[1] for row in results.values()):
+                self.app.schedule_panel_refresh(left=True, center=True, right=True)
             return
-        errors = sum(bool(row[2]) for row in results.values())
-        self.settings.setValue(
-            "sync_ics_failed_ids", [key for key, row in results.items() if row[2]]
-        )
-        self.settings.setValue("sync_ics_issue_count", errors)
-        self.settings.setValue("sync_ics_last_error", "ics_fetch_failed" if errors else "")
-        if results and not errors:
+        if not results:
+            return
+        committed = any(row[0] or row[1] for row in results.values())
+        current_calendars = self.calendar_rows
+        original = getattr(self.ics_worker, "calendars", None)
+        if isinstance(original, list):
+            # A queued completion must not clear errors for a replacement feed.
+            try:
+                current_calendars = self._calendars()
+            except (sqlite3.Error, OSError, RuntimeError):
+                self.settings.setValue("sync_ics_last_error", "operation_failed")
+                if committed:
+                    self.app.schedule_panel_refresh(left=True, center=True, right=True)
+                return
+            original_urls = {c["id"]: c.get("ics_url") for c in original}
+            eligible = {
+                c["id"]
+                for c in current_calendars
+                if c.get("type") == "ics"
+                and c.get("is_active", 1)
+                and c.get("ics_url")
+                and c.get("ics_url") == original_urls.get(c["id"])
+            }
+            results = {key: row for key, row in results.items() if key in eligible}
+            if not results:
+                if committed:
+                    self.app.schedule_panel_refresh(left=True, center=True, right=True)
+                return
+        error_codes = subscription_errors(self.settings)
+        for key, row in results.items():
+            if row[2] == "cancelled":
+                continue
+            if row[2]:
+                error_codes[key] = (
+                    row[2]
+                    if isinstance(row[2], str) and row[2] in ICS_ERRORS
+                    else "operation_failed"
+                )
+            else:
+                error_codes.pop(key, None)
+        self.settings.setValue("sync_ics_error_codes", error_codes)
+        self.settings.setValue("sync_ics_failed_ids", sorted(error_codes))
+        self.settings.setValue("sync_ics_issue_count", len(error_codes))
+        self.settings.setValue("sync_ics_last_error", "ics_fetch_failed" if error_codes else "")
+        active_ids = {
+            c["id"]
+            for c in current_calendars
+            if c.get("type") == "ics" and c.get("is_active", 1) and c.get("ics_url")
+        }
+        if (
+            active_ids
+            and not (active_ids & error_codes.keys())
+            and active_ids <= results.keys()
+            and all(not r[2] for r in results.values())
+        ):
             self.settings.setValue(
                 "sync_ics_last_success", datetime.now().astimezone().isoformat(timespec="seconds")
             )
-        if any(row[0] or row[1] for row in results.values()):
+        if committed:
             self.app.schedule_panel_refresh(left=True, center=True, right=True)
 
     def _ics_finished(self):
         worker = self.sender()
         if worker in self.app._bg_workers:
             self.app._bg_workers.remove(worker)
-        self.ics_worker = None
-        worker.deleteLater()
+        if self.ics_worker is worker:
+            self.ics_worker = None
+        if worker:
+            worker.deleteLater()
         self.refresh()
 
     def record_google_result(self, success, skipped=False):
         if not skipped:
-            self.settings.setValue("sync_google_last_error", "" if success else "operation_failed")
+            code = getattr(self.app, "_last_gcal_sync_error", None)
+            service = getattr(self.app, "gcal_sync", None)
+            safe_code = google_sync_error_code(code, getattr(service, "last_error_status", None))
+            self.settings.setValue("sync_google_last_error", "" if success else safe_code)
 
     def stop(self):
         self.local_change_timer.stop()
@@ -421,32 +604,37 @@ class CalendarSyncCoordinator(QObject):
         elif connected:
             text, symbol = (
                 t("sync_unified.connected_count", "연결 {count}").format(count=connected),
-                ICON.CLOUD,
+                ICON.SYNC_SETTINGS,
             )
         else:
-            text, symbol = t("sync_unified.local_only", "로컬 모드"), ICON.SYNC
+            text, symbol = t("sync_unified.local_only", "로컬 모드"), ICON.SYNC_SETTINGS
         tooltip = (
-            t("sync_unified.sync_all", "연결된 모든 캘린더 동기화")
+            t("sync_ui.hub_title", "캘린더 · 계정 및 동기화")
+            + "\n"
+            + text
             + "\n"
             + "\n".join(
                 provider_name(k) + ": " + provider_status(s) for k, s in self.states.items()
             )
         )
-        color = (
-            "#d39a2a"
-            if (issues or failed) and not busy
-            else self.settings.value("theme_color", "#4da6ff", type=str)
+        styles = build_sync_toolbar_styles(
+            self.settings, busy=bool(busy), attention=bool(issues or failed)
         )
         button = getattr(self.app, "sync_action_btn", None)
         if button:
-            button.setIcon(icon(symbol, color=color))
+            button.setIcon(icon(symbol, color=styles["icon_color"]))
+            if button.styleSheet() != styles["button"]:
+                button.setStyleSheet(styles["button"])
             button.setToolTip(tooltip)
-            button.setAccessibleName(t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"))
+            button.setAccessibleName(t("sync_ui.hub_title", "캘린더 · 계정 및 동기화"))
             button.setAccessibleDescription(tooltip)
         label = getattr(self.app, "sync_status_text_lbl", None)
         if label:
             label.setText(text)
+            if label.styleSheet() != styles["label"]:
+                label.setStyleSheet(styles["label"])
             label.setToolTip(tooltip)
+            label.setAccessibleDescription(text)
         old_label = getattr(self.app, "sync_status_lbl", None)
         if old_label and button:
             old_label.hide()

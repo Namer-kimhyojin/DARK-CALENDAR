@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -81,7 +82,23 @@ class WidgetModeCoordinator:
             fullscreen=bool(state & Qt.WindowState.WindowFullScreen),
         )
         self.state = WidgetModeState.OPENING
-        self.controller.show_widget(filter_mode)
+        try:
+            self.controller.show_widget(filter_mode)
+        except Exception:
+            # A partially shown widget must not retain delayed loading work or
+            # make the next entry look like an already active workspace.
+            self._internal_hide = True
+            try:
+                with suppress(Exception):
+                    self.controller.prepare_shutdown()
+                with suppress(Exception):
+                    if self.controller.widget is not None:
+                        self.controller.widget.hide()
+            finally:
+                self._internal_hide = False
+                self._snapshot = None
+                self.state = WidgetModeState.CLOSED
+            raise
         window.hide()
         if hasattr(window, "is_visible"):
             window.is_visible = False

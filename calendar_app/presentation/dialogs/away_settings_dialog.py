@@ -39,7 +39,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
-from calendar_app.shared.value_parsers import as_bool
+from calendar_app.shared.value_parsers import as_bool, as_int
 
 # ?? 怨듯넻 移섏닔 ?곸닔 ????????????????????????????????????????????????
 
@@ -1022,7 +1022,9 @@ class AwaySettingsDialog(QDialog):
         else:
             self.msg_edit.setPlainText(raw)
 
-        self.interval_spin.setValue(int(self.settings.value("away_interval", 5)))
+        self.interval_spin.setValue(
+            as_int(self.settings.value("away_interval", 5), 5, minimum=1, maximum=1440)
+        )
 
         if self.settings.value("away_unlock_method", "idle") == "password":
             self.unlock_pw_radio.setChecked(True)
@@ -1048,7 +1050,9 @@ class AwaySettingsDialog(QDialog):
 
         self.bg_path_edit.setText(self.settings.value("away_bg_path", ""))
 
-        self.opacity_slider.setValue(int(self.settings.value("away_bg_opacity", 100)))
+        self.opacity_slider.setValue(
+            as_int(self.settings.value("away_bg_opacity", 100), 100, minimum=20, maximum=100)
+        )
 
         self.editor_tabs.setCurrentIndex(0)
 

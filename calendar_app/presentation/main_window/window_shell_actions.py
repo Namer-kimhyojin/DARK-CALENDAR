@@ -353,7 +353,7 @@ class WindowShellActionsMixin:
     # ------------------------------------------------------------------ #
     def toggle_overlay(self):
         if self.is_widget_mode_active():
-            self.stop_widget_mode()
+            self._ensure_widget_mode_coordinator().return_to_main()
             return
         if (
             not self.isVisible()

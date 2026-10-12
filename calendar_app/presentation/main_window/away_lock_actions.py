@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Away-lock (idle lock) related action mixin."""
 
 import logging
@@ -9,7 +10,7 @@ from PyQt6.QtWidgets import QApplication, QDialog
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
-from calendar_app.shared.value_parsers import as_bool
+from calendar_app.shared.value_parsers import as_bool, as_int
 
 try:
     import win32api as _win32api
@@ -812,7 +813,9 @@ class AwayLockMixin:
         if dlg.exec():
             # ???占쎌젧???占쎄떠??占쎄퍔?占썹뵳???占쎈さ亦껋깢???AlarmScheduler???占쎌룄?占썹댆????占쎌몥??袁⑤콦 ?熬곣뫗??
             if hasattr(self, "alarm_worker"):
-                interval = int(self.settings.value("away_interval", 5))
+                interval = as_int(
+                    self.settings.value("away_interval", 5), 5, minimum=1, maximum=1440
+                )
                 self.alarm_worker.idle_timeout_ms = interval * 60 * 1000
             # UI 嶺뚯빖占???占쎌룇占??(??占쎈맪????占쎌뻼????占썬늾????
             self.refresh_idle_lock_ui()
@@ -848,11 +851,13 @@ class AwayLockMixin:
         color = self.settings.value("away_font_color", "#4da6ff")
         bold = self.settings.value("away_font_bold", True, type=bool)
         italic = self.settings.value("away_font_italic", False, type=bool)
-        base_pt = self.settings.value("font_size", 10, type=int)
+        base_pt = as_int(self.settings.value("font_size", 10), 10, minimum=1, maximum=256)
         from calendar_app.presentation.theme.style_builder import _scaled_pt
 
         clock_pt = _scaled_pt(base_pt, 24, 48)
-        alpha_pct = max(20, min(100, int(self.settings.value("away_bg_opacity", 100))))
+        alpha_pct = as_int(
+            self.settings.value("away_bg_opacity", 100), 100, minimum=20, maximum=100
+        )
         alpha = max(0, min(255, int(round(alpha_pct * 255 / 100))))
 
         pixmap = None
@@ -886,7 +891,7 @@ class AwayLockMixin:
             if raw.strip().startswith("<"):
                 msg_lbl.setText(_wrap_message_html(raw))
             else:
-                size = int(self.settings.value("away_font_size", 24))
+                size = as_int(self.settings.value("away_font_size", 24), 24, minimum=1)
                 if frame_width < 620:
                     size = min(size, 20)
                 style = f"font-size:{size}pt; color:{color};"
@@ -1068,7 +1073,9 @@ class AwayLockMixin:
 
         if hasattr(self, "alarm_worker"):
             try:
-                interval = int(self.settings.value("away_interval", 5))
+                interval = as_int(
+                    self.settings.value("away_interval", 5), 5, minimum=1, maximum=1440
+                )
                 self.alarm_worker.idle_timeout_ms = interval * 60 * 1000
             except Exception:
                 pass

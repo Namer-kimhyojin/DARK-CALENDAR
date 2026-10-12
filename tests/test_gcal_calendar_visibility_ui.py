@@ -17,42 +17,33 @@ class GCalCalendarVisibilityUiTests(unittest.TestCase):
         cls._app = QApplication.instance() or QApplication([])
 
     def test_visibility_toggle_refreshes_today_panel_and_calendar(self):
-        class _Parent(QWidget):
-            def __init__(self):
-                super().__init__()
-                self.settings = QSettings("CodexTests", "GCalCalendarVisibilityUi")
-                self.refresh_requests = []
+        from types import SimpleNamespace
 
-            def schedule_panel_refresh(self, **kwargs):
-                self.refresh_requests.append(kwargs)
+        from calendar_app.presentation.dialogs.calendar_manager_page import CalendarManagerPage
 
-        parent = _Parent()
-        dialog = GCalSettingsDialog(parent=parent)
-        row = dialog._make_calendar_row_widget(
-            {
-                "id": "gcal::team@example.com",
-                "name": "숨김 테스트",
-                "type": "gcal",
-                "color": "#4da6ff",
-                "is_default": 0,
-                "is_visible": 1,
-            }
+        parent = QWidget()
+        parent.settings = QSettings("CodexTests", "GCalCalendarVisibilityUi")
+        parent.schedule_panel_refresh = __import__("unittest.mock", fromlist=["Mock"]).Mock()
+        calendar = {"id": "gcal::team", "name": "Team", "type": "gcal", "is_visible": 1}
+        coordinator = SimpleNamespace(
+            calendar_rows=[calendar],
+            calendar_providers={"gcal::team": "google"},
+            states={},
+            refresh=lambda: None,
         )
+        page = CalendarManagerPage(parent, coordinator, lambda *args: None)
         try:
-            visibility_button = row.findChild(QPushButton, "calendarVisibilityButton")
-            self.assertIsNotNone(visibility_button)
             with patch(
                 "calendar_app.infrastructure.db.calendar_repo.set_calendar_visible",
                 return_value=True,
-            ):
-                visibility_button.click()
-            self.assertEqual(
-                {"left": True, "center": True},
-                parent.refresh_requests[-1],
+            ) as save:
+                page.visible.click()
+            save.assert_called_once_with("gcal::team", False)
+            parent.schedule_panel_refresh.assert_called_once_with(
+                left=True, center=True, right=True
             )
         finally:
-            row.close()
-            dialog.close()
+            page.close()
             parent.close()
 
 

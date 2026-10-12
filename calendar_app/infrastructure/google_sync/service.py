@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 from dataclasses import dataclass
 import datetime
+import json
 import logging
+import math
 import os.path
 import socket
 import ssl
 import threading
 import time
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +17,12 @@ logger = logging.getLogger(__name__)
 from PyQt6.QtWidgets import QMessageBox  # noqa: E402
 
 from calendar_app.app_paths import CREDENTIALS_PATH, TOKEN_PATH  # noqa: E402
+from calendar_app.infrastructure.google_sync.oauth import (  # noqa: E402
+    GoogleAuthError,
+    check_auth_cancelled,
+    load_desktop_client_config,
+    run_desktop_auth,
+)
 from calendar_app.shared.datetime_utils import (  # noqa: E402
     _extract_tz_offset,
     parse_datetime_str,
@@ -47,6 +56,29 @@ except ImportError:
 
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
+
+
+def is_google_rate_limit_error(status, error=None) -> bool:
+    """Distinguish temporary Calendar API quotas from other HTTP 403 failures."""
+    if status == 429:
+        return True
+    if status != 403:
+        return False
+    reasons = {"rateLimitExceeded", "userRateLimitExceeded"}
+    content = getattr(error, "content", None)
+    if content is not None:
+        try:
+            payload = json.loads(content)
+            return any(
+                item.get("reason") in reasons
+                for item in payload.get("error", {}).get("errors", [])
+                if isinstance(item, dict)
+            )
+        except (ValueError, TypeError, AttributeError):
+            return False
+    # Engine results contain the safe error text already saved by the service.
+    message = str(error or "").lower()
+    return any(reason.lower() in message for reason in reasons)
 
 
 @dataclass
@@ -159,6 +191,10 @@ class CalendarSyncService:
 
         self.last_error_message = None
 
+        self._pending_token_json = None
+        self._account_identity_mismatch = False
+        self._account_identity_error_kind = "account_mismatch"
+
         # 마지막 429 응답의 Retry-After 값(초). engine.py 로깅용.
         self._last_retry_after_secs: float = 0.0
 
@@ -181,6 +217,14 @@ class CalendarSyncService:
 
         self.last_error_message = message
 
+    def _remote_writes_allowed(self):
+        if self._account_identity_mismatch:
+            self._set_last_error(
+                self._account_identity_error_kind, self._account_identity_error_kind
+            )
+            return False
+        return True
+
     def _default_tz_offset(self) -> str:
         return timezone_offset_for_name(self.time_zone)
 
@@ -202,6 +246,9 @@ class CalendarSyncService:
     def _is_transient_error(self, exc: Exception) -> bool:
         if HAS_GOOGLE_API and isinstance(exc, HttpError):
             status = getattr(getattr(exc, "resp", None), "status", None)
+
+            if is_google_rate_limit_error(status, exc):
+                return True
 
             if status in {408, 409, 425, 429, 500, 502, 503, 504}:
                 return True
@@ -250,7 +297,7 @@ class CalendarSyncService:
                 return default
             secs = float(raw)
             # epoch timestamp(>3600) 인 경우 무시하고 default 사용
-            if secs > 3600:
+            if not math.isfinite(secs) or secs <= 0 or secs > 3600:
                 return default
             return min(secs, 60.0)
         except Exception:
@@ -272,24 +319,19 @@ class CalendarSyncService:
                 if attempt >= retries or not self._is_transient_error(exc):
                     raise
 
-                # 429 응답이면 Retry-After 헤더를 우선 사용
-                is_429 = False
-                if HAS_GOOGLE_API:
-                    try:
-                        from googleapiclient.errors import HttpError as _HttpError
-
-                        if isinstance(exc, _HttpError):
-                            _status = int(getattr(getattr(exc, "resp", None), "status", 0) or 0)
-                            if _status == 429:
-                                is_429 = True
-                    except Exception:
-                        pass
-
-                if is_429:
+                # Temporary quotas can use 403 or 429; honor Retry-After for either.
+                status = getattr(getattr(exc, "resp", None), "status", None)
+                is_rate_limited = (
+                    HAS_GOOGLE_API
+                    and isinstance(exc, HttpError)
+                    and is_google_rate_limit_error(status, exc)
+                )
+                if is_rate_limited:
                     wait = self._get_retry_after_secs(exc, retry_delay * (2**attempt))
                     self._last_retry_after_secs = wait
                     logger.warning(
-                        "GCal 429 rate-limit (attempt %d/%d), honouring Retry-After=%.0fs",
+                        "GCal %s rate-limit (attempt %d/%d), honouring Retry-After=%.0fs",
+                        status,
                         attempt + 1,
                         retries,
                         wait,
@@ -353,9 +395,17 @@ class CalendarSyncService:
             logger.warning("Google OAuth token revocation failed (non-critical): %s", exc)
             return False
 
-    def authenticate(self, parent_widget=None, interactive=True) -> bool:
+    def authenticate(
+        self,
+        parent_widget=None,
+        interactive=True,
+        *,
+        force_reauth=False,
+        is_cancelled=None,
+        persist_token=True,
+    ) -> bool:
         with self._service_lock:
-            if self.is_authenticated and self.service is not None:
+            if not force_reauth and self.is_authenticated and self.service is not None:
                 return True
 
             self._clear_auth_state()
@@ -363,6 +413,7 @@ class CalendarSyncService:
             self._clear_last_error()
 
         if not HAS_GOOGLE_API:
+            self._set_last_error("auth_modules", "Google Calendar modules are not installed")
             if parent_widget:
                 QMessageBox.warning(
                     parent_widget, "Google Calendar", "Google Calendar modules are not installed."
@@ -371,8 +422,10 @@ class CalendarSyncService:
             return False
 
         creds = None
+        token_json = None
+        self._pending_token_json = None
 
-        if os.path.exists(TOKEN_PATH):
+        if not force_reauth and os.path.exists(TOKEN_PATH):
             try:
                 if not _token_file_supports_scopes(TOKEN_PATH):
                     logger.warning(
@@ -411,7 +464,13 @@ class CalendarSyncService:
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 try:
-                    creds.refresh(Request())
+                    refresh_request = Request()
+
+                    def bounded_refresh_request(*args, **kwargs):
+                        kwargs["timeout"] = 12
+                        return refresh_request(*args, **kwargs)
+
+                    creds.refresh(bounded_refresh_request)
 
                     if not _credentials_support_scopes(creds):
                         logger.warning(
@@ -442,6 +501,7 @@ class CalendarSyncService:
                     return False
 
                 if not os.path.exists(CREDENTIALS_PATH):
+                    self._set_last_error("auth_client_missing", "credentials.json was not found")
                     if parent_widget:
                         QMessageBox.critical(
                             parent_widget,
@@ -452,25 +512,30 @@ class CalendarSyncService:
                     return False
 
                 try:
-                    flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
-
-                    creds = flow.run_local_server(port=0)
+                    config = load_desktop_client_config(CREDENTIALS_PATH)
+                    flow = InstalledAppFlow.from_client_config(config, SCOPES)
+                    creds = run_desktop_auth(flow, is_cancelled=is_cancelled)
 
                 except Exception as exc:
-                    self._set_last_error("auth", str(exc))
+                    kind = exc.kind if isinstance(exc, GoogleAuthError) else "auth"
+                    self._set_last_error(kind, "Google authentication failed")
 
                     if parent_widget:
                         QMessageBox.warning(
-                            parent_widget, "Google Calendar", f"Authentication failed: {exc}"
+                            parent_widget,
+                            "Google Calendar",
+                            "Authentication failed. Check the OAuth desktop client file and try again.",
                         )
 
                     return False
 
             try:
-                from calendar_app.infrastructure.google_sync.token_store import save_token_json
+                check_auth_cancelled(is_cancelled)
+                token_json = creds.to_json()
 
-                save_token_json(creds.to_json())
-
+            except GoogleAuthError as exc:
+                self._set_last_error(exc.kind, "Google authentication cancelled")
+                return False
             except OSError as exc:
                 self._set_last_error("auth", f"token_write_failed: {exc}")
 
@@ -482,19 +547,24 @@ class CalendarSyncService:
                 return False
 
         try:
+            check_auth_cancelled(is_cancelled)
             with self._service_lock:
-                try:
-                    import httplib2
+                from google_auth_httplib2 import AuthorizedHttp
+                import httplib2
 
-                    authorized_http = creds.authorize(httplib2.Http(timeout=12))
+                authorized_http = AuthorizedHttp(creds, http=httplib2.Http(timeout=12))
+                self.service = build("calendar", "v3", http=authorized_http, cache_discovery=False)
 
-                    self.service = build(
-                        "calendar", "v3", http=authorized_http, cache_discovery=False
-                    )
+                check_auth_cancelled(is_cancelled)
+                if token_json is not None:
+                    if persist_token:
+                        from calendar_app.infrastructure.google_sync.token_store import (
+                            save_token_json,
+                        )
 
-                except Exception:
-                    self.service = build("calendar", "v3", credentials=creds, cache_discovery=False)
-
+                        save_token_json(token_json)
+                    else:
+                        self._pending_token_json = token_json
                 self.is_authenticated = True
 
             if parent_widget:
@@ -508,7 +578,12 @@ class CalendarSyncService:
             with self._service_lock:
                 self._clear_auth_state()
 
-            self._set_last_error("auth", str(exc))
+            if isinstance(exc, GoogleAuthError):
+                self._set_last_error(exc.kind, "Google authentication cancelled")
+            elif isinstance(exc, OSError) and token_json is not None:
+                self._set_last_error("auth", "token_write_failed")
+            else:
+                self._set_last_error("auth", "API connection failed")
 
             if parent_widget:
                 QMessageBox.critical(
@@ -570,12 +645,12 @@ class CalendarSyncService:
                     )
                 )
 
+                page_items, page_token, _ = self._validate_events_page(response)
                 events.extend(
                     self._to_google_event(item, source_calendar_id=calendar_id)
-                    for item in response.get("items", [])
+                    for item in page_items
                 )
 
-                page_token = response.get("nextPageToken")
                 fetched_pages += 1
                 if not page_token:
                     break
@@ -651,15 +726,16 @@ class CalendarSyncService:
                     source_calendar_id = str(
                         request_params.get("calendarId") or resolved_calendar_id or ""
                     ).strip()
+                    page_items, page_token, next_sync_token = self._validate_events_page(
+                        response, require_sync_token=True
+                    )
                     events.extend(
                         self._to_google_event(item, source_calendar_id=source_calendar_id)
-                        for item in response.get("items", [])
+                        for item in page_items
                     )
 
-                    page_token = response.get("nextPageToken")
                     fetched_pages += 1
                     if not page_token:
-                        next_sync_token = response.get("nextSyncToken")
                         break
                     if fetched_pages >= max_pages:
                         raise RuntimeError(
@@ -731,12 +807,25 @@ class CalendarSyncService:
                 logger.error("GCal incremental fetch err: %s", exc)
             return None, None, False
 
-    def list_accessible_calendars(self) -> list[dict]:
+    def create_metadata_reader(self, *, is_cancelled=None):
+        """Use an independent HTTP transport for settings queries and push workers."""
+        candidate = CalendarSyncService(calendar_id=self.calendar_id, time_zone=self.time_zone)
+        candidate._account_identity_mismatch = self._account_identity_mismatch
+        candidate._account_identity_error_kind = self._account_identity_error_kind
+        if not candidate.authenticate(
+            interactive=False, persist_token=False, is_cancelled=is_cancelled
+        ):
+            raise GoogleAuthError("reauth_required")
+        return candidate
+
+    def list_accessible_calendars(self, *, is_cancelled=None) -> list[dict]:
         if not self.is_authenticated or not self.service:
             return []
         self._clear_last_error()
 
         calendars: list[dict] = []
+        seen_calendar_ids: set[str] = set()
+        primary_count = 0
         page_token = None
         seen_page_tokens: set[str] = set()
         max_pages = 200
@@ -744,6 +833,7 @@ class CalendarSyncService:
 
         try:
             while True:
+                check_auth_cancelled(is_cancelled)
                 if page_token:
                     page_token_str = str(page_token)
                     if page_token_str in seen_page_tokens:
@@ -762,22 +852,21 @@ class CalendarSyncService:
                 response = self._execute_request(
                     lambda request_params=request_params: (
                         self.service.calendarList().list(**request_params).execute()
-                    )
+                    ),
+                    retries=0 if is_cancelled else 3,
                 )
-                for item in response.get("items", []):
-                    calendars.append(
-                        {
-                            "id": item.get("id", ""),
-                            "summary": item.get("summaryOverride")
-                            or item.get("summary")
-                            or item.get("id", ""),
-                            "timeZone": item.get("timeZone") or "",
-                            "accessRole": item.get("accessRole") or "",
-                            "primary": bool(item.get("primary")),
-                        }
-                    )
-
-                page_token = response.get("nextPageToken")
+                check_auth_cancelled(is_cancelled)
+                page_items, page_token, _ = self._validate_events_page(response)
+                for item in page_items:
+                    calendar = self._to_calendar_list_entry(item)
+                    if calendar["id"] in seen_calendar_ids:
+                        raise ValueError("duplicate_google_calendar_identity")
+                    seen_calendar_ids.add(calendar["id"])
+                    if calendar["primary"]:
+                        primary_count += 1
+                        if primary_count > 1:
+                            raise ValueError("ambiguous_google_primary_identity")
+                    calendars.append(calendar)
                 fetched_pages += 1
                 if not page_token:
                     break
@@ -791,6 +880,8 @@ class CalendarSyncService:
             )
             return calendars
 
+        except GoogleAuthError:
+            raise
         except Exception as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
             if status == 403 and (
@@ -821,6 +912,33 @@ class CalendarSyncService:
             logger.warning("GCal calendar list fetch failed: %s", exc)
             return []
 
+    @staticmethod
+    def _to_calendar_list_entry(item):
+        """Keep metadata types intact so malformed values cannot become account evidence."""
+        if not isinstance(item, dict):
+            raise ValueError("invalid_google_calendar_entry")
+        calendar_id = item.get("id")
+        if not isinstance(calendar_id, str) or not calendar_id.strip():
+            raise ValueError("invalid_google_calendar_identity")
+        primary = item.get("primary", False)
+        if not isinstance(primary, bool):
+            raise ValueError("invalid_google_calendar_primary")
+        text_values = {}
+        for field in ("summaryOverride", "summary", "timeZone", "accessRole"):
+            value = item.get(field)
+            if value is not None and not isinstance(value, str):
+                raise ValueError("invalid_google_calendar_text")
+            text_values[field] = value or ""
+        return {
+            "id": calendar_id.strip(),
+            "summary": text_values["summaryOverride"]
+            or text_values["summary"]
+            or calendar_id.strip(),
+            "timeZone": text_values["timeZone"],
+            "accessRole": text_values["accessRole"],
+            "primary": primary,
+        }
+
     def subscribe_calendar(self, calendar_id: str) -> dict | None:
         calendar_id = self._normalize_calendar_id(calendar_id)
 
@@ -832,15 +950,7 @@ class CalendarSyncService:
                 lambda: self.service.calendarList().insert(body={"id": calendar_id}).execute()
             )
 
-            return {
-                "id": response.get("id", calendar_id),
-                "summary": response.get("summaryOverride")
-                or response.get("summary")
-                or calendar_id,
-                "timeZone": response.get("timeZone") or "",
-                "accessRole": response.get("accessRole") or "",
-                "primary": bool(response.get("primary")),
-            }
+            return self._to_calendar_list_entry(response)
 
         except Exception as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
@@ -897,35 +1007,115 @@ class CalendarSyncService:
 
             return False
 
-    def _to_google_event(self, event: dict, source_calendar_id: str | None = None) -> GoogleEvent:
-        start = event.get("start", {}).get("dateTime", event.get("start", {}).get("date", ""))
+    @staticmethod
+    def _validate_events_page(response, *, require_sync_token=False):
+        """Reject incomplete or malformed pages before they become a full-sync snapshot."""
+        if not isinstance(response, dict):
+            raise ValueError("invalid_google_events_page")
+        items = response.get("items", [])
+        if not isinstance(items, list):
+            raise ValueError("invalid_google_events_items")
+        page_token = response.get("nextPageToken")
+        sync_token = response.get("nextSyncToken")
+        for key, value in (("nextPageToken", page_token), ("nextSyncToken", sync_token)):
+            if key in response and (not isinstance(value, str) or not value.strip()):
+                raise ValueError("invalid_google_events_token")
+        if require_sync_token and (
+            (page_token and sync_token) or (not page_token and not sync_token)
+        ):
+            raise ValueError("incomplete_google_events_page")
+        return items, page_token, sync_token
 
-        end = event.get("end", {}).get("dateTime", event.get("end", {}).get("date", ""))
+    @staticmethod
+    def _event_text(event, field, default=""):
+        value = event.get(field)
+        if value is None:
+            return default
+        if not isinstance(value, str):
+            raise ValueError("invalid_google_event_text")
+        return value
+
+    @staticmethod
+    def _event_datetime(event, field, *, required=True):
+        raw = event.get(field)
+        if raw is None and not required:
+            return None
+        if not isinstance(raw, dict):
+            raise ValueError("invalid_google_event_datetime")
+        date_only = raw.get("date")
+        date_time = raw.get("dateTime")
+        if date_only is not None and date_time is not None:
+            raise ValueError("ambiguous_google_event_datetime")
+        value = date_time if date_time is not None else date_only
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("missing_google_event_datetime")
+        if date_time is not None:
+            if "T" not in value:
+                raise ValueError("invalid_google_event_datetime")
+            parsed = datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                zone_name = raw.get("timeZone")
+                if not isinstance(zone_name, str) or not zone_name.strip():
+                    raise ValueError("missing_google_event_timezone")
+                try:
+                    parsed = parsed.replace(tzinfo=ZoneInfo(zone_name))
+                except (ZoneInfoNotFoundError, ValueError) as exc:
+                    raise ValueError("invalid_google_event_timezone") from exc
+                value = parsed.isoformat()
+        else:
+            if len(value) != 10:
+                raise ValueError("invalid_google_event_date")
+            datetime.date.fromisoformat(value)
+        return value
+
+    def _to_google_event(self, event: dict, source_calendar_id: str | None = None) -> GoogleEvent:
+        if not isinstance(event, dict):
+            raise ValueError("invalid_google_event")
+        event_id = event.get("id")
+        if not isinstance(event_id, str) or not event_id.strip():
+            raise ValueError("missing_google_event_identity")
+        status = self._event_text(event, "status", "confirmed")
+        if status not in {"confirmed", "tentative", "cancelled"}:
+            raise ValueError("invalid_google_event_status")
+        # Cancelled tombstones are only guaranteed to contain their ID.
+        start = self._event_datetime(event, "start") if status != "cancelled" else ""
+        end = self._event_datetime(event, "end") if status != "cancelled" else ""
+        for field in ("attendees", "attachments", "recurrence"):
+            value = event.get(field)
+            if value is not None and not isinstance(value, list):
+                raise ValueError("invalid_google_event_collection")
+        if any(not isinstance(value, str) for value in (event.get("recurrence") or [])):
+            raise ValueError("invalid_google_event_recurrence")
+        properties = event.get("extendedProperties") or {}
+        if not isinstance(properties, dict):
+            raise ValueError("invalid_google_event_properties")
+        private_properties = properties.get("private")
+        if private_properties is not None and not isinstance(private_properties, dict):
+            raise ValueError("invalid_google_event_private_properties")
 
         # 반복 일정 원래 시작시각 (인스턴스 identity)
-        _orig_start_raw = event.get("originalStartTime") or {}
-        _orig_start = _orig_start_raw.get("dateTime") or _orig_start_raw.get("date") or None
+        _orig_start = self._event_datetime(event, "originalStartTime", required=False)
 
         return GoogleEvent(
-            id=event.get("id", ""),
-            summary=event.get("summary", "Untitled"),
-            description=event.get("description", ""),
+            id=event_id,
+            summary=self._event_text(event, "summary", "Untitled") or "Untitled",
+            description=self._event_text(event, "description"),
             start_time=start,
             end_time=end,
-            location=event.get("location", ""),
-            status=event.get("status", "confirmed"),
-            color_id=event.get("colorId"),
-            updated_time=event.get("updated"),
+            location=self._event_text(event, "location"),
+            status=status,
+            color_id=self._event_text(event, "colorId") or None,
+            updated_time=self._event_text(event, "updated") or None,
             source_calendar_id=source_calendar_id or self.calendar_id,
             # 반복 일정 필드
-            recurring_event_id=event.get("recurringEventId") or None,
+            recurring_event_id=self._event_text(event, "recurringEventId") or None,
             recurrence=event.get("recurrence") or None,
             original_start_time=_orig_start,
             # 참석자 / 첨부파일
             attendees=event.get("attendees") or None,
             attachments=event.get("attachments") or None,
             # extendedProperties.private (item 10)
-            extended_properties_private=event.get("extendedProperties", {}).get("private") or None,
+            extended_properties_private=private_properties or None,
         )
 
     def create_event(
@@ -940,6 +1130,8 @@ class CalendarSyncService:
         calendar_id: str | None = None,
         idempotency_key: str | None = None,
     ) -> str | None:
+        if not self._remote_writes_allowed():
+            return None
         if not self.is_authenticated or not self.service:
             return None
         self._clear_last_error()
@@ -1068,6 +1260,22 @@ class CalendarSyncService:
             return event_id
 
         except Exception as exc:
+            if getattr(getattr(exc, "resp", None), "status", None) == 409 and _sanitized_key:
+                try:
+                    existing = self._execute_request(
+                        lambda: (
+                            self.service.events()
+                            .get(calendarId=calendar_id, eventId=_sanitized_key)
+                            .execute()
+                        )
+                    )
+                    if self._matches_created_event(existing, event):
+                        self._clear_last_error()
+                        return _sanitized_key
+                except Exception:
+                    logger.warning("Could not verify the existing Google create receipt")
+                self._set_last_error("create_conflict", "existing_create_not_verified", 409)
+                return None
             self._set_last_error(
                 "create", str(exc), getattr(getattr(exc, "resp", None), "status", None)
             )
@@ -1094,6 +1302,8 @@ class CalendarSyncService:
         hide_completed: bool = False,
         expected_remote_updated_at: str | None = None,
     ) -> bool:
+        if not self._remote_writes_allowed():
+            return False
         if not self.is_authenticated or not self.service or not event_id:
             return False
         self._clear_last_error()
@@ -1232,6 +1442,8 @@ class CalendarSyncService:
             return False
 
     def delete_event(self, event_id: str, calendar_id: str | None = None) -> bool:
+        if not self._remote_writes_allowed():
+            return False
         if not self.is_authenticated or not self.service or not event_id:
             return False
         self._clear_last_error()
@@ -1272,6 +1484,8 @@ class CalendarSyncService:
         already-moved). False on auth/network errors so caller can fall back to
         create-on-new + delete-on-old.
         """
+        if not self._remote_writes_allowed():
+            return False
         if not self.is_authenticated or not self.service or not event_id:
             return False
         self._clear_last_error()
@@ -1309,6 +1523,33 @@ class CalendarSyncService:
         """최대 50개의 이벤트 생성을 단일 HTTP 배치 요청으로 처리한다."""
         return self._execute_batch("insert", operations)
 
+    @classmethod
+    def _matches_created_event(cls, existing, body):
+        """A 409 receipt may link only the exact payload previously sent."""
+        if not isinstance(existing, dict) or existing.get("status") == "cancelled":
+            return False
+        if existing.get("id") != body.get("id"):
+            return False
+        if any(
+            (existing.get(key) or "") != (body.get(key) or "")
+            for key in ("summary", "description", "location", "colorId")
+        ):
+            return False
+        try:
+            for field in ("start", "end"):
+                remote = cls._event_datetime(existing, field)
+                requested = cls._event_datetime(body, field)
+                if "date" in body[field]:
+                    if remote != requested:
+                        return False
+                elif datetime.datetime.fromisoformat(remote.replace("Z", "+00:00")) != (
+                    datetime.datetime.fromisoformat(requested.replace("Z", "+00:00"))
+                ):
+                    return False
+        except (ValueError, KeyError, TypeError):
+            return False
+        return True
+
     def batch_update_events(self, operations: list) -> list:
         """최대 50개의 이벤트 수정을 단일 HTTP 배치 요청으로 처리한다.
         각 operation: {"event_id", "calendar_id", "summary", "start_iso", "end_iso", ...}
@@ -1322,6 +1563,16 @@ class CalendarSyncService:
         return self._execute_batch("delete", operations)
 
     def _execute_batch(self, method: str, operations: list) -> list:
+        if not self._remote_writes_allowed():
+            return [
+                {
+                    "local_task_id": operation.get("local_task_id"),
+                    "event_id": operation.get("event_id"),
+                    "success": False,
+                    "error": self._account_identity_error_kind,
+                }
+                for operation in operations
+            ]
         if not self.is_authenticated or not self.service or not operations:
             return []
 
@@ -1336,25 +1587,39 @@ class CalendarSyncService:
                 # HTTP 409 on an insert with an idempotency_key means the event already
                 # exists under that id — treat as idempotent success.
                 _ikey = op.get("idempotency_key")
-                if _st == 409 and _ikey:
+                if method == "insert" and _st == 409 and _ikey:
                     import re as _re
 
                     _sk = _re.sub(r"[^a-v0-9]", "", str(_ikey).lower())
                     if len(_sk) >= 5:
-                        logger.info(
-                            "batch insert 409 (idempotent) for task %s; using key %s as event_id",
-                            ltid,
-                            _sk,
-                        )
-                        results.append(
-                            {
-                                "local_task_id": ltid,
-                                "success": True,
-                                "event_id": _sk,
-                                "error": None,
-                            }
-                        )
-                        return
+                        try:
+                            body = self._build_event_body_from_op(op)
+                            if body is not None:
+                                body["id"] = _sk
+                                existing = self._execute_request(
+                                    lambda: (
+                                        self.service.events()
+                                        .get(
+                                            calendarId=self._normalize_calendar_id(
+                                                op.get("calendar_id")
+                                            ),
+                                            eventId=_sk,
+                                        )
+                                        .execute()
+                                    )
+                                )
+                                if self._matches_created_event(existing, body):
+                                    results.append(
+                                        {
+                                            "local_task_id": ltid,
+                                            "success": True,
+                                            "event_id": _sk,
+                                            "error": None,
+                                        }
+                                    )
+                                    return
+                        except Exception:
+                            logger.warning("Could not verify a Google batch create receipt")
                 results.append(
                     {
                         "local_task_id": ltid,
@@ -1479,10 +1744,8 @@ class CalendarSyncService:
         self, summary, start_iso, end_iso, description, location, color_id, all_day, calendar_id
     ) -> "dict | None":
         """create_event() 과 동일한 event body dict를 생성한다. 파싱 실패 시 None."""
-        from calendar_app.shared.datetime_utils import parse_datetime_str, timezone_offset_for_name
-
         tz_name = getattr(self, "time_zone", "Asia/Seoul") or "Asia/Seoul"
-        tz_offset = timezone_offset_for_name(tz_name) or "+09:00"
+        tz_offset = self._tz_offset_for_value(start_iso)
 
         if all_day:
             try:
@@ -1492,29 +1755,32 @@ class CalendarSyncService:
                 s = start_iso[:10]
                 _dt.strptime(s, "%Y-%m-%d")
                 e_raw = (end_iso or start_iso)[:10]
-                e_dt = _dt.strptime(e_raw, "%Y-%m-%d") + _td(days=1)
+                e_dt = max(_dt.strptime(e_raw, "%Y-%m-%d"), _dt.strptime(s, "%Y-%m-%d")) + _td(
+                    days=1
+                )
                 start_block = {"date": s}
                 end_block = {"date": e_dt.strftime("%Y-%m-%d")}
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, OverflowError):
                 return None
         else:
-            st = parse_datetime_str(start_iso, target_tz_offset=tz_offset)
-            en = (
-                parse_datetime_str(end_iso or start_iso, target_tz_offset=tz_offset)
-                if (end_iso or start_iso)
-                else st
-            )
+            start_text = to_iso_with_tz(start_iso, tz_offset=tz_offset)
+            end_text = to_iso_with_tz(end_iso, tz_offset=tz_offset)
+            st = parse_datetime_str(start_text, target_tz_offset=tz_offset)
+            en = parse_datetime_str(end_text, target_tz_offset=tz_offset)
             if not st:
                 return None
+            if not en or en <= st:
+                try:
+                    end_text = (st + datetime.timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%S") + (
+                        _extract_tz_offset(start_text) or tz_offset
+                    )
+                except OverflowError:
+                    return None
             start_block = {
-                "dateTime": st.strftime("%Y-%m-%dT%H:%M:%S") + tz_offset,
+                "dateTime": start_text,
                 "timeZone": tz_name,
             }
-            end_block = (
-                {"dateTime": en.strftime("%Y-%m-%dT%H:%M:%S") + tz_offset, "timeZone": tz_name}
-                if en
-                else start_block
-            )
+            end_block = {"dateTime": end_text, "timeZone": tz_name}
 
         ev: dict = {"summary": summary, "start": start_block, "end": end_block}
         if description:

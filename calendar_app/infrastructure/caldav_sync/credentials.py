@@ -10,7 +10,7 @@ from calendar_app.app_paths import get_app_data_dir
 from calendar_app.application.calendar_sync_contract import CalendarSyncError
 from calendar_app.infrastructure.calendar_sync.secret_store import crypt
 
-from .profiles import account_key
+from .profiles import PROFILES, account_key, validate_url
 
 
 class CalDAVCredentials:
@@ -18,18 +18,20 @@ class CalDAVCredentials:
         self.folder = folder or get_app_data_dir()
 
     def path(self, account):
-        if not re.fullmatch(r"caldav::(icloud|naver)::[a-f0-9]{24}", account):
+        match = re.fullmatch(r"caldav::([a-z]+)::[a-f0-9]{24}", account)
+        if not match or match[1] not in PROFILES:
             raise CalendarSyncError("account_mismatch")
         return self.folder / (account.replace("::", "-") + ".credential")
 
-    def save(self, service, username, password):
+    def save(self, service, username, password, server_url=None):
         account = account_key(service, username)
         destination = self.path(account)
         temporary = destination.with_suffix("." + uuid.uuid4().hex + ".tmp")
         try:
-            data = json.dumps(
-                {"service": service, "username": username.strip(), "password": password}
-            ).encode("utf-8", errors="strict")
+            value = {"service": service, "username": username.strip(), "password": password}
+            if server_url:
+                value["server_url"] = validate_url(service, server_url)
+            data = json.dumps(value).encode("utf-8", errors="strict")
             encrypted = crypt(data, True)
             temporary.write_bytes(encrypted)
             os.replace(temporary, destination)

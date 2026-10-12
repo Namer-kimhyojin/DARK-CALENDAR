@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 import ast
@@ -8,10 +9,12 @@ IGNORE_PARTS = {".venv", "__pycache__"}
 
 
 def _iter_project_py_files():
-    for path in ROOT.rglob("*.py"):
-        if any(part in IGNORE_PARTS for part in path.parts):
-            continue
-        yield path
+    yield from ROOT.glob("*.py")
+    for source_dir in ("calendar_app", "infrastructure", "scripts", "tests"):
+        for path in (ROOT / source_dir).rglob("*.py"):
+            if any(part in IGNORE_PARTS for part in path.parts):
+                continue
+            yield path
 
 
 def _norm_encoding_name(name: str) -> str:

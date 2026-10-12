@@ -8,6 +8,9 @@ import logging
 import sqlite3
 
 from calendar_app.infrastructure.google_sync.common import (
+    google_create_idempotency_key,
+)
+from calendar_app.infrastructure.google_sync.common import (
     is_gcal_enabled as _common_is_gcal_enabled,
 )
 from calendar_app.infrastructure.google_sync.common import (
@@ -85,9 +88,15 @@ def _resolve_source_summary(source_calendar_id):
 
 
 def _candidate_recovery_calendar_ids(sync, settings, attempted_calendar_id=None):
+    """Recover a verified account alias without guessing another calendar's event."""
     candidates = []
     seen = set()
     attempted = _normalize_calendar_id(attempted_calendar_id) if attempted_calendar_id else None
+    resolved_primary = str(_setting_value(settings, "gcal_primary_resolved_id", "") or "").strip()
+
+    def _canonical(calendar_id):
+        normalized = _normalize_calendar_id(calendar_id)
+        return resolved_primary if normalized == "primary" and resolved_primary else normalized
 
     def _add(calendar_id):
         raw = str(calendar_id or "").strip()
@@ -96,21 +105,13 @@ def _candidate_recovery_calendar_ids(sync, settings, attempted_calendar_id=None)
         normalized = _normalize_calendar_id(raw)
         if normalized == attempted or normalized in seen:
             return
+        if not attempted or _canonical(normalized) != _canonical(attempted):
+            return
         seen.add(normalized)
         candidates.append(normalized)
 
     _add(_setting_value(settings, "gcal_calendar_id", None))
     _add(getattr(sync, "calendar_id", None))
-
-    if hasattr(sync, "list_accessible_calendars"):
-        try:
-            for row in sync.list_accessible_calendars() or []:
-                if isinstance(row, dict):
-                    _add(row.get("id"))
-                else:
-                    _add(getattr(row, "id", None))
-        except Exception:
-            logger.exception("Failed to enumerate accessible calendars for event recovery")
 
     return candidates
 
@@ -169,6 +170,12 @@ def sync_task_to_google(
         return SyncTaskResult(event_id=existing_id)
 
     sync = getattr(app, "gcal_sync", None)
+    if sync is not None and getattr(sync, "_account_identity_mismatch", False) is True:
+        existing_id = task_data.get("gcal_event_id") if isinstance(task_data, dict) else None
+        code = getattr(sync, "_account_identity_error_kind", "account_mismatch")
+        return SyncTaskResult(
+            event_id=existing_id, success=False, error_kind=code, error_message=code
+        )
     if not sync or not getattr(sync, "is_authenticated", False):
         existing_id = task_data.get("gcal_event_id") if isinstance(task_data, dict) else None
         return SyncTaskResult(event_id=existing_id, success=False, error_kind="auth_required")
@@ -209,7 +216,7 @@ def sync_task_to_google(
         effective_calendar_id
         and "::" in effective_calendar_id
         and not effective_calendar_id.startswith("gcal::")
-        and not has_explicit_gcal_route
+        and (not has_explicit_gcal_route or not existing_id)
     ):
         _mark_task_synced(local_id, commit=commit, source_calendar_id=None, target_calendar_id=None)
         return SyncTaskResult(event_id=None, success=True, error_kind="skipped_non_gcal")
@@ -254,6 +261,7 @@ def sync_task_to_google(
         source_calendar_id if (has_explicit_source or not existing_id) else None
     )
 
+    calendar_move_pending = False
     if existing_id:
         # ── Calendar move detection ─────────────────────────────────────────
         # 사용자가 일정 수정 다이얼로그에서 캘린더를 변경한 경우, Google API의
@@ -268,6 +276,7 @@ def sync_task_to_google(
             )
             _prev_gcal_id = _normalize_calendar_id(_prev_raw) if _prev_raw else None
             if _prev_gcal_id and source_calendar_id and _prev_gcal_id != source_calendar_id:
+                calendar_move_pending = True
                 moved_ok = sync.move_event(existing_id, _prev_gcal_id, source_calendar_id)
                 if moved_ok:
                     logger.info(
@@ -278,17 +287,25 @@ def sync_task_to_google(
                         local_id,
                     )
                 else:
-                    # Move failed (event not on previous calendar, or transient error).
-                    # Fall through to update_event; recovery loop or create path will handle.
-                    logger.warning(
-                        "Calendar move failed for event %s (%s -> %s); "
-                        "update_event will attempt fallback",
-                        existing_id,
-                        _prev_gcal_id,
-                        source_calendar_id,
-                    )
+                    # A missing source may mean a previous move completed before
+                    # the local mark failed. Only the intended destination may
+                    # confirm that retry; transient failures remain pending.
+                    move_error = getattr(sync, "last_error_kind", None)
+                    if move_error != "not_found":
+                        return SyncTaskResult(
+                            event_id=existing_id,
+                            success=False,
+                            error_kind=move_error or "calendar_move",
+                            error_message="calendar_move_failed",
+                        )
         except Exception:
-            logger.exception("Calendar move detection failed; proceeding with update_event")
+            logger.exception("Calendar move failed; preserving the pending destination")
+            return SyncTaskResult(
+                event_id=existing_id,
+                success=False,
+                error_kind="calendar_move",
+                error_message="calendar_move_failed",
+            )
 
         # [2] scope=all → update the master recurring event instead of just this instance
         _update_target_id = existing_id
@@ -331,6 +348,19 @@ def sync_task_to_google(
             )
             if not marked:
                 logger.warning("Failed to mark task %s as synced after update", local_id)
+                if calendar_move_pending:
+                    return SyncTaskResult(
+                        event_id=existing_id,
+                        success=False,
+                        error_kind="calendar_move_local_state",
+                        error_message="calendar_move_local_state_not_saved",
+                    )
+                return SyncTaskResult(
+                    event_id=existing_id,
+                    success=False,
+                    error_kind="local_state",
+                    error_message="remote_updated_but_local_mark_failed",
+                )
             return SyncTaskResult(event_id=existing_id, success=True)
         if getattr(sync, "last_error_kind", None) != "not_found":
             return SyncTaskResult(
@@ -338,6 +368,15 @@ def sync_task_to_google(
                 success=False,
                 error_kind=getattr(sync, "last_error_kind", None) or "update",
                 error_message=getattr(sync, "last_error_message", None),
+            )
+        if calendar_move_pending:
+            # Updating an old calendar would silently undo the user's move,
+            # while creating in the destination could duplicate the old event.
+            return SyncTaskResult(
+                event_id=existing_id,
+                success=False,
+                error_kind="calendar_move_unconfirmed",
+                error_message="calendar_move_destination_unconfirmed",
             )
 
         recovery_candidates = _candidate_recovery_calendar_ids(sync, settings, source_calendar_id)
@@ -371,6 +410,12 @@ def sync_task_to_google(
                     existing_id,
                     recovery_calendar_id,
                     local_id,
+                )
+                return SyncTaskResult(
+                    event_id=existing_id,
+                    success=False,
+                    error_kind="local_state",
+                    error_message="remote_updated_but_local_mark_failed",
                 )
             return SyncTaskResult(
                 event_id=existing_id,
@@ -420,13 +465,20 @@ def sync_task_to_google(
                         expected_remote_updated_at=expected_remote_updated_at,
                     )
                     if ok:
-                        _mark_task_synced(
+                        marked = _mark_task_synced(
                             local_id,
                             existing_id,
                             commit=commit,
                             source_calendar_id=source_calendar_id_for_mark,
                             target_calendar_id=source_calendar_id_for_mark,
                         )
+                        if not marked:
+                            return SyncTaskResult(
+                                event_id=existing_id,
+                                success=False,
+                                error_kind="local_state",
+                                error_message="remote_updated_but_local_mark_failed",
+                            )
                         return SyncTaskResult(event_id=existing_id, success=True, auto_healed=True)
             except Exception:
                 if not (existing_id and has_explicit_source):
@@ -453,17 +505,9 @@ def sync_task_to_google(
 
         # Build idempotency key from task identity so that GCal server rejects
         # a duplicate insert (HTTP 409) if this create_event() call is retried.
-        # Format: task_{local_id}_{updated_at_compact} -> sanitised to [a-v0-9].
-        _ikey = None
-        if local_id:
-            _updated_raw = (
-                str((fresh or task_data).get("updated_at") or "")
-                .replace("-", "")
-                .replace(":", "")
-                .replace(" ", "")
-                .replace("T", "")[:14]
-            )
-            _ikey = f"task{local_id}{_updated_raw}" if _updated_raw else f"task{local_id}"
+        # updated_at changes even when merely recording a failed sync, so it
+        # cannot identify a retried create after the remote write succeeded.
+        _ikey = google_create_idempotency_key(fresh or task_data)
 
         created = sync.create_event(
             summary,
@@ -565,7 +609,7 @@ def sync_task_to_google(
 def delete_task_from_google(app, event_id, calendar_id=None):
     sync = getattr(app, "gcal_sync", None)
     event_id = str(event_id or "").strip()
-    if not sync or not event_id:
+    if not sync or not event_id or getattr(sync, "_account_identity_mismatch", False) is True:
         return False
     try:
         return bool(sync.delete_event(event_id, calendar_id=calendar_id))

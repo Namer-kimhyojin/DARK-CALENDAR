@@ -3,7 +3,7 @@ import datetime
 import html as _html_mod
 import logging
 
-from PyQt6.QtCore import QDate, QLocale, QPoint, QSize, Qt
+from PyQt6.QtCore import QDate, QLocale, QPoint, QSize, Qt, QTime
 from PyQt6.QtGui import QAction, QBrush, QColor, QIcon, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from calendar_app.domain.calendar_visibility import CalendarVisibility
 from calendar_app.domain.date_range import inclusive_day_count, inclusive_end_from_exclusive
 from calendar_app.domain.task_constants import priority_icon
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
@@ -144,6 +145,43 @@ def _build_month_dates(
 
 def _calendar_scroll_style() -> str:
     return "QScrollArea { background: transparent; border: none; }"
+
+
+def refresh_week_planner_theme(app):
+    """Preview opacity without rebuilding an active schedule gesture."""
+    from calendar_app.presentation.calendar.week_time_grid import WeekTimeGrid
+
+    center = getattr(app, "center_frame", None)
+    grid = center.findChild(WeekTimeGrid) if center is not None else None
+    if grid is None:
+        return
+    tokens = _ui_tokens(app.settings)
+    shape = _shape_tokens(app.settings)
+    surface = grid.parentWidget()
+    surface_style = _calendar_surface_style(tokens=tokens, shape=shape)
+    if surface.styleSheet() != surface_style:
+        surface.setStyleSheet(surface_style)
+    grid.apply_theme({**tokens, "calendar_bg": "transparent"})
+    toolbar = getattr(app, "calendar_toolbar_widget", None)
+    if toolbar is not None:
+        toolbar_style = _calendar_toolbar_shell_style(toolbar.is_toolbar_expanded(), tokens, shape)
+        if toolbar.styleSheet() != toolbar_style:
+            toolbar.setStyleSheet(toolbar_style)
+
+
+def _jump_week_planner_time(app, minute):
+    """Move the current grid and keep explicit jumps as the saved scroll position."""
+    from calendar_app.presentation.calendar.week_time_grid import WeekTimeGrid
+
+    grid = app.center_frame.findChild(WeekTimeGrid)
+    if grid is None:
+        return
+    if minute is None:
+        now = QTime.currentTime()
+        minute = max(0, now.hour() * 60 + now.minute() - 60)
+    minute = max(0, min(1440, int(minute)))
+    grid.scroll_to_time(minute)
+    app.settings.setValue("cal_week_scroll_minutes", minute)
 
 
 def _accent_rgba(alpha: float, tokens=None):
@@ -441,6 +479,38 @@ def _subscription_detail_style_bundle(tokens=None, shape=None):
         ),
         "divider": f"color: {tokens['divider']}; margin: 2px 0;",
     }
+
+
+class _CalToolbarScroll(QScrollArea):
+    """Keep toolbar actions on one row without widening a narrow dock."""
+
+    def __init__(self, content):
+        super().__init__()
+        self.setObjectName("calendar_toolbar_scroll")
+        self.viewport().setObjectName("calendar_toolbar_viewport")
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setWidgetResizable(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setMinimumWidth(0)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setStyleSheet(
+            "QScrollArea#calendar_toolbar_scroll, QWidget#calendar_toolbar_viewport "
+            "{ background: transparent; border: none; }"
+        )
+        self.setWidget(content)
+        content.setAutoFillBackground(False)
+        self.viewport().setAutoFillBackground(False)
+        self.horizontalScrollBar().rangeChanged.connect(self._update_height)
+        self._update_height()
+
+    def _update_height(self, *_):
+        content = self.widget()
+        height = content.sizeHint().height() if content else 0
+        if self.horizontalScrollBar().maximum() > 0:
+            height += self.horizontalScrollBar().sizeHint().height()
+        if self.height() != height or self.minimumHeight() != height:
+            self.setFixedHeight(height)
 
 
 class _CalToolbarWidget(QWidget):
@@ -865,8 +935,27 @@ def _task_matches_search(task_row, search_query):
 
 def _subscription_source_text(task_row):
     return str(
-        task_row.get("_subscription_summary") or task_row.get("_subscription_calendar_id") or ""
+        task_row.get("_calendar_name")
+        or task_row.get("_subscription_summary")
+        or task_row.get("_subscription_calendar_id")
+        or ""
     ).strip()
+
+
+def _prepare_calendar_display_rows(tasks, calendar_rows, primary_gcal_id="primary"):
+    """Keep the owning source readable on detached render records in every view."""
+    policy = CalendarVisibility(calendar_rows, primary_gcal_id)
+    records = []
+    for task in policy.filter_tasks(tasks):
+        row = dict(task)
+        calendar = policy.calendar_for_task(row)
+        if calendar:
+            row["_calendar_name"] = str(calendar.get("name") or "").strip()
+        elif not row.get("_subscription_summary"):
+            google = not policy.is_visible(row, hide_gcal_items=True)
+            row["_calendar_name"] = "Google Calendar" if google else t("sync_unified.local", "로컬")
+        records.append(row)
+    return records
 
 
 def _format_subscription_datetime(raw_value) -> str:
@@ -1521,6 +1610,7 @@ def render_calendar(app):
     )
     is_week_mode = view_mode.startswith("weekly")
     is_month_mode = view_mode == "monthly"
+    is_time_week = view_mode == "weekly_1" and getattr(app, "cal_week_layout", "time") != "date"
 
     # 캘린더전용 툴바 (내비게이션+ 날짜 표시 + 보기 모드)
     cal_toolbar = QHBoxLayout()
@@ -1550,6 +1640,7 @@ def render_calendar(app):
     dropdown_menu_style = toolbar_styles["dropdown_menu"]
 
     today_btn = QPushButton(t("calendar.today"))
+    today_btn.setObjectName("calendar_today")
     today_btn.setStyleSheet(today_btn_style)
     today_btn.setMinimumWidth(64)
     today_btn.setAccessibleName(t("calendar.today"))
@@ -1559,6 +1650,7 @@ def render_calendar(app):
     today_btn.setEnabled(app.current_date != QDate.currentDate())
 
     prev_btn = QPushButton()
+    prev_btn.setObjectName("calendar_previous")
     prev_btn.setIcon(_ic(ICON.NAV_PREV, color=_icon_color))
     prev_btn.setIconSize(QSize(14, 14))
     prev_btn.setStyleSheet(nav_btn_style)
@@ -1568,6 +1660,7 @@ def render_calendar(app):
     prev_btn.clicked.connect(app.prev_day)
 
     next_btn = QPushButton()
+    next_btn.setObjectName("calendar_next")
     next_btn.setIcon(_ic(ICON.NAV_NEXT, color=_icon_color))
     next_btn.setIconSize(QSize(14, 14))
     next_btn.setStyleSheet(nav_btn_style)
@@ -1579,6 +1672,7 @@ def render_calendar(app):
     date_text = _format_toolbar_date(app.current_date, is_month_mode)
 
     date_btn = QPushButton(date_text)
+    date_btn.setObjectName("calendar_date_selector")
     date_btn.setAccessibleName(date_text)
     date_btn.setToolTip(date_text)
     date_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1636,6 +1730,7 @@ def render_calendar(app):
     view_btn_label = display_name_map.get(view_mode, view_mode)
 
     view_btn = QPushButton(f"  {view_btn_label}")
+    view_btn.setObjectName("calendar_view")
     view_btn.setIcon(_ic(ICON.VIEW_CALENDAR, color=_icon_color))
     view_btn.setStyleSheet(menu_btn_style)
     view_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1668,6 +1763,7 @@ def render_calendar(app):
     view_btn.setMenu(view_menu)
 
     opt_btn = QPushButton(_se(t("calendar.options")))
+    opt_btn.setObjectName("calendar_options")
     opt_btn.setIcon(_ic(ICON.SETTINGS, color=_icon_color))
     opt_btn.setStyleSheet(menu_btn_style)
     opt_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1730,9 +1826,7 @@ def render_calendar(app):
 
             calendars = list_calendars(include_inactive=True)
         except Exception:
-            return
-        if not calendars:
-            return
+            calendars = []
 
         sep_cal = opt_menu.addSeparator()
         sep_cal._cal_vis_action = True
@@ -1741,14 +1835,11 @@ def render_calendar(app):
             def _fn(checked):
                 try:
                     set_calendar_visible(cal_id, checked)
-                    invalidate_calendar_meta_cache()
-                    from calendar_app.presentation.panels.side_panel_renderer import (
-                        invalidate_panel_calendar_cache,
+                    from calendar_app.presentation.calendar.calendar_controls import (
+                        refresh_calendar_preferences,
                     )
 
-                    invalidate_panel_calendar_cache()
-                    if hasattr(app, "schedule_panel_refresh"):
-                        app.schedule_panel_refresh(center=True)
+                    refresh_calendar_preferences(app)
                 except Exception:
                     pass
 
@@ -1801,6 +1892,7 @@ def render_calendar(app):
     opt_btn.setMenu(opt_menu)
 
     add_btn = QPushButton()
+    add_btn.setObjectName("calendar_add")
     add_btn.setIcon(_ic(ICON.ADD, color=_icon_color))
     add_btn.setIconSize(QSize(15, 15))
     add_btn.setToolTip(t("calendar.add_hint"))
@@ -1809,6 +1901,7 @@ def render_calendar(app):
     add_btn.clicked.connect(app.open_task_dialog)
 
     sync_btn = QPushButton()
+    sync_btn.setObjectName("calendar_sync")
     sync_btn.setIcon(_ic(ICON.SYNC, color=_icon_color))
     sync_btn.setIconSize(QSize(15, 15))
     sync_btn.setToolTip(t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"))
@@ -1832,6 +1925,34 @@ def render_calendar(app):
 
     cal_toolbar.addWidget(today_btn)
     cal_toolbar.addWidget(nav_group)
+    if is_time_week:
+        for object_name, label, hint, minute in (
+            (
+                "week_jump_now",
+                t("week_planner.current_time", "현재 시간"),
+                t(
+                    "week_planner.current_time_hint",
+                    "날짜를 유지하고 현재 시간대가 보이도록 이동합니다.",
+                ),
+                None,
+            ),
+            (
+                "week_jump_work_start",
+                "09:00",
+                t("week_planner.work_start_hint", "오전 9시로 이동합니다."),
+                540,
+            ),
+        ):
+            button = QPushButton(label)
+            button.setObjectName(object_name)
+            button.setStyleSheet(menu_btn_style)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setToolTip(hint)
+            button.setAccessibleName(hint)
+            button.clicked.connect(
+                lambda _checked=False, target=minute: _jump_week_planner_time(app, target)
+            )
+            cal_toolbar.addWidget(button)
 
     cal_toolbar.addStretch(1)  # 以묒븰 ?щ갚 ?뺣낫
     cal_toolbar.addWidget(app.selection_status_lbl)  # ?곗륫 ?덈궡 臾멸뎄 諛곗튂
@@ -1842,6 +1963,23 @@ def render_calendar(app):
     cal_toolbar.addSpacing(10)
 
     cal_toolbar.addWidget(opt_btn)
+    if view_mode == "weekly_1":
+        from calendar_app.presentation.calendar.week_planner_controller import set_week_layout
+
+        time_view_btn = QPushButton(t("week_planner.time_view", "시간표"))
+        time_view_btn.setObjectName("week_layout_toggle")
+        time_view_btn.setCheckable(True)
+        time_view_btn.setChecked(getattr(app, "cal_week_layout", "time") != "date")
+        time_view_btn.setStyleSheet(menu_btn_style)
+        time_view_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        time_view_btn.setToolTip(
+            t("week_planner.toggle_hint", "시간표와 날짜별 목록을 전환합니다.")
+        )
+        time_view_btn.setAccessibleName(time_view_btn.toolTip())
+        time_view_btn.toggled.connect(
+            lambda checked: set_week_layout(app, "time" if checked else "date")
+        )
+        cal_toolbar.addWidget(time_view_btn)
     cal_toolbar.addWidget(view_btn)
 
     cal_toolbar_content = QWidget()
@@ -1849,13 +1987,14 @@ def render_calendar(app):
     cal_toolbar_vbox.setContentsMargins(6, 4, 6, 2)
     cal_toolbar_vbox.setSpacing(0)
     cal_toolbar_vbox.addLayout(cal_toolbar)
+    toolbar_scroll = _CalToolbarScroll(cal_toolbar_content)
 
     cal_toolbar_widget = _CalToolbarWidget()
     host_layout = QVBoxLayout(cal_toolbar_widget)
     host_layout.setContentsMargins(0, 0, 0, 0)
     host_layout.setSpacing(0)
-    host_layout.addWidget(cal_toolbar_content)
-    cal_toolbar_widget.set_content_widget(cal_toolbar_content)
+    host_layout.addWidget(toolbar_scroll)
+    cal_toolbar_widget.set_content_widget(toolbar_scroll)
     cal_toolbar_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
     cal_toolbar_widget.setMinimumWidth(100)
     # Explicitly delete the previous title bar widget before replacing it.
@@ -1902,7 +2041,11 @@ def render_calendar(app):
         )
 
     elif is_week_mode:
-        days_offset = app.current_date.dayOfWeek() - 1
+        days_offset = (
+            app.current_date.dayOfWeek() - 1
+            if getattr(app, "cal_start_monday", True)
+            else app.current_date.dayOfWeek() % 7
+        )
         monday = app.current_date.addDays(-days_offset)
 
         span = 7
@@ -1976,6 +2119,14 @@ def render_calendar(app):
             range_end,
             hide_gcal_items=not gcal_enabled,
         )
+        from calendar_app.infrastructure.db.calendar_repo import list_calendars
+        from calendar_app.infrastructure.db.db_repository_unified import (
+            _resolved_primary_gcal_id_for_query,
+        )
+
+        calendar_rows = list_calendars(include_inactive=True)
+        primary_gcal_id = _resolved_primary_gcal_id_for_query()
+        all_tasks = _prepare_calendar_display_rows(all_tasks, calendar_rows, primary_gcal_id)
         logger.debug("fetched %d tasks from repo", len(all_tasks))
         for task in all_tasks:
             if str(task.get("calendar_id") or "").startswith("ics::"):
@@ -1984,6 +2135,9 @@ def render_calendar(app):
 
         subscription_tasks = (
             _get_subscription_events(app, range_start, range_end) if gcal_enabled else []
+        )
+        subscription_tasks = _prepare_calendar_display_rows(
+            subscription_tasks, calendar_rows, primary_gcal_id
         )
 
         # Deduplicate: synced Google events are in all_tasks, direct fetch in subscription_tasks.
@@ -2088,6 +2242,53 @@ def render_calendar(app):
             wknd_action.setText(t("calendar.opt_weekend"))
             opt_btn.setText(_se(t("calendar.options")))
             opt_btn.setToolTip("")
+
+        if view_mode == "weekly_1" and getattr(app, "cal_week_layout", "time") != "date":
+            app.selection_status_lbl.hide()
+            from calendar_app.presentation.calendar.week_planner_controller import (
+                create_week_schedule,
+                edit_week_schedule,
+                prepare_week_tasks,
+                reschedule_week_schedule,
+                set_week_interaction,
+            )
+            from calendar_app.presentation.calendar.week_time_grid import WeekTimeGrid
+
+            time_grid = WeekTimeGrid(frame)
+            time_grid.set_week(
+                dates_to_render[0],
+                prepare_week_tasks(filtered_all, calendar_rows, primary_gcal_id),
+                dates=dates_to_render,
+                tokens={**tokens, "calendar_bg": "transparent"},
+            )
+            time_grid.set_selected_date(app.current_date)
+            time_grid.create_requested.connect(
+                lambda date, start, duration: create_week_schedule(app, date, start, duration),
+                type=Qt.ConnectionType.QueuedConnection,
+            )
+            time_grid.reschedule_requested.connect(
+                lambda task, date, start, duration: reschedule_week_schedule(
+                    app, task, date, start, duration
+                )
+            )
+            time_grid.edit_requested.connect(
+                lambda task: edit_week_schedule(app, task),
+                type=Qt.ConnectionType.QueuedConnection,
+            )
+            time_grid.day_selected.connect(lambda date: _select_week_planner_day(app, date))
+            time_grid.interaction_changed.connect(lambda active: set_week_interaction(app, active))
+            top_minute = app.settings.value("cal_week_scroll_minutes", 480, type=int)
+            time_grid.scroll_to_time(top_minute)
+            time_grid.scroll_position_changed.connect(
+                lambda minute: app.settings.setValue("cal_week_scroll_minutes", minute)
+            )
+            days_layout.addWidget(time_grid, 1)
+            inner_v.setContentsMargins(0, 0, 0, 0)
+            inner_v.addLayout(days_layout, 1)
+            frame.setLayout(inner_v)
+            app._multiday_bridge_overlay = None
+            new_layout.addWidget(frame)
+            return
 
         week_count = max(1, len(weeks))
         center_height = max(
@@ -2507,3 +2708,26 @@ def _jump_to_daily_view(app, target_qdate):
     app.view_mode_state = "weekly_1"
     app.load_left_panel()
     app.load_center_panel()
+
+
+def _select_week_planner_day(app, date):
+    """Update the side panel without rebuilding a canvas under the pointer."""
+    app._last_clicked_date = QDate(date)
+    app.current_date = QDate(date)
+    from calendar_app.presentation.calendar.week_time_grid import WeekTimeGrid
+
+    grid = app.center_frame.findChild(WeekTimeGrid)
+    if grid is not None:
+        grid.set_selected_date(date)
+    toolbar = getattr(app, "calendar_toolbar_widget", None)
+    if toolbar is not None:
+        date_button = toolbar.findChild(QPushButton, "calendar_date_selector")
+        if date_button is not None:
+            label = _format_toolbar_date(date, False)
+            date_button.setText(label)
+            date_button.setAccessibleName(label)
+            date_button.setToolTip(label)
+        today_button = toolbar.findChild(QPushButton, "calendar_today")
+        if today_button is not None:
+            today_button.setEnabled(date != QDate.currentDate())
+    app.schedule_panel_refresh(left=True)

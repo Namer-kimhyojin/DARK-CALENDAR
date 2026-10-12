@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from calendar_app.application.calendar_sync_contract import CalendarSyncError, RemoteCalendarError
+from calendar_app.infrastructure.calendar_sync.http_retry import retry_after_seconds
 
 from .conversion import edited_calendar, new_calendar, records
 from .profiles import PROFILES, validate_url
@@ -59,10 +60,14 @@ class CalDAVClient:
         cancelled=lambda: False,
         local_zone="Asia/Seoul",
         resource_cache=None,
+        server_url=None,
     ):
         if service not in PROFILES or not username.strip() or not password:
             raise CalendarSyncError("credentials_required")
-        self.service, self.profile = service, PROFILES[service]
+        self.service, self.profile = service, dict(PROFILES[service])
+        if server_url:
+            self.profile["url"] = validate_url(service, server_url)
+        self.server_host = urlparse(self.profile["url"]).hostname
         self.auth = (username.strip(), password)
         self.session = session or requests.Session()
         self.cancelled = cancelled
@@ -76,6 +81,8 @@ class CalDAVClient:
             if self.cancelled():
                 raise CalendarSyncError("cancelled")
             validate_url(self.service, url)
+            if self.service == "zoho" and urlparse(url).hostname != self.server_host:
+                raise CalendarSyncError("unsafe_caldav_url")
             try:
                 response = self.session.request(
                     method,
@@ -93,7 +100,13 @@ class CalDAVClient:
                         validate_url(self.service, url)
                         continue
                     if response.status_code >= 300:
-                        raise RemoteCalendarError(response.status_code)
+                        error = RemoteCalendarError(response.status_code)
+                        error.retry_after = retry_after_seconds(
+                            requests.structures.CaseInsensitiveDict(response.headers).get(
+                                "Retry-After"
+                            )
+                        )
+                        raise error
                     chunks, size = [], 0
                     for chunk in response.iter_content(65536):
                         if self.cancelled():
@@ -393,6 +406,7 @@ class CalDAVClient:
         if not self.profile["writable"]:
             raise CalendarSyncError("calendar_read_only")
         transaction = str(uuid.UUID(transaction_id))
+        expected_uid = transaction + "@air-calendar"
         href = self.resource_url(calendar, transaction + ".ics")
         self.missing_resources.discard(href)
         data = new_calendar(payload["task"], transaction, payload["zone"])
@@ -408,15 +422,21 @@ class CalDAVClient:
                 raise
             self.cache.pop(href, None)
             existing = self.event(href)
-            if existing.get("transaction_id") != transaction:
+            if existing.get("uid") != expected_uid or existing.get("transaction_id") != transaction:
                 raise CalendarSyncError("create_conflict") from exc
             return existing
         self.cache.pop(href, None)
         self.missing_resources.discard(href)
-        return self.event(href)
+        event = self.event(href)
+        if event.get("uid") != expected_uid or event.get("transaction_id") != transaction:
+            raise CalendarSyncError("create_conflict")
+        return event
 
     def update(self, event_id, payload, etag):
-        if not self.profile["writable"] or self.event(event_id).get("read_only"):
+        if not self.profile["writable"]:
+            raise CalendarSyncError("event_read_only")
+        original = self.event(event_id)
+        if original.get("read_only"):
             raise CalendarSyncError("event_read_only")
         if not etag:
             raise CalendarSyncError("etag_required")
@@ -428,7 +448,13 @@ class CalDAVClient:
         )
         self.cache.pop(event_id, None)
         self.missing_resources.discard(event_id)
-        return self.event(event_id)
+        event = self.event(event_id)
+        if (event.get("uid"), event.get("recurrence_id", "")) != (
+            original.get("uid"),
+            original.get("recurrence_id", ""),
+        ):
+            raise CalendarSyncError("remote_identity_changed")
+        return event
 
     def delete(self, event_id, etag):
         if not self.profile["writable"] or self.event(event_id).get("read_only"):

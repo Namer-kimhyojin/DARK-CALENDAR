@@ -3,6 +3,7 @@
 from datetime import UTC, datetime, timedelta
 import json
 
+from calendar_app.domain.calendar_visibility import CalendarVisibility
 from calendar_app.domain.routine_cycle import cycle_display_name
 from calendar_app.domain.task_status_view import can_transition_status
 from calendar_app.domain.task_validation import normalize_task_payload
@@ -85,8 +86,15 @@ def create_unified_task(task_data, commit=True):
         생성된 task의 ID
     """
     task_data, issues = normalize_task_payload(task_data, is_update=False)
-    if any(issue.field == "name" and issue.code == "required" for issue in issues):
-        logger.error("Error creating unified task: task name is required")
+    if any(
+        issue.code
+        in {"required", "invalid_datetime", "invalid_date", "invalid_int", "invalid_bool"}
+        for issue in issues
+    ):
+        logger.error(
+            "Error creating unified task: invalid fields %s",
+            [(issue.field, issue.code) for issue in issues],
+        )
         return None
     if task_data.get("status") == "completed":
         task_data["is_completed"] = 1
@@ -425,7 +433,11 @@ def update_unified_task(task_id, updates, mark_gcal_dirty=None, commit=True):
         is_update=True,
         existing_task=existing_task,
     )
-    if any(issue.field == "name" and issue.code == "required" for issue in issues):
+    if any(
+        issue.code
+        in {"required", "invalid_datetime", "invalid_date", "invalid_int", "invalid_bool"}
+        for issue in issues
+    ):
         return False
     if "status" in updates and not can_transition_status(
         existing_task.get("status"), updates.get("status")
@@ -1887,11 +1899,8 @@ def get_all_tasks_by_date(date_str, hide_gcal_items=False):
     # 일정도 포함하도록 type='schedule' 필터 유지
     filters = [
         "(date(t.deadline) = date(?) OR date(t.target_date) = date(?))",
-        "(c.is_visible IS NULL OR c.is_visible = 1)",
     ]
     params = [date_str, date_str]
-    if hide_gcal_items:
-        filters.append("(c.type IS NULL OR c.type != 'gcal')")
     query = f"""
         SELECT t.*
         FROM unified_task t
@@ -1901,7 +1910,7 @@ def get_all_tasks_by_date(date_str, hide_gcal_items=False):
     """
     cur.execute(query, tuple(params))
     rows = cur.fetchall()
-    return [dict(row) for row in rows]
+    return _filter_hidden_calendar_rows([dict(row) for row in rows], hide_gcal_items)
 
 
 def _apply_checklist_progress(task_dict):
@@ -1972,7 +1981,7 @@ def _canonical_gcal_calendar_id_for_query(calendar_id):
     return cid
 
 
-def _filter_hidden_calendar_rows(tasks):
+def _filter_hidden_calendar_rows(tasks, hide_gcal_items=False):
     """Hide rows whose effective calendar is hidden, including legacy GCal aliases.
 
     Older Google rows can keep ``calendar_id='gcal::primary'`` while their
@@ -1989,45 +1998,9 @@ def _filter_hidden_calendar_rows(tasks):
     cur = conn.cursor()
     cur.execute("SELECT id, type, is_visible, gcal_calendar_id FROM calendar")
     calendars = [dict(row) for row in cur.fetchall()]
-    by_id = {str(row.get("id") or "").strip(): row for row in calendars}
-    by_gcal_id = {
-        str(row.get("gcal_calendar_id") or "").strip(): row
-        for row in calendars
-        if str(row.get("gcal_calendar_id") or "").strip()
-    }
-    resolved_primary = _resolved_primary_gcal_id_for_query()
-
-    def _canonical_id(value):
-        calendar_id = str(value or "").strip()
-        if calendar_id.startswith("gcal::"):
-            calendar_id = calendar_id[len("gcal::") :]
-        if calendar_id == "primary" and resolved_primary != "primary":
-            return resolved_primary
-        return calendar_id
-
-    visible_rows = []
-    for task in tasks:
-        stored_calendar_id = str(task.get("calendar_id") or "").strip()
-        is_google_row = bool(
-            str(task.get("gcal_event_id") or "").strip()
-            or str(task.get("gcal_sync_mode") or "").strip()
-            or stored_calendar_id.startswith("gcal::")
-        )
-        uses_primary_alias = stored_calendar_id in {"primary", "gcal::primary"}
-        calendar = None if is_google_row and uses_primary_alias else by_id.get(stored_calendar_id)
-        if calendar is None and is_google_row:
-            for candidate in (
-                task.get("gcal_source_calendar_id"),
-                task.get("gcal_target_calendar_id"),
-                stored_calendar_id,
-            ):
-                calendar = by_gcal_id.get(_canonical_id(candidate))
-                if calendar is not None:
-                    break
-        if calendar is not None and not bool(calendar.get("is_visible", 1)):
-            continue
-        visible_rows.append(task)
-    return visible_rows
+    return CalendarVisibility(calendars, _resolved_primary_gcal_id_for_query()).filter_tasks(
+        tasks, hide_gcal_items
+    )
 
 
 def _gcal_row_dedupe_key(task):
@@ -2096,6 +2069,7 @@ def get_all_tasks_by_date_with_progress(date_str, hide_gcal_items=False):
 
 def get_tasks_by_type_with_progress(task_type, date_filter=None, status_filter=None):
     tasks = get_tasks_by_type(task_type, date_filter, status_filter)
+    tasks = _filter_hidden_calendar_rows(tasks)
     _apply_checklist_progress_batch(tasks)
     return tasks
 
@@ -2116,14 +2090,11 @@ def get_schedule_tasks_overlapping_range_with_progress(
         "(COALESCE(t.gcal_sync_mode, '') = 'remote_mirror' "
         "AND COALESCE(trim(t.gcal_event_id), '') != '')"
         ")",
-        "(c.is_visible IS NULL OR c.is_visible = 1)",
         # deadline 이 NULL 인 일정은 target_date 로 대체하여 범위 비교 (NULL 비교 누락 방지)
         "date(COALESCE(t.deadline, t.target_date)) <= date(?)",
         "date(COALESCE(t.end_date, t.deadline, t.target_date)) >= date(?)",
     ]
     params = [end_date_str, start_date_str]
-    if hide_gcal_items:
-        filters.append("(c.type IS NULL OR c.type != 'gcal')")
     query = f"""
         SELECT t.* FROM unified_task t
         LEFT JOIN calendar c ON t.calendar_id = c.id
@@ -2133,7 +2104,7 @@ def get_schedule_tasks_overlapping_range_with_progress(
     cur.execute(query, tuple(params))
     rows = cur.fetchall()
     tasks = [dict(row) for row in rows]
-    tasks = _filter_hidden_calendar_rows(tasks)
+    tasks = _filter_hidden_calendar_rows(tasks, hide_gcal_items)
     tasks = _dedupe_gcal_schedule_rows(tasks)
     _apply_checklist_progress_batch(tasks)
     return tasks

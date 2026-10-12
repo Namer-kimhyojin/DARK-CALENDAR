@@ -6,6 +6,8 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass
 import functools
+import math
+import re
 
 from PyQt6.QtCore import QBuffer, QIODevice, QRect, QSize, Qt
 from PyQt6.QtGui import QIcon, QPainter, QPixmap
@@ -22,6 +24,63 @@ class MomentAssetPack:
 
 
 DEFAULT_MOMENT_ASSET_PACK_ID = "air_moments"
+EMPTY_MOMENT_ART = "\x00MOMENT_EMPTY_ART\x00"
+
+
+def moment_art_size(hints: list[str], base_font_size: int) -> int:
+    """Resolve art pixels with the same 24-point reference as template text."""
+    try:
+        base = max(6, min(500, int(base_font_size)))
+    except (TypeError, ValueError, OverflowError):
+        base = 24
+    size = 56.0 * base / 24
+    for hint in hints:
+        if not hint.strip().startswith("size="):
+            continue
+        raw = hint.strip()[5:].strip()
+        try:
+            if raw == "base":
+                candidate = float(base)
+            elif raw.endswith("x"):
+                candidate = float(raw[:-1]) * base
+            elif raw.endswith("%"):
+                candidate = float(raw[:-1]) * base / 100
+            elif raw.startswith(("+", "-")):
+                candidate = base + float(raw)
+            else:
+                candidate = float(raw) * base / 24
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if math.isfinite(candidate):
+            size = candidate
+    return max(16, min(1536, round(size)))
+
+
+def remove_empty_moment_rows(text: str) -> str:
+    """Omit unavailable art-only rows while keeping deliberate empty text rows."""
+    if EMPTY_MOMENT_ART not in text:
+        return text
+    rows = []
+    controls = []
+    for row in text.replace("\\n", "\n").split("\n"):
+        if EMPTY_MOMENT_ART in row:
+            cleaned = row.replace(EMPTY_MOMENT_ART, "")
+            content = re.sub(r"\x00ALIGN:(?:left|center|right)\x00", "", cleaned)
+            content = re.sub(r"<lh\s+[^>]+>", "", content, flags=re.IGNORECASE)
+            if not content.strip():
+                controls.extend(re.findall(r"<lh\s+[^>]+>", cleaned, flags=re.IGNORECASE))
+                continue
+            row = cleaned
+        rows.append(row)
+    return "".join(controls) + "\n".join(rows)
+
+
+def _bounded_moment_size(size: int) -> int:
+    try:
+        return max(16, min(int(size), 1536))
+    except (TypeError, ValueError, OverflowError):
+        return 56
+
 
 _PACKS = (
     MomentAssetPack(
@@ -109,7 +168,7 @@ def moment_asset_pixmap(pack_id: object, moment_id: str, size: int) -> QPixmap:
     pack = get_moment_asset_pack(pack_id)
     if not pack.filename:
         return QPixmap()
-    target_size = max(16, min(int(size), 320))
+    target_size = _bounded_moment_size(size)
     cell = _sprite_cell(pack.pack_id, moment_id)
     if cell.isNull():
         return QPixmap()
@@ -131,7 +190,8 @@ def moment_asset_pixmap(pack_id: object, moment_id: str, size: int) -> QPixmap:
     return canvas
 
 
-def moment_asset_html(pack_id: object, moment_id: str, size: int) -> str:
+@functools.lru_cache(maxsize=64)
+def _moment_png_data(pack_id: str, moment_id: str, size: int) -> str:
     pixmap = moment_asset_pixmap(pack_id, moment_id, size)
     if pixmap.isNull():
         return ""
@@ -142,7 +202,21 @@ def moment_asset_html(pack_id: object, moment_id: str, size: int) -> str:
         return ""
     png_b64 = base64.b64encode(bytes(buffer.data())).decode("utf-8", errors="strict")
     buffer.close()
-    rendered_size = max(16, min(int(size), 320))
+    return png_b64
+
+
+def moment_asset_html(pack_id: object, moment_id: str, size: int) -> str:
+    pack = get_moment_asset_pack(pack_id)
+    if not pack.filename:
+        return ""
+    rendered_size = _bounded_moment_size(size)
+    # A sprite cell has finite detail. Keep HTML previews and font fitting from
+    # repeatedly encoding large upscaled images; Qt scales the authored bitmap.
+    raster_size = min(512, rendered_size)
+    normalized_moment = str(moment_id) if str(moment_id) in _MOMENT_TO_CELL else "sparkle"
+    png_b64 = _moment_png_data(pack.pack_id, normalized_moment, raster_size)
+    if not png_b64:
+        return ""
     return (
         f'<img src="data:image/png;base64,{png_b64}" '
         f'width="{rendered_size}" height="{rendered_size}" />'
@@ -172,12 +246,15 @@ def moment_pack_icon(pack_id: object) -> QIcon:
 
 __all__ = [
     "DEFAULT_MOMENT_ASSET_PACK_ID",
+    "EMPTY_MOMENT_ART",
     "MomentAssetPack",
     "get_moment_asset_pack",
     "moment_asset_html",
     "moment_asset_packs",
     "moment_asset_pixmap",
+    "moment_art_size",
     "moment_pack_icon",
     "moment_pack_preview_pixmap",
+    "remove_empty_moment_rows",
     "season_moment_id",
 ]

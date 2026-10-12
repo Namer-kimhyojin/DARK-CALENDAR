@@ -3,11 +3,12 @@ import contextlib
 from datetime import datetime
 import os
 import shutil
+import sqlite3
+from types import SimpleNamespace
 import webbrowser
-from zoneinfo import available_timezones
+from zoneinfo import ZoneInfo, available_timezones
 
-from PyQt6.QtCore import QSettings, QSize, Qt, QTimeZone
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import QSettings, QSize, Qt, QTimer, QTimeZone
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -29,11 +30,14 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.app_paths import APP_NAME, APP_VENDOR, CREDENTIALS_PATH, TOKEN_PATH
+from calendar_app.infrastructure.google_sync.oauth import (
+    GoogleAuthError,
+    load_desktop_client_config,
+)
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_editor_styles import (
     build_settings_dialog_stylesheet,
     build_settings_style_bundle,
-    build_settings_swatch_style,
     build_task_editor_stylesheet,
 )
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
@@ -42,6 +46,15 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
     schedule_dialog_text_fit,
 )
+from calendar_app.presentation.dialogs.gcal_auth_worker import (
+    GCalAuthWorker,
+    GCalQueryWorker,
+    GCalRevokeWorker,
+)
+from calendar_app.presentation.dialogs.sync_feedback import (
+    google_sync_error_code,
+    sync_error_message,
+)
 from calendar_app.shared.calendar_defaults import DEFAULT_CALENDAR_COLOR
 from calendar_app.shared.datetime_utils import timezone_offset_for_name
 from calendar_app.shared.icon_map import ICON
@@ -49,6 +62,60 @@ from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
 
 _GCAL_STYLE_TEMPLATE = ""
+
+
+def _gcal_auth_error_text(kind):
+    messages = {
+        "auth_client_type": (
+            "client_type",
+            "선택한 파일은 웹 애플리케이션용 OAuth 인증 파일입니다. Google Cloud에서 클라이언트 유형을 '데스크톱 앱'으로 생성하고 다운로드한 JSON 파일을 선택하세요. 웹용 파일은 redirect_uri_mismatch 오류를 일으킬 수 있습니다.",
+        ),
+        "auth_client_invalid": (
+            "client_invalid",
+            "올바른 Google OAuth 인증 파일이 아닙니다. Google Cloud에서 '데스크톱 앱' 클라이언트의 JSON 파일을 다시 다운로드하세요.",
+        ),
+        "auth_client_missing": (
+            "client_missing",
+            "인증 파일을 찾을 수 없습니다. Google Cloud에서 '데스크톱 앱' OAuth 클라이언트의 JSON 파일을 다운로드하고 선택하세요.",
+        ),
+        "auth_timeout": (
+            "timeout",
+            "3분 동안 인증 응답을 받지 못했습니다. 브라우저에 redirect_uri_mismatch가 표시되면 '데스크톱 앱' OAuth 파일인지 확인하세요. 파일을 확인한 뒤 인증을 다시 실행하세요.",
+        ),
+        "auth_cancelled": ("cancelled", "Google 인증을 취소했습니다. 기존 연결 정보는 유지됩니다."),
+        "auth_browser": (
+            "browser",
+            "로그인 브라우저를 열 수 없습니다. Windows 기본 브라우저 설정을 확인한 뒤 다시 시도하세요.",
+        ),
+        "auth_listener": (
+            "listener",
+            "인증 응답을 받을 로컬 주소를 열 수 없습니다. 보안 프로그램과 방화벽 설정을 확인한 뒤 다시 시도하세요.",
+        ),
+        "auth_redirect": (
+            "redirect",
+            "Google이 인증 주소를 거절했습니다 (redirect_uri_mismatch). Google Cloud에서 '데스크톱 앱'으로 생성한 OAuth JSON 파일을 선택하세요.",
+        ),
+        "auth_denied": (
+            "denied",
+            "Google 로그인이 거절되었거나 권한 동의가 취소되었습니다. 계정과 OAuth 앱의 접근 권한을 확인한 뒤 다시 시도하세요.",
+        ),
+        "auth_token_write": (
+            "token_write",
+            "인증 정보를 저장하지 못했습니다. 저장 공간과 앱 데이터 폴더의 쓰기 권한을 확인하세요. 기존 연결 정보는 유지됩니다.",
+        ),
+        "auth_modules": (
+            "modules",
+            "Google Calendar 인증 구성 요소를 불러오지 못했습니다. 앱을 업데이트한 뒤 다시 시도하세요.",
+        ),
+    }
+    key, fallback = messages.get(
+        kind,
+        (
+            "failed",
+            "Google 인증을 완료하지 못했습니다. 네트워크 연결과 데스크톱 앱용 OAuth 파일을 확인한 뒤 다시 시도하세요.",
+        ),
+    )
+    return t(f"gcal_settings.auth_error_{key}", fallback)
 
 
 def _build_gcal_stylesheet(tokens=None):
@@ -106,7 +173,11 @@ class GCalSettingsDialog(QDialog):
 
             self.reject()
             if not self.property("syncHubChild"):
-                QTimer.singleShot(0, self.parent_app.open_calendar_sync_hub)
+                QTimer.singleShot(
+                    0, lambda: self.parent_app.open_calendar_sync_hub(section="calendars")
+                )
+            else:
+                self.setProperty("returnToCalendars", True)
 
     def __init__(self, parent=None, initial_tab: str | None = None):
         super().__init__(parent)
@@ -120,12 +191,24 @@ class GCalSettingsDialog(QDialog):
         apply_dialog_title(self, t("sync_unified.google_settings", "Google Calendar 세부 설정"))
         self.setAccessibleName(self.windowTitle())
         self.setSizeGripEnabled(True)
-        self.setMinimumSize(820, 560)
+        self.setMinimumSize(740, 560)
         self.setProperty("_dc_preferred_size", QSize(980, 680))
         self.resize(980, 680)
         self._all_timezones = self._build_timezone_list()
         self._calendar_choices = []
+        self._calendar_import_selection = {}
+        self._calendar_import_checks = {}
+        self._loading_settings = True
+        self._settings_dirty = False
+        self._applied_changes = False
         self._browse_creds_open = False
+        self._auth_worker = None
+        self._query_worker = None
+        self._query_kind = None
+        self._auth_close_result = None
+        self._auth_calendars_loaded = False
+        self._metadata_load_failed = False
+        self._feedback_code = None
         self._nav_btns = []
         self._ui_tokens = get_dialog_theme_tokens()
         self._dialog_metrics = get_dialog_metric_tokens(apply_overrides=True)
@@ -133,7 +216,15 @@ class GCalSettingsDialog(QDialog):
         self._init_ui()
         schedule_dialog_text_fit(self)
         self._load_state()
+        self._loading_settings = False
+        self._connect_dirty_tracking()
         self._refresh_status()
+        self._external_busy = None
+        self._availability_timer = QTimer(self)
+        self._availability_timer.setInterval(600)
+        self._availability_timer.timeout.connect(self._refresh_operation_availability)
+        self._availability_timer.start()
+        self._refresh_operation_availability()
         # initial_tab으로 직접 이동
         if initial_tab == "calendar":
             self._switch_section(1)
@@ -152,6 +243,7 @@ class GCalSettingsDialog(QDialog):
 
         # ── 상태 헤더 (compact 한 줄) ──────────────
         root.addWidget(self._build_status_bar())
+        root.addWidget(self._build_feedback_bar())
 
         # ── 사이드바 + 콘텐츠 영역 ──────────────────
         body = QHBoxLayout()
@@ -175,70 +267,191 @@ class GCalSettingsDialog(QDialog):
         bar = QFrame()
         bar.setObjectName("statusBar")
         bar.setStyleSheet(self._style_bundle["status_bar"])
-        bar.setFixedHeight(48)
-        layout = QHBoxLayout(bar)
-        layout.setContentsMargins(18, 0, 18, 0)
-        layout.setSpacing(12)
+        layout = QGridLayout(bar)
+        layout.setContentsMargins(18, 10, 18, 10)
+        layout.setHorizontalSpacing(10)
+        layout.setVerticalSpacing(4)
 
         # 상태 아이콘 + 텍스트
         self.status_title = QLabel()
         self.status_title.setProperty("role", "statusLabel")
         self.status_title.setStyleSheet(self._style_bundle["status_title_pending"])
-        layout.addWidget(self.status_title)
+        layout.addWidget(self.status_title, 0, 0)
 
         self.status_pill = QLabel()
         self.status_pill.setProperty("role", "pill")
         self.status_pill.setStyleSheet(self._style_bundle["status_pill_pending"])
-        layout.addWidget(self.status_pill)
-
-        layout.addSpacing(8)
-
-        # 구분선
-        sep1 = QFrame()
-        sep1.setFrameShape(QFrame.Shape.VLine)
-        sep1.setStyleSheet(self._style_bundle["status_separator"])
-        layout.addWidget(sep1)
-
-        layout.addSpacing(8)
+        layout.addWidget(self.status_pill, 0, 1, 1, 1, Qt.AlignmentFlag.AlignLeft)
 
         # 계정 메타
         lbl_acc = QLabel(t("gcal_settings.meta_account", "계정"))
         lbl_acc.setProperty("role", "statusBarMeta")
         lbl_acc.setStyleSheet(self._style_bundle["meta_label"])
-        layout.addWidget(lbl_acc)
+        layout.addWidget(lbl_acc, 1, 0)
         self.account_meta = (None, QLabel("-"))
         self.account_meta[1].setProperty("role", "statusBarMetaVal")
         self.account_meta[1].setStyleSheet(self._style_bundle["meta_value"])
-        self.account_meta[1].setMaximumWidth(180)
+        self.account_meta[1].setMinimumWidth(0)
+        self.account_meta[1].setWordWrap(True)
+        self.account_meta[1].setTextFormat(Qt.TextFormat.PlainText)
         self.account_meta[1].setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        layout.addWidget(self.account_meta[1])
+        layout.addWidget(self.account_meta[1], 1, 1)
 
-        layout.addSpacing(12)
-
-        lbl_cal = QLabel(t("gcal_settings.meta_calendar", "캘린더"))
+        lbl_cal = QLabel(t("gcal_focus.import_meta", "가져오기"))
         lbl_cal.setProperty("role", "statusBarMeta")
         lbl_cal.setStyleSheet(self._style_bundle["meta_label"])
-        layout.addWidget(lbl_cal)
+        layout.addWidget(lbl_cal, 1, 2)
         self.calendar_meta = (None, QLabel("-"))
         self.calendar_meta[1].setProperty("role", "statusBarMetaVal")
         self.calendar_meta[1].setStyleSheet(self._style_bundle["meta_value"])
-        self.calendar_meta[1].setMaximumWidth(200)
         self.calendar_meta[1].setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        layout.addWidget(self.calendar_meta[1])
-
-        layout.addSpacing(12)
+        layout.addWidget(self.calendar_meta[1], 1, 3)
 
         lbl_sync = QLabel(t("gcal_settings.meta_last_sync", "마지막 동기화"))
         lbl_sync.setProperty("role", "statusBarMeta")
         lbl_sync.setStyleSheet(self._style_bundle["meta_label"])
-        layout.addWidget(lbl_sync)
+        layout.addWidget(lbl_sync, 1, 4)
         self.last_sync_meta = (None, QLabel("-"))
         self.last_sync_meta[1].setProperty("role", "statusBarMetaVal")
         self.last_sync_meta[1].setStyleSheet(self._style_bundle["meta_value"])
-        layout.addWidget(self.last_sync_meta[1])
-
-        layout.addStretch(1)
+        layout.addWidget(self.last_sync_meta[1], 1, 5)
+        layout.setColumnStretch(1, 1)
         return bar
+
+    def _build_feedback_bar(self):
+        bar = QFrame()
+        bar.setStyleSheet(self._style_bundle["subtle_card"])
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(18, 10, 18, 10)
+        self.connection_feedback = self._help_label("")
+        self.connection_feedback.setAccessibleName(t("gcal_ux.feedback", "연결 및 동기화 안내"))
+        self.connection_feedback.setTextFormat(Qt.TextFormat.PlainText)
+        self.connection_feedback.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        layout.addWidget(self.connection_feedback, 1)
+        self.recovery_btn = QPushButton(t("gcal_ux.review_connection", "연결 확인"))
+        self._apply_section_button_style(self.recovery_btn, "secondary")
+        self.recovery_btn.clicked.connect(self._run_recovery_action)
+        layout.addWidget(self.recovery_btn)
+        self.cancel_operation_btn = QPushButton(t("common.cancel", "취소"))
+        self._apply_section_button_style(self.cancel_operation_btn, "secondary")
+        self.cancel_operation_btn.clicked.connect(self._cancel_operation)
+        self.cancel_operation_btn.hide()
+        layout.addWidget(self.cancel_operation_btn)
+        self.feedback_bar = bar
+        bar.hide()
+        return bar
+
+    def _show_inline_feedback(self, text, tone="help", code=None):
+        self._feedback_code = code
+        self._set_feedback_label(self.connection_feedback, text, tone)
+        self.feedback_bar.setVisible(bool(text))
+        busy = self._auth_worker is not None or self._query_worker is not None
+        self.recovery_btn.setVisible(tone in {"error", "warning"} and not busy)
+        if code in {"auth_client_missing", "auth_client_invalid", "auth_client_type"}:
+            label = t("gcal_ux.review_file", "인증 파일 확인")
+        elif code in {
+            "account_mismatch",
+            "account_unverified",
+            "auth_required",
+            "reauth_required",
+            "auth",
+            "auth_denied",
+            "auth_timeout",
+        }:
+            label = t("gcal_ux.reconnect", "계정 다시 연결")
+        else:
+            label = t("gcal_ux.review_connection", "연결 확인")
+        self.recovery_btn.setText(label)
+
+    def _run_recovery_action(self):
+        self._switch_section(0)
+        if self._feedback_code in {
+            "auth_client_missing",
+            "auth_client_invalid",
+            "auth_client_type",
+        }:
+            self.credentials_details_btn.setChecked(True)
+            self.creds_path_edit.setFocus()
+        else:
+            self.auth_btn.setFocus()
+
+    def _set_operation_state(self, busy, text="", *, cancellable=True):
+        for widget in (
+            self.creds_path_edit,
+            self.browse_creds_btn,
+            self.credentials_details_btn,
+            self.enable_cb,
+            self.auto_sync_cb,
+            self.hide_completed_check,
+            self.timezone_combo,
+            self.detect_timezone_btn,
+            self.timezone_details_btn,
+            self.import_list,
+            self.test_access_btn,
+            self.load_calendars_btn,
+            self.auth_btn,
+            self.reset_btn,
+            self.reset_sync_state_btn,
+        ):
+            widget.setEnabled(not busy)
+        self.save_btn.setEnabled(
+            not busy and not self._metadata_load_failed and self._settings_dirty
+        )
+        self._update_auto_sync_controls()
+        self.cancel_operation_btn.setVisible(busy and cancellable)
+        self.cancel_operation_btn.setEnabled(True)
+        if busy:
+            if text:
+                self._show_inline_feedback(text)
+            if cancellable:
+                self.cancel_operation_btn.setFocus()
+
+    def _parent_google_busy(self):
+        coordinator = getattr(self.parent_app, "_calendar_sync_coordinator", None)
+        if coordinator and getattr(coordinator, "states", {}).get("google", {}).get("busy"):
+            return True
+        return any(
+            worker and worker.isRunning()
+            for worker in (
+                getattr(self.parent_app, "_sync_worker", None),
+                getattr(self.parent_app, "_auth_worker", None),
+            )
+        )
+
+    def _refresh_operation_availability(self):
+        if self._auth_worker is not None or self._query_worker is not None:
+            return
+        busy = self._parent_google_busy()
+        if busy == self._external_busy:
+            return
+        self._external_busy = busy
+        self._set_operation_state(busy, cancellable=False)
+        if busy:
+            self._show_inline_feedback(
+                t(
+                    "gcal_ux.sync_busy",
+                    "Google 동기화가 진행 중입니다. 완료되면 설정을 변경할 수 있습니다.",
+                )
+            )
+        else:
+            if self.connection_feedback.text() == t(
+                "gcal_ux.sync_busy",
+                "Google 동기화가 진행 중입니다. 완료되면 설정을 변경할 수 있습니다.",
+            ):
+                self._show_inline_feedback("")
+            self._refresh_status()
+
+    def _cancel_operation(self):
+        worker = self._auth_worker or self._query_worker
+        if worker is None or self._query_kind == "disconnect" and self._query_worker is not None:
+            return
+        worker.requestInterruption()
+        self.cancel_operation_btn.setEnabled(False)
+        self._show_inline_feedback(
+            t("gcal_ux.cancelling", "작업을 취소하고 있습니다. 기존 연결과 일정은 유지됩니다.")
+        )
 
     # ──────────────────────────────────────────────
     # 사이드바
@@ -254,12 +467,26 @@ class GCalSettingsDialog(QDialog):
         layout.setSpacing(2)
 
         nav_items = [
-            (t("gcal_settings.nav_connection", "연결"), _ic(ICON.LINK)),
-            (t("gcal_settings.nav_calendar", "캘린더"), _ic(ICON.VIEW_CALENDAR)),
-            (t("gcal_settings.nav_subscription", "구독"), _ic(ICON.GCAL)),
-            (t("gcal_settings.nav_sync", "동기화"), _ic(ICON.SYNC)),
-            (t("gcal_settings.nav_diagnostics", "진단"), _ic(ICON.SEARCH)),
-            (t("gcal_settings.nav_guide", "가이드"), _ic(ICON.DOCS)),
+            (
+                t("gcal_focus.nav_connection", "계정 연결"),
+                _ic(ICON.LINK, color=self._ui_tokens["text_primary"]),
+            ),
+            (
+                t("gcal_focus.nav_calendars", "가져올 캘린더"),
+                _ic(ICON.VIEW_CALENDAR, color=self._ui_tokens["text_primary"]),
+            ),
+            (
+                t("gcal_focus.nav_sync", "동기화 설정"),
+                _ic(ICON.SYNC, color=self._ui_tokens["text_primary"]),
+            ),
+            (
+                t("gcal_focus.nav_issues", "문제 해결"),
+                _ic(ICON.SEARCH, color=self._ui_tokens["text_primary"]),
+            ),
+            (
+                t("gcal_focus.nav_help", "설정 도움말"),
+                _ic(ICON.DOCS, color=self._ui_tokens["text_primary"]),
+            ),
         ]
 
         for idx, (label, nav_icon) in enumerate(nav_items):
@@ -300,10 +527,9 @@ class GCalSettingsDialog(QDialog):
         self._stack = QStackedWidget()
         self._stack.addWidget(self._wrap_scroll(self._build_connection_section()))  # 0
         self._stack.addWidget(self._wrap_scroll(self._build_calendar_section()))  # 1
-        self._stack.addWidget(self._wrap_scroll(self._build_subscription_section()))  # 2
-        self._stack.addWidget(self._wrap_scroll(self._build_sync_section()))  # 3
-        self._stack.addWidget(self._wrap_scroll(self._build_diagnostics_section()))  # 4
-        self._stack.addWidget(self._wrap_scroll(self._build_guide_section()))  # 5
+        self._stack.addWidget(self._wrap_scroll(self._build_sync_section()))  # 2
+        self._stack.addWidget(self._wrap_scroll(self._build_diagnostics_section()))  # 3
+        self._stack.addWidget(self._wrap_scroll(self._build_guide_section()))  # 4
 
         layout.addWidget(self._stack)
         return container
@@ -328,13 +554,16 @@ class GCalSettingsDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(16)
 
-        other_services = QPushButton(t("sync_unified.back", "전체 캘린더 설정으로"))
-        self._apply_section_button_style(other_services, "secondary")
-        other_services.clicked.connect(self._open_other_services)
-        layout.addWidget(other_services)
-
-        card = self._make_card(t("gcal_settings.sync_title", "연결 설정"))
+        card = self._make_card(t("gcal_focus.connection_title", "Google 계정 연결"))
         cl = card.layout()
+        cl.addWidget(
+            self._help_label(
+                t(
+                    "gcal_focus.connection_help",
+                    "계정을 한 번 연결하면 선택한 Google 캘린더의 일정을 가져오고 변경 사항을 동기화할 수 있습니다.",
+                )
+            )
+        )
 
         # Enable toggle
         enable_row = QHBoxLayout()
@@ -343,10 +572,40 @@ class GCalSettingsDialog(QDialog):
         enable_row.addWidget(self.enable_cb)
         enable_row.addStretch(1)
         cl.addLayout(enable_row)
-        cl.addWidget(self._make_divider())
+        self.connection_next_step = self._help_label("")
+        cl.addWidget(self.connection_next_step)
+
+        auth_row = QHBoxLayout()
+        self.auth_btn = QPushButton(t("gcal_focus.connect_account", "Google 계정 연결"))
+        self.auth_btn.setIcon(_ic(ICON.AUTH, color=self._ui_tokens["text_primary"]))
+        self._apply_section_button_style(self.auth_btn, "accent")
+        self.auth_btn.setAutoDefault(False)
+        self.auth_btn.clicked.connect(self.run_auth)
+        auth_row.addWidget(self.auth_btn)
+        self.reset_btn = QPushButton(t("gcal_focus.disconnect", "연결 해제"))
+        self._apply_section_button_style(self.reset_btn, "secondary")
+        self.reset_btn.setAutoDefault(False)
+        self.reset_btn.clicked.connect(self.reset_auth)
+        auth_row.addWidget(self.reset_btn)
+        auth_row.addStretch(1)
+        cl.addLayout(auth_row)
+
+        self.credentials_details_btn = QPushButton(
+            t("gcal_ux.credentials_details", "인증 파일 · 연결 도움말")
+        )
+        self.credentials_details_btn.setCheckable(True)
+        self._apply_section_button_style(self.credentials_details_btn, "secondary")
+        cl.addWidget(self.credentials_details_btn)
+        self.credentials_panel = QWidget()
+        credentials_layout = QVBoxLayout(self.credentials_panel)
+        credentials_layout.setContentsMargins(0, 0, 0, 0)
+        credentials_layout.setSpacing(8)
+        self.credentials_details_btn.toggled.connect(self.credentials_panel.setVisible)
 
         # Credentials
-        cl.addWidget(self._field_label(t("gcal_settings.creds_label", "OAuth 인증 파일")))
+        credentials_layout.addWidget(
+            self._field_label(t("gcal_settings.creds_label", "OAuth 인증 파일"))
+        )
         creds_row = QHBoxLayout()
         creds_row.setSpacing(8)
         self.creds_path_edit = QLineEdit()
@@ -354,28 +613,33 @@ class GCalSettingsDialog(QDialog):
         self.creds_path_edit.setPlaceholderText(
             t("gcal_settings.creds_placeholder", "credentials.json 경로")
         )
+        self.creds_path_edit.setAccessibleName(t("gcal_settings.creds_label", "OAuth 인증 파일"))
         browse_btn = QPushButton(t("gcal_settings.browse", "파일 선택"))
+        self.browse_creds_btn = browse_btn
         self._apply_section_button_style(browse_btn, "secondary")
-        browse_btn.setFixedWidth(90)
         browse_btn.clicked.connect(self.browse_creds)
         creds_row.addWidget(self.creds_path_edit, 1)
         creds_row.addWidget(browse_btn)
-        cl.addLayout(creds_row)
-        cl.addWidget(
+        credentials_layout.addLayout(creds_row)
+        credentials_layout.addWidget(
             self._help_label(
                 t("gcal_settings.creds_help", "Desktop OAuth 클라이언트 JSON만 지원합니다.")
             )
         )
 
-        cl.addSpacing(8)
+        help_btn = QPushButton(t("gcal_ux.setup_help", "인증 파일 준비 방법"))
+        self._apply_section_button_style(help_btn, "secondary")
+        help_btn.clicked.connect(lambda: self._switch_section(4))
+        credentials_layout.addWidget(help_btn)
+        cl.addWidget(self.credentials_panel)
+        self.credentials_panel.hide()
         cl.addWidget(self._make_divider())
-        cl.addSpacing(4)
 
         # Test access
         test_row = QHBoxLayout()
         test_row.setSpacing(10)
         self.test_access_btn = QPushButton(t("gcal_settings.test_access", "캘린더 접근 테스트"))
-        self.test_access_btn.setIcon(_ic(ICON.SEARCH))
+        self.test_access_btn.setIcon(_ic(ICON.SEARCH, color=self._ui_tokens["text_primary"]))
         self._apply_section_button_style(self.test_access_btn, "accent")
         self.test_access_btn.clicked.connect(self._test_calendar_access)
         self.test_access_result = QLabel(
@@ -398,511 +662,56 @@ class GCalSettingsDialog(QDialog):
 
     # ── 캘린더 카드 아이템 (테이블 대체) ──────────────────────────────────
 
-    def _make_color_swatch(self, color_str: str, size: int = 40) -> QPushButton:
-        """클릭 가능한 색상 스와치 버튼."""
-        btn = QPushButton()
-        btn.setFixedSize(size, size)
-        self._set_icon_button_accessibility(btn, t("gcal_settings.color_swatch_tip", "색상 변경"))
-        self._apply_swatch_color(btn, color_str)
-        return btn
-
-    @staticmethod
-    def _set_icon_button_accessibility(button: QPushButton, label: str):
-        button.setToolTip(label)
-        button.setAccessibleName(label)
-        button.setAccessibleDescription(label)
-
-    def _apply_swatch_color(self, btn: QPushButton, color_str: str):
-        c = QColor(color_str) if color_str else QColor("#4da6ff")
-        if not c.isValid():
-            c = QColor("#4da6ff")
-        hex_c = c.name()
-        btn.setStyleSheet(build_settings_swatch_style(hex_c, self._ui_tokens))
-        btn.setProperty("_color", hex_c)
-
-    def _calendar_name_style(self) -> str:
-        color = self._ui_tokens.get("text_primary", "#f4f7fb")
-        return f"color: {color}; font-size: 13px; font-weight: 600; background: transparent;"
-
-    def _calendar_row_action_button_style(self, tone: str = "neutral") -> str:
-        tone_key = str(tone or "neutral").lower()
-        style_map = {
-            "neutral": {
-                "bg": "#1e2536",
-                "border": "#34425d",
-                "hover_bg": "#26304a",
-                "hover_border": "#45608a",
-            },
-            "accent": {
-                "bg": "rgba(77, 166, 255, 0.16)",
-                "border": "rgba(77, 166, 255, 0.42)",
-                "hover_bg": "rgba(77, 166, 255, 0.24)",
-                "hover_border": "rgba(77, 166, 255, 0.68)",
-            },
-            "warning": {
-                "bg": "rgba(255, 196, 74, 0.16)",
-                "border": "rgba(255, 196, 74, 0.42)",
-                "hover_bg": "rgba(255, 196, 74, 0.24)",
-                "hover_border": "rgba(255, 196, 74, 0.68)",
-            },
-            "danger": {
-                "bg": "rgba(210, 90, 102, 0.16)",
-                "border": "rgba(210, 90, 102, 0.42)",
-                "hover_bg": "rgba(210, 90, 102, 0.24)",
-                "hover_border": "rgba(210, 90, 102, 0.68)",
-            },
-        }
-        palette = style_map.get(tone_key, style_map["neutral"])
-        return (
-            "QPushButton {"
-            f"background-color: {palette['bg']};"
-            "color: #f4f7fb;"
-            f"border: 1px solid {palette['border']};"
-            "border-radius: 7px;"
-            "padding: 0px;"
-            "min-width: 40px; max-width: 40px;"
-            "min-height: 40px; max-height: 40px;"
-            "}"
-            "QPushButton:hover {"
-            f"background-color: {palette['hover_bg']};"
-            f"border: 1px solid {palette['hover_border']};"
-            "}"
-            "QPushButton:pressed {"
-            f"background-color: {palette['hover_bg']};"
-            f"border: 1px solid {palette['hover_border']};"
-            "}"
-        )
-
-    def _calendar_action_separator_style(self) -> str:
-        return "background: rgba(255,255,255,0.12); margin: 8px 4px;"
-
-    def _make_calendar_row_widget(self, cal: dict, is_sub: bool = False) -> QFrame:
-        """캘린더 1개를 나타내는 카드 행 위젯."""
-        from PyQt6.QtWidgets import QSizePolicy
-
-        row_frame = QFrame()
-        row_frame.setObjectName("calRow")
-        row_frame.setStyleSheet(self._style_bundle["calendar_row"])
-        row_frame.setFixedHeight(64)
-        row_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-
-        h = QHBoxLayout(row_frame)
-        h.setContentsMargins(16, 6, 16, 6)
-        h.setSpacing(8)
-
-        # ① 색상 스와치
-        cal_color = str(cal.get("color") or "").strip()
-        swatch = self._make_color_swatch(cal_color or "#4da6ff", size=40)
-        swatch.setFixedWidth(40)  # Pill-like width
-        cal_id = cal["id"]
-        cal_type = cal.get("type", "local")
-
-        def _on_swatch_click(_=None, cid=cal_id, sw=swatch):
-            self._pick_calendar_color(cid, sw)
-
-        swatch.clicked.connect(_on_swatch_click)
-        h.addWidget(swatch, 0, Qt.AlignmentFlag.AlignVCenter)
-
-        # ② 이름 및 타입 정보 (유연한 레이아웃)
-        _TYPE_LABEL = {
-            "gcal": t("gcal_settings.type_gcal", "Google Calendar"),
-            "outlook": t("outlook.type", "Outlook / Microsoft 365"),
-            "caldav": t("caldav.type", "CalDAV"),
-            "ics": t("gcal_settings.type_ics", "ICS 구독"),
-            "local": t("gcal_settings.type_local", "로컬"),
-        }
-        type_label_str = _TYPE_LABEL.get(cal_type, cal_type)
-
-        info_layout = QVBoxLayout()
-        info_layout.setSpacing(4)
-        info_layout.setContentsMargins(0, 0, 0, 0)
-
-        clean_name = str(cal.get("name") or "Untitled").strip()
-        name_lbl = QLabel(clean_name)
-        name_lbl.setObjectName("calendarNameLabel")
-        name_lbl.setStyleSheet(self._calendar_name_style())
-        name_lbl.setToolTip(clean_name)
-        name_lbl.setWordWrap(False)
-        name_lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-        type_lbl = QLabel()
-        type_lbl.setStyleSheet(self._style_bundle["calendar_meta"])
-        type_lbl.setWordWrap(False)
-        type_lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-        ics_url = str(cal.get("ics_url") or "").strip()
-        gcal_id_str = str(cal.get("gcal_calendar_id") or "").strip()
-        if ics_url:
-            url_display = ics_url if len(ics_url) <= 55 else ics_url[:52] + "…"
-            type_lbl.setText(f"{type_label_str}  ·  {url_display}")
-            type_lbl.setToolTip(ics_url)
-        elif gcal_id_str:
-            id_display = gcal_id_str if len(gcal_id_str) <= 45 else gcal_id_str[:42] + "…"
-            type_lbl.setText(f"{type_label_str}  ·  {id_display}")
-            type_lbl.setToolTip(gcal_id_str)
-        else:
-            type_lbl.setText(type_label_str)
-
-        info_layout.addWidget(name_lbl)
-        info_layout.addWidget(type_lbl)
-        h.addLayout(info_layout, 1)
-
-        # ③ ICS: 마지막 동기화 시간
-        if cal_type == "ics":
-            last_fetched = str(cal.get("ics_last_fetched") or "").strip()
-            if last_fetched:
-                try:
-                    dt = datetime.fromisoformat(last_fetched)
-                    fetch_str = dt.strftime("%m/%d %H:%M")
-                except Exception:
-                    fetch_str = last_fetched[:16]
-                sync_lbl = QLabel(f"{fetch_str}")
-                sync_lbl.setToolTip(t("gcal_settings.ics_last_synced", "마지막 동기화"))
-            else:
-                sync_lbl = QLabel(t("gcal_settings.ics_never_synced", "미동기화"))
-            sync_lbl.setStyleSheet(self._style_bundle["calendar_meta"])
-
-        # ④ 기본 배지 / 기본 지정 버튼 (구독 탭 아닌 경우만)
-        if not is_sub:
-            is_default = bool(cal.get("is_default"))
-            default_btn = QPushButton()
-            default_btn.setObjectName("calendarDefaultButton")
-            default_btn.setFixedSize(40, 40)
-            default_btn.setIconSize(QSize(18, 18))
-            default_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-
-            if is_default:
-                default_btn.setIcon(_ic(ICON.STAR))
-                default_label = t("gcal_settings.badge_default", "기본 캘린더")
-                default_btn.setStyleSheet(self._calendar_row_action_button_style("warning"))
-            else:
-                default_btn.setIcon(_ic(ICON.STAR_EMPTY))
-                default_label = t("gcal_settings.set_default", "기본으로 지정")
-                default_btn.setStyleSheet(self._calendar_row_action_button_style("neutral"))
-
-                def _on_set_default(_=None, cid=cal_id):
-                    self._set_default_calendar(cid)
-
-                default_btn.clicked.connect(_on_set_default)
-            self._set_icon_button_accessibility(default_btn, default_label)
-
-        # ⑤ 보기 토글
-        vis_btn = QPushButton()
-        vis_btn.setObjectName("calendarVisibilityButton")
-        is_vis = bool(cal.get("is_visible", 1))
-        vis_btn.setCheckable(True)
-        vis_btn.setChecked(is_vis)
-        vis_btn.setFixedSize(40, 40)
-        vis_btn.setIconSize(QSize(18, 18))
-        self._set_icon_button_accessibility(
-            vis_btn, t("gcal_settings.col_visible_tip", "표시/숨김")
-        )
-        self._apply_vis_btn_style(vis_btn, is_vis)
-
-        def _on_vis_toggle(checked, cid=cal_id, vb=vis_btn):
-            from calendar_app.infrastructure.db.calendar_repo import set_calendar_visible
-            from calendar_app.presentation.calendar.month_renderer import (
-                invalidate_calendar_meta_cache,
-            )
-            from calendar_app.presentation.panels.side_panel_renderer import (
-                invalidate_panel_calendar_cache,
-            )
-
-            set_calendar_visible(cid, checked)
-            invalidate_calendar_meta_cache()
-            invalidate_panel_calendar_cache()
-            self._apply_vis_btn_style(vb, checked)
-            if self.parent_app and hasattr(self.parent_app, "_gcal_subscription_events_cache"):
-                self.parent_app._gcal_subscription_events_cache = {}
-            if self.parent_app and hasattr(self.parent_app, "schedule_panel_refresh"):
-                self.parent_app.schedule_panel_refresh(left=True, center=True)
-
-        vis_btn.toggled.connect(_on_vis_toggle)
-
-        # ③ 우측 액션 그룹 (공간 확보를 위한 컨테이너)
-        actions = QWidget()
-        actions.setContentsMargins(0, 0, 0, 0)
-        al = QHBoxLayout(actions)
-        al.setContentsMargins(0, 0, 0, 0)
-        al.setSpacing(8)
-
-        # ICS: 마지막 동기화 시간
-        if cal_type == "ics":
-            last_fetched = str(cal.get("ics_last_fetched") or "").strip()
-            if last_fetched:
-                try:
-                    dt = datetime.fromisoformat(last_fetched)
-                    fetch_str = dt.strftime("%m/%d %H:%M")
-                except Exception:
-                    fetch_str = last_fetched[:16]
-                sync_lbl = QLabel(f"{fetch_str}")
-                sync_lbl.setToolTip(t("gcal_settings.ics_last_synced", "마지막 동기화"))
-            else:
-                sync_lbl = QLabel(t("gcal_settings.ics_never_synced", "미동기화"))
-            sync_lbl.setStyleSheet(self._style_bundle["calendar_meta_compact"])
-            al.addWidget(sync_lbl)
-
-        # 기본 배지 위치 조정 (아이콘으로 처리됨)
-        if not is_sub:
-            al.addWidget(default_btn)
-
-        al.addWidget(vis_btn)
-
-        # 구분선 (액션 앞)
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.VLine)
-        sep.setFixedWidth(1)
-        sep.setMaximumHeight(28)
-        sep.setStyleSheet(self._calendar_action_separator_style())
-        al.addWidget(sep)
-
-        # 공통 버튼 아이콘 스타일
-
-        # ICS 새로고침
-        if cal_type == "ics" and ics_url:
-            refresh_btn = QPushButton()
-            refresh_btn.setObjectName("calendarRefreshButton")
-            refresh_btn.setIcon(_ic(ICON.REFRESH))
-            refresh_btn.setFixedSize(40, 40)
-            refresh_btn.setIconSize(QSize(18, 18))
-            self._set_icon_button_accessibility(
-                refresh_btn, t("gcal_settings.ics_refresh", "지금 소식 가져오기")
-            )
-            refresh_btn.setStyleSheet(self._calendar_row_action_button_style("neutral"))
-
-            def _on_ics_refresh(_=None, cid=cal_id, url=ics_url):
-                self._refresh_ics_now(cid, url)
-
-            refresh_btn.clicked.connect(_on_ics_refresh)
-            al.addWidget(refresh_btn)
-
-        # 편집
-        edit_btn = QPushButton()
-        edit_btn.setObjectName("calendarEditButton")
-        edit_btn.setIcon(_ic(ICON.EDIT))
-        edit_btn.setFixedSize(40, 40)
-        edit_btn.setIconSize(QSize(18, 18))
-        self._set_icon_button_accessibility(edit_btn, t("gcal_settings.col_edit", "편집"))
-        edit_btn.setStyleSheet(self._calendar_row_action_button_style("neutral"))
-
-        def _on_edit(_=None, cid=cal_id, cname=cal["name"], ctype=cal_type):
-            self._edit_calendar(cid, cname, ctype)
-
-        edit_btn.clicked.connect(_on_edit)
-        al.addWidget(edit_btn)
-
-        # 삭제
-        del_btn = QPushButton()
-        del_btn.setObjectName("calendarDeleteButton")
-        del_btn.setIcon(_ic(ICON.DELETE))
-        del_btn.setFixedSize(40, 40)
-        del_btn.setIconSize(QSize(18, 18))
-        self._set_icon_button_accessibility(del_btn, t("gcal_settings.col_delete", "삭제"))
-        del_btn.setStyleSheet(self._calendar_row_action_button_style("danger"))
-        if cal_type in {"outlook", "caldav"}:
-            del_btn.setEnabled(False)
-            del_btn.setToolTip(
-                t(
-                    "outlook.managed_calendar",
-                    "연결 설정에서 캘린더 선택을 해제하세요. 기존 일정은 보존됩니다.",
-                )
-            )
-
-        def _on_del(_=None, cid=cal_id, cname=cal["name"]):
-            self._delete_calendar(cid, cname)
-
-        del_btn.clicked.connect(_on_del)
-        al.addWidget(del_btn)
-
-        h.addWidget(actions, 0, Qt.AlignmentFlag.AlignVCenter)
-        return row_frame
-
-    def _apply_vis_btn_style(self, btn: QPushButton, is_visible: bool):
-        btn.setText("")
-        btn.setIcon(_ic(ICON.OPACITY) if is_visible else _ic(ICON.STATUS_CANCELED))
-        btn.setStyleSheet(
-            self._calendar_row_action_button_style("accent" if is_visible else "neutral")
-        )
-
-    def _pick_calendar_color(self, cal_id: str, swatch_btn: QPushButton):
-        from PyQt6.QtWidgets import QColorDialog
-
-        current = swatch_btn.property("_color") or "#4da6ff"
-        color = QColorDialog.getColor(
-            QColor(current), self, t("gcal_settings.color_pick_title", "캘린더 색상 선택")
-        )
-        if color.isValid():
-            hex_c = color.name()
-            try:
-                from calendar_app.infrastructure.db.calendar_repo import set_calendar_color
-
-                set_calendar_color(cal_id, hex_c)
-                self._apply_swatch_color(swatch_btn, hex_c)
-                from calendar_app.presentation.calendar.month_renderer import (
-                    invalidate_calendar_meta_cache,
-                )
-                from calendar_app.presentation.panels.side_panel_renderer import (
-                    invalidate_panel_calendar_cache,
-                )
-
-                invalidate_calendar_meta_cache()
-                invalidate_panel_calendar_cache()
-                if self.parent_app and hasattr(self.parent_app, "schedule_panel_refresh"):
-                    self.parent_app.schedule_panel_refresh(center=True)
-            except Exception:
-                pass
-
-    def _set_default_calendar(self, cal_id: str):
-        import logging as _logging
-
-        _log = _logging.getLogger(__name__)
-        try:
-            from calendar_app.infrastructure.db.calendar_repo import (
-                get_calendar,
-                set_calendar_default,
-            )
-
-            _log.info("set_calendar_default called: %s", cal_id)
-            ok = set_calendar_default(cal_id)
-            _log.info("set_calendar_default result: %s (cal_id=%s)", ok, cal_id)
-            if not ok:
-                QMessageBox.warning(
-                    self,
-                    t("common.error", "오류"),
-                    t("gcal_settings.default_set_failed", "기본 캘린더를 지정하지 못했습니다."),
-                )
-                return
-            selected = get_calendar(cal_id) or {}
-            gcal_id = str(selected.get("gcal_calendar_id") or "").strip()
-            if selected.get("type") == "gcal" and gcal_id and hasattr(self, "cal_id_edit"):
-                self.cal_id_edit.setText(gcal_id)
-            self._refresh_calendar_table()
-            self._refresh_subscription_table()
-        except Exception as exc:
-            _log.exception("_set_default_calendar exception for %s", cal_id)
-            QMessageBox.warning(
-                self,
-                t("common.error", "오류"),
-                t(
-                    "gcal_settings.default_set_error",
-                    "기본 캘린더 지정 중 오류가 발생했습니다.\n{error}",
-                    error=str(exc),
-                ),
-            )
-
-    def _refresh_ics_now(self, cal_id: str, ics_url: str):
-        from PyQt6.QtWidgets import QApplication
-
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            from calendar_app.infrastructure.ics.ics_fetcher import fetch_and_sync
-
-            upserted, _deleted, err = fetch_and_sync(cal_id, ics_url)
-        except Exception as e:
-            upserted, _deleted, err = 0, 0, str(e)
-        finally:
-            QApplication.restoreOverrideCursor()
-        if err:
-            QMessageBox.warning(
-                self,
-                t("common.error", "오류"),
-                t("gcal_settings.ics_fetch_err", "ICS 일정 가져오기 실패:\n{err}").replace(
-                    "{err}", str(err)
-                ),
-            )
-        else:
-            QMessageBox.information(
-                self,
-                t("common.success", "완료"),
-                t("gcal_settings.ics_refresh_ok", "동기화 완료: {count}개 일정 업데이트").replace(
-                    "{count}", str(upserted)
-                ),
-            )
-        self._refresh_subscription_table()
-        if self.parent_app and hasattr(self.parent_app, "schedule_panel_refresh"):
-            self.parent_app.schedule_panel_refresh(center=True)
-
     def _build_calendar_section(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(16)
 
-        list_card = self._make_card(t("gcal_settings.calendar_list_title", "내 캘린더"))
-        ll = list_card.layout()
-
-        # 설명 + 버튼 행
-        desc = QLabel(
-            t(
-                "gcal_settings.calendar_desc",
-                "일정을 저장할 캘린더를 추가하고 관리합니다. 색상 원을 클릭하면 색상을 바꿀 수 있습니다.",
+        cal_card = self._make_card(t("gcal_focus.import_title", "Google에서 가져올 캘린더"))
+        cl = cal_card.layout()
+        cl.addWidget(
+            self._help_label(
+                t(
+                    "gcal_focus.import_help",
+                    "가져올 캘린더를 선택하세요. 읽기 전용 캘린더도 가져올 수 있습니다. 변경 내용은 설정 저장을 누르면 적용됩니다.",
+                )
             )
         )
-        desc.setProperty("role", "help")
-        desc.setStyleSheet(self._style_bundle["help"])
-        desc.setWordWrap(True)
-        ll.addWidget(desc)
-        ll.addSpacing(4)
 
-        btn_row = QHBoxLayout()
-        btn_row.setSpacing(6)
-        add_local_btn = QPushButton(t("gcal_settings.add_local", "로컬 추가"))
-        add_local_btn.setIcon(_ic(ICON.ADD))
-        load_gcal_btn = QPushButton(t("gcal_settings.load_calendars", "Google 캘린더 가져오기"))
-        load_gcal_btn.setIcon(_ic(ICON.GCAL))
-        refresh_cal_list_btn = QPushButton(
-            t("gcal_settings.refresh_cal_list", "캘린더 목록 새로고침")
-        )
-        refresh_cal_list_btn.setIcon(_ic(ICON.REFRESH))
-        self._apply_section_button_style(add_local_btn, "secondary")
-        self._apply_section_button_style(load_gcal_btn, "accent")
-        self._apply_section_button_style(refresh_cal_list_btn, "secondary")
-        for b in (add_local_btn, load_gcal_btn, refresh_cal_list_btn):
-            b.setMinimumWidth(80)
-        btn_row.addWidget(add_local_btn)
-        btn_row.addStretch(1)
-        btn_row.addWidget(refresh_cal_list_btn)
-        btn_row.addWidget(load_gcal_btn)
-        ll.addLayout(btn_row)
-        ll.addSpacing(4)
-
-        # 캘린더 목록 컨테이너 (스크롤 가능한 카드 리스트)
-        self._cal_list_container = QWidget()
-        self._cal_list_layout = QVBoxLayout(self._cal_list_container)
-        self._cal_list_layout.setContentsMargins(8, 12, 16, 12)
-        self._cal_list_layout.setSpacing(8)
-        ll.addWidget(self._cal_list_container)
-
-        add_local_btn.clicked.connect(self._add_local_calendar)
-        load_gcal_btn.clicked.connect(self._refresh_google_calendar_list)
-        refresh_cal_list_btn.clicked.connect(self._on_manual_refresh_calendar_list)
-
-        layout.addWidget(list_card)
-
-        # ── 숨겨진 GCal ID 필드 (기존 로직 유지) ─────────────────────────
-        cal_card = self._make_card(t("gcal_settings.calendar_id_label", "GCal 쓰기 대상 캘린더 ID"))
-        cl = cal_card.layout()
-
-        self.cal_id_edit = QLineEdit()
+        # Keep legacy APIs without exposing a second default-calendar picker.
+        self.cal_id_edit = QLineEdit(page)
         self._apply_input_style(self.cal_id_edit, "line")
         self.cal_id_edit.setPlaceholderText("primary")
+        self.cal_id_edit.setAccessibleName(
+            t("gcal_settings.calendar_id_label", "GCal 쓰기 대상 캘린더 ID")
+        )
         self.cal_id_edit.textChanged.connect(self._sync_edit_to_combo)
-        cl.addWidget(self.cal_id_edit)
+        self.cal_id_edit.hide()
 
         picker_row = QHBoxLayout()
         picker_row.setSpacing(8)
-        self.calendar_choice_combo = QComboBox()
+        self.calendar_choice_combo = QComboBox(page)
+        self.calendar_choice_combo.setAccessibleName(
+            t("sync_unified.google_write_target", "Google 쓰기 대상")
+        )
         self.calendar_choice_combo.view().setAutoFillBackground(True)
         self._apply_combo_input_style(self.calendar_choice_combo)
         self.calendar_choice_combo.currentIndexChanged.connect(self._on_calendar_choice_changed)
-        picker_row.addWidget(self.calendar_choice_combo, 1)
-        self.load_calendars_btn = QPushButton(
-            t("gcal_settings.load_calendars", "내 캘린더 불러오기")
-        )
+        self.calendar_choice_combo.hide()
+        self.load_calendars_btn = QPushButton(t("gcal_focus.refresh_calendars", "목록 새로고침"))
         self._apply_section_button_style(self.load_calendars_btn, "accent")
         self.load_calendars_btn.clicked.connect(self._load_accessible_calendars)
         picker_row.addWidget(self.load_calendars_btn)
+        picker_row.addStretch(1)
         cl.addLayout(picker_row)
+
+        self.import_list = QWidget()
+        self.import_list.setAccessibleName(t("gcal_focus.import_title", "Google에서 가져올 캘린더"))
+        self.import_list_layout = QVBoxLayout(self.import_list)
+        self.import_list_layout.setContentsMargins(0, 0, 0, 0)
+        self.import_list_layout.setSpacing(8)
+        cl.addWidget(self.import_list)
 
         self.calendar_choice_hint = self._help_label(
             t(
@@ -919,520 +728,222 @@ class GCalSettingsDialog(QDialog):
         self.go_to_auth_btn.hide()
         cl.addWidget(self.go_to_auth_btn)
 
-        cal_card.hide()
         layout.addWidget(cal_card)
+        manage_card = self._make_card(
+            t("gcal_focus.main_calendar_title", "화면 표시와 기본 캘린더")
+        )
+        manage_card.layout().addWidget(
+            self._help_label(
+                t(
+                    "gcal_focus.main_calendar_help",
+                    "가져온 일정의 화면 표시, 색상과 새 일정의 기본 저장 캘린더는 메인 캘린더에서 설정하세요. 가져오기를 꺼도 이미 받은 일정은 보존됩니다.",
+                )
+            )
+        )
+        manage_card.layout().addWidget(
+            self._help_label(
+                t(
+                    "gcal_focus.import_pause_help",
+                    "가져오기를 끄면 Google의 새 변경 사항을 받지 않습니다. 기존 일정은 남아 있으며, 편집한 내용은 Google 자동 동기화가 켜져 있거나 직접 동기화할 때 전송됩니다.",
+                )
+            )
+        )
+        manage = QPushButton(t("gcal_focus.manage_main", "메인 캘린더 관리 열기"))
+        self._apply_section_button_style(manage, "secondary")
+        manage.clicked.connect(self._open_other_services)
+        manage_card.layout().addWidget(manage)
+        layout.addWidget(manage_card)
         layout.addStretch(1)
 
         self._refresh_calendar_table()
-        return page
-
-    def _build_subscription_section(self) -> QWidget:
-        page = QWidget()
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(16)
-
-        list_card = self._make_card(t("gcal_settings.subscription_list_title", "ICS 구독 캘린더"))
-        ll = list_card.layout()
-
-        # 설명
-        desc = QLabel(
-            t(
-                "gcal_settings.subscription_desc",
-                "외부 캘린더(iCal/ICS URL)를 읽기 전용으로 구독합니다. "
-                "Apple Calendar, Outlook, Naver Calendar 등의 공개 URL을 사용하세요.",
-            )
-        )
-        desc.setProperty("role", "help")
-        desc.setStyleSheet(self._style_bundle["help"])
-        desc.setWordWrap(True)
-        ll.addWidget(desc)
-        ll.addSpacing(6)
-
-        btn_row = QHBoxLayout()
-        btn_row.setSpacing(6)
-        add_ics_btn = QPushButton(t("gcal_settings.add_ics", "구독 추가"))
-        add_ics_btn.setIcon(_ic(ICON.ADD))
-        self._apply_section_button_style(add_ics_btn, "accent")
-        refresh_all_btn = QPushButton(t("gcal_settings.refresh_all_ics", "전체 새로고침"))
-        refresh_all_btn.setIcon(_ic(ICON.REFRESH))
-        self._apply_section_button_style(refresh_all_btn, "secondary")
-        btn_row.addWidget(add_ics_btn)
-        btn_row.addWidget(refresh_all_btn)
-        btn_row.addStretch(1)
-        ll.addLayout(btn_row)
-        ll.addSpacing(4)
-
-        # 구독 목록 컨테이너
-        self._sub_list_container = QWidget()
-        self._sub_list_layout = QVBoxLayout(self._sub_list_container)
-        self._sub_list_layout.setContentsMargins(2, 6, 12, 6)  # 우측 여백 추가
-        self._sub_list_layout.setSpacing(8)
-        ll.addWidget(self._sub_list_container)
-
-        add_ics_btn.clicked.connect(self._add_ics_calendar)
-        refresh_all_btn.clicked.connect(self._refresh_all_ics)
-
-        layout.addWidget(list_card)
-        layout.addStretch(1)
-        self._refresh_subscription_table()
         return page
 
     # ── 캘린더 관리 테이블 헬퍼 ─────────────────────────────────────────
 
     def _refresh_calendar_table(self):
-        self._refresh_cal_list(self._cal_list_layout, ("local", "gcal"), is_sub=False)
+        coordinator = getattr(self.parent_app, "_calendar_sync_coordinator", None)
+        if coordinator:
+            coordinator.refresh()
+        if hasattr(self, "import_list_layout"):
+            self._render_calendar_imports()
 
-    def _refresh_subscription_table(self):
-        self._refresh_cal_list(self._sub_list_layout, ("ics",), is_sub=True)
+    def _render_calendar_imports(self):
+        """Show persisted Google metadata while retaining unsaved import choices."""
+        from calendar_app.infrastructure.db.calendar_repo import (
+            is_calendar_row_read_only,
+            list_calendars,
+        )
 
-    def _clear_layout(self, layout):
-        while layout.count():
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-
-    def _refresh_cal_list(self, list_layout, type_filter, is_sub: bool):
-        self._clear_layout(list_layout)
         try:
-            from calendar_app.infrastructure.db.calendar_repo import list_calendars
-
-            all_cals = list_calendars(include_inactive=True)
-            calendars = [c for c in all_cals if c.get("type") in type_filter]
-            gcal_enabled = str(self.settings.value("gcal_enabled", "true")).lower() == "true"
-            if not gcal_enabled and "gcal" in type_filter:
-                calendars = [c for c in calendars if c.get("type") != "gcal"]
-        except Exception:
+            calendars = [
+                row for row in list_calendars(include_inactive=True) if row.get("type") == "gcal"
+            ]
+        except (sqlite3.Error, OSError, RuntimeError):
             calendars = []
-
+            self._metadata_load_failed = True
+        else:
+            self._metadata_load_failed = False
+            known_ids = {str(row.get("id") or "") for row in calendars}
+            self._calendar_import_selection = {
+                cid: checked
+                for cid, checked in self._calendar_import_selection.items()
+                if cid in known_ids
+            }
+        while self.import_list_layout.count():
+            item = self.import_list_layout.takeAt(0)
+            if item.widget():
+                item.widget().hide()
+                item.widget().deleteLater()
+        self._calendar_import_checks = {}
         if not calendars:
-            empty = QLabel(
+            message = (
                 t(
-                    "gcal_settings.cal_list_empty_sub",
-                    "구독 중인 ICS 캘린더가 없습니다.\n위 버튼으로 ICS URL을 추가하세요.",
+                    "gcal_ux.metadata_unavailable",
+                    "저장된 캘린더 목록을 읽지 못했습니다. 선택 내용은 유지했습니다. 목록을 다시 확인한 뒤 저장하세요.",
                 )
-                if is_sub
-                else t("gcal_settings.cal_list_empty", "캘린더가 없습니다. 위 버튼으로 추가하세요.")
+                if self._metadata_load_failed
+                else t(
+                    "gcal_focus.no_calendars",
+                    "등록된 Google 캘린더가 없습니다. 계정을 연결한 뒤 목록을 새로고침하세요.",
+                )
             )
-            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            empty.setProperty("role", "help")
-            empty.setWordWrap(True)
-            empty.setStyleSheet(self._style_bundle["empty_state"])
-            list_layout.addWidget(empty)
+            self.import_list_layout.addWidget(self._help_label(message))
+            if hasattr(self, "save_btn"):
+                self.save_btn.setEnabled(not self._metadata_load_failed and self._settings_dirty)
             return
-
-        for cal in calendars:
-            row_widget = self._make_calendar_row_widget(cal, is_sub=is_sub)
-            list_layout.addWidget(row_widget)
-
-    def _add_local_calendar(self):
-        from PyQt6.QtWidgets import QInputDialog
-
-        name, ok = QInputDialog.getText(
-            self,
-            t("gcal_settings.add_local_title", "로컬 캘린더 추가"),
-            t("gcal_settings.cal_name_prompt", "캘린더 이름:"),
+        sync = getattr(self.parent_app, "gcal_sync", None)
+        idle_hint = t(
+            "gcal_settings.calendar_choice_hint",
+            "인증 완료 후 내 계정에서 사용 가능한 캘린더 목록을 불러올 수 있습니다.",
         )
-        if ok and name.strip():
-            from calendar_app.infrastructure.db.calendar_repo import make_local_id, upsert_calendar
-
-            cal_id = make_local_id(name.strip())
-            upsert_calendar(cal_id, "local", name.strip())
-            self._refresh_calendar_table()
-
-    def _add_ics_calendar(self):
-        """ICS URL 구독 추가 — 이름 + URL을 하나의 다이얼로그에서 입력."""
-        from PyQt6.QtWidgets import QApplication
-
-        dlg = QDialog(self)
-        apply_dialog_title(dlg, t("gcal_settings.add_ics_title", "ICS URL 구독 추가"))
-        dlg.setObjectName("TaskEditorDialog")
-        dlg.setMinimumWidth(480)
-        dlg.setStyleSheet(build_task_editor_stylesheet(self._ui_tokens, self._dialog_metrics))
-
-        v = QVBoxLayout(dlg)
-        v.setContentsMargins(24, 20, 24, 20)
-        v.setSpacing(14)
-
-        # 설명
-        info_lbl = QLabel(
-            t(
-                "gcal_settings.add_ics_desc",
-                "ICS URL을 입력하면 외부 캘린더 일정을 읽기 전용으로 가져옵니다.\n"
-                "Apple Calendar · Outlook · Naver Calendar 등에서 공개 URL을 복사하세요.",
-            )
-        )
-        info_lbl.setProperty("role", "help")
-        info_lbl.setStyleSheet(self._style_bundle["help"])
-        info_lbl.setWordWrap(True)
-        v.addWidget(info_lbl)
-
-        v.addWidget(self._make_divider())
-
-        # 이름 입력
-        name_lbl = QLabel(t("gcal_settings.cal_name_prompt", "캘린더 이름"))
-        name_lbl.setObjectName("TaskDialogFieldLabel")
-        v.addWidget(name_lbl)
-        name_edit = QLineEdit()
-        name_edit.setObjectName("TaskTitleEdit")
-        name_edit.setPlaceholderText(
-            t("gcal_settings.ics_name_placeholder", "예: 회사 일정, 공휴일 등")
-        )
-        v.addWidget(name_edit)
-
-        # URL 입력
-        url_lbl = QLabel(t("gcal_settings.ics_url_label", "ICS URL"))
-        url_lbl.setObjectName("TaskDialogFieldLabel")
-        v.addWidget(url_lbl)
-        url_edit = QLineEdit()
-        url_edit.setPlaceholderText(
-            t("gcal_settings.ics_url_placeholder", "https://calendar.example.com/feed.ics")
-        )
-        v.addWidget(url_edit)
-
-        url_hint = QLabel(
-            t("gcal_settings.ics_url_hint", "http:// 또는 webcal:// 형식을 지원합니다.")
-        )
-        url_hint.setProperty("role", "help")
-        url_hint.setStyleSheet(self._style_bundle["help"])
-        v.addWidget(url_hint)
-
-        v.addSpacing(4)
-
-        # 버튼 행
-        btn_row = QHBoxLayout()
-        btn_row.setSpacing(8)
-        btn_row.addStretch(1)
-        cancel_btn = QPushButton(t("common.cancel", "취소"))
-        cancel_btn.setObjectName("ghost_btn")
-        cancel_btn.setMinimumWidth(80)
-        add_btn = QPushButton(t("gcal_settings.ics_add_btn", "구독 추가"))
-        add_btn.setObjectName("primary_btn")
-        add_btn.setMinimumWidth(100)
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(add_btn)
-        v.addLayout(btn_row)
-
-        cancel_btn.clicked.connect(dlg.reject)
-        add_btn.clicked.connect(dlg.accept)
-
-        # Enter 키 동작
-        name_edit.returnPressed.connect(url_edit.setFocus)
-        url_edit.returnPressed.connect(dlg.accept)
-
-        if dlg.exec() != QDialog.DialogCode.Accepted:
-            return
-
-        url = url_edit.text().strip()
-        name = name_edit.text().strip()
-
-        if not url:
-            QMessageBox.warning(
-                self,
-                t("common.error", "오류"),
-                t("gcal_settings.ics_url_required", "ICS URL을 입력해 주세요."),
-            )
-            return
-        if not name:
-            QMessageBox.warning(
-                self,
-                t("common.error", "오류"),
-                t("gcal_settings.cal_name_required", "캘린더 이름을 입력해 주세요."),
-            )
-            return
-
-        # webcal:// → https:// 변환
-        if url.lower().startswith("webcal://"):
-            url = "https://" + url[9:]
-
-        from calendar_app.infrastructure.db.calendar_repo import make_ics_id, upsert_calendar
-
-        cal_id = make_ics_id(url)
-        upsert_calendar(cal_id, "ics", name, ics_url=url)
-
-        # 즉시 동기화
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            from calendar_app.infrastructure.ics.ics_fetcher import fetch_and_sync
-
-            upserted, _deleted, err = fetch_and_sync(cal_id, url)
-        except Exception as e:
-            upserted, _deleted, err = 0, 0, str(e)
-        finally:
-            QApplication.restoreOverrideCursor()
-
-        if err:
-            QMessageBox.warning(
-                self,
-                t("common.error", "오류"),
-                t("gcal_settings.ics_fetch_err", "ICS 일정 가져오기 실패:\n{err}").replace(
-                    "{err}", str(err)
+        if (
+            sync
+            and getattr(sync, "is_authenticated", False)
+            and self.calendar_choice_hint.text() in ("", idle_hint)
+        ):
+            self._set_feedback_label(
+                self.calendar_choice_hint,
+                t(
+                    "gcal_focus.list_loaded",
+                    "{count}개 캘린더를 확인했습니다. 가져올 캘린더를 선택한 뒤 설정을 저장하세요.",
+                    count=len(calendars),
                 ),
             )
-        else:
-            QMessageBox.information(
-                self,
-                t("common.success", "구독 완료"),
-                t("gcal_settings.ics_fetch_ok", "'{name}' 구독 완료!\n가져온 일정: {count}개")
-                .replace("{name}", name)
-                .replace("{count}", str(upserted)),
+        for calendar in calendars:
+            calendar_id = str(calendar.get("id") or "")
+            if not calendar_id:
+                continue
+            row = QFrame()
+            row.setStyleSheet(self._style_bundle["subtle_card"])
+            line = QHBoxLayout(row)
+            line.setContentsMargins(12, 10, 12, 10)
+            text = QVBoxLayout()
+            name = str(calendar.get("name") or calendar.get("gcal_calendar_id") or calendar_id)
+            name_label = QLabel(name)
+            name_label.setTextFormat(Qt.TextFormat.PlainText)
+            name_label.setWordWrap(True)
+            name_label.setStyleSheet(self._style_bundle["meta_value"])
+            text.addWidget(name_label)
+            hint = (
+                t("gcal_focus.readonly", "일정 가져오기 · 읽기 전용")
+                if is_calendar_row_read_only(calendar)
+                else t("gcal_focus.writable", "일정 가져오기 · 편집 가능")
             )
-
-        self._refresh_subscription_table()
-        if self.parent_app and hasattr(self.parent_app, "schedule_panel_refresh"):
-            self.parent_app.schedule_panel_refresh(center=True)
-
-    def _refresh_all_ics(self):
-        """구독 중인 모든 ICS를 일괄 새로고침."""
-        from PyQt6.QtWidgets import QApplication
-
-        try:
-            from calendar_app.infrastructure.db.calendar_repo import list_calendars
-
-            ics_cals = [c for c in list_calendars(include_inactive=True) if c.get("type") == "ics"]
-        except Exception:
-            ics_cals = []
-
-        if not ics_cals:
-            QMessageBox.information(
-                self,
-                t("gcal_settings.refresh_all_ics", "전체 새로고침"),
-                t("gcal_settings.ics_no_subscriptions", "구독 중인 ICS 캘린더가 없습니다."),
-            )
-            return
-
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        total_upserted = 0
-        errors = []
-        try:
-            from calendar_app.infrastructure.ics.ics_fetcher import fetch_and_sync
-
-            for cal in ics_cals:
-                url = str(cal.get("ics_url") or "").strip()
-                if not url:
-                    continue
-                try:
-                    upserted, deleted, err = fetch_and_sync(cal["id"], url)
-                    if err:
-                        errors.append(f"{cal['name']}: {err}")
-                    else:
-                        total_upserted += upserted
-                except Exception as e:
-                    errors.append(f"{cal['name']}: {e}")
-        finally:
-            QApplication.restoreOverrideCursor()
-
-        self._refresh_subscription_table()
-        if self.parent_app and hasattr(self.parent_app, "schedule_panel_refresh"):
-            self.parent_app.schedule_panel_refresh(center=True)
-
-        if errors:
-            QMessageBox.warning(
-                self,
-                t("common.error", "오류"),
-                t("gcal_settings.ics_refresh_partial", "일부 구독 새로고침 실패:\n")
-                + "\n".join(errors),
-            )
-        else:
-            QMessageBox.information(
-                self,
-                t("common.success", "완료"),
-                t(
-                    "gcal_settings.ics_refresh_all_ok", "전체 {count}개 캘린더 새로고침 완료!"
-                ).replace("{count}", str(len(ics_cals))),
-            )
-
-    def _edit_calendar(self, cal_id: str, name: str, _cal_type: str):
-        """이름 + 색상을 하나의 다이얼로그에서 편집."""
-        try:
-            from calendar_app.infrastructure.db.calendar_repo import get_calendar
-
-            cal_data = get_calendar(cal_id) or {}
-        except Exception:
-            cal_data = {}
-
-        is_gcal = _cal_type == "gcal"
-
-        dlg = QDialog(self)
-        apply_dialog_title(dlg, t("gcal_settings.edit_calendar_title", "캘린더 편집"))
-        dlg.setObjectName("TaskEditorDialog")
-        dlg.setMinimumWidth(360)
-        dlg.setStyleSheet(build_task_editor_stylesheet(self._ui_tokens, self._dialog_metrics))
-
-        v = QVBoxLayout(dlg)
-        v.setContentsMargins(24, 20, 24, 20)
-        v.setSpacing(12)
-
-        # BUG A: gcal 캘린더는 Google에서 이름이 관리됨 → 이름 필드 비활성화 + 안내 표시
-        if is_gcal:
-            gcal_notice = QLabel(
-                t(
-                    "gcal_settings.edit_gcal_name_notice",
-                    "Google Calendar 이름은 Google에서 관리됩니다.\n"
-                    "이름은 표시 전용이며 다음 동기화 시 Google 이름으로 갱신됩니다.",
+            if calendar.get("is_default"):
+                hint += " · " + t(
+                    "gcal_focus.default_import_warning",
+                    "기본 저장 캘린더: 가져오기를 끄면 기본 저장 대상이 변경됩니다.",
                 )
+            text.addWidget(self._help_label(hint))
+            line.addLayout(text, 1)
+            configured = self.settings.value("gcal_import_selection_configured", False, type=bool)
+            active_default = bool(calendar.get("is_active", True))
+            if not configured:
+                active_default = active_default or bool(calendar.get("is_visible", True))
+            active = self._calendar_import_selection.setdefault(calendar_id, active_default)
+            checkbox = QCheckBox(t("gcal_focus.import_toggle", "가져오기"))
+            checkbox.setAccessibleName(
+                t("gcal_focus.import_accessible", "{name} 일정 가져오기", name=name)
             )
-            gcal_notice.setWordWrap(True)
-            gcal_notice.setStyleSheet(self._style_bundle["notice_warning"])
-            v.addWidget(gcal_notice)
-            v.addWidget(self._make_divider())
-
-        name_lbl = QLabel(t("gcal_settings.cal_name_prompt", "캘린더 이름"))
-        name_lbl.setObjectName("TaskDialogFieldLabel")
-        v.addWidget(name_lbl)
-        name_edit = QLineEdit(name)
-        name_edit.setObjectName("TaskTitleEdit")
-        if is_gcal:
-            name_edit.setEnabled(False)
-            name_edit.setToolTip(
-                t(
-                    "gcal_settings.edit_gcal_name_tooltip",
-                    "Google Calendar 이름은 Google에서만 변경할 수 있습니다.",
-                )
+            checkbox.setStyleSheet(self._style_bundle["check_toggle"])
+            checkbox.setChecked(active)
+            checkbox.toggled.connect(
+                lambda checked, cid=calendar_id: self._set_import_selection(cid, checked)
             )
-        v.addWidget(name_edit)
+            self._calendar_import_checks[calendar_id] = checkbox
+            line.addWidget(checkbox)
+            self.import_list_layout.addWidget(row)
+        if hasattr(self, "save_btn"):
+            self.save_btn.setEnabled(
+                self._auth_worker is None and self._query_worker is None and self._settings_dirty
+            )
 
-        color_lbl = QLabel(t("gcal_settings.cal_color_prompt", "색상"))
-        color_lbl.setObjectName("TaskDialogFieldLabel")
-        v.addWidget(color_lbl)
+    def _set_import_selection(self, calendar_id, checked):
+        self._calendar_import_selection[calendar_id] = bool(checked)
+        self._mark_settings_dirty()
+        self._refresh_meta()
 
-        color_row = QHBoxLayout()
-        color_row.setSpacing(10)
-        current_color = str(cal_data.get("color") or "#4da6ff").strip()
-        swatch_btn = self._make_color_swatch(current_color, size=28)
-        swatch_btn.setToolTip(t("gcal_settings.color_pick_title", "클릭해서 색상 선택"))
+    def _connect_dirty_tracking(self):
+        for widget in (self.enable_cb, self.auto_sync_cb, self.hide_completed_check):
+            widget.toggled.connect(self._mark_settings_dirty)
+        self.creds_path_edit.textChanged.connect(self._mark_settings_dirty)
+        self.interval_spin.valueChanged.connect(self._mark_settings_dirty)
+        self.quick_interval_spin.valueChanged.connect(self._mark_settings_dirty)
+        self.timezone_combo.currentTextChanged.connect(self._mark_settings_dirty)
 
-        color_hex_edit = QLineEdit(current_color)
-        color_hex_edit.setPlaceholderText("#4da6ff")
-        color_hex_edit.setMaximumWidth(110)
-
-        def _pick_color_inline():
-            from PyQt6.QtWidgets import QColorDialog
-
-            c = QColorDialog.getColor(QColor(color_hex_edit.text().strip() or current_color), dlg)
-            if c.isValid():
-                color_hex_edit.setText(c.name())
-                self._apply_swatch_color(swatch_btn, c.name())
-
-        def _on_hex_changed(text):
-            c = QColor(text.strip())
-            if c.isValid():
-                self._apply_swatch_color(swatch_btn, c.name())
-
-        swatch_btn.clicked.connect(_pick_color_inline)
-        color_hex_edit.textChanged.connect(_on_hex_changed)
-        color_row.addWidget(swatch_btn)
-        color_row.addWidget(color_hex_edit)
-        color_row.addStretch(1)
-        v.addLayout(color_row)
-
-        v.addSpacing(8)
-        btn_row = QHBoxLayout()
-        btn_row.addStretch(1)
-        cancel_btn = QPushButton(t("common.cancel", "취소"))
-        cancel_btn.setObjectName("ghost_btn")
-        cancel_btn.setMinimumWidth(80)
-        save_btn = QPushButton(t("common.save", "저장"))
-        save_btn.setObjectName("primary_btn")
-        save_btn.setMinimumWidth(80)
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(save_btn)
-        v.addLayout(btn_row)
-
-        cancel_btn.clicked.connect(dlg.reject)
-        save_btn.clicked.connect(dlg.accept)
-        name_edit.returnPressed.connect(dlg.accept)
-
-        if dlg.exec() != QDialog.DialogCode.Accepted:
+    def _mark_settings_dirty(self, *_):
+        if self._loading_settings:
             return
-
-        new_name = name_edit.text().strip()
-        new_color = color_hex_edit.text().strip()
-        if not new_name:
-            return
-
-        from calendar_app.infrastructure.db.calendar_repo import rename_calendar, set_calendar_color
-
-        # gcal 캘린더는 이름이 비활성화되어 있으므로 건너뜀 (Google에서 관리)
-        if not is_gcal:
-            rename_calendar(cal_id, new_name)
-        if new_color and QColor(new_color).isValid():
-            set_calendar_color(cal_id, new_color)
-
-        try:
-            from calendar_app.presentation.calendar.month_renderer import (
-                invalidate_calendar_meta_cache,
-            )
-            from calendar_app.presentation.panels.side_panel_renderer import (
-                invalidate_panel_calendar_cache,
-            )
-
-            invalidate_calendar_meta_cache()
-            invalidate_panel_calendar_cache()
-        except Exception:
-            pass
-        if self.parent_app and hasattr(self.parent_app, "schedule_panel_refresh"):
-            self.parent_app.schedule_panel_refresh(center=True)
-
-        self._refresh_calendar_table()
-        self._refresh_subscription_table()
-
-    def _delete_calendar(self, cal_id: str, name: str):
-        reply = QMessageBox.question(
-            self,
-            t("gcal_settings.col_delete", "삭제"),
+        self._settings_dirty = True
+        self.unsaved_label.setText(
             t(
-                "gcal_settings.delete_confirm",
-                "'{name}' 캘린더를 삭제하시겠습니까?\n해당 캘린더의 태스크는 미분류 상태가 됩니다.",
-            ).format(name=name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                "gcal_ux.unsaved",
+                "변경 내용은 저장 후 적용됩니다. 닫으면 저장하지 않은 변경은 취소됩니다.",
+            )
         )
-        if reply == QMessageBox.StandardButton.Yes:
-            from calendar_app.infrastructure.db.calendar_repo import delete_calendar, get_calendar
+        self.save_btn.setEnabled(
+            self._auth_worker is None
+            and self._query_worker is None
+            and not self._metadata_load_failed
+        )
 
-            # Google Calendar 원격 구독 해제
-            try:
-                cal_row = get_calendar(cal_id)
-                if cal_row and cal_row.get("type") == "gcal":
-                    gcal_cal_id = str(cal_row.get("gcal_calendar_id") or "").strip()
-                    sync = getattr(self.parent_app, "gcal_sync", None)
-                    if gcal_cal_id and sync and getattr(sync, "is_authenticated", False):
-                        from calendar_app.infrastructure.db.database_unified import (
-                            logger as db_logger,
-                        )
+    def _set_query_feedback(self, text, tone="help", code=None):
+        self._set_feedback_label(self.test_access_result, text, tone)
+        self._set_feedback_label(self.calendar_choice_hint, text, tone)
+        self._show_inline_feedback(text, tone, code)
 
-                        db_logger.info(f"Unsubscribing remote Google calendar: {gcal_cal_id}")
-                        sync.unsubscribe_calendar(gcal_cal_id)
-            except Exception as e:
-                from calendar_app.infrastructure.db.database_unified import logger as db_logger
+    def _validate_calendar_account(self, calendars, *, sync=None):
+        from calendar_app.infrastructure.google_sync.engine import (
+            _assert_primary_account_identity,
+            _PrimaryAccountMismatchError,
+        )
 
-                db_logger.error(f"Failed to unsubscribe remote calendar: {e}")
-
-            delete_calendar(cal_id)
-            self._refresh_calendar_table()
-            self._refresh_subscription_table()
-            # BUG C: 삭제 후 월간 뷰 + 사이드 패널 캐시 무효화 및 새로고침
-            try:
-                from calendar_app.presentation.calendar.month_renderer import (
-                    invalidate_calendar_meta_cache,
+        service = sync if sync is not None else getattr(self.parent_app, "gcal_sync", None)
+        identity = SimpleNamespace(settings=self.settings, gcal_sync=service)
+        try:
+            _assert_primary_account_identity(identity, calendars)
+            if getattr(service, "_account_identity_mismatch", False):
+                raise _PrimaryAccountMismatchError(
+                    getattr(service, "_account_identity_error_kind", None) or "account_mismatch"
                 )
-                from calendar_app.presentation.panels.side_panel_renderer import (
-                    invalidate_panel_calendar_cache,
-                )
-
-                invalidate_calendar_meta_cache()
-                invalidate_panel_calendar_cache()
-            except Exception:
-                pass
-            if self.parent_app and hasattr(self.parent_app, "_gcal_subscription_events_cache"):
-                self.parent_app._gcal_subscription_events_cache = {}
-            if self.parent_app and hasattr(self.parent_app, "schedule_panel_refresh"):
-                self.parent_app.schedule_panel_refresh(center=True)
-
-    # ──────────────────────────────────────────────
-    # 섹션 2: 동기화
-    # ──────────────────────────────────────────────
+        except _PrimaryAccountMismatchError as exc:
+            self.settings.setValue("sync_google_last_error", exc.code)
+            self._set_query_feedback(sync_error_message(exc.code), "error", exc.code)
+            coordinator = getattr(self.parent_app, "_calendar_sync_coordinator", None)
+            if coordinator:
+                coordinator.refresh()
+            return False
+        if any(
+            isinstance(item, dict) and item.get("primary") is True for item in calendars
+        ) and self.settings.value("sync_google_last_error") in {
+            "account_mismatch",
+            "account_unverified",
+        }:
+            self.settings.setValue("sync_google_last_error", "")
+            coordinator = getattr(self.parent_app, "_calendar_sync_coordinator", None)
+            if coordinator:
+                coordinator.refresh()
+        return True
 
     def _build_sync_section(self) -> QWidget:
         page = QWidget()
@@ -1447,6 +958,18 @@ class GCalSettingsDialog(QDialog):
         cl.addWidget(
             self._help_label(
                 t("gcal_settings.advanced_summary", "대부분의 경우 기본값으로도 충분합니다.")
+            )
+        )
+        self.auto_sync_cb = QCheckBox(t("gcal_focus.auto_sync", "Google 자동 동기화"))
+        self.auto_sync_cb.setStyleSheet(self._style_bundle["check_toggle"])
+        self.auto_sync_cb.setChecked(self.settings.value("sync_google_auto", True, type=bool))
+        cl.addWidget(self.auto_sync_cb)
+        cl.addWidget(
+            self._help_label(
+                t(
+                    "gcal_focus.auto_sync_help",
+                    "켜면 정기적으로 동기화하고 일정 편집 후 변경 사항을 전송합니다. 꺼도 메인 화면에서 직접 동기화할 수 있습니다.",
+                )
             )
         )
         cl.addWidget(self._make_divider())
@@ -1486,6 +1009,8 @@ class GCalSettingsDialog(QDialog):
             1,
         )
         cl.addLayout(quick_row)
+        self.auto_sync_cb.toggled.connect(self._update_auto_sync_controls)
+        self._update_auto_sync_controls()
 
         cl.addWidget(self._make_divider())
 
@@ -1544,8 +1069,8 @@ class GCalSettingsDialog(QDialog):
         self._apply_combo_input_style(self.timezone_combo)
 
         detect_btn = QPushButton(t("gcal_settings.detect_timezone", "현재 시간대 사용"))
+        self.detect_timezone_btn = detect_btn
         self._apply_section_button_style(detect_btn, "secondary")
-        detect_btn.setFixedWidth(130)
         detect_btn.clicked.connect(self._apply_system_timezone)
         tz_row.addWidget(self.timezone_combo, 1)
         tz_row.addWidget(detect_btn)
@@ -1557,9 +1082,28 @@ class GCalSettingsDialog(QDialog):
         self.timezone_preview.setWordWrap(True)
         tl.addWidget(self.timezone_preview)
 
+        self.timezone_details_btn = QPushButton(
+            t("gcal_focus.timezone_details", "시간대 · 고급 설정")
+        )
+        self.timezone_details_btn.setCheckable(True)
+        self._apply_section_button_style(self.timezone_details_btn, "secondary")
+        self.timezone_details_btn.toggled.connect(tz_card.setVisible)
+        layout.addWidget(self.timezone_details_btn)
+        tz_card.hide()
+        self.timezone_card = tz_card
         layout.addWidget(tz_card)
         layout.addStretch(1)
         return page
+
+    def _update_auto_sync_controls(self, *_):
+        enabled = (
+            self.auto_sync_cb.isChecked()
+            and self._auth_worker is None
+            and self._query_worker is None
+            and not getattr(self, "_external_busy", False)
+        )
+        self.interval_spin.setEnabled(enabled)
+        self.quick_interval_spin.setEnabled(enabled)
 
     # ──────────────────────────────────────────────
     # 섹션 3: 진단
@@ -1701,17 +1245,17 @@ class GCalSettingsDialog(QDialog):
         links = QHBoxLayout()
         links.setSpacing(8)
         doc_btn = QPushButton(t("gcal_settings.open_docs", "공식 문서"))
-        doc_btn.setIcon(_ic(ICON.DOCS))
+        doc_btn.setIcon(_ic(ICON.DOCS, color=self._ui_tokens["text_primary"]))
         self._apply_section_button_style(doc_btn, "secondary")
         doc_btn.clicked.connect(
             lambda: webbrowser.open("https://developers.google.com/calendar/api/quickstart/python")
         )
         console_btn = QPushButton(t("gcal_settings.open_console", "Cloud Console"))
-        console_btn.setIcon(_ic(ICON.CLOUD))
+        console_btn.setIcon(_ic(ICON.CLOUD, color=self._ui_tokens["text_primary"]))
         self._apply_section_button_style(console_btn, "secondary")
         console_btn.clicked.connect(lambda: webbrowser.open("https://console.cloud.google.com/"))
         oauth_btn = QPushButton(t("gcal_settings.open_oauth_docs", "OAuth 가이드"))
-        oauth_btn.setIcon(_ic(ICON.OAUTH_GUIDE))
+        oauth_btn.setIcon(_ic(ICON.OAUTH_GUIDE, color=self._ui_tokens["text_primary"]))
         self._apply_section_button_style(oauth_btn, "secondary")
         oauth_btn.clicked.connect(
             lambda: webbrowser.open("https://developers.google.com/identity/protocols/oauth2")
@@ -1724,8 +1268,8 @@ class GCalSettingsDialog(QDialog):
 
         quick_note = QLabel(
             t(
-                "gcal_settings.setup_note",
-                "캘린더를 여러 개 관리하는 경우, 인증은 한 번만 하고 캘린더 ID를 변경하면 됩니다.",
+                "gcal_focus.setup_note",
+                "인증은 계정마다 한 번만 진행하고, '가져올 캘린더'에서 동기화할 캘린더를 선택하세요.",
             )
         )
         quick_note.setProperty("role", "help")
@@ -1748,34 +1292,29 @@ class GCalSettingsDialog(QDialog):
         layout.setContentsMargins(18, 10, 18, 10)
         layout.setSpacing(6)
 
-        reset_btn = QPushButton(t("gcal_settings.reset", "연결 초기화"))
-        self._apply_section_button_style(reset_btn, "danger")
-        reset_btn.setAutoDefault(False)
-        reset_btn.clicked.connect(self.reset_auth)
-        layout.addWidget(reset_btn)
+        self.unsaved_label = self._help_label(
+            t("gcal_focus.saved_state", "변경한 동기화 설정은 저장 후 적용됩니다.")
+        )
+        layout.addWidget(self.unsaved_label, 1)
         layout.addStretch(1)
 
-        auth_btn = QPushButton(t("gcal_settings.authenticate", "인증하기"))
-        auth_btn.setIcon(_ic(ICON.AUTH))
-        self._apply_section_button_style(auth_btn, "accent")
-        auth_btn.setMinimumWidth(100)
-        auth_btn.setAutoDefault(False)
-        auth_btn.clicked.connect(self.run_auth)
-
         save_btn = QPushButton(t("gcal_settings.save", "설정 저장"))
-        self._apply_section_button_style(save_btn, "success")
+        self._apply_section_button_style(save_btn, "accent")
         # save_btn.setFixedHeight(28) # Removed for standardization
         save_btn.setMinimumWidth(80)
+        save_btn.setObjectName("primary_btn")
         save_btn.setDefault(True)
         save_btn.clicked.connect(self.save_settings)
+        self.save_btn = save_btn
 
         close_btn = QPushButton(t("common.close", "닫기"))
         self._apply_section_button_style(close_btn, "secondary")
         close_btn.setMinimumWidth(64)
+        close_btn.setObjectName("ghost_btn")
         close_btn.setAutoDefault(False)
         close_btn.clicked.connect(self.reject)
+        self.close_btn = close_btn
 
-        layout.addWidget(auth_btn)
         layout.addWidget(save_btn)
         layout.addWidget(close_btn)
         return footer
@@ -1862,8 +1401,16 @@ class GCalSettingsDialog(QDialog):
     def _apply_section_button_style(
         self, button: QPushButton, tone: str = "secondary"
     ) -> QPushButton:
+        disabled_style = (
+            "QPushButton:disabled { "
+            f"background: {self._ui_tokens['button_disabled_bg']}; "
+            f"color: {self._ui_tokens['button_disabled_text']}; "
+            f"border-color: {self._ui_tokens['button_disabled_border']}; "
+            "}"
+        )
         button.setStyleSheet(
             self._style_bundle.get(f"button_{tone}", self._style_bundle["button_secondary"])
+            + disabled_style
         )
         return button
 
@@ -1932,19 +1479,34 @@ class GCalSettingsDialog(QDialog):
     # ──────────────────────────────────────────────
 
     def _load_state(self):
-        self.enable_cb.setChecked(self.settings.value("gcal_enabled", "true") == "true")
-        self.creds_path_edit.setText(CREDENTIALS_PATH if os.path.exists(CREDENTIALS_PATH) else "")
-        self.cal_id_edit.setText(
-            str(self.settings.value("gcal_calendar_id", "primary") or "primary")
+        from calendar_app.infrastructure.google_sync.common import (
+            get_default_gcal_calendar_id,
+            is_gcal_enabled,
         )
-        self.interval_spin.setValue(int(self.settings.value("gcal_sync_interval", "10") or 10))
+
+        self.enable_cb.setChecked(is_gcal_enabled(self.settings))
+        self.creds_path_edit.setText(CREDENTIALS_PATH if os.path.exists(CREDENTIALS_PATH) else "")
+        self.cal_id_edit.setText(get_default_gcal_calendar_id(self.settings))
+        self.interval_spin.setValue(self._setting_interval("gcal_sync_interval", 10, 1, 240))
         self.quick_interval_spin.setValue(
-            max(5, int(self.settings.value("gcal_quick_sync_interval", "30") or 30))
+            self._setting_interval("gcal_quick_sync_interval", 30, 5, 300)
+        )
+        sync = getattr(self.parent_app, "gcal_sync", None)
+        self.credentials_details_btn.setChecked(
+            not os.path.exists(CREDENTIALS_PATH)
+            and not (sync and getattr(sync, "is_authenticated", False))
         )
         self._set_calendar_choices([])
         self._populate_timezones(
             str(self.settings.value("gcal_timezone", "Asia/Seoul") or "Asia/Seoul")
         )
+
+    def _setting_interval(self, key, default, minimum, maximum):
+        try:
+            value = int(self.settings.value(key, default))
+        except (TypeError, ValueError, OverflowError):
+            return default
+        return value if minimum <= value <= maximum else default
 
     def _populate_timezones(self, current_tz: str):
         self.timezone_combo.clear()
@@ -2016,12 +1578,12 @@ class GCalSettingsDialog(QDialog):
             "",
         )
         for item in self._calendar_choices:
+            if item.get("accessRole") not in ("owner", "writer"):
+                continue
             label = item.get("summary") or item.get("id") or "?"
             if item.get("primary"):
                 label = f"{label} ({t('gcal_settings.calendar_primary', 'Primary')})"
             self.calendar_choice_combo.addItem(label, item.get("id") or "")
-        self.calendar_choice_combo.blockSignals(False)
-
         current_id = self.cal_id_edit.text().strip() or "primary"
         idx = self.calendar_choice_combo.findData(current_id)
         if idx >= 0:
@@ -2035,19 +1597,14 @@ class GCalSettingsDialog(QDialog):
             self.calendar_choice_combo.setCurrentIndex(self.calendar_choice_combo.count() - 1)
         else:
             self.calendar_choice_combo.setCurrentIndex(0)
+        self.calendar_choice_combo.blockSignals(False)
 
     def _resolve_calendar_display_meta(self, calendar_id: str) -> tuple[str, str]:
         calendar_id = (calendar_id or "").strip()
         if not calendar_id:
             return "-", ""
 
-        sync = getattr(self.parent_app, "gcal_sync", None)
         calendars = list(self._calendar_choices or [])
-        if not calendars and sync and hasattr(sync, "list_accessible_calendars"):
-            try:
-                calendars = sync.list_accessible_calendars() or []
-            except Exception:
-                calendars = []
 
         matched = None
         if calendar_id == "primary":
@@ -2067,39 +1624,15 @@ class GCalSettingsDialog(QDialog):
         return label, tooltip if tooltip != label else tooltip
 
     def _refresh_google_calendar_list(
-        self, _=None, *, notify: bool = True, show_empty_message: bool = True
+        self, _=None, *, notify: bool = True, show_empty_message: bool = True, calendars=None
     ):
         """Refresh accessible Google calendars into the local list and update the dialog immediately."""
-        from PyQt6.QtWidgets import QApplication
-
-        sync = getattr(self.parent_app, "gcal_sync", None)
-        if (
-            not sync
-            or not getattr(sync, "is_authenticated", False)
-            or getattr(sync, "service", None) is None
-        ):
-            if notify:
-                QMessageBox.warning(
-                    self,
-                    t("common.error", "오류"),
-                    t(
-                        "gcal_settings.load_calendars_auth_needed",
-                        "인증을 먼저 진행한 뒤 캘린더 목록을 불러와 주세요.",
-                    ),
-                )
+        if calendars is None:
+            self._start_calendar_query("import")
             return
 
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            calendars = sync.list_accessible_calendars()
-        except Exception as exc:
-            QApplication.restoreOverrideCursor()
-            if notify:
-                QMessageBox.warning(self, t("common.error", "오류"), str(exc))
-            return
-        finally:
-            QApplication.restoreOverrideCursor()
-
+        if not self._validate_calendar_account(calendars):
+            return False
         self._set_calendar_choices(calendars)
 
         if not calendars:
@@ -2132,8 +1665,12 @@ class GCalSettingsDialog(QDialog):
             cal_db_id = make_gcal_id(gcal_id)
             name = item.get("summary") or gcal_id
             access = item.get("accessRole", "reader")
-            is_active = access in ("owner", "writer")
-            existing_color = existing.get(cal_db_id, {}).get("color")
+            previous = existing.get(cal_db_id, {})
+            new_calendar_active = not self.settings.value(
+                "gcal_import_selection_configured", False, type=bool
+            ) and access in ("owner", "writer")
+            is_active = bool(previous.get("is_active", new_calendar_active))
+            existing_color = previous.get("color")
             raw_color = str(item.get("backgroundColor") or "").strip()
             color = (
                 existing_color
@@ -2141,28 +1678,40 @@ class GCalSettingsDialog(QDialog):
                 or DEFAULT_CALENDAR_COLOR
             )
             is_primary = bool(item.get("primary"))
-            is_default = is_primary and not already_has_default and not default_assigned_this_run
+            is_default = bool(previous.get("is_default")) and access in ("owner", "writer")
+            if not previous:
+                is_default = (
+                    is_primary
+                    and not already_has_default
+                    and not default_assigned_this_run
+                    and access in ("owner", "writer")
+                )
             if is_default:
                 default_assigned_this_run = True
 
-            upsert_calendar(
+            saved = upsert_calendar(
                 calendar_id=cal_db_id,
                 name=name,
                 cal_type="gcal",
                 color=color,
                 is_default=is_default,
                 is_active=is_active,
-                is_visible=True,
+                is_visible=bool(previous.get("is_visible", True)),
+                sort_order=previous.get("sort_order", 0),
                 gcal_calendar_id=gcal_id,
                 access_role=access or None,
             )
+            if not saved:
+                self._set_feedback_label(
+                    self.calendar_choice_hint,
+                    t(
+                        "sync_unified.calendar_save_failed",
+                        "설정을 저장하지 못했습니다. 다시 시도하세요.",
+                    ),
+                    "error",
+                )
+                return
             imported += 1
-
-        for item in calendars:
-            gcal_id = str(item.get("id") or "").strip()
-            if gcal_id:
-                self.settings.setValue(f"gcal_sync_token::{gcal_id}", "")
-                self.settings.setValue(f"gcal_sync_token_fails::{gcal_id}", 0)
 
         self._refresh_calendar_table()
         self._refresh_meta()
@@ -2180,211 +1729,17 @@ class GCalSettingsDialog(QDialog):
             pass
         if self.parent_app and hasattr(self.parent_app, "schedule_panel_refresh"):
             self.parent_app.schedule_panel_refresh(center=True)
-        if self.parent_app and hasattr(self.parent_app, "sync_google_calendar_silent"):
-            self.parent_app.sync_google_calendar_silent()
         if notify:
-            QMessageBox.information(
-                self,
-                t("gcal_settings.load_calendars", "Google 캘린더 불러오기"),
-                t("gcal_settings.import_done", "{count}개 캘린더를 가져왔습니다.", count=imported),
-            )
-
-    def _import_gcal_calendars(
-        self, _=None, *, notify: bool = True, show_empty_message: bool = True
-    ):
-        return self._refresh_google_calendar_list(
-            _,
-            notify=notify,
-            show_empty_message=show_empty_message,
-        )
-        """Google 계정의 캘린더 목록을 가져와 calendar 테이블에 등록/갱신합니다."""
-        from PyQt6.QtWidgets import QApplication
-
-        sync = getattr(self.parent_app, "gcal_sync", None)
-        if (
-            not sync
-            or not getattr(sync, "is_authenticated", False)
-            or getattr(sync, "service", None) is None
-        ):
-            QMessageBox.warning(
-                self,
-                t("common.error", "오류"),
+            self._set_query_feedback(
                 t(
-                    "gcal_settings.load_calendars_auth_needed",
-                    "인증을 먼저 진행한 후 캘린더 목록을 불러오세요.",
-                ),
+                    "gcal_focus.list_loaded",
+                    "{count}개 캘린더를 확인했습니다. 가져올 캘린더를 선택한 뒤 설정을 저장하세요.",
+                    count=imported,
+                )
             )
-            return
-
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            calendars = sync.list_accessible_calendars()
-        except Exception as e:
-            QApplication.restoreOverrideCursor()
-            QMessageBox.warning(self, t("common.error", "오류"), str(e))
-            return
-        finally:
-            QApplication.restoreOverrideCursor()
-
-        if not calendars:
-            QMessageBox.information(
-                self,
-                t("gcal_settings.load_calendars", "Google 캘린더 가져오기"),
-                t("gcal_settings.load_calendars_empty", "접근 가능한 캘린더가 없습니다."),
-            )
-            return
-
-        from calendar_app.infrastructure.db.calendar_repo import (
-            list_calendars,
-            make_gcal_id,
-            upsert_calendar,
-        )
-
-        existing = {c["id"]: c for c in list_calendars(include_inactive=True)}
-        imported = 0
-        new_gcal_ids = []  # 새로 추가된 캘린더의 gcal_calendar_id
-        # BUG B: is_default 중복 방지 — 루프 시작 전 1회만 확인 + 루프 내 플래그로 최대 1개만 허용
-        already_has_default = any(c.get("is_default") for c in existing.values())
-        default_assigned_this_run = False
-        for item in calendars:
-            gcal_id = item.get("id", "").strip()
-            if not gcal_id:
-                continue
-            # "primary" 는 Google API 별칭이지 실제 캘린더 ID가 아니다. 무시한다.
-            if gcal_id == "primary":
-                continue
-            cal_db_id = make_gcal_id(gcal_id)
-            name = item.get("summary") or gcal_id
-            # accessRole: owner/writer=쓰기 가능, reader=읽기 전용
-            access = item.get("accessRole", "reader")
-            is_active = access in ("owner", "writer")
-            # 기존 캘린더 색상 유지, 신규는 Google 색상 사용
-            existing_color = existing.get(cal_db_id, {}).get("color")
-            raw_color = item.get("backgroundColor") or ""
-            color = (
-                existing_color
-                or (raw_color if raw_color.startswith("#") else None)
-                or DEFAULT_CALENDAR_COLOR
-            )
-            # primary 캘린더이고, 아직 기본 지정이 없고, 이번 루프에서 아직 할당 안 됐을 때만 is_default=True
-            is_primary = bool(item.get("primary"))
-            is_default = is_primary and not already_has_default and not default_assigned_this_run
-            if is_default:
-                default_assigned_this_run = True
-            is_new = cal_db_id not in existing
-            upsert_calendar(
-                calendar_id=cal_db_id,
-                name=name,
-                cal_type="gcal",
-                color=color,
-                is_default=is_default,
-                is_active=is_active,
-                is_visible=True,
-                gcal_calendar_id=gcal_id,
-                access_role=access or None,
-            )
-            imported += 1
-            if is_new:
-                new_gcal_ids.append(gcal_id)
-
-        # 모든 gcal 캘린더 token 리셋 → 다음 sync에서 전체 full rescan
-        for item in calendars:
-            gcal_id = item.get("id", "").strip()
-            if gcal_id:
-                self.settings.setValue(f"gcal_sync_token::{gcal_id}", "")
-                self.settings.setValue(f"gcal_sync_token_fails::{gcal_id}", 0)
-
-        self._refresh_calendar_table()
-        from calendar_app.presentation.calendar.month_renderer import invalidate_calendar_meta_cache
-        from calendar_app.presentation.panels.side_panel_renderer import (
-            invalidate_panel_calendar_cache,
-        )
-
-        invalidate_calendar_meta_cache()
-        invalidate_panel_calendar_cache()
-        if self.parent_app and hasattr(self.parent_app, "schedule_panel_refresh"):
-            self.parent_app.schedule_panel_refresh(center=True)
-        # 즉시 GCal sync 트리거 (전체 full rescan)
-        if self.parent_app and hasattr(self.parent_app, "sync_google_calendar_silent"):
-            self.parent_app.sync_google_calendar_silent()
-        QMessageBox.information(
-            self,
-            t("gcal_settings.load_calendars", "Google 캘린더 가져오기"),
-            t("gcal_settings.import_done", "{count}개 캘린더를 가져왔습니다.", count=imported),
-        )
-
-    def _on_manual_refresh_calendar_list(self):
-        """[11] Manual calendar list refresh with 10-second cooldown."""
-        import time as _time
-
-        sync = getattr(self.parent_app, "gcal_sync", None)
-        if not sync or not getattr(sync, "is_authenticated", False):
-            QMessageBox.warning(
-                self,
-                t("common.error", "오류"),
-                t("gcal_settings.not_authenticated", "구글 인증 후 사용 가능합니다."),
-            )
-            return
-        _cooldown_key = "gcal_cal_list_manual_refresh_at"
-        _last = float(self.settings.value(_cooldown_key, 0) or 0)
-        _elapsed = _time.monotonic() - _last
-        _cooldown_secs = 10
-        if _elapsed < _cooldown_secs:
-            remaining = int(_cooldown_secs - _elapsed) + 1
-            QMessageBox.information(
-                self,
-                t("gcal_settings.refresh_cal_list", "캘린더 목록 새로고침"),
-                t(
-                    "gcal_settings.refresh_cooldown",
-                    "잠시 후 다시 시도하세요. ({sec}초 남음)",
-                    sec=remaining,
-                ),
-            )
-            return
-        self.settings.setValue(_cooldown_key, _time.monotonic())
-        self._refresh_google_calendar_list()
 
     def _load_accessible_calendars(self):
-        self.go_to_auth_btn.hide()
-        sync = getattr(self.parent_app, "gcal_sync", None)
-        if (
-            not sync
-            or not getattr(sync, "is_authenticated", False)
-            or getattr(sync, "service", None) is None
-        ):
-            self._set_feedback_label(
-                self.calendar_choice_hint,
-                t(
-                    "gcal_settings.load_calendars_auth_needed",
-                    "인증을 먼저 진행한 후 캘린더 목록을 불러오세요.",
-                ),
-                "error",
-            )
-            self.go_to_auth_btn.show()
-            return
-
-        calendars = sync.list_accessible_calendars()
-        self._set_calendar_choices(calendars)
-        if calendars:
-            self._set_feedback_label(
-                self.calendar_choice_hint,
-                t(
-                    "gcal_settings.load_calendars_ok",
-                    "Loaded {count} calendars. Choosing one will fill its Calendar ID.",
-                    count=len(calendars),
-                ),
-                "help",
-            )
-        else:
-            self._set_feedback_label(
-                self.calendar_choice_hint,
-                t(
-                    "gcal_settings.load_calendars_empty",
-                    "No accessible calendars were returned for this account.",
-                ),
-                "error",
-            )
-        self._refresh_diagnostics()
+        self._start_calendar_query("import")
 
     def _on_calendar_choice_changed(self, index: int):
         if index <= 0:
@@ -2578,6 +1933,18 @@ class GCalSettingsDialog(QDialog):
         self._refresh_diagnostics()
 
     def _reset_sync_state(self):
+        if (
+            self._auth_worker is not None
+            or self._query_worker is not None
+            or self._parent_google_busy()
+        ):
+            self._set_query_feedback(
+                t(
+                    "gcal_ux.sync_busy",
+                    "Google 동기화가 진행 중입니다. 완료되면 설정을 변경할 수 있습니다.",
+                )
+            )
+            return
         cleared = 0
         # 등록된 모든 gcal 캘린더 token 리셋
         try:
@@ -2628,22 +1995,35 @@ class GCalSettingsDialog(QDialog):
             and getattr(self.parent_app.gcal_sync, "service", None) is not None
         ):
             try:
-                primary_info = (
-                    self.parent_app.gcal_sync.service.calendarList()
-                    .get(calendarId="primary")
-                    .execute()
+                primary_info = next(
+                    (item for item in self._calendar_choices if item.get("primary")), {}
                 )
-                account_value = primary_info.get("id") or account_value
+                account_value = (
+                    primary_info.get("id")
+                    or str(self.settings.value("gcal_primary_resolved_id", "") or "")
+                    or t("sync_ui.connected", "연결됨")
+                )
             except Exception:
                 pass
         self.account_meta[1].setText(account_value)
-        calendar_text, calendar_tooltip = self._resolve_calendar_display_meta(
-            self.cal_id_edit.text().strip() or "primary"
+        self.account_meta[1].setToolTip(account_value)
+        active_count = sum(self._calendar_import_selection.values())
+        self.calendar_meta[1].setText(t("gcal_focus.import_count", "{count}개", count=active_count))
+        self.calendar_meta[1].setToolTip(
+            t(
+                "gcal_focus.import_meta_help",
+                "Google에서 새 일정을 가져올 캘린더 수입니다. 화면 표시 여부는 메인 캘린더에서 따로 설정합니다.",
+            )
         )
-        self.calendar_meta[1].setText(calendar_text)
-        self.calendar_meta[1].setToolTip(calendar_tooltip)
         last_sync = str(self.settings.value("last_successful_sync", "") or "")
-        self.last_sync_meta[1].setText(last_sync if last_sync else t("gcal.last_sync_none", "없음"))
+        try:
+            last_sync_short = datetime.fromisoformat(last_sync).strftime("%m-%d %H:%M")
+        except ValueError:
+            last_sync_short = last_sync
+        self.last_sync_meta[1].setText(
+            last_sync_short if last_sync else t("gcal.last_sync_none", "없음")
+        )
+        self.last_sync_meta[1].setToolTip(last_sync)
         self._refresh_diagnostics()
 
     def _refresh_diagnostics(self):
@@ -2669,10 +2049,10 @@ class GCalSettingsDialog(QDialog):
             str(self.settings.value("gcal_bound_calendar_id", "") or "") if is_authenticated else ""
         )
         error_kind = getattr(sync, "last_error_kind", None) if sync else None
-        error_message = getattr(sync, "last_error_message", None) if sync else None
+        error_kind = self.settings.value("sync_google_last_error", "") or error_kind
         error_text = (
-            f"{error_kind}: {str(error_message or '-')[:80]}"
-            if error_kind and is_authenticated
+            self._friendly_error(error_kind)
+            if error_kind
             else t("gcal_settings.meta_no_error", "None")
         )
 
@@ -2690,18 +2070,55 @@ class GCalSettingsDialog(QDialog):
             and getattr(self.parent_app.gcal_sync, "is_authenticated", False)
         )
         if authenticated:
-            self.status_title.setText(t("gcal_settings.status_connected", "Google Calendar 연결됨"))
+            self.status_title.setText(t("gcal_focus.service_name", "Google Calendar"))
             self.status_pill.setText(t("gcal_settings.status_pill_connected", "● 연결됨"))
             self.status_title.setStyleSheet(self._style_bundle["status_title_connected"])
             self.status_pill.setStyleSheet(self._style_bundle["status_pill_connected"])
         else:
-            self.status_title.setText(
-                t("gcal_settings.status_not_connected", "Google Calendar 미연결")
-            )
+            self.status_title.setText(t("gcal_focus.service_name", "Google Calendar"))
             self.status_pill.setText(t("gcal_settings.status_pill_pending", "● 인증 필요"))
             self.status_title.setStyleSheet(self._style_bundle["status_title_pending"])
             self.status_pill.setStyleSheet(self._style_bundle["status_pill_pending"])
+        if self._auth_worker is None:
+            self.auth_btn.setText(
+                t("gcal_ux.reconnect", "계정 다시 연결")
+                if authenticated
+                else t("gcal_focus.connect_account", "Google 계정 연결")
+            )
+        self.reset_btn.setVisible(authenticated)
+        self.go_to_auth_btn.setVisible(not authenticated)
+        from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
+
+        if authenticated and not is_gcal_enabled(self.settings):
+            self.status_pill.setText(t("gcal_focus.sync_disabled", "동기화 꺼짐"))
+            self.status_pill.setStyleSheet(self._style_bundle["status_pill_pending"])
+        error = self.settings.value("sync_google_last_error", "") or getattr(
+            getattr(self.parent_app, "gcal_sync", None), "last_error_kind", None
+        )
+        if error in {"account_mismatch", "account_unverified", "auth_required", "reauth_required"}:
+            self.status_pill.setText(t("gcal_ux.connection_review", "연결 확인 필요"))
+            self.status_pill.setStyleSheet(self._style_bundle["status_pill_pending"])
+            self._set_query_feedback(self._friendly_error(error), "error", error)
+        self.connection_next_step.setText(
+            t(
+                "gcal_ux.connected_help",
+                "연결된 계정을 유지합니다. 권한을 다시 확인하려면 같은 계정으로 연결하세요. 가져올 캘린더는 다음 섹션에서 선택합니다.",
+            )
+            if authenticated
+            else t(
+                "gcal_ux.connect_help",
+                "인증 파일을 준비하고 Google 계정을 연결하세요. 연결 후 가져올 캘린더를 선택할 수 있습니다.",
+            )
+        )
         self._refresh_meta()
+
+    def _friendly_error(self, code):
+        if code and str(code).startswith("auth_") and code not in {"auth_required"}:
+            return _gcal_auth_error_text(code)
+        sync = getattr(self.parent_app, "gcal_sync", None)
+        return sync_error_message(
+            google_sync_error_code(code, getattr(sync, "last_error_status", None))
+        )
 
     # ──────────────────────────────────────────────
     # 액션
@@ -2740,11 +2157,16 @@ class GCalSettingsDialog(QDialog):
         if not selected_json:
             return True
         if not os.path.exists(selected_json):
-            QMessageBox.warning(
-                self,
-                t("common.error", "오류"),
-                t("gcal_settings.creds_missing", "선택한 인증 파일을 찾을 수 없습니다."),
+            self._set_query_feedback(
+                _gcal_auth_error_text("auth_client_missing"), "error", "auth_client_missing"
             )
+            self._run_recovery_action()
+            return False
+        try:
+            load_desktop_client_config(selected_json)
+        except GoogleAuthError as exc:
+            self._set_query_feedback(_gcal_auth_error_text(exc.kind), "error", exc.kind)
+            self._run_recovery_action()
             return False
         if os.path.abspath(selected_json) == os.path.abspath(CREDENTIALS_PATH):
             return True
@@ -2752,144 +2174,420 @@ class GCalSettingsDialog(QDialog):
             shutil.copy(selected_json, CREDENTIALS_PATH)
             self.creds_path_edit.setText(CREDENTIALS_PATH)
             return True
-        except Exception as exc:
-            QMessageBox.warning(
-                self,
-                t("gcal_settings.copy_error_title", "파일 복사 오류"),
+        except (OSError, shutil.Error):
+            self._set_query_feedback(
                 t(
-                    "gcal_settings.copy_error_body",
-                    "인증 파일을 복사할 수 없습니다.\n{error}",
-                    error=str(exc),
+                    "gcal_ux.file_copy_failed",
+                    "인증 파일을 앱에 저장하지 못했습니다. 파일과 앱 데이터 폴더의 접근 권한을 확인한 뒤 다시 선택하세요.",
                 ),
+                "error",
+                "auth_client_invalid",
             )
             return False
 
     def _apply_runtime_settings(self, enabled: bool):
-        cal_id = self.cal_id_edit.text().strip() or "primary"
+        from calendar_app.infrastructure.google_sync.common import get_default_gcal_calendar_id
+
+        cal_id = get_default_gcal_calendar_id(self.settings)
+        self.cal_id_edit.setText(cal_id)
         tz_name = self._current_timezone() or "UTC"
         if hasattr(self.parent_app, "gcal_sync") and self.parent_app.gcal_sync:
             self.parent_app.gcal_sync.calendar_id = cal_id
             self.parent_app.gcal_sync.time_zone = tz_name
-            if not enabled:
-                self.parent_app.gcal_sync.is_authenticated = False
-                self.parent_app.gcal_sync.service = None
 
     def _test_calendar_access(self):
-        sync = getattr(self.parent_app, "gcal_sync", None)
-        if (
-            not sync
-            or not getattr(sync, "is_authenticated", False)
-            or getattr(sync, "service", None) is None
+        self._start_calendar_query("access")
+
+    def _start_calendar_query(self, kind):
+        if self._auth_worker is not None or self._query_worker is not None:
+            return
+        coordinator = getattr(self.parent_app, "_calendar_sync_coordinator", None)
+        if coordinator:
+            coordinator.refresh()
+        if (coordinator and coordinator.states.get("google", {}).get("busy")) or any(
+            worker and worker.isRunning()
+            for worker in (
+                getattr(self.parent_app, "_sync_worker", None),
+                getattr(self.parent_app, "_auth_worker", None),
+            )
         ):
-            self._set_feedback_label(
-                self.test_access_result,
+            self._set_query_feedback(
+                t("sync_unified.google_busy", "진행 중인 Google 작업이 끝난 뒤 다시 시도하세요."),
+                "help",
+            )
+            return
+        sync = getattr(self.parent_app, "gcal_sync", None)
+        if kind != "disconnect" and (not sync or not sync.is_authenticated or sync.service is None):
+            self._set_query_feedback(
                 t(
                     "gcal_settings.test_access_auth_needed",
                     "먼저 인증을 완료해야 테스트할 수 있습니다.",
                 ),
                 "error",
             )
+            self.go_to_auth_btn.show()
             return
-        try:
-            # calendarList().list() 로 계정 접근 자체를 확인
-            result = sync.service.calendarList().list(maxResults=5).execute()
-            items = result.get("items", [])
-            cal_count = len(items)
-
-            # cal_id_edit 에 특정 캘린더 ID가 입력된 경우 해당 캘린더 접근도 추가 확인
-            cal_id = self.cal_id_edit.text().strip()
-            if cal_id and cal_id != "primary":
-                try:
-                    info = sync.service.calendarList().get(calendarId=cal_id).execute()
-                    summary = info.get("summaryOverride") or info.get("summary") or cal_id
-                    self._set_feedback_label(
-                        self.test_access_result,
-                        t(
-                            "gcal_settings.test_access_ok",
-                            "접근 확인: {name} (계정 캘린더 {count}개)",
-                            name=summary,
-                            count=cal_count,
-                        ),
-                        "success",
-                    )
-                except Exception:
-                    # 선택된 캘린더가 없거나 접근 불가 → 경고만 표시하고 계정 자체는 OK
-                    names = ", ".join(
-                        (i.get("summaryOverride") or i.get("summary") or "") for i in items[:3]
-                    )
-                    self._set_feedback_label(
-                        self.test_access_result,
-                        t(
-                            "gcal_settings.test_access_cal_not_found",
-                            "계정 접근 OK ({count}개 캘린더) — 선택된 캘린더 ID를 찾을 수 없습니다. 목록에서 다시 선택해 주세요.\n예: {names}",
-                            count=cal_count,
-                            names=names,
-                        ),
-                        "warning",
-                    )
-                    return
-            else:
-                # "primary" 또는 빈 값이면 calendarList 전체 접근 성공으로 판단
-                names = ", ".join(
-                    (i.get("summaryOverride") or i.get("summary") or "") for i in items[:3]
-                )
-                self._set_feedback_label(
-                    self.test_access_result,
-                    t(
-                        "gcal_settings.test_access_ok_list",
-                        "계정 접근 확인 ({count}개 캘린더: {names}…)",
-                        count=cal_count,
-                        names=names,
-                    ),
-                    "success",
-                )
-        except Exception as exc:
-            self._set_feedback_label(
-                self.test_access_result,
-                t("gcal_settings.test_access_fail", "접근 실패: {error}", error=str(exc)),
-                "error",
+        worker = (GCalRevokeWorker if kind == "disconnect" else GCalQueryWorker)(sync, self)
+        self._query_worker, self._query_kind = worker, kind
+        workers = getattr(self.parent_app, "_bg_workers", None)
+        if workers is not None:
+            workers.append(worker)
+        self._set_operation_state(
+            True,
+            t(
+                "gcal_ux.disconnecting",
+                "Google 연결을 해제하고 있습니다. 작업이 끝날 때까지 잠시 기다려 주세요.",
             )
+            if kind == "disconnect"
+            else t(
+                "gcal_ux.loading",
+                "Google 캘린더 목록을 확인하고 있습니다. 기존 선택 내용은 유지됩니다.",
+            ),
+            cancellable=kind != "disconnect",
+        )
+        worker.finished.connect(self._finish_calendar_query)
+        try:
+            worker.start()
+        except RuntimeError:
+            worker.success = False
+            self._finish_calendar_query()
+        if coordinator:
+            coordinator.refresh()
+
+    def _finish_calendar_query(self):
+        worker = self._query_worker
+        if worker is None:
+            return
+        self._query_worker = None
+        workers = getattr(self.parent_app, "_bg_workers", None)
+        if workers is not None and worker in workers:
+            workers.remove(worker)
+        self._set_operation_state(False)
+        worker.deleteLater()
+        if self._query_kind == "disconnect":
+            self._complete_reset_auth(notify=self._auth_close_result is None)
+        if self._auth_close_result is not None:
+            result, self._auth_close_result = self._auth_close_result, None
+            self._availability_timer.stop()
+            super().done(self._close_result(result))
+            return
+        if self._query_kind == "disconnect":
+            return
+        if worker.is_cancelled():
+            self._set_query_feedback(
+                t(
+                    "gcal_ux.query_cancelled",
+                    "목록 확인을 취소했습니다. 기존 연결과 선택 내용은 유지됩니다.",
+                )
+            )
+            return
+        if not worker.success:
+            code = getattr(worker.service, "last_error_kind", None) or "calendar_list"
+            self._set_query_feedback(self._friendly_error(code), "error", code)
+            self._refresh_calendar_table()
+            return
+        if not self._validate_calendar_account(worker.calendars):
+            return
+        self._auth_calendars_loaded = True
+        self._set_calendar_choices(worker.calendars)
+        self._set_feedback_label(
+            self.calendar_choice_hint,
+            t(
+                "gcal_focus.list_loaded",
+                "{count}개 캘린더를 확인했습니다. 가져올 캘린더를 선택한 뒤 설정을 저장하세요.",
+                count=len(worker.calendars),
+            ),
+            "help",
+        )
+        if self._query_kind == "import":
+            try:
+                self._refresh_google_calendar_list(notify=False, calendars=worker.calendars)
+            except (OSError, RuntimeError, sqlite3.Error):
+                self._set_feedback_label(
+                    self.calendar_choice_hint,
+                    t(
+                        "sync_unified.calendar_save_failed",
+                        "설정을 저장하지 못했습니다. 다시 시도하세요.",
+                    ),
+                    "error",
+                )
+                return
+        cal_id = self.cal_id_edit.text().strip() or "primary"
+        matched = next(
+            (
+                c
+                for c in worker.calendars
+                if c.get("id") == cal_id or (cal_id == "primary" and c.get("primary"))
+            ),
+            None,
+        )
+        self._set_query_feedback(
+            t(
+                "gcal_settings.test_access_ok",
+                "접근 확인: {name} (계정 캘린더 {count}개)",
+                name=(matched or {}).get("summary", cal_id),
+                count=len(worker.calendars),
+            )
+            if matched
+            else t(
+                "sync_unified.google_target_missing",
+                "계정에 접근했지만 선택한 캘린더를 찾지 못했습니다. 목록에서 다시 선택하세요.",
+            ),
+            "success" if matched else "warning",
+        )
+        self._refresh_meta()
+        self._refresh_calendar_table()
 
     def run_auth(self):
+        if self._query_worker is not None:
+            return
+        if self._auth_worker is None and self._parent_google_busy():
+            self._set_query_feedback(
+                t("sync_unified.google_busy", "진행 중인 Google 작업이 끝난 뒤 다시 시도하세요.")
+            )
+            return
+        if (
+            self._auth_worker is None
+            and hasattr(self.parent_app, "_sync_worker_running")
+            and self.parent_app._sync_worker_running()
+        ):
+            self._set_feedback_label(
+                self.test_access_result,
+                t("sync_unified.google_busy", "진행 중인 Google 작업이 끝난 뒤 다시 시도하세요."),
+                "help",
+            )
+            return
+        if self._auth_worker is not None:
+            self._auth_worker.requestInterruption()
+            self.auth_btn.setEnabled(False)
+            self.auth_btn.setText(t("gcal_settings.auth_cancelling", "인증 취소 중…"))
+            return
+        try:
+            ZoneInfo(self._current_timezone() or "UTC")
+        except (KeyError, ValueError):
+            self._set_feedback_label(
+                self.timezone_preview,
+                t("sync_ui.invalid_timezone", "올바른 시간대를 선택하세요. 예: Asia/Seoul"),
+                "error",
+            )
+            self._switch_section(2)
+            self.timezone_details_btn.setChecked(True)
+            return
         if not self._copy_credentials_if_needed():
             return
-        cal_id = self.cal_id_edit.text().strip() or "primary"
+        from calendar_app.infrastructure.google_sync.common import get_default_gcal_calendar_id
+
+        cal_id = get_default_gcal_calendar_id(self.settings)
         tz_name = self._current_timezone() or "UTC"
 
         from calendar_app.infrastructure.google_sync.service import prepare_calendar_sync_service
 
-        if os.path.exists(TOKEN_PATH):
-            with contextlib.suppress(OSError):
-                os.remove(TOKEN_PATH)
-
-        self.parent_app.gcal_sync = prepare_calendar_sync_service(
-            getattr(self.parent_app, "gcal_sync", None),
+        candidate = prepare_calendar_sync_service(
+            None,
             calendar_id=cal_id,
             time_zone=tz_name,
             reset_auth=True,
         )
 
-        if self.parent_app.gcal_sync.authenticate(self):
+        worker = GCalAuthWorker(candidate, self)
+        self._auth_worker = worker
+        workers = getattr(self.parent_app, "_bg_workers", None)
+        if workers is not None:
+            workers.append(worker)
+        worker.finished.connect(self._finish_auth)
+        self._switch_section(0)
+        self._set_operation_state(
+            True,
+            t(
+                "gcal_settings.auth_waiting",
+                "브라우저에서 로그인을 완료하세요. 최대 3분 동안 기다립니다. 오류가 표시되면 인증을 취소하고 인증 파일을 확인하세요.",
+            ),
+        )
+        try:
+            worker.start()
+        except RuntimeError:
+            candidate._set_last_error("auth_modules", "auth_worker_start_failed")
+            self._finish_auth()
+
+    def _finish_auth(self):
+        worker = self._auth_worker
+        if worker is None:
+            return
+        self._auth_worker = None
+        workers = getattr(self.parent_app, "_bg_workers", None)
+        if workers is not None and worker in workers:
+            workers.remove(worker)
+        self._set_operation_state(False)
+        self._refresh_status()
+        worker.deleteLater()
+        if self._auth_close_result is not None:
+            if hasattr(worker.service, "_pending_token_json"):
+                worker.service._pending_token_json = None
+            result = self._auth_close_result
+            self._auth_close_result = None
+            self._availability_timer.stop()
+            super().done(self._close_result(result))
+            return
+        if worker.is_cancelled():
+            worker.success = False
+            worker.service._set_last_error("auth_cancelled", "Google authentication cancelled")
+        if (
+            worker.success
+            and sum(
+                isinstance(item, dict)
+                and item.get("primary") is True
+                and isinstance(item.get("id"), str)
+                and item["id"].strip() not in {"", "primary"}
+                for item in worker.calendars
+            )
+            != 1
+        ):
+            worker.service._pending_token_json = None
+            self.settings.setValue("sync_google_last_error", "account_unverified")
+            self._set_query_feedback(
+                sync_error_message("account_unverified"), "error", "account_unverified"
+            )
+            return
+        if worker.success and not self._validate_calendar_account(
+            worker.calendars, sync=worker.service
+        ):
+            worker.service._pending_token_json = None
+            return
+        if worker.success:
+            from calendar_app.infrastructure.google_sync.token_store import save_token_json
+
+            try:
+                if worker.service._pending_token_json is not None:
+                    save_token_json(worker.service._pending_token_json)
+                    worker.service._pending_token_json = None
+            except OSError:
+                worker.success = False
+                worker.service._set_last_error("auth_token_write", "token_write_failed")
+        if worker.success:
+            self.parent_app.gcal_sync = worker.service
+            self._applied_changes = True
+            self._auth_calendars_loaded = True
+            self._set_calendar_choices(worker.calendars)
             self.settings.setValue("gcal_enabled", "true")
             self.enable_cb.setChecked(True)
             self._refresh_parent_state()
             self._refresh_status()
-            self._load_accessible_calendars()
-            self._refresh_google_calendar_list(notify=False, show_empty_message=False)
-            QMessageBox.information(
-                self,
-                t("gcal.setup_done", "설정 완료"),
-                t("gcal_settings.auth_success", "Google 인증이 성공적으로 완료되었습니다."),
+            try:
+                self._refresh_google_calendar_list(
+                    notify=False, show_empty_message=False, calendars=worker.calendars
+                )
+            except (sqlite3.Error, OSError, RuntimeError):
+                self._set_feedback_label(
+                    self.calendar_choice_hint,
+                    t(
+                        "sync_unified.calendar_save_failed",
+                        "설정을 저장하지 못했습니다. 다시 시도하세요.",
+                    ),
+                    "error",
+                )
+                return
+            self._set_query_feedback(
+                t(
+                    "gcal_ux.connected_next",
+                    "Google 계정을 연결했습니다. 가져올 캘린더를 선택하고 설정을 저장하세요.",
+                ),
+                "success",
             )
+            self._switch_section(1)
+        else:
+            if hasattr(worker.service, "_pending_token_json"):
+                worker.service._pending_token_json = None
+            code = worker.service.last_error_kind
+            self._set_query_feedback(
+                self._friendly_error(code), "help" if code == "auth_cancelled" else "error", code
+            )
+            self._refresh_status()
+
+    def _close_result(self, result):
+        # Preserve the caller's post-save refresh without saving any later draft.
+        return QDialog.DialogCode.Accepted if self._applied_changes else result
+
+    def done(self, result):
+        if self._query_worker is not None:
+            self._auth_close_result = result
+            if self._query_kind != "disconnect":
+                self._query_worker.requestInterruption()
+            return
+        if self._auth_worker is not None:
+            self._auth_close_result = result
+            self._auth_worker.requestInterruption()
+            self.auth_btn.setEnabled(False)
+            return
+        self._availability_timer.stop()
+        super().done(self._close_result(result))
+
+    def closeEvent(self, event):
+        if self._auth_worker is not None or self._query_worker is not None:
+            event.ignore()
+            self.done(QDialog.DialogCode.Rejected)
+            return
+        super().closeEvent(event)
 
     def save_settings(self):
-        if not self._copy_credentials_if_needed():
+        if self._auth_worker is not None or self._query_worker is not None:
+            return
+        if self._parent_google_busy():
+            self._set_query_feedback(
+                t(
+                    "gcal_ux.sync_busy",
+                    "Google 동기화가 진행 중입니다. 완료되면 설정을 변경할 수 있습니다.",
+                )
+            )
+            return
+        if self._metadata_load_failed:
+            self._set_query_feedback(
+                t(
+                    "gcal_ux.metadata_unavailable",
+                    "저장된 캘린더 목록을 읽지 못했습니다. 선택 내용은 유지했습니다. 목록을 다시 확인한 뒤 저장하세요.",
+                ),
+                "error",
+            )
+            self._switch_section(1)
+            return
+        if self.enable_cb.isChecked() and not self._copy_credentials_if_needed():
             return
 
+        try:
+            ZoneInfo(self._current_timezone() or "UTC")
+        except (KeyError, ValueError):
+            self._set_feedback_label(
+                self.timezone_preview,
+                t("sync_ui.invalid_timezone", "올바른 시간대를 선택하세요. 예: Asia/Seoul"),
+                "error",
+            )
+            self._switch_section(2)
+            self.timezone_details_btn.setChecked(True)
+            return
+        from calendar_app.application.calendar_preferences import (
+            set_google_calendar_import_selection,
+        )
+        from calendar_app.infrastructure.db import calendar_repo
+
+        selection_result = set_google_calendar_import_selection(
+            self._calendar_import_selection, self.settings, repository=calendar_repo
+        )
+        if not selection_result.success:
+            self._set_feedback_label(
+                self.calendar_choice_hint,
+                t(
+                    "gcal_focus.import_save_failed",
+                    "가져오기 선택을 저장하지 못했습니다. 사용 가능한 기본 저장 캘린더가 있는지 확인하고 다시 시도하세요.",
+                ),
+                "error",
+            )
+            self._switch_section(1)
+            return
         enabled = self.enable_cb.isChecked()
         tz_name = self._current_timezone() or "UTC"
         self.settings.setValue("gcal_enabled", "true" if enabled else "false")
-        self.settings.setValue("gcal_calendar_id", self.cal_id_edit.text().strip() or "primary")
+        self.settings.setValue(
+            "sync_google_auto", "true" if self.auto_sync_cb.isChecked() else "false"
+        )
         self.settings.setValue("gcal_timezone", tz_name)
         self.settings.setValue("gcal_sync_interval", str(self.interval_spin.value()))
         self.settings.setValue("gcal_quick_sync_interval", str(self.quick_interval_spin.value()))
@@ -2901,14 +2599,32 @@ class GCalSettingsDialog(QDialog):
         self._apply_runtime_settings(enabled)
         self._refresh_parent_state()
         self._refresh_status()
-        QMessageBox.information(
-            self,
-            t("gcal_settings.saved_title", "저장 완료"),
-            t("gcal_settings.saved_body", "Google 동기화 설정이 저장되었습니다."),
+        message = t("gcal_settings.saved_body", "Google 동기화 설정이 저장되었습니다.")
+        if selection_result.default_changed:
+            message += "\n" + t(
+                "gcal_focus.default_changed",
+                "가져오기를 끈 캘린더 대신 '{name}'을 새 일정의 기본 저장 캘린더로 지정했습니다. 메인 캘린더에서 변경할 수 있습니다.",
+                name=(selection_result.default_calendar or {}).get("name", ""),
+            )
+        self._settings_dirty = False
+        self._applied_changes = True
+        self.unsaved_label.setText(
+            t("gcal_ux.saved", "설정을 저장했습니다. 변경 내용이 적용되었습니다.")
         )
-        self.accept()
+        self._show_inline_feedback(message, "success")
+        self.save_btn.setEnabled(False)
 
     def reset_auth(self):
+        if self._auth_worker is not None or self._query_worker is not None:
+            return
+        if self._parent_google_busy():
+            self._set_query_feedback(
+                t(
+                    "gcal_ux.sync_busy",
+                    "Google 동기화가 진행 중입니다. 완료되면 설정을 변경할 수 있습니다.",
+                )
+            )
+            return
         reply = QMessageBox.warning(
             self,
             t("gcal_settings.reset_title", "Disconnect reset"),
@@ -2921,13 +2637,16 @@ class GCalSettingsDialog(QDialog):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
+        sync = getattr(self.parent_app, "gcal_sync", None)
+        if sync is not None and callable(getattr(sync, "revoke_token", None)):
+            self._start_calendar_query("disconnect")
+        else:
+            self._complete_reset_auth()
+
+    def _complete_reset_auth(self, notify=True):
+        self._applied_changes = True
         removed_calendar_count = 0
         removed_subscription_count = 0
-
-        # 연동 해제 전 Google 서버에서 토큰 취소 (로컬 삭제보다 먼저)
-        _sync = getattr(self.parent_app, "gcal_sync", None)
-        if _sync is not None and hasattr(_sync, "revoke_token"):
-            _sync.revoke_token()
 
         for path in (TOKEN_PATH, CREDENTIALS_PATH):
             if os.path.exists(path):
@@ -2938,7 +2657,7 @@ class GCalSettingsDialog(QDialog):
             from calendar_app.infrastructure.db.calendar_repo import delete_calendar, list_calendars
 
             for cal in list_calendars(include_inactive=True):
-                if cal.get("type") not in ("gcal", "ics"):
+                if cal.get("type") != "gcal":
                     continue
                 cal_id = str(cal.get("id") or "").strip()
                 if not cal_id:
@@ -2972,6 +2691,7 @@ class GCalSettingsDialog(QDialog):
         self.settings.setValue("gcal_bound_calendar_id", "")
         self.settings.setValue("last_successful_sync", "")
         self.settings.setValue("gcal_calendar_id", "primary")
+        self._calendar_import_selection.clear()
         self.enable_cb.setChecked(False)
         self.creds_path_edit.clear()
         self.cal_id_edit.setText("primary")
@@ -2985,7 +2705,6 @@ class GCalSettingsDialog(QDialog):
             self.parent_app.gcal_sync.service = None
 
         self._refresh_calendar_table()
-        self._refresh_subscription_table()
 
         try:
             from calendar_app.presentation.calendar.month_renderer import (
@@ -3011,6 +2730,8 @@ class GCalSettingsDialog(QDialog):
 
         self._refresh_parent_state()
         self._refresh_status()
+        if not notify:
+            return
         QMessageBox.information(
             self,
             t("gcal_settings.reset_done_title", "Reset complete"),

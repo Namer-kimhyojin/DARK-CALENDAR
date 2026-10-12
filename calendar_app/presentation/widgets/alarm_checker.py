@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Alarm checker: polls DB for due task alarms and shows popups.
 
 Architecture
@@ -72,7 +73,10 @@ class TaskAlarmChecker(QObject):
         self._timer.start()
 
         # First check after a short delay (app may still be loading)
-        QTimer.singleShot(3_000, self._poll)
+        self._startup_timer = QTimer(self)
+        self._startup_timer.setSingleShot(True)
+        self._startup_timer.timeout.connect(self._poll)
+        self._startup_timer.start(3_000)
 
     def _load_fired_alarms(self) -> None:
         """Load previously fired alarms from database to prevent duplicates on restart."""
@@ -96,6 +100,7 @@ class TaskAlarmChecker(QObject):
 
     def stop(self) -> None:
         self._timer.stop()
+        self._startup_timer.stop()
 
     # ------------------------------------------------------------------
     # Core poll
@@ -163,7 +168,11 @@ class TaskAlarmChecker(QObject):
                     else:
                         continue
 
-                trigger_dt = deadline_dt - timedelta(minutes=offset_mins)
+                try:
+                    trigger_dt = deadline_dt - timedelta(minutes=offset_mins)
+                except OverflowError:
+                    logger.warning("Ignoring overflowing alarm offset for task %s", task_id)
+                    continue
                 delta_secs = (now - trigger_dt).total_seconds()
 
                 if -_LOOK_AHEAD_SECS <= delta_secs <= _GRACE_PAST_SECS:
@@ -229,7 +238,12 @@ class TaskAlarmChecker(QObject):
         for part in str(raw).split(","):
             part = part.strip()
             if part.isdigit():
-                result.append(int(part))
+                try:
+                    result.append(int(part))
+                except ValueError:
+                    # isdigit() also accepts superscript digits; Python's
+                    # integer parser additionally rejects excessively long input.
+                    continue
         return result
 
     # ------------------------------------------------------------------

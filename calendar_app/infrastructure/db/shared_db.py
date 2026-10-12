@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 shared_db.py — PC 공유 캘린더 DB (C:\\Users\\Public\\DarkCalendar\\shared.db)
 
@@ -5,6 +6,7 @@ shared_db.py — PC 공유 캘린더 DB (C:\\Users\\Public\\DarkCalendar\\shared
 SQLite WAL 모드로 동시 접근을 안전하게 처리합니다.
 """
 
+import contextlib
 from datetime import datetime
 import logging
 import os
@@ -24,20 +26,33 @@ _conn: sqlite3.Connection | None = None
 
 def _get_connection() -> sqlite3.Connection | None:
     global _conn
-    if _conn is not None:
-        return _conn
+    with _lock:
+        if _conn is not None:
+            return _conn
+        conn = None
+        try:
+            os.makedirs(SHARED_DIR, exist_ok=True)
+            conn = sqlite3.connect(SHARED_DB_PATH, check_same_thread=False, timeout=10)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA foreign_keys=ON")
+            _initialize_schema(conn)
+            _conn = conn
+            return conn
+        except Exception as e:
+            if conn is not None:
+                with contextlib.suppress(sqlite3.Error):
+                    conn.close()
+            logger.error(f"SharedDB connection failed: {e}")
+            return None
+
+
+def _rollback_failed_write(conn: sqlite3.Connection) -> None:
+    """Do not leave a failed write pending for a later operation to commit."""
     try:
-        os.makedirs(SHARED_DIR, exist_ok=True)
-        conn = sqlite3.connect(SHARED_DB_PATH, check_same_thread=False, timeout=10)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA foreign_keys=ON")
-        _conn = conn
-        _initialize_schema(conn)
-        return conn
-    except Exception as e:
-        logger.error(f"SharedDB connection failed: {e}")
-        return None
+        conn.rollback()
+    except sqlite3.Error:
+        logger.exception("SharedDB rollback failed")
 
 
 def _initialize_schema(conn: sqlite3.Connection) -> None:
@@ -114,6 +129,7 @@ def upsert_shared_calendar(cal_id: str, name: str, color: str = DEFAULT_CALENDAR
             conn.commit()
             return True
         except Exception as e:
+            _rollback_failed_write(conn)
             logger.error(f"upsert_shared_calendar failed: {e}")
             return False
 
@@ -131,6 +147,7 @@ def delete_shared_calendar(cal_id: str) -> bool:
             conn.commit()
             return True
         except Exception as e:
+            _rollback_failed_write(conn)
             logger.error(f"delete_shared_calendar failed: {e}")
             return False
 
@@ -211,6 +228,7 @@ def insert_shared_task(
             conn.commit()
             return cur.lastrowid
         except Exception as e:
+            _rollback_failed_write(conn)
             logger.error(f"insert_shared_task failed: {e}")
             return None
 
@@ -246,6 +264,7 @@ def update_shared_task(task_id: int, **kwargs) -> bool:
             conn.commit()
             return True
         except Exception as e:
+            _rollback_failed_write(conn)
             logger.error(f"update_shared_task failed: {e}")
             return False
 
@@ -260,6 +279,7 @@ def delete_shared_task(task_id: int) -> bool:
             conn.commit()
             return True
         except Exception as e:
+            _rollback_failed_write(conn)
             logger.error(f"delete_shared_task failed: {e}")
             return False
 

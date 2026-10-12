@@ -182,43 +182,23 @@ class DialogUsabilityAccessibilityTests(unittest.TestCase):
 
     def test_gcal_navigation_and_calendar_actions_expose_state_and_targets(self):
         parent = _SettingsParent("GCalDialogUsability")
-        dialog = GCalSettingsDialog(parent=parent)
+        dialog = GCalSettingsDialog(parent=parent, initial_tab="calendar")
         self.addCleanup(dialog.close)
         self.addCleanup(parent.close)
         _show_and_polish(dialog)
-
         self.assertEqual(dialog.accessibleName(), dialog.windowTitle())
         self.assertTrue(dialog.isSizeGripEnabled())
         self.assertLessEqual(dialog.width(), 980)
         self.assertLessEqual(dialog.height(), 680)
-        self.assertTrue(dialog._nav_btns)
+        self.assertEqual(len(dialog._nav_btns), 5)
         self.assertTrue(all(button.isCheckable() for button in dialog._nav_btns))
         self.assertEqual(sum(button.isChecked() for button in dialog._nav_btns), 1)
         self.assertTrue(all(button.accessibleName() for button in dialog._nav_btns))
-
-        row = dialog._make_calendar_row_widget(
-            {
-                "id": 1,
-                "name": "업무",
-                "type": "local",
-                "color": "#4da6ff",
-                "is_visible": 1,
-                "is_default": 0,
-            }
-        )
-        self.addCleanup(row.close)
-        action_names = (
-            "calendarDefaultButton",
-            "calendarVisibilityButton",
-            "calendarEditButton",
-            "calendarDeleteButton",
-        )
-        for object_name in action_names:
-            button = row.findChild(QPushButton, object_name)
-            self.assertIsNotNone(button)
-            self.assertGreaterEqual(button.width(), 40)
-            self.assertGreaterEqual(button.height(), 40)
-            self.assertTrue(button.accessibleName())
+        self.assertFalse(dialog.cal_id_edit.isVisible())
+        self.assertTrue(dialog.import_list.isVisible())
+        self.assertTrue(dialog.import_list.accessibleName())
+        self.assertTrue(dialog.cal_id_edit.accessibleName())
+        self.assertTrue(dialog.calendar_choice_combo.accessibleName())
 
     def test_checklist_subdialogs_share_footer_and_field_accessibility(self):
         item_dialog = ChecklistItemEditDialog(template_id=1)

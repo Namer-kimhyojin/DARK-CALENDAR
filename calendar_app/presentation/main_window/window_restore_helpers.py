@@ -16,9 +16,13 @@ def restore_window_and_bind_menu_state(self):
         self.focus_frame.hide()
 
     geom = self.settings.value("last_geometry")
+    geometry_restored = False
     if geom:
-        self.restoreGeometry(geom)
-    else:
+        try:
+            geometry_restored = bool(self.restoreGeometry(geom))
+        except TypeError:
+            logger.warning("Ignoring invalid saved window geometry")
+    if not geometry_restored:
         self.resize(1200, 700)
 
     state = self.settings.value("last_state")
@@ -35,7 +39,10 @@ def restore_window_and_bind_menu_state(self):
     restored = False
     restore_source = "none"
     if state:
-        restored = bool(self.restoreState(state))
+        try:
+            restored = bool(self.restoreState(state))
+        except TypeError:
+            logger.warning("Ignoring invalid saved dock state")
         if restored:
             restore_source = "last_session"
 

@@ -1612,7 +1612,14 @@ class UnifiedTaskDialog(BaseTaskDialog):
         prev_gcal_event_id = self.task_data.get("gcal_event_id")
         old_local_cal = str(self.task_data.get("calendar_id") or "")
         new_local_cal = str(updates.get("calendar_id") or "")
+        destination_changed = old_local_cal != new_local_cal
         calendar_changed = bool(old_local_cal != new_local_cal and prev_gcal_event_id)
+
+        if destination_changed and new_local_cal.startswith("gcal::"):
+            # Keep the previous source for events.move, but persist the newly
+            # selected destination so a queued push cannot reuse the old target.
+            updates["gcal_target_calendar_id"] = new_local_cal[len("gcal::") :]
+            updates["gcal_sync_mode"] = "local_owned"
 
         # gcal → 비-gcal (local::/ics::) 이동 감지
         moving_off_gcal = (
@@ -1622,6 +1629,12 @@ class UnifiedTaskDialog(BaseTaskDialog):
             and not new_local_cal.startswith("gcal::")
         )
         pending_gcal_delete = None
+        unsynced_off_gcal = (
+            destination_changed
+            and not prev_gcal_event_id
+            and "::" in new_local_cal
+            and not new_local_cal.startswith("gcal::")
+        )
 
         if moving_off_gcal:
             reply = QMessageBox.question(
@@ -1647,7 +1660,13 @@ class UnifiedTaskDialog(BaseTaskDialog):
             updates["gcal_dirty"] = 0
             updates["gcal_sync_error"] = None
 
-        self.skip_post_commit_gcal_sync = bool(moving_off_gcal)
+        if unsynced_off_gcal:
+            updates["gcal_source_calendar_id"] = None
+            updates["gcal_target_calendar_id"] = None
+            updates["gcal_dirty"] = 0
+            updates["gcal_sync_error"] = None
+
+        self.skip_post_commit_gcal_sync = bool(moving_off_gcal or unsynced_off_gcal)
         self.post_commit_gcal_sync_overrides = {}
         if calendar_changed and not moving_off_gcal and prev_gcal_cal_id:
             self.post_commit_gcal_sync_overrides["_previous_gcal_calendar_id"] = prev_gcal_cal_id
@@ -2094,28 +2113,57 @@ class UnifiedTaskDialog(BaseTaskDialog):
         default_index = 0
         try:
             from calendar_app.infrastructure.db.calendar_repo import (
+                can_calendar_be_default,
+                get_calendar,
                 get_default_calendar,
                 is_calendar_row_read_only,
                 list_calendars,
             )
 
             calendars = list_calendars(include_inactive=False)
+            # Keep an existing event's owner when importing that calendar has
+            # been stopped. Otherwise opening the editor silently selects the
+            # new default and a title-only edit becomes a calendar move.
+            current_id = str((getattr(self, "task_data", None) or {}).get("calendar_id") or "")
+            if current_id and all(cal["id"] != current_id for cal in calendars):
+                current_owner = get_calendar(current_id)
+                if current_owner:
+                    calendars.append(current_owner)
             default_cal = get_default_calendar()
             default_id = default_cal["id"] if default_cal else None
 
             for i, cal in enumerate(calendars):
                 # ICS 및 GCal reader는 쓰기 불가 → 비활성화
                 is_readonly = is_calendar_row_read_only(cal)
+                is_available = can_calendar_be_default(cal)
                 icon = _TYPE_ICON.get(cal.get("type", "local"), "📁")
                 label = f"{icon} {cal['name']}"
+                if not is_available and not is_readonly:
+                    label += " · " + (
+                        t("dialog.task.calendar_import_paused", "가져오기 중지")
+                        if cal.get("type") == "gcal"
+                        else t("dialog.task.calendar_paused", "동기화 중지")
+                    )
                 self.calendar_combo.addItem(label, cal["id"])
-                if is_readonly:
+                if not is_available:
                     # QComboBox 아이템 비활성화
                     model = self.calendar_combo.model()
                     item = model.item(i)
                     if item:
                         item.setEnabled(False)
-                if cal["id"] == default_id and not is_readonly:
+                        if not is_readonly:
+                            item.setToolTip(
+                                t(
+                                    "dialog.task.calendar_import_paused_owner_hint",
+                                    "새 일정 가져오기가 중지되어 있습니다. 기존 일정의 소속과 수정 동기화는 유지됩니다. 새 저장 대상으로 선택하려면 가져오기를 켜세요.",
+                                )
+                                if cal.get("type") == "gcal"
+                                else t(
+                                    "dialog.task.calendar_paused_owner_hint",
+                                    "동기화가 중지된 캘린더입니다. 기존 일정의 소속은 유지하며 새 저장 대상으로는 선택할 수 없습니다.",
+                                )
+                            )
+                if cal["id"] == default_id and is_available:
                     default_index = i
 
             # 캘린더가 한 개도 없으면 기본 로컬 캘린더를 자동 생성 후 추가

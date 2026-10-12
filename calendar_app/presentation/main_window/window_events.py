@@ -213,11 +213,20 @@ class WindowEventsMixin:
         _set_window_bottom(int(self.winId()))
 
     def mouseReleaseEvent(self, event):
+        was_interacting = self.old_pos_drag is not None or self._resize_dir is not None
         self.old_pos_drag = None
         self._resize_dir = None
         self.setCursor(Qt.CursorShape.ArrowCursor)
-        self.ensure_window_on_screen()
-        _set_window_bottom(int(self.winId()))
+        if was_interacting:
+            self.ensure_window_on_screen()
+            # Only restore desktop layering after a window gesture.  Ordinary
+            # child-control releases must not lower the window, and an active
+            # popup or modal dialog must retain its owner until it closes.
+            if (
+                QApplication.activePopupWidget() is None
+                and QApplication.activeModalWidget() is None
+            ):
+                _set_window_bottom(int(self.winId()))
         return super().mouseReleaseEvent(event)
 
     def leaveEvent(self, event):
@@ -471,6 +480,9 @@ class WindowEventsMixin:
         x = safe.left() + max(0, (safe.width() - width) // 2)
         y = safe.top() + max(0, (safe.height() - height) // 2)
         self.setGeometry(x, y, width, height)
+        from calendar_app.infrastructure.runtime.infra_wiring import _set_overlay_visible
+
+        _set_overlay_visible(self, True)
 
     def move_to_next_monitor(self):
         from PyQt6.QtGui import QGuiApplication

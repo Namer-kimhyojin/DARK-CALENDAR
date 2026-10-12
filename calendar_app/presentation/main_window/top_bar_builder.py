@@ -5,7 +5,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMenu,
     QPushButton,
     QSizePolicy,
     QToolButton,
@@ -14,7 +13,12 @@ from PyQt6.QtWidgets import (
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.main_window.top_bar_menu_factory import build_top_left_menus
 from calendar_app.presentation.theme.style_builder import _scaled_pt, apply_top_menu_theme
-from calendar_app.shared.color_utils import derive_panel_palette, derive_ui_palette, hex_to_rgba
+from calendar_app.shared.color_utils import (
+    contrast_safe_color,
+    derive_panel_palette,
+    derive_ui_palette,
+    hex_to_rgba,
+)
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
@@ -31,9 +35,41 @@ def build_top_bar_frame_style(settings, opacity_factor: float = 1.0):
     pal_panel = derive_panel_palette(panel_base, opacity_factor)
     border = "rgba(0,0,0,0.10)" if text_theme == "light" else "rgba(255,255,255,0.05)"
     return (
-        f"background-color: {pal_panel['topbar_bg']}; "
-        f"border-radius: 8px; border: 1px solid {border};"
+        f"QFrame#top_bar_frame {{ background-color: {pal_panel['topbar_bg']}; "
+        f"border-radius: 8px; border: 1px solid {border}; }}"
     )
+
+
+def build_sync_toolbar_styles(settings, *, busy=False, attention=False):
+    """Keep ordinary status neutral and clear stale provider-specific styling."""
+    palette = _topbar_palette(settings)
+    _, panel_base, _ = get_theme_palette_inputs(settings)
+    size = settings.value("font_size", 10, type=int)
+    color = palette["text_primary"]
+    if busy:
+        color = contrast_safe_color(
+            settings.value("theme_color", "#4da6ff", type=str), panel_base, minimum=3.0
+        )
+    elif attention:
+        color = contrast_safe_color("#d39a2a", panel_base, minimum=3.0)
+    return {
+        "icon_color": color,
+        "button": f"""
+            QToolButton {{
+                color: {palette["text_secondary"]}; background: transparent;
+                border: 1px solid transparent; border-radius: 6px; padding: 0;
+            }}
+            QToolButton:hover, QToolButton:focus {{
+                background: {palette["control_bg_hover"]};
+                border-color: {palette["border_soft"]};
+            }}
+            QToolButton:pressed {{ background: {palette["control_bg_pressed"]}; }}
+        """,
+        "label": (
+            f"color: {palette['text_secondary']}; background: transparent; border: none; "
+            f"font-size: {_scaled_pt(size, -1, 8)}pt; font-weight: normal; margin-right: 6px;"
+        ),
+    }
 
 
 def build_top_bar_runtime_styles(settings, size: int, theme_color: str) -> dict[str, str]:
@@ -95,7 +131,6 @@ def setup_top_bar(self, _size, _theme, _ta):
     top_bar.setSpacing(5)
 
     status_pt = _scaled_pt(_size, 0, 9)
-    status_text_pt = _scaled_pt(_size, -1, 8)
     _tb_pal = _topbar_palette(self.settings)
     _tb_text = _tb_pal["text_primary"]
     self._tb_icon_color = _tb_text  # qtawesome icon colors use the semantic hex text token.
@@ -124,54 +159,25 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.sync_status_lbl.setAccessibleName(t("topbar.sync_label", "Sync"))
     self.sync_status_lbl.setAccessibleDescription(t("topbar.sync_checking"))
     self.sync_status_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    self.sync_status_lbl.setMinimumWidth(28)
+    self.sync_status_lbl.setFixedWidth(0)
+    self.sync_status_lbl.hide()
     self.sync_status_lbl.setStyleSheet(
         runtime_styles["label"]
         + f" font-size: {status_pt}pt; font-weight: bold; margin-right: 4px;"
     )
-    top_bar.addWidget(self.sync_status_lbl, alignment=Qt.AlignmentFlag.AlignCenter)
 
     self.sync_action_btn = QToolButton()
     self.sync_action_btn.setAutoRaise(True)
     self.sync_action_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    self.sync_action_btn.setIcon(_ic(ICON.SYNC, color=_theme))
-    self.sync_action_btn.setIconSize(QSize(18, 18))
-    self.sync_action_btn.setToolTip(t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"))
-    self.sync_action_btn.setAccessibleName(t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"))
+    sync_styles = build_sync_toolbar_styles(self.settings)
+    self.sync_action_btn.setIcon(_ic(ICON.SYNC_SETTINGS, color=sync_styles["icon_color"]))
+    self.sync_action_btn.setIconSize(QSize(16, 16))
+    self.sync_action_btn.setToolTip(t("sync_ui.hub_title", "캘린더 · 계정 및 동기화"))
+    self.sync_action_btn.setAccessibleName(self.sync_action_btn.toolTip())
     self.sync_action_btn.setAccessibleDescription(t("topbar.sync_checking"))
-    self.sync_action_btn.setMinimumSize(32, 32)
-    self.sync_action_btn.setMaximumSize(36, 36)
-    self.sync_action_btn.setStyleSheet(
-        f"""
-        QToolButton {{
-            color: {_theme};
-            background: transparent;
-            border: none;
-            font-size: {status_pt}pt;
-            font-weight: bold;
-            margin-right: 4px;
-            padding: 2px 6px;
-        }}
-        QToolButton:hover {{
-            background: {_ta(40)};
-            border-radius: 6px;
-        }}
-    """
-    )
-    self.sync_action_btn.clicked.connect(self.sync_calendars)
-    sync_menu = QMenu(self.sync_action_btn)
-    sync_menu.addAction(
-        t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"), self.sync_calendars
-    )
-    sync_menu.addAction(
-        t("sync_ui.hub_title", "캘린더 · 계정 및 동기화"), self.open_calendar_sync_hub
-    )
-    sync_menu.addAction(
-        t("sync_unified.issues", "전체 동기화 문제"), self.open_calendar_sync_issues
-    )
-    self.sync_action_btn.setMenu(sync_menu)
-    self.sync_action_btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-    self.sync_action_btn.setMaximumWidth(48)
+    self.sync_action_btn.setFixedSize(30, 30)
+    self.sync_action_btn.setStyleSheet(sync_styles["button"])
+    self.sync_action_btn.clicked.connect(self.open_calendar_sync_hub)
     top_bar.addWidget(self.sync_action_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
     self.sync_status_text_lbl = QLabel(t("topbar.sync_waiting"))
@@ -179,10 +185,15 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.sync_status_text_lbl.setAccessibleName(t("topbar.sync_label", "Sync"))
     self.sync_status_text_lbl.setAccessibleDescription(t("topbar.sync_checking"))
     self.sync_status_text_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    self.sync_status_text_lbl.setStyleSheet(
-        runtime_styles["label"]
-        + f" font-size: {status_text_pt}pt; font-weight: bold; margin-right: 8px;"
+    self.sync_status_text_lbl.setTextFormat(Qt.TextFormat.PlainText)
+    self.sync_status_text_lbl.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+    self.sync_status_text_lbl.setMinimumWidth(
+        self.sync_status_text_lbl.fontMetrics().horizontalAdvance(
+            t("sync_unified.local_only", "로컬 모드")
+        )
+        + 12
     )
+    self.sync_status_text_lbl.setStyleSheet(sync_styles["label"])
     top_bar.addWidget(self.sync_status_text_lbl, alignment=Qt.AlignmentFlag.AlignCenter)
 
     self.top_bar_divider = QFrame()

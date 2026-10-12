@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+# -*- coding: utf-8 -*-
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 import re
 from zoneinfo import ZoneInfo
@@ -128,57 +129,39 @@ def timezone_offset_for_datetime_str(dt_str: str, tz_name: str, fallback: str = 
     return timezone_offset_for_name(tz_name, when=parsed)
 
 
-@lru_cache(maxsize=512)
 def parse_datetime_str(dt_str: str, target_tz_offset: str = "+09:00") -> datetime | None:
-    if not dt_str:
+    # Check types before the cache hashes keys, including malformed external rows.
+    if not isinstance(dt_str, str) or not isinstance(target_tz_offset, str):
         return None
+    return _parse_datetime_str_cached(dt_str, target_tz_offset)
 
-    # ISO-8601 parsing with timezone awareness (simple version)
-    s = dt_str.strip()
-    is_utc = s.endswith("Z")
-    offset = _extract_tz_offset(s)
 
-    clean_s = _strip_tz(s).replace("T", " ")
-
-    base_dt = None
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
-        try:
-            # We only need the first part
-            if fmt == "%Y-%m-%d":
-                base_dt = datetime.strptime(clean_s[:10], fmt)
-            elif fmt == "%Y-%m-%d %H:%M":
-                base_dt = datetime.strptime(clean_s[:16], fmt)
-            else:
-                base_dt = datetime.strptime(clean_s[:19], fmt)
-            break
-        except ValueError:
-            continue
-
-    if not base_dt:
+@lru_cache(maxsize=512)
+def _parse_datetime_str_cached(dt_str: str, target_tz_offset: str) -> datetime | None:
+    if not isinstance(dt_str, str) or not dt_str.strip():
         return None
-
-    # Timezone conversion if needed (target: target_tz_offset)
-    target_h = int(target_tz_offset[1:3])
-    target_m = int(target_tz_offset[4:6])
-    target_sign = 1 if target_tz_offset[0] == "+" else -1
-    target_total_mins = target_sign * (target_h * 60 + target_m)
-    if is_utc:
-        base_dt += timedelta(minutes=target_total_mins)
-    elif offset and offset != target_tz_offset:
-        try:
-            h = int(offset[1:3])
-            m = int(offset[4:6])
-            sign = 1 if offset[0] == "+" else -1
-            total_offset_mins = sign * (h * 60 + m)
-            diff_mins = target_total_mins - total_offset_mins
-            base_dt += timedelta(minutes=diff_mins)
-        except Exception:
-            pass
-
-    return base_dt
+    if not isinstance(target_tz_offset, str) or not re.fullmatch(
+        r"[+-]\d{2}:\d{2}", target_tz_offset
+    ):
+        return None
+    try:
+        target_h = int(target_tz_offset[1:3])
+        target_m = int(target_tz_offset[4:6])
+        if target_h >= 24 or target_m >= 60:
+            return None
+        target_sign = 1 if target_tz_offset[0] == "+" else -1
+        target_zone = timezone(timedelta(minutes=target_sign * (target_h * 60 + target_m)))
+        parsed = datetime.fromisoformat(dt_str.strip())
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(target_zone).replace(tzinfo=None)
+        return parsed
+    except (ValueError, OverflowError):
+        return None
 
 
 def to_iso_with_tz(dt_str: str, tz_offset: str = "+09:00") -> str | None:
+    if not isinstance(dt_str, str) or not dt_str.strip():
+        return None
     tz_from_input = _extract_tz_offset(dt_str)
     if tz_from_input:
         tz_offset = tz_from_input
