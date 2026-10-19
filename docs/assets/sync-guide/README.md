@@ -2,6 +2,10 @@
 
 Updated 2026-10-19 for `docs/sync-guide.html` using the current checkout's Korean UI.
 
+Complete English, Japanese and Simplified Chinese guides use corresponding `en/`, `ja/` and `zh/` subfolders. Each contains real dialog captures with the current app's matching language and localized example names, plus a localized `sync-workflow.webp`. Some newer Japanese/Chinese app controls currently display English fallback labels; the guide preserves those exact labels and explains them in the reader's language. No app locale files were changed for this documentation task.
+
+The three localized hero images were edited from the original using the built-in image generation tool, preserving composition and arrow directions while replacing all Korean text. Prompt specifications and the source catalogs/template are maintained alongside this task's artifacts and `web/sync-guide/`.
+
 ## Product screenshots
 
 The PNG files are real renders of the current PyQt6 dialog classes at Windows scale 1 with Malgun Gothic. They use synthetic example accounts, calendars and a nonfunctional example.com feed URL. They are illustrations of setup states, not evidence of live account authorization or remote synchronization.

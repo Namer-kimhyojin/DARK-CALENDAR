@@ -6,6 +6,10 @@
 .sync-brand { display: inline-flex; align-items: center; gap: 11px; color: var(--text); font-size: 17px; font-weight: 700; white-space: nowrap; }
 .sync-header nav, .sync-footer nav { display: flex; flex-wrap: wrap; gap: 12px 24px; font-size: 13px; }
 .sync-header nav a, .sync-footer a { color: var(--muted-strong); }
+.sync-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 24px; font-size: 13px; }
+.sync-header .sync-language-switch { gap: 4px; padding: 4px; border: 1px solid var(--line-strong); border-radius: 8px; }
+.sync-language-switch a { padding: 7px 11px; border-radius: 5px; white-space: nowrap; }
+.sync-header .sync-language-switch a[aria-current="page"] { background: rgba(83,169,255,.16); color: #a7d5ff; font-weight: 700; }
 .sync-guide-page a:hover { color: var(--blue); }
 .sync-intro { padding: 72px 0 44px; }
 .sync-eyebrow, .sync-section-number { color: var(--blue); font-size: 11px; letter-spacing: .12em; font-weight: 750; }
@@ -77,6 +81,10 @@
 @media (max-width: 780px) {
   .sync-header, .sync-main { width: calc(100% - 40px); }
   .sync-header { min-height: 76px; gap: 15px; }
+  .sync-header { flex-wrap: wrap; padding-block: 16px; }
+  .sync-header-actions { width: 100%; justify-content: space-between; gap: 8px; }
+  .sync-header .sync-language-switch { gap: 2px; font-size: 12px; }
+  .sync-language-switch a { padding: 7px 6px; }
   .sync-header nav { gap: 5px 12px; justify-content: flex-end; font-size: 11px; }
   .sync-brand { font-size: 15px; gap: 8px; }
   .sync-brand img { width: 27px; height: 27px; }
@@ -99,6 +107,8 @@
   .sync-screen { margin-inline: 0; padding: 8px 8px 0; }
   .sync-screen figcaption { font-size: 12px; padding: 13px 4px; }
 }
+html:lang(ja) { --font: "Yu Gothic UI", "Meiryo", "Segoe UI", sans-serif; }
+html:lang(zh) { --font: "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", sans-serif; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }

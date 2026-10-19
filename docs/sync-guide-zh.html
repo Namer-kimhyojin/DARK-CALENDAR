@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-CN" data-guide-locale="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>日历连接与同步设置指南 | Air Calendar</title>
+  <meta name="description" content="对照 Air Calendar 当前的设置界面，连接 Google、Outlook、iCloud、Naver、Yahoo、Zoho、Fastmail 和 ICS 日历。从准备认证资料、选择日历到首次同步、自动刷新和故障排查，本指南逐步带您完成设置。">
+  <link rel="canonical" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide-zh.html">
+  <meta name="theme-color" content="#08090b">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="日历连接与同步设置指南 | Air Calendar">
+  <meta property="og:description" content="对照设置界面，逐步完成账户连接和首次同步。">
+  <meta property="og:url" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide-zh.html">
+  <meta property="og:image" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/sync-guide/zh/sync-workflow.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="alternate" hreflang="ko" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide.html">
+  <link rel="alternate" hreflang="en" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide-en.html">
+  <link rel="alternate" hreflang="ja" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide-ja.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide-zh.html">
+  <link rel="alternate" hreflang="x-default" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide.html">
+  <meta property="og:locale" content="zh_CN">
+  <script src="sync-guide.js?v=20261019-languages"></script>
+  <link rel="icon" href="assets/app_icon.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="sync-guide.css?v=20261019-languages">
+</head>
+<body class="sync-guide-page">
+  <a class="skip-link" href="#main-content">跳转到正文</a>
+  <header class="sync-header">
+    <a class="sync-brand" href="index.html?lang=zh"><img src="assets/app_icon.png" width="32" height="32" alt="">Air Calendar</a>
+    <div class="sync-header-actions"><a data-guide-home href="index.html?lang=zh#calendar-sync">首页</a><nav class="sync-language-switch" aria-label="选择语言"><a data-guide-language="ko" href="sync-guide.html?lang=ko" lang="ko" hreflang="ko">한국어</a><a data-guide-language="en" href="sync-guide-en.html" lang="en" hreflang="en">English</a><a data-guide-language="ja" href="sync-guide-ja.html" lang="ja" hreflang="ja">日本語</a><a data-guide-language="zh" aria-current="page" href="sync-guide-zh.html" lang="zh-CN" hreflang="zh-CN">中文</a></nav></div>
+  </header>
+  <main id="main-content" class="sync-main">
+    <div class="sync-intro">
+      <p class="sync-eyebrow">日历连接指南 · <time datetime="2026-10-19">2026.10.19</time></p>
+      <h1>从连接日历<br><em>到完成首次同步。</em></h1>
+      <p class="sync-lead">先选择要导入日程的服务，再对照下方界面进行设置。<br>依次完成：连接账户 → 选择日历 → 执行同步 → 检查结果。</p>
+      <p class="sync-intro-note">连接外部账户是可选操作。本地日历无需登录即可使用。</p>
+      <div class="sync-actions"><a class="sync-primary-link" href="#start">从打开设置界面开始 ↓</a><a href="#choose">先查看各服务所需资料</a></div>
+    </div>
+    <figure class="sync-hero">
+      <a href="assets/sync-guide/zh/sync-workflow.webp" target="_blank" rel="noopener" aria-label="查看同步完整流程大图（在新标签页中打开）"><img src="assets/sync-guide/zh/sync-workflow.webp" width="1672" height="941" fetchpriority="high" alt="四个步骤：连接账户、选择日历、执行同步、检查结果。Google、Outlook 和 iCloud 可与具有写入权限的日历双向同步；Naver 和 ICS 将日程导入 Air Calendar。不同外部服务之间不会自动复制日程。"></a>
+      <figcaption>这是完整流程示意图，点击图片可放大查看。下文也介绍了 Yahoo、Zoho 和 Fastmail 的 CalDAV 连接方法。</figcaption>
+    </figure>
+    <div class="sync-layout">
+      <aside class="sync-toc">
+        <nav aria-label="设置指南目录">
+          <p>请按此顺序操作</p>
+          <a href="#start">01 打开设置界面</a><a href="#choose">02 确认服务与所需资料</a>
+          <a href="#google">Google Calendar</a><a href="#outlook">Outlook · Microsoft 365</a><a href="#icloud">iCloud</a><a href="#naver">Naver</a><a href="#caldav">Yahoo · Zoho · Fastmail</a><a href="#ics">通过 ICS 地址订阅</a>
+          <a href="#verify">03 检查同步与显示</a><a href="#automatic">04 设置自动刷新</a><a href="#resolve">遇到问题时</a>
+        </nav>
+      </aside>
+      <div class="sync-content">
+        <section id="start" class="sync-section">
+          <p class="sync-section-number">从这里开始</p>
+          <h2>01. 打开设置界面</h2>
+          <ol class="sync-setup-steps">
+            <li><strong>点击 Air Calendar 顶部的同步图标。</strong><p>也可以依次选择菜单中的 <b>系统 → 日历与同步（Calendars and sync）→ 日历、账户与同步（Calendars / accounts and synchronization）</b>。打开的窗口标题是 <b>日历管理（Calendar management）</b>。</p></li>
+            <li><strong>点击窗口上方的“连接与订阅”标签页。</strong><p>窗口最初可能显示 <b>我的日历（My calendars）</b> 标签页。添加账户请从 <b>连接与订阅（Connections and subscriptions）</b> 开始。首先可看到 Google Calendar 和 <b>通过地址订阅日历（Subscribe by address）</b> 卡片。</p></li>
+            <li><strong>点击所需服务的“连接账户”。</strong><p>要找到 Outlook、iCloud、Naver、Yahoo、Zoho 或 Fastmail，请点击 <b>添加其他账户（Connect another account）</b> 旁的 <b>展开服务列表（Show services）</b>，然后向下滚动。如果已经连接，按钮可能显示为 <b>连接设置（Connection settings）</b>、<b>重新连接（Reconnect）</b> 或 <b>选择要导入的日历（Choose calendars to import）</b> 等。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/zh/services.png" target="_blank" rel="noopener" aria-label="查看连接与订阅设置大图（在新标签页中打开）"><img src="assets/sync-guide/zh/services.png" width="1040" height="820" loading="lazy" alt="日历管理窗口中的连接与订阅标签页，显示 Google Calendar 卡片、通过地址订阅日历卡片，以及添加其他账户的区域。"></a>
+            <figcaption><b>先看这里：</b>上方的 <b>连接与订阅</b> 标签页 → 服务卡片中的 <b>连接账户（Connect account）</b>。其他服务需展开列表后查找。</figcaption>
+          </figure>
+          <p class="sync-caption-note">截图使用对应的应用语言和示例数据。账号名称、日历名称及连接状态因用户而异。点击图片可查看原始尺寸。当前应用中的部分新按钮仍显示英文，因此本指南同时注明实际显示的名称。</p>
+        </section>
+        <section id="choose" class="sync-section">
+          <p class="sync-section-number">连接前的准备</p>
+          <h2>02. 确认所用服务需要哪些资料</h2>
+          <p>“双向同步”表示与对应服务互相同步日程变更，并不表示将 Google 日程自动复制到 Outlook。共享日历可能为只读，具体取决于原账户授予的写入权限。</p>
+          <div class="sync-table-wrap" tabindex="0" role="region" aria-label="各服务所需资料与支持范围表。屏幕较小时可左右滚动。">
+            <table>
+              <caption>点击服务名称可跳转到对应的设置步骤。</caption>
+              <thead><tr><th scope="col">要连接的服务</th><th scope="col">提前准备</th><th scope="col">日程编辑能力</th></tr></thead>
+              <tbody>
+                <tr><th scope="row"><a href="#google">Google Calendar ↗</a></th><td>Google 账户 + 桌面应用类型的 OAuth JSON 文件</td><td>有写入权限时支持双向同步</td></tr>
+                <tr><th scope="row"><a href="#outlook">Outlook · Microsoft 365 ↗</a></th><td>Microsoft 账户 + 用于连接日历的客户端 ID</td><td>有写入权限时支持双向同步</td></tr>
+                <tr><th scope="row"><a href="#icloud">iCloud ↗</a></th><td>Apple 账户邮箱 + 应用专用密码</td><td>个人日程双向同步¹</td></tr>
+                <tr><th scope="row"><a href="#naver">Naver ↗</a></th><td>Naver ID + 认证密码</td><td>只读²</td></tr>
+                <tr><th scope="row"><a href="#caldav">Yahoo · Zoho · Fastmail ↗</a></th><td>账户邮箱 + 对应服务要求的认证密码</td><td>个人日程双向同步¹</td></tr>
+                <tr><th scope="row"><a href="#ics">ICS 订阅 ↗</a></th><td>服务提供的 iCal / ICS 订阅地址</td><td>只读</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="sync-caption-note">¹ CalDAV 的重复日程和邀请日程需在原服务中编辑。² Naver 是否允许 Windows 连接，可能受其服务政策限制。</p>
+          <div class="sync-callout"><strong>认证文件和密码应填在哪里？</strong><p>仅在下文所示的应用文件选择框或密码输入框中填写，无需在本指南页面输入。请勿在论坛或截图中公开 JSON 文件、应用专用密码或私人 ICS 地址。</p></div>
+        </section>
+        <section id="google" class="sync-section">
+          <p class="sync-section-number">GOOGLE CALENDAR</p>
+          <h2>连接 Google Calendar</h2>
+          <p>当前应用使用您自行准备的 <b>桌面应用类型 OAuth 凭证文件</b>进行连接。首次使用时需在 Google Cloud 中创建文件，然后登录您希望在 Air Calendar 中使用的 Google 账户。</p>
+          <details class="sync-details" open>
+            <summary>A. 首次设置：准备 Google 认证 JSON 文件</summary>
+            <ol class="sync-setup-steps">
+              <li><strong>在 Google Cloud 中创建项目。</strong><p>登录 <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud 控制台</a>。在顶部项目选择菜单中选择 <b>新建项目</b>，输入名称并创建，然后选中该项目。</p></li>
+              <li><strong>启用 Google Calendar API。</strong><p>在 <b>API 和服务 → 库</b> 中搜索 <b>Google Calendar API</b>，然后点击 <b>启用</b>（部分界面显示为 <b>启用 API</b>）。</p></li>
+              <li><strong>在 Google Auth Platform 中配置同意屏幕。</strong><p>打开 <b>Google Auth Platform → 品牌信息（Branding）</b>。首次配置时，点击 <b>开始使用（Get started）</b>，填写应用名称（例如：我的 Air Calendar 连接）、支持邮箱和联系邮箱。个人 Gmail 账户的受众群体（Audience）应选择 <b>外部（External）</b>；组织内部账户请按管理员的政策选择。</p></li>
+              <li><strong>确认测试用户和日历权限。</strong><p>如果以测试状态使用外部应用，请在 <b>受众群体（Audience）→ 测试用户（Test users）→ 添加用户</b> 中填写实际要连接的 Google 邮箱并保存。在 <b>数据访问权限（Data Access）→ 添加或移除范围</b> 中选择 Google Calendar API 的 <code>https://www.googleapis.com/auth/calendar</code> 范围并保存。</p></li>
+              <li><strong>创建“桌面应用”客户端并下载 JSON 文件。</strong><p>点击 <b>客户端（Clients）→ 创建客户端（Create client）</b>。应用类型选择 <b>桌面应用（Desktop app）</b>，输入名称并创建。在生成的客户端中下载 JSON 文件，保存到电脑上方便查找的文件夹。网页应用类型的文件无法用于此设置。</p></li>
+            </ol>
+            <p class="sync-source">Google 界面可能因账户和语言而异。<a href="https://developers.google.com/workspace/calendar/api/quickstart/python" target="_blank" rel="noopener">Google 官方桌面应用认证准备指南</a> · <a href="https://developers.google.com/workspace/guides/configure-oauth-consent" target="_blank" rel="noopener">同意屏幕与测试用户指南</a>。完成以上步骤无需安装 Python，也无需运行示例代码。</p>
+          </details>
+          <h3>B. 在 Air Calendar 中连接并选择要导入的日历</h3>
+          <ol class="sync-setup-steps">
+            <li><strong>点击 Google Calendar 卡片中的“连接账户”。</strong><p>在打开的 Google 设置中选择 <b>账户连接（Account connection）</b>。展开 <b>OAuth 文件与连接帮助（OAuth file and connection help）</b>，在 <b>凭证文件 → 浏览</b> 中选择刚下载的 OAuth JSON 文件。在首次设置的电脑上，这部分帮助可能已展开。</p></li>
+            <li><strong>点击“连接 Google 账户”，在浏览器中授权。</strong><p>选择要使用的 Google 账户，核对日历访问权限并授权。应用最多等待 3 分钟。授权完成后返回 Air Calendar，并确认登录的账户就是已添加的测试用户账户。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/zh/google-connect.png" target="_blank" rel="noopener" aria-label="查看 Google 账户连接界面大图（在新标签页中打开）"><img src="assets/sync-guide/zh/google-connect.png" width="980" height="820" loading="lazy" alt="Google 设置中的账户连接界面，包含用于选择凭证文件的浏览按钮和连接 Google 账户按钮。"></a>
+            <figcaption><b>点击顺序：</b><b>OAuth 文件与连接帮助</b> → <b>浏览</b> → <b>连接 Google 账户（Connect Google account）</b>。</figcaption>
+          </figure>
+          <ol class="sync-setup-steps" start="3">
+            <li><strong>在“要导入的日历”中勾选“导入”。</strong><p>连接成功后会进入此界面。只勾选需要使用的个人、工作或共享日历。如果看不到新建的日历，点击 <b>刷新列表（Refresh list）</b>。同时确认各项标注的 <b>可编辑（Editable）/ 只读（Read-only）</b> 权限。</p></li>
+            <li><strong>点击下方的“保存设置”。</strong><p>看到保存完成的提示后，点击 <b>关闭</b>。<b>保存设置</b>不会关闭窗口。如果在保存前关闭窗口，刚选择的导入项目不会生效。</p></li>
+            <li><strong>返回日历管理，点击“立即同步”。</strong><p>也可以点击服务卡片中的 <b>刷新（Refresh）</b>，只刷新 Google。完成下文的<a href="#verify">同步与显示检查</a>后，首次连接便设置好了。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/zh/google-calendars.png" target="_blank" rel="noopener" aria-label="查看 Google 导入日历选择界面大图（在新标签页中打开）"><img src="assets/sync-guide/zh/google-calendars.png" width="980" height="820" loading="lazy" alt="Google 的待导入日历界面，显示示例日历的导入复选框和保存设置按钮。"></a>
+            <figcaption><b>检查这里：</b>勾选各日历的 <b>导入（Import）</b> → 点击下方 <b>保存设置</b>。是否在画面中显示，稍后在 <b>我的日历</b> 中确认。</figcaption>
+          </figure>
+          <div class="sync-callout"><strong>“测试日历访问”成功，不代表已接收日程。</strong><p>访问测试用于确认权限。是否实际下载了日程，请在同步后查看日历。Google 自动同步默认开启，默认定期间隔为 10 分钟，编辑后的快速同步间隔为 30 秒。</p></div>
+        </section>
+        <section id="outlook" class="sync-section">
+          <p class="sync-section-number">OUTLOOK · MICROSOFT 365</p><h2>连接 Outlook</h2>
+          <p>支持连接个人 Microsoft 账户以及工作或学校账户。当前连接方式需要一个<b>用于连接日历的 Microsoft 应用客户端 ID</b>。如果组织已提供 ID，可跳过准备步骤，直接从 B 部分开始。</p>
+          <details class="sync-details">
+            <summary>A. 没有客户端 ID 时：由管理员或应用注册负责人准备</summary>
+            <ol class="sync-setup-steps">
+              <li><strong>在 Microsoft Entra 中注册应用。</strong><p>进入 <a href="https://entra.microsoft.com/" target="_blank" rel="noopener">Microsoft Entra 管理中心</a>的 <b>Entra ID → 应用注册 → 新注册</b>。输入名称，将支持的账户类型设为 <b>任何组织目录中的账户和个人 Microsoft 账户</b>。如果没有应用注册权限，请联系组织管理员。</p></li>
+              <li><strong>添加桌面应用登录地址。</strong><p>在已注册应用的 <b>身份验证 → 添加平台 → 移动和桌面应用程序</b> 中，将 <code>http://localhost</code> 添加为重定向 URI 并保存。</p></li>
+              <li><strong>添加日历权限。</strong><p>在 <b>API 权限 → 添加权限 → Microsoft Graph → 委托的权限</b> 中确认 <code>Calendars.ReadWrite</code> 和 <code>User.Read</code>。如果组织有要求，还需获得管理员同意。</p></li>
+              <li><strong>复制“应用程序（客户端）ID”。</strong><p>将应用 <b>概述</b> 页面中显示的 UUID 格式 ID 用于 Air Calendar。无需客户端密钥。</p></li>
+            </ol>
+            <p class="sync-source"><a href="https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app" target="_blank" rel="noopener">Microsoft 官方应用注册指南</a> · <a href="https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-registration" target="_blank" rel="noopener">桌面应用认证设置指南</a></p>
+          </details>
+          <h3>B. 在应用中登录并导入日程</h3>
+          <ol class="sync-setup-steps">
+            <li><strong>在“连接与订阅”中展开其他服务列表。</strong><p>点击 <b>Outlook · Microsoft 365 → 连接账户</b>。在打开的窗口中选择 <b>1. 连接账户（1. Connect account）</b> 标签页。</p></li>
+            <li><strong>展开“应用注册与连接准备指南”，填写客户端 ID。</strong><p>输入为日历连接准备的 <b>应用程序（客户端）ID（Application (client) ID）</b>。点击 <b>Microsoft 登录（Sign in with Microsoft）</b>，在浏览器中完成登录和权限授权。工作或学校账户可能需要管理员批准或多重身份验证（MFA）。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/zh/outlook-connect.png" target="_blank" rel="noopener" aria-label="查看 Outlook 账户连接界面大图（在新标签页中打开）"><img src="assets/sync-guide/zh/outlook-connect.png" width="880" height="820" loading="lazy" alt="Outlook 连接设置中的第 1 步：连接账户标签页，包含应用注册说明、客户端 ID 输入框和 Microsoft 登录按钮。"></a>
+            <figcaption><b>操作顺序：</b><b>1. 连接账户</b> → 输入客户端 ID → <b>Microsoft 登录</b> → <b>2. 选择日历（2. Choose calendars）</b>。</figcaption>
+          </figure>
+          <ol class="sync-setup-steps" start="3">
+            <li><strong>在“2. 选择日历”中勾选要导入的日历。</strong><p>先点击 <b>保存所选日历（Save calendar selection）</b>，再点击 <b>立即同步（Sync now）</b>。如果更改了选择但尚未保存，也可以点击 <b>保存选择并同步（Save selection and sync）</b>，一次完成两项操作。</p></li>
+            <li><strong>检查完成结果，再按需开启自动同步。</strong><p>确认显示 <b>同步完成</b>及导入的项目数量。如果需要自动刷新，请在保存日历后勾选 <b>每 5 分钟自动同步（Automatically synchronize every 5 minutes）</b>。首次连接账户时，自动同步处于关闭状态。</p></li>
+          </ol>
+          <p class="sync-caption-note">当前 Outlook 会导入从今天起过去 120 天至未来 400 天的日程。不支持编辑完整的重复规则、回复邀请或将已连接的日程移至其他日历。这些操作请在 Outlook 原服务中完成。</p>
+          <details class="sync-details"><summary>查看 Outlook 日历选择界面</summary><figure class="sync-screen"><a href="assets/sync-guide/zh/outlook-calendar-selection.png" target="_blank" rel="noopener" aria-label="查看 Outlook 日历选择界面大图（在新标签页中打开）"><img src="assets/sync-guide/zh/outlook-calendar-selection.png" width="880" height="820" loading="lazy" alt="Outlook 的第 2 步：选择日历标签页，显示示例日历复选框、保存所选日历按钮和自动同步设置。"></a><figcaption>依次<b>勾选日历 → 保存所选日历 → 立即同步</b>。自动刷新可在保存后按需开启。</figcaption></figure></details>
+        </section>
+        <section id="icloud" class="sync-section">
+          <p class="sync-section-number">ICLOUD · CALDAV</p><h2>连接 iCloud</h2>
+          <h3>A. 在 Apple 账户中生成应用专用密码</h3>
+          <ol class="sync-setup-steps">
+            <li><strong>准备一个已开启双重认证的 Apple 账户。</strong><p>登录 <a href="https://account.apple.com/" target="_blank" rel="noopener">Apple 账户管理页面</a>。</p></li>
+            <li><strong>在“登录与安全 → App 专用密码”中创建新密码。</strong><p>点击生成按钮并输入名称（例如：Air Calendar）。准备好生成的密码，以便粘贴到应用的密码框中。此连接使用<b>应用专用密码</b>，不是 Apple 账户的常规登录密码。</p></li>
+          </ol>
+          <p class="sync-source"><a href="https://support.apple.com/en-us/102654" target="_blank" rel="noopener">Apple 官方 App 专用密码指南</a>。更改或重置 Apple 账户的主密码后，原有应用专用密码会被撤销，需要重新生成。</p>
+          <h3>B. 在 Air Calendar 中填写邮箱和应用专用密码</h3>
+          <ol class="sync-setup-steps">
+            <li><strong>在其他服务列表中点击“iCloud → 连接账户”。</strong><p>应用会打开 <b>连接 CalDAV 账户</b>窗口。确认顶部的 <b>日历服务（Calendar service）</b> 为 <b>iCloud</b>，然后选择 <b>1. 连接账户</b> 标签页。</p></li>
+            <li><strong>在“账户”中填写 Apple 邮箱，在“应用专用密码”中填写刚生成的密码。</strong><p>服务器地址由应用自动设置。点击 <b>验证连接并查找日历（Verify connection and find calendars）</b>，等待日历列表显示。开始连接后，密码框可能会被清空。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/zh/icloud-connect.png" target="_blank" rel="noopener" aria-label="查看 iCloud 账户连接界面大图（在新标签页中打开）"><img src="assets/sync-guide/zh/icloud-connect.png" width="880" height="820" loading="lazy" alt="已选择 iCloud 的 CalDAV 账户连接窗口，包含账户、应用专用密码，以及验证连接并查找日历按钮。"></a>
+            <figcaption><b>填写位置：</b>顶部服务选择 <b>iCloud</b>；<b>账户（Account）</b>填写 Apple 邮箱；<b>应用专用密码（App-specific password）</b>填写 Apple 生成的密码。</figcaption>
+          </figure>
+          <ol class="sync-setup-steps" start="3">
+            <li><strong>在“2. 选择日历”中勾选日历，然后点击“保存选择”。</strong><p>接着点击 <b>立即同步</b>。如果尚未保存，可使用 <b>保存选择并同步</b>。仅完成登录或查看列表，并不代表日程已导入。</p></li>
+            <li><strong>确认日程已导入，再按需开启自动同步。</strong><p>如果需要，可在保存日历后勾选 <b>每 5 分钟自动同步</b>。可写的个人日程支持双向同步，重复日程和邀请日程请在原服务中修改。</p></li>
+          </ol>
+          <details class="sync-details"><summary>查看 CalDAV 日历选择界面</summary><figure class="sync-screen"><a href="assets/sync-guide/zh/icloud-calendar-selection.png" target="_blank" rel="noopener" aria-label="查看 CalDAV 日历选择界面大图（在新标签页中打开）"><img src="assets/sync-guide/zh/icloud-calendar-selection.png" width="880" height="820" loading="lazy" alt="CalDAV 窗口中已选择 iCloud 的第 2 步：选择日历标签页，显示示例日历复选框和保存选择按钮。"></a><figcaption>其他 CalDAV 服务也使用相同的 <b>2. 选择日历</b> 标签页。确认是否可编辑后，点击 <b>保存选择（Save selection）</b>。</figcaption></figure></details>
+        </section>
+        <section id="naver" class="sync-section">
+          <p class="sync-section-number">NAVER · 只读</p><h2>导入 Naver 日程</h2>
+          <div class="sync-callout"><strong>Naver 连接为只读模式。</strong><p>您可以在 Air Calendar 中查看已导入的日程；添加、修改和删除操作需在 Naver 日历中进行。Naver 官方指南面向 iOS 和 macOS，Windows 连接可能受账户及服务器政策限制。</p></div>
+          <ol class="sync-setup-steps">
+            <li><strong>准备 Naver ID 和认证密码。</strong><p>开启两步验证的个人 ID，需要在 Naver 账户安全设置中生成 <b>应用密码</b>。未开启两步验证的个人 ID 使用 <b>Naver 登录密码</b>。开启两步验证的团体 ID 不支持应用密码，因此无法通过此方式连接。</p></li>
+            <li><strong>在其他服务列表中点击“Naver → 连接账户”。</strong><p>确认 <b>连接 CalDAV 账户</b>窗口顶部的服务为 <b>Naver</b>。在 <b>1. 连接账户</b>中的 <b>账户</b>栏填写 Naver ID，在 <b>认证密码（Authentication password）</b>栏填写已准备的密码，然后点击 <b>验证连接并查找日历</b>。</p></li>
+            <li><strong>在“2. 选择日历”中勾选日历，保存并同步。</strong><p>点击 <b>保存选择 → 立即同步</b>，或直接点击 <b>保存选择并同步</b>。检查刷新结果后，可按需开启 <b>每 5 分钟自动同步</b>。</p></li>
+          </ol>
+          <p class="sync-source"><a href="https://help.naver.com/service/5620/contents/2426?lang=ko&amp;osType=COMMONOS" target="_blank" rel="noopener">Naver 官方 CalDAV 与认证密码指南</a>。如果连接被拒绝，请检查密码、账户类型及当前服务支持范围。</p>
+        </section>
+        <section id="caldav" class="sync-section">
+          <p class="sync-section-number">其他 CALDAV 服务</p><h2>连接 Yahoo、Zoho 和 Fastmail</h2>
+          <p>这三项服务使用与 iCloud 相同的 <b>连接 CalDAV 账户</b>窗口。在 <b>连接与订阅 → 展开服务列表</b> 中点击对应服务的 <b>连接账户</b>，也可以在 CalDAV 窗口顶部切换 <b>日历服务</b>。</p>
+          <dl class="sync-provider-notes">
+            <div><dt>Yahoo Calendar</dt><dd>在 <b>账户</b>栏填写完整邮箱地址，在 <b>应用专用密码</b>栏填写 Yahoo 生成的密码。请先参阅 <a href="https://help.yahoo.com/kb/SLN4707.html" target="_blank" rel="noopener">Yahoo 官方应用密码帮助</a>，确认能否生成密码。不支持 Yahoo! JAPAN 账户。</dd></div>
+            <div><dt>Zoho Calendar</dt><dd>先在 Zoho Calendar 的 <b>设置 → 同步（Synchronize）→ CalDAV</b> 中指定要同步的日历。在应用中输入完整邮箱地址和认证密码，并根据账户所在地区选择 <b>账户数据中心服务器</b>。开启两步验证时需要应用专用密码。<a href="https://www.zoho.com/calendar/help/setup-caldav-sync.html" target="_blank" rel="noopener">Zoho 官方 CalDAV 指南</a></dd></div>
+            <div><dt>Fastmail</dt><dd>在 Fastmail 的 <b>Settings → Privacy &amp; Security → Connected apps &amp; API tokens</b> 中进入应用密码管理，创建一个允许访问 <b>Calendars</b> 的应用密码。在应用中输入注册时的完整邮箱地址和此密码。Basic 套餐不支持 CalDAV 和应用密码。<a href="https://www.fastmail.help/hc/en-us/articles/360058752854-App-passwords" target="_blank" rel="noopener">Fastmail 官方应用密码指南</a></dd></div>
+          </dl>
+          <ol class="sync-setup-steps">
+            <li><strong>填写对应服务的资料后，点击“验证连接并查找日历”。</strong><p>连接失败时，可点击窗口中的 <b>服务认证指南（Service authentication guide）</b> 按钮，打开对应服务的官方帮助。</p></li>
+            <li><strong>在“2. 选择日历”中勾选要使用的日历。</strong><p>通过 <b>保存选择 → 立即同步</b> 或 <b>保存选择并同步</b> 导入日程，然后按需开启 <b>每 5 分钟自动同步</b>。</p></li>
+          </ol>
+          <p class="sync-caption-note">CalDAV 会导入从今天起过去 120 天至未来 400 天的日程。个人日程根据写入权限支持双向同步；只读日历、重复日程和邀请日程需在原服务中编辑。不支持将已连接的日程移至其他日历。</p>
+        </section>
+        <section id="ics" class="sync-section">
+          <p class="sync-section-number">ICS 订阅 · 只读</p><h2>通过 ICS 地址订阅日历</h2>
+          <p>以只读方式导入具有订阅地址的日历，例如节假日、活动和公开日程。无需登录 Google 或 Microsoft。</p>
+          <ol class="sync-setup-steps">
+            <li><strong>从原服务复制 iCal / ICS 订阅地址。</strong><p>在日历服务的共享或导出设置中，查找标有 <b>iCal</b>、<b>ICS</b> 或 <b>订阅地址</b> 的链接。它不同于浏览器地址栏中普通日历网页的地址。支持 <code>https://</code>、<code>http://</code> 和 <code>webcal://</code> 地址。</p></li>
+            <li><strong>在日历管理的“ICS 订阅”标签页中，点击“添加 ICS 订阅”。</strong><p>应用会打开 <b>通过地址订阅日历</b>窗口。将地址粘贴到 <b>1. 订阅地址（必填）（1. Subscription address (required)）</b>，并在 <b>2. 日历名称（必填）（2. Calendar name (required)）</b> 中输入容易辨认的名称，例如“团队活动”。</p></li>
+            <li><strong>点击“添加订阅”，等待导入结果。</strong><p>地址格式正确且填写名称后，按钮才会启用。<b>地址格式有效</b>仅表示格式检查通过，不代表已连接到服务器并接收了日程。添加订阅后，会开始首次刷新。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/zh/ics-add.png" target="_blank" rel="noopener" aria-label="查看添加 ICS 订阅界面大图（在新标签页中打开）"><img src="assets/sync-guide/zh/ics-add.png" width="800" height="640" loading="lazy" alt="通过地址订阅日历窗口，包含第 1 项订阅地址（必填）、第 2 项日历名称（必填）输入框和添加订阅按钮。"></a>
+            <figcaption><b>填写位置：</b>上方填写<b>真实的 ICS 订阅地址</b>，下方填写要在应用中显示的<b>日历名称</b>。请勿直接使用示例地址。</figcaption>
+          </figure>
+          <ol class="sync-setup-steps" start="4">
+            <li><strong>选中刚添加的订阅，检查“上次刷新”时间。</strong><p>如果显示 <b>尚未获取任何日程</b>，说明首次接收尚未完成。开启 <b>刷新此订阅（Refresh this subscription）</b> 后，点击 <b>立即刷新此订阅（Refresh this subscription now）</b> 重试。若要在日历中看到日程，还需开启 <b>在日历中显示（Show in calendar views）</b>。</p></li>
+          </ol>
+          <details class="sync-details"><summary>查看 ICS 订阅的显示与刷新设置界面</summary><figure class="sync-screen"><a href="assets/sync-guide/zh/ics-management.png" target="_blank" rel="noopener" aria-label="查看 ICS 订阅管理界面大图（在新标签页中打开）"><img src="assets/sync-guide/zh/ics-management.png" width="1040" height="820" loading="lazy" alt="ICS 订阅标签页中已选中示例订阅的界面，显示在日历中显示、刷新此订阅，以及立即刷新此订阅等设置。"></a><figcaption>请分别检查 <b>在日历中显示</b> 和 <b>刷新此订阅</b>。示例界面中的“尚未获取”并不表示接收已完成。</figcaption></figure></details>
+          <div class="sync-callout"><strong>如果订阅地址变更，请修改现有订阅。</strong><p>选中同一订阅，使用 <b>修改订阅地址 → 保存更改（Save changes）</b>，即可保留名称、颜色、显示设置和已有日程。应用运行时，如果整体自动刷新和该订阅的刷新均已开启，就会每小时检查一次。原日程的添加、修改和删除需在原服务中进行。</p></div>
+        </section>
+        <section id="verify" class="sync-section">
+          <p class="sync-section-number">检查结果</p><h2>03. 检查同步与画面显示</h2>
+          <ol class="sync-setup-steps">
+            <li><strong>保存所选日历后，点击“立即同步”。</strong><p>日历管理中的通用按钮会一起刷新已连接的服务。也可以通过各服务的 <b>刷新</b> 或单独设置中的 <b>立即同步</b> 只检查一个服务。默认快捷键为 <kbd>F5</kbd>；如果已更改快捷键，请使用您指定的按键。</p></li>
+            <li><strong>同时检查完成状态和实际日程。</strong><p>检查最近同步或刷新时间以及结果消息。记住原服务中某个日程的日期和标题，然后在 Air Calendar 中转到同一天进行核对。仅登录账户成功，并不代表日程接收已完成。</p></li>
+            <li><strong>在“我的日历”中开启显示。</strong><p>选择已导入的日历，在详细信息区域开启 <b>在日历中显示（Show in calendar views）</b>。如果原服务有日程却看不到，请先检查此显示设置。</p></li>
+            <li><strong>选择新日程的保存位置。</strong><p>如果要在外部日历中创建新日程，请将可写的日历设为 <b>默认保存（New event default）</b>。只读项目无法选择。也可以在主日历的 <b>新日程保存位置</b> 中确认目标。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/zh/calendars.png" target="_blank" rel="noopener" aria-label="查看我的日历显示与默认保存设置大图（在新标签页中打开）"><img src="assets/sync-guide/zh/calendars.png" width="1040" height="820" loading="lazy" alt="日历管理窗口中的我的日历标签页，示例日历列表中可选择新日程的默认保存位置，详细信息区域中可设置是否在日历中显示。"></a>
+            <figcaption><b>检查这里：</b><b>在日历中显示</b>决定日程是否显示在画面上；<b>默认保存</b>决定新日程创建在哪里。</figcaption>
+          </figure>
+          <h3>容易混淆的三项设置</h3>
+          <dl class="sync-provider-notes">
+            <div><dt>导入 / 选择日历</dt><dd>决定从哪些日历接收原服务的变更。取消选择后，已导入的日程仍可能保留。Google 即使关闭导入，仍可能将保留下来的可编辑日程的变更发送回原服务，因此取消选择不等于断开连接。</dd></div>
+            <div><dt>在日历中显示</dt><dd>只决定是否显示在日历上。隐藏后，同步和默认保存设置仍然保留。也可以通过主界面的 <b>显示设置</b> 按钮更改。</dd></div>
+            <div><dt>默认保存 / 新日程保存位置</dt><dd>决定新建日程的保存目标。若要在 Google 日历中创建日程，请选择对应的 Google 日历，而不是本地日历。</dd></div>
+          </dl>
+          <p class="sync-caption-note">如果要创建测试日程进行验证，请选择可写的日历。修改或删除该日程并同步后，原服务也会相应更新。Google 日历的名称需在 Google Calendar 中更改。</p>
+        </section>
+        <section id="automatic" class="sync-section">
+          <p class="sync-section-number">自动刷新</p><h2>04. 设置自动刷新</h2>
+          <p>自动同步仅在 Air Calendar 运行时生效。建议先手动同步并确认结果，再选择所需的刷新方式。账户连接与自动刷新的开启或关闭是两项独立设置。</p>
+          <dl class="sync-provider-notes">
+            <div><dt>Google Calendar</dt><dd>在 <b>连接设置 → 同步设置（Sync settings）→ 自动同步 Google Calendar（Automatically sync Google Calendar）</b> 中设置。默认开启，定期同步间隔为 <b>10 分钟</b>，编辑后的快速同步间隔为 <b>30 秒</b>。更改间隔后请点击 <b>保存设置</b>。即使关闭自动同步，仍可手动同步。</dd></div>
+            <div><dt>Outlook 与 CalDAV 服务</dt><dd>在 <b>2. 选择日历</b> 中保存至少一个日历后，开启 <b>每 5 分钟自动同步</b>。新账户默认关闭自动同步。即使自动刷新关闭，仍可手动点击 <b>立即同步</b>。</dd></div>
+            <div><dt>ICS 订阅</dt><dd>检查整体 ICS 自动刷新开关，以及各订阅的 <b>刷新此订阅</b> 设置。自动刷新间隔为 <b>1 小时</b>。只要单个订阅的刷新已开启，即使整体自动刷新关闭，仍可使用 <b>立即刷新此订阅</b>。</dd></div>
+          </dl>
+          <p>如需快速开启或关闭，可使用 <b>连接与订阅</b> 中各服务卡片上的 <b>自动刷新（Refresh automatically）</b>。该开关会立即生效。</p>
+          <details class="sync-details"><summary>查看 Google 自动同步设置界面</summary><figure class="sync-screen"><a href="assets/sync-guide/zh/google-sync-options.png" target="_blank" rel="noopener" aria-label="查看 Google 自动同步设置大图（在新标签页中打开）"><img src="assets/sync-guide/zh/google-sync-options.png" width="980" height="820" loading="lazy" alt="Google 同步设置界面，显示 Google 自动同步、10 分钟的定期同步间隔，以及编辑后 30 秒的快速同步间隔。"></a><figcaption>更改间隔后，请点击下方的 <b>保存设置</b>。</figcaption></figure></details>
+        </section>
+        <section id="resolve" class="sync-section">
+          <p class="sync-section-number">故障排查</p><h2>遇到问题时</h2>
+          <p>在 <b>日历管理 → 故障排查（Troubleshoot）</b> 中选择对应服务。界面会根据状态显示下一步操作，例如 <b>重新连接</b>、<b>选择要导入的日历</b>、<b>检查待处理项目（Review pending items）</b> 或 <b>重新同步（Sync again）</b>。</p>
+          <details class="sync-details"><summary>查看通用故障排查界面</summary><figure class="sync-screen"><a href="assets/sync-guide/zh/issues.png" target="_blank" rel="noopener" aria-label="查看通用故障排查界面大图（在新标签页中打开）"><img src="assets/sync-guide/zh/issues.png" width="1040" height="820" loading="lazy" alt="在日历管理的故障排查标签页中选择服务，查看其状态和下一步操作的界面。"></a><figcaption>先在左侧选择出问题的服务，再查看右侧的说明和操作按钮。</figcaption></figure></details>
+          <dl class="sync-troubleshooting">
+            <div><dt>已登录，却看不到日程</dt><dd>依次检查：① 是否已勾选要导入的日历并保存 → ② 立即同步是否已完成 → ③ <b>我的日历 → 在日历中显示</b> 是否已开启 → ④ 是否已转到原日程所在的日期。Outlook 和 CalDAV 还需确认日程位于过去 120 天至未来 400 天的范围内。</dd></div>
+            <div><dt>无法点击“立即同步”按钮</dt><dd>请先连接账户，再选择并保存至少一个日历。如果正在执行操作，请等待完成。更改选择后，按钮可能会变为 <b>保存选择并同步</b>。</dd></div>
+            <div><dt>Google 认证失败</dt><dd>确认 JSON 属于 <b>桌面应用</b>类型、已启用 Calendar API，且测试用户邮箱与登录账户一致。如果授权受限，请查看 Google 界面显示的原因，并联系项目所有者或组织管理员。认证过期或权限变更时，可通过 <b>重新连接</b> 再次授权。</dd></div>
+            <div><dt>输入了应用专用密码，仍无法连接</dt><dd>检查服务选择、邮箱或 ID，并确认使用的是尚未撤销的新应用密码。同时检查是否更改了 Apple 主密码、Zoho 数据中心是否正确、Fastmail 套餐是否支持，以及 Naver 的账户或平台限制。可通过各窗口中的 <b>服务认证指南</b> 打开官方帮助。</dd></div>
+            <div><dt>ICS 地址显示有效，却没有导入日程</dt><dd>格式检查与实际接收是两回事。确认使用的是订阅地址，而不是普通网页地址，并检查私人链接是否已失效。选择现有订阅，通过 <b>修改订阅地址 → 保存更改</b> 更新后再次刷新。</dd></div>
+            <div><dt>两边修改的日程内容不一致</dt><dd>在 Google 设置的 <b>故障排查 → 未决问题</b> 中比较内容，选择 <b>保留本地版本</b> 或 <b>应用 Google 版本</b>。Google 可能会保留冲突记录，并优先应用远程内容。Outlook 和 CalDAV 请查看各自设置窗口中的 <b>3. 检查问题（3. Review issues）</b>。</dd></div>
+            <div><dt>日程的修改或删除受到限制</dt><dd>只读日历、Naver 和 ICS 的日程需在原服务中编辑。CalDAV 的重复日程和邀请日程，以及 Outlook 的完整重复规则和邀请回复，也需在原服务中处理。</dd></div>
+            <div><dt>想停止连接</dt><dd>如果只想停止自动刷新，请关闭对应服务的自动刷新；如果要断开账户，请使用单独设置中的 <b>断开连接（Disconnect）</b>。ICS 使用 <b>取消订阅（Unsubscribe）</b>。这些操作不会删除原服务中的日程，已导入的日程也可能保留。如果还要检查或撤销服务器端的应用访问权限，请前往对应服务的账户安全设置。</dd></div>
+          </dl>
+          <div class="sync-callout"><strong>需要更多帮助时</strong><p>请记下出问题的服务名称、点击过的按钮和错误提示，并在<a href="index.html?lang=zh#requests">用户反馈区</a>提交。上传截图或诊断报告前，请检查并遮盖邮箱、日程内容、文件路径和认证信息。</p></div>
+        </section>
+</div>
+    </div>
+    <footer class="sync-footer"><p><time datetime="2026-10-19">2026-10-19</time> · 基于当前应用的设置界面</p><p class="sync-footer-context">部分文字、界面和连接支持情况可能因已安装的应用版本及服务账户政策而异。</p><nav aria-label="相关页面"><a href="index.html?lang=zh">Air Calendar 首页</a><a href="privacy.html">隐私政策</a><a href="#start">返回设置起点 ↑</a></nav></footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ja" data-guide-locale="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>カレンダー接続・同期ガイド | Air Calendar</title>
+  <meta name="description" content="Air Calendarの現在の設定画面を見ながら、Google、Outlook、iCloud、Naver、Yahoo、Zoho、Fastmail、ICSを接続できます。認証の準備からカレンダーの選択、初回同期、自動更新、トラブル解決まで、順を追って説明します。">
+  <link rel="canonical" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide-ja.html">
+  <meta name="theme-color" content="#08090b">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="カレンダー接続・同期ガイド | Air Calendar">
+  <meta property="og:description" content="設定画面を見ながら、アカウント接続から初回同期まで、一つずつ進めましょう。">
+  <meta property="og:url" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide-ja.html">
+  <meta property="og:image" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/sync-guide/ja/sync-workflow.webp">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="alternate" hreflang="ko" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide.html">
+  <link rel="alternate" hreflang="en" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide-en.html">
+  <link rel="alternate" hreflang="ja" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide-ja.html">
+  <link rel="alternate" hreflang="zh-CN" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide-zh.html">
+  <link rel="alternate" hreflang="x-default" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide.html">
+  <meta property="og:locale" content="ja_JP">
+  <script src="sync-guide.js?v=20261019-languages"></script>
+  <link rel="icon" href="assets/app_icon.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="sync-guide.css?v=20261019-languages">
+</head>
+<body class="sync-guide-page">
+  <a class="skip-link" href="#main-content">本文へスキップ</a>
+  <header class="sync-header">
+    <a class="sync-brand" href="index.html?lang=ja"><img src="assets/app_icon.png" width="32" height="32" alt="">Air Calendar</a>
+    <div class="sync-header-actions"><a data-guide-home href="index.html?lang=ja#calendar-sync">ホームページ</a><nav class="sync-language-switch" aria-label="言語を選択"><a data-guide-language="ko" href="sync-guide.html?lang=ko" lang="ko" hreflang="ko">한국어</a><a data-guide-language="en" href="sync-guide-en.html" lang="en" hreflang="en">English</a><a data-guide-language="ja" aria-current="page" href="sync-guide-ja.html" lang="ja" hreflang="ja">日本語</a><a data-guide-language="zh" href="sync-guide-zh.html" lang="zh-CN" hreflang="zh-CN">中文</a></nav></div>
+  </header>
+  <main id="main-content" class="sync-main">
+    <div class="sync-intro">
+      <p class="sync-eyebrow">カレンダー接続ガイド · <time datetime="2026-10-19">2026.10.19</time></p>
+      <h1>カレンダー接続から<br><em>初回同期まで。</em></h1>
+      <p class="sync-lead">取り込みたいサービスを一つ選び、以下の画面を見ながら進めてください。<br>アカウント接続 → カレンダー選択 → 同期実行 → 結果確認の順に説明します。</p>
+      <p class="sync-intro-note">外部アカウントの接続は任意です。ローカルカレンダーはログインせずに利用できます。</p>
+      <div class="sync-actions"><a class="sync-primary-link" href="#start">設定画面を開くところから始める ↓</a><a href="#choose">サービス別の準備物を先に確認</a></div>
+    </div>
+    <figure class="sync-hero">
+      <a href="assets/sync-guide/ja/sync-workflow.webp" target="_blank" rel="noopener" aria-label="同期の全体像を大きな画像で表示（新しいタブ）"><img src="assets/sync-guide/ja/sync-workflow.webp" width="1672" height="941" fetchpriority="high" alt="アカウント接続、カレンダー選択、同期実行、結果確認の4ステップ。Google・Outlook・iCloudは書き込み権限のあるカレンダーと双方向に同期し、Naver・ICSはAir Calendarへ予定を取り込みます。外部サービス間で予定を自動コピーする機能はありません。"></a>
+      <figcaption>同期の全体像を示す概念図です。クリックすると拡大できます。Yahoo・Zoho・FastmailのCalDAV接続も、以下で説明します。</figcaption>
+    </figure>
+    <div class="sync-layout">
+      <aside class="sync-toc">
+        <nav aria-label="設定ガイドの目次">
+          <p>この順番で進めましょう</p>
+          <a href="#start">01 設定画面を開く</a><a href="#choose">02 サービスと準備物を確認</a>
+          <a href="#google">Google Calendar</a><a href="#outlook">Outlook · Microsoft 365</a><a href="#icloud">iCloud</a><a href="#naver">Naver</a><a href="#caldav">Yahoo · Zoho · Fastmail</a><a href="#ics">ICSアドレスで購読</a>
+          <a href="#verify">03 同期と表示を確認</a><a href="#automatic">04 自動更新を設定</a><a href="#resolve">困ったときは</a>
+        </nav>
+      </aside>
+      <div class="sync-content">
+        <section id="start" class="sync-section">
+          <p class="sync-section-number">ここから始めましょう</p>
+          <h2>01. 設定画面を開いてください</h2>
+          <ol class="sync-setup-steps">
+            <li><strong>Air Calendar上部の同期アイコンをクリックしてください。</strong><p>メニューから開く場合は、<b>システム → Calendars and sync → Calendars / accounts and synchronization</b>の順に選びます。開いたウィンドウのタイトルは<b>Calendar management</b>です。</p></li>
+            <li><strong>ウィンドウ上部の「Connections and subscriptions」タブをクリックしてください。</strong><p>最初は<b>My calendars</b>タブが表示されることがあります。アカウントの追加は<b>Connections and subscriptions</b>から始めます。Google Calendarと<b>Subscribe by address</b>のカードが先に表示されます。</p></li>
+            <li><strong>利用するサービスの「Connect account」をクリックしてください。</strong><p>Outlook・iCloud・Naver・Yahoo・Zoho・Fastmailを探すには、<b>Connect another account</b>の横の<b>Show services</b>をクリックし、下へスクロールしてください。接続済みの場合は、<b>Connection settings</b>、<b>Reconnect</b>、<b>Choose calendars to import</b>などのボタンが表示されることがあります。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/ja/services.png" target="_blank" rel="noopener" aria-label="接続・購読の設定画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/services.png" width="1040" height="820" loading="lazy" alt="Calendar managementウィンドウのConnections and subscriptionsタブ。Google Calendar、Subscribe by addressのカードと、追加のアカウント接続欄が表示されています。"></a>
+            <figcaption><b>最初に見る場所：</b>上部の<b>Connections and subscriptions</b>タブ → サービスカードの<b>Connect account</b>。追加のサービスは一覧を展開して探します。</figcaption>
+          </figure>
+          <p class="sync-caption-note">設定画面は、該当するアプリ言語とサンプルデータで表示したものです。アカウント名、カレンダー名、接続状態は利用者によって異なります。画像をクリックすると原寸で確認できます。現在のアプリでは一部の新しいボタンが英語で表示されるため、本ガイドにも実際の表示名を併記しています。</p>
+        </section>
+        <section id="choose" class="sync-section">
+          <p class="sync-section-number">接続する前に</p>
+          <h2>02. 利用するサービスの準備物を確認してください</h2>
+          <p>「双方向」とは、そのサービスと予定の変更をやり取りできるという意味です。Googleの予定をOutlookへ自動コピーする機能ではありません。共有されたカレンダーは、元のアカウントで付与された書き込み権限によって読み取り専用になる場合があります。</p>
+          <div class="sync-table-wrap" tabindex="0" role="region" aria-label="サービス別の準備物と対応範囲の表。小さい画面では左右にスクロールできます。">
+            <table>
+              <caption>サービス名をクリックすると、その設定手順へ移動します。</caption>
+              <thead><tr><th scope="col">接続するサービス</th><th scope="col">事前に準備するもの</th><th scope="col">予定の編集</th></tr></thead>
+              <tbody>
+                <tr><th scope="row"><a href="#google">Google Calendar ↗</a></th><td>Googleアカウント + デスクトップアプリ用OAuth JSONファイル</td><td>書き込み権限があれば双方向</td></tr>
+                <tr><th scope="row"><a href="#outlook">Outlook · Microsoft 365 ↗</a></th><td>Microsoftアカウント + カレンダー接続用クライアントID</td><td>書き込み権限があれば双方向</td></tr>
+                <tr><th scope="row"><a href="#icloud">iCloud ↗</a></th><td>Apple Accountのメールアドレス + アプリ用パスワード</td><td>個人の予定は双方向¹</td></tr>
+                <tr><th scope="row"><a href="#naver">Naver ↗</a></th><td>Naver ID + 認証用パスワード</td><td>読み取り専用²</td></tr>
+                <tr><th scope="row"><a href="#caldav">Yahoo · Zoho · Fastmail ↗</a></th><td>アカウントのメールアドレス + サービスに合った認証用パスワード</td><td>個人の予定は双方向¹</td></tr>
+                <tr><th scope="row"><a href="#ics">ICS購読 ↗</a></th><td>サービスが発行したiCal / ICS購読アドレス</td><td>読み取り専用</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="sync-caption-note">¹ CalDAVの繰り返し予定と招待された予定は、元のサービスで編集します。² WindowsでのNaver接続は、サービスの方針により制限される場合があります。</p>
+          <div class="sync-callout"><strong>認証ファイルやパスワードはどこに入力しますか？</strong><p>以下で案内するアプリ内のファイル選択欄・パスワード欄にのみ指定してください。このガイドページへの入力は不要です。JSONファイル、アプリ用パスワード、非公開のICSアドレスを、掲示板やスクリーンショットで公開しないでください。</p></div>
+        </section>
+        <section id="google" class="sync-section">
+          <p class="sync-section-number">GOOGLE CALENDAR</p>
+          <h2>Google Calendarに接続する</h2>
+          <p>現在のアプリは、利用者が用意した<b>デスクトップアプリ用OAuth認証ファイル</b>で接続します。初回にGoogle Cloudでファイルを作成し、Air Calendarで利用するGoogleアカウントでログインします。</p>
+          <details class="sync-details" open>
+            <summary>A. 初回のみ：Google認証JSONファイルを準備する</summary>
+            <ol class="sync-setup-steps">
+              <li><strong>Google Cloudでプロジェクトを作成してください。</strong><p><a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a>にログインします。上部のプロジェクト選択メニューから<b>新しいプロジェクト</b>を選び、名前を入力して作成した後、そのプロジェクトを選択します。</p></li>
+              <li><strong>Google Calendar APIを有効にしてください。</strong><p><b>APIとサービス → ライブラリ</b>で<b>Google Calendar API</b>を検索し、<b>有効にする</b>または<b>有効化</b>をクリックします。</p></li>
+              <li><strong>Google Auth Platformで同意画面を準備してください。</strong><p><b>Google Auth Platform → ブランディング（Branding）</b>を開きます。初回の場合は<b>開始（Get started）</b>から、アプリ名（例：自分のAir Calendar接続）、サポート用メールアドレス、連絡先メールアドレスを入力します。個人のGmailアカウントでは、対象（Audience）を<b>外部（External）</b>に設定します。組織内のアカウントでは、管理者の方針に従って選択してください。</p></li>
+              <li><strong>テストユーザーとカレンダーの権限を確認してください。</strong><p>外部アプリをテスト状態で使う場合は、<b>対象（Audience）→ テストユーザー（Test users）→ ユーザーを追加</b>に、実際に接続するGoogleのメールアドレスを入力して保存します。<b>データアクセス（Data Access）→ スコープを追加または削除</b>では、Google Calendar APIの<code>https://www.googleapis.com/auth/calendar</code>スコープを選んで保存します。</p></li>
+              <li><strong>「デスクトップアプリ」のクライアントを作成し、JSONをダウンロードしてください。</strong><p><b>クライアント（Clients）→ クライアントを作成（Create client）</b>をクリックします。アプリケーションの種類は<b>デスクトップアプリ（Desktop app）</b>を選び、名前を入力して作成します。作成したクライアントのJSONをダウンロードし、PCの見つけやすいフォルダーに保存してください。ウェブアプリケーション用のファイルは、この設定には使えません。</p></li>
+            </ol>
+            <p class="sync-source">Googleの画面は、アカウントや言語によって異なる場合があります。<a href="https://developers.google.com/workspace/calendar/api/quickstart/python" target="_blank" rel="noopener">Google公式のデスクトップ認証準備ガイド</a> · <a href="https://developers.google.com/workspace/guides/configure-oauth-consent" target="_blank" rel="noopener">同意画面とテストユーザーのガイド</a>。上記の手順でPythonのインストールやサンプルコードの実行は必要ありません。</p>
+          </details>
+          <h3>B. Air Calendarで接続し、取り込むカレンダーを選ぶ</h3>
+          <ol class="sync-setup-steps">
+            <li><strong>Google Calendarカードの「Connect account」をクリックしてください。</strong><p>開いたGoogle設定で<b>Account connection</b>を選びます。<b>OAuth file and connection help</b>を展開し、<b>認証情報ファイル → ブラウズ</b>から、ダウンロードしたOAuth JSONを選択します。初めて設定するPCでは、ヘルプが最初から開いていることがあります。</p></li>
+            <li><strong>「Connect Google account」をクリックし、ブラウザーで許可してください。</strong><p>利用するGoogleアカウントを選び、カレンダーへのアクセス権限を確認して許可します。アプリは完了まで最大3分間待機します。許可が完了したら、Air Calendarへ戻ってください。テストユーザーに追加したアカウントと、ログインしたアカウントが同じかも確認します。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/ja/google-connect.png" target="_blank" rel="noopener" aria-label="Googleアカウントの接続画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/google-connect.png" width="980" height="820" loading="lazy" alt="Google設定のアカウント接続画面。認証情報ファイルを選ぶブラウズボタンと、Connect Google accountボタンがあります。"></a>
+            <figcaption><b>クリックする順番：</b><b>OAuth file and connection help</b> → <b>ブラウズ</b> → <b>Connect Google account</b>。</figcaption>
+          </figure>
+          <ol class="sync-setup-steps" start="3">
+            <li><strong>「Calendars to import」で「Import」にチェックを入れてください。</strong><p>接続に成功すると、この画面へ移動します。個人・仕事・共有カレンダーから、使いたいものだけを選びます。新しく作ったカレンダーが見当たらない場合は、<b>Refresh list</b>をクリックしてください。各項目の<b>Import events · Editable / Import events · Read-only</b>も確認しましょう。</p></li>
+            <li><strong>下部の「設定の保存」をクリックしてください。</strong><p>保存完了の案内を確認してから、<b>閉じる</b>をクリックします。<b>設定の保存</b>をクリックしてもウィンドウは閉じません。保存前に閉じると、選んだ取り込み対象は適用されません。</p></li>
+            <li><strong>Calendar managementへ戻り、「Sync now」をクリックしてください。</strong><p>サービスカードの<b>Refresh</b>を使うと、Googleだけを更新することもできます。以下の<a href="#verify">同期と表示の確認</a>まで進めれば、初回の接続は完了です。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/ja/google-calendars.png" target="_blank" rel="noopener" aria-label="Googleから取り込むカレンダーの選択画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/google-calendars.png" width="980" height="820" loading="lazy" alt="GoogleのCalendars to import画面。サンプルカレンダーのImportチェックボックスと、設定の保存ボタンが表示されています。"></a>
+            <figcaption><b>確認する場所：</b>各カレンダーの<b>Import</b>にチェック → 下部の<b>設定の保存</b>。画面に表示するかどうかは、この後<b>My calendars</b>で確認します。</figcaption>
+          </figure>
+          <div class="sync-callout"><strong>「カレンダーへのアクセスをテストする」の成功と、予定の取り込み完了は別です。</strong><p>アクセステストは権限を確認する機能です。予定を実際に取得できたかは、同期後にカレンダーで確認してください。Googleの自動同期は初期設定でオンになっており、既定の間隔は定期同期が10分、編集後が30秒です。</p></div>
+        </section>
+        <section id="outlook" class="sync-section">
+          <p class="sync-section-number">OUTLOOK · MICROSOFT 365</p><h2>Outlookに接続する</h2>
+          <p>個人のMicrosoftアカウントと職場・学校のアカウントを接続できます。現在の接続方法では、<b>カレンダー接続用MicrosoftアプリのクライアントID</b>が必要です。組織からIDを受け取っている場合は、準備を飛ばしてBから進めてください。</p>
+          <details class="sync-details">
+            <summary>A. クライアントIDがない場合：管理者・アプリ登録担当者の準備</summary>
+            <ol class="sync-setup-steps">
+              <li><strong>Microsoft Entraでアプリを登録します。</strong><p><a href="https://entra.microsoft.com/" target="_blank" rel="noopener">Microsoft Entra管理センター</a>の<b>Entra ID → アプリの登録 → 新規登録</b>へ進みます。名前を入力し、サポートされているアカウントの種類は<b>任意の組織ディレクトリ内のアカウントと個人用のMicrosoftアカウント</b>を選択します。アプリ登録の権限がない場合は、組織の管理者へ依頼してください。</p></li>
+              <li><strong>デスクトップのログイン用アドレスを追加します。</strong><p>登録したアプリの<b>認証 → プラットフォームを追加 → モバイルアプリケーションとデスクトップアプリケーション</b>で、<code>http://localhost</code>をリダイレクトURIに追加して保存します。</p></li>
+              <li><strong>カレンダーの権限を追加します。</strong><p><b>APIのアクセス許可 → アクセス許可の追加 → Microsoft Graph → 委任されたアクセス許可</b>で、<code>Calendars.ReadWrite</code>と<code>User.Read</code>を確認します。組織で必要とされる場合は、管理者の同意を受けてください。</p></li>
+              <li><strong>「アプリケーション（クライアント）ID」をコピーします。</strong><p>アプリの<b>概要</b>に表示されるUUID形式のIDをAir Calendarで使います。クライアントシークレットは不要です。</p></li>
+            </ol>
+            <p class="sync-source"><a href="https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app" target="_blank" rel="noopener">Microsoft公式アプリ登録ガイド</a> · <a href="https://learn.microsoft.com/en-us/entra/identity-platform/scenario-desktop-app-registration" target="_blank" rel="noopener">デスクトップアプリの認証設定ガイド</a></p>
+          </details>
+          <h3>B. アプリでログインし、予定を取り込む</h3>
+          <ol class="sync-setup-steps">
+            <li><strong>「Connections and subscriptions」で追加サービスの一覧を展開してください。</strong><p><b>Outlook · Microsoft 365 → Connect account</b>をクリックします。開いたウィンドウで<b>1. Connect account</b>タブを選びます。</p></li>
+            <li><strong>「App registration and setup guide」を展開し、クライアントIDを入力してください。</strong><p>カレンダー接続用に準備したIDを<b>Application (client) ID</b>に入力します。<b>Sign in with Microsoft</b>をクリックし、ブラウザーでログインと権限の許可を完了します。職場・学校のアカウントでは、管理者の承認やMFAが必要になる場合があります。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/ja/outlook-connect.png" target="_blank" rel="noopener" aria-label="Outlookアカウントの接続画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/outlook-connect.png" width="880" height="820" loading="lazy" alt="Outlook接続設定の1. Connect accountタブ。アプリ登録の案内、クライアントIDの入力欄、Sign in with Microsoftボタンがあります。"></a>
+            <figcaption><b>クリックする順番：</b><b>1. Connect account</b> → クライアントIDを入力 → <b>Sign in with Microsoft</b> → <b>2. Choose calendars</b>。</figcaption>
+          </figure>
+          <ol class="sync-setup-steps" start="3">
+            <li><strong>「2. Choose calendars」で取り込むカレンダーにチェックを入れてください。</strong><p><b>Save calendar selection</b>をクリックし、続けて<b>Sync now</b>をクリックします。選択を変更してまだ保存していない場合は、<b>Save selection and sync</b>ボタンで保存と同期をまとめて実行できます。</p></li>
+            <li><strong>完了結果を確認し、必要に応じて自動同期をオンにしてください。</strong><p><b>Sync completed</b>と取り込んだ件数を確認します。自動更新したい場合は、カレンダーを保存した後、<b>Automatically synchronize every 5 minutes</b>にチェックを入れます。初めてアカウントを接続するとき、自動同期はオフです。</p></li>
+          </ol>
+          <p class="sync-caption-note">現在のOutlook接続では、今日を基準に過去120日から今後400日までの予定を取り込みます。繰り返しルール全体の編集、招待への返答、接続された予定の別カレンダーへの移動には対応していません。これらの操作はOutlookで行ってください。</p>
+          <details class="sync-details"><summary>Outlookカレンダーの選択画面を見る</summary><figure class="sync-screen"><a href="assets/sync-guide/ja/outlook-calendar-selection.png" target="_blank" rel="noopener" aria-label="Outlookカレンダーの選択画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/outlook-calendar-selection.png" width="880" height="820" loading="lazy" alt="Outlookの2. Choose calendarsタブ。サンプルカレンダーのチェック欄、Save calendar selection、自動同期の設定が表示されています。"></a><figcaption><b>カレンダーにチェック → Save calendar selection → Sync now</b>の順に進めます。自動更新は保存後に選択してください。</figcaption></figure></details>
+        </section>
+        <section id="icloud" class="sync-section">
+          <p class="sync-section-number">ICLOUD · CALDAV</p><h2>iCloudに接続する</h2>
+          <h3>A. Appleでアプリ用パスワードを発行する</h3>
+          <ol class="sync-setup-steps">
+            <li><strong>2ファクタ認証がオンのApple Accountを準備してください。</strong><p><a href="https://account.apple.com/" target="_blank" rel="noopener">Apple Accountの管理ページ</a>にサインインします。</p></li>
+            <li><strong>「サインインとセキュリティ → アプリ用パスワード」で新しいパスワードを作成してください。</strong><p>作成ボタンをクリックし、名前（例：Air Calendar）を入力します。生成されたパスワードを、アプリのパスワード欄へ貼り付けられるように準備してください。この接続では、Apple Accountの通常のログインパスワードではなく、<b>アプリ用パスワード</b>を使います。</p></li>
+          </ol>
+          <p class="sync-source"><a href="https://support.apple.com/en-us/102654" target="_blank" rel="noopener">Apple公式のアプリ用パスワードの案内</a>。Apple Accountの通常のパスワードを変更・リセットすると、既存のアプリ用パスワードは無効になるため、新たに発行する必要があります。</p>
+          <h3>B. Air Calendarにメールアドレスとアプリ用パスワードを入力する</h3>
+          <ol class="sync-setup-steps">
+            <li><strong>追加サービス一覧の「iCloud → Connect account」をクリックしてください。</strong><p><b>CalDAVアカウント接続</b>ウィンドウが開きます。上部の<b>Calendar service</b>が<b>iCloud</b>であることを確認し、<b>1. Connect account</b>タブを選びます。</p></li>
+            <li><strong>「Account」にAppleのメールアドレスを、「App-specific password」に発行したパスワードを入力してください。</strong><p>サーバーアドレスはアプリが設定します。<b>Verify connection and find calendars</b>をクリックし、カレンダー一覧が表示されるまで待ちます。接続を開始すると、パスワードの入力欄が空になることがあります。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/ja/icloud-connect.png" target="_blank" rel="noopener" aria-label="iCloudアカウントの接続画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/icloud-connect.png" width="880" height="820" loading="lazy" alt="CalDAVアカウント接続ウィンドウでiCloudを選んだ画面。Account、App-specific password、Verify connection and find calendarsボタンがあります。"></a>
+            <figcaption><b>入力する場所：</b>上部のサービスは<b>iCloud</b>、<b>Account</b>にはAppleのメールアドレス、<b>App-specific password</b>にはAppleで発行した値を入力します。</figcaption>
+          </figure>
+          <ol class="sync-setup-steps" start="3">
+            <li><strong>「2. Choose calendars」でチェックを入れ、「Save selection」をクリックしてください。</strong><p>続けて<b>Sync now</b>をクリックします。保存前であれば<b>Save selection and sync</b>でも進められます。ログインや一覧の確認だけでは、予定の取り込みは完了しません。</p></li>
+            <li><strong>予定を取得できたか確認し、自動同期を選択してください。</strong><p>必要に応じて、カレンダーを保存した後、<b>Automatically synchronize every 5 minutes</b>にチェックを入れます。書き込み可能な個人の予定は双方向に同期されます。繰り返し予定や招待された予定は、元のサービスで編集してください。</p></li>
+          </ol>
+          <details class="sync-details"><summary>CalDAVカレンダーの選択画面を見る</summary><figure class="sync-screen"><a href="assets/sync-guide/ja/icloud-calendar-selection.png" target="_blank" rel="noopener" aria-label="CalDAVカレンダーの選択画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/icloud-calendar-selection.png" width="880" height="820" loading="lazy" alt="iCloudを選んだCalDAVの2. Choose calendarsタブ。サンプルカレンダーのチェック欄とSave selectionボタンが表示されています。"></a><figcaption>ほかのCalDAVサービスも、同じ<b>2. Choose calendars</b>タブを使います。編集可能かどうかを確認し、<b>Save selection</b>をクリックしてください。</figcaption></figure></details>
+        </section>
+        <section id="naver" class="sync-section">
+          <p class="sync-section-number">NAVER · 読み取り専用</p><h2>Naverの予定を取り込む</h2>
+          <div class="sync-callout"><strong>Naver接続は読み取り専用です。</strong><p>Air Calendarでは取り込んだ予定を確認し、追加・編集・削除はNaverカレンダーで行います。Naverの公式案内はiOS・macOSを対象としているため、Windowsでの接続はアカウントやサーバーの方針により制限される場合があります。</p></div>
+          <ol class="sync-setup-steps">
+            <li><strong>Naver IDと認証用パスワードを準備してください。</strong><p>2段階認証を利用する個人IDでは、Naverアカウントのセキュリティ設定から<b>アプリケーションパスワード</b>を発行します。2段階認証を利用しない個人IDでは、<b>Naverのログインパスワード</b>を使います。2段階認証を利用する団体IDはアプリケーションパスワードに対応していないため、この方法では接続できません。</p></li>
+            <li><strong>追加サービス一覧から「Naver → Connect account」をクリックしてください。</strong><p><b>CalDAVアカウント接続</b>ウィンドウ上部のサービスが<b>Naver</b>であることを確認します。<b>1. Connect account</b>の<b>Account</b>にNaver ID、<b>Authentication password</b>に準備したパスワードを入力し、<b>Verify connection and find calendars</b>をクリックします。</p></li>
+            <li><strong>「2. Choose calendars」でチェックを入れ、保存して同期してください。</strong><p><b>Save selection → Sync now</b>、または<b>Save selection and sync</b>をクリックします。更新結果を確認した後、必要に応じて<b>Automatically synchronize every 5 minutes</b>をオンにします。</p></li>
+          </ol>
+          <p class="sync-source"><a href="https://help.naver.com/service/5620/contents/2426?lang=ko&amp;osType=COMMONOS" target="_blank" rel="noopener">Naver公式のCalDAV・認証用パスワードの案内</a>。接続が拒否される場合は、パスワード、アカウントの種類、現在のサービス対応範囲を確認してください。</p>
+        </section>
+        <section id="caldav" class="sync-section">
+          <p class="sync-section-number">その他のCALDAVサービス</p><h2>Yahoo・Zoho・Fastmailに接続する</h2>
+          <p>3つのサービスは、iCloudと同じ<b>CalDAVアカウント接続</b>ウィンドウを使います。<b>Connections and subscriptions → Show services</b>から該当サービスの<b>Connect account</b>をクリックするか、CalDAVウィンドウ上部の<b>Calendar service</b>を切り替えてください。</p>
+          <dl class="sync-provider-notes">
+            <div><dt>Yahoo Calendar</dt><dd><b>Account</b>にメールアドレス全体を、<b>App-specific password</b>にYahooで発行したパスワードを入力します。<a href="https://help.yahoo.com/kb/SLN4707.html" target="_blank" rel="noopener">Yahoo公式のアプリパスワードのヘルプ</a>で、発行できるか確認してください。Yahoo! JAPANアカウントには対応していません。</dd></div>
+            <div><dt>Zoho Calendar</dt><dd>Zoho Calendarの<b>設定 → 同期（Synchronize）→ CalDAV</b>で、同期するカレンダーを先に指定します。アプリではメールアドレス全体と認証用パスワードを入力し、<b>アカウントのデータセンターサーバー</b>をアカウントの地域に合わせて選びます。2段階認証を利用している場合は、アプリパスワードが必要です。<a href="https://www.zoho.com/calendar/help/setup-caldav-sync.html" target="_blank" rel="noopener">Zoho公式CalDAVガイド</a></dd></div>
+            <div><dt>Fastmail</dt><dd>Fastmailの<b>Settings → Privacy &amp; Security → Connected apps &amp; API tokens</b>からアプリパスワードの管理へ進み、<b>Calendars</b>へのアクセスを許可したアプリパスワードを作成します。アプリには、登録時のメールアドレス全体とこのパスワードを入力します。BasicプランはCalDAVとアプリパスワードに対応していません。<a href="https://www.fastmail.help/hc/en-us/articles/360058752854-App-passwords" target="_blank" rel="noopener">Fastmail公式アプリパスワードガイド</a></dd></div>
+          </dl>
+          <ol class="sync-setup-steps">
+            <li><strong>サービスごとの入力を終えたら、「Verify connection and find calendars」をクリックしてください。</strong><p>接続に失敗した場合は、ウィンドウ内の<b>Service authentication guide</b>ボタンから、該当サービスの公式ヘルプを開けます。</p></li>
+            <li><strong>「2. Choose calendars」で利用するカレンダーにチェックを入れてください。</strong><p><b>Save selection → Sync now</b>、または<b>Save selection and sync</b>で予定を取り込みます。その後、必要に応じて<b>Automatically synchronize every 5 minutes</b>をオンにします。</p></li>
+          </ol>
+          <p class="sync-caption-note">CalDAVは今日を基準に、過去120日から今後400日までを取り込みます。個人の予定は書き込み権限に応じて双方向に同期します。読み取り専用カレンダーや繰り返し・招待の予定は、元のサービスで編集してください。接続された予定の別カレンダーへの移動にも対応していません。</p>
+        </section>
+        <section id="ics" class="sync-section">
+          <p class="sync-section-number">ICS購読 · 読み取り専用</p><h2>ICSアドレスでカレンダーを購読する</h2>
+          <p>祝日・イベント・公開予定など、購読アドレスがあるカレンダーを読み取り専用で取り込みます。GoogleやMicrosoftへのログインは不要です。</p>
+          <ol class="sync-setup-steps">
+            <li><strong>元のサービスからiCal / ICS購読アドレスをコピーしてください。</strong><p>カレンダーサービスの共有・エクスポート設定で、<b>iCal</b>、<b>ICS</b>、<b>購読アドレス</b>と表示されているリンクを探します。ブラウザーで見ている通常のカレンダーページのアドレスとは異なります。<code>https://</code>、<code>http://</code>、<code>webcal://</code>のアドレスを利用できます。</p></li>
+            <li><strong>Calendar managementの「ICS subscriptions」タブで「Add ICS subscription」をクリックしてください。</strong><p><b>Subscribe to a calendar by address</b>ウィンドウが開きます。<b>1. Subscription address (required)</b>に貼り付け、<b>2. Calendar name (required)</b>に分かりやすい名前（例：チームのイベント）を入力します。</p></li>
+            <li><strong>「Add subscription」をクリックし、取り込み結果を待ってください。</strong><p>アドレスの形式と名前がそろうと、ボタンが有効になります。<b>The address format is valid.</b>は形式を確認した結果であり、サーバーに接続して予定を取得できたという意味ではありません。追加後に最初の更新が始まります。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/ja/ics-add.png" target="_blank" rel="noopener" aria-label="ICS購読の追加画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/ics-add.png" width="800" height="640" loading="lazy" alt="Subscribe to a calendar by addressウィンドウ。1. Subscription address (required)、2. Calendar name (required)の入力欄とAdd subscriptionボタンがあります。"></a>
+            <figcaption><b>入力する場所：</b>上の欄に<b>実際のICS購読アドレス</b>、下の欄にアプリで表示する<b>カレンダー名</b>を入力します。サンプルのアドレスはそのまま使えません。</figcaption>
+          </figure>
+          <ol class="sync-setup-steps" start="4">
+            <li><strong>追加した購読を選び、「Last refreshed」の時刻を確認してください。</strong><p><b>No events have been fetched yet.</b>と表示されている場合、初回の取得はまだ完了していません。<b>Refresh this subscription</b>をオンにした状態で、<b>Refresh this subscription now</b>から再試行します。カレンダーに表示するには、<b>Show in calendar views</b>もオンにしてください。</p></li>
+          </ol>
+          <details class="sync-details"><summary>ICS購読の表示・更新設定画面を見る</summary><figure class="sync-screen"><a href="assets/sync-guide/ja/ics-management.png" target="_blank" rel="noopener" aria-label="ICS購読の管理画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/ics-management.png" width="1040" height="820" loading="lazy" alt="ICS subscriptionsタブでサンプルの購読を選んだ画面。Show in calendar views、Refresh this subscription、Refresh this subscription nowが表示されています。"></a><figcaption><b>Show in calendar views</b>と<b>Refresh this subscription</b>をそれぞれ確認してください。サンプル画面の「No events have been fetched yet.」は、取得が完了した状態ではありません。</figcaption></figure></details>
+          <div class="sync-callout"><strong>アドレスが変わった場合は、既存の購読を編集してください。</strong><p>同じ購読を選び、<b>購読URLを編集 → Save changes</b>を使うと、名前・色・表示設定と既存の予定を保持できます。アプリの実行中に、自動更新とその購読の更新がオンになっていれば、1時間ごとに確認します。予定の追加・編集・削除は元のサービスで行ってください。</p></div>
+        </section>
+        <section id="verify" class="sync-section">
+          <p class="sync-section-number">結果を確認する</p><h2>03. 同期と画面表示を確認してください</h2>
+          <ol class="sync-setup-steps">
+            <li><strong>選んだカレンダーを保存してから、「Sync now」をクリックしてください。</strong><p>Calendar managementの共通ボタンは、接続済みのサービスをまとめて更新します。サービスごとの<b>Refresh</b>や個別設定の<b>Sync now</b>を使えば、一つのサービスだけを確認することもできます。既定のショートカットは<kbd>F5</kbd>です。変更している場合は、設定したキーを使ってください。</p></li>
+            <li><strong>完了状態と実際の予定を両方確認してください。</strong><p>直近の同期・更新時刻と結果のメッセージを確認します。元のサービスにある予定を一つ選び、日付とタイトルを覚えておいて、Air Calendarでも同じ日付を開いてください。アカウントへのログインに成功しただけでは、予定の取得は完了していません。</p></li>
+            <li><strong>「My calendars」で表示をオンにしてください。</strong><p>取り込んだカレンダーを選び、詳細欄の<b>Show in calendar views</b>をオンにします。元の予定があるのに表示されない場合は、まずこの表示設定を確認してください。</p></li>
+            <li><strong>新しい予定の保存先を決めてください。</strong><p>新しい予定を外部カレンダーに作るには、書き込み可能な項目の<b>Default save</b>を選択します。読み取り専用の項目は選択できません。メインカレンダーの<b>Save new events to</b>からも保存先を確認できます。</p></li>
+          </ol>
+          <figure class="sync-screen">
+            <a href="assets/sync-guide/ja/calendars.png" target="_blank" rel="noopener" aria-label="カレンダーの表示と既定の保存先の設定画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/calendars.png" width="1040" height="820" loading="lazy" alt="Calendar managementウィンドウのMy calendarsタブ。サンプルカレンダー一覧のDefault saveと、詳細欄のShow in calendar viewsが表示されています。"></a>
+            <figcaption><b>確認する場所：</b><b>Show in calendar views</b>は画面に表示するかを、<b>Default save</b>は新しい予定をどこに作るかを決めます。</figcaption>
+          </figure>
+          <h3>混同しやすい3つの設定</h3>
+          <dl class="sync-provider-notes">
+            <div><dt>取り込み / カレンダーの選択</dt><dd>元のサービスの変更を取り込む対象を決めます。選択をオフにしても、取り込み済みの予定は残る場合があります。Googleでは取り込みをオフにしても、残っている編集可能な予定の変更が元のサービスへ送信されることがあります。選択解除とアカウントの切断は別の操作です。</dd></div>
+            <div><dt>Show in calendar views（カレンダーに表示）</dt><dd>カレンダーに表示するかどうかだけを決めます。非表示にしても、同期と既定の保存先の設定は維持されます。メイン画面の<b>Visible …/…</b>ボタンからも変更できます。</dd></div>
+            <div><dt>Default save / Save new events to</dt><dd>新しく作る予定の保存先を決めます。Googleカレンダーに予定を作りたい場合は、ローカルカレンダーではなく、そのGoogleカレンダーを選んでください。</dd></div>
+          </dl>
+          <p class="sync-caption-note">テスト用の予定を作って確認する場合は、書き込み可能なカレンダーを選んでください。その予定を編集・削除して同期すると、元のサービスにも反映されます。Googleカレンダーの名前はGoogle Calendarで変更します。</p>
+        </section>
+        <section id="automatic" class="sync-section">
+          <p class="sync-section-number">自動更新</p><h2>04. 自動更新を設定してください</h2>
+          <p>自動同期はAir Calendarの実行中に動作します。まず手動同期で結果を確認し、その後に希望する更新方法を選んでください。アカウントの接続と、自動更新のオン・オフは別々の設定です。</p>
+          <dl class="sync-provider-notes">
+            <div><dt>Google Calendar</dt><dd><b>Connection settings → Sync settings → Automatically sync Google Calendar</b>で設定します。初期設定はオンで、定期同期は<b>10分</b>、編集後のクイック同期は<b>30秒</b>です。間隔を変更したら、<b>設定の保存</b>をクリックします。自動同期をオフにしても、手動同期は利用できます。</dd></div>
+            <div><dt>Outlook・CalDAVサービス</dt><dd><b>2. Choose calendars</b>でカレンダーを一つ以上保存し、<b>Automatically synchronize every 5 minutes</b>をオンにします。新しいアカウントでは、初期設定はオフです。自動更新がオフでも、手動の<b>Sync now</b>は利用できます。</dd></div>
+            <div><dt>ICS購読</dt><dd>ICS全体の自動更新と、個別の購読の<b>Refresh this subscription</b>を確認します。自動更新の間隔は<b>1時間</b>です。個別の更新がオンであれば、全体の自動更新がオフでも<b>Refresh this subscription now</b>を利用できます。</dd></div>
+          </dl>
+          <p>すぐにオン・オフを切り替えるには、<b>Connections and subscriptions</b>のサービスカードにある<b>Refresh automatically</b>を使ってください。このスイッチは即座に適用されます。</p>
+          <details class="sync-details"><summary>Google自動同期の設定画面を見る</summary><figure class="sync-screen"><a href="assets/sync-guide/ja/google-sync-options.png" target="_blank" rel="noopener" aria-label="Google自動同期の設定画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/google-sync-options.png" width="980" height="820" loading="lazy" alt="GoogleのSync settings画面。Automatically sync Google Calendar、定期同期間隔10分、編集後のクイック同期30秒が表示されています。"></a><figcaption>間隔を変更したら、下部の<b>設定の保存</b>をクリックします。</figcaption></figure></details>
+        </section>
+        <section id="resolve" class="sync-section">
+          <p class="sync-section-number">トラブルシューティング</p><h2>困ったときは</h2>
+          <p><b>Calendar management → Troubleshoot</b>で該当するサービスを選んでください。状態に応じて、<b>Reconnect</b>、<b>Choose calendars to import</b>、<b>Review pending items</b>、<b>Sync again</b>など、次に行う操作が表示されます。</p>
+          <details class="sync-details"><summary>共通のトラブル解決画面を見る</summary><figure class="sync-screen"><a href="assets/sync-guide/ja/issues.png" target="_blank" rel="noopener" aria-label="共通のトラブル解決画面を拡大表示（新しいタブ）"><img src="assets/sync-guide/ja/issues.png" width="1040" height="820" loading="lazy" alt="Calendar managementのTroubleshootタブでサービスを選び、状態と次の操作を確認する画面。"></a><figcaption>左側で問題のあるサービスを選び、右側の説明と操作ボタンを確認します。</figcaption></figure></details>
+          <dl class="sync-troubleshooting">
+            <div><dt>ログインできたのに予定がありません</dt><dd>① 取り込むカレンダーにチェックを入れて保存したか → ② Sync nowが完了したか → ③ <b>My calendars → Show in calendar views</b>がオンか → ④ 元の予定の日付を開いているか、の順に確認します。Outlook・CalDAVでは、過去120日から今後400日までの範囲内かも確認してください。</dd></div>
+            <div><dt>「Sync now」ボタンをクリックできません</dt><dd>まずアカウントの接続を完了し、カレンダーを一つ以上選んで保存してください。処理中の場合は、完了を待ちます。選択を変更した状態では、ボタンが<b>Save selection and sync</b>に変わる場合があります。</dd></div>
+            <div><dt>Googleの認証に失敗します</dt><dd>JSONが<b>デスクトップアプリ</b>用か、Calendar APIが有効か、テストユーザーのメールアドレスとログインアカウントが同じかを確認します。承認が制限された場合は、Google画面に表示される理由を確認し、プロジェクトの所有者や組織の管理者に問い合わせてください。有効期限切れや権限の変更時は、<b>Reconnect</b>から再度許可します。</dd></div>
+            <div><dt>アプリ用パスワードを入力しても接続できません</dt><dd>選択したサービス、メールアドレスまたはID、有効な新しいアプリパスワードかどうかを確認します。Appleの通常のパスワードの変更、Zohoのデータセンター選択、Fastmailのプラン、Naverのアカウント・プラットフォーム制限も確認してください。各ウィンドウの<b>Service authentication guide</b>から公式ヘルプを開けます。</dd></div>
+            <div><dt>ICSアドレスは正しいと出るのに、予定を取り込めません</dt><dd>形式の確認と、実際の取得は別です。通常のウェブページではなく購読用のアドレスか、非公開リンクの有効期限が切れていないかを確認します。既存の購読を選び、<b>購読URLを編集 → Save changes</b>で保存してから再度更新してください。</dd></div>
+            <div><dt>両方で編集した予定の内容が異なります</dt><dd>Google設定の<b>Troubleshooting → 未解決の問題</b>で内容を比較し、<b>ローカルを保持</b>または<b>Google版を使用</b>を選びます。Googleでは競合を記録したうえで、リモート側の内容が優先して反映される場合があります。Outlook・CalDAVでは、各設定ウィンドウの<b>3. Review issues</b>を確認してください。</dd></div>
+            <div><dt>予定の編集・削除が制限されています</dt><dd>読み取り専用カレンダー、Naver・ICSの予定は、元のサービスで編集します。CalDAVの繰り返し・招待の予定や、Outlookの繰り返しルール全体・招待への返答も、元のサービスで操作してください。</dd></div>
+            <div><dt>接続をやめたいときは</dt><dd>自動更新を止めるには、そのサービスの自動更新をオフにします。アカウントを切断するには、個別設定の<b>Disconnect</b>を使います。ICSは<b>Unsubscribe</b>を使います。この操作で元のサービスの予定は削除されず、取り込み済みの予定は残る場合があります。サーバー側のアプリへのアクセス許可も確認・取り消したい場合は、各サービスのアカウントのセキュリティ設定も確認してください。</dd></div>
+          </dl>
+          <div class="sync-callout"><strong>さらにサポートが必要な場合</strong><p>問題が起きたサービス名、クリックしたボタン、エラーメッセージを記載し、<a href="index.html?lang=ja#requests">ユーザーリクエスト掲示板</a>でお知らせください。画面や診断レポートを投稿する前に、メールアドレス、予定の内容、ファイルパス、認証情報が含まれていないか確認し、隠してください。</p></div>
+        </section>
+</div>
+    </div>
+    <footer class="sync-footer"><p><time datetime="2026-10-19">2026-10-19</time> · 現在のアプリの設定画面に基づくガイド</p><p class="sync-footer-context">インストール済みのアプリのバージョンや、各サービスのアカウント方針によって、一部の文言、画面、接続の可否が異なる場合があります。</p><nav aria-label="関連ページ"><a href="index.html?lang=ja">Air Calendarホームページ</a><a href="privacy.html">プライバシーポリシー</a><a href="#start">設定の最初へ ↑</a></nav></footer>
+  </main>
+</body>
+</html>

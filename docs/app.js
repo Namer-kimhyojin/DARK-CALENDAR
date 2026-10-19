@@ -784,6 +784,12 @@
       select.setAttribute("aria-label", copy.languageLabel);
     });
 
+    document.querySelectorAll("[data-sync-guide-link]").forEach((link) => {
+      const guideUrl = new URL(link.href, window.location.href);
+      guideUrl.searchParams.set("lang", currentLanguage);
+      link.href = guideUrl.href;
+    });
+
     updateScreen();
     updateShareLinks();
 
