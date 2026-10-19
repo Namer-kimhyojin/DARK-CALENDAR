@@ -51,6 +51,7 @@ from calendar_app.presentation.widgets.keydeck.model import (
     ACTION_TYPES,
     CASE_STYLES,
     COMMANDS,
+    DECK_SOUND_CHOICES,
     INSERT_FITS,
     INSERT_KINDS,
     KEY_MODES,
@@ -190,10 +191,12 @@ def _form(parent=None) -> QFormLayout:
 
 def _scroll_page(parent=None) -> tuple[QScrollArea, QVBoxLayout]:
     scroll = QScrollArea(parent)
+    scroll.setObjectName("kdInspectorScroll")
     scroll.setWidgetResizable(True)
     scroll.setFrameShape(QFrame.Shape.NoFrame)
     scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
     host = QWidget(scroll)
+    host.setObjectName("kdInspectorPage")
     layout = QVBoxLayout(host)
     layout.setContentsMargins(4, 8, 10, 8)
     layout.setSpacing(6)
@@ -1772,6 +1775,8 @@ class KeyInspector(QWidget):
         )
         self.switch_seg.changed.connect(lambda value: self._set("switch", value))
         layout.addWidget(self.switch_seg)
+        self.sound_section = _section(t("widget.launcher.studio.sound", "소리"), self)
+        layout.addWidget(self.sound_section)
         sound_form = _form()
         sound_row = QHBoxLayout()
         self.sound_combo = NoWheelComboBox(self)
@@ -1782,19 +1787,35 @@ class KeyInspector(QWidget):
         for sound_id, key, fallback in SOUND_CHOICES:
             self.sound_combo.addItem(str(t(key, fallback)), sound_id)
         self.sound_combo.activated.connect(self._sound_changed)
-        play = QPushButton("▶", self)
-        play.setFixedWidth(40)
-        play.setToolTip(t("widget.launcher.studio.preview_sound", "미리 듣기"))
-        play.clicked.connect(self.controller.preview_sound)
+        self.sound_preview_button = QPushButton("▶", self)
+        self.sound_preview_button.setFixedWidth(40)
+        self.sound_preview_button.setToolTip(
+            t(
+                "widget.launcher.studio.preview_sound_tip",
+                "미리 듣기 · 전체 효과음이 꺼져 있거나 음량이 0%여도 최소 음량으로 재생합니다.",
+            )
+        )
+        self.sound_preview_button.setAccessibleName(
+            t("widget.launcher.studio.preview_sound", "미리 듣기")
+        )
+        self.sound_preview_button.clicked.connect(self.controller.preview_sound)
         sound_row.addWidget(self.sound_combo, 1)
-        sound_row.addWidget(play)
-        sound_form.addRow(t("widget.launcher.studio.sound", "소리"), sound_row)
+        sound_row.addWidget(self.sound_preview_button)
+        sound_form.addRow("", sound_row)
         self.sound_file_button = QPushButton(
             t("widget.launcher.studio.choose_sound", "WAV 파일 선택…"), self
         )
         self.sound_file_button.clicked.connect(self.controller.choose_sound)
         sound_form.addRow("", self.sound_file_button)
         layout.addLayout(sound_form)
+        self.sound_status = _hint("", self)
+        layout.addWidget(self.sound_status)
+        self.global_sound_button = QPushButton(
+            t("widget.launcher.studio.open_global_sound", "전체 효과음 설정…"), self
+        )
+        self.global_sound_button.setObjectName("ghost_btn")
+        self.global_sound_button.clicked.connect(lambda: self.controller.show_sound_settings())
+        layout.addWidget(self.global_sound_button)
         layout.addWidget(_section(t("widget.launcher.studio.led", "키 아래 불빛"), self))
         led_form = _form()
         self.led_combo = NoWheelComboBox(self)
@@ -1891,9 +1912,29 @@ class KeyInspector(QWidget):
         self.cap_color.set_color(cap["color"])
         self.switch_seg.set_value(key["switch"])
         self.sound_combo.setCurrentIndex(max(0, self.sound_combo.findData(key["sound"])))
+        self.sound_combo.setToolTip(self.sound_combo.currentText())
         self.sound_file_button.setVisible(key["sound"] == "custom")
-        if key["sound"] == "custom" and key["sound_path"]:
-            self.sound_file_button.setText(Path(key["sound_path"]).name)
+        self.sound_file_button.setText(
+            Path(key["sound_path"]).name
+            if key["sound"] == "custom" and key["sound_path"]
+            else t("widget.launcher.studio.choose_sound", "WAV 파일 선택…")
+        )
+        if not deck["sound_enabled"]:
+            sound_status = t(
+                "widget.launcher.studio.sound_muted",
+                "전체 효과음이 꺼져 있어 키를 눌러도 소리가 나지 않습니다.",
+            )
+        elif not deck["sound_volume"]:
+            sound_status = t(
+                "widget.launcher.studio.sound_zero_volume",
+                "전체 음량이 0%입니다. 전체 효과음 설정에서 음량을 높이세요.",
+            )
+        else:
+            sound_status = t(
+                "widget.launcher.studio.key_sound_hint",
+                "'전체 설정 따름'은 전체 기본 소리를 사용합니다. 다른 소리를 고르면 이 키에만 적용됩니다.",
+            )
+        self.sound_status.setText(sound_status)
         self.led_combo.setCurrentIndex(max(0, self.led_combo.findData(key["led"]["mode"])))
         self.led_color.set_color(key["led"]["color"])
         if insert["kind"] == "panorama":
@@ -1984,6 +2025,15 @@ class KeyInspector(QWidget):
             return
         self._set("sound", choice)
 
+    def focus_sound(self) -> None:
+        self.tabs.setCurrentIndex(3)
+        self._scroll_to_sound()
+        QTimer.singleShot(0, self._scroll_to_sound)
+        self.sound_combo.setFocus()
+
+    def _scroll_to_sound(self) -> None:
+        self.tabs.widget(3).verticalScrollBar().setValue(self.sound_section.y())
+
 
 # ---------------------------------------------------------------------------
 # Deck inspector
@@ -2002,13 +2052,66 @@ class DeckInspector(QWidget):
         title = QLabel(t("widget.launcher.studio.deck_title", "덱 설정"), self)
         title.setObjectName("kdSummary")
         outer.addWidget(title)
-        scroll, layout = _scroll_page(self)
-        outer.addWidget(scroll, 1)
+        self.scroll, layout = _scroll_page(self)
+        outer.addWidget(self.scroll, 1)
         layout.addWidget(
             _hint(
                 t(
                     "widget.launcher.studio.deck_hint",
                     "키를 클릭하면 키 설정으로 바뀝니다. 빈 곳을 클릭하면 이 화면으로 돌아옵니다.",
+                ),
+                self,
+            )
+        )
+        layout.addWidget(_section(t("widget.launcher.studio.sound_settings", "전체 효과음"), self))
+        sound_form = _form()
+        self.sound_check = QCheckBox(
+            t("widget.launcher.studio.sound_enabled", "누를 때 소리 내기"), self
+        )
+        self.sound_check.toggled.connect(lambda value: self._set("sound_enabled", bool(value)))
+        sound_form.addRow("", self.sound_check)
+        sound_row = QHBoxLayout()
+        self.sound_combo = NoWheelComboBox(self)
+        self.sound_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.sound_combo.setMinimumContentsLength(8)
+        for sound_id, key, fallback in DECK_SOUND_CHOICES:
+            self.sound_combo.addItem(str(t(key, fallback)), sound_id)
+        self.sound_combo.activated.connect(self._sound_changed)
+        self.sound_preview_button = QPushButton("▶", self)
+        self.sound_preview_button.setFixedWidth(40)
+        self.sound_preview_button.setToolTip(
+            t(
+                "widget.launcher.studio.preview_sound_tip",
+                "미리 듣기 · 전체 효과음이 꺼져 있거나 음량이 0%여도 최소 음량으로 재생합니다.",
+            )
+        )
+        self.sound_preview_button.setAccessibleName(
+            t("widget.launcher.studio.preview_sound", "미리 듣기")
+        )
+        self.sound_preview_button.clicked.connect(self.controller.preview_deck_sound)
+        sound_row.addWidget(self.sound_combo, 1)
+        sound_row.addWidget(self.sound_preview_button)
+        sound_form.addRow(t("widget.launcher.studio.default_sound", "기본 효과음"), sound_row)
+        self.sound_file_button = QPushButton(
+            t("widget.launcher.studio.choose_sound", "WAV 파일 선택…"), self
+        )
+        self.sound_file_button.clicked.connect(self.controller.choose_deck_sound)
+        sound_form.addRow("", self.sound_file_button)
+        self.volume_slider = LabeledSlider(0, 100, "%", self)
+        self.volume_slider.valueChanged.connect(
+            lambda value: self._set("sound_volume", value, "volume")
+        )
+        sound_form.addRow(t("widget.launcher.studio.volume", "음량"), self.volume_slider)
+        layout.addLayout(sound_form)
+        layout.addWidget(
+            _hint(
+                t(
+                    "widget.launcher.studio.deck_sound_hint",
+                    "기본 효과음은 '전체 설정 따름'인 키에 적용됩니다. 개별 지정한 소리는 유지됩니다. "
+                    "켜기/끄기와 음량은 모든 키에 적용됩니다. "
+                    "미리 듣기는 꺼짐·음량 0%에서도 최소 음량으로 재생합니다.",
                 ),
                 self,
             )
@@ -2061,16 +2164,6 @@ class DeckInspector(QWidget):
         feedback_form.addRow(
             t("widget.launcher.studio.led_brightness", "불빛 밝기"), self.led_slider
         )
-        self.sound_check = QCheckBox(
-            t("widget.launcher.studio.sound_enabled", "누를 때 소리 내기"), self
-        )
-        self.sound_check.toggled.connect(lambda value: self._set("sound_enabled", bool(value)))
-        feedback_form.addRow("", self.sound_check)
-        self.volume_slider = LabeledSlider(0, 100, "%", self)
-        self.volume_slider.valueChanged.connect(
-            lambda value: self._set("sound_volume", value, "volume")
-        )
-        feedback_form.addRow(t("widget.launcher.studio.volume", "음량"), self.volume_slider)
         self.motion_check = QCheckBox(
             t("widget.launcher.studio.reduce_motion", "움직임 줄이기 (애니메이션 없이 바로 반응)"),
             self,
@@ -2134,6 +2227,14 @@ class DeckInspector(QWidget):
         self.led_slider.set_value(deck["led_brightness"])
         self.sound_check.setChecked(bool(deck["sound_enabled"]))
         self.volume_slider.set_value(deck["sound_volume"])
+        self.sound_combo.setCurrentIndex(max(0, self.sound_combo.findData(deck["sound"])))
+        self.sound_combo.setToolTip(self.sound_combo.currentText())
+        self.sound_file_button.setVisible(deck["sound"] == "custom")
+        self.sound_file_button.setText(
+            Path(deck["sound_path"]).name
+            if deck["sound"] == "custom" and deck["sound_path"]
+            else t("widget.launcher.studio.choose_sound", "WAV 파일 선택…")
+        )
         self.motion_check.setChecked(bool(deck["reduce_motion"]))
         self.panorama_editor.load(deck)
         self._loading = False
@@ -2141,6 +2242,17 @@ class DeckInspector(QWidget):
     def _set(self, path: str, value, coalesce: str = "") -> None:
         if not self._loading:
             self.controller.set_deck_fields({path: value}, coalesce=coalesce)
+
+    def _sound_changed(self) -> None:
+        choice = str(self.sound_combo.currentData())
+        if choice == "custom" and not self.controller.deck["sound_path"]:
+            self.controller.choose_deck_sound()
+            return
+        self._set("sound", choice)
+
+    def focus_sound(self) -> None:
+        self.scroll.verticalScrollBar().setValue(0)
+        self.sound_combo.setFocus()
 
 
 __all__ = [

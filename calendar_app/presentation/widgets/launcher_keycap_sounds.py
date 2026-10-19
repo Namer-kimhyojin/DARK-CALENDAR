@@ -35,6 +35,20 @@ KEYCAP_SOUNDS = (
     KeycapSound("whoosh", "widget.launcher.sound.whoosh", "소프트 우시", "whoosh.wav"),
     KeycapSound("chime", "widget.launcher.sound.chime", "에어 차임", "chime.wav"),
     KeycapSound("pulse", "widget.launcher.sound.pulse", "디지털 펄스", "pulse.wav"),
+    KeycapSound("wood_tap", "widget.launcher.sound.wood_tap", "우드 탭", "wood-tap.wav"),
+    KeycapSound("bamboo", "widget.launcher.sound.bamboo", "뱀부 톡", "bamboo.wav"),
+    KeycapSound("deep_thock", "widget.launcher.sound.deep_thock", "로우 톡", "deep-thock.wav"),
+    KeycapSound("felt_key", "widget.launcher.sound.felt_key", "펠트 키", "felt-key.wav"),
+    KeycapSound("typewriter", "widget.launcher.sound.typewriter", "타자기", "typewriter.wav"),
+    KeycapSound("ceramic", "widget.launcher.sound.ceramic", "세라믹 탭", "ceramic.wav"),
+    KeycapSound("marimba", "widget.launcher.sound.marimba", "마림바", "marimba.wav"),
+    KeycapSound("water_drop", "widget.launcher.sound.water_drop", "워터 드롭", "water-drop.wav"),
+    KeycapSound(
+        "digital_blip", "widget.launcher.sound.digital_blip", "디지털 블립", "digital-blip.wav"
+    ),
+    KeycapSound("retro_beep", "widget.launcher.sound.retro_beep", "레트로 삡", "retro-beep.wav"),
+    KeycapSound("warm_pluck", "widget.launcher.sound.warm_pluck", "웜 플럭", "warm-pluck.wav"),
+    KeycapSound("double_tap", "widget.launcher.sound.double_tap", "더블 탭", "double-tap.wav"),
 )
 _SOUND_BY_ID = {sound.sound_id: sound for sound in KEYCAP_SOUNDS}
 

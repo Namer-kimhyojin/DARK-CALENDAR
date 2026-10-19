@@ -130,6 +130,8 @@ def _studio_qss(tokens: dict) -> str:
     QToolButton#kdTool {{ padding: 5px 10px; border-radius: 8px; }}
     QToolButton#kdTool:checked {{ background: {soft_bg}; border: 1px solid {accent}; }}
     QTabWidget#kdInspectorTabs QTabBar::tab {{ min-width: 48px; padding: 7px 8px; }}
+    QScrollArea#kdInspectorScroll, QScrollArea#kdInspectorScroll > QWidget,
+    QWidget#kdInspectorPage {{ background: transparent; }}
     QFrame#kdCard {{ background: {item}; border: 1px solid {border}; border-radius: 10px; }}
     QToolButton#kdDisclosure {{ border: none; background: transparent; color: {muted};
                                 font-weight: 700; padding: 10px 0 2px 0; }}
@@ -279,6 +281,16 @@ class KeyDeckStudioDialog(QDialog):
         titles.addWidget(subtitle)
         header.addLayout(titles)
         header.addStretch()
+        self.sound_settings_button = self._tool(
+            t("widget.launcher.studio.sound_settings", "전체 효과음"),
+            "play",
+            lambda: self.show_sound_settings(),
+            t(
+                "widget.launcher.studio.sound_settings_tip",
+                "전체 효과음 · 켜기/끄기 · 기본 소리 · 음량",
+            ),
+        )
+        header.addWidget(self.sound_settings_button)
         self.undo_button = self._tool(
             t("widget.launcher.studio.undo", "실행 취소"), "undo", self.undo, "Ctrl+Z"
         )
@@ -643,6 +655,19 @@ class KeyDeckStudioDialog(QDialog):
         self.key_inspector.label_edit.setFocus()
         self.key_inspector.label_edit.selectAll()
 
+    def show_sound_settings(self, key_id: str = "") -> None:
+        """Open global or individual sound controls from any studio selection."""
+        self._leave_preview()
+        if key_id:
+            for index, page in enumerate(self.deck["pages"]):
+                if any(key["id"] == key_id for key in page["keys"]):
+                    self._load_page(index, [key_id])
+                    self.key_inspector.focus_sound()
+                    return
+        self.canvas.select([])
+        self._selection_changed()
+        self.deck_inspector.focus_sound()
+
     # -- undo / redo ----------------------------------------------------------------------
 
     def _snapshot(self) -> tuple[dict, list[str]]:
@@ -912,7 +937,7 @@ class KeyDeckStudioDialog(QDialog):
         """Show a one-off result in the status bar until the next selection change."""
         self.status.setText(str(text))
 
-    def choose_sound(self) -> None:
+    def choose_sound(self, *, deck_wide: bool = False) -> None:
         path, _selected = QFileDialog.getOpenFileName(
             self,
             t("widget.launcher.studio.choose_sound", "WAV 파일 선택…"),
@@ -922,7 +947,8 @@ class KeyDeckStudioDialog(QDialog):
         if path:
             imported = import_launcher_asset(path, "sound")
             if imported:
-                self.set_key_fields({"sound": "custom", "sound_path": imported})
+                setter = self.set_deck_fields if deck_wide else self.set_key_fields
+                setter({"sound": "custom", "sound_path": imported})
             else:
                 QMessageBox.warning(
                     self,
@@ -933,6 +959,13 @@ class KeyDeckStudioDialog(QDialog):
                     ),
                 )
         self._reload_inspector()
+
+    def choose_deck_sound(self) -> None:
+        self.choose_sound(deck_wide=True)
+
+    def preview_deck_sound(self) -> None:
+        """Listen to the global default without changing per-key overrides."""
+        self.canvas.preview_deck_sound()
 
     def preview_sound(self) -> None:
         """Play one real keystroke (switch sounds follow the physics events)."""

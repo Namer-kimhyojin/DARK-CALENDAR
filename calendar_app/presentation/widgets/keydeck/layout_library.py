@@ -147,11 +147,19 @@ def build_document(
         for page in body["pages"]:
             embed.keys(page["keys"])
         body["panorama"]["path"] = embed(body["panorama"]["path"], "image")
+        if body["sound_path"]:
+            body["sound_path"] = embed(body["sound_path"], "sound")
         document["deck"] = body
     else:
         index = source["page"] if page_index is None else int(page_index)
         index = max(0, min(index, len(source["pages"]) - 1))
         page = deepcopy(source["pages"][index])
+        # A shared page retains its sound without replacing the receiving deck's default.
+        for key in page["keys"]:
+            if key["sound"] == "auto":
+                key["sound"] = "switch" if source["sound"] == "auto" else source["sound"]
+                if source["sound"] == "custom":
+                    key["sound_path"] = source["sound_path"]
         embed.keys(page["keys"])
         uses_panorama = any(key["insert"]["kind"] == "panorama" for key in page["keys"])
         panorama = deepcopy(source["panorama"]) if uses_panorama else default_panorama()
@@ -311,6 +319,8 @@ def _decode_asset(asset: dict) -> bytes | None:
 
 
 def _restore_refs(content: dict, resolve) -> None:
+    if "sound_path" in content:
+        content["sound_path"] = resolve(content["sound_path"])
     pages = content["pages"] if "pages" in content else [content["page"]]
     for page in pages:
         for key in page["keys"]:

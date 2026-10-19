@@ -3414,7 +3414,9 @@
         "sound": "按键音效",
         "studio": "打开 KeyDeck 工作室...",
         "templates": "布局",
-        "themes": "主题"
+        "themes": "主题",
+        "sound_settings": "Global sound settings…",
+        "key_sound_settings": "Sound settings for this key…"
       },
       "mode": {
         "tap": "按一次",
@@ -3458,7 +3460,21 @@
         "success": "成功提示音",
         "toggle_off": "关闭提示音",
         "toggle_on": "开启提示音",
-        "whoosh": "柔和呼啸"
+        "whoosh": "柔和呼啸",
+        "inherit": "Use global default",
+        "switch": "Physical switch (this key)",
+        "wood_tap": "Wood Tap",
+        "bamboo": "Bamboo Knock",
+        "deep_thock": "Deep Thock",
+        "felt_key": "Felt Key",
+        "typewriter": "Typewriter",
+        "ceramic": "Ceramic Tap",
+        "marimba": "Marimba",
+        "water_drop": "Water Drop",
+        "digital_blip": "Digital Blip",
+        "retro_beep": "Retro Beep",
+        "warm_pluck": "Warm Pluck",
+        "double_tap": "Double Tap"
       },
       "studio": {
         "accent": "强调色",
@@ -3621,7 +3637,16 @@
         "url_warning": "只能打开 http:// 或 https:// 地址。",
         "volume": "音量",
         "weight": "粗细",
-        "zoom": "缩放"
+        "zoom": "缩放",
+        "sound_settings": "Global sound",
+        "sound_settings_tip": "Global sound · On/off · Default sound · Volume",
+        "open_global_sound": "Global sound settings…",
+        "default_sound": "Default sound",
+        "sound_muted": "Global sound is off, so pressing keys will be silent.",
+        "sound_zero_volume": "Global volume is 0%. Increase it in global sound settings.",
+        "key_sound_hint": "Use global default follows the default sound. Choosing another sound affects only this key.",
+        "deck_sound_hint": "The default sound applies to keys using the global default. Individual sounds are preserved. On/off and volume apply to every key. Preview plays at a minimum volume even when sound is off or volume is 0%.",
+        "preview_sound_tip": "Preview · Plays at a minimum volume even when global sound is off or volume is 0%."
       },
       "switch": {
         "clicky": "青轴 · 咔哒",

@@ -221,3 +221,145 @@ def test_history_chain_cannot_silently_skip_a_version_event(project):
     ledger["events"][0]["previous_version"] = "0.0.0"
     with pytest.raises(ValueError, match="chain"):
         versions.verify(project, ledger)
+
+
+@pytest.fixture
+def unpublished_release(project):
+    for name, data in versions.core_updates(project, "4.3.0", "2026-10-19").items():
+        (project / name).write_bytes(data)
+    register(project, "module", "unpublished-module")
+    register(project, "store", "unpublished-store")
+    assert versions.current_version(project) == "4.5.0"
+    return project
+
+
+def correct_release(project, version="4.3.3", published="4.3.0", key="user-release-4.3.3"):
+    return versions.override(project, version, published, key, "User explicitly requested 4.3.3")
+
+
+def test_explicit_override_preserves_reservations_and_registers_current_inputs(unpublished_release):
+    project = unpublished_release
+    previous = json.loads(versions.text(project / versions.HISTORY))
+    public_before = (project / "docs/site-config.json").read_bytes()
+    result = correct_release(project)
+    ledger = json.loads(versions.text(project / versions.HISTORY))
+    assert result["previous_version"] == "4.5.0"
+    assert result["version"] == versions.verify(project, ledger) == "4.3.3"
+    assert ledger["events"][:-1] == previous["events"]
+    assert ledger["events"][-1]["kind"] == "override"
+    assert ledger["events"][-1]["published_version"] == "4.3.0"
+    assert ledger["observed_inputs"] == versions.input_hashes(project)
+    assert not versions.scan(project)["changed"]
+    assert 'APP_RELEASE_CHANNEL = "Dev"' in versions.text(project / versions.CORE[0])
+    assert (project / "docs/site-config.json").read_bytes() == public_before
+
+
+def test_override_and_same_payload_store_retries_keep_explicit_version(unpublished_release):
+    project = unpublished_release
+    correct_release(project)
+    before = (project / versions.HISTORY).read_bytes()
+    assert not correct_release(project)["changed"]
+    store_retry = register(project, "store", "same-explicit-release-retry")
+    assert not store_retry["changed"]
+    assert store_retry["version"] == store_retry["event_version"] == "4.3.3"
+    assert (project / versions.HISTORY).read_bytes() == before
+
+
+@pytest.mark.parametrize(("version", "published"), [("4.3.4", "4.3.0"), ("4.3.3", "4.2.9")])
+def test_override_id_cannot_change_target_or_published_floor(
+    unpublished_release, version, published
+):
+    correct_release(unpublished_release)
+    with pytest.raises(ValueError, match="different correction"):
+        correct_release(unpublished_release, version, published)
+
+
+def test_override_id_cannot_absorb_new_inputs_or_reuse_regular_event_id(unpublished_release):
+    project = unpublished_release
+    with pytest.raises(ValueError, match="different correction"):
+        correct_release(project, key="unpublished-store")
+    correct_release(project)
+    path = project / "calendar_app/feature.py"
+    path.write_bytes(path.read_bytes() + b"VALUE = 2\n")
+    with pytest.raises(ValueError, match="different correction"):
+        correct_release(project)
+    assert versions.current_version(project) == "4.3.3"
+
+
+@pytest.mark.parametrize(
+    ("version", "published"),
+    [
+        ("4.3.0", "4.3.0"),
+        ("4.2.9", "4.3.0"),
+        ("4.3.10", "4.3.0"),
+        ("4.3.3.0", "4.3.0"),
+        ("4.3.3", "4.3.0.0"),
+    ],
+)
+def test_override_rejects_invalid_or_published_target_without_writes(
+    unpublished_release, version, published
+):
+    project = unpublished_release
+    before = {name: (project / name).read_bytes() for name in versions.TARGETS}
+    with pytest.raises(ValueError):
+        correct_release(project, version, published)
+    assert {name: (project / name).read_bytes() for name in versions.TARGETS} == before
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"), [("change", "4.3.4"), ("module", "4.4.0"), ("store", "4.4.0")]
+)
+def test_new_work_after_override_uses_ordinary_increment_rules(unpublished_release, kind, expected):
+    project = unpublished_release
+    correct_release(project)
+    path = project / "calendar_app/feature.py"
+    path.write_bytes(path.read_bytes() + b"VALUE = 2\n")
+    assert register(project, kind, "new-work-after-override")["version"] == expected
+    assert (
+        versions.verify(project, json.loads(versions.text(project / versions.HISTORY))) == expected
+    )
+
+
+def test_verify_rejects_override_at_or_below_its_recorded_published_floor(unpublished_release):
+    project = unpublished_release
+    correct_release(project)
+    ledger = json.loads(versions.text(project / versions.HISTORY))
+    ledger["events"][-1]["published_version"] = "4.3.3"
+    with pytest.raises(ValueError, match="published"):
+        versions.verify(project, ledger)
+
+
+def test_override_cli_retry_scan_and_build_check_use_the_exact_target(unpublished_release):
+    def run(*args):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts/manage_version.py"),
+                *args,
+                "--root",
+                str(unpublished_release),
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="strict",
+            timeout=10,
+        )
+        assert result.returncode == 0, result.stderr
+        return json.loads(result.stdout)
+
+    arguments = (
+        "override",
+        "--version",
+        "4.3.3",
+        "--published-version",
+        "4.3.0",
+        "--event-id",
+        "user-release-4.3.3",
+        "--summary",
+        "Explicit user correction",
+    )
+    assert run(*arguments)["changed"]
+    assert not run(*arguments)["changed"]
+    assert run("scan") == {"changed": False, "version": "4.3.3"}
+    assert run("check", "--expected", "4.3.3")["version"] == "4.3.3"

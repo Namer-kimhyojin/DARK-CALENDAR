@@ -1449,9 +1449,15 @@ class ThreadLocalDatabaseManager:
 
         conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
 
-        conn.row_factory = sqlite3.Row
-
-        conn.execute("PRAGMA busy_timeout = 10000")
+        try:
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA busy_timeout = 10000")
+        except sqlite3.Error:
+            try:
+                conn.close()
+            except sqlite3.Error:
+                pass
+            raise
 
         return conn
 
@@ -1475,6 +1481,7 @@ class ThreadLocalDatabaseManager:
 
                 self._connections.pop(thread_id, None)
 
+            conn = None
             try:
                 conn = self._create_connection()
 
@@ -1491,6 +1498,11 @@ class ThreadLocalDatabaseManager:
                 return ConnectionWrapper(conn)
 
             except sqlite3.Error as e:
+                if conn is not None:
+                    try:
+                        conn.close()
+                    except sqlite3.Error:
+                        pass
                 logger.error(f"Failed to connect to database: {e}")
 
                 return None

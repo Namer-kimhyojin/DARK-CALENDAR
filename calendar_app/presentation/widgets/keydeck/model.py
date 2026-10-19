@@ -139,11 +139,16 @@ CASE_STYLES: tuple[Option, ...] = (
     ("walnut", "widget.launcher.case.walnut", "월넛 우드"),
     ("floating", "widget.launcher.case.floating", "플로팅 (케이스 없음)"),
 )
-SOUND_CHOICES: tuple[Option, ...] = (
+DECK_SOUND_CHOICES: tuple[Option, ...] = (
     ("auto", "widget.launcher.sound.auto", "실제 타건음 (스위치·키캡·케이스 반영)"),
     ("none", "widget.launcher.sound.none", "소리 없음"),
     *((sound.sound_id, sound.label_key, sound.label_default) for sound in KEYCAP_SOUNDS),
     ("custom", "widget.launcher.sound.custom", "내 WAV 파일"),
+)
+SOUND_CHOICES: tuple[Option, ...] = (
+    ("auto", "widget.launcher.sound.inherit", "전체 설정 따름"),
+    ("switch", "widget.launcher.sound.switch", "실제 타건음 (이 키)"),
+    *DECK_SOUND_CHOICES[1:],
 )
 
 
@@ -426,6 +431,8 @@ def default_deck() -> dict:
         "led_brightness": 80,
         "sound_enabled": True,
         "sound_volume": 60,
+        "sound": "auto",
+        "sound_path": "",
         "reduce_motion": False,
         "panorama": default_panorama(),
         "theme": DEFAULT_THEME_ID,
@@ -589,6 +596,8 @@ def normalize_deck(raw: object) -> dict:
     deck["led_brightness"] = _int(raw.get("led_brightness"), 0, 100, deck["led_brightness"])
     deck["sound_enabled"] = _bool(raw.get("sound_enabled"), True)
     deck["sound_volume"] = _int(raw.get("sound_volume"), 0, 100, deck["sound_volume"])
+    deck["sound"] = _choice(raw.get("sound"), option_ids(DECK_SOUND_CHOICES), "auto")
+    deck["sound_path"] = _text(raw.get("sound_path"), 1024).strip()
     deck["reduce_motion"] = _bool(raw.get("reduce_motion"), False)
     deck["panorama"] = normalize_panorama(raw.get("panorama"))
     theme = str(raw.get("theme") or "")
@@ -2131,6 +2140,7 @@ __all__ = [
     "PLAYBACK_MODES",
     "PROFILES",
     "SOUND_CHOICES",
+    "DECK_SOUND_CHOICES",
     "STYLE_FIELDS",
     "SWITCHES",
     "TEMPLATES",

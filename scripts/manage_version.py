@@ -32,11 +32,20 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def next_version(current, kind):
-    if not re.fullmatch(r"[0-9]\.[0-9]\.[0-9]", current):
+def version_number(version):
+    if not isinstance(version, str) or not re.fullmatch(r"[0-9]\.[0-9]\.[0-9]", version):
         raise ValueError("Version must have three single-digit components")
-    major, minor, patch = map(int, current.split("."))
-    value = major * 100 + minor * 10 + patch
+    major, minor, patch = map(int, version.split("."))
+    return major * 100 + minor * 10 + patch
+
+
+def validate_override(version, published_version):
+    if version_number(version) <= version_number(published_version):
+        raise ValueError("Override version must be higher than the verified published version")
+
+
+def next_version(current, kind):
+    value = version_number(current)
     value = value + 1 if kind == "change" else (value // 10 + 1) * 10
     if value > 999:
         raise ValueError("Single-digit version space exhausted; a new numbering policy is required")
@@ -95,10 +104,13 @@ def verify(root, ledger):
     for event in ledger["events"]:
         if (
             event["id"] in ids
-            or event["kind"] not in {"change", "module", "store"}
+            or event["kind"] not in {"change", "module", "store", "override"}
             or event["previous_version"] != previous
-            or event["version"] != next_version(previous, event["kind"])
         ):
+            raise ValueError("Version history chain is inconsistent")
+        if event["kind"] == "override":
+            validate_override(event["version"], event.get("published_version"))
+        elif event["version"] != next_version(previous, event["kind"]):
             raise ValueError("Version history chain is inconsistent")
         ids.add(event["id"])
         previous = event["version"]
@@ -325,7 +337,7 @@ def record(root, kind, event_id, summary, files=()):
                 "Event ID already belongs to different inputs; use a new logical change ID"
             )
         return {"changed": False, "version": current, "event_version": existing["version"]}
-    if scopes and inputs == ledger.get("observed_inputs"):
+    if kind != "store" and scopes and inputs == ledger.get("observed_inputs"):
         duplicate = next(
             (
                 item
@@ -338,7 +350,8 @@ def record(root, kind, event_id, summary, files=()):
             return {"changed": False, "version": current, "event_version": duplicate["version"]}
     if kind == "store":
         previous = next(
-            (item for item in reversed(ledger["events"]) if item["kind"] == "store"), None
+            (item for item in reversed(ledger["events"]) if item["kind"] in {"store", "override"}),
+            None,
         )
         if previous and previous["inputs"] == inputs:
             return {"changed": False, "version": current, "event_version": previous["version"]}
@@ -356,6 +369,52 @@ def record(root, kind, event_id, summary, files=()):
         "inputs": inputs,
     }
     ledger["events"].append(event)
+    ledger.update({"current_version": version, "observed_inputs": inputs})
+    updates = core_updates(root, version, timestamp.date().isoformat())
+    updates[HISTORY] = json_bytes(ledger)
+    updates[REPORT] = render_history(ledger)
+    transaction(root, updates)
+    return {"changed": True, "version": version, "previous_version": current, "event_id": event_id}
+
+
+def override(root, version, published_version, event_id, summary):
+    """Record a user's explicit unpublished-version correction without deleting history."""
+    validate_override(version, published_version)
+    if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,160}", event_id) or not summary.strip():
+        raise ValueError("override requires a valid event ID and summary")
+    history_path = root / HISTORY
+    if not history_path.exists():
+        raise ValueError("Version history missing; restore it before correcting a version")
+    ledger = json.loads(text(history_path))
+    current = verify(root, ledger)
+    inputs = input_hashes(root)
+    existing = next((item for item in ledger["events"] if item["id"] == event_id), None)
+    if existing:
+        if (
+            existing["kind"] != "override"
+            or existing["version"] != version
+            or existing["published_version"] != published_version
+            or existing["inputs"] != inputs
+        ):
+            raise ValueError(
+                "Event ID already belongs to different correction parameters or inputs"
+            )
+        return {"changed": False, "version": current, "event_version": existing["version"]}
+    timestamp = datetime.now(timezone(timedelta(hours=9)))
+    ledger["events"].append(
+        {
+            "id": event_id,
+            "created_at": timestamp.isoformat(),
+            "kind": "override",
+            "previous_version": current,
+            "version": version,
+            "published_version": published_version,
+            "summary": summary,
+            "files": [],
+            "scoped_hashes": {},
+            "inputs": inputs,
+        }
+    )
     ledger.update({"current_version": version, "observed_inputs": inputs})
     updates = core_updates(root, version, timestamp.date().isoformat())
     updates[HISTORY] = json_bytes(ledger)
@@ -388,13 +447,15 @@ def scan(root):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("record", "scan", "check", "status"))
+    parser.add_argument("command", choices=("record", "override", "scan", "check", "status"))
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--kind", choices=("change", "module", "store"), default="change")
     parser.add_argument("--event-id")
     parser.add_argument("--summary", default="")
     parser.add_argument("--files", nargs="*", default=[])
     parser.add_argument("--expected")
+    parser.add_argument("--version")
+    parser.add_argument("--published-version")
     args = parser.parse_args()
     root = args.root.resolve()
     try:
@@ -403,6 +464,14 @@ def main():
                 if not args.event_id or not args.summary:
                     raise ValueError("record requires --event-id and --summary")
                 result = record(root, args.kind, args.event_id, args.summary, args.files)
+            elif args.command == "override":
+                if not all((args.version, args.published_version, args.event_id, args.summary)):
+                    raise ValueError(
+                        "override requires --version, --published-version, --event-id and --summary"
+                    )
+                result = override(
+                    root, args.version, args.published_version, args.event_id, args.summary
+                )
             elif args.command == "scan":
                 result = scan(root)
             else:

@@ -3414,7 +3414,9 @@
         "sound": "키 사운드",
         "studio": "KeyDeck 스튜디오 열기...",
         "templates": "레이아웃",
-        "themes": "테마"
+        "themes": "테마",
+        "sound_settings": "전체 효과음 설정…",
+        "key_sound_settings": "이 키 효과음 설정…"
       },
       "mode": {
         "tap": "한 번 누르기",
@@ -3458,7 +3460,21 @@
         "success": "성공 차임",
         "toggle_off": "토글 꺼짐",
         "toggle_on": "토글 켜짐",
-        "whoosh": "소프트 우시"
+        "whoosh": "소프트 우시",
+        "inherit": "전체 설정 따름",
+        "switch": "실제 타건음 (이 키)",
+        "wood_tap": "우드 탭",
+        "bamboo": "뱀부 톡",
+        "deep_thock": "로우 톡",
+        "felt_key": "펠트 키",
+        "typewriter": "타자기",
+        "ceramic": "세라믹 탭",
+        "marimba": "마림바",
+        "water_drop": "워터 드롭",
+        "digital_blip": "디지털 블립",
+        "retro_beep": "레트로 삡",
+        "warm_pluck": "웜 플럭",
+        "double_tap": "더블 탭"
       },
       "studio": {
         "accent": "포인트 색",
@@ -3621,7 +3637,16 @@
         "url_warning": "http:// 또는 https:// 주소만 열 수 있습니다.",
         "volume": "음량",
         "weight": "굵기",
-        "zoom": "확대"
+        "zoom": "확대",
+        "sound_settings": "전체 효과음",
+        "sound_settings_tip": "전체 효과음 · 켜기/끄기 · 기본 소리 · 음량",
+        "open_global_sound": "전체 효과음 설정…",
+        "default_sound": "기본 효과음",
+        "sound_muted": "전체 효과음이 꺼져 있어 키를 눌러도 소리가 나지 않습니다.",
+        "sound_zero_volume": "전체 음량이 0%입니다. 전체 효과음 설정에서 음량을 높이세요.",
+        "key_sound_hint": "'전체 설정 따름'은 전체 기본 소리를 사용합니다. 다른 소리를 고르면 이 키에만 적용됩니다.",
+        "deck_sound_hint": "기본 효과음은 '전체 설정 따름'인 키에 적용됩니다. 개별 지정한 소리는 유지됩니다. 켜기/끄기와 음량은 모든 키에 적용됩니다. 미리 듣기는 꺼짐·음량 0%에서도 최소 음량으로 재생합니다.",
+        "preview_sound_tip": "미리 듣기 · 전체 효과음이 꺼져 있거나 음량이 0%여도 최소 음량으로 재생합니다."
       },
       "switch": {
         "clicky": "청축 · 딸깍",

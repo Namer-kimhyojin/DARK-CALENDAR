@@ -26,7 +26,6 @@ from calendar_app.presentation.widgets.keydeck.model import (
 )
 from calendar_app.presentation.widgets.keydeck.physics import (
     EVENT_BOTTOM,
-    EVENT_CLICK,
     EVENT_TOP,
     LATCH_DEPTH,
     KeySpring,
@@ -107,7 +106,7 @@ class _KeyRuntime:
         "pending_release",
     )
 
-    def __init__(self, key: dict, rest: float):
+    def __init__(self, key: dict, rest: float, deck: dict | None = None):
         self.switch = key["switch"]
         self.spring = KeySpring(switch_profile(key["switch"]), rest)
         self.tilt = TiltSpring()
@@ -117,7 +116,7 @@ class _KeyRuntime:
         self.shake_t = 0.0
         self.pending_release = False
         self.plan = None
-        self.press_path, self.release_path = key_sound_paths(key)
+        self.press_path, self.release_path = key_sound_paths(key, deck)
 
 
 class KeyDeckCanvas(QWidget):
@@ -167,7 +166,10 @@ class KeyDeckCanvas(QWidget):
         self._geometry_overrides: dict = {}
         self._mouse_inside = False
         self._armed_at = 0.0
-        self._force_sound_until = 0.0
+        self._sound_preview_timer = QTimer(self)
+        self._sound_preview_timer.setSingleShot(True)
+        self._sound_preview_timer.timeout.connect(self._advance_sound_preview)
+        self._sound_preview_queue: list[tuple[float, str, float]] = []
         self.close_control_enabled = True
 
     # -- deck binding -----------------------------------------------------------
@@ -272,9 +274,9 @@ class KeyDeckCanvas(QWidget):
             runtime = self._runtime.get(key["id"])
             rest = self._rest_position(key)
             if runtime is None or runtime.switch != key["switch"]:
-                runtime = _KeyRuntime(key, rest)
+                runtime = _KeyRuntime(key, rest, self._deck)
             elif force_ids is None or key["id"] in force_ids:
-                runtime.press_path, runtime.release_path = key_sound_paths(key)
+                runtime.press_path, runtime.release_path = key_sound_paths(key, self._deck)
             runtime.plan = physical_sound_plan(key, self._deck)
             if key["id"] != self._pressed_id and not runtime.pending_release:
                 self._move_to(runtime, rest)
@@ -396,16 +398,64 @@ class KeyDeckCanvas(QWidget):
         self._ensure_timer()
 
     def press_visual(self, key_id: str, *, force_sound: bool = False) -> None:
-        """Animate a full keystroke without mouse input (studio preview / test run)."""
+        """Preview audio explicitly, or animate a keystroke for a test run."""
         key = self._key_by_id(key_id)
         runtime = self._runtime.get(key_id)
         if key is None or runtime is None:
             return
         if force_sound:
-            self._force_sound_until = time.monotonic() + 0.8
+            self._preview_key_sound(key)
+            return
         self._press_runtime(key, runtime, None)
         QTimer.singleShot(110, lambda: self._release_visual(key_id))
         self._ensure_timer()
+
+    def preview_deck_sound(self) -> None:
+        """Audition the deck default even when every key has an individual override."""
+        if self._deck is not None:
+            keys = self._page_keys()
+            key = dict(keys[0]) if keys else {"switch": "tactile", "cap": {}}
+            key["sound"] = "auto"
+            self._preview_key_sound(key)
+
+    def _preview_key_sound(self, key: dict) -> None:
+        # Audition does not depend on visibility, animation ticks, or runtime mute.
+        self._sound_preview_timer.stop()
+        self._sound_preview_queue.clear()
+        deck = self._deck
+        if deck is None:
+            return
+        volume = max(0.25, deck.get("sound_volume", 60) / 100.0)
+        plan = physical_sound_plan(key, deck)
+        now = time.monotonic()
+        if plan is None:
+            press, release = key_sound_paths(key, deck)
+            cues = [(0, press, 1.0), (110, release, 1.0)]
+        else:
+            cues = [
+                (delay, pick_switch_sound(plan[event][0]), plan[event][1])
+                for event, delay in (
+                    ("bump", 0),
+                    ("click", 12),
+                    ("bottom", 30),
+                    ("click_up", 130),
+                    ("top", 155),
+                )
+                if event in plan
+            ]
+        self._sound_preview_queue = [
+            (now + delay / 1000.0, path, volume * gain) for delay, path, gain in cues if path
+        ]
+        self._advance_sound_preview()
+
+    def _advance_sound_preview(self) -> None:
+        now = time.monotonic()
+        while self._sound_preview_queue and self._sound_preview_queue[0][0] <= now:
+            _when, path, volume = self._sound_preview_queue.pop(0)
+            sound_bank().play(path, volume)
+        if self._sound_preview_queue:
+            delay = max(1, math.ceil((self._sound_preview_queue[0][0] - now) * 1000))
+            self._sound_preview_timer.start(delay)
 
     def _release_visual(self, key_id: str) -> None:
         key = self._key_by_id(key_id)
@@ -433,6 +483,8 @@ class KeyDeckCanvas(QWidget):
     def hideEvent(self, event) -> None:  # noqa: N802
         self._timer.stop()
         self._hold_timer.stop()
+        self._sound_preview_timer.stop()
+        self._sound_preview_queue.clear()
         for movie in self._movies.values():
             movie.setPaused(True)
         super().hideEvent(event)
@@ -635,7 +687,7 @@ class KeyDeckCanvas(QWidget):
         else:
             runtime.spring.press(1.0)
             runtime.tilt.set_target(*self._tilt_for(key, point))
-        if runtime.plan is None and (not runtime.spring.profile.click_at or self._reduce_motion()):
+        if runtime.plan is None:
             self._play(runtime.press_path)
 
     def _release_runtime(self, key: dict, runtime: _KeyRuntime) -> None:
@@ -668,8 +720,6 @@ class KeyDeckCanvas(QWidget):
     def _emit_switch_sound(self, runtime: _KeyRuntime, event: str) -> None:
         plan = runtime.plan
         if plan is None:
-            if event == EVENT_CLICK:
-                self._play(runtime.press_path)
             return
         cue = plan.get(event)
         if cue is None:
@@ -724,14 +774,9 @@ class KeyDeckCanvas(QWidget):
         deck = self._deck
         if not path or deck is None:
             return
-        forced = time.monotonic() < self._force_sound_until
-        if not deck.get("sound_enabled", True) and not forced:
+        if not deck.get("sound_enabled", True):
             return
-        volume = (
-            max(0.25, deck.get("sound_volume", 60) / 100.0)
-            if forced
-            else deck.get("sound_volume", 60) / 100.0
-        )
+        volume = deck.get("sound_volume", 60) / 100.0
         sound_bank().play(path, volume * gain, voices=voices)
 
     def _preload_sounds(self) -> None:

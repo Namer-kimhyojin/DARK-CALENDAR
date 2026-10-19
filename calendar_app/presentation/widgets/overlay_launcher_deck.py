@@ -560,13 +560,17 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             self._schedule_save()
             self._fit_window()
 
-    def _open_settings(self, initial_tab: int = 0, key_id: str = "") -> None:
+    def _open_settings(
+        self, initial_tab: int = 0, key_id: str = "", *, sound_settings: bool = False
+    ) -> None:
         del initial_tab
         from calendar_app.presentation.widgets.keydeck.studio import KeyDeckStudioDialog
 
         if is_app_exiting():
             return
         if self._studio is not None:
+            if sound_settings:
+                self._studio.show_sound_settings(key_id)
             self._studio.raise_()
             self._studio.activateWindow()
             return
@@ -575,6 +579,8 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         dialog = KeyDeckStudioDialog(
             self._deck_data, self, key_id=key_id, execute_callback=self._execute_action
         )
+        if sound_settings:
+            dialog.show_sound_settings(key_id)
         self._studio = dialog
         try:
             accepted = dialog.exec() == QDialog.DialogCode.Accepted
@@ -582,6 +588,9 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             self._studio = None
         if accepted and not is_app_exiting():
             self._apply_deck(dialog.result_deck())
+
+    def _open_sound_settings(self, key_id: str = "") -> None:
+        self._open_settings(key_id=key_id, sound_settings=True)
 
     def _apply_template(self, template_id: str) -> None:
         deck = self._deck_data
@@ -645,6 +654,14 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
                 t("widget.launcher.menu.edit_key", "'{name}' 키 편집...", name=name),
                 lambda *_, kid=key["id"]: self._open_settings(key_id=kid),
             )
+            menu.addAction(
+                t("widget.launcher.menu.key_sound_settings", "이 키 효과음 설정…"),
+                lambda *_, kid=key["id"]: self._open_sound_settings(kid),
+            )
+        menu.addAction(
+            t("widget.launcher.menu.sound_settings", "전체 효과음 설정…"),
+            lambda: self._open_sound_settings(),
+        )
         menu.addSeparator()
         pages_menu = menu.addMenu(t("widget.launcher.menu.pages", "페이지"))
         pages_menu.setStyleSheet(style)

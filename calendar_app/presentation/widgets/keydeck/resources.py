@@ -23,6 +23,7 @@ except ImportError:  # pragma: no cover - optional in minimal Qt installs
     QSoundEffect = None
 
 from calendar_app.app_paths import get_resource_path
+from calendar_app.infrastructure.runtime.keydeck_audio import NativeSoundBank
 from calendar_app.presentation.widgets.keydeck.physics import switch_profile
 from calendar_app.presentation.widgets.launcher_keycap_assets import keycap_asset
 from calendar_app.presentation.widgets.launcher_keycap_icons import keycap_icon_asset
@@ -226,16 +227,23 @@ def _bundled_sound_path(sound_id: str) -> str:
     return str(path) if path.is_file() else ""
 
 
-def key_sound_paths(key: dict) -> tuple[str, str]:
-    """Resolve (press, release) WAV paths for a key's sound choice."""
+def _sound_source(key: dict, deck: dict | None) -> tuple[str, dict]:
     choice = str(key.get("sound", "auto") or "auto")
+    if choice == "auto" and deck is not None:
+        return str(deck.get("sound", "auto") or "auto"), deck
+    return choice, key
+
+
+def key_sound_paths(key: dict, deck: dict | None = None) -> tuple[str, str]:
+    """Resolve (press, release) WAV paths for a key's sound choice."""
+    choice, source = _sound_source(key, deck)
     if choice == "none":
         return ("", "")
     if choice == "custom":
-        path = str(key.get("sound_path", "") or "")
+        path = str(source.get("sound_path", "") or "")
         valid = path.lower().endswith(".wav") and file_stamp(path) is not None
         return (path if valid else "", "")
-    if choice == "auto":
+    if choice in {"auto", "switch"}:
         profile = switch_profile(key.get("switch"))
         return (
             _bundled_sound_path(profile.press_sound) if profile.press_sound else "",
@@ -292,7 +300,7 @@ def key_tone(key: dict, deck: dict | None) -> str:
 
 def physical_sound_plan(key: dict, deck: dict | None) -> dict[str, tuple[str, float]] | None:
     """Switch event → (sound kind, gain) for keys using the automatic switch sound."""
-    if str(key.get("sound", "auto") or "auto") != "auto":
+    if _sound_source(key, deck)[0] not in {"auto", "switch"}:
         return None
     switch = str(key.get("switch", "tactile"))
     if switch == "silent":
@@ -321,6 +329,12 @@ class SoundBank:
     def __init__(self):
         self._pools: dict[str, list] = {}
         self._cursor: dict[str, int] = {}
+        self._native: NativeSoundBank | None = None
+
+    def _native_bank(self) -> NativeSoundBank:
+        if self._native is None:
+            self._native = NativeSoundBank()
+        return self._native
 
     def _pool(self, path: str, voices: int | None = None) -> list:
         pool = self._pools.get(path)
@@ -335,14 +349,20 @@ class SoundBank:
         return pool
 
     def preload(self, paths, voices: int | None = None) -> None:
-        if QSoundEffect is None or QApplication.instance() is None:
+        if QApplication.instance() is None:
+            return
+        if QSoundEffect is None:
+            self._native_bank().preload(paths, voices=voices)
             return
         for path in paths:
             if path:
                 self._pool(path, voices)
 
     def play(self, path: str, volume: float, voices: int | None = None) -> None:
-        if not path or volume <= 0.0 or QSoundEffect is None or QApplication.instance() is None:
+        if not path or volume <= 0.0 or QApplication.instance() is None:
+            return
+        if QSoundEffect is None:
+            self._native_bank().play(path, volume, voices=voices)
             return
         pool = self._pool(path, voices)
         index = self._cursor.get(path, 0)
