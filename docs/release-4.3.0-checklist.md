@@ -14,7 +14,7 @@ Target: Windows x64 / MSIX 4.3.0.0. Existing Store product: 9MXQ08RF22K8.
 - [x] Pass 179 packaged-implementation cases in 9 isolated files, with no source fallback and native preferences preserved.
 - [x] Pass post-format source contracts, final registered-version scan and encoding checks.
 - [x] Commit/push the complete runtime inputs and verify the matching GitHub Windows build and public package/source/checksums.
-- [ ] Upload the single verified 4.3.0.0 package to the existing product, validate and submit for certification.
+- [x] Upload the single verified 4.3.0.0 package to the existing product, validate and submit for certification.
 - [ ] Confirm Store publication and installation separately.
 
 The first local 4.2.0 payload build verified 286 compiled modules and 203 resources. Formatting later changed one compiled fingerprint despite equal ASTs; it is not the final submitted artifact. The final build must pass its own complete match. The local PC has no `makeappx.exe`; the Store MSIX and upload will come from the verified GitHub Windows runner.
@@ -32,3 +32,13 @@ Authenticated Partner Center created **Submission 27 / `1152921505702165197`**. 
 Public release: https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.3.0
 
 Evidence: `artifacts/deployment/4.3.0/20261019-1017/` (`public-package-validation.json`, `public-runtime-match.json`, `public-frozen-smoke.xml`, `github-workflows.json`, `store-draft-status.json`). Common state preserves the published Submission 26 checkpoint and the precise upload resume point.
+
+## Certification submitted — 2026-10-19
+
+The user selected the verified 4.3.0.0 upload through the normal Chrome picker. Partner Center recognized x64 / Windows.Desktop minimum 10.0.17763.0 and confirmed that this version supports the same customers as 3.8.1.0. Save completed; the overview shows `DarkCalendar-4.3.0.0-x64.msixupload`, **Validated** and **Updated**. The browser-upload blocker is resolved by the normal user upload; no permission bypass or duplicate package was used.
+
+Release notes for all **18 existing Store listing languages** were updated to 4.3.0 and saved. Existing product descriptions, images, prices, availability and account settings were preserved. The existing option publishes automatically after certification passes.
+
+**Submission 27 / `1152921505702165197` was submitted for certification.** The authenticated portal shows submission complete, preprocessing in progress, certification/publication not yet started. Status: **PreProcessing**, confirmed at approximately **11:07 KST**. Published/installed Store version remains **3.8.1.0**; do not treat submission as publication or installation. Continue status checks on this ID, then use the official Store update after publication. Keep release 4.3.0 and its package/hash on all retries.
+
+Evidence: `store-package-validated.png`, `store-listing-save-evidence.json`, `store-release-notes-4.3.0.json`, `store-publication-options.json`, `store-submitted.json` and `store-submission27-preprocessing.png` in the deployment evidence directory above.
