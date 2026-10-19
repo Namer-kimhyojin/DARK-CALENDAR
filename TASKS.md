@@ -12,8 +12,9 @@
 - [x] 긴 안내문 검사 타이밍과 스톱워치 미지원 기호 글꼴 보완, 234개 파일 4,225개 통합 검사 통과
 - [x] 최종 4.3.0 로컬 페이로드 286개 모듈·203개 리소스 일치, frozen 핵심 회귀 179개·클린 DB·라이선스·인코딩 통과 ([근거](docs/maintenance/review-20261019.md))
 - [x] Chrome Partner Center 로그인, 기존 Submission 26 게시·제품 identity 확인
-- [~] 전체 실행 입력 커밋·GitHub Windows 패키지 생성/공개·공개본 재검증
-- [ ] 최종 검증 패키지 Store 제출, 심사·게시와 이 PC 설치 업데이트 별도 확인 ([체크리스트](docs/release-4.3.0-checklist.md))
+- [x] 전체 실행 입력 `73c9c3c` 커밋·태그 v4.3.0·GitHub Windows 공개 완료, 공개본 286모듈·203리소스·해시 및 frozen 37개 추가 확인
+- [~] Store Submission 27 생성, Chrome 확장 프로그램 파일 URL 권한 대기. 같은 초안에 검증 파일 업로드 후 심사 제출 ([체크리스트](docs/release-4.3.0-checklist.md))
+- [ ] Store 심사·게시와 이 PC 설치 업데이트 별도 확인 (현재 설치 3.8.1.0)
 
 ## 13일차 테마·설정·번역·접근성 (2026-10-17)
 
