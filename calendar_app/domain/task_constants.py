@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # task_constants.py
 # 중요도(priority)와 상태(status)에 대한 이모티콘·텍스트 정의를 한 곳에서 관리합니다.
 # 이 파일만 수정하면 캘린더, 오늘 일정, 일반업무, 지시/협조사항 전체에 일괄 적용됩니다.
@@ -277,8 +278,7 @@ def save_user_preset(name: str, priority_data: dict, status_data: dict):
         from PyQt6.QtCore import QSettings
 
         s = QSettings("kimhyojin", "Dark Calendar")
-        raw = s.value("label_user_presets", "[]")
-        presets = json.loads(raw) if raw else []
+        presets = get_user_presets()
         # 동일 이름 있으면 업데이트
         presets = [p for p in presets if p.get("name") != name]
         presets.append({"name": name, "priority": priority_data, "status": status_data})
@@ -295,8 +295,7 @@ def delete_user_preset(name: str):
         from PyQt6.QtCore import QSettings
 
         s = QSettings("kimhyojin", "Dark Calendar")
-        raw = s.value("label_user_presets", "[]")
-        presets = json.loads(raw) if raw else []
+        presets = get_user_presets()
         presets = [p for p in presets if p.get("name") != name]
         s.setValue("label_user_presets", json.dumps(presets, ensure_ascii=False))
     except Exception:
@@ -312,9 +311,31 @@ def get_user_presets() -> list:
 
         s = QSettings("kimhyojin", "Dark Calendar")
         raw = s.value("label_user_presets", "[]")
-        return json.loads(raw) if raw else []
+        presets = json.loads(raw) if raw else []
+        if not isinstance(presets, list):
+            return []
+        return [preset for preset in presets if _is_valid_user_preset(preset)]
     except Exception:
         return []
+
+
+def _is_valid_user_preset(preset) -> bool:
+    """Only expose records that the label dialog can safely render and apply."""
+    if not isinstance(preset, dict):
+        return False
+    name = preset.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return False
+    for section in ("priority", "status"):
+        entries = preset.get(section, {})
+        if not isinstance(entries, dict):
+            return False
+        for fields in entries.values():
+            if not isinstance(fields, dict):
+                return False
+            if any(not isinstance(fields.get(key, ""), str) for key in ("icon", "text")):
+                return False
+    return True
 
 
 # ── 편의 함수 ──────────────────────────────────────────────────────

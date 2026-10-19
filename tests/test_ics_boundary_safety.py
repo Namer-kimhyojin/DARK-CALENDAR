@@ -342,3 +342,27 @@ def test_database_connection_failure_returns_error_without_leaking_private_url(
     assert synchronize(feed(event(name="Changed")))[2] == "operation_failed"
     assert state(conn) == before
     assert "synthetic-private-token" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    "method", ["REQUEST", "REPLY", "ADD", "CANCEL", "REFRESH", "COUNTER", "DECLINECOUNTER"]
+)
+def test_scheduling_message_cannot_replace_a_subscription_snapshot(boundary, method):
+    conn, synchronize, before = cached(boundary)
+    message = event(
+        name="Meeting update", extra="STATUS:CANCELLED\r\n" if method == "CANCEL" else ""
+    )
+    data = feed(message).replace(
+        b"VERSION:2.0\r\n", f"VERSION:2.0\r\nMETHOD:{method}\r\n".encode("utf-8", errors="strict")
+    )
+    assert synchronize(data)[2] == "invalid_calendar_data"
+    assert state(conn) == before
+
+
+def test_published_calendar_remains_a_valid_subscription_snapshot(boundary):
+    conn, synchronize, _ = cached(boundary)
+    data = feed(event(name="Published update")).replace(
+        b"VERSION:2.0\r\n", b"VERSION:2.0\r\nMETHOD:PUBLISH\r\n"
+    )
+    assert synchronize(data) == (1, 1, None)
+    assert conn.execute("SELECT name FROM unified_task").fetchone() == ("Published update",)

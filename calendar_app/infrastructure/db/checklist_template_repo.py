@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 
 체크리스트 템플릿 및 항목 관리 전용 Repository
@@ -5,8 +6,78 @@
 """
 
 from datetime import datetime
+import logging
 
 from calendar_app.infrastructure.db.database_unified import db_manager
+
+logger = logging.getLogger(__name__)
+
+
+def import_checklist_template(payload):
+    """Validate an exported template and import all rows in one savepoint.
+
+    Invalid file contents raise ValueError; database failures return None.
+    An existing caller transaction is neither committed nor rolled back.
+    """
+    if not isinstance(payload, dict):
+        raise ValueError("Checklist import must be an object")
+    template, items = payload.get("template"), payload.get("items")
+    if not isinstance(template, dict) or not isinstance(items, list):
+        raise ValueError("Checklist import requires template and items")
+    name = template.get("name", "가져온 체크리스트")
+    description = template.get("description", "")
+    checklist_type = template.get("checklist_type", "list")
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError("Checklist name must be nonempty text")
+    if description is not None and not isinstance(description, str):
+        raise ValueError("Checklist description must be text")
+    if checklist_type not in ("list", "process"):
+        raise ValueError("Unsupported checklist type")
+    rows = []
+    for order, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise ValueError("Checklist item must be an object")
+        text = item.get("item_text", "")
+        detail, guide = item.get("item_description", ""), item.get("item_guide", "")
+        required = item.get("is_required", 0)
+        if not isinstance(text, str) or not text.strip():
+            raise ValueError("Checklist item text must be nonempty")
+        if any(value is not None and not isinstance(value, str) for value in (detail, guide)):
+            raise ValueError("Checklist item description and guide must be text")
+        if not isinstance(required, (bool, int)) or required not in (0, 1):
+            raise ValueError("Checklist required flag must be 0 or 1")
+        rows.append((text, detail, guide, order, int(required)))
+
+    conn = get_connection()
+    if conn is None:
+        return None
+    savepoint_open = False
+    try:
+        conn.execute("SAVEPOINT checklist_import")
+        savepoint_open = True
+        cursor = conn.execute(
+            "INSERT INTO checklist_template (name, description, category, checklist_type) "
+            "VALUES (?, ?, ?, ?)",
+            (name, description, "공통", checklist_type),
+        )
+        template_id = cursor.lastrowid
+        conn.executemany(
+            "INSERT INTO checklist_item "
+            "(checklist_id, item_text, item_description, item_guide, item_order, is_required) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [(template_id, *row) for row in rows],
+        )
+        conn.execute("RELEASE SAVEPOINT checklist_import")
+        return template_id
+    except Exception:
+        logger.exception("Checklist import failed")
+        if savepoint_open:
+            try:
+                conn.execute("ROLLBACK TO SAVEPOINT checklist_import")
+                conn.execute("RELEASE SAVEPOINT checklist_import")
+            except Exception:
+                logger.exception("Checklist import rollback failed")
+        return None
 
 
 def get_connection():

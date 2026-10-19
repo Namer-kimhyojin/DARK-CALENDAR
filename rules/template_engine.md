@@ -63,18 +63,19 @@
 {seconds}       초 (숫자)
 {tenths}        1/10초
 {status}        "running" / "paused" / "stopped"
-{status_icon}   ▶ / ⏸ / ⏹
+{status_icon}   ▶ / Ⅱ / ■ (해당 기호를 지원하는 설치 글꼴로 표시, 기호별 선택 결과 캐시)
 ```
 
 ### DateCard (`dc_template`)
 ```
 {weekday}         요일 전체 이름
-{weekday:short}   요일 약어 (Mon, Tue ...)
+{weekday:short}   현재 로케일의 요일 약어
 {day}             일 (숫자)
 {date}            YYYY-MM-DD
 {month}           월 이름
 {year}            연도
 {doy}             연중 몇 번째 날
+{art}             선택한 팩의 계절 일러스트
 ```
 
 ### Countdown (`cd_template`)
@@ -96,7 +97,18 @@
 {label}         사용자 지정 이름
 {date:fmt}      목표 날짜 (커스텀 포맷)
 {date_short}    M/D 형태 약식 날짜
+{date}          목표 날짜 (yyyy.MM.dd)
+{art}           선택한 팩과 장면의 일러스트
 ```
+
+프리셋과 실제 렌더러는 `overlay_template_validation.py`의 같은 위젯별 변수 계약을
+사용합니다. `__DEFAULT__` 항목은 실제 기본 템플릿으로 치환한 뒤에도 검사합니다.
+그림 크기도 기준 24pt에 맞춰 글자와 함께 조정하며 `size=N`, `size=base`,
+배수·퍼센트·가감 크기를 지원합니다. 그림 없는 팩은 그림만 있는 행을 제거합니다.
+미리보기는 임시 크기 문맥을 사용하고 종료 시 복원하며 사용자 설정을 쓰지 않습니다.
+손상된 크기·줄 간격은 렌더링 단계에서도 방어하고 최대 CSS 크기는 100,000pt입니다.
+요일·월 이름은 현재 로케일을 따르며 `weekday:en`은 영어를 유지합니다.
+일정 제목·사용자 정의 변수는 HTML 문법으로 해석하지 않고 문자로 표시합니다.
 
 ## 조건식
 

@@ -1037,30 +1037,13 @@ class ChecklistManagerDialog(QDialog):
             with open(filename, encoding="utf-8", errors="strict") as file:
                 data = json.load(file)
 
-            if "template" not in data or "items" not in data:
-                raise ValueError(t("checklist_mgr.import_err_invalid"))
-
-            template_data = data["template"]
-
-            template_id = checklist_repo.create_checklist_template(
-                name=template_data.get("name", "가져온 체크리스트"),
-                description=template_data.get("description", ""),
-                category="공통",
-                checklist_type=template_data.get("checklist_type", "list"),
-            )
+            try:
+                template_id = checklist_repo.import_checklist_template(data)
+            except ValueError as exc:
+                raise ValueError(t("checklist_mgr.import_err_invalid")) from exc
 
             if not template_id:
                 raise RuntimeError(t("checklist_mgr.import_err_fail"))
-
-            for order, item_data in enumerate(data["items"]):
-                checklist_repo.create_checklist_item(
-                    template_id,
-                    item_data.get("item_text", ""),
-                    item_data.get("item_description", ""),
-                    item_data.get("item_guide", ""),
-                    order,
-                    item_data.get("is_required", 0),
-                )
 
             self.current_template_id = template_id
 
@@ -1073,7 +1056,7 @@ class ChecklistManagerDialog(QDialog):
             QMessageBox.information(
                 self,
                 t("checklist_mgr.import_done_title"),
-                t("checklist_mgr.import_done_msg", name=template_data.get("name", "체크리스트")),
+                t("checklist_mgr.import_done_msg", name=data["template"].get("name", "체크리스트")),
             )
 
         except Exception as exc:

@@ -349,7 +349,9 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
     def _initialize_database():
         from calendar_app.infrastructure.db.database_unified import initialize_unified_database
 
-        return initialize_unified_database()
+        if not initialize_unified_database():
+            raise RuntimeError("Database initialization failed")
+        return True
 
     def _migrate_calendar_data():
         from calendar_app.infrastructure.db.calendar_repo import migrate_from_gcal_subscription
@@ -360,7 +362,9 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
             "gcal_calendar_id": None if raw_gcal_id == "primary" else raw_gcal_id,
             "gcal_enabled": "true" if infer_initial_gcal_enabled(startup_settings) else "false",
         }
-        return migrate_from_gcal_subscription(settings=_StartupSettingsView(settings_values))
+        if not migrate_from_gcal_subscription(settings=_StartupSettingsView(settings_values)):
+            raise RuntimeError("Calendar migration failed")
+        return True
 
     def _load_custom_task_labels():
         from calendar_app.domain.task_constants import load_custom_labels
@@ -415,55 +419,55 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
         },
     }
 
-    for phase_name, _weight, threaded in _STARTUP_PHASE_SPECS:
-        phase = phase_plan[phase_name]
-        start, end = phase_ranges[phase_name]
-        _run_splash_phase(
-            app,
-            splash,
-            text=phase["text"],
-            start=start,
-            end=end,
-            work=phase.get("work"),
-            threaded=threaded,
-            min_duration_ms=_STARTUP_PHASE_MIN_MS.get(phase_name, 0),
-        )
-
-    window = window_box["window"]
-    if window is None:
-        raise RuntimeError("UI startup phase did not produce a main window")
-
-    # Connect splash finish to main window's first actual paint event
-    # to ensure the transition is seamless when the app UI is actually ready.
-    window.first_paint.connect(splash.finish)
-
-    def _restore_widget_workspace():
-        from calendar_app.presentation.widgets.widget_mode_coordinator import (
-            restore_saved_widget_workspace,
-        )
-
-        QTimer.singleShot(0, lambda: restore_saved_widget_workspace(window))
-
-    window.first_paint.connect(_restore_widget_workspace)
-    window.show()
-
-    def _handle_sigint(*_):
-        from calendar_app.shared.app_lifecycle import finish_application_exit
-
-        window._exit_requested = True
-        window.close()
-        finish_application_exit(app)
-
-    signal.signal(signal.SIGINT, _handle_sigint)
-    app._sigint_pump = QTimer()
-    app._sigint_pump.timeout.connect(lambda: None)
-    app._sigint_pump.start(200)
-
-    app.aboutToQuit.connect(lambda: _finalize_runtime(app, window))
     try:
-        exit_code = app.exec()
+        for phase_name, _weight, threaded in _STARTUP_PHASE_SPECS:
+            phase = phase_plan[phase_name]
+            start, end = phase_ranges[phase_name]
+            _run_splash_phase(
+                app,
+                splash,
+                text=phase["text"],
+                start=start,
+                end=end,
+                work=phase.get("work"),
+                threaded=threaded,
+                min_duration_ms=_STARTUP_PHASE_MIN_MS.get(phase_name, 0),
+            )
+
+        window = window_box["window"]
+        if window is None:
+            raise RuntimeError("UI startup phase did not produce a main window")
+
+        # Connect splash finish to main window's first actual paint event
+        # to ensure the transition is seamless when the app UI is actually ready.
+        window.first_paint.connect(splash.finish)
+
+        def _restore_widget_workspace():
+            from calendar_app.presentation.widgets.widget_mode_coordinator import (
+                restore_saved_widget_workspace,
+            )
+
+            QTimer.singleShot(0, lambda: restore_saved_widget_workspace(window))
+
+        window.first_paint.connect(_restore_widget_workspace)
+        window.show()
+
+        def _handle_sigint(*_):
+            from calendar_app.shared.app_lifecycle import finish_application_exit
+
+            window._exit_requested = True
+            window.close()
+            finish_application_exit(app)
+
+        signal.signal(signal.SIGINT, _handle_sigint)
+        app._sigint_pump = QTimer()
+        app._sigint_pump.timeout.connect(lambda: None)
+        app._sigint_pump.start(200)
+
+        app.aboutToQuit.connect(lambda: _finalize_runtime(app, window))
+        return app.exec()
     finally:
-        # Covers event-loop errors and any platform path that does not emit
-        # aboutToQuit.  The finalizer is idempotent.
-        _finalize_runtime(app, window)
-    return exit_code
+        # Startup failures must release the same resources as event-loop exit.
+        _finalize_runtime(app, window_box["window"])
+        with contextlib.suppress(RuntimeError):
+            splash.close()

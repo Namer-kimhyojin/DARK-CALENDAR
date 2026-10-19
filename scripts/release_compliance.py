@@ -25,6 +25,10 @@ _REQUIRED_UNTRACKED_SOURCE_FILES = (
     Path("requirements-build.lock"),
     Path("release-compliance.json"),
     Path("scripts/release_compliance.py"),
+    Path("scripts/manage_version.py"),
+    Path("version-history.json"),
+    Path("rules/versioning.md"),
+    Path("docs/maintenance/version-history.md"),
 )
 
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Pull before push; preserve conflicting local changes and remote deletions."""
 
+from collections import Counter
 from datetime import UTC, datetime, timedelta
 import threading
 import uuid
@@ -74,6 +75,20 @@ class CalendarSyncEngine:
                 self._check()
                 if not event.get("cancelled"):
                     converted[event["id"]] = self.client.to_task(event, self.zone)
+            pending_deletes = {
+                row[0]
+                for row in self.repo.conn.execute(
+                    "SELECT transaction_id FROM calendar_sync_pending_delete WHERE calendar_id=?",
+                    (key,),
+                )
+            }
+            transactions = Counter(
+                e["transaction_id"]
+                for e in events
+                if isinstance(e.get("transaction_id"), str) and e["transaction_id"]
+            )
+            if any(transactions[transaction] > 1 for transaction in pending_deletes):
+                raise CalendarSyncError("duplicate_remote_event")
             links = self.repo.links(key)
             event_links = {v["event_id"]: v for v in links.values() if v["event_id"]}
             pending_creates = {v["transaction_id"]: v for v in links.values() if not v["event_id"]}
@@ -112,6 +127,8 @@ class CalendarSyncEngine:
                 task = converted[event["id"]]
                 with self.repo.atomic():
                     self._check()
+                    if self._recover_pending_delete(key, event, task, transactions):
+                        continue
                     if not self._selected(key):
                         continue
                     if self.repo.conn.execute(
@@ -244,6 +261,11 @@ class CalendarSyncEngine:
                     ):
                         raise
                     with self.repo.atomic():
+                        # A failed remote request can race with a local edit,
+                        # move, deletion or cancellation just like a successful
+                        # response. Do not invalidate a newer link/snapshot.
+                        if not self._current_snapshot(tid, key, task, link):
+                            continue
                         if isinstance(exc, RemoteCalendarError) and exc.status == 404:
                             if not link["event_id"]:
                                 raise CalendarSyncError("calendar_access_lost") from exc
@@ -264,6 +286,44 @@ class CalendarSyncEngine:
             ).fetchone()[0]
         )
         return counts
+
+    def _recover_pending_delete(self, key, event, task, transactions):
+        """Reconnect a deleted create; caller holds the writer lock before import."""
+        transaction = event.get("transaction_id")
+        if not transaction:
+            return False
+        self._check()
+        pending = self.repo.conn.execute(
+            "SELECT baseline FROM calendar_sync_pending_delete WHERE calendar_id=? AND transaction_id=?",
+            (key, transaction),
+        ).fetchone()
+        if not pending:
+            return False
+        # Recurring CalDAV occurrences can legitimately share a transaction.
+        # They are ambiguous only when reconnecting this pending deletion.
+        if transactions[transaction] != 1:
+            raise CalendarSyncError("duplicate_remote_event")
+        if not self._selected(key):
+            return True
+        # The original response/revision was never received. A changed
+        # payload needs explicit review before any remote deletion.
+        error = "delete_conflict" if fingerprint(task) != pending["baseline"] else None
+        self.repo.conn.execute(
+            "INSERT OR IGNORE INTO calendar_sync_delete_queue(event_id,calendar_id,etag,remote_uid,recurrence_id,error) VALUES(?,?,?,?,?,?)",
+            (
+                event["id"],
+                key,
+                event.get("etag"),
+                event.get("uid"),
+                event.get("recurrence_id"),
+                error,
+            ),
+        )
+        self.repo.conn.execute(
+            "DELETE FROM calendar_sync_pending_delete WHERE calendar_id=? AND transaction_id=?",
+            (key, transaction),
+        )
+        return True
 
     def _recover_resource_identity(self, key, event, remote):
         """CalDAV URLs can change; require stable UID/recurrence and confirmed old 404."""
@@ -393,6 +453,10 @@ class CalendarSyncEngine:
                     ),
                 )
                 self.repo.conn.execute("DELETE FROM calendar_sync_event WHERE task_id=?", (tid,))
+                self.repo.conn.execute(
+                    "DELETE FROM calendar_sync_pending_delete WHERE calendar_id=? AND transaction_id=?",
+                    (key, link["transaction_id"]),
+                )
                 return
             canonical = self.client.to_task(event, self.zone)
             if current["calendar_id"] == key and fingerprint(current) == fingerprint(task):
@@ -433,13 +497,22 @@ class CalendarSyncEngine:
             self._check()
             try:
                 event = self.client.event(row["event_id"])
-                self._check()
-                if not self._selected(key):
-                    break
-                if not self._writable(key):
-                    raise CalendarSyncError("calendar_read_only")
-                if not self._same_identity(row, event) or event.get("etag") != row["etag"]:
-                    raise CalendarSyncError("delete_conflict")
+                with self.repo.atomic():
+                    self._check()
+                    current = self.repo.conn.execute(
+                        "SELECT * FROM calendar_sync_delete_queue WHERE calendar_id=? AND event_id=?",
+                        (key, row["event_id"]),
+                    ).fetchone()
+                    if not current or dict(current) != dict(row):
+                        # The user may have kept the remote event or changed
+                        # the retry decision while its revision was fetched.
+                        continue
+                    if not self._selected(key):
+                        break
+                    if not self._writable(key):
+                        raise CalendarSyncError("calendar_read_only")
+                    if not self._same_identity(row, event) or event.get("etag") != row["etag"]:
+                        raise CalendarSyncError("delete_conflict")
                 self.client.delete(row["event_id"], row["etag"])
             except RemoteCalendarError as exc:
                 if exc.status != 404:

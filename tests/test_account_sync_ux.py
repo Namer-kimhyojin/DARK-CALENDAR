@@ -27,6 +27,7 @@ def google_runtime(sync_ui, monkeypatch):
         "set_gcal_sync_enabled",
         "sync_google_calendar_silent",
         "sync_google_calendar",
+        "_start_gcal_sync_worker",
         "_manual_sync_setup_state",
         "_silent_sync_waiting_for_auth",
         "_on_auth_finished",

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """Real renderer regressions for timer and weather content presets."""
 
+from html import unescape
 import json
 from pathlib import Path
+import re
 
 from PyQt6.QtCore import QDateTime, QSettings, Qt
-from PyQt6.QtGui import QFontDatabase, QRawFont, QTextDocument
+from PyQt6.QtGui import QFont, QRawFont, QTextDocument
 from PyQt6.QtWidgets import QApplication, QWidget
 import pytest
 
@@ -99,7 +101,9 @@ def test_stopwatch_semantic_colors_are_resolved_in_actual_label(widgets):
 def test_stopwatch_transport_glyphs_use_supported_ui_font(widgets, elapsed, running, glyph):
     stopwatch, _countdown = widgets
     rendered = stopwatch._resolve_sw_template("{status_icon|size=18} {status}", elapsed, running)
-    font = QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont)
+    font_match = re.search(r"font-family:'([^']+)'", rendered)
+    assert font_match is not None
+    font = QFont(unescape(font_match.group(1)))
 
     assert _plain(rendered).startswith(glyph + " ")
     assert QRawFont.fromFont(font).supportsCharacter(ord(glyph))

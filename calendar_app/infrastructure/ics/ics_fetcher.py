@@ -115,6 +115,11 @@ def _snapshot(raw, icalendar, zone, cancelled):
     calendar = icalendar.Calendar.from_ical(raw)
     if calendar.name != "VCALENDAR" or any(c.errors for c in calendar.walk()):
         raise CalendarSyncError("invalid_calendar_data")
+    # iTIP requests, replies and cancellations describe selected events, not
+    # a full subscription snapshot. Their omissions cannot authorize deletion.
+    method = calendar.get("METHOD")
+    if method is not None and str(method).upper() != "PUBLISH":
+        raise CalendarSyncError("invalid_calendar_data")
     components = calendar.walk("VEVENT")
     if len(components) > MAX_EVENTS:
         raise CalendarSyncError("too_many_events")

@@ -100,6 +100,11 @@ CalDAV도 같은 계약을 사용합니다. iCloud·네이버 어댑터는 `infr
 기존 연결 기록의 `remote_name`은 `ALTER TABLE`로 추가해 사용자 지정 캘린더 이름을 보존합니다.
 네이버 캘린더와 쓰기 권한이 없는 CalDAV 캘린더는 `access_role='reader'`로 저장합니다.
 
+원격 생성 응답을 받기 전에 로컬 일정이 삭제되면 `calendar_sync_pending_delete`에
+`(calendar_id, transaction_id)`와 원래 내용 지문을 보존합니다. 전체 조회에서 유일한
+생성 결과가 확인된 경우에만 기존 삭제 큐로 연결하며, 원격 내용 변경·식별 모호성·권한
+상실 시 자동 삭제하지 않습니다. 원격 서버가 transaction ID를 제거하면 보류 기록을 유지합니다.
+
 - `infrastructure/db/db_repository.py` — 통합 레포지토리 진입점 (대부분의 코드는 여기서 임포트)
 - 레포지토리를 직접 임포트할 때는 `infrastructure/db/` 하위 모듈에서 직접 가져옵니다:
   ```python

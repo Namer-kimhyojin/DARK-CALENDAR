@@ -200,29 +200,40 @@ class CalDAVSyncController(QObject):
                 return False
             self.settings.setValue(self.prefix + "enabled", False)
         self.status = operation
-        worker = CalDAVWorker(
-            self.service,
-            operation,
-            self.account,
-            self,
-            username,
-            password,
-            self.settings.value("gcal_timezone", "Asia/Seoul", type=str),
-            server_url=server_url,
-        )
-        self.worker = worker
-        self.app._bg_workers.append(worker)
-        worker.result.connect(self._result)
-        worker.failed.connect(self._failed)
-        worker.finished.connect(self._finished)
+        worker = None
         try:
+            worker = CalDAVWorker(
+                self.service,
+                operation,
+                self.account,
+                self,
+                username,
+                password,
+                self.settings.value("gcal_timezone", "Asia/Seoul", type=str),
+                server_url=server_url,
+            )
+            self.worker = worker
+            self.app._bg_workers.append(worker)
+            worker.result.connect(self._result)
+            worker.failed.connect(self._failed)
+            worker.finished.connect(self._finished)
             worker.start()
         except Exception:
+            running = False
+            if worker is not None:
+                with suppress(RuntimeError):
+                    running = worker.isRunning()
+            if running:
+                self._failed("operation_failed")
+                worker.requestInterruption()
+                return False
             self.worker = None
             if worker in self.app._bg_workers:
                 self.app._bg_workers.remove(worker)
-            worker.password = ""
-            worker.deleteLater()
+            if worker is not None:
+                worker.password = ""
+                with suppress(RuntimeError):
+                    worker.deleteLater()
             self._failed("operation_failed")
             return False
         self.changed.emit()

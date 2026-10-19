@@ -465,6 +465,8 @@ class MainWindowUiActionsMixin:
             items = json.loads(str(raw))
         except Exception:
             items = []
+        if not isinstance(items, list):
+            return []
         out = []
         for item in items:
             hx = self._normalize_hex_color(item)

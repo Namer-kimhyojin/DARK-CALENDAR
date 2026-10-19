@@ -568,6 +568,7 @@ def migrate_from_gcal_subscription(settings=None) -> bool:
     """
     gcal_subscription 테이블을 calendar 테이블로 마이그레이션합니다.
     이미 calendar 레코드가 있으면 건너뜁니다.
+    실패한 변경만 되돌리며 호출자의 진행 중 트랜잭션은 보존합니다.
 
     settings: QSettings 인스턴스 (gcal_calendar_id 기본값 확인용)
     """
@@ -575,24 +576,28 @@ def migrate_from_gcal_subscription(settings=None) -> bool:
     if conn is None:
         logger.error("migrate_from_gcal_subscription: DB 연결 실패")
         return False
-    cur = conn.cursor()
-
-    # 이미 마이그레이션 됐으면 스킵
-    cur.execute("SELECT COUNT(*) FROM calendar")
-    if cur.fetchone()[0] > 0:
-        return True
-
-    logger.info("Migrating gcal_subscription → calendar table...")
-
-    # QSettings에서 기본 캘린더 ID 읽기
-    # "primary" 는 Google API 별칭이므로 DB 저장/비교에는 None 으로 처리한다.
-    default_gcal_id = None
-    if settings is not None:
-        _raw = settings.value("gcal_calendar_id", None)
-        if _raw and str(_raw).strip() and str(_raw).strip() != "primary":
-            default_gcal_id = str(_raw).strip()
-
+    savepoint_open = False
     try:
+        cur = conn.cursor()
+        cur.execute("SAVEPOINT calendar_migration")
+        savepoint_open = True
+
+        # 이미 마이그레이션 됐으면 사용자 캘린더와 외부 트랜잭션을 유지한다.
+        cur.execute("SELECT COUNT(*) FROM calendar")
+        if cur.fetchone()[0] > 0:
+            cur.execute("RELEASE SAVEPOINT calendar_migration")
+            savepoint_open = False
+            return True
+
+        logger.info("Migrating gcal_subscription → calendar table...")
+
+        # "primary" 는 Google API 별칭이므로 실제 ID만 저장/비교한다.
+        default_gcal_id = None
+        if settings is not None:
+            _raw = settings.value("gcal_calendar_id", None)
+            if _raw and str(_raw).strip() and str(_raw).strip() != "primary":
+                default_gcal_id = str(_raw).strip()
+
         cur.execute(
             "SELECT * FROM gcal_subscription ORDER BY is_primary DESC, is_active DESC, summary ASC"
         )
@@ -683,10 +688,18 @@ def migrate_from_gcal_subscription(settings=None) -> bool:
             (fallback_id,),
         )
 
-        conn.commit()
+        # 바깥 트랜잭션이 없으면 저장하고, 있으면 그 호출자가 커밋을 결정한다.
+        cur.execute("RELEASE SAVEPOINT calendar_migration")
+        savepoint_open = False
         logger.info("Migration complete.")
         return True
 
     except Exception as e:
+        if savepoint_open:
+            try:
+                conn.execute("ROLLBACK TO SAVEPOINT calendar_migration")
+                conn.execute("RELEASE SAVEPOINT calendar_migration")
+            except sqlite3.Error:
+                logger.error("Could not roll back calendar migration savepoint")
         logger.error(f"migrate_from_gcal_subscription failed: {e}")
         return False

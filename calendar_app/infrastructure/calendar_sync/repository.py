@@ -65,6 +65,10 @@ def _initialize(conn):
             task_id INTEGER PRIMARY KEY, kind TEXT NOT NULL, local_json TEXT,
             remote_json TEXT, created_at TEXT DEFAULT (datetime('now'))
         );
+        CREATE TABLE IF NOT EXISTS calendar_sync_pending_delete (
+            calendar_id TEXT NOT NULL, transaction_id TEXT NOT NULL,
+            baseline TEXT NOT NULL, PRIMARY KEY(calendar_id,transaction_id)
+        );
         CREATE TRIGGER IF NOT EXISTS calendar_sync_capture_delete BEFORE DELETE ON unified_task
         BEGIN
             INSERT OR IGNORE INTO calendar_sync_delete_queue(event_id,calendar_id,etag)
@@ -95,6 +99,9 @@ def _initialize(conn):
         DROP TRIGGER IF EXISTS calendar_sync_capture_delete;
         CREATE TRIGGER calendar_sync_capture_delete BEFORE DELETE ON unified_task
         BEGIN
+            INSERT OR IGNORE INTO calendar_sync_pending_delete(calendar_id,transaction_id,baseline)
+            SELECT calendar_id,transaction_id,baseline FROM calendar_sync_event
+            WHERE task_id=OLD.id AND event_id IS NULL AND remote_deleted=0;
             INSERT OR IGNORE INTO calendar_sync_delete_queue(event_id,calendar_id,etag,remote_uid,recurrence_id)
             SELECT event_id,calendar_id,etag,remote_uid,recurrence_id FROM calendar_sync_event
             WHERE task_id=OLD.id AND event_id IS NOT NULL AND remote_deleted=0;

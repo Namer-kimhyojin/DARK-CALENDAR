@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """UI-thread coordinator with isolated DB connections in background workers."""
 
+from contextlib import suppress
 from datetime import datetime
 from math import ceil
 import sqlite3
@@ -159,26 +160,37 @@ class OutlookSyncController(QObject):
             return False
         account = self.settings.value("outlook_account_id", "", type=str)
         self.status = operation
-        worker = OutlookWorker(
-            operation,
-            client_id,
-            account,
-            self,
-            self.settings.value("outlook_home_account_id", "", type=str),
-            self.settings.value("gcal_timezone", "Asia/Seoul", type=str),
-        )
-        self.worker = worker
-        self.app._bg_workers.append(worker)
-        worker.result.connect(self._result)
-        worker.failed.connect(self._failed)
-        worker.finished.connect(self._finished)
+        worker = None
         try:
+            worker = OutlookWorker(
+                operation,
+                client_id,
+                account,
+                self,
+                self.settings.value("outlook_home_account_id", "", type=str),
+                self.settings.value("gcal_timezone", "Asia/Seoul", type=str),
+            )
+            self.worker = worker
+            self.app._bg_workers.append(worker)
+            worker.result.connect(self._result)
+            worker.failed.connect(self._failed)
+            worker.finished.connect(self._finished)
             worker.start()
         except Exception:
+            running = False
+            if worker is not None:
+                with suppress(RuntimeError):
+                    running = worker.isRunning()
+            if running:
+                self._failed("operation_failed")
+                worker.requestInterruption()
+                return False
             self.worker = None
             if worker in self.app._bg_workers:
                 self.app._bg_workers.remove(worker)
-            worker.deleteLater()
+            if worker is not None:
+                with suppress(RuntimeError):
+                    worker.deleteLater()
             self._failed("operation_failed")
             return False
         self.changed.emit()

@@ -1,9 +1,12 @@
+# -*- coding: utf-8 -*-
 """Idle detection worker using win32api when available."""
 
 import logging
 import time
 
 from PyQt6.QtCore import QThread, pyqtSignal
+
+from calendar_app.shared.value_parsers import as_int
 
 try:
     import win32api
@@ -58,8 +61,7 @@ class AlarmWorker(QThread):
         self._suppress_lock_until = 0.0
 
         if parent and hasattr(parent, "settings"):
-            interval = int(parent.settings.value("away_interval", 5))
-            self._idle_timeout_ms = interval * 60 * 1000
+            self.update_idle_timeout(parent.settings.value("away_interval", 5))
 
     @property
     def is_idle(self):
@@ -75,10 +77,11 @@ class AlarmWorker(QThread):
 
     @idle_timeout_ms.setter
     def idle_timeout_ms(self, value):
-        self._idle_timeout_ms = int(value)
+        self._idle_timeout_ms = as_int(value, 5 * 60_000, minimum=60_000, maximum=1440 * 60_000)
 
     def update_idle_timeout(self, minutes):
-        self.idle_timeout_ms = minutes * 60 * 1000
+        minutes = as_int(minutes, 5, minimum=1, maximum=1440)
+        self.idle_timeout_ms = minutes * 60_000
         logger.info("Idle timeout updated to %s minutes.", minutes)
 
     def _has_activity_resumed(self, elapsed_ms):

@@ -248,6 +248,8 @@ function Sync-AppVersion {
     # 1. app_metadata.py
     $content = Get-Content $MetadataPath -Raw -Encoding utf8
     $content = $content -replace '(APP_VERSION\s*=\s*)"[^"]+"', ('$1"' + $NewVersion + '"')
+    $content = $content -replace '(APP_PUBLISHED_VERSION\s*=\s*)"[^"]+"', ('$1"' + $NewVersion + '"')
+    $content = $content -replace '(APP_PUBLISHED_DATE\s*=\s*)"[^"]+"', ('$1"' + $NewDate + '"')
     $content = $content -replace '(APP_RELEASE_DATE\s*=\s*)"[^"]+"', ('$1"' + $NewDate + '"')
     $content = $content -replace '(APP_RELEASE_CHANNEL\s*=\s*)"[^"]+"', ('$1"' + $NewChannel + '"')
     [System.IO.File]::WriteAllText($MetadataPath, $content, $utf8NoBom)
@@ -803,6 +805,10 @@ if (-not $allParamsGiven -and -not $NoBanner) {
 }
 
 Assert-VersionFormat $resolvedVersion
+Run-OrThrow -Exe $venvPython -Args @(
+    (Join-Path $projectRoot "scripts\manage_version.py"),
+    "check", "--expected", $resolvedVersion
+) -WorkingDirectory $projectRoot
 if ($resolvedDate -notmatch '^\d{4}-\d{2}-\d{2}$') {
     throw "ReleaseDate must be YYYY-MM-DD. Got: '$resolvedDate'"
 }

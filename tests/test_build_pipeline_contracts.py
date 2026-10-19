@@ -165,7 +165,7 @@ class BuildPipelineContractTests(unittest.TestCase):
 
     def test_homepage_exposes_versioned_source_and_gpl(self):
         metadata = self._read("calendar_app/app_metadata.py")
-        version_match = re.search(r'^APP_VERSION\s*=\s*"([^"]+)"', metadata, re.MULTILINE)
+        version_match = re.search(r'^APP_PUBLISHED_VERSION\s*=\s*"([^"]+)"', metadata, re.MULTILINE)
         self.assertIsNotNone(version_match)
 
         config = self._read("docs/site-config.json")

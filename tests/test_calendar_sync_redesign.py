@@ -7,7 +7,7 @@ import sys
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from PyQt6.QtCore import QObject, QPoint, QSettings, Qt, pyqtSignal
+from PyQt6.QtCore import QElapsedTimer, QObject, QPoint, QSettings, Qt, pyqtSignal
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QDialog, QLabel, QScrollArea, QToolButton, QWidget
 import pytest
@@ -300,6 +300,15 @@ def test_selected_service_retry_does_not_dispatch_other_services(sync_ui, monkey
 
 
 def test_subscription_controls_are_reachable_in_a_small_window_with_long_guidance(sync_ui):
+    def wait_for_overflow(scroll):
+        # Wrapped text needs deferred layout passes, especially with native fonts.
+        timer = QElapsedTimer()
+        timer.start()
+        while scroll.verticalScrollBar().maximum() == 0 and timer.elapsed() < 1000:
+            sync_ui.qapp.processEvents()
+            QTest.qWait(10)
+        assert scroll.verticalScrollBar().maximum() > 0
+
     sync_ui.add_calendar("ics::small")
     hub = CalendarSyncHub(sync_ui.host, section="ics")
     hub.resize(640, 500)
@@ -310,7 +319,7 @@ def test_subscription_controls_are_reachable_in_a_small_window_with_long_guidanc
     sync_ui.qapp.processEvents()
     scroll = hub.findChild(QScrollArea, "SyncIcs")
     assert page.calendars.height() >= 120
-    assert scroll.verticalScrollBar().maximum() > 0
+    wait_for_overflow(scroll)
     for action in (page.edit_subscription, page.service, page.remove):
         scroll.ensureWidgetVisible(action)
         sync_ui.qapp.processEvents()
@@ -324,7 +333,7 @@ def test_subscription_controls_are_reachable_in_a_small_window_with_long_guidanc
         "Translated recovery instructions for a failed calendar connection. " * 30
     )
     sync_ui.qapp.processEvents()
-    assert hub.issue_scroll.verticalScrollBar().maximum() > 0
+    wait_for_overflow(hub.issue_scroll)
     for action in (hub.retry_selected, hub.resolve_selected):
         hub.issue_scroll.ensureWidgetVisible(action)
         sync_ui.qapp.processEvents()

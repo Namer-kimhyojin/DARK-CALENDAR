@@ -77,13 +77,6 @@ class RefreshSchedulerMixin:
         if int(getattr(self, "_task_dialog_refresh_depth", 0)) > 0:
             self._defer_task_dialog_refresh(left, center, right, notify_data_consumers)
             return
-        # 드래그 중에는 패널 리프레시를 보류 (필요 시 자동으로 인한 새로고침 방지)
-        if getattr(self, "_is_dragging", False) or getattr(
-            self, "_is_calendar_range_dragging", False
-        ):
-            if left or center:
-                self._drag_pending_refresh = True
-            return
         self._ensure_refresh_scheduler()
         self.mark_panel_dirty(left=left, center=center, right=right)
         self._pending_refresh["left"] = self._pending_refresh["left"] or left
@@ -92,6 +85,13 @@ class RefreshSchedulerMixin:
         self._pending_data_consumer_refresh = self._pending_data_consumer_refresh or bool(
             notify_data_consumers
         )
+        # Retain every requested panel until the existing drag-end refresh.
+        if getattr(self, "_is_dragging", False) or getattr(
+            self, "_is_calendar_range_dragging", False
+        ):
+            if left or center or right:
+                self._drag_pending_refresh = True
+            return
 
         delay_ms = max(0, int(delay_ms or 16))
 
@@ -120,6 +120,13 @@ class RefreshSchedulerMixin:
             self._pending_data_consumer_refresh = False
             return
         self._ensure_refresh_scheduler()
+        # A timer queued before drag started must not rebuild the drag source.
+        if getattr(self, "_is_dragging", False) or getattr(
+            self, "_is_calendar_range_dragging", False
+        ):
+            if any(self._pending_refresh.values()):
+                self._drag_pending_refresh = True
+            return
         pending = dict(self._pending_refresh)
         notify_data_consumers = self._pending_data_consumer_refresh
         self._pending_refresh = {"left": False, "center": False, "right": False}

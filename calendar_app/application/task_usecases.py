@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Task-oriented application usecases extracted from UI handlers."""
 
 from __future__ import annotations
@@ -64,6 +65,8 @@ def _load_auto_color_history() -> list[str]:
         values = json.loads(str(raw))
     except Exception:
         values = []
+    if not isinstance(values, list):
+        return []
     cleaned: list[str] = []
     for value in values:
         color = QColor(str(value))

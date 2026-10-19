@@ -12,7 +12,15 @@ def test_current_runtime_inputs_include_new_files_without_collecting_private_art
     tracked = tmp_path / "main.py"
     tracked.write_text("# -*- coding: utf-8 -*-\n", encoding="utf-8", errors="strict")
     subprocess.run(["git", "-C", str(tmp_path), "add", "main.py"], check=True)
-    runtime_paths = ["calendar_app/new_feature.py", "Assets/switch.wav", "locales/ko.json"]
+    runtime_paths = [
+        "calendar_app/new_feature.py",
+        "Assets/switch.wav",
+        "locales/ko.json",
+        "scripts/manage_version.py",
+        "version-history.json",
+        "rules/versioning.md",
+        "docs/maintenance/version-history.md",
+    ]
     for relative in runtime_paths:
         path = tmp_path / relative
         path.parent.mkdir(parents=True, exist_ok=True)

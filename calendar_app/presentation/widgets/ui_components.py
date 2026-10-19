@@ -53,6 +53,7 @@ from calendar_app.shared.theme_settings import (
     get_theme_palette_inputs,
 )
 from calendar_app.shared.ui_tokens import get_ui_tokens
+from calendar_app.shared.value_parsers import as_int
 
 logger = logging.getLogger(__name__)
 
@@ -991,7 +992,12 @@ class DraggableTaskButton(QFrame):
         if self._watermark_title:
             # Post-start multiday segments should never show text.
             color = "transparent"
-            base_pt = int(QSettings("kimhyojin", "Dark Calendar").value("font_size", 10))
+            base_pt = as_int(
+                QSettings("kimhyojin", "Dark Calendar").value("font_size", 10),
+                10,
+                minimum=1,
+                maximum=256,
+            )
             wm_pt = max(7, base_pt - 1)
             size_rule = f"font-size: {wm_pt}pt;"
             weight = "600"

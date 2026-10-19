@@ -995,6 +995,7 @@ def _push_local_changes_to_google(app, remote_versions=None):
         for _chunk_start in range(0, len(batch_create_eligible), BATCH_SIZE):
             _chunk = batch_create_eligible[_chunk_start : _chunk_start + BATCH_SIZE]
             _ops = []
+            _verified_create_tasks = []
             _redirect_to_update = []  # BUG-L01: tasks that already have a gcal_event_id in DB
             for _bt in _chunk:
                 _local_id = _bt.get("id")
@@ -1005,7 +1006,22 @@ def _push_local_changes_to_google(app, remote_versions=None):
                     _fresh = task_repo.get_unified_task(_local_id)
                     _db_event_id = str((_fresh or {}).get("gcal_event_id") or "").strip() or None
                 except Exception:
-                    pass
+                    # A deterministic ID only prevents duplicate creates in
+                    # the same calendar. An unreadable row may already have a
+                    # remote link or a different destination, so defer it.
+                    _mark_sync_failure(_local_id, "pre_create_db_reread_error", commit=True)
+                    failed += 1
+                    logger.warning(
+                        "Skipped Google batch create for task %s because its current row could not be read",
+                        _local_id,
+                    )
+                    continue
+                if not _fresh:
+                    logger.info(
+                        "Skipped Google batch create for task %s because it was deleted locally",
+                        _local_id,
+                    )
+                    continue
                 if _db_event_id:
                     logger.info(
                         "BUG-L01 guard: task %s already has gcal_event_id %s in DB; "
@@ -1013,12 +1029,21 @@ def _push_local_changes_to_google(app, remote_versions=None):
                         _local_id,
                         _db_event_id,
                     )
-                    _redirect_to_update.append(_bt)
+                    _redirect_to_update.append(_fresh)
+                    continue
+                if _fresh != _bt:
+                    # Keep the user's newer content or calendar choice for the
+                    # next cycle rather than creating the stale snapshot.
+                    logger.info(
+                        "Deferred Google batch create for task %s because its local snapshot changed",
+                        _local_id,
+                    )
                     continue
                 _cal = _task_target_calendar_id(_bt, default_target_calendar_id)
                 # Build idempotency key so GCal server rejects duplicate inserts
                 # with HTTP 409 instead of creating a second event.
                 _batch_ikey = google_create_idempotency_key(_bt)
+                _verified_create_tasks.append(_bt)
                 _ops.append(
                     {
                         "local_task_id": _local_id,
@@ -1039,10 +1064,10 @@ def _push_local_changes_to_google(app, remote_versions=None):
                 continue
             _batch_results = sync.batch_create_events(_ops)
             if not _batch_results:
-                remaining_tasks.extend(_chunk)
+                remaining_tasks.extend(_verified_create_tasks)
                 logger.warning(
                     "batch_create_events failed for chunk of %d; falling back to sequential",
-                    len(_chunk),
+                    len(_verified_create_tasks),
                 )
             else:
                 _task_map = {str(_bt.get("id")): _bt for _bt in _chunk}
@@ -1436,6 +1461,7 @@ def _process_google_delete_queue(app):
 
 def sync_google_calendar(app, silent=False):
     """Bi-directional sync with remote conflict detection before local push."""
+    owns_sync_guard = False
     try:
         from calendar_app.infrastructure.google_sync.service import CalendarSyncService
 
@@ -1444,6 +1470,7 @@ def sync_google_calendar(app, silent=False):
             app._last_gcal_sync_error = "sync_in_progress"
             return False
         app._gcal_sync_in_progress = True
+        owns_sync_guard = True
         app._last_gcal_sync_changed_any = False
         app._last_gcal_sync_refresh_left = False
         app._last_gcal_sync_outcome = SYNC_OUTCOME_SKIPPED
@@ -2282,7 +2309,7 @@ def sync_google_calendar(app, silent=False):
             raise e
         return False
     finally:
-        if hasattr(app, "_gcal_sync_in_progress"):
+        if owns_sync_guard:
             app._gcal_sync_in_progress = False
 
 

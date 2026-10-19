@@ -69,7 +69,7 @@ def test_compliance_config_pins_every_download_with_sha256():
 
 
 def test_release_version_surfaces_are_in_sync():
-    from calendar_app.app_metadata import APP_RELEASE_DATE, APP_VERSION
+    from calendar_app.app_metadata import APP_PUBLISHED_DATE, APP_PUBLISHED_VERSION, APP_VERSION
 
     package_version = f"{APP_VERSION}.0"
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8", errors="strict"))
@@ -84,31 +84,34 @@ def test_release_version_surfaces_are_in_sync():
     assert f"FileVersion', '{package_version}'" in (ROOT / "version_info.txt").read_text(
         encoding="utf-8", errors="strict"
     )
-    assert site_config["appVersion"] == APP_VERSION
+    # Development changes have their own versions; the website advertises the
+    # last public release until a release build prepares all publication files.
+    assert site_config["appVersion"] == APP_PUBLISHED_VERSION
+    published = APP_PUBLISHED_VERSION
 
     expected_release_url = (
-        f"https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v{APP_VERSION}"
+        f"https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v{published}"
     )
     expected_source_asset = (
         "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/"
-        f"v{APP_VERSION}/DarkCalendar-{APP_VERSION}-corresponding-source.zip"
+        f"v{published}/DarkCalendar-{published}-corresponding-source.zip"
     )
     assert site_config["releaseSourceUrl"] == expected_release_url
     readme = (ROOT / "README.md").read_text(encoding="utf-8", errors="strict")
     homepage = (ROOT / "docs" / "index.html").read_text(encoding="utf-8", errors="strict")
     assert expected_release_url in readme
-    assert f"Release page for `{APP_VERSION}`" in readme
-    assert f'"softwareVersion": "{APP_VERSION}"' in homepage
+    assert f"Release page for `{published}`" in readme
+    assert f'"softwareVersion": "{published}"' in homepage
     assert expected_source_asset in (ROOT / "SOURCE_OFFER.md").read_text(
         encoding="utf-8", errors="strict"
     )
 
-    checklist = ROOT / "docs" / f"release-{APP_VERSION}-checklist.md"
-    notes = ROOT / "docs" / f"release-{APP_VERSION}-notes.md"
+    checklist = ROOT / "docs" / f"release-{published}-checklist.md"
+    notes = ROOT / "docs" / f"release-{published}-notes.md"
     assert checklist.is_file()
     assert notes.is_file()
     checklist_text = checklist.read_text(encoding="utf-8", errors="strict")
-    assert f"**Date:** {APP_RELEASE_DATE}" in checklist_text
+    assert f"**Date:** {APP_PUBLISHED_DATE}" in checklist_text
 
 
 def test_github_release_workflow_uses_unified_release_entrypoint():

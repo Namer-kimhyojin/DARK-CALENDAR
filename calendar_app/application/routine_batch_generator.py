@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Application service for batch generating routine instances.
 """
@@ -39,7 +40,7 @@ class RoutineBatchGenerator:
 
         create_task = getattr(self.repo, "create_unified_task", task_repo.create_unified_task)
 
-        while current_date <= end_dt.date():
+        while current_date < end_dt.date():
             # Use policy to find the first valid occurrence after current_date.
             occurrence = routine_policy.get_next_occurrence(
                 current_date.strftime("%Y-%m-%d"), cycle_type, recurrence_rule
@@ -69,14 +70,14 @@ class RoutineBatchGenerator:
             }
 
             if self._routine_exists_in_period(template_id, occurrence, cycle_type):
-                current_date = occurrence_date + timedelta(days=1)
+                current_date = occurrence_date
                 continue
 
             new_id = create_task(task_data)
             if new_id:
                 created_ids.append(new_id)
 
-            current_date = occurrence_date + timedelta(days=1)
+            current_date = occurrence_date
 
         return created_ids
 

@@ -36,3 +36,7 @@ _restore_tmp/
 # Local tool metadata
 .agents/
 .claude/
+
+# Version transaction journal and exclusive lock (history remains tracked)
+.versioning/
+*.version-tmp

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Google Calendar 동기화 관련 액션 핸들러 Mixin"""
 
+from contextlib import suppress
 import datetime
 import logging
 import os
@@ -30,6 +31,37 @@ def _sync_failure_message(app):
     return sync_error_message(
         google_sync_error_code(code, getattr(sync, "last_error_status", None))
     )
+
+
+def _cleanup_failed_gcal_launch(app, worker, attribute=None):
+    """Release unstarted objects; retain an already running thread until it ends."""
+    if worker is not None:
+        try:
+            if worker.isRunning():
+                worker.requestInterruption()
+                return
+        except RuntimeError:
+            pass
+    if attribute and (worker is None or getattr(app, attribute, None) is worker):
+        setattr(app, attribute, None)
+    workers = getattr(app, "_bg_workers", [])
+    if worker is not None and worker in workers:
+        workers.remove(worker)
+    if worker is not None:
+        with suppress(RuntimeError):
+            worker.deleteLater()
+
+
+def _record_gcal_launch_failure(app, *, reset_sync_result=False):
+    # Authentication/metadata jobs can overlap a sync; preserve that run's
+    # committed-change flags and statistics when only their launch failed.
+    if reset_sync_result:
+        app._last_gcal_sync_outcome = _SYNC_OUTCOME_FAILED
+        app._last_gcal_sync_error = "operation_failed"
+        app._last_gcal_sync_changed_any = False
+        app._last_gcal_sync_refresh_left = False
+        app._last_gcal_sync_stats = {}
+    app.settings.setValue("sync_google_last_error", "operation_failed")
 
 
 class GCalActionsMixin:
@@ -261,15 +293,19 @@ class GCalActionsMixin:
         from calendar_app.shared.background_worker import AuthWorker
 
         if authenticate_silently and os.path.exists(TOKEN_PATH):
-            worker = AuthWorker(self)
-
-            self._auth_worker = worker
-
-            worker.result_ready.connect(self._on_auth_finished)
-
-            worker.finished.connect(self._release_auth_worker)
-
-            worker.start()
+            worker = None
+            try:
+                worker = AuthWorker(self)
+                self._auth_worker = worker
+                worker.result_ready.connect(self._on_auth_finished)
+                worker.finished.connect(self._release_auth_worker)
+                worker.start()
+            except Exception:
+                _cleanup_failed_gcal_launch(self, worker, "_auth_worker")
+                _record_gcal_launch_failure(self)
+                logger.warning("GCal authentication worker could not be started")
+                self._on_auth_finished(False, sync_error_message("operation_failed"))
+                return False
 
             return True  # 워커 시작됨
 
@@ -355,14 +391,23 @@ class GCalActionsMixin:
             except Exception:
                 logger.exception("_refresh_calendar_access_roles_bg failed")
 
-        worker = DbTaskWorker(_work)
-        if not hasattr(self, "_bg_workers"):
-            self._bg_workers = []
-        self._bg_workers.append(worker)
-        worker.task_done.connect(
-            lambda _w=worker: self._bg_workers.remove(_w) if _w in self._bg_workers else None
-        )
-        worker.start()
+        worker = None
+        try:
+            worker = DbTaskWorker(_work)
+            if not hasattr(self, "_bg_workers"):
+                self._bg_workers = []
+            self._bg_workers.append(worker)
+            worker.task_done.connect(
+                lambda _w=worker: self._bg_workers.remove(_w) if _w in self._bg_workers else None
+            )
+            worker.start()
+        except Exception:
+            _cleanup_failed_gcal_launch(self, worker)
+            _record_gcal_launch_failure(self)
+            logger.warning("GCal calendar metadata worker could not be started")
+            self.update_sync_status()
+            return False
+        return True
 
     def notify_gcal_setup_needed(self, disabled=False):
         title = t("gcal.setup_guide_title", "동기화 안내")
@@ -498,23 +543,13 @@ class GCalActionsMixin:
             return
 
         if is_gcal_enabled(self.settings):
-            from calendar_app.shared.background_worker import SyncWorker
-
             if self._sync_worker_running():
                 return
 
             if self._silent_sync_waiting_for_auth():
                 return
 
-            self._sync_worker = SyncWorker(self, silent=True)
-
-            self._sync_worker.result_ready.connect(self._on_sync_finished)
-
-            self._sync_worker.finished.connect(self._release_sync_worker)
-
-            self._sync_worker.start()
-
-            self.update_sync_status()
+            return self._start_gcal_sync_worker(silent=True)
 
     def sync_google_calendar(self, silent=False):
         if getattr(self, "_is_shutting_down", False):
@@ -538,8 +573,6 @@ class GCalActionsMixin:
         if not hasattr(self, "gcal_sync") or self.gcal_sync is None:
             self.refresh_gcal_sync_state(authenticate_silently=True)
 
-        from calendar_app.shared.background_worker import SyncWorker
-
         if self._sync_worker_running():
             if not silent:
                 QMessageBox.information(
@@ -550,16 +583,26 @@ class GCalActionsMixin:
 
             return False
 
-        self._sync_worker = SyncWorker(self, silent=silent)
+        return self._start_gcal_sync_worker(silent=silent)
 
-        self._sync_worker.result_ready.connect(
-            self._on_sync_finished_manual if not silent else self._on_sync_finished
-        )
+    def _start_gcal_sync_worker(self, *, silent):
+        """Report launch failures through the existing sync result/diagnostic flow."""
+        from calendar_app.shared.background_worker import SyncWorker
 
-        self._sync_worker.finished.connect(self._release_sync_worker)
-
-        self._sync_worker.start()
-
+        worker = None
+        callback = self._on_sync_finished if silent else self._on_sync_finished_manual
+        try:
+            worker = SyncWorker(self, silent=silent)
+            self._sync_worker = worker
+            worker.result_ready.connect(callback)
+            worker.finished.connect(self._release_sync_worker)
+            worker.start()
+        except Exception:
+            _cleanup_failed_gcal_launch(self, worker, "_sync_worker")
+            _record_gcal_launch_failure(self, reset_sync_result=True)
+            logger.warning("GCal sync worker could not be started")
+            callback(False, sync_error_message("operation_failed"))
+            return False
         self.update_sync_status()
         return True
 

@@ -480,19 +480,35 @@ class CalendarSyncCoordinator(QObject):
             return False
         if not calendars:
             return False
-        worker = IcsSyncWorker(
-            calendars, self, self.settings.value("gcal_timezone", "Asia/Seoul", type=str)
-        )
-        self.ics_worker = worker
-        self.app._bg_workers.append(worker)
-        worker.result.connect(self._ics_result)
-        worker.finished.connect(self._ics_finished)
+        worker = None
+        launch_failed = False
+
+        def deliver_result(results):
+            if not launch_failed and self.ics_worker is worker:
+                self._ics_result(results)
+
         try:
+            worker = IcsSyncWorker(
+                calendars, self, self.settings.value("gcal_timezone", "Asia/Seoul", type=str)
+            )
+            self.ics_worker = worker
+            self.app._bg_workers.append(worker)
+            worker.result.connect(deliver_result)
+            worker.finished.connect(self._ics_finished)
             worker.start()
         except Exception:
-            self.ics_worker = None
-            self.app._bg_workers.remove(worker)
-            worker.deleteLater()
+            launch_failed = True
+            if worker is not None and worker.isRunning():
+                # start() may have launched the thread before reporting failure.
+                # Keep its owner/reference until the normal finished cleanup.
+                worker.requestInterruption()
+            else:
+                if self.ics_worker is worker:
+                    self.ics_worker = None
+                if worker is not None:
+                    if worker in self.app._bg_workers:
+                        self.app._bg_workers.remove(worker)
+                    worker.deleteLater()
             self.settings.setValue("sync_ics_last_error", "operation_failed")
             self.refresh(refresh_issues=False)
             return False

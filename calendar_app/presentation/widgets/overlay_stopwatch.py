@@ -3,13 +3,14 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from html import escape
 import math
 import re
 import time
 
 from PyQt6.QtCore import QPoint, Qt, QTimer
-from PyQt6.QtGui import QFont, QFontDatabase
+from PyQt6.QtGui import QFont, QFontDatabase, QRawFont
 from PyQt6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout
 
 from calendar_app.infrastructure.i18n import t
@@ -24,6 +25,30 @@ from calendar_app.presentation.widgets.overlay_base import (
     _rgba_css,
     _scale_template_html,
 )
+
+
+@lru_cache(maxsize=3)
+def _status_icon_font_family(glyph: str) -> str:
+    """Choose a font that actually contains this transport glyph."""
+    default = QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont).family()
+    candidates = (
+        default,
+        "Segoe UI Symbol",
+        "Malgun Gothic",
+        "Noto Sans Symbols 2",
+        "Noto Sans Symbols",
+        "DejaVu Sans",
+    )
+    checked = set()
+    for families in (candidates, QFontDatabase.families()):
+        for family in families:
+            if family in checked:
+                continue
+            checked.add(family)
+            font = QRawFont.fromFont(QFont(family))
+            if font.isValid() and font.supportsCharacter(ord(glyph)):
+                return font.familyName() or family
+    return default
 
 
 class OverlayStopwatchWidget(_BaseOverlayWidget):
@@ -286,7 +311,7 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
             elif key == "status_icon":
                 # The fixed timer font may lack transport symbols. Windows'
                 # normal UI font has these simple geometric glyphs.
-                family = QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont).family()
+                family = _status_icon_font_family(str(value))
                 value = f"<span style=\"font-family:'{escape(family, quote=True)}'\">{value}</span>"
             return _apply_span(str(value), hints)
 

@@ -275,7 +275,11 @@ def test_google_batch_create_rate_limit_defers_next_batch_and_updates(monkeypatc
     monkeypatch.setattr(engine, "_task_target_calendar_id", lambda *a: "team")
     monkeypatch.setattr(engine, "_writable_gcal_ids", lambda: {"team"})
     monkeypatch.setattr(engine.task_repo, "get_google_sync_tasks", lambda: tasks)
-    monkeypatch.setattr(engine.task_repo, "get_unified_task", lambda _: None)
+    monkeypatch.setattr(
+        engine.task_repo,
+        "get_unified_task",
+        lambda task_id: next(t for t in tasks if t["id"] == task_id),
+    )
     monkeypatch.setattr(engine.task_repo, "mark_unified_task_gcal_failed", lambda *a, **k: True)
     monkeypatch.setattr(
         engine, "sync_task_to_google", lambda *a, **k: pytest.fail("Must defer remaining updates")

@@ -1,5 +1,46 @@
+# -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
 import re
+
+_TIME_PATTERNS = (
+    ("kr_meridiem", re.compile(r"(오전|오후|저녁|밤|아침|새벽)\s*(\d+)[:시](?:\s*(\d+)분?)?")),
+    ("en_meridiem", re.compile(r"\b(\d+)(?::(\d+))?\s*(am|pm)\b", re.IGNORECASE)),
+    ("kr_clock", re.compile(r"(?<!\d)(\d+)시(?:\s*(\d+)분)?")),
+    ("clock", re.compile(r"\b(\d+):(\d{2})\b")),
+)
+
+
+def _extract_time(title):
+    candidates = [
+        (match.start(), priority, kind, match)
+        for priority, (kind, pattern) in enumerate(_TIME_PATTERNS)
+        if (match := pattern.search(title)) is not None
+    ]
+    if not candidates:
+        return title, None
+    _, _, kind, match = min(candidates, key=lambda item: item[:2])
+    if kind == "kr_meridiem":
+        marker, hour, minute = match.groups()
+    elif kind == "en_meridiem":
+        hour, minute, marker = match.groups()
+        marker = marker.lower()
+    else:
+        hour, minute = match.groups()
+        marker = None
+    minute = minute or "0"
+    # Validate the entire token before removing it, including malformed clocks.
+    # Length checks also bound integer conversion for exceptionally long input.
+    if len(hour) > 2 or len(minute) > 2:
+        return title, None
+    h, m = int(hour), int(minute)
+    if not 0 <= m < 60 or not (1 <= h <= 12 if marker else 0 <= h < 24):
+        return title, None
+    if marker in {"오후", "저녁", "밤", "pm"} and h < 12:
+        h += 12
+    elif marker in {"오전", "아침", "새벽", "밤", "am"} and h == 12:
+        h = 0
+    title = (title[: match.start()] + title[match.end() :]).strip()
+    return title, f"{h:02d}:{m:02d}"
 
 
 def parse_nlp_task(text: str):
@@ -13,7 +54,7 @@ def parse_nlp_task(text: str):
     now = datetime.now()
     target_date = now.date()
     target_time = None
-    title = text.strip()
+    title = re.sub(r"\s+", " ", text.strip())
 
     # 1. Date Extraction
     date_found = False
@@ -31,7 +72,7 @@ def parse_nlp_task(text: str):
         "tomorrow": 1,
         "day after tomorrow": 2,
     }
-    for kw, offset in rel_dates.items():
+    for kw, offset in sorted(rel_dates.items(), key=lambda item: len(item[0]), reverse=True):
         if re.search(rf"\b{kw}\b", title.lower()):
             target_date = (now + timedelta(days=offset)).date()
             # Case-insensitive replacement
@@ -43,7 +84,7 @@ def parse_nlp_task(text: str):
     kr_weekdays = ["월", "화", "수", "목", "금", "토", "일"]
     kr_weekday_map = {w: i for i, w in enumerate(kr_weekdays)}
 
-    weekday_match = re.search(r"(이번주|다음주)?\s*([월화수목금토일])요일?", title)
+    weekday_match = re.search(r"(이번\s*주|다음\s*주)?\s*([월화수목금토일])요일?", title)
     if weekday_match:
         prefix = weekday_match.group(1)
         wd_str = weekday_match.group(2)
@@ -51,9 +92,7 @@ def parse_nlp_task(text: str):
         current_wd = now.weekday()
 
         days_ahead = target_wd - current_wd
-        if days_ahead <= 0:
-            days_ahead += 7
-        if prefix == "다음주":
+        if prefix and prefix.replace(" ", "") == "다음주" or not prefix and days_ahead <= 0:
             days_ahead += 7
         target_date = (now + timedelta(days=days_ahead)).date()
         title = title.replace(weekday_match.group(0), "").strip()
@@ -73,9 +112,7 @@ def parse_nlp_task(text: str):
         target_wd = en_weekday_map[wd_str]
         current_wd = now.weekday()
         days_ahead = target_wd - current_wd
-        if days_ahead <= 0:
-            days_ahead += 7
-        if prefix and "next" in prefix:
+        if prefix and "next" in prefix or days_ahead <= 0:
             days_ahead += 7
         target_date = (now + timedelta(days=days_ahead)).date()
         title = re.sub(wd_en_regex, "", title, flags=re.IGNORECASE).strip()
@@ -87,54 +124,25 @@ def parse_nlp_task(text: str):
         m = int(md_match.group(1))
         d = int(md_match.group(2))
         try:
-            target_date = datetime(now.year, m, d).date()
-            if target_date < now.date() and not date_found:  # If date is passed, assume next year
-                target_date = datetime(now.year + 1, m, d).date()
+            candidate_date = datetime(now.year, m, d).date()
+            if (
+                candidate_date < now.date() and not date_found
+            ):  # If date is passed, assume next year
+                candidate_date = datetime(now.year + 1, m, d).date()
+            target_date = candidate_date
             title = title.replace(md_match.group(0), "").strip()
             date_found = True
         except ValueError:
             pass
 
-    # 2. Time Extraction
-    # Support: 오전/오후, am/pm, HH:MM, HH시 MM분, HH시, 3pm, 4:30pm
-    # KR patterns
-    kr_time_match = re.search(r"(오전|오후|저녁|밤|아침|새벽)\s*(\d{1,2})[:시](\d{1,2})?분?", title)
-    if kr_time_match:
-        ampm = kr_time_match.group(1)
-        h = int(kr_time_match.group(2))
-        m = int(kr_time_match.group(3)) if kr_time_match.group(3) else 0
-        if ampm in ["오후", "저녁", "밤"] and h < 12:
-            h += 12
-        elif ampm in ["오전", "아침", "새벽"] and h == 12:
-            h = 0
-        target_time = f"{h:02d}:{m:02d}"
-        title = title.replace(kr_time_match.group(0), "").strip()
-
-    # EN patterns (3pm, 4:30 PM, 15:00)
-    en_time_match = re.search(r"\b(\d{1,2})(:(\d{2}))?\s*(am|pm)\b", title, flags=re.IGNORECASE)
-    if en_time_match:
-        h = int(en_time_match.group(1))
-        m = int(en_time_match.group(3)) if en_time_match.group(3) else 0
-        ampm = en_time_match.group(4).lower()
-        if ampm == "pm" and h < 12:
-            h += 12
-        elif ampm == "am" and h == 12:
-            h = 0
-        target_time = f"{h:02d}:{m:02d}"
-        title = re.sub(en_time_match.group(0), "", title, flags=re.IGNORECASE).strip()
-    elif not target_time:
-        # Simple HH:MM pattern
-        simple_time = re.search(r"\b(\d{1,2}):(\d{2})\b", title)
-        if simple_time:
-            h = int(simple_time.group(1))
-            m = int(simple_time.group(2))
-            if 0 <= h < 24 and 0 <= m < 60:
-                target_time = f"{h:02d}:{m:02d}"
-                title = title.replace(simple_time.group(0), "").strip()
-
-    # Clean up title: remove words like "at", "on" if they are at start/end of remaining title
-    title = re.sub(r"\b(at|on|in|to)\b", "", title, flags=re.IGNORECASE).strip()
+    # 2. Time extraction preserves invalid input for the user to correct.
+    title, target_time = _extract_time(title)
     title = re.sub(r"\s+", " ", title).strip()
+    # Only remove temporal connectors at the edges, never words inside a title.
+    if date_found or target_time is not None:
+        title = re.sub(
+            r"^(?:at|on|in|to)\b|\b(?:at|on|in|to)$", "", title, flags=re.IGNORECASE
+        ).strip()
 
     return {
         "title": title or "제목 없음",
