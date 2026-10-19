@@ -9,7 +9,10 @@ from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from calendar_app.infrastructure.i18n import t
-from calendar_app.presentation.widgets.overlay_stopwatch import OverlayStopwatchWidget
+from calendar_app.presentation.widgets.overlay_stopwatch import (
+    OverlayStopwatchWidget,
+    _status_icon_font_family,
+)
 
 
 class OverlayStopwatchTextTests(unittest.TestCase):
@@ -61,6 +64,24 @@ class OverlayStopwatchTextTests(unittest.TestCase):
 
         self.assertNotEqual(widget._time_label.font().family(), "DefinitelyNotARealFont")
         self.assertNotEqual(widget._status_label.font().family(), "DefinitelyNotARealFont")
+
+    def test_status_icon_font_selection_is_cached_for_each_rendered_state(self):
+        widget = OverlayStopwatchWidget(self.owner)
+        self.addCleanup(widget.close)
+        _status_icon_font_family.cache_clear()
+        self.addCleanup(_status_icon_font_family.cache_clear)
+
+        for elapsed, running, glyph in ((0, True, "▶"), (1234, False, "Ⅱ"), (0, False, "■")):
+            with self.subTest(glyph=glyph):
+                first = widget._resolve_sw_template("{status_icon} {status}", elapsed, running)
+                second = widget._resolve_sw_template("{status_icon} {status}", elapsed, running)
+                self.assertIn(glyph, first)
+                self.assertEqual(first, second)
+
+        cache = _status_icon_font_family.cache_info()
+        self.assertEqual(cache.misses, 3)
+        self.assertEqual(cache.hits, 3)
+        self.assertEqual(cache.currsize, 3)
 
     def test_stopwatch_template_uses_fixed_font_family(self):
         widget = OverlayStopwatchWidget(self.owner)

@@ -10,7 +10,7 @@ import re
 import time
 
 from PyQt6.QtCore import QPoint, Qt, QTimer
-from PyQt6.QtGui import QFont, QFontDatabase, QRawFont
+from PyQt6.QtGui import QFont, QFontDatabase, QFontInfo, QFontMetrics
 from PyQt6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout
 
 from calendar_app.infrastructure.i18n import t
@@ -45,9 +45,10 @@ def _status_icon_font_family(glyph: str) -> str:
             if family in checked:
                 continue
             checked.add(family)
-            font = QRawFont.fromFont(QFont(family))
-            if font.isValid() and font.supportsCharacter(ord(glyph)):
-                return font.familyName() or family
+            font = QFont(family)
+            font.setStyleStrategy(QFont.StyleStrategy.NoFontMerging)
+            if QFontMetrics(font).inFontUcs4(ord(glyph)):
+                return QFontInfo(font).family() or family
     return default
 
 

@@ -7,6 +7,8 @@ Released: 2026-10-19
 - Choose from 24 built-in sound effects. Sound previews remain available while the deck is muted or its volume is zero.
 - Restore KeyDeck sound playback in Windows Store builds with a native Windows audio path that supports separate volume levels and overlapping sounds.
 - Improve the sound settings guidance, including explanations for muted decks and zero volume.
+- Avoid a Windows crash while selecting fonts for stopwatch status symbols.
+- Improve cleanup after failed database initialization while preserving the existing database.
 
 The existing Microsoft Store identity and automatic update path are retained.
 

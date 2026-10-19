@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 
 from PyQt6.QtCore import QDateTime, QSettings, Qt
-from PyQt6.QtGui import QFont, QRawFont, QTextDocument
+from PyQt6.QtGui import QFont, QFontMetrics, QTextDocument
 from PyQt6.QtWidgets import QApplication, QWidget
 import pytest
 
@@ -104,9 +104,10 @@ def test_stopwatch_transport_glyphs_use_supported_ui_font(widgets, elapsed, runn
     font_match = re.search(r"font-family:'([^']+)'", rendered)
     assert font_match is not None
     font = QFont(unescape(font_match.group(1)))
+    font.setStyleStrategy(QFont.StyleStrategy.NoFontMerging)
 
     assert _plain(rendered).startswith(glyph + " ")
-    assert QRawFont.fromFont(font).supportsCharacter(ord(glyph))
+    assert QFontMetrics(font).inFontUcs4(ord(glyph))
     assert "⏹" not in rendered and "⏸" not in rendered
     assert f"font-family:'{font.family()}'" in rendered
 
