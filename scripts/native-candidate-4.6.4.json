@@ -24,7 +24,7 @@
   },
   "qa_sha256": {
     "scripts/verify_native_candidate_inputs.py": "be83e57f4349f4aa9f7e780e8577cac6bd900b4b1cc25425f05f5bb56da7970f",
-    "scripts/native_release_smoke.py": "abb2309d4d48fc42ebb1a5c1c6e399f17c282038de34f5e5c253e88daaca9169",
+    "scripts/native_release_smoke.py": "18578d029a5e7d6361533d2d1d119a13b943c635949159cf9c662252ea6d82a0",
     "scripts/native_exception_observer.py": "993a53a50993e1e55dcd65792ec94aa994795490ecdc58c0d9ca0b65e2ec8748",
     "scripts/prepare_native_smoke_baseline.py": "2e9bff8f8cda2252b33b117687f4f1b22f66e35f1ffda78aa6618d58cd69c33a",
     "scripts/verify_sqlite_runtime.py": "35f149eafda0dee38dd9dd2d69133d46e8c0fe2af721ab113f1f10c08619c1d7",

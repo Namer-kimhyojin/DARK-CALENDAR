@@ -703,3 +703,210 @@ def test_capture_checks_visibility_both_immediately_before_and_after_pixels(tmp_
     monkeypatch.setattr(smoke, "sha256", lambda _path: "f" * 64)
     smoke._capture(window, tmp_path / "main.png", verify_visible=phases.append)
     assert phases == ["before", "pixels", "after"]
+
+
+def summary_metadata():
+    return {
+        "handle": 9,
+        "pid": 42,
+        "parent": 3,
+        "visible": True,
+        "title": "Today's Events & Due Tasks",
+        "class_name": "Qt6102QWindow",
+    }
+
+
+def test_only_exact_owned_startup_summary_is_selected():
+    summary = summary_metadata()
+    assert smoke.select_startup_summary([summary], 42, 3) == summary
+    for field, value in (
+        ("pid", 99),
+        ("parent", 99),
+        ("visible", False),
+        ("title", "Database initialization failed"),
+        ("class_name", "Qt6102QWindowIcon"),
+    ):
+        assert smoke.select_startup_summary([{**summary, field: value}], 42, 3) is None
+    with pytest.raises(RuntimeError, match="More than one"):
+        smoke.select_startup_summary([summary, {**summary, "handle": 10}], 42, 3)
+
+
+def briefing_button(name="Confirm", *, visible=True, enabled=True, identity="primary_btn"):
+    return SimpleNamespace(
+        window_text=lambda: name,
+        is_visible=lambda: visible,
+        is_enabled=lambda: enabled,
+        element_info=SimpleNamespace(automation_id=f"DailySummaryDialog.{identity}"),
+    )
+
+
+def test_summary_uses_only_visible_primary_confirm_and_keeps_automatic_display_unchanged():
+    confirm = briefing_button()
+    disable = briefing_button("Stop automatic reminders", identity="disable_auto")
+    dialog = SimpleNamespace(
+        window_text=lambda: "Today's Briefing", descendants=lambda **_kw: [disable, confirm]
+    )
+    assert smoke.briefing_confirm(dialog, [{"name": smoke.FIXTURE_NAME}]) is confirm
+
+
+@pytest.mark.parametrize(
+    "button",
+    [
+        briefing_button(visible=False),
+        briefing_button(enabled=False),
+        briefing_button(identity="settings_save"),
+        briefing_button("Stop automatic reminders"),
+    ],
+)
+def test_summary_never_clicks_hidden_disabled_unidentified_or_settings_buttons(button):
+    dialog = SimpleNamespace(
+        window_text=lambda: "Today's Briefing", descendants=lambda **_kw: [button]
+    )
+    with pytest.raises(RuntimeError, match="primary Confirm"):
+        smoke.briefing_confirm(dialog, [{"name": smoke.FIXTURE_NAME}])
+
+
+def test_summary_requires_original_briefing_and_synthetic_schedule_content():
+    dialog = SimpleNamespace(window_text=lambda: "Today's Briefing")
+    with pytest.raises(RuntimeError, match="synthetic schedule"):
+        smoke.briefing_confirm(dialog, [{"name": "Database error"}])
+
+
+@pytest.mark.parametrize("hwnd_retained", [False, True])
+@pytest.mark.parametrize("main_enabled", [False, True])
+def test_startup_summary_normal_confirm_records_raw_evidence_and_releases_modal(
+    tmp_path, monkeypatch, hwnd_retained, main_enabled
+):
+    monkeypatch.setattr(smoke, "require_hosted_runner", lambda *_args: tmp_path)
+    gui = Mock()
+    gui.WindowFromPoint.return_value = 9
+    gui.GetAncestor.return_value = 9
+    gui.IsWindow.return_value = hwnd_retained
+    gui.IsWindowVisible.return_value = False
+    monkeypatch.setitem(sys.modules, "win32gui", gui)
+    confirm = Mock()
+    state = {"clicked": False}
+
+    class Element:
+        @property
+        def automation_id(self):
+            if state["clicked"]:
+                raise AssertionError("Closed UIA elements cannot be queried again")
+            return "DailySummaryDialog.primary_btn"
+
+    confirm.element_info = Element()
+    confirm.click_input.side_effect = lambda: state.update(clicked=True)
+    confirm.rectangle.return_value = SimpleNamespace(left=500, top=500, right=600, bottom=550)
+    dialog = Mock()
+    desktop = Mock()
+    desktop.window.return_value.wrapper_object.return_value = dialog
+    monkeypatch.setitem(sys.modules, "pywinauto", SimpleNamespace(Desktop=lambda **_kw: desktop))
+    monkeypatch.setattr(smoke, "_window_metadata", lambda _processes: [summary_metadata()])
+    monkeypatch.setattr(smoke, "_controls", lambda _dialog: [{"name": smoke.FIXTURE_NAME}])
+    monkeypatch.setattr(smoke, "briefing_confirm", lambda *_args: confirm)
+    monkeypatch.setattr(smoke, "_capture", lambda *_args, **_kw: {"path": "startup-briefing.png"})
+    monkeypatch.setattr(
+        smoke, "system_button", lambda _window: SimpleNamespace(is_enabled=lambda: main_enabled)
+    )
+    phases = []
+    if not main_enabled:
+        with pytest.raises(RuntimeError, match="regain enabled"):
+            smoke._acknowledge_startup_summary(
+                SimpleNamespace(handle=3, process_id=lambda: 42), [], tmp_path, True, phases.append
+            )
+        confirm.click_input.assert_called_once_with()
+        return
+    result = smoke._acknowledge_startup_summary(
+        SimpleNamespace(handle=3, process_id=lambda: 42), [], tmp_path, True, phases.append
+    )
+    desktop.window.assert_called_once_with(handle=9)
+    confirm.click_input.assert_called_once_with()
+    assert not result["automatic_display_disabled"]
+    assert not result["settings_changed_by_harness"]
+    assert not result["visible_after_confirm"]
+    assert result["hwnd_exists_after_confirm"] is hwnd_retained
+    assert phases == ["startup_briefing_fixture_observed", "startup_briefing_confirmed"]
+    assert (tmp_path / "startup-briefing-accessibility.json").is_file()
+    assert (tmp_path / "startup-briefing-acknowledged.json").is_file()
+
+
+def test_unknown_owned_popup_is_not_acknowledged(tmp_path, monkeypatch):
+    monkeypatch.setattr(smoke, "require_hosted_runner", lambda *_args: tmp_path)
+    monkeypatch.setitem(sys.modules, "win32gui", SimpleNamespace())
+    monkeypatch.setitem(sys.modules, "pywinauto", None)
+    monkeypatch.setattr(
+        smoke,
+        "_window_metadata",
+        lambda _processes: [{**summary_metadata(), "title": "Unhandled exception"}],
+    )
+    result = smoke._acknowledge_startup_summary(
+        SimpleNamespace(handle=3, process_id=lambda: 42), [], tmp_path, True, Mock()
+    )
+    assert result == {"seen": False, "settings_changed_by_harness": False}
+
+
+def test_unexpected_summary_in_empty_profile_fails_before_any_click(tmp_path, monkeypatch):
+    monkeypatch.setattr(smoke, "require_hosted_runner", lambda *_args: tmp_path)
+    monkeypatch.setitem(sys.modules, "win32gui", SimpleNamespace())
+    monkeypatch.setitem(sys.modules, "pywinauto", None)
+    monkeypatch.setattr(smoke, "_window_metadata", lambda _processes: [summary_metadata()])
+    with pytest.raises(RuntimeError, match="empty fresh profile"):
+        smoke._acknowledge_startup_summary(
+            SimpleNamespace(handle=3, process_id=lambda: 42), [], tmp_path, False, Mock()
+        )
+
+
+def test_owned_modal_disabling_main_does_not_prevent_main_identification():
+    main = NativeWindow(3)
+    main.button.is_enabled = lambda: False
+    assert smoke.select_qualified_main([main], lambda *_args: False) is main
+
+
+def test_daily_briefing_is_confirmed_before_main_foreground_semantics_and_capture(
+    tmp_path, monkeypatch
+):
+    state = {"disabled": True, "active": False}
+    order = []
+
+    def acknowledge(*_args):
+        assert state["disabled"]
+        order.append("normal_confirm")
+        state["disabled"] = False
+        return {"seen": True}
+
+    def foreground(*_args):
+        assert not state["disabled"]
+        state["active"] = True
+        order.append("main_foreground")
+        return {"foreground_handle": 3}
+
+    def controls(_window):
+        assert state["active"] and not state["disabled"]
+        order.append("restored_fixture_semantics")
+        return [*main_controls(fixture=True), {"name": "Settings"}]
+
+    def visibility(_window, _evidence, _controls, stage):
+        assert state["active"] and not state["disabled"]
+        order.append(f"grid_{stage}")
+
+    def capture(_window, _path, *, verify_visible):
+        verify_visible("before")
+        order.append("pixels")
+        verify_visible("after")
+        return {"path": "main-window.png"}
+
+    monkeypatch.setattr(smoke, "_acknowledge_startup_summary", acknowledge)
+    monkeypatch.setattr(smoke, "_prepare_visible_main", foreground)
+    monkeypatch.setattr(smoke, "_controls", controls)
+    monkeypatch.setattr(smoke, "_verify_capture_visibility", visibility)
+    monkeypatch.setattr(smoke, "_capture", capture)
+    result = smoke.prepare_main_capture(SimpleNamespace(handle=3), [], tmp_path, True, Mock())
+    assert result[2]["fixture_visible"]
+    assert order == [
+        "normal_confirm",
+        "main_foreground",
+        "restored_fixture_semantics",
+        "grid_before",
+        "pixels",
+        "grid_after",
+    ]

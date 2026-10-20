@@ -548,6 +548,96 @@ def select_exit_modal(metadata: list[dict], pid: int, main_handle: int) -> dict 
     return dialogs[0] if dialogs else None
 
 
+def select_startup_summary(metadata: list[dict], pid: int, main_handle: int) -> dict | None:
+    dialogs = [
+        item
+        for item in metadata
+        if item["visible"]
+        and item["pid"] == pid
+        and item["parent"] == main_handle
+        and item["title"] == "Today's Events & Due Tasks"
+        and item["class_name"] == "Qt6102QWindow"
+    ]
+    if len(dialogs) > 1:
+        raise RuntimeError("More than one owned startup daily briefing exists")
+    return dialogs[0] if dialogs else None
+
+
+def briefing_confirm(dialog, controls: list[dict]):
+    names = [dialog.window_text(), *(item["name"] for item in controls)]
+    if "Today's Briefing" not in names or not any(FIXTURE_NAME in name for name in names):
+        raise RuntimeError("Startup briefing lacks its expected title and synthetic schedule")
+    buttons = [
+        item
+        for item in dialog.descendants(control_type="Button")
+        if item.window_text().replace("&", "").strip() == "Confirm"
+        and item.is_visible()
+        and item.is_enabled()
+        and item.element_info.automation_id.split(".")[-1] == "primary_btn"
+    ]
+    if len(buttons) != 1:
+        raise RuntimeError("Cannot identify the briefing's unique visible primary Confirm button")
+    return buttons[0]
+
+
+def _acknowledge_startup_summary(window, processes, evidence: Path, fixture: bool, activity):
+    require_hosted_runner(os.environ, sys.platform, evidence)
+    import win32gui
+
+    metadata = _window_metadata(processes)
+    write_json(evidence / "startup-window-observation.json", metadata)
+    modal = select_startup_summary(metadata, window.process_id(), window.handle)
+    if modal is None:
+        return {"seen": False, "settings_changed_by_harness": False}
+    if not fixture:
+        raise RuntimeError("Unexpected daily briefing in the empty fresh profile")
+    from pywinauto import Desktop
+
+    dialog = Desktop(backend="uia").window(handle=modal["handle"]).wrapper_object()
+    controls = _controls(dialog)
+    write_json(evidence / "startup-briefing-accessibility.json", controls)
+    button = briefing_confirm(dialog, controls)
+    confirmation_id = button.element_info.automation_id
+    rect = button.rectangle()
+    point = (round((rect.left + rect.right) / 2), round((rect.top + rect.bottom) / 2))
+    if win32gui.GetAncestor(win32gui.WindowFromPoint(point), 2) != modal["handle"]:
+        raise RuntimeError("Startup briefing Confirm button is obscured")
+    capture = _capture(dialog, evidence / "startup-briefing.png", main=False)
+    activity("startup_briefing_fixture_observed")
+    button.click_input()
+    deadline = time.monotonic() + 5
+    while (
+        win32gui.IsWindow(modal["handle"])
+        and win32gui.IsWindowVisible(modal["handle"])
+        and time.monotonic() < deadline
+    ):
+        time.sleep(0.1)
+    handle_exists = bool(win32gui.IsWindow(modal["handle"]))
+    still_visible = handle_exists and bool(win32gui.IsWindowVisible(modal["handle"]))
+    if still_visible:
+        raise RuntimeError("Startup briefing did not close after normal Confirm")
+    main_system = system_button(window)
+    if main_system is None or not main_system.is_enabled():
+        raise RuntimeError("Main window did not regain enabled controls after briefing Confirm")
+    activity("startup_briefing_confirmed")
+    result = {
+        "seen": True,
+        "modal": modal,
+        "capture": capture,
+        "button": "Confirm / primary_btn",
+        "button_automation_id": confirmation_id,
+        "hwnd_exists_after_confirm": handle_exists,
+        "visible_after_confirm": still_visible,
+        "main_controls_enabled": True,
+        "synthetic_schedule_visible": True,
+        "normal_ui_acknowledgement": True,
+        "settings_changed_by_harness": False,
+        "automatic_display_disabled": False,
+    }
+    write_json(evidence / "startup-briefing-acknowledged.json", result)
+    return result
+
+
 def validate_main_content(controls: list[dict], fixture: bool) -> dict:
     names = [item["name"].strip() for item in controls]
     cells = sum(bool(re.fullmatch(r"\d{4}-\d{2}-\d{2} date cell", name)) for name in names)
@@ -823,6 +913,26 @@ def start_ready_observer(process, evidence: Path, log_path: Path, diagnostic: di
     return diagnostic["observer"]
 
 
+def prepare_main_capture(window, processes, evidence: Path, fixture: bool, activity):
+    # A normal startup briefing legitimately disables/owns focus over main.
+    # Acknowledge it before requiring active, unobscured main-window contents.
+    briefing = _acknowledge_startup_summary(window, processes, evidence, fixture, activity)
+    visibility = _prepare_visible_main(window, evidence)
+    activity("main_foreground_verified")
+    controls = _controls(window)
+    write_json(evidence / "accessibility.json", controls)
+    if not any(item["name"].strip() in {"System", "Settings", "시스템"} for item in controls):
+        raise RuntimeError("Main-window accessibility tree lacks the application System menu")
+    content = validate_main_content(controls, fixture)
+    capture = _capture(
+        window,
+        evidence / "main-window.png",
+        verify_visible=lambda stage: _verify_capture_visibility(window, evidence, controls, stage),
+    )
+    activity("main_calendar_and_task_capture")
+    return briefing, visibility, content, capture
+
+
 def _launch_cycle(
     payload: Path,
     profile: Path,
@@ -936,19 +1046,9 @@ def _launch_cycle(
         if name not in loaded or not loaded[name].is_relative_to((payload / "_internal").resolve()):
             raise RuntimeError(f"Native app did not load bundled {name}")
         bundled[name] = {"path": str(loaded[name]), "sha256": sha256(loaded[name])}
-    visibility = _prepare_visible_main(window, evidence)
-    activity("main_foreground_verified")
-    controls = _controls(window)
-    write_json(evidence / "accessibility.json", controls)
-    if not any(item["name"].strip() in {"System", "Settings", "시스템"} for item in controls):
-        raise RuntimeError("Main-window accessibility tree lacks the application System menu")
-    content = validate_main_content(controls, fixture)
-    capture = _capture(
-        window,
-        evidence / "main-window.png",
-        verify_visible=lambda stage: _verify_capture_visibility(window, evidence, controls, stage),
+    briefing, visibility, content, capture = prepare_main_capture(
+        window, candidates, evidence, fixture, activity
     )
-    activity("main_calendar_and_task_capture")
     _normal_exit(window, candidates, evidence, activity)
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline and _related_processes(executable, started):
@@ -992,6 +1092,7 @@ def _launch_cycle(
         "visibility": visibility,
         "main_content": content,
         "rpc_diagnostics": observed_rpc,
+        "startup_briefing": briefing,
     }
 
 
