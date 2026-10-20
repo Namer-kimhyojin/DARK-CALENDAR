@@ -27,7 +27,7 @@ def _cells(keys):
 
 class KeyDeckTemplateTests(unittest.TestCase):
     def test_every_template_and_theme_builds_a_valid_overlap_free_deck(self):
-        self.assertEqual(len(m.TEMPLATES), 10)
+        self.assertEqual(len(m.TEMPLATES), 13)
         self.assertEqual(len(m.THEMES), 24)
         for template_id, *_rest in m.TEMPLATES:
             for theme in m.THEMES:
@@ -37,7 +37,11 @@ class KeyDeckTemplateTests(unittest.TestCase):
                 self.assertFalse(m.has_overlaps(keys), (template_id, theme.theme_id))
                 self.assertEqual(deck["theme"], theme.theme_id)
                 self.assertEqual(m.layout_bounds(keys)[:2], (0.0, 0.0))
-                if theme.insert_kind != "none" and template_id not in m.KEYBOARD_TEMPLATE_IDS:
+                if (
+                    theme.insert_kind != "none"
+                    and template_id not in m.KEYBOARD_TEMPLATE_IDS
+                    and template_id not in m.BEATMAKER_TEMPLATE_KITS
+                ):
                     self.assertTrue(all(key["insert"]["kind"] == theme.insert_kind for key in keys))
 
     def test_templates_mix_key_sizes_like_real_keyboards(self):

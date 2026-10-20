@@ -739,6 +739,8 @@ if (-not [string]::IsNullOrWhiteSpace($PythonExecutable)) {
 $resetScript    = Join-Path $projectRoot "scripts\reset_release_state.py"
 $payloadScript  = Join-Path $projectRoot "build_store.py"
 $complianceScript = Join-Path $projectRoot "scripts\release_compliance.py"
+$sqliteRuntimeVerifier = Join-Path $projectRoot "scripts\verify_sqlite_runtime.py"
+$sqliteRuntimePreparer = Join-Path $projectRoot "scripts\prepare_sqlite_build_runtime.py"
 $runtimeLock    = Join-Path $projectRoot "requirements-runtime.lock"
 $buildLock      = Join-Path $projectRoot "requirements-build.lock"
 $complianceConfig = Join-Path $projectRoot "release-compliance.json"
@@ -757,6 +759,7 @@ if ([string]::IsNullOrWhiteSpace($hostArch)) {
     throw "Cannot determine host architecture."
 }
 if ($Arch -eq "auto") { $Arch = $hostArch }
+$sqliteRuntimeDirectory = Join-Path $projectRoot "build\python-sqlite-$Arch"
 if (-not $AllowCrossArch -and $hostArch -ne $Arch) {
     throw "Cross-arch blocked. Host='$hostArch' target='$Arch'. Use -AllowCrossArch to override."
 }
@@ -876,6 +879,8 @@ foreach ($chk in @(
     @{ Path = $assetsSource;  Name = "Assets/" },
     @{ Path = $payloadScript; Name = "build_store.py" }
     @{ Path = $complianceScript; Name = "release_compliance.py" }
+    @{ Path = $sqliteRuntimeVerifier; Name = "verify_sqlite_runtime.py" }
+    @{ Path = $sqliteRuntimePreparer; Name = "prepare_sqlite_build_runtime.py" }
     @{ Path = $runtimeLock; Name = "requirements-runtime.lock" }
     @{ Path = $buildLock; Name = "requirements-build.lock" }
     @{ Path = $complianceConfig; Name = "release-compliance.json" }
@@ -892,6 +897,22 @@ foreach ($chk in @(
 Assert-DiskSpace -Path $projectRoot -MinimumGB 3
 Assert-StoreManifestContract -ManifestPath $manifestSource
 Test-PythonEnv -Python $venvPython
+# Clone only the standard runtime; read the locked packages from the selected
+# environment. Never replace a DLL in the developer or globally installed Python.
+# ValidateOnly checks an existing preparation and creates no build environment.
+$sqlitePreparationArgs = @($sqliteRuntimePreparer, "--arch", $Arch, "--directory", $sqliteRuntimeDirectory)
+if ($ValidateOnly) { $sqlitePreparationArgs += "--check" }
+$sqlitePreparationJson = & $venvPython @sqlitePreparationArgs
+if ($LASTEXITCODE -ne 0) { throw "Pinned SQLite build runtime preparation failed: $sqlitePreparationJson" }
+$sqlitePreparation = ($sqlitePreparationJson -join "`n") | ConvertFrom-Json
+if ($sqlitePreparation.passed -ne $true) { throw "Pinned SQLite runtime was not verified." }
+$venvPython = [string]$sqlitePreparation.python_executable
+Write-Info "private pinned SQLite runtime: $venvPython (reused=$($sqlitePreparation.reused))"
+Test-PythonEnv -Python $venvPython
+Run-OrThrow -Exe $venvPython -Args @(
+    $sqliteRuntimeVerifier,
+    "--runtime"
+) -WorkingDirectory $projectRoot
 Run-OrThrow -Exe $venvPython -Args @(
     $complianceScript,
     "verify-env",
@@ -1016,6 +1037,18 @@ $pyinstallerArgs = @(
 Run-OrThrow -Exe $venvPython -Args $pyinstallerArgs -WorkingDirectory $projectRoot
 
 if (-not (Test-Path $appDir)) { throw "Build output missing: $appDir" }
+
+# A host-only or PYZ check cannot establish which SQLite DLL the EXE ships.
+# Check the native payload before assets, sanitisation, MSIX or publication.
+Run-OrThrow -Exe $venvPython -Args @(
+    $sqliteRuntimeVerifier,
+    "--payload", $appDir
+) -WorkingDirectory $projectRoot
+Run-OrThrow -Exe $venvPython -Args @(
+    $sqliteRuntimePreparer,
+    "--arch", $Arch,
+    "--payload", $appDir
+) -WorkingDirectory $projectRoot
 
 $exeSize = [math]::Round((Get-Item (Join-Path $appDir "DarkCalendar.exe")).Length / 1MB, 1)
 Write-Ok "PyInstaller done  (exe: ${exeSize} MB)"

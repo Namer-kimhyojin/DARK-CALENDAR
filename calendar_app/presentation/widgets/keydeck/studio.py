@@ -39,6 +39,12 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
 )
 from calendar_app.presentation.widgets.keydeck import layout_library
+from calendar_app.presentation.widgets.keydeck.beatmaker import (
+    BEATMAKER_BANKS,
+    BEATMAKER_KITS,
+    apply_beatmaker_preset,
+    beatmaker_state,
+)
 from calendar_app.presentation.widgets.keydeck.canvas import action_summary
 from calendar_app.presentation.widgets.keydeck.layout_dialog import (
     LayoutLibraryDialog,
@@ -74,7 +80,11 @@ from calendar_app.presentation.widgets.keydeck.resources import (
     panorama_image,
 )
 from calendar_app.presentation.widgets.keydeck.studio_canvas import StudioCanvas
-from calendar_app.presentation.widgets.keydeck.studio_inspector import DeckInspector, KeyInspector
+from calendar_app.presentation.widgets.keydeck.studio_inspector import (
+    BeatmakerControls,
+    DeckInspector,
+    KeyInspector,
+)
 from calendar_app.presentation.widgets.keydeck.theme_dialog import ThemeGalleryDialog
 from calendar_app.shared.app_lifecycle import is_app_exiting
 
@@ -379,6 +389,9 @@ class KeyDeckStudioDialog(QDialog):
         toolbar.addWidget(self.delete_button)
         root.addLayout(toolbar)
 
+        self.beatmaker_controls = BeatmakerControls(self, self, compact=True)
+        root.addWidget(self.beatmaker_controls)
+
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         host = QFrame(splitter)
         host.setObjectName("kdCanvasHost")
@@ -459,6 +472,7 @@ class KeyDeckStudioDialog(QDialog):
         self.canvas.set_deck(self.deck)
         self.canvas.selection = []
         self.canvas.select(selection or [])
+        self.beatmaker_controls.load(self.deck["pages"][self.deck["page"]])
         self._selection_changed()
 
     def _rebuild_tabs(self) -> None:
@@ -474,6 +488,56 @@ class KeyDeckStudioDialog(QDialog):
     def _page_tab_changed(self, index: int) -> None:
         if 0 <= index < len(self.deck["pages"]) and index != self.deck["page"]:
             self._load_page(index, [])
+
+    def set_beatmaker_kit(self, kit: str) -> None:
+        """Refill this page as one undoable draft edit."""
+        state = beatmaker_state(self.deck["pages"][self.deck["page"]])
+        if state is None or kit not in {option[0] for option in BEATMAKER_KITS}:
+            return
+        if kit == state["kit"]:
+            return
+        self._leave_preview()
+        self._push_undo("")
+        apply_beatmaker_preset(self.deck, kit, state["bank"])
+        self._mark_dirty()
+        self._load_page(self.deck["page"], [])
+
+    def set_beatmaker_bank(self, bank: str) -> None:
+        """Use an existing bank page so customized pads survive page switching."""
+        state = beatmaker_state(self.deck["pages"][self.deck["page"]])
+        if state is None or bank not in {option[0] for option in BEATMAKER_BANKS}:
+            return
+        if bank == state["bank"]:
+            return
+        self._leave_preview()
+        candidates = [
+            (index, beatmaker_state(page))
+            for index, page in enumerate(self.deck["pages"])
+            if (beatmaker_state(page) or {}).get("bank") == bank
+        ]
+        if candidates:
+            index, _target_state = next(
+                (candidate for candidate in candidates if candidate[1]["kit"] == state["kit"]),
+                candidates[0],
+            )
+            self._load_page(index, [])
+            return
+        if len(self.deck["pages"]) >= MAX_PAGES:
+            self.beatmaker_controls.load(self.deck["pages"][self.deck["page"]])
+            self.deck_inspector.beatmaker_controls.load(self.deck["pages"][self.deck["page"]])
+            self._show_notice(
+                t(
+                    "beatmaker.page_limit",
+                    "페이지가 가득 차 연주 페이지를 추가할 수 없습니다. 사용하지 않는 페이지를 삭제한 뒤 다시 선택하세요.",
+                )
+            )
+            return
+        self._push_undo("")
+        self.deck["pages"].append(new_page(""))
+        self.deck["page"] = len(self.deck["pages"]) - 1
+        apply_beatmaker_preset(self.deck, state["kit"], bank)
+        self._mark_dirty()
+        self._load_page(self.deck["page"], [])
 
     def _page_moved(self, source: int, target: int) -> None:
         self._push_undo("")
@@ -973,6 +1037,11 @@ class KeyDeckStudioDialog(QDialog):
         if keys:
             self.canvas.press_visual(keys[0]["id"], force_sound=True)
 
+    def preview_beatmaker_pad(self) -> None:
+        keys = self.selected_keys() or self.current_keys()[:1]
+        if keys:
+            self.canvas.press_visual(keys[0]["id"], force_sound=True)
+
     def test_action(self, which: str) -> None:
         keys = self.selected_keys()
         if len(keys) != 1:
@@ -980,6 +1049,9 @@ class KeyDeckStudioDialog(QDialog):
         key = keys[0]
         action = key["hold_action"] if which == "hold_action" else key["action"]
         self.canvas.press_visual(key["id"])
+        if action["type"] == "sound":
+            self.canvas.show_feedback(key["id"], True)
+            return
         if action["type"] == "page":
             self._load_page(resolve_page_target(self.deck, action["target"]), [])
             return

@@ -7,12 +7,68 @@ import faulthandler
 import logging
 import logging.handlers
 import os
+import sqlite3
 import sys
 from typing import TextIO
 
 # 로그 파일 크기 상한: 5MB × (본 파일 + 백업 2개)
 _LOG_MAX_BYTES = 5 * 1024 * 1024
 _LOG_BACKUP_COUNT = 2
+
+
+def show_database_startup_error(
+    error: sqlite3.Error | OSError, *, database_path: str | None = None
+) -> None:
+    """Show a data-preserving diagnostic, including failures before bootstrap imports."""
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtWidgets import QApplication, QMessageBox
+
+    from calendar_app.domain.i18n import t
+
+    # Keep the application alive while an import-time error's dialog is modal.
+    application = QApplication.instance() or QApplication(sys.argv)
+    code = (getattr(error, "sqlite_errorcode", 0) or 0) & 0xFF
+    if code in (sqlite3.SQLITE_CORRUPT, sqlite3.SQLITE_NOTADB):
+        message = t(
+            "startup_database.corrupt",
+            "일정 데이터베이스의 손상이 확인됐습니다. 원본 파일을 보존한 뒤 복구가 필요합니다.",
+        )
+    elif code in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+        message = t(
+            "startup_database.locked",
+            "다른 프로세스가 일정 데이터베이스를 사용 중입니다. 다른 Air Calendar 실행을 닫고 다시 시도해 주세요.",
+        )
+    else:
+        message = t(
+            "startup_database.unavailable",
+            "일정 데이터베이스를 열 수 없습니다. 저장 공간과 앱 데이터 폴더의 접근 권한을 확인해 주세요.",
+        )
+    dialog = QMessageBox()
+    dialog.setIcon(QMessageBox.Icon.Critical)
+    dialog.setWindowTitle(t("startup_database.title", "Air Calendar를 시작할 수 없습니다"))
+    dialog.setTextFormat(Qt.TextFormat.PlainText)
+    dialog.setText(message)
+    dialog.setInformativeText(
+        t(
+            "startup_database.details",
+            "자세히 보기를 열면 데이터베이스 경로와 원래 오류를 확인할 수 있습니다.",
+        )
+    )
+    path = (
+        database_path
+        or getattr(error, "database_path", None)
+        or getattr(error, "filename", None)
+        or ""
+    )
+    source = getattr(error, "database_source", None)
+    context = f"{path}\nsource={source}" if source else path
+    dialog.setDetailedText(
+        f"{context}\n{getattr(error, 'sqlite_errorname', type(error).__name__)}\n{error}"
+    )
+    dialog.setStandardButtons(QMessageBox.StandardButton.Close)
+    dialog.exec()
+    # An application created only for this failure has no main event loop to enter.
+    application.processEvents()
 
 
 def _trim_oversized_log(log_path: str) -> None:

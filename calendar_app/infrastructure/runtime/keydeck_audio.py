@@ -300,6 +300,13 @@ class _Player:
         for voice in self.voices:
             voice.finish()
 
+    def stop_all(self) -> None:
+        for voice in self.voices:
+            try:
+                voice.finish(stop=True)
+            except OSError:
+                logger.warning("Could not stop native KeyDeck audio voice", exc_info=True)
+
     def play(self, path: str, volume: float, voices: int | None = None) -> None:
         pcm = self._asset(path)
         self.reap()
@@ -395,6 +402,19 @@ class NativeSoundBank:
             return False
         return self._submit("play", str(path), min(1.0, gain), voices)
 
+    def stop_all(self) -> None:
+        """Discard queued taps and stop active voices on their owning worker."""
+        if self._thread is None or self._stop.is_set():
+            return
+        while True:
+            try:
+                self._queue.get_nowait()
+            except queue.Empty:
+                break
+        with self._lock:
+            self._pending_preloads.clear()
+        self._submit("silence", "")
+
     def _run(self) -> None:
         player = None
         try:
@@ -412,6 +432,8 @@ class NativeSoundBank:
                         player.play(value, volume, voices)
                     elif operation == "preload":
                         player.preload([value], voices)
+                    elif operation == "silence":
+                        player.stop_all()
                     else:
                         player.reap()
                 except (OSError, ValueError, EOFError, wave.Error) as error:

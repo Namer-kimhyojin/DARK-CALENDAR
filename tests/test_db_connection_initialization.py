@@ -159,3 +159,29 @@ def test_connect_failure_preserves_error_without_caching(database_module, monkey
         assert database_module.db_manager.get_connection() is None
     assert database_module.db_manager._connections == {}
     assert "Failed to connect to database: unable to open database file" in caplog.text
+
+
+@pytest.mark.parametrize("fail_close", [False, True])
+def test_startup_opt_in_propagates_sqlite_failure_after_cleanup(
+    database_module, tracked_connections, fail_close
+):
+    connections = tracked_connections(fail_sql="PRAGMA journal_mode = WAL", fail_close=fail_close)
+    with pytest.raises(sqlite3.DatabaseError, match="database disk image is malformed"):
+        database_module.initialize_unified_database(raise_on_error=True)
+    assert connections[0].close_calls == 1
+    assert database_module.db_manager._connections == {}
+
+
+@pytest.mark.parametrize("raise_on_error", [False, True])
+def test_corrupt_database_is_preserved_without_silent_reset(database_module, raise_on_error):
+    original = b"A damaged original database which must remain available for recovery"
+    path = Path(database_module.DB_PATH)
+    path.write_bytes(original)
+    if raise_on_error:
+        with pytest.raises(sqlite3.DatabaseError) as failure:
+            database_module.initialize_unified_database(raise_on_error=True)
+        assert failure.value.sqlite_errorcode in (sqlite3.SQLITE_NOTADB, sqlite3.SQLITE_CORRUPT)
+    else:
+        assert database_module.initialize_unified_database() is False
+    assert path.read_bytes() == original
+    assert database_module.db_manager._connections == {}

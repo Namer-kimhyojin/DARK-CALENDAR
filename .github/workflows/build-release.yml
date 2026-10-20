@@ -32,6 +32,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-runtime.lock
+            requirements-build.lock
 
       - name: Install locked build environment
         shell: powershell
@@ -39,6 +43,12 @@ jobs:
           python -m venv .venv
           .\.venv\Scripts\python.exe -m pip install --upgrade pip
           .\.venv\Scripts\python.exe -m pip install -r requirements-build.lock
+
+      - name: Prepare pinned official SQLite runtime
+        shell: powershell
+        run: |
+          .\.venv\Scripts\python.exe scripts\prepare_sqlite_build_runtime.py --arch x64 --directory build\python-sqlite-x64
+          if ($LASTEXITCODE -ne 0) { throw "Pinned SQLite preparation failed." }
 
       - name: Verify tag matches application version
         if: github.ref_type == 'tag'
@@ -56,7 +66,41 @@ jobs:
 
       - name: Build x64 release
         shell: cmd
-        run: .\build-release.bat -Arch x64 -NoBanner
+        run: .\build-release.bat -Arch x64 -Channel Stable -NoBanner
+
+      - name: Prepare isolated native GUI validation
+        shell: powershell
+        run: |
+          $runtimeJson = .\.venv\Scripts\python.exe scripts\prepare_sqlite_build_runtime.py --arch x64 --directory build\python-sqlite-x64 --check
+          if ($LASTEXITCODE -ne 0) { throw "Prepared runtime validation failed." }
+          $runtime = ($runtimeJson -join "`n") | ConvertFrom-Json
+          & $runtime.python_executable -m venv build\native-smoke-venv
+          if ($LASTEXITCODE -ne 0) { throw "Native validation environment creation failed." }
+          .\build\native-smoke-venv\Scripts\python.exe -m pip install pywinauto==0.6.9 Pillow==13.0.0 psutil==7.2.2
+          if ($LASTEXITCODE -ne 0) { throw "Native validation dependency installation failed." }
+          .\build\native-smoke-venv\Scripts\python.exe scripts\prepare_native_smoke_baseline.py --directory "$env:RUNNER_TEMP\native-baseline-4.3.3"
+          if ($LASTEXITCODE -ne 0) { throw "Previous public release verification failed." }
+
+      - name: Verify native startup and normal restart for fresh and upgrade profiles
+        shell: powershell
+        run: |
+          $metadata = Get-Content "calendar_app\app_metadata.py" -Raw -Encoding utf8
+          $match = [regex]::Match($metadata, 'APP_VERSION\s*=\s*"([^"]+)"')
+          if (-not $match.Success) { throw "APP_VERSION was not found." }
+          .\build\native-smoke-venv\Scripts\python.exe scripts\native_release_smoke.py `
+            --payload dist/x64/DarkCalendar `
+            --baseline-payload "$env:RUNNER_TEMP\native-baseline-4.3.3" `
+            --expected-version $match.Groups[1].Value `
+            --evidence "$env:RUNNER_TEMP\native-release-evidence"
+          if ($LASTEXITCODE -ne 0) { throw "Native startup/restart release gate failed." }
+
+      - name: Upload native startup and restart evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-native-runtime-evidence-x64
+          path: ${{ runner.temp }}/native-release-evidence
+          if-no-files-found: warn
 
       - name: Upload x64 payload
         uses: actions/upload-artifact@v4
@@ -101,6 +145,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-runtime.lock
+            requirements-build.lock
 
       - name: Install locked build environment
         shell: powershell
@@ -109,9 +157,15 @@ jobs:
           .\.venv\Scripts\python.exe -m pip install --upgrade pip
           .\.venv\Scripts\python.exe -m pip install -r requirements-build.lock
 
+      - name: Prepare pinned official SQLite runtime
+        shell: powershell
+        run: |
+          .\.venv\Scripts\python.exe scripts\prepare_sqlite_build_runtime.py --arch arm64 --directory build\python-sqlite-arm64
+          if ($LASTEXITCODE -ne 0) { throw "Pinned SQLite preparation failed." }
+
       - name: Build arm64 release
         shell: cmd
-        run: .\build-release.bat -Arch arm64 -NoBanner
+        run: .\build-release.bat -Arch arm64 -Channel Stable -NoBanner
 
       - name: Upload arm64 payload
         uses: actions/upload-artifact@v4
@@ -181,7 +235,7 @@ jobs:
           name: darkcalendar-github-release-x64
           path: release-assets
 
-      - name: Publish GitHub release
+      - name: Prepare draft GitHub release candidate
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
@@ -194,16 +248,69 @@ jobs:
             throw "No release assets were downloaded."
           }
 
-          cmd /c "gh release view %GITHUB_REF_NAME% --repo %GITHUB_REPOSITORY% >nul 2>&1"
-          $releaseExists = $LASTEXITCODE -eq 0
+          $previousErrorActionPreference = $ErrorActionPreference
+          try {
+            $ErrorActionPreference = "Continue"
+            $existingReleaseJson = gh release view $env:GITHUB_REF_NAME `
+              --repo $env:GITHUB_REPOSITORY --json isDraft,assets 2>$null
+            $releaseExists = $LASTEXITCODE -eq 0
+          } finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+          }
           if ($releaseExists) {
-            gh release upload $env:GITHUB_REF_NAME @assets --clobber `
-              --repo $env:GITHUB_REPOSITORY
+            $existingRelease = $existingReleaseJson | ConvertFrom-Json
+            if ($existingRelease.isDraft -ne $true) {
+              throw "Published release assets are immutable. Reuse the verified release or prepare a new version."
+            }
+            $existingNames = @($existingRelease.assets | ForEach-Object { $_.name })
+            $reusedAssets = @($assets | Where-Object {
+              [System.IO.Path]::GetFileName($_) -cin $existingNames
+            })
+            $missingAssets = @($assets | Where-Object {
+              [System.IO.Path]::GetFileName($_) -cnotin $existingNames
+            })
+            if ($reusedAssets.Count -gt 0) {
+              $verificationBase = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
+              $verificationPath = Join-Path $verificationBase ("air-calendar-draft-assets-" + [guid]::NewGuid().ToString("N"))
+              New-Item -ItemType Directory -Path $verificationPath -ErrorAction Stop | Out-Null
+              try {
+                foreach ($asset in $reusedAssets) {
+                  $assetName = [System.IO.Path]::GetFileName($asset)
+                  gh release download $env:GITHUB_REF_NAME `
+                    --repo $env:GITHUB_REPOSITORY --pattern $assetName --dir $verificationPath
+                  if ($LASTEXITCODE -ne 0) { throw "Draft asset download failed: $assetName" }
+                  $downloadedAsset = Join-Path $verificationPath $assetName
+                  if (-not (Test-Path $downloadedAsset -PathType Leaf)) {
+                    throw "Draft asset download was incomplete: $assetName"
+                  }
+                  $buildHash = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash
+                  $draftHash = (Get-FileHash -LiteralPath $downloadedAsset -Algorithm SHA256).Hash
+                  if ($buildHash -cne $draftHash) {
+                    throw "Existing draft asset differs from this build: $assetName. Prepare a new version; no assets were replaced."
+                  }
+                }
+              } finally {
+                $resolvedVerificationPath = [System.IO.Path]::GetFullPath($verificationPath)
+                $verificationPrefix = $verificationBase.TrimEnd([char[]]'\/') + [System.IO.Path]::DirectorySeparatorChar
+                if ($resolvedVerificationPath.StartsWith($verificationPrefix, [StringComparison]::OrdinalIgnoreCase) -and
+                    [System.IO.Path]::GetFileName($resolvedVerificationPath).StartsWith("air-calendar-draft-assets-")) {
+                  Remove-Item -LiteralPath $resolvedVerificationPath -Recurse -Force
+                }
+              }
+            }
+            if ($missingAssets.Count -gt 0) {
+              gh release upload $env:GITHUB_REF_NAME @missingAssets `
+                --repo $env:GITHUB_REPOSITORY
+              if ($LASTEXITCODE -ne 0) { throw "Draft asset upload failed." }
+            } else {
+              Write-Host "Reusing existing draft assets; no files were replaced."
+            }
           } else {
             $releaseArgs = @(
               "release", "create", $env:GITHUB_REF_NAME,
               "--repo", $env:GITHUB_REPOSITORY,
               "--verify-tag",
+              "--draft",
               "--title", "Air Calendar $version"
             )
             if (Test-Path $notesPath -PathType Leaf) {
@@ -213,4 +320,6 @@ jobs:
             }
             $releaseArgs += $assets
             & gh @releaseArgs
+            if ($LASTEXITCODE -ne 0) { throw "Draft release creation failed." }
           }
+          Write-Host "Candidate remains a draft until installed native startup and restart gates pass."

@@ -9,6 +9,7 @@ import wave
 from scripts.generate_keycap_sounds import _library, _write
 
 from calendar_app.presentation.widgets.launcher_keycap_sounds import (
+    FEEDBACK_SOUNDS,
     KEYCAP_SOUNDS,
     keycap_sound,
     keycap_sound_ids,
@@ -17,8 +18,8 @@ from calendar_app.presentation.widgets.launcher_keycap_sounds import (
 
 class LauncherKeycapSoundTests(unittest.TestCase):
     def test_bundled_library_contains_twenty_four_valid_short_wav_files(self):
-        self.assertEqual(len(KEYCAP_SOUNDS), 24)
-        for sound in KEYCAP_SOUNDS:
+        self.assertEqual(len(FEEDBACK_SOUNDS), 24)
+        for sound in FEEDBACK_SOUNDS:
             path = sound.path()
             self.assertTrue(path.is_file(), sound.sound_id)
             with wave.open(str(path), "rb") as source:
@@ -46,9 +47,9 @@ class LauncherKeycapSoundTests(unittest.TestCase):
 
     def test_generator_reproduces_every_bundled_wav(self):
         generated = _library()
-        self.assertEqual(set(generated), {sound.filename for sound in KEYCAP_SOUNDS})
+        self.assertEqual(set(generated), {sound.filename for sound in FEEDBACK_SOUNDS})
         with tempfile.TemporaryDirectory() as temporary_dir:
-            for sound in KEYCAP_SOUNDS:
+            for sound in FEEDBACK_SOUNDS:
                 path = Path(temporary_dir) / sound.filename
                 _write(path, generated[sound.filename])
                 self.assertEqual(path.read_bytes(), sound.path().read_bytes(), sound.sound_id)

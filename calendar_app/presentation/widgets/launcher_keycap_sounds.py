@@ -7,6 +7,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from calendar_app.app_paths import get_resource_path
+from calendar_app.shared.beatmaker_sound_catalog import (
+    BEATMAKER_DRUMS,
+    BEATMAKER_KITS,
+    BEATMAKER_NOTES,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,7 +25,7 @@ class KeycapSound:
         return Path(get_resource_path(f"Assets/keycaps/sounds/{self.filename}"))
 
 
-KEYCAP_SOUNDS = (
+FEEDBACK_SOUNDS = (
     KeycapSound("soft_click", "widget.launcher.sound.soft_click", "소프트 클릭", "soft-click.wav"),
     KeycapSound(
         "crisp_click", "widget.launcher.sound.crisp_click", "크리스프 클릭", "crisp-click.wav"
@@ -50,6 +55,20 @@ KEYCAP_SOUNDS = (
     KeycapSound("warm_pluck", "widget.launcher.sound.warm_pluck", "웜 플럭", "warm-pluck.wav"),
     KeycapSound("double_tap", "widget.launcher.sound.double_tap", "더블 탭", "double-tap.wav"),
 )
+BEATMAKER_SOUNDS = tuple(
+    KeycapSound(
+        f"beat_{kit_id}_{voice}",
+        f"widget.launcher.sound.beat_{kit_id}_{voice}",
+        f"{kit_label} · {label}",
+        f"beatmaker/{kit_id}-{voice}.wav",
+    )
+    for kit_id, kit_label in BEATMAKER_KITS
+    for voice, label in (
+        *BEATMAKER_DRUMS,
+        *((voice, label) for voice, label, _midi in BEATMAKER_NOTES),
+    )
+)
+KEYCAP_SOUNDS = (*FEEDBACK_SOUNDS, *BEATMAKER_SOUNDS)
 _SOUND_BY_ID = {sound.sound_id: sound for sound in KEYCAP_SOUNDS}
 
 
@@ -61,4 +80,11 @@ def keycap_sound_ids() -> set[str]:
     return set(_SOUND_BY_ID)
 
 
-__all__ = ["KEYCAP_SOUNDS", "KeycapSound", "keycap_sound", "keycap_sound_ids"]
+__all__ = [
+    "BEATMAKER_SOUNDS",
+    "FEEDBACK_SOUNDS",
+    "KEYCAP_SOUNDS",
+    "KeycapSound",
+    "keycap_sound",
+    "keycap_sound_ids",
+]

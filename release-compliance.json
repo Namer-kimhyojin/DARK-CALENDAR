@@ -20,6 +20,13 @@
   },
   "additionalSources": [
     {
+      "name": "SQLite",
+      "version": "3.54.1",
+      "filename": "sqlite-src-3540100.zip",
+      "url": "https://sqlite.org/2026/sqlite-src-3540100.zip",
+      "sha256": "387e7f6cad4797b17848c07d453dc6606917bb356a6cfe5a3abafd38c240c71b"
+    },
+    {
       "name": "QtBase",
       "version": "6.10.2",
       "filename": "qtbase-everywhere-src-6.10.2.tar.xz",

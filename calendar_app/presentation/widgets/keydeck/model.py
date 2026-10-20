@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
+from functools import partial
 import json
 import math
 from pathlib import PureWindowsPath
@@ -16,6 +17,14 @@ import re
 import uuid
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.widgets.keydeck.beatmaker import (
+    BEATMAKER_KITS,
+    BEATMAKER_TEMPLATE_ID,
+    BEATMAKER_TEMPLATE_KITS,
+    apply_beatmaker_preset,
+    beatmaker_keys,
+    beatmaker_state,
+)
 from calendar_app.presentation.widgets.launcher_keycap_assets import keycap_asset_ids
 from calendar_app.presentation.widgets.launcher_keycap_icons import keycap_icon_ids
 from calendar_app.presentation.widgets.launcher_keycap_sounds import KEYCAP_SOUNDS
@@ -44,6 +53,7 @@ ACTION_TYPES: tuple[Option, ...] = (
     ("text", "widget.launcher.action.text", "텍스트 스니펫"),
     ("command", "widget.launcher.action.command", "Air Calendar 명령"),
     ("page", "widget.launcher.action.page", "페이지 이동"),
+    ("sound", "widget.launcher.action.sound", "소리 연주"),
     ("none", "widget.launcher.action.none", "동작 없음"),
 )
 COMMANDS: tuple[Option, ...] = (
@@ -329,6 +339,7 @@ def default_key() -> dict:
         "switch": "tactile",
         "sound": "auto",
         "sound_path": "",
+        "sound_volume": 100,
     }
 
 
@@ -456,9 +467,13 @@ def normalize_action(raw: object) -> dict:
         target = ""
     if kind == "page" and not target:
         target = "next"
-    if kind == "none":
+    if kind in {"none", "sound"}:
         target = ""
-    return {"type": kind, "target": target, "paste": _bool(data.get("paste"), False)}
+    return {
+        "type": kind,
+        "target": target,
+        "paste": False if kind == "sound" else _bool(data.get("paste"), False),
+    }
 
 
 def _normalize_insert(raw: object) -> dict:
@@ -544,6 +559,7 @@ def normalize_key(raw: object) -> dict:
     key["switch"] = _choice(data.get("switch"), _SWITCH_IDS, "tactile")
     key["sound"] = _choice(data.get("sound"), _SOUND_IDS, "auto")
     key["sound_path"] = _text(data.get("sound_path"), 1024).strip()
+    key["sound_volume"] = _int(data.get("sound_volume"), 0, 100, key["sound_volume"])
     return key
 
 
@@ -568,6 +584,9 @@ def _normalize_page(raw: object, index: int, seen_key_ids: set[str]) -> dict:
     if has_overlaps(keys):
         settle_layout(keys)
     page["keys"] = keys
+    performance = beatmaker_state(data)
+    if performance is not None:
+        page["beatmaker"] = performance
     return page
 
 
@@ -769,7 +788,17 @@ def reflow_keys(keys: list[dict], columns: float) -> None:
 # Key helpers
 # ---------------------------------------------------------------------------
 
-STYLE_FIELDS = ("insert", "legend", "cap", "led", "indicator", "switch", "sound", "sound_path")
+STYLE_FIELDS = (
+    "insert",
+    "legend",
+    "cap",
+    "led",
+    "indicator",
+    "switch",
+    "sound",
+    "sound_path",
+    "sound_volume",
+)
 
 
 def copy_key_style(key: dict) -> dict:
@@ -883,6 +912,8 @@ def auto_glyph(action: dict) -> str:
         return {"next": "forward", "prev": "arrow_left"}.get(target, "layers")
     if kind == "app":
         return "rocket"
+    if kind == "sound":
+        return "play"
     return "none"
 
 
@@ -1363,6 +1394,24 @@ def _template_keyboard_full() -> list[dict]:
 
 
 TEMPLATES = (
+    (
+        BEATMAKER_TEMPLATE_ID,
+        "widget.launcher.template.beatmaker_4x4",
+        "비트메이커 4×4 · Lo-fi Desk",
+        beatmaker_keys,
+    ),
+    (
+        "beatmaker_neon_4x4",
+        "widget.launcher.template.beatmaker_neon_4x4",
+        "비트메이커 4×4 · Neon Beat",
+        partial(beatmaker_keys, "neon"),
+    ),
+    (
+        "beatmaker_arcade_4x4",
+        "widget.launcher.template.beatmaker_arcade_4x4",
+        "비트메이커 4×4 · 8-bit Arcade",
+        partial(beatmaker_keys, "arcade"),
+    ),
     ("macro_3x3", "widget.launcher.template.macro_3x3", "매크로 패드 3×3", _template_macro_3x3),
     ("stream_5x3", "widget.launcher.template.stream_5x3", "스트림 패드 5×3", _template_stream_5x3),
     (
@@ -2031,6 +2080,9 @@ def apply_theme(
         for index, key in enumerate(page["keys"]):
             if key_ids is not None and key["id"] not in key_ids:
                 continue
+            if beatmaker_state(page) is not None and key["action"]["type"] == "sound":
+                # Performance pad colours and flat legends identify instruments.
+                continue
             hero = _is_hero(key)
             key["cap"]["material"] = theme.material
             key["cap"]["profile"] = theme.profile
@@ -2074,7 +2126,14 @@ def build_template_deck(
     template_id: str = DEFAULT_TEMPLATE_ID, theme_id: str = DEFAULT_THEME_ID
 ) -> dict:
     deck = default_deck()
-    deck["pages"][0]["keys"] = template_keys(template_id)
+    if template_id in BEATMAKER_TEMPLATE_KITS:
+        kit = BEATMAKER_TEMPLATE_KITS[template_id]
+        deck["name"] = next(label for kit_id, _key, label in BEATMAKER_KITS if kit_id == kit)
+        apply_beatmaker_preset(deck, kit=kit)
+        deck["pages"].append(new_page())
+        apply_beatmaker_preset(deck, kit=kit, bank="melody", page_index=1)
+    else:
+        deck["pages"][0]["keys"] = template_keys(template_id)
     apply_theme(deck, theme_id)
     if template_id in KEYBOARD_TEMPLATE_IDS:
         _keep_keycap_legends(deck["pages"][0]["keys"])
@@ -2084,6 +2143,17 @@ def build_template_deck(
 def apply_template_to_page(deck: dict, page_index: int, template_id: str) -> dict:
     """Replace one page's keys with a layout template styled like the current deck."""
     page = deck["pages"][page_index]
+    if template_id in BEATMAKER_TEMPLATE_KITS:
+        kit = BEATMAKER_TEMPLATE_KITS[template_id]
+        apply_beatmaker_preset(deck, kit=kit, page_index=page_index)
+        has_melody = any(
+            beatmaker_state(other) == {"kit": kit, "bank": "melody"} for other in deck["pages"]
+        )
+        if not has_melody and len(deck["pages"]) < MAX_PAGES:
+            deck["pages"].append(new_page())
+            apply_beatmaker_preset(deck, kit=kit, bank="melody", page_index=len(deck["pages"]) - 1)
+        return deck
+    page.pop("beatmaker", None)
     reference = page["keys"][0] if page["keys"] else None
     page["keys"] = template_keys(template_id)
     if deck.get("theme") in _THEME_IDS:
@@ -2109,6 +2179,7 @@ def apply_template_to_page(deck: dict, page_index: int, template_id: str) -> dic
 
 __all__ = [
     "ACTION_TYPES",
+    "BEATMAKER_TEMPLATE_KITS",
     "CASE_STYLES",
     "COMMANDS",
     "COMMAND_IDS",

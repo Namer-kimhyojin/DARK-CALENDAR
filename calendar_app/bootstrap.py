@@ -7,6 +7,7 @@ import contextlib
 import logging
 import os
 import signal
+import sqlite3
 import sys
 import threading
 import time
@@ -22,10 +23,13 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
-from calendar_app.app_metadata import APP_NAME
+from calendar_app.app_metadata import APP_NAME, APP_VERSION
 from calendar_app.app_paths import APP_ICON_PATH
 from calendar_app.domain.i18n import set_translator as set_domain_translator
 from calendar_app.infrastructure.i18n import t
+from calendar_app.infrastructure.runtime.crash_bootstrap import (
+    show_database_startup_error as _show_database_startup_error,
+)
 from calendar_app.shared.value_parsers import as_int
 
 set_domain_translator(t)
@@ -347,9 +351,17 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
             return self._values.get(key, default)
 
     def _initialize_database():
+        from calendar_app.app_paths import DB_PATH
         from calendar_app.infrastructure.db.database_unified import initialize_unified_database
 
-        if not initialize_unified_database():
+        logging.getLogger(__name__).info(
+            "Database startup: pid=%s app_version=%s sqlite=%s db=%s",
+            os.getpid(),
+            APP_VERSION,
+            sqlite3.sqlite_version,
+            DB_PATH,
+        )
+        if not initialize_unified_database(raise_on_error=True):
             raise RuntimeError("Database initialization failed")
         return True
 
@@ -466,6 +478,19 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
 
         app.aboutToQuit.connect(lambda: _finalize_runtime(app, window))
         return app.exec()
+    except (sqlite3.Error, OSError) as error:
+        if phase_name not in ("initializing_db", "migrating_data"):
+            raise
+        logging.getLogger(__name__).exception(
+            "Database startup aborted: code=%s",
+            getattr(error, "sqlite_errorname", type(error).__name__),
+        )
+        with contextlib.suppress(RuntimeError):
+            splash.close()
+        from calendar_app.app_paths import DB_PATH
+
+        _show_database_startup_error(error, database_path=DB_PATH)
+        return 1
     finally:
         # Startup failures must release the same resources as event-loop exit.
         _finalize_runtime(app, window_box["window"])

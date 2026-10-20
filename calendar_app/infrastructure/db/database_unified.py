@@ -134,13 +134,17 @@ def safe_db_fetch_one(conn, sql, params=None):
         return None
 
 
-def initialize_unified_database():
+def initialize_unified_database(*, raise_on_error=False):
     """
     일정과 일반업무를 통합한 unified_task 테이블을 생성하고,
     일반업무 유형별 기간 처리를 지원합니다.
     """
     try:
-        conn = db_manager.get_connection()
+        conn = (
+            db_manager.get_connection(raise_on_error=True)
+            if raise_on_error
+            else db_manager.get_connection()
+        )
         if not conn:
             logger.error("Failed to get database connection during initialization.")
             return False
@@ -1425,6 +1429,9 @@ def initialize_unified_database():
 
         logger.error(traceback.format_exc())
 
+        if raise_on_error:
+            raise
+
         return False
 
 
@@ -1461,7 +1468,7 @@ class ThreadLocalDatabaseManager:
 
         return conn
 
-    def get_connection(self):
+    def get_connection(self, *, raise_on_error=False):
         thread_id = threading.get_ident()
 
         with self._lock:
@@ -1504,6 +1511,9 @@ class ThreadLocalDatabaseManager:
                     except sqlite3.Error:
                         pass
                 logger.error(f"Failed to connect to database: {e}")
+
+                if raise_on_error:
+                    raise
 
                 return None
 

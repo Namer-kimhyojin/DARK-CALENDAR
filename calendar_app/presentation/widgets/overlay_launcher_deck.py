@@ -17,6 +17,12 @@ from PyQt6.QtWidgets import QDialog, QMenu, QMessageBox, QToolTip, QVBoxLayout
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.runtime.hotkey_sender import send_hotkey
 from calendar_app.infrastructure.runtime.launcher_asset_store import import_launcher_asset
+from calendar_app.presentation.widgets.keydeck.beatmaker import (
+    BEATMAKER_BANKS,
+    BEATMAKER_KITS,
+    apply_beatmaker_preset,
+    beatmaker_state,
+)
 from calendar_app.presentation.widgets.keydeck.canvas import KeyDeckCanvas
 from calendar_app.presentation.widgets.keydeck.model import (
     MAX_KEYS_PER_PAGE,
@@ -37,6 +43,7 @@ from calendar_app.presentation.widgets.keydeck.model import (
     modifier_name,
     new_page,
     normalize_deck,
+    option_label,
     resolve_page_target,
 )
 from calendar_app.presentation.widgets.keydeck.renderer import DeckGeometry
@@ -79,6 +86,7 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         self._canvas: KeyDeckCanvas | None = None
         self._live_scale_percent: int | None = None
         self._studio = None
+        self._keyboard_performance = False
         super().__init__(owner)
         # 실물 매크로 패드처럼 창이 포커스를 가져가지 않아야 단축키가 작업 중인 앱으로 간다.
         self.setWindowFlag(Qt.WindowType.WindowDoesNotAcceptFocus, True)
@@ -109,6 +117,7 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         canvas.pageRequested.connect(self._go_to_page)
         canvas.imageDropped.connect(self._on_image_dropped)
         canvas.targetsDropped.connect(self._on_targets_dropped)
+        canvas.performanceStopped.connect(lambda: self._set_keyboard_performance(False))
         self._canvas = canvas
         self._deck_data = self._load_deck()
         canvas.set_deck(self._deck_data)
@@ -142,6 +151,8 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             self._canvas.update()
 
     def _set_runtime_active(self, active: bool) -> None:
+        if not active and self._keyboard_performance:
+            self._set_keyboard_performance(False)
         if self._canvas is not None:
             self._canvas.set_runtime_active(active)
         if not active and is_app_exiting():
@@ -394,6 +405,9 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             self._canvas.show_feedback(key_id, True)
             return
         action = key["hold_action"] if which == "hold" else key["action"]
+        if action.get("type") == "sound":
+            # Pad sound and its own LED already respond at finger contact.
+            return
         held = []
         if action.get("type") == "hotkey" and action.get("target"):
             held = [
@@ -435,6 +449,8 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         target = str(action.get("target", "") or "")
         if kind == "none":
             return None
+        if kind == "sound":
+            return True
         if kind == "command":
             return self._run_command(target)
         if kind == "page":
@@ -563,6 +579,7 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
     def _open_settings(
         self, initial_tab: int = 0, key_id: str = "", *, sound_settings: bool = False
     ) -> None:
+        self._set_keyboard_performance(False)
         del initial_tab
         from calendar_app.presentation.widgets.keydeck.studio import KeyDeckStudioDialog
 
@@ -636,6 +653,122 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             deck[field] = not deck.get(field, True)
         self._apply_deck(deck)
 
+    # -- focused musical performance -------------------------------------------------
+
+    def _set_keyboard_performance(self, enabled: bool) -> None:
+        enabled = bool(enabled and beatmaker_state(current_page(self._deck_data)))
+        if enabled == self._keyboard_performance:
+            return
+        self._keyboard_performance = enabled
+        visible, position = self.isVisible(), self.pos()
+        self._canvas.set_keyboard_performance(False)
+        # Ordinary decks keep forwarding shortcuts to the app behind them. Only an
+        # explicit musical session makes this window a normal keyboard focus target.
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, not enabled)
+        self.setWindowFlag(Qt.WindowType.WindowDoesNotAcceptFocus, not enabled)
+        self.move(position)
+        if visible:
+            self.show()
+        self._canvas.set_keyboard_performance(enabled)
+        if enabled and visible:
+            self.raise_()
+            self.activateWindow()
+            self._canvas.setFocus(Qt.FocusReason.OtherFocusReason)
+            QToolTip.showText(
+                QCursor.pos(),
+                t("beatmaker.keyboard_hint", "1234 / QWER / ASDF / ZXCV로 연주 · Esc로 종료"),
+                self,
+            )
+
+    def _stop_sounds(self) -> None:
+        self._canvas.stop_sounds()
+
+    def _set_beatmaker_kit(self, kit: str) -> None:
+        state = beatmaker_state(current_page(self._deck_data))
+        if state is None or state["kit"] == kit or kit not in {item[0] for item in BEATMAKER_KITS}:
+            return
+        self._set_keyboard_performance(False)
+        if (
+            self.isVisible()
+            and QMessageBox.question(
+                self,
+                t("beatmaker.kit", "음원 키트"),
+                t("beatmaker.kit_confirm", "현재 페이지의 패드와 소리를 선택한 키트로 바꿀까요?"),
+            )
+            != QMessageBox.StandardButton.Yes
+        ):
+            return
+        apply_beatmaker_preset(self._deck_data, kit, state["bank"])
+        self._apply_deck(self._deck_data)
+
+    def _set_beatmaker_bank(self, bank: str) -> None:
+        deck = self._deck_data
+        state = beatmaker_state(current_page(deck))
+        if (
+            state is None
+            or state["bank"] == bank
+            or bank not in {item[0] for item in BEATMAKER_BANKS}
+        ):
+            return
+        candidates = [
+            index
+            for index, page in enumerate(deck["pages"])
+            if (page_state := beatmaker_state(page)) is not None and page_state["bank"] == bank
+        ]
+        if candidates:
+            same_kit = [
+                i for i in candidates if beatmaker_state(deck["pages"][i])["kit"] == state["kit"]
+            ]
+            self._go_to_page((same_kit or candidates)[0])
+            return
+        if len(deck["pages"]) >= MAX_PAGES:
+            # A full user deck must never lose a page merely to switch instruments.
+            QToolTip.showText(
+                QCursor.pos(),
+                t(
+                    "beatmaker.page_limit",
+                    "페이지가 가득 차 연주 페이지를 추가할 수 없습니다. 사용하지 않는 페이지를 삭제한 뒤 다시 선택하세요.",
+                ),
+                self,
+            )
+            return
+        deck["pages"].append(new_page(option_label(BEATMAKER_BANKS, bank)))
+        index = len(deck["pages"]) - 1
+        apply_beatmaker_preset(deck, state["kit"], bank, page_index=index)
+        deck["page"] = index
+        self._apply_deck(deck)
+
+    def _add_beatmaker_menu(self, menu: QMenu) -> None:
+        state = beatmaker_state(current_page(self._deck_data))
+        if state is None:
+            return
+        music = menu.addMenu(t("beatmaker.title", "비트메이커"))
+        keyboard = music.addAction(
+            t("beatmaker.stop_keyboard", "키보드 연주 종료 (Esc)")
+            if self._keyboard_performance
+            else t("beatmaker.play_keyboard", "키보드 연주 시작"),
+            lambda: self._set_keyboard_performance(not self._keyboard_performance),
+        )
+        keyboard.setCheckable(True)
+        keyboard.setChecked(self._keyboard_performance)
+        music.addAction(t("beatmaker.stop_sounds", "모든 소리 정지"), self._stop_sounds)
+        kits = music.addMenu(t("beatmaker.kit", "음원 키트"))
+        for option in BEATMAKER_KITS:
+            action = kits.addAction(
+                option_label(BEATMAKER_KITS, option[0]),
+                lambda *_, kit=option[0]: self._set_beatmaker_kit(kit),
+            )
+            action.setCheckable(True)
+            action.setChecked(state["kit"] == option[0])
+        banks = music.addMenu(t("beatmaker.bank", "연주 종류"))
+        for option in BEATMAKER_BANKS:
+            action = banks.addAction(
+                option_label(BEATMAKER_BANKS, option[0]),
+                lambda *_, bank=option[0]: self._set_beatmaker_bank(bank),
+            )
+            action.setCheckable(True)
+            action.setChecked(state["bank"] == option[0])
+
     # -- context menu ---------------------------------------------------------------------
 
     def _show_context_menu(self, global_pos: QPoint):
@@ -662,6 +795,7 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             t("widget.launcher.menu.sound_settings", "전체 효과음 설정…"),
             lambda: self._open_sound_settings(),
         )
+        self._add_beatmaker_menu(menu)
         menu.addSeparator()
         pages_menu = menu.addMenu(t("widget.launcher.menu.pages", "페이지"))
         pages_menu.setStyleSheet(style)

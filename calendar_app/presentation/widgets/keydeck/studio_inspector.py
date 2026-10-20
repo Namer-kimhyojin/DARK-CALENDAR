@@ -47,6 +47,11 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.widgets.keydeck.beatmaker import (
+    BEATMAKER_BANKS,
+    BEATMAKER_KITS,
+    beatmaker_state,
+)
 from calendar_app.presentation.widgets.keydeck.model import (
     ACTION_TYPES,
     CASE_STYLES,
@@ -406,6 +411,117 @@ class NoWheelComboBox(QComboBox):
         event.ignore()
 
 
+def _fill_sound_choices(combo: QComboBox, options: tuple) -> None:
+    """Keep a growing sound catalog searchable and visibly grouped by kit."""
+    group = ""
+    for sound_id, key, fallback in options:
+        if sound_id.startswith("beat_"):
+            kit = sound_id.split("_", 2)[1]
+            if kit != group:
+                group = kit
+                label = next(
+                    (
+                        str(t(label_key, label_default))
+                        for kit_id, label_key, label_default in BEATMAKER_KITS
+                        if kit_id == kit
+                    ),
+                    kit,
+                )
+                combo.insertSeparator(combo.count())
+                combo.addItem(f"── {label} ──", None)
+                heading = combo.model().item(combo.count() - 1)
+                if heading is not None:
+                    heading.setEnabled(False)
+        elif sound_id == "custom" and group:
+            combo.insertSeparator(combo.count())
+        combo.addItem(str(t(key, fallback)), sound_id)
+    combo.setMaxVisibleItems(16)
+    combo.setEditable(True)
+    combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+    combo.lineEdit().setPlaceholderText(t("beatmaker.search_sounds", "소리 이름으로 검색"))
+    completer = QCompleter(combo.model(), combo)
+    completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+    completer.setFilterMode(Qt.MatchFlag.MatchContains)
+    completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+    completer.setMaxVisibleItems(16)
+    combo.setCompleter(completer)
+
+
+class BeatmakerControls(QWidget):
+    """Page-level kit and bank controls shared by the toolbar and inspector."""
+
+    def __init__(self, controller, parent=None, *, compact: bool = False):
+        super().__init__(parent)
+        self.controller = controller
+        self._loading = False
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)
+        row = QHBoxLayout()
+        if compact:
+            title = QLabel(t("beatmaker.title", "비트메이커"), self)
+            title.setObjectName("kdSummary")
+            row.addWidget(title)
+        else:
+            layout.addWidget(_section(t("beatmaker.title", "비트메이커"), self))
+        self.kit_combo = NoWheelComboBox(self)
+        self.kit_combo.setAccessibleName(t("beatmaker.kit", "음원 키트"))
+        self.kit_combo.setToolTip(t("beatmaker.kit", "음원 키트"))
+        for option_id, key, fallback in BEATMAKER_KITS:
+            self.kit_combo.addItem(str(t(key, fallback)), option_id)
+        self.kit_combo.activated.connect(self._kit_changed)
+        self.bank_combo = NoWheelComboBox(self)
+        self.bank_combo.setAccessibleName(t("beatmaker.bank", "연주 종류"))
+        self.bank_combo.setToolTip(t("beatmaker.bank", "연주 종류"))
+        for option_id, key, fallback in BEATMAKER_BANKS:
+            self.bank_combo.addItem(str(t(key, fallback)), option_id)
+        self.bank_combo.activated.connect(self._bank_changed)
+        self.preview_button = QPushButton(t("beatmaker.preview_pad", "패드 미리 듣기"), self)
+        self.preview_button.setObjectName("ghost_btn")
+        self.preview_button.setAutoDefault(False)
+        self.preview_button.clicked.connect(controller.preview_beatmaker_pad)
+        if compact:
+            self.kit_combo.setMaximumWidth(260)
+            self.bank_combo.setMaximumWidth(150)
+            row.addWidget(self.kit_combo)
+            row.addWidget(self.bank_combo)
+            row.addStretch()
+            row.addWidget(self.preview_button)
+            layout.addLayout(row)
+        else:
+            form = _form()
+            form.addRow(t("beatmaker.kit", "음원 키트"), self.kit_combo)
+            form.addRow(t("beatmaker.bank", "연주 종류"), self.bank_combo)
+            layout.addLayout(form)
+            layout.addWidget(self.preview_button)
+        self.hint = _hint(
+            t(
+                "beatmaker.studio_hint",
+                "키트 변경은 현재 페이지의 패드를 다시 채웁니다. Ctrl+Z로 되돌릴 수 있습니다.",
+            ),
+            self,
+        )
+        layout.addWidget(self.hint)
+
+    def load(self, page: dict) -> None:
+        state = beatmaker_state(page)
+        self.setVisible(state is not None)
+        if state is None:
+            return
+        self._loading = True
+        self.kit_combo.setCurrentIndex(max(0, self.kit_combo.findData(state["kit"])))
+        self.bank_combo.setCurrentIndex(max(0, self.bank_combo.findData(state["bank"])))
+        self._loading = False
+
+    def _kit_changed(self) -> None:
+        if not self._loading:
+            self.controller.set_beatmaker_kit(str(self.kit_combo.currentData()))
+
+    def _bank_changed(self) -> None:
+        if not self._loading:
+            self.controller.set_beatmaker_bank(str(self.bank_combo.currentData()))
+
+
 class LabeledSlider(QWidget):
     valueChanged = pyqtSignal(int)
 
@@ -667,6 +783,17 @@ class ActionEditor(QWidget):
         self.page_combo = NoWheelComboBox(self.stack)
         self.page_combo.currentIndexChanged.connect(self._emit)
         self._add_page("page", self.page_combo)
+
+        self._add_page(
+            "sound",
+            _hint(
+                t(
+                    "beatmaker.sound_action_hint",
+                    "이 패드의 소리를 연주합니다. 소리 탭에서 음원 교체와 미리 듣기를 할 수 있습니다.",
+                ),
+                self.stack,
+            ),
+        )
 
         self._add_page(
             "none",
@@ -1784,8 +1911,7 @@ class KeyInspector(QWidget):
             QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
         )
         self.sound_combo.setMinimumContentsLength(8)
-        for sound_id, key, fallback in SOUND_CHOICES:
-            self.sound_combo.addItem(str(t(key, fallback)), sound_id)
+        _fill_sound_choices(self.sound_combo, SOUND_CHOICES)
         self.sound_combo.activated.connect(self._sound_changed)
         self.sound_preview_button = QPushButton("▶", self)
         self.sound_preview_button.setFixedWidth(40)
@@ -1807,6 +1933,11 @@ class KeyInspector(QWidget):
         )
         self.sound_file_button.clicked.connect(self.controller.choose_sound)
         sound_form.addRow("", self.sound_file_button)
+        self.sound_volume_slider = LabeledSlider(0, 100, "%", self)
+        self.sound_volume_slider.valueChanged.connect(
+            lambda value: self._set("sound_volume", value, "sound_volume")
+        )
+        sound_form.addRow(t("beatmaker.key_volume", "개별 음량"), self.sound_volume_slider)
         layout.addLayout(sound_form)
         self.sound_status = _hint("", self)
         layout.addWidget(self.sound_status)
@@ -1913,6 +2044,8 @@ class KeyInspector(QWidget):
         self.switch_seg.set_value(key["switch"])
         self.sound_combo.setCurrentIndex(max(0, self.sound_combo.findData(key["sound"])))
         self.sound_combo.setToolTip(self.sound_combo.currentText())
+        self.sound_combo.lineEdit().setCursorPosition(0)
+        self.sound_volume_slider.set_value(key.get("sound_volume", 100))
         self.sound_file_button.setVisible(key["sound"] == "custom")
         self.sound_file_button.setText(
             Path(key["sound_path"]).name
@@ -2063,6 +2196,8 @@ class DeckInspector(QWidget):
                 self,
             )
         )
+        self.beatmaker_controls = BeatmakerControls(controller, self)
+        layout.addWidget(self.beatmaker_controls)
         layout.addWidget(_section(t("widget.launcher.studio.sound_settings", "전체 효과음"), self))
         sound_form = _form()
         self.sound_check = QCheckBox(
@@ -2076,8 +2211,7 @@ class DeckInspector(QWidget):
             QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
         )
         self.sound_combo.setMinimumContentsLength(8)
-        for sound_id, key, fallback in DECK_SOUND_CHOICES:
-            self.sound_combo.addItem(str(t(key, fallback)), sound_id)
+        _fill_sound_choices(self.sound_combo, DECK_SOUND_CHOICES)
         self.sound_combo.activated.connect(self._sound_changed)
         self.sound_preview_button = QPushButton("▶", self)
         self.sound_preview_button.setFixedWidth(40)
@@ -2216,6 +2350,7 @@ class DeckInspector(QWidget):
 
     def load(self, deck: dict) -> None:
         self._loading = True
+        self.beatmaker_controls.load(deck["pages"][deck["page"]])
         if self.name_edit.text() != deck["name"]:
             self.name_edit.setText(deck["name"])
         self.header_check.setChecked(bool(deck["case"]["header"]))
@@ -2229,6 +2364,7 @@ class DeckInspector(QWidget):
         self.volume_slider.set_value(deck["sound_volume"])
         self.sound_combo.setCurrentIndex(max(0, self.sound_combo.findData(deck["sound"])))
         self.sound_combo.setToolTip(self.sound_combo.currentText())
+        self.sound_combo.lineEdit().setCursorPosition(0)
         self.sound_file_button.setVisible(deck["sound"] == "custom")
         self.sound_file_button.setText(
             Path(deck["sound_path"]).name

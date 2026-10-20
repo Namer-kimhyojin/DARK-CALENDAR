@@ -33,6 +33,7 @@ import uuid
 from calendar_app.app_metadata import APP_VERSION
 from calendar_app.app_paths import get_app_data_dir
 from calendar_app.infrastructure.runtime.launcher_asset_store import import_launcher_asset
+from calendar_app.presentation.widgets.keydeck.beatmaker import beatmaker_state
 from calendar_app.presentation.widgets.keydeck.model import (
     CUSTOM_THEME_ID,
     MAX_PAGES,
@@ -367,6 +368,7 @@ def materialize(document: dict, *, asset_root: Path | None = None) -> dict:
         "name": document["name"],
         "keys": [duplicate_key(key) for key in content["page"]["keys"]],
         "panorama": content["panorama"],
+        "beatmaker": beatmaker_state(content["page"]),
     }
 
 
@@ -401,6 +403,11 @@ def apply_content(deck: dict, content: dict, mode: str = "replace") -> dict:
         result["page"] = len(result["pages"]) - 1
     else:
         result["pages"][index]["keys"] = keys
+        page = result["pages"][index]
+    performance = beatmaker_state(content)
+    page.pop("beatmaker", None)
+    if performance is not None:
+        page["beatmaker"] = performance
     result["theme"] = CUSTOM_THEME_ID
     return normalize_deck(result)
 

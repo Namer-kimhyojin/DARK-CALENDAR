@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+import logging
 import os
+import sqlite3
 import sys
 
 # ── Surface / High-DPI 최적화 ──
@@ -9,17 +12,22 @@ os.environ.setdefault("QT_SCALE_FACTOR_ROUNDING_POLICY", "PassThrough")
 
 from calendar_app.infrastructure.runtime.crash_bootstrap import (
     setup_crash_logging,
+    show_database_startup_error,
     teardown_crash_logging,
 )
 
 _faulthandler_stream = setup_crash_logging()
 
 if __name__ == "__main__":
-    from calendar_app.bootstrap import run
-
     exit_code = 1
     try:
-        exit_code = run()
+        try:
+            from calendar_app.bootstrap import run
+        except (sqlite3.Error, OSError) as error:
+            logging.getLogger(__name__).exception("Application data preparation failed")
+            show_database_startup_error(error)
+        else:
+            exit_code = run()
     finally:
         teardown_crash_logging(_faulthandler_stream)
 

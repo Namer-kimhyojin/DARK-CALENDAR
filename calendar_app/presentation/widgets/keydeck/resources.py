@@ -371,6 +371,14 @@ class SoundBank:
         effect.setVolume(max(0.0, min(1.0, volume)))
         effect.play()
 
+    def stop_all(self) -> None:
+        """Silence active voices while retaining the preloaded sound cache."""
+        for pool in self._pools.values():
+            for effect in pool:
+                effect.stop()
+        if self._native is not None:
+            self._native.stop_all()
+
 
 _SOUND_BANK: SoundBank | None = None
 

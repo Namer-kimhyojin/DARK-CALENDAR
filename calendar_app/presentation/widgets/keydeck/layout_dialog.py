@@ -41,6 +41,10 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
 )
 from calendar_app.presentation.widgets.keydeck import layout_library as library
+from calendar_app.presentation.widgets.keydeck.beatmaker import (
+    BEATMAKER_KITS,
+    BEATMAKER_TEMPLATE_KITS,
+)
 from calendar_app.presentation.widgets.keydeck.model import (
     ACTION_TYPES,
     MAX_PAGES,
@@ -264,6 +268,7 @@ class LayoutLibraryDialog(QDialog):
         self.grid.setResizeMode(QListView.ResizeMode.Adjust)
         self.grid.setMovement(QListView.Movement.Static)
         self.grid.setWordWrap(True)
+        self.grid.setTextElideMode(Qt.TextElideMode.ElideNone)
         self.grid.setUniformItemSizes(True)
         self.grid.setSpacing(6)
         self.grid.currentItemChanged.connect(lambda *_: self._refresh_detail())
@@ -393,8 +398,19 @@ class LayoutLibraryDialog(QDialog):
             )
             for template_id, key, fallback, _builder in TEMPLATES:
                 preview = build_template_deck(template_id, self._theme_id)
-                item = QListWidgetItem(self._thumbnail(preview), str(t(key, fallback)))
+                label = str(t(key, fallback))
+                caption = (
+                    label.replace(" · ", "\n", 1)
+                    if template_id in BEATMAKER_TEMPLATE_KITS
+                    else label
+                )
+                item = QListWidgetItem(self._thumbnail(preview), caption)
                 item.setData(Qt.ItemDataRole.UserRole, ("template", template_id))
+                item.setData(Qt.ItemDataRole.AccessibleTextRole, label)
+                item.setToolTip(label)
+                # Uniform icon views derive their cached height from another item.
+                # Give every built-in card room for both caption lines.
+                item.setSizeHint(QSize(_THUMB.width() + 14, _THUMB.height() + 50))
                 self.grid.addItem(item)
         self.stack.setCurrentWidget(self.empty if user_tab and not self.grid.count() else self.grid)
         target = 0
@@ -475,12 +491,18 @@ class LayoutLibraryDialog(QDialog):
         else:
             template_id = selection[1]
             preview = build_template_deck(template_id, self._theme_id)
-            name = self.grid.currentItem().text()
+            name = self.grid.currentItem().toolTip()
             meta = t(
                 "widget.launcher.layouts.meta_builtin",
                 "기본 제공 · 키 {keys}개 · 지금 덱의 테마로 꾸며집니다",
                 keys=len(preview["pages"][0]["keys"]),
             )
+            if template_id in BEATMAKER_TEMPLATE_KITS:
+                meta = t(
+                    "beatmaker.gallery_detail",
+                    "{kit} · 4×4 패드 · 드럼·멜로디 페이지. 음원과 패드 색상이 함께 적용됩니다.",
+                    kit=option_label(BEATMAKER_KITS, BEATMAKER_TEMPLATE_KITS[template_id]),
+                )
         self.detail_preview.setPixmap(self._thumbnail(preview, _DETAIL).pixmap(_DETAIL))
         self.detail_name.setText(name)
         self.detail_meta.setText(str(meta))
@@ -517,6 +539,17 @@ class LayoutLibraryDialog(QDialog):
             )
         else:
             message = ""
+        if selection[0] == "template" and selection[1] in BEATMAKER_TEMPLATE_KITS and message:
+            message = (
+                str(message)
+                + "\n\n"
+                + str(
+                    t(
+                        "beatmaker.gallery_apply_hint",
+                        "같은 키트의 멜로디 페이지가 없고 페이지 여유가 있으면 함께 추가합니다. 다른 페이지는 유지합니다.",
+                    )
+                )
+            )
         if message:
             confirm = _ChoiceDialog(
                 self,

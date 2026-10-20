@@ -337,3 +337,59 @@ def test_silent_or_invalid_gain_does_not_start_native_worker():
     assert not bank.play("", 1.0)
     assert bank._thread is None
     bank.close()
+
+
+def test_stop_all_releases_native_buffers_and_keeps_cache(player, tmp_path):
+    instance, api = player
+    path = _wav(tmp_path / "pad.wav")
+    instance.play(path, 0.6)
+    instance.play(path, 0.5)
+    instance.stop_all()
+    assert all(not voice.busy for voice in instance.voices)
+    assert not api.headers
+    assert len(instance.voices) == 2 and path in instance.assets
+    instance.play(path, 0.6)
+    assert len(instance.voices) == 2
+    assert instance.voices[0].busy
+
+
+def test_stop_all_discards_pending_hits_before_next_performance(monkeypatch):
+    entered, release, silenced = threading.Event(), threading.Event(), threading.Event()
+    fresh_played = threading.Event()
+    played = []
+
+    class SlowPlayer:
+        voices = []
+
+        def play(self, path, *args):
+            played.append(path)
+            entered.set()
+            assert release.wait(timeout=3)
+            if path == "fresh.wav":
+                fresh_played.set()
+
+        def stop_all(self):
+            silenced.set()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(audio, "_Player", SlowPlayer)
+    bank = audio.NativeSoundBank()
+    bank.stop_all()
+    assert bank._thread is None
+    try:
+        bank.play("first.wav", 0.5)
+        assert entered.wait(timeout=2)
+        for _ in range(64):
+            bank.play("stale.wav", 0.5)
+        bank.stop_all()
+        release.set()
+        assert silenced.wait(timeout=2)
+        assert played == ["first.wav"]
+        bank.play("fresh.wav", 0.5)
+        assert fresh_played.wait(timeout=2)
+        assert played == ["first.wav", "fresh.wav"]
+    finally:
+        release.set()
+        bank._shutdown()
