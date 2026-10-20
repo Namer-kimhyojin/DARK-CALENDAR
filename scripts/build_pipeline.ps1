@@ -348,13 +348,6 @@ function Sync-AppVersion {
         [System.IO.File]::WriteAllText($noticePath, $notice, $utf8NoBom)
     }
 
-    $runtimeLockPath = Join-Path $ProjectRoot "requirements-runtime.lock"
-    $runtimeLock = Get-Content $runtimeLockPath -Raw -Encoding utf8
-    $runtimeLock = $runtimeLock -replace (
-        'Air Calendar \d+\.\d+\.\d+ release runtime lock'
-    ), "Air Calendar $NewVersion release runtime lock"
-    [System.IO.File]::WriteAllText($runtimeLockPath, $runtimeLock, $utf8NoBom)
-
     $thirdPartyPath = Join-Path $ProjectRoot "THIRD_PARTY_NOTICES.md"
     $thirdParty = Get-Content $thirdPartyPath -Raw -Encoding utf8
     $thirdParty = $thirdParty -replace (

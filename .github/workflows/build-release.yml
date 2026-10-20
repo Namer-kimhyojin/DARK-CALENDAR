@@ -72,7 +72,7 @@ jobs:
         shell: powershell
         run: |
           $runtimeJson = .\.venv\Scripts\python.exe scripts\prepare_sqlite_build_runtime.py --arch x64 --directory build\python-sqlite-x64 --check
-          if ($LASTEXITCODE -ne 0) { throw "Prepared runtime validation failed." }
+          if ($LASTEXITCODE -ne 0) { throw "Prepared runtime validation failed: $($runtimeJson -join [Environment]::NewLine)" }
           $runtime = ($runtimeJson -join "`n") | ConvertFrom-Json
           & $runtime.python_executable -m venv build\native-smoke-venv
           if ($LASTEXITCODE -ne 0) { throw "Native validation environment creation failed." }
