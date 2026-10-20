@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test the CI-only guard and evidence rejection without launching any app."""
 
+import json
 from pathlib import Path
 import sqlite3
 import sys
@@ -596,6 +597,59 @@ def paging_metadata():
 def test_only_exact_os_paging_information_notice_can_be_acknowledged(monkeypatch):
     monkeypatch.setenv("SYSTEMROOT", r"C:\Windows")
     assert smoke.select_paging_notice(paging_metadata(), 42) == 5
+
+
+@pytest.fixture
+def observed_performance_paging_notice():
+    # Exact synthetic-runner observation from run39360438071, not a user profile.
+    return json.loads(
+        r"""{
+          "handle": 65682,
+          "pid": 6816,
+          "title": "System Properties",
+          "class_name": "#32770",
+          "executable": "C:\\Windows\\System32\\SystemPropertiesPerformance.exe",
+          "children": [
+            {"handle": 65684, "class_name": "Button", "text": "OK", "control_id": 2},
+            {"handle": 65686, "class_name": "Static", "text": "", "control_id": 20},
+            {"handle": 65690, "class_name": "Static", "text": "Windows created a temporary paging file on your computer because of a problem that occurred with your paging file configuration when you started your computer.  The total paging file size for all disk drives may be somewhat larger than the size you specified.", "control_id": 65535}
+          ]
+        }"""
+    )
+
+
+def test_observed_windows_performance_notice_has_ok_id_two(
+    monkeypatch, observed_performance_paging_notice
+):
+    monkeypatch.setenv("SYSTEMROOT", r"C:\Windows")
+    assert smoke.select_paging_notice(observed_performance_paging_notice, 42) == 65684
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"executable": r"C:\Windows\System32\rundll32.exe"},
+        {"executable": r"C:\Temp\SystemPropertiesPerformance.exe"},
+        {"pid": 42},
+        {"title": "Other information"},
+    ],
+)
+def test_observed_ok_id_two_exception_cannot_extend_to_other_fingerprints(
+    monkeypatch, observed_performance_paging_notice, change
+):
+    monkeypatch.setenv("SYSTEMROOT", r"C:\Windows")
+    observed_performance_paging_notice.update(change)
+    assert smoke.select_paging_notice(observed_performance_paging_notice, 42) is None
+
+
+def test_observed_performance_notice_still_requires_unique_exact_ok(
+    monkeypatch, observed_performance_paging_notice
+):
+    monkeypatch.setenv("SYSTEMROOT", r"C:\Windows")
+    observed_performance_paging_notice["children"].append(
+        {"handle": 777, "class_name": "Button", "text": "OK", "control_id": 2}
+    )
+    assert smoke.select_paging_notice(observed_performance_paging_notice, 42) is None
 
 
 @pytest.mark.parametrize(

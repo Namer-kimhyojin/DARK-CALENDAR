@@ -675,7 +675,13 @@ def select_paging_notice(metadata: dict, application_pid: int) -> int | None:
         item["handle"]
         for item in metadata["children"]
         if item["class_name"].lower() == "button"
-        and item["control_id"] == 1
+        and (
+            item["control_id"] == 1
+            or (
+                executable.name.lower() == "systempropertiesperformance.exe"
+                and item["control_id"] == 2
+            )
+        )
         and item["text"].replace("&", "").strip() == "OK"
     ]
     return buttons[0] if len(buttons) == 1 else None
