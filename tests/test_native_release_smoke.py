@@ -186,6 +186,8 @@ def test_log_requires_actual_version_database_and_sqlite(tmp_path):
         "Unhandled exception",
         "database disk image is malformed",
         "Traceback (most recent call last)",
+        "Windows fatal exception: code 0x8001010d",
+        "Fatal Python error: access violation",
     ],
 )
 def test_fresh_error_cannot_be_hidden_by_success_marker(tmp_path, error):
@@ -232,3 +234,162 @@ def test_corrupt_or_invalid_database_fails(responses, error):
     engine.query.side_effect = responses
     with pytest.raises(RuntimeError, match=error):
         smoke.inspect_database(engine, Path("unused.db"), False)
+
+
+READY_LOG = (
+    "Unified database initialized successfully.\n"
+    "System tray and unified shortcuts initialized.\n"
+    "Idle detector (AlarmWorker) initialized and started.\n"
+)
+
+
+@pytest.mark.parametrize("missing", READY_LOG.splitlines())
+def test_runtime_readiness_requires_every_actual_native_marker(missing):
+    assert smoke.runtime_ready(READY_LOG)
+    assert not smoke.runtime_ready(READY_LOG.replace(missing, ""))
+
+
+@pytest.mark.parametrize(
+    "width,height,dpi,style,expected",
+    [
+        (560, 340, 96, 0x88, True),
+        (840, 510, 144, 0x88, True),
+        (1018, 700, 96, 0x80, False),
+        (560, 340, 96, 0x80, False),
+    ],
+)
+def test_splash_detection_uses_size_dpi_and_topmost_tool_flags(width, height, dpi, style, expected):
+    metadata = [
+        {"visible": True, "rectangle": [0, 0, width, height], "dpi": dpi, "extended_style": style}
+    ]
+    assert smoke.splash_visible(metadata) is expected
+
+
+class NativeWindow:
+    def __init__(self, handle, *, count=25, visible=True):
+        self.handle = handle
+        self.button = SimpleNamespace(window_text=lambda: " Settings", is_visible=lambda: visible)
+        self.count = count
+
+    def descendants(self, control_type=None):
+        return [self.button] if control_type == "Button" else [self.button] * self.count
+
+
+def test_only_actual_qualified_main_is_selected_among_startup_windows():
+    splash = NativeWindow(1, count=0)
+    main = NativeWindow(2)
+    assert smoke.select_qualified_main([splash, main], lambda _a, _b: False) is main
+    assert smoke.select_qualified_main([NativeWindow(3, count=19)], lambda _a, _b: False) is None
+
+
+def test_independent_qualified_main_windows_still_fail():
+    with pytest.raises(RuntimeError, match="independent qualified"):
+        smoke.select_qualified_main([NativeWindow(1), NativeWindow(2)], lambda _a, _b: False)
+
+
+def test_only_native_parent_child_duplicates_are_deduplicated():
+    parent, child = NativeWindow(1), NativeWindow(2)
+    assert smoke.select_qualified_main([child, parent], lambda a, b: (a, b) == (1, 2)) is parent
+
+
+@pytest.mark.parametrize("ready,splash", [(False, False), (True, True)])
+def test_uia_is_not_imported_before_runtime_ready_and_splash_gone(
+    tmp_path, monkeypatch, ready, splash
+):
+    monkeypatch.setitem(sys.modules, "win32gui", SimpleNamespace())
+    monkeypatch.setitem(sys.modules, "pywinauto", None)
+    monkeypatch.setattr(smoke, "_window_metadata", lambda _processes: [])
+    monkeypatch.setattr(smoke, "splash_visible", lambda _windows: splash)
+    assert smoke._main_window([], tmp_path, ready=ready) is None
+    observation = __import__("json").loads(
+        (tmp_path / "window-observation.json").read_text(encoding="utf-8", errors="strict")
+    )
+    assert observation["runtime_ready_log"] is ready
+
+
+def test_runner_input_records_real_event_and_last_input_change(tmp_path, monkeypatch):
+    user, kernel = Mock(), Mock()
+    last_times = iter([640000, 999990])
+
+    def last_input(pointer):
+        pointer._obj.dwTime = next(last_times)
+        return True
+
+    user.GetLastInputInfo.side_effect = last_input
+    user.SendInput.return_value = 1
+    kernel.GetTickCount64.return_value = 1000000
+    monkeypatch.setattr(
+        smoke.ctypes, "WinDLL", lambda name, **_kwargs: user if name == "user32" else kernel
+    )
+    monkeypatch.setattr(smoke, "require_hosted_runner", lambda *_args: tmp_path)
+    monkeypatch.setattr(smoke.time, "sleep", lambda _seconds: None)
+    assert smoke._reset_runner_idle(tmp_path) == {
+        "before_idle_ms": 360000,
+        "after_idle_ms": 10,
+        "real_mouse_input_events": 1,
+    }
+    user.SendInput.assert_called_once()
+    assert user.SendInput.call_args.args[0] == 1
+
+
+def test_runner_input_failure_cannot_continue(tmp_path, monkeypatch):
+    user = Mock()
+    user.SendInput.return_value = 0
+    monkeypatch.setattr(smoke.ctypes, "WinDLL", lambda *_args, **_kwargs: user)
+    monkeypatch.setattr(smoke, "require_hosted_runner", lambda *_args: tmp_path)
+    monkeypatch.setattr(smoke, "_idle_ms", lambda *_args: 10000)
+    with pytest.raises(RuntimeError, match="real mouse input"):
+        smoke._reset_runner_idle(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "window,button,valid",
+    [
+        ([0, 0, 1018, 700], [900, 0, 1000, 40], True),
+        ([0, 0, 1200, 700], [1080, 0, 1180, 40], False),
+        ([0, 0, 1018, 700], [1000, 0, 1100, 40], False),
+        ([-10, 0, 1000, 700], [900, 0, 990, 40], False),
+    ],
+)
+def test_window_and_system_button_must_be_inside_actual_display(window, button, valid):
+    def control(rect):
+        return SimpleNamespace(
+            rectangle=lambda: SimpleNamespace(
+                **dict(zip(["left", "top", "right", "bottom"], rect, strict=True))
+            )
+        )
+
+    if valid:
+        assert (
+            smoke.validate_window_bounds(control(window), control(button), 1024, 768)["window"]
+            == window
+        )
+    else:
+        with pytest.raises(RuntimeError, match="outside"):
+            smoke.validate_window_bounds(control(window), control(button), 1024, 768)
+
+
+def test_failure_records_remaining_process_and_exit_code_without_terminating(tmp_path, monkeypatch):
+    monkeypatch.setattr(smoke, "require_hosted_runner", lambda *_args: tmp_path)
+    parent = SimpleNamespace(pid=42, poll=lambda: None)
+
+    def failed_launch(_payload, _profile, _evidence, *, diagnostic, **_options):
+        diagnostic.update(parent=parent, executable=tmp_path / "DarkCalendar.exe", started=100.0)
+        raise RuntimeError("observed UI failure")
+
+    monkeypatch.setattr(smoke, "_launch_cycle", failed_launch)
+    monkeypatch.setattr(smoke, "_related_processes", lambda *_args: [SimpleNamespace(pid=42)])
+    monkeypatch.setattr(smoke, "_window_metadata", lambda _processes: [])
+    with pytest.raises(RuntimeError, match="observed UI"):
+        smoke.launch_cycle(tmp_path, tmp_path / "profile", tmp_path / "evidence")
+    state = __import__("json").loads(
+        (tmp_path / "evidence/failure-process-state.json").read_text(
+            encoding="utf-8", errors="strict"
+        )
+    )
+    assert state == {
+        "launched_parent_pid": 42,
+        "parent_exit_code": None,
+        "remaining_native_pids": [42],
+        "force_killed": False,
+    }

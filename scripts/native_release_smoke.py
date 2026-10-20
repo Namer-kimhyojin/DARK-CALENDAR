@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+from ctypes import wintypes
 from datetime import datetime
 import hashlib
 import json
@@ -34,7 +35,8 @@ FIXTURE_CALENDAR = "native-release-fixture"
 BASELINE_EXE_SHA256 = "1363e829f3c71e4e38222497076237c84fff5875d056ca6f50a7f6067e5100d5"
 ERROR_PATTERN = re.compile(
     r"Unhandled exception|Traceback \(most recent call last\)|Database startup aborted|"
-    r"database disk image is malformed|Database initialization failed|\[(?:ERROR|CRITICAL)\]",
+    r"database disk image is malformed|Database initialization failed|"
+    r"Windows fatal exception|Fatal Python error|\[(?:ERROR|CRITICAL)\]",
     re.IGNORECASE,
 )
 
@@ -290,32 +292,196 @@ def _related_processes(executable: Path, started: float) -> list:
     return found
 
 
-def _main_window(processes):
-    from pywinauto import Desktop
+def _window_metadata(processes) -> list[dict]:
     import win32gui
     import win32process
 
     pids = {process.pid for process in processes}
-    handles = set()
+    windows = {}
+    user = ctypes.WinDLL("user32", use_last_error=True)
+    dpi_for_window = getattr(user, "GetDpiForWindow", None)
+    if dpi_for_window is not None:
+        dpi_for_window.argtypes = [wintypes.HWND]
+        dpi_for_window.restype = wintypes.UINT
 
     def collect(handle, _context):
         if win32process.GetWindowThreadProcessId(handle)[1] in pids:
             title = win32gui.GetWindowText(handle)
-            if ERROR_PATTERN.search(title) or "cannot start" in title.lower():
-                raise RuntimeError(f"Native error window: {title}")
-            if title == "Air Calendar" and win32gui.IsWindowVisible(handle):
-                handles.add(handle)
+            windows[handle] = {
+                "handle": handle,
+                "pid": win32process.GetWindowThreadProcessId(handle)[1],
+                "title": title,
+                "class_name": win32gui.GetClassName(handle),
+                "visible": bool(win32gui.IsWindowVisible(handle)),
+                "parent": win32gui.GetParent(handle),
+                "rectangle": list(win32gui.GetWindowRect(handle)),
+                "extended_style": win32gui.GetWindowLong(handle, -20),
+                "dpi": int(dpi_for_window(handle) or 96) if dpi_for_window else 96,
+            }
 
     def top(handle, _context):
         collect(handle, None)
         win32gui.EnumChildWindows(handle, collect, None)
 
     win32gui.EnumWindows(top, None)
-    if len(handles) > 1:
-        raise RuntimeError("More than one candidate main window exists")
-    if not handles:
+    return list(windows.values())
+
+
+def runtime_ready(text: str) -> bool:
+    return all(
+        marker in text
+        for marker in (
+            "Unified database initialized successfully.",
+            "System tray and unified shortcuts initialized.",
+            "Idle detector (AlarmWorker) initialized and started.",
+        )
+    )
+
+
+def splash_visible(windows: list[dict]) -> bool:
+    for window in windows:
+        left, top, right, bottom = window["rectangle"]
+        scale = window["dpi"] / 96
+        if (
+            window["visible"]
+            and window["extended_style"] & 0x88 == 0x88
+            and abs(right - left - round(560 * scale)) <= 2
+            and abs(bottom - top - round(340 * scale)) <= 2
+        ):
+            return True
+    return False
+
+
+def system_button(window):
+    buttons = [
+        item
+        for item in window.descendants(control_type="Button")
+        if item.window_text().strip() in {"System", "Settings", "시스템"} and item.is_visible()
+    ]
+    return buttons[0] if len(buttons) == 1 else None
+
+
+def select_qualified_main(windows, is_child):
+    qualified = [
+        window
+        for window in windows
+        if len(window.descendants()) >= 20 and system_button(window) is not None
+    ]
+    roots = [
+        window
+        for window in qualified
+        if not any(
+            other is not window and is_child(other.handle, window.handle) for other in qualified
+        )
+    ]
+    if len(roots) > 1:
+        raise RuntimeError("More than one independent qualified main window exists")
+    return roots[0] if roots else None
+
+
+def _main_window(processes, evidence: Path, *, ready: bool):
+    import win32gui
+
+    metadata = _window_metadata(processes)
+    observation = {
+        "runtime_ready_log": ready,
+        "windows": metadata,
+        "splash_visible": splash_visible(metadata),
+    }
+    write_json(evidence / "window-observation.json", observation)
+    for window in metadata:
+        if ERROR_PATTERN.search(window["title"]) or "cannot start" in window["title"].lower():
+            raise RuntimeError(f"Native error window: {window['title']}")
+    # Do not ask Qt's UIA provider about a window while splash processEvents()
+    # is still running; synchronous provider calls can reenter startup COM work.
+    if not ready or observation["splash_visible"]:
         return None
-    return Desktop(backend="uia").window(handle=handles.pop()).wrapper_object()
+    from pywinauto import Desktop
+
+    desktop = Desktop(backend="uia")
+    candidates = [
+        desktop.window(handle=item["handle"]).wrapper_object()
+        for item in metadata
+        if item["visible"] and item["title"] == "Air Calendar"
+    ]
+    return select_qualified_main(candidates, win32gui.IsChild)
+
+
+class _LastInputInfo(ctypes.Structure):
+    _fields_ = [("cbSize", wintypes.UINT), ("dwTime", wintypes.DWORD)]
+
+
+class _MouseInput(ctypes.Structure):
+    _fields_ = [
+        ("dx", wintypes.LONG),
+        ("dy", wintypes.LONG),
+        ("mouseData", wintypes.DWORD),
+        ("dwFlags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", ctypes.c_size_t),
+    ]
+
+
+class _InputPayload(ctypes.Union):
+    _fields_ = [("mi", _MouseInput)]
+
+
+class _Input(ctypes.Structure):
+    _fields_ = [("type", wintypes.DWORD), ("payload", _InputPayload)]
+
+
+def _idle_ms(user, kernel) -> int:
+    last = _LastInputInfo(cbSize=ctypes.sizeof(_LastInputInfo))
+    user.GetLastInputInfo.argtypes = [ctypes.POINTER(_LastInputInfo)]
+    user.GetLastInputInfo.restype = wintypes.BOOL
+    kernel.GetTickCount64.restype = ctypes.c_ulonglong
+    if not user.GetLastInputInfo(ctypes.byref(last)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    return (kernel.GetTickCount64() - last.dwTime) & 0xFFFFFFFF
+
+
+def _reset_runner_idle(evidence: Path) -> dict:
+    require_hosted_runner(os.environ, sys.platform, evidence)
+    user = ctypes.WinDLL("user32", use_last_error=True)
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    before = _idle_ms(user, kernel)
+    movement = _Input(type=0, payload=_InputPayload(mi=_MouseInput(dx=1, dwFlags=1)))
+    user.SendInput.argtypes = [wintypes.UINT, ctypes.POINTER(_Input), ctypes.c_int]
+    user.SendInput.restype = wintypes.UINT
+    if user.SendInput(1, ctypes.byref(movement), ctypes.sizeof(movement)) != 1:
+        raise RuntimeError("Disposable runner could not receive a real mouse input event")
+    time.sleep(0.1)
+    after = _idle_ms(user, kernel)
+    result = {"before_idle_ms": before, "after_idle_ms": after, "real_mouse_input_events": 1}
+    write_json(evidence / "runner-input.json", result)
+    if after > 2000:
+        raise RuntimeError("Runner last-input time did not update after real mouse input")
+    return result
+
+
+def validate_window_bounds(
+    window, button, width: int, height: int, *, evidence: Path | None = None
+) -> dict:
+    def rectangle(item):
+        rect = item.rectangle()
+        return [rect.left, rect.top, rect.right, rect.bottom]
+
+    result = {
+        "display": [0, 0, width, height],
+        "window": rectangle(window),
+        "system_button": rectangle(button),
+    }
+    if evidence is not None:
+        write_json(evidence / "window-bounds.json", result)
+    for name in ("window", "system_button"):
+        left, top, right, bottom = result[name]
+        if not (0 <= left < right <= width and 0 <= top < bottom <= height):
+            raise RuntimeError(f"Native {name} is outside the visible display: {result}")
+    wl, wt, wr, wb = result["window"]
+    bl, bt, br, bb = result["system_button"]
+    if not (wl <= bl < br <= wr and wt <= bt < bb <= wb):
+        raise RuntimeError("System button is outside the native main window")
+    return result
 
 
 def _capture(window, destination: Path, *, main: bool = True) -> dict:
@@ -339,14 +505,10 @@ def _capture(window, destination: Path, *, main: bool = True) -> dict:
 def _normal_exit(window, process_ids: set[int], evidence: Path) -> None:
     from pywinauto import Desktop
 
-    buttons = [
-        item
-        for item in window.descendants(control_type="Button")
-        if item.window_text().strip() in {"System", "Settings", "시스템"}
-    ]
-    if len(buttons) != 1:
+    button = system_button(window)
+    if button is None:
         raise RuntimeError("Cannot identify the native System menu for normal Exit")
-    buttons[0].click_input()
+    button.click_input()
     time.sleep(0.5)
     desktop = Desktop(backend="uia")
     menus = []
@@ -390,6 +552,7 @@ def _launch_cycle(
     version: str,
     sqlite_version: str,
     baseline: bool = False,
+    diagnostic: dict | None = None,
 ) -> dict:
     evidence.mkdir()
     executable = payload / "DarkCalendar.exe"
@@ -408,16 +571,26 @@ def _launch_cycle(
         }
     }
     environment.update(LOCALAPPDATA=str(profile), APPDATA=str(profile / "Roaming"))
+    input_evidence = _reset_runner_idle(evidence)
     started = time.time()
     process = subprocess.Popen([str(executable)], cwd=payload, env=environment)
+    if diagnostic is not None:
+        diagnostic.update(parent=process, executable=executable, started=started)
     deadline = time.monotonic() + 90
     window = None
     while time.monotonic() < deadline:
         candidates = _related_processes(executable, started)
         if process.poll() is not None and not candidates:
             raise RuntimeError(f"Native app exited before UI readiness: {process.returncode}")
-        window = _main_window(candidates)
-        if window is not None and len(window.descendants()) >= 20:
+        fresh_log = (
+            log_path.read_bytes()[previous:].decode("utf-8", errors="replace")
+            if log_path.exists()
+            else ""
+        )
+        if ERROR_PATTERN.search(fresh_log):
+            raise RuntimeError("Fresh application log contains a fatal/error diagnostic")
+        window = _main_window(candidates, evidence, ready=runtime_ready(fresh_log))
+        if window is not None:
             break
         time.sleep(0.5)
     if window is None:
@@ -427,6 +600,24 @@ def _launch_cycle(
     ui_process = next((item for item in candidates if item.pid == window.process_id()), None)
     if ui_process is None:
         raise RuntimeError("Window belongs to a different executable")
+    user = ctypes.WinDLL("user32", use_last_error=True)
+    bounds = validate_window_bounds(
+        window,
+        system_button(window),
+        user.GetSystemMetrics(0),
+        user.GetSystemMetrics(1),
+        evidence=evidence,
+    )
+    write_json(
+        evidence / "main-ready.json",
+        {
+            "pid": ui_process.pid,
+            "handle": window.handle,
+            "runtime_ready_log": True,
+            "splash_gone": True,
+            "bounds": bounds,
+        },
+    )
     loaded = {
         Path(item.path).name.lower(): Path(item.path).resolve()
         for item in ui_process.memory_maps()
@@ -473,13 +664,16 @@ def _launch_cycle(
         "exit_code": return_code,
         "normal_exit": True,
         "force_killed": False,
+        "runner_input": input_evidence,
+        "bounds": bounds,
     }
 
 
 def launch_cycle(payload: Path, profile: Path, evidence: Path, **options) -> dict:
     require_hosted_runner(os.environ, sys.platform, evidence)
+    diagnostic = {}
     try:
-        return _launch_cycle(payload, profile, evidence, **options)
+        return _launch_cycle(payload, profile, evidence, diagnostic=diagnostic, **options)
     except Exception:
         # Preserve failure evidence too. These profiles exist only in this new
         # hosted VM and contain public defaults plus synthetic data.
@@ -487,6 +681,24 @@ def launch_cycle(payload: Path, profile: Path, evidence: Path, **options) -> dic
         crash_log = profile / "kimhyojin/Dark Calendar/crash.log"
         if crash_log.exists():
             shutil.copyfile(crash_log, evidence / "failure-application.log")
+        if diagnostic:
+            process = diagnostic["parent"]
+            remaining = _related_processes(diagnostic["executable"], diagnostic["started"])
+            write_json(
+                evidence / "failure-process-state.json",
+                {
+                    "launched_parent_pid": process.pid,
+                    "parent_exit_code": process.poll(),
+                    "remaining_native_pids": [item.pid for item in remaining],
+                    "force_killed": False,
+                },
+            )
+            try:
+                write_json(evidence / "failure-windows.json", _window_metadata(remaining))
+            except Exception as diagnostic_error:
+                write_json(
+                    evidence / "failure-windows.json", {"diagnostic_error": str(diagnostic_error)}
+                )
         raise
 
 
