@@ -2,10 +2,12 @@
 
 개발 변경 버전과 실제 공개·설치 상태는 별도로 관리한다. 버전 부여는 검증·게시 완료를 의미하지 않는다.
 
-기준 버전: `3.8.1` · 현재 개발 버전: **`4.6.4`**
+기준 버전: `3.8.1` · 현재 개발 버전: **`4.6.6`**
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.6.6 | 2026-10-20T11:16:11.991124+09:00 | change | Windows 검증 VM의 줄바꿈 변환을 차단하고 실제 QA 파일과 Git blob 해시를 함께 검증 | `native-candidate-exact-checkout-bytes-20261020` |
+| 4.6.5 | 2026-10-20T11:12:31.369927+09:00 | change | 검증 하네스의 종료 모달·화면·Windows 예외 관찰을 보완하고 동일 후보 패키지를 새 VM에서 재검증 | `native-owned-modal-exception-observer-and-candidate-reuse-20261020` |
 | 4.6.4 | 2026-10-20T10:50:12.414162+09:00 | change | 격리 Windows 검증에서 실제 입력·메인 창 준비·정상 종료와 오류 증거를 확인 | `native-main-selection-and-runner-idle-20261020` |
 | 4.6.3 | 2026-10-20T10:32:02.317807+09:00 | change | 별도 Windows VM에서 동일 배포 페이로드의 native 기동·재시작 검증 실행 | `isolated-native-validation-job-20261020` |
 | 4.6.2 | 2026-10-20T10:21:06.865568+09:00 | change | Keep dependency lock bytes stable during release version sync and retain CI runtime diagnostics | `ci-lock-comment-stability-20261020` |

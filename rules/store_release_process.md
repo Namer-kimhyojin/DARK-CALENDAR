@@ -198,6 +198,30 @@ The previous public baseline is pinned and checked by
 `scripts/prepare_native_smoke_baseline.py`. These checks do not establish current
 Store package-identity behavior or a real user's DB health.
 
+### Revalidating an unchanged candidate with a newer QA commit
+
+Keep the candidate build commit/version separate from the QA commit/version.
+If only the native QA harness or its workflow changes, the manual
+`verify-native-candidate.yml` workflow may validate the existing candidate on a
+new disposable Windows VM. Its pinned policy identifies the original run,
+commit, artifact IDs and archive SHA-256 values. The verifier permits only an
+explicit QA file list, managed development version fields and version records;
+application behavior, dependencies and packaging inputs must remain identical.
+Any unexplained change requires a new build. Never substitute the QA development
+version for the version actually embedded in the candidate payload.
+
+The job verifies helper/policy hashes and the raw payload archive before
+extracting or running it. Its disposable VM sets `core.autocrlf=false` before
+checkout; pinned policy/QA files use exact committed Git bytes, without CRLF
+conversion. This changes no developer-machine Git setting. It does not rebuild,
+replace release assets or publish.
+Always retain provenance and failure evidence. Require all six candidate cycles,
+normal UI exit/restarts, DB/fixture checks and human review of all six main-window
+screenshots. Reuse the exact verified release assets only after that review;
+changing the payload or a protected build input invalidates this reuse path.
+Retry the failed stage when its cause is corrected instead of repeatedly
+tagging and rebuilding unchanged product inputs.
+
 Otherwise use an isolated VM, Sandbox or existing test account that protects QSettings,
 the shared DB and real calendar accounts. Test both a fresh profile and a
 consistent previous-version profile copy. For each, verify the main window,

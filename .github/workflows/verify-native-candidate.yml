@@ -1,0 +1,81 @@
+name: Verify Native Candidate
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: verify-native-candidate-4.6.4
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify-native-candidate-x64:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      PYTHON_VERSION: "3.13.15"
+      CANDIDATE_VERSION: "4.6.4"
+      CANDIDATE_POLICY_SHA256: "cc40abdab8cd14708f75954bd8347f84d56da139c430bdcd185af10cdee7213e"
+    steps:
+      - name: Preserve exact Git bytes on disposable QA VM
+        shell: powershell
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Checkout reviewed QA commit and candidate ancestry
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup native validation Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Verify unchanged candidate inputs and pinned raw artifact
+        shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python scripts\verify_native_candidate_inputs.py `
+            --root . `
+            --policy scripts\native-candidate-4.6.4.json `
+            --policy-sha256 $env:CANDIDATE_POLICY_SHA256 `
+            --qa-commit $env:GITHUB_SHA `
+            --evidence "$env:RUNNER_TEMP\candidate-provenance" `
+            --payload "$env:RUNNER_TEMP\native-candidate-payload"
+          if ($LASTEXITCODE -ne 0) { throw "Pinned candidate provenance failed; no native launch allowed." }
+
+      - name: Prepare isolated native QA dependencies and public baseline
+        shell: powershell
+        run: |
+          python -m venv build\native-smoke-venv
+          if ($LASTEXITCODE -ne 0) { throw "Native QA environment creation failed." }
+          .\build\native-smoke-venv\Scripts\python.exe -m pip install pywinauto==0.6.9 Pillow==13.0.0 psutil==7.2.2
+          if ($LASTEXITCODE -ne 0) { throw "Native QA dependency installation failed." }
+          .\build\native-smoke-venv\Scripts\python.exe scripts\prepare_native_smoke_baseline.py --directory "$env:RUNNER_TEMP\native-baseline-4.3.3"
+          if ($LASTEXITCODE -ne 0) { throw "Public baseline validation failed." }
+
+      - name: Verify same candidate in six fresh and upgrade cycles
+        shell: powershell
+        run: |
+          .\build\native-smoke-venv\Scripts\python.exe scripts\native_release_smoke.py `
+            --payload "$env:RUNNER_TEMP\native-candidate-payload" `
+            --baseline-payload "$env:RUNNER_TEMP\native-baseline-4.3.3" `
+            --expected-version $env:CANDIDATE_VERSION `
+            --evidence "$env:RUNNER_TEMP\native-release-evidence"
+          if ($LASTEXITCODE -ne 0) { throw "Candidate native startup/restart gate failed." }
+
+      - name: Preserve candidate provenance and native evidence on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-native-candidate-4.6.4-evidence-x64
+          path: |
+            ${{ runner.temp }}/candidate-provenance/candidate-reuse-provenance.json
+            ${{ runner.temp }}/native-release-evidence
+          if-no-files-found: warn

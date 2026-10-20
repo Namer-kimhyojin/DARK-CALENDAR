@@ -393,3 +393,125 @@ def test_failure_records_remaining_process_and_exit_code_without_terminating(tmp
         "remaining_native_pids": [42],
         "force_killed": False,
     }
+
+
+def test_owned_exit_modal_is_selected_from_win32_even_when_uia_root_list_omits_it():
+    modal = {"handle": 4, "pid": 42, "parent": 3, "title": "Exit", "visible": True}
+    unrelated = {**modal, "handle": 5, "parent": 99}
+    assert smoke.select_exit_modal([modal, unrelated], 42, 3) == modal
+    assert smoke.select_exit_modal([modal], 43, 3) is None
+    with pytest.raises(RuntimeError, match="More than one"):
+        smoke.select_exit_modal([modal, {**modal, "handle": 6}], 42, 3)
+
+
+def test_normal_exit_uses_observed_owned_hwnd_instead_of_only_uia_desktop_roots(
+    tmp_path, monkeypatch
+):
+    yes = Mock()
+    yes.window_text.return_value = "&Yes"
+    yes.element_info.control_type = "Button"
+    dialog = Mock()
+    dialog.descendants.return_value = [yes]
+    exit_item = Mock()
+    exit_item.window_text.return_value = "Exit"
+    menu_owner = Mock()
+    menu_owner.process_id.return_value = 42
+    menu_owner.descendants.return_value = [exit_item]
+    desktop = Mock()
+    desktop.windows.return_value = [menu_owner]  # The actual Exit dialog is omitted.
+    desktop.window.return_value.wrapper_object.return_value = dialog
+    monkeypatch.setitem(sys.modules, "pywinauto", SimpleNamespace(Desktop=lambda **_kw: desktop))
+    main = SimpleNamespace(handle=3, process_id=lambda: 42)
+    monkeypatch.setattr(smoke, "system_button", lambda _window: Mock())
+    monkeypatch.setattr(
+        smoke,
+        "_window_metadata",
+        lambda _processes: [
+            {"handle": 4, "pid": 42, "parent": 3, "title": "Exit", "visible": True}
+        ],
+    )
+    monkeypatch.setattr(smoke, "_capture", lambda *_args, **_kw: {})
+    monkeypatch.setattr(smoke.time, "sleep", lambda _seconds: None)
+    phases = []
+    smoke._normal_exit(main, [SimpleNamespace(pid=42)], tmp_path, phases.append)
+    desktop.window.assert_called_once_with(handle=4)
+    yes.click_input.assert_called_once_with()
+    assert phases[-2:] == ["exit_confirmation_observed", "exit_yes_clicked"]
+
+
+def main_controls(*, fixture=False):
+    names = ["Main Calendar", "Today's Schedule", "No schedules posted for today."]
+    names += [f"2026-10-{day:02d} date cell" for day in range(1, 29)]
+    if fixture:
+        names.append(smoke.FIXTURE_NAME)
+    return [{"name": name, "control_type": "Text"} for name in names]
+
+
+def test_main_evidence_requires_real_calendar_and_expected_task_content():
+    assert smoke.validate_main_content(main_controls(), False)["date_cells"] == 28
+    assert smoke.validate_main_content(main_controls(fixture=True), True)["fixture_visible"]
+    with pytest.raises(RuntimeError, match="persisted schedule"):
+        smoke.validate_main_content(main_controls(), True)
+    with pytest.raises(RuntimeError, match="date cells"):
+        smoke.validate_main_content([{"name": "Settings"}], False)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        "Windows fatal exception: access violation",
+        "Windows fatal exception: code 0x8001010e",
+        "Fatal Python error: segmentation fault",
+        "[ERROR] database locked",
+    ],
+)
+def test_pending_known_rpc_never_hides_another_fatal_or_database_error(error):
+    text = "Windows fatal exception: code 0x8001010d\n" + error
+    with pytest.raises(RuntimeError):
+        smoke.check_runtime_log(text, pending=True)
+
+
+def test_only_directly_classified_rpc_may_leave_pending_state():
+    text = "Windows fatal exception: code 0x8001010d\nCurrent thread 0x1234\n"
+    assert smoke.check_runtime_log(text, pending=True) == 1
+    with pytest.raises(RuntimeError):
+        smoke.check_runtime_log(text)
+    with pytest.raises(RuntimeError):
+        smoke.check_runtime_log(text, observed_rpc={"classification": "handled_first_chance"})
+    assert (
+        smoke.check_runtime_log(
+            text,
+            observed_rpc={"classification": "handled_first_chance", "rpc_event_count": 1},
+        )
+        == 1
+    )
+
+
+@pytest.mark.parametrize("obscured", [False, True])
+def test_capture_verifies_foreground_and_real_window_point_ownership(
+    tmp_path, monkeypatch, obscured
+):
+    gui = Mock()
+    gui.GetForegroundWindow.return_value = 3
+    gui.WindowFromPoint.return_value = 44 if obscured else 3
+    gui.GetAncestor.side_effect = lambda handle, _flag: handle
+    gui.EnumWindows.side_effect = lambda _callback, _context: None
+    monkeypatch.setitem(sys.modules, "win32gui", gui)
+    monkeypatch.setitem(sys.modules, "win32con", SimpleNamespace(SW_MINIMIZE=6, SW_RESTORE=9))
+    monkeypatch.setattr(smoke, "require_hosted_runner", lambda *_args: tmp_path)
+    monkeypatch.setattr(smoke.time, "sleep", lambda _seconds: None)
+    window = SimpleNamespace(
+        handle=3,
+        rectangle=lambda: SimpleNamespace(left=0, top=0, right=1000, bottom=700),
+    )
+    if obscured:
+        with pytest.raises(RuntimeError, match="obscured"):
+            smoke._prepare_visible_main(window, tmp_path)
+    else:
+        assert not smoke._prepare_visible_main(window, tmp_path)["app_window_style_changed"]
+
+
+def test_foreground_preparation_cannot_run_on_local_desktop(tmp_path, monkeypatch):
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    with pytest.raises(RuntimeError, match="disposable"):
+        smoke._prepare_visible_main(SimpleNamespace(handle=43380), tmp_path)

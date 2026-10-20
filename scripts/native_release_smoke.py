@@ -25,8 +25,10 @@ import sys
 import time
 
 try:
+    from scripts.native_exception_observer import ExceptionObserver, classify_rpc
     from scripts.verify_sqlite_runtime import verify_payload
 except ModuleNotFoundError:
+    from native_exception_observer import ExceptionObserver, classify_rpc
     from verify_sqlite_runtime import verify_payload
 
 SETTINGS_KEY = r"Software\kimhyojin\Dark Calendar"
@@ -39,6 +41,27 @@ ERROR_PATTERN = re.compile(
     r"Windows fatal exception|Fatal Python error|\[(?:ERROR|CRITICAL)\]",
     re.IGNORECASE,
 )
+KNOWN_RPC = re.compile(r"^Windows fatal exception: code 0x8001010d\r?$", re.MULTILINE)
+
+
+def check_runtime_log(text: str, *, observed_rpc: dict | None = None, pending=False) -> int:
+    count = len(KNOWN_RPC.findall(text))
+    # The original text is always retained. Only this exact diagnostic can stay
+    # pending while a real Windows debugger records first/second-chance dispatch.
+    if (
+        count
+        and not pending
+        and (
+            observed_rpc is None
+            or observed_rpc.get("classification") != "handled_first_chance"
+            or observed_rpc.get("rpc_event_count") != count
+        )
+    ):
+        raise RuntimeError("Unclassified native RPC/fatal error diagnostic")
+    checked = KNOWN_RPC.sub("", text) if pending or observed_rpc else text
+    if ERROR_PATTERN.search(checked):
+        raise RuntimeError("Fresh application log contains an error or traceback")
+    return count
 
 
 def sha256(path: Path) -> str:
@@ -94,9 +117,10 @@ def validate_capture(image) -> dict:
     return {"width": image.width, "height": image.height, "stddev": deviations}
 
 
-def validate_launch_log(text: str, version: str, database: Path, sqlite_version: str) -> None:
-    if ERROR_PATTERN.search(text):
-        raise RuntimeError("Fresh application log contains an error or traceback")
+def validate_launch_log(
+    text: str, version: str, database: Path, sqlite_version: str, *, observed_rpc=None
+) -> None:
+    check_runtime_log(text, observed_rpc=observed_rpc)
     marker = re.search(
         r"Database startup: pid=(\d+) app_version=(\S+) sqlite=(\S+) db=([^\r\n]+)", text
     )
@@ -487,9 +511,6 @@ def validate_window_bounds(
 def _capture(window, destination: Path, *, main: bool = True) -> dict:
     # Window-bound capture and UIA ownership are both recorded; the reviewer sees
     # the actual rendered image, not a source-rendered substitute.
-    if main:
-        window.set_focus()
-        time.sleep(0.3)
     image = window.capture_as_image()
     statistics = validate_capture(image) if main else {"width": image.width, "height": image.height}
     image.save(destination, format="PNG")
@@ -502,18 +523,93 @@ def _capture(window, destination: Path, *, main: bool = True) -> dict:
     }
 
 
-def _normal_exit(window, process_ids: set[int], evidence: Path) -> None:
+def select_exit_modal(metadata: list[dict], pid: int, main_handle: int) -> dict | None:
+    dialogs = [
+        item
+        for item in metadata
+        if item["visible"]
+        and item["pid"] == pid
+        and item["parent"] == main_handle
+        and item["title"] in {"Exit", "Exit Confirmation", "종료 안내", "Exit Notice"}
+    ]
+    if len(dialogs) > 1:
+        raise RuntimeError("More than one owned Exit confirmation exists")
+    return dialogs[0] if dialogs else None
+
+
+def validate_main_content(controls: list[dict], fixture: bool) -> dict:
+    names = [item["name"].strip() for item in controls]
+    cells = sum(bool(re.fullmatch(r"\d{4}-\d{2}-\d{2} date cell", name)) for name in names)
+    if "Main Calendar" not in names or "Today's Schedule" not in names or cells < 28:
+        raise RuntimeError("Main screen lacks the actual calendar/task panels and date cells")
+    if fixture and not any(FIXTURE_NAME in name for name in names):
+        raise RuntimeError("Synthetic persisted schedule is absent from the actual main UI")
+    if not fixture and "No schedules posted for today." not in names:
+        raise RuntimeError("Fresh profile does not show the expected empty schedule state")
+    return {"date_cells": cells, "fixture_visible": fixture, "calendar_and_task_panels": True}
+
+
+def _prepare_visible_main(window, evidence: Path) -> dict:
+    """Clear only the hosted runner's known console; never change app Z-order flags."""
+    require_hosted_runner(os.environ, sys.platform, evidence)
+    import win32con
+    import win32gui
+
+    minimized = []
+
+    def minimize_host(handle, _context):
+        title = win32gui.GetWindowText(handle)
+        if win32gui.IsWindowVisible(handle) and r"C:\ProgramData\GitHub\Host" in title:
+            minimized.append({"handle": handle, "class_name": win32gui.GetClassName(handle)})
+            win32gui.ShowWindow(handle, win32con.SW_MINIMIZE)
+
+    win32gui.EnumWindows(minimize_host, None)
+    win32gui.ShowWindow(window.handle, win32con.SW_RESTORE)
+    activation_error = None
+    try:
+        win32gui.SetForegroundWindow(window.handle)
+    except Exception as error:
+        activation_error = str(error)
+    time.sleep(0.5)
+    foreground = win32gui.GetForegroundWindow()
+    rectangle = window.rectangle()
+    samples = []
+    for x_factor, y_factor in ((0.2, 0.3), (0.5, 0.3), (0.8, 0.3), (0.5, 0.75)):
+        point = (
+            round(rectangle.left + (rectangle.right - rectangle.left) * x_factor),
+            round(rectangle.top + (rectangle.bottom - rectangle.top) * y_factor),
+        )
+        top = win32gui.WindowFromPoint(point)
+        root = win32gui.GetAncestor(top, 2)  # GA_ROOT, not GA_ROOTOWNER.
+        samples.append({"point": list(point), "handle": top, "root": root})
+    result = {
+        "main_handle": window.handle,
+        "foreground_handle": foreground,
+        "minimized_runner_consoles": minimized,
+        "activation_error": activation_error,
+        "visible_samples": samples,
+        "app_window_style_changed": False,
+        "expected_translucent_panels": "default 200/255; desktop may be visible beneath panels",
+    }
+    write_json(evidence / "capture-visibility.json", result)
+    if foreground != window.handle or any(item["root"] != window.handle for item in samples):
+        raise RuntimeError("Actual main window is not foreground or is obscured at capture samples")
+    return result
+
+
+def _normal_exit(window, processes, evidence: Path, activity) -> None:
     from pywinauto import Desktop
 
     button = system_button(window)
     if button is None:
         raise RuntimeError("Cannot identify the native System menu for normal Exit")
     button.click_input()
+    activity("system_menu_clicked")
     time.sleep(0.5)
     desktop = Desktop(backend="uia")
     menus = []
     for owner in desktop.windows():
-        if owner.process_id() in process_ids:
+        if owner.process_id() in {process.pid for process in processes}:
             menus.extend(
                 item
                 for item in owner.descendants(control_type="MenuItem")
@@ -522,15 +618,17 @@ def _normal_exit(window, process_ids: set[int], evidence: Path) -> None:
     if len(menus) != 1:
         raise RuntimeError("Cannot identify the application's Exit menu item")
     menus[0].click_input()
+    activity("exit_menu_clicked")
     deadline = time.monotonic() + 10
     while time.monotonic() < deadline:
-        dialogs = [
-            item
-            for item in desktop.windows()
-            if item.process_id() in process_ids
-            and item.window_text() in {"Exit", "Exit Confirmation", "종료 안내", "Exit Notice"}
-        ]
-        for dialog in dialogs:
+        metadata = _window_metadata(processes)
+        write_json(evidence / "exit-window-observation.json", metadata)
+        modal = select_exit_modal(metadata, window.process_id(), window.handle)
+        if modal:
+            # Qt's owned modal can be below the main element in the UIA tree,
+            # so Desktop.windows() is not a reliable enumeration of its HWND.
+            dialog = desktop.window(handle=modal["handle"]).wrapper_object()
+            write_json(evidence / "exit-accessibility.json", _controls(dialog))
             buttons = [
                 item
                 for item in dialog.descendants(control_type="Button")
@@ -538,10 +636,19 @@ def _normal_exit(window, process_ids: set[int], evidence: Path) -> None:
             ]
             if len(buttons) == 1:
                 _capture(dialog, evidence / "normal-exit-confirmation.png", main=False)
+                activity("exit_confirmation_observed")
                 buttons[0].click_input()
+                activity("exit_yes_clicked")
                 return
         time.sleep(0.2)
     raise RuntimeError("Normal Exit confirmation was not observed")
+
+
+def _controls(window) -> list[dict]:
+    return [
+        {"name": item.window_text(), "control_type": item.element_info.control_type}
+        for item in window.descendants()
+    ]
 
 
 def _launch_cycle(
@@ -552,6 +659,7 @@ def _launch_cycle(
     version: str,
     sqlite_version: str,
     baseline: bool = False,
+    fixture: bool = False,
     diagnostic: dict | None = None,
 ) -> dict:
     evidence.mkdir()
@@ -576,6 +684,28 @@ def _launch_cycle(
     process = subprocess.Popen([str(executable)], cwd=payload, env=environment)
     if diagnostic is not None:
         diagnostic.update(parent=process, executable=executable, started=started)
+    observer = ExceptionObserver(
+        process.pid, lambda: require_hosted_runner(os.environ, sys.platform, evidence)
+    )
+    if diagnostic is not None:
+        diagnostic["observer"] = observer
+    observer.start()
+    activities = []
+
+    def activity(phase):
+        activities.append(
+            {
+                "phase": phase,
+                "observed_at": datetime.now().astimezone().isoformat(),
+                "monotonic": time.monotonic(),
+                "pid": process.pid,
+                "process_running": process.poll() is None,
+                "log_size": log_path.stat().st_size if log_path.exists() else 0,
+            }
+        )
+        write_json(evidence / "ui-activity.json", activities)
+
+    activity("exception_observer_attached")
     deadline = time.monotonic() + 90
     window = None
     while time.monotonic() < deadline:
@@ -587,8 +717,8 @@ def _launch_cycle(
             if log_path.exists()
             else ""
         )
-        if ERROR_PATTERN.search(fresh_log):
-            raise RuntimeError("Fresh application log contains a fatal/error diagnostic")
+        check_runtime_log(fresh_log, pending=observer.trace["attached"])
+        activity("before_main_readiness_probe")
         window = _main_window(candidates, evidence, ready=runtime_ready(fresh_log))
         if window is not None:
             break
@@ -600,6 +730,9 @@ def _launch_cycle(
     ui_process = next((item for item in candidates if item.pid == window.process_id()), None)
     if ui_process is None:
         raise RuntimeError("Window belongs to a different executable")
+    if ui_process.pid != process.pid:
+        raise RuntimeError("Native UI PID differs from the exception-observed process")
+    activity("main_ready")
     user = ctypes.WinDLL("user32", use_last_error=True)
     bounds = validate_window_bounds(
         window,
@@ -628,15 +761,16 @@ def _launch_cycle(
         if name not in loaded or not loaded[name].is_relative_to((payload / "_internal").resolve()):
             raise RuntimeError(f"Native app did not load bundled {name}")
         bundled[name] = {"path": str(loaded[name]), "sha256": sha256(loaded[name])}
-    capture = _capture(window, evidence / "main-window.png")
-    controls = [
-        {"name": item.window_text(), "control_type": item.element_info.control_type}
-        for item in window.descendants()
-    ]
+    visibility = _prepare_visible_main(window, evidence)
+    activity("main_foreground_verified")
+    controls = _controls(window)
     write_json(evidence / "accessibility.json", controls)
     if not any(item["name"].strip() in {"System", "Settings", "시스템"} for item in controls):
         raise RuntimeError("Main-window accessibility tree lacks the application System menu")
-    _normal_exit(window, {item.pid for item in candidates}, evidence)
+    content = validate_main_content(controls, fixture)
+    capture = _capture(window, evidence / "main-window.png")
+    activity("main_calendar_and_task_capture")
+    _normal_exit(window, candidates, evidence, activity)
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline and _related_processes(executable, started):
         time.sleep(0.25)
@@ -647,10 +781,20 @@ def _launch_cycle(
         raise RuntimeError(f"Application returned failure exit code {return_code}")
     text = log_path.read_bytes()[previous:].decode("utf-8", errors="replace")
     (evidence / "fresh-application.log").write_text(text, encoding="utf-8", errors="strict")
-    if ERROR_PATTERN.search(text):
-        raise RuntimeError("Fresh application log contains an error")
+    observed_rpc = classify_rpc(observer.finish(), len(KNOWN_RPC.findall(text)), ui_process.pid)
+    rpc_events = [event for event in observer.trace["events"] if event.get("code") == "0x8001010d"]
+    if rpc_events and not any(
+        item["phase"] == "exit_confirmation_observed"
+        and item["process_running"]
+        and item["monotonic"] > max(event["monotonic"] for event in rpc_events)
+        for item in activities
+    ):
+        raise RuntimeError("No same-PID working Exit confirmation after the RPC diagnostic")
+    write_json(evidence / "native-exception-events.json", observer.trace)
+    write_json(evidence / "rpc-classification.json", observed_rpc)
+    check_runtime_log(text, observed_rpc=observed_rpc)
     if not baseline:
-        validate_launch_log(text, version, database, sqlite_version)
+        validate_launch_log(text, version, database, sqlite_version, observed_rpc=observed_rpc)
     if "Shutting down background workers" not in text or "Database connection closed" not in text:
         raise RuntimeError("Missing fresh normal shutdown/database-close evidence")
     return {
@@ -666,6 +810,9 @@ def _launch_cycle(
         "force_killed": False,
         "runner_input": input_evidence,
         "bounds": bounds,
+        "visibility": visibility,
+        "main_content": content,
+        "rpc_diagnostics": observed_rpc,
     }
 
 
@@ -700,6 +847,10 @@ def launch_cycle(payload: Path, profile: Path, evidence: Path, **options) -> dic
                     evidence / "failure-windows.json", {"diagnostic_error": str(diagnostic_error)}
                 )
         raise
+    finally:
+        if diagnostic.get("observer") is not None:
+            trace = diagnostic["observer"].close()
+            write_json(evidence / "native-exception-events.json", trace)
 
 
 def payload_manifest(payload: Path) -> dict:
@@ -758,9 +909,11 @@ def run(args, summary: dict) -> None:
                 version="4.3.3",
                 sqlite_version="3.50.4",
                 baseline=True,
+                fixture=True,
             )
             summary["baseline"] = baseline_record
             inspect_database(engine, database, True)
+            baseline_record["rpc_diagnostics"]["database_integrity_confirmed"] = True
         for index in range(3):
             record = launch_cycle(
                 candidate,
@@ -768,10 +921,12 @@ def run(args, summary: dict) -> None:
                 args.evidence / f"{scenario}-{index + 1}",
                 version=args.expected_version,
                 sqlite_version=native["sqlite_version"],
+                fixture=scenario == "upgrade" or index > 0,
             )
             record["database"] = inspect_database(
                 engine, database, scenario == "upgrade" or index > 0
             )
+            record["rpc_diagnostics"]["database_integrity_confirmed"] = True
             if scenario == "fresh" and index == 0:
                 seed_fixture(engine, database)
                 inspect_database(engine, database, True)
