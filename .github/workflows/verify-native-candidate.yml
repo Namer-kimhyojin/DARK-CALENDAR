@@ -18,7 +18,7 @@ jobs:
     env:
       PYTHON_VERSION: "3.13.15"
       CANDIDATE_VERSION: "4.6.4"
-      CANDIDATE_POLICY_SHA256: "cc40abdab8cd14708f75954bd8347f84d56da139c430bdcd185af10cdee7213e"
+      CANDIDATE_POLICY_SHA256: "f44d39230f5680c9742d4957c649ff2b89a2c93e89844e1c626e0113286942b2"
     steps:
       - name: Preserve exact Git bytes on disposable QA VM
         shell: powershell

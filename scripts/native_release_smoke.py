@@ -42,6 +42,11 @@ ERROR_PATTERN = re.compile(
     re.IGNORECASE,
 )
 KNOWN_RPC = re.compile(r"^Windows fatal exception: code 0x8001010d\r?$", re.MULTILINE)
+PAGING_NOTICE = (
+    "Windows created a temporary paging file on your computer because of a problem that "
+    "occurred with your paging file configuration when you started your computer. The total "
+    "paging file size for all disk drives may be somewhat larger than the size you specified."
+)
 
 
 def check_runtime_log(text: str, *, observed_rpc: dict | None = None, pending=False) -> int:
@@ -403,7 +408,7 @@ def select_qualified_main(windows, is_child):
     return roots[0] if roots else None
 
 
-def _main_window(processes, evidence: Path, *, ready: bool):
+def _main_window(processes, evidence: Path, *, ready: bool, before_uia=None):
     import win32gui
 
     metadata = _window_metadata(processes)
@@ -420,6 +425,8 @@ def _main_window(processes, evidence: Path, *, ready: bool):
     # is still running; synchronous provider calls can reenter startup COM work.
     if not ready or observation["splash_visible"]:
         return None
+    if before_uia is not None:
+        before_uia()
     from pywinauto import Desktop
 
     desktop = Desktop(backend="uia")
@@ -508,10 +515,14 @@ def validate_window_bounds(
     return result
 
 
-def _capture(window, destination: Path, *, main: bool = True) -> dict:
+def _capture(window, destination: Path, *, main: bool = True, verify_visible=None) -> dict:
     # Window-bound capture and UIA ownership are both recorded; the reviewer sees
     # the actual rendered image, not a source-rendered substitute.
+    if main and verify_visible is not None:
+        verify_visible("before")
     image = window.capture_as_image()
+    if main and verify_visible is not None:
+        verify_visible("after")
     statistics = validate_capture(image) if main else {"width": image.width, "height": image.height}
     image.save(destination, format="PNG")
     return {
@@ -549,12 +560,159 @@ def validate_main_content(controls: list[dict], fixture: bool) -> dict:
     return {"date_cells": cells, "fixture_visible": fixture, "calendar_and_task_panels": True}
 
 
+def select_paging_notice(metadata: dict, application_pid: int) -> int | None:
+    """Acknowledge only this exact OS information box, never app/error/settings UI."""
+    executable = Path(metadata["executable"])
+    windows = Path(os.environ.get("SYSTEMROOT", r"C:\Windows"))
+    trusted = executable.parent in {windows / "System32", windows / "SysWOW64"}
+    if (
+        metadata["pid"] == application_pid
+        or metadata["title"] != "System Properties"
+        or metadata["class_name"] != "#32770"
+        or not trusted
+        or executable.name.lower()
+        not in {"rundll32.exe", "systempropertiesadvanced.exe", "systempropertiesperformance.exe"}
+    ):
+        return None
+    messages = [
+        " ".join(item["text"].split())
+        for item in metadata["children"]
+        if item["class_name"].lower() == "static"
+    ]
+    if PAGING_NOTICE not in messages:
+        return None
+    buttons = [
+        item["handle"]
+        for item in metadata["children"]
+        if item["class_name"].lower() == "button"
+        and item["control_id"] == 1
+        and item["text"].replace("&", "").strip() == "OK"
+    ]
+    return buttons[0] if len(buttons) == 1 else None
+
+
+def _dismiss_paging_notice(window, evidence: Path) -> None:
+    require_hosted_runner(os.environ, sys.platform, evidence)
+    import psutil
+    import win32gui
+    import win32process
+
+    notices, observations = [], []
+
+    def inspect(handle, _context):
+        if (
+            not win32gui.IsWindowVisible(handle)
+            or win32gui.GetWindowText(handle) != "System Properties"
+            or win32gui.GetClassName(handle) != "#32770"
+        ):
+            return
+        pid = win32process.GetWindowThreadProcessId(handle)[1]
+        children = []
+
+        def child(child_handle, _unused):
+            children.append(
+                {
+                    "handle": child_handle,
+                    "class_name": win32gui.GetClassName(child_handle),
+                    "text": win32gui.GetWindowText(child_handle),
+                    "control_id": win32gui.GetDlgCtrlID(child_handle),
+                }
+            )
+
+        win32gui.EnumChildWindows(handle, child, None)
+        metadata = {
+            "handle": handle,
+            "pid": pid,
+            "title": win32gui.GetWindowText(handle),
+            "class_name": win32gui.GetClassName(handle),
+            "executable": psutil.Process(pid).exe(),
+            "children": children,
+        }
+        button = select_paging_notice(metadata, window.process_id())
+        observations.append({**metadata, "recognized_paging_notice": button is not None})
+        if button is not None:
+            notices.append((metadata, button))
+
+    win32gui.EnumWindows(inspect, None)
+    if observations:
+        write_json(evidence / "runner-system-properties-observation.json", observations)
+    if len(notices) > 1:
+        raise RuntimeError("More than one exact OS paging information notice exists")
+    for metadata, button in notices:
+        from pywinauto import Desktop
+
+        write_json(evidence / "runner-paging-notice.json", metadata)
+        control = Desktop(backend="win32").window(handle=button).wrapper_object()
+        control.click_input()
+        deadline = time.monotonic() + 3
+        while win32gui.IsWindow(metadata["handle"]) and time.monotonic() < deadline:
+            time.sleep(0.1)
+        if win32gui.IsWindow(metadata["handle"]):
+            raise RuntimeError("Exact OS paging information notice did not close after OK")
+        write_json(
+            evidence / "runner-paging-notice-acknowledged.json",
+            {"handle": metadata["handle"], "ok_clicked": True, "settings_changed": False},
+        )
+
+
+def capture_points(rectangle, controls: list[dict]) -> list[dict]:
+    left, top, right, bottom = rectangle
+    samples = [
+        {
+            "source": "window_grid",
+            "point": [round(left + (right - left) * x / 10), round(top + (bottom - top) * y / 8)],
+        }
+        for y in range(1, 8)
+        for x in range(1, 10)
+    ]
+    for item in controls:
+        if "rectangle" not in item:
+            continue
+        cl, ct, cr, cb = item["rectangle"]
+        if not (left <= cl < cr <= right and top <= ct < cb <= bottom):
+            continue
+        samples.extend(
+            {
+                "source": item["name"],
+                "point": [round(cl + (cr - cl) * x), round(ct + (cb - ct) * y)],
+            }
+            for x, y in ((0.25, 0.25), (0.5, 0.5), (0.75, 0.75))
+        )
+    return samples
+
+
+def _verify_capture_visibility(window, evidence: Path, controls: list[dict], stage: str) -> dict:
+    require_hosted_runner(os.environ, sys.platform, evidence)
+    import win32gui
+
+    rectangle = window.rectangle()
+    samples = capture_points(
+        [rectangle.left, rectangle.top, rectangle.right, rectangle.bottom], controls
+    )
+    for sample in samples:
+        sample["handle"] = win32gui.WindowFromPoint(tuple(sample["point"]))
+        sample["root"] = win32gui.GetAncestor(sample["handle"], 2)
+    result = {
+        "main_handle": window.handle,
+        "foreground_handle": win32gui.GetForegroundWindow(),
+        "visible_samples": samples,
+        "stage": stage,
+    }
+    write_json(evidence / f"capture-visibility-{stage}.json", result)
+    if result["foreground_handle"] != window.handle or any(
+        item["root"] != window.handle for item in samples
+    ):
+        raise RuntimeError("Actual main window is not foreground or is obscured at capture samples")
+    return result
+
+
 def _prepare_visible_main(window, evidence: Path) -> dict:
-    """Clear only the hosted runner's known console; never change app Z-order flags."""
+    """Clear exact CI infrastructure notices; never change app flags/settings."""
     require_hosted_runner(os.environ, sys.platform, evidence)
     import win32con
     import win32gui
 
+    _dismiss_paging_notice(window, evidence)
     minimized = []
 
     def minimize_host(handle, _context):
@@ -571,29 +729,15 @@ def _prepare_visible_main(window, evidence: Path) -> dict:
     except Exception as error:
         activation_error = str(error)
     time.sleep(0.5)
-    foreground = win32gui.GetForegroundWindow()
-    rectangle = window.rectangle()
-    samples = []
-    for x_factor, y_factor in ((0.2, 0.3), (0.5, 0.3), (0.8, 0.3), (0.5, 0.75)):
-        point = (
-            round(rectangle.left + (rectangle.right - rectangle.left) * x_factor),
-            round(rectangle.top + (rectangle.bottom - rectangle.top) * y_factor),
-        )
-        top = win32gui.WindowFromPoint(point)
-        root = win32gui.GetAncestor(top, 2)  # GA_ROOT, not GA_ROOTOWNER.
-        samples.append({"point": list(point), "handle": top, "root": root})
+    visible = _verify_capture_visibility(window, evidence, [], "prepared")
     result = {
-        "main_handle": window.handle,
-        "foreground_handle": foreground,
+        **visible,
         "minimized_runner_consoles": minimized,
         "activation_error": activation_error,
-        "visible_samples": samples,
         "app_window_style_changed": False,
         "expected_translucent_panels": "default 200/255; desktop may be visible beneath panels",
     }
     write_json(evidence / "capture-visibility.json", result)
-    if foreground != window.handle or any(item["root"] != window.handle for item in samples):
-        raise RuntimeError("Actual main window is not foreground or is obscured at capture samples")
     return result
 
 
@@ -645,10 +789,38 @@ def _normal_exit(window, processes, evidence: Path, activity) -> None:
 
 
 def _controls(window) -> list[dict]:
-    return [
-        {"name": item.window_text(), "control_type": item.element_info.control_type}
-        for item in window.descendants()
-    ]
+    controls = []
+    for item in window.descendants():
+        name = item.window_text()
+        control = {"name": name, "control_type": item.element_info.control_type}
+        if name.strip() in {"Main Calendar", "Today's Schedule"} or FIXTURE_NAME in name:
+            rect = item.rectangle()
+            control["rectangle"] = [rect.left, rect.top, rect.right, rect.bottom]
+        controls.append(control)
+    return controls
+
+
+def start_ready_observer(process, evidence: Path, log_path: Path, diagnostic: dict, activity):
+    if "observer" not in diagnostic:
+        observer = ExceptionObserver(
+            process.pid, lambda: require_hosted_runner(os.environ, sys.platform, evidence)
+        )
+        diagnostic["observer"] = observer
+        observer.start()
+        write_json(
+            evidence / "exception-observation-scope.json",
+            {
+                "pid": process.pid,
+                "starts_after": "strict clean startup log, DB/worker readiness and Win32 splash gone",
+                "ends_after": "normal Exit and EXIT_PROCESS_DEBUG_EVENT",
+                "startup_debugger_attached": False,
+                "raw_startup_log_remains_strict": True,
+                "first_uia_probe_follows_observer_ready": True,
+                "log_offset_at_attach": log_path.stat().st_size,
+            },
+        )
+        activity("exception_observer_attached_before_first_uia")
+    return diagnostic["observer"]
 
 
 def _launch_cycle(
@@ -682,14 +854,10 @@ def _launch_cycle(
     input_evidence = _reset_runner_idle(evidence)
     started = time.time()
     process = subprocess.Popen([str(executable)], cwd=payload, env=environment)
-    if diagnostic is not None:
-        diagnostic.update(parent=process, executable=executable, started=started)
-    observer = ExceptionObserver(
-        process.pid, lambda: require_hosted_runner(os.environ, sys.platform, evidence)
-    )
-    if diagnostic is not None:
-        diagnostic["observer"] = observer
-    observer.start()
+    if diagnostic is None:
+        diagnostic = {}
+    diagnostic.update(parent=process, executable=executable, started=started)
+    observer = None
     activities = []
 
     def activity(phase):
@@ -705,7 +873,10 @@ def _launch_cycle(
         )
         write_json(evidence / "ui-activity.json", activities)
 
-    activity("exception_observer_attached")
+    def attach_before_uia():
+        nonlocal observer
+        observer = start_ready_observer(process, evidence, log_path, diagnostic, activity)
+
     deadline = time.monotonic() + 90
     window = None
     while time.monotonic() < deadline:
@@ -717,14 +888,18 @@ def _launch_cycle(
             if log_path.exists()
             else ""
         )
-        check_runtime_log(fresh_log, pending=observer.trace["attached"])
+        check_runtime_log(fresh_log, pending=observer is not None and observer.trace["attached"])
         activity("before_main_readiness_probe")
-        window = _main_window(candidates, evidence, ready=runtime_ready(fresh_log))
+        window = _main_window(
+            candidates, evidence, ready=runtime_ready(fresh_log), before_uia=attach_before_uia
+        )
         if window is not None:
             break
         time.sleep(0.5)
     if window is None:
         raise RuntimeError("No actual main window appeared before timeout")
+    if observer is None:
+        raise RuntimeError("UI readiness was observed without an active exception observer")
     time.sleep(2)
     candidates = _related_processes(executable, started)
     ui_process = next((item for item in candidates if item.pid == window.process_id()), None)
@@ -768,7 +943,11 @@ def _launch_cycle(
     if not any(item["name"].strip() in {"System", "Settings", "시스템"} for item in controls):
         raise RuntimeError("Main-window accessibility tree lacks the application System menu")
     content = validate_main_content(controls, fixture)
-    capture = _capture(window, evidence / "main-window.png")
+    capture = _capture(
+        window,
+        evidence / "main-window.png",
+        verify_visible=lambda stage: _verify_capture_visibility(window, evidence, controls, stage),
+    )
     activity("main_calendar_and_task_capture")
     _normal_exit(window, candidates, evidence, activity)
     deadline = time.monotonic() + 30

@@ -300,7 +300,9 @@ def test_uia_is_not_imported_before_runtime_ready_and_splash_gone(
     monkeypatch.setitem(sys.modules, "pywinauto", None)
     monkeypatch.setattr(smoke, "_window_metadata", lambda _processes: [])
     monkeypatch.setattr(smoke, "splash_visible", lambda _windows: splash)
-    assert smoke._main_window([], tmp_path, ready=ready) is None
+    attach = Mock(side_effect=AssertionError("No debugger may attach during startup"))
+    assert smoke._main_window([], tmp_path, ready=ready, before_uia=attach) is None
+    attach.assert_not_called()
     observation = __import__("json").loads(
         (tmp_path / "window-observation.json").read_text(encoding="utf-8", errors="strict")
     )
@@ -499,6 +501,7 @@ def test_capture_verifies_foreground_and_real_window_point_ownership(
     monkeypatch.setitem(sys.modules, "win32gui", gui)
     monkeypatch.setitem(sys.modules, "win32con", SimpleNamespace(SW_MINIMIZE=6, SW_RESTORE=9))
     monkeypatch.setattr(smoke, "require_hosted_runner", lambda *_args: tmp_path)
+    monkeypatch.setattr(smoke, "_dismiss_paging_notice", lambda *_args: None)
     monkeypatch.setattr(smoke.time, "sleep", lambda _seconds: None)
     window = SimpleNamespace(
         handle=3,
@@ -515,3 +518,188 @@ def test_foreground_preparation_cannot_run_on_local_desktop(tmp_path, monkeypatc
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     with pytest.raises(RuntimeError, match="disposable"):
         smoke._prepare_visible_main(SimpleNamespace(handle=43380), tmp_path)
+
+
+def test_ready_debugger_attach_precedes_first_uia_probe(tmp_path, monkeypatch):
+    order = []
+    monkeypatch.setitem(sys.modules, "win32gui", SimpleNamespace(IsChild=lambda *_args: False))
+
+    def desktop(**_kwargs):
+        order.append("uia")
+        return Mock()
+
+    monkeypatch.setitem(sys.modules, "pywinauto", SimpleNamespace(Desktop=desktop))
+    monkeypatch.setattr(smoke, "_window_metadata", lambda _processes: [])
+    monkeypatch.setattr(smoke, "select_qualified_main", lambda *_args: None)
+    smoke._main_window([], tmp_path, ready=True, before_uia=lambda: order.append("attach_ready"))
+    assert order == ["attach_ready", "uia"]
+
+
+def test_repeated_readiness_probes_attach_debugger_only_once(tmp_path, monkeypatch):
+    observed = Mock()
+    constructor = Mock(return_value=observed)
+    monkeypatch.setattr(smoke, "ExceptionObserver", constructor)
+    log = tmp_path / "synthetic.log"
+    log.write_text("clean startup", encoding="utf-8", errors="strict")
+    diagnostic, phases = {}, []
+    for _index in range(3):
+        assert (
+            smoke.start_ready_observer(
+                SimpleNamespace(pid=42), tmp_path, log, diagnostic, phases.append
+            )
+            is observed
+        )
+    constructor.assert_called_once()
+    observed.start.assert_called_once_with()
+    assert phases == ["exception_observer_attached_before_first_uia"]
+
+
+def test_pre_attach_rpc_stops_launch_before_any_debugger_or_uia(tmp_path, monkeypatch):
+    profile = tmp_path / "profile"
+    log = profile / "kimhyojin/Dark Calendar/crash.log"
+    log.parent.mkdir(parents=True)
+    process = SimpleNamespace(pid=42, poll=lambda: None)
+
+    def fake_popen(*_args, **_kwargs):
+        log.write_text(
+            "Windows fatal exception: code 0x8001010d\n", encoding="utf-8", errors="strict"
+        )
+        return process
+
+    monkeypatch.setattr(smoke.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(smoke, "_reset_runner_idle", lambda *_args: {})
+    monkeypatch.setattr(smoke, "_related_processes", lambda *_args: [process])
+    constructor, uia = Mock(), Mock()
+    monkeypatch.setattr(smoke, "ExceptionObserver", constructor)
+    monkeypatch.setattr(smoke, "_main_window", uia)
+    with pytest.raises(RuntimeError, match="Unclassified"):
+        smoke._launch_cycle(
+            tmp_path, profile, tmp_path / "evidence", version="4.6.4", sqlite_version="3.54.1"
+        )
+    constructor.assert_not_called()
+    uia.assert_not_called()
+
+
+def paging_metadata():
+    return {
+        "pid": 99,
+        "executable": r"C:\Windows\System32\rundll32.exe",
+        "title": "System Properties",
+        "class_name": "#32770",
+        "children": [
+            {"class_name": "Static", "text": smoke.PAGING_NOTICE, "handle": 4, "control_id": 9},
+            {"class_name": "Button", "text": "OK", "handle": 5, "control_id": 1},
+        ],
+    }
+
+
+def test_only_exact_os_paging_information_notice_can_be_acknowledged(monkeypatch):
+    monkeypatch.setenv("SYSTEMROOT", r"C:\Windows")
+    assert smoke.select_paging_notice(paging_metadata(), 42) == 5
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("pid", 42),
+        ("executable", r"C:\Temp\rundll32.exe"),
+        ("executable", r"C:\Windows\System32\DarkCalendar.exe"),
+        ("title", "Air Calendar Error"),
+        ("class_name", "Qt6102QWindowIcon"),
+    ],
+)
+def test_app_errors_or_untrusted_paging_lookalikes_are_never_closed(monkeypatch, field, value):
+    monkeypatch.setenv("SYSTEMROOT", r"C:\Windows")
+    metadata = paging_metadata()
+    metadata[field] = value
+    assert smoke.select_paging_notice(metadata, 42) is None
+
+
+def test_nonmatching_information_or_wrong_button_cannot_be_closed(monkeypatch):
+    monkeypatch.setenv("SYSTEMROOT", r"C:\Windows")
+    metadata = paging_metadata()
+    metadata["children"][0]["text"] = "Change virtual memory settings?"
+    assert smoke.select_paging_notice(metadata, 42) is None
+    metadata = paging_metadata()
+    metadata["children"][1]["text"] = "Apply"
+    assert smoke.select_paging_notice(metadata, 42) is None
+
+
+@pytest.mark.parametrize("application_owns_dialog", [False, True])
+def test_only_fingerprinted_foreign_os_information_receives_ok(
+    tmp_path, monkeypatch, application_owns_dialog
+):
+    monkeypatch.setenv("SYSTEMROOT", r"C:\Windows")
+    gui = Mock()
+    texts = {99: "System Properties", 4: smoke.PAGING_NOTICE, 5: "OK"}
+    classes = {99: "#32770", 4: "Static", 5: "Button"}
+    gui.GetWindowText.side_effect = texts.__getitem__
+    gui.GetClassName.side_effect = classes.__getitem__
+    gui.GetDlgCtrlID.side_effect = lambda handle: 1 if handle == 5 else 9
+    gui.IsWindowVisible.return_value = True
+    gui.IsWindow.return_value = False
+    gui.EnumWindows.side_effect = lambda callback, context: callback(99, context)
+    gui.EnumChildWindows.side_effect = lambda _owner, callback, context: [
+        callback(handle, context) for handle in (4, 5)
+    ]
+    owner = 42 if application_owns_dialog else 99
+    monkeypatch.setitem(sys.modules, "win32gui", gui)
+    monkeypatch.setitem(
+        sys.modules,
+        "win32process",
+        SimpleNamespace(GetWindowThreadProcessId=lambda _handle: (17, owner)),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "psutil",
+        SimpleNamespace(
+            Process=lambda _pid: SimpleNamespace(exe=lambda: paging_metadata()["executable"])
+        ),
+    )
+    desktop = Mock()
+    desktop_type = Mock(return_value=desktop)
+    monkeypatch.setitem(sys.modules, "pywinauto", SimpleNamespace(Desktop=desktop_type))
+    monkeypatch.setattr(smoke, "require_hosted_runner", lambda *_args: tmp_path)
+    smoke._dismiss_paging_notice(SimpleNamespace(process_id=lambda: 42), tmp_path)
+    if application_owns_dialog:
+        desktop_type.assert_not_called()
+    else:
+        desktop_type.assert_called_once_with(backend="win32")
+        desktop.window.assert_called_once_with(handle=5)
+        desktop.window.return_value.wrapper_object.return_value.click_input.assert_called_once()
+
+
+def test_paging_notice_dismissal_cannot_operate_on_local_desktop(tmp_path, monkeypatch):
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    with pytest.raises(RuntimeError, match="disposable"):
+        smoke._dismiss_paging_notice(SimpleNamespace(process_id=lambda: 43380), tmp_path)
+
+
+def test_capture_grid_catches_center_popup_missed_by_previous_four_samples():
+    samples = smoke.capture_points([6, 6, 1018, 706], [])
+    assert len(samples) == 63
+    assert {"source": "window_grid", "point": [512, 356]} in samples
+    assert any(313 <= x <= 717 and 314 <= y <= 498 for x, y in [s["point"] for s in samples])
+
+
+def test_required_calendar_task_content_rectangles_add_interior_samples():
+    controls = [{"name": "Main Calendar", "rectangle": [100, 300, 500, 700]}]
+    samples = smoke.capture_points([0, 0, 1000, 700], controls)
+    assert {"source": "Main Calendar", "point": [300, 500]} in samples
+    assert {"source": "Main Calendar", "point": [200, 400]} in samples
+
+
+def test_capture_checks_visibility_both_immediately_before_and_after_pixels(tmp_path, monkeypatch):
+    phases = []
+    rendered = Mock()
+    rendered.width, rendered.height = 1000, 700
+
+    def capture():
+        phases.append("pixels")
+        return rendered
+
+    window = SimpleNamespace(handle=3, capture_as_image=capture, process_id=lambda: 42)
+    monkeypatch.setattr(smoke, "validate_capture", lambda _image: {})
+    monkeypatch.setattr(smoke, "sha256", lambda _path: "f" * 64)
+    smoke._capture(window, tmp_path / "main.png", verify_visible=phases.append)
+    assert phases == ["before", "pixels", "after"]
