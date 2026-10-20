@@ -2,10 +2,11 @@
 
 개발 변경 버전과 실제 공개·설치 상태는 별도로 관리한다. 버전 부여는 검증·게시 완료를 의미하지 않는다.
 
-기준 버전: `3.8.1` · 현재 개발 버전: **`4.6.2`**
+기준 버전: `3.8.1` · 현재 개발 버전: **`4.6.3`**
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.6.3 | 2026-10-20T10:32:02.317807+09:00 | change | 별도 Windows VM에서 동일 배포 페이로드의 native 기동·재시작 검증 실행 | `isolated-native-validation-job-20261020` |
 | 4.6.2 | 2026-10-20T10:21:06.865568+09:00 | change | Keep dependency lock bytes stable during release version sync and retain CI runtime diagnostics | `ci-lock-comment-stability-20261020` |
 | 4.6.1 | 2026-10-20T10:10:26.659642+09:00 | change | 전용 Python 빌드에서 pywin32 등 원본 .pth 초기화를 보존해 Windows 통합 모듈 누락 방지 | `private-build-runtime-pth-initialization-20261020` |
 | 4.6.0 | 2026-10-20T10:07:08.345455+09:00 | store | DB 손상 재발 방지와 최신 KeyDeck 전체 입력의 Store 릴리스 준비 | `store-db-runtime-fix-20261020` |

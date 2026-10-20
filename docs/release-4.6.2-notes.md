@@ -1,6 +1,6 @@
 # Air Calendar 4.6.2
 
-Released: 2026-10-20
+Unpublished candidate: 2026-10-20. The native validation environment was not fresh; this candidate was not published.
 
 - Updated the bundled SQLite engine to 3.54.1 and improved database migration consistency.
 - Startup messages now distinguish damaged, busy and inaccessible databases and retain the original error and file path for recovery.

@@ -81,6 +81,33 @@ def test_existing_state_is_refused_instead_of_reset(existing):
         smoke.require_fresh_state(*existing)
 
 
+@pytest.mark.parametrize(
+    "settings,shared,running", [(True, False, False), (False, True, False), (False, False, True)]
+)
+def test_preexisting_state_diagnostic_records_only_boolean_categories(
+    tmp_path, monkeypatch, settings, shared, running
+):
+    monkeypatch.setattr(smoke, "require_hosted_runner", lambda *_args: tmp_path)
+    monkeypatch.setattr(smoke, "_desktop_preflight", lambda: {"session_id": 2})
+    monkeypatch.setattr(smoke, "_settings_exists", lambda: settings)
+    monkeypatch.setattr(smoke, "Path", lambda _path: SimpleNamespace(exists=lambda: shared))
+    process = SimpleNamespace(pid=1234, info={"name": "DarkCalendar.exe"})
+    monkeypatch.setitem(
+        sys.modules,
+        "psutil",
+        SimpleNamespace(process_iter=lambda _attributes: [process] if running else []),
+    )
+    summary = {}
+    with pytest.raises(RuntimeError, match="refusing to reset"):
+        smoke.run(SimpleNamespace(evidence=tmp_path), summary)
+    assert summary["preexisting_state"] == {
+        "settings_key_exists": settings,
+        "shared_directory_exists": shared,
+        "calendar_process_running": running,
+    }
+    assert all(isinstance(value, bool) for value in summary["preexisting_state"].values())
+
+
 def test_process_scan_skips_inaccessible_creation_time(tmp_path, monkeypatch):
     class ProcessError(Exception):
         pass

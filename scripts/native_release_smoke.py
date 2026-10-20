@@ -509,7 +509,17 @@ def run(args, summary: dict) -> None:
         for process in psutil.process_iter(["name"])
         if (process.info["name"] or "").lower() == "darkcalendar.exe"
     ]
-    require_fresh_state(_settings_exists(), shared.exists(), running)
+    preexisting_state = {
+        "settings_key_exists": _settings_exists(),
+        "shared_directory_exists": shared.exists(),
+        "calendar_process_running": bool(running),
+    }
+    summary["preexisting_state"] = preexisting_state
+    require_fresh_state(
+        preexisting_state["settings_key_exists"],
+        preexisting_state["shared_directory_exists"],
+        running,
+    )
     candidate = args.payload.resolve()
     baseline = args.baseline_payload.resolve()
     if sha256(baseline / "DarkCalendar.exe") != BASELINE_EXE_SHA256:

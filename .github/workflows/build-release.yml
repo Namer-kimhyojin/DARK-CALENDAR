@@ -68,40 +68,6 @@ jobs:
         shell: cmd
         run: .\build-release.bat -Arch x64 -Channel Stable -NoBanner
 
-      - name: Prepare isolated native GUI validation
-        shell: powershell
-        run: |
-          $runtimeJson = .\.venv\Scripts\python.exe scripts\prepare_sqlite_build_runtime.py --arch x64 --directory build\python-sqlite-x64 --check
-          if ($LASTEXITCODE -ne 0) { throw "Prepared runtime validation failed: $($runtimeJson -join [Environment]::NewLine)" }
-          $runtime = ($runtimeJson -join "`n") | ConvertFrom-Json
-          & $runtime.python_executable -m venv build\native-smoke-venv
-          if ($LASTEXITCODE -ne 0) { throw "Native validation environment creation failed." }
-          .\build\native-smoke-venv\Scripts\python.exe -m pip install pywinauto==0.6.9 Pillow==13.0.0 psutil==7.2.2
-          if ($LASTEXITCODE -ne 0) { throw "Native validation dependency installation failed." }
-          .\build\native-smoke-venv\Scripts\python.exe scripts\prepare_native_smoke_baseline.py --directory "$env:RUNNER_TEMP\native-baseline-4.3.3"
-          if ($LASTEXITCODE -ne 0) { throw "Previous public release verification failed." }
-
-      - name: Verify native startup and normal restart for fresh and upgrade profiles
-        shell: powershell
-        run: |
-          $metadata = Get-Content "calendar_app\app_metadata.py" -Raw -Encoding utf8
-          $match = [regex]::Match($metadata, 'APP_VERSION\s*=\s*"([^"]+)"')
-          if (-not $match.Success) { throw "APP_VERSION was not found." }
-          .\build\native-smoke-venv\Scripts\python.exe scripts\native_release_smoke.py `
-            --payload dist/x64/DarkCalendar `
-            --baseline-payload "$env:RUNNER_TEMP\native-baseline-4.3.3" `
-            --expected-version $match.Groups[1].Value `
-            --evidence "$env:RUNNER_TEMP\native-release-evidence"
-          if ($LASTEXITCODE -ne 0) { throw "Native startup/restart release gate failed." }
-
-      - name: Upload native startup and restart evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: darkcalendar-native-runtime-evidence-x64
-          path: ${{ runner.temp }}/native-release-evidence
-          if-no-files-found: warn
-
       - name: Upload x64 payload
         uses: actions/upload-artifact@v4
         with:
@@ -128,6 +94,59 @@ jobs:
             release/source/*-corresponding-source.zip
             release/source/*-corresponding-source.zip.sha256
           if-no-files-found: error
+
+  verify-native-x64:
+    needs:
+      - build-x64
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup native validation Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Download unchanged x64 payload
+        uses: actions/download-artifact@v4
+        with:
+          name: darkcalendar-dist-x64
+          path: native-payload
+
+      - name: Prepare isolated native GUI validation
+        shell: powershell
+        run: |
+          python -m venv build\native-smoke-venv
+          if ($LASTEXITCODE -ne 0) { throw "Native validation environment creation failed." }
+          .\build\native-smoke-venv\Scripts\python.exe -m pip install pywinauto==0.6.9 Pillow==13.0.0 psutil==7.2.2
+          if ($LASTEXITCODE -ne 0) { throw "Native validation dependency installation failed." }
+          .\build\native-smoke-venv\Scripts\python.exe scripts\prepare_native_smoke_baseline.py --directory "$env:RUNNER_TEMP\native-baseline-4.3.3"
+          if ($LASTEXITCODE -ne 0) { throw "Previous public release verification failed." }
+
+      - name: Verify native startup and normal restart for fresh and upgrade profiles
+        shell: powershell
+        run: |
+          $metadata = Get-Content "calendar_app\app_metadata.py" -Raw -Encoding utf8
+          $match = [regex]::Match($metadata, 'APP_VERSION\s*=\s*"([^"]+)"')
+          if (-not $match.Success) { throw "APP_VERSION was not found." }
+          .\build\native-smoke-venv\Scripts\python.exe scripts\native_release_smoke.py `
+            --payload native-payload `
+            --baseline-payload "$env:RUNNER_TEMP\native-baseline-4.3.3" `
+            --expected-version $match.Groups[1].Value `
+            --evidence "$env:RUNNER_TEMP\native-release-evidence"
+          if ($LASTEXITCODE -ne 0) { throw "Native startup/restart release gate failed." }
+
+      - name: Upload native startup and restart evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-native-runtime-evidence-x64
+          path: ${{ runner.temp }}/native-release-evidence
+          if-no-files-found: warn
 
   build-arm64:
     if: github.event_name == 'workflow_dispatch' && inputs.build_arm64 == true
@@ -222,6 +241,7 @@ jobs:
     if: github.ref_type == 'tag'
     needs:
       - build-x64
+      - verify-native-x64
     runs-on: windows-latest
     permissions:
       contents: write
