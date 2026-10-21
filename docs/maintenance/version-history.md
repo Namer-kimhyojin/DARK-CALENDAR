@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.7.0 | 2026-10-21T11:47:48.318505+09:00 | change | Normalize release regression test formatting and preserve cancellation trace coverage for commit quality checks | `release-4.7.0-test-format-20261021` |
 | 4.7.0 | 2026-10-21T11:41:32.507067+09:00 | release | Unified date/time input across schedules, directives and routines with keyboard improvements and accumulated calendar sync reliability and security fixes | `release-4.7.0-20261021` |
 | 4.6.9 | 2026-10-21T11:35:00.161574+09:00 | change | Fix date/time keyboard entry, popup traversal, live schedule summaries and consistent task editor controls after native Windows QA | `schedule-datetime-native-20261021` |
 | 4.6.9 | 2026-10-21T11:05:36.254885+09:00 | change | 일정 날짜 통합·시간 목록·일정 길이 입력 및 지시협조·일반업무 디자인 통일, 생성수정이동복사 검증 | `schedule-datetime-input-20261021` |
