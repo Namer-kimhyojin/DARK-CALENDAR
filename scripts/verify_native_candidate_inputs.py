@@ -20,6 +20,7 @@ QA_FILES = frozenset(
         ".github/workflows/verify-native-candidate.yml",
         "scripts/verify_native_candidate_inputs.py",
         "scripts/native-candidate-4.6.4.json",
+        "scripts/native-candidate-4.7.1.json",
         "scripts/native_release_smoke.py",
         "scripts/native_exception_observer.py",
         "tests/test_native_release_smoke.py",

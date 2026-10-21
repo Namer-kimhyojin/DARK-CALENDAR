@@ -49,6 +49,20 @@ def test_development_version_only_change_can_reuse_candidate(repository, version
     assert result["product_dependency_packaging_inputs_unchanged"]
 
 
+@pytest.mark.parametrize("version", ["4.6.4", "4.7.1"])
+def test_only_reviewed_exact_candidate_policy_paths_are_qa_files(repository, version):
+    root, policy = repository
+    name = f"scripts/native-candidate-{version}.json"
+    path = root / name
+    path.parent.mkdir(parents=True)
+    path.write_text("{}\n", encoding="utf-8", errors="strict")
+    git(root, "add", ".")
+    git(root, "commit", "-m", "reviewed QA policy path")
+    result = candidate.verify_inputs(root, policy, git(root, "rev-parse", "HEAD"))
+    assert result["explained_changes"] == {name: "explicit QA-only file"}
+    assert result["product_dependency_packaging_inputs_unchanged"]
+
+
 def test_multidigit_msix_version_does_not_hide_os_floor_or_identity_changes():
     original = '<Package><Identity Name="Same" Version="4.6.9.0"/><TargetDeviceFamily MinVersion="10.0.17763.0"/></Package>'
     newer = original.replace('Version="4.6.9.0"', 'Version="4.6.10.0"')
@@ -69,6 +83,9 @@ def test_multidigit_msix_version_does_not_hide_os_floor_or_identity_changes():
         ("DarkCalendar.spec", "new packaging\n"),
         ("calendar_app/new_feature.py", "new feature\n"),
         (".github/workflows/build-release.yml", "new pipeline\n"),
+        ("scripts/native-candidate-4.7.2.json", "{}\n"),
+        ("scripts/native-candidate-other.json", "{}\n"),
+        ("scripts/nested/native-candidate-4.7.1.json", "{}\n"),
     ],
 )
 def test_product_dependency_or_packaging_change_requires_rebuild(repository, name, contents):

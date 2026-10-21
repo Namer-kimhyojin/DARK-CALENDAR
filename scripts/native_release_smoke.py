@@ -695,13 +695,7 @@ def _dismiss_paging_notice(window, evidence: Path) -> None:
 
     notices, observations = [], []
 
-    def inspect(handle, _context):
-        if (
-            not win32gui.IsWindowVisible(handle)
-            or win32gui.GetWindowText(handle) != "System Properties"
-            or win32gui.GetClassName(handle) != "#32770"
-        ):
-            return
+    def describe(handle):
         pid = win32process.GetWindowThreadProcessId(handle)[1]
         children = []
 
@@ -716,7 +710,7 @@ def _dismiss_paging_notice(window, evidence: Path) -> None:
             )
 
         win32gui.EnumChildWindows(handle, child, None)
-        metadata = {
+        return {
             "handle": handle,
             "pid": pid,
             "title": win32gui.GetWindowText(handle),
@@ -724,6 +718,15 @@ def _dismiss_paging_notice(window, evidence: Path) -> None:
             "executable": psutil.Process(pid).exe(),
             "children": children,
         }
+
+    def inspect(handle, _context):
+        if (
+            not win32gui.IsWindowVisible(handle)
+            or win32gui.GetWindowText(handle) != "System Properties"
+            or win32gui.GetClassName(handle) != "#32770"
+        ):
+            return
+        metadata = describe(handle)
         button = select_paging_notice(metadata, window.process_id())
         observations.append({**metadata, "recognized_paging_notice": button is not None})
         if button is not None:
@@ -738,13 +741,85 @@ def _dismiss_paging_notice(window, evidence: Path) -> None:
         from pywinauto import Desktop
 
         write_json(evidence / "runner-paging-notice.json", metadata)
-        control = Desktop(backend="win32").window(handle=button).wrapper_object()
-        control.click_input()
-        deadline = time.monotonic() + 3
-        while win32gui.IsWindow(metadata["handle"]) and time.monotonic() < deadline:
-            time.sleep(0.1)
-        if win32gui.IsWindow(metadata["handle"]):
-            raise RuntimeError("Exact OS paging information notice did not close after OK")
+        desktop = Desktop(backend="win32")
+        dialog = desktop.window(handle=metadata["handle"]).wrapper_object()
+        control = desktop.window(handle=button).wrapper_object()
+        attempt = {"handle": metadata["handle"], "button": button, "ok_clicked": False}
+
+        def verify_identity(original=metadata, expected_button=button):
+            current = describe(original["handle"])
+            if (
+                current["pid"] != original["pid"]
+                or current["executable"] != original["executable"]
+                or select_paging_notice(current, window.process_id()) != expected_button
+            ):
+                raise RuntimeError("OS paging information notice changed before input")
+            return current
+
+        try:
+            # ButtonWrapper.click_input() does not activate its parent dialog.
+            # Activate only the already fingerprinted notice, then prove the
+            # real mouse position will reach that exact OK button before input.
+            verify_identity()
+            dialog.set_focus()
+            attempt["before_capture"] = _capture(
+                dialog, evidence / "runner-paging-notice-before.png", main=False
+            )
+            attempt["before"] = verify_identity()
+            left, top, right, bottom = win32gui.GetWindowRect(button)
+            point = ((left + right) // 2, (top + bottom) // 2)
+            target = win32gui.WindowFromPoint(point)
+            attempt["input"] = {
+                "foreground": win32gui.GetForegroundWindow(),
+                "button_rectangle": [left, top, right, bottom],
+                "point": list(point),
+                "target": target,
+                "target_root": win32gui.GetAncestor(target, 2),
+                "button_root": win32gui.GetAncestor(button, 2),
+                "notice_visible": bool(win32gui.IsWindowVisible(metadata["handle"])),
+                "notice_enabled": bool(win32gui.IsWindowEnabled(metadata["handle"])),
+                "button_visible": bool(win32gui.IsWindowVisible(button)),
+                "button_enabled": bool(win32gui.IsWindowEnabled(button)),
+            }
+            observed = attempt["input"]
+            write_json(evidence / "runner-paging-notice-input.json", attempt)
+            if (
+                observed["foreground"] != metadata["handle"]
+                or observed["target"] != button
+                or observed["target_root"] != metadata["handle"]
+                or observed["button_root"] != metadata["handle"]
+                or not all(
+                    observed[key]
+                    for key in (
+                        "notice_visible",
+                        "notice_enabled",
+                        "button_visible",
+                        "button_enabled",
+                    )
+                )
+                or not (left < right and top < bottom)
+            ):
+                raise RuntimeError("Exact OS paging OK button is not foreground and unobscured")
+            control.click_input()
+            attempt["ok_clicked"] = True
+            deadline = time.monotonic() + 3
+            while win32gui.IsWindow(metadata["handle"]) and time.monotonic() < deadline:
+                time.sleep(0.1)
+            if win32gui.IsWindow(metadata["handle"]):
+                raise RuntimeError("Exact OS paging information notice did not close after OK")
+        finally:
+            attempt["notice_still_exists"] = bool(win32gui.IsWindow(metadata["handle"]))
+            if attempt["notice_still_exists"]:
+                try:
+                    attempt["after"] = describe(metadata["handle"])
+                    attempt["after_visible"] = bool(win32gui.IsWindowVisible(metadata["handle"]))
+                    attempt["after_foreground"] = win32gui.GetForegroundWindow()
+                    attempt["after_capture"] = _capture(
+                        dialog, evidence / "runner-paging-notice-after.png", main=False
+                    )
+                except Exception as error:
+                    attempt["observation_error"] = str(error)
+            write_json(evidence / "runner-paging-notice-result.json", attempt)
         write_json(
             evidence / "runner-paging-notice-acknowledged.json",
             {"handle": metadata["handle"], "ok_clicked": True, "settings_changed": False},

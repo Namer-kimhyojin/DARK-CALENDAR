@@ -6,7 +6,7 @@ from pathlib import Path
 import sqlite3
 import sys
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, call
 
 import pytest
 from scripts import native_release_smoke as smoke
@@ -679,29 +679,32 @@ def test_nonmatching_information_or_wrong_button_cannot_be_closed(monkeypatch):
     assert smoke.select_paging_notice(metadata, 42) is None
 
 
-@pytest.mark.parametrize("application_owns_dialog", [False, True])
-def test_only_fingerprinted_foreign_os_information_receives_ok(
-    tmp_path, monkeypatch, application_owns_dialog
-):
+@pytest.fixture
+def paging_runtime(tmp_path, monkeypatch):
     monkeypatch.setenv("SYSTEMROOT", r"C:\Windows")
     gui = Mock()
+    state = {"pid": 99, "exists": True}
     texts = {99: "System Properties", 4: smoke.PAGING_NOTICE, 5: "OK"}
     classes = {99: "#32770", 4: "Static", 5: "Button"}
     gui.GetWindowText.side_effect = texts.__getitem__
     gui.GetClassName.side_effect = classes.__getitem__
     gui.GetDlgCtrlID.side_effect = lambda handle: 1 if handle == 5 else 9
     gui.IsWindowVisible.return_value = True
-    gui.IsWindow.return_value = False
+    gui.IsWindowEnabled.return_value = True
+    gui.IsWindow.side_effect = lambda _handle: state["exists"]
+    gui.GetWindowRect.return_value = (100, 100, 160, 140)
+    gui.GetForegroundWindow.return_value = 99
+    gui.WindowFromPoint.return_value = 5
+    gui.GetAncestor.return_value = 99
     gui.EnumWindows.side_effect = lambda callback, context: callback(99, context)
     gui.EnumChildWindows.side_effect = lambda _owner, callback, context: [
         callback(handle, context) for handle in (4, 5)
     ]
-    owner = 42 if application_owns_dialog else 99
     monkeypatch.setitem(sys.modules, "win32gui", gui)
     monkeypatch.setitem(
         sys.modules,
         "win32process",
-        SimpleNamespace(GetWindowThreadProcessId=lambda _handle: (17, owner)),
+        SimpleNamespace(GetWindowThreadProcessId=lambda _handle: (17, state["pid"])),
     )
     monkeypatch.setitem(
         sys.modules,
@@ -711,16 +714,105 @@ def test_only_fingerprinted_foreign_os_information_receives_ok(
         ),
     )
     desktop = Mock()
+    dialog, button = Mock(), Mock()
+    wrappers = {99: dialog, 5: button}
+    desktop.window.side_effect = lambda handle: SimpleNamespace(
+        wrapper_object=lambda: wrappers[handle]
+    )
+    button.click_input.side_effect = lambda: state.update(exists=False)
     desktop_type = Mock(return_value=desktop)
     monkeypatch.setitem(sys.modules, "pywinauto", SimpleNamespace(Desktop=desktop_type))
     monkeypatch.setattr(smoke, "require_hosted_runner", lambda *_args: tmp_path)
+    capture = Mock(side_effect=lambda _window, path, **_kwargs: {"path": path.name})
+    monkeypatch.setattr(smoke, "_capture", capture)
+    return SimpleNamespace(
+        gui=gui,
+        state=state,
+        texts=texts,
+        desktop=desktop,
+        desktop_type=desktop_type,
+        dialog=dialog,
+        button=button,
+        capture=capture,
+    )
+
+
+@pytest.mark.parametrize("application_owns_dialog", [False, True])
+def test_only_fingerprinted_foreign_os_information_receives_ok(
+    tmp_path, paging_runtime, application_owns_dialog
+):
+    runtime = paging_runtime
+    runtime.state["pid"] = 42 if application_owns_dialog else 99
     smoke._dismiss_paging_notice(SimpleNamespace(process_id=lambda: 42), tmp_path)
     if application_owns_dialog:
-        desktop_type.assert_not_called()
+        runtime.desktop_type.assert_not_called()
     else:
-        desktop_type.assert_called_once_with(backend="win32")
-        desktop.window.assert_called_once_with(handle=5)
-        desktop.window.return_value.wrapper_object.return_value.click_input.assert_called_once()
+        runtime.desktop_type.assert_called_once_with(backend="win32")
+        assert runtime.desktop.window.call_args_list == [call(handle=99), call(handle=5)]
+        runtime.dialog.set_focus.assert_called_once()
+        runtime.button.click_input.assert_called_once()
+        observed = json.loads(
+            (tmp_path / "runner-paging-notice-result.json").read_text(
+                encoding="utf-8", errors="strict"
+            )
+        )
+        assert observed["ok_clicked"] and not observed["notice_still_exists"]
+        assert observed["input"]["target"] == 5
+
+
+@pytest.mark.parametrize(
+    "failure", ["foreground", "other_button", "other_root", "disabled", "hidden"]
+)
+def test_paging_notice_must_be_active_and_actual_ok_unobscured_before_click(
+    tmp_path, paging_runtime, failure
+):
+    runtime = paging_runtime
+    if failure == "foreground":
+        runtime.gui.GetForegroundWindow.return_value = 42
+    elif failure == "other_button":
+        # A sibling control with the same parent is still the wrong mouse target.
+        runtime.gui.WindowFromPoint.return_value = 4
+    elif failure == "other_root":
+        runtime.gui.GetAncestor.return_value = 42
+    elif failure == "disabled":
+        runtime.gui.IsWindowEnabled.side_effect = lambda handle: handle != 5
+    elif failure == "hidden":
+        runtime.gui.IsWindowVisible.side_effect = lambda handle: handle != 5
+    with pytest.raises(RuntimeError, match="foreground and unobscured"):
+        smoke._dismiss_paging_notice(SimpleNamespace(process_id=lambda: 42), tmp_path)
+    runtime.button.click_input.assert_not_called()
+    assert (tmp_path / "runner-paging-notice-result.json").is_file()
+    assert runtime.capture.call_count == 2
+
+
+def test_paging_notice_rechecks_identity_after_activation(tmp_path, paging_runtime):
+    runtime = paging_runtime
+    runtime.dialog.set_focus.side_effect = lambda: runtime.state.update(pid=42)
+    with pytest.raises(RuntimeError, match="changed before input"):
+        smoke._dismiss_paging_notice(SimpleNamespace(process_id=lambda: 42), tmp_path)
+    runtime.button.click_input.assert_not_called()
+
+
+@pytest.mark.parametrize("still_visible", [False, True])
+def test_paging_notice_requires_destruction_and_records_post_click_failure(
+    tmp_path, monkeypatch, paging_runtime, still_visible
+):
+    runtime = paging_runtime
+    runtime.button.click_input.side_effect = lambda: setattr(
+        runtime.gui.IsWindowVisible, "return_value", still_visible
+    )
+    monkeypatch.setattr(smoke.time, "monotonic", Mock(side_effect=[0, 4]))
+    with pytest.raises(RuntimeError, match="did not close after OK"):
+        smoke._dismiss_paging_notice(SimpleNamespace(process_id=lambda: 42), tmp_path)
+    runtime.button.click_input.assert_called_once()
+    assert not (tmp_path / "runner-paging-notice-acknowledged.json").exists()
+    observed = json.loads(
+        (tmp_path / "runner-paging-notice-result.json").read_text(encoding="utf-8", errors="strict")
+    )
+    assert observed["ok_clicked"] and observed["notice_still_exists"]
+    assert observed["after_visible"] == still_visible
+    assert observed["after"]["pid"] == 99
+    assert observed["after_capture"]["path"] == "runner-paging-notice-after.png"
 
 
 def test_paging_notice_dismissal_cannot_operate_on_local_desktop(tmp_path, monkeypatch):
