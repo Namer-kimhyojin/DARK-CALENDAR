@@ -25,6 +25,10 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Preserve release input bytes on the disposable runner
+        shell: powershell
+        run: git config --global core.autocrlf false
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -103,6 +107,10 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Preserve release input bytes on the disposable runner
+        shell: powershell
+        run: git config --global core.autocrlf false
+
       - name: Checkout
         uses: actions/checkout@v4
 

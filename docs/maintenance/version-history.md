@@ -2,10 +2,12 @@
 
 제품 버전은 배포 단위로 결정한다. 변경 기록·Git/CI 빌드·공개·Store·설치 상태는 별도이며 변경 기록만으로 버전을 올리지 않는다.
 
-기준 버전: `3.8.1` · 현재 제품 버전: **`4.7.0`**
+기준 버전: `3.8.1` · 현재 제품 버전: **`4.7.1`**
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.7.1 | 2026-10-21T12:06:24.011310+09:00 | release | Unified date and time entry, external calendar reliability and security, and bounded sparse ICS recurrence processing | `release-4.7.1-20261021` |
+| 4.7.0 | 2026-10-21T12:06:21.818732+09:00 | change | Preserve sparse ICS recurrence results within the existing processing budget and keep exact input bytes in hosted Windows release jobs | `sparse-ics-and-release-checkout-20261021` |
 | 4.7.0 | 2026-10-21T11:51:42.154128+09:00 | store | Keep source and homepage on the verified last public release while 4.7.0 candidate is being validated; packaged build metadata remains release-specific | `release-4.7.0-pending-publication-20261021` |
 | 4.7.0 | 2026-10-21T11:47:48.318505+09:00 | change | Normalize release regression test formatting and preserve cancellation trace coverage for commit quality checks | `release-4.7.0-test-format-20261021` |
 | 4.7.0 | 2026-10-21T11:41:32.507067+09:00 | release | Unified date/time input across schedules, directives and routines with keyboard improvements and accumulated calendar sync reliability and security fixes | `release-4.7.0-20261021` |

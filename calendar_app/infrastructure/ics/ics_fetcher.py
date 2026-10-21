@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Bounded, validated and atomic read-only ICS subscription snapshots."""
 
+from copy import deepcopy
 from datetime import UTC, date, datetime, timedelta
 from http.client import HTTPException
 import logging
@@ -115,6 +116,38 @@ def _snapshot(raw, icalendar, zone, cancelled):
         return _snapshot_rows(raw, icalendar, zone, cancelled)
 
 
+def _recurrence_expansion_event(event):
+    """Avoid second-by-second searches for fully specified daily wall times.
+
+    With an interval of one second, explicit hour/minute/second filters select
+    the same ordered wall times as a daily rule expanding those three fields.
+    DTSTART, COUNT and UNTIL bound that identical sequence in either form.
+    Do not generalize across INTERVAL, BYSETPOS or other filters: their meaning
+    can depend on the frequency. Only the library's expansion copy is changed.
+    """
+    rule = event.get("RRULE")
+    start = event.get("DTSTART")
+    allowed = {"FREQ", "INTERVAL", "BYHOUR", "BYMINUTE", "BYSECOND", "COUNT", "UNTIL", "WKST"}
+    if (
+        not rule
+        or rule.get("FREQ") != ["SECONDLY"]
+        or rule.get("INTERVAL", [1]) != [1]
+        or not set(rule).issubset(allowed)
+        or start is None
+        or not isinstance(start.dt, datetime)
+    ):
+        return event
+    for key, upper in (("BYHOUR", 24), ("BYMINUTE", 60), ("BYSECOND", 60)):
+        values = rule.get(key)
+        if not values or any(
+            not isinstance(value, int) or not 0 <= value < upper for value in values
+        ):
+            return event
+    expanded_event = deepcopy(event)
+    expanded_event["RRULE"]["FREQ"] = ["DAILY"]
+    return expanded_event
+
+
 def _snapshot_rows(raw, icalendar, zone, cancelled):
     """Build a complete snapshot; a processing timeout must discard every row."""
     envelope = raw.strip().removeprefix(b"\xef\xbb\xbf").upper()
@@ -225,7 +258,7 @@ def _snapshot_rows(raw, icalendar, zone, cancelled):
                 if component.name == "VTIMEZONE":
                     series.add_component(component)
             for event in events:
-                series.add_component(event)
+                series.add_component(_recurrence_expansion_event(event))
             expanded = []
             for page in recurring_ical_events.of(series).paginate(
                 100, earliest_end=start, latest_start=end
