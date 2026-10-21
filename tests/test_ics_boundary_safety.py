@@ -57,7 +57,7 @@ def boundary(monkeypatch):
 
     def synchronize(data, response=None, **kwargs):
         stream = response or Response(data)
-        monkeypatch.setattr(ics_fetcher.urllib.request, "urlopen", lambda *args, **kw: stream)
+        monkeypatch.setattr(ics_fetcher, "open_subscription", lambda *args, **kw: stream)
         return ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul", **kwargs)
 
     yield conn, synchronize
@@ -260,7 +260,7 @@ def test_stream_error_after_receiving_a_complete_prefix_preserves_snapshot(
             return super().read1(size)
 
     stream = Interrupted(feed(event(name="Changed")))
-    monkeypatch.setattr(ics_fetcher.urllib.request, "urlopen", lambda *args, **kw: stream)
+    monkeypatch.setattr(ics_fetcher, "open_subscription", lambda *args, **kw: stream)
     assert ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul") == (0, 0, "network_unavailable")
     assert state(conn) == before
     assert stream.closed
@@ -278,7 +278,7 @@ def test_network_stream_failures_are_actionable_and_keep_snapshot(boundary, monk
             raise failure
 
     stream = Broken(b"")
-    monkeypatch.setattr(ics_fetcher.urllib.request, "urlopen", lambda *args, **kw: stream)
+    monkeypatch.setattr(ics_fetcher, "open_subscription", lambda *args, **kw: stream)
     assert ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul") == (0, 0, "network_unavailable")
     assert state(conn) == before
     assert stream.closed

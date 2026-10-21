@@ -214,14 +214,16 @@ function Get-AppField {
 
 function Assert-VersionFormat {
     param([string]$Ver)
-    if ($Ver -notmatch '^\d+\.\d+\.\d+$') {
+    if ($Ver -notmatch '^[1-9][0-9]*\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' -or
+        @($Ver.Split('.') | Where-Object { [double]$_ -gt 65535 }).Count -gt 0) {
         throw "Version must be MAJOR.MINOR.PATCH (e.g. 3.2.0). Got: '$Ver'"
     }
 }
 
 function Assert-PackageVersionFormat {
     param([string]$Ver)
-    if ($Ver -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+    if ($Ver -notmatch '^[1-9][0-9]*\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.0$' -or
+        @($Ver.Split('.') | Where-Object { [double]$_ -gt 65535 }).Count -gt 0) {
         throw "PackageVersion must be MAJOR.MINOR.PATCH.REVISION (e.g. 3.2.0.0). Got: '$Ver'"
     }
 }
@@ -240,70 +242,18 @@ function Sync-AppVersion {
         [string]$NewVersion,
         [string]$NewPackageVersion,
         [string]$NewDate,
-        [string]$NewChannel
+        [string]$NewChannel,
+        [string]$PythonExecutable = "python"
     )
 
     $utf8NoBom = [System.Text.UTF8Encoding]::new($false, $true)
 
-    # 1. app_metadata.py
-    $content = Get-Content $MetadataPath -Raw -Encoding utf8
-    $content = $content -replace '(APP_VERSION\s*=\s*)"[^"]+"', ('$1"' + $NewVersion + '"')
-    $content = $content -replace '(APP_PUBLISHED_VERSION\s*=\s*)"[^"]+"', ('$1"' + $NewVersion + '"')
-    $content = $content -replace '(APP_PUBLISHED_DATE\s*=\s*)"[^"]+"', ('$1"' + $NewDate + '"')
-    $content = $content -replace '(APP_RELEASE_DATE\s*=\s*)"[^"]+"', ('$1"' + $NewDate + '"')
-    $content = $content -replace '(APP_RELEASE_CHANNEL\s*=\s*)"[^"]+"', ('$1"' + $NewChannel + '"')
-    [System.IO.File]::WriteAllText($MetadataPath, $content, $utf8NoBom)
-    Write-Info "updated: app_metadata.py  ($NewVersion / $NewDate / $NewChannel)"
-
-    # 2. pyproject.toml
-    $pyproject = Get-Content $PyprojectPath -Raw -Encoding utf8
-    $pyproject = [regex]::Replace(
-        $pyproject,
-        '(?m)^(version\s*=\s*)"[^"]+"',
-        ('${1}"' + $NewVersion + '"'),
-        1
-    )
-    [System.IO.File]::WriteAllText($PyprojectPath, $pyproject, $utf8NoBom)
-    Write-Info "updated: pyproject.toml  ($NewVersion)"
-
-    # 3. AppxManifest.xml
-    $msixVer = $NewPackageVersion
-    [xml]$xml = Get-Content -Path $ManifestPath -Encoding utf8
-    $ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
-    $ns.AddNamespace("f", "http://schemas.microsoft.com/appx/manifest/foundation/windows10")
-    $identity = $xml.SelectSingleNode("/f:Package/f:Identity", $ns)
-    if ($null -ne $identity) {
-        $identity.SetAttribute("Version", $msixVer)
-        $xml.Save($ManifestPath)
-        $manifestContent = [System.IO.File]::ReadAllText($ManifestPath, [System.Text.Encoding]::UTF8)
-        if (-not $manifestContent.EndsWith("`n")) {
-            [System.IO.File]::WriteAllText(
-                $ManifestPath,
-                $manifestContent + [System.Environment]::NewLine,
-                $utf8NoBom
-            )
-        }
-        Write-Info "updated: AppxManifest.xml  ($msixVer)"
-    } else {
-        Write-Warn "AppxManifest.xml Identity node not found — skipped"
-    }
-
-    # 4. version_info.txt
-    $parts = $NewVersion -split '\.'
-    $ma = [int]$parts[0]; $mi = [int]$parts[1]; $pa = [int]$parts[2]
-    $tuple = "($ma, $mi, $pa, 0)"
-    $verStr = "${NewVersion}.0"
-    $vi = Get-Content $VersionInfoPath -Raw -Encoding utf8
-    $vi = $vi -replace 'filevers\s*=\s*\([^)]+\)', "filevers=$tuple"
-    $vi = $vi -replace 'prodvers\s*=\s*\([^)]+\)', "prodvers=$tuple"
-    $vi = $vi -replace (
-        '(StringStruct\(''FileVersion'',\s*'')[^'']+('')'
-    ), ('${1}' + $verStr + '${2}')
-    $vi = $vi -replace (
-        '(StringStruct\(''ProductVersion'',\s*'')[^'']+('')'
-    ), ('${1}' + $verStr + '${2}')
-    [System.IO.File]::WriteAllText($VersionInfoPath, $vi, $utf8NoBom)
-    Write-Info "updated: version_info.txt  ($verStr)"
+    # The version ledger is the single source for all four package surfaces.
+    & $PythonExecutable (Join-Path $ProjectRoot "scripts\manage_version.py") `
+        sync --root $ProjectRoot --expected $NewVersion --date $NewDate `
+        --channel $NewChannel --for-build
+    if ($LASTEXITCODE -ne 0) { throw "Prepared release version synchronization failed." }
+    Write-Info "updated: app, project, manifest and PE versions from version-history.json"
 
     # 5. Website and release-source notices
     $releasePage = "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v$NewVersion"
@@ -503,8 +453,94 @@ function Test-PythonEnv {
     Write-Info "venv OK (PyInstaller, PyQt6 present)"
 }
 
-# Copy only files referenced by AppxManifest.xml to the MSIX root. The complete
-# runtime Assets directory already lives under _internal via PyInstaller.
+# Lexical containment alone does not protect against a junction or symlink
+# inside an asset tree. Check existing components, including the asset root.
+function Assert-ManifestAssetTreePath {
+    param([string]$Path, [string]$Root)
+
+    $current = $Path
+    while ($true) {
+        if (Test-Path -LiteralPath $current) {
+            $item = Get-Item -LiteralPath $current -Force
+            if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+                throw "Manifest asset path contains a reparse point: $current"
+            }
+        }
+        if ($current.Equals($Root, [System.StringComparison]::OrdinalIgnoreCase)) { break }
+        $current = Split-Path -Parent $current
+    }
+}
+
+# Validate the complete manifest before the first write, and reuse this check
+# on the staged manifest immediately before MSIX packaging.
+function Get-ManifestAssetCopies {
+    param(
+        [Parameter(Mandatory)][string]$ManifestPath,
+        [Parameter(Mandatory)][string]$SourceRoot,
+        [Parameter(Mandatory)][string]$DestinationRoot,
+        [switch]$RequireDestination
+    )
+
+    [xml]$manifest = Get-Content -LiteralPath $ManifestPath -Raw -Encoding utf8
+    $assetPaths = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::OrdinalIgnoreCase
+    )
+    foreach ($node in $manifest.SelectNodes("//*")) {
+        foreach ($attribute in $node.Attributes) {
+            if ($attribute.LocalName -notmatch "(Logo|Image)$") { continue }
+            [void]$assetPaths.Add([string]$attribute.Value)
+        }
+
+        # Properties/Logo stores its asset path as element text rather than as
+        # an attribute, so it must be collected separately from VisualElements.
+        if ($node.LocalName -match "(Logo|Image)$") {
+            [void]$assetPaths.Add([string]$node.InnerText)
+        }
+    }
+    if ($assetPaths.Count -eq 0) { throw "No manifest asset references found." }
+
+    $sourceBase = [System.IO.Path]::GetFullPath($SourceRoot).TrimEnd([char[]]"\/")
+    $destinationBase = [System.IO.Path]::GetFullPath(
+        (Join-Path $DestinationRoot "Assets")
+    ).TrimEnd([char[]]"\/")
+    $sourcePrefix = $sourceBase + '\'
+    $destinationPrefix = $destinationBase + '\'
+    $copies = foreach ($relative in $assetPaths) {
+        if ([System.IO.Path]::IsPathRooted($relative) -or $relative.Contains('/') -or
+            -not $relative.StartsWith('Assets\', [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Invalid manifest asset path: '$relative'"
+        }
+        $parts = $relative.Split([char]'\')
+        foreach ($part in $parts) {
+            if ([string]::IsNullOrWhiteSpace($part) -or $part -eq '.' -or $part -eq '..' -or
+                $part.EndsWith('.') -or $part.EndsWith(' ') -or
+                $part.IndexOfAny([System.IO.Path]::GetInvalidFileNameChars()) -ge 0 -or
+                $part -match '^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)') {
+                throw "Invalid manifest asset path component in '$relative'"
+            }
+        }
+        $assetRelative = [string]::Join('\', $parts[1..($parts.Length - 1)])
+        $source = [System.IO.Path]::GetFullPath((Join-Path $sourceBase $assetRelative))
+        $destination = [System.IO.Path]::GetFullPath((Join-Path $destinationBase $assetRelative))
+        if (-not $source.StartsWith($sourcePrefix, [System.StringComparison]::OrdinalIgnoreCase) -or
+            -not $destination.StartsWith($destinationPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Manifest asset path escapes its Assets root: '$relative'"
+        }
+        Assert-ManifestAssetTreePath -Path $source -Root $sourceBase
+        Assert-ManifestAssetTreePath -Path $destination -Root $destinationBase
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "Manifest asset missing: $source"
+        }
+        if ($RequireDestination -and -not (Test-Path -LiteralPath $destination -PathType Leaf)) {
+            throw "Staged manifest asset missing: $destination"
+        }
+        [PSCustomObject]@{ Source = $source; Destination = $destination }
+    }
+    return $copies
+}
+
+# Copy only validated manifest references. The complete runtime Assets directory
+# already lives under _internal via PyInstaller.
 function Copy-ManifestAssets {
     param(
         [Parameter(Mandatory)][string]$ManifestPath,
@@ -512,45 +548,14 @@ function Copy-ManifestAssets {
         [Parameter(Mandatory)][string]$DestinationRoot
     )
 
-    [xml]$manifest = Get-Content $ManifestPath -Raw -Encoding utf8
-    $assetPaths = [System.Collections.Generic.HashSet[string]]::new(
-        [System.StringComparer]::OrdinalIgnoreCase
-    )
-    foreach ($node in $manifest.SelectNodes("//*")) {
-        foreach ($attribute in $node.Attributes) {
-            if ($attribute.LocalName -notmatch "(Logo|Image)$") { continue }
-            $relative = [string]$attribute.Value
-            if (-not $relative.StartsWith("Assets\", [System.StringComparison]::OrdinalIgnoreCase)) {
-                continue
-            }
-            [void]$assetPaths.Add($relative)
-        }
-
-        # Properties/Logo stores its asset path as element text rather than as
-        # an attribute, so it must be collected separately from VisualElements.
-        if ($node.LocalName -match "(Logo|Image)$") {
-            $relative = ([string]$node.InnerText).Trim()
-            if ($relative.StartsWith("Assets\", [System.StringComparison]::OrdinalIgnoreCase)) {
-                [void]$assetPaths.Add($relative)
-            }
-        }
+    $copies = @(Get-ManifestAssetCopies -ManifestPath $ManifestPath `
+        -SourceRoot $SourceRoot -DestinationRoot $DestinationRoot)
+    foreach ($copy in $copies) {
+        $destinationDir = Split-Path -Parent $copy.Destination
+        [System.IO.Directory]::CreateDirectory($destinationDir) | Out-Null
+        Copy-Item -LiteralPath $copy.Source -Destination $copy.Destination -Force
     }
-    if ($assetPaths.Count -eq 0) { throw "No manifest asset references found." }
-
-    foreach ($relative in $assetPaths) {
-        $leaf = Split-Path -Leaf $relative
-        $source = Join-Path $SourceRoot $leaf
-        $destination = Join-Path $DestinationRoot $relative
-        if (-not (Test-Path $source -PathType Leaf)) {
-            throw "Manifest asset missing: $source"
-        }
-        $destinationDir = Split-Path -Parent $destination
-        if (-not (Test-Path $destinationDir)) {
-            New-Item -Path $destinationDir -ItemType Directory -Force | Out-Null
-        }
-        Copy-Item -LiteralPath $source -Destination $destination -Force
-    }
-    return $assetPaths.Count
+    return $copies.Count
 }
 
 # ---------------------------------------------------------------------------
@@ -803,7 +808,7 @@ if (-not $allParamsGiven -and -not $NoBanner) {
 Assert-VersionFormat $resolvedVersion
 Run-OrThrow -Exe $venvPython -Args @(
     (Join-Path $projectRoot "scripts\manage_version.py"),
-    "check", "--expected", $resolvedVersion
+    "check", "--expected", $resolvedVersion, "--strict", "--for-build"
 ) -WorkingDirectory $projectRoot
 if ($resolvedDate -notmatch '^\d{4}-\d{2}-\d{2}$') {
     throw "ReleaseDate must be YYYY-MM-DD. Got: '$resolvedDate'"
@@ -815,6 +820,9 @@ $resolvedPackageVersion = if ([string]::IsNullOrWhiteSpace($PackageVersion)) {
     $PackageVersion.Trim()
 }
 Assert-PackageVersionFormat $resolvedPackageVersion
+if ($resolvedPackageVersion -ne "$resolvedVersion.0") {
+    throw "Store PackageVersion must match the product version with a final .0"
+}
 
 $appVersion = $resolvedVersion
 
@@ -889,6 +897,8 @@ foreach ($chk in @(
 
 Assert-DiskSpace -Path $projectRoot -MinimumGB 3
 Assert-StoreManifestContract -ManifestPath $manifestSource
+Get-ManifestAssetCopies -ManifestPath $manifestSource `
+    -SourceRoot $assetsSource -DestinationRoot $appDir | Out-Null
 Test-PythonEnv -Python $venvPython
 # Clone only the standard runtime; read the locked packages from the selected
 # environment. Never replace a DLL in the developer or globally installed Python.
@@ -943,7 +953,8 @@ Sync-AppVersion `
     -NewVersion      $resolvedVersion `
     -NewPackageVersion $resolvedPackageVersion `
     -NewDate         $resolvedDate `
-    -NewChannel      $resolvedChannel
+    -NewChannel      $resolvedChannel `
+    -PythonExecutable $venvPython
 
 Write-Ok "v$resolvedVersion  [$resolvedChannel]  $resolvedDate"
 Write-Log "version sync OK"
@@ -1164,6 +1175,8 @@ if ($SkipMsix) {
         Write-Info "using: $makeappx"
         if (Test-Path $msixOutput) { Remove-Item -Force $msixOutput }
 
+        Get-ManifestAssetCopies -ManifestPath $manifestDest `
+            -SourceRoot $assetsSource -DestinationRoot $appDir -RequireDestination | Out-Null
         $packArgs = @("pack", "/d", $appDir, "/p", $msixOutput, "/o")
         Run-OrThrow -Exe $makeappx -Args $packArgs -WorkingDirectory $projectRoot
 

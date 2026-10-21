@@ -94,13 +94,17 @@ def _initialize(conn):
         for column in ("remote_uid", "recurrence_id"):
             if column not in columns:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")
+    if "created_at" not in {
+        row[1] for row in conn.execute("PRAGMA table_info(calendar_sync_pending_delete)")
+    }:
+        conn.execute("ALTER TABLE calendar_sync_pending_delete ADD COLUMN created_at TEXT")
     # Capture the stable identity before the local row and its link are removed.
     conn.executescript("""
         DROP TRIGGER IF EXISTS calendar_sync_capture_delete;
         CREATE TRIGGER calendar_sync_capture_delete BEFORE DELETE ON unified_task
         BEGIN
-            INSERT OR IGNORE INTO calendar_sync_pending_delete(calendar_id,transaction_id,baseline)
-            SELECT calendar_id,transaction_id,baseline FROM calendar_sync_event
+            INSERT OR IGNORE INTO calendar_sync_pending_delete(calendar_id,transaction_id,baseline,created_at)
+            SELECT calendar_id,transaction_id,baseline,datetime('now') FROM calendar_sync_event
             WHERE task_id=OLD.id AND event_id IS NULL AND remote_deleted=0;
             INSERT OR IGNORE INTO calendar_sync_delete_queue(event_id,calendar_id,etag,remote_uid,recurrence_id)
             SELECT event_id,calendar_id,etag,remote_uid,recurrence_id FROM calendar_sync_event
@@ -134,6 +138,24 @@ class CalendarSyncRepository:
                 (account,),
             )
         ]
+
+    def refresh_calendar_metadata(self, account, calendars):
+        """Apply a complete discovery result without losing the user's selection."""
+        available = {calendar["id"]: calendar for calendar in calendars}
+        errors = {}
+        with self.atomic():
+            for saved in self.calendars(account):
+                fresh = available.get(saved["remote_id"])
+                if fresh is not None:
+                    self._register(account, fresh)
+                elif saved["is_active"]:
+                    key = saved["local_id"]
+                    self.conn.execute("UPDATE calendar SET access_role='reader' WHERE id=?", (key,))
+                    self.conn.execute(
+                        "UPDATE calendar_sync_calendar SET can_edit=0 WHERE local_id=?", (key,)
+                    )
+                    errors[key] = "calendar_access_lost"
+        return errors
 
     def register(self, account, remote):
         with self.conn:
@@ -259,6 +281,27 @@ class CalendarSyncRepository:
                 (account,),
             )
         ]
+
+    def pending_deletes(self, account):
+        """Unconfirmed creates deleted locally, retained until identity is proven."""
+        return [
+            dict(row)
+            for row in self.conn.execute(
+                "SELECT p.*,c.account_id,v.name AS calendar_name "
+                "FROM calendar_sync_pending_delete p "
+                "JOIN calendar_sync_calendar c ON c.local_id=p.calendar_id "
+                "JOIN calendar v ON v.id=p.calendar_id WHERE c.account_id=? "
+                "ORDER BY p.created_at,p.calendar_id,p.transaction_id",
+                (account,),
+            )
+        ]
+
+    def pending_delete_count(self, account):
+        return self.conn.execute(
+            "SELECT COUNT(*) FROM calendar_sync_pending_delete p "
+            "JOIN calendar_sync_calendar c ON c.local_id=p.calendar_id WHERE c.account_id=?",
+            (account,),
+        ).fetchone()[0]
 
     def resolve(self, task_id, choice, local_zone, provider):
         with self.atomic():

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Dialog listing unresolved Google sync issues with detailed guidance."""
 
+from html import escape
 import json
 
 from PyQt6.QtCore import Qt
@@ -34,7 +35,10 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
     set_footer_loading,
 )
-from calendar_app.presentation.dialogs.sync_feedback import sync_error_message
+from calendar_app.presentation.dialogs.sync_feedback import (
+    google_sync_error_code,
+    sync_error_message,
+)
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 
@@ -498,7 +502,9 @@ class GCalSyncIssuesDialog(QDialog):
                 "gcal.treatments.pending_retry", "재시도 대기"
             )
 
-        return error_raw, t("gcal.treatments.manual", "수동 확인")
+        return sync_error_message(google_sync_error_code(error_raw)), t(
+            "gcal.treatments.manual", "수동 확인"
+        )
 
     def _load_snapshot_json(self, raw_json):
         if not raw_json:
@@ -936,7 +942,10 @@ class GCalSyncIssuesDialog(QDialog):
         elif "rate_limit" in raw or "429" in raw:
             html_content = t("gcal.guidance.rate_limit")
         else:
-            html_content = t("gcal.guidance.generic", error=str(meta.get("raw_error") or "-"))
+            html_content = t(
+                "gcal.guidance.generic",
+                error=escape(sync_error_message(google_sync_error_code(meta.get("raw_error")))),
+            )
 
         if not html_content.startswith("<"):
             html_content = html_content.replace("\n", "<br>")
@@ -986,15 +995,19 @@ class GCalSyncIssuesDialog(QDialog):
         self.load_rows()
 
     def resolve_keep_local(self):
-        """[1] Mark conflict resolved by keeping local version; set gcal_dirty=1 to push it."""
+        """Restore the saved local version and resolve the conflict atomically."""
         meta = self._selected_meta()
         if not meta or meta.get("type") != "conflict":
             return
         conflict_id = meta.get("id")
-        local_task_id = meta.get("local_task_id")
-        task_repo.mark_gcal_sync_conflict_resolved(conflict_id, resolution="keep_local")
-        if local_task_id:
-            task_repo.update_unified_task(local_task_id, {"gcal_dirty": 1}, mark_gcal_dirty=False)
+        if not task_repo.mark_gcal_sync_conflict_resolved(conflict_id, resolution="keep_local"):
+            QMessageBox.warning(
+                self,
+                t("gcal.issues_keep_local", "로컬 유지"),
+                sync_error_message("database_failed"),
+            )
+            self.load_rows()
+            return
         if self.app and hasattr(self.app, "show_toast"):
             self.app.show_toast(
                 t("gcal.issues_keep_local", "로컬 유지"),
@@ -1005,6 +1018,8 @@ class GCalSyncIssuesDialog(QDialog):
             )
         if self.app and hasattr(self.app, "wake_gcal_sync"):
             self.app.wake_gcal_sync()
+        if self.app and hasattr(self.app, "_refresh_all_panels"):
+            self.app._refresh_all_panels()
         self.load_rows()
 
     def resolve_use_remote(self):

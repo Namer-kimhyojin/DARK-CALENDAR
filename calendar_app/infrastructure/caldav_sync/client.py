@@ -3,6 +3,7 @@
 
 from datetime import UTC, datetime, timedelta
 import re
+from time import monotonic
 from urllib.parse import unquote, urljoin, urlparse
 import uuid
 import xml.etree.ElementTree as ET
@@ -11,6 +12,10 @@ from zoneinfo import ZoneInfo
 import requests
 
 from calendar_app.application.calendar_sync_contract import CalendarSyncError, RemoteCalendarError
+from calendar_app.infrastructure.calendar_sync.http_response import (
+    MAX_RESPONSE_SECONDS,
+    read_calendar_response,
+)
 from calendar_app.infrastructure.calendar_sync.http_retry import retry_after_seconds
 
 from .conversion import edited_calendar, new_calendar, records
@@ -19,13 +24,37 @@ from .profiles import PROFILES, validate_url
 D = "{DAV:}"
 C = "{urn:ietf:params:xml:ns:caldav}"
 MAX_RESPONSE = 8 * 1024 * 1024
+MAX_XML_DEPTH = 64
+MAX_XML_ELEMENTS = 100_000
+
+
+class _DAVTreeBuilder(ET.TreeBuilder):
+    """Reject DTDs through the parser, independently of the XML byte encoding."""
+
+    def __init__(self):
+        super().__init__()
+        self.depth = self.elements = 0
+
+    def doctype(self, name, pubid, system):
+        raise ValueError("DTD is not allowed")
+
+    def start(self, tag, attributes):
+        self.depth += 1
+        self.elements += 1
+        if self.depth > MAX_XML_DEPTH or self.elements > MAX_XML_ELEMENTS:
+            raise ValueError("XML structure limit exceeded")
+        return super().start(tag, attributes)
+
+    def end(self, tag):
+        self.depth -= 1
+        return super().end(tag)
 
 
 def multistatus(data):
-    if b"<!DOCTYPE" in data.upper() or b"<!ENTITY" in data.upper():
-        raise CalendarSyncError("invalid_calendar_response")
     try:
-        root = ET.fromstring(data)
+        if len(data) > MAX_RESPONSE:
+            raise ValueError
+        root = ET.fromstring(data, parser=ET.XMLParser(target=_DAVTreeBuilder()))
         if root.tag != D + "multistatus":
             raise ValueError
         rows = []
@@ -77,9 +106,13 @@ class CalDAVClient:
         self.missing_resources = set()
 
     def request(self, method, url, *, body=None, headers=None, redirect=False):
+        deadline = monotonic() + MAX_RESPONSE_SECONDS
+        headers = {**(headers or {}), "Accept-Encoding": "identity"}
         for _ in range(5):
             if self.cancelled():
                 raise CalendarSyncError("cancelled")
+            if monotonic() >= deadline:
+                raise CalendarSyncError("network_unavailable")
             validate_url(self.service, url)
             if self.service == "zoho" and urlparse(url).hostname != self.server_host:
                 raise CalendarSyncError("unsafe_caldav_url")
@@ -89,7 +122,7 @@ class CalDAVClient:
                     url,
                     auth=self.auth,
                     data=body,
-                    headers=headers or {},
+                    headers=headers,
                     timeout=(10, 30),
                     allow_redirects=False,
                     stream=True,
@@ -107,18 +140,16 @@ class CalDAVClient:
                             )
                         )
                         raise error
-                    chunks, size = [], 0
-                    for chunk in response.iter_content(65536):
-                        if self.cancelled():
-                            raise CalendarSyncError("cancelled")
-                        size += len(chunk)
-                        if size > MAX_RESPONSE:
-                            raise CalendarSyncError("calendar_response_too_large")
-                        chunks.append(chunk)
                     return (
                         url,
                         requests.structures.CaseInsensitiveDict(response.headers),
-                        b"".join(chunks),
+                        read_calendar_response(
+                            response,
+                            max_bytes=MAX_RESPONSE,
+                            deadline=deadline,
+                            cancelled=self.cancelled,
+                            invalid_code="invalid_calendar_response",
+                        ),
                     )
                 finally:
                     response.close()

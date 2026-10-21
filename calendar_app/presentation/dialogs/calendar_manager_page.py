@@ -41,6 +41,7 @@ from calendar_app.infrastructure.ics.subscriptions import (
 )
 from calendar_app.presentation.dialogs.dialog_styles import get_dialog_theme_tokens
 from calendar_app.presentation.dialogs.ics_subscription_dialog import IcsSubscriptionDialog
+from calendar_app.presentation.dialogs.provider_settings_widgets import plain_tooltip
 from calendar_app.presentation.dialogs.sync_feedback import (
     guard_calendar_action,
     sync_error_message,
@@ -57,7 +58,7 @@ class _CalendarRowLabel(QLabel):
         self._full_text = str(text)
         self.setProperty("role", role)
         self.setTextFormat(Qt.TextFormat.PlainText)
-        self.setToolTip(self._full_text)
+        self.setToolTip(plain_tooltip(self._full_text))
         self.setMinimumWidth(0)
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
@@ -414,7 +415,7 @@ class CalendarManagerPage(QWidget):
             item.setSizeHint(QSize(0, 76))
             item.setData(Qt.ItemDataRole.UserRole, calendar)
             item.setData(Qt.ItemDataRole.AccessibleTextRole, label.replace("\n", ". "))
-            item.setToolTip(str(name) + " · " + " · ".join(traits))
+            item.setToolTip(plain_tooltip(str(name) + " · " + " · ".join(traits)))
             self.calendars.addItem(item)
             row = QFrame()
             row.setObjectName("SyncCalendarRow")

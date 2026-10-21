@@ -51,6 +51,7 @@ from calendar_app.presentation.dialogs.gcal_auth_worker import (
     GCalQueryWorker,
     GCalRevokeWorker,
 )
+from calendar_app.presentation.dialogs.provider_settings_widgets import plain_tooltip
 from calendar_app.presentation.dialogs.sync_feedback import (
     google_sync_error_code,
     sync_error_message,
@@ -1767,6 +1768,10 @@ class GCalSettingsDialog(QDialog):
             self.calendar_choice_combo.blockSignals(False)
 
     def _export_diagnostics_report(self):
+        from collections import Counter
+
+        from calendar_app.shared.log_privacy import redact_diagnostic_text
+
         try:
             # 1. 파일 다이얼로그 띄워 저장 경로 획득
             default_name = (
@@ -1805,6 +1810,10 @@ class GCalSettingsDialog(QDialog):
                 "gcal_primary_resolved_id",
             ]:
                 val = self.settings.value(key, None)
+                if key == "gcal_enabled":
+                    val = str(val).lower() in {"true", "1"}
+                else:
+                    val = "present" if val else "absent"
                 lines.append(f"  {key}: {val}")
 
             # DB & Calendars 진단
@@ -1813,12 +1822,14 @@ class GCalSettingsDialog(QDialog):
             try:
                 from calendar_app.infrastructure.db.calendar_repo import list_calendars
 
-                for cal in list_calendars(include_inactive=True):
+                for index, cal in enumerate(list_calendars(include_inactive=True), 1):
                     if cal.get("type") == "gcal":
+                        role = cal.get("access_role")
+                        if role not in {"owner", "writer", "reader", "freeBusyReader"}:
+                            role = "unknown"
                         lines.append(
-                            f"  ID: {cal.get('id')} | GCal ID: {cal.get('gcal_calendar_id')} | "
-                            f"Name: {cal.get('name')} | Active: {cal.get('is_active')} | "
-                            f"Visible: {cal.get('is_visible')} | AccessRole: {cal.get('access_role')}"
+                            f"  Calendar {index} | Active: {bool(cal.get('is_active'))} | "
+                            f"Visible: {bool(cal.get('is_visible'))} | AccessRole: {role}"
                         )
                         # 이 캘린더의 sync token 정보도 가져오기
                         gcal_id = cal.get("gcal_calendar_id")
@@ -1826,10 +1837,11 @@ class GCalSettingsDialog(QDialog):
                             token = self.settings.value(f"gcal_sync_token::{gcal_id}", None)
                             fails = self.settings.value(f"gcal_sync_token_fails::{gcal_id}", 0)
                             lines.append(
-                                f"    - Sync Token Length: {len(str(token or ''))} chars | Fail Count: {fails}"
+                                f"    - Sync Token Present: {bool(token)} | "
+                                f"Failure Recorded: {bool(fails)}"
                             )
             except Exception as e:
-                lines.append(f"  Failed to load calendar table: {e}")
+                lines.append(f"  Failed to load calendar table: {type(e).__name__}")
 
             # DB Tasks 무결성 진단
             lines.append("-" * 60)
@@ -1868,36 +1880,53 @@ class GCalSettingsDialog(QDialog):
                     if error_tasks > 0:
                         lines.append("  [Failed Tasks Detail (Up to 10)]")
                         cur.execute(
-                            "SELECT id, name, gcal_sync_error, deadline FROM unified_task WHERE gcal_sync_error IS NOT NULL LIMIT 10"
+                            "SELECT gcal_sync_error FROM unified_task "
+                            "WHERE gcal_sync_error IS NOT NULL "
+                            "AND trim(gcal_sync_error) != '' LIMIT 10"
                         )
                         for row in cur.fetchall():
-                            lines.append(
-                                f"    - Task ID {row[0]} ({row[1]}): {row[2]} (Deadline: {row[3]})"
-                            )
+                            lines.append(f"    - {google_sync_error_code(row[0])}")
             except Exception as e:
-                lines.append(f"  Failed to load database stats: {e}")
+                lines.append(f"  Failed to load database stats: {type(e).__name__}")
 
             # 최근 로그 추출
             lines.append("-" * 60)
-            lines.append("[Recent GCal Logs (Tail 150 lines)]")
+            lines.append("[Recent GCal Log Levels (Up to 150 matching lines)]")
             try:
                 from calendar_app.app_paths import LOG_PATH
 
                 if os.path.exists(LOG_PATH):
-                    with open(LOG_PATH, encoding="utf-8", errors="replace") as fh:
-                        log_lines = fh.readlines()
+                    with open(LOG_PATH, "rb") as fh:
+                        fh.seek(0, os.SEEK_END)
+                        offset = max(0, fh.tell() - 512 * 1024)
+                        fh.seek(offset)
+                        data = fh.read(512 * 1024)
+                    log_lines = data.decode("utf-8", errors="replace").splitlines()
+                    if offset:
+                        log_lines = log_lines[1:]
                     tail_lines = log_lines[-2000:]
                     gcal_logs = [
                         ln.strip()
                         for ln in tail_lines
                         if any(k in ln.lower() for k in ["gcal", "sync", "google"])
                     ]
-                    for log in gcal_logs[-150:]:
-                        lines.append(f"  {log}")
+                    categories = Counter(
+                        next(
+                            (
+                                level
+                                for level in ("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG")
+                                if f"[{level}]" in log
+                            ),
+                            "OTHER",
+                        )
+                        for log in gcal_logs[-150:]
+                    )
+                    for code, count in sorted(categories.items()):
+                        lines.append(f"  {code}: {count}")
                 else:
                     lines.append("  No log file found.")
             except Exception as e:
-                lines.append(f"  Failed to load logs: {e}")
+                lines.append(f"  Failed to load logs: {type(e).__name__}")
 
             lines.append("=" * 60)
             lines.append("END OF REPORT")
@@ -1905,7 +1934,7 @@ class GCalSettingsDialog(QDialog):
 
             # 파일 저장
             with open(file_path, "w", encoding="utf-8", errors="strict") as fh:
-                fh.write("\n".join(lines))
+                fh.write(redact_diagnostic_text("\n".join(lines)))
                 fh.write("\n")
 
             QMessageBox.information(
@@ -1917,14 +1946,14 @@ class GCalSettingsDialog(QDialog):
                 ).format(path=file_path),
             )
 
-        except Exception as e:
+        except Exception:
             from calendar_app.infrastructure.db.database_unified import logger as db_logger
 
-            db_logger.exception("Failed to export diagnostics report")
+            db_logger.error("Failed to export diagnostics report")
             QMessageBox.critical(
                 self,
                 t("gcal_settings.export_diagnostics_failed_title", "Export Failed"),
-                f"An error occurred while generating the report:\n{e}",
+                t("gcal_settings.export_diagnostics_failed_title", "Export Failed"),
             )
 
     def _open_sync_issues(self):
@@ -2006,7 +2035,7 @@ class GCalSettingsDialog(QDialog):
             except Exception:
                 pass
         self.account_meta[1].setText(account_value)
-        self.account_meta[1].setToolTip(account_value)
+        self.account_meta[1].setToolTip(plain_tooltip(account_value))
         active_count = sum(self._calendar_import_selection.values())
         self.calendar_meta[1].setText(t("gcal_focus.import_count", "{count}개", count=active_count))
         self.calendar_meta[1].setToolTip(
@@ -2023,7 +2052,7 @@ class GCalSettingsDialog(QDialog):
         self.last_sync_meta[1].setText(
             last_sync_short if last_sync else t("gcal.last_sync_none", "없음")
         )
-        self.last_sync_meta[1].setToolTip(last_sync)
+        self.last_sync_meta[1].setToolTip(plain_tooltip(last_sync))
         self._refresh_diagnostics()
 
     def _refresh_diagnostics(self):

@@ -109,6 +109,8 @@ def test_google_update_local_persistence_failure_is_not_a_success(monkeypatch):
         "calendar_id": "gcal::team",
         "gcal_source_calendar_id": "team",
         "deadline": "2026-10-08T10:00:00",
+        "gcal_remote_updated_at": "2026-10-07T00:00:00Z",
+        "gcal_last_synced_at": "2026-10-07T00:01:00Z",
     }
     monkeypatch.setattr(helpers, "_is_gcal_enabled", lambda _: True)
     monkeypatch.setattr(engine.task_repo, "get_unified_task", lambda _: task.copy())

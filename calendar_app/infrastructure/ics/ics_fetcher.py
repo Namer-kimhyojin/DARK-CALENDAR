@@ -8,16 +8,18 @@ import sqlite3
 import time
 import urllib.error
 from urllib.parse import quote
-import urllib.request
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from calendar_app.application.calendar_sync_contract import CalendarSyncError
+from calendar_app.infrastructure.ics.processing_budget import processing_budget
+from calendar_app.infrastructure.ics.subscription_http import open_subscription
 from calendar_app.infrastructure.ics.subscriptions import normalize_subscription_url
 
 logger = logging.getLogger("IcsFetcher")
 MAX_FEED_BYTES = 8 * 1024 * 1024
 MAX_EVENTS = 10000
 MAX_FETCH_SECONDS = 45
+MAX_PROCESS_SECONDS = 10
 
 
 def _read_feed(response, cancelled, deadline):
@@ -109,10 +111,18 @@ def _event_identity(value):
 
 def _snapshot(raw, icalendar, zone, cancelled):
     """Validate the whole feed before any database write or missing-event deletion."""
+    with processing_budget(cancelled, MAX_PROCESS_SECONDS):
+        return _snapshot_rows(raw, icalendar, zone, cancelled)
+
+
+def _snapshot_rows(raw, icalendar, zone, cancelled):
+    """Build a complete snapshot; a processing timeout must discard every row."""
     envelope = raw.strip().removeprefix(b"\xef\xbb\xbf").upper()
     if not envelope.startswith(b"BEGIN:VCALENDAR") or not envelope.endswith(b"END:VCALENDAR"):
         raise CalendarSyncError("invalid_calendar_data")
-    calendar = icalendar.Calendar.from_ical(raw)
+    from calendar_app.infrastructure.calendar_sync.ical_parser import parse_calendar
+
+    calendar = parse_calendar(raw)
     if calendar.name != "VCALENDAR" or any(c.errors for c in calendar.walk()):
         raise CalendarSyncError("invalid_calendar_data")
     # iTIP requests, replies and cancellations describe selected events, not
@@ -296,11 +306,8 @@ def fetch_and_sync(
         return 0, 0, "dependency_unavailable"
     try:
         _check(cancelled)
-        req = urllib.request.Request(
-            fetch_url, headers={"User-Agent": "AirCalendar/1.0 ICS-Fetcher"}
-        )
         deadline = time.monotonic() + MAX_FETCH_SECONDS
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with open_subscription(fetch_url, cancelled=cancelled, deadline=deadline) as resp:
             raw = _read_feed(resp, cancelled, deadline)
         _check(cancelled)
         if len(raw) > MAX_FEED_BYTES:

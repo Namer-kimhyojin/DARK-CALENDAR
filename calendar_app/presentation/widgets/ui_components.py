@@ -212,6 +212,12 @@ def _set_hover_state(widget, hovered: bool):
 class _ChecklistTextLabel(QLabel):
     clicked = pyqtSignal()
 
+    def __init__(self, text, parent=None):
+        super().__init__(parent)
+        # Imported checklist text must never be interpreted as Qt rich text.
+        self.setTextFormat(Qt.TextFormat.PlainText)
+        self.setText(text)
+
     def enterEvent(self, event):
         _set_hover_state(self, True)
         super().enterEvent(event)
@@ -897,6 +903,7 @@ class DraggableTaskButton(QFrame):
         self.detail_container.setMaximumHeight(0)
 
         self.detail_title_label = QLabel()
+        self.detail_title_label.setTextFormat(Qt.TextFormat.PlainText)
         self.detail_title_label.setWordWrap(True)
         self.detail_title_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
@@ -1259,6 +1266,7 @@ class DraggableTaskButton(QFrame):
                 f"background:transparent; color: {text_pal['text_secondary']}; font-size: 9pt;"
             )
             tlbl = QLabel()
+            tlbl.setTextFormat(Qt.TextFormat.PlainText)
             tlbl.setText(text)
             tlbl.setStyleSheet(
                 f"background:transparent; color: {text_pal['text_primary']}; font-size: 9pt;"

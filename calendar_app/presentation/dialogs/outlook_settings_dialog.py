@@ -39,9 +39,12 @@ from calendar_app.presentation.dialogs.provider_settings_widgets import (
 )
 from calendar_app.presentation.dialogs.sync_feedback import (
     add_sync_hub_return,
+    calendar_recovery_issues,
     calendar_selection_style,
     conflict_text,
     guard_sync_database,
+    recovery_issue_label,
+    recovery_issue_text,
     sync_error_message,
 )
 from calendar_app.presentation.dialogs.sync_recovery import (
@@ -474,6 +477,7 @@ class OutlookSettingsDialog(QDialog):
         task_id = item.data(Qt.ItemDataRole.UserRole) if item else None
         detail = item.data(int(Qt.ItemDataRole.UserRole) + 2) if item else None
         conflict = isinstance(task_id, int) and bool(detail and detail.get("kind") == "conflict")
+        recovery = bool(detail and detail.get("recovery_issue"))
         busy = self.controller.busy
         self.local.setEnabled(conflict and not busy)
         self.remote.setEnabled(conflict and not busy)
@@ -482,12 +486,19 @@ class OutlookSettingsDialog(QDialog):
             and not busy
             and not getattr(self.controller, "retry_remaining_seconds", 0)
         )
-        self.cancel_delete.setEnabled(isinstance(task_id, str) and not busy)
+        self.cancel_delete.setEnabled(isinstance(task_id, str) and not busy and not recovery)
+        self.retry_delete.setText(
+            t("sync_recovery.recheck", "다시 확인")
+            if recovery
+            else t("outlook.retry_delete", "선택 삭제 다시 시도")
+        )
         preview = (
             conflict_text(
                 detail, GraphClient, self.settings.value("gcal_timezone", "Asia/Seoul", type=str)
             )
             if conflict
+            else recovery_issue_text(detail)
+            if recovery
             else ""
         )
         if self.preview.toPlainText() != preview:
@@ -533,6 +544,11 @@ class OutlookSettingsDialog(QDialog):
             return
         event_id = item.data(Qt.ItemDataRole.UserRole)
         if not isinstance(event_id, str) or choice not in {"retry", "cancel"}:
+            return
+        detail = item.data(int(Qt.ItemDataRole.UserRole) + 2)
+        if detail and detail.get("recovery_issue"):
+            if choice == "retry":
+                self.controller.sync(force=True)
             return
         calendar_id = item.data(int(Qt.ItemDataRole.UserRole) + 1)
         conn = self._connection()
@@ -718,6 +734,17 @@ class OutlookSettingsDialog(QDialog):
                         kind=self._issue_label(row["error"] or t("outlook.pending", "대기 중")),
                     )
                     entries.append((label, {0: row["event_id"], 1: row["calendar_id"]}))
+                for row in calendar_recovery_issues(repo, self.settings, "outlook_", account_id):
+                    entries.append(
+                        (
+                            recovery_issue_label(row),
+                            {
+                                0: row.get("transaction_id") or row["calendar_id"],
+                                1: row["calendar_id"],
+                                2: row,
+                            },
+                        )
+                    )
             finally:
                 conn.close()
         if refresh_data:

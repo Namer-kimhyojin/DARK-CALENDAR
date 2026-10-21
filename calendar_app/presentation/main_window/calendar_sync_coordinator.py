@@ -16,6 +16,7 @@ from calendar_app.application.calendar_provider_catalog import (
     PROVIDERS,
     account_provider,
 )
+from calendar_app.infrastructure.calendar_sync.status import load_calendar_errors
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.ics.subscriptions import ICS_ERRORS, subscription_errors
@@ -174,6 +175,15 @@ class CalendarSyncCoordinator(QObject):
                     ):
                         counts[row["account_id"]] = counts.get(row["account_id"], 0) + 1
                         issues.append(dict(row))
+                if "calendar_sync_pending_delete" in tables:
+                    for row in conn.execute(
+                        "SELECT c.account_id,p.calendar_id,"
+                        "'pending_delete_unconfirmed' AS kind "
+                        "FROM calendar_sync_pending_delete p JOIN calendar_sync_calendar c "
+                        "ON c.local_id=p.calendar_id"
+                    ):
+                        counts[row["account_id"]] = counts.get(row["account_id"], 0) + 1
+                        issues.append(dict(row))
         finally:
             conn.close()
         return counts, selected, issues
@@ -294,7 +304,13 @@ class CalendarSyncCoordinator(QObject):
                 if not (controller and controller.busy)
                 else ""
             )
-            issue_count = counts.get(account, 0)
+            active_ids = {c["id"] for c in self.calendar_rows if c.get("is_active", 1)}
+            calendar_errors = {
+                cid: code
+                for cid, code in load_calendar_errors(self.settings, prefix).items()
+                if cid in active_ids
+            }
+            issue_count = counts.get(account, 0) + len(calendar_errors)
             summary = getattr(controller, "summary", {})
             if status == "completed_with_issues" and isinstance(summary, dict):
                 issue_count = max(issue_count, int(summary.get("issues") or 0))
@@ -307,6 +323,7 @@ class CalendarSyncCoordinator(QObject):
                 "selected": selected.get(account, 0),
                 "needs_selection": bool(account) and not selected.get(account),
                 "issues": issue_count,
+                "calendar_errors": calendar_errors,
                 "can_sync": bool(
                     account
                     and controller

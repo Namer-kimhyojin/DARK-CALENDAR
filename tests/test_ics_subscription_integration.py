@@ -2,6 +2,7 @@
 """Exercise the real HTTP reader, ICS worker, settings feedback and SQLite snapshot together."""
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import socket
 import threading
 from unittest.mock import Mock
 
@@ -10,6 +11,7 @@ from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from calendar_app.infrastructure.db import calendar_repo, database_unified, task_repo
+from calendar_app.infrastructure.ics import subscription_http
 from calendar_app.presentation.main_window.calendar_sync_coordinator import CalendarSyncCoordinator
 
 
@@ -37,6 +39,14 @@ def test_subscription_http_worker_import_failure_recovery_and_automatic_pause(
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
+
+    def fixture_connection(address, timeout, source_address=None, **_kwargs):
+        # This worker/reader fixture deliberately uses a synthetic loopback
+        # server. Destination enforcement is covered by test_ics_request_security.
+        assert address == ("127.0.0.1", server.server_port)
+        return socket.create_connection(address, timeout, source_address)
+
+    monkeypatch.setattr(subscription_http, "_connect_public", fixture_connection)
     qtapp = QApplication.instance() or QApplication([])
     host = QWidget()
     host.settings = QSettings(str(tmp_path / "settings.ini"), QSettings.Format.IniFormat)

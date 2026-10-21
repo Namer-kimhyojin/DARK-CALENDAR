@@ -78,7 +78,8 @@ def _deleted_pending_create(repo):
         raise CalendarSyncError("network_unavailable")
 
     provider.create = lost_response
-    engine.run()
+    with pytest.raises(CalendarSyncError, match="network_unavailable"):
+        engine.run()
     with repo.conn:
         repo.conn.execute("DELETE FROM unified_task WHERE id=?", (tid,))
     provider.create = create
@@ -108,6 +109,27 @@ def test_pending_delete_survives_database_restart(repo, tmp_path):
         restarted.close()
 
 
+def test_pending_delete_timestamp_migration_preserves_legacy_guards(repo):
+    provider, key, engine = _deleted_pending_create(repo)
+    original = repo.pending_deletes("account")[0]
+    assert original["created_at"]
+    assert repo.pending_delete_count("account") == 1
+    assert repo.pending_delete_count("unrelated-account") == 0
+    with repo.conn:
+        repo.conn.execute("DROP TRIGGER calendar_sync_capture_delete")
+        repo.conn.execute("ALTER TABLE calendar_sync_pending_delete DROP COLUMN created_at")
+    migrated = CalendarSyncRepository(repo.conn)
+    legacy = migrated.pending_deletes("account")[0]
+    assert legacy["created_at"] is None
+    assert legacy["transaction_id"] == original["transaction_id"]
+    assert legacy["baseline"] == original["baseline"]
+    assert CalendarSyncRepository(repo.conn).pending_deletes("account") == [legacy]
+    CalendarSyncEngine(provider, migrated, "account").run()
+    assert migrated.tasks(key) == []
+    assert provider.remote == {}
+    assert migrated.pending_delete_count("account") == 0
+
+
 def test_failed_pull_preserves_pending_delete_for_later_receipt(repo):
     provider, key, engine = _deleted_pending_create(repo)
     provider.fail_read = True
@@ -131,8 +153,7 @@ def test_invalid_later_remote_event_preserves_pending_delete(repo):
         return convert(event, zone)
 
     provider.to_task = invalid
-    with pytest.raises(CalendarSyncError, match="^invalid_event_time$"):
-        engine.run()
+    assert engine.run()["calendar_errors"] == {key: "invalid_event_time"}
     assert repo.conn.execute("SELECT COUNT(*) FROM calendar_sync_pending_delete").fetchone()[0] == 1
     assert repo.conn.execute("SELECT COUNT(*) FROM calendar_sync_delete_queue").fetchone()[0] == 0
     assert provider.writes == ["create"]
@@ -186,8 +207,7 @@ def test_duplicate_transaction_receipts_do_not_consume_pending_delete(repo):
     event = deepcopy(next(iter(provider.remote.values())))
     event["id"] = "duplicate-receipt"
     provider.remote[event["id"]] = event
-    with pytest.raises(CalendarSyncError, match="^duplicate_remote_event$"):
-        engine.run()
+    assert engine.run()["calendar_errors"] == {key: "duplicate_remote_event"}
     assert repo.conn.execute("SELECT COUNT(*) FROM calendar_sync_pending_delete").fetchone()[0] == 1
     assert repo.conn.execute("SELECT COUNT(*) FROM calendar_sync_delete_queue").fetchone()[0] == 0
     assert provider.writes == ["create"]
@@ -267,7 +287,8 @@ def test_pending_create_deleted_during_receipt_merge_cannot_be_reimported(repo):
         raise CalendarSyncError("network_unavailable")
 
     provider.create = lost_response
-    engine.run()
+    with pytest.raises(CalendarSyncError, match="network_unavailable"):
+        engine.run()
     provider.create = create
     read = repo.task
     removed = [False]

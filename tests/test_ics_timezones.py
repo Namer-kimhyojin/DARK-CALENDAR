@@ -44,7 +44,7 @@ def test_ics_all_day_exclusive_end_stays_on_original_dates():
 
 def test_invalid_shared_zone_fails_before_network_or_db(monkeypatch):
     network = Mock()
-    monkeypatch.setattr(ics_fetcher.urllib.request, "urlopen", network)
+    monkeypatch.setattr(ics_fetcher, "open_subscription", network)
     assert ics_fetcher.fetch_and_sync(
         "ics::fixture", "https://example.invalid", local_zone="Invalid/Fixture"
     ) == (0, 0, "invalid_timezone")
@@ -56,6 +56,6 @@ def test_private_subscription_url_is_not_in_failure_logs(monkeypatch, caplog):
 
     url = "https://example.invalid/calendar.ics?token=synthetic-private-value"
     monkeypatch.setattr(ics_fetcher, "_try_import_icalendar", lambda: object())
-    monkeypatch.setattr(ics_fetcher.urllib.request, "urlopen", Mock(side_effect=URLError(url)))
+    monkeypatch.setattr(ics_fetcher, "open_subscription", Mock(side_effect=URLError(url)))
     assert ics_fetcher.fetch_and_sync("ics::fixture", url)[2] == "network_unavailable"
     assert "synthetic-private-value" not in caplog.text

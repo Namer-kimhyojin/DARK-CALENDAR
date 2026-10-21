@@ -49,7 +49,7 @@ def snapshot(monkeypatch):
     monkeypatch.setattr(database_unified.db_manager, "get_connection", lambda: conn)
 
     def sync(data, **kwargs):
-        monkeypatch.setattr(ics_fetcher.urllib.request, "urlopen", lambda *a, **k: BytesIO(data))
+        monkeypatch.setattr(ics_fetcher, "open_subscription", lambda *a, **k: BytesIO(data))
         return ics_fetcher.fetch_and_sync(KEY, URL, local_zone="Asia/Seoul", **kwargs)
 
     yield conn, sync
@@ -85,7 +85,7 @@ def test_cancellation_during_stream_read_preserves_snapshot(snapshot, monkeypatc
             return data
 
     monkeypatch.setattr(
-        ics_fetcher.urllib.request, "urlopen", lambda *args, **kwargs: Stream(feed(event("two")))
+        ics_fetcher, "open_subscription", lambda *args, **kwargs: Stream(feed(event("two")))
     )
     assert (
         ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul", cancelled=lambda: bool(stopped))[2]
@@ -261,10 +261,10 @@ def test_real_database_schema_accepts_atomic_ics_snapshot(tmp_path, monkeypatch)
         )
         conn.commit()
         monkeypatch.setattr(
-            ics_fetcher.urllib.request, "urlopen", lambda *a, **k: BytesIO(feed(event("one")))
+            ics_fetcher, "open_subscription", lambda *a, **k: BytesIO(feed(event("one")))
         )
         assert ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul") == (1, 0, None)
-        monkeypatch.setattr(ics_fetcher.urllib.request, "urlopen", lambda *a, **k: BytesIO(feed()))
+        monkeypatch.setattr(ics_fetcher, "open_subscription", lambda *a, **k: BytesIO(feed()))
         assert ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul") == (0, 1, None)
     finally:
         database_unified.db_manager.close_connection()
@@ -295,7 +295,7 @@ def test_http_failure_has_actionable_code_and_preserves_snapshot(
     failure = HTTPError(
         URL + "?token=synthetic-private-key", status, "synthetic-private-key", {}, body
     )
-    monkeypatch.setattr(ics_fetcher.urllib.request, "urlopen", Mock(side_effect=failure))
+    monkeypatch.setattr(ics_fetcher, "open_subscription", Mock(side_effect=failure))
     assert ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul") == (0, 0, code)
     assert rows(conn) == [("one", "Original")]
     assert conn.execute("SELECT ics_last_fetched FROM calendar").fetchone()[0] == before
@@ -351,14 +351,12 @@ def test_edit_subscription_preserves_id_preferences_and_events_until_new_fetch(
     )
     assert rows(conn) == [("one", "Original")]
     assert sync(feed(event("one", "Stale")))[2] == "calendar_access_lost"
-    monkeypatch.setattr(
-        ics_fetcher.urllib.request, "urlopen", Mock(side_effect=OSError("synthetic"))
-    )
+    monkeypatch.setattr(ics_fetcher, "open_subscription", Mock(side_effect=OSError("synthetic")))
     assert ics_fetcher.fetch_and_sync(KEY, new_url, "Asia/Seoul")[2] is not None
     assert rows(conn) == [("one", "Original")]
     monkeypatch.setattr(
-        ics_fetcher.urllib.request,
-        "urlopen",
+        ics_fetcher,
+        "open_subscription",
         lambda *a, **k: BytesIO(feed(event("one", "Current"))),
     )
     assert ics_fetcher.fetch_and_sync(KEY, new_url, "Asia/Seoul") == (1, 0, None)

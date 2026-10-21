@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """Shared user-facing recovery messages and plain-text conflict comparisons."""
 
+from datetime import UTC, datetime
 from functools import wraps
 import json
 import sqlite3
 
 from calendar_app.application.calendar_sync_contract import CalendarSyncError
+from calendar_app.infrastructure.calendar_sync.status import load_calendar_errors
 from calendar_app.infrastructure.i18n import t
 
 _GOOGLE_ERROR_CODES = {
@@ -161,6 +163,51 @@ def calendar_selection_style(tokens):
     )
 
 
+def calendar_recovery_issues(repo, settings, prefix, account):
+    """Use one diagnostic representation for both provider settings dialogs."""
+    rows = [
+        dict(row, kind="pending_delete_unconfirmed", recovery_issue=True)
+        for row in repo.pending_deletes(account)
+    ]
+    calendars = {row["local_id"]: row for row in repo.calendars(account)}
+    for key, code in load_calendar_errors(settings, prefix).items():
+        if key in calendars and calendars[key]["is_active"]:
+            rows.append(
+                {
+                    "calendar_id": key,
+                    "calendar_name": calendars[key]["display_name"],
+                    "kind": code,
+                    "recovery_issue": True,
+                }
+            )
+    return rows
+
+
+def recovery_issue_label(row):
+    return t("sync_recovery.calendar_issue", "{calendar} · {reason}").format(
+        calendar=row.get("calendar_name") or row["calendar_id"],
+        reason=(
+            t("sync_recovery.pending_delete", "삭제 결과 확인 필요")
+            if row["kind"] == "pending_delete_unconfirmed"
+            else sync_error_message(row["kind"])
+        ),
+    )
+
+
+def recovery_issue_text(row):
+    text = sync_error_message(row["kind"])
+    if row["kind"] == "pending_delete_unconfirmed":
+        try:
+            stamp = datetime.fromisoformat(row.get("created_at") or "")
+            if stamp.tzinfo is None:
+                stamp = stamp.replace(tzinfo=UTC)
+            when = stamp.astimezone().strftime("%Y-%m-%d %H:%M:%S")
+        except (TypeError, ValueError, OverflowError, OSError):
+            when = t("sync_recovery.time_unknown", "이전 버전 기록 · 시각 정보 없음")
+        text += "\n" + t("sync_recovery.pending_since", "발생 시각: {time}").format(time=when)
+    return text
+
+
 def sync_error_message(code):
     if code == "account_unverified":
         return t(
@@ -285,6 +332,14 @@ def sync_error_message(code):
         "ics_server_error": t(
             "sync_unified.ics_server_error",
             "구독 서버에 일시적인 오류가 있습니다. 기존 일정은 보존했습니다. 잠시 후 다시 동기화하세요.",
+        ),
+        "ics_processing_timeout": t(
+            "sync_recovery.ics_processing_timeout",
+            "반복 일정 계산이 오래 걸려 이번 갱신을 중단했습니다. 기존 일정은 보존했습니다. 원래 서비스에서 반복 일정이나 구독 범위를 확인하세요.",
+        ),
+        "pending_delete_unconfirmed": t(
+            "sync_recovery.pending_delete_hint",
+            "생성 결과를 확인하기 전에 앱에서 삭제한 일정입니다. 원격 일정의 일치 여부를 확인할 때까지 삭제를 보류합니다. '다시 확인'으로 조회할 수 있으며, 확인되지 않은 원격 일정은 삭제하지 않습니다.",
         ),
         "invalid_subscription_url": t(
             "sync_unified.invalid_ics", "HTTP · HTTPS · webcal 캘린더 구독 주소를 입력하세요."

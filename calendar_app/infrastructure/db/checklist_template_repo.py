@@ -12,6 +12,26 @@ from calendar_app.infrastructure.db.database_unified import db_manager
 
 logger = logging.getLogger(__name__)
 
+# Budgets for the user-selected JSON import, independent of ordinary CRUD.
+MAX_CHECKLIST_IMPORT_BYTES = 1024 * 1024
+MAX_CHECKLIST_IMPORT_ITEMS = 500
+MAX_CHECKLIST_NAME_LENGTH = 256
+MAX_CHECKLIST_ITEM_TEXT_LENGTH = 4096
+MAX_CHECKLIST_DETAIL_LENGTH = 16384
+MAX_CHECKLIST_METADATA_LENGTH = 128
+
+
+def _validate_import_fields(value, allowed):
+    if type(value) is not dict or any(key not in allowed for key in value):
+        raise ValueError("Checklist import contains an invalid object or unknown fields")
+
+
+def _validate_import_text(value, limit, *, nullable=False, nonempty=False):
+    if value is None and nullable:
+        return
+    if type(value) is not str or len(value) > limit or (nonempty and not value.strip()):
+        raise ValueError("Checklist import contains invalid or oversized text")
+
 
 def import_checklist_template(payload):
     """Validate an exported template and import all rows in one savepoint.
@@ -19,32 +39,35 @@ def import_checklist_template(payload):
     Invalid file contents raise ValueError; database failures return None.
     An existing caller transaction is neither committed nor rolled back.
     """
-    if not isinstance(payload, dict):
-        raise ValueError("Checklist import must be an object")
+    _validate_import_fields(payload, {"template", "items", "exported_at", "version"})
     template, items = payload.get("template"), payload.get("items")
-    if not isinstance(template, dict) or not isinstance(items, list):
+    _validate_import_fields(template, {"name", "description", "category", "checklist_type"})
+    if type(items) is not list or len(items) > MAX_CHECKLIST_IMPORT_ITEMS:
         raise ValueError("Checklist import requires template and items")
+    for key in ("exported_at", "version"):
+        if key in payload:
+            _validate_import_text(payload[key], MAX_CHECKLIST_METADATA_LENGTH)
+    if "category" in template:
+        _validate_import_text(template["category"], MAX_CHECKLIST_NAME_LENGTH, nullable=True)
     name = template.get("name", "가져온 체크리스트")
     description = template.get("description", "")
     checklist_type = template.get("checklist_type", "list")
-    if not isinstance(name, str) or not name.strip():
-        raise ValueError("Checklist name must be nonempty text")
-    if description is not None and not isinstance(description, str):
-        raise ValueError("Checklist description must be text")
-    if checklist_type not in ("list", "process"):
+    _validate_import_text(name, MAX_CHECKLIST_NAME_LENGTH, nonempty=True)
+    _validate_import_text(description, MAX_CHECKLIST_DETAIL_LENGTH, nullable=True)
+    if type(checklist_type) is not str or checklist_type not in ("list", "process"):
         raise ValueError("Unsupported checklist type")
     rows = []
     for order, item in enumerate(items):
-        if not isinstance(item, dict):
-            raise ValueError("Checklist item must be an object")
+        _validate_import_fields(
+            item, {"item_text", "item_description", "item_guide", "is_required"}
+        )
         text = item.get("item_text", "")
         detail, guide = item.get("item_description", ""), item.get("item_guide", "")
         required = item.get("is_required", 0)
-        if not isinstance(text, str) or not text.strip():
-            raise ValueError("Checklist item text must be nonempty")
-        if any(value is not None and not isinstance(value, str) for value in (detail, guide)):
-            raise ValueError("Checklist item description and guide must be text")
-        if not isinstance(required, (bool, int)) or required not in (0, 1):
+        _validate_import_text(text, MAX_CHECKLIST_ITEM_TEXT_LENGTH, nonempty=True)
+        for value in (detail, guide):
+            _validate_import_text(value, MAX_CHECKLIST_DETAIL_LENGTH, nullable=True)
+        if type(required) not in (bool, int) or required not in (0, 1):
             raise ValueError("Checklist required flag must be 0 or 1")
         rows.append((text, detail, guide, order, int(required)))
 

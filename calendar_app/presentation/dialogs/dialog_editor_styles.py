@@ -315,6 +315,11 @@ QDialog#TaskEditorDialog QPushButton[quickActionButton="true"]:pressed {{
     color: {tab_text_active};
     border: 1px solid {accent};
 }}
+QDialog#TaskEditorDialog QPushButton[quickActionButton="true"]:checked {{
+    background: {accent_soft};
+    color: {tab_text_active};
+    border: 1px solid {accent};
+}}
 QDialog#TaskEditorDialog QPushButton[quickActionButton="true"]:focus {{
     border: 2px solid {accent};
 }}

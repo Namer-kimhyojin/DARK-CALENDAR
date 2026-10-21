@@ -43,9 +43,12 @@ from .provider_settings_widgets import (
 )
 from .sync_feedback import (
     add_sync_hub_return,
+    calendar_recovery_issues,
     calendar_selection_style,
     conflict_text,
     guard_sync_database,
+    recovery_issue_label,
+    recovery_issue_text,
     sync_error_message,
 )
 from .sync_recovery import requires_account_reconnection, sync_recovery_action
@@ -566,7 +569,8 @@ class CalDAVSettingsDialog(QDialog):
         item = self.issues.currentItem()
         data = item.data(Qt.ItemDataRole.UserRole) if item else {}
         conflict = data.get("kind") == "conflict"
-        queued = "event_id" in data
+        recovery = bool(data.get("recovery_issue"))
+        queued = "event_id" in data or recovery
         self.local.setEnabled(conflict and not self.controller.busy)
         self.remote.setEnabled(conflict and not self.controller.busy)
         self.retry.setEnabled(
@@ -574,12 +578,19 @@ class CalDAVSettingsDialog(QDialog):
             and not self.controller.busy
             and not getattr(self.controller, "retry_remaining_seconds", 0)
         )
-        self.cancel_delete.setEnabled(queued and not self.controller.busy)
+        self.cancel_delete.setEnabled(queued and not self.controller.busy and not recovery)
+        self.retry.setText(
+            t("sync_recovery.recheck", "다시 확인")
+            if recovery
+            else t("outlook.retry_delete", "선택 삭제 다시 시도")
+        )
         preview = (
             conflict_text(
                 data, CalDAVClient, self.settings.value("gcal_timezone", "Asia/Seoul", type=str)
             )
             if conflict
+            else recovery_issue_text(data)
+            if recovery
             else sync_error_message(data["kind"])
             if data.get("kind")
             else ""
@@ -618,6 +629,10 @@ class CalDAVSettingsDialog(QDialog):
         if not item or self.controller.busy:
             return
         row = item.data(Qt.ItemDataRole.UserRole)
+        if row.get("recovery_issue"):
+            if choice == "retry":
+                self.controller.sync(force=True)
+            return
         if "event_id" not in row or choice not in {"retry", "cancel"}:
             return
         conn = self._db()
@@ -723,7 +738,8 @@ class CalDAVSettingsDialog(QDialog):
         if connected and refresh_data:
             conn = self._db()
             try:
-                issues = CalendarSyncRepository(conn, "caldav").issues(self.controller.account)
+                repo = CalendarSyncRepository(conn, "caldav")
+                issues = repo.issues(self.controller.account)
                 for issue in issues:
                     task = conn.execute(
                         "SELECT name FROM unified_task WHERE id=?", (issue["task_id"],)
@@ -744,6 +760,10 @@ class CalDAVSettingsDialog(QDialog):
                         attempts=data["attempts"]
                     )
                     entries.append((label, {0: data}))
+                for row in calendar_recovery_issues(
+                    repo, self.settings, self.controller.prefix, self.controller.account
+                ):
+                    entries.append((recovery_issue_label(row), {0: row}))
             finally:
                 conn.close()
         if refresh_data:

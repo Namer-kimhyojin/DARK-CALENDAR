@@ -1766,6 +1766,8 @@ class _BaseOverlayWidget(QWidget):
             self._set("appearance_preset", CUSTOM_DISPLAY_PRESET_ID)
             return
         self._store_display_preset(DEFAULT_DISPLAY_PRESET_ID)
+        if not self._setting_exists("text_shadow_enabled"):
+            self._set("text_shadow_enabled", True)
 
     def display_preset_id(self) -> str:
         raw = str(self._get("appearance_preset", CUSTOM_DISPLAY_PRESET_ID) or "")

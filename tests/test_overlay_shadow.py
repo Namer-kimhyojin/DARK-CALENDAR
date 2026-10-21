@@ -174,7 +174,7 @@ def test_instance_restore_and_duplicate_keep_shadows_independent(owner):
         store_text_shadow(first._set, config)
         first._apply_and_resize()
         first.move(60, 60)
-        assert read_text_shadow(second._get) == TextShadow()
+        assert read_text_shadow(second._get) == TextShadow(True)
 
         copy_id = manager.duplicate_instance(first_id)
         duplicate = manager.get_widget(copy_id)
@@ -188,7 +188,7 @@ def test_instance_restore_and_duplicate_keep_shadows_independent(owner):
         restored = OverlayWidgetManager(owner)
         restored.restore_all()
         assert read_text_shadow(restored.get_widget(first_id)._get) == config
-        assert read_text_shadow(restored.get_widget(second_id)._get) == TextShadow()
+        assert read_text_shadow(restored.get_widget(second_id)._get) == TextShadow(True)
         assert not read_text_shadow(restored.get_widget(copy_id)._get).enabled
         assert restored.get_widget(first_id)._template_label.graphicsEffect().isEnabled()
     finally:

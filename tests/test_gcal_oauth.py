@@ -147,7 +147,7 @@ def test_service_rejects_web_before_browser_and_preserves_token(monkeypatch, tmp
 def test_atomic_token_save_keeps_old_file_on_replace_failure(monkeypatch, tmp_path):
     path = tmp_path / "token.json"
     path.write_bytes(b"existing-token")
-    monkeypatch.setattr(token_store, "_dpapi_available", lambda: False)
+    monkeypatch.setattr(token_store, "_dpapi_crypt", lambda *a, **k: b"protected-token")
 
     def fail(*args):
         raise OSError("disk full")
@@ -174,6 +174,60 @@ def test_service_defers_token_save_until_dialog_accepts_result(monkeypatch, tmp_
     assert sync.authenticate(force_reauth=True, persist_token=False)
     assert sync._pending_token_json == "test-token"
     assert sync.is_authenticated
+
+
+def test_service_requires_auth_when_legacy_token_protection_fails(monkeypatch, tmp_path):
+    path = tmp_path / "token.json"
+    raw = json.dumps({"token": "synthetic", "scopes": service.SCOPES}).encode(
+        "utf-8", errors="strict"
+    )
+    path.write_bytes(raw)
+    monkeypatch.setattr(service, "TOKEN_PATH", str(path))
+    monkeypatch.setattr(token_store, "TOKEN_PATH", str(path))
+
+    def fail(data, encrypt):
+        raise OSError("synthetic encryption failure")
+
+    monkeypatch.setattr(token_store, "_dpapi_crypt", fail)
+    monkeypatch.setattr(
+        service.Credentials,
+        "from_authorized_user_info",
+        lambda *a: pytest.fail("Unprotected credentials must not be used"),
+    )
+    monkeypatch.setattr(service, "build", lambda *a, **k: pytest.fail("Must require auth"))
+    sync = service.CalendarSyncService()
+    assert not sync.authenticate(interactive=False)
+    assert sync.last_error_kind == "auth_required"
+    assert not sync.is_authenticated
+    assert sync.service is None
+    assert path.read_bytes() == raw
+
+
+def test_service_rejects_auth_when_token_encryption_fails(monkeypatch, tmp_path):
+    client = tmp_path / "credentials.json"
+    client.write_text(json.dumps(DESKTOP_CONFIG), encoding="utf-8", errors="strict")
+    path = tmp_path / "token.json"
+    previous = b"DCTOK1previous-encrypted-token"
+    path.write_bytes(previous)
+    monkeypatch.setattr(service, "CREDENTIALS_PATH", str(client))
+    monkeypatch.setattr(service, "TOKEN_PATH", str(path))
+    monkeypatch.setattr(token_store, "TOKEN_PATH", str(path))
+    creds = SimpleNamespace(valid=True, to_json=lambda: "synthetic-token")
+    monkeypatch.setattr(service, "run_desktop_auth", lambda *a, **k: creds)
+    monkeypatch.setattr(service, "build", lambda *a, **k: object())
+
+    def fail(data, encrypt):
+        raise OSError("synthetic encryption failure")
+
+    monkeypatch.setattr(token_store, "_dpapi_crypt", fail)
+    sync = service.CalendarSyncService()
+    assert not sync.authenticate(force_reauth=True)
+    assert sync.last_error_message == "token_write_failed"
+    assert not sync.is_authenticated
+    assert sync.service is None
+    assert sync._pending_token_json is None
+    assert path.read_bytes() == previous
+    assert sorted(item.name for item in tmp_path.iterdir()) == ["credentials.json", "token.json"]
 
 
 def test_expired_token_refresh_uses_bounded_request_and_independent_metadata_reader(

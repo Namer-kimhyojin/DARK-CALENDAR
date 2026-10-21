@@ -1,11 +1,28 @@
 # 버전 변경 이력
 
-개발 변경 버전과 실제 공개·설치 상태는 별도로 관리한다. 버전 부여는 검증·게시 완료를 의미하지 않는다.
+제품 버전은 배포 단위로 결정한다. 변경 기록·Git/CI 빌드·공개·Store·설치 상태는 별도이며 변경 기록만으로 버전을 올리지 않는다.
 
-기준 버전: `3.8.1` · 현재 개발 버전: **`4.6.9`**
+기준 버전: `3.8.1` · 현재 제품 버전: **`4.7.0`**
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.7.0 | 2026-10-21T11:41:32.507067+09:00 | release | Unified date/time input across schedules, directives and routines with keyboard improvements and accumulated calendar sync reliability and security fixes | `release-4.7.0-20261021` |
+| 4.6.9 | 2026-10-21T11:35:00.161574+09:00 | change | Fix date/time keyboard entry, popup traversal, live schedule summaries and consistent task editor controls after native Windows QA | `schedule-datetime-native-20261021` |
+| 4.6.9 | 2026-10-21T11:05:36.254885+09:00 | change | 일정 날짜 통합·시간 목록·일정 길이 입력 및 지시협조·일반업무 디자인 통일, 생성수정이동복사 검증 | `schedule-datetime-input-20261021` |
+| 4.6.9 | 2026-10-21T10:16:25.713305+09:00 | change | 외부 캘린더 후속 계획: 설치 인수·보안 자동화, 통합 상태/진단, 갱신 효율과 다중 계정 단계 수립 | `external-sync-roadmap-20261021` |
+| 4.6.9 | 2026-10-21T09:04:23.615635+09:00 | change | 주간 시간표에서 키보드로 선택한 일정 카드가 화면 위아래에 잘리는 스크롤 보정 | `maintenance-20261021-weekly-keyboard-scroll-visibility` |
+| 4.6.9 | 2026-10-21T09:02:49.593361+09:00 | change | 주간 보기에서 선택 해제 후 위·왼쪽 방향키가 마지막 일정을 건너뛰는 오류 수정 | `maintenance-20261021-weekly-reverse-key-selection` |
+| 4.6.9 | 2026-10-20T18:29:06.940591+09:00 | change | 외부 캘린더 인증·로그·진단 보호, 악성 응답과 시간대 격리, 의존성 취약점 및 배포 민감 파일 차단 | `external-sync-security-20261020` |
+| 4.6.9 | 2026-10-20T18:04:43.350267+09:00 | change | 외부 캘린더 충돌·생성 경합·오류 격리·ICS 계산 중단 및 공통 복구 진단 안정화 | `external-sync-stability-20261020` |
+| 4.6.9 | 2026-10-20T17:21:30.331938+09:00 | change | Default new text overlay widgets to Pure Type with text shadows while preserving saved appearance | `text-widget-pure-shadow-defaults-20261020` |
+| 4.6.9 | 2026-10-20T17:01:42.114894+09:00 | change | Bound checklist JSON imports before parsing and database access; validate schema and preserve atomic imports | `20261020-security-checklist-import-limits` |
+| 4.6.9 | 2026-10-20T16:49:01.818167+09:00 | change | Restrict ICS requests and redirects to pinned public destinations, validate peers, and reject HTTPS downgrades | `security-ics-redirect-public-destinations-20261020` |
+| 4.6.9 | 2026-10-20T16:37:48.315078+09:00 | change | Render calendar detail fields and imported checklist text as plain text before assigning content; add resource-resolution regression checks. | `20261020-security-untrusted-label-text` |
+| 4.6.9 | 2026-10-20T16:31:29.873707+09:00 | change | Google OAuth token protection fails closed; preserve encrypted credentials and reject failed plaintext migration | `security-google-oauth-dpapi-fail-closed-20261020` |
+| 4.6.9 | 2026-10-20T15:14:33.102984+09:00 | change | Reject unsafe release compliance filenames and ZIP members; constrain cache downloads and partial files. | `security-compliance-filename-path-traversal-20261020` |
+| 4.6.9 | 2026-10-20T15:06:55.361398+09:00 | module | 배포 단위 제품 버전과 변경 기록을 분리하고 읽기 전용 검사·명시적 배포 준비·원본 기준 동기화 적용 | `release-unit-version-policy-20261020` |
+| 4.6.9 | 2026-10-20T15:06:26.907050+09:00 | change | Reject unsafe manifest asset paths before release staging and revalidate before MSIX packaging | `security-manifest-asset-containment-20261020` |
+| 4.6.9 | 2026-10-20T15:06:26.084262+09:00 | policy | 배포 단위 버전 체계로 전환; 기존 번호·이력·공개 패키지 보존 | `policy:release-unit-v2` |
 | 4.6.9 | 2026-10-20T11:53:24.438016+09:00 | change | 실제 Windows 시스템 정보창의 OK 버튼 ID 2 변형을 정확한 지문과 함께 인식 | `native-observed-system-notice-ok-id2-20261020` |
 | 4.6.8 | 2026-10-20T11:42:15.224369+09:00 | change | 정상 오늘 일정 요약을 명시적 Confirm으로 닫고 데이터·화면 검증을 이어가는 실제 재시작 흐름 보완 | `native-owned-startup-briefing-20261020` |
 | 4.6.7 | 2026-10-20T11:28:17.801160+09:00 | change | 기동 로그는 엄격히 검사하고 첫 UIA 직전에 예외를 관찰하며 CI 시스템 알림과 화면 가림을 검증 | `native-observation-boundary-and-os-notice-20261020` |

@@ -1218,6 +1218,7 @@ def queue_gcal_sync_conflict(
     remote_snapshot=None,
     local_snapshot_json=None,
     remote_snapshot_json=None,
+    commit=True,
 ):
     conn = get_connection()
     if not conn:
@@ -1281,7 +1282,8 @@ def queue_gcal_sync_conflict(
                     created_at,
                 ),
             )
-        conn.commit()
+        if commit:
+            conn.commit()
         return True
     except Exception as e:
         logger.error(f"Error queueing Google sync conflict: {e}")
@@ -1316,18 +1318,77 @@ def mark_gcal_sync_conflict_resolved(conflict_id, resolution):
         return False
     try:
         cur = conn.cursor()
+        if resolution == "keep_local":
+            # Acquire the write lock before reading the linked task. The identity
+            # check and snapshot restore must not race a calendar move or relink.
+            cur.execute(
+                "UPDATE gcal_sync_conflict_queue SET is_resolved=is_resolved "
+                "WHERE id=? AND COALESCE(is_resolved, 0)=0",
+                (conflict_id,),
+            )
+            if cur.rowcount != 1:
+                conn.rollback()
+                return False
+            cur.execute(
+                "SELECT * FROM gcal_sync_conflict_queue WHERE id=? AND is_resolved=0",
+                (conflict_id,),
+            )
+            conflict = cur.fetchone()
+            if not conflict:
+                conn.rollback()
+                return False
+            snapshot = json.loads(conflict["local_snapshot_json"] or "{}")
+            if not isinstance(snapshot, dict):
+                conn.rollback()
+                return False
+            fields = {
+                "name",
+                "deadline",
+                "end_date",
+                "description",
+                "location",
+                "all_day",
+                "bg_color",
+                "is_completed",
+            }
+            payload = {field: value for field, value in snapshot.items() if field in fields}
+            current = get_unified_task(conflict["local_task_id"])
+            if not payload or not current:
+                conn.rollback()
+                return False
+            if current.get("gcal_event_id") != conflict["gcal_event_id"]:
+                conn.rollback()
+                return False
+            current_source = current.get("gcal_source_calendar_id") or current.get(
+                "gcal_target_calendar_id"
+            )
+            if current_source and current_source != conflict["gcal_calendar_id"]:
+                conn.rollback()
+                return False
+            # Keep the server revision observed during pull. Restoring the old
+            # baseline would turn the user's explicit choice into another conflict.
+            payload["gcal_sync_error"] = None
+            if not update_unified_task(
+                conflict["local_task_id"], payload, mark_gcal_dirty=True, commit=False
+            ):
+                conn.rollback()
+                return False
         cur.execute(
             """
             UPDATE gcal_sync_conflict_queue
             SET is_resolved=1,
                 resolution=?,
                 resolved_at=?
-            WHERE id=?
+            WHERE id=? AND COALESCE(is_resolved, 0)=0
             """,
             (resolution or "resolved", _now_local_str(), conflict_id),
         )
+        resolved = cur.rowcount > 0
+        if not resolved:
+            conn.rollback()
+            return False
         conn.commit()
-        return cur.rowcount > 0
+        return True
     except Exception as e:
         logger.error(f"Error resolving Google sync conflict: {e}")
         conn.rollback()
@@ -2170,6 +2231,8 @@ def mark_unified_task_gcal_synced(
     source_calendar_id=None,
     source_calendar_summary=None,
     target_calendar_id=None,
+    remote_updated_at=None,
+    expected_snapshot=None,
 ):
     conn = get_connection()
     if not conn:
@@ -2191,7 +2254,9 @@ def mark_unified_task_gcal_synced(
             "gcal_sync_error=NULL",
             "updated_at=?",
         ]
-        params = [now_utc, now_utc, now_local]
+        # This is a server revision, not the local time at which we saved it.
+        # A missing receipt remains unknown until the next pull.
+        params = [now_utc, remote_updated_at or None, now_local]
 
         if event_id is not None:
             sets.insert(0, "gcal_event_id=?")
@@ -2208,10 +2273,16 @@ def mark_unified_task_gcal_synced(
 
         sql = f"UPDATE unified_task SET {', '.join(sets)} WHERE id=?"
         params.append(task_id)
+        for field, value in (expected_snapshot or {}).items():
+            if field not in columns:
+                continue
+            sql += f' AND "{field}" IS ?'
+            params.append(value)
         cur.execute(sql, tuple(params))
+        marked = cur.rowcount == 1
         if commit:
             conn.commit()
-        return True
+        return marked
     except Exception as e:
         logger.error(f"Error marking unified task synced: {e}")
         conn.rollback()

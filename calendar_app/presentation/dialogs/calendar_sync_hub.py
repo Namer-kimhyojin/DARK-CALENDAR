@@ -35,6 +35,7 @@ from calendar_app.shared.icon_map import ICON, icon
 from .calendar_manager_page import CalendarManagerPage
 from .calendar_sync_style import build_sync_workspace_styles
 from .dialog_styles import apply_common_dialog_style, build_dialog_footer, get_dialog_theme_tokens
+from .provider_settings_widgets import plain_tooltip
 from .sync_feedback import sync_error_message
 from .sync_recovery import sync_recovery_action
 
@@ -476,6 +477,12 @@ class CalendarSyncHub(QDialog):
             self.resolve_selected.style().unpolish(self.resolve_selected)
             self.resolve_selected.style().polish(self.resolve_selected)
         details = provider_status(state) if state else ""
+        if state.get("calendar_errors") and self.coordinator:
+            names = {c["id"]: c.get("name") or c["id"] for c in self.coordinator.calendar_rows}
+            details += "\n\n" + "\n\n".join(
+                names.get(cid, cid) + "\n" + sync_error_message(code)
+                for cid, code in state["calendar_errors"].items()
+            )
         if provider == "ics" and self.coordinator:
             errors = subscription_errors(self.app.settings)
             failed = [
@@ -986,7 +993,7 @@ class CalendarSyncHub(QDialog):
             for index, (provider, text) in enumerate(issue_rows):
                 item = QListWidgetItem(text) if rebuild else self.issue_list.item(index)
                 item.setText(text)
-                item.setToolTip(item.text())
+                item.setToolTip(plain_tooltip(item.text()))
                 item.setData(Qt.ItemDataRole.UserRole, provider)
                 if rebuild:
                     self.issue_list.addItem(item)

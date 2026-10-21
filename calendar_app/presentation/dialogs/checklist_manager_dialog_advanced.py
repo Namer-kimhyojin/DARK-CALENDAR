@@ -15,6 +15,7 @@
 
 from datetime import datetime
 import json
+import os
 import re
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
@@ -1034,12 +1035,18 @@ class ChecklistManagerDialog(QDialog):
             return
 
         try:
-            with open(filename, encoding="utf-8", errors="strict") as file:
-                data = json.load(file)
-
             try:
+                limit = checklist_repo.MAX_CHECKLIST_IMPORT_BYTES
+                with open(filename, "rb") as file:
+                    if os.fstat(file.fileno()).st_size > limit:
+                        raise ValueError("Checklist import exceeds the byte limit")
+                    # Bound the read too: the file can grow after the size check.
+                    raw = file.read(limit + 1)
+                if len(raw) > limit:
+                    raise ValueError("Checklist import exceeds the byte limit")
+                data = json.loads(raw.decode("utf-8", errors="replace"))
                 template_id = checklist_repo.import_checklist_template(data)
-            except ValueError as exc:
+            except (ValueError, RecursionError) as exc:
                 raise ValueError(t("checklist_mgr.import_err_invalid")) from exc
 
             if not template_id:

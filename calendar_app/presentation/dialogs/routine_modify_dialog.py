@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 
 from calendar_app.infrastructure.db import checklist_repo, common_repo, task_repo
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.dialogs.dialog_editor_styles import build_task_editor_stylesheet
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
@@ -69,7 +70,13 @@ class RoutineModifyDialog(BaseTaskDialog):
         self._parse_task_datetime()
 
         apply_dialog_title(self, t("dialog.task.mod_routine", "일반업무 수정"))
-        apply_common_dialog_style(self, minimum_width=640, size=(660, 580))
+        self.setObjectName("TaskEditorDialog")
+        apply_common_dialog_style(
+            self,
+            minimum_width=640,
+            size=(660, 580),
+            extra_stylesheet=build_task_editor_stylesheet(),
+        )
 
         self._build_ui()
         self._load_data()
@@ -175,19 +182,55 @@ class RoutineModifyDialog(BaseTaskDialog):
         date_group, date_layout = self._create_section(
             t("dialog.task.routine_datetime_section", "수행 일시")
         )
-        dt_row = QHBoxLayout()
-        dt_row.setSpacing(8)
+        date_label = QLabel(t("dialog.schedule_input.date", "날짜"))
+        date_label.setObjectName("TaskDialogFieldLabel")
+        date_layout.addWidget(date_label)
+
+        date_row = QHBoxLayout()
+        date_row.setSpacing(8)
 
         self.start_date = DatePickerWidget(self.initial_date)
         self.start_date.setMinimumWidth(130)
+        self.start_date.setAccessibleName(date_label.text())
+        date_label.setBuddy(self.start_date)
         self._set_editor_height(self.start_date)
         polish_calendar_popup(self.start_date)
+        date_row.addWidget(self.start_date)
+        date_row.addStretch()
+        date_layout.addLayout(date_row)
 
+        self._routine_time_group = QWidget()
+        time_column = QVBoxLayout(self._routine_time_group)
+        time_column.setContentsMargins(0, 0, 0, 0)
+        time_column.setSpacing(5)
+        time_label = QLabel(t("dialog.schedule_input.time", "시간"))
+        time_label.setObjectName("TaskDialogFieldLabel")
         self.start_time = TimePickerWidget(self.initial_time)
-        dt_row.addWidget(self.start_date)
-        dt_row.addWidget(self.start_time)
-        dt_row.addStretch()
-        date_layout.addLayout(dt_row)
+        self.start_time.enable_dropdown()
+        self.start_time.setAccessibleName(time_label.text())
+        time_label.setBuddy(self.start_time)
+        time_column.addWidget(time_label)
+        time_row = QHBoxLayout()
+        time_row.addWidget(self.start_time)
+        time_row.addStretch()
+        time_column.addLayout(time_row)
+        date_layout.addWidget(self._routine_time_group)
+
+        shortcuts = QHBoxLayout()
+        shortcuts.setSpacing(6)
+        for label, action in (
+            (t("dialog.common.today", "오늘"), "today"),
+            (t("common.tomorrow", "내일"), "tomorrow"),
+            (t("alarm_popup.time_now", "지금"), "now"),
+        ):
+            button = self._make_quick_btn(label, accent=action == "now")
+            button.setProperty("quickAction", action)
+            button.clicked.connect(
+                lambda _=False, quick_action=action: self._apply_start_quick_action(quick_action)
+            )
+            shortcuts.addWidget(button)
+        shortcuts.addStretch()
+        date_layout.addLayout(shortcuts)
 
         self.end_date = None
         self.end_time = None

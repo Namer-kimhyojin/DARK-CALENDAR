@@ -34,11 +34,12 @@ def repository(tmp_path):
     return tmp_path, {"candidate_commit": git(tmp_path, "rev-parse", "HEAD"), "qa_sha256": {}}
 
 
-def test_development_version_only_change_can_reuse_candidate(repository):
+@pytest.mark.parametrize("version", ["4.6.5", "4.6.10", "4.10.123"])
+def test_development_version_only_change_can_reuse_candidate(repository, version):
     root, policy = repository
     path = root / "calendar_app/app_metadata.py"
     path.write_text(
-        path.read_text(encoding="utf-8", errors="strict").replace("4.6.4", "4.6.5"),
+        path.read_text(encoding="utf-8", errors="strict").replace("4.6.4", version),
         encoding="utf-8",
         errors="strict",
     )
@@ -46,6 +47,18 @@ def test_development_version_only_change_can_reuse_candidate(repository):
     git(root, "commit", "-m", "QA version")
     result = candidate.verify_inputs(root, policy, git(root, "rev-parse", "HEAD"))
     assert result["product_dependency_packaging_inputs_unchanged"]
+
+
+def test_multidigit_msix_version_does_not_hide_os_floor_or_identity_changes():
+    original = '<Package><Identity Name="Same" Version="4.6.9.0"/><TargetDeviceFamily MinVersion="10.0.17763.0"/></Package>'
+    newer = original.replace('Version="4.6.9.0"', 'Version="4.6.10.0"')
+    assert candidate.version_normalized(
+        "AppxManifest.xml", original
+    ) == candidate.version_normalized("AppxManifest.xml", newer)
+    for changed in (newer.replace("17763", "19041"), newer.replace('Name="Same"', 'Name="Other"')):
+        assert candidate.version_normalized(
+            "AppxManifest.xml", original
+        ) != candidate.version_normalized("AppxManifest.xml", changed)
 
 
 @pytest.mark.parametrize(

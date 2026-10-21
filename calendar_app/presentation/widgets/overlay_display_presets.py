@@ -197,7 +197,7 @@ _PRESETS: tuple[OverlayDisplayPreset, ...] = (
 )
 
 _PRESET_BY_ID = {preset.preset_id: preset for preset in _PRESETS}
-DEFAULT_DISPLAY_PRESET_ID = "midnight_glass"
+DEFAULT_DISPLAY_PRESET_ID = "pure_type"
 CUSTOM_DISPLAY_PRESET_ID = "custom"
 
 

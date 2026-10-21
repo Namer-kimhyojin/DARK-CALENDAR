@@ -18,6 +18,10 @@ from calendar_app.infrastructure.caldav_sync.resource_cache import CalDAVResourc
 from calendar_app.infrastructure.calendar_sync.engine import CalendarSyncEngine
 from calendar_app.infrastructure.calendar_sync.http_retry import MAX_RETRY_AFTER_SECONDS
 from calendar_app.infrastructure.calendar_sync.repository import CalendarSyncRepository
+from calendar_app.infrastructure.calendar_sync.status import (
+    save_calendar_discovery_errors,
+    save_calendar_errors,
+)
 
 
 class CalDAVWorker(QThread):
@@ -87,22 +91,12 @@ class CalDAVWorker(QThread):
             try:
                 repo = CalendarSyncRepository(conn, "caldav")
                 client.resource_cache = CalDAVResourceCache(conn, account)
-                saved = repo.calendars(account)
-                available = {c["id"]: c for c in calendars}
-                missing = [c for c in saved if c["is_active"] and c["remote_id"] not in available]
-                if missing:
-                    with conn:
-                        for calendar in missing:
-                            conn.execute(
-                                "UPDATE calendar SET is_active=0,access_role='reader' WHERE id=?",
-                                (calendar["local_id"],),
-                            )
-                    raise CalendarSyncError("calendar_access_lost")
-                for calendar in saved:
-                    if calendar["remote_id"] in available:
-                        repo.register(account, available[calendar["remote_id"]])
+                calendar_errors = repo.refresh_calendar_metadata(account, calendars)
                 if self.operation == "refresh":
-                    self.result.emit(self.operation, {"calendars": calendars})
+                    self.result.emit(
+                        self.operation,
+                        {"calendars": calendars, "calendar_errors": calendar_errors},
+                    )
                 else:
                     summary = CalendarSyncEngine(
                         client,
@@ -110,6 +104,7 @@ class CalDAVWorker(QThread):
                         account,
                         self.local_zone,
                         cancelled=self.isInterruptionRequested,
+                        calendar_errors=calendar_errors,
                     ).run()
                     self.result.emit(self.operation, {"summary": summary, "calendars": calendars})
             finally:
@@ -254,7 +249,7 @@ class CalDAVSyncController(QObject):
             return
         try:
             self._apply_result(operation, result)
-        except sqlite3.Error:
+        except (sqlite3.Error, CalendarSyncError):
             self._failed("operation_failed")
 
     def _apply_result(self, operation, result):
@@ -272,20 +267,29 @@ class CalDAVSyncController(QObject):
                 self.settings.setValue(self.prefix + "enabled", False)
             self.settings.setValue(self.prefix + "account_id", result["account"])
             self.settings.setValue(self.prefix + "account_name", result["name"])
+            save_calendar_errors(self.settings, self.prefix, {})
             if result.get("server_url"):
                 self.settings.setValue(self.prefix + "server_url", result["server_url"])
         elif operation == "disconnect":
             self.settings.setValue(self.prefix + "enabled", False)
             self.settings.remove(self.prefix + "account_id")
             self.settings.remove(self.prefix + "account_name")
+            save_calendar_errors(self.settings, self.prefix, {})
             self.available = []
         elif operation == "sync":
             self.summary = result["summary"]
+            save_calendar_errors(
+                self.settings, self.prefix, self.summary.get("calendar_errors", {})
+            )
             if not self.summary.get("issues"):
                 self.settings.setValue(
                     self.prefix + "last_success",
                     datetime.now().astimezone().isoformat(timespec="seconds"),
                 )
+        elif operation == "refresh":
+            save_calendar_discovery_errors(
+                self.settings, self.prefix, result.get("calendar_errors", {})
+            )
         self.available = result.get("calendars", self.available)
         self.status = {
             "login": "connected",

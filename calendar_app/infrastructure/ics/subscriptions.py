@@ -22,6 +22,7 @@ ICS_ERRORS = {
     "ics_not_found",
     "ics_rate_limited",
     "ics_server_error",
+    "ics_processing_timeout",
 }
 
 

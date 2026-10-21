@@ -36,7 +36,11 @@ def _get_default_gcal_id(app) -> str:
 
 
 from calendar_app.infrastructure.google_sync.helpers import (  # noqa: E402
+    _mark_task_synced,
     delete_task_from_google,
+    google_push_snapshot,
+    google_push_snapshot_matches,
+    google_remote_revision,
     sync_task_to_google,
 )
 from calendar_app.shared.datetime_utils import timezone_offset_for_name  # noqa: E402
@@ -581,23 +585,17 @@ def _apply_calendar_binding_change(app, previous_calendar_id, calendar_id):
 
 
 def _remote_is_newer_than_local_base(task, event):
-    remote_dt = _parse_sync_dt(getattr(event, "updated_time", None))
-    if remote_dt is None:
-        return False
-    base_dt = _parse_sync_dt(task.get("gcal_last_synced_at"))
-    if base_dt is None:
-        return False
-    return remote_dt > base_dt
+    return _remote_text_is_newer_than_local_base(task, getattr(event, "updated_time", None))
 
 
 def _remote_text_is_newer_than_local_base(task, remote_updated_at):
     remote_dt = _parse_sync_dt(remote_updated_at)
     if remote_dt is None:
         return False
-    base_dt = _parse_sync_dt(task.get("gcal_last_synced_at"))
-    if base_dt is None:
-        return False
-    return remote_dt > base_dt
+    base_dt = _parse_sync_dt(task.get("gcal_remote_updated_at"))
+    # Compare server revisions only; a fast or slow workstation clock cannot
+    # establish that a remote edit is safe to overwrite.
+    return base_dt is None or remote_dt != base_dt
 
 
 def _mark_sync_failure(task_id, message, commit=True):
@@ -692,12 +690,12 @@ def _normalize_gcal_event_datetimes(event, target_tz_offset="+09:00", *, target_
 
 
 def _validate_google_pull_snapshot(
-    events, next_sync_token, target_tz_offset, *, target_tz_name=None
+    events, next_sync_token, target_tz_offset, *, target_tz_name=None, require_sync_token=True
 ):
     """Validate the entire calendar before writes, missing-row archives or token changes."""
     if not isinstance(events, list):
         raise ValueError("invalid_google_pull_events")
-    if not isinstance(next_sync_token, str) or not next_sync_token.strip():
+    if require_sync_token and (not isinstance(next_sync_token, str) or not next_sync_token.strip()):
         raise ValueError("invalid_google_pull_token")
     for event in events:
         event_id = getattr(event, "id", None)
@@ -1031,7 +1029,7 @@ def _push_local_changes_to_google(app, remote_versions=None):
                     )
                     _redirect_to_update.append(_fresh)
                     continue
-                if _fresh != _bt:
+                if not google_push_snapshot_matches(_bt, _fresh):
                     # Keep the user's newer content or calendar choice for the
                     # next cycle rather than creating the stale snapshot.
                     logger.info(
@@ -1081,13 +1079,15 @@ def _push_local_changes_to_google(app, remote_versions=None):
                     _bt2 = _task_map.get(str(_ltid))
                     if _res.get("success") and _res.get("event_id"):
                         _src_cal = _task_target_calendar_id(_bt2 or {}, default_target_calendar_id)
-                        marked = task_repo.mark_unified_task_gcal_synced(
+                        marked = _mark_task_synced(
                             _ltid,
                             event_id=_res["event_id"],
                             commit=True,
                             source_calendar_id=_src_cal,
-                            source_calendar_summary=None,
                             target_calendar_id=_src_cal,
+                            remote_updated_at=_res.get("remote_updated_at"),
+                            expected_snapshot=google_push_snapshot(_bt2 or {}),
+                            created=True,
                         )
                         if not marked:
                             task_repo.mark_unified_task_gcal_failed(
@@ -1233,8 +1233,8 @@ def _push_local_changes_to_google(app, remote_versions=None):
                 target_calendar_id,
                 before_id,
             )
-            expected_remote_updated_at = remote_versions.get(event_key) or task.get(
-                "gcal_remote_updated_at"
+            expected_remote_updated_at = remote_versions.get(event_key) or google_remote_revision(
+                task
             )
             result = sync_task_to_google(
                 app,
@@ -1568,6 +1568,29 @@ def sync_google_calendar(app, silent=False):
         # BUG-D01: calendar ID 목록은 루프 진입 전 1번만 스냅샷으로 고정.
         # 루프 도중 사용자가 캘린더를 삭제/추가해도 한 번 sync 주기에는 영향 없음.
         sync_calendar_ids = list(_active_sync_calendar_ids(app, cal_id))
+        pending_tasks = task_repo.get_google_sync_tasks()
+        if pending_tasks is None:
+            raise RuntimeError("pending_google_tasks_unavailable")
+        revision_refresh_calendars = set()
+        revision_recovery_events = {}
+        for pending_task in pending_tasks:
+            if not pending_task.get("gcal_event_id") or google_remote_revision(pending_task):
+                continue
+            calendar_id = pending_task.get("gcal_source_calendar_id") or _task_target_calendar_id(
+                pending_task, cal_id
+            )
+            if calendar_id:
+                calendar_id = resolved_primary_id if calendar_id == "primary" else calendar_id
+                revision_refresh_calendars.add(calendar_id)
+                revision_recovery_events.setdefault(calendar_id, []).append(
+                    pending_task["gcal_event_id"]
+                )
+        targeted_calendar_ids = {
+            calendar_id
+            for calendar_id in revision_recovery_events
+            if calendar_id not in sync_calendar_ids
+        }
+        sync_calendar_ids.extend(sorted(targeted_calendar_ids))
         app._last_gcal_sync_stats["pull_calendar_count"] = len(sync_calendar_ids)
         changed_dates = set()
         changed_any = False
@@ -1578,10 +1601,15 @@ def sync_google_calendar(app, silent=False):
         conn = gcal_db_adapter.get_connection()
 
         for sync_calendar_id in sync_calendar_ids:
+            targeted_recovery = sync_calendar_id in targeted_calendar_ids
             token_key = _sync_token_key(sync_calendar_id)
             fail_key = _sync_fail_count_key(sync_calendar_id)
             sync_token = app.settings.value(token_key, "", type=str) or None
             if binding_changed and sync_calendar_id == cal_id:
+                sync_token = None
+            if sync_calendar_id in revision_refresh_calendars:
+                # Reuse the full-pull recovery path: an unchanged incremental
+                # feed cannot recover a missing or legacy local-clock revision.
                 sync_token = None
 
             token_fail_count = int(app.settings.value(fail_key, 0, type=int) or 0)
@@ -1595,10 +1623,17 @@ def sync_google_calendar(app, silent=False):
                 _settings_set(app, fail_key, 0)
                 sync_token = None
 
-            events, next_sync_token, reset_required = app.gcal_sync.fetch_sync_events(
-                sync_token,
-                calendar_id=sync_calendar_id,
-            )
+            if targeted_recovery:
+                events, next_sync_token, reset_required = app.gcal_sync.fetch_sync_events(
+                    None,
+                    calendar_id=sync_calendar_id,
+                    event_ids=revision_recovery_events[sync_calendar_id],
+                )
+            else:
+                events, next_sync_token, reset_required = app.gcal_sync.fetch_sync_events(
+                    sync_token,
+                    calendar_id=sync_calendar_id,
+                )
             if reset_required:
                 # BUG-B01: 410 sync token 만료 후 full resync 재시도
                 reset_retry_count = token_fail_count + 1
@@ -1699,7 +1734,11 @@ def sync_google_calendar(app, silent=False):
 
             try:
                 _validate_google_pull_snapshot(
-                    events, next_sync_token, timezone_offset_for_name(tz), target_tz_name=tz
+                    events,
+                    next_sync_token,
+                    timezone_offset_for_name(tz),
+                    target_tz_name=tz,
+                    require_sync_token=not targeted_recovery,
                 )
             except Exception as validation_error:
                 _capture_google_sync_failure(
@@ -1715,7 +1754,7 @@ def sync_google_calendar(app, silent=False):
                 )
                 continue
             _settings_set(app, fail_key, 0)
-            full_sync = sync_token is None or reset_required
+            full_sync = not targeted_recovery and (sync_token is None or reset_required)
             # Incremental sync can miss pre-existing events if a sync token survives
             # across DB resets/migrations. Probe a near-term window once per day and
             # backfill remote events that are absent locally.
@@ -1726,7 +1765,12 @@ def sync_google_calendar(app, silent=False):
             force_probe = not _has_local
 
             probe_due = _should_run_incremental_backfill_probe(app, sync_calendar_id)
-            if not full_sync and events is not None and (probe_due or force_probe):
+            if (
+                not targeted_recovery
+                and not full_sync
+                and events is not None
+                and (probe_due or force_probe)
+            ):
                 probe_start = (
                     datetime.now() - timedelta(days=_INCREMENTAL_BACKFILL_LOOKBACK_DAYS)
                 ).strftime("%Y-%m-%d")
@@ -1786,7 +1830,11 @@ def sync_google_calendar(app, silent=False):
             try:
                 # Backfill events must pass the same preflight before any row is applied.
                 _validate_google_pull_snapshot(
-                    events, next_sync_token, timezone_offset_for_name(tz), target_tz_name=tz
+                    events,
+                    next_sync_token,
+                    timezone_offset_for_name(tz),
+                    target_tz_name=tz,
+                    require_sync_token=not targeted_recovery,
                 )
                 for event in events:
                     source_calendar_id = _normalize_calendar_id(
@@ -1888,7 +1936,7 @@ def sync_google_calendar(app, silent=False):
                                 )
                                 if remote_newer:
                                     try:
-                                        task_repo.queue_gcal_sync_conflict(
+                                        conflict_saved = task_repo.queue_gcal_sync_conflict(
                                             local_id,
                                             event.id,
                                             gcal_calendar_id=source_calendar_id,
@@ -1918,12 +1966,19 @@ def sync_google_calendar(app, silent=False):
                                                 "bg_color": bg_color,
                                                 "updated_time": remote_updated_at,
                                             },
+                                            commit=False,
                                         )
+                                        if not conflict_saved:
+                                            raise RuntimeError("conflict_snapshot_not_saved")
                                     except Exception:
                                         logger.exception(
                                             "Failed to queue gcal sync conflict for task %s",
                                             local_id,
                                         )
+                                        # Without a durable local snapshot the remote
+                                        # overwrite would destroy the user's recovery path.
+                                        # Roll back this calendar and retain its sync token.
+                                        raise
                                     logger.warning(
                                         "GCal conflict on task %s: remote newer than local dirty change, remote version wins",
                                         local_id,
@@ -1969,6 +2024,7 @@ def sync_google_calendar(app, silent=False):
                                             source_calendar_id=source_calendar_id,
                                             source_calendar_summary=source_calendar_summary,
                                             target_calendar_id=source_calendar_id,
+                                            remote_updated_at=remote_updated_at,
                                         )
                                         if cleared:
                                             calendar_committed_any = True
@@ -2022,6 +2078,9 @@ def sync_google_calendar(app, silent=False):
                                 source_calendar_id,
                             )
                     else:
+                        if targeted_recovery:
+                            # A linked row removed while GET was in flight must stay removed.
+                            continue
                         if task_repo.is_gcal_event_in_task_trash(
                             event.id,
                             gcal_calendar_id=source_calendar_id,
@@ -2162,6 +2221,8 @@ def sync_google_calendar(app, silent=False):
             else:
                 _settings_set(app, _cancelled_fail_key, 0)
 
+            if targeted_recovery:
+                continue
             # apply 실패가 반복될 때 sync token이 영구 정체되는 것을 방지
             apply_fail_streak_key = f"gcal_apply_fail_streak::{sync_calendar_id}"
             apply_fail_streak = int(app.settings.value(apply_fail_streak_key, 0, type=int) or 0)

@@ -1,17 +1,27 @@
 # -*- coding: utf-8 -*-
 """Bounded Graph requests, safe pagination and conditional writes."""
 
+import json
+from time import monotonic
 from urllib.parse import quote, urlparse
 import uuid
 
 import requests
 
 from calendar_app.application.calendar_sync_contract import RemoteCalendarError
+from calendar_app.infrastructure.calendar_sync.http_response import (
+    MAX_RESPONSE_SECONDS,
+    read_calendar_response,
+)
 from calendar_app.infrastructure.calendar_sync.http_retry import retry_after_seconds
 
 from .auth import OutlookError
 
 BASE = "https://graph.microsoft.com/v1.0"
+MAX_RESPONSE = 8 * 1024 * 1024
+MAX_COLLECTION_BYTES = 32 * 1024 * 1024
+MAX_COLLECTION_ITEMS = 10_000
+MAX_COLLECTION_SECONDS = 300
 
 
 class GraphError(RemoteCalendarError):
@@ -25,22 +35,46 @@ class GraphClient:
     def __init__(self, token: str, session=None, cancelled=lambda: False):
         self.session = session or requests.Session()
         self.cancelled = cancelled
+        self._last_response_bytes = 0
         self.headers = {
             "Authorization": f"Bearer {token}",
             "Prefer": 'outlook.timezone="UTC", IdType="ImmutableId", outlook.body-content-type="text"',
+            "Accept-Encoding": "identity",
         }
 
-    def request(self, method, path, *, params=None, payload=None, etag=None):
+    def request(
+        self,
+        method,
+        path,
+        *,
+        params=None,
+        payload=None,
+        etag=None,
+        deadline=None,
+        max_bytes=MAX_RESPONSE,
+    ):
         if self.cancelled():
             raise OutlookError("cancelled")
+        if (
+            not isinstance(path, str)
+            or not path.startswith(("/", "https://"))
+            or any(ord(char) < 32 or char.isspace() or char == "\\" for char in path)
+        ):
+            raise OutlookError("unsafe_graph_url")
         url = path if path.startswith("https://") else BASE + path
-        parsed = urlparse(url)
+        try:
+            parsed = urlparse(url)
+        except ValueError as exc:
+            raise OutlookError("unsafe_graph_url") from exc
         if (
             parsed.scheme != "https"
             or parsed.netloc != "graph.microsoft.com"
             or not parsed.path.startswith("/v1.0/")
+            or parsed.fragment
         ):
             raise OutlookError("unsafe_graph_url")
+        deadline = min(deadline or float("inf"), monotonic() + MAX_RESPONSE_SECONDS)
+        self._last_response_bytes = 0
         headers = dict(self.headers)
         if etag:
             headers["If-Match"] = etag
@@ -53,20 +87,32 @@ class GraphClient:
                 json=payload,
                 timeout=(10, 30),
                 allow_redirects=False,
+                stream=True,
             )
+            try:
+                if response.status_code >= 300:
+                    raise GraphError(
+                        response.status_code,
+                        retry_after_seconds(response.headers.get("Retry-After")),
+                    )
+                if response.status_code == 204:
+                    return {}
+                content = read_calendar_response(
+                    response,
+                    max_bytes=min(MAX_RESPONSE, max_bytes),
+                    deadline=deadline,
+                    cancelled=self.cancelled,
+                    invalid_code="invalid_graph_response",
+                )
+                self._last_response_bytes = len(content)
+                try:
+                    data = json.loads(content)
+                except (ValueError, UnicodeError, RecursionError) as exc:
+                    raise OutlookError("invalid_graph_response") from exc
+            finally:
+                response.close()
         except requests.RequestException as exc:
             raise OutlookError("network_unavailable") from exc
-        if response.status_code >= 300:
-            raise GraphError(
-                response.status_code,
-                retry_after_seconds(response.headers.get("Retry-After")),
-            )
-        if response.status_code == 204:
-            return {}
-        try:
-            data = response.json()
-        except ValueError as exc:
-            raise OutlookError("invalid_graph_response") from exc
         if not isinstance(data, dict):
             raise OutlookError("invalid_graph_response")
         values = data.get("value", [])
@@ -100,13 +146,20 @@ class GraphClient:
 
     def collection(self, path, params=None):
         result, seen, identities = [], set(), set()
+        remaining = MAX_COLLECTION_BYTES
+        deadline = monotonic() + MAX_COLLECTION_SECONDS
         for _ in range(1000):
+            if monotonic() >= deadline:
+                raise OutlookError("network_unavailable")
             if path in seen:
                 raise OutlookError("pagination_loop")
             seen.add(path)
-            page = self.request("GET", path, params=params)
+            page = self.request("GET", path, params=params, deadline=deadline, max_bytes=remaining)
+            remaining -= self._last_response_bytes
             if not isinstance(page.get("value"), list):
                 raise OutlookError("invalid_graph_response")
+            if len(result) + len(page["value"]) > MAX_COLLECTION_ITEMS:
+                raise OutlookError("calendar_response_too_large")
             for item in page["value"]:
                 identifier = item.get("id")
                 if not isinstance(identifier, str) or not identifier.strip():

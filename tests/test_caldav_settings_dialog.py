@@ -14,6 +14,42 @@ from calendar_app.presentation.dialogs.calendar_sync_hub import CalendarSyncHub
 from calendar_app.presentation.main_window.caldav_sync_controller import CalDAVSyncController
 
 
+def test_pending_deletions_keep_selection_and_recheck_the_current_provider(ui):
+    app, host, path = ui
+    controller = host._caldav_sync_controllers["icloud"]
+    conn = sqlite3.connect(path)
+    repo = CalendarSyncRepository(conn, "caldav")
+    key = repo.register(controller.account, controller.available[0])
+    with conn:
+        conn.executemany(
+            "INSERT INTO calendar_sync_pending_delete(calendar_id,transaction_id,baseline) "
+            "VALUES(?,?,?)",
+            [(key, "first", "a"), (key, "second", "b")],
+        )
+    dialog = module.CalDAVSettingsDialog(host, host._caldav_sync_controllers)
+    try:
+        assert dialog.issues.count() == 2
+        dialog.issues.setCurrentRow(0)
+        selected = dialog.issues.currentItem().data(Qt.ItemDataRole.UserRole)["transaction_id"]
+        with conn:
+            conn.execute("UPDATE calendar_sync_pending_delete SET created_at='2026-10-20 00:00:00'")
+        dialog._available_key = None
+        dialog._refresh()
+        assert (
+            dialog.issues.currentItem().data(Qt.ItemDataRole.UserRole)["transaction_id"] == selected
+        )
+        assert not dialog.cancel_delete.isEnabled()
+        assert dialog.retry.isEnabled()
+        dialog.retry.click()
+        controller.sync.assert_called_once_with(force=True)
+        host._caldav_sync_controllers["naver"].sync.assert_not_called()
+        dialog._queue("cancel")
+        assert repo.pending_delete_count(controller.account) == 2
+    finally:
+        conn.close()
+        dialog.close()
+
+
 class Controller(QObject):
     changed = pyqtSignal()
 

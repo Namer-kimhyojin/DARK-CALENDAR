@@ -445,7 +445,7 @@ class BaseTaskDialog(QDialog):
         start_value = self._date_time_value(self.start_date, self.start_time)
         end_value = self._date_time_value(self.end_date, self.end_time)
         minutes = start_value.secsTo(end_value) // 60
-        self._auto_end_duration_mins = max(15, minutes if minutes > 0 else 60)
+        self._auto_end_duration_mins = minutes if minutes > 0 else 60
 
     def _apply_auto_end_from_start(self):
         if (
@@ -574,8 +574,9 @@ class BaseTaskDialog(QDialog):
             self.start_label_widget.setText(
                 t("dialog.task.start_day_routine")
                 if is_repeat
-                else t("dialog.task.end_day_routine")
+                else t("dialog.schedule_input.date", "날짜")
             )
+            self.start_date.setAccessibleName(self.start_label_widget.text())
 
         # 반복 마법사 스택 (상세 조건 입력 영역)
         if hasattr(self, "routine_wizard_stack"):
@@ -592,6 +593,8 @@ class BaseTaskDialog(QDialog):
         # 시간 위젯: 반복업무는 날짜 단위이므로 반복 설정 시 숨김
         if hasattr(self, "start_time") and self.start_time is not None:
             self.start_time.setVisible(not is_repeat)
+        if hasattr(self, "_routine_time_group"):
+            self._routine_time_group.setVisible(not is_repeat)
 
         # 반복 종료일 설정: 반복 업무일 때만 표시
         if hasattr(self, "routine_end_container"):

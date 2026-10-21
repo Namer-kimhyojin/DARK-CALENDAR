@@ -7,7 +7,7 @@ import argparse
 import hashlib
 from importlib import metadata
 import json
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 import shutil
 import subprocess
@@ -102,13 +102,78 @@ def verify_environment(lock_path: Path) -> list[dict[str, str]]:
     return resolved
 
 
-def _download(url: str, destination: Path, expected_sha256: str) -> Path:
+def _is_private_calendar_file(path: str | Path) -> bool:
+    """Recognize credential files by basename without reading their contents."""
+    name = PureWindowsPath(str(path)).name.lower()
+    if name in {"credentials.json", "token.json", "oauth.json", ".env"}:
+        return True
+    return (
+        (name.startswith(".env.") and name != ".env.example")
+        or (name.startswith("client_secret") and name.endswith(".json"))
+        or name.endswith(".credential")
+        or (name.startswith("outlook-") and name.endswith((".cache", ".tmp")))
+        or (name.startswith("caldav-") and name.endswith(".tmp"))
+        or name.startswith(("token.json.", "credentials.json.", "oauth.json."))
+    )
+
+
+def _validated_filename(filename: str) -> str:
+    """Accept portable basenames, never metadata-provided path syntax."""
+    if (
+        not isinstance(filename, str)
+        or not filename
+        or filename in (".", "..")
+        or filename != filename.rstrip(" .")
+        or any(character in '/\\:<>"|?*' or ord(character) < 32 for character in filename)
+        or PureWindowsPath(filename).is_reserved()
+    ):
+        raise ValueError(f"Unsafe compliance filename: {filename!r}")
+    return filename
+
+
+def _validate_config_filenames(config: dict) -> None:
+    filenames = []
+    for item in config.get("sourceOverrides", {}).values():
+        if "filename" in item:
+            filenames.append(item["filename"])
+    for section in ("additionalSources", "commonLicenseTexts"):
+        for item in config.get(section, []):
+            filenames.append(item["filename"])
+    for item in config.get("licenseFallbacks", {}).values():
+        filenames.append(item["filename"])
+    for filename in filenames:
+        _validated_filename(filename)
+        if _is_private_calendar_file(filename):
+            raise ValueError(f"Private calendar file cannot be packaged: {filename}")
+
+
+def _cache_path(cache_dir: Path, filename: str) -> Path:
+    root = cache_dir.resolve()
+    destination = root / _validated_filename(filename)
+    if _is_private_calendar_file(filename):
+        raise ValueError(f"Private calendar file cannot be packaged: {filename}")
+    if not destination.resolve().is_relative_to(root):
+        raise ValueError(f"Compliance file leaves cache directory: {destination}")
+    return destination
+
+
+def _validated_archive_member(member: str) -> str:
+    # Check raw components before any path library can normalize away traversal.
+    for component in member.split("/"):
+        _validated_filename(component)
+    if _is_private_calendar_file(member):
+        raise ValueError(f"Private calendar file cannot be packaged: {member}")
+    return member
+
+
+def _download(url: str, cache_dir: Path, filename: str, expected_sha256: str) -> Path:
+    destination = _cache_path(cache_dir, filename)
+    partial = _cache_path(cache_dir, filename + ".part")
     destination.parent.mkdir(parents=True, exist_ok=True)
     expected = expected_sha256.lower()
     if destination.exists() and _sha256(destination) == expected:
         return destination
 
-    partial = destination.with_suffix(destination.suffix + ".part")
     if partial.exists():
         partial.unlink()
     request = Request(url, headers={"User-Agent": _USER_AGENT})
@@ -136,7 +201,7 @@ def _pypi_sdist(name: str, version: str) -> dict[str, str]:
     return {
         "name": name,
         "version": version,
-        "filename": str(item["filename"]),
+        "filename": _validated_filename(item["filename"]),
         "url": str(item["url"]),
         "sha256": str(item["digests"]["sha256"]).lower(),
         "source": "PyPI sdist",
@@ -163,6 +228,7 @@ def bundle_licenses(
     """Copy all locked-distribution license texts into the frozen payload."""
     resolved = verify_environment(lock_path)
     config = _read_json(config_path)
+    _validate_config_filenames(config)
     output_dir = payload_dir / "THIRD_PARTY_LICENSES"
     if output_dir.exists():
         shutil.rmtree(output_dir)
@@ -189,7 +255,8 @@ def bundle_licenses(
             sources = [
                 _download(
                     str(fallback_config["url"]),
-                    cache_dir / "licenses" / fallback_filename,
+                    cache_dir / "licenses",
+                    fallback_filename,
                     str(fallback_config["sha256"]),
                 )
             ]
@@ -229,7 +296,8 @@ def bundle_licenses(
     for item in config.get("commonLicenseTexts", []):
         cached = _download(
             str(item["url"]),
-            cache_dir / "licenses" / str(item["filename"]),
+            cache_dir / "licenses",
+            item["filename"],
             str(item["sha256"]),
         )
         destination = common_dir / cached.name
@@ -291,6 +359,21 @@ def build_corresponding_source(
 ) -> Path:
     """Create one release asset containing application and upstream source."""
     config = _read_json(config_path)
+    _validate_config_filenames(config)
+    prefix = _validated_filename(f"DarkCalendar-{version}")
+    # Freeze and validate the source inventory before any downloads, output
+    # replacement or ZIP writes. Do not partially package a rejected inventory.
+    root = project_root.resolve()
+    source_files = []
+    for relative in _tracked_files(project_root):
+        member = _validated_archive_member(f"{prefix}/application-source/{relative.as_posix()}")
+        source = project_root / relative
+        resolved_source = source.resolve()
+        if not resolved_source.is_relative_to(root):
+            raise ValueError(f"Application source leaves project directory: {relative}")
+        if _is_private_calendar_file(resolved_source):
+            raise ValueError(f"Private calendar file cannot be packaged: {relative}")
+        source_files.append((source, member))
     overrides = {
         _canonical_name(name): value for name, value in config.get("sourceOverrides", {}).items()
     }
@@ -320,7 +403,8 @@ def build_corresponding_source(
             item = _pypi_sdist(name, package_version)
         cached = _download(
             item["url"],
-            cache_dir / "sources" / item["filename"],
+            cache_dir / "sources",
+            item["filename"],
             item["sha256"],
         )
         item["bytes"] = str(cached.stat().st_size)
@@ -331,7 +415,8 @@ def build_corresponding_source(
         item["source"] = "Pinned upstream source"
         cached = _download(
             item["url"],
-            cache_dir / "sources" / item["filename"],
+            cache_dir / "sources",
+            item["filename"],
             item["sha256"],
         )
         item["bytes"] = str(cached.stat().st_size)
@@ -340,7 +425,6 @@ def build_corresponding_source(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if output_path.exists():
         output_path.unlink()
-    prefix = f"DarkCalendar-{version}"
     source_manifest = {
         "schemaVersion": 1,
         "version": version,
@@ -350,38 +434,38 @@ def build_corresponding_source(
     }
 
     with zipfile.ZipFile(output_path, "w", allowZip64=True) as archive:
-        for relative in _tracked_files(project_root):
-            source = project_root / relative
+        for source, member in source_files:
             if source.is_file():
                 archive.write(
                     source,
-                    f"{prefix}/application-source/{relative.as_posix()}",
+                    member,
                     compress_type=zipfile.ZIP_DEFLATED,
                 )
         archive.writestr(
-            f"{prefix}/SOURCE_BUNDLE_MANIFEST.json",
+            _validated_archive_member(f"{prefix}/SOURCE_BUNDLE_MANIFEST.json"),
             json.dumps(source_manifest, ensure_ascii=False, indent=2) + "\n",
             compress_type=zipfile.ZIP_DEFLATED,
         )
         for item in archives:
             filename = item.get("filename")
-            if not filename:
+            if filename is None:
                 continue
-            source = cache_dir / "sources" / filename
+            source = _cache_path(cache_dir / "sources", filename)
             archive.write(
                 source,
-                f"{prefix}/upstream-sources/{filename}",
+                _validated_archive_member(f"{prefix}/upstream-sources/{filename}"),
                 compress_type=zipfile.ZIP_STORED,
             )
         for item in config.get("commonLicenseTexts", []):
             cached = _download(
                 str(item["url"]),
-                cache_dir / "licenses" / str(item["filename"]),
+                cache_dir / "licenses",
+                item["filename"],
                 str(item["sha256"]),
             )
             archive.write(
                 cached,
-                f"{prefix}/common-license-texts/{cached.name}",
+                _validated_archive_member(f"{prefix}/common-license-texts/{cached.name}"),
                 compress_type=zipfile.ZIP_DEFLATED,
             )
     return output_path
@@ -423,6 +507,7 @@ def verify_payload(
         if path.is_file()
         and (
             path.name.lower() in forbidden
+            or _is_private_calendar_file(path)
             or (
                 path.suffix.lower() == ".dll"
                 and path.name.lower().startswith(_FORBIDDEN_FOREIGN_ICU_PREFIXES)
@@ -434,6 +519,10 @@ def verify_payload(
 
     if source_bundle is not None and not source_bundle.is_file():
         raise RuntimeError(f"Corresponding-source bundle missing: {source_bundle}")
+    if source_bundle is not None:
+        with zipfile.ZipFile(source_bundle) as archive:
+            for member in archive.infolist():
+                _validated_archive_member(member.orig_filename)
 
 
 def _parser() -> argparse.ArgumentParser:

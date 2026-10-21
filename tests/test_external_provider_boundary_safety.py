@@ -20,10 +20,7 @@ from calendar_app.infrastructure.outlook_sync.graph import GraphClient
 from tests.test_caldav_sync import BASE, HREF, ICS, Response, Session
 from tests.test_calendar_sync_engine import imported, setup, task
 from tests.test_calendar_sync_engine import repo as repo
-
-
-def graph_response(data):
-    return Mock(status_code=200, json=Mock(return_value=data))
+from tests.test_outlook_graph import response as graph_response
 
 
 @pytest.mark.parametrize(
@@ -64,8 +61,9 @@ def test_invalid_later_event_preserves_the_entire_previous_snapshot(repo):
         return convert(event, zone)
 
     provider.to_task = invalid_later_event
-    with pytest.raises(CalendarSyncError, match="invalid_event_time"):
-        engine.run()
+    summary = engine.run()
+    assert summary["calendar_errors"] == {key: "invalid_event_time"}
+    assert summary["issues"] == 1
     assert repo.tasks(key) == []
     assert repo.links(key) == {}
     assert provider.writes == []

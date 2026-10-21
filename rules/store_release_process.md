@@ -4,19 +4,23 @@
 
 ## Version numbering
 
-Follow [versioning.md](versioning.md): each logical change (including scheduled
-fixes) increments patch; a module addition/replacement/contract change or a new
-Store release preparation increments minor and resets patch. A carry from minor
-increments major. Register events with `scripts/manage_version.py`; reuse the
-event ID and package on retries. Build preparation and upload retry are distinct.
-Development versions can be newer than the last published website/Store version.
+Follow [versioning.md](versioning.md). Record logical changes without changing
+the product version. Only an explicit release preparation selects patch (fixes),
+minor (compatible features), or major (incompatible changes). Store upload,
+CI/test maintenance, app launch and retries do not increment a version.
 
-Public versions use one digit per component: `3.8.0`, `3.8.1`, ...,
-`3.8.9`, `3.9.0`, ..., `3.9.9`, `4.0.0`. When patch reaches 9,
-increment minor and reset patch; when minor reaches 9, increment major
-and reset minor and patch. Store and Windows executable metadata retain
-the required four-component form, for example `3.8.0.0`. Always increase
-the numeric version; never rename an already published package.
+Use `scripts/manage_version.py prepare --bump patch --event-id <release-id>
+--summary "<release scope>"` after recording the final input changes. The
+version-history.json ledger is the source of truth; `sync` generates app,
+project, MSIX and PE version fields. The build checks a prepared input snapshot
+before any package is produced. Different payloads must not reuse an already
+reserved or published version. A retry reuses the same ID and exact package.
+
+Components are integers, not decimal digits: `4.6.9` -> `4.6.10`. MSIX/PE use
+the matching four-part form `4.6.10.0`; the fourth Store component remains zero.
+Published packages, tag targets and existing history must not be rewritten.
+GitHub publication, Store submission/publication and installed version are
+independent observed states, not side effects of selecting a version.
 
 ## Package goals
 
@@ -146,6 +150,13 @@ The release payload removes:
 - `credentials.json`
 - `token.json`
 
+The compliance gate rejects credential basenames in both corresponding-source
+ZIPs and frozen payloads, including OAuth/client-secret JSON, `.env` variants
+other than `.env.example`, encrypted calendar credential/cache files and their
+temporary files. Application source paths and resolved targets are validated
+from one inventory before downloads or source ZIP replacement; rejected inputs
+must leave the previous output intact. File contents are not inspected for this
+filename gate.
 
 ## Current Development Inputs
 

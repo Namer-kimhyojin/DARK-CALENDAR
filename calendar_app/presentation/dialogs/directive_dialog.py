@@ -28,7 +28,6 @@ from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_editor_styles import (
     build_editor_counter_style,
     build_editor_hint_style,
-    build_editor_quick_button_style,
     build_task_editor_stylesheet,
 )
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
@@ -93,6 +92,18 @@ class DirectiveDialog(QDialog):
                 self, t("dialog.common.error"), "지시사항 다이얼로그 초기화 중 오류가 발생했습니다."
             )
 
+    def _make_deadline_quick_button(self, label):
+        button = QPushButton(label)
+        button.setObjectName("ghost_btn")
+        button.setProperty("quickActionButton", True)
+        button.setProperty("accentVariant", False)
+        button.setMinimumWidth(50)
+        button.setMinimumHeight(34)
+        button.setMaximumHeight(34)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setAccessibleName(label)
+        return button
+
     def init_ui(self):
         layout = QVBoxLayout()
         layout.setSpacing(9)
@@ -132,52 +143,55 @@ class DirectiveDialog(QDialog):
         deadline_lbl.setObjectName("TaskDialogFieldLabel")
         layout.addWidget(deadline_lbl)
 
-        dt_input_row = QHBoxLayout()
-        dt_input_row.setSpacing(6)
-        self.deadline_date = DatePickerWidget(self.initial_date)
+        self.deadline_date = DatePickerWidget(self.initial_date, metrics=self._dialog_metrics)
         self.deadline_date.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.deadline_date.setMinimumHeight(30)
+        self.deadline_date.setAccessibleName(
+            f"{deadline_lbl.text()} {t('dialog.schedule_input.date', '날짜')}"
+        )
+        deadline_lbl.setBuddy(self.deadline_date)
         polish_calendar_popup(self.deadline_date)
 
-        self.deadline_time = TimePickerWidget(QTime(12, 0))
+        self.deadline_time = TimePickerWidget(QTime(12, 0), metrics=self._dialog_metrics)
         self.deadline_time.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.deadline_time.setMinimumHeight(30)
-
-        dt_input_row.addWidget(self.deadline_date, 3)
-        dt_input_row.addWidget(self.deadline_time, 2)
-        layout.addLayout(dt_input_row)
+        self.deadline_time.setAccessibleName(
+            f"{deadline_lbl.text()} {t('dialog.schedule_input.time', '시간')}"
+        )
+        self.deadline_time.enable_dropdown()
 
         date_quick_row = QHBoxLayout()
-        date_quick_row.setSpacing(5)
+        date_quick_row.setSpacing(6)
+        date_label = QLabel(t("dialog.schedule_input.date", "날짜"))
+        date_label.setObjectName("TaskDialogFieldLabel")
+        date_label.setBuddy(self.deadline_date)
+        date_quick_row.addWidget(date_label)
+        date_quick_row.addWidget(self.deadline_date, 1)
         for label, delta in [
             (t("dialog.directive.quick_today"), 0),
             (t("dialog.directive.quick_tomorrow"), 1),
             (t("dialog.directive.quick_plus_3d"), 3),
             (t("dialog.directive.quick_plus_1w"), 7),
         ]:
-            btn = QPushButton(label)
-            btn.setFixedWidth(50)
-            btn.setStyleSheet(
-                build_editor_quick_button_style(self._ui_tokens, self._dialog_metrics)
-            )
+            btn = self._make_deadline_quick_button(label)
             btn.clicked.connect(
                 lambda _, d=delta: self.deadline_date.setDate(QDate.currentDate().addDays(d))
             )
             date_quick_row.addWidget(btn)
-        date_quick_row.addStretch()
         layout.addLayout(date_quick_row)
 
         time_quick_row = QHBoxLayout()
-        time_quick_row.setSpacing(5)
+        time_quick_row.setSpacing(6)
+        time_label = QLabel(t("dialog.schedule_input.time", "시간"))
+        time_label.setObjectName("TaskDialogFieldLabel")
+        time_label.setBuddy(self.deadline_time)
+        label_width = max(date_label.sizeHint().width(), time_label.sizeHint().width())
+        date_label.setMinimumWidth(label_width)
+        time_label.setMinimumWidth(label_width)
+        time_quick_row.addWidget(time_label)
+        time_quick_row.addWidget(self.deadline_time, 1)
         for label, hh, mm in _QUICK_TIME_BTNS:
-            btn = QPushButton(label)
-            btn.setFixedWidth(50)
-            btn.setStyleSheet(
-                build_editor_quick_button_style(self._ui_tokens, self._dialog_metrics)
-            )
+            btn = self._make_deadline_quick_button(label)
             btn.clicked.connect(lambda _, h=hh, m=mm: self.deadline_time.setTime(QTime(h, m)))
             time_quick_row.addWidget(btn)
-        time_quick_row.addStretch()
         layout.addLayout(time_quick_row)
 
         ops_group = QGroupBox(t("dialog.directive.label_ops"))

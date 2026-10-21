@@ -10,6 +10,7 @@ from icalendar import Calendar, Event
 import recurring_ical_events
 
 from calendar_app.application.calendar_sync_contract import CalendarSyncError
+from calendar_app.infrastructure.calendar_sync.ical_parser import parse_calendar
 from calendar_app.infrastructure.calendar_sync.repository import FIELDS
 
 MAX_OCCURRENCES = 10000
@@ -17,7 +18,7 @@ MAX_OCCURRENCES = 10000
 
 def parse(data):
     try:
-        calendar = Calendar.from_ical(data)
+        calendar = parse_calendar(data)
         events = calendar.walk("VEVENT")
         if (
             not events

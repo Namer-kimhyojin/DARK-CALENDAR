@@ -235,6 +235,7 @@ def test_google_pull_rate_limit_preserves_sync_token_failure_state(
     monkeypatch.setattr(engine, "_should_refresh_calendar_list", lambda _: False)
     monkeypatch.setattr(engine, "_active_sync_calendar_ids", lambda *a: ["team"])
     monkeypatch.setattr(engine.gcal_db_adapter, "get_all_gcal_tasks_map", lambda: {})
+    monkeypatch.setattr(engine.task_repo, "get_google_sync_tasks", lambda: [])
     monkeypatch.setattr(
         engine,
         "_push_local_changes_to_google",
@@ -364,6 +365,7 @@ def test_google_partial_failures_do_not_report_full_success(monkeypatch, failure
         "get_all_gcal_tasks_map",
         lambda: {"team::event-1": ("unified_task", 7)},
     )
+    monkeypatch.setattr(engine.task_repo, "get_google_sync_tasks", lambda: [])
     monkeypatch.setattr(
         engine.task_repo, "get_unified_task", lambda _: {"id": 7, "name": "Old", "gcal_dirty": 0}
     )

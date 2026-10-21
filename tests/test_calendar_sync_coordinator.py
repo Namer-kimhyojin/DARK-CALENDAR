@@ -18,6 +18,37 @@ from calendar_app.presentation.main_window import calendar_sync_coordinator as m
 from calendar_app.presentation.main_window.calendar_sync_actions import CalendarSyncActionsMixin
 
 
+def test_unconfirmed_deletions_are_visible_without_remote_event_id(ui):
+    with sqlite3.connect(ui.path) as conn:
+        conn.execute(
+            "INSERT INTO calendar_sync_pending_delete(calendar_id,transaction_id,baseline) "
+            "VALUES(?,?,?)",
+            (ui.keys["outlook"], "unconfirmed-create", "original"),
+        )
+    ui.coordinator.refresh()
+    assert ui.coordinator.states["outlook"]["issues"] == 1
+    assert ui.coordinator.states["icloud"]["issues"] == 0
+    assert any(row["kind"] == "pending_delete_unconfirmed" for row in ui.coordinator.issue_rows)
+
+
+def test_calendar_errors_persist_across_views_and_are_account_scoped(ui):
+    from calendar_app.infrastructure.calendar_sync.status import (
+        load_calendar_errors,
+        save_calendar_errors,
+    )
+
+    errors = {ui.keys["outlook"]: "invalid_remote_event"}
+    save_calendar_errors(ui.host.settings, "outlook_", errors)
+    ui.coordinator.refresh()
+    assert ui.coordinator.states["outlook"]["calendar_errors"] == errors
+    assert ui.coordinator.states["outlook"]["issues"] == 1
+    assert load_calendar_errors(ui.host.settings, "outlook_") == errors
+    ui.host.settings.setValue("outlook_account_id", "outlook::different")
+    assert load_calendar_errors(ui.host.settings, "outlook_") == {}
+    ui.host.settings.setValue("outlook_calendar_errors", '{"account":')
+    assert load_calendar_errors(ui.host.settings, "outlook_") == {}
+
+
 class Controller(QObject):
     changed = pyqtSignal()
 
@@ -288,11 +319,20 @@ def test_common_action_does_not_open_settings_during_shutdown(ui):
 
 
 def test_hub_tabs_selection_navigation_and_partial_errors(ui):
+    from calendar_app.infrastructure.calendar_sync.status import save_calendar_errors
+    from calendar_app.presentation.dialogs.sync_feedback import sync_error_message
+
     ui.host._caldav_sync_controllers["naver"].status = "remote_http_403"
+    save_calendar_errors(
+        ui.host.settings, "caldav_naver_", {ui.keys["naver"]: "invalid_remote_event"}
+    )
     ui.coordinator.refresh()
     hub = CalendarSyncHub(ui.host, "issues")
     assert hub.tabs.count() == 5 and hub.tabs.currentWidget() is hub.section_pages["issues"]
     assert hub.issue_list.count() == 1
+    hub.issue_list.setCurrentRow(0)
+    assert "naver" in hub.issue_detail.text()
+    assert sync_error_message("invalid_remote_event") in hub.issue_detail.text()
     assert hub.sync_buttons["icloud"].isEnabled()
     hub._open("google", "calendars")
     ui.host.open_gcal_settings_dialog.assert_called_once_with(

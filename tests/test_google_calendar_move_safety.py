@@ -21,6 +21,8 @@ def pending_move(monkeypatch):
         "gcal_source_calendar_id": "family",
         "gcal_target_calendar_id": "team",
         "gcal_sync_mode": "local_owned",
+        "gcal_remote_updated_at": "2026-10-06T00:00:00Z",
+        "gcal_last_synced_at": "2026-10-06T00:01:00Z",
     }
     sync = SimpleNamespace(
         is_authenticated=True,
@@ -120,7 +122,13 @@ def test_successful_move_marks_only_the_new_target(pending_move):
     task, sync, app, mark = pending_move
     result = helpers.sync_task_to_google(app, task)
     assert result.success
-    sync.move_event.assert_called_once_with("original-event", "family", "team")
+    sync.move_event.assert_called_once_with(
+        "original-event",
+        "family",
+        "team",
+        expected_remote_updated_at="2026-10-06T00:00:00Z",
+        result_metadata={},
+    )
     assert sync.update_event.call_args.kwargs["calendar_id"] == "team"
     assert mark.call_args.kwargs["source_calendar_id"] == "team"
     assert mark.call_args.kwargs["target_calendar_id"] == "team"

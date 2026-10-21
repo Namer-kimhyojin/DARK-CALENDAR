@@ -38,6 +38,86 @@ def test_complete_cycle_records_full_success(controller):
     assert ctrl.status == "completed"
 
 
+def test_calendar_failures_persist_and_clear_after_recovery(controller):
+    from calendar_app.infrastructure.calendar_sync.status import load_calendar_errors
+
+    _, host, ctrl, prefix, _, _ = controller
+    key = ("outlook" if prefix == "outlook_" else "caldav") + "::fixture"
+    previous = "2026-10-06T09:00:00+09:00"
+    host.settings.setValue(prefix + "last_success", previous)
+    summary = {"issues": 1, "calendar_errors": {key: "calendar_access_lost"}}
+    result = summary if prefix == "outlook_" else {"summary": summary, "calendars": []}
+    ctrl._result("sync", result)
+    assert load_calendar_errors(host.settings, prefix) == {key: "calendar_access_lost"}
+    assert host.settings.value(prefix + "last_success") == previous
+    assert ctrl.status == "completed_with_issues"
+    summary = {"issues": 0, "calendar_errors": {}}
+    result = summary if prefix == "outlook_" else {"summary": summary, "calendars": []}
+    ctrl._result("sync", result)
+    assert load_calendar_errors(host.settings, prefix) == {}
+    assert ctrl.status == "completed"
+
+
+def test_discovery_result_persists_missing_calendar_diagnostic(controller):
+    from calendar_app.infrastructure.calendar_sync.status import load_calendar_errors
+
+    _, host, ctrl, prefix, _, _ = controller
+    key = ("outlook" if prefix == "outlook_" else "caldav") + "::fixture"
+    ctrl._result("refresh", {"calendars": [], "calendar_errors": {key: "calendar_access_lost"}})
+    assert load_calendar_errors(host.settings, prefix) == {key: "calendar_access_lost"}
+    ctrl._result("disconnect", {})
+    assert load_calendar_errors(host.settings, prefix) == {}
+
+
+def test_transport_failure_uses_existing_service_backoff(controller):
+    _, host, ctrl, prefix, _, _ = controller
+    previous = "2026-10-06T09:00:00+09:00"
+    host.settings.setValue(prefix + "last_success", previous)
+    ctrl.worker = SimpleNamespace(operation="sync", retry_after=None)
+    ctrl._failed("network_unavailable")
+    ctrl.worker = None
+    assert ctrl.failures == 1
+    assert ctrl.timer.interval() == 600_000
+    assert ctrl.status == "network_unavailable"
+    assert host.settings.value(prefix + "last_success") == previous
+
+
+def test_calendar_list_refresh_cannot_clear_unverified_event_failure(controller):
+    from calendar_app.infrastructure.calendar_sync.status import (
+        load_calendar_errors,
+        save_calendar_errors,
+    )
+
+    _, host, ctrl, prefix, _, _ = controller
+    provider = "outlook" if prefix == "outlook_" else "caldav"
+    invalid, missing = provider + "::invalid", provider + "::missing"
+    save_calendar_errors(
+        host.settings, prefix, {invalid: "invalid_event_time", missing: "calendar_access_lost"}
+    )
+    ctrl._result("refresh", {"calendars": [], "calendar_errors": {}})
+    assert load_calendar_errors(host.settings, prefix) == {invalid: "invalid_event_time"}
+
+
+def test_oversized_calendar_diagnostics_do_not_escape_result_slot(controller):
+    from calendar_app.infrastructure.calendar_sync.status import (
+        load_calendar_errors,
+        save_calendar_errors,
+    )
+
+    _, host, ctrl, prefix, _, _ = controller
+    provider = "outlook" if prefix == "outlook_" else "caldav"
+    previous = {provider + "::previous": "invalid_remote_event"}
+    save_calendar_errors(host.settings, prefix, previous)
+    host.settings.setValue(prefix + "last_success", "previous-success")
+    errors = {provider + "::" + str(n) + "x" * 220: "invalid_event_time" for n in range(700)}
+    summary = {"issues": len(errors), "calendar_errors": errors}
+    result = summary if prefix == "outlook_" else {"summary": summary, "calendars": []}
+    ctrl._result("sync", result)
+    assert ctrl.status == "operation_failed"
+    assert host.settings.value(prefix + "last_success") == "previous-success"
+    assert load_calendar_errors(host.settings, prefix) == previous
+
+
 class FinishedWorker(QObject):
     finished = pyqtSignal()
 

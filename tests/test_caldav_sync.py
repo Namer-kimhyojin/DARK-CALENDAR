@@ -2,12 +2,14 @@
 """Protocol and independent iCalendar regressions, without real user calendars."""
 
 from datetime import UTC, datetime
+from io import BytesIO
 from pathlib import Path
 import sqlite3
 import uuid
 
 from icalendar import Calendar
 import pytest
+from urllib3.response import HTTPResponse
 
 from calendar_app.application.calendar_sync_contract import CalendarSyncError, RemoteCalendarError
 from calendar_app.infrastructure.caldav_sync.client import CalDAVClient, multistatus
@@ -29,12 +31,11 @@ class Response:
         self.data = data.encode("utf-8", errors="strict") if isinstance(data, str) else data
         self.status_code, self.headers = status, headers or {}
         self.closed = False
-
-    def iter_content(self, size):
-        yield self.data
+        self.raw = HTTPResponse(body=BytesIO(self.data), preload_content=False)
 
     def close(self):
         self.closed = True
+        self.raw.close()
 
 
 class Session:
@@ -367,7 +368,7 @@ def test_real_caldav_adapter_with_common_engine_imports_once_and_preserves_parti
         "CREATE TABLE calendar(id TEXT PRIMARY KEY,type TEXT,name TEXT,color TEXT,is_active INTEGER,access_role TEXT); CREATE TABLE unified_task(id INTEGER PRIMARY KEY,name TEXT,deadline TEXT,end_date TEXT,all_day INTEGER,description TEXT,location TEXT,calendar_id TEXT,type TEXT,gcal_dirty INTEGER,gcal_sync_mode TEXT,recurrence TEXT,updated_at TEXT);"
     )
     repo = CalendarSyncRepository(conn, "caldav")
-    repo.register(
+    key = repo.register(
         "caldav::fixture", {"id": BASE + "calendar/", "name": "Fixture", "can_edit": True}
     )
     prop = '<d:getetag>"1"</d:getetag><c:calendar-data>' + ICS + "</c:calendar-data>"
@@ -381,8 +382,7 @@ def test_real_caldav_adapter_with_common_engine_imports_once_and_preserves_parti
     try:
         assert engine.run()["imported"] == 1
         assert engine.run()["imported"] == 0
-        with pytest.raises(CalendarSyncError):
-            engine.run()
+        assert engine.run()["calendar_errors"] == {key: "calendar_report_incomplete"}
         assert conn.execute("SELECT COUNT(*) FROM unified_task").fetchone()[0] == 1
         assert conn.execute("SELECT gcal_dirty,gcal_sync_mode FROM unified_task").fetchone()[:] == (
             0,

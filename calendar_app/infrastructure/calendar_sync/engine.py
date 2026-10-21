@@ -26,9 +26,11 @@ class CalendarSyncEngine:
         account,
         local_zone="Asia/Seoul",
         cancelled=lambda: False,
+        calendar_errors=None,
     ):
         self.client, self.repo, self.account = client, repository, account
         self.zone, self.cancelled = local_zone, cancelled
+        self.calendar_errors = dict(calendar_errors or {})
 
     def _check(self):
         if self.cancelled():
@@ -46,246 +48,265 @@ class CalendarSyncEngine:
         finally:
             lease.release()
 
+    @staticmethod
+    def _service_failure(error):
+        """Account/transport failures stop the round; one calendar's data does not."""
+        return str(error) in {"cancelled", "network_unavailable"} or (
+            isinstance(error, RemoteCalendarError)
+            and (error.status in {401, 408, 429} or error.status >= 500)
+        )
+
     def _run(self):
         counts = {"imported": 0, "updated": 0, "created": 0, "deleted": 0, "issues": 0}
+        errors = dict(self.calendar_errors)
         now = datetime.now(UTC)
         start, end = [(now + timedelta(days=n)).isoformat() for n in (-120, 400)]
         for calendar in self.repo.calendars(self.account):
             self._check()
-            if not calendar["is_active"]:
-                continue
             key = calendar["local_id"]
-            # Fetch every page before applying any changes for this calendar.
-            events = self.client.events(calendar["remote_id"], start, end)
-            if any(
-                not isinstance(e, dict) or not isinstance(e.get("id"), str) or not e["id"]
-                for e in events
-            ):
-                raise CalendarSyncError("invalid_remote_event")
-            remote = {e["id"]: e for e in events}
-            if len(remote) != len(events):
-                raise CalendarSyncError("duplicate_remote_event")
-            identities = [(e["uid"], e.get("recurrence_id", "")) for e in events if e.get("uid")]
-            if len(set(identities)) != len(identities):
-                raise CalendarSyncError("duplicate_remote_event")
-            # A valid first page/event must not be committed before a later
-            # malformed time or payload makes the calendar snapshot unusable.
-            converted = {}
-            for event in events:
-                self._check()
-                if not event.get("cancelled"):
-                    converted[event["id"]] = self.client.to_task(event, self.zone)
-            pending_deletes = {
-                row[0]
-                for row in self.repo.conn.execute(
-                    "SELECT transaction_id FROM calendar_sync_pending_delete WHERE calendar_id=?",
-                    (key,),
-                )
-            }
-            transactions = Counter(
-                e["transaction_id"]
-                for e in events
-                if isinstance(e.get("transaction_id"), str) and e["transaction_id"]
-            )
-            if any(transactions[transaction] > 1 for transaction in pending_deletes):
-                raise CalendarSyncError("duplicate_remote_event")
-            links = self.repo.links(key)
-            event_links = {v["event_id"]: v for v in links.values() if v["event_id"]}
-            pending_creates = {v["transaction_id"]: v for v in links.values() if not v["event_id"]}
-            queued = {
-                r[0]
-                for r in self.repo.conn.execute(
-                    "SELECT event_id FROM calendar_sync_delete_queue WHERE calendar_id=?", (key,)
-                )
-            }
-            for event in events:
-                self._check()
-                if event["id"] in queued or event.get("cancelled"):
-                    continue
-                link = event_links.get(event["id"])
-                if link:
-                    continue
-                pending = pending_creates.get(event.get("transaction_id"))
-                if pending and self.repo.task(pending["task_id"]):
-                    with self.repo.atomic():
-                        self._check()
-                        current = self.repo.task(pending["task_id"])
-                        if not current or current["calendar_id"] != key or not self._selected(key):
-                            continue
-                        self.repo.link(
-                            pending["task_id"],
-                            key,
-                            event["id"],
-                            event.get("etag"),
-                            fingerprint(converted[event["id"]]),
-                            pending["transaction_id"],
-                            remote=event,
-                        )
-                    continue
-                if self._recover_resource_identity(key, event, remote):
-                    continue
-                task = converted[event["id"]]
-                with self.repo.atomic():
-                    self._check()
-                    if self._recover_pending_delete(key, event, task, transactions):
-                        continue
-                    if not self._selected(key):
-                        continue
-                    if self.repo.conn.execute(
-                        "SELECT 1 FROM calendar_sync_delete_queue WHERE event_id=? AND calendar_id=?",
-                        (event["id"], key),
-                    ).fetchone():
-                        continue
-                    tid = self.repo.import_task(key, task)
-                    self.repo.link(
-                        tid,
-                        key,
-                        event["id"],
-                        event.get("etag"),
-                        fingerprint(task),
-                        str(uuid.uuid4()),
-                        remote=event,
-                    )
-                counts["imported"] += 1
-            # Re-read local rows after network I/O; never overwrite a concurrent edit.
-            for task in self.repo.tasks(key):
-                self._check()
-                tid = task["id"]
-                link = self.repo.task_link(tid)
-                if link and link["calendar_id"] != key:
-                    with self.repo.atomic():
-                        self.repo.issue(tid, "calendar_move_not_supported", task)
-                    continue
-                if not link:
-                    transaction = str(uuid.uuid4())
-                    with self.repo.atomic():
-                        current = self.repo.task(tid)
-                        if (
-                            not current
-                            or current["calendar_id"] != key
-                            or not self._selected(key)
-                            or fingerprint(current) != fingerprint(task)
-                        ):
-                            continue
-                        self.repo.link(tid, key, None, None, fingerprint(task), transaction)
-                    link = self.repo.links(key)[tid]
-                if link["remote_deleted"]:
-                    continue
-                try:
-                    if not link["event_id"]:
-                        if not self._writable(key):
-                            raise CalendarSyncError("calendar_read_only")
-                        payload = self.client.from_task(task, self.zone)
-                        with self.repo.atomic():
-                            if not self._current_snapshot(tid, key, task, link):
-                                continue
-                            if not self._writable(key):
-                                raise CalendarSyncError("calendar_read_only")
-                        event = self.client.create(
-                            calendar["remote_id"], payload, link["transaction_id"]
-                        )
-                        self._save_write(tid, key, event, task, link)
-                        counts["created"] += 1
-                        continue
-                    event = remote.get(link["event_id"])
-                    if event is None:
-                        event = self.client.event(link["event_id"])
-                    if not self._same_identity(link, event):
-                        raise CalendarSyncError("remote_identity_changed")
-                    if event.get("cancelled"):
-                        raise RemoteCalendarError(404)
-                    local_changed = fingerprint(task) != link["baseline"]
-                    fresh = converted.get(event["id"])
-                    if fresh is None:
-                        fresh = self.client.to_task(event, self.zone)
-                    remote_changed = fingerprint(fresh) != link["baseline"]
-                    if local_changed and remote_changed:
-                        with self.repo.atomic():
-                            if not self._current_snapshot(tid, key, task, link):
-                                continue
-                            self.repo.issue(tid, "conflict", task, event)
-                        continue
-                    if remote_changed:
-                        with self.repo.atomic():
-                            if not self._current_snapshot(tid, key, task, link):
-                                continue
-                            self.repo.apply_remote(tid, fresh)
-                            self.repo.link(
-                                tid,
-                                key,
-                                event["id"],
-                                event.get("etag"),
-                                fingerprint(fresh),
-                                link["transaction_id"],
-                                remote=event,
-                            )
-                            self.repo.clear_issue(tid)
-                        counts["updated"] += 1
-                    elif local_changed:
-                        if not self._writable(key):
-                            raise CalendarSyncError("calendar_read_only")
-                        payload = self.client.edit_payload(task, event, self.zone)
-                        with self.repo.atomic():
-                            if not self._current_snapshot(tid, key, task, link):
-                                continue
-                            if not self._writable(key):
-                                raise CalendarSyncError("calendar_read_only")
-                        event = self.client.update(
-                            event["id"],
-                            payload,
-                            event.get("etag"),
-                        )
-                        self._save_write(tid, key, event, task, link)
-                        counts["updated"] += 1
-                    else:
-                        # Reminder/metadata changes are not a content conflict and
-                        # should not be reported as a visible task modification.
-                        with self.repo.atomic():
-                            if not self._current_snapshot(tid, key, task, link):
-                                continue
-                            self.repo.link(
-                                tid,
-                                key,
-                                event["id"],
-                                event.get("etag"),
-                                fingerprint(fresh),
-                                link["transaction_id"],
-                                remote=event,
-                            )
-                            self.repo.clear_issue(tid)
-                except CalendarSyncError as exc:
-                    if str(exc) == "cancelled":
-                        raise
-                    if isinstance(exc, RemoteCalendarError) and (
-                        exc.status in {401, 403, 429} or exc.status >= 500
-                    ):
-                        raise
-                    with self.repo.atomic():
-                        # A failed remote request can race with a local edit,
-                        # move, deletion or cancellation just like a successful
-                        # response. Do not invalidate a newer link/snapshot.
-                        if not self._current_snapshot(tid, key, task, link):
-                            continue
-                        if isinstance(exc, RemoteCalendarError) and exc.status == 404:
-                            if not link["event_id"]:
-                                raise CalendarSyncError("calendar_access_lost") from exc
-                            self.repo.conn.execute(
-                                "UPDATE calendar_sync_event SET remote_deleted=1 WHERE task_id=?",
-                                (tid,),
-                            )
-                            self.repo.issue(tid, "remote_deleted", task)
-                        else:
-                            self.repo.issue(tid, str(exc), task)
-            if calendar["can_edit"]:
-                counts["deleted"] += self._deletions(key)
+            if not calendar["is_active"] or key in errors:
+                continue
+            try:
+                self._sync_calendar(calendar, start, end, counts)
+            except CalendarSyncError as exc:
+                if self._service_failure(exc):
+                    raise
+                errors[key] = str(exc)
+        counts["calendar_errors"] = errors
         counts["issues"] = (
             len(self.repo.issues(self.account))
+            + len(errors)
+            + self.repo.pending_delete_count(self.account)
             + self.repo.conn.execute(
                 "SELECT COUNT(*) FROM calendar_sync_delete_queue q JOIN calendar_sync_calendar c ON q.calendar_id=c.local_id WHERE c.account_id=? AND q.error IS NOT NULL",
                 (self.account,),
             ).fetchone()[0]
         )
         return counts
+
+    def _sync_calendar(self, calendar, start, end, counts):
+        key = calendar["local_id"]
+        # Fetch every page before applying any changes for this calendar.
+        events = self.client.events(calendar["remote_id"], start, end)
+        if any(
+            not isinstance(e, dict) or not isinstance(e.get("id"), str) or not e["id"]
+            for e in events
+        ):
+            raise CalendarSyncError("invalid_remote_event")
+        remote = {e["id"]: e for e in events}
+        if len(remote) != len(events):
+            raise CalendarSyncError("duplicate_remote_event")
+        identities = [(e["uid"], e.get("recurrence_id", "")) for e in events if e.get("uid")]
+        if len(set(identities)) != len(identities):
+            raise CalendarSyncError("duplicate_remote_event")
+        # A valid first page/event must not be committed before a later
+        # malformed time or payload makes the calendar snapshot unusable.
+        converted = {}
+        for event in events:
+            self._check()
+            if not event.get("cancelled"):
+                converted[event["id"]] = self.client.to_task(event, self.zone)
+        pending_deletes = {
+            row[0]
+            for row in self.repo.conn.execute(
+                "SELECT transaction_id FROM calendar_sync_pending_delete WHERE calendar_id=?",
+                (key,),
+            )
+        }
+        transactions = Counter(
+            e["transaction_id"]
+            for e in events
+            if isinstance(e.get("transaction_id"), str) and e["transaction_id"]
+        )
+        if any(transactions[transaction] > 1 for transaction in pending_deletes):
+            raise CalendarSyncError("duplicate_remote_event")
+        links = self.repo.links(key)
+        event_links = {v["event_id"]: v for v in links.values() if v["event_id"]}
+        pending_creates = {v["transaction_id"]: v for v in links.values() if not v["event_id"]}
+        queued = {
+            r[0]
+            for r in self.repo.conn.execute(
+                "SELECT event_id FROM calendar_sync_delete_queue WHERE calendar_id=?", (key,)
+            )
+        }
+        for event in events:
+            self._check()
+            if event["id"] in queued or event.get("cancelled"):
+                continue
+            link = event_links.get(event["id"])
+            if link:
+                continue
+            pending = pending_creates.get(event.get("transaction_id"))
+            if pending and self.repo.task(pending["task_id"]):
+                with self.repo.atomic():
+                    self._check()
+                    current = self.repo.task(pending["task_id"])
+                    if not current or current["calendar_id"] != key or not self._selected(key):
+                        continue
+                    self.repo.link(
+                        pending["task_id"],
+                        key,
+                        event["id"],
+                        event.get("etag"),
+                        fingerprint(converted[event["id"]]),
+                        pending["transaction_id"],
+                        remote=event,
+                    )
+                continue
+            if self._recover_resource_identity(key, event, remote):
+                continue
+            task = converted[event["id"]]
+            with self.repo.atomic():
+                self._check()
+                if self._recover_pending_delete(key, event, task, transactions):
+                    continue
+                if not self._selected(key):
+                    continue
+                if self.repo.conn.execute(
+                    "SELECT 1 FROM calendar_sync_delete_queue WHERE event_id=? AND calendar_id=?",
+                    (event["id"], key),
+                ).fetchone():
+                    continue
+                tid = self.repo.import_task(key, task)
+                self.repo.link(
+                    tid,
+                    key,
+                    event["id"],
+                    event.get("etag"),
+                    fingerprint(task),
+                    str(uuid.uuid4()),
+                    remote=event,
+                )
+            counts["imported"] += 1
+        # Re-read local rows after network I/O; never overwrite a concurrent edit.
+        for task in self.repo.tasks(key):
+            self._check()
+            tid = task["id"]
+            link = self.repo.task_link(tid)
+            if link and link["calendar_id"] != key:
+                with self.repo.atomic():
+                    self.repo.issue(tid, "calendar_move_not_supported", task)
+                continue
+            if not link:
+                transaction = str(uuid.uuid4())
+                with self.repo.atomic():
+                    current = self.repo.task(tid)
+                    if (
+                        not current
+                        or current["calendar_id"] != key
+                        or not self._selected(key)
+                        or fingerprint(current) != fingerprint(task)
+                    ):
+                        continue
+                    self.repo.link(tid, key, None, None, fingerprint(task), transaction)
+                link = self.repo.links(key)[tid]
+            if link["remote_deleted"]:
+                continue
+            try:
+                if not link["event_id"]:
+                    if not self._writable(key):
+                        raise CalendarSyncError("calendar_read_only")
+                    payload = self.client.from_task(task, self.zone)
+                    with self.repo.atomic():
+                        if not self._current_snapshot(tid, key, task, link):
+                            continue
+                        if not self._writable(key):
+                            raise CalendarSyncError("calendar_read_only")
+                    event = self.client.create(
+                        calendar["remote_id"], payload, link["transaction_id"]
+                    )
+                    self._save_write(tid, key, event, task, link)
+                    counts["created"] += 1
+                    continue
+                event = remote.get(link["event_id"])
+                if event is None:
+                    event = self.client.event(link["event_id"])
+                if not self._same_identity(link, event):
+                    raise CalendarSyncError("remote_identity_changed")
+                if event.get("cancelled"):
+                    raise RemoteCalendarError(404)
+                local_changed = fingerprint(task) != link["baseline"]
+                fresh = converted.get(event["id"])
+                if fresh is None:
+                    fresh = self.client.to_task(event, self.zone)
+                remote_changed = fingerprint(fresh) != link["baseline"]
+                if local_changed and remote_changed:
+                    with self.repo.atomic():
+                        if not self._current_snapshot(tid, key, task, link):
+                            continue
+                        self.repo.issue(tid, "conflict", task, event)
+                    continue
+                if remote_changed:
+                    with self.repo.atomic():
+                        if not self._current_snapshot(tid, key, task, link):
+                            continue
+                        self.repo.apply_remote(tid, fresh)
+                        self.repo.link(
+                            tid,
+                            key,
+                            event["id"],
+                            event.get("etag"),
+                            fingerprint(fresh),
+                            link["transaction_id"],
+                            remote=event,
+                        )
+                        self.repo.clear_issue(tid)
+                    counts["updated"] += 1
+                elif local_changed:
+                    if not self._writable(key):
+                        raise CalendarSyncError("calendar_read_only")
+                    payload = self.client.edit_payload(task, event, self.zone)
+                    with self.repo.atomic():
+                        if not self._current_snapshot(tid, key, task, link):
+                            continue
+                        if not self._writable(key):
+                            raise CalendarSyncError("calendar_read_only")
+                    event = self.client.update(
+                        event["id"],
+                        payload,
+                        event.get("etag"),
+                    )
+                    self._save_write(tid, key, event, task, link)
+                    counts["updated"] += 1
+                else:
+                    # Reminder/metadata changes are not a content conflict and
+                    # should not be reported as a visible task modification.
+                    with self.repo.atomic():
+                        if not self._current_snapshot(tid, key, task, link):
+                            continue
+                        self.repo.link(
+                            tid,
+                            key,
+                            event["id"],
+                            event.get("etag"),
+                            fingerprint(fresh),
+                            link["transaction_id"],
+                            remote=event,
+                        )
+                        self.repo.clear_issue(tid)
+            except CalendarSyncError as exc:
+                if self._service_failure(exc) or (
+                    isinstance(exc, RemoteCalendarError) and exc.status == 403
+                ):
+                    raise
+                with self.repo.atomic():
+                    # A failed remote request can race with a local edit,
+                    # move, deletion or cancellation just like a successful
+                    # response. Do not invalidate a newer link/snapshot.
+                    if not self._current_snapshot(tid, key, task, link):
+                        continue
+                    if isinstance(exc, RemoteCalendarError) and exc.status == 404:
+                        if not link["event_id"]:
+                            raise CalendarSyncError("calendar_access_lost") from exc
+                        self.repo.conn.execute(
+                            "UPDATE calendar_sync_event SET remote_deleted=1 WHERE task_id=?",
+                            (tid,),
+                        )
+                        self.repo.issue(tid, "remote_deleted", task)
+                    else:
+                        self.repo.issue(tid, str(exc), task)
+        if calendar["can_edit"]:
+            counts["deleted"] += self._deletions(key)
 
     def _recover_pending_delete(self, key, event, task, transactions):
         """Reconnect a deleted create; caller holds the writer lock before import."""
@@ -516,12 +537,14 @@ class CalendarSyncEngine:
                 self.client.delete(row["event_id"], row["etag"])
             except RemoteCalendarError as exc:
                 if exc.status != 404:
+                    if self._service_failure(exc):
+                        raise
                     self._delete_failure(row, str(exc))
-                    if exc.status in {401, 403, 429} or exc.status >= 500:
+                    if exc.status == 403:
                         raise
                     continue
             except CalendarSyncError as exc:
-                if str(exc) == "cancelled":
+                if self._service_failure(exc):
                     raise
                 self._delete_failure(row, str(exc))
                 continue

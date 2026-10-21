@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Small view helpers for provider setup pages and stable selection lists."""
 
+from html import escape
 import json
 
 from PyQt6.QtCore import Qt
@@ -14,6 +15,14 @@ def plain_label(text=""):
     label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
     label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
     return label
+
+
+def plain_tooltip(text):
+    """Qt tooltips auto-detect HTML, even when their associated label is plain."""
+    value = str(text) if text else ""
+    if not any(char in value for char in "<>&"):
+        return value
+    return "<qt>" + escape(value).replace("\n", "<br>") + "</qt>"
 
 
 def scroll_page(content):
@@ -59,7 +68,7 @@ def update_calendar_items(widget, account, choices, saved):
     widget.clear()
     for label, remote in choices:
         item = QListWidgetItem(label)
-        item.setToolTip(remote["name"])
+        item.setToolTip(plain_tooltip(remote["name"]))
         item.setData(Qt.ItemDataRole.UserRole, remote)
         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
         selected = pending.get(remote["id"], remote["id"] in saved_ids)
@@ -88,8 +97,21 @@ def update_issue_items(widget, account, entries):
     def identity(item):
         value = item.data(role)
         if isinstance(value, dict):
-            return (value.get("task_id"), value.get("event_id"), value.get("calendar_id"))
-        return (value, item.data(role + 1))
+            return (
+                value.get("task_id"),
+                value.get("event_id"),
+                value.get("calendar_id"),
+                value.get("transaction_id"),
+                value.get("recovery_issue"),
+            )
+        detail = item.data(role + 2)
+        return (
+            value,
+            item.data(role + 1),
+            detail.get("kind")
+            if isinstance(detail, dict) and detail.get("recovery_issue")
+            else None,
+        )
 
     selected = identity(current) if current else None
     previous_account = getattr(widget, "_provider_account", None)

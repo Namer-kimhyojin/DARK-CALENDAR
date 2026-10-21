@@ -11,6 +11,8 @@ import sqlite3
 import sys
 from typing import TextIO
 
+from calendar_app.shared.log_privacy import PrivacyFormatter
+
 # 로그 파일 크기 상한: 5MB × (본 파일 + 백업 2개)
 _LOG_MAX_BYTES = 5 * 1024 * 1024
 _LOG_BACKUP_COUNT = 2
@@ -102,19 +104,24 @@ def setup_crash_logging(log_path: str | None = None) -> TextIO | None:
 
     # 개인정보 최소 기록 원칙: 기본 INFO. 진단 시에만 환경변수로 DEBUG 활성화.
     debug_enabled = os.environ.get("DARK_CALENDAR_DEBUG", "").strip() in ("1", "true", "on")
+    handlers = [
+        logging.handlers.RotatingFileHandler(
+            log_path,
+            maxBytes=_LOG_MAX_BYTES,
+            backupCount=_LOG_BACKUP_COUNT,
+            encoding="utf-8",
+            errors="strict",
+        ),
+        logging.StreamHandler(sys.stdout),
+    ]
+    formatter = PrivacyFormatter(
+        "%(asctime)s [%(levelname)s] %(name)s (%(filename)s:%(lineno)d): %(message)s"
+    )
+    for handler in handlers:
+        handler.setFormatter(formatter)
     logging.basicConfig(
         level=logging.DEBUG if debug_enabled else logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s (%(filename)s:%(lineno)d): %(message)s",
-        handlers=[
-            logging.handlers.RotatingFileHandler(
-                log_path,
-                maxBytes=_LOG_MAX_BYTES,
-                backupCount=_LOG_BACKUP_COUNT,
-                encoding="utf-8",
-                errors="strict",
-            ),
-            logging.StreamHandler(sys.stdout),
-        ],
+        handlers=handlers,
     )
     crash_logger = logging.getLogger("crash")
 

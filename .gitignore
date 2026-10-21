@@ -13,6 +13,11 @@ __pycache__/
 credentials.json
 client_secret*.json
 token.json
+[Oo][Aa][Uu][Tt][Hh].json
+*.credential
+outlook-*.cache
+outlook-*.tmp
+caldav-*.tmp
 *.key
 *.p12
 *.pem

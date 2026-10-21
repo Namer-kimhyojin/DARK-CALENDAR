@@ -206,8 +206,7 @@ def test_url_change_preserves_both_sides_of_conflict(repo):
 def test_duplicate_uid_response_is_rejected_before_import(repo):
     provider, key, engine, tid = caldav_import(repo)
     provider.remote["duplicate"] = {**provider.remote["old"], "id": "duplicate"}
-    with pytest.raises(CalendarSyncError, match="duplicate_remote_event"):
-        engine.run()
+    assert engine.run()["calendar_errors"] == {key: "duplicate_remote_event"}
     assert len(repo.tasks(key)) == 1
 
 
@@ -215,8 +214,7 @@ def test_still_existing_old_url_cannot_be_reassigned(repo):
     provider, key, engine, tid = caldav_import(repo)
     event = {**provider.remote["old"], "id": "new"}
     provider.events = lambda *args: [deepcopy(event)]
-    with pytest.raises(CalendarSyncError, match="duplicate_remote_event"):
-        engine.run()
+    assert engine.run()["calendar_errors"] == {key: "duplicate_remote_event"}
     assert repo.task_link(tid)["event_id"] == "old"
     assert len(repo.tasks(key)) == 1
 

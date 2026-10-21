@@ -47,9 +47,7 @@ def isolated_subscription(monkeypatch):
     monkeypatch.setattr(ics_fetcher, "_now", lambda: datetime(2026, 10, 5, tzinfo=UTC))
 
     def synchronize(data):
-        monkeypatch.setattr(
-            ics_fetcher.urllib.request, "urlopen", lambda *args, **kwargs: BytesIO(data)
-        )
+        monkeypatch.setattr(ics_fetcher, "open_subscription", lambda *args, **kwargs: BytesIO(data))
         return ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul")
 
     yield conn, synchronize
@@ -111,7 +109,7 @@ def test_socket_timeout_is_network_failure_and_preserves_snapshot(
     fetched = conn.execute("SELECT ics_last_fetched FROM calendar").fetchone()[0]
     failure = TimeoutError("timed out " + URL)
     if stage == "open":
-        monkeypatch.setattr(ics_fetcher.urllib.request, "urlopen", Mock(side_effect=failure))
+        monkeypatch.setattr(ics_fetcher, "open_subscription", Mock(side_effect=failure))
     else:
 
         class TimedOutResponse(BytesIO):
@@ -119,7 +117,7 @@ def test_socket_timeout_is_network_failure_and_preserves_snapshot(
                 raise failure
 
         monkeypatch.setattr(
-            ics_fetcher.urllib.request, "urlopen", lambda *args, **kwargs: TimedOutResponse()
+            ics_fetcher, "open_subscription", lambda *args, **kwargs: TimedOutResponse()
         )
     assert ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul") == (0, 0, "network_unavailable")
     assert conn.execute("SELECT id,name FROM unified_task").fetchall() == before

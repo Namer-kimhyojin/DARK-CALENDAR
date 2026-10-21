@@ -3,7 +3,6 @@
 from datetime import datetime, timedelta
 import sqlite3
 from types import SimpleNamespace
-from unittest import TestCase
 from unittest.mock import patch
 
 from calendar_app.infrastructure.db import db_repository_unified
@@ -11,6 +10,7 @@ from calendar_app.infrastructure.google_sync import engine, repository
 from calendar_app.infrastructure.google_sync import helpers as gcal_sync_helpers
 from calendar_app.infrastructure.google_sync import service as gcal_service
 from calendar_app.shared import datetime_utils
+from tests.support import TemporaryDatabaseTestCase
 
 
 class FakeSyncService:
@@ -96,7 +96,7 @@ class FakeSyncService:
         ]
 
 
-class GCalSyncHelperTests(TestCase):
+class GCalSyncHelperTests(TemporaryDatabaseTestCase):
     def test_lookup_key_can_use_the_calling_apps_primary_calendar_resolution(self):
         with patch.object(
             repository,
@@ -239,9 +239,12 @@ class GCalSyncHelperTests(TestCase):
             "gcal_event_id": "existing-id",
         }
 
-        with patch(
-            "calendar_app.infrastructure.google_sync.helpers._persist_gcal_event_id"
-        ) as persist_mock:
+        with (
+            patch(
+                "calendar_app.infrastructure.google_sync.helpers._persist_gcal_event_id"
+            ) as persist_mock,
+            patch.object(engine.task_repo, "get_unified_task", return_value=task_data),
+        ):
             result = gcal_sync_helpers.sync_task_to_google(
                 app,
                 task_data,
@@ -287,12 +290,18 @@ class GCalSyncHelperTests(TestCase):
             patch(
                 "calendar_app.infrastructure.google_sync.helpers._persist_gcal_event_id"
             ) as persist_mock,
+            patch.object(engine.task_repo, "get_unified_task", return_value=task_data),
             patch(
                 "calendar_app.infrastructure.google_sync.helpers._mark_task_synced",
                 return_value=True,
             ),
         ):
-            result = gcal_sync_helpers.sync_task_to_google(app, task_data, create_if_missing=True)
+            result = gcal_sync_helpers.sync_task_to_google(
+                app,
+                task_data,
+                create_if_missing=True,
+                expected_remote_updated_at="2026-03-04T00:00:00Z",
+            )
 
         self.assertEqual(result.event_id, "replacement-id")
         self.assertTrue(result.success)
@@ -320,10 +329,19 @@ class GCalSyncHelperTests(TestCase):
             "gcal_event_id": "evt-team",
         }
 
-        with patch(
-            "calendar_app.infrastructure.google_sync.helpers._mark_task_synced", return_value=True
-        ) as mark_mock:
-            result = gcal_sync_helpers.sync_task_to_google(app, task_data, create_if_missing=True)
+        with (
+            patch(
+                "calendar_app.infrastructure.google_sync.helpers._mark_task_synced",
+                return_value=True,
+            ) as mark_mock,
+            patch.object(engine.task_repo, "get_unified_task", return_value=task_data),
+        ):
+            result = gcal_sync_helpers.sync_task_to_google(
+                app,
+                task_data,
+                create_if_missing=True,
+                expected_remote_updated_at="2026-03-04T00:00:00Z",
+            )
 
         self.assertFalse(result.success)
         self.assertEqual(result.error_kind, "calendar_ambiguous")
@@ -351,10 +369,18 @@ class GCalSyncHelperTests(TestCase):
             "gcal_event_id": "evt-ambiguous",
         }
 
-        with patch(
-            "calendar_app.infrastructure.google_sync.helpers._persist_gcal_event_id"
-        ) as persist_mock:
-            result = gcal_sync_helpers.sync_task_to_google(app, task_data, create_if_missing=True)
+        with (
+            patch(
+                "calendar_app.infrastructure.google_sync.helpers._persist_gcal_event_id"
+            ) as persist_mock,
+            patch.object(engine.task_repo, "get_unified_task", return_value=task_data),
+        ):
+            result = gcal_sync_helpers.sync_task_to_google(
+                app,
+                task_data,
+                create_if_missing=True,
+                expected_remote_updated_at="2026-03-04T00:00:00Z",
+            )
 
         self.assertFalse(result.success)
         self.assertEqual(result.error_kind, "calendar_ambiguous")
@@ -381,10 +407,19 @@ class GCalSyncHelperTests(TestCase):
             "gcal_source_calendar_id": "team-cal",
         }
 
-        with patch(
-            "calendar_app.infrastructure.google_sync.helpers._mark_task_synced", return_value=False
+        with (
+            patch(
+                "calendar_app.infrastructure.google_sync.helpers._mark_task_synced",
+                return_value=False,
+            ),
+            patch.object(engine.task_repo, "get_unified_task", return_value=task_data),
         ):
-            result = gcal_sync_helpers.sync_task_to_google(app, task_data, create_if_missing=True)
+            result = gcal_sync_helpers.sync_task_to_google(
+                app,
+                task_data,
+                create_if_missing=True,
+                expected_remote_updated_at="2026-03-04T00:00:00Z",
+            )
 
         self.assertEqual(result.event_id, "replacement-id")
         self.assertFalse(result.success)

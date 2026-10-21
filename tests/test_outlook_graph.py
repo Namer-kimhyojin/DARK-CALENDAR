@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
+from io import BytesIO
+import json
 from unittest.mock import Mock
 
 import pytest
+from urllib3.response import HTTPResponse
 
 from calendar_app.infrastructure.outlook_sync.auth import OutlookError
 from calendar_app.infrastructure.outlook_sync.graph import GraphClient, GraphError
 
 
 def response(data, status=200):
-    reply = Mock(status_code=status)
-    reply.json.return_value = data
+    reply = Mock(status_code=status, headers={})
+    reply.raw = HTTPResponse(
+        body=BytesIO(json.dumps(data).encode("utf-8", errors="strict")), preload_content=False
+    )
     return reply
 
 

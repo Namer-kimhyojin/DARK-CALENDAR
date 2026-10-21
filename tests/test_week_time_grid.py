@@ -308,6 +308,42 @@ class WeekTimeGridTests(unittest.TestCase):
         QTest.keyClick(self.grid, Qt.Key.Key_Return)
         self.assertEqual(list(opened), [[task]])
 
+    def test_first_keyboard_selection_starts_at_the_correct_end_after_escape(self):
+        tasks = [
+            self.task(1),
+            self.task(2, start="2026-10-05 11:00:00", end="2026-10-05 12:00:00"),
+            self.task(3, start="2026-10-06 09:00:00", end="2026-10-06 10:00:00"),
+        ]
+        self.load(tasks)
+        for key, expected in (
+            (Qt.Key.Key_Up, tasks[-1]),
+            (Qt.Key.Key_Left, tasks[-1]),
+            (Qt.Key.Key_Down, tasks[0]),
+            (Qt.Key.Key_Right, tasks[0]),
+        ):
+            with self.subTest(key=key):
+                QTest.keyClick(self.grid, Qt.Key.Key_Escape)
+                QTest.keyClick(self.grid, key)
+                self.assertIs(self.grid._selected, expected)
+
+    def test_keyboard_selection_wraps_both_ends_without_skipping_an_event(self):
+        tasks = [
+            self.task(1),
+            self.task(2, start="2026-10-05 11:00:00", end="2026-10-05 12:00:00"),
+            self.task(3, start="2026-10-06 09:00:00", end="2026-10-06 10:00:00"),
+        ]
+        self.load(tasks)
+        for key, expected in (
+            (Qt.Key.Key_Down, tasks[0]),
+            (Qt.Key.Key_Up, tasks[-1]),
+            (Qt.Key.Key_Down, tasks[0]),
+            (Qt.Key.Key_Right, tasks[1]),
+            (Qt.Key.Key_Right, tasks[2]),
+            (Qt.Key.Key_Right, tasks[0]),
+        ):
+            QTest.keyClick(self.grid, key)
+            self.assertIs(self.grid._selected, expected)
+
     def test_scroll_restore_before_show_and_user_scroll_signal(self):
         grid = WeekTimeGrid()
         self.addCleanup(grid.close)
@@ -319,6 +355,21 @@ class WeekTimeGridTests(unittest.TestCase):
         scrolled = QSignalSpy(grid.scroll_position_changed)
         grid._scroll.verticalScrollBar().setValue(720)
         self.assertEqual(list(scrolled), [[600]])
+
+    def test_keyboard_selection_keeps_a_fitting_timed_event_fully_visible(self):
+        tasks = [
+            self.task(1, start="2026-10-05 01:00:00", end="2026-10-05 03:00:00"),
+            self.task(2, start="2026-10-05 19:00:00", end="2026-10-05 21:00:00"),
+        ]
+        self.load(tasks)
+        for key in (Qt.Key.Key_Down, Qt.Key.Key_Down, Qt.Key.Key_Up):
+            QTest.keyClick(self.grid, key)
+            rect = next(
+                rect for item, rect in self.grid._timed_rects if item.task is self.grid._selected
+            )
+            top = self.grid._scroll.verticalScrollBar().value()
+            self.assertGreaterEqual(rect.top(), top)
+            self.assertLessEqual(rect.bottom(), top + self.grid._scroll.viewport().height())
 
     def test_semantic_rgba_tokens_and_long_titles_render(self):
         task = self.task(name="매우 긴 일정 " * 30, bg_color="rgba(90, 140, 200, 0.8)")

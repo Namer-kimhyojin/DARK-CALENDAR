@@ -1006,8 +1006,11 @@ class WeekTimeGrid(QWidget):
             if not any(task is item.task for task in tasks):
                 tasks.append(item.task)
         if key in {Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_Left, Qt.Key.Key_Right} and tasks:
-            index = next((i for i, task in enumerate(tasks) if task is self._selected), -1)
             step = -1 if key in {Qt.Key.Key_Up, Qt.Key.Key_Left} else 1
+            index = next(
+                (i for i, task in enumerate(tasks) if task is self._selected),
+                -1 if step > 0 else 0,
+            )
             self._selected = tasks[(index + step) % len(tasks)]
             self._repaint()
             visible = next(
@@ -1015,8 +1018,13 @@ class WeekTimeGrid(QWidget):
                 None,
             )
             if visible:
+                rect = visible[1]
+                margin = min(
+                    max(30, math.ceil(rect.height() / 2) + 8),
+                    max(0, (self._scroll.viewport().height() - 1) // 2),
+                )
                 self._scroll.ensureVisible(
-                    round(visible[1].center().x()), round(visible[1].center().y()), 8, 30
+                    round(rect.center().x()), round(rect.center().y()), 8, margin
                 )
             else:
                 all_day = next(

@@ -81,6 +81,32 @@ def is_google_rate_limit_error(status, error=None) -> bool:
     return any(reason.lower() in message for reason in reasons)
 
 
+def _google_error_code(kind, error, status=None):
+    """Keep remote payloads/URLs out of stored errors and diagnostic messages."""
+    if is_google_rate_limit_error(status, error):
+        return "rateLimitExceeded"
+    if isinstance(error, ValueError) and str(error).startswith(
+        (
+            "invalid_google_",
+            "incomplete_google_",
+            "missing_google_",
+            "ambiguous_google_",
+            "duplicate_google_",
+        )
+    ):
+        return "invalid_google_event"
+    if isinstance(error, str) and error in {
+        "token_write_failed",
+        "empty_response",
+        "missing_id_in_response",
+        "existing_create_not_verified",
+    }:
+        return error
+    if isinstance(status, int) and not isinstance(status, bool) and 100 <= status <= 599:
+        return f"http_{status}"
+    return kind
+
+
 @dataclass
 class GoogleEvent:
     id: str
@@ -210,12 +236,12 @@ class CalendarSyncService:
 
         self.last_error_message = None
 
-    def _set_last_error(self, kind: str, message: str, status: int | None = None):
+    def _set_last_error(self, kind: str, message, status: int | None = None):
         self.last_error_kind = kind
 
         self.last_error_status = status
 
-        self.last_error_message = message
+        self.last_error_message = _google_error_code(kind, message, status)
 
     def _remote_writes_allowed(self):
         if self._account_identity_mismatch:
@@ -346,7 +372,7 @@ class CalendarSyncService:
                         attempt + 1,
                         retries,
                         wait,
-                        exc,
+                        _google_error_code("request_failed", exc, status),
                     )
 
                 time.sleep(wait)
@@ -378,7 +404,9 @@ class CalendarSyncService:
                     "revoke_token: no access_token found in token file; skipping revoke call"
                 )
                 return True
-            body = f"token={token}".encode("utf-8", errors="strict")
+            from urllib.parse import urlencode
+
+            body = urlencode({"token": token}).encode("utf-8", errors="strict")
             req = _urllib_req.Request(
                 "https://oauth2.googleapis.com/revoke",
                 data=body,
@@ -392,7 +420,10 @@ class CalendarSyncService:
                 logger.warning("Google OAuth revoke returned HTTP %d", resp.status)
                 return False
         except Exception as exc:
-            logger.warning("Google OAuth token revocation failed (non-critical): %s", exc)
+            logger.warning(
+                "Google OAuth token revocation failed (non-critical): %s",
+                _google_error_code("revoke_failed", exc),
+            )
             return False
 
     def authenticate(
@@ -449,15 +480,14 @@ class CalendarSyncService:
                 if not _credentials_support_scopes(creds):
                     logger.warning(
                         "authenticate(non-interactive): loaded credentials object is missing required scopes "
-                        "(has_scopes=%s); discarding.",
-                        getattr(creds, "scopes", None),
+                        "and was discarded."
                     )
                     creds = None
 
             except Exception as _load_exc:
                 logger.warning(
                     "authenticate(non-interactive): failed to load/validate token file: %s",
-                    _load_exc,
+                    _google_error_code("token_load_failed", _load_exc),
                 )
                 creds = None
 
@@ -481,7 +511,7 @@ class CalendarSyncService:
                 except Exception as _refresh_exc:
                     logger.warning(
                         "authenticate(non-interactive): token refresh failed: %s",
-                        _refresh_exc,
+                        _google_error_code("token_refresh_failed", _refresh_exc),
                     )
                     creds = None
 
@@ -513,7 +543,9 @@ class CalendarSyncService:
 
                 try:
                     config = load_desktop_client_config(CREDENTIALS_PATH)
-                    flow = InstalledAppFlow.from_client_config(config, SCOPES)
+                    flow = InstalledAppFlow.from_client_config(
+                        config, SCOPES, autogenerate_code_verifier=True
+                    )
                     creds = run_desktop_auth(flow, is_cancelled=is_cancelled)
 
                 except Exception as exc:
@@ -536,13 +568,11 @@ class CalendarSyncService:
             except GoogleAuthError as exc:
                 self._set_last_error(exc.kind, "Google authentication cancelled")
                 return False
-            except OSError as exc:
-                self._set_last_error("auth", f"token_write_failed: {exc}")
+            except OSError:
+                self._set_last_error("auth", "token_write_failed")
 
                 if parent_widget:
-                    QMessageBox.warning(
-                        parent_widget, "Google Calendar", f"Failed to save token: {exc}"
-                    )
+                    QMessageBox.warning(parent_widget, "Google Calendar", "Failed to save token.")
 
                 return False
 
@@ -586,9 +616,7 @@ class CalendarSyncService:
                 self._set_last_error("auth", "API connection failed")
 
             if parent_widget:
-                QMessageBox.critical(
-                    parent_widget, "Google Calendar", f"API connection failed: {exc}"
-                )
+                QMessageBox.critical(parent_widget, "Google Calendar", "API connection failed.")
 
             return False
 
@@ -659,21 +687,15 @@ class CalendarSyncService:
 
             return events
         except Exception as exc:
-            self._set_last_error(
-                "fetch", str(exc), getattr(getattr(exc, "resp", None), "status", None)
-            )
-            if hasattr(exc, "content"):
-                print(
-                    f"Google fetch err (HttpError): {exc.content.decode('utf-8', errors='replace')}"
-                )
-            else:
-                print("Google fetch err:", exc)
+            self._set_last_error("fetch", exc, getattr(getattr(exc, "resp", None), "status", None))
+            logger.warning("Google request failed (%s)", self.last_error_message)
             return None
 
     def fetch_sync_events(
         self,
         sync_token: str | None = None,
         calendar_id: str | None = None,
+        event_ids: list[str] | None = None,
     ) -> tuple[list[GoogleEvent] | None, str | None, bool]:
         if not self.is_authenticated or not self.service:
             self._set_last_error(
@@ -705,6 +727,23 @@ class CalendarSyncService:
             old_timeout = socket.getdefaulttimeout()
             socket.setdefaulttimeout(12)
             try:
+                if event_ids is not None:
+                    # Recover only linked events when importing this calendar is off.
+                    # Feed them through the same validation/conflict transaction as a pull.
+                    for event_id in dict.fromkeys(event_ids):
+                        event = self._execute_request(
+                            lambda event_id=event_id: (
+                                self.service.events()
+                                .get(calendarId=resolved_calendar_id, eventId=event_id)
+                                .execute()
+                            )
+                        )
+                        if not isinstance(event, dict) or event.get("id") != event_id:
+                            raise ValueError("invalid_google_event_identity")
+                        events.append(
+                            self._to_google_event(event, source_calendar_id=resolved_calendar_id)
+                        )
+                    return events, None, False
                 while True:
                     if page_token:
                         page_token_str = str(page_token)
@@ -744,18 +783,17 @@ class CalendarSyncService:
 
             except HttpError as _page_exc:
                 _page_status = getattr(getattr(_page_exc, "resp", None), "status", None)
-                if _page_status == 410:
-                    self._set_last_error("sync_token_expired", str(_page_exc), 410)
+                if _page_status == 410 and event_ids is None:
+                    self._set_last_error("sync_token_expired", _page_exc, 410)
                     print("Google incremental sync token expired (mid-page). Full resync required.")
                     socket.setdefaulttimeout(old_timeout)
                     return None, None, True
-                self._set_last_error("fetch", str(_page_exc), _page_status)
+                self._set_last_error("fetch", _page_exc, _page_status)
                 if events:
                     logger.warning(
-                        "fetch_sync_events: HttpError %s on page %s after %d event(s); "
+                        "fetch_sync_events: HttpError %s after %d event(s); "
                         "discarding the incomplete result",
                         _page_status,
-                        page_token,
                         len(events),
                     )
                     socket.setdefaulttimeout(old_timeout)
@@ -764,14 +802,13 @@ class CalendarSyncService:
                 raise
 
             except Exception as _page_exc2:
-                self._set_last_error("fetch", str(_page_exc2))
+                self._set_last_error("fetch", _page_exc2)
                 if events:
                     logger.warning(
-                        "fetch_sync_events: Exception on page %s after %d event(s); "
+                        "fetch_sync_events: Exception after %d event(s); "
                         "discarding the incomplete result: %s",
-                        page_token,
                         len(events),
-                        _page_exc2,
+                        self.last_error_message,
                     )
                     socket.setdefaulttimeout(old_timeout)
                     return None, None, False
@@ -785,26 +822,21 @@ class CalendarSyncService:
 
         except HttpError as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
-            if status == 410:
-                self._set_last_error("sync_token_expired", str(exc), 410)
+            if status == 410 and event_ids is None:
+                self._set_last_error("sync_token_expired", exc, 410)
                 print("Google incremental sync token expired. Full resync required.")
                 return None, None, True
 
-            self._set_last_error("fetch", str(exc), status)
-            if hasattr(exc, "content"):
-                print(
-                    f"Google incremental fetch err (HttpError): {exc.content.decode('utf-8', errors='replace')}"
-                )
-            else:
-                print(f"Google incremental fetch err: {exc}")
+            self._set_last_error("fetch", exc, status)
+            logger.warning("Google request failed (%s)", self.last_error_message)
             return None, None, False
 
         except Exception as exc:
-            self._set_last_error("fetch", str(exc))
+            self._set_last_error("fetch", exc)
             if self._is_transient_error(exc):
-                logger.warning("GCal incremental fetch: transient network error (skipped): %s", exc)
+                logger.warning("GCal incremental fetch skipped (%s)", self.last_error_message)
             else:
-                logger.error("GCal incremental fetch err: %s", exc)
+                logger.error("GCal incremental fetch failed (%s)", self.last_error_message)
             return None, None, False
 
     def create_metadata_reader(self, *, is_cancelled=None):
@@ -898,18 +930,18 @@ class CalendarSyncService:
                 )
                 return []
 
-            self._set_last_error("calendar_list", str(exc), status)
+            self._set_last_error("calendar_list", exc, status)
             if calendars:
                 logger.warning(
                     "GCal calendar list fetch failed mid-page (status=%s) after %d calendar(s); "
                     "discarding the incomplete result: %s",
                     status,
                     len(calendars),
-                    exc,
+                    self.last_error_message,
                 )
                 return []
 
-            logger.warning("GCal calendar list fetch failed: %s", exc)
+            logger.warning("GCal calendar list fetch failed (%s)", self.last_error_message)
             return []
 
     @staticmethod
@@ -940,6 +972,8 @@ class CalendarSyncService:
         }
 
     def subscribe_calendar(self, calendar_id: str) -> dict | None:
+        if not self._remote_writes_allowed():
+            return None
         calendar_id = self._normalize_calendar_id(calendar_id)
 
         if not self.is_authenticated or not self.service or not calendar_id:
@@ -967,13 +1001,15 @@ class CalendarSyncService:
                 )
 
             else:
-                self._set_last_error("subscribe", str(exc), status)
+                self._set_last_error("subscribe", exc, status)
 
-            logger.warning("GCal calendar subscription failed for %s: %s", calendar_id, exc)
+            logger.warning("GCal calendar subscription failed (%s)", self.last_error_message)
 
             return None
 
     def unsubscribe_calendar(self, calendar_id: str) -> bool:
+        if not self._remote_writes_allowed():
+            return False
         calendar_id = self._normalize_calendar_id(calendar_id)
 
         if not self.is_authenticated or not self.service or not calendar_id:
@@ -1001,9 +1037,9 @@ class CalendarSyncService:
                 )
 
             else:
-                self._set_last_error("unsubscribe", str(exc), status)
+                self._set_last_error("unsubscribe", exc, status)
 
-            logger.warning("GCal calendar unsubscribe failed for %s: %s", calendar_id, exc)
+            logger.warning("GCal calendar unsubscribe failed (%s)", self.last_error_message)
 
             return False
 
@@ -1129,6 +1165,7 @@ class CalendarSyncService:
         all_day: bool = False,
         calendar_id: str | None = None,
         idempotency_key: str | None = None,
+        result_metadata: dict | None = None,
     ) -> str | None:
         if not self._remote_writes_allowed():
             return None
@@ -1154,9 +1191,7 @@ class CalendarSyncService:
                     _dt.date.fromisoformat(end_date) + _dt.timedelta(days=1)
                 ).isoformat()
 
-                logger.debug(
-                    "GCal create all-day: summary=%r date=%s~%s", summary, start_date, end_date
-                )
+                logger.debug("GCal create all-day event")
                 event = {
                     "summary": summary,
                     "description": description,
@@ -1186,13 +1221,7 @@ class CalendarSyncService:
                         "%Y-%m-%dT%H:%M:%S"
                     ) + tz_offset
 
-                # 일정 제목은 개인정보이므로 로그에 남기지 않는다 (길이만 기록)
-                logger.debug(
-                    "GCal create: summary_len=%d start=%s end=%s",
-                    len(summary or ""),
-                    start_iso,
-                    end_iso,
-                )
+                logger.debug("GCal create timed event")
                 event = {
                     "summary": summary,
                     "description": description,
@@ -1250,13 +1279,11 @@ class CalendarSyncService:
 
             event_id = created_event.get("id")
             if not event_id or not str(event_id).strip():
-                logger.error(
-                    "create_event: API response missing 'id' for calendar %s (response keys: %s)",
-                    calendar_id,
-                    list(created_event.keys()),
-                )
+                logger.error("create_event: API response missing event identity")
                 self._set_last_error("create", "missing_id_in_response", None)
                 return None
+            if result_metadata is not None:
+                result_metadata["remote_updated_at"] = created_event.get("updated")
             return event_id
 
         except Exception as exc:
@@ -1271,20 +1298,15 @@ class CalendarSyncService:
                     )
                     if self._matches_created_event(existing, event):
                         self._clear_last_error()
+                        if result_metadata is not None:
+                            result_metadata["remote_updated_at"] = existing.get("updated")
                         return _sanitized_key
                 except Exception:
                     logger.warning("Could not verify the existing Google create receipt")
                 self._set_last_error("create_conflict", "existing_create_not_verified", 409)
                 return None
-            self._set_last_error(
-                "create", str(exc), getattr(getattr(exc, "resp", None), "status", None)
-            )
-            if hasattr(exc, "content"):
-                print(
-                    f"GCal Create Error (HttpError): {exc.content.decode('utf-8', errors='replace')}"
-                )
-            else:
-                print(f"GCal Create Error: {exc}")
+            self._set_last_error("create", exc, getattr(getattr(exc, "resp", None), "status", None))
+            logger.warning("Google request failed (%s)", self.last_error_message)
             return None
 
     def update_event(
@@ -1301,6 +1323,8 @@ class CalendarSyncService:
         completed: bool = False,
         hide_completed: bool = False,
         expected_remote_updated_at: str | None = None,
+        result_metadata: dict | None = None,
+        revision_event_id: str | None = None,
     ) -> bool:
         if not self._remote_writes_allowed():
             return False
@@ -1354,18 +1378,26 @@ class CalendarSyncService:
                 end_block = {"dateTime": end_iso, "timeZone": self.time_zone}
 
             def _do_update():
-                ev = self.service.events().get(calendarId=calendar_id, eventId=event_id).execute()
-                current_updated_at = str(ev.get("updated") or "").strip()
+                revision_id = revision_event_id or event_id
+                revision_event = (
+                    self.service.events().get(calendarId=calendar_id, eventId=revision_id).execute()
+                )
+                current_updated_at = str(revision_event.get("updated") or "").strip()
                 expected_updated_at = str(expected_remote_updated_at or "").strip()
-                if (
-                    expected_updated_at
-                    and current_updated_at
-                    and current_updated_at != expected_updated_at
+                if (expected_updated_at and current_updated_at != expected_updated_at) or (
+                    revision_id != event_id and revision_event.get("recurringEventId") != event_id
                 ):
                     return {
                         "_dark_calendar_conflict": True,
                         "updated": current_updated_at,
                     }
+                ev = revision_event
+                if revision_id != event_id:
+                    ev = (
+                        self.service.events()
+                        .get(calendarId=calendar_id, eventId=event_id)
+                        .execute()
+                    )
                 ev["summary"] = summary
                 ev["description"] = description
                 if location:
@@ -1412,6 +1444,11 @@ class CalendarSyncService:
                     412,
                 )
                 return False
+            if result_metadata is not None and isinstance(update_result, dict):
+                # A master receipt is not the selected instance's revision.
+                result_metadata["remote_updated_at"] = (
+                    None if revision_event_id else update_result.get("updated")
+                )
             return True
 
         except HttpError as exc:
@@ -1422,23 +1459,13 @@ class CalendarSyncService:
                 error_kind = "conflict"
             else:
                 error_kind = "update"
-            self._set_last_error(error_kind, str(exc), status)
-            if hasattr(exc, "content"):
-                print(
-                    f"GCal Update Error (HttpError): {exc.content.decode('utf-8', errors='replace')}"
-                )
-            else:
-                print(f"GCal Update Error: {exc}")
+            self._set_last_error(error_kind, exc, status)
+            logger.warning("Google request failed (%s)", self.last_error_message)
             return False
 
         except Exception as exc:
-            self._set_last_error("update", str(exc))
-            if hasattr(exc, "content"):
-                print(
-                    f"GCal Update Error (HttpError): {exc.content.decode('utf-8', errors='replace')}"
-                )
-            else:
-                print(f"GCal Update Error: {exc}")
+            self._set_last_error("update", exc)
+            logger.warning("Google request failed (%s)", self.last_error_message)
             return False
 
     def delete_event(self, event_id: str, calendar_id: str | None = None) -> bool:
@@ -1461,15 +1488,15 @@ class CalendarSyncService:
         except HttpError as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
             if status in (404, 410):
-                self._set_last_error("not_found", str(exc), status)
+                self._set_last_error("not_found", exc, status)
                 return True
-            self._set_last_error("delete", str(exc), status)
-            print(f"GCal Delete Error: {exc}")
+            self._set_last_error("delete", exc, status)
+            logger.warning("Google request failed (%s)", self.last_error_message)
             return False
 
         except Exception as exc:
-            self._set_last_error("delete", str(exc))
-            print(f"GCal Delete Error: {exc}")
+            self._set_last_error("delete", exc)
+            logger.warning("Google request failed (%s)", self.last_error_message)
             return False
 
     def move_event(
@@ -1477,13 +1504,10 @@ class CalendarSyncService:
         event_id: str,
         source_calendar_id: str | None,
         destination_calendar_id: str | None,
+        expected_remote_updated_at: str | None = None,
+        result_metadata: dict | None = None,
     ) -> bool:
-        """Move event between calendars via events.move API.
-
-        Returns True if moved or already at destination (404/410 treated as
-        already-moved). False on auth/network errors so caller can fall back to
-        create-on-new + delete-on-old.
-        """
+        """Move an unchanged source event; missing sources require reconciliation."""
         if not self._remote_writes_allowed():
             return False
         if not self.is_authenticated or not self.service or not event_id:
@@ -1497,26 +1521,40 @@ class CalendarSyncService:
         if src == dst:
             return True
         try:
-            self._execute_request(
-                lambda: (
-                    self.service.events()
-                    .move(calendarId=src, eventId=event_id, destination=dst)
-                    .execute()
+
+            def _do_move():
+                etag = None
+                if expected_remote_updated_at:
+                    current = self.service.events().get(calendarId=src, eventId=event_id).execute()
+                    if current.get("updated") != expected_remote_updated_at:
+                        return {"_dark_calendar_conflict": True}
+                    etag = current.get("etag")
+                request = self.service.events().move(
+                    calendarId=src, eventId=event_id, destination=dst
                 )
-            )
+                if etag and hasattr(request, "headers"):
+                    request.headers["If-Match"] = etag
+                return request.execute()
+
+            moved = self._execute_request(_do_move)
+            if isinstance(moved, dict) and moved.get("_dark_calendar_conflict"):
+                self._set_last_error("conflict", "Remote event changed before move", 412)
+                return False
+            if result_metadata is not None and isinstance(moved, dict):
+                result_metadata["remote_updated_at"] = moved.get("updated")
             return True
         except HttpError as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
             if status in (404, 410):
                 # Event already gone on source; nothing to move.
-                self._set_last_error("not_found", str(exc), status)
+                self._set_last_error("not_found", exc, status)
                 return False
-            self._set_last_error("move", str(exc), status)
-            print(f"GCal Move Error: {exc}")
+            self._set_last_error("conflict" if status == 412 else "move", exc, status)
+            logger.warning("Google request failed (%s)", self.last_error_message)
             return False
         except Exception as exc:
-            self._set_last_error("move", str(exc))
-            print(f"GCal Move Error: {exc}")
+            self._set_last_error("move", exc)
+            logger.warning("Google request failed (%s)", self.last_error_message)
             return False
 
     def batch_create_events(self, operations: list) -> list:
@@ -1615,6 +1653,7 @@ class CalendarSyncService:
                                             "success": True,
                                             "event_id": _sk,
                                             "error": None,
+                                            "remote_updated_at": existing.get("updated"),
                                         }
                                     )
                                     return
@@ -1625,14 +1664,20 @@ class CalendarSyncService:
                         "local_task_id": ltid,
                         "success": False,
                         "event_id": op.get("event_id"),
-                        "error": f"http_{_st}" if _st else str(exception),
+                        "error": _google_error_code("batch_failed", exception, _st),
                         "status": _st,
                     }
                 )
             else:
                 eid = (response or {}).get("id") or op.get("event_id")
                 results.append(
-                    {"local_task_id": ltid, "success": True, "event_id": eid, "error": None}
+                    {
+                        "local_task_id": ltid,
+                        "success": True,
+                        "event_id": eid,
+                        "error": None,
+                        "remote_updated_at": (response or {}).get("updated"),
+                    }
                 )
 
         with self._service_lock:
@@ -1724,7 +1769,13 @@ class CalendarSyncService:
             try:
                 batch.execute()
             except Exception as exc:
-                logger.error("batch_%s_events: batch.execute() failed: %s", method, exc)
+                logger.error(
+                    "batch_%s_events failed (%s)",
+                    method,
+                    _google_error_code(
+                        "batch_failed", exc, getattr(getattr(exc, "resp", None), "status", None)
+                    ),
+                )
                 return []
         return results
 

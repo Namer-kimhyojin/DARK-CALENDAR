@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QMessageBox,
     QTableView,
+    QToolButton,
 )
 
 from calendar_app.shared.color_utils import (
@@ -1753,7 +1754,7 @@ def set_footer_loading(
 def polish_calendar_popup(
     date_edit: QDateEdit, minimum_size: QSize | None = None
 ) -> QCalendarWidget:
-    """Normalize QDateEdit popup calendar sizing and header alignment."""
+    """Normalize popup sizing, header alignment and themed navigation icons."""
     date_edit.setCalendarPopup(True)
     calendar = date_edit.calendarWidget()
     if minimum_size is None:
@@ -1766,6 +1767,23 @@ def polish_calendar_popup(
     calendar.setSizePolicy(
         calendar.sizePolicy().horizontalPolicy(), calendar.sizePolicy().verticalPolicy()
     )
+
+    # QCalendarWidget supplies native arrow icons whose pixels do not inherit
+    # the QToolButton text color. Use the same semantic icons as the app shell.
+    from calendar_app.shared.icon_map import ICON, icon
+
+    tokens = get_dialog_theme_tokens()
+    icon_color = parse_hex_color(tokens.get("text_primary"), "#e1e1e6").name()
+    for object_name, icon_key in (
+        ("qt_calendar_prevmonth", ICON.NAV_PREV),
+        ("qt_calendar_nextmonth", ICON.NAV_NEXT),
+    ):
+        button = calendar.findChild(QToolButton, object_name)
+        if button is not None:
+            navigation_icon = icon(icon_key, color=icon_color)
+            if not navigation_icon.isNull():
+                button.setIcon(navigation_icon)
+                button.setIconSize(QSize(14, 14))
 
     table = calendar.findChild(QTableView)
     if table is not None:

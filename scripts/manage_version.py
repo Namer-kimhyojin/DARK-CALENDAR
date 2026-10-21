@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Record logical changes and keep development version surfaces consistent."""
+"""Record changes without bumping; explicitly prepare release-unit versions."""
 
 from __future__ import annotations
 
@@ -33,10 +33,14 @@ def digest(data):
 
 
 def version_number(version):
-    if not isinstance(version, str) or not re.fullmatch(r"[0-9]\.[0-9]\.[0-9]", version):
-        raise ValueError("Version must have three single-digit components")
-    major, minor, patch = map(int, version.split("."))
-    return major * 100 + minor * 10 + patch
+    if not isinstance(version, str) or not re.fullmatch(
+        r"[1-9][0-9]*\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", version
+    ):
+        raise ValueError("Version must be MAJOR.MINOR.PATCH without leading zeros")
+    parts = tuple(map(int, version.split(".")))
+    if any(part > 65535 for part in parts):
+        raise ValueError("MSIX version components cannot exceed 65535")
+    return parts
 
 
 def validate_override(version, published_version):
@@ -45,10 +49,29 @@ def validate_override(version, published_version):
 
 
 def next_version(current, kind):
-    value = version_number(current)
+    major, minor, patch = version_number(current)
+    if kind == "patch":
+        patch += 1
+    elif kind == "minor":
+        minor, patch = minor + 1, 0
+    elif kind == "major":
+        major, minor, patch = major + 1, 0, 0
+    else:
+        raise ValueError("Only an explicit patch, minor or major release changes the version")
+    result = f"{major}.{minor}.{patch}"
+    version_number(result)
+    return result
+
+
+def legacy_next_version(current, kind):
+    """Validate historical v1 events with their original single-digit policy."""
+    if not re.fullmatch(r"[0-9]\.[0-9]\.[0-9]", current):
+        raise ValueError("Invalid legacy version")
+    major, minor, patch = map(int, current.split("."))
+    value = major * 100 + minor * 10 + patch
     value = value + 1 if kind == "change" else (value // 10 + 1) * 10
     if value > 999:
-        raise ValueError("Single-digit version space exhausted; a new numbering policy is required")
+        raise ValueError("Invalid legacy version event")
     return f"{value // 100}.{value // 10 % 10}.{value % 10}"
 
 
@@ -64,12 +87,17 @@ def current_version(root):
     if not match:
         raise ValueError("APP_VERSION missing")
     version = match[1]
-    if not re.fullmatch(r"[0-9]\.[0-9]\.[0-9]", version):
-        raise ValueError("Invalid development version")
+    version_number(version)
     return version
 
 
-def core_updates(root, version, date):
+def core_updates(root, version, date, channel="Dev", *, for_build=False):
+    version_number(version)
+    if channel not in {"Dev", "Beta", "Stable"}:
+        raise ValueError("Channel must be Dev, Beta or Stable")
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date):
+        raise ValueError("Release date must be YYYY-MM-DD")
+    datetime.strptime(date, "%Y-%m-%d")
     metadata = replace_one(
         r'^APP_VERSION = "[^"]+"$', f'APP_VERSION = "{version}"', text(root / CORE[0])
     )
@@ -77,8 +105,11 @@ def core_updates(root, version, date):
         r'^APP_RELEASE_DATE = "[^"]+"$', f'APP_RELEASE_DATE = "{date}"', metadata
     )
     metadata = replace_one(
-        r'^APP_RELEASE_CHANNEL = "[^"]+"$', 'APP_RELEASE_CHANNEL = "Dev"', metadata
+        r'^APP_RELEASE_CHANNEL = "[^"]+"$', f'APP_RELEASE_CHANNEL = "{channel}"', metadata
     )
+    if for_build:
+        for name, value in (("APP_PUBLISHED_VERSION", version), ("APP_PUBLISHED_DATE", date)):
+            metadata = replace_one(rf'^{name} = "[^"]+"$', f'{name} = "{value}"', metadata)
     project = replace_one(r'^version = "[^"]+"$', f'version = "{version}"', text(root / CORE[1]))
     manifest = replace_one(
         r'(<Identity\b[^>]*\bVersion=")[^"]+("[^>]*>)', rf"\g<1>{version}.0\2", text(root / CORE[2])
@@ -95,27 +126,46 @@ def core_updates(root, version, date):
     }
 
 
-def verify(root, ledger):
-    version = current_version(root)
-    if ledger["current_version"] != version:
+def verify(root, ledger, *, check_surfaces=True):
+    version = ledger["current_version"]
+    version_number(version)
+    if check_surfaces and current_version(root) != version:
         raise ValueError("Version history and APP_VERSION disagree; do not edit versions manually")
     previous = ledger["baseline_version"]
     ids = set()
-    for event in ledger["events"]:
-        if (
-            event["id"] in ids
-            or event["kind"] not in {"change", "module", "store", "override"}
-            or event["previous_version"] != previous
+    schema = ledger.get("schema_version", 1)
+    if schema not in {1, 2}:
+        raise ValueError("Unsupported version history schema")
+    legacy_count = len(ledger["events"]) if schema == 1 else ledger["legacy_event_count"]
+    if not isinstance(legacy_count, int) or not 0 <= legacy_count <= len(ledger["events"]):
+        raise ValueError("Invalid legacy event boundary")
+    for index, event in enumerate(ledger["events"]):
+        if event["id"] in ids or event["previous_version"] != previous:
+            raise ValueError("Version history chain is inconsistent")
+        if index < legacy_count:
+            if event["kind"] == "override":
+                validate_override(event["version"], event.get("published_version"))
+            elif event["kind"] not in {"change", "module", "store"} or event[
+                "version"
+            ] != legacy_next_version(previous, event["kind"]):
+                raise ValueError("Version history chain is inconsistent")
+        elif event["kind"] == "release":
+            if version_number(event["version"]) < version_number(previous):
+                raise ValueError("Release version cannot move backwards")
+            if event.get("bump") and event["version"] != next_version(previous, event["bump"]):
+                raise ValueError("Release increment does not match its recorded scope")
+            validate_override(event["version"], event["published_version"])
+        elif (
+            event["kind"] not in {"change", "module", "store", "policy"}
+            or event["version"] != previous
         ):
-            raise ValueError("Version history chain is inconsistent")
-        if event["kind"] == "override":
-            validate_override(event["version"], event.get("published_version"))
-        elif event["version"] != next_version(previous, event["kind"]):
-            raise ValueError("Version history chain is inconsistent")
+            raise ValueError("Change records must not increment the product version")
         ids.add(event["id"])
         previous = event["version"]
     if previous != version:
         raise ValueError("Version history endpoint is inconsistent")
+    if not check_surfaces:
+        return version
     checks = (
         (CORE[1], rf'^version = "{re.escape(version)}"$'),
         (CORE[2], rf'<Identity\b[^>]*\bVersion="{re.escape(version)}\.0"'),
@@ -127,6 +177,19 @@ def verify(root, ledger):
     for name, pattern in checks:
         if not re.search(pattern, text(root / name), re.M):
             raise ValueError(f"Version metadata mismatch: {name}")
+    if schema == 2:
+        if ledger["release"]["channel"] not in {"Dev", "Beta", "Stable"}:
+            raise ValueError("Invalid release channel")
+        date = ledger["release"]["date"]
+        if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date):
+            raise ValueError("Release date must be YYYY-MM-DD")
+        datetime.strptime(date, "%Y-%m-%d")
+        for name, value in (
+            ("APP_RELEASE_DATE", ledger["release"]["date"]),
+            ("APP_RELEASE_CHANNEL", ledger["release"]["channel"]),
+        ):
+            if f'{name} = "{value}"' not in text(root / CORE[0]):
+                raise ValueError(f"Version metadata mismatch: {name}")
     return version
 
 
@@ -282,9 +345,9 @@ def render_history(ledger):
     lines = [
         "# 버전 변경 이력",
         "",
-        "개발 변경 버전과 실제 공개·설치 상태는 별도로 관리한다. 버전 부여는 검증·게시 완료를 의미하지 않는다.",
+        "제품 버전은 배포 단위로 결정한다. 변경 기록·Git/CI 빌드·공개·Store·설치 상태는 별도이며 변경 기록만으로 버전을 올리지 않는다.",
         "",
-        f"기준 버전: `{ledger['baseline_version']}` · 현재 개발 버전: **`{ledger['current_version']}`**",
+        f"기준 버전: `{ledger['baseline_version']}` · 현재 제품 버전: **`{ledger['current_version']}`**",
         "",
         "| 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |",
         "|---|---|---|---|---|",
@@ -295,6 +358,57 @@ def render_history(ledger):
             f"| {item['version']} | {item['created_at']} | {item['kind']} | {summary} | `{item['id']}` |"
         )
     return ("\n".join(lines) + "\n").encode("utf-8", errors="strict")
+
+
+def load_ledger(root, *, check_surfaces=True):
+    if not (root / HISTORY).exists():
+        raise ValueError("Version history missing; restore it before managing releases")
+    ledger = json.loads(text(root / HISTORY))
+    verify(root, ledger, check_surfaces=check_surfaces)
+    return ledger
+
+
+def adopt_release_policy(root, ledger):
+    if ledger.get("schema_version") == 2:
+        return False
+    metadata = text(root / CORE[0])
+    ledger.update(
+        schema_version=2,
+        legacy_event_count=len(ledger["events"]),
+        release={
+            "date": re.search(r'^APP_RELEASE_DATE = "([^"]+)"$', metadata, re.M)[1],
+            "channel": re.search(r'^APP_RELEASE_CHANNEL = "([^"]+)"$', metadata, re.M)[1],
+        },
+    )
+    ledger["events"].append(
+        {
+            "id": "policy:release-unit-v2",
+            "created_at": datetime.now(timezone(timedelta(hours=9))).isoformat(),
+            "kind": "policy",
+            "previous_version": ledger["current_version"],
+            "version": ledger["current_version"],
+            "summary": "배포 단위 버전 체계로 전환; 기존 번호·이력·공개 패키지 보존",
+            "files": [],
+            "scoped_hashes": {},
+            "inputs": input_hashes(root),
+        }
+    )
+    return True
+
+
+def save_ledger(root, ledger, updates=None):
+    changes = dict(updates or {})
+    changes[HISTORY] = json_bytes(ledger)
+    changes[REPORT] = render_history(ledger)
+    transaction(root, changes)
+
+
+def migrate(root):
+    ledger = load_ledger(root)
+    changed = adopt_release_policy(root, ledger)
+    if changed:
+        save_ledger(root, ledger)
+    return {"changed": changed, "version": ledger["current_version"], "schema_version": 2}
 
 
 def record(root, kind, event_id, summary, files=()):
@@ -314,6 +428,7 @@ def record(root, kind, event_id, summary, files=()):
         }
     )
     current = verify(root, ledger)
+    adopt_release_policy(root, ledger)
     inputs = input_hashes(root)
     scopes = sorted(set(files))
     scoped = {}
@@ -356,7 +471,7 @@ def record(root, kind, event_id, summary, files=()):
         if previous and previous["inputs"] == inputs:
             return {"changed": False, "version": current, "event_version": previous["version"]}
     timestamp = datetime.now(timezone(timedelta(hours=9)))
-    version = next_version(current, kind)
+    version = current
     event = {
         "id": event_id,
         "created_at": timestamp.isoformat(),
@@ -369,11 +484,17 @@ def record(root, kind, event_id, summary, files=()):
         "inputs": inputs,
     }
     ledger["events"].append(event)
-    ledger.update({"current_version": version, "observed_inputs": inputs})
-    updates = core_updates(root, version, timestamp.date().isoformat())
-    updates[HISTORY] = json_bytes(ledger)
-    updates[REPORT] = render_history(ledger)
-    transaction(root, updates)
+    observed = dict(ledger.get("observed_inputs", inputs))
+    if not scopes:
+        observed = inputs
+    else:
+        for name in scopes:
+            if name in inputs:
+                observed[name] = inputs[name]
+            else:
+                observed.pop(name, None)
+    ledger["observed_inputs"] = observed
+    save_ledger(root, ledger)
     return {"changed": True, "version": version, "previous_version": current, "event_id": event_id}
 
 
@@ -386,6 +507,8 @@ def override(root, version, published_version, event_id, summary):
     if not history_path.exists():
         raise ValueError("Version history missing; restore it before correcting a version")
     ledger = json.loads(text(history_path))
+    if ledger.get("schema_version") == 2:
+        raise ValueError("Use prepare for release-unit versions; published versions are immutable")
     current = verify(root, ledger)
     inputs = input_hashes(root)
     existing = next((item for item in ledger["events"] if item["id"] == event_id), None)
@@ -424,30 +547,117 @@ def override(root, version, published_version, event_id, summary):
 
 
 def scan(root):
-    if not (root / HISTORY).exists():
-        raise ValueError("Version history missing; restore it before running the development app")
-    ledger = json.loads(text(root / HISTORY))
-    current = verify(root, ledger)
+    ledger = load_ledger(root)
+    current = ledger["current_version"]
     inputs = input_hashes(root)
     previous = ledger["observed_inputs"]
     changed = sorted(
         name for name in inputs.keys() | previous.keys() if inputs.get(name) != previous.get(name)
     )
-    if not changed:
-        return {"changed": False, "version": current}
-    fingerprint = digest(json_bytes(inputs))[:24]
-    return record(
-        root,
-        "change",
-        f"auto:{current}:{fingerprint}",
-        "개발 실행 전 미등록 실행 입력 변경 감지(검증 상태 별도)",
-        changed,
+    return {"changed": False, "version": current, "unrecorded_files": changed}
+
+
+def prepare(root, event_id, summary, *, version=None, bump=None):
+    if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,160}", event_id or "") or not summary.strip():
+        raise ValueError("prepare requires --event-id and --summary")
+    if bool(version) == bool(bump):
+        raise ValueError("prepare requires exactly one of --version or --bump")
+    ledger = load_ledger(root)
+    adopt_release_policy(root, ledger)
+    if scan(root)["unrecorded_files"]:
+        raise ValueError("Unrecorded inputs; record the scoped changes before preparing a release")
+    inputs = input_hashes(root)
+    existing = next((event for event in ledger["events"] if event["id"] == event_id), None)
+    if existing:
+        if (
+            existing["kind"] != "release"
+            or existing["inputs"] != inputs
+            or (version is not None and existing["version"] != version)
+            or existing.get("bump") != bump
+        ):
+            raise ValueError("Release ID already belongs to different parameters or inputs")
+        return {"changed": False, "version": existing["version"], "event_id": event_id}
+    current = ledger["current_version"]
+    selected = version or next_version(current, bump)
+    metadata = text(root / CORE[0])
+    published = re.search(r'^APP_PUBLISHED_VERSION = "([^"]+)"$', metadata, re.M)[1]
+    validate_override(selected, published)
+    if version_number(selected) < version_number(current):
+        raise ValueError("Release version cannot move backwards")
+    reservation = next(
+        (
+            event
+            for event in reversed(ledger["events"])
+            if event["kind"] == "release" and event["version"] == selected
+        ),
+        None,
     )
+    if reservation:
+        if reservation["inputs"] != inputs:
+            raise ValueError(
+                "Reserved version has different inputs; choose a higher release version"
+            )
+        return {"changed": False, "version": selected, "event_id": reservation["id"]}
+    timestamp = datetime.now(timezone(timedelta(hours=9)))
+    ledger["events"].append(
+        {
+            "id": event_id,
+            "kind": "release",
+            "created_at": timestamp.isoformat(),
+            "previous_version": current,
+            "version": selected,
+            "published_version": published,
+            "bump": bump,
+            "summary": summary,
+            "files": [],
+            "scoped_hashes": {},
+            "inputs": inputs,
+        }
+    )
+    ledger["current_version"] = selected
+    ledger["release"] = {"date": timestamp.date().isoformat(), "channel": "Dev"}
+    save_ledger(root, ledger, core_updates(root, selected, ledger["release"]["date"]))
+    return {"changed": True, "previous_version": current, "version": selected, "event_id": event_id}
+
+
+def sync(root, *, expected=None, date=None, channel=None, for_build=False):
+    ledger = load_ledger(root, check_surfaces=False)
+    adopt_release_policy(root, ledger)
+    version = ledger["current_version"]
+    if expected and version != expected:
+        raise ValueError("Build version differs from the prepared release version")
+    if for_build:
+        verify_prepared(root, ledger)
+    date = date or ledger["release"]["date"]
+    channel = channel or ledger["release"]["channel"]
+    updates = core_updates(root, version, date, channel, for_build=for_build)
+    ledger["release"] = {"date": date, "channel": channel}
+    save_ledger(root, ledger, updates)
+    return {"changed": True, "version": version, "channel": channel, "date": date}
+
+
+def verify_prepared(root, ledger):
+    reservation = next(
+        (
+            event
+            for event in reversed(ledger["events"])
+            if event["kind"] == "release" and event["version"] == ledger["current_version"]
+        ),
+        None,
+    )
+    if reservation is None:
+        raise ValueError("Prepare the release explicitly before building a new package")
+    if reservation["inputs"] != input_hashes(root):
+        raise ValueError("Prepared release inputs changed; prepare a new version before rebuilding")
+    return reservation
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("record", "override", "scan", "check", "status"))
+    parser.add_argument(
+        "command",
+        choices=("record", "override", "scan", "check", "status", "migrate", "prepare", "sync"),
+    )
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--kind", choices=("change", "module", "store"), default="change")
     parser.add_argument("--event-id")
@@ -456,10 +666,22 @@ def main():
     parser.add_argument("--expected")
     parser.add_argument("--version")
     parser.add_argument("--published-version")
+    parser.add_argument("--bump", choices=("patch", "minor", "major"))
+    parser.add_argument("--date")
+    parser.add_argument("--channel", choices=("Dev", "Beta", "Stable"))
+    parser.add_argument("--for-build", action="store_true")
+    parser.add_argument("--strict", action="store_true", help="Fail on unrecorded runtime inputs")
     args = parser.parse_args()
     root = args.root.resolve()
     try:
-        with locked(root):
+        from contextlib import nullcontext
+
+        reading = args.command in {"scan", "check", "status"}
+        if reading and (root / ".versioning/transaction.json").exists():
+            raise ValueError(
+                "Interrupted transaction pending; recover with a mutating command first"
+            )
+        with nullcontext() if reading else locked(root):
             if args.command == "record":
                 if not args.event_id or not args.summary:
                     raise ValueError("record requires --event-id and --summary")
@@ -474,19 +696,39 @@ def main():
                 )
             elif args.command == "scan":
                 result = scan(root)
+            elif args.command == "migrate":
+                result = migrate(root)
+            elif args.command == "prepare":
+                result = prepare(
+                    root, args.event_id, args.summary, version=args.version, bump=args.bump
+                )
+            elif args.command == "sync":
+                result = sync(
+                    root,
+                    expected=args.expected,
+                    date=args.date,
+                    channel=args.channel,
+                    for_build=args.for_build,
+                )
             else:
                 ledger = json.loads(text(root / HISTORY))
                 version = verify(root, ledger)
                 if args.expected and args.expected != version:
                     raise ValueError(
-                        "Build version is not the registered development version; record a change/store event first"
+                        "Build version is not the prepared product version; use prepare explicitly"
                     )
                 result = {
                     "version": version,
                     "events": len(ledger["events"]),
                     "latest_event": ledger["events"][-1]["id"] if ledger["events"] else None,
                 }
+                if args.strict:
+                    result["unrecorded_files"] = scan(root)["unrecorded_files"]
+                if args.for_build:
+                    verify_prepared(root, ledger)
         print(json.dumps(result))
+        if args.strict and result.get("unrecorded_files"):
+            return 2
         return 0
     except (OSError, ValueError, KeyError) as exc:
         print(f"Version management failed: {exc}", file=sys.stderr)

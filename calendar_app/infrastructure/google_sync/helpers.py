@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-import sqlite3
 
 from calendar_app.infrastructure.google_sync.common import (
     google_create_idempotency_key,
@@ -116,8 +115,51 @@ def _candidate_recovery_calendar_ids(sync, settings, attempted_calendar_id=None)
     return candidates
 
 
+def google_push_snapshot(task):
+    """Fields whose change invalidates a queued Google write or its receipt."""
+    fields = (
+        "name",
+        "summary",
+        "deadline",
+        "end_date",
+        "description",
+        "location",
+        "bg_color",
+        "all_day",
+        "is_completed",
+        "calendar_id",
+        "gcal_source_calendar_id",
+        "gcal_target_calendar_id",
+        "gcal_event_id",
+        "gcal_recurring_series_id",
+        "created_at",
+    )
+    return {field: task[field] for field in fields if field in task}
+
+
+def google_push_snapshot_matches(task, current):
+    """Use the same stale-write guard for individual and batch creates."""
+    return bool(current) and all(
+        current.get(field) == value for field, value in google_push_snapshot(task).items()
+    )
+
+
+def google_remote_revision(task):
+    """Reject the local-clock placeholder written by older app versions."""
+    revision = str(task.get("gcal_remote_updated_at") or "").strip()
+    last_synced = str(task.get("gcal_last_synced_at") or "").strip()
+    return revision if revision and revision != last_synced else None
+
+
 def _mark_task_synced(
-    local_id, event_id=None, commit=True, source_calendar_id=None, target_calendar_id=None
+    local_id,
+    event_id=None,
+    commit=True,
+    source_calendar_id=None,
+    target_calendar_id=None,
+    remote_updated_at=None,
+    expected_snapshot=None,
+    created=False,
 ):
     if not local_id:
         return True
@@ -131,20 +173,30 @@ def _mark_task_synced(
             source_calendar_id=source_calendar_id,
             source_calendar_summary=_resolve_source_summary(source_calendar_id),
             target_calendar_id=target_calendar_id,
+            remote_updated_at=remote_updated_at,
+            expected_snapshot=expected_snapshot,
         )
         if marked:
             return True
 
-        conn = _task_repo.get_connection()
-        if conn:
-            cur = conn.cursor()
-            cur.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='unified_task'")
-            if not cur.fetchone():
-                logger.warning(
-                    "Skipping local GCal sync mark for task %s because unified_task table is unavailable",
-                    local_id,
-                )
-                return True
+        if created and event_id:
+            conn = _task_repo.get_connection()
+            if conn:
+                current = conn.execute(
+                    "SELECT gcal_event_id FROM unified_task WHERE id=?", (local_id,)
+                ).fetchone()
+                if current is None or (current[0] and current[0] != event_id):
+                    # Reuse the persistent delete queue if the task was deleted
+                    # or another create won while the HTTP request was in flight.
+                    queued = _task_repo.queue_gcal_delete(
+                        event_id, local_task_id=None, gcal_calendar_id=source_calendar_id
+                    )
+                    logger.warning(
+                        "Created event %s outlived local task %s; cleanup queued=%s",
+                        event_id,
+                        local_id,
+                        queued,
+                    )
         return False
     except Exception:
         logger.exception("Failed to mark local task %s as Google-synced", local_id)
@@ -221,6 +273,14 @@ def sync_task_to_google(
         _mark_task_synced(local_id, commit=commit, source_calendar_id=None, target_calendar_id=None)
         return SyncTaskResult(event_id=None, success=True, error_kind="skipped_non_gcal")
 
+    if local_id and not google_push_snapshot_matches(task_data, fresh):
+        return SyncTaskResult(
+            event_id=existing_id,
+            success=False,
+            error_kind="local_state",
+            error_message="local_task_changed_before_push",
+        )
+
     summary = task_data.get("name") or task_data.get("summary") or "Untitled"
     start_iso = task_data.get("deadline") or ""
     end_iso = task_data.get("end_date") or ""
@@ -261,6 +321,21 @@ def sync_task_to_google(
         source_calendar_id if (has_explicit_source or not existing_id) else None
     )
 
+    write_metadata = {}
+    write_snapshot = google_push_snapshot(fresh or task_data)
+    if existing_id and not expected_remote_updated_at:
+        stored_revision = google_remote_revision(fresh or task_data)
+        # Older versions wrote the local sync clock into both columns. Such a
+        # value cannot authorize an overwrite: the regular pull must reconcile it.
+        if not stored_revision:
+            return SyncTaskResult(
+                event_id=existing_id,
+                success=False,
+                error_kind="conflict",
+                error_message="remote_revision_requires_pull",
+            )
+        expected_remote_updated_at = stored_revision
+
     calendar_move_pending = False
     if existing_id:
         # ── Calendar move detection ─────────────────────────────────────────
@@ -277,8 +352,18 @@ def sync_task_to_google(
             _prev_gcal_id = _normalize_calendar_id(_prev_raw) if _prev_raw else None
             if _prev_gcal_id and source_calendar_id and _prev_gcal_id != source_calendar_id:
                 calendar_move_pending = True
-                moved_ok = sync.move_event(existing_id, _prev_gcal_id, source_calendar_id)
+                move_metadata = {}
+                moved_ok = sync.move_event(
+                    existing_id,
+                    _prev_gcal_id,
+                    source_calendar_id,
+                    expected_remote_updated_at=expected_remote_updated_at,
+                    result_metadata=move_metadata,
+                )
                 if moved_ok:
+                    expected_remote_updated_at = (
+                        move_metadata.get("remote_updated_at") or expected_remote_updated_at
+                    )
                     logger.info(
                         "Moved GCal event %s from %s to %s (task %s)",
                         existing_id,
@@ -324,6 +409,9 @@ def sync_task_to_google(
                     )
             except Exception:
                 pass
+        revision_kwargs = (
+            {"revision_event_id": existing_id} if _update_target_id != existing_id else {}
+        )
         ok = sync.update_event(
             _update_target_id,
             summary,
@@ -337,6 +425,8 @@ def sync_task_to_google(
             completed=is_completed,
             hide_completed=hide_completed,
             expected_remote_updated_at=expected_remote_updated_at,
+            result_metadata=write_metadata,
+            **revision_kwargs,
         )
         if ok:
             marked = _mark_task_synced(
@@ -345,6 +435,8 @@ def sync_task_to_google(
                 commit=commit,
                 source_calendar_id=source_calendar_id_for_mark,
                 target_calendar_id=source_calendar_id_for_mark,
+                remote_updated_at=write_metadata.get("remote_updated_at"),
+                expected_snapshot=write_snapshot,
             )
             if not marked:
                 logger.warning("Failed to mark task %s as synced after update", local_id)
@@ -394,6 +486,8 @@ def sync_task_to_google(
                 completed=is_completed,
                 hide_completed=hide_completed,
                 expected_remote_updated_at=expected_remote_updated_at,
+                result_metadata=write_metadata,
+                **revision_kwargs,
             )
             if not recovered:
                 continue
@@ -403,6 +497,8 @@ def sync_task_to_google(
                 commit=commit,
                 source_calendar_id=recovery_calendar_id,
                 target_calendar_id=recovery_calendar_id,
+                remote_updated_at=write_metadata.get("remote_updated_at"),
+                expected_snapshot=write_snapshot,
             )
             if not marked:
                 logger.warning(
@@ -444,63 +540,39 @@ def sync_task_to_google(
                 from calendar_app.infrastructure.db import task_repo as _task_repo
 
                 fresh = _task_repo.get_unified_task(local_id)
-                if fresh and fresh.get("gcal_event_id"):
-                    existing_id = fresh["gcal_event_id"]
-                    logger.info(
-                        "BUG-C01 guard: found existing gcal_event_id %s for task %s before create; "
-                        "switching to update to prevent duplicate",
-                        existing_id,
-                        local_id,
-                    )
-                    ok = sync.update_event(
-                        existing_id,
-                        summary,
-                        start_iso,
-                        end_iso,
-                        description,
-                        location,
-                        color_id,
-                        all_day,
-                        calendar_id=source_calendar_id,
-                        expected_remote_updated_at=expected_remote_updated_at,
-                    )
-                    if ok:
-                        marked = _mark_task_synced(
-                            local_id,
-                            existing_id,
-                            commit=commit,
-                            source_calendar_id=source_calendar_id_for_mark,
-                            target_calendar_id=source_calendar_id_for_mark,
-                        )
-                        if not marked:
-                            return SyncTaskResult(
-                                event_id=existing_id,
-                                success=False,
-                                error_kind="local_state",
-                                error_message="remote_updated_but_local_mark_failed",
-                            )
-                        return SyncTaskResult(event_id=existing_id, success=True, auto_healed=True)
-            except Exception:
-                if not (existing_id and has_explicit_source):
-                    # DB re-read itself failed for a new/ambiguous create: skip
-                    # to avoid potential duplicates. Existing explicit-source
-                    # not_found recovery is safe to continue because create_event
-                    # uses a deterministic idempotency key below.
-                    logger.warning(
-                        "BUG-C01 guard: DB re-read failed for task %s before create; "
-                        "skipping create to avoid duplicate (will retry next cycle)",
-                        local_id,
-                    )
+                if not fresh:
                     return SyncTaskResult(
-                        event_id=None,
+                        event_id=existing_id,
                         success=False,
-                        error_kind="db_reread_failed",
-                        error_message="pre_create_db_reread_error",
+                        error_kind="local_state",
+                        error_message="local_task_deleted_before_create",
                     )
+                if not google_push_snapshot_matches(task_data, fresh):
+                    return SyncTaskResult(
+                        event_id=existing_id,
+                        success=False,
+                        error_kind="local_state",
+                        error_message="local_task_changed_before_create",
+                    )
+                write_snapshot = google_push_snapshot(fresh)
+                current_event_id = str(fresh.get("gcal_event_id") or "").strip() or None
+                if current_event_id != existing_id:
+                    return SyncTaskResult(
+                        event_id=current_event_id,
+                        success=False,
+                        error_kind="local_state",
+                        error_message="local_task_changed_before_create",
+                    )
+            except Exception:
                 logger.warning(
-                    "BUG-C01 guard: DB re-read failed for task %s during explicit "
-                    "not_found recovery; continuing with idempotent create",
+                    "DB re-read failed for task %s before Google create; deferring the write",
                     local_id,
+                )
+                return SyncTaskResult(
+                    event_id=existing_id,
+                    success=False,
+                    error_kind="db_reread_failed",
+                    error_message="pre_create_db_reread_error",
                 )
 
         # Build idempotency key from task identity so that GCal server rejects
@@ -519,58 +591,20 @@ def sync_task_to_google(
             all_day,
             calendar_id=source_calendar_id,
             idempotency_key=_ikey,
+            result_metadata=write_metadata,
         )
         if created:
             _persist_gcal_event_id(task_data, created)
-            try:
-                marked = _mark_task_synced(
-                    local_id,
-                    created,
-                    commit=commit,
-                    source_calendar_id=source_calendar_id,
-                    target_calendar_id=source_calendar_id,
-                )
-            except sqlite3.IntegrityError:
-                # BUG-C03: concurrent worker already wrote gcal_event_id -> UNIQUE violation.
-                # The event we just created in GCal is now orphaned; queue it for deletion.
-                try:
-                    from calendar_app.infrastructure.db import task_repo as _task_repo
-
-                    fresh2 = _task_repo.get_unified_task(local_id)
-                    winner_id = (fresh2 or {}).get("gcal_event_id") or created
-                except Exception:
-                    winner_id = created
-                # If winner differs from what we just created, our event is orphaned -> delete
-                if winner_id != created:
-                    try:
-                        from calendar_app.infrastructure.db import task_repo as _task_repo
-
-                        _task_repo.queue_gcal_delete(
-                            created,
-                            local_task_id=None,
-                            gcal_calendar_id=source_calendar_id,
-                        )
-                        logger.warning(
-                            "BUG-C03: queued orphan GCal event %s for deletion "
-                            "(task %s already has winner %s)",
-                            created,
-                            local_id,
-                            winner_id,
-                        )
-                    except Exception:
-                        logger.warning(
-                            "BUG-C03: could not queue orphan GCal event %s for deletion; "
-                            "manual cleanup may be needed",
-                            created,
-                        )
-                else:
-                    logger.warning(
-                        "BUG-C03: IntegrityError on mark_synced for task %s; "
-                        "concurrent create detected. Winner gcal_event_id: %s",
-                        local_id,
-                        winner_id,
-                    )
-                return SyncTaskResult(event_id=winner_id, success=True, auto_healed=True)
+            marked = _mark_task_synced(
+                local_id,
+                created,
+                commit=commit,
+                source_calendar_id=source_calendar_id,
+                target_calendar_id=source_calendar_id,
+                remote_updated_at=write_metadata.get("remote_updated_at"),
+                expected_snapshot=write_snapshot,
+                created=True,
+            )
             if not marked:
                 # GCal event created but DB mark_synced failed. Log event_id for manual reconciliation.
                 logger.error(

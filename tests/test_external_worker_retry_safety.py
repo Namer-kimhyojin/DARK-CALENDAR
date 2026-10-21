@@ -44,7 +44,11 @@ def worker_case(request, monkeypatch):
     )
     connection = SimpleNamespace(close=Mock())
     connect = Mock(return_value=connection)
-    repository = SimpleNamespace(calendars=Mock(return_value=[]), register=Mock())
+    repository = SimpleNamespace(
+        calendars=Mock(return_value=[]),
+        register=Mock(),
+        refresh_calendar_metadata=Mock(return_value={}),
+    )
     summary = {"imported": 1, "updated": 0, "created": 0, "deleted": 0, "issues": 0}
     engine = SimpleNamespace(run=Mock(return_value=summary))
     engine_factory = Mock(return_value=engine)
@@ -243,6 +247,26 @@ def test_failure_before_client_creation_has_safe_error_and_clears_password(worke
     case.connect.assert_not_called()
     if case.service != "outlook":
         assert case.worker.password == ""
+
+
+def test_mismatched_authenticated_account_never_reaches_calendar_or_database(worker_case):
+    case = worker_case
+    if case.service == "outlook":
+        case.client.profile.return_value = {"id": "another-account"}
+    else:
+        case.store.load.return_value = {
+            "service": "naver" if case.service == "icloud" else "icloud",
+            "username": "synthetic@example.invalid",
+            "password": "synthetic-password",
+        }
+    case.worker.run()
+    assert case.failures == ["account_mismatch"]
+    assert not case.results
+    case.client.calendars.assert_not_called()
+    case.connect.assert_not_called()
+    case.engine_factory.assert_not_called()
+    if case.service != "outlook":
+        case.client_factory.assert_not_called()
 
 
 @pytest.mark.parametrize("outcome", ["success", "failure"])

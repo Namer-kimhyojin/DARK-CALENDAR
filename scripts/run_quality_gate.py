@@ -19,6 +19,20 @@ SOURCE_PATHS = [path.name for path in sorted(ROOT.glob("*.py"))] + [
 CHECKS: list[tuple[str, list[str]]] = [
     ("Compile Python files", [PYTHON, "-m", "compileall", "-q", *SOURCE_PATHS]),
     (
+        "Check product version and recorded inputs",
+        [PYTHON, "scripts/manage_version.py", "scan", "--strict"],
+    ),
+    (
+        "Run release version contracts",
+        [
+            *PYTEST,
+            "tests/test_version_management.py",
+            "tests/test_build_version_sync_lock_stability.py",
+            "tests/test_build_pipeline_contracts.py",
+            "tests/test_release_compliance.py",
+        ],
+    ),
+    (
         "Run core management and sync-helper tests",
         [
             *PYTEST,

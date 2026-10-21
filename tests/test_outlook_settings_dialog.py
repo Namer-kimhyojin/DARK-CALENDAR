@@ -9,6 +9,93 @@ from calendar_app.infrastructure.calendar_sync.repository import CalendarSyncRep
 from calendar_app.presentation.dialogs import outlook_settings_dialog as module
 
 
+def test_pending_create_deletion_can_be_rechecked_without_discarding_guard(tmp_path, monkeypatch):
+    app, window = host(tmp_path)
+    path = tmp_path / "calendar.db"
+    database(path)
+    monkeypatch.setattr(module, "DB_PATH", str(path))
+    window.settings.setValue("outlook_account_id", "microsoft::test")
+    controller = Controller()
+    conn = sqlite3.connect(path)
+    repo = CalendarSyncRepository(conn)
+    key = repo.register("microsoft::test", controller.available[0])
+    with conn:
+        conn.execute(
+            "INSERT INTO calendar_sync_pending_delete(calendar_id,transaction_id,baseline,created_at) "
+            "VALUES(?,?,?,?)",
+            (key, "uncertain", "baseline", "2026-10-20 00:00:00"),
+        )
+    dialog = module.OutlookSettingsDialog(window, controller)
+    try:
+        assert dialog.issues.count() == 1
+        dialog.issues.setCurrentRow(0)
+        assert dialog.retry_delete.isEnabled()
+        assert not dialog.cancel_delete.isEnabled()
+        assert "2026-10-20" in dialog.preview.toPlainText()
+        dialog.retry_delete.click()
+        controller.sync.assert_called_once_with(force=True)
+        dialog._queue_action("cancel")
+        assert repo.pending_delete_count("microsoft::test") == 1
+    finally:
+        conn.close()
+        dialog.close()
+        window.close()
+
+
+def test_pending_receipt_and_delete_queue_with_same_id_keep_distinct_selection(
+    tmp_path, monkeypatch
+):
+    app, window = host(tmp_path)
+    path = tmp_path / "calendar.db"
+    database(path)
+    monkeypatch.setattr(module, "DB_PATH", str(path))
+    window.settings.setValue("outlook_account_id", "microsoft::test")
+    controller = Controller()
+    conn = sqlite3.connect(path)
+    repo = CalendarSyncRepository(conn)
+    key = repo.register("microsoft::test", controller.available[0])
+    with conn:
+        conn.execute(
+            "INSERT INTO calendar_sync_delete_queue(event_id,calendar_id,etag,error) "
+            "VALUES('shared-id',?,'etag','delete_conflict')",
+            (key,),
+        )
+        conn.execute(
+            "INSERT INTO calendar_sync_pending_delete(calendar_id,transaction_id,baseline) "
+            "VALUES(?,'shared-id','original')",
+            (key,),
+        )
+    dialog = module.OutlookSettingsDialog(window, controller)
+    role = int(Qt.ItemDataRole.UserRole)
+    try:
+        assert dialog.issues.count() == 2
+        dialog.issues.setCurrentRow(0)
+        assert not dialog.issues.currentItem().data(role + 2)
+        assert dialog.cancel_delete.isEnabled()
+        with conn:
+            conn.execute("UPDATE calendar_sync_pending_delete SET created_at='2026-10-20 00:00:00'")
+        dialog._available_key = None
+        dialog._refresh()
+        assert not dialog.issues.currentItem().data(role + 2)
+        assert dialog.cancel_delete.isEnabled()
+
+        dialog.issues.setCurrentRow(1)
+        assert dialog.issues.currentItem().data(role + 2)["recovery_issue"]
+        assert not dialog.cancel_delete.isEnabled()
+        with conn:
+            conn.execute("DELETE FROM calendar_sync_pending_delete")
+        dialog._available_key = None
+        dialog._refresh()
+        assert dialog.issues.currentItem() is None
+        assert not dialog.cancel_delete.isEnabled()
+        assert conn.execute("SELECT COUNT(*) FROM calendar_sync_delete_queue").fetchone()[0] == 1
+        controller.sync.assert_not_called()
+    finally:
+        conn.close()
+        dialog.close()
+        window.close()
+
+
 class Controller(QObject):
     changed = pyqtSignal()
     busy = False

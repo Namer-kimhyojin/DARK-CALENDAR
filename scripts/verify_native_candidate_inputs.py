@@ -57,15 +57,21 @@ def git(root: Path, *arguments: str) -> str:
 
 def version_normalized(name: str, text: str) -> str:
     if name == "calendar_app/app_metadata.py":
-        patterns = [r'(?m)^APP_VERSION = "[0-9]\.[0-9]\.[0-9]"$']
+        patterns = [r'(?m)^APP_VERSION = "[0-9]+\.[0-9]+\.[0-9]+"$']
     elif name == "pyproject.toml":
-        patterns = [r'(?m)^version = "[0-9]\.[0-9]\.[0-9]"$']
+        patterns = [r'(?m)^version = "[0-9]+\.[0-9]+\.[0-9]+"$']
     elif name == "AppxManifest.xml":
-        patterns = [r'(?<=Version=")[0-9]\.[0-9]\.[0-9]\.0(?=")']
+        matches = list(
+            re.finditer(r'<Identity\b[^>]*\bVersion="([0-9]+\.[0-9]+\.[0-9]+\.0)"', text)
+        )
+        if len(matches) != 1:
+            raise ValueError(f"Cannot identify exact managed version fields: {name}")
+        start, end = matches[0].span(1)
+        return text[:start] + "<managed-version>" + text[end:]
     else:
         patterns = [
-            r"(?:filevers|prodvers)\s*=\s*\([0-9], [0-9], [0-9], 0\)",
-            r"StringStruct\('(?:FileVersion|ProductVersion)', '[0-9]\.[0-9]\.[0-9]\.0'\)",
+            r"(?:filevers|prodvers)\s*=\s*\([0-9]+, [0-9]+, [0-9]+, 0\)",
+            r"StringStruct\('(?:FileVersion|ProductVersion)', '[0-9]+\.[0-9]+\.[0-9]+\.0'\)",
         ]
     for pattern in patterns:
         text, count = re.subn(pattern, "<managed-version>", text)
@@ -76,7 +82,7 @@ def version_normalized(name: str, text: str) -> str:
 
 
 def is_release_note(name: str) -> bool:
-    return bool(re.fullmatch(r"docs/release-[0-9]\.[0-9]\.[0-9]-notes\.md", name))
+    return bool(re.fullmatch(r"docs/release-[0-9]+\.[0-9]+\.[0-9]+-notes\.md", name))
 
 
 def verify_qa_hashes(root: Path, qa_commit: str, hashes: dict) -> None:

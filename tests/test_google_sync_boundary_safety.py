@@ -2,6 +2,7 @@
 """Google identities and failures must stay within their owning calendar."""
 
 from contextlib import closing
+import json
 import sqlite3
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -24,7 +25,7 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
         settings.remove("gcal_primary_resolved_id")
         self.addCleanup(settings.remove, "gcal_primary_resolved_id")
 
-    def _add(self, name, source, *, target=None, calendar_id=None, dirty=0):
+    def _add(self, name, source, *, target=None, calendar_id=None, dirty=0, event_id="same-event"):
         return task_repo.create_unified_task(
             {
                 "name": name,
@@ -32,7 +33,7 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
                 "deadline": "2026-10-09 00:00:00",
                 "end_date": "2026-10-09 00:00:00",
                 "all_day": 1,
-                "gcal_event_id": "same-event",
+                "gcal_event_id": event_id,
                 "gcal_source_calendar_id": source,
                 "gcal_target_calendar_id": target,
                 "calendar_id": calendar_id or (f"gcal::{source}" if source else None),
@@ -93,19 +94,22 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
         self.assertEqual(0, repository.cleanup_duplicate_gcal_rows())
         self.assertEqual({source_id, target_id}, {row["id"] for row in self._rows()})
 
-    def _pull(self, event, *, failure_status=None, sync_token=""):
+    def _pull(self, event, *, failure_status=None, sync_token="", import_enabled=True):
         sync = SimpleNamespace(
             is_authenticated=True,
             calendar_id="team",
             time_zone="Asia/Seoul",
             authenticate=lambda *args, **kwargs: True,
-            fetch_sync_events=lambda token, calendar_id=None: (
-                None
-                if failure_status
-                else ([] if event is None else event if isinstance(event, list) else [event]),
-                None if failure_status else "next-token",
-                False,
+            fetch_sync_events=Mock(
+                side_effect=lambda token, calendar_id=None, event_ids=None: (
+                    None
+                    if failure_status
+                    else ([] if event is None else event if isinstance(event, list) else [event]),
+                    None if failure_status or event_ids is not None else "next-token",
+                    False,
+                )
             ),
+            fetch_events=Mock(return_value=[]),
             last_error_status=failure_status,
             last_error_kind="fetch" if failure_status else None,
         )
@@ -128,7 +132,11 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
         with (
             patch.object(engine, "_get_default_gcal_id", return_value="team"),
             patch.object(engine, "_refresh_resolved_primary_alias_id", return_value="primary"),
-            patch.object(engine, "_active_sync_calendar_ids", return_value=["team"]),
+            patch.object(
+                engine,
+                "_active_sync_calendar_ids",
+                return_value=["team"] if import_enabled else [],
+            ),
             patch.object(engine, "_should_refresh_calendar_list", return_value=False),
             patch.object(engine, "_should_run_incremental_backfill_probe", return_value=False),
             patch.object(engine, "_process_google_delete_queue", return_value=(0, 0)),
@@ -945,3 +953,399 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
         ):
             engine.auto_heal_google_orphans(app)
         link.assert_not_called()
+
+    def _push_fixture(self, *, linked=True):
+        task_id = self._add("Local edit", "team", target="team", dirty=1)
+        conn = database_unified.db_manager.get_connection()
+        conn.execute(
+            "UPDATE unified_task SET gcal_remote_updated_at=?, gcal_last_synced_at=?, "
+            "gcal_event_id=? WHERE id=?",
+            (
+                "2026-10-19T00:00:00Z",
+                "2026-10-19T00:01:00Z",
+                "same-event" if linked else None,
+                task_id,
+            ),
+        )
+        conn.commit()
+        sync = gcal_service.CalendarSyncService(calendar_id="team")
+        sync.is_authenticated = True
+        sync.service = Mock()
+        api = sync.service.events.return_value
+        api.get.return_value.execute.return_value = {
+            "id": "same-event",
+            "updated": "2026-10-19T00:00:00Z",
+            "etag": '"base"',
+            "summary": "Remote base",
+        }
+        api.update.return_value.execute.return_value = {
+            "id": "same-event",
+            "updated": "2026-10-20T01:02:03.456Z",
+        }
+        api.update.return_value.headers = {}
+        api.insert.return_value.execute.return_value = {
+            "id": "created-event",
+            "updated": "2026-10-20T01:02:03.456Z",
+        }
+        app = SimpleNamespace(
+            settings=FakeSettings({"gcal_enabled": "true"}),
+            gcal_sync=sync,
+        )
+        return app, task_repo.get_unified_task(task_id), api
+
+    def test_immediate_push_checks_saved_server_revision_before_overwrite(self):
+        app, task, api = self._push_fixture()
+        api.get.return_value.execute.return_value["updated"] = "2026-10-20T00:00:00Z"
+        result = helpers.sync_task_to_google(app, task)
+        self.assertFalse(result.success)
+        self.assertEqual("conflict", result.error_kind)
+        api.update.assert_not_called()
+        self.assertEqual(1, task_repo.get_unified_task(task["id"])["gcal_dirty"])
+
+    def test_immediate_push_defers_legacy_local_clock_revision(self):
+        app, task, api = self._push_fixture()
+        conn = database_unified.db_manager.get_connection()
+        conn.execute(
+            "UPDATE unified_task SET gcal_remote_updated_at=gcal_last_synced_at WHERE id=?",
+            (task["id"],),
+        )
+        conn.commit()
+        result = helpers.sync_task_to_google(app, task)
+        self.assertFalse(result.success)
+        self.assertEqual("remote_revision_requires_pull", result.error_message)
+        api.get.assert_not_called()
+        api.update.assert_not_called()
+
+    def test_unknown_revision_recovers_with_existing_pull_and_conflict_resolution(self):
+        for unknown_revision in (None, "2026-10-19T00:01:00Z"):
+            with self.subTest(unknown_revision=unknown_revision):
+                app, task, api = self._push_fixture()
+                conn = database_unified.db_manager.get_connection()
+                conn.execute(
+                    "UPDATE unified_task SET gcal_remote_updated_at=? WHERE id=?",
+                    (unknown_revision, task["id"]),
+                )
+                conn.commit()
+                self.assertFalse(helpers.sync_task_to_google(app, task).success)
+                self.assertEqual(1, task_repo.get_unified_task(task["id"])["gcal_dirty"])
+                event = FakeGoogleEvent(
+                    "same-event",
+                    "Remote base",
+                    "2026-10-09",
+                    "2026-10-10",
+                    updated_time="2026-10-19T00:00:00Z",
+                )
+                self.assertTrue(self._pull(event, sync_token="old-token"))
+                self._last_app.gcal_sync.fetch_sync_events.assert_called_once_with(
+                    None, calendar_id="team"
+                )
+                row = conn.execute(
+                    "SELECT local_snapshot_json, id FROM gcal_sync_conflict_queue "
+                    "WHERE local_task_id=? ORDER BY id DESC LIMIT 1",
+                    (task["id"],),
+                ).fetchone()
+                self.assertEqual("Local edit", json.loads(row[0])["name"])
+                saved = task_repo.get_unified_task(task["id"])
+                self.assertEqual("2026-10-19T00:00:00Z", saved["gcal_remote_updated_at"])
+                # The existing 'keep local' resolution restores the saved text
+                # while retaining the newly observed remote revision.
+                self.assertTrue(task_repo.mark_gcal_sync_conflict_resolved(row[1], "keep_local"))
+                self.assertTrue(
+                    helpers.sync_task_to_google(app, task_repo.get_unified_task(task["id"])).success
+                )
+                conn.execute("DELETE FROM unified_task WHERE id=?", (task["id"],))
+                conn.commit()
+
+    def test_unknown_revision_recovers_known_event_when_import_is_disabled(self):
+        app, task, api = self._push_fixture()
+        conn = database_unified.db_manager.get_connection()
+        conn.execute(
+            "UPDATE unified_task SET gcal_remote_updated_at=NULL WHERE id=?", (task["id"],)
+        )
+        other_id = self._add(
+            "Unrelated cached event", "team", target="team", event_id="unrelated-event"
+        )
+        conn.commit()
+        event = FakeGoogleEvent(
+            "same-event",
+            "Remote base",
+            "2026-10-09",
+            "2026-10-10",
+            updated_time="2026-10-19T00:00:00Z",
+        )
+        self.assertTrue(self._pull(event, sync_token="old-token", import_enabled=False))
+        self._last_app.gcal_sync.fetch_sync_events.assert_called_once_with(
+            None, calendar_id="team", event_ids=["same-event"]
+        )
+        self._last_app.gcal_sync.fetch_events.assert_not_called()
+        self.assertEqual("old-token", self._last_app.settings.value("gcal_sync_token::team"))
+        self.assertEqual("Unrelated cached event", task_repo.get_unified_task(other_id)["name"])
+        conflict = conn.execute(
+            "SELECT id FROM gcal_sync_conflict_queue WHERE local_task_id=?", (task["id"],)
+        ).fetchone()
+        self.assertTrue(task_repo.mark_gcal_sync_conflict_resolved(conflict[0], "keep_local"))
+        self.assertTrue(
+            helpers.sync_task_to_google(app, task_repo.get_unified_task(task["id"])).success
+        )
+        self.assertEqual("Local edit", api.update.call_args.kwargs["body"]["summary"])
+
+    def test_targeted_revision_fetch_does_not_list_or_accept_wrong_identity(self):
+        sync = gcal_service.CalendarSyncService(calendar_id="team")
+        sync.is_authenticated = True
+        sync.service = Mock()
+        api = sync.service.events.return_value
+        remote = self._raw_event()
+        api.get.return_value.execute.return_value = remote
+        events, token, reset = sync.fetch_sync_events(event_ids=["same-event"])
+        self.assertEqual(["same-event"], [event.id for event in events])
+        self.assertIsNone(token)
+        self.assertFalse(reset)
+        api.list.assert_not_called()
+        remote["id"] = "unrelated-event"
+        self.assertEqual((None, None, False), sync.fetch_sync_events(event_ids=["same-event"]))
+
+    def test_individual_and_batch_created_receipts_queue_cleanup_after_local_deletion(self):
+        for batch in (False, True):
+            with self.subTest(batch=batch):
+                app, task, api = self._push_fixture(linked=False)
+                conn = database_unified.db_manager.get_connection()
+
+                def create_then_delete(*_args, conn=conn, task=task, batch=batch, **_kwargs):
+                    conn.execute("DELETE FROM unified_task WHERE id=?", (task["id"],))
+                    conn.commit()
+                    receipt = {
+                        "id": "batch-created" if batch else "created-event",
+                        "updated": "2026-10-20T01:02:03.456Z",
+                    }
+                    if batch:
+                        return [
+                            {
+                                "local_task_id": task["id"],
+                                "success": True,
+                                "event_id": receipt["id"],
+                                "remote_updated_at": receipt["updated"],
+                            }
+                        ]
+                    return receipt
+
+                if batch:
+                    with (
+                        patch.object(app.gcal_sync, "batch_create_events", create_then_delete),
+                        patch.object(engine, "_get_default_gcal_id", return_value="team"),
+                        patch.object(engine, "_writable_gcal_ids", return_value={"team"}),
+                    ):
+                        self.assertEqual((0, 1, 0), engine._push_local_changes_to_google(app))
+                else:
+                    api.insert.return_value.execute.side_effect = create_then_delete
+                    self.assertFalse(helpers.sync_task_to_google(app, task).success)
+                queued = task_repo.get_gcal_delete_queue()
+                self.assertIn(
+                    ("batch-created" if batch else "created-event", "team"),
+                    [(row["gcal_event_id"], row["gcal_calendar_id"]) for row in queued],
+                )
+
+    def test_series_edit_verifies_instance_and_uses_master_etag_without_mixing_revisions(self):
+        app, task, api = self._push_fixture()
+        conn = database_unified.db_manager.get_connection()
+        conn.execute(
+            "UPDATE unified_task SET gcal_recurring_series_id='series' WHERE id=?", (task["id"],)
+        )
+        conn.commit()
+        instance = {
+            "id": "same-event",
+            "recurringEventId": "series",
+            "updated": "2026-10-19T00:00:00Z",
+            "etag": '"instance"',
+        }
+        master = {
+            "id": "series",
+            "updated": "2026-10-18T00:00:00Z",
+            "etag": '"master"',
+        }
+        api.get.return_value.execute.side_effect = [instance, master]
+        self.assertTrue(
+            helpers.sync_task_to_google(
+                app, task_repo.get_unified_task(task["id"]), recurring_scope="all"
+            ).success
+        )
+        self.assertEqual("series", api.update.call_args.kwargs["eventId"])
+        self.assertEqual('"master"', api.update.return_value.headers["If-Match"])
+        self.assertIsNone(task_repo.get_unified_task(task["id"])["gcal_remote_updated_at"])
+
+    def test_series_edit_blocks_changed_instance_or_wrong_series_identity(self):
+        app, task, api = self._push_fixture()
+        conn = database_unified.db_manager.get_connection()
+        conn.execute(
+            "UPDATE unified_task SET gcal_recurring_series_id='series' WHERE id=?", (task["id"],)
+        )
+        conn.commit()
+        for changed in ("updated", "recurringEventId"):
+            with self.subTest(changed=changed):
+                instance = {
+                    "id": "same-event",
+                    "recurringEventId": "series",
+                    "updated": "2026-10-19T00:00:00Z",
+                    "etag": '"instance"',
+                }
+                instance[changed] = (
+                    "2026-10-20T00:00:00Z" if changed == "updated" else "other-series"
+                )
+                api.get.return_value.execute.return_value = instance
+                result = helpers.sync_task_to_google(
+                    app, task_repo.get_unified_task(task["id"]), recurring_scope="all"
+                )
+                self.assertFalse(result.success)
+                self.assertEqual("conflict", result.error_kind)
+                api.update.assert_not_called()
+
+    def test_update_and_create_preserve_actual_server_revision(self):
+        for linked in (True, False):
+            with self.subTest(linked=linked):
+                app, task, _api = self._push_fixture(linked=linked)
+                result = helpers.sync_task_to_google(app, task)
+                self.assertTrue(result.success)
+                saved = task_repo.get_unified_task(task["id"])
+                self.assertEqual("2026-10-20T01:02:03.456Z", saved["gcal_remote_updated_at"])
+                self.assertEqual(0, saved["gcal_dirty"])
+                # Avoid colliding with the next fixture's remote identity.
+                conn = database_unified.db_manager.get_connection()
+                conn.execute("DELETE FROM unified_task WHERE id=?", (task["id"],))
+                conn.commit()
+
+    def test_individual_create_skips_deleted_or_changed_snapshot(self):
+        for changed in (False, True):
+            with self.subTest(changed=changed):
+                app, task, api = self._push_fixture(linked=False)
+                conn = database_unified.db_manager.get_connection()
+                if changed:
+                    conn.execute(
+                        "UPDATE unified_task SET name='Newer local edit' WHERE id=?", (task["id"],)
+                    )
+                else:
+                    conn.execute("DELETE FROM unified_task WHERE id=?", (task["id"],))
+                conn.commit()
+                result = helpers.sync_task_to_google(app, task)
+                self.assertFalse(result.success)
+                api.insert.assert_not_called()
+
+    def test_individual_update_does_not_send_a_stale_queued_payload(self):
+        app, task, api = self._push_fixture()
+        conn = database_unified.db_manager.get_connection()
+        conn.execute("UPDATE unified_task SET name='Newer local edit' WHERE id=?", (task["id"],))
+        conn.commit()
+        result = helpers.sync_task_to_google(app, task)
+        self.assertFalse(result.success)
+        api.update.assert_not_called()
+        self.assertEqual(1, task_repo.get_unified_task(task["id"])["gcal_dirty"])
+
+    def test_remote_receipt_does_not_clear_a_newer_local_edit(self):
+        app, task, api = self._push_fixture()
+
+        def update_then_edit():
+            conn = database_unified.db_manager.get_connection()
+            conn.execute(
+                "UPDATE unified_task SET name='Edited during request', gcal_dirty=1 WHERE id=?",
+                (task["id"],),
+            )
+            conn.commit()
+            return {"id": "same-event", "updated": "2026-10-20T01:02:03.456Z"}
+
+        api.update.return_value.execute.side_effect = update_then_edit
+        result = helpers.sync_task_to_google(app, task)
+        self.assertFalse(result.success)
+        saved = task_repo.get_unified_task(task["id"])
+        self.assertEqual("Edited during request", saved["name"])
+        self.assertEqual(1, saved["gcal_dirty"])
+
+    def test_move_checks_source_revision_and_updates_using_its_receipt(self):
+        app, task, api = self._push_fixture()
+        conn = database_unified.db_manager.get_connection()
+        conn.execute(
+            "UPDATE unified_task SET calendar_id='gcal::family', "
+            "gcal_target_calendar_id='family' WHERE id=?",
+            (task["id"],),
+        )
+        conn.commit()
+        task = task_repo.get_unified_task(task["id"])
+        api.get.return_value.execute.side_effect = [
+            {"id": "same-event", "updated": "2026-10-19T00:00:00Z", "etag": '"source"'},
+            {"id": "same-event", "updated": "2026-10-20T00:00:00Z", "etag": '"moved"'},
+        ]
+        api.move.return_value.headers = {}
+        api.move.return_value.execute.return_value = {
+            "id": "same-event",
+            "updated": "2026-10-20T00:00:00Z",
+        }
+        result = helpers.sync_task_to_google(app, task)
+        self.assertTrue(result.success)
+        self.assertEqual('"source"', api.move.return_value.headers["If-Match"])
+        self.assertEqual('"moved"', api.update.return_value.headers["If-Match"])
+        self.assertEqual(
+            "family", task_repo.get_unified_task(task["id"])["gcal_source_calendar_id"]
+        )
+
+    def test_move_preserves_concurrent_remote_edit_before_source_move(self):
+        app, task, api = self._push_fixture()
+        conn = database_unified.db_manager.get_connection()
+        conn.execute(
+            "UPDATE unified_task SET calendar_id='gcal::family', "
+            "gcal_target_calendar_id='family' WHERE id=?",
+            (task["id"],),
+        )
+        conn.commit()
+        api.get.return_value.execute.return_value["updated"] = "2026-10-20T00:00:00Z"
+        result = helpers.sync_task_to_google(app, task_repo.get_unified_task(task["id"]))
+        self.assertFalse(result.success)
+        self.assertEqual("conflict", result.error_kind)
+        api.move.assert_not_called()
+        api.update.assert_not_called()
+
+    def test_mark_synced_requires_an_existing_row_and_never_invents_remote_revision(self):
+        self.assertFalse(task_repo.mark_unified_task_gcal_synced(987654321))
+        task_id = self._add("Pending", "team", target="team", dirty=1)
+        self.assertTrue(task_repo.mark_unified_task_gcal_synced(task_id))
+        saved = task_repo.get_unified_task(task_id)
+        self.assertIsNone(saved["gcal_remote_updated_at"])
+
+    def test_failed_conflict_snapshot_preserves_local_edit_and_sync_token(self):
+        for failure in (False, RuntimeError("snapshot write failed")):
+            with self.subTest(failure=failure):
+                task_id = self._add("Unsent local edit", "team", target="team", dirty=1)
+                conn = database_unified.db_manager.get_connection()
+                conn.execute(
+                    "UPDATE unified_task SET gcal_remote_updated_at=? WHERE id=?",
+                    ("2026-10-18T00:00:00Z", task_id),
+                )
+                conn.commit()
+                event = FakeGoogleEvent(
+                    "same-event",
+                    "Changed remotely",
+                    "2026-10-09",
+                    "2026-10-10",
+                    updated_time="2026-10-19T00:00:00Z",
+                )
+                with (
+                    patch.object(
+                        task_repo,
+                        "queue_gcal_sync_conflict",
+                        return_value=False,
+                        side_effect=failure if isinstance(failure, Exception) else None,
+                    ),
+                    patch.object(repository, "update_task_from_gcal") as update,
+                ):
+                    self.assertFalse(self._pull(event, sync_token="old-token"))
+                update.assert_not_called()
+                self._last_push.assert_not_called()
+                self.assertEqual("old-token", self._last_app.settings.data["gcal_sync_token::team"])
+                self.assertEqual("Unsent local edit", task_repo.get_unified_task(task_id)["name"])
+                conn.execute("DELETE FROM unified_task WHERE id=?", (task_id,))
+                conn.commit()
+
+    def test_server_revision_conflict_detection_ignores_workstation_clock(self):
+        task = {
+            "gcal_remote_updated_at": "2026-10-19T00:00:00Z",
+            "gcal_last_synced_at": "2027-01-01T00:00:00Z",
+        }
+        self.assertTrue(engine._remote_text_is_newer_than_local_base(task, "2026-10-20T00:00:00Z"))
+        task["gcal_last_synced_at"] = "2020-01-01T00:00:00Z"
+        self.assertFalse(engine._remote_text_is_newer_than_local_base(task, "2026-10-19T00:00:00Z"))

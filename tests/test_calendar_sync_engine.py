@@ -361,7 +361,8 @@ def test_lost_create_response_reconciles_transaction_without_duplicate(repo):
         raise CalendarSyncError("network_unavailable")
 
     provider.create = lost
-    engine.run()
+    with pytest.raises(CalendarSyncError, match="network_unavailable"):
+        engine.run()
     provider.create = create
     engine.run()
     assert len(repo.tasks(key)) == 1
@@ -434,8 +435,9 @@ def test_permission_failure_stops_remaining_writes(repo):
         raise RemoteCalendarError(403)
 
     provider.create = denied
-    with pytest.raises(RemoteCalendarError):
-        engine.run()
+    result = engine.run()
+    assert result["calendar_errors"] == {key: "remote_http_403"}
+    assert result["issues"] == 1
     assert len(attempts) == 1
 
 
@@ -594,7 +596,6 @@ def test_create_404_does_not_mark_never_created_event_as_remote_deleted(repo):
     with repo.conn:
         tid = repo.import_task(key, task())
     provider.create = lambda *args: (_ for _ in ()).throw(RemoteCalendarError(404))
-    with pytest.raises(CalendarSyncError, match="calendar_access_lost"):
-        engine.run()
+    assert engine.run()["calendar_errors"] == {key: "calendar_access_lost"}
     assert not repo.task_link(tid)["remote_deleted"]
     assert repo.task(tid) is not None

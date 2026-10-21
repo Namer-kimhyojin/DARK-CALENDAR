@@ -15,6 +15,7 @@ from calendar_app.presentation.widgets.overlay_display_presets import (
     overlay_display_presets,
 )
 from calendar_app.presentation.widgets.overlay_manager import OverlayWidgetManager
+from calendar_app.presentation.widgets.overlay_shadow import read_text_shadow
 from calendar_app.presentation.widgets.overlay_widgets import (
     OverlayCountdownWidget,
     OverlayDateCardWidget,
@@ -105,6 +106,8 @@ class OverlayDisplayPresetTests(unittest.TestCase):
             self.addCleanup(widget.close)
             self.assertEqual(expected_ids, [item[0] for item in widget._display_preset_items()])
             self.assertEqual(DEFAULT_DISPLAY_PRESET_ID, widget.display_preset_id())
+            self.assertEqual("pure_type", widget.display_preset_id())
+            self.assertTrue(read_text_shadow(widget._get).enabled)
 
     def test_selecting_preset_applies_and_persists_complete_appearance(self):
         widget = OverlayClockWidget(self.owner)
@@ -135,6 +138,14 @@ class OverlayDisplayPresetTests(unittest.TestCase):
 
         self.assertEqual(CUSTOM_DISPLAY_PRESET_ID, widget.display_preset_id())
         self.assertEqual(custom_text, widget.text_color_rgba())
+        self.assertFalse(read_text_shadow(widget._get).enabled)
+
+    def test_explicit_shadow_disabled_is_preserved_on_initialization(self):
+        self.owner.settings.setValue("overlay_clock_text_shadow_enabled", False)
+        widget = OverlayClockWidget(self.owner)
+        self.addCleanup(widget.close)
+        self.assertEqual("pure_type", widget.display_preset_id())
+        self.assertFalse(read_text_shadow(widget._get).enabled)
 
     def test_visual_preset_does_not_replace_widget_specific_display_format(self):
         widget = OverlayClockWidget(self.owner)

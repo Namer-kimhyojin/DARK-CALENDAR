@@ -14,6 +14,10 @@ from calendar_app.application.calendar_sync_contract import CalendarSyncError
 from calendar_app.infrastructure.calendar_sync.engine import CalendarSyncEngine
 from calendar_app.infrastructure.calendar_sync.http_retry import MAX_RETRY_AFTER_SECONDS
 from calendar_app.infrastructure.calendar_sync.repository import CalendarSyncRepository
+from calendar_app.infrastructure.calendar_sync.status import (
+    save_calendar_discovery_errors,
+    save_calendar_errors,
+)
 from calendar_app.infrastructure.outlook_sync.auth import MicrosoftAuth
 from calendar_app.infrastructure.outlook_sync.graph import GraphClient
 
@@ -69,20 +73,12 @@ class OutlookWorker(QThread):
             conn = sqlite3.connect(DB_PATH, timeout=10)
             try:
                 repository = CalendarSyncRepository(conn)
-                for calendar in repository.calendars(account):
-                    if not calendar["is_active"]:
-                        continue
-                    fresh = next((c for c in calendars if c["id"] == calendar["remote_id"]), None)
-                    if not fresh:
-                        with conn:
-                            conn.execute(
-                                "UPDATE calendar SET is_active=0,access_role='reader' WHERE id=?",
-                                (calendar["local_id"],),
-                            )
-                        raise CalendarSyncError("calendar_access_lost")
-                    repository.register(account, fresh)
+                calendar_errors = repository.refresh_calendar_metadata(account, calendars)
                 if self.operation == "refresh":
-                    self.result.emit(self.operation, {"calendars": calendars})
+                    self.result.emit(
+                        self.operation,
+                        {"calendars": calendars, "calendar_errors": calendar_errors},
+                    )
                     return
                 summary = CalendarSyncEngine(
                     client,
@@ -90,6 +86,7 @@ class OutlookWorker(QThread):
                     account,
                     self.local_zone,
                     cancelled=self.isInterruptionRequested,
+                    calendar_errors=calendar_errors,
                 ).run()
                 self.result.emit(self.operation, summary)
             finally:
@@ -209,7 +206,7 @@ class OutlookSyncController(QObject):
             return
         try:
             self._apply_result(operation, result)
-        except sqlite3.Error:
+        except (sqlite3.Error, CalendarSyncError):
             self._failed("operation_failed")
 
     def _apply_result(self, operation, result):
@@ -234,17 +231,23 @@ class OutlookSyncController(QObject):
             self.settings.setValue("outlook_account_id", result["account"])
             self.settings.setValue("outlook_home_account_id", result["home_id"])
             self.settings.setValue("outlook_account_name", result["name"])
+            save_calendar_errors(self.settings, "outlook_", {})
             self.available = result["calendars"]
         elif operation == "disconnect":
             self.settings.setValue("outlook_enabled", False)
             self.settings.remove("outlook_account_id")
             self.settings.remove("outlook_home_account_id")
             self.settings.remove("outlook_account_name")
+            save_calendar_errors(self.settings, "outlook_", {})
             self.available = []
         elif operation == "refresh":
             self.available = result["calendars"]
+            save_calendar_discovery_errors(
+                self.settings, "outlook_", result.get("calendar_errors", {})
+            )
         else:
             self.summary = result
+            save_calendar_errors(self.settings, "outlook_", result.get("calendar_errors", {}))
             if not result.get("issues"):
                 self.settings.setValue(
                     "outlook_last_success",
