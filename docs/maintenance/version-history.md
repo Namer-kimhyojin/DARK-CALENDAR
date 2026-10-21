@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.7.1 | 2026-10-21T12:43:03.608549+09:00 | store | Publish verified 4.7.1 assets and synchronize public release metadata | `github-publication-4.7.1-20261021` |
 | 4.7.1 | 2026-10-21T12:26:35.906763+09:00 | change | Activate and verify the exact disposable Windows paging notice before clicking OK; revalidate the unchanged 4.7.1 payload with pinned QA provenance | `native-qa-focus-4.7.1-20261021` |
 | 4.7.1 | 2026-10-21T12:06:24.011310+09:00 | release | Unified date and time entry, external calendar reliability and security, and bounded sparse ICS recurrence processing | `release-4.7.1-20261021` |
 | 4.7.0 | 2026-10-21T12:06:21.818732+09:00 | change | Preserve sparse ICS recurrence results within the existing processing budget and keep exact input bytes in hosted Windows release jobs | `sparse-ics-and-release-checkout-20261021` |
