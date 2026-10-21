@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.7.0 | 2026-10-21T11:51:42.154128+09:00 | store | Keep source and homepage on the verified last public release while 4.7.0 candidate is being validated; packaged build metadata remains release-specific | `release-4.7.0-pending-publication-20261021` |
 | 4.7.0 | 2026-10-21T11:47:48.318505+09:00 | change | Normalize release regression test formatting and preserve cancellation trace coverage for commit quality checks | `release-4.7.0-test-format-20261021` |
 | 4.7.0 | 2026-10-21T11:41:32.507067+09:00 | release | Unified date/time input across schedules, directives and routines with keyboard improvements and accumulated calendar sync reliability and security fixes | `release-4.7.0-20261021` |
 | 4.6.9 | 2026-10-21T11:35:00.161574+09:00 | change | Fix date/time keyboard entry, popup traversal, live schedule summaries and consistent task editor controls after native Windows QA | `schedule-datetime-native-20261021` |
