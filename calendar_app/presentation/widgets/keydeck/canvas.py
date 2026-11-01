@@ -132,6 +132,7 @@ class KeyDeckCanvas(QWidget):
     imageDropped = pyqtSignal(str, str)  # key id, image path
     targetsDropped = pyqtSignal(list)  # [(kind, target), ...]
     performanceStopped = pyqtSignal()
+    padTriggered = pyqtSignal(str)  # finger contact, sound-only pads; never loop playback
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -440,6 +441,19 @@ class KeyDeckCanvas(QWidget):
             key = dict(keys[0]) if keys else {"switch": "tactile", "cap": {}}
             key["sound"] = "auto"
             self._preview_key_sound(key)
+
+    def play_recorded_pad(self, event: dict) -> bool:
+        """Replay only a captured sound, without actions or recording feedback."""
+        path, _release = key_sound_paths(event)
+        if not path:
+            return False
+        self._play(path, event["volume"] / 100.0)
+        runtime = self._runtime.get(event.get("key_id", ""))
+        if runtime is not None:
+            runtime.visual.led = 1.0
+            self._ensure_timer()
+            self.update()
+        return True
 
     def _preview_key_sound(self, key: dict) -> None:
         # Audition does not depend on visibility, animation ticks, or runtime mute.
@@ -839,6 +853,8 @@ class KeyDeckCanvas(QWidget):
             runtime.tilt.set_target(*self._tilt_for(key, point))
         if runtime.plan is None:
             self._play(runtime.press_path, runtime.sound_volume)
+        if key.get("enabled", True) and key["action"]["type"] == "sound":
+            self.padTriggered.emit(key["id"])
 
     def _release_runtime(self, key: dict, runtime: _KeyRuntime) -> None:
         """Finger lifted: finish a too-short tap as a full stroke, then let the cap return."""

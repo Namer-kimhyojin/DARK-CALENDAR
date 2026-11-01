@@ -16,6 +16,7 @@ from pathlib import PureWindowsPath
 import re
 import uuid
 
+from calendar_app.domain.beatmaker_recording import normalize_recording
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.widgets.keydeck.beatmaker import (
     BEATMAKER_KITS,
@@ -617,6 +618,9 @@ def normalize_deck(raw: object) -> dict:
     deck["sound_volume"] = _int(raw.get("sound_volume"), 0, 100, deck["sound_volume"])
     deck["sound"] = _choice(raw.get("sound"), option_ids(DECK_SOUND_CHOICES), "auto")
     deck["sound_path"] = _text(raw.get("sound_path"), 1024).strip()
+    recording = normalize_recording(raw.get("beatmaker_recording"))
+    if recording is not None:
+        deck["beatmaker_recording"] = recording
     deck["reduce_motion"] = _bool(raw.get("reduce_motion"), False)
     deck["panorama"] = normalize_panorama(raw.get("panorama"))
     theme = str(raw.get("theme") or "")

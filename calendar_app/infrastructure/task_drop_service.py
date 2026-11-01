@@ -126,6 +126,8 @@ def _clone_task(task, target_date, target_time, read_only_by_calendar, *, commit
     payload["gcal_sync_mode"] = "local_owned"
     payload["gcal_dirty"] = 1
     payload["status"] = "in_progress"
+    payload["is_completed"] = 0
+    payload["completed_at"] = None
     updates = _apply_datetime_move(task, target_date, target_time)
     payload.update(updates)
     return task_repo.create_unified_task(payload, commit=commit)

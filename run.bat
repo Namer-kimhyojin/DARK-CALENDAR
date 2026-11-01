@@ -5,5 +5,5 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-".venv\Scripts\python.exe" main.py %*
+".venv\Scripts\python.exe" scripts\run_development.py %*
 if errorlevel 1 pause

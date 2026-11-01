@@ -145,6 +145,26 @@ def test_month_day_rolls_forward_without_losing_the_title():
     }
 
 
+@pytest.mark.parametrize(
+    "expression", ["111/2", "1/234", "10/280", "101월2일", "1월234일", "2001/2/3"]
+)
+def test_malformed_date_is_not_partially_consumed(expression):
+    assert nlp_engine.parse_nlp_task(f"{expression} review") == {
+        "title": f"{expression} review",
+        "date": "2026-10-14",
+        "time": None,
+    }
+
+
+@pytest.mark.parametrize("expression", ["10/28", "10.28", "10월28일", "10월 28일"])
+def test_complete_month_day_tokens_keep_supported_formats(expression):
+    assert nlp_engine.parse_nlp_task(f"{expression} review") == {
+        "title": "review",
+        "date": "2026-10-28",
+        "time": None,
+    }
+
+
 def test_empty_input_preserves_existing_fallback_contract():
     assert nlp_engine.parse_nlp_task("  ") == {
         "title": "제목 없음",

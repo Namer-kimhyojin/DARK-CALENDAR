@@ -30,6 +30,7 @@ CHECKS: list[tuple[str, list[str]]] = [
             "tests/test_build_version_sync_lock_stability.py",
             "tests/test_build_pipeline_contracts.py",
             "tests/test_release_compliance.py",
+            "tests/test_release_compliance_paths.py",
         ],
     ),
     (

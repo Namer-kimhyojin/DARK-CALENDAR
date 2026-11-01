@@ -188,6 +188,28 @@ class CommandPaletteTests(TemporaryDatabaseTestCase):
         self.assertTrue(host.refresh_calls)
         self.assertTrue(host.toast_calls)
 
+    def test_nlp_default_time_preview_matches_the_created_schedule(self):
+        host = _PaletteHost()
+        self.addCleanup(host.close)
+        palette = CommandPalette(parent=host)
+        self.addCleanup(palette.close)
+        action_host = _ActionHost()
+        palette.execute_command.connect(
+            lambda command_id, params: OverlayApp.handle_palette_command(
+                action_host, command_id, params
+            )
+        )
+        palette._on_search_changed("+tomorrow default time review")
+        entry = palette._result_entries[0]
+        self.assertEqual(entry["kind"], "create")
+        self.assertIn("09:00", entry["subtitle"])
+
+        palette._dispatch_entry(entry)
+
+        rows = search_repo.search_unified_tasks("default time review")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["deadline"], f"{entry['params']['date']} 09:00:00")
+
     def test_palette_exit_commands_use_confirmed_application_exit_path(self):
         exit_calls = []
         host = types.SimpleNamespace(request_app_exit=lambda: exit_calls.append("exit"))

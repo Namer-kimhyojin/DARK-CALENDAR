@@ -480,6 +480,13 @@ class BeatmakerControls(QWidget):
         self.preview_button.setObjectName("ghost_btn")
         self.preview_button.setAutoDefault(False)
         self.preview_button.clicked.connect(controller.preview_beatmaker_pad)
+        self.performance_button = QPushButton(t("beatmaker.performance", "연주·녹음"), self)
+        self.performance_button.setObjectName("primary_btn")
+        self.performance_button.setAutoDefault(False)
+        self.performance_button.clicked.connect(controller.open_beatmaker_performance)
+        self.performance_button.setToolTip(
+            t("beatmaker.performance_tip", "키보드 연주 · 녹음 · 반복 재생 전용 화면 열기")
+        )
         if compact:
             self.kit_combo.setMaximumWidth(260)
             self.bank_combo.setMaximumWidth(150)
@@ -487,6 +494,7 @@ class BeatmakerControls(QWidget):
             row.addWidget(self.bank_combo)
             row.addStretch()
             row.addWidget(self.preview_button)
+            row.addWidget(self.performance_button)
             layout.addLayout(row)
         else:
             form = _form()
@@ -494,6 +502,7 @@ class BeatmakerControls(QWidget):
             form.addRow(t("beatmaker.bank", "연주 종류"), self.bank_combo)
             layout.addLayout(form)
             layout.addWidget(self.preview_button)
+            layout.addWidget(self.performance_button)
         self.hint = _hint(
             t(
                 "beatmaker.studio_hint",
@@ -1557,6 +1566,14 @@ class KeyInspector(QWidget):
         self.enabled_check.toggled.connect(lambda value: self._set("enabled", bool(value)))
         form.addRow("", self.enabled_check)
         layout.addLayout(form)
+        self.performance_input_hint = _hint(
+            t(
+                "beatmaker.editor_input_hint",
+                "이름·작은 글자 입력은 연주가 아닙니다. ‘연주·녹음’을 열면 키보드로 연주할 수 있습니다.",
+            ),
+            self,
+        )
+        layout.addWidget(self.performance_input_hint)
         layout.addWidget(_section(t("widget.launcher.studio.section_press", "누를 때"), self))
         self.action_editor = ActionEditor(self, browse_callback=self.controller.browse_target)
         self.action_editor.changed.connect(
@@ -1996,6 +2013,9 @@ class KeyInspector(QWidget):
         if self.sublabel_edit.text() != key["sublabel"]:
             self.sublabel_edit.setText(key["sublabel"])
         self.enabled_check.setChecked(bool(key["enabled"]))
+        self.performance_input_hint.setVisible(
+            single and beatmaker_state(deck["pages"][deck["page"]]) is not None
+        )
         pages = deck["pages"]
         self.action_editor.set_pages(pages)
         self.hold_editor.set_pages(pages)

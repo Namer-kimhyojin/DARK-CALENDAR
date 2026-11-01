@@ -2,10 +2,27 @@
 
 제품 버전은 배포 단위로 결정한다. 변경 기록·Git/CI 빌드·공개·Store·설치 상태는 별도이며 변경 기록만으로 버전을 올리지 않는다.
 
-기준 버전: `3.8.1` · 현재 제품 버전: **`4.7.1`**
+기준 버전: `3.8.1` · 현재 제품 버전: **`4.8.0`**
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.8.0 | 2026-11-01T09:24:40.339589+09:00 | release | 현재 전체 실행 입력: 비트메이커 녹음·루프, 날씨 프리미엄 UI, Google 갱신 복구, 완료 복사/NLP/아이콘 대비 및 안전한 개발 실행 통합 | `release-4.8.0-integrated-20261101` |
+| 4.7.1 | 2026-11-01T09:24:38.830003+09:00 | change | 권한 제한 심볼릭 링크 검사를 Ubuntu Quality Gate에 포함하고 4.8.0 변경 안내 준비 | `release-4.8.0-symlink-ci-coverage-20261101` |
+| 4.7.1 | 2026-11-01T09:24:37.920970+09:00 | change | 커밋 서식 검사에 맞춘 9개 파일 정리; AST와 제품 동작 유지 | `release-4.8.0-source-format-20261101` |
+| 4.7.1 | 2026-11-01T03:10:31.997203+09:00 | change | 14일차 홈페이지·게시판·이미지·릴리스 경로 점검과 11월 2일 전체 입력 배포 인계 문서 갱신; 제품 코드와 버전 유지 | `maintenance-20261101-homepage-release-review` |
+| 4.7.1 | 2026-10-31T03:12:44.139669+09:00 | change | 모양 설정 동작 아이콘의 테마 대비 보완, 13일차 검증 및 최근 개발 변경의 통합 배포 범위 연결 | `maintenance-20261031-appearance-icon-theme-contrast` |
+| 4.7.1 | 2026-10-31T03:12:43.130240+09:00 | change | 명령 검색의 검색·결과 아이콘을 앱 글자색에 맞추고 테마 전환 후 재열기에서 색상을 갱신 | `maintenance-20261031-palette-icon-theme-contrast` |
+| 4.7.1 | 2026-10-31T00:56:29.651628+09:00 | change | 날씨 프리미엄 카드 3종·시간별 예보·애니메이션·공유 캐시와 부분 렌더링 구현 | `weather-premium-ui-20261031` |
+| 4.7.1 | 2026-10-30T21:45:48.870934+09:00 | change | Google 토큰 갱신의 일시 오류와 실제 인증 거부를 구분하고 설정 조회의 오류 원인 및 재시도 경로 보존 | `fix-google-refresh-retry-classification-20261030` |
+| 4.7.1 | 2026-10-30T03:09:36.065227+09:00 | change | 12일차 Google 동기화·인증·오프라인 격리 검증과 UI 확인, 주기 및 배포 잔여 작업 기록(제품 코드·번호 유지) | `maintenance-20261030-google-review-checkpoint` |
+| 4.7.1 | 2026-10-29T09:03:25.077876+09:00 | change | 11월 2일 전체 배포 입력과 미배포 후보 확인, 남은 일정·검증 조건 및 개발 실행 문서 정리(제품 코드·번호 유지) | `release-readiness-20261102-audit-20261029` |
+| 4.7.1 | 2026-10-29T03:19:17.691041+09:00 | change | Use the verified private SQLite runtime for current-source run.bat launches; fail closed without replacing the developer Python; validate SQLite/shared/ICS preservation and pinned Qt compatibility | `maintenance-20261029-safe-development-sqlite-launcher` |
+| 4.7.1 | 2026-10-28T03:08:11.359161+09:00 | change | Pass the displayed 09:00 default time through natural-language schedule creation; record day-ten algorithm and performance review | `maintenance-20261028-nlp-preview-default-time` |
+| 4.7.1 | 2026-10-28T03:07:40.083048+09:00 | change | Preserve malformed numeric date expressions instead of partially changing titles and dates; retain supported month-day formats | `maintenance-20261028-nlp-date-token-boundaries` |
+| 4.7.1 | 2026-10-27T03:05:52.153892+09:00 | change | Reset completion flag and timestamp when copying completed schedules or routines; preserve originals and moved completion metadata; record day-nine review | `maintenance-20261027-completed-task-copy` |
+| 4.7.1 | 2026-10-26T09:18:07.986135+09:00 | change | 누락된 5~7일차와 당일 8일차 검증, 미배포 비트메이커 후보 및 Store 후속 기록 정렬(제품 코드·번호 유지) | `maintenance-20261026-catchup-area-checkpoints` |
+| 4.7.1 | 2026-10-22T11:57:58.879294+09:00 | module | 비트메이커 전용 연주창, 패드 녹음과 루프 재생, 저장·공유·종료 보호 추가 | `keydeck-beatmaker-recording-loop-20261022` |
+| 4.7.1 | 2026-10-22T08:49:53.811700+09:00 | change | 정기 자동화의 버전 규칙을 현행화하고 4.7.1 공개·설치 후속 기록을 일치시킴(제품 코드와 버전 유지) | `maintenance-20261022-automation-version-policy-and-checkpoints` |
 | 4.7.1 | 2026-10-21T12:43:03.608549+09:00 | store | Publish verified 4.7.1 assets and synchronize public release metadata | `github-publication-4.7.1-20261021` |
 | 4.7.1 | 2026-10-21T12:26:35.906763+09:00 | change | Activate and verify the exact disposable Windows paging notice before clicking OK; revalidate the unchanged 4.7.1 payload with pinned QA provenance | `native-qa-focus-4.7.1-20261021` |
 | 4.7.1 | 2026-10-21T12:06:24.011310+09:00 | release | Unified date and time entry, external calendar reliability and security, and bounded sparse ICS recurrence processing | `release-4.7.1-20261021` |

@@ -56,6 +56,28 @@ def weather_design_preview_pixmap(
     The temporary face has no owner, settings, timer or network manager. Its
     proportional fit changes only the preview painter, never the actual recipe.
     """
+    if design.scene_id:
+        from calendar_app.presentation.widgets.weather_scene import render_scene_preview
+
+        preset = overlay_display_preset(design.appearance_preset_id)
+        fg, fg_alpha = _parse_rgba(preset.text_rgba)
+        _, bg_alpha = _parse_rgba(preset.background_rgba)
+        families = set(QFontDatabase.families())
+        family = next(
+            (candidate for candidate in preset.font_candidates if candidate in families),
+            QApplication.font().family(),
+        )
+        return render_scene_preview(
+            design.scene_id,
+            data,
+            size,
+            pack=design.asset_pack_id,
+            dpr=dpr,
+            foreground=fg.name(),
+            background_alpha=bg_alpha / 255,
+            text_alpha=fg_alpha / 255,
+            family=family,
+        )
     preset = overlay_display_preset(design.appearance_preset_id)
     if preset is None:
         raise ValueError(f"Unknown weather appearance: {design.appearance_preset_id}")
@@ -400,7 +422,7 @@ class WeatherDesignGalleryDialog(QDialog):
         self.grid.clear()
         target = 0
         categories = {item[0]: str(t(item[1], item[2])) for item in WEATHER_DESIGN_CATEGORIES}
-        for design in weather_designs():
+        for design in sorted(weather_designs(), key=lambda design: not bool(design.scene_id)):
             searchable = " ".join(
                 (
                     design.design_id,

@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 import math
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 MET_FORECAST_ENDPOINT = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
 MET_LICENSE_URL = "https://api.met.no/doc/License"
@@ -70,11 +72,46 @@ def _first_forecast_entry(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def parse_locationforecast(
-    payload: dict[str, Any], display_name: str, unit: str = "celsius"
+    payload: dict[str, Any],
+    display_name: str,
+    unit: str = "celsius",
+    *,
+    now: datetime | None = None,
+    timezone_name: str = "UTC",
 ) -> dict[str, Any]:
-    """Parse the first Locationforecast time step for the weather widget."""
+    """Read the current forecast step and six actual future steps, in city time.
+
+    Six-hour precipitation totals are never presented as one-hour amounts. The
+    temperature range covers the remaining local-day forecast, not observations.
+    Older payloads without timestamps retain their original single-step contract.
+    """
 
     entry = _first_forecast_entry(payload)
+    now = now or datetime.now(UTC)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=UTC)
+    try:
+        zone = ZoneInfo(timezone_name)
+    except (ZoneInfoNotFoundError, ValueError, TypeError):
+        zone = UTC
+        timezone_name = "UTC"
+    timeline = []
+    for item in payload["properties"]["timeseries"]:
+        if not isinstance(item, dict):
+            continue
+        stamp = _forecast_datetime(item.get("time"))
+        if stamp is None:
+            continue
+        try:
+            value = float(item["data"]["instant"]["details"]["air_temperature"])
+        except (KeyError, TypeError, ValueError, OverflowError):
+            continue
+        if math.isfinite(value):
+            timeline.append((stamp, item, value))
+    timeline.sort(key=lambda step: step[0])
+    if timeline:
+        past = [step for step in timeline if step[0] <= now]
+        entry = (past[-1] if past else timeline[0])[1]
     data = entry.get("data") or {}
     if not isinstance(data, dict):
         raise ValueError("data must be an object")
@@ -104,7 +141,7 @@ def parse_locationforecast(
             break
 
     symbol_code = str(summary.get("symbol_code") or "")
-    return {
+    result = {
         "city": display_name,
         "temp": f"{temperature:.1f}".rstrip("0").rstrip("."),
         "unit": unit_label,
@@ -112,4 +149,71 @@ def parse_locationforecast(
         "wind": str(details.get("wind_speed", "--")),
         "_wmo": symbol_code_to_wmo(symbol_code),
         "_day_period": symbol_code_to_day_period(symbol_code),
+    }
+    if timeline:
+        current_time = _forecast_datetime(entry.get("time"))
+        today = now.astimezone(zone).date()
+        upcoming = [step for step in timeline if now < step[0] <= now + timedelta(hours=6)]
+        result["hourly"] = [
+            _hourly_step(stamp, item, value, unit, zone) for stamp, item, value in upcoming[:6]
+        ]
+        remaining = [
+            value
+            for stamp, _, value in timeline
+            if stamp >= (current_time or now) and stamp.astimezone(zone).date() == today
+        ]
+        result.update(
+            forecast_time=current_time.isoformat() if current_time else "",
+            timezone=timezone_name,
+            forecast_high=_temperature_text(max(remaining), unit) if remaining else "--",
+            forecast_low=_temperature_text(min(remaining), unit) if remaining else "--",
+            _forecast_expired=timeline[-1][0] < now,
+        )
+    return result
+
+
+def _forecast_datetime(value: object) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def _temperature_text(value: float, unit: str) -> str:
+    if unit == "fahrenheit":
+        value = value * 9 / 5 + 32
+    return f"{value:.1f}".rstrip("0").rstrip(".")
+
+
+def _hourly_step(stamp: datetime, item: dict, value: float, unit: str, zone) -> dict:
+    data = item.get("data")
+    data = data if isinstance(data, dict) else {}
+    period = data.get("next_1_hours")
+    period = period if isinstance(period, dict) else {}
+    summary = period.get("summary")
+    summary = summary if isinstance(summary, dict) else {}
+    symbol = str(summary.get("symbol_code") or "")
+    if not symbol:
+        for key in ("next_6_hours", "next_12_hours"):
+            fallback = data.get(key)
+            summary = fallback.get("summary") if isinstance(fallback, dict) else {}
+            symbol = str(summary.get("symbol_code") or "") if isinstance(summary, dict) else ""
+            if symbol:
+                break
+    details = period.get("details")
+    amount = details.get("precipitation_amount") if isinstance(details, dict) else None
+    try:
+        amount = float(amount)
+        if not math.isfinite(amount) or amount < 0:
+            amount = None
+    except (TypeError, ValueError, OverflowError):
+        amount = None
+    return {
+        "time": stamp.isoformat(),
+        "label": stamp.astimezone(zone).strftime("%H:%M"),
+        "temp": _temperature_text(value, unit),
+        "_wmo": symbol_code_to_wmo(symbol),
+        "_day_period": symbol_code_to_day_period(symbol),
+        "precip_mm": amount,
     }

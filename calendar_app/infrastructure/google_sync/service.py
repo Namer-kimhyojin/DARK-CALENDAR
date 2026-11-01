@@ -32,6 +32,7 @@ from calendar_app.shared.datetime_utils import (  # noqa: E402
 )
 
 try:
+    from google.auth import exceptions as google_auth_exceptions
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
     from google_auth_oauthlib.flow import InstalledAppFlow
@@ -42,6 +43,8 @@ try:
 
 
 except ImportError:
+    google_auth_exceptions = None
+
     Request = None
 
     Credentials = None
@@ -56,6 +59,28 @@ except ImportError:
 
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
+
+
+def _google_refresh_failure_kind(error):
+    """Only a confirmed OAuth rejection should send an existing user to sign-in."""
+    if isinstance(error, (ConnectionError, TimeoutError, socket.gaierror, ssl.SSLError)):
+        return "network_unavailable"
+    if google_auth_exceptions is not None:
+        if isinstance(error, google_auth_exceptions.TransportError):
+            return "network_unavailable"
+        if isinstance(error, google_auth_exceptions.RefreshError):
+            # google-auth supplies the parsed OAuth response separately from its
+            # free-form message. Never parse/log descriptions or credential URLs.
+            code = next((arg.get("error") for arg in error.args if isinstance(arg, dict)), None)
+            if not isinstance(code, str):
+                code = None
+            if code in {"invalid_grant", "access_denied", "invalid_scope"}:
+                return "auth_required"
+            if code in {"invalid_client", "unauthorized_client"}:
+                return "auth_client_invalid"
+            if error.retryable or code in {"server_error", "temporarily_unavailable"}:
+                return "network_unavailable"
+    return "operation_failed"
 
 
 def is_google_rate_limit_error(status, error=None) -> bool:
@@ -509,10 +534,16 @@ class CalendarSyncService:
                         creds = None
 
                 except Exception as _refresh_exc:
+                    kind = _google_refresh_failure_kind(_refresh_exc)
+                    self._set_last_error(kind, kind)
                     logger.warning(
                         "authenticate(non-interactive): token refresh failed: %s",
-                        _google_error_code("token_refresh_failed", _refresh_exc),
+                        kind,
                     )
+                    if kind != "auth_required":
+                        # Keep the saved token for the next attempt. A transport
+                        # outage must not trigger a browser or a synthetic 401.
+                        return False
                     creds = None
 
             if not creds or not creds.valid:
@@ -847,7 +878,7 @@ class CalendarSyncService:
         if not candidate.authenticate(
             interactive=False, persist_token=False, is_cancelled=is_cancelled
         ):
-            raise GoogleAuthError("reauth_required")
+            raise GoogleAuthError(candidate.last_error_kind or "reauth_required")
         return candidate
 
     def list_accessible_calendars(self, *, is_cancelled=None) -> list[dict]:

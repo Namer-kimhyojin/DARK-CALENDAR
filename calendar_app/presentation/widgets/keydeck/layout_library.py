@@ -150,6 +150,9 @@ def build_document(
         body["panorama"]["path"] = embed(body["panorama"]["path"], "image")
         if body["sound_path"]:
             body["sound_path"] = embed(body["sound_path"], "sound")
+        for event in body.get("beatmaker_recording", {}).get("events", []):
+            if event["sound_path"]:
+                event["sound_path"] = embed(event["sound_path"], "sound")
         document["deck"] = body
     else:
         index = source["page"] if page_index is None else int(page_index)
@@ -322,6 +325,9 @@ def _decode_asset(asset: dict) -> bytes | None:
 def _restore_refs(content: dict, resolve) -> None:
     if "sound_path" in content:
         content["sound_path"] = resolve(content["sound_path"])
+    for event in content.get("beatmaker_recording", {}).get("events", []):
+        if event["sound_path"]:
+            event["sound_path"] = resolve(event["sound_path"])
     pages = content["pages"] if "pages" in content else [content["page"]]
     for page in pages:
         for key in page["keys"]:

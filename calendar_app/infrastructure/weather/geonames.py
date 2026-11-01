@@ -23,6 +23,7 @@ class GeoNameCity:
     longitude: float
     country_code: str
     population: int
+    timezone: str = "UTC"
 
 
 def _normalize(value: str) -> str:
@@ -93,6 +94,7 @@ def find_city(query: str) -> GeoNameCity | None:
                         longitude=longitude,
                         country_code=country_code,
                         population=population,
+                        timezone=fields[17].strip() if len(fields) > 17 else "UTC",
                     )
                     best_score = score
     except OSError as exc:

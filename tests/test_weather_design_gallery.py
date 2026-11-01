@@ -65,12 +65,17 @@ def _choose(dialog, design_id):
     return item
 
 
-def test_catalog_has_twenty_four_distinct_complete_recipes_in_six_balanced_categories():
+def test_catalog_preserves_classic_recipes_and_adds_three_premium_scenes():
     designs = weather_designs()
-    assert len(designs) == len({design.design_id for design in designs}) == 24
-    assert Counter(design.category for design in designs) == dict.fromkeys(
-        [item[0] for item in WEATHER_DESIGN_CATEGORIES], 4
-    )
+    assert len(designs) == len({design.design_id for design in designs}) == 27
+    assert Counter(design.category for design in designs) == {
+        item[0]: 3 if item[0] == "premium" else 4 for item in WEATHER_DESIGN_CATEGORIES
+    }
+    assert {design.scene_id for design in designs if design.scene_id} == {
+        "air_atmosphere",
+        "soft_object",
+        "editorial_mono",
+    }
     assert {design.appearance_preset_id for design in designs} >= {
         "midnight_glass",
         "pearl_mist",
@@ -144,7 +149,7 @@ def test_search_matches_ids_korean_names_and_recovers_from_no_results(gallery):
     gallery.apply_button.click()
     assert gallery.selected_design is None
     gallery.search_edit.clear()
-    assert gallery.grid.count() == 24
+    assert gallery.grid.count() == 27
     assert gallery.apply_button.isEnabled()
 
 
@@ -193,7 +198,7 @@ def test_lazy_cards_keep_thumbnail_and_label_height_and_stop_on_close(gallery, a
     assert gallery.grid.visualItemRect(item).height() >= required
     QTest.qWait(100)
     assert not item.icon().isNull()
-    assert 0 < len(gallery._icons) < 24
+    assert 0 < len(gallery._icons) < 27
     assert gallery.grid.visualItemRect(item).height() >= required
     gallery.reject()
     assert not gallery._thumb_timer.isActive()
@@ -269,6 +274,8 @@ def test_all_native_preview_frames_and_complete_html_fit_the_painter_bounds(app,
 
     monkeypatch.setattr(QFrame, "render", checked_render)
     for design in weather_designs():
+        if design.scene_id:
+            continue  # Native painted cards have no HTML label or QFrame.
         weather_design_preview_pixmap(design, data, QSize(264, 188), dpr=2)
     assert len(rendered) == 24
 

@@ -202,11 +202,11 @@ def _coerce_text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _safe_icon(icon_key: str):
+def _safe_icon(icon_key: str, color: str | None = None):
     try:
-        return _ic(icon_key)
+        return _ic(icon_key, color=color)
     except Exception:
-        return _ic(ICON.SEARCH)
+        return _ic(ICON.SEARCH, color=color)
 
 
 def _status_text(raw_status: Any) -> str:
@@ -390,7 +390,10 @@ class CommandPalette(QWidget):
             )
         )
         self.search_bar.setMinimumHeight(36)
-        self.search_bar.addAction(_ic(ICON.SEARCH), QLineEdit.ActionPosition.LeadingPosition)
+        self._search_icon_action = self.search_bar.addAction(
+            _safe_icon(ICON.SEARCH, _palette_qcolor(self._style_bundle["item_text"]).name()),
+            QLineEdit.ActionPosition.LeadingPosition,
+        )
         self.search_layout.addWidget(self.search_bar)
 
         self.nlp_preview = QLabel()
@@ -475,6 +478,9 @@ class CommandPalette(QWidget):
 
     def _apply_style(self):
         self.setStyleSheet(_build_command_palette_stylesheet(self._style_bundle))
+        self._search_icon_action.setIcon(
+            _safe_icon(ICON.SEARCH, _palette_qcolor(self._style_bundle["item_text"]).name())
+        )
 
     def _command_entry(
         self,
@@ -1221,7 +1227,7 @@ class CommandPalette(QWidget):
             "params": {
                 "title": title,
                 "date": _coerce_text(parsed.get("date")),
-                "time": time_text,
+                "time": time_text or "09:00:00",
             },
             "icon_key": ICON.ADD,
         }
@@ -1301,7 +1307,12 @@ class CommandPalette(QWidget):
             item.setData(Qt.ItemDataRole.UserRole, entry)
             item.setToolTip(subtitle)
             item.setSizeHint(QSize(0, _ITEM_HEIGHT))
-            item.setIcon(_safe_icon(entry.get("icon_key", ICON.SEARCH)))
+            item.setIcon(
+                _safe_icon(
+                    entry.get("icon_key", ICON.SEARCH),
+                    _palette_qcolor(self._style_bundle["item_text"]).name(),
+                )
+            )
             self.result_list.addItem(item)
 
         self.result_list.setVisible(True)

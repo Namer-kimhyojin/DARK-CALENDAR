@@ -16,6 +16,7 @@ from PyQt6.QtNetwork import QNetworkReply, QNetworkRequest
 from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
+    QFileDialog,
     QFrame,
     QLabel,
     QMenu,
@@ -34,6 +35,7 @@ from calendar_app.infrastructure.weather.met_norway import (
     MET_LICENSE_URL,
     parse_locationforecast,
 )
+from calendar_app.infrastructure.weather.request_pool import pooled_weather_reply
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
@@ -46,6 +48,7 @@ from calendar_app.presentation.widgets.overlay_base import (
     _parse_rgba,
     _rgba_css,
 )
+from calendar_app.presentation.widgets.overlay_shadow import read_text_shadow
 from calendar_app.presentation.widgets.overlay_template_utils import _preview_base_size
 from calendar_app.presentation.widgets.weather_asset_packs import (
     DEFAULT_WEATHER_ASSET_PACK_ID,
@@ -55,6 +58,7 @@ from calendar_app.presentation.widgets.weather_asset_packs import (
     weather_pack_icon,
     weather_pack_preview_pixmap,
 )
+from calendar_app.presentation.widgets.weather_scene import WeatherSceneSurface
 from calendar_app.presentation.widgets.weather_template import (
     render_weather_template,
     scale_weather_preview_images,
@@ -174,6 +178,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._request_key: tuple[str, str] | None = None
         self._status_text = ""
         self._rate_limited_until = 0.0
+        self._forecast_payload: dict | None = None
 
         self._weather_data: dict = {
             "city": "---",
@@ -207,6 +212,10 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(20, 12, 20, 12)
         layout.setSpacing(4)
+
+        self._scene_surface = WeatherSceneSurface(frame)
+        self._scene_surface.hide()
+        layout.addWidget(self._scene_surface, 1)
 
         self._icon_label = QLabel("--", frame)
         self._icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -257,8 +266,22 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
                 temp="--",
                 error="",
                 _wmo=-1,
+                _day_period="day",
+                desc="--",
+                humidity="--",
+                wind="--",
                 unit="°F" if request_key[1] == "fahrenheit" else "°C",
             )
+            for key in (
+                "hourly",
+                "forecast_high",
+                "forecast_low",
+                "forecast_time",
+                "fetched_at",
+                "_forecast_expired",
+            ):
+                self._weather_data.pop(key, None)
+            self._forecast_payload = None
         self._request_key = request_key
         self._retry_timer.stop()
         self._status_text = t("widget.weather.loading", "날씨를 불러오는 중…")
@@ -278,6 +301,9 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
 
         # Fetch weather using cached coords (display_name은 지오코딩 결과 사용)
         display_name = self._get("display_name", location)
+        if not self._get("location_timezone", ""):
+            city = find_city(location)
+            self._set("location_timezone", getattr(city, "timezone", "UTC") or "UTC")
         self._fetch_weather(lat, lon, display_name)
 
     def _scheduled_update(self) -> None:
@@ -331,6 +357,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._set("lon", lon)
         self._set("resolved_name", name)
         self._set("display_name", city.name)
+        self._set("location_timezone", getattr(city, "timezone", "UTC") or "UTC")
         self._fetch_weather(lat, lon, city.name)
 
     def _fetch_weather(self, lat: float, lon: float, display_name: str) -> None:
@@ -362,7 +389,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
                 b"If-Modified-Since", last_modified.encode("utf-8", errors="replace")
             )
 
-        reply = self._network_manager.get(request)
+        reply = pooled_weather_reply(self._network_manager, request, self)
         reply.finished.connect(
             lambda r=reply, name=display_name, request_unit=unit, request_lat=lat, request_lon=lon: (
                 self._on_weather_reply(r, name, request_unit, request_lat, request_lon)
@@ -432,6 +459,9 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         else:
             self._failure_count = 0
             self._retry_timer.stop()
+            if status == 304:
+                self._weather_data["fetched_at"] = datetime.now(UTC).isoformat()
+                self._store_weather_cache(lat, lon, display_name, unit)
             self._status_text = t(
                 "widget.weather.updated", "{time} 업데이트", time=datetime.now().strftime("%H:%M")
             )
@@ -439,9 +469,24 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._refresh_face()
 
     def _update_weather_data(self, json_data: dict, display_name: str, unit: str) -> None:
-        parsed = parse_locationforecast(json_data, display_name, unit)
+        parsed = parse_locationforecast(
+            json_data,
+            display_name,
+            unit,
+            timezone_name=str(self._get("location_timezone", "UTC")),
+        )
         parsed["desc"] = self._weather_code_to_text(int(parsed.get("_wmo", 2)))
         parsed["error"] = ""
+        parsed["fetched_at"] = datetime.now(UTC).isoformat()
+        self._forecast_payload = json_data
+        for key in (
+            "hourly",
+            "forecast_high",
+            "forecast_low",
+            "forecast_time",
+            "_forecast_expired",
+        ):
+            self._weather_data.pop(key, None)
         self._weather_data.update(parsed)
 
     def _store_weather_cache(self, lat: float, lon: float, display_name: str, unit: str) -> None:
@@ -451,6 +496,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             "display_name": display_name,
             "unit": unit,
             "weather": self._weather_data,
+            "forecast": self._forecast_payload,
         }
         self._set("met_cache_json", json.dumps(cache, ensure_ascii=False))
 
@@ -504,6 +550,17 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             if not math.isfinite(float(weather.get("temp"))):
                 return False
             int(weather.get("_wmo"))
+            payload = cache.get("forecast")
+            if isinstance(payload, dict):
+                refreshed = parse_locationforecast(
+                    payload,
+                    display_name,
+                    unit,
+                    timezone_name=str(self._get("location_timezone", "UTC")),
+                )
+                refreshed["desc"] = self._weather_code_to_text(int(refreshed.get("_wmo", 2)))
+                weather.update(refreshed)
+                self._forecast_payload = payload
             weather["city"] = display_name
             weather["error"] = ""
             self._weather_data.update(weather)
@@ -535,6 +592,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
     def _set_runtime_active(self, active: bool) -> None:
         was_active = self._runtime_active
         self._runtime_active = active
+        self._scene_surface.set_runtime_active(active and bool(self._active_scene_id()))
         if active:
             self._update_refresh_interval()
             if not was_active:
@@ -572,6 +630,24 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
     def _apply_appearance(self) -> None:
         """Apply unified styling then render current weather to template."""
         self._apply_base_appearance()
+        if self._active_scene_id():
+            self.face.setStyleSheet("QFrame#weatherFace { background: transparent; border: none; }")
+            self.face.layout().setContentsMargins(0, 0, 0, 0)
+            self.face.layout().setSpacing(0)
+            for label in (
+                self._icon_label,
+                self._temp_label,
+                self._city_label,
+                self._template_label,
+                self._status_label,
+            ):
+                label.hide()
+            self._scene_surface.show()
+            self._configure_scene()
+            return
+        self._scene_surface.set_runtime_active(False)
+        self._scene_surface.hide()
+        self.face.layout().setSpacing(4)
 
         # Text and illustration sizes both follow the current fitted font size.
         html = self._resolve_weather_template(
@@ -599,7 +675,62 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
 
     def _refresh_face(self) -> None:
         """Re-render widget after data update."""
+        if self._active_scene_id() and self._scene_surface.isVisible():
+            self._configure_scene()
+            return
         self._apply_and_resize()
+
+    def _active_scene_id(self) -> str:
+        from calendar_app.presentation.widgets.weather_designs import weather_designs
+
+        if self.widget_shape_id() != "card":
+            return ""
+        template = str(self._get("weather_template", self._DEFAULT_TEMPLATE))
+        return next(
+            (
+                design.scene_id
+                for design in weather_designs()
+                if design.scene_id and design.template == template
+            ),
+            "",
+        )
+
+    def _configure_scene(self) -> None:
+        bg, bg_alpha = _parse_rgba(self.bg_color_rgba())
+        fg, fg_alpha = _parse_rgba(self.text_color_rgba())
+        shadow = read_text_shadow(self._get)
+        self._scene_surface.configure(
+            scene_id=self._active_scene_id(),
+            data=self._weather_data,
+            pack=get_weather_asset_pack(
+                self._get("weather_asset_pack", DEFAULT_WEATHER_ASSET_PACK_ID)
+            ).pack_id,
+            family=self.font_family(),
+            motion=str(self._get("weather_motion", "subtle")),
+            hourly=self._get("weather_show_hourly", True, type_=bool),
+            background_alpha=bg_alpha / 255,
+            text_alpha=fg_alpha / 255,
+            shadow=shadow.active,
+            shadow_opacity=shadow.opacity,
+            shadow_blur=shadow.blur,
+            shadow_distance=shadow.distance,
+            shadow_color=shadow.color,
+            foreground=fg.name(),
+            background_override=bg.name() if self.display_preset_id() == "custom" else "",
+            text_scale=self.font_size() / 24,
+            status=self._status_text,
+            animation_dir=str(self._get("weather_animation_dir", "") or ""),
+        )
+        self._scene_surface.set_runtime_active(getattr(self, "_runtime_active", False))
+
+    def _fit_font_to_size(self, target_w: int, target_h: int, *, live: bool = False):
+        if not self._active_scene_id():
+            return super()._fit_font_to_size(target_w, target_h, live=live)
+        self._apply_appearance()
+        self._release_layout_constraints()
+        self.resize(max(120, int(target_w)), max(100, int(target_h)))
+        self._update_grip_color()
+        self._update_interaction_surface()
 
     def _resolve_weather_template(
         self,
@@ -692,6 +823,11 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._set("weather_template", design.template)
         self._set("weather_asset_pack", design.asset_pack_id)
         self._set("weather_design_id", design.design_id)
+        if design.scene_id:
+            self._set("font_size", 24)
+            if self._normalized_fixed_dimension("fixed_w") is None:
+                self._set("fixed_w", 360)
+                self._set("fixed_h", 350)
         width = self._normalized_fixed_dimension("fixed_w")
         height = self._normalized_fixed_dimension("fixed_h")
         if original_shape != design.shape or (
@@ -712,6 +848,32 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         """Show standardized settings dialog with schema-based fields."""
         self._refresh_minutes()
         extra = [
+            {
+                "key": "weather_motion",
+                "label": t("weather_premium.motion", "움직임:"),
+                "type": "combo",
+                "default": "subtle",
+                "options": [
+                    (t("weather_premium.motion_off", "끔 · 정지 이미지"), "off"),
+                    (t("weather_premium.motion_subtle", "은은하게"), "subtle"),
+                    (t("weather_premium.motion_full", "풍부하게"), "full"),
+                ],
+            },
+            {
+                "key": "weather_show_hourly",
+                "label": t("weather_premium.show_hourly", "큰 카드에서 시간별 예보 표시:"),
+                "type": "bool",
+                "default": True,
+            },
+            {
+                "key": "weather_animation_dir",
+                "label": t("weather_premium.animation_dir", "움직이는 그림 폴더:"),
+                "type": "text",
+                "default": "",
+                "placeholder": t(
+                    "weather_premium.animation_placeholder", "비워 두면 내장 애니메이션 사용"
+                ),
+            },
             {
                 "key": "weather_asset_pack",
                 "label": t("widget.weather.asset_pack", "일러스트 팩:"),
@@ -782,6 +944,14 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         ).pack_id
 
     def _setup_weather_asset_preview(self, basic, dialog) -> None:
+        animation_field = self._active_settings_widgets.get("weather_animation_dir")
+        if animation_field is not None:
+            animation_field.setToolTip(
+                t(
+                    "weather_premium.animation_help",
+                    "프리미엄 카드에서 상태별 WebP·GIF를 사용합니다.",
+                )
+            )
         designs = QPushButton(t("widget.weather.design_gallery", "날씨 디자인 고르기…"), dialog)
         designs.setObjectName("ghost_btn")
         designs.setProperty("weatherDesignGallery", True)
@@ -890,6 +1060,8 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
                     if index >= 0:
                         combo.setCurrentIndex(index)
                 controls["template_editor"].setPlainText(design.template)
+                if design.scene_id:
+                    controls["size_spin"].setValue(design.font_size)
             finally:
                 gallery.deleteLater()
 
@@ -937,6 +1109,23 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             t("widget.weather.sources_title", "날씨 데이터 출처"),
             lambda checked=False: self._show_data_sources(),
         )
+        motion_menu = menu.addMenu(t("weather_premium.motion", "움직임"))
+        for mode, key, label in (
+            ("off", "motion_off", "끔 · 정지 이미지"),
+            ("subtle", "motion_subtle", "은은하게"),
+            ("full", "motion_full", "풍부하게"),
+        ):
+            action = motion_menu.addAction(t("weather_premium." + key, label))
+            action.setCheckable(True)
+            action.setChecked(str(self._get("weather_motion", "subtle")) == mode)
+            action.triggered.connect(
+                lambda _checked=False, selected=mode: self._set_weather_motion(selected)
+            )
+        motion_menu.addSeparator()
+        motion_menu.addAction(
+            t("weather_premium.choose_animation_dir", "움직이는 그림 폴더 고르기…"),
+            self._choose_animation_dir,
+        )
         pack_menu = menu.addMenu(t("widget.weather.asset_pack", "일러스트 팩"))
         current_pack = get_weather_asset_pack(
             self._get("weather_asset_pack", DEFAULT_WEATHER_ASSET_PACK_ID)
@@ -956,6 +1145,22 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
     def _on_double_click(self) -> bool:
         self._open_settings()
         return True
+
+    def _set_weather_motion(self, mode: str) -> None:
+        self._set("weather_motion", mode)
+        if self._active_scene_id():
+            self._configure_scene()
+
+    def _choose_animation_dir(self) -> None:
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            t("weather_premium.choose_animation_dir", "움직이는 그림 폴더 고르기…"),
+            str(self._get("weather_animation_dir", "") or ""),
+        )
+        if directory:
+            self._set("weather_animation_dir", directory)
+            if self._active_scene_id():
+                self._configure_scene()
 
     def apply_initial_settings(self) -> None:
         self._apply_and_resize()

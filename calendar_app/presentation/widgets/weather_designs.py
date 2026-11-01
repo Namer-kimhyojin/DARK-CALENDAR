@@ -23,9 +23,11 @@ class WeatherDesign:
     template: str
     shape: str = "card"
     font_size: int = 24
+    scene_id: str = ""
 
 
 WEATHER_DESIGN_CATEGORIES = (
+    ("premium", "weather_premium.category", "프리미엄 · 애니메이션"),
     ("glass", "widget.weather.design_category.glass", "글래스"),
     ("minimal", "widget.weather.design_category.minimal", "미니멀"),
     ("editorial", "widget.weather.design_category.editorial", "에디토리얼"),
@@ -45,6 +47,7 @@ def _recipe(
     template: str,
     shape: str = "card",
     font_size: int = 24,
+    scene_id: str = "",
 ) -> WeatherDesign:
     return WeatherDesign(
         design_id,
@@ -58,6 +61,7 @@ def _recipe(
         template,
         shape,
         font_size,
+        scene_id,
     )
 
 
@@ -301,6 +305,41 @@ _DESIGNS = (
         "{align=left}{city|size=12|bold}\n{icon|size=58}\n{temp|size=32|bold}{unit|size=14}\n{desc|size=11}",
         "poster",
         20,
+    ),
+)
+_DESIGNS += (
+    _recipe(
+        "air_atmosphere",
+        "Air Atmosphere",
+        "premium",
+        "날씨와 낮·밤에 반응하는 하늘빛, 입체 그래픽과 시간별 예보",
+        "midnight_glass",
+        "air_soft",
+        "{city|size=14}\n{icon|size=96}\n{temp|size=52|bold}{unit|size=20}\n{desc|size=15}\n{humidity|size=11}% · {wind|size=11} m/s",
+        font_size=24,
+        scene_id="air_atmosphere",
+    ),
+    _recipe(
+        "soft_object",
+        "Soft Object",
+        "premium",
+        "밝고 부드러운 표면, 입체 오브젝트와 여유로운 정보 배치",
+        "pearl_mist",
+        "air_soft",
+        "{city|size=14}\n{icon|size=94}\n{temp|size=50|bold}{unit|size=20}\n{desc|size=15}\n{humidity|size=11}% · {wind|size=11} m/s",
+        font_size=24,
+        scene_id="soft_object",
+    ),
+    _recipe(
+        "editorial_mono",
+        "Editorial Mono",
+        "premium",
+        "종이빛 표면과 절제된 그래픽, 읽기 좋은 타이포그래피",
+        "paper_ivory",
+        "mono_atmosphere",
+        "{city|size=14}\n{icon|size=92}\n{temp|size=48|bold}{unit|size=20}\n{desc|size=15}\n{humidity|size=11}% · {wind|size=11} m/s",
+        font_size=24,
+        scene_id="editorial_mono",
     ),
 )
 _BY_ID = {design.design_id: design for design in _DESIGNS}

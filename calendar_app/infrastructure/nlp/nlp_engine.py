@@ -119,7 +119,8 @@ def parse_nlp_task(text: str):
         date_found = True
 
     # Month/Day (MM/DD or MM월 DD일 or Month DD)
-    md_match = re.search(r"(\d{1,2})[월/.]\s*(\d{1,2})일?", title)
+    # Preserve malformed or longer numeric dates instead of consuming a fragment.
+    md_match = re.search(r"(?<![\d/.])(\d{1,2})[월/.]\s*(\d{1,2})일?(?!\d|[/.]\d)", title)
     if md_match:
         m = int(md_match.group(1))
         d = int(md_match.group(2))

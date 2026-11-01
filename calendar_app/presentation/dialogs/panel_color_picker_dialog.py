@@ -1689,7 +1689,7 @@ class PanelColorPickerDialog(QDialog):
         bottom_row.setSpacing(8)
 
         adv_btn = QPushButton(t("dialog.theme.advanced", "고급 사용자 설정"))
-        adv_btn.setIcon(_ic(ICON.ADVANCED))
+        adv_btn.setIcon(_ic(ICON.ADVANCED, color=self._ui_tokens["text_primary"]))
         adv_btn.setToolTip(t("dialog.theme.advanced_tip", "색상, 크기와 간격을 세부 조정"))
         adv_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         _tf = self._ui_tokens.get("text_faint", "rgba(255,255,255,0.45)")
@@ -2048,7 +2048,7 @@ class PanelColorPickerDialog(QDialog):
         self._contrast_fix_btn = QPushButton(
             t("dialog.theme.text.contrast_fix", "읽기 편하게 자동 보정")
         )
-        self._contrast_fix_btn.setIcon(_ic(ICON.APPEARANCE))
+        self._contrast_fix_btn.setIcon(_ic(ICON.APPEARANCE, color=self._ui_tokens["text_primary"]))
         self._contrast_fix_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._contrast_fix_btn.setToolTip(
             t(
@@ -2064,7 +2064,9 @@ class PanelColorPickerDialog(QDialog):
         self._btn_apply_preset_text = QPushButton(
             t("dialog.theme.text.apply_recommended", "권장 글자색 적용")
         )
-        self._btn_apply_preset_text.setIcon(_ic(ICON.APPEARANCE))
+        self._btn_apply_preset_text.setIcon(
+            _ic(ICON.APPEARANCE, color=self._ui_tokens["text_primary"])
+        )
         self._btn_apply_preset_text.setObjectName("btn_apply_preset_text")
         self._btn_apply_preset_text.setCursor(Qt.CursorShape.PointingHandCursor)
         self._btn_apply_preset_text.setToolTip(
@@ -2278,7 +2280,7 @@ class PanelColorPickerDialog(QDialog):
         # 직접 지정 행
         custom_row = QHBoxLayout()
         btn_custom = QPushButton(t("dialog.theme.custom_color", "직접 색상"))
-        btn_custom.setIcon(_ic(ICON.COLOR_PICKER))
+        btn_custom.setIcon(_ic(ICON.COLOR_PICKER, color=self._ui_tokens["text_primary"]))
         btn_custom.setObjectName("btn_point_custom")
         btn_custom.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_custom.clicked.connect(self._open_custom_point_color)

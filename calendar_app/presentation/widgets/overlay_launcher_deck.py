@@ -86,6 +86,7 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         self._canvas: KeyDeckCanvas | None = None
         self._live_scale_percent: int | None = None
         self._studio = None
+        self._performance_dialog = None
         self._keyboard_performance = False
         super().__init__(owner)
         # 실물 매크로 패드처럼 창이 포커스를 가져가지 않아야 단축키가 작업 중인 앱으로 간다.
@@ -151,6 +152,8 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             self._canvas.update()
 
     def _set_runtime_active(self, active: bool) -> None:
+        if not active and self._performance_dialog is not None:
+            self._performance_dialog.reject()
         if not active and self._keyboard_performance:
             self._set_keyboard_performance(False)
         if self._canvas is not None:
@@ -161,6 +164,8 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
     def closeEvent(self, event) -> None:  # noqa: N802
         # 창이 닫히는 모든 경로(앱 종료의 창 일괄 닫기 포함)에서 저장·정지만 하고 닫기를 거부하지 않는다.
         # 거부하면 Qt 6의 quit()이 취소되어 프로세스가 남는다.
+        if self._performance_dialog is not None:
+            self._performance_dialog.reject()
         if self._save_timer.isActive():
             self._save_timer.stop()
             self._flush_deck()
@@ -683,6 +688,27 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
     def _stop_sounds(self) -> None:
         self._canvas.stop_sounds()
 
+    def _open_beatmaker_performance(self) -> None:
+        from calendar_app.presentation.widgets.keydeck.beatmaker_dialog import (
+            BeatmakerPerformanceDialog,
+        )
+
+        if is_app_exiting() or beatmaker_state(current_page(self._deck_data)) is None:
+            return
+        self._set_keyboard_performance(False)
+        dialog = BeatmakerPerformanceDialog(self._deck_data, self)
+        self._performance_dialog = dialog
+        try:
+            dialog.exec()
+        finally:
+            self._performance_dialog = None
+        if not is_app_exiting():
+            result = dialog.result_performance()
+            if any(self._deck_data.get(key) != value for key, value in result.items()):
+                self._deck_data.update(result)
+                self._apply_deck(self._deck_data)
+        dialog.deleteLater()
+
     def _set_beatmaker_kit(self, kit: str) -> None:
         state = beatmaker_state(current_page(self._deck_data))
         if state is None or state["kit"] == kit or kit not in {item[0] for item in BEATMAKER_KITS}:
@@ -743,6 +769,7 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         if state is None:
             return
         music = menu.addMenu(t("beatmaker.title", "비트메이커"))
+        music.addAction(t("beatmaker.performance", "연주·녹음"), self._open_beatmaker_performance)
         keyboard = music.addAction(
             t("beatmaker.stop_keyboard", "키보드 연주 종료 (Esc)")
             if self._keyboard_performance

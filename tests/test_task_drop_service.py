@@ -57,6 +57,71 @@ class TaskDropServiceTests(TemporaryDatabaseTestCase):
         self.assertFalse(app._drag_pending_refresh)
         self.assertEqual(app.refresh_calls, [{"left": True, "center": True, "right": False}])
 
+    def test_copy_completed_work_starts_incomplete_without_changing_original(self):
+        self.assertTrue(
+            calendar_repo.upsert_calendar("local::copy-completed", "local", "Copy calendar")
+        )
+        for task_type in ("schedule", "routine"):
+            with self.subTest(task_type=task_type):
+                task_id = task_repo.create_unified_task(
+                    {
+                        "name": "Completed work",
+                        "type": task_type,
+                        "cycle_type": "daily" if task_type == "routine" else None,
+                        "status": "completed",
+                        "deadline": "2026-03-05 09:00:00",
+                        "end_date": "2026-03-05 10:00:00",
+                        "calendar_id": "local::copy-completed",
+                    }
+                )
+                original = task_repo.get_unified_task(task_id)
+                self.assertEqual(original["is_completed"], 1)
+                self.assertIsNotNone(original["completed_at"])
+
+                changed, copied_ids = task_drop_service.handle_task_drop(
+                    _DummyApp(), [task_id], "2026-04-02", "11:00:00", "copy"
+                )
+
+                self.assertEqual(changed, 1)
+                self.assertEqual(len(copied_ids), 1)
+                self.assertNotEqual(copied_ids[0], task_id)
+                copied = task_repo.get_unified_task(copied_ids[0])
+                self.assertEqual(copied["status"], "in_progress")
+                self.assertEqual(copied["is_completed"], 0)
+                self.assertIsNone(copied["completed_at"])
+                self.assertEqual(copied["calendar_id"], original["calendar_id"])
+                self.assertEqual(copied["deadline"], "2026-04-02 11:00:00")
+                self.assertEqual(copied["end_date"], "2026-04-02 12:00:00")
+                self.assertEqual(task_repo.get_unified_task(task_id), original)
+
+    def test_move_completed_work_keeps_completion_metadata(self):
+        self.assertTrue(
+            calendar_repo.upsert_calendar("local::move-completed", "local", "Move calendar")
+        )
+        for task_type in ("schedule", "routine"):
+            with self.subTest(task_type=task_type):
+                task_id = task_repo.create_unified_task(
+                    {
+                        "name": "Completed work to move",
+                        "type": task_type,
+                        "cycle_type": "daily" if task_type == "routine" else None,
+                        "status": "completed",
+                        "deadline": "2026-03-05 09:00:00",
+                        "end_date": "2026-03-05 10:00:00",
+                        "calendar_id": "local::move-completed",
+                    }
+                )
+                original = task_repo.get_unified_task(task_id)
+                changed, copied_ids = task_drop_service.handle_task_drop(
+                    _DummyApp(), [task_id], "2026-04-02", "11:00:00", "move"
+                )
+                self.assertEqual((changed, copied_ids), (1, []))
+                moved = task_repo.get_unified_task(task_id)
+                for field in ("status", "is_completed", "completed_at", "calendar_id"):
+                    self.assertEqual(moved[field], original[field])
+                self.assertEqual(moved["deadline"], "2026-04-02 11:00:00")
+                self.assertEqual(moved["end_date"], "2026-04-02 12:00:00")
+
     def test_copy_creates_new_task_with_moved_datetime(self):
         task_id = self._create_schedule_task()
         app = _DummyApp()
