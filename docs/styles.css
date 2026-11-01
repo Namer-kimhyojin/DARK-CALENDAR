@@ -455,6 +455,10 @@ h2 em {
   letter-spacing: 0.02em;
 }
 
+.hero-meta[hidden] {
+  display: none;
+}
+
 .hero-visual {
   position: relative;
   z-index: 1;
