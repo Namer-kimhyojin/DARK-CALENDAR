@@ -1,0 +1,5 @@
+# These packaged assets are hashed as exact bytes by the release input ledger.
+Assets/branding/air-calendar-a1-symbol.svg -text
+Assets/branding/air-calendar-a1.svg -text
+Assets/moments/README.md -text
+Assets/weather/README.md -text
