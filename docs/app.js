@@ -3,6 +3,7 @@
 
   const fallbackConfig = {
     appVersion: "4.8.0",
+    storeReleaseStatus: "submission_pending",
     requestBoardApi: "https://air-calendar-requests.kimhj.chatgpt.site",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
@@ -728,6 +729,14 @@
     screens[locale].beatmaker = { image: `assets/screenshots/beatmaker-4.8.0-${imageLocale}.png`, alt: copy.beatmakerTitle, kicker: "BEATMAKER · RECORD + LOOP", title: copy.beatmakerTitle, description: copy.beatmakerBody, points: copy.beatmakerPoints };
   });
 
+  const releaseAvailabilityCopy = {
+    ko: { storePending: "GitHub 공개 완료 · Store 제출 준비 중", githubLatest: "최신 GitHub 배포 보기 ↗" },
+    en: { storePending: "Released on GitHub · Store submission pending", githubLatest: "View the latest GitHub release ↗" },
+    ja: { storePending: "GitHubで公開済み · Storeへの提出準備中", githubLatest: "最新のGitHubリリースを見る ↗" },
+    zh: { storePending: "已在GitHub发布 · Store提交准备中", githubLatest: "查看最新GitHub版本 ↗" }
+  };
+  Object.entries(releaseAvailabilityCopy).forEach(([locale, copy]) => Object.assign(translations[locale], copy));
+
   const richTextKeys = new Set(["unifiedTitle", "heroTitle", "desktopTitle", "featuresTitle", "atlasTitle", "exploreTitle", "googleTitle", "workflowTitle", "privacyTitle", "faqTitle", "ctaTitle", "shareTitle"]);
   let currentLanguage = "ko";
   let currentScreen = "main";
@@ -878,6 +887,9 @@
       if (value) node.textContent = value;
     });
 
+    const releaseNotice = document.querySelector("[data-store-release-notice]");
+    if (releaseNotice) releaseNotice.hidden = currentConfig.storeReleaseStatus === "published";
+
     const eventBand = document.querySelector("[data-event-band]");
     const eventActive = currentConfig.event.enabled !== false && Boolean(currentConfig.eventUrl);
     if (eventBand) eventBand.hidden = !eventActive;
@@ -887,7 +899,7 @@
       try {
         const schema = JSON.parse(schemaNode.textContent);
         schema.softwareVersion = currentConfig.appVersion;
-        schema.downloadUrl = currentConfig.microsoftStoreUrl;
+        schema.downloadUrl = currentConfig.storeReleaseStatus === "submission_pending" ? currentConfig.releaseSourceUrl : currentConfig.microsoftStoreUrl;
         schema.license = currentConfig.licenseUrl;
         schemaNode.textContent = JSON.stringify(schema);
       } catch (_error) {

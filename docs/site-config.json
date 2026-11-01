@@ -1,6 +1,7 @@
 {
   "appName": "Air Calendar",
   "appVersion": "4.8.0",
+  "storeReleaseStatus": "submission_pending",
   "requestBoardApi": "https://air-calendar-requests.kimhj.chatgpt.site",
   "microsoftStoreUrl": "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
   "sourceCodeUrl": "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
