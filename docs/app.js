@@ -2,14 +2,14 @@
   "use strict";
 
   const fallbackConfig = {
-    appVersion: "4.7.1",
+    appVersion: "4.8.0",
     requestBoardApi: "https://air-calendar-requests.kimhj.chatgpt.site",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
     promotionKitUrl: "promo.html",
-    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.7.1",
-    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v4.7.1/LICENSE",
-    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v4.7.1/THIRD_PARTY_NOTICES.md",
+    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.8.0",
+    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v4.8.0/LICENSE",
+    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v4.8.0/THIRD_PARTY_NOTICES.md",
     eventUrl: "https://account.microsoft.com/billing/redeem?mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ",
     event: { enabled: true }
   };
@@ -681,6 +681,51 @@
 
   Object.entries(unifiedSyncTranslations).forEach(([locale, copy]) => {
     screens[locale].sync = { image: `assets/screenshots/sync-services-${locale}.png`, alt: copy.unifiedManage, kicker: 'UNIFIED CALENDAR SYNC', title: copy.unifiedManage, description: copy.unifiedLead, points: [copy.unifiedProtect, copy.unifiedEfficient, copy.unifiedStep4] };
+  });
+
+  const releaseScreens = {
+    ko: {
+      weatherTab: "새 날씨 카드", beatmakerTab: "비트메이커",
+      weatherTitle: "날씨를 보는 세 가지 새로운 방식.",
+      weatherBody: "새 카드 3종과 앞으로 6시간의 예보를 제공합니다. 날씨별 움직임과 사용자 WebP/GIF를 지원하고 절전·숨김·시스템 애니메이션 설정을 존중합니다. 화면은 고정 예시 데이터입니다.",
+      weatherPoints: ["지역 시간대에 맞춘 시간별 예보", "기존 디자인·설정 유지", "새 문구는 한국어·영어, 다른 언어는 영어 대체 표시"],
+      beatmakerTitle: "연주를 녹음하고, 나만의 루프로.",
+      beatmakerBody: "키덱의 전용 연주창에서 키보드와 패드를 누르면 연주 타이밍을 녹음할 수 있습니다. 녹음한 패드 연주를 반복 재생하고 저장·복원·공유하세요. 마이크 소리를 녹음하는 기능은 아닙니다.",
+      beatmakerPoints: ["키보드·마우스 패드 연주", "녹음·반복 재생·정지", "녹음과 음량 저장, 공유 지원"]
+    },
+    en: {
+      weatherTab: "New weather cards", beatmakerTab: "Beatmaker",
+      weatherTitle: "Three new ways to see the weather.",
+      weatherBody: "Choose from three new cards with forecasts for the next six hours, weather animations, and custom WebP/GIF artwork. Power-saving, hidden state, and system animation settings are respected. Screens use fixed sample weather.",
+      weatherPoints: ["Hourly forecasts in the location's time zone", "Existing designs and settings retained", "New labels in Korean and English; English fallback in other languages"],
+      beatmakerTitle: "Record your performance. Build your loop.",
+      beatmakerBody: "Use the dedicated KeyDeck performance window to play with your keyboard or pads. Record pad timing, loop your take, then save, restore, or share it. Recording captures pad events, not microphone audio.",
+      beatmakerPoints: ["Keyboard and mouse pad input", "Record, loop, and stop", "Save the take and volume; share recordings"]
+    },
+    ja: {
+      weatherTab: "新しい天気カード", beatmakerTab: "ビートメーカー",
+      weatherTitle: "天気を見る、新しい3つのスタイル。",
+      weatherBody: "新しいカード3種と今後6時間の予報、天気アニメーション、独自のWebP/GIFに対応します。省電力・非表示・システムのアニメーション設定を尊重します。画像は英語UIと固定の天気サンプルです。",
+      weatherPoints: ["地域のタイムゾーンに合わせた時間別予報", "既存のデザインと設定を保持", "新しい文言は韓国語・英語、その他は英語で代替表示"],
+      beatmakerTitle: "演奏を録音して、自分だけのループに。",
+      beatmakerBody: "KeyDeckの専用演奏画面でキーボードやパッドを使い、演奏のタイミングを記録できます。ループ再生・保存・復元・共有に対応します。マイク音声の録音ではありません。画像は英語UIの例です。",
+      beatmakerPoints: ["キーボードとマウスで演奏", "録音・ループ再生・停止", "演奏と音量の保存、共有"]
+    },
+    zh: {
+      weatherTab: "全新天气卡片", beatmakerTab: "节拍制作器",
+      weatherTitle: "查看天气的三种全新方式。",
+      weatherBody: "三种新卡片提供未来六小时预报、天气动画和自定义WebP/GIF，并遵循省电、隐藏与系统动画设置。图片使用英语界面和固定天气示例。",
+      weatherPoints: ["按所在地时区显示逐小时预报", "保留现有设计和设置", "新文字提供韩语和英语，其他语言使用英语回退"],
+      beatmakerTitle: "录下演奏，制作自己的循环。",
+      beatmakerBody: "在KeyDeck专用演奏窗口使用键盘或节拍垫，记录演奏时序，循环播放并保存、恢复或分享。录制的是节拍垫事件，不是麦克风音频。图片为英语界面示例。",
+      beatmakerPoints: ["键盘与鼠标演奏", "录制、循环播放与停止", "保存演奏与音量，分享录音"]
+    }
+  };
+  Object.entries(releaseScreens).forEach(([locale, copy]) => {
+    Object.assign(translations[locale], { tabWeather: copy.weatherTab, tabWeatherSmall: "6-hour forecast", tabBeatmaker: copy.beatmakerTab, tabBeatmakerSmall: "Record + loop" });
+    const imageLocale = locale === "ko" ? "ko" : "en";
+    screens[locale].weather = { image: `assets/screenshots/weather-4.8.0-${imageLocale}.png`, alt: copy.weatherTitle, kicker: "WEATHER CARDS", title: copy.weatherTitle, description: copy.weatherBody, points: copy.weatherPoints };
+    screens[locale].beatmaker = { image: `assets/screenshots/beatmaker-4.8.0-${imageLocale}.png`, alt: copy.beatmakerTitle, kicker: "BEATMAKER · RECORD + LOOP", title: copy.beatmakerTitle, description: copy.beatmakerBody, points: copy.beatmakerPoints };
   });
 
   const richTextKeys = new Set(["unifiedTitle", "heroTitle", "desktopTitle", "featuresTitle", "atlasTitle", "exploreTitle", "googleTitle", "workflowTitle", "privacyTitle", "faqTitle", "ctaTitle", "shareTitle"]);

@@ -2182,8 +2182,11 @@ h2 em {
   .screen-explorer { grid-template-columns: 1fr; }
   .screen-tabs {
     display: grid;
-    grid-template-columns: repeat(4, minmax(150px, 1fr));
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(170px, 1fr);
     overflow-x: auto;
+    overflow-y: hidden;
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
@@ -2268,7 +2271,7 @@ h2 em {
   .feature-group { min-height: 0; padding: 27px 24px; border-right: 0; border-bottom: 1px solid var(--line); }
   .feature-group:nth-last-child(2) { border-bottom: 1px solid var(--line); }
   .feature-group:last-child { border-bottom: 0; }
-  .screen-tabs { grid-template-columns: repeat(4, 170px); }
+  .screen-tabs { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 170px; }
   .screen-tabs button { padding: 18px 14px; }
   .screen-panel { gap: 32px; padding: 22px 0 30px; }
   .screen-shot { border-right: 0; border-left: 0; border-radius: 0; }
