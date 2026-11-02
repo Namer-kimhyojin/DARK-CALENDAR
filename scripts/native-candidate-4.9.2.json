@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "repository": "Namer-kimhyojin/DARK-CALENDAR",
+  "repository_id": 1195286732,
+  "candidate_version": "4.9.2",
+  "candidate_commit": "4818a7b8957c9f59af8e37fb6632256946bff5f3",
+  "candidate_run_id": 41369216042,
+  "artifacts": {
+    "payload": {
+      "id": 13108486777,
+      "name": "darkcalendar-dist-x64",
+      "sha256": "5ed06aab74f23ac56132d6ad1fe824f7ee97aab2c02da1f5c96edbefc37812be"
+    },
+    "msix": {
+      "id": 13108337024,
+      "name": "darkcalendar-msix-x64",
+      "sha256": "61e5d83b3c5b00940180cdb7ca7fc34049ab0a27f819c66f8b8e6bbf3fb93914"
+    },
+    "release_assets": {
+      "id": 13108097891,
+      "name": "darkcalendar-github-release-x64",
+      "sha256": "c1469f971ad3767e29eb4b147f390f161278a9b31bde5ed96004eab2d80b77d5"
+    }
+  },
+  "qa_sha256": {
+    "scripts/native_exception_observer.py": "b96c515c81ccdcfa4bc5bb78fecb046893b8abfcd2d0c0540b8c39e2309323cd",
+    "scripts/native_release_smoke.py": "b49de2cfa9d10f3f529ae058275b979744a1f14cfd106105443506c546f08f04",
+    "scripts/prepare_native_smoke_baseline.py": "2e9bff8f8cda2252b33b117687f4f1b22f66e35f1ffda78aa6618d58cd69c33a",
+    "scripts/sqlite-runtime-lock.json": "bd56ccc86508e8fc5e61cc12097990d76cbd5ae16f2a8a7eb5d0be6ef8231b77",
+    "scripts/verify_native_candidate_inputs.py": "4ebb9d744c7c9ab0d2edd0167ead50abe58778bcbbac69138c50a48dce813f94",
+    "scripts/verify_sqlite_runtime.py": "35f149eafda0dee38dd9dd2d69133d46e8c0fe2af721ab113f1f10c08619c1d7"
+  }
+}

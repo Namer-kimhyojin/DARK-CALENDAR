@@ -22,6 +22,7 @@ QA_FILES = frozenset(
         "scripts/native-candidate-4.6.4.json",
         "scripts/native-candidate-4.7.1.json",
         "scripts/native-candidate-4.9.1.json",
+        "scripts/native-candidate-4.9.2.json",
         "scripts/native_release_smoke.py",
         "scripts/native_exception_observer.py",
         "tests/test_native_release_smoke.py",

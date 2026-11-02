@@ -12,6 +12,56 @@ import pytest
 from scripts import native_release_smoke as smoke
 
 
+@pytest.mark.parametrize("database_bad", [False, True])
+def test_historical_failure_needs_independent_closed_database_integrity(
+    tmp_path, monkeypatch, database_bad
+):
+    evidence = tmp_path / "legacy"
+    evidence.mkdir()
+    values = {
+        "native-exception-events.json": {
+            "events": [
+                {"kind": 1, "first_chance": False, "diagnostic_dump": "native-second-chance-17.dmp"}
+            ]
+        },
+        "failure-process-state.json": {},
+        "ui-activity.json": [],
+    }
+    for name, value in values.items():
+        (evidence / name).write_text(json.dumps(value), encoding="utf-8", errors="strict")
+    (evidence / "failure-application.log").write_text(
+        "clean synthetic shutdown", encoding="utf-8", errors="strict"
+    )
+    (evidence / "native-second-chance-17.dmp").write_bytes(b"synthetic dump")
+    monkeypatch.setattr(smoke, "sha256", lambda _path: "synthetic")
+    monkeypatch.setattr(
+        smoke,
+        "classify_legacy_sip_shutdown",
+        Mock(
+            return_value={
+                "passed": False,
+                "normal_exit": False,
+                "profile_integrity_check_required": True,
+            }
+        ),
+    )
+    check = Mock(
+        side_effect=RuntimeError("fixture corruption") if database_bad else None,
+        return_value={"integrity_check": "ok", "fixture_preserved": True},
+    )
+    monkeypatch.setattr(smoke, "inspect_database", check)
+    engine, database = object(), tmp_path / "synthetic.db"
+    if database_bad:
+        with pytest.raises(RuntimeError, match="fixture corruption"):
+            smoke.inspect_closed_legacy_upgrade_fixture(tmp_path, evidence, engine, database)
+        assert not (evidence / "historical-failure-classification.json").exists()
+    else:
+        result = smoke.inspect_closed_legacy_upgrade_fixture(tmp_path, evidence, engine, database)
+        assert result["passed"] is False and result["normal_exit"] is False
+        assert result["profile_integrity_check_required"] is False
+    check.assert_called_once_with(engine, database, True)
+
+
 def hosted_environment(temporary):
     return {
         "GITHUB_ACTIONS": "true",

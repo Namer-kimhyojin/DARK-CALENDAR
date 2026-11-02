@@ -13,6 +13,7 @@ import ctypes
 from ctypes import wintypes
 from datetime import UTC, datetime
 from pathlib import Path
+import struct
 import threading
 import time
 
@@ -120,6 +121,117 @@ def classify_rpc(trace: dict, diagnostic_count: int, pid: int) -> dict:
         "process_exit_code": 0,
         "handler_identity": "not determined; original Windows/application handlers ran",
         "debugger_timing_limitation": "Debugger attachment may alter exception/UI timing",
+    }
+
+
+def classify_legacy_sip_shutdown(trace, state, activities, log, dump, exe_sha256, sip_sha256):
+    """Identify only the immutable 4.3.3 post-DB-close SIP teardown fault.
+
+    This is a FAILED historical launch, never a successful candidate launch.
+    The caller must separately check the closed synthetic DB before using it as
+    an upgrade-from-crashed-legacy fixture. New candidate exits remain strict.
+    """
+    if (
+        exe_sha256 != "1363e829f3c71e4e38222497076237c84fff5875d056ca6f50a7f6067e5100d5"
+        or sip_sha256 != "3f36d67b20f505dde46032f79d5e384ef3ba34faed586ee086f5827867f6bdb0"
+        or trace.get("error")
+        or not trace.get("attached")
+        or not trace.get("completed")
+        or trace.get("exit_code") != 0xC0000005
+        or state.get("parent_exit_code") != 0xC0000005
+        or state.get("remaining_native_pids") != []
+        or state.get("force_killed") is not False
+        or trace.get("pid") != state.get("launched_parent_pid")
+        or not isinstance(trace.get("pid"), int)
+        or trace["pid"] <= 0
+    ):
+        raise RuntimeError("Not the pinned historical SIP shutdown failure")
+    events = trace["events"]
+    if any(row.get("pid") != trace["pid"] or row["kind"] == 9 for row in events):
+        raise RuntimeError("Legacy observer has unrelated or RIP events")
+    if len([row for row in events if row["kind"] == 5]) != 1:
+        raise RuntimeError("Missing unique historical process-exit event")
+    exceptions = [row for row in events if row["kind"] == 1]
+    faults = [row for row in exceptions if not row["first_chance"]]
+    if len(faults) != 1 or faults[0]["code"] != "0xc0000005":
+        raise RuntimeError("Legacy failure has another second-chance exception")
+    for row in exceptions:
+        if row["code"] not in {"0xc0000005", "0x8001010d", "0x80000003"}:
+            raise RuntimeError("Legacy failure has an unclassified exception")
+        if row["code"] == "0x80000003" and not row.get("attach_breakpoint"):
+            raise RuntimeError("Legacy failure has an unrelated breakpoint")
+    fault = faults[0]
+    access = [row for row in exceptions if row["code"] == "0xc0000005"]
+    if (
+        len(access) != 2
+        or not access[0]["first_chance"]
+        or access[1]["first_chance"]
+        or access[0].get("exception_address") != fault.get("exception_address")
+        or access[0].get("exception_parameters") != fault.get("exception_parameters")
+        or access[0].get("tid") != fault.get("tid")
+        or not fault.get("exception_parameters")
+        or fault["exception_parameters"][0] != 0
+    ):
+        raise RuntimeError("Missing exact first/second-chance legacy read-fault pair")
+    if not any(
+        row["phase"] == "exit_confirmation_observed"
+        and row["process_running"]
+        and row["monotonic"] < fault["monotonic"]
+        for row in activities
+    ) or not any(row["phase"] == "exit_yes_clicked" for row in activities):
+        raise RuntimeError("No normal legacy Exit confirmation/input evidence")
+    required = (
+        "Shutting down background workers",
+        "AlarmWorker stopping",
+        f"Database connection closed for thread {fault['tid']}.",
+    )
+    if any(marker not in log for marker in required):
+        raise RuntimeError("Legacy failure preceded main-thread database shutdown")
+    if dump[:4] != b"MDMP" or len(dump) < 32:
+        raise RuntimeError("Missing valid legacy crash dump")
+    streams, directory = struct.unpack_from("<II", dump, 8)
+    if streams > 1000 or directory + streams * 12 > len(dump):
+        raise RuntimeError("Invalid legacy dump directory")
+    address = int(fault["exception_address"], 16)
+    expected_tail = b"".join(bytes((ord(c), 0)) for c in "\\PyQt6\\sip.cp313-win_amd64.pyd")
+    identified = False
+    for index in range(streams):
+        kind, size, rva = struct.unpack_from("<III", dump, directory + index * 12)
+        if kind != 4:
+            continue
+        if size < 4 or rva + size > len(dump):
+            raise RuntimeError("Invalid legacy module stream")
+        count = struct.unpack_from("<I", dump, rva)[0]
+        if count > 5000 or 4 + count * 108 > size:
+            raise RuntimeError("Invalid legacy module count")
+        for number in range(count):
+            base, image_size, _checksum, timestamp, name_rva = struct.unpack_from(
+                "<QIIII", dump, rva + 4 + number * 108
+            )
+            if not base <= address < base + image_size:
+                continue
+            if name_rva + 4 > len(dump):
+                raise RuntimeError("Invalid legacy module name")
+            length = struct.unpack_from("<I", dump, name_rva)[0]
+            if length > 8192 or length % 2 or name_rva + 4 + length > len(dump):
+                raise RuntimeError("Invalid legacy module name bounds")
+            name = dump[name_rva + 4 : name_rva + 4 + length]
+            identified = (
+                name.lower().endswith(expected_tail.lower())
+                and image_size == 131072
+                and timestamp == 1773058744
+                and address - base == 0x10496
+            )
+    if not identified:
+        raise RuntimeError("Legacy fault is not the pinned SIP instruction/module")
+    return {
+        "passed": False,
+        "normal_exit": False,
+        "exit_code": 0xC0000005,
+        "classification": "historical_4.3.3_sip_13.11.1_post_database_close_fault",
+        "fault_offset": "0x10496",
+        "candidate_exit_requirement_unchanged": "all six candidate launches must exit zero",
+        "profile_integrity_check_required": True,
     }
 
 

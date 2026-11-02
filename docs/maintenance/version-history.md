@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.9.2 | 2026-11-02T10:13:36.278627+09:00 | change | QA-only: preserve exact historical 4.3.3 SIP teardown failure as FAILED, independently validate its closed synthetic upgrade DB, and require all six unchanged 4.9.2 candidate exits zero | `native-legacy-upgrade-fixture-20261102` |
 | 4.9.2 | 2026-11-02T09:48:07.711805+09:00 | release | All post-4.8.0 widget, workspace, localization and calendar-sync improvements plus reviewed SIP 13.12.0 shutdown runtime and Qt message fallback correction | `release-4.9.2-integrated-20261102` |
 | 4.9.1 | 2026-11-02T09:45:28.645852+09:00 | module | Keep source-run and CI dependency installation on the same reviewed PyQt6-sip 13.12.0 as the release runtime lock | `qt-sip-development-pin-20261102` |
 | 4.9.1 | 2026-11-02T09:43:46.857816+09:00 | module | Pin PyQt6-sip 13.12.0 instead of 13.11.1 after a native second-chance shutdown dump in SIP; retain PyQt6 and Qt 6.10.2 and revalidate complete source and final native EXE | `qt-sip-runtime-shutdown-fix-20261102` |

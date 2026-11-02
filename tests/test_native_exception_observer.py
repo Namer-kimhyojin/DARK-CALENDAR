@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Pure/mocked debugger tests: no process, debugger or GUI is started locally."""
 
+from copy import deepcopy
+import struct
 from unittest.mock import Mock
 
 import pytest
@@ -188,3 +190,112 @@ def test_second_chance_retains_fault_details_without_consuming_exception(
     assert kernel.ContinueDebugEvent.call_args_list[1].args[2] == 0x80010001
     with pytest.raises(RuntimeError, match="exit code zero"):
         observer.classify_rpc(instance.trace, 0, 42)
+
+
+def legacy_failure():
+    fault = {
+        "kind": 1,
+        "pid": 42,
+        "tid": 17,
+        "code": "0xc0000005",
+        "first_chance": True,
+        "exception_address": "0x110496",
+        "exception_parameters": [0, 123],
+        "monotonic": 5,
+    }
+    second = {**fault, "first_chance": False}
+    trace = {
+        "pid": 42,
+        "attached": True,
+        "completed": True,
+        "exit_code": 0xC0000005,
+        "events": [fault, second, {"kind": 5, "pid": 42}],
+    }
+    state = {
+        "launched_parent_pid": 42,
+        "parent_exit_code": 0xC0000005,
+        "remaining_native_pids": [],
+        "force_killed": False,
+    }
+    activities = [
+        {"phase": "exit_confirmation_observed", "process_running": True, "monotonic": 4},
+        {"phase": "exit_yes_clicked"},
+    ]
+    log = "Shutting down background workers\nAlarmWorker stopping\nDatabase connection closed for thread 17."
+    dump = bytearray(256)
+    dump[:4] = b"MDMP"
+    struct.pack_into("<II", dump, 8, 1, 32)
+    struct.pack_into("<III", dump, 32, 4, 112, 44)
+    struct.pack_into("<I", dump, 44, 1)
+    struct.pack_into("<QIIII", dump, 48, 0x100000, 131072, 0, 1773058744, 160)
+    name = b"".join(bytes((ord(c), 0)) for c in "D:\\PyQt6\\sip.cp313-win_amd64.pyd")
+    struct.pack_into("<I", dump, 160, len(name))
+    dump[164 : 164 + len(name)] = name
+    return trace, state, activities, log, bytes(dump)
+
+
+def test_known_old_shutdown_failure_remains_failed_and_requires_database_validation():
+    result = observer.classify_legacy_sip_shutdown(
+        *legacy_failure(),
+        "1363e829f3c71e4e38222497076237c84fff5875d056ca6f50a7f6067e5100d5",
+        "3f36d67b20f505dde46032f79d5e384ef3ba34faed586ee086f5827867f6bdb0",
+    )
+    assert result["passed"] is False and result["normal_exit"] is False
+    assert result["profile_integrity_check_required"] is True
+    assert "all six candidate" in result["candidate_exit_requirement_unchanged"]
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        "candidate_exe",
+        "sip_binary",
+        "incomplete",
+        "alive",
+        "killed",
+        "different_pid",
+        "no_exit",
+        "other_exception",
+        "no_first",
+        "no_confirmation",
+        "no_main_db_close",
+        "bad_dump",
+        "wrong_module",
+        "wrong_instruction",
+    ],
+)
+def test_legacy_classification_cannot_exempt_new_or_unproven_failures(change):
+    trace, state, activities, log, dump = deepcopy(legacy_failure())
+    exe = "1363e829f3c71e4e38222497076237c84fff5875d056ca6f50a7f6067e5100d5"
+    sip = "3f36d67b20f505dde46032f79d5e384ef3ba34faed586ee086f5827867f6bdb0"
+    if change == "candidate_exe":
+        exe = "0" * 64
+    elif change == "sip_binary":
+        sip = "0" * 64
+    elif change == "incomplete":
+        trace["completed"] = False
+    elif change == "alive":
+        state["remaining_native_pids"] = [42]
+    elif change == "killed":
+        state["force_killed"] = True
+    elif change == "different_pid":
+        state["launched_parent_pid"] = 43
+    elif change == "no_exit":
+        trace["events"].pop()
+    elif change == "other_exception":
+        trace["events"][1]["code"] = "0xc00000fd"
+    elif change == "no_first":
+        trace["events"].pop(0)
+    elif change == "no_confirmation":
+        activities.pop(0)
+    elif change == "no_main_db_close":
+        log = log.replace("thread 17", "thread 18")
+    elif change == "bad_dump":
+        dump = b"bad"
+    elif change == "wrong_module":
+        dump = dump.replace(b"s\x00i\x00p\x00", b"b\x00a\x00d\x00")
+    elif change == "wrong_instruction":
+        for event in trace["events"][:2]:
+            event["exception_address"] = "0x110497"
+    with pytest.raises(RuntimeError):
+        observer.classify_legacy_sip_shutdown(trace, state, activities, log, dump, exe, sip)

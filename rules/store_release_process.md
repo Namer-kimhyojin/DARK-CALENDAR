@@ -214,6 +214,18 @@ The previous public baseline is pinned and checked by
 `scripts/prepare_native_smoke_baseline.py`. These checks do not establish current
 Store package-identity behavior or a real user's DB health.
 
+The immutable 4.3.3 fixture generator has a separately identified historical
+SIP 13.11.1 interpreter-teardown fault. It must remain recorded as a FAILED old
+launch, never as a normal exit or a successful candidate cycle. An upgrade from
+that closed synthetic profile may continue only when the exact pinned old EXE
+and SIP hashes, complete same-PID first/second-chance read-fault pair, minidump
+SIP image/timestamp and offset 0x10496, normal Exit confirmation, main-thread DB
+close, process exit without force-kill, and independent integrity/foreign-key
+and fixture-preservation checks all match. Any other old failure still blocks.
+All SIX actual candidate launches and exits must still pass the unchanged
+zero-exit, log, data, exception-observer, visibility and screenshot checks.
+The failed old launch and its dump remain in the evidence and summary.
+
 ### Revalidating an unchanged candidate with a newer QA commit
 
 Keep the candidate build commit/version separate from the QA commit/version.
