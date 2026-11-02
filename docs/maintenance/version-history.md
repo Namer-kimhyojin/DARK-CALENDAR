@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.9.2 | 2026-11-03T03:22:48.049259+09:00 | change | 4.9.2 배포 확인표의 원래 출시일을 유지하고 Store 게시 후속 관찰일을 별도 표시 | `maintenance-20261103-preserve-release-date-contract` |
 | 4.9.2 | 2026-11-03T03:18:49.003067+09:00 | change | Store 4.9.2 게시 확인에 따른 홈페이지 상태와 유지보수 후보·2일차 점검 인수 기록 정합화; 제품 버전 유지 | `maintenance-20261103-store-492-published-day02` |
 | 4.9.2 | 2026-11-02T10:13:36.278627+09:00 | change | QA-only: preserve exact historical 4.3.3 SIP teardown failure as FAILED, independently validate its closed synthetic upgrade DB, and require all six unchanged 4.9.2 candidate exits zero | `native-legacy-upgrade-fixture-20261102` |
 | 4.9.2 | 2026-11-02T09:48:07.711805+09:00 | release | All post-4.8.0 widget, workspace, localization and calendar-sync improvements plus reviewed SIP 13.12.0 shutdown runtime and Qt message fallback correction | `release-4.9.2-integrated-20261102` |
