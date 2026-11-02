@@ -23,3 +23,12 @@
 ## 로컬 도구 제한
 
 Windows 앱 제어 정책이 일부 pre-commit 보조 실행 파일을 차단했다. 정책을 변경하지 않았으며, 통과한 진단 테스트·인코딩·Ruff·YAML·compile 및 staged whitespace/conflict/debug-statement 검사를 근거로 GitHub API에 정확한 QA bytes를 기록하고 원격 CI를 확인했다. 이 제한을 회피하기 위해 차단 실행 파일을 이동하거나 보안 정책을 끄지 않았다.
+
+
+## 4.9.2 최종 결과
+
+SIP 13.12.0과 Qt 문구 수정 후 최종 격리 회귀는 3,168건 통과, Windows 심볼릭 링크 권한 제약 4건 건너뜀이다. 단일 build commit `4818a7b8957c9f59af8e37fb6632256946bff5f3`의 동일 payload를 QA commit `fba7fb1a231f496c5c79d53ff06cd84a841ab37e`의 별도 VM run `41371580195`에서 검증했다. 새 프로필 3회와 기존 데이터 업그레이드 프로필 3회가 모두 정상 기동·정상 종료·재시작했고, 6개 화면과 DB 보존·무결성·원본 payload 해시를 확인했다. 최종 run에서는 이전 4.3.3 fixture도 정상 종료했으므로 제한적 legacy 예외 분류를 사용하지 않았다.
+
+원본 build run의 앞선 OS 화면 가림 실패와 이전 4.3.3 SIP 종료 실패 증거는 각각 별도로 보존한다. 최종 성공이 앞선 실패를 삭제하거나 최초 4.9.1의 정확한 원인을 소급 입증하지 않는다. 6회 성공은 간헐적 오류가 전혀 없다는 보장이 아니다.
+
+GitHub release `430981895`로 같은 4.9.2 파일을 공개하고 자산 6개를 새로 다운로드해 검토한 draft와 완전히 일치함을 확인했다. 증거는 `artifacts/deployment/4.9.2/20261102-0943/`의 `private-candidate-verification.json`, `candidate-verification.json`, `native-visual-review.json`, `public-download-verification.json`에 있다. Store 제출과 실제 설치판 인수는 아직 별도 대기 단계다.

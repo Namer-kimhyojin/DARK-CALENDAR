@@ -2,15 +2,15 @@
   "use strict";
 
   const fallbackConfig = {
-    appVersion: "4.8.0",
-    storeReleaseStatus: "published",
+    appVersion: "4.9.2",
+    storeReleaseStatus: "submission_pending",
     requestBoardApi: "https://air-calendar-requests.kimhj.chatgpt.site",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
     promotionKitUrl: "promo.html",
-    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.8.0",
-    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v4.8.0/LICENSE",
-    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v4.8.0/THIRD_PARTY_NOTICES.md",
+    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.9.2",
+    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v4.9.2/LICENSE",
+    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v4.9.2/THIRD_PARTY_NOTICES.md",
     eventUrl: "https://account.microsoft.com/billing/redeem?mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ",
     event: { enabled: true }
   };
@@ -730,10 +730,10 @@
   });
 
   const releaseAvailabilityCopy = {
-    ko: { storePending: "GitHub 공개 완료 · Store 심사 중", githubLatest: "최신 GitHub 배포 보기 ↗" },
-    en: { storePending: "Released on GitHub · Store certification in progress", githubLatest: "View the latest GitHub release ↗" },
-    ja: { storePending: "GitHubで公開済み · Storeで審査中", githubLatest: "最新のGitHubリリースを見る ↗" },
-    zh: { storePending: "已在GitHub发布 · Store审核中", githubLatest: "查看最新GitHub版本 ↗" }
+    ko: { storePending: "GitHub 4.9.2 공개 완료 · Store 제출 준비 중", githubLatest: "최신 GitHub 배포 보기 ↗" },
+    en: { storePending: "4.9.2 released on GitHub · Store submission being prepared", githubLatest: "View the latest GitHub release ↗" },
+    ja: { storePending: "4.9.2はGitHubで公開済み · Store提出準備中", githubLatest: "最新のGitHubリリースを見る ↗" },
+    zh: { storePending: "4.9.2已在GitHub发布 · 正在准备提交Store", githubLatest: "查看最新GitHub版本 ↗" }
   };
   Object.entries(releaseAvailabilityCopy).forEach(([locale, copy]) => Object.assign(translations[locale], copy));
 
