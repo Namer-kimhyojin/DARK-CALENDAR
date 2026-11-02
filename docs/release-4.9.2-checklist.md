@@ -1,6 +1,6 @@
 # Air Calendar 4.9.2 배포 확인표
 
-**Date:** 2026-11-02
+**Date:** 2026-11-03 (게시 후속 확인)
 
 사용자의 2026-11-02 누적 개선 통합 배포 요청을 수행한다. 4.8.0 이후의 위젯 그래픽·디자인·통합 관리·작업 공간, 다국어, 동기화·구독 개선을 모두 포함한다. 새 기능에 더해 배포 검증에서 확인한 Qt 문구 누락 수정과 SIP 런타임 갱신을 포함한다.
 
@@ -13,11 +13,12 @@
 - [x] 동일 draft 공개·공개 파일 재다운로드·코드/리소스·의존성·SQLite·클린 DB·라이선스·대응 소스 검증
 - [x] 홈페이지 최신 버전·Store 상태 안내 반영과 공개 확인
 - [x] Store 원본 listing 보존·18언어 변경 안내·패키지 업로드 검증·심사 제출
-- [ ] Store 게시·공식 설치 업데이트·실제 설치 앱 인수
+- [x] Store Submission 32 게시·공개 4.9.2.0 x64 패키지 확인
+- [ ] 공식 설치 업데이트·실제 설치 앱 인수 — 실행 중인 4.8.0.0의 사용자 정상 종료 대기
 
 증거: `artifacts/deployment/4.9.2/20261102-0943/`. [4.9.1 종료 오류 진단](maintenance/native-shutdown-20261102.md)의 실패와 성공 결과를 모두 보존한다. 과거 패키지·태그·원본 증거는 변경하지 않는다.
 
-초기 브라우저 연결 제한은 사용자 설정·로그인 후 해소됐다. 11/02 13시대 인증된 포털에서 기존 Submission 32를 재사용하여 4.9.2.0 x64를 제출했다. 화면은 ‘제품 업데이트: 인증 중’, 세부 단계는 ‘사전 처리 중’이다. 심사 통과 후 자동 게시를 유지하며, 현재 게시본 Submission 31·설치판 4.8.0.0과 구분한다.
+초기 브라우저 연결 제한은 사용자 설정·로그인 후 해소됐다. 11/02 13시대 기존 Submission 32에 4.9.2.0 x64를 제출했고, **11/03 03:05 KST 인증된 포털에서 제품 업데이트 완료·Store 제공·현재 제출 32를 확인**했다. 해당 공개 제출의 Packages도 4.9.2.0 x64다. 정확한 서버 게시 완료 시각은 추정하지 않는다. 이 PC의 설치판은 별도 조회에서 4.8.0.0이며 사용자 실행 인스턴스를 보존한다.
 
 ## 공개 파일과 검증 연결
 
@@ -33,4 +34,6 @@
 
 홈페이지 공개 확인: 기존 GitHub Pages의 index.html·app.js·site-config.json이 publication commit 53e532c661595096003675a9a57d8fef28798101의 원격 bytes와 일치한다. Pages run 41373493824 성공. 브라우저 UI 세션은 비활성화여서 HTTP 대조 범위로 기록한다.
 
-Store 제출 증거: `artifacts/deployment/4.9.2/20261102-0943/store-submission-32/`의 `submission-receipt.json`, `submission-confirmed.jpg`, `package-upload-verification.json`, `listing-readback-verification.json`. 심사 접수를 확인했으므로 게시 대기는 다음 승인된 후속 조회에서 이어가며, 설치 완료로 보고하지 않는다.
+Store 제출 증거: `artifacts/deployment/4.9.2/20261102-0943/store-submission-32/`의 `submission-receipt.json`, `submission-confirmed.jpg`, `package-upload-verification.json`, `listing-readback-verification.json`.
+
+게시 확인 증거: `artifacts/maintenance/20261103-0302/store-publication-observation.json`, `store-published-overview.png`, `store-published-package.png`. 공식 Store에서 Air Calendar 업데이트 1건이 제공되는 것을 확인했다. 현재 실행 중인 4.8.0.0을 강제 종료하거나 사이드로드하지 않고 사용자에게 정상 종료를 요청했다. 설치 완료·사용자 데이터 비교·설치 앱 정상 종료/재시작은 별도 후속이며, 동일 후보의 새 빌드·버전 증가·재제출은 없다. [11/03 유지보수 기록](maintenance/review-20261103.md).
