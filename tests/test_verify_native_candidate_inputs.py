@@ -49,7 +49,7 @@ def test_development_version_only_change_can_reuse_candidate(repository, version
     assert result["product_dependency_packaging_inputs_unchanged"]
 
 
-@pytest.mark.parametrize("version", ["4.6.4", "4.7.1"])
+@pytest.mark.parametrize("version", ["4.6.4", "4.7.1", "4.9.1"])
 def test_only_reviewed_exact_candidate_policy_paths_are_qa_files(repository, version):
     root, policy = repository
     name = f"scripts/native-candidate-{version}.json"

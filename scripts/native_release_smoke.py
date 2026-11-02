@@ -974,7 +974,9 @@ def _controls(window) -> list[dict]:
 def start_ready_observer(process, evidence: Path, log_path: Path, diagnostic: dict, activity):
     if "observer" not in diagnostic:
         observer = ExceptionObserver(
-            process.pid, lambda: require_hosted_runner(os.environ, sys.platform, evidence)
+            process.pid,
+            lambda: require_hosted_runner(os.environ, sys.platform, evidence),
+            evidence=evidence,
         )
         diagnostic["observer"] = observer
         observer.start()

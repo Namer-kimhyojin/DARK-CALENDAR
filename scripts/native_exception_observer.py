@@ -12,6 +12,7 @@ from __future__ import annotations
 import ctypes
 from ctypes import wintypes
 from datetime import UTC, datetime
+from pathlib import Path
 import threading
 import time
 
@@ -122,10 +123,53 @@ def classify_rpc(trace: dict, diagnostic_count: int, pid: int) -> dict:
     }
 
 
+def write_crash_dump(pid: int, destination: Path) -> None:
+    """Read a failed disposable debuggee from this separate observer process.
+
+    No exception context is fabricated; the event records the fault address and
+    thread separately, and the dump retains the suspended thread contexts.
+    """
+    import msvcrt
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    process = kernel.OpenProcess(0x0410, False, pid)  # QUERY_INFORMATION | VM_READ
+    if not process:
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        dbghelp = ctypes.WinDLL("dbghelp", use_last_error=True)
+        dbghelp.MiniDumpWriteDump.argtypes = [
+            wintypes.HANDLE,
+            wintypes.DWORD,
+            wintypes.HANDLE,
+            wintypes.DWORD,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+        ]
+        dbghelp.MiniDumpWriteDump.restype = wintypes.BOOL
+        with destination.open("wb") as stream:
+            if not dbghelp.MiniDumpWriteDump(
+                process,
+                pid,
+                msvcrt.get_osfhandle(stream.fileno()),
+                0x1000,
+                None,
+                None,
+                None,
+            ):
+                raise ctypes.WinError(ctypes.get_last_error())
+    finally:
+        kernel.CloseHandle(process)
+
+
 class ExceptionObserver:
-    def __init__(self, pid: int, guard):
+    def __init__(self, pid: int, guard, *, evidence: Path | None = None):
         guard()  # Caller repeats the hosted-runner safety contract before attach.
         self.pid = pid
+        self.evidence = evidence
         self.ready = threading.Event()
         self.stop_requested = threading.Event()
         self.trace = {"pid": pid, "attached": False, "completed": False, "events": []}
@@ -193,7 +237,20 @@ class ExceptionObserver:
                     code = event.payload.exception.record.code
                     first = bool(event.payload.exception.first_chance)
                     item.update(code=f"0x{code:08x}", first_chance=first)
+                    record = event.payload.exception.record
+                    item["exception_address"] = f"0x{int(record.address or 0):016x}"
+                    item["exception_parameters"] = [
+                        int(record.parameters[index])
+                        for index in range(min(int(record.parameter_count), 15))
+                    ]
                     item["attach_breakpoint"] = initial_breakpoint and code == 0x80000003
+                    if not first and self.evidence is not None:
+                        try:
+                            dump = self.evidence / f"native-second-chance-{event.tid}.dmp"
+                            write_crash_dump(self.pid, dump)
+                            item["diagnostic_dump"] = dump.name
+                        except Exception as error:
+                            item["diagnostic_dump_error"] = f"{type(error).__name__}: {error}"
                 if event.kind == 5:
                     self.trace["exit_code"] = int(event.payload.exit_code)
                 self.trace["events"].append(item)

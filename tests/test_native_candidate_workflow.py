@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-POLICY = ROOT / "scripts/native-candidate-4.7.1.json"
+POLICY = ROOT / "scripts/native-candidate-4.9.1.json"
 
 
 def workflow():
@@ -27,9 +27,9 @@ def test_candidate_workflow_is_manual_read_only_on_fresh_hosted_vm():
     assert len(value["jobs"]) == 1
     job = value["jobs"]["verify-native-candidate-x64"]
     assert job["runs-on"] == "windows-latest"
-    assert job["env"]["CANDIDATE_VERSION"] == "4.7.1"
+    assert job["env"]["CANDIDATE_VERSION"] == "4.9.1"
     assert value["concurrency"] == {
-        "group": "verify-native-candidate-4.7.1",
+        "group": "verify-native-candidate-4.9.1",
         "cancel-in-progress": False,
     }
     checkout = next(
@@ -78,26 +78,26 @@ def test_candidate_policy_hash_and_qa_helper_hashes_are_pinned():
     job = workflow()["jobs"]["verify-native-candidate-x64"]
     assert hashlib.sha256(POLICY.read_bytes()).hexdigest() == job["env"]["CANDIDATE_POLICY_SHA256"]
     policy = json.loads(POLICY.read_text(encoding="utf-8", errors="strict"))
-    assert policy["candidate_version"] == job["env"]["CANDIDATE_VERSION"] == "4.7.1"
+    assert policy["candidate_version"] == job["env"]["CANDIDATE_VERSION"] == "4.9.1"
     assert policy["repository"] == "Namer-kimhyojin/DARK-CALENDAR"
     assert policy["repository_id"] == 1195286732
-    assert policy["candidate_run_id"] == 39536866518
-    assert policy["candidate_commit"] == "6329be6f8a0b91946837289f44d56637b9a91636"
+    assert policy["candidate_run_id"] == 41366550223
+    assert policy["candidate_commit"] == "c0d4b01d903ab4cb89427d312ad1491d69c852fd"
     assert policy["artifacts"] == {
         "payload": {
-            "id": 12318496336,
+            "id": 13106773996,
             "name": "darkcalendar-dist-x64",
-            "sha256": "c5342ecbd38f20b126818738b7a58b1940e5c6cbb253d8a949dbda4c2f02b337",
+            "sha256": "2237d4188d85dd4d72b75a000f78fae2c14a88a878b546aa1b725cad105d967d",
         },
         "msix": {
-            "id": 12318441527,
+            "id": 13107347095,
             "name": "darkcalendar-msix-x64",
-            "sha256": "f483c06b9871233450cc9af60e7616b485a5ec1973f7aec08a78b2979e541129",
+            "sha256": "6e6474a844ef8fae037c3df1dc667a79315157ca6f893e787424fd23a7cab3ce",
         },
         "release_assets": {
-            "id": 12318456483,
+            "id": 13106898732,
             "name": "darkcalendar-github-release-x64",
-            "sha256": "ae63dbcc8d268e6c21bef445aede7498cba41b55462aa8ba94fd274348f3873c",
+            "sha256": "2d782dbbb8afd43df0e5b022b8f6b5f4c38ad4d948e7b42ced7cab60a98225d3",
         },
     }
     assert set(policy["qa_sha256"]) == {
@@ -123,10 +123,10 @@ def test_native_launch_is_after_provenance_and_evidence_is_always_preserved():
         i for i, step in enumerate(steps) if "native_release_smoke.py" in step.get("run", "")
     )
     assert checks < launch
-    assert "--policy scripts\\native-candidate-4.7.1.json" in steps[checks]["run"]
+    assert "--policy scripts\\native-candidate-4.9.1.json" in steps[checks]["run"]
     assert "if ($LASTEXITCODE -ne 0)" in steps[checks]["run"]
     evidence = steps[-1]
     assert evidence["if"] == "always()"
-    assert evidence["with"]["name"] == "darkcalendar-native-candidate-4.7.1-evidence-x64"
+    assert evidence["with"]["name"] == "darkcalendar-native-candidate-4.9.1-evidence-x64"
     assert "candidate-reuse-provenance.json" in evidence["with"]["path"]
     assert "native-release-evidence" in evidence["with"]["path"]

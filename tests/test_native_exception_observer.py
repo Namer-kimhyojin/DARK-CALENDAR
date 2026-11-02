@@ -145,3 +145,46 @@ def test_x64_debug_event_layout_matches_windows_sdk():
         assert observer.ctypes.sizeof(observer._ExceptionRecord) == 152
         assert observer._DebugEvent.payload.offset == 16
         assert observer.ctypes.sizeof(observer._DebugEvent) == 176
+
+
+@pytest.mark.parametrize("dump_fails", [False, True])
+def test_second_chance_retains_fault_details_without_consuming_exception(
+    tmp_path, monkeypatch, dump_fails
+):
+    kernel = Mock()
+    kernel.DebugActiveProcess.return_value = True
+    kernel.DebugSetProcessKillOnExit.return_value = True
+    kernel.ContinueDebugEvent.return_value = True
+    pending = iter([(1, 0x80000003, True), (1, 0xC0000005, False), (5, 0, False)])
+
+    def wait(pointer, _timeout):
+        kind, code, first = next(pending)
+        event = pointer._obj
+        event.kind, event.pid, event.tid = kind, 42, 17
+        if kind == 1:
+            record = event.payload.exception.record
+            record.code, record.address = code, 0x123456789ABC
+            record.parameter_count = 2
+            record.parameters[0], record.parameters[1] = 0, 0xDEAD
+            event.payload.exception.first_chance = first
+        else:
+            event.payload.exit_code = 0xC0000005
+        return True
+
+    kernel.WaitForDebugEvent.side_effect = wait
+    dumper = Mock(side_effect=OSError("synthetic dump failure") if dump_fails else None)
+    monkeypatch.setattr(observer.ctypes, "WinDLL", lambda *_args, **_kwargs: kernel)
+    monkeypatch.setattr(observer, "write_crash_dump", dumper)
+    instance = observer.ExceptionObserver(42, lambda: None, evidence=tmp_path)
+    instance._observe()
+    fault = instance.trace["events"][1]
+    assert fault["exception_address"] == "0x0000123456789abc"
+    assert fault["exception_parameters"] == [0, 0xDEAD]
+    dumper.assert_called_once_with(42, tmp_path / "native-second-chance-17.dmp")
+    if dump_fails:
+        assert "synthetic dump failure" in fault["diagnostic_dump_error"]
+    else:
+        assert fault["diagnostic_dump"] == "native-second-chance-17.dmp"
+    assert kernel.ContinueDebugEvent.call_args_list[1].args[2] == 0x80010001
+    with pytest.raises(RuntimeError, match="exit code zero"):
+        observer.classify_rpc(instance.trace, 0, 42)

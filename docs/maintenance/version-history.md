@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.9.1 | 2026-11-02T09:30:43.122086+09:00 | change | QA-only: retain second-chance exception address and read-only crash dump on disposable VM; pin unchanged 4.9.1 candidate for diagnostic revalidation | `release-4.9.1-native-diagnostics-20261102` |
 | 4.9.1 | 2026-11-02T09:14:32.969950+09:00 | change | Make preset timezone expectations locale-independent and modal automation test independent of the real weekday and current time | `release-4.9-test-determinism-20261102` |
 | 4.9.1 | 2026-11-02T09:12:30.268229+09:00 | release | All post-4.8.0 widget, workspace, multilingual and sync improvements; final source formatting included; 4.9.0 preflight reservation not built or published | `release-4.9.1-integrated-20261102` |
 | 4.9.0 | 2026-11-02T09:12:27.327987+09:00 | change | Normalize final release source import and formatting; AST unchanged across all changed Python files | `release-4.9-source-format-20261102` |
