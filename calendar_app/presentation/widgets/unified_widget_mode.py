@@ -32,6 +32,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLayout,
+    QLineEdit,
     QMenu,
     QPushButton,
     QScrollArea,
@@ -77,8 +78,12 @@ from calendar_app.presentation.widgets.widget_mode_opacity import (
 )
 from calendar_app.presentation.widgets.widget_mode_skins import (
     get_widget_mode_layout,
+    get_widget_mode_skin,
     read_widget_mode_layout_id,
     read_widget_mode_skin_id,
+    widget_layout_calendar_mode,
+    widget_layout_has_columns,
+    widget_layout_is_compact,
     widget_mode_layouts,
     widget_mode_skins,
     write_widget_mode_layout_id,
@@ -995,6 +1000,8 @@ class UnifiedWidgetWindow(QWidget):
         self._active_layout_id = ""
         self._free_runtime = None
         self._free_layout_active = False
+        self._workspace_board = None
+        self._workspace_board_active = False
         self._active_filter = "all"
         self._filter_buttons: dict[str, QToolButton] = {}
         self._compact_filter_actions = {}
@@ -1232,6 +1239,7 @@ class UnifiedWidgetWindow(QWidget):
         self.scroll_layout.addStretch()
         self.scroll.setWidget(self.scroll_content)
         self.agenda_layout.addWidget(self.scroll, 1)
+        self._build_workspace_features()
 
         surface_layout.addWidget(self.container, 1)
         footer = QHBoxLayout()
@@ -1290,6 +1298,70 @@ class UnifiedWidgetWindow(QWidget):
         self._apply_filter_responsive_layout()
         self._update_toolbar_labels()
         self._update_tab_order()
+
+    def _build_workspace_features(self):
+        from calendar_app.presentation.widgets.widget_workspace_ui import WorkspaceOverview
+
+        self.workspace_overview = WorkspaceOverview(self)
+        self.workspace_overview.hide()
+        self.hero_layout.addWidget(self.workspace_overview)
+        self.search_input = QLineEdit(self.agenda_section)
+        self.search_input.setObjectName("workspace_search")
+        self.search_input.setPlaceholderText(
+            t("widget_workspace.search", "선택한 날짜에서 검색 · Ctrl+F")
+        )
+        self.search_input.setAccessibleName(
+            t("widget_workspace.search_name", "선택한 날짜의 항목 검색")
+        )
+        self.search_input.setClearButtonEnabled(True)
+        self.search_input.hide()
+        self.agenda_layout.insertWidget(0, self.search_input)
+        self._search_timer = QTimer(self)
+        self._search_timer.setSingleShot(True)
+        self._search_timer.setInterval(120)
+        self._search_timer.timeout.connect(lambda: self.update_agenda(self._last_items))
+        self.search_input.textChanged.connect(self._workspace_search_changed)
+        self.view_btn = self._button(t("widget_workspace.view", "보기"), lambda: None)
+        self.view_btn.setProperty("compactControl", True)
+        self.view_btn.setIconSize(QSize(16, 16))
+        self.view_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.view_menu = QMenu(self.view_btn)
+        self.view_menu.aboutToShow.connect(self._fill_workspace_views)
+        self.view_btn.setMenu(self.view_menu)
+        self.toolbar.layout().insertWidget(self.toolbar.layout().count() - 1, self.view_btn)
+
+    def _workspace_search_changed(self, text):
+        if text.strip():
+            self._search_timer.start()
+        else:
+            self._search_timer.stop()
+            self.update_agenda(self._last_items)
+
+    def _fill_workspace_views(self):
+        self.view_menu.clear()
+        for spec in sorted(widget_mode_layouts(), key=lambda value: not value.searchable):
+            action = self.view_menu.addAction(t(spec.label_key, spec.label_default))
+            action.setCheckable(True)
+            action.setChecked(self.active_layout_id() == spec.layout_id)
+            action.triggered.connect(
+                lambda _checked=False, key=spec.layout_id: self.controller.set_layout(key)
+            )
+
+    def _configure_workspace(self, spec, *, free=False):
+        from calendar_app.presentation.widgets.widget_workspace_ui import WorkspaceBoard
+
+        board = not free and spec.presentation == "board"
+        if board != self._workspace_board_active:
+            self._last_render_key = None
+        self._workspace_board_active = board
+        self.workspace_overview.setVisible(not free and spec.show_overview)
+        self.search_input.setVisible(not free and spec.searchable)
+        if board and self._workspace_board is None:
+            self._workspace_board = WorkspaceBoard(self)
+            self.agenda_layout.addWidget(self._workspace_board, 1)
+        self.scroll.setVisible(not board)
+        if self._workspace_board is not None:
+            self._workspace_board.setVisible(board)
 
     def _button(self, text, callback):
         button = QToolButton(self)
@@ -1522,6 +1594,16 @@ class UnifiedWidgetWindow(QWidget):
         dialog.deleteLater()
 
     def keyPressEvent(self, event):
+        if (
+            not self._free_layout_active
+            and event.key() == Qt.Key.Key_F
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+        ):
+            self.search_input.show()
+            self.search_input.setFocus(Qt.FocusReason.ShortcutFocusReason)
+            self.search_input.selectAll()
+            event.accept()
+            return
         if event.key() == Qt.Key.Key_Escape and self._placement_origin is not None:
             self._cancel_placement_edit()
             event.accept()
@@ -1540,6 +1622,7 @@ class UnifiedWidgetWindow(QWidget):
         )
 
         if str(settings.value(FREE_LAYOUT_MODE_KEY, "preset")) == "free":
+            self._configure_workspace(layout_spec, free=True)
             self._apply_free_layout(read_free_layout(settings, preset_id=layout_spec.layout_id))
             return
         if self._free_runtime is not None:
@@ -1567,14 +1650,15 @@ class UnifiedWidgetWindow(QWidget):
 
         self.container_layout.setContentsMargins(0, 4, 0, 4)
         self.container_layout.setHorizontalSpacing(min(10, layout_spec.spacing))
-        self.container_layout.setVerticalSpacing(min(10, layout_spec.spacing))
+        self.container_layout.setVerticalSpacing(min(8, layout_spec.spacing))
         # Keep saved layout identity; only its presentation adapts to narrow windows.
         target_width = (
             self.controller.saved_size_for_layout(layout_spec).width()
             if resize_to_layout
             else self.width()
         )
-        compact = target_width < 640 and layout_spec.layout_id in {"dashboard", "magazine"}
+        compact = widget_layout_is_compact(layout_spec, target_width)
+        self._configure_workspace(layout_spec)
         calendar_supported = any(
             section == "calendar" for section, *_placement in layout_spec.placements
         )
@@ -1620,7 +1704,7 @@ class UnifiedWidgetWindow(QWidget):
             spacing=layout_spec.calendar_spacing,
             margins=layout_spec.calendar_margins,
         )
-        calendar_mode = "month" if layout_spec.layout_id in {"dashboard", "magazine"} else "week"
+        calendar_mode = widget_layout_calendar_mode(layout_spec, target_width)
         self.cal_grid.set_display_mode(calendar_mode)
         if not calendar_visible:
             self.cal_grid.hide()
@@ -1645,9 +1729,14 @@ class UnifiedWidgetWindow(QWidget):
             str(settings.value("widget_mode_show_hint", "false")).lower() == "true"
         )
         self.caption_label.hide()
-        self.hero.setVisible(not self.eyebrow_label.isHidden() or not self.hint_label.isHidden())
+        self.hero.setVisible(
+            not self.eyebrow_label.isHidden()
+            or not self.hint_label.isHidden()
+            or layout_spec.show_overview
+        )
 
         self._active_layout_id = layout_spec.layout_id
+        self._last_render_key = None
         self.container.setProperty("widgetLayout", layout_spec.layout_id)
         if resize_to_layout:
             self.resize(self.controller.saved_size_for_layout(layout_spec))
@@ -1708,8 +1797,11 @@ class UnifiedWidgetWindow(QWidget):
         self.apply_selected_layout(resize_to_layout=resize_to_layout, force=force)
 
     def apply_theme(self) -> None:
+        from calendar_app.presentation.widgets.widget_workspace_styles import workspace_styles
+
         tokens = _widget_theme_tokens(self.controller.main_window)
         settings = self.controller.main_window.settings
+        workspace_skin = get_widget_mode_skin(read_widget_mode_skin_id(settings))
         opacities = read_widget_opacities(settings)
         family = str(settings.value("widget_mode_font_family", QApplication.font().family()))
         try:
@@ -1724,6 +1816,7 @@ class UnifiedWidgetWindow(QWidget):
             weight,
             typography,
             read_widget_density(settings).key,
+            workspace_skin.surface_style,
             opacities,
         )
         if signature == self._style_signature:
@@ -1793,12 +1886,15 @@ class UnifiedWidgetWindow(QWidget):
             QCheckBox {{ color: {tokens["text_primary"]}; }}
             QCheckBox#agenda_complete {{ background: transparent; border: none; }}
             QCheckBox::indicator {{ width: 20px; height: 20px; }}
-        """,
+        """
+                + workspace_styles(tokens, workspace_skin),
                 *opacities,
             )
         )
         color = tokens.get("text_primary", "#ffffff")
         self.customize_btn.setIcon(_ic(ICON.DISPLAY_STYLE, color=color))
+        self.view_btn.setIcon(_ic(ICON.VIEW_MONTHLY, color=color))
+        self.view_menu.setStyleSheet(_widget_mode_menu_stylesheet(tokens))
         self.restore_btn.setIcon(_ic(ICON.CALENDAR, color=color))
         self.pin_btn.setIcon(_ic(ICON.ALWAYS_ON_TOP, color=color))
         for button in (self.restore_btn, self.customize_btn, self.pin_btn):
@@ -1847,7 +1943,10 @@ class UnifiedWidgetWindow(QWidget):
 
     def _update_toolbar_labels(self) -> None:
         """Measure real translated labels before exposing the wider toolbar."""
-        buttons = (self.restore_btn, self.customize_btn, self.pin_btn)
+        self.view_btn.setVisible(self.width() >= 380)
+        buttons = (self.restore_btn, self.customize_btn, self.pin_btn) + (
+            (self.view_btn,) if not self.view_btn.isHidden() else ()
+        )
         label_widths = [
             button.fontMetrics().horizontalAdvance(button.text()) + 40 for button in buttons
         ]
@@ -1873,6 +1972,7 @@ class UnifiedWidgetWindow(QWidget):
             self.today_btn,
             self.pin_btn,
             self.customize_btn,
+            self.view_btn,
             self.more_btn,
         ]
         controls += self.cal_grid.findChildren(QToolButton)
@@ -1881,7 +1981,9 @@ class UnifiedWidgetWindow(QWidget):
             self.week_toggle_btn,
             self.add_btn,
         ]
-        for row in self._agenda_rows:
+        controls.append(self.search_input)
+        rows = self._workspace_board.rows() if self._workspace_board_active else self._agenda_rows
+        for row in rows:
             controls += (
                 row.findChildren(QCheckBox)
                 + row.findChildren(QPushButton)
@@ -1914,9 +2016,9 @@ class UnifiedWidgetWindow(QWidget):
 
     def _apply_filter_responsive_layout(self, width: int | None = None) -> None:
         available_width = int(width or self.filter_section.width() or self.width())
-        board_column = self._active_layout_id in {"dashboard", "magazine"} and not getattr(
-            self, "_compact_layout", False
-        )
+        board_column = widget_layout_has_columns(
+            get_widget_mode_layout(self._active_layout_id)
+        ) and not getattr(self, "_compact_layout", False)
         choices_width = (
             sum(max(44, btn.sizeHint().width()) for btn in self._filter_buttons.values()) + 18
         )
@@ -1979,9 +2081,9 @@ class UnifiedWidgetWindow(QWidget):
     def _responsive_filter_width(self) -> int:
         if self._free_layout_active:
             return max(0, self.filter_section.width())
-        board_column = self._active_layout_id in {"dashboard", "magazine"} and not getattr(
-            self, "_compact_layout", False
-        )
+        board_column = widget_layout_has_columns(
+            get_widget_mode_layout(self._active_layout_id)
+        ) and not getattr(self, "_compact_layout", False)
         if board_column:
             return max(0, self.filter_section.width())
         return max(0, self.width() - 28)
@@ -2004,6 +2106,19 @@ class UnifiedWidgetWindow(QWidget):
         self._set_filter(mode)
 
     def _filter_items(self, items: list[dict[str, object]]) -> list[dict[str, object]]:
+        query = (
+            self.search_input.text().strip().casefold() if not self.search_input.isHidden() else ""
+        )
+        if query:
+            items = [
+                item
+                for item in items
+                if not item.get("is_section")
+                and query
+                in " ".join(
+                    str(item.get(key, "")) for key in ("title", "time", "status")
+                ).casefold()
+            ]
         if self._active_filter == "all":
             return [dict(item) for item in items]
 
@@ -2053,6 +2168,15 @@ class UnifiedWidgetWindow(QWidget):
             self.timer.start(self._ms_until_next_clock_tick())
 
     def _refresh_locale_texts(self) -> None:
+        self.view_btn.setText(t("widget_workspace.view", "보기"))
+        self.view_btn.setToolTip(self.view_btn.text())
+        self.view_btn.setAccessibleName(self.view_btn.text())
+        self.search_input.setPlaceholderText(
+            t("widget_workspace.search", "선택한 날짜에서 검색 · Ctrl+F")
+        )
+        self.search_input.setAccessibleName(
+            t("widget_workspace.search_name", "선택한 날짜의 항목 검색")
+        )
         self.eyebrow_label.setText(t("widget_mode.hero_eyebrow", "집중 위젯"))
         self.today_btn.setText(t("widget_mode.today", "오늘"))
         self.today_btn.setToolTip(t("widget_mode.today", "오늘"))
@@ -2228,6 +2352,13 @@ class UnifiedWidgetWindow(QWidget):
             if visible_items
             else t("widget_mode.widget_hint_empty", "No items for the selected date.")
         )
+        self.workspace_overview.update_items(total_items, data_state=self._data_state)
+        if self._workspace_board_active:
+            if self._agenda_rows:
+                self._clear_items()
+            self._workspace_board.update_items(filtered_items, data_state=self._data_state)
+            self._update_tab_order()
+            return
 
         settings = self.controller.main_window.settings
         row_style = (
@@ -2298,6 +2429,11 @@ class UnifiedWidgetWindow(QWidget):
             empty_layout.setContentsMargins(14, 12, 14, 12)
             empty_layout.setSpacing(8)
 
+            if not self.search_input.isHidden() and self.search_input.text().strip():
+                empty_text = t(
+                    "widget_workspace.search_empty",
+                    "검색 결과가 없습니다. 검색어를 지우면 전체 항목이 표시됩니다.",
+                )
             empty = QLabel(empty_text, empty_state)
             empty.setWordWrap(True)
             empty.setObjectName("unified_empty")
@@ -2403,6 +2539,7 @@ class UnifiedWidgetWindow(QWidget):
         self.controller.refresh_data()
 
     def hideEvent(self, event):
+        self._search_timer.stop()
         super().hideEvent(event)
         self.timer.stop()
         self.controller.notify_hidden()
@@ -2428,6 +2565,10 @@ class UnifiedWidgetWindow(QWidget):
         tokens = _widget_theme_tokens(self.controller.main_window)
         menu = QMenu(self)
         menu.setStyleSheet(_widget_mode_menu_stylesheet(tokens))
+        open_manager = getattr(self.controller.main_window, "open_widget_manager", None)
+        if callable(open_manager):
+            menu.addAction(t("widget_manager.title", "위젯 관리자"), open_manager)
+            menu.addSeparator()
         menu.addSection(t("widget_mode.menu_date", "날짜 이동"))
         menu.addAction(t("widget_mode.pick_date", "날짜 선택"), self._pick_date)
         menu.addAction(
@@ -2602,11 +2743,16 @@ class UnifiedWidgetWindow(QWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        compact = self.width() < 640 and self._active_layout_id in {"dashboard", "magazine"}
+        compact = widget_layout_is_compact(
+            get_widget_mode_layout(self._active_layout_id), self.width()
+        )
+        calendar_mode = widget_layout_calendar_mode(
+            get_widget_mode_layout(self._active_layout_id), self.width()
+        )
         if (
             not self._free_layout_active
             and hasattr(self, "_compact_layout")
-            and compact != self._compact_layout
+            and (compact != self._compact_layout or calendar_mode != self.cal_grid.display_mode)
         ):
             self.apply_selected_layout(force=True)
         if hasattr(self, "filter_section"):
@@ -2675,10 +2821,15 @@ class UnifiedWidgetController:
         else:
             self.show_widget()
 
-    def show_widget(self, filter_mode: str | None = None) -> None:
+    def ensure_widget(self):
+        """Create the workspace for editing without entering or resuming widget mode."""
         if self.widget is None:
             self.widget = UnifiedWidgetWindow(self)
             self._restore_geometry()
+        return self.widget
+
+    def show_widget(self, filter_mode: str | None = None) -> None:
+        self.ensure_widget()
         if filter_mode is None:
             filter_mode = str(self.main_window.settings.value("widget_mode_filter", "all"))
         self.widget.set_filter(filter_mode)
@@ -3085,7 +3236,7 @@ class UnifiedWidgetController:
         if not calendar_visible and any(
             section == "calendar" for section, *_ in layout_spec.placements
         ):
-            if layout_spec.layout_id in {"dashboard", "magazine"}:
+            if widget_layout_has_columns(layout_spec):
                 width = min(width, 420)
             else:
                 height = max(360, height - 170)
@@ -3245,6 +3396,7 @@ class UnifiedWidgetController:
     def _display_signature(self, target: QDate) -> tuple:
         return (
             target.toString("yyyy-MM-dd"),
+            str(self.main_window.settings.value("widget_mode_calendar_scope", "")),
             self._cache_signature(
                 getattr(self.main_window, "_latest_calendar_range_data", None), "rows"
             ),
@@ -3272,6 +3424,13 @@ class UnifiedWidgetController:
             self._items_cache.pop(oldest_key, None)
 
     def _schedule_rows_for_date(self, target: QDate) -> list[dict]:
+        from calendar_app.domain.widget_workspace import (
+            CALENDAR_SCOPE_KEY,
+            calendar_matches,
+            calendar_scope,
+        )
+
+        selected_calendars = calendar_scope(self.main_window.settings.value(CALENDAR_SCOPE_KEY, ""))
         calendar_cache = getattr(self.main_window, "_latest_calendar_range_data", None)
         agenda_cache = getattr(self.main_window, "_latest_agenda_data", None)
         if self._cache_covers_date(calendar_cache, target):
@@ -3284,6 +3443,8 @@ class UnifiedWidgetController:
         matched = []
         for row in rows:
             if not isinstance(row, dict):
+                continue
+            if not calendar_matches(row, selected_calendars):
                 continue
             start_qd = _parse_qdate(row.get("deadline") or row.get("target_date"))
             end_qd = _parse_qdate(

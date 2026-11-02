@@ -18,6 +18,7 @@ from types import MappingProxyType
 from uuid import uuid4
 
 from calendar_app.app_paths import get_app_data_dir
+from calendar_app.presentation.widgets.widget_workspace_catalog import register_workspace_presets
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +50,19 @@ class WidgetModeLayout:
     agenda_spacing: int = 8
     show_eyebrow: bool = True
     show_hint: bool = True
+    calendar_mode: str = "auto"
+    responsive_breakpoint: int = 0
+    presentation: str = "list"
+    show_overview: bool = False
+    searchable: bool = False
 
     def __post_init__(self) -> None:
         normalized_id = str(self.layout_id or "").strip().lower()
+        if self.calendar_mode not in {"auto", "week", "month"} or self.presentation not in {
+            "list",
+            "board",
+        }:
+            raise ValueError("invalid workspace presentation or calendar mode")
         if not normalized_id or not normalized_id.replace("_", "").isalnum():
             raise ValueError("layout_id must contain only letters, numbers, and underscores")
         valid_sections = {"hero", "calendar", "filters", "agenda"}
@@ -93,9 +104,12 @@ class WidgetModeSkin:
     base_theme: str = "light"
     legacy_layout_id: str = DEFAULT_WIDGET_MODE_LAYOUT_ID
     token_overrides: Mapping[str, str] = field(default_factory=dict)
+    surface_style: str = "legacy"
 
     def __post_init__(self) -> None:
         normalized_id = str(self.skin_id or "").strip().lower()
+        if self.surface_style not in {"legacy", "soft", "paper", "outline", "glass", "compact"}:
+            raise ValueError("invalid workspace surface style")
         if not normalized_id or not normalized_id.replace("_", "").isalnum():
             raise ValueError("skin_id must contain only letters, numbers, and underscores")
         normalized_theme = str(self.base_theme or "light").strip().lower()
@@ -132,6 +146,22 @@ def widget_mode_layouts() -> tuple[WidgetModeLayout, ...]:
 def get_widget_mode_layout(layout_id: object) -> WidgetModeLayout:
     normalized = str(layout_id or "").strip().lower()
     return _LAYOUTS.get(normalized, _LAYOUTS[DEFAULT_WIDGET_MODE_LAYOUT_ID])
+
+
+def widget_layout_calendar_mode(layout: WidgetModeLayout, width: int | None = None) -> str:
+    if layout.searchable and width is not None and width < 520:
+        return "week"
+    if layout.calendar_mode != "auto":
+        return layout.calendar_mode
+    return "month" if layout.layout_id in {"dashboard", "magazine"} else "week"
+
+
+def widget_layout_has_columns(layout: WidgetModeLayout) -> bool:
+    return any(column > 0 for _section, _row, column, *_ in layout.placements)
+
+
+def widget_layout_is_compact(layout: WidgetModeLayout, width: int) -> bool:
+    return widget_layout_has_columns(layout) and width < (layout.responsive_breakpoint or 640)
 
 
 def register_widget_mode_skin(skin: WidgetModeSkin, *, replace: bool = False) -> None:
@@ -555,6 +585,9 @@ def _register_builtin_skins() -> None:
 
 _register_builtin_layouts()
 _register_builtin_skins()
+register_workspace_presets(
+    WidgetModeLayout, WidgetModeSkin, register_widget_mode_layout, register_widget_mode_skin
+)
 load_user_widget_styles()
 
 

@@ -98,7 +98,7 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
 
         self._template_label = QLabel("", frame)
         self._template_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._template_label.setWordWrap(True)
+        self._template_label.setWordWrap(False)
         self._template_label.setTextFormat(Qt.TextFormat.RichText)
         self._template_label.setVisible(False)
 
@@ -188,8 +188,12 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
             return
         elapsed = self._sw_elapsed_ms()
         running = self._sw_running()
+        if self._render_graphic_face({"elapsed_ms": elapsed, "running": running}):
+            return
         if self._is_template_mode():
-            html = self._resolve_sw_template(self._widget_template(), elapsed, running)
+            template = self._widget_template()
+            self._template_label.setWordWrap(template != self._DEFAULT_TEMPLATE)
+            html = self._resolve_sw_template(template, elapsed, running)
             self._set_template_label(html)
             self._title_label.setVisible(False)
             self._time_label.setVisible(False)
@@ -215,20 +219,29 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
                 )
 
     def _apply_appearance(self) -> None:
+        if self._render_graphic_face(appearance=True):
+            return
         self._apply_base_appearance()
         size, family = self.font_size(), self.font_family()
         mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont).family() or family
 
         self._title_label.setFont(QFont(mono, max(8, size - 14)))
-        self._title_label.setStyleSheet("background:transparent;letter-spacing:3px;")
         self._time_label.setFont(QFont(mono, size, QFont.Weight.Bold))
         self._status_label.setFont(QFont(mono, max(8, size - 16)))
-        self._status_label.setStyleSheet("background:transparent;letter-spacing:2px;")
         self._template_label.setFont(QFont(mono, size))
 
         fg_css = f"color: {self._text_color_str()};"
         for lbl in [self._title_label, self._time_label, self._status_label, self._template_label]:
-            lbl.setStyleSheet(lbl.styleSheet() + fg_css)
+            spacing = (
+                "letter-spacing:3px;"
+                if lbl is self._title_label
+                else "letter-spacing:2px;"
+                if lbl is self._status_label
+                else ""
+            )
+            stylesheet = "background:transparent; border:none; " + fg_css + spacing
+            if lbl.styleSheet() != stylesheet:
+                lbl.setStyleSheet(stylesheet)
         style = self.display_style()
         if style == "ticker":
             self._title_label.setText(t("widget.stopwatch.short_title", "SW"))
@@ -247,6 +260,7 @@ class OverlayStopwatchWidget(_BaseOverlayWidget):
             self._sw_timer.start(100)
 
     def _set_runtime_active(self, active: bool) -> None:
+        self._set_graphics_runtime_active(active)
         if active:
             self._start_sw_timer()
         elif hasattr(self, "_sw_timer"):

@@ -12,7 +12,15 @@ from unittest.mock import Mock, patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QByteArray, QObject, QSettings, QTimer, pyqtSignal
+from PyQt6.QtCore import (
+    QByteArray,
+    QCoreApplication,
+    QEvent,
+    QObject,
+    QSettings,
+    QTimer,
+    pyqtSignal,
+)
 from PyQt6.QtNetwork import QNetworkReply, QNetworkRequest
 from PyQt6.QtWidgets import QApplication, QMenu, QWidget
 
@@ -110,6 +118,10 @@ class WeatherWidgetLoadingTests(unittest.TestCase):
         self.widget._set_runtime_active(False)
         self.widget.close()
         self.owner.close()
+        # Dispose Qt children at the test boundary, before later menus trigger Python GC.
+        self.widget.deleteLater()
+        self.owner.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
         self.app.processEvents()
         self.network_patch.stop()
         self.temp_dir.cleanup()

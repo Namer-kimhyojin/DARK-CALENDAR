@@ -164,6 +164,8 @@ class KeyDeckCanvas(QWidget):
         self._hover_id = ""
         self._header_hover = ""
         self._active = True
+        self._studio_motion_mode = "balanced"
+        self._studio_motion_paused = False
         self._movies: dict[str, QMovie] = {}
         self._fade_pixmap: QPixmap | None = None
         self._fade_t = 0.0
@@ -309,7 +311,23 @@ class KeyDeckCanvas(QWidget):
         return {key_id: runtime.visual for key_id, runtime in self._runtime.items()}
 
     def _reduce_motion(self) -> bool:
-        return bool(self._deck and self._deck.get("reduce_motion"))
+        return (
+            bool(self._deck and self._deck.get("reduce_motion"))
+            or self._studio_motion_mode == "static"
+            or self._studio_motion_paused
+        )
+
+    def set_motion_policy(self, mode, paused=False):
+        if (mode, bool(paused)) == (self._studio_motion_mode, self._studio_motion_paused):
+            return
+        self._studio_motion_mode, self._studio_motion_paused = mode, bool(paused)
+        if mode == "static" or paused:
+            self._timer.stop()
+            self._settle_all()
+            self.update()
+        else:
+            self._ensure_timer()
+        self._sync_movies()
 
     # -- sizing & painting ------------------------------------------------------------
 
@@ -967,6 +985,11 @@ class KeyDeckCanvas(QWidget):
     # -- animation --------------------------------------------------------------------
 
     def _ensure_timer(self) -> None:
+        if self._studio_motion_mode == "static" or self._studio_motion_paused:
+            self._timer.stop()
+            self._settle_all()
+            self.update()
+            return
         if not self._active or not self.isVisible():
             # 숨김 상태에서는 애니메이션 없이 최종 상태로 즉시 정착시킨다.
             self._settle_all()
@@ -983,7 +1006,11 @@ class KeyDeckCanvas(QWidget):
             if runtime is None:
                 continue
             runtime.pending_release = False
-            if runtime.spring.target >= 0.9 and key["id"] != self._pressed_id:
+            if (
+                runtime.spring.target >= 0.9
+                and key["id"] != self._pressed_id
+                and key["id"] not in self._keyboard_held.values()
+            ):
                 runtime.spring.set_target(self._rest_position(key))
             runtime.spring.snap(runtime.spring.target)
             runtime.visual.travel = runtime.spring.position
@@ -1140,6 +1167,8 @@ class KeyDeckCanvas(QWidget):
                 playback = "hover"
             should_play = (
                 self._active
+                and self._studio_motion_mode != "static"
+                and not self._studio_motion_paused
                 and self.isVisible()
                 and (playback == "always" or (playback == "hover" and key_id == self._hover_id))
             )

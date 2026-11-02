@@ -138,8 +138,9 @@ def test_layout_cards_and_disclosure_never_overlap_at_short_dialog_height(prefer
     controls = [button for button in dialog.layout_buttons.values() if not button.isHidden()]
     if not dialog.all_layouts_btn.isHidden():
         controls.append(dialog.all_layouts_btn)
-    for control, following in zip(controls, controls[1:], strict=False):
-        assert control.geometry().bottom() < following.geometry().top()
+    for index, control in enumerate(controls):
+        for following in controls[index + 1 :]:
+            assert not control.geometry().intersects(following.geometry())
     scrollbar = dialog.controls_scroll.verticalScrollBar()
     if controls[-1].geometry().bottom() > dialog.controls_scroll.viewport().height():
         assert scrollbar.maximum() > 0

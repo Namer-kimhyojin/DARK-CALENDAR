@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-BOARD_CALENDAR_LAYOUT_IDS = frozenset({"dashboard", "magazine"})
+BOARD_CALENDAR_LAYOUT_IDS = frozenset({"dashboard", "magazine", "month_focus", "side_planner"})
 LEGACY_CALENDAR_VISIBILITY_KEY = "widget_mode_show_week"
 
 

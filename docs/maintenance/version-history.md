@@ -2,10 +2,26 @@
 
 제품 버전은 배포 단위로 결정한다. 변경 기록·Git/CI 빌드·공개·Store·설치 상태는 별도이며 변경 기록만으로 버전을 올리지 않는다.
 
-기준 버전: `3.8.1` · 현재 제품 버전: **`4.8.0`**
+기준 버전: `3.8.1` · 현재 제품 버전: **`4.9.1`**
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 4.9.1 | 2026-11-02T09:14:32.969950+09:00 | change | Make preset timezone expectations locale-independent and modal automation test independent of the real weekday and current time | `release-4.9-test-determinism-20261102` |
+| 4.9.1 | 2026-11-02T09:12:30.268229+09:00 | release | All post-4.8.0 widget, workspace, multilingual and sync improvements; final source formatting included; 4.9.0 preflight reservation not built or published | `release-4.9.1-integrated-20261102` |
+| 4.9.0 | 2026-11-02T09:12:27.327987+09:00 | change | Normalize final release source import and formatting; AST unchanged across all changed Python files | `release-4.9-source-format-20261102` |
+| 4.9.0 | 2026-11-02T09:10:15.907217+09:00 | release | Widget graphic collections and designs, workspace and management features, multilingual improvements, calendar subscription and sync stability | `release-4.9.0-integrated-20261102` |
+| 4.8.0 | 2026-11-02T07:12:17.027314+09:00 | change | ICS 구독 해제 사본 보관, 재개 즉시 갱신, 복구 결과와 다국어 안내 개선 | `sync-subscription-ux-20261102` |
+| 4.8.0 | 2026-11-02T03:30:36.221925+09:00 | change | Fix the website release-status notice remaining visible despite its hidden attribute and refresh CSS/JS cache keys after verified Store publication | `maintenance-20261102-store-published-notice-hidden` |
+| 4.8.0 | 2026-11-02T03:25:47.991384+09:00 | change | Verify official Store 4.8.0 installation and fresh runtime/profile data, retain UI/restart acceptance limits, and repair read-only live-log sharing in the local deployment observer | `maintenance-20261102-official-store-installation` |
+| 4.8.0 | 2026-11-02T03:15:15.668749+09:00 | change | Confirm Store 4.8.0 publication, update public availability metadata, record day01 startup checks, and track post-release development separately for the next integration cycle | `maintenance-20261102-store-publication-cycle-handoff` |
+| 4.8.0 | 2026-11-01T21:35:24.657149+09:00 | change | 19개 로케일 번역·위젯 관리 문구·RTL·날짜·Qt 버튼·사용자 번역 대체 처리 보완, 400건 회귀 및 다국어 화면 검증 | `i18n-support-audit-20261101` |
+| 4.8.0 | 2026-11-01T18:56:45.438842+09:00 | change | 위젯 확장 7종: 통합 작업 공간, 실제 미리보기, 모니터 배치, 상황별 전환, 통합 절전, 상태 안내, 네이티브 스택 및 관리창 재사용 | `widget-workspace-studio-20261101` |
+| 4.8.0 | 2026-11-01T15:36:56.072548+09:00 | change | 위젯 통합 관리 허브: 추가 갤러리, 검색·상태 필터, 표시·찾기·꾸미기, 전용 모드 실행·복귀·편집, 행 재사용과 갱신 병합 | `widget-management-hub-20261101` |
+| 4.8.0 | 2026-11-01T15:15:05.952146+09:00 | change | ICS 수신 중 개별 갱신 보존, Outlook·CalDAV 연결 해제의 트랜잭션·종료 안전성 및 계정별 오류·성공 상태 보완; 관련 회귀 1,350건 검증 | `calendar-sync-subscription-stability-20261101` |
+| 4.8.0 | 2026-11-01T15:09:53.561209+09:00 | change | 캘린더 5종 공식 문서 벤치마킹 기반 위젯 전용 스킨 10종·화면 6종·3영역 보드·캐시 검색·스킨 갤러리·빠른 보기 전환 | `widget-mode-workspace-redesign-20261101` |
+| 4.8.0 | 2026-11-01T14:33:58.405325+09:00 | change | 위젯 8종별 디자인 10종씩 총 80종 추가, 13종 스크롤 갤러리와 종류별 일괄 매핑·큰 날씨 카드 예보 통합 | `widget-designs-80-20261101` |
+| 4.8.0 | 2026-11-01T12:37:16.952881+09:00 | change | 고배율 위젯 검증 보드 축소 캡처의 부드러운 샘플링 보완 | `widget-graphic-qa-dpi-20261101` |
+| 4.8.0 | 2026-11-01T12:36:38.487876+09:00 | change | 위젯 8종 그래픽 컬렉션·전용 숫자/계기판·짧은 상태 전환·복원·대비 및 Qt 회귀 수명 개선 | `widget-graphic-collections-20261101` |
 | 4.8.0 | 2026-11-01T10:56:40.859176+09:00 | change | Record Store Submission 31 certification acceptance and update the public four-language review notice without changing the package or product version | `release-4.8.0-store-submission31-20261101` |
 | 4.8.0 | 2026-11-01T10:01:44.084498+09:00 | change | 홈페이지에서 GitHub 4.8.0 공개와 Store 제출 준비 상태를 네 언어로 구분하고 최신 배포 링크 제공 | `release-4.8.0-store-availability-notice-20261101` |
 | 4.8.0 | 2026-11-01T09:55:59.517823+09:00 | change | 4.8.0 GitHub·홈페이지 완료와 Store 로그인/설치 후속을 유지보수 계획에 구분해 인계 | `release-4.8.0-maintenance-handoff-20261101` |

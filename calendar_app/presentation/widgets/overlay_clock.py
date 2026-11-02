@@ -96,6 +96,7 @@ class OverlayClockWidget(_BaseOverlayWidget):
         return frame
 
     def _set_runtime_active(self, active: bool) -> None:
+        self._set_graphics_runtime_active(active)
         if active:
             if not self._timer.isActive():
                 self._timer.start(1000)
@@ -182,6 +183,8 @@ class OverlayClockWidget(_BaseOverlayWidget):
     def _tick(self):
         if self._resizing and not self._measuring:
             return
+        if self._render_graphic_face():
+            return
         now = self._now_tz()
 
         if self._is_template_mode():
@@ -239,6 +242,8 @@ class OverlayClockWidget(_BaseOverlayWidget):
             self._date_label.setText("")
 
     def _apply_appearance(self) -> None:
+        if self._render_graphic_face(appearance=True):
+            return
         """Unified appearance update using base class engine."""
         sp = self._apply_base_appearance()
 

@@ -40,7 +40,15 @@ class OutlookWorker(QThread):
                 import uuid
 
                 client_id = str(uuid.UUID(self.client_id))
-                (get_app_data_dir() / f"outlook-{client_id}.cache").unlink(missing_ok=True)
+                conn = sqlite3.connect(DB_PATH, timeout=10)
+                try:
+                    repository = CalendarSyncRepository(conn)
+                    with conn:
+                        conn.execute("BEGIN IMMEDIATE")
+                        repository.deactivate(self.account)
+                        (get_app_data_dir() / f"outlook-{client_id}.cache").unlink(missing_ok=True)
+                finally:
+                    conn.close()
                 self.result.emit(self.operation, {})
                 return
             auth = MicrosoftAuth(self.client_id)
@@ -217,29 +225,29 @@ class OutlookSyncController(QObject):
         if operation == "login":
             previous = self.settings.value("outlook_account_id", "", type=str)
             if previous and previous != result["account"]:
-                self.settings.setValue("outlook_enabled", False)
                 conn = sqlite3.connect(DB_PATH, timeout=10)
                 try:
-                    CalendarSyncRepository(conn)
-                    with conn:
-                        conn.execute(
-                            "UPDATE calendar SET is_active=0,access_role='reader' WHERE id IN (SELECT local_id FROM calendar_sync_calendar WHERE account_id=?)",
-                            (previous,),
-                        )
+                    CalendarSyncRepository(conn).deactivate(previous)
                 finally:
                     conn.close()
+                self.settings.setValue("outlook_enabled", False)
             self.settings.setValue("outlook_account_id", result["account"])
             self.settings.setValue("outlook_home_account_id", result["home_id"])
             self.settings.setValue("outlook_account_name", result["name"])
-            save_calendar_errors(self.settings, "outlook_", {})
+            if previous != result["account"]:
+                self.summary = {}
+                self.settings.remove("outlook_last_success")
+                save_calendar_errors(self.settings, "outlook_", {})
             self.available = result["calendars"]
         elif operation == "disconnect":
             self.settings.setValue("outlook_enabled", False)
             self.settings.remove("outlook_account_id")
             self.settings.remove("outlook_home_account_id")
             self.settings.remove("outlook_account_name")
+            self.settings.remove("outlook_last_success")
             save_calendar_errors(self.settings, "outlook_", {})
             self.available = []
+            self.summary = {}
         elif operation == "refresh":
             self.available = result["calendars"]
             save_calendar_discovery_errors(

@@ -361,7 +361,7 @@ def sync_error_message(code):
         ),
         "ics_fetch_failed": t(
             "sync_unified.ics_failed",
-            "ICS 구독을 갱신하지 못했습니다. 전체 캘린더에서 구독 주소를 확인하고 다시 동기화하세요.",
+            "ICS 구독을 갱신하지 못했습니다. 'ICS 구독'에서 해당 구독의 주소와 오류를 확인하세요.",
         ),
         "invalid_event_range": t(
             "sync_ui.event_range",

@@ -7,6 +7,8 @@ text snippets reach the application the user is working in.
 
 from __future__ import annotations
 
+from copy import deepcopy
+import json
 import logging
 from pathlib import Path
 
@@ -647,8 +649,48 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             self._apply_deck(resolve_request(self._deck_data, dialog.request))
 
     def _apply_theme(self, theme_id: str) -> None:
+        self._detach_graphic_collection()
         apply_theme(self._deck_data, theme_id)
         self._apply_deck(self._deck_data)
+
+    def _apply_deck_graphic_style(self, collection_id: str) -> None:
+        from calendar_app.presentation.widgets.widget_graphics import (
+            graphic_collection,
+            keydeck_collection_deck,
+            keydeck_visual_values,
+        )
+
+        if graphic_collection(collection_id):
+            if not self._get("graphics_keydeck_backup", ""):
+                self._set(
+                    "graphics_keydeck_backup", json.dumps(keydeck_visual_values(self._deck_data))
+                )
+            deck = keydeck_collection_deck(self._deck_data, collection_id)
+            self._set("graphics_keydeck_applied", json.dumps(keydeck_visual_values(deck)))
+        else:
+            deck = deepcopy(self._deck_data)
+            try:
+                backup = json.loads(str(self._get("graphics_keydeck_backup", "{}")))
+                applied = json.loads(str(self._get("graphics_keydeck_applied", "{}")))
+                for field, old in backup.get("case", {}).items():
+                    if deck["case"].get(field) == applied.get("case", {}).get(field):
+                        deck["case"][field] = old
+                for page in deck["pages"]:
+                    for key in page["keys"]:
+                        before = backup.get("keys", {}).get(key["id"], {})
+                        after = applied.get("keys", {}).get(key["id"], {})
+                        for group, fields in before.items():
+                            for field, old in fields.items():
+                                if key[group].get(field) == after.get(group, {}).get(field):
+                                    key[group][field] = old
+            except (ValueError, TypeError, AttributeError):
+                pass
+            for field in ("graphics_keydeck_backup", "graphics_keydeck_applied"):
+                self._s().remove(f"{self._pref()}_{field}")
+        self._deck_data = deck
+        self._save_timer.stop()
+        self._flush_deck()
+        self._canvas.set_deck(deck)
 
     def _toggle_deck_flag(self, field: str) -> None:
         deck = self._deck_data
@@ -803,6 +845,9 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         style = self._menu_style()
         menu = QMenu(self)
         menu.setStyleSheet(style)
+        menu.addAction(
+            t("widget_graphics.choose", "그래픽 컬렉션…"), self._open_graphic_collections
+        )
         studio = menu.addAction(
             t("widget.launcher.menu.studio", "KeyDeck 스튜디오 열기..."), self._open_settings
         )

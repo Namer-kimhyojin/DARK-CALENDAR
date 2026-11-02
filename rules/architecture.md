@@ -74,6 +74,12 @@ _DIALOG_ROUTE_MAP = {
 
 `open_*` 메서드는 `DialogActionsMixin`에 구현합니다.
 
+## 개발 실행
+
+개발용 `run.bat`는 버전 일치 검사 후 `scripts/run_development.py`로 빌드와 동일한 고정 SQLite
+프라이빗 런타임을 검증·준비하고 현재 `main.py`를 실행한다. 인자와 프로젝트 작업 폴더를 유지하며,
+검증 실패 시 실행을 중단한다. 원래 Python·`.venv` DLL과 사용자 DB·설정은 교체하지 않는다.
+
 ## 백그라운드 작업
 
 DB 작업이나 네트워크 요청은 UI 블로킹을 방지하기 위해 `shared/background_worker.py`의 워커 클래스를 사용합니다:

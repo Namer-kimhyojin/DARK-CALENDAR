@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 import shutil
 
-from PyQt6.QtCore import QSettings
+from PyQt6.QtCore import QSettings, QTranslator
 
 from calendar_app.app_paths import get_app_data_dir
 from calendar_app.shared.encoding_utils import read_text_with_legacy_fallback
@@ -13,6 +13,22 @@ from calendar_app.shared.encoding_utils import read_text_with_legacy_fallback
 logger = logging.getLogger(__name__)
 
 _BUNDLED_LOCALES_DIR = Path(__file__).resolve().parents[2] / "locales"
+
+
+class _StandardButtonTranslator(QTranslator):
+    """Cover common buttons even when Qt ships no catalog for a bundled language."""
+
+    def __init__(self, values, parent):
+        super().__init__(parent)
+        self._values = values
+
+    def isEmpty(self):  # noqa: N802 - Qt API
+        return False
+
+    def translate(self, context, sourceText, disambiguation=None, n=-1):  # noqa: N803
+        if context in {"QPlatformTheme", "QDialogButtonBox", "QMessageBox"}:
+            return self._values.get(sourceText.replace("&", ""), "")
+        return ""
 
 
 def get_user_locales_dir(create: bool = False) -> Path:
@@ -167,41 +183,42 @@ class I18nManager:
             cls._instance._load_translations()
         return cls._instance
 
+    @classmethod
+    def canonical_locale_code(cls, lang_code, available):
+        """Match BCP 47 regional/script tags without losing Traditional Chinese."""
+        normalized = str(lang_code or "").strip().replace("_", "-")
+        if not normalized:
+            return None
+        if normalized in available:
+            mapped = cls._LANG_ALIASES.get(normalized, normalized)
+            return mapped if mapped in available else normalized
+        parts = normalized.lower().split("-")
+        for length in range(len(parts), 0, -1):
+            prefix = "-".join(parts[:length])
+            candidate = cls._LANG_ALIASES.get(prefix, prefix)
+            if candidate in available:
+                return candidate
+        return None
+
     def _load_translations(self):
         settings = QSettings("kimhyojin", "Dark Calendar")
         available = list_available_locale_codes()
 
-        def canonicalize(lang_code):
-            if not lang_code:
-                return None
-            normalized = str(lang_code).strip().replace("_", "-")
-            if not normalized:
-                return None
-            lowered = normalized.lower()
-            mapped = self._LANG_ALIASES.get(lowered, normalized)
-            if mapped in available:
-                return mapped
-            if normalized in available:
-                return normalized
-            base = lowered.split("-")[0]
-            mapped_base = self._LANG_ALIASES.get(base, base)
-            if mapped_base in available:
-                return mapped_base
-            if base in available:
-                return base
-            return None
-
         # 1. Try to get saved language from settings
-        saved_lang = canonicalize(settings.value("language"))
+        raw_saved_lang = settings.value("language")
+        saved_lang = self.canonical_locale_code(raw_saved_lang, available)
 
         if saved_lang:
             self.lang = saved_lang
+            if raw_saved_lang != saved_lang:
+                settings.setValue("language", saved_lang)
+                settings.sync()
         else:
             # 2. First run: detect from system locale
             from PyQt6.QtCore import QLocale
 
             system_locale = QLocale.system().name()  # e.g. "ko_KR", "en_US"
-            detected = canonicalize(system_locale)
+            detected = self.canonical_locale_code(system_locale, available)
             self.lang = detected or "en"  # Fallback to English
 
             # Save the detected language so it's consistent on next run
@@ -229,9 +246,54 @@ class I18nManager:
         if self.lang != "en":
             self._warn_if_broken_locale("en", self.fallback_translations)
 
-        # Set Qt default locale so QDateTime.toString("dddd") returns weekday
+        # Set Qt default locale so QLocale().toString(..., "dddd") returns weekday
         # names in the current UI language (affects overlay widgets, panels, etc.)
+        self.apply_application_locale()
+
+    def apply_application_locale(self):
+        """Apply direction and standard Qt translations after QApplication exists."""
+        from PyQt6.QtCore import QLibraryInfo
+        from PyQt6.QtWidgets import QApplication
+
         self._apply_qt_locale(self.lang)
+        app = QApplication.instance()
+        if app is None:
+            return
+        previous = getattr(self, "_qt_translator", None)
+        if previous is not None:
+            app.removeTranslator(previous)
+            previous.deleteLater()
+        self._qt_translator = None
+        code = {"zh": "zh_CN", "zh-CN": "zh_CN", "zh-TW": "zh_TW", "pt": "pt_BR"}.get(
+            self.lang, self.lang
+        )
+        translator = QTranslator(app)
+        directory = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+        if translator.load(f"qtbase_{code}", directory) and app.installTranslator(translator):
+            self._qt_translator = translator
+        else:
+            translator.deleteLater()
+        previous_buttons = getattr(self, "_button_translator", None)
+        if previous_buttons is not None:
+            app.removeTranslator(previous_buttons)
+            previous_buttons.deleteLater()
+        buttons = _StandardButtonTranslator(
+            {
+                source: self.get(key, source)
+                for source, key in (
+                    ("OK", "dialog.common.ok"),
+                    ("Cancel", "common.cancel"),
+                    ("Save", "common.save"),
+                    ("Apply", "common.apply"),
+                    ("Close", "common.close"),
+                    ("Yes", "dialog.common.yes"),
+                    ("No", "dialog.common.no"),
+                )
+            },
+            app,
+        )
+        app.installTranslator(buttons)
+        self._button_translator = buttons
 
     @staticmethod
     def _load_locale_json(path: str, lang: str) -> dict:
@@ -298,7 +360,7 @@ class I18nManager:
             return None
         return current
 
-    def _weekday_from_calendar(self, key):
+    def _weekday_from_calendar(self, key, data=None):
         weekday_index = {
             "weekday.mon": 0,
             "weekday.tue": 1,
@@ -310,27 +372,30 @@ class I18nManager:
         }.get(key)
         if weekday_index is None:
             return None
-        weekdays = self._resolve("calendar.weekdays")
+        weekdays = self._resolve_from(
+            self.translations if data is None else data, "calendar.weekdays"
+        )
         if isinstance(weekdays, list) and len(weekdays) > weekday_index:
             return weekdays[weekday_index]
         return None
 
-    def _resolve_alias(self, key):
+    def _resolve_alias(self, key, data=None):
+        source = self.translations if data is None else data
         # Legacy keys used in some dialogs
         if key.startswith("dialog.shortcut."):
-            return self._resolve("shortcut." + key[len("dialog.shortcut.") :])
+            return self._resolve_from(source, "shortcut." + key[len("dialog.shortcut.") :])
         if key.startswith("dialog.help."):
-            return self._resolve("help." + key[len("dialog.help.") :])
+            return self._resolve_from(source, "help." + key[len("dialog.help.") :])
         if key == "recurrence.finish":
-            return self._resolve("recurrence.btn_finish")
+            return self._resolve_from(source, "recurrence.btn_finish")
         if key.startswith("common."):
             suffix = key[len("common.") :]
             for prefix in ("dialog.common.", "panel.common."):
-                value = self._resolve(prefix + suffix)
+                value = self._resolve_from(source, prefix + suffix)
                 if value is not None:
                     return value
         if key.startswith("weekday."):
-            return self._weekday_from_calendar(key)
+            return self._weekday_from_calendar(key, source)
         return None
 
     @staticmethod
@@ -373,33 +438,29 @@ class I18nManager:
         logger.warning("i18n: suspicious locale strings detected in %s: %s%s", lang, preview, extra)
 
     def get(self, key, default=None, **kwargs):
-        data = self._resolve(key)
-        if data is None:
-            data = self._resolve_alias(key)
-        if data is None or self._looks_broken_text(data):
-            # Try bundled locale before English fallback: recovers keys missing from
-            # stale user locale files (e.g. emoji added after file was seeded).
-            data = self._resolve_from(getattr(self, "bundled_translations", {}), key)
-        if data is None or self._looks_broken_text(data):
-            data = self._resolve_from(getattr(self, "fallback_translations", {}), key)
-        if (data is None or self._looks_broken_text(data)) and key.startswith("common."):
-            suffix = key[len("common.") :]
-            for prefix in ("dialog.common.", "panel.common."):
-                data = self._resolve_from(
-                    getattr(self, "fallback_translations", {}), prefix + suffix
-                )
-                if data is not None and not self._looks_broken_text(data):
-                    break
-        if self._looks_broken_text(data):
-            data = None
-        if data is None:
-            # An explicit empty string is a valid fallback for optional UI text.
-            data = default if default is not None else key
-
+        for source in (
+            self.translations,
+            getattr(self, "bundled_translations", {}),
+            getattr(self, "fallback_translations", {}),
+        ):
+            data = self._resolve_from(source, key)
+            if data is None:
+                data = self._resolve_alias(key, source)
+            if data is None or self._looks_broken_text(data):
+                continue
+            if isinstance(data, str) and kwargs:
+                try:
+                    return data.format(**kwargs)
+                except (KeyError, IndexError, ValueError, AttributeError, TypeError):
+                    # A malformed user override must not leak unformatted fields.
+                    continue
+            return data
+        # An explicit empty string is a valid fallback for optional UI text.
+        data = default if default is not None else key
         if isinstance(data, str) and kwargs:
             try:
                 return data.format(**kwargs)
-            except Exception:
+            except (KeyError, IndexError, ValueError, AttributeError, TypeError):
                 pass
         return data
 

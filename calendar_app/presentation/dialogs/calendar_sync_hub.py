@@ -47,6 +47,7 @@ class CalendarSyncHub(QDialog):
         self.coordinator = getattr(app, "_calendar_sync_coordinator", None)
         self._feedback_providers = ()
         self._feedback_baselines = {}
+        self._feedback_ics_baselines = {}
         self._issue_snapshot = None
         self._retry_tick = QTimer(self)
         self._retry_tick.setInterval(1000)
@@ -253,7 +254,9 @@ class CalendarSyncHub(QDialog):
         self.tabs.addTab(calendar_scroll, t("sync_redesign.calendars_tab", "내 캘린더"))
         self.section_pages["calendars"] = calendar_scroll
         self.local_manager = CalendarManagerPage(app, self.coordinator, self._open, scope="local")
-        self.ics_manager = CalendarManagerPage(app, self.coordinator, self._open, scope="ics")
+        self.ics_manager = CalendarManagerPage(
+            app, self.coordinator, self._open, scope="ics", request_ics_sync=self._run_ics_sync
+        )
         for section_key, page, label in (
             ("local", self.local_manager, t("calendar_management_tabs.local_tab", "로컬 캘린더")),
             ("ics", self.ics_manager, t("calendar_management_tabs.ics_tab", "ICS 구독")),
@@ -510,31 +513,69 @@ class CalendarSyncHub(QDialog):
         if not sync_recovery_action(provider, state)["can_retry"]:
             return
         if provider == "ics":
-            self._feedback_baselines = {"ics": state.get("last_success", "")}
             errors = subscription_errors(self.app.settings)
             failed = [
                 c["id"]
                 for c in self.coordinator.calendar_rows
                 if c.get("type") == "ics" and c.get("is_active", 1) and c["id"] in errors
             ]
-            started = (
-                self.coordinator.sync_ics(force=True, calendar_ids=failed)
-                if failed
-                else self.coordinator.sync_ics(force=True)
-            )
-            self._feedback_providers = ("ics",) if started else ()
+            self._run_ics_sync(failed or None)
+        else:
+            self._run_sync(provider)
+
+    def _run_ics_sync(self, calendar_ids=None):
+        """Track targeted refreshes from add/edit/resume/retry in the same banner."""
+        if not self.coordinator:
+            return False
+        self._feedback_ics_baselines = {
+            c["id"]: c.get("ics_last_fetched")
+            for c in self.coordinator.calendar_rows
+            if c.get("type") == "ics"
+            and c.get("is_active", 1)
+            and c.get("ics_url")
+            and (calendar_ids is None or c["id"] in calendar_ids)
+        }
+        # Set the intent before starting: refresh signals can arrive synchronously.
+        self._feedback_providers = ("ics",)
+        self.sync_feedback.setText(
+            t("sync_unified.refresh_started", "선택한 구독을 새로고침하고 있습니다.")
+        )
+        self.sync_feedback.show()
+        started = self.coordinator.sync_ics(force=True, calendar_ids=calendar_ids)
+        if not started:
+            self._feedback_providers = ()
+            self._feedback_ics_baselines = {}
             self.sync_feedback.setText(
-                t("sync_redesign.retry_started", "문제가 있는 구독을 다시 갱신하고 있습니다.")
-                if started
-                else t(
+                t(
                     "sync_unified.sync_not_started",
                     "동기화를 시작하지 못했습니다. 연결 상태와 진행 중인 작업을 확인하세요.",
                 )
             )
-            self.sync_feedback.show()
-            self._refresh()
-        else:
-            self._run_sync(provider)
+        self._refresh()
+        return bool(started)
+
+    def _ics_completion_message(self):
+        errors = subscription_errors(self.app.settings)
+        if any(key in errors for key in self._feedback_ics_baselines):
+            return t(
+                "sync_recovery.finished_issues",
+                "동기화가 끝났습니다. 문제 해결에서 확인이 필요한 항목을 살펴보세요.",
+            )
+        rows = {c["id"]: c for c in self.coordinator.calendar_rows}
+        if all(
+            (c := rows.get(key, {})).get("type") == "ics"
+            and c.get("is_active", 1)
+            and c.get("ics_last_fetched")
+            and c["ics_last_fetched"] != before
+            for key, before in self._feedback_ics_baselines.items()
+        ):
+            return t(
+                "sync_subscription.refresh_finished", "선택한 구독의 최신 일정을 가져왔습니다."
+            )
+        return t(
+            "sync_recovery.finished_unconfirmed",
+            "작업이 종료되었습니다. 마지막 갱신 기록과 연결 상태를 확인하세요.",
+        )
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -648,6 +689,7 @@ class CalendarSyncHub(QDialog):
 
     def _run_sync(self, provider=None):
         if self.coordinator:
+            self._feedback_ics_baselines = {}
             self._feedback_baselines = {
                 p: s.get("last_success", "") for p, s in self.coordinator.states.items()
             }
@@ -796,7 +838,9 @@ class CalendarSyncHub(QDialog):
             states[p]["busy"] for p in self._feedback_providers
         ):
             results = [states[p] for p in self._feedback_providers]
-            if any(s.get("error") or s.get("issues") for s in results):
+            if self._feedback_providers == ("ics",) and self._feedback_ics_baselines:
+                message = self._ics_completion_message()
+            elif any(s.get("error") or s.get("issues") for s in results):
                 message = t(
                     "sync_recovery.finished_issues",
                     "동기화가 끝났습니다. 문제 해결에서 확인이 필요한 항목을 살펴보세요.",
@@ -816,6 +860,7 @@ class CalendarSyncHub(QDialog):
                     "작업이 종료되었습니다. 마지막 갱신 기록과 연결 상태를 확인하세요.",
                 )
             self._feedback_providers = ()
+            self._feedback_ics_baselines = {}
             self.sync_feedback.setText(message)
         self.sync_all.setEnabled(
             any(sync_recovery_action(p, s)["can_retry"] for p, s in states.items())

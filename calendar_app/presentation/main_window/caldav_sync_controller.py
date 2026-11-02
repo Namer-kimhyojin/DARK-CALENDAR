@@ -52,7 +52,15 @@ class CalDAVWorker(QThread):
             store = CalDAVCredentials()
             if self.operation == "disconnect":
                 if self.account:
-                    store.remove(self.account)
+                    conn = sqlite3.connect(DB_PATH, timeout=10)
+                    try:
+                        repository = CalendarSyncRepository(conn, "caldav")
+                        with conn:
+                            conn.execute("BEGIN IMMEDIATE")
+                            repository.deactivate(self.account)
+                            store.remove(self.account)
+                    finally:
+                        conn.close()
                 self.result.emit(self.operation, {})
                 return
             if self.operation == "login":
@@ -258,24 +266,30 @@ class CalDAVSyncController(QObject):
         self._retry_not_before = 0.0
         self.timer.setInterval(5 * 60 * 1000)
         if operation == "login":
-            if self.account and self.account != result["account"]:
+            previous = self.account
+            if previous and previous != result["account"]:
                 conn = sqlite3.connect(DB_PATH, timeout=10)
                 try:
-                    CalendarSyncRepository(conn, "caldav").deactivate(self.account)
+                    CalendarSyncRepository(conn, "caldav").deactivate(previous)
                 finally:
                     conn.close()
                 self.settings.setValue(self.prefix + "enabled", False)
             self.settings.setValue(self.prefix + "account_id", result["account"])
             self.settings.setValue(self.prefix + "account_name", result["name"])
-            save_calendar_errors(self.settings, self.prefix, {})
+            if previous != result["account"]:
+                self.summary = {}
+                self.settings.remove(self.prefix + "last_success")
+                save_calendar_errors(self.settings, self.prefix, {})
             if result.get("server_url"):
                 self.settings.setValue(self.prefix + "server_url", result["server_url"])
         elif operation == "disconnect":
             self.settings.setValue(self.prefix + "enabled", False)
             self.settings.remove(self.prefix + "account_id")
             self.settings.remove(self.prefix + "account_name")
+            self.settings.remove(self.prefix + "last_success")
             save_calendar_errors(self.settings, self.prefix, {})
             self.available = []
+            self.summary = {}
         elif operation == "sync":
             self.summary = result["summary"]
             save_calendar_errors(

@@ -126,6 +126,7 @@ class CalendarSyncCoordinator(QObject):
         self.database_path = database_path
         self.calendar_source = calendar_source
         self.ics_worker = None
+        self._ics_pending_ids = set()
         self.states = {}
         self.issue_rows = []
         self.calendar_rows = []
@@ -478,8 +479,15 @@ class CalendarSyncCoordinator(QObject):
         self.refresh(refresh_issues=False)
 
     def sync_ics(self, force=False, calendar_ids=None):
-        if self.ics_worker or getattr(self.app, "_is_shutting_down", False):
+        if getattr(self.app, "_is_shutting_down", False):
             return False
+        if self.ics_worker:
+            if not force or calendar_ids is None or self.ics_worker.is_cancelled():
+                return False
+            # Edits/additions during a fetch must run against the latest rows
+            # after that worker finishes. Keep one worker and coalesce IDs only.
+            self._ics_pending_ids.update(calendar_ids)
+            return bool(calendar_ids)
         if not force and not self.settings.value("sync_ics_auto", True, type=bool):
             return False
         try:
@@ -602,12 +610,17 @@ class CalendarSyncCoordinator(QObject):
 
     def _ics_finished(self):
         worker = self.sender()
+        pending = set()
         if worker in self.app._bg_workers:
             self.app._bg_workers.remove(worker)
         if self.ics_worker is worker:
             self.ics_worker = None
+            pending = getattr(self, "_ics_pending_ids", set())
+            self._ics_pending_ids = set()
         if worker:
             worker.deleteLater()
+        if pending:
+            self.sync_ics(force=True, calendar_ids=pending)
         self.refresh()
 
     def record_google_result(self, success, skipped=False):
@@ -619,6 +632,7 @@ class CalendarSyncCoordinator(QObject):
 
     def stop(self):
         self.local_change_timer.stop()
+        self._ics_pending_ids.clear()
         if self.ics_worker:
             self.ics_worker.requestInterruption()
 

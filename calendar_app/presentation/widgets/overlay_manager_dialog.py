@@ -12,7 +12,7 @@ from __future__ import annotations
 import functools
 import logging
 
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtCore import QEvent, QSize, Qt, QTimer
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -22,8 +22,12 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
+    QStackedWidget,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -35,9 +39,13 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
-from calendar_app.presentation.widgets.overlay_manager import _WIDGET_TYPES, widget_type_label
-from calendar_app.shared.icon_map import ICON
-from calendar_app.shared.icon_map import icon as _ic
+from calendar_app.presentation.widgets.overlay_manager import widget_type_label
+from calendar_app.presentation.widgets.widget_management_styles import management_styles
+from calendar_app.presentation.widgets.widget_management_ui import (
+    WidgetAddDialog,
+    WidgetModeManagementPanel,
+    hub_button,
+)
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
 
 logger = logging.getLogger(__name__)
@@ -91,9 +99,9 @@ def _q(h: str, a: float) -> str:
     return f"rgba({c.red()},{c.green()},{c.blue()},{a})"
 
 
-def _load_tokens() -> dict:
+def _load_tokens(settings=None) -> dict:
     """dialog_theme 토큰 + metric 토큰을 통합한 번들 반환."""
-    tok = get_dialog_theme_tokens()
+    tok = get_dialog_theme_tokens(settings=settings)
     met = get_dialog_metric_tokens(apply_overrides=True)
 
     success_hex = str(tok.get("success_hex") or tok.get("button_success_text") or tok.get("accent"))
@@ -355,15 +363,15 @@ class _OutlineBtn(QPushButton):
 
 
 class WidgetCard(QFrame):
-    """한 줄 위젯 카드: [ accent_bar │ chip │ name/id │ toggle │ 설정 │ ◎ ↺ ✕ ]"""
+    """Stable, editable row with visible primary actions and a secondary menu."""
 
     def __init__(
         self,
-        iid: str,
-        name: str,
-        wtype: str,
+        iid,
+        name,
+        wtype,
         widget,
-        tokens: dict,
+        tokens,
         on_toggle,
         on_rename,
         on_focus,
@@ -371,398 +379,610 @@ class WidgetCard(QFrame):
         on_duplicate,
         on_delete,
         on_settings,
+        on_graphics=None,
         parent=None,
     ):
         super().__init__(parent)
-        self.iid = iid
+        self.iid, self.wtype, self.widget = iid, wtype, widget
         self._tokens = tokens
         self.setObjectName("WidgetCard")
-
-        is_on = widget.is_enabled()
-        accent = _type_color(wtype, tokens)
-        text_primary = tokens["text_primary"]
-
-        card_h = max(tokens["btn_h"] + 18, 54)
-        self.setFixedHeight(card_h)
-
+        self.setMinimumHeight(86)
         root = QHBoxLayout(self)
-        root.setContentsMargins(0, 0, 10, 0)
-        root.setSpacing(6)
-
-        # 왼쪽 액센트 바 — type color or muted
-        self._bar = QFrame()
-        self._bar.setFixedWidth(3)
-        bar_color = accent if is_on else tokens["divider"]
-        self._bar.setStyleSheet(f"background: {bar_color}; border-radius: 0;")
-        root.addWidget(self._bar)
-
-        # 타입 칩
-        root.addWidget(_Chip(wtype, tokens))
-
-        # 이름 + ID
+        root.setContentsMargins(14, 10, 12, 10)
+        root.setSpacing(12)
         info = QVBoxLayout()
-        info.setSpacing(1)
-        info.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-
+        info.setSpacing(3)
         self.name_edit = QLineEdit(name or t("widget_manager.unnamed", "이름 없음"))
         self.name_edit.setObjectName("cardNameEdit")
-        self.name_edit.setPlaceholderText(t("widget_manager.unnamed", "이름 없음"))
+        self.name_edit.setAccessibleName(t("widget_hub.rename", "위젯 이름 변경"))
+        self.name_edit.setToolTip(
+            t("widget_hub.rename_hint", "이름을 수정하고 Enter를 눌러 저장하세요")
+        )
         self.name_edit.editingFinished.connect(lambda: on_rename(iid, self.name_edit.text()))
-
-        id_lbl = QLabel(iid)
-        id_lbl.setObjectName("cardIdLabel")
-
+        self.detail = QLabel()
+        self.detail.setObjectName("cardIdLabel")
+        self.detail.setToolTip(iid)
         info.addWidget(self.name_edit)
-        info.addWidget(id_lbl)
+        info.addWidget(self.detail)
         root.addLayout(info, 1)
-
-        # ON/OFF 토글
-        self.toggle = _ToggleBtn(is_on, tokens)
+        self.toggle = _ToggleBtn(widget.is_enabled(), tokens)
+        self.toggle.setAutoDefault(False)
+        self.toggle.setFixedSize(64, 28)
         self.toggle.toggled.connect(functools.partial(on_toggle, iid))
         root.addWidget(self.toggle)
+        self.find_button = hub_button(t("widget_hub.find", "찾기"), lambda: on_focus(iid))
+        self.find_button.setToolTip(t("widget_hub.find_hint", "이 화면 중앙으로 가져와 표시합니다"))
+        root.addWidget(self.find_button)
+        self.graphics_button = hub_button(
+            t("widget_hub.decorate", "꾸미기"), lambda: on_graphics(iid), primary=True
+        )
+        self.graphics_button.setEnabled(
+            callable(on_graphics) and hasattr(widget, "_open_graphic_collections")
+        )
+        root.addWidget(self.graphics_button)
+        self.more_button = hub_button(t("widget_hub.more", "더보기"), lambda: None)
+        self.more_menu = QMenu(self.more_button)
+        self.more_menu.addAction(t("widget_manager.btn_settings", "설정"), lambda: on_settings(iid))
+        lock_reader = getattr(widget, "placement_is_locked", None)
+        self.lock_action = None
+        if callable(lock_reader):
+            self.lock_action = self.more_menu.addAction(
+                t("widget_hub.lock_position", "위치·크기 잠금")
+            )
+            self.lock_action.setCheckable(True)
+            self.lock_action.triggered.connect(self._lock_position)
+        self.more_menu.addAction(
+            t("widget_manager.tip_reset", "위치 초기화"), lambda: on_reset(iid)
+        )
+        self.more_menu.addAction(
+            t("widget_manager.tip_duplicate", "복제"), lambda: on_duplicate(iid)
+        )
+        self.more_menu.addSeparator()
+        self.more_menu.addAction(t("widget_manager.tip_delete", "삭제"), lambda: on_delete(iid))
+        self.more_menu.aboutToShow.connect(lambda: self.update_state(self.name_edit.text(), widget))
+        self.more_button.setMenu(self.more_menu)
+        root.addWidget(self.more_button)
+        self.update_state(name, widget)
 
-        # 설정 버튼
-        btn_cfg = _GhostBtn(
-            _ic(ICON.SETTINGS, color=text_primary),
-            t("widget_manager.btn_settings", "설정"),
-            tokens["accent"],
-            tokens,
-        )
-        btn_cfg.clicked.connect(lambda: on_settings(iid))
-        root.addWidget(btn_cfg)
+    def _lock_position(self, checked):
+        self.widget._set_placement_locked(checked)
+        self.update_state(self.name_edit.text(), self.widget)
 
-        # 액션 아이콘
-        btn_focus = _GhostBtn(
-            _ic(ICON.SNAP_CENTER, color=text_primary),
-            t("widget_manager.tip_center", "화면 중앙으로"),
-            tokens["accent"],
-            tokens,
+    def update_state(self, name, widget):
+        self.widget = widget
+        if not self.name_edit.hasFocus() and not self.name_edit.isModified():
+            self.name_edit.setText(name or t("widget_manager.unnamed", "이름 없음"))
+        enabled = widget.is_enabled()
+        self.toggle.blockSignals(True)
+        self.toggle.setChecked(enabled)
+        self.toggle._refresh()
+        self.toggle.setText(
+            t("widget_hub.shown", "표시 중") if enabled else t("widget_hub.hidden", "숨김")
         )
-        btn_reset = _GhostBtn(
-            _ic(ICON.RESET_POS, color=text_primary),
-            t("widget_manager.tip_reset", "위치 초기화"),
-            tokens["text_muted"],
-            tokens,
+        self.toggle.setAccessibleName(
+            t("widget_hub.visibility_for", "{name} 표시 전환").format(name=name)
         )
-        btn_duplicate = _GhostBtn(
-            _ic(ICON.ADD, color=text_primary),
-            t("widget_manager.tip_duplicate", "복제"),
-            tokens["accent"],
-            tokens,
-        )
-        btn_del = _GhostBtn(
-            _ic(ICON.DELETE, color=text_primary),
-            t("widget_manager.tip_delete", "삭제"),
-            tokens["danger"],
-            tokens,
-        )
-        btn_focus.clicked.connect(lambda: on_focus(iid))
-        btn_reset.clicked.connect(lambda: on_reset(iid))
-        btn_duplicate.clicked.connect(lambda: on_duplicate(iid))
-        btn_del.clicked.connect(lambda: on_delete(iid))
-        root.addWidget(btn_focus)
-        root.addWidget(btn_reset)
-        root.addWidget(btn_duplicate)
-        root.addWidget(btn_del)
+        self.toggle.blockSignals(False)
+        locked = bool(getattr(widget, "placement_is_locked", lambda: False)())
+        state = t("widget_hub.shown", "표시 중") if enabled else t("widget_hub.hidden", "숨김")
+        group = getattr(widget, "_overlay_manager_stack_state", lambda: None)()
+        if enabled and group and group["members"][group["index"]] != self.iid:
+            state = t("widget_studio.stack_waiting", "스택 대기")
+        from calendar_app.presentation.widgets.widget_workspace_preview import widget_health
 
-
-# ── 메인 다이얼로그 ───────────────────────────────────────────────────────────
+        health, label, hint = widget_health(widget, self.wtype)
+        if health != "normal":
+            state += " · " + label
+        self.detail.setToolTip(hint or self.iid)
+        if locked:
+            state += " · " + t("widget_hub.position_locked", "배치 잠김")
+        self.detail.setText(f"{_se(widget_type_label(self.wtype))}  ·  {state}")
+        if self.lock_action is not None:
+            self.lock_action.setChecked(locked)
 
 
 class OverlayManagerDialog(QDialog):
-    """위젯 관리자 다이얼로그 — dialog_styles 토큰 기반."""
+    """Nonmodal hub; querying, filtering and opening editors never enters widget mode."""
 
     def __init__(self, manager, parent=None):
         super().__init__(parent)
         self._mgr = manager
         self._tok = _load_tokens()
-
+        self._cards = {}
+        self._instances = []
+        self._listening = True
+        factory = getattr(manager, "workspace_service", None)
+        self.studio = factory() if callable(factory) else None
+        self.gallery = None
+        self._snap_action = None
+        self._refresh_timer = QTimer(self)
+        self._refresh_timer.setSingleShot(True)
+        self._refresh_timer.timeout.connect(self._populate)
         apply_dialog_title(self, t("widget_manager.title", "위젯 관리자"))
-        apply_common_dialog_style(self, minimum_width=760, size=(840, 560))
-        self.setStyleSheet(_build_manager_css(self._tok))
-
-        self._cards: dict[str, WidgetCard] = {}
+        apply_common_dialog_style(self, minimum_width=760, size=(940, 680))
+        self.setStyleSheet(_build_manager_css(self._tok) + management_styles(self._tok))
         self._build_ui()
         self._populate()
         self._mgr.add_listener(self._sync_from_manager)
 
-    # ── UI 구성 ──────────────────────────────────────────────────────────────
     def _build_ui(self):
-        tok = self._tok
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
-
-        # ── 헤더 ──
-        hdr = QFrame()
-        hdr.setObjectName("MgrHdr")
-        hdr_lay = QVBoxLayout(hdr)
-        hdr_lay.setContentsMargins(18, 12, 18, 10)
-        hdr_lay.setSpacing(8)
-
-        # 제목 행
-        title_row = QHBoxLayout()
-        title_row.setSpacing(8)
-
-        title_lbl = QLabel(t("widget_manager.title", "위젯 관리자"))
-        title_lbl.setObjectName("overlayManagerTitle")
-        title_row.addWidget(title_lbl)
-        title_row.addStretch()
-
-        self.btn_show_all = self._mk_btn(
-            t("widget_manager.btn_show_all", "모두 표시"), primary=True
+        header = QFrame()
+        self._header_frame = header
+        header.setObjectName("MgrHdr")
+        head = QVBoxLayout(header)
+        head.setContentsMargins(20, 16, 20, 14)
+        title = QLabel(t("widget_manager.title", "위젯 관리자"))
+        title.setObjectName("overlayManagerTitle")
+        head.addWidget(title)
+        desc = QLabel(
+            t(
+                "widget_hub.description",
+                "바탕화면 위젯부터 캘린더 전용 화면까지, 한곳에서 관리하세요.",
+            )
         )
-        self.btn_hide_all = self._mk_btn(
-            t("widget_manager.btn_hide_all", "모두 숨김"), primary=False
-        )
-        self.btn_delete_all = self._mk_btn(
-            t("widget_manager.btn_delete_all", "전체 삭제..."), primary=False
-        )
-        self.btn_delete_all.setObjectName("DangerBtn")
-        self.btn_show_all.setFixedWidth(84)
-        self.btn_hide_all.setFixedWidth(84)
-        self.btn_delete_all.setFixedWidth(90)
+        desc.setObjectName("overlayManagerDesc")
+        desc.setWordWrap(True)
+        head.addWidget(desc)
+        root.addWidget(header)
+        self.tabs = QTabWidget()
+        self.tabs.setObjectName("hubTabs")
+        desktop = QWidget()
+        body = QVBoxLayout(desktop)
+        body.setContentsMargins(18, 14, 18, 8)
+        body.setSpacing(12)
+        addbar = QFrame()
+        addbar.setObjectName("overlayManagerAddBar")
+        tools = QHBoxLayout(addbar)
+        tools.setContentsMargins(10, 8, 10, 8)
+        self.search_edit = QLineEdit()
+        self.search_edit.setObjectName("hubSearch")
+        self.search_edit.setPlaceholderText(t("widget_hub.search", "이름 또는 위젯 종류 검색"))
+        self.search_edit.setAccessibleName(t("widget_hub.search", "이름 또는 위젯 종류 검색"))
+        self.search_edit.setClearButtonEnabled(True)
+        self.search_edit.textChanged.connect(self._apply_filters)
+        tools.addWidget(self.search_edit, 1)
+        self.visibility_combo = QComboBox()
+        self.visibility_combo.setObjectName("hubFilter")
+        self.visibility_combo.setAccessibleName(t("widget_hub.visibility_filter", "표시 상태 필터"))
+        for key, label in (
+            ("all", t("widget_hub.all", "전체 상태")),
+            ("shown", t("widget_hub.shown", "표시 중")),
+            ("hidden", t("widget_hub.hidden", "숨김")),
+        ):
+            self.visibility_combo.addItem(label, key)
+        self.visibility_combo.currentIndexChanged.connect(self._apply_filters)
+        if self.studio is not None:
+            self.visibility_combo.addItem(t("widget_studio.stack_waiting", "스택 대기"), "waiting")
+        tools.addWidget(self.visibility_combo)
+        self.add_button = self._mk_btn(t("widget_hub.add", "위젯 추가"), True)
+        self.add_button.clicked.connect(self._add_instance)
+        tools.addWidget(self.add_button)
+        body.addWidget(addbar)
+        row = QHBoxLayout()
+        self._count_badge = QLabel()
+        self._count_badge.setObjectName("hubBody")
+        row.addWidget(self._count_badge)
+        self.view_combo = QComboBox()
+        self.view_combo.setObjectName("hubView")
+        self.view_combo.setAccessibleName(t("widget_studio.view", "관리창 보기"))
+        self.view_combo.addItem(t("widget_studio.list_view", "목록"))
+        if self.studio is not None:
+            self.view_combo.addItem(t("widget_studio.gallery_view", "갤러리"))
+        self.view_combo.currentIndexChanged.connect(self._set_view)
+        row.addWidget(self.view_combo)
+        row.addStretch()
+        self.btn_show_all = self._mk_btn(t("widget_hub.show_all", "전체 표시"), False)
+        self.btn_hide_all = self._mk_btn(t("widget_hub.hide_all", "전체 숨김"), False)
         self.btn_show_all.clicked.connect(self._show_all)
         self.btn_hide_all.clicked.connect(self._hide_all)
-        self.btn_delete_all.clicked.connect(self._delete_all)
-        title_row.addWidget(self.btn_show_all)
-        title_row.addWidget(self.btn_hide_all)
-        title_row.addWidget(self.btn_delete_all)
-        hdr_lay.addLayout(title_row)
-
-        desc_lbl = QLabel(t("widget_manager.desc", "화면에 표시할 위젯을 관리합니다."))
-        desc_lbl.setObjectName("overlayManagerDesc")
-        hdr_lay.addWidget(desc_lbl)
-
-        # 추가 바
-        add_bar = QFrame()
-        add_bar.setObjectName("overlayManagerAddBar")
-        add_lay = QHBoxLayout(add_bar)
-        add_lay.setContentsMargins(10, 5, 8, 5)
-        add_lay.setSpacing(6)
-
-        self._type_combo = QComboBox()
-        self._type_combo.setObjectName("typeCombo")
-        self._type_combo.setFixedHeight(tok["fld_h"] - 4)
-        self._type_combo.setFixedWidth(172)
-        for wtype in _WIDGET_TYPES:
-            icon_char, _ = _TYPE_META.get(wtype, ("▪", ""))
-            self._type_combo.addItem(
-                f"{icon_char}  {_se(widget_type_label(wtype))}", userData=wtype
+        row.addWidget(self.btn_show_all)
+        row.addWidget(self.btn_hide_all)
+        self.bulk_more = self._mk_btn(t("widget_hub.more", "더보기"), False)
+        bulk_menu = QMenu(self.bulk_more)
+        bulk_menu.addAction(t("widget_manager.btn_delete_all", "전체 삭제..."), self._delete_all)
+        if self.studio is not None:
+            bulk_menu.addSeparator()
+            bulk_menu.addAction(
+                t("widget_studio.layout_editor", "바탕화면 배치 편집"), self._edit_desktop
             )
-        add_lay.addWidget(self._type_combo)
-
-        self._name_edit = QLineEdit()
-        self._name_edit.setObjectName("nameEditBar")
-        self._name_edit.setPlaceholderText(t("widget_manager.name_placeholder", "위젯 이름 (선택)"))
-        self._name_edit.setFixedHeight(tok["fld_h"] - 4)
-        self._name_edit.returnPressed.connect(self._add_instance)
-        add_lay.addWidget(self._name_edit, 1)
-
-        btn_add = self._mk_btn(t("widget_manager.btn_add", "+ 추가"), primary=True)
-        btn_add.setFixedWidth(72)
-        btn_add.clicked.connect(self._add_instance)
-        add_lay.addWidget(btn_add)
-        hdr_lay.addWidget(add_bar)
-        root.addWidget(hdr)
-
-        # ── 목록 섹션 헤더 ──
-        sec = QFrame()
-        sec_lay = QHBoxLayout(sec)
-        sec_lay.setContentsMargins(18, 8, 18, 4)
-        sec_lay.setSpacing(8)
-
-        sec_lbl = QLabel(t("widget_manager.list_heading", "위젯 목록"))
-        sec_lbl.setObjectName("secLabel")
-        self._count_badge = QLabel("0")
-        self._count_badge.setObjectName("countBadge")
-        sec_lay.addWidget(sec_lbl)
-        sec_lay.addWidget(self._count_badge)
-        sec_lay.addStretch()
-        self._snap_check = QCheckBox(t("widget_manager.snap_enabled", "가장자리와 위젯에 맞춤"))
-        settings_getter = getattr(self._mgr, "_settings", None)
-        manager_settings = settings_getter() if callable(settings_getter) else None
-        self._snap_check.setChecked(
-            manager_settings.value("overlay_snap_enabled", True, type=bool)
-            if manager_settings is not None
-            else True
-        )
-        if manager_settings is not None:
-            self._snap_check.toggled.connect(
-                lambda enabled, settings=manager_settings: settings.setValue(
-                    "overlay_snap_enabled", enabled
-                )
+            bulk_menu.addAction(
+                t("widget_studio.create_stack", "선택 위젯 스택 만들기"), self._create_stack
             )
-        sec_lay.addWidget(self._snap_check)
-        root.addWidget(sec)
-
-        # ── 스크롤 목록 ──
+            bulk_menu.addAction(
+                t("widget_studio.ungroup_selected", "선택 위젯 스택 해제"), self._ungroup_selected
+            )
+            bulk_menu.addAction(t("widget_studio.undo", "최근 적용 되돌리기"), self.studio.undo)
+            self._snap_action = bulk_menu.addAction(
+                t("widget_manager.snap_enabled", "가장자리와 위젯에 맞춤")
+            )
+            self._snap_action.setCheckable(True)
+        self.bulk_more.setMenu(bulk_menu)
+        row.addWidget(self.bulk_more)
+        body.addLayout(row)
         self._scroll = QScrollArea()
         self._scroll.setObjectName("widgetListScroll")
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
         self._scroll.viewport().setObjectName("widgetListViewport")
-
         self._list_container = QWidget()
         self._list_container.setObjectName("widgetListContainer")
         self._list_lay = QVBoxLayout(self._list_container)
-        self._list_lay.setContentsMargins(16, 4, 16, 10)
-        self._list_lay.setSpacing(3)
-
-        self._empty_lbl = QLabel(
-            t("widget_manager.empty", "위젯이 없습니다.\n상단에서 새 위젯을 추가하세요.")
-        )
+        self._list_lay.setContentsMargins(0, 0, 6, 8)
+        self._list_lay.setSpacing(8)
+        self._empty_lbl = QLabel()
         self._empty_lbl.setObjectName("emptyLabel")
         self._empty_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._empty_lbl.setWordWrap(True)
         self._list_lay.addWidget(self._empty_lbl)
         self._list_lay.addStretch()
-
         self._scroll.setWidget(self._list_container)
-        root.addWidget(self._scroll, 1)
+        self._views = QStackedWidget()
+        self._views.setMinimumHeight(80)
+        self._views.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
+        self._views.addWidget(self._scroll)
+        if self.studio is not None:
+            from calendar_app.presentation.widgets.widget_workspace_gallery import WidgetGallery
 
-        # ── 푸터 ──
-        foot = QFrame()
-        foot.setObjectName("MgrFoot")
-        foot_lay = QHBoxLayout(foot)
-        foot_lay.setContentsMargins(18, 8, 18, 8)
-
-        hint = QLabel(t("widget_manager.footer_hint", "이름 클릭 → 수정  ·  설정 버튼 → 위젯 옵션"))
-        hint.setObjectName("overlayManagerHint")
-        foot_lay.addWidget(hint)
-        foot_lay.addStretch()
-
-        btn_close = self._mk_btn(t("common.close", "닫기"), primary=False)
-        btn_close.setFixedWidth(72)
-        btn_close.clicked.connect(self.close)
-        foot_lay.addWidget(btn_close)
-        root.addWidget(foot)
-
-    # ── 버튼 팩토리 ──────────────────────────────────────────────────────────
-    def _mk_btn(self, text: str, primary: bool) -> QPushButton:
-        tok = self._tok
-        b = QPushButton(text)
-        b.setFixedHeight(max(tok["btn_h"] - 4, 28))
-        b.setCursor(Qt.CursorShape.PointingHandCursor)
-        b.setObjectName("primary_btn" if primary else "ghost_btn")
-        return b
-
-    # ── 목록 갱신 ────────────────────────────────────────────────────────────
-    def _populate(self):
-        for card in list(self._cards.values()):
-            self._list_lay.removeWidget(card)
-            card.deleteLater()
-        self._cards.clear()
-
-        while self._list_lay.count():
-            item = self._list_lay.takeAt(0)
-            if item and item.widget() and item.widget() is not self._empty_lbl:
-                pass
-
-        instances = self._mgr.all_instances()
-        count = len(instances)
-
-        self._count_badge.setText(str(count))
-        self._empty_lbl.setVisible(count == 0)
-
-        if count == 0:
-            self._list_lay.addWidget(self._empty_lbl)
-            self._list_lay.addStretch()
-            return
-
-        for iid, name, wtype, widget in instances:
-            card = WidgetCard(
-                iid,
-                name,
-                wtype,
-                widget,
-                tokens=self._tok,
-                on_toggle=self._on_toggle,
-                on_rename=self._on_rename,
-                on_focus=self._on_focus,
-                on_reset=self._on_reset_pos,
-                on_duplicate=self._on_duplicate,
-                on_delete=self._on_delete,
-                on_settings=self._on_settings,
-                parent=self._list_container,
+            self.gallery = WidgetGallery(self, self.studio)
+            self._views.addWidget(self.gallery)
+        body.addWidget(self._views, 1)
+        self._snap_check = QCheckBox(t("widget_manager.snap_enabled", "가장자리와 위젯에 맞춤"))
+        self._snap_check.setObjectName("hubSnap")
+        settings_getter = getattr(self._mgr, "_settings", None)
+        settings = settings_getter() if callable(settings_getter) else None
+        self._snap_check.setChecked(
+            settings.value("overlay_snap_enabled", True, type=bool)
+            if settings is not None
+            else True
+        )
+        if settings is not None:
+            self._snap_check.toggled.connect(
+                lambda enabled: settings.setValue("overlay_snap_enabled", enabled)
             )
-            self._list_lay.addWidget(card)
-            self._cards[iid] = card
+        body.addWidget(self._snap_check)
+        if self._snap_action is not None:
+            self._snap_action.setChecked(self._snap_check.isChecked())
+            self._snap_action.toggled.connect(self._snap_check.setChecked)
+            self._snap_check.toggled.connect(self._snap_action.setChecked)
+        self.tabs.addTab(desktop, t("widget_hub.desktop_tab", "바탕화면 위젯"))
+        mode_scroll = QScrollArea()
+        mode_scroll.setWidgetResizable(True)
+        mode_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.mode_panel = WidgetModeManagementPanel(getattr(self._mgr, "_owner", None), self)
+        mode_scroll.setWidget(self.mode_panel)
+        self.tabs.addTab(mode_scroll, t("widget_hub.mode_tab", "위젯 전용 모드"))
+        if self.studio is not None:
+            from calendar_app.presentation.widgets.widget_workspace_panel import (
+                WidgetWorkspacePanel,
+            )
 
-        self._list_lay.addStretch()
+            self.workspace_panel = WidgetWorkspacePanel(self.studio, self)
+            workspace_scroll = QScrollArea()
+            workspace_scroll.setObjectName("hubWorkspaceScroll")
+            workspace_scroll.viewport().setObjectName("hubWorkspaceViewport")
+            workspace_scroll.setWidgetResizable(True)
+            workspace_scroll.setFrameShape(QFrame.Shape.NoFrame)
+            workspace_scroll.setWidget(self.workspace_panel)
+            self.tabs.addTab(workspace_scroll, t("widget_studio.workspace_tab", "작업 공간"))
+        self.tabs.currentChanged.connect(self._tab_changed)
+        root.addWidget(self.tabs, 1)
+        footer = QFrame()
+        footer.setObjectName("MgrFoot")
+        foot = QHBoxLayout(footer)
+        foot.setContentsMargins(20, 10, 20, 10)
+        hint = QLabel(
+            t("widget_hub.footer", "이름 수정 후 Enter · 찾기로 화면에 가져오기 · 더보기에서 설정")
+        )
+        hint.setObjectName("overlayManagerHint")
+        self._footer_hint = hint
+        hint.setWordWrap(True)
+        foot.addWidget(hint, 1)
+        close = self._mk_btn(t("common.close", "닫기"), False)
+        close.clicked.connect(self.close)
+        foot.addWidget(close)
+        root.addWidget(footer)
+
+    def _mk_btn(self, text, primary=False):
+        return hub_button(text, lambda: None, primary=primary)
+
+    def _tab_changed(self, index):
+        self.mode_panel.refresh()
+        if index == 2:
+            self._footer_hint.setText(
+                t(
+                    "widget_studio.workspace_footer",
+                    "현재 상태 저장 · 작업 공간 적용 · 자동 전환과 움직임 설정",
+                )
+            )
+            return
+        self._footer_hint.setText(
+            t(
+                "widget_hub.mode_edit_hint",
+                "꾸미기는 미리보기에서 적용하거나 취소할 수 있어요. 모드를 실행하지 않고도 설정할 수 있습니다.",
+            )
+            if index
+            else t(
+                "widget_hub.footer", "이름 수정 후 Enter · 찾기로 화면에 가져오기 · 더보기에서 설정"
+            )
+        )
+
+    def _set_view(self, index):
+        self._views.setCurrentIndex(index)
+        self._update_compact_controls()
+        self._apply_filters()
+
+    def _update_compact_controls(self):
+        compact = self.height() < 560
+        self._header_frame.setVisible(not compact)
+        self._snap_check.setVisible(not (compact and self._views.currentIndex() == 1))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, "_views") and hasattr(self, "_snap_check"):
+            self._update_compact_controls()
+
+    def _edit_desktop(self):
+        from calendar_app.presentation.dialogs.widget_desktop_layout_dialog import (
+            WidgetDesktopLayoutDialog,
+        )
+
+        if self.studio is None:
+            return
+        dialog = WidgetDesktopLayoutDialog(self.studio, self)
+        dialog.exec()
+        dialog.deleteLater()
+        if self.gallery is not None:
+            self.gallery.cache.clear()
+        self._populate()
+
+    def _create_stack(self):
+        from PyQt6.QtWidgets import QMessageBox
+
+        ids = self.gallery.selected_ids() if self.gallery is not None else []
+        if self.studio is None or len(ids) < 2:
+            QMessageBox.information(
+                self,
+                t("widget_studio.stack", "위젯 스택"),
+                t(
+                    "widget_studio.select_stack",
+                    "갤러리에서 Ctrl+클릭으로 잠금 해제된 위젯을 두 개 이상 선택하세요.",
+                ),
+            )
+            return
+        from calendar_app.presentation.widgets.overlay_manager import _prompt_widget_name
+
+        name, accepted = _prompt_widget_name(
+            self,
+            t("widget_studio.create_stack", "선택 위젯 스택 만들기"),
+            t("widget_studio.stack_name", "스택 이름"),
+            t("widget_studio.stack", "위젯 스택"),
+        )
+        if accepted:
+            try:
+                self.studio.stacks.create(ids, name)
+            except ValueError:
+                QMessageBox.information(
+                    self,
+                    t("widget_studio.stack", "위젯 스택"),
+                    t(
+                        "widget_studio.stack_invalid",
+                        "기존 스택을 해제하고 선택한 위젯의 배치 잠금을 해제하세요.",
+                    ),
+                )
+
+    def _ungroup_selected(self):
+        if self.studio is not None and self.gallery is not None:
+            groups = {
+                group["id"]
+                for iid in self.gallery.selected_ids()
+                if (group := self.studio.stacks.group_for(iid))
+            }
+            for group_id in groups:
+                self.studio.stacks.remove(group_id)
+
+    def _populate(self):
+        self._refresh_timer.stop()
+        self._instances = list(self._mgr.all_instances())
+        current_ids = {item[0] for item in self._instances}
+        for iid in set(self._cards) - current_ids:
+            card = self._cards.pop(iid)
+            self._list_lay.removeWidget(card)
+            card.hide()
+            card.deleteLater()
+        for index, (iid, name, kind, widget) in enumerate(self._instances):
+            card = self._cards.get(iid)
+            if card is None:
+                card = WidgetCard(
+                    iid,
+                    name,
+                    kind,
+                    widget,
+                    self._tok,
+                    self._on_toggle,
+                    self._on_rename,
+                    self._on_focus,
+                    self._on_reset_pos,
+                    self._on_duplicate,
+                    self._on_delete,
+                    self._on_settings,
+                    self._on_graphics,
+                    parent=self._list_container,
+                )
+                self._cards[iid] = card
+                self._list_lay.insertWidget(index, card)
+            else:
+                card.update_state(name, widget)
+        self._apply_filters()
+
+    def _apply_filters(self, *_):
+        query = self.search_edit.text().strip().casefold()
+        state = self.visibility_combo.currentData()
+        matches = shown = 0
+        for iid, name, kind, widget in self._instances:
+            enabled = widget.is_enabled()
+            group = self.studio.stacks.group_for(iid) if self.studio is not None else None
+            waiting = bool(enabled and group and group["members"][group["index"]] != iid)
+            shown += bool(enabled and not waiting)
+            match = (not query or query in f"{name} {widget_type_label(kind)}".casefold()) and (
+                state == "all"
+                or (state == "shown" and enabled and not waiting)
+                or (state == "hidden" and not enabled)
+                or (state == "waiting" and waiting)
+            )
+            self._cards[iid].setVisible(match)
+            matches += bool(match)
+        total = len(self._instances)
+        self._count_badge.setText(
+            t("widget_hub.count", "{matches}/{total}개 · 표시 중 {shown}개").format(
+                matches=matches, total=total, shown=shown
+            )
+        )
+        self._empty_lbl.setVisible(matches == 0)
+        self._empty_lbl.setText(
+            t(
+                "widget_hub.no_match",
+                "조건에 맞는 위젯이 없습니다.\n검색어나 표시 상태를 바꿔보세요.",
+            )
+            if total
+            else t(
+                "widget_hub.no_widgets",
+                "첫 위젯을 추가해 보세요.\n‘위젯 추가’에서 원하는 종류를 고를 수 있어요.",
+            )
+        )
+        for button in (self.btn_show_all, self.btn_hide_all, self.bulk_more):
+            button.setEnabled(total > 0)
+        if self.gallery is not None and self.gallery.isVisible():
+            self.gallery.populate(
+                self._instances, {iid for iid, card in self._cards.items() if not card.isHidden()}
+            )
 
     def _sync_from_manager(self):
-        self._populate()
+        if self._listening and not self._refresh_timer.isActive():
+            self._refresh_timer.start(0)
 
-    # ── 액션 ─────────────────────────────────────────────────────────────────
     def _add_instance(self):
-        wtype = self._type_combo.currentData()
-        name = self._name_edit.text().strip() or None
-        iid = self._mgr.add_instance(wtype, name)
-        self._mgr.show_instance(iid)
-        self._name_edit.clear()
-        self._populate()
-
-    def _on_toggle(self, iid: str, checked: bool):
-        if checked:
+        dialog = WidgetAddDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            kind, name = dialog.selection()
+            iid = self._mgr.add_instance(kind, name)
             self._mgr.show_instance(iid)
-        else:
-            self._mgr.hide_instance(iid)
-
-    def _on_rename(self, iid: str, text: str):
-        if text.strip():
-            self._mgr.rename_instance(iid, text.strip())
-
-    def _on_focus(self, iid: str):
-        from PyQt6.QtWidgets import QApplication
-
-        w = self._mgr.get_widget(iid)
-        if not w:
-            return
-        screen = QApplication.primaryScreen()
-        if screen:
-            g = screen.availableGeometry()
-            w.move(g.x() + (g.width() - w.width()) // 2, g.y() + (g.height() - w.height()) // 2)
-            w.save_position()
-        if not w.is_enabled():
-            self._mgr.show_instance(iid)
+            self.search_edit.clear()
+            self.visibility_combo.setCurrentIndex(0)
             self._populate()
-        else:
-            w.raise_()
+            self._scroll.ensureWidgetVisible(self._cards[iid])
+        dialog.deleteLater()
 
-    def _on_reset_pos(self, iid: str):
-        w = self._mgr.get_widget(iid)
-        if w and hasattr(w, "_action_reset_position"):
-            w._action_reset_position()
+    def _on_toggle(self, iid, checked):
+        (self._mgr.show_instance if checked else self._mgr.hide_instance)(iid)
 
-    def _on_delete(self, iid: str):
+    def _on_rename(self, iid, text):
+        name = text.strip()
+        previous = next((item[1] for item in self._instances if item[0] == iid), "")
+        if name and name != previous:
+            self._mgr.rename_instance(iid, name)
+        card = self._cards.get(iid)
+        if card is not None:
+            card.name_edit.setText(name or previous)
+            card.name_edit.setModified(False)
+
+    def _on_focus(self, iid):
+        widget = self._mgr.get_widget(iid)
+        if widget is None:
+            return
+        self._mgr.show_instance(iid)
+        if self.studio is not None:
+            group = self.studio.stacks.group_for(iid)
+            if group:
+                self.studio.stacks.select(group["id"], group["members"].index(iid))
+        screen = self.screen()
+        if screen is not None:
+            geometry = screen.availableGeometry()
+            widget.move(
+                geometry.x() + max(0, (geometry.width() - widget.width()) // 2),
+                geometry.y() + max(0, (geometry.height() - widget.height()) // 2),
+            )
+            widget.save_position()
+        widget.raise_()
+
+    def _on_reset_pos(self, iid):
+        widget = self._mgr.get_widget(iid)
+        if widget is not None and hasattr(widget, "_action_reset_position"):
+            widget._action_reset_position()
+
+    def _on_delete(self, iid):
         self._mgr._ui_remove_with_confirm(iid, parent_widget=self)
         self._populate()
 
-    def _on_duplicate(self, iid: str):
+    def _on_duplicate(self, iid):
         new_id = self._mgr.duplicate_instance(iid)
         if new_id:
             self._mgr.show_instance(new_id)
         self._populate()
 
-    def _on_settings(self, iid: str):
-        w = self._mgr.get_widget(iid)
-        if w and hasattr(w, "_open_settings"):
-            w._open_settings()
+    def _on_settings(self, iid):
+        widget = self._mgr.get_widget(iid)
+        if widget is not None and hasattr(widget, "_open_settings"):
+            widget._open_settings()
+            if self.gallery is not None:
+                self.gallery.cache.clear()
+
+    def _on_graphics(self, iid):
+        widget = self._mgr.get_widget(iid)
+        if widget is not None and hasattr(widget, "_open_graphic_collections"):
+            widget._open_graphic_collections()
+            if self.gallery is not None:
+                self.gallery.cache.clear()
 
     def _show_all(self):
-        for iid, _, _, _ in self._mgr.all_instances():
-            self._mgr.show_instance(iid)
-        self._populate()
+        for iid, _, _, widget in self._mgr.all_instances():
+            if not widget.is_enabled():
+                self._mgr.show_instance(iid)
 
     def _hide_all(self):
-        for iid, _, _, _ in self._mgr.all_instances():
-            self._mgr.hide_instance(iid)
-        self._populate()
+        for iid, _, _, widget in self._mgr.all_instances():
+            if widget.is_enabled():
+                self._mgr.hide_instance(iid)
 
     def _delete_all(self):
         self._mgr._ui_remove_all_with_confirm(parent_widget=self)
         self._populate()
 
-    def closeEvent(self, e):
-        self._mgr.remove_listener(self._sync_from_manager)
-        super().closeEvent(e)
+    def showEvent(self, event):
+        super().showEvent(event)
+        tokens = _load_tokens()
+        if tokens != self._tok:
+            self._tok = tokens
+            self.setStyleSheet(_build_manager_css(tokens) + management_styles(tokens))
+            for card in self._cards.values():
+                card._tokens = card.toggle._tokens = tokens
+        if not self._listening:
+            self._mgr.add_listener(self._sync_from_manager)
+            self._listening = True
+        self._populate()
+        self.mode_panel.refresh()
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if (
+            event.type() == QEvent.Type.ActivationChange
+            and self.isActiveWindow()
+            and hasattr(self, "mode_panel")
+        ):
+            self.mode_panel.refresh()
+
+    def _pause_sync(self):
+        self._refresh_timer.stop()
+        if self._listening:
+            self._mgr.remove_listener(self._sync_from_manager)
+            self._listening = False
+
+    def hideEvent(self, event):
+        self._pause_sync()
+        super().hideEvent(event)
+
+    def closeEvent(self, event):
+        self._pause_sync()
+        super().closeEvent(event)

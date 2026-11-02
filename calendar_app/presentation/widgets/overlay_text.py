@@ -6,7 +6,7 @@ from __future__ import annotations
 from html import escape as _escape_html
 import re as _re
 
-from PyQt6.QtCore import QDateTime, QPoint, Qt
+from PyQt6.QtCore import QDateTime, QLocale, QPoint, Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout
 
@@ -166,7 +166,7 @@ class OverlayTextWidget(_BaseOverlayWidget):
 
         def _strftime_compat(fmt: str, dt: QDateTime | None = None) -> str:
             selected = dt or now
-            return selected.toString(_strftime_to_qt(fmt, hour=selected.time().hour()))
+            return QLocale().toString(selected, _strftime_to_qt(fmt, hour=selected.time().hour()))
 
         eval_ctx = {
             "task_count": _ad.get("task_count", 0),
@@ -235,13 +235,13 @@ class OverlayTextWidget(_BaseOverlayWidget):
                 val = _strftime_compat(arg or "%Y.%m.%d")
             elif name == "weekday":
                 if arg == "short":
-                    val = now.toString("ddd")
+                    val = QLocale().toString(now, "ddd")
                 elif arg == "en":
                     val = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][
                         (qdate.dayOfWeek() - 1) % 7
                     ]
                 else:
-                    val = now.toString("dddd")
+                    val = QLocale().toString(now, "dddd")
             elif name == "day_of_year":
                 val = f"D+{qdate.dayOfYear()}"
             elif name == "dday":
@@ -307,6 +307,8 @@ class OverlayTextWidget(_BaseOverlayWidget):
 
     def _apply_appearance(self) -> None:
         """Unified appearance engine."""
+        if self._render_graphic_face(appearance=True):
+            return
         self._apply_base_appearance()
 
         # Propagate text color
@@ -340,6 +342,8 @@ class OverlayTextWidget(_BaseOverlayWidget):
             "center": Qt.AlignmentFlag.AlignCenter,
         }
         self._text_label.setAlignment(flags.get(alignment, Qt.AlignmentFlag.AlignCenter))
+        if self._graphic_face_active:
+            self._render_graphic_face()
 
     def _open_settings(self, initial_tab=0):
         extra = [

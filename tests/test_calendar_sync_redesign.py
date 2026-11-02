@@ -392,7 +392,7 @@ def test_pasted_ics_address_is_validated_before_submit_and_never_claims_a_fetch(
         ("default", "gcal", "set_calendar_default"),
         ("edit_subscription", "ics", "update_ics_subscription"),
         ("remove", "local", "delete_calendar"),
-        ("remove", "ics", "delete_calendar"),
+        ("remove", "ics", "archive_ics_subscription"),
     ],
 )
 def test_manager_mouse_click_reaches_guarded_action(sync_ui, monkeypatch, action, kind, operation):

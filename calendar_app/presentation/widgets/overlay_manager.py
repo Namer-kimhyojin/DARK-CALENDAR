@@ -167,6 +167,18 @@ class OverlayWidgetManager:
         self._counters: dict[str, int] = {}
         self._id_lock = threading.Lock()
         self._listeners: list = []
+        self._workspace_service = None
+
+    def workspace_service(self):
+        """One owner-scoped workspace runtime, shared by every management entry."""
+        if self._workspace_service is None:
+            from calendar_app.presentation.widgets.widget_workspace_runtime import (
+                WidgetWorkspaceService,
+            )
+
+            self._workspace_service = WidgetWorkspaceService(self)
+            self._workspace_service.start()
+        return self._workspace_service
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -267,6 +279,31 @@ class OverlayWidgetManager:
             else None
         )
         widget._overlay_inst_id = inst_id
+        widget._overlay_manager_stack_state = lambda iid=inst_id, ref=manager_ref: (
+            manager._workspace_service.stacks.group_for(iid)
+            if (manager := ref()) and manager._workspace_service is not None
+            else None
+        )
+        widget._overlay_manager_graphic_collection = (
+            lambda collection, motion, contrast, iid=inst_id, ref=manager_ref: (
+                manager.apply_graphic_collection(
+                    iid, collection, motion=motion, auto_contrast=contrast
+                )
+                if (manager := ref())
+                else None
+            )
+        )
+
+    def apply_graphic_collection(
+        self, source_id: str, collection_id: str, *, motion=True, auto_contrast=True
+    ) -> None:
+        """A group action touches the source and visible widgets, never hidden instances."""
+        for inst_id, widget in list(self._widgets.items()):
+            if inst_id == source_id or widget.isVisible():
+                widget.apply_graphic_collection(
+                    collection_id, motion=motion, auto_contrast=auto_contrast
+                )
+        self._notify_listeners()
 
     # ------------------------------------------------------------------
     # Public API
@@ -739,6 +776,8 @@ class OverlayWidgetManager:
         # _had_saved_instances=True 이면 key가 존재 → 사용자가 의도적으로 비운 것
         self._had_saved_instances = raw is not None
         if raw is None:
+            if self._settings().value("widget_studio_state", ""):
+                self.workspace_service()
             return  # 진짜 첫 실행 — 키가 없음
         needs_repair = False
         try:
@@ -811,6 +850,8 @@ class OverlayWidgetManager:
         if needs_repair:
             self._save()
         self._notify_listeners()
+        if self._settings().value("widget_studio_state", ""):
+            self.workspace_service()
 
     def save_all(self):
         """Persist live widget positions and metadata, then flush at shutdown."""
@@ -824,6 +865,8 @@ class OverlayWidgetManager:
     def shutdown(self):
         """Persist widgets, then stop their timers/network work without disabling them."""
 
+        if self._workspace_service is not None:
+            self._workspace_service.shutdown()
         self.save_all()
         for widget in self._widgets.values():
             with contextlib.suppress(Exception):

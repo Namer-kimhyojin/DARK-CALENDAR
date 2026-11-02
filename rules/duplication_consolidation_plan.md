@@ -1,5 +1,7 @@
 # Duplication Consolidation Plan
 
+> 역할: 중복 통합 당시의 설계·검증 기록과 후속 후보입니다. 아래 성공 기록은 현재 테스트 결과를 의미하지 않습니다. 진행 상태는 [TASKS.md](../TASKS.md)에서 확인하고, 착수 전 현재 코드와 후보의 적용 여부를 재확인합니다.
+
 ## Goal
 - Reduce duplicated logic without shrinking features or changing user-visible behavior.
 - Prefer consolidation behind existing call paths so runtime behavior stays stable.

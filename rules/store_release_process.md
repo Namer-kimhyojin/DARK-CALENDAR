@@ -160,7 +160,12 @@ filename gate.
 
 ## Current Development Inputs
 
-`run.bat` runs `.venv\Scripts\python.exe main.py` from the development directory.
+`run.bat` checks version metadata with `.venv\Scripts\python.exe`, then delegates
+to `scripts/run_development.py`. That launcher verifies/prepares the same private
+SQLite runtime used by the release pipeline and runs the current `main.py` from
+the development directory, preserving command-line arguments. The developer's
+base Python and personal data are not replaced, and preparation failure blocks
+launch rather than falling back to an unsafe runtime.
 Local release builds read the current build directory, including uncommitted
 runtime changes. GitHub release builds read the pushed commit. Before creating
 an isolated build directory, capture all current application code, assets,

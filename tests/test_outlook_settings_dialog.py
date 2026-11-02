@@ -131,7 +131,9 @@ def database(path):
     conn.close()
 
 
-def test_calendar_selection_saves_outlook_only_and_disconnect_preserves_rows(tmp_path, monkeypatch):
+def test_calendar_selection_saves_outlook_only_and_disconnect_waits_for_worker(
+    tmp_path, monkeypatch
+):
     app, window = host(tmp_path)
     path = tmp_path / "calendar.db"
     database(path)
@@ -148,7 +150,7 @@ def test_calendar_selection_saves_outlook_only_and_disconnect_preserves_rows(tmp
     dialog._disconnect()
     assert (
         conn.execute(
-            "SELECT COUNT(*) FROM calendar WHERE type='outlook' AND is_active=0 AND access_role='reader'"
+            "SELECT COUNT(*) FROM calendar WHERE type='outlook' AND is_active=1"
         ).fetchone()[0]
         == 2
     )

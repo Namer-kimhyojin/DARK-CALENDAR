@@ -99,11 +99,21 @@ class _CalendarRowDelegate(QStyledItemDelegate):
 
 
 class CalendarManagerPage(QWidget):
-    def __init__(self, app, coordinator, open_service, *, scope="all", show_add_actions=True):
+    def __init__(
+        self,
+        app,
+        coordinator,
+        open_service,
+        *,
+        scope="all",
+        show_add_actions=True,
+        request_ics_sync=None,
+    ):
         super().__init__()
         if scope not in {"all", "local", "ics"}:
             raise ValueError("invalid_calendar_manager_scope")
         self.app, self.coordinator, self.open_service = app, coordinator, open_service
+        self._request_ics_sync = request_ics_sync
         self.scope = scope
         self._overview = scope == "all" and not show_add_actions
         self._selected_id = None
@@ -824,14 +834,24 @@ class CalendarManagerPage(QWidget):
             return False
         self._changed(success)
         if success and calendar.get("is_active", 1) and self.coordinator:
-            self.coordinator.sync_ics(force=True, calendar_ids=[calendar["id"]])
+            self._refresh_subscription(calendar["id"])
         return success
 
     @guard_calendar_action
     def _subscription_active(self, checked):
         calendar = self.current()
         if calendar and calendar.get("type") == "ics" and not self._ics_busy():
-            self._changed(calendar_repo.set_calendar_active(calendar["id"], checked))
+            success = calendar_repo.set_calendar_active(calendar["id"], checked)
+            self._changed(success)
+            if success and checked and not calendar.get("is_active", 1):
+                self._refresh_subscription(calendar["id"])
+
+    def _refresh_subscription(self, calendar_id):
+        if not self.coordinator:
+            return False
+        if self._request_ics_sync is not None:
+            return self._request_ics_sync([calendar_id])
+        return self.coordinator.sync_ics(force=True, calendar_ids=[calendar_id])
 
     def _changed(self, success):
         self._refresh_feedback_pending = False
@@ -980,7 +1000,7 @@ class CalendarManagerPage(QWidget):
                     self.calendars.setCurrentRow(index)
                     break
             if self.coordinator:
-                self.coordinator.sync_ics(force=True, calendar_ids=[key])
+                self._refresh_subscription(key)
         return success
 
     def _service(self):
@@ -991,7 +1011,7 @@ class CalendarManagerPage(QWidget):
                 return
             if calendar.get("type") == "ics":
                 if self.coordinator:
-                    started = self.coordinator.sync_ics(force=True, calendar_ids=[calendar["id"]])
+                    started = self._refresh_subscription(calendar["id"])
                     self._refresh_feedback_pending = bool(started)
                     self.feedback.setText(
                         t("sync_unified.refresh_started", "선택한 구독을 새로고침하고 있습니다.")
@@ -1018,8 +1038,8 @@ class CalendarManagerPage(QWidget):
                 if calendar.get("type") == "ics"
                 else t("sync_redesign.remove_local", "로컬 캘린더 제거"),
                 t(
-                    "sync_redesign.unsubscribe_confirm",
-                    "'{name}' 구독을 해제할까요? 갱신을 중지하고 구독 목록에서 제거합니다. 이미 가져온 일정은 로컬 사본으로 남으며 원본 캘린더는 삭제되지 않습니다.",
+                    "sync_subscription.unsubscribe_confirm",
+                    "'{name}' 구독을 해제할까요? 원본 캘린더는 삭제되지 않습니다. 가져온 일정은 숨겨진 로컬 보관 캘린더에 남으며, '로컬 캘린더'에서 다시 표시할 수 있습니다.",
                 ).format(name=calendar.get("name") or calendar["id"])
                 if calendar.get("type") == "ics"
                 else t(
@@ -1033,10 +1053,28 @@ class CalendarManagerPage(QWidget):
         ):
             return
         if calendar.get("type") != "ics" or not self._ics_busy():
-            success = calendar_repo.delete_calendar(calendar["id"])
+            success = (
+                calendar_repo.archive_ics_subscription(
+                    calendar["id"],
+                    t(
+                        "sync_subscription.archive_name",
+                        "{name} · 보관",
+                        name=calendar.get("name") or calendar["id"],
+                    ),
+                )
+                if calendar.get("type") == "ics"
+                else calendar_repo.delete_calendar(calendar["id"])
+            )
             if success and calendar.get("type") == "ics":
                 errors = subscription_errors(self.app.settings)
                 errors.pop(calendar["id"], None)
                 self.app.settings.setValue("sync_ics_error_codes", errors)
                 self.app.settings.setValue("sync_ics_failed_ids", sorted(errors))
             self._changed(success)
+            if success and calendar.get("type") == "ics":
+                self.feedback.setText(
+                    t(
+                        "sync_subscription.archived_notice",
+                        "구독을 해제했습니다. 보관된 일정은 '로컬 캘린더'에서 다시 표시할 수 있습니다.",
+                    )
+                )

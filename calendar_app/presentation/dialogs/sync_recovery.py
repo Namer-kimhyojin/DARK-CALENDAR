@@ -101,6 +101,11 @@ def sync_recovery_action(provider, state):
             section="issues",
             label=t("sync_recovery.review", "보류된 항목 확인"),
             hint=t(
+                "sync_subscription.review_hint",
+                "'ICS 구독'에서 해당 구독을 선택해 주소와 원본 공유 설정을 확인하세요.",
+            )
+            if provider == "ics"
+            else t(
                 "sync_recovery.review_hint", "문제 해결에서 보류된 일정과 처리 방법을 확인하세요."
             ),
         )

@@ -590,6 +590,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._refresh_timer.start(minutes * 60 * 1000)
 
     def _set_runtime_active(self, active: bool) -> None:
+        self._set_graphics_runtime_active(active)
         was_active = self._runtime_active
         self._runtime_active = active
         self._scene_surface.set_runtime_active(active and bool(self._active_scene_id()))
@@ -701,12 +702,15 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         shadow = read_text_shadow(self._get)
         self._scene_surface.configure(
             scene_id=self._active_scene_id(),
+            graphic_design=self.graphic_collection_id(),
             data=self._weather_data,
             pack=get_weather_asset_pack(
                 self._get("weather_asset_pack", DEFAULT_WEATHER_ASSET_PACK_ID)
             ).pack_id,
             family=self.font_family(),
-            motion=str(self._get("weather_motion", "subtle")),
+            motion="off"
+            if self.graphic_collection_id() and not self._get("graphics_motion", True, type_=bool)
+            else str(self._get("weather_motion", "subtle")),
             hourly=self._get("weather_show_hourly", True, type_=bool),
             background_alpha=bg_alpha / 255,
             text_alpha=fg_alpha / 255,
@@ -716,8 +720,17 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             shadow_distance=shadow.distance,
             shadow_color=shadow.color,
             foreground=fg.name(),
-            background_override=bg.name() if self.display_preset_id() == "custom" else "",
-            text_scale=self.font_size() / 24,
+            background_override=bg.name()
+            if self.display_preset_id() == "custom"
+            or self.graphic_collection_id() not in {"", "pure_air", "soft_object"}
+            else "",
+            auto_contrast=self._get("graphics_auto_contrast", True, type_=bool)
+            if self.graphic_collection_id()
+            else self._get("weather_auto_contrast", True, type_=bool),
+            text_scale=self.font_size()
+            / max(1, self._get("graphics_font_reference", self.font_size(), type_=float))
+            if self.graphic_collection_id()
+            else self.font_size() / 24,
             status=self._status_text,
             animation_dir=str(self._get("weather_animation_dir", "") or ""),
         )
@@ -818,6 +831,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         design = weather_design(design_id)
         if design is None:
             return
+        self._detach_graphic_collection()
         original_shape = self.widget_shape_id()
         self._store_display_preset(design.appearance_preset_id)
         self._set("weather_template", design.template)
@@ -848,6 +862,12 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         """Show standardized settings dialog with schema-based fields."""
         self._refresh_minutes()
         extra = [
+            {
+                "key": "weather_auto_contrast",
+                "label": t("widget_graphics.contrast", "글자 대비 자동 보정"),
+                "type": "bool",
+                "default": True,
+            },
             {
                 "key": "weather_motion",
                 "label": t("weather_premium.motion", "움직임:"),

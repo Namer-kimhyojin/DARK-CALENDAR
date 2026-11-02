@@ -202,7 +202,7 @@ class _CalendarGridWidget(QWidget):
         hdr_font.setBold(True)
         p.setFont(hdr_font)
 
-        month_name = QDate(now_y, now_m, 1).toString("MMMM")
+        month_name = QLocale().toString(QDate(now_y, now_m, 1), "MMMM")
         hdr_text = f"{now_y}. {now_m:02d}  {month_name}"
         header_color = QColor(self._fg_color)
         header_color.setAlpha(230)
@@ -439,6 +439,7 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
         return frame
 
     def _set_runtime_active(self, active: bool) -> None:
+        self._set_graphics_runtime_active(active)
         if active:
             if not self._dc_timer.isActive():
                 self._dc_timer.start(60_000)
@@ -448,6 +449,8 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
     # ------------------------------------------------------------------ tick
 
     def _tick(self):
+        if self._render_graphic_face():
+            return
         if self._resizing and not self._measuring:
             return
         now = QDateTime.currentDateTime()
@@ -568,6 +571,8 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
     # ------------------------------------------------------------------ appearance
 
     def _apply_appearance(self) -> None:
+        if self._render_graphic_face(appearance=True):
+            return
         self._apply_base_appearance()
         size = self.font_size()
         family = self.font_family()

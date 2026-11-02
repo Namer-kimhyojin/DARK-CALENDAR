@@ -13,6 +13,7 @@ import hashlib
 import logging
 import re
 import sqlite3
+from uuid import uuid4
 
 from calendar_app.application.calendar_sync_contract import CalendarSyncError
 from calendar_app.infrastructure.db.database_unified import db_manager
@@ -513,11 +514,70 @@ def update_ics_subscription(calendar_id: str, name: str, url: str) -> bool:
         raise
 
 
+def archive_ics_subscription(calendar_id: str, archive_name: str) -> bool:
+    """Unsubscribe atomically, preserving events in a hidden local calendar.
+
+    Archived events retain their task IDs and related data, but no remote write
+    identity. A later subscription can import a fresh mirror without displaying
+    two copies. The user can show or edit the archive as a normal local calendar.
+    """
+    conn = db_manager.get_connection()
+    if conn is None:
+        return False
+    saved = False
+    try:
+        conn.execute("SAVEPOINT ics_subscription_archive")
+        saved = True
+        # Acquire the writer lock before rechecking the subscription and events.
+        conn.execute(
+            "UPDATE calendar SET is_active=is_active WHERE id=? AND type='ics'", (calendar_id,)
+        )
+        row = conn.execute(
+            "SELECT name FROM calendar WHERE id=? AND type='ics'", (calendar_id,)
+        ).fetchone()
+        if row is None:
+            conn.execute("RELEASE SAVEPOINT ics_subscription_archive")
+            return False
+        if conn.execute(
+            "SELECT 1 FROM unified_task WHERE calendar_id=? LIMIT 1", (calendar_id,)
+        ).fetchone():
+            archive_id = "local::ics_archive::" + uuid4().hex
+            conn.execute(
+                """INSERT INTO calendar
+                   (id,type,name,color,is_default,is_active,is_visible,sort_order)
+                   SELECT ?,'local',?,color,0,1,0,sort_order FROM calendar WHERE id=?""",
+                (archive_id, archive_name.strip() or row[0] or calendar_id, calendar_id),
+            )
+            conn.execute(
+                """UPDATE unified_task SET calendar_id=?,
+                   gcal_event_id=NULL,gcal_source_calendar_id=NULL,gcal_target_calendar_id=NULL,
+                   gcal_sync_mode='local_owned',gcal_dirty=0,gcal_sync_error=NULL,
+                   gcal_last_synced_at=NULL,gcal_remote_updated_at=NULL
+                   WHERE calendar_id=?""",
+                (archive_id, calendar_id),
+            )
+        conn.execute("DELETE FROM calendar WHERE id=? AND type='ics'", (calendar_id,))
+        conn.execute("RELEASE SAVEPOINT ics_subscription_archive")
+        return True
+    except Exception:
+        if saved:
+            conn.execute("ROLLBACK TO SAVEPOINT ics_subscription_archive")
+            conn.execute("RELEASE SAVEPOINT ics_subscription_archive")
+        raise
+
+
 def delete_calendar(calendar_id: str) -> bool:
-    """캘린더를 삭제합니다. 해당 캘린더의 태스크들은 GCal 연동이 안전하게 해제되고 calendar_id는 NULL로 초기화됩니다."""
+    """Remove a calendar; ICS events go to a hidden archive, other events detach."""
     conn = db_manager.get_connection()
     if conn is None:
         logger.error("delete_calendar: DB 연결 실패")
+        return False
+    try:
+        row = conn.execute("SELECT type,name FROM calendar WHERE id=?", (calendar_id,)).fetchone()
+        if row and row[0] == "ics":
+            return archive_ics_subscription(calendar_id, row[1] or calendar_id)
+    except sqlite3.Error:
+        logger.warning("delete_calendar: calendar lookup or subscription archive failed")
         return False
     cur = conn.cursor()
     try:

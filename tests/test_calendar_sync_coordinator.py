@@ -384,7 +384,7 @@ def test_ics_busy_blocks_subscription_deactivation_and_removal(ui, monkeypatch):
     ui.coordinator.refresh()
     ui.coordinator.states["ics"]["busy"] = True
     remove, active = Mock(), Mock()
-    monkeypatch.setattr(manager.calendar_repo, "delete_calendar", remove)
+    monkeypatch.setattr(manager.calendar_repo, "archive_ics_subscription", remove)
     monkeypatch.setattr(manager.calendar_repo, "set_calendar_active", active)
     page = manager.CalendarManagerPage(ui.host, ui.coordinator, Mock())
     select_calendar(page, "ics::fixture")

@@ -132,6 +132,8 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
     def _tick_cd(self):
         if self._resizing and not self._measuring:
             return
+        if self._render_graphic_face():
+            return
         remaining, target_text = self._cd_remaining()
 
         if self._is_template_mode():
@@ -174,6 +176,8 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
         self._title_label.setVisible(style == "titled")
 
     def _apply_appearance(self) -> None:
+        if self._render_graphic_face(appearance=True):
+            return
         self._apply_base_appearance()
         size, family, style = self.font_size(), self.font_family(), self.display_style()
 
@@ -209,6 +213,7 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
             self._cd_timer.start(1000)
 
     def _set_runtime_active(self, active: bool) -> None:
+        self._set_graphics_runtime_active(active)
         if active:
             self._start_cd_timer()
         elif hasattr(self, "_cd_timer"):
@@ -294,6 +299,7 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
     # ------------------------------------------------------------------
 
     def _open_settings(self):
+        previous_target = self._get("cd_target_iso", "")
         target = self._cd_target_dt()
         cur_date = target.date().toString("yyyy-MM-dd") if target is not None else ""
         cur_time = target.time().toString("HH:mm") if target is not None else "00:00"
@@ -378,6 +384,12 @@ class OverlayCountdownWidget(_BaseOverlayWidget):
             time_val = self._get("cd_target_time") or "00:00"
             if date_val and date_val != "None":
                 self._set("cd_target_iso", f"{date_val}T{time_val}")
+            if self._get("cd_target_iso", "") != previous_target:
+                now = QDateTime.currentDateTime()
+                target = self._cd_target_dt()
+                self._set("cd_duration_target", self._get("cd_target_iso", ""))
+                self._set("cd_started_iso", now.toString(Qt.DateFormat.ISODate))
+                self._set("cd_duration_seconds", max(0, now.secsTo(target)) if target else 0)
             self._tick_cd()
 
     def _adjust_target_relative(self, days=0, hours=0, minutes=0):

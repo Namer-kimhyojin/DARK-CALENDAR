@@ -104,6 +104,8 @@ CalDAV도 같은 계약을 사용합니다. iCloud·네이버 어댑터는 `infr
 `(calendar_id, transaction_id)`와 원래 내용 지문을 보존합니다. 전체 조회에서 유일한
 생성 결과가 확인된 경우에만 기존 삭제 큐로 연결하며, 원격 내용 변경·식별 모호성·권한
 상실 시 자동 삭제하지 않습니다. 원격 서버가 transaction ID를 제거하면 보류 기록을 유지합니다.
+`created_at`은 `ALTER TABLE`로 추가합니다. 새 보류는 삭제 트리거에서 UTC 시각을 기록하고,
+과거 기록의 알 수 없는 시각은 NULL로 보존합니다. 문제 화면에서 계정·캘린더·발생 시각을 확인할 수 있습니다.
 
 - `infrastructure/db/db_repository.py` — 통합 레포지토리 진입점 (대부분의 코드는 여기서 임포트)
 - 레포지토리를 직접 임포트할 때는 `infrastructure/db/` 하위 모듈에서 직접 가져옵니다:

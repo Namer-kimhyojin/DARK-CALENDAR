@@ -193,7 +193,10 @@ class CalendarSyncRepository:
                 self.conn.execute("UPDATE calendar SET is_active=1 WHERE id=?", (key,))
 
     def deactivate(self, account):
-        with self.conn:
+        # Disconnect workers also remove credentials under their writer lock.
+        # Do not commit their outer transaction before that removal succeeds.
+        self.conn.execute("SAVEPOINT calendar_deactivate")
+        try:
             self.conn.execute(
                 "UPDATE calendar SET is_active=0,access_role='reader' WHERE id IN (SELECT local_id FROM calendar_sync_calendar WHERE account_id=?)",
                 (account,),
@@ -201,6 +204,11 @@ class CalendarSyncRepository:
             self.conn.execute(
                 "UPDATE calendar_sync_calendar SET can_edit=0 WHERE account_id=?", (account,)
             )
+            self.conn.execute("RELEASE SAVEPOINT calendar_deactivate")
+        except Exception:
+            self.conn.execute("ROLLBACK TO SAVEPOINT calendar_deactivate")
+            self.conn.execute("RELEASE SAVEPOINT calendar_deactivate")
+            raise
 
     def tasks(self, key):
         return [

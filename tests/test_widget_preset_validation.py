@@ -5,7 +5,7 @@ import re
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from PyQt6.QtCore import QDateTime, Qt
+from PyQt6.QtCore import QDateTime, QLocale, Qt
 from PyQt6.QtGui import QTextDocument
 from PyQt6.QtWidgets import QApplication
 import pytest
@@ -452,5 +452,6 @@ def test_invalid_timezone_offsets_use_a_safe_local_time_fallback(timezone):
 def test_timezone_minutes_and_twelve_hour_formats_have_real_values(monkeypatch, token, expected):
     fixed = QDateTime.fromString("2026-10-06T13:34:56Z", Qt.DateFormat.ISODate)
     monkeypatch.setattr(overlay_text, "QDateTime", SimpleNamespace(currentDateTime=lambda: fixed))
+    monkeypatch.setattr(overlay_text, "QLocale", QLocale.c)
     assert not validate_widget_template("text", token)
     assert _render("text", token) == expected

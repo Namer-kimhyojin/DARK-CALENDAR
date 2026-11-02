@@ -122,6 +122,8 @@ class OverlayDDayWidget(_BaseOverlayWidget):
     def _tick_dd(self):
         if self._resizing and not self._measuring:
             return
+        if self._render_graphic_face():
+            return
         dday_str, subtitle = self._dd_display()
 
         if self._is_template_mode():
@@ -164,6 +166,8 @@ class OverlayDDayWidget(_BaseOverlayWidget):
                 self._template_label.setWordWrap(True)
 
     def _apply_appearance(self) -> None:
+        if self._render_graphic_face(appearance=True):
+            return
         self._apply_base_appearance()
         size, style, family = self.font_size(), self.display_style(), self.font_family()
 
@@ -193,6 +197,7 @@ class OverlayDDayWidget(_BaseOverlayWidget):
             self._dd_timer.start(60_000)
 
     def _set_runtime_active(self, active: bool) -> None:
+        self._set_graphics_runtime_active(active)
         if active:
             self._start_dd_timer()
         elif hasattr(self, "_dd_timer"):

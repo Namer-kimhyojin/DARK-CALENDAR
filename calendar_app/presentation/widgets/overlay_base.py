@@ -100,6 +100,7 @@ from calendar_app.presentation.widgets.overlay_template_validation import (
     normalize_widget_template_kind,
     validate_widget_template,
 )
+from calendar_app.presentation.widgets.widget_graphic_runtime import WidgetGraphicRuntimeMixin
 from calendar_app.presentation.widgets.widget_placement import (
     NoWheelComboBox,
     NoWheelFontComboBox,
@@ -1551,7 +1552,7 @@ class _GripFrame(QFrame):
 # ---------------------------------------------------------------------------
 
 
-class _BaseOverlayWidget(QWidget):
+class _BaseOverlayWidget(WidgetGraphicRuntimeMixin, QWidget):
     """Common base for all overlay widgets.
 
     Subclasses must implement:
@@ -1591,6 +1592,7 @@ class _BaseOverlayWidget(QWidget):
         super().__init__(None, flags)
         self.setProperty("airCalendarOverlayWindow", True)
         self.owner = owner
+        self._init_graphic_collection_state()
         self._drag_offset: QPoint | None = None
         self._resize_origin_global: QPoint | None = None
         self._resize_origin_size: tuple[int, int] = (0, 0)
@@ -3924,6 +3926,7 @@ class _BaseOverlayWidget(QWidget):
         return str(self._get("display_style", default) or default)
 
     def _set_display_style(self, style_id: str):
+        self._detach_graphic_collection()
         self._set("display_style", style_id)
         self._apply_and_resize(refit=True)
 
@@ -4041,6 +4044,7 @@ class _BaseOverlayWidget(QWidget):
 
     def _set_runtime_active(self, active: bool) -> None:
         """Allow subclasses to pause timers/network work while hidden."""
+        self._set_graphics_runtime_active(active)
         del active
 
     def set_interaction_locked(self, locked: bool):
@@ -4357,6 +4361,16 @@ class _BaseOverlayWidget(QWidget):
 
     def _fit_font_to_size(self, target_w: int, target_h: int, *, live: bool = False):
         """Binary-search the largest font size that fits within target_w x target_h."""
+        if self.graphic_collection_id() and self._graphic_kind() not in {
+            "weather",
+            "launcher_deck",
+        }:
+            self._apply_appearance()
+            self._release_layout_constraints()
+            self.resize(max(100, int(target_w)), max(70, int(target_h)))
+            self._update_grip_color()
+            self._update_interaction_surface()
+            return
         lay = self.face.layout()
         if lay is None:
             return
@@ -4642,6 +4656,10 @@ class _BaseOverlayWidget(QWidget):
         menu.setStyleSheet(self._menu_style())
 
         self._build_context_menu(menu)
+
+        menu.addAction(
+            t("widget_graphics.choose", "그래픽 컬렉션…"), self._open_graphic_collections
+        )
 
         menu.addSeparator()
         style_menu = menu.addMenu(t("widget.menu.display_style", "Display Style"))

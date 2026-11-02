@@ -2330,16 +2330,16 @@ class UnifiedTaskDialog(BaseTaskDialog):
                 upsert_calendar(
                     "local::기본",
                     "local",
-                    "기본",
+                    t("common.default", "기본"),
                     color="#3c8cff",
                     is_default=True,
                     is_active=True,
                     is_visible=True,
                 )
-                self.calendar_combo.addItem("📁 기본", "local::기본")
+                self.calendar_combo.addItem("📁 " + t("common.default", "기본"), "local::기본")
                 default_index = 0
         except Exception:
-            self.calendar_combo.addItem("📁 기본", None)
+            self.calendar_combo.addItem("📁 " + t("common.default", "기본"), None)
 
         selected_item = self.calendar_combo.model().item(default_index)
         if selected_item and not selected_item.isEnabled():

@@ -99,10 +99,10 @@ class MainWindowUiActionsMixin:
         existing = getattr(self, "_widget_manager_dlg", None)
         if existing is not None:
             try:
-                if existing.isVisible():
-                    existing.raise_()
-                    existing.activateWindow()
-                    return
+                existing.show()
+                existing.raise_()
+                existing.activateWindow()
+                return
             except RuntimeError:
                 # C++ 객체가 이미 삭제된 경우 — 참조를 초기화하고 새로 생성
                 self._widget_manager_dlg = None

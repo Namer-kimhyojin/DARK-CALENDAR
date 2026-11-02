@@ -458,18 +458,9 @@ class OutlookSettingsDialog(QDialog):
         self.settings.setValue("outlook_enabled", enabled)
         self._update_actions()
 
-    @guard_sync_database
     def _disconnect(self):
         if self.controller.busy:
             return
-        account = self.settings.value("outlook_account_id", "", type=str)
-        conn = self._connection()
-        try:
-            CalendarSyncRepository(conn).deactivate(account)
-        finally:
-            conn.close()
-        self.settings.setValue("outlook_enabled", False)
-        self.enable.setChecked(False)
         self.controller.start("disconnect")
 
     def _preview(self, *_):

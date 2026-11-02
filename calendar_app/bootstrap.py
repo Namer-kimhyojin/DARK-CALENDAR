@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 from calendar_app.app_metadata import APP_NAME, APP_VERSION
 from calendar_app.app_paths import APP_ICON_PATH
 from calendar_app.domain.i18n import set_translator as set_domain_translator
-from calendar_app.infrastructure.i18n import t
+from calendar_app.infrastructure.i18n import i18n, t
 from calendar_app.infrastructure.runtime.crash_bootstrap import (
     show_database_startup_error as _show_database_startup_error,
 )
@@ -290,6 +290,7 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
     QCoreApplication.setApplicationName(APP_NAME)
 
     app = QApplication(sys.argv)
+    i18n.apply_application_locale()
     _install_qt_message_handler()
     from calendar_app.presentation.dialogs.dialog_styles import (
         install_common_dialog_style_filter,

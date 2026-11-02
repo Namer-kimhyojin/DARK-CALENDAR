@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QDialog,
     QFontComboBox,
     QFormLayout,
+    QGridLayout,
     QHBoxLayout,
     QInputDialog,
     QLabel,
@@ -116,12 +117,15 @@ class WidgetCustomizationDialog(QDialog):
         controls.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         controls.setMinimumWidth(410)
         tabs = self.preferences_tabs = QTabWidget(self)
+        tabs.setMinimumWidth(0)
+        tabs.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding)
         tabs.tabBar().setUsesScrollButtons(True)
         controls.setWidget(tabs)
         body.addWidget(controls, 1)
-        tabs.addTab(self._layout_tab(), t("widget_mode.preferences_layout", "배치"))
-        tabs.addTab(self._appearance_tab(), t("widget_mode.preferences_appearance", "모양"))
+        tabs.addTab(self._layout_tab(), t("widget_workspace.preferences_view", "화면 형태"))
+        tabs.addTab(self._appearance_tab(), t("widget_workspace.preferences_style", "스킨·글꼴"))
         tabs.addTab(self._visibility_tab(), t("widget_mode.preferences_visibility", "표시 항목"))
+        tabs.currentChanged.connect(self._scroll_active_skin)
 
         self.preview_frame = QWidget(self)
         preview_column = QVBoxLayout(self.preview_frame)
@@ -206,6 +210,7 @@ class WidgetCustomizationDialog(QDialog):
         layout.addWidget(self.my_layouts_btn)
         layout.addWidget(QLabel(t("widget_mode.preset_builtin", "기본 배치"), tab))
         recommended = {"minimal", "agenda_first", "dashboard"}
+        recommended.update({"day_brief", "side_planner", "work_board"})
         for spec in widget_mode_layouts():
             button = QToolButton(tab)
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
@@ -215,7 +220,7 @@ class WidgetCustomizationDialog(QDialog):
             button.setIconSize(QSize(90, 42))
             button.setCheckable(True)
             button.ensurePolished()
-            minimum_width = max(180, button.fontMetrics().horizontalAdvance(button.text()) + 28)
+            minimum_width = max(160, button.fontMetrics().horizontalAdvance(button.text()) + 28)
             minimum_height = max(76, button.fontMetrics().height() + 54)
             button.setStyleSheet(
                 f"QToolButton {{ min-width: {minimum_width}px; min-height: {minimum_height}px; "
@@ -230,7 +235,9 @@ class WidgetCustomizationDialog(QDialog):
             )
             self.layout_group.addButton(button)
             self.layout_buttons[spec.layout_id] = button
-            layout.addWidget(button)
+        cards = self._layout_card_grid = QGridLayout()
+        layout.addLayout(cards)
+        self._reflow_layout_cards()
         more = self.all_layouts_btn = QPushButton(
             t("widget_mode.all_layouts", "전체 배치 보기"), tab
         )
@@ -512,12 +519,26 @@ class WidgetCustomizationDialog(QDialog):
             control.blockSignals(blocked)
             if hasattr(control, "_percentage_label"):
                 control._percentage_label.setText(f"{value}%")
+        self._sync_skin_gallery()
 
     def _show_all_layouts(self):
         for button in self.layout_buttons.values():
             button.show()
         self.all_layouts_btn.hide()
+        self._reflow_layout_cards()
         self.layout_buttons[read_widget_mode_layout_id(self.draft)].setFocus()
+
+    def _reflow_layout_cards(self):
+        grid = self._layout_card_grid
+        while grid.count():
+            grid.takeAt(0)
+        columns = (
+            1 if any(button.minimumWidth() > 190 for button in self.layout_buttons.values()) else 2
+        )
+        for index, button in enumerate(
+            button for button in self.layout_buttons.values() if not button.isHidden()
+        ):
+            grid.addWidget(button, index // columns, index % columns)
 
     def _font_weight_preference(self):
         try:
@@ -569,7 +590,38 @@ class WidgetCustomizationDialog(QDialog):
         self.skin_combo.currentIndexChanged.connect(
             lambda: self._change("widget_mode_skin", self.skin_combo.currentData())
         )
-        form.addRow(t("widget_mode.style_color_skin", "색상 스킨"), self.skin_combo)
+        self.skin_combo.hide()
+        self.skin_gallery = QListWidget(tab)
+        self.skin_gallery.setAccessibleName(
+            t("widget_workspace.skin_gallery", "스킨 미리보기 갤러리")
+        )
+        self.skin_gallery.setViewMode(QListWidget.ViewMode.IconMode)
+        self.skin_gallery.setMovement(QListWidget.Movement.Static)
+        self.skin_gallery.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self.skin_gallery.setIconSize(QSize(150, 74))
+        self.skin_gallery.setGridSize(QSize(172, 112))
+        self.skin_gallery.setWordWrap(True)
+        self.skin_gallery.setFixedHeight(260)
+        self.skin_gallery.setMinimumWidth(0)
+        self.skin_gallery.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        self.skin_gallery.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        for skin in widget_mode_skins():
+            item = QListWidgetItem(self._skin_icon(skin), t(skin.label_key, skin.label_default))
+            item.setData(Qt.ItemDataRole.UserRole, skin.skin_id)
+            item.setToolTip(item.text())
+            self.skin_gallery.addItem(item)
+        self._sync_skin_gallery()
+        self.skin_gallery.currentItemChanged.connect(
+            lambda item, _old: (
+                self.skin_combo.setCurrentIndex(
+                    self.skin_combo.findData(item.data(Qt.ItemDataRole.UserRole))
+                )
+                if item is not None
+                else None
+            )
+        )
+        self.skin_combo.currentIndexChanged.connect(self._sync_skin_gallery)
+        form.addRow(t("widget_mode.style_color_skin", "색상 스킨"), self.skin_gallery)
         self.font_family = QFontComboBox(tab)
         self.font_family.setCurrentFont(
             QFont(
@@ -658,6 +710,56 @@ class WidgetCustomizationDialog(QDialog):
         opacity_help.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         form.addRow(opacity_help)
         return tab
+
+    @staticmethod
+    def _skin_icon(skin):
+        from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor
+
+        values = skin.token_overrides
+        dark = skin.base_theme == "dark"
+        background = values.get("panel_bg", "#142131" if dark else "#edf2f8")
+        surface = values.get("section_bg", "#26384e" if dark else "#ffffff")
+        accent = values.get("accent", "#8dbbff" if dark else "#3568a7")
+        image = QPixmap(150, 74)
+        image.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(css_to_qcolor(background))
+        painter.drawRoundedRect(1, 1, 148, 72, 10, 10)
+        painter.setBrush(css_to_qcolor(accent))
+        painter.drawRoundedRect(10, 10, 35, 5, 2, 2)
+        for row in range(3):
+            painter.setBrush(css_to_qcolor(surface))
+            painter.drawRoundedRect(10, 23 + row * 14, 130, 11, 3, 3)
+            painter.setBrush(css_to_qcolor(accent))
+            painter.drawRoundedRect(14, 27 + row * 14, 55 + row * 12, 3, 1, 1)
+        painter.end()
+        icon = QIcon()
+        for mode in (QIcon.Mode.Normal, QIcon.Mode.Active, QIcon.Mode.Selected):
+            icon.addPixmap(image, mode)
+        return icon
+
+    def _sync_skin_gallery(self, *_):
+        if not hasattr(self, "skin_gallery"):
+            return
+        selected = self.skin_combo.currentData()
+        blocked = self.skin_gallery.blockSignals(True)
+        for index in range(self.skin_gallery.count()):
+            item = self.skin_gallery.item(index)
+            if item.data(Qt.ItemDataRole.UserRole) == selected:
+                self.skin_gallery.setCurrentItem(item)
+                break
+        self.skin_gallery.blockSignals(blocked)
+
+    def _scroll_active_skin(self, *_):
+        if (
+            self.preferences_tabs.currentIndex() == 1
+            and self.skin_gallery.currentItem() is not None
+        ):
+            self.skin_gallery.scrollToItem(
+                self.skin_gallery.currentItem(), QListWidget.ScrollHint.PositionAtCenter
+            )
 
     def _opacity_control(self, parent, form, key, title, value, minimum):
         row = QHBoxLayout()
@@ -844,27 +946,38 @@ class WidgetCustomizationDialog(QDialog):
             str(self.draft.value("widget_mode_show_completed", "false")).lower() == "true"
         )
         self.preview.completed_btn.setChecked(show_completed)
-        self.preview.update_agenda(
-            [
+        preview_items = [
+            {
+                "title": t("widget_mode.preview_schedule", "프로젝트 회의"),
+                "time": "14:00",
+                "is_task": False,
+                "item_kind": "schedule",
+                "item_id": 2,
+                "source": "task",
+            },
+            {
+                "title": t("widget_mode.preview_work", "회의 자료 정리"),
+                "time": "",
+                "is_task": True,
+                "item_kind": "work",
+                "item_id": 1,
+                "source": "task",
+                "completed": show_completed,
+            },
+        ]
+        if spec.presentation == "board":
+            preview_items.append(
                 {
-                    "title": t("widget_mode.preview_schedule", "프로젝트 회의"),
-                    "time": "14:00",
-                    "is_task": False,
-                    "item_kind": "schedule",
-                    "item_id": 2,
-                    "source": "task",
-                },
-                {
-                    "title": t("widget_mode.preview_work", "회의 자료 정리"),
+                    "title": t("widget_mode.preview_directive", "검토 의견 전달"),
                     "time": "",
                     "is_task": True,
                     "item_kind": "work",
-                    "item_id": 1,
-                    "source": "task",
-                    "completed": show_completed,
-                },
-            ]
-        )
+                    "item_id": 3,
+                    "source": "directive",
+                    "completed": False,
+                }
+            )
+        self.preview.update_agenda(preview_items)
         self.preview.layout().activate()
         # Render the widget's own transparent layers, not the dialog's background.
         self.preview.ensurePolished()

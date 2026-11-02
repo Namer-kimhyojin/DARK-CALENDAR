@@ -115,10 +115,15 @@ class WeatherSceneSurface(QWidget):
         self.foreground = ""
         self.background_override = ""
         self.text_scale = 1.0
+        self.auto_contrast = True
+        self.graphic_design = ""
+        self._design_surface = None
         self.status = ""
         self.animation_dir = ""
         self._active = False
         self._policy_allowed = True
+        self._studio_motion_mode = "balanced"
+        self._studio_motion_paused = False
         self._started = time.monotonic()
         self._layer: QPixmap | None = None
         self._layer_dpr = 0.0
@@ -158,6 +163,8 @@ class WeatherSceneSurface(QWidget):
         foreground: str = "",
         background_override: str = "",
         text_scale: float = 1.0,
+        auto_contrast: bool = True,
+        graphic_design: str = "",
         status: str = "",
         animation_dir: str = "",
     ) -> None:
@@ -191,6 +198,8 @@ class WeatherSceneSurface(QWidget):
             foreground=foreground,
             background_override=background_override,
             text_scale=max(0.65, min(1.5, text_scale)),
+            auto_contrast=bool(auto_contrast),
+            graphic_design=str(graphic_design or ""),
             status=str(status or ""),
             animation_dir=str(animation_dir or ""),
         )
@@ -224,7 +233,13 @@ class WeatherSceneSurface(QWidget):
         self._sync_motion()
 
     def _sync_motion(self) -> None:
-        eligible = self._active and self.isVisible() and self.motion != "off"
+        eligible = (
+            self._active
+            and self.isVisible()
+            and self.motion != "off"
+            and self._studio_motion_mode != "static"
+            and not self._studio_motion_paused
+        )
         live = eligible and self._policy_allowed
         if eligible:
             if not self._policy_timer.isActive():
@@ -243,6 +258,14 @@ class WeatherSceneSurface(QWidget):
             if self._movie is not None:
                 self._movie.setPaused(True)
             self.update()
+
+    def set_motion_policy(self, mode, paused=False):
+        state = (mode, bool(paused))
+        if state == (self._studio_motion_mode, self._studio_motion_paused):
+            return
+        self._studio_motion_mode, self._studio_motion_paused = state
+        self._timer.setInterval(33 if mode == "rich" else 50)
+        self._sync_motion()
 
     def _animate(self) -> None:
         self._ticks += 1
@@ -291,6 +314,14 @@ class WeatherSceneSurface(QWidget):
                 QColor(self.background_override).darker(112).name(),
                 *palette[2:],
             )
+        if self.auto_contrast and self.background_alpha > 0.1:
+            from calendar_app.presentation.widgets.widget_graphics import readable_foreground
+
+            fg = readable_foreground(palette[2], palette[0], palette[1])
+            muted = (
+                QColor(fg).darker(128) if QColor(fg).lightness() > 128 else QColor(fg).lighter(155)
+            )
+            palette = (*palette[:2], fg, muted.name())
         return palette
 
     def _base_palette(self) -> tuple[str, str, str, str]:
@@ -336,9 +367,14 @@ class WeatherSceneSurface(QWidget):
                 str(text), Qt.TextElideMode.ElideRight, max(0, width)
             )
         if self.shadow:
-            color = QColor(self.shadow_color)
-            color.setAlpha(round(255 * self.text_alpha * self.shadow_opacity / 100 / 5))
-            painter.setPen(color)
+            shadow_color = QColor(self.shadow_color)
+            gain = (
+                0.35 if self.auto_contrast and QColor(self._palette()[0]).lightness() > 128 else 1.0
+            )
+            shadow_color.setAlpha(
+                round(255 * self.text_alpha * self.shadow_opacity / 100 / 5 * gain)
+            )
+            painter.setPen(shadow_color)
             radius = self.shadow_blur / 4
             for dx, dy in ((0, 0), (-radius, 0), (radius, 0), (0, -radius), (0, radius)):
                 painter.drawText(QPointF(x + dx, baseline + self.shadow_distance + dy), str(text))
@@ -357,6 +393,12 @@ class WeatherSceneSurface(QWidget):
         )
 
     def _paint_static(self, painter: QPainter) -> None:
+        from calendar_app.presentation.widgets.widget_graphic_catalog import graphic_collection
+
+        design = graphic_collection(self.graphic_design)
+        if design and design.widget_kind == "weather":
+            self._paint_collection_static(painter, design)
+            return
         w, h = self.width(), self.height()
         tier = self.layout_tier()
         compact = tier == "compact"
@@ -457,6 +499,83 @@ class WeatherSceneSurface(QWidget):
         self._text(
             painter, self._freshness(), pad, h - 15 * scale, 9 * scale, muted, width=w - 2 * pad
         )
+
+    def _paint_collection_static(self, painter, design) -> None:
+        from calendar_app.presentation.widgets.overlay_shadow import TextShadow
+        from calendar_app.presentation.widgets.widget_graphics import WidgetGraphicSurface
+
+        if self._design_surface is None:
+            self._design_surface = WidgetGraphicSurface(self)
+            self._design_surface.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+            self._design_surface.hide()
+        surface = self._design_surface
+        hourly = self.data.get("hourly") or []
+        expanded = self.layout_tier() == "expanded" and self.hourly and bool(hourly)
+        height = max(100, self.height() - 165) if expanded else self.height()
+        surface.resize(self.width(), height)
+        _, _, foreground, _ = self._palette()
+        surface.configure(
+            kind="weather",
+            collection_id=design.collection_id,
+            data={
+                "title": self.data.get("city", "--"),
+                "main": self.data.get("temp", "--"),
+                "minor": self.data.get("unit", "°C"),
+                "detail": str(self.data.get("desc", "--"))
+                + (
+                    "  "
+                    + t(
+                        "weather_premium.range",
+                        "남은 오늘 {low}° / {high}°",
+                        low=self.data.get("forecast_low", "--"),
+                        high=self.data.get("forecast_high", "--"),
+                    )
+                    if self.data.get("forecast_high") not in (None, "--")
+                    else ""
+                ),
+                "metrics": t(
+                    "weather_premium.metrics",
+                    "습도 {humidity}%  ·  바람 {wind} m/s",
+                    humidity=self.data.get("humidity", "--"),
+                    wind=self.data.get("wind", "--"),
+                ),
+            },
+            family=self.family,
+            foreground=foreground,
+            background=self.background_override or design.background,
+            background_alpha=self.background_alpha,
+            text_alpha=self.text_alpha,
+            shadow=TextShadow(
+                enabled=self.shadow,
+                opacity=self.shadow_opacity,
+                blur=self.shadow_blur,
+                distance=self.shadow_distance,
+                color=self.shadow_color,
+            ),
+            motion=False,
+            auto_contrast=self.auto_contrast,
+            text_scale=self.text_scale,
+        )
+        painter.save()
+        clip = QPainterPath()
+        clip.addRoundedRect(QRectF(1, 1, self.width() - 2, self.height() - 2), 22, 22)
+        painter.setClipPath(clip)
+        surface.resize(self.width(), self.height())
+        painter.drawPixmap(0, 0, surface._paint_background())
+        surface.resize(self.width(), height)
+        surface._paint_content(painter)
+        self._art_rect = QRectF(surface._design_art_rect)
+        if expanded:
+            # Keep forecast data and native artwork animation on the original surface.
+            pad = max(12, min(30, self.width() * 0.065))
+            _, _, fg, muted = self._palette()
+            self._paint_hourly(painter, hourly[:6], pad, self.height(), 1, fg, muted)
+        status = self._freshness()
+        if status:
+            self._text(
+                painter, status, 16, self.height() - 7, 8, foreground, width=self.width() - 32
+            )
+        painter.restore()
 
     def _paint_hourly(self, painter, hourly, pad, h, scale, fg, muted) -> None:
         base = min(1.15, scale)
@@ -710,6 +829,8 @@ def render_scene_preview(
     background_alpha=1.0,
     text_alpha=1.0,
     family="Segoe UI",
+    background_override="",
+    graphic_design="",
 ) -> QPixmap:
     """Render a static, settings-free preview using the production card surface."""
     surface = WeatherSceneSurface()
@@ -723,6 +844,8 @@ def render_scene_preview(
         background_alpha=background_alpha,
         text_alpha=text_alpha,
         family=family,
+        background_override=background_override,
+        graphic_design=graphic_design,
     )
     canvas = QPixmap(round(size.width() * dpr), round(size.height() * dpr))
     canvas.setDevicePixelRatio(dpr)
