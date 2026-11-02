@@ -2,7 +2,7 @@
 # Regenerate only after a clean dependency and license review.
 PyQt6==6.10.2
 PyQt6-Qt6==6.10.2
-PyQt6-sip==13.11.1
+PyQt6-sip==13.12.0
 QtAwesome==1.4.2
 QtPy==2.4.3
 winrt-runtime==3.2.1; platform_system == "Windows"

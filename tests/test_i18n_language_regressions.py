@@ -4,15 +4,27 @@
 from pathlib import Path
 from unittest.mock import patch
 
-from PyQt6.QtCore import QDate, QDateTime, QLocale, QSettings, Qt
+from PyQt6.QtCore import QCoreApplication, QDate, QDateTime, QLocale, QSettings, Qt
 from PyQt6.QtWidgets import QApplication, QDialogButtonBox, QWidget
 import pytest
 from scripts.i18n_sync import load_locale
 
-from calendar_app.infrastructure.i18n import I18nManager, i18n
+from calendar_app.infrastructure.i18n import I18nManager, _StandardButtonTranslator, i18n
 from calendar_app.presentation.widgets.overlay_text import OverlayTextWidget
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.mark.parametrize("context", ["AirCalendarUnmappedQtContext", "QMessageBox"])
+def test_standard_button_override_preserves_unmapped_qt_messages(app, context):
+    translator = _StandardButtonTranslator({"Yes": "예"}, app)
+    app.installTranslator(translator)
+    try:
+        assert QCoreApplication.translate("QPlatformTheme", "Yes") == "예"
+        assert QCoreApplication.translate(context, "Unmapped Qt text %1") == "Unmapped Qt text %1"
+    finally:
+        app.removeTranslator(translator)
+        translator.deleteLater()
 
 
 def manager_for(code):

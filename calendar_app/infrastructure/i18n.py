@@ -27,8 +27,10 @@ class _StandardButtonTranslator(QTranslator):
 
     def translate(self, context, sourceText, disambiguation=None, n=-1):  # noqa: N803
         if context in {"QPlatformTheme", "QDialogButtonBox", "QMessageBox"}:
-            return self._values.get(sourceText.replace("&", ""), "")
-        return ""
+            return self._values.get(sourceText.replace("&", ""))
+        # None maps to a null QString: Qt can try the next translator/source.
+        # An empty Python string is a successful, blank translation instead.
+        return None
 
 
 def get_user_locales_dir(create: bool = False) -> Path:
