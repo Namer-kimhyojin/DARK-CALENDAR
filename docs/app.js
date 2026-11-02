@@ -730,10 +730,10 @@
   });
 
   const releaseAvailabilityCopy = {
-    ko: { storePending: "GitHub 4.9.2 공개 완료 · Store 제출 준비 중", githubLatest: "최신 GitHub 배포 보기 ↗" },
-    en: { storePending: "4.9.2 released on GitHub · Store submission being prepared", githubLatest: "View the latest GitHub release ↗" },
-    ja: { storePending: "4.9.2はGitHubで公開済み · Store提出準備中", githubLatest: "最新のGitHubリリースを見る ↗" },
-    zh: { storePending: "4.9.2已在GitHub发布 · 正在准备提交Store", githubLatest: "查看最新GitHub版本 ↗" }
+    ko: { storePending: "GitHub 4.9.2 공개 완료 · Store 심사 중", githubLatest: "최신 GitHub 배포 보기 ↗" },
+    en: { storePending: "4.9.2 released on GitHub · Store certification in progress", githubLatest: "View the latest GitHub release ↗" },
+    ja: { storePending: "4.9.2はGitHubで公開済み · Storeで審査中", githubLatest: "最新のGitHubリリースを見る ↗" },
+    zh: { storePending: "4.9.2已在GitHub发布 · Store审核中", githubLatest: "查看最新GitHub版本 ↗" }
   };
   Object.entries(releaseAvailabilityCopy).forEach(([locale, copy]) => Object.assign(translations[locale], copy));
 

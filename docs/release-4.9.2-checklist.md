@@ -12,12 +12,12 @@
 - [x] 새/업그레이드 프로필 각각 3회, 총 6회 실제 EXE 기동·정상 종료/재시작과 화면 검토
 - [x] 동일 draft 공개·공개 파일 재다운로드·코드/리소스·의존성·SQLite·클린 DB·라이선스·대응 소스 검증
 - [x] 홈페이지 최신 버전·Store 상태 안내 반영과 공개 확인
-- [ ] Store 원본 listing 보존·18언어 변경 안내·패키지 업로드 검증·심사 제출
+- [x] Store 원본 listing 보존·18언어 변경 안내·패키지 업로드 검증·심사 제출
 - [ ] Store 게시·공식 설치 업데이트·실제 설치 앱 인수
 
 증거: `artifacts/deployment/4.9.2/20261102-0943/`. [4.9.1 종료 오류 진단](maintenance/native-shutdown-20261102.md)의 실패와 성공 결과를 모두 보존한다. 과거 패키지·태그·원본 증거는 변경하지 않는다.
 
-Store API 자격증명 파일이 없고, 이번 실행의 마지막 로컬 브라우저 조회도 Work 설정에서 비활성화 상태였다. GitHub 공개 파일 검증은 완료했다. Store 서버의 새 제출 상태는 아직 조회하지 못했다. 제출·심사·게시·설치 완료는 별도로 확인한다.
+초기 브라우저 연결 제한은 사용자 설정·로그인 후 해소됐다. 11/02 13시대 인증된 포털에서 기존 Submission 32를 재사용하여 4.9.2.0 x64를 제출했다. 화면은 ‘제품 업데이트: 인증 중’, 세부 단계는 ‘사전 처리 중’이다. 심사 통과 후 자동 게시를 유지하며, 현재 게시본 Submission 31·설치판 4.8.0.0과 구분한다.
 
 ## 공개 파일과 검증 연결
 
@@ -28,7 +28,9 @@ Store API 자격증명 파일이 없고, 이번 실행의 마지막 로컬 브�
 - MSIX SHA-256: `fb071e29eea7be8588f1d40e3050eaee6bee9de0b20ad9aa2e8ed5a5c426fe91`
 - MSIXUPLOAD SHA-256: `781757c7e0e54a5c379149ec11f80a45e2216f8698feda74a56220a4bc9cdda7`
 - 대응 소스 ZIP SHA-256: `cfefa9084804ba30e8e4bb6e288bae575bb26c6dd3526ce54a97bd2370184ca3`
-- 18언어 Store 변경 안내는 로컬 준비·길이 검증 완료. Store listing 저장·업로드·제출은 수행하지 않았으며 다음 연결에서 기존 제품의 실제 제출 상태를 먼저 조회한다. 새 빌드나 버전 증가는 필요 없다.
+- 기존 Submission 32 (`1152921505702292348`)의 18언어 변경 안내 저장·동일 패키지 Validated/Save·심사 제출 완료. 453행 원본에서 스크린샷 이미지 120행만 제외한 333행을 보존해 가져왔고, 새 전체 export의 429개 필드/ID·453행에서 의도한 ReleaseNotes 18셀 외 차이가 없다. 이미지·순서·캡션·가격·가용성·옵션을 보존했다. 새 빌드·버전 증가·새 초안 생성은 하지 않았다.
 - 2026-11-02 읽기 전용 설치 조회: `Kimhyojin.DarkCalendar 4.8.0.0`, 서명 `Store`. 개인 DB·설정·설치 앱을 변경하지 않았다.
 
 홈페이지 공개 확인: 기존 GitHub Pages의 index.html·app.js·site-config.json이 publication commit 53e532c661595096003675a9a57d8fef28798101의 원격 bytes와 일치한다. Pages run 41373493824 성공. 브라우저 UI 세션은 비활성화여서 HTTP 대조 범위로 기록한다.
+
+Store 제출 증거: `artifacts/deployment/4.9.2/20261102-0943/store-submission-32/`의 `submission-receipt.json`, `submission-confirmed.jpg`, `package-upload-verification.json`, `listing-readback-verification.json`. 심사 접수를 확인했으므로 게시 대기는 다음 승인된 후속 조회에서 이어가며, 설치 완료로 보고하지 않는다.
