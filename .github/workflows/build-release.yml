@@ -69,6 +69,8 @@ jobs:
 
       - name: Build x64 release
         shell: cmd
+        env:
+          PYTHONPATH: ${{ github.workspace }}/tests/release_qa/fingerprint_compat
         run: .\build-release.bat -Arch x64 -Channel Stable -NoBanner
 
       - name: Upload x64 payload
