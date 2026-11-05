@@ -23,6 +23,49 @@ candidate = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(candidate)
 ROOT = _PATH.parents[2]
 
+# Recorded directly from the GitHub API for run 42083557480.
+LIVE_ARTIFACT_METADATA = {
+    "payload": {
+        "id": 13442635125,
+        "name": "darkcalendar-dist-x64",
+        "digest": "sha256:1a85e998516fc269a17ac9b43fd09b91d8264731a595b60b204a8d5a2b3d0bed",
+        "expired": False,
+        "workflow_run": {
+            "id": 42083557480,
+            "repository_id": 1195286732,
+            "head_repository_id": 1195286732,
+            "head_branch": "release/5.0.0-integrated-20261106",
+            "head_sha": "2557dd940015ee7a404966b6ed9ef76cd57e86f1",
+        },
+    },
+    "msix": {
+        "id": 13440664435,
+        "name": "darkcalendar-msix-x64",
+        "digest": "sha256:ed8df53b62effefc2047c0f060c9ca7c328b48a8ac63185cf1a0df7c0fa945d5",
+        "expired": False,
+        "workflow_run": {
+            "id": 42083557480,
+            "repository_id": 1195286732,
+            "head_repository_id": 1195286732,
+            "head_branch": "release/5.0.0-integrated-20261106",
+            "head_sha": "2557dd940015ee7a404966b6ed9ef76cd57e86f1",
+        },
+    },
+    "release_assets": {
+        "id": 13440629566,
+        "name": "darkcalendar-github-release-x64",
+        "digest": "sha256:c21b96c70db3919f4da38dc81836641e62fc335fc4459c500d4d5b680ab69f84",
+        "expired": False,
+        "workflow_run": {
+            "id": 42083557480,
+            "repository_id": 1195286732,
+            "head_repository_id": 1195286732,
+            "head_branch": "release/5.0.0-integrated-20261106",
+            "head_sha": "2557dd940015ee7a404966b6ed9ef76cd57e86f1",
+        },
+    },
+}
+
 
 def policy_fixture(inputs=None):
     inputs = {"main.py": "hash", "calendar_app/x.py": "hash2"} if inputs is None else inputs
@@ -265,3 +308,58 @@ def test_new_workflow_is_manual_read_only_no_rebuild_and_always_preserves_eviden
     policy = json.loads(policy_path.read_text(encoding="utf-8", errors="strict"))
     for name, expected in policy["qa_sha256"].items():
         assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == expected
+
+
+def _pinned_policy():
+    return json.loads(
+        _PATH.with_name("native-candidate-5.0.0.json").read_text(encoding="utf-8", errors="strict")
+    )
+
+
+@pytest.mark.parametrize(
+    "path",
+    [("product_inputs_sha256",), ("payload_manifest_sha256",)]
+    + [("artifacts", role, "sha256") for role in _pinned_policy()["artifacts"]]
+    + [("qa_sha256", name) for name in _pinned_policy()["qa_sha256"]],
+)
+def test_65_character_policy_pin_fails_before_checkout_network_or_app(tmp_path, monkeypatch, path):
+    policy = _pinned_policy()
+    target = policy
+    for name in path[:-1]:
+        target = target[name]
+    target[path[-1]] = "a" * 65
+    checkout = Mock()
+    opener = Mock()
+    original = Mock()
+    input_hasher = Mock()
+    monkeypatch.setattr(candidate, "verify_checkout", checkout)
+    monkeypatch.setattr(candidate.urllib.request, "build_opener", opener)
+    with pytest.raises(ValueError, match="Invalid SHA256 policy pin"):
+        candidate.verify_and_download(
+            tmp_path, policy, "c" * 40, tmp_path, tmp_path, original, input_hasher
+        )
+    checkout.assert_not_called()
+    opener.assert_not_called()
+    input_hasher.assert_not_called()
+    assert original.mock_calls == []
+
+
+@pytest.mark.parametrize("invalid", ["a" * 63, "A" * 64, "g" * 64, None, 123])
+def test_policy_pin_requires_exact_lowercase_sha256(invalid):
+    policy = _pinned_policy()
+    policy["artifacts"]["msix"]["sha256"] = invalid
+    with pytest.raises(ValueError, match="artifacts.msix.sha256"):
+        candidate.validate_policy_digests(policy)
+
+
+def test_all_three_policy_artifacts_match_recorded_live_api_metadata():
+    from scripts.verify_native_candidate_inputs import validate_artifact
+
+    policy = _pinned_policy()
+    candidate.validate_policy_digests(policy)
+    assert set(LIVE_ARTIFACT_METADATA) == set(policy["artifacts"])
+    for role, metadata in LIVE_ARTIFACT_METADATA.items():
+        expected = policy["artifacts"][role]
+        result = validate_artifact(metadata, expected, policy)
+        assert result["id"] == expected["id"]
+        assert result["sha256"] == metadata["digest"].removeprefix("sha256:")

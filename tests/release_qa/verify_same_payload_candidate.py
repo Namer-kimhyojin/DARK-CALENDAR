@@ -50,6 +50,21 @@ def canonical_digest(value):
     return hashlib.sha256(data).hexdigest()
 
 
+def validate_policy_digests(policy):
+    digests = {
+        "product_inputs_sha256": policy["product_inputs_sha256"],
+        "payload_manifest_sha256": policy["payload_manifest_sha256"],
+    }
+    digests.update(
+        (f"artifacts.{role}.sha256", artifact["sha256"])
+        for role, artifact in policy["artifacts"].items()
+    )
+    digests.update((f"qa_sha256.{name}", value) for name, value in policy["qa_sha256"].items())
+    for name, value in digests.items():
+        if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+            raise ValueError(f"Invalid SHA256 policy pin: {name}")
+
+
 def git_bytes(root, *arguments):
     return subprocess.run(["git", *arguments], cwd=root, capture_output=True, check=True).stdout
 
@@ -139,6 +154,7 @@ def verify_checkout(root, policy, qa_commit, original, input_hasher):
 
 
 def verify_and_download(root, policy, qa_commit, evidence, payload, original, input_hasher):
+    validate_policy_digests(policy)
     result = verify_checkout(root, policy, qa_commit, original, input_hasher)
     opener = urllib.request.build_opener(original.SafeRedirect())
     metadata = {}
@@ -240,6 +256,7 @@ def main(argv=None):
         else "payload-after-native.json"
     )
     try:
+        validate_policy_digests(policy)
         if args.operation == "prepare":
             result = verify_and_download(
                 root,

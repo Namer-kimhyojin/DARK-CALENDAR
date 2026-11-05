@@ -21,7 +21,7 @@
     "msix": {
       "id": 13440664435,
       "name": "darkcalendar-msix-x64",
-      "sha256": "ed8df53b62effefc2047c0f060c9ca7fc328b48a8ac63185cf1a0df7c0fa945d5"
+      "sha256": "ed8df53b62effefc2047c0f060c9ca7c328b48a8ac63185cf1a0df7c0fa945d5"
     },
     "release_assets": {
       "id": 13440629566,
@@ -40,6 +40,6 @@
     "tests/release_qa/native_capture_diagnostics.py": "d4b5ab828d57d26450bc91f87520887d27743f22c88d8a2f7725b3816e34495e",
     "tests/release_qa/native_diagnostic_smoke.py": "cfe01f45a853325396fd683b69983140143b6391f1c1357ef34fc5e79889648b",
     "tests/release_qa/native_release_smoke_adapter.py": "2825f11bc838cab7bee0d9e70a7390931cb9b67d37c1ed27df459012300b281b",
-    "tests/release_qa/verify_same_payload_candidate.py": "c1e07db0042d4647b49d991717594ebdd40628717d943194b97b20dbae2a2c7d"
+    "tests/release_qa/verify_same_payload_candidate.py": "dd4e78faf6dad6ba68ec10ee9ff348901db66a7826652997018b20ed71ee786a"
   }
 }
