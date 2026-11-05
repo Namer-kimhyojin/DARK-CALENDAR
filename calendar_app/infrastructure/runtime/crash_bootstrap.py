@@ -84,6 +84,14 @@ def _trim_oversized_log(log_path: str) -> None:
         pass
 
 
+def _allow_safe_log_record(record: logging.LogRecord) -> bool:
+    # OAuth debug records include raw token exchanges and unlabeled state values.
+    return record.levelno >= logging.WARNING or record.name.partition(".")[0] not in {
+        "oauthlib",
+        "requests_oauthlib",
+    }
+
+
 def setup_crash_logging(log_path: str | None = None) -> TextIO | None:
     if log_path is None:
         # Use AppData/Local for writable log file when frozen or installed.
@@ -119,6 +127,7 @@ def setup_crash_logging(log_path: str | None = None) -> TextIO | None:
     )
     for handler in handlers:
         handler.setFormatter(formatter)
+        handler.addFilter(_allow_safe_log_record)
     logging.basicConfig(
         level=logging.DEBUG if debug_enabled else logging.INFO,
         handlers=handlers,

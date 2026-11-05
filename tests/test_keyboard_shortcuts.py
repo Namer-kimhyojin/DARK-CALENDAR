@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
+from types import SimpleNamespace
 import unittest
+from unittest.mock import Mock, patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtCore import QEvent, QRect, Qt
+from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QDockWidget, QMainWindow, QWidget
 
@@ -14,6 +17,7 @@ from calendar_app.infrastructure.runtime.keyboard_shortcuts import (
     register_all,
     search_shortcut_guide_entries,
 )
+from calendar_app.presentation.main_window.window_events import WindowEventsMixin
 
 
 class _ShortcutHost(QMainWindow):
@@ -111,6 +115,34 @@ class KeyboardShortcutTests(unittest.TestCase):
         host.close()
         host.deleteLater()
         self._app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    def test_previous_and_next_monitor_shortcuts_move_to_different_screens(self):
+        class MonitorHost(WindowEventsMixin, _ShortcutHost):
+            pass
+
+        host = MonitorHost()
+        self.addCleanup(self._dispose_host, host)
+        host.settings = Mock()
+        host.setGeometry(100, 200, 400, 300)
+        host.move = Mock()
+        host.ensure_window_on_screen = Mock()
+        screens = [
+            SimpleNamespace(geometry=lambda: QRect(0, 0, 1000, 800)),
+            SimpleNamespace(geometry=lambda: QRect(1000, 0, 1500, 1200)),
+            SimpleNamespace(geometry=lambda: QRect(-800, 0, 800, 600)),
+        ]
+        register_all(host)
+        bindings = {shortcut.key().toString(): shortcut for shortcut in host._global_shortcuts}
+        with (
+            patch.object(QGuiApplication, "screens", return_value=screens),
+            patch.object(QGuiApplication, "screenAt", return_value=screens[0]),
+        ):
+            bindings["Ctrl+Alt+Shift+Left"].activated.emit()
+            host.move.assert_called_once_with(-720, 150)
+            host.move.reset_mock()
+            bindings["Ctrl+Alt+Shift+Right"].activated.emit()
+            host.move.assert_called_once_with(1150, 300)
+        self.assertEqual(2, host.ensure_window_on_screen.call_count)
 
     def test_register_all_attaches_ctrl_k_to_main_window(self):
         host = _ShortcutHost()

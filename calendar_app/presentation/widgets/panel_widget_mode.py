@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 from collections import OrderedDict
@@ -41,6 +42,7 @@ from calendar_app.presentation.widgets.panel_widget_views import (  # noqa: F401
     _PanelWidget,
     _QuickAddInput,
 )
+from calendar_app.presentation.widgets.schedule_info import _is_all_day as _schedule_is_all_day
 from calendar_app.shared.background_worker import DbTaskWorker
 
 
@@ -218,6 +220,7 @@ class PanelWidgetModeController:
             str(self._settings.value("theme_color", "#4da6ff") or "#4da6ff"),
             str(self._settings.value("ui_shape_preset", "sharp") or "sharp"),
             str(self._settings.value("dialog_token.accent", "") or ""),
+            tuple(sorted(panel._read_theme_tokens().items())),
         )
 
     def _maybe_apply_panel_palette(
@@ -841,7 +844,12 @@ class PanelWidgetModeController:
             # ── 시간 레이블: 시작~종료 / 종일 ──────────────────────────
             start_dt = _parse_qdatetime(_safe_text(row.get("deadline")))
             end_dt = _parse_qdatetime(_safe_text(row.get("end_date") or row.get("end_time") or ""))
-            has_time = start_dt.isValid() and len(_safe_text(row.get("deadline"))) >= 16
+            explicit_all_day = row.get("all_day") is not None and _schedule_is_all_day(row)
+            has_time = (
+                not explicit_all_day
+                and start_dt.isValid()
+                and len(_safe_text(row.get("deadline"))) >= 16
+            )
             if not has_time:
                 time_label = all_day_text
             else:
@@ -875,7 +883,7 @@ class PanelWidgetModeController:
                 memo_display = (memo_full[:40] + "…") if len(memo_full) > 40 else memo_full
 
             # subtitle: time_label\n장소\n담당자 (메모는 별도 보관)
-            subtitle_parts = [time_label] if time_label != all_day_text else []
+            subtitle_parts = [time_label] if explicit_all_day or time_label != all_day_text else []
             subtitle_parts.extend(detail_parts)
             subtitle = "\n".join(subtitle_parts)
 

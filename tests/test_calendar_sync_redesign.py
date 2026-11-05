@@ -121,6 +121,9 @@ def test_my_calendars_is_the_entry_point_and_empty_ics_has_a_direct_add_action(
     add_subscription = Mock()
     monkeypatch.setattr(hub.ics_manager, "_add_ics", add_subscription)
     hub.tabs.setCurrentIndex(0)
+    assert hub.service_cards["ics"].isHidden()
+    hub.more_services.click()
+    assert not hub.service_cards["ics"].isHidden()
     hub.connect_buttons["ics"].click()
     assert hub.tabs.currentWidget() is hub.section_pages["ics"]
     assert hub.ics_manager.provider_filter.currentData() == "ics"
@@ -129,13 +132,26 @@ def test_my_calendars_is_the_entry_point_and_empty_ics_has_a_direct_add_action(
     hub.close()
 
 
+def test_calendar_hub_has_one_title_with_common_chrome(sync_ui):
+    from calendar_app.presentation.dialogs.dialog_chrome import ensure_dialog_chrome
+
+    hub = CalendarSyncHub(sync_ui.host)
+    ensure_dialog_chrome(hub, settings=sync_ui.host.settings)
+    title = hub.findChild(QLabel, "dialogTitle")
+    assert title.isHidden()
+    assert hub.findChild(QLabel, "CommonDialogTitle").text() == hub.windowTitle()
+    assert not hub.summary.isHidden()
+    assert not hub.sync_all.isHidden()
+    hub.close()
+
+
 def test_busy_sync_prevents_duplicate_request_and_explains_service_state(sync_ui, monkeypatch):
     hub = CalendarSyncHub(sync_ui.host, section="services")
     hub.show()
     sync_ui.qapp.processEvents()
-    for provider in ("google", "ics"):
-        assert hub.service_badges[provider].isVisible()
-        assert hub.service_badges[provider].width() > 0
+    assert hub.service_badges["google"].isVisible()
+    assert hub.service_badges["google"].width() > 0
+    assert hub.service_cards["ics"].isHidden()
     hub.sync_buttons["google"].click()
     sync_ui.qapp.processEvents()
     assert sync_ui.coordinator.states["google"]["busy"]
@@ -156,6 +172,7 @@ def test_busy_sync_prevents_duplicate_request_and_explains_service_state(sync_ui
     assert worker is not None
     assert not hub.sync_buttons["ics"].isEnabled()
     sync_ui.qapp.processEvents()
+    assert hub.service_badges["ics"].isVisible()
     assert hub.service_badges["ics"].property("health") == "busy"
     assert hub.service_badges["ics"].width() > 0
     assert not hub.sync_all.isEnabled()

@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QEvent, QSettings, Qt, QTime
+from PyQt6.QtCore import QEvent, QPoint, QSettings, Qt, QTime
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from calendar_app.presentation.dialogs import daily_summary_dialog as daily
@@ -204,6 +204,88 @@ class DailySummaryDialogTests(unittest.TestCase):
         self.assertFalse(dialog._priority_guard_active)
         self.assertFalse(dialog._priority_raise_timer.isActive())
         self.assertFalse(dialog.isVisible())
+
+    def test_narrow_settings_keep_footer_visible_and_cancel_draft(self):
+        parent = _SettingsParent("DailySummaryNarrowDraft")
+        self.addCleanup(parent.settings.clear)
+        self.addCleanup(parent.close)
+        parent.settings.setValue(daily._SETTINGS_KEY_STARTUP_ENABLED, True)
+        with (
+            patch.object(daily.DailySummaryDialog, "_load_schedule", return_value=["• Schedule"]),
+            patch.object(daily.DailySummaryDialog, "_load_due_routines", return_value=[]),
+        ):
+            dialog = daily.DailySummaryDialog(parent=parent, show_settings=True)
+        self.addCleanup(dialog.close)
+        dialog.setMinimumSize(420, 360)
+        dialog.setMaximumSize(420, 420)
+        dialog.resize(420, 420)
+        dialog.show()
+        for _ in range(4):
+            QApplication.processEvents()
+        self.assertTrue(dialog.settings_save_btn.isVisible())
+        self.assertTrue(dialog.settings_cancel_btn.isVisible())
+        self.assertFalse(dialog.settings_footer.visibleRegion().isEmpty())
+        dialog.startup_toggle.setChecked(False)
+        dialog.settings_cancel_btn.click()
+        self.assertTrue(
+            daily._setting_bool(parent.settings, daily._SETTINGS_KEY_STARTUP_ENABLED, False)
+        )
+        self.assertTrue(dialog.startup_toggle.isChecked())
+
+    def test_light_reminder_title_uses_full_width_above_time_and_toggle(self):
+        parent = _SettingsParent("DailySummaryLightReminderLayout")
+        self.addCleanup(parent.settings.clear)
+        self.addCleanup(parent.close)
+        for key, value in {
+            "text_theme": "light",
+            "panel_base_color": "#f3f1fa",
+            "theme_color": "#7950b8",
+        }.items():
+            parent.settings.setValue(key, value)
+        with (
+            patch.object(daily.DailySummaryDialog, "_load_schedule", return_value=[]),
+            patch.object(daily.DailySummaryDialog, "_load_due_routines", return_value=[]),
+        ):
+            dialog = daily.DailySummaryDialog(parent=parent, show_settings=True)
+        self.addCleanup(dialog.close)
+        dialog.settings_panel.setFixedWidth(320)
+        dialog.show()
+        for _ in range(4):
+            QApplication.processEvents()
+        label = dialog.daily_reminder_label
+        title_top = label.mapTo(dialog, QPoint()).y()
+        time_top = dialog.time_edit.mapTo(dialog, QPoint()).y()
+        toggle_top = dialog.daily_toggle.mapTo(dialog, QPoint()).y()
+        self.assertGreaterEqual(label.width(), label.fontMetrics().horizontalAdvance(label.text()))
+        self.assertLess(label.height(), label.fontMetrics().lineSpacing() * 2)
+        self.assertLess(title_top + label.height(), time_top)
+        self.assertLess(title_top + label.height(), toggle_top)
+        self.assertGreater(dialog.time_edit.width(), dialog.daily_toggle.width())
+        self.assertIs(label.buddy(), dialog.time_edit)
+
+    def test_reminder_time_and_enabled_draft_are_discarded_on_cancel(self):
+        parent = _SettingsParent("DailySummaryReminderDraft")
+        self.addCleanup(parent.settings.clear)
+        self.addCleanup(parent.close)
+        parent.settings.setValue(daily._SETTINGS_KEY_DAILY_ENABLED, True)
+        parent.settings.setValue(daily._SETTINGS_KEY_TIME, "08:15")
+        with (
+            patch.object(daily.DailySummaryDialog, "_load_schedule", return_value=[]),
+            patch.object(daily.DailySummaryDialog, "_load_due_routines", return_value=[]),
+        ):
+            dialog = daily.DailySummaryDialog(parent=parent, show_settings=True)
+        self.addCleanup(dialog.close)
+        dialog.daily_toggle.setChecked(False)
+        dialog.time_edit.setTime(QTime(10, 45))
+        self.assertFalse(dialog.time_edit.isEnabled())
+        dialog.settings_cancel_btn.click()
+        self.assertTrue(
+            daily._setting_bool(parent.settings, daily._SETTINGS_KEY_DAILY_ENABLED, False)
+        )
+        self.assertEqual(parent.settings.value(daily._SETTINGS_KEY_TIME), "08:15")
+        self.assertTrue(dialog.daily_toggle.isChecked())
+        self.assertEqual(dialog.time_edit.time(), QTime(8, 15))
+        self.assertTrue(dialog.time_edit.isEnabled())
 
 
 if __name__ == "__main__":

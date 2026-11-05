@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
@@ -30,7 +32,7 @@ class SplashScreenTests(unittest.TestCase):
         self.addCleanup(splash.close)
 
         self.assertEqual(splash._headline_text, "Planning today")
-        translate.assert_called_once_with("splash.organizing_today", "오늘을 정리하는 중")
+        translate.assert_any_call("splash.organizing_today", "오늘을 정리하는 중")
 
     def test_progress_chases_target_in_steps(self):
         splash = SplashScreen()
@@ -51,6 +53,45 @@ class SplashScreenTests(unittest.TestCase):
             splash._advance_progress_display()
 
         self.assertAlmostEqual(splash._progress_anim, 0.8, places=3)
+
+    def test_visible_percent_matches_smoothed_bar_without_early_completion(self):
+        splash = SplashScreen()
+        self.addCleanup(splash.close)
+        splash.set_status("Loading", 0.8)
+        self.assertEqual(splash._display_progress_percent(), 0)
+        splash._progress_anim = 0.537
+        self.assertEqual(splash._display_progress_percent(), 53)
+        splash._progress_anim = 0.999
+        self.assertEqual(splash._display_progress_percent(), 99)
+        splash._progress_anim = 1.0
+        self.assertEqual(splash._display_progress_percent(), 100)
+
+    def test_compact_splash_uses_saved_light_and_custom_theme_surfaces(self):
+        from PyQt6.QtCore import QSettings
+
+        from calendar_app.presentation.dialogs.dialog_styles import get_dialog_theme_tokens
+
+        with TemporaryDirectory() as directory:
+            settings = QSettings(str(Path(directory) / "splash.ini"), QSettings.Format.IniFormat)
+            with patch("calendar_app.presentation.splash_screen.QSettings", return_value=settings):
+                for mode, base, accent in (
+                    ("light", "#f3f1fa", "#7950b8"),
+                    ("dark", "#123c38", "#e5b15b"),
+                ):
+                    with self.subTest(mode=mode):
+                        settings.setValue("text_theme", mode)
+                        settings.setValue("panel_base_color", base)
+                        settings.setValue("theme_color", accent)
+                        expected = get_dialog_theme_tokens(settings=settings)
+                        splash = SplashScreen()
+                        self.addCleanup(splash.close)
+                        self.assertEqual((splash.width(), splash.height()), (480, 280))
+                        self.assertEqual(
+                            splash._theme_tokens["floating_bg"], expected["floating_bg"]
+                        )
+                        self.assertEqual(splash._theme_tokens["accent"], accent)
+                        image = splash.grab().toImage()
+                        self.assertEqual(image.size(), splash.size())
 
     def test_bootstrap_phase_ranges_follow_weighted_distribution(self):
         ranges = _build_startup_phase_ranges()

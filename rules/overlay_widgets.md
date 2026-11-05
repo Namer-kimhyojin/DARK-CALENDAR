@@ -280,6 +280,10 @@ class OverlayXxxWidget(OverlayBaseWidget):
 - `domain/beatmaker_recording.py`가 최대 5분·4,096타의 선택 필드 `deck.beatmaker_recording`을 검증한다. 음원 스냅샷만 재생하고 키 동작을 실행하지 않는다. 저장된 녹음을 자동 재생하지 않는다.
 - 스튜디오는 초안·실행 취소·적용 흐름을 유지하며 위젯은 연주창을 닫을 때 저장한다. 빈 녹음은 기존 녹음을 유지하고, 교체·삭제는 확인한다. 닫기·숨김·종료·확인창 중 종료에서 재생과 타이머를 정리한다.
 - 전체 덱 공유는 녹음의 사용자 WAV도 내장/복원한다. 페이지 공유 시 수신 덱의 기존 녹음을 보존한다. 세부 계약·검증은 `docs/ux-audit/keydeck-recording-loop-20261022.md`를 참고한다.
+- `루프덱 · 4트랙`은 기존 단일 녹음과 분리된 `deck.beatmaker_looper`를 사용한다. `domain/beatmaker_looper.py`가 BPM 40~240, 1·2·4·8마디, 16분음표/끄기, 4트랙·트랙당 2,048타·총 8,192타를 검증한다. 기존 `beatmaker_recording` version 1은 변경하거나 자동 변환하지 않는다.
+- 루프덱은 첫 패드부터 한 바퀴를 녹음한 뒤 반복한다. 다음 트랙과 오버더빙은 같은 monotonic epoch를 공유하고 다른 트랙의 반복을 유지한다. 라이브 입력을 녹음 중 중복 재생하지 않으며, 절전 후 지난 타격을 한꺼번에 재생하지 않는다. 닫기·숨김·종료에서는 타이머와 악기 입력을 정리한다.
+- `keydeck/looper_dialog.py`의 전용 입력만 패드를 연주한다. Studio의 초안·실행 취소·적용과 위젯의 닫을 때 저장 계약을 유지한다. 전체 덱 공유는 네 트랙의 사용자 WAV 스냅샷을 함께 내장/복원하고 페이지 가져오기는 수신 덱의 단일 녹음과 루프를 모두 보존한다.
+- 회귀는 `tests/test_beatmaker_looper.py`, `tests/test_keydeck_looper_ui.py`, `tests/test_keydeck_looper_layouts.py` 및 기존 녹음/KeyDeck 공유 테스트를 포함한다. 사용 순서와 검증 경계는 [루프덱 안내](../docs/ux-audit/keydeck-loopdeck-20261106.md)를 참고한다.
 
 ## 크로스 위젯 참조
 

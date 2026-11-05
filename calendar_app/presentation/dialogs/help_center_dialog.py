@@ -33,6 +33,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
+from calendar_app.shared.typography import get_typography_scale
 
 
 class HelpCenterDialog(QDialog):
@@ -139,9 +140,12 @@ class HelpCenterDialog(QDialog):
         self._select_default_page()
 
     def _build_ui(self) -> None:
-        tokens = get_dialog_theme_tokens(apply_overrides=True)
+        settings = getattr(self.parentWidget(), "settings", None)
+        tokens = get_dialog_theme_tokens(apply_overrides=True, settings=settings)
         self._ui_tokens = tokens
-        metrics = get_dialog_metric_tokens(apply_overrides=True)
+        metrics = get_dialog_metric_tokens(apply_overrides=True, settings=settings)
+        typography = get_typography_scale(settings=settings)
+        self._typography = typography
         shell_radius = max(16, int(metrics.get("group_radius", 12)) + 4)
         sidebar_width = 188
         accent = tokens.get("accent", "#4da6ff")
@@ -177,18 +181,18 @@ class HelpCenterDialog(QDialog):
                 f"}}"
                 f"QLabel#helpCenterEyebrow {{"
                 f"color: {accent};"
-                f"font-size: 11px;"
+                f"font-size: {typography.caption_px}px;"
                 f"font-weight: 800;"
                 f"letter-spacing: 1px;"
                 f"}}"
                 f"QLabel#helpCenterTitle {{"
                 f"color: {text_primary};"
-                f"font-size: 20px;"
+                f"font-size: {int(metrics['title_font_pt'])}px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLabel#helpCenterSubtitle {{"
                 f"color: {text_muted};"
-                f"font-size: 12px;"
+                f"font-size: {typography.body_px}px;"
                 f"}}"
                 f"QFrame#helpCenterBadge, QFrame#helpCenterBadgeAccent {{"
                 f"border-radius: 999px;"
@@ -204,12 +208,12 @@ class HelpCenterDialog(QDialog):
                 f"}}"
                 f"QLabel#helpCenterBadgeText {{"
                 f"color: {text_secondary};"
-                f"font-size: 10px;"
+                f"font-size: {typography.caption_px}px;"
                 f"font-weight: 700;"
                 f"}}"
                 f"QLabel#helpCenterBadgeTextAccent {{"
                 f"color: {text_primary};"
-                f"font-size: 10px;"
+                f"font-size: {typography.caption_px}px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLineEdit#helpCenterSearch {{"
@@ -230,12 +234,12 @@ class HelpCenterDialog(QDialog):
                 f"}}"
                 f"QLabel#helpCenterSidebarTitle {{"
                 f"color: {text_primary};"
-                f"font-size: 14px;"
+                f"font-size: {typography.section_px}px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLabel#helpCenterSidebarHint {{"
                 f"color: {text_muted};"
-                f"font-size: 11px;"
+                f"font-size: {typography.caption_px}px;"
                 f"}}"
                 f"QListWidget#helpCenterNav {{"
                 f"background: transparent;"
@@ -276,18 +280,18 @@ class HelpCenterDialog(QDialog):
                 f"}}"
                 f"QLabel#helpPageEyebrow {{"
                 f"color: {accent};"
-                f"font-size: 11px;"
+                f"font-size: {typography.caption_px}px;"
                 f"font-weight: 800;"
                 f"letter-spacing: 1px;"
                 f"}}"
                 f"QLabel#helpPageTitle {{"
                 f"color: {text_primary};"
-                f"font-size: 18px;"
+                f"font-size: {typography.title_px}px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLabel#helpPageSubtitle {{"
                 f"color: {text_secondary};"
-                f"font-size: 12px;"
+                f"font-size: {typography.body_px}px;"
                 f"}}"
                 f"QFrame#helpSectionSurface {{"
                 f"background: {surface_alt};"
@@ -296,12 +300,12 @@ class HelpCenterDialog(QDialog):
                 f"}}"
                 f"QLabel#helpSectionTitle {{"
                 f"color: {text_primary};"
-                f"font-size: 16px;"
+                f"font-size: {typography.section_px}px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLabel#helpSectionDesc {{"
                 f"color: {text_muted};"
-                f"font-size: 11px;"
+                f"font-size: {typography.caption_px}px;"
                 f"}}"
                 f"QFrame#helpShortcutCard, QFrame#helpShortcutCardAccent {{"
                 f"border-radius: {shell_radius - 4}px;"
@@ -316,30 +320,30 @@ class HelpCenterDialog(QDialog):
                 f"}}"
                 f"QLabel#helpCardBadge {{"
                 f"color: {accent};"
-                f"font-size: 10px;"
+                f"font-size: {typography.caption_px}px;"
                 f"font-weight: 800;"
                 f"letter-spacing: 1px;"
                 f"}}"
                 f"QLabel#helpCardTitle {{"
                 f"color: {text_primary};"
-                f"font-size: 13px;"
+                f"font-size: {typography.body_px}px;"
                 f"font-weight: 800;"
                 f"}}"
                 f"QLabel#helpCardDescription {{"
                 f"color: {text_secondary};"
-                f"font-size: 11px;"
+                f"font-size: {typography.caption_px}px;"
                 f"}}"
                 f"QLabel#helpCardMeta {{"
                 f"color: {text_muted};"
-                f"font-size: 10px;"
+                f"font-size: {typography.caption_px}px;"
                 f"}}"
                 f"QLabel#helpCardKeys {{"
                 f"color: {text_primary};"
-                f"font-size: 11px;"
+                f"font-size: {typography.caption_px}px;"
                 f"}}"
                 f"QLabel#helpFooterText {{"
                 f"color: {text_faint};"
-                f"font-size: 11px;"
+                f"font-size: {typography.caption_px}px;"
                 f"}}"
             ),
         )
@@ -405,6 +409,7 @@ class HelpCenterDialog(QDialog):
             t("shortcut.chrome.search_placeholder", "예: 잠금, 위젯, F11, Ctrl+Shift+1")
         )
         self.search_input.textChanged.connect(self._on_search_text_changed)
+        self.search_input.returnPressed.connect(self._submit_search)
         header_right.addWidget(self.search_input)
 
         search_hint = QLabel(
@@ -474,7 +479,8 @@ class HelpCenterDialog(QDialog):
         close_btn.setProperty("dialogFooter", True)
         close_btn.setFixedWidth(max(92, int(metrics.get("button_min_width", 45)) + 14))
         close_btn.clicked.connect(self.accept)
-        close_btn.setDefault(True)
+        close_btn.setAutoDefault(False)
+        close_btn.setDefault(False)
         footer.addWidget(close_btn)
         root.addLayout(footer)
 
@@ -857,15 +863,16 @@ class HelpCenterDialog(QDialog):
         return frame
 
     def _render_entry_keys_html(self, entry: dict, *, accent: bool = False) -> str:
-        parts = [render_keycaps_html(str(entry.get("key") or ""), accent=accent)]
+        tokens = self._ui_tokens
+        parts = [render_keycaps_html(str(entry.get("key") or ""), accent=accent, tokens=tokens)]
         aliases = [str(alias).strip() for alias in entry.get("aliases", []) if str(alias).strip()]
         for alias in aliases:
-            parts.append(render_keycaps_html(alias, accent=accent))
+            parts.append(render_keycaps_html(alias, accent=accent, tokens=tokens))
         if len(parts) == 1:
             return parts[0]
         separator_color = getattr(self, "_ui_tokens", {}).get("text_faint", "#838b95")
         separator = (
-            f"<span style='color:{separator_color}; font-size:10px; padding:0 6px;'>"
+            f"<span style='color:{separator_color}; font-size:{self._typography.caption_px}px; padding:0 6px;'>"
             "&nbsp;/&nbsp;</span>"
         )
         return separator.join(parts)
@@ -890,6 +897,9 @@ class HelpCenterDialog(QDialog):
 
         self._populate_search_results(query)
         self.page_stack.setCurrentIndex(self._page_indexes["search"])
+
+    def _submit_search(self) -> None:
+        self._on_search_text_changed(self.search_input.text())
 
     def _populate_search_results(self, query: str) -> None:
         while self.search_results_container_layout.count():

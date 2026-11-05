@@ -141,6 +141,17 @@ def test_common_dispatch_uses_all_connected_selected_providers(ui):
     assert ui.coordinator.sync() == ["google"]  # remote workers already running
 
 
+def test_common_dispatch_skips_providers_that_require_repair_or_selection(ui):
+    ui.host.settings.setValue("sync_google_last_error", "dependency_unavailable")
+    icloud = ui.host._caldav_sync_controllers["icloud"]
+    icloud.status = "calendar_access_lost"
+
+    assert ui.coordinator.sync() == ["outlook", "naver"]
+    assert ui.coordinator.sync("icloud") == []
+    ui.host.sync_google_calendar.assert_not_called()
+    icloud.start.assert_not_called()
+
+
 @pytest.mark.parametrize("theme,base", [("dark", "#0d1b2e"), ("light", "#fafafa")])
 def test_toolbar_warning_style_clears_on_local_status_and_theme_refresh(
     ui, monkeypatch, theme, base
@@ -162,7 +173,7 @@ def test_toolbar_warning_style_clears_on_local_status_and_theme_refresh(
     ui.coordinator.states["google"].update(connected=False, issues=0)
     ui.coordinator._paint_status()
     ui.host.sync_status_text_lbl.ensurePolished()
-    assert capture.call_args.args[0] == ICON.SYNC_SETTINGS
+    assert capture.call_args.args[0] == ICON.SYNC
     assert capture.call_args.kwargs["color"] != warning_color
     assert not ui.host.sync_status_text_lbl.font().bold()
     assert (
@@ -187,8 +198,9 @@ def test_toolbar_hub_remains_open_after_sync_action(ui, monkeypatch):
     monkeypatch.setattr(top_bar_builder, "apply_top_menu_theme", lambda *args, **kwargs: None)
     observations = []
 
-    def open_hub(checked=False):
-        hub = CalendarSyncHub(ui.host)
+    def open_hub(*, section):
+        hub = CalendarSyncHub(ui.host, section=section)
+        assert hub.tabs.currentWidget() is hub.section_pages["services"]
 
         def run_sync():
             hub._run_sync()
@@ -261,6 +273,41 @@ def test_google_stale_waiting_flag_does_not_hide_authenticated_connection(ui):
     assert not ui.coordinator.states["google"]["error"]
 
 
+def test_google_without_token_shows_authentication_before_automatic_sync(ui):
+    ui.host.gcal_sync = None
+    ui.host.settings.setValue("sync_google_auto", False)
+    for key in ("outlook_account_id", "caldav_icloud_account_id", "caldav_naver_account_id"):
+        ui.host.settings.remove(key)
+    ui.coordinator.refresh()
+
+    state = ui.coordinator.states["google"]
+    assert state["waiting_for_auth"] and not state["connected"]
+    assert state["error"] == "login_required"
+    assert module.t("gcal.status.auth_needed", "인증 필요") in ui.host.sync_status_text_lbl.text()
+    assert CalendarSyncActionsMixin.sync_calendars(ui.host) == []
+    ui.host.open_calendar_sync_hub.assert_called_once_with(section="services")
+    ui.host.sync_google_calendar.assert_not_called()
+
+    hub = CalendarSyncHub(ui.host, section="services")
+    hub.connect_buttons["google"].click()
+    ui.host.open_gcal_settings_dialog.assert_called_once_with(initial_tab=None, from_sync_hub=True)
+    hub.close()
+
+    ui.host.settings.setValue("gcal_enabled", False)
+    ui.coordinator.refresh()
+    assert not ui.coordinator.states["google"]["waiting_for_auth"]
+    assert ui.host.sync_status_text_lbl.text() == module.t("sync_unified.local_only", "로컬 모드")
+
+
+@pytest.mark.parametrize(
+    "error, expected", [("account_unverified", []), ("network_unavailable", ["google"])]
+)
+def test_google_manual_retry_distinguishes_identity_and_network_errors(ui, error, expected):
+    ui.host.settings.setValue("sync_google_last_error", error)
+    assert ui.coordinator.sync("google") == expected
+    assert ui.host.sync_google_calendar.call_count == len(expected)
+
+
 def test_google_disabled_does_not_mask_icloud_status(ui):
     ui.host.settings.setValue("gcal_enabled", "false")
     ui.host.settings.setValue("sync_google_last_error", "operation_failed")
@@ -269,7 +316,9 @@ def test_google_disabled_does_not_mask_icloud_status(ui):
     assert ui.coordinator.states["google"]["paused"]
     assert not ui.coordinator.states["google"]["can_sync"]
     assert not ui.coordinator.states["google"]["error"]
-    assert "iCloud" in ui.host.sync_action_btn.toolTip()
+    assert "\n" not in ui.host.sync_action_btn.toolTip()
+    assert "iCloud" not in ui.host.sync_action_btn.toolTip()
+    assert not ui.host.sync_status_text_lbl.toolTip()
     assert ui.coordinator.states["icloud"]["can_sync"]
 
 
@@ -676,6 +725,51 @@ def test_local_change_respects_pause_busy_and_backoff(ui):
         controller.sync.assert_not_called()
 
 
+def test_local_changes_during_sync_wake_that_provider_once_after_completion(ui):
+    outlook = ui.host._outlook_sync_controller
+    icloud = ui.host._caldav_sync_controllers["icloud"]
+    ui.coordinator.set_auto("icloud", False)
+    outlook.busy = True
+    for _ in range(2):
+        ui.coordinator.sync_after_local_change(include_google=False)
+    outlook.sync.assert_not_called()
+
+    outlook.busy = False
+    outlook.status = "completed"
+    outlook.changed.emit()
+    ui.qapp.processEvents()
+    ui.qapp.processEvents()
+
+    outlook.sync.assert_called_once()
+    icloud.sync.assert_not_called()
+    ui.host.sync_google_calendar_silent.assert_not_called()
+
+
+@pytest.mark.parametrize("outcome", ["network_unavailable", "cancelled", "paused", "account"])
+def test_deferred_local_change_respects_provider_state_after_completion(ui, outcome):
+    outlook = ui.host._outlook_sync_controller
+    ui.coordinator.set_auto("icloud", False)
+    outlook.busy = True
+    ui.coordinator.sync_after_local_change(include_google=False)
+
+    outlook.busy = False
+    if outcome == "paused":
+        ui.coordinator.set_auto("outlook", False)
+    elif outcome == "account":
+        replacement = "outlook::replacement"
+        with sqlite3.connect(ui.path) as conn:
+            CalendarSyncRepository(conn, "outlook").register(
+                replacement, {"id": "replacement", "name": "Replacement", "can_edit": True}
+            )
+        ui.host.settings.setValue("outlook_account_id", replacement)
+    else:
+        outlook.status = outcome
+    outlook.changed.emit()
+    ui.qapp.processEvents()
+
+    outlook.sync.assert_not_called()
+
+
 def test_multiple_local_edits_share_one_debounce_timer(ui):
     CalendarSyncActionsMixin.wake_gcal_sync(ui.host)
     timer = ui.coordinator.local_change_timer
@@ -727,6 +821,18 @@ def test_shutdown_ics_result_does_not_report_partial_success(ui):
     ui.host._is_shutting_down = True
     ui.coordinator._ics_result({"first": (2, 0, None)})
     assert not ui.host.settings.value("sync_ics_last_success")
+    ui.host.schedule_panel_refresh.assert_not_called()
+
+
+def test_cancelled_ics_results_preserve_previous_diagnostics_and_success_time(ui):
+    previous_success = "2026-11-03T00:00:00+09:00"
+    ui.host.settings.setValue("sync_ics_last_success", previous_success)
+    ui.host.settings.setValue("sync_ics_last_error", "operation_failed")
+
+    ui.coordinator._ics_result({"ics::cancelled": (0, 0, "cancelled")})
+
+    assert ui.host.settings.value("sync_ics_last_success") == previous_success
+    assert ui.host.settings.value("sync_ics_last_error") == "operation_failed"
     ui.host.schedule_panel_refresh.assert_not_called()
 
 

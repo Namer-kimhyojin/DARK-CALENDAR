@@ -7,6 +7,7 @@ from unittest.mock import patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont, QFontDatabase
 from PyQt6.QtTest import QSignalSpy, QTest
 from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QLabel, QPushButton, QScrollArea
 
@@ -117,7 +118,8 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.assertTrue(dialog._preset_grid_widget.isHidden())
         self.assertTrue(all(button.isHidden() for button in dialog._preset_filter_btns.values()))
         self.assertFalse(dialog._preset_buttons_built)
-        self.assertEqual(len(dialog._family_btns), 8)
+        self.assertEqual(len(dialog._family_btns), 9)
+        self.assertIn("navy_lilac", dialog._family_btns)
         self.assertTrue(all(not button.isHidden() for button in dialog._family_btns.values()))
 
         dialog._style_details_toggle.click()
@@ -168,7 +170,7 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.assertEqual(dialog.selected_base_hex(), "#e7f5ff")
         self.assertEqual(dialog.selected_point_hex(), "#1971c2")
         self.assertEqual(dialog.selected_text_theme(), "light")
-        self.assertEqual(dialog._row_primary.hex_value(), "#101318")
+        self.assertEqual(dialog._row_primary.hex_value(), "#20283a")
         self.assertEqual(dialog._row_input_bg.hex_value(), "#ffffff")
 
     def test_style_family_cards_preview_only_the_current_mode_variant(self):
@@ -177,7 +179,7 @@ class PanelOpacityUiTests(unittest.TestCase):
 
         ocean = dialog._family_btns["ocean"]
         self.assertEqual(ocean.objectName(), "appearanceFamilyCard")
-        self.assertEqual(ocean.iconSize().width(), 88)
+        self.assertEqual(ocean.iconSize().width(), 64 if dialog._family_columns == 3 else 88)
         self.assertIn("블루\n네이비", ocean.text())
         self.assertEqual(ocean.property("variant_label"), "네이비")
 
@@ -185,6 +187,62 @@ class PanelOpacityUiTests(unittest.TestCase):
 
         self.assertIn("블루\n파스텔 스카이", ocean.text())
         self.assertEqual(ocean.property("variant_label"), "파스텔 스카이")
+
+    def test_appearance_bounds_and_family_cards_preserve_visible_content(self):
+        dialog = PanelColorPickerDialog()
+        self.addCleanup(dialog.close)
+        dialog.show()
+        for _ in range(3):
+            self._app.processEvents()
+        preferred = dialog.property("_dc_preferred_size")
+        self.assertIsNotNone(preferred)
+        self.assertLessEqual(preferred.width(), 960)
+        self.assertLessEqual(preferred.height(), 740)
+        self.assertLessEqual(dialog.height(), 740)
+        self.assertEqual(len(dialog._family_btns), 9)
+        heights = {button.height() for button in dialog._family_btns.values()}
+        self.assertEqual(heights, {72})
+        self.assertTrue(
+            all(
+                button.height() >= button.iconSize().height() + 16
+                for button in dialog._family_btns.values()
+            )
+        )
+        self.assertFalse(dialog._settings_scroll.viewport().autoFillBackground())
+
+    def test_appearance_reflows_without_rebuilding_or_discarding_draft(self):
+        with patch(
+            "calendar_app.presentation.dialogs.dialog_styles._available_dialog_bounds",
+            return_value=(1400, 1000),
+        ):
+            dialog = PanelColorPickerDialog()
+            self.addCleanup(dialog.close)
+            dialog.show()
+            for _ in range(3):
+                self._app.processEvents()
+            dialog._select_style_family("ocean")
+            dialog._slider.setValue(153)
+            original_buttons = list(dialog._family_btns.values())
+            original_preview = dialog._preview_frame
+            draft = (dialog.selected_base_hex(), dialog.selected_point_hex(), dialog._opacity)
+            for width, wide, columns in ((960, True, 2), (700, False, 3), (960, True, 2)):
+                with self.subTest(width=width, wide=wide):
+                    dialog.resize(width, 740)
+                    for _ in range(3):
+                        self._app.processEvents()
+                    self.assertEqual(dialog._wide_appearance_layout, wide)
+                    self.assertEqual(dialog._family_columns, columns)
+                    self.assertEqual(list(dialog._family_btns.values()), original_buttons)
+                    self.assertIs(dialog._preview_frame, original_preview)
+                    self.assertEqual(
+                        (dialog.selected_base_hex(), dialog.selected_point_hex(), dialog._opacity),
+                        draft,
+                    )
+                    if not wide:
+                        self.assertLess(
+                            dialog._preview_panel.geometry().bottom(),
+                            dialog._settings_scroll.geometry().top(),
+                        )
 
     def test_mode_controls_expose_system_light_and_dark(self):
         dialog = PanelColorPickerDialog()
@@ -325,6 +383,33 @@ class PanelOpacityUiTests(unittest.TestCase):
         dialog._section_reset_buttons["font"].click()
         self.assertEqual(dialog._font_size_spin.value(), original_font_size)
         self.assertFalse(dialog._apply_btn.isEnabled())
+
+    def test_font_preview_renders_selected_family_size_and_restores_opening_font(self):
+        families = QFontDatabase.families()
+        self.assertTrue(families)
+        first_family = "Courier New" if "Courier New" in families else families[0]
+        other_family = "Times New Roman" if "Times New Roman" in families else families[-1]
+        dialog = PanelColorPickerDialog(current_font_family=first_family, current_font_size=10)
+        self.addCleanup(dialog.close)
+        dialog._section_toggles["font"].click()
+        dialog.show()
+        QApplication.processEvents()
+
+        for family, size in ((first_family, 24), (other_family, 18)):
+            with self.subTest(family=family, size=size):
+                dialog._font_combo.setCurrentFont(QFont(family))
+                dialog._font_size_spin.setValue(size)
+                QApplication.processEvents()
+                self.assertEqual(dialog._font_preview.font().family(), family)
+                self.assertAlmostEqual(dialog._font_preview.font().pointSizeF(), size)
+                self.assertGreaterEqual(
+                    dialog._font_preview.height(), dialog._font_preview.fontMetrics().height() + 22
+                )
+
+        dialog._section_reset_buttons["font"].click()
+        QApplication.processEvents()
+        self.assertEqual(dialog._font_preview.font().family(), first_family)
+        self.assertAlmostEqual(dialog._font_preview.font().pointSizeF(), 10)
 
     def test_family_selection_uses_checkmark_and_arrow_key_navigation(self):
         dialog = PanelColorPickerDialog()

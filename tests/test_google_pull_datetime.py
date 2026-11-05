@@ -208,7 +208,7 @@ class GooglePullDatetimeSnapshotTests(TemporaryDatabaseTestCase):
             app.gcal_sync.update_event.assert_not_called()
             app.gcal_sync.batch_create_events.assert_not_called()
 
-    def test_http_failure_is_retained_when_a_later_calendar_request_succeeds(self):
+    def test_http_failure_scope_controls_whether_later_calendars_are_fetched(self):
         original_id = self._add_original()
         valid = service.CalendarSyncService(calendar_id="team")._to_google_event(
             _raw_event(
@@ -216,11 +216,11 @@ class GooglePullDatetimeSnapshotTests(TemporaryDatabaseTestCase):
                 {"dateTime": "2026-10-09T10:00:00+09:00"},
             )
         )
-        for status, message, expected in (
-            (403, "forbidden", "remote_http_403"),
-            (403, "userRateLimitExceeded", "remote_http_429"),
-            (429, "limit", "remote_http_429"),
-            (503, "unavailable", "remote_http_503"),
+        for status, message, expected, can_continue in (
+            (403, "userRateLimitExceeded", "remote_http_429", False),
+            (429, "limit", "remote_http_429", False),
+            (503, "unavailable", "remote_http_503", False),
+            (403, "forbidden", "remote_http_403", True),
         ):
             with self.subTest(status=status, expected=expected):
                 success, app, push = self._pull(
@@ -228,10 +228,17 @@ class GooglePullDatetimeSnapshotTests(TemporaryDatabaseTestCase):
                 )
                 self.assertFalse(success)
                 self.assertEqual(expected, app._last_gcal_sync_error)
-                self.assertIsNone(app.gcal_sync.last_error_status)
+                self.assertEqual(None if can_continue else status, app.gcal_sync.last_error_status)
                 self.assertEqual(1, app._last_gcal_sync_stats["pull_fetch_failures"])
-                self.assertEqual("Synthetic event", task_repo.get_unified_task(original_id)["name"])
-                self.assertEqual("next-token", app.settings.value("gcal_sync_token::team"))
+                self.assertEqual(2 if can_continue else 1, app.gcal_sync.fetch_sync_events.call_count)
+                self.assertEqual(
+                    "Synthetic event" if can_continue else "Existing mirror",
+                    task_repo.get_unified_task(original_id)["name"],
+                )
+                self.assertEqual(
+                    "next-token" if can_continue else "old-token",
+                    app.settings.value("gcal_sync_token::team"),
+                )
                 self.assertEqual("failed", app._last_gcal_sync_outcome)
                 push.assert_not_called()
 

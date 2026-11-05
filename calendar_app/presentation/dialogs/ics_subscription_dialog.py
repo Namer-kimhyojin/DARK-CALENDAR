@@ -43,14 +43,7 @@ class IcsSubscriptionDialog(QDialog):
         settings = getattr(parent, "settings", None)
         if settings is None:
             settings = getattr(getattr(parent, "app", None), "settings", None)
-        theme_options = {}
-        if settings is not None:
-            theme_options = {
-                "theme_color": settings.value("theme_color", "#4da6ff", type=str),
-                "text_theme": settings.value("text_theme", "dark", type=str),
-                "panel_base_color": settings.value("panel_base_color", "#0d1b2e", type=str),
-            }
-        apply_common_dialog_style(self, minimum_width=600, size=(640, 540), **theme_options)
+        apply_common_dialog_style(self, minimum_width=600, size=(640, 540), settings=settings)
         root = QVBoxLayout(self)
         root.setContentsMargins(24, 20, 24, 20)
         root.setSpacing(12)

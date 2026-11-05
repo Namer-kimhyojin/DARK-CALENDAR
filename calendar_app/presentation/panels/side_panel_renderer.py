@@ -2,16 +2,18 @@
 import logging
 
 from PyQt6.QtCore import QDate, QEvent, QLocale, QObject, Qt, QTimer
-from PyQt6.QtGui import QColor, QMouseEvent
+from PyQt6.QtGui import QActionGroup, QColor, QMouseEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QProgressBar,
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -30,6 +32,7 @@ from calendar_app.infrastructure.db import (
     directive_repo,
     search_repo,
 )
+from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
@@ -43,19 +46,25 @@ from calendar_app.shared.qt_helpers import find_parent_dock
 from calendar_app.shared.search_utils import clean_display_text as _tooltip_text_without_tags
 from calendar_app.shared.search_utils import matches_search_query
 from calendar_app.shared.theme_settings import (
-    fpt as _fpt,
-)
-from calendar_app.shared.theme_settings import (
     get_text_theme_and_panel_base,
     get_theme_color,
 )
 from calendar_app.shared.theme_settings import (
     panel_palette as _panel_palette,
 )
+from calendar_app.shared.typography import get_typography_scale
 from calendar_app.shared.ui_tokens import get_ui_tokens
 
 logger = logging.getLogger(__name__)
 _panel_calendar_cache = None  # dict | None: {calendar_id: color}
+
+
+def _font_role(role="body"):
+    """Keep panel text on the application's shared, point-based type ramp."""
+    app = QApplication.instance()
+    base = app.font().pointSizeF() if app is not None else None
+    scale = get_typography_scale(base_pt=base if base and base > 0 else 11)
+    return f"{getattr(scale, role + '_pt'):g}pt"
 
 
 def _shape_tokens() -> dict:
@@ -170,6 +179,26 @@ def _handle_panel_item_click(app, tid, is_directive, ctrl):
 
 def _apply_panel_item_style(container, selected, bg_color):
     """Apply consistent card style for panel items across normal/selected states."""
+    if container.property("agendaCard"):
+        tokens = _semantic_tokens()
+        color = _color_rgba(bg_color or tokens["accent"], 220, tokens["accent"])
+        background = tokens["accent_soft"] if selected else tokens["bg_item"]
+        border = tokens["accent_border"] if selected else tokens["border_soft"]
+        container.setStyleSheet(f"""
+            QFrame#selectedDayAgendaCard {{
+                background-color: {background};
+                border: 1px solid {border};
+                border-left: 3px solid {color};
+                border-radius: {tokens["radius_md"]};
+                margin: 3px 0;
+            }}
+            QFrame#selectedDayAgendaCard:hover {{
+                background-color: {tokens["bg_item_hover"]};
+                border-color: {tokens["accent_border"]};
+                border-left-color: {color};
+            }}
+        """)
+        return
     _tc = get_theme_color()
     shape = _shape_tokens()
     card_radius = int(shape.get("panel_item_radius", 0))
@@ -386,7 +415,7 @@ def _toolbar_button_style(tokens=None, shape=None):
             color: {txt};
             background-color: transparent;
             font-weight: bold;
-            font-size: {_fpt()};
+            font-size: {_font_role()};
             border-radius: {btn_radius}px;
             padding: 2px 7px;
             border: none;
@@ -481,13 +510,13 @@ def _directive_group_header(receiver_name):
         f"background-color: {_tc_rgba(30)}; "
         f"border: 1px solid {_tc_rgba(80)}; "
         f"border-radius: {badge_radius}px; "
-        f"color: {get_theme_color()}; font-size: {_fpt(-2)};"
+        f"color: {get_theme_color()}; font-size: {_font_role("caption")};"
     )
     row.addWidget(badge)
 
     name = QLabel(receiver_name)
     name.setStyleSheet(
-        f"color: {_panel_text_color()}; font-size: {_fpt(-1)}; font-weight: bold; "
+        f"color: {_panel_text_color()}; font-size: {_font_role("caption")}; font-weight: bold; "
         "background: transparent; border: none; padding: 0 2px 0 0;"
     )
     row.addWidget(name)
@@ -517,13 +546,13 @@ def _deadline_group_header(deadline_text):
         f"background-color: {_tc_rgba(30)}; "
         f"border: 1px solid {_tc_rgba(80)}; "
         f"border-radius: {badge_radius}px; "
-        f"color: {get_theme_color()}; font-size: {_fpt(-2)};"
+        f"color: {get_theme_color()}; font-size: {_font_role("caption")};"
     )
     row.addWidget(badge)
 
     name = QLabel(f"{deadline_text}{t('panel.deadline_suffix', ' 마감')}")
     name.setStyleSheet(
-        f"color: {_panel_text_color()}; font-size: {_fpt(-1)}; font-weight: bold; "
+        f"color: {_panel_text_color()}; font-size: {_font_role("caption")}; font-weight: bold; "
         "background: transparent; border: none; padding: 0 2px 0 0;"
     )
     row.addWidget(name)
@@ -553,13 +582,13 @@ def _schedule_group_header(label_text, icon="📅"):
         f"background-color: {_tc_rgba(30)}; "
         f"border: 1px solid {_tc_rgba(80)}; "
         f"border-radius: {badge_radius}px; "
-        f"color: {get_theme_color()}; font-size: {_fpt(-2)};"
+        f"color: {get_theme_color()}; font-size: {_font_role("caption")};"
     )
     row.addWidget(badge)
 
     name = QLabel(label_text)
     name.setStyleSheet(
-        f"color: {_panel_text_color()}; font-size: {_fpt(-1)}; font-weight: bold; "
+        f"color: {_panel_text_color()}; font-size: {_font_role("caption")}; font-weight: bold; "
         "background: transparent; border: none; padding: 0 2px 0 0;"
     )
     row.addWidget(name)
@@ -589,13 +618,13 @@ def _routine_group_header(label_text, icon="🔄"):
         f"background-color: {_tc_rgba(30)}; "
         f"border: 1px solid {_tc_rgba(80)}; "
         f"border-radius: {badge_radius}px; "
-        f"color: {get_theme_color()}; font-size: {_fpt(-2)};"
+        f"color: {get_theme_color()}; font-size: {_font_role("caption")};"
     )
     row.addWidget(badge)
 
     name = QLabel(label_text)
     name.setStyleSheet(
-        f"color: {_panel_text_color()}; font-size: {_fpt(-1)}; font-weight: bold; "
+        f"color: {_panel_text_color()}; font-size: {_font_role("caption")}; font-weight: bold; "
         "background: transparent; border: none; padding: 0 2px 0 0;"
     )
     row.addWidget(name)
@@ -660,17 +689,21 @@ class DockTitleBar(QWidget):
         layout.setContentsMargins(10, 4, 8, 4)
         layout.setSpacing(6)
 
-        icon = QLabel(icon_text)
-        icon.setStyleSheet(
-            f"color: {get_theme_color()}; font-size: {_fpt(-2)}; background: transparent; border: none;"
-        )
-        layout.addWidget(icon)
+        if trailing_widget is not None and trailing_widget.property("panelTitleControl"):
+            layout.addWidget(trailing_widget)
+            trailing_widget = None
+        else:
+            icon = QLabel(icon_text)
+            icon.setStyleSheet(
+                f"color: {get_theme_color()}; font-size: {_font_role("caption")}; background: transparent; border: none;"
+            )
+            layout.addWidget(icon)
 
-        title = QLabel(title_text)
-        if not title_style:
-            title_style = f"color: {_panel_text_color()}; font-weight: bold; font-size: {_fpt()}; background: transparent; border: none;"
-        title.setStyleSheet(title_style)
-        layout.addWidget(title)
+            title = QLabel(title_text)
+            if not title_style:
+                title_style = f"color: {_panel_text_color()}; font-weight: bold; font-size: {_font_role()}; background: transparent; border: none;"
+            title.setStyleSheet(title_style)
+            layout.addWidget(title)
         layout.addStretch(1)
 
         if trailing_widget is not None:
@@ -752,6 +785,7 @@ def create_panel(
     icon_map = {
         t("panel.today_schedule", "Today's Schedule"): "📅",
         t("panel.this_week_schedule", "이번 주 일정"): "📅",
+        t("panel.selected_day_schedule", "선택일 일정"): "📅",
         t("panel.routine", "Routine Tasks"): "🔁",
         t("panel.directive", "Directions"): "📣",
     }
@@ -803,7 +837,7 @@ def create_panel(
                     border: none;
                     border-radius: 0px;
                     background: {_btn_bg};
-                    font-size: {_fpt()};
+                    font-size: {_font_role()};
                 }}
             """)
             btn.clicked.connect(handler)
@@ -812,7 +846,7 @@ def create_panel(
             lbl = QLabel(str(item))
             _empty_txt = _panel_text_faint()
             lbl.setStyleSheet(
-                f"color: {_empty_txt}; padding: 6px 8px; font-size: {_fpt(-1)}; font-style: italic;"
+                f"color: {_empty_txt}; padding: 6px 8px; font-size: {_font_role("caption")}; font-style: italic;"
             )
             lbl.setWordWrap(True)
             layout.addWidget(lbl)
@@ -901,18 +935,15 @@ def _panel_empty_items(app, message, action_label, action_handler, *, search_que
     return [_build_panel_empty_state(message, action_label, action_handler)]
 
 
-def _left_panel_mode(app):
-    raw = getattr(app, "left_panel_mode", None)
-    if raw:
-        return str(raw)
-    if hasattr(app, "settings"):
-        raw = app.settings.value("left_panel_mode", "today")
-        return str(raw or "today")
-    return "today"
+def left_panel_mode(app):
+    mode = getattr(app, "left_panel_mode", None)
+    if mode is None and hasattr(app, "settings"):
+        mode = app.settings.value("left_panel_mode", "today")
+    return mode if mode in ("today", "week", "selected") else "today"
 
 
-def _set_left_panel_mode(app, mode):
-    mode = "week" if str(mode).lower() == "week" else "today"
+def set_left_panel_mode(app, mode):
+    mode = mode if mode in ("today", "week", "selected") else "today"
     app.left_panel_mode = mode
     if hasattr(app, "settings"):
         app.settings.setValue("left_panel_mode", mode)
@@ -920,47 +951,87 @@ def _set_left_panel_mode(app, mode):
         app.schedule_panel_refresh(left=True)
 
 
+def selected_schedule_date(app):
+    for date in (getattr(app, "_last_clicked_date", None), getattr(app, "current_date", None)):
+        if isinstance(date, QDate) and date.isValid():
+            return date
+    return QDate.currentDate()
+
+
 def _build_left_panel_mode_switch(app, mode):
-    container = QWidget()
-    layout = QHBoxLayout(container)
-    layout.setContentsMargins(0, 0, 0, 0)
-    layout.setSpacing(4)
+    modes = (
+        ("today", t("panel.today_schedule", "Today's Schedule")),
+        ("week", t("panel.this_week_schedule", "This Week Schedule")),
+        ("selected", t("panel.selected_day_schedule", "선택일 일정")),
+    )
+    button = QToolButton()
+    button.setObjectName("schedulePanelMode")
+    button.setProperty("panelTitleControl", True)
+    button.setText(next(label for value, label in modes if value == mode))
+    button.setAccessibleName(button.text())
+    button.setToolTip(button.text())
+    button.setIcon(_ic(ICON.ALL_SCHEDULES, color=_semantic_tokens()["accent"]))
+    button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+    button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+    button.setStyleSheet(_toolbar_button_style().replace("QPushButton", "QToolButton"))
+    menu = QMenu(button)
+    menu.setStyleSheet(_panel_menu_style())
+    group = QActionGroup(menu)
+    group.setExclusive(True)
+    for value, label in modes:
+        action = menu.addAction(label)
+        action.setCheckable(True)
+        action.setChecked(value == mode)
+        action.setData(value)
+        group.addAction(action)
+        action.triggered.connect(
+            lambda _checked=False, selected=value: set_left_panel_mode(app, selected)
+        )
+    button.setMenu(menu)
+    return button
 
-    active_bg = _tc_rgba(56)
-    active_border = _tc_rgba(120)
-    shape = _shape_tokens()
-    switch_radius = int(shape.get("panel_mode_switch_radius", 0))
-    inactive_bg = "rgba(255,255,255,0.06)"
-    inactive_border = "rgba(255,255,255,0.10)"
-    active_text = _panel_text_color()
-    inactive_text = _panel_text_secondary()
 
-    def _make_btn(label, target_mode):
-        is_active = mode == target_mode
-        btn = QPushButton(label)
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setFixedHeight(24)
-        btn.setStyleSheet(f"""
-            QPushButton {{
-                color: {active_text if is_active else inactive_text};
-                background: {active_bg if is_active else inactive_bg};
-                border: 1px solid {active_border if is_active else inactive_border};
-                border-radius: {switch_radius}px;
-                padding: 0 8px;
-                font-size: {_fpt(-2)};
-                font-weight: {"700" if is_active else "500"};
-            }}
-            QPushButton:hover {{
-                border: 1px solid {active_border};
-                background: {_tc_rgba(38)};
-            }}
-        """)
-        btn.clicked.connect(lambda _=False, m=target_mode: _set_left_panel_mode(app, m))
-        return btn
+def _selected_day_header(app, date):
+    from calendar_app.presentation.calendar.month_renderer import _jump_to_daily_view
 
-    layout.addWidget(_make_btn(t("dialog.common.today", "Today"), "today"))
-    layout.addWidget(_make_btn(t("panel.this_week", "This Week"), "week"))
-    return container
+    tokens = _semantic_tokens()
+    header = QFrame()
+    header.setObjectName("selectedDayAgendaHeader")
+    layout = QVBoxLayout(header)
+    layout.setContentsMargins(12, 16, 12, 12)
+    layout.setSpacing(8)
+    label = QLabel(_app_locale().toString(date, QLocale.FormatType.LongFormat))
+    label.setWordWrap(True)
+    label.setMinimumWidth(0)
+    label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+    label.setStyleSheet(
+        f"color: {tokens['text_primary']}; font-size: {_font_role("section")}; "
+        "font-weight: 700; background: transparent; border: none;"
+    )
+    layout.addWidget(label)
+    button = QToolButton()
+    button.setText(t("panel.open_day_timetable", "시간표 보기"))
+    button.setStyleSheet(_toolbar_button_style().replace("QPushButton", "QToolButton"))
+    button.clicked.connect(lambda: _jump_to_daily_view(app, date))
+    layout.addWidget(button, 0, Qt.AlignmentFlag.AlignLeft)
+    return header
+
+
+def _selected_day_subscription_rows(app, date):
+    from calendar_app.presentation.calendar.month_renderer import _task_date_range
+
+    # The visible calendar already fetched and deduplicated legacy remote-only rows.
+    # Reuse them so changing the agenda date does not make another network request.
+    calendar_data = getattr(app, "_latest_calendar_range_data", None) or {}
+    rows = []
+    for task in calendar_data.get("rows", ()):
+        task_id = task.get("id")
+        if not task.get("is_subscription") or not isinstance(task_id, int) or task_id >= 0:
+            continue
+        start, end = _task_date_range(task)
+        if start and start <= date <= end:
+            rows.append(task)
+    return rows
 
 
 def show_side_panel_context_menu(app, widget, pos, tid, task_name, is_routine=False):
@@ -1119,10 +1190,16 @@ def create_task_box(
     hover_html=None,
     bg_color=None,
     checklist_display_type="list",
+    agenda_time=None,
+    agenda_source=None,
 ):
     """Create a task item box used in side panels."""
     _tc = get_theme_color()
     container = QFrame()
+    agenda = agenda_time is not None
+    if agenda:
+        container.setObjectName("selectedDayAgendaCard")
+        container.setProperty("agendaCard", True)
 
     is_selected = False
     if tid is not None:
@@ -1135,8 +1212,26 @@ def create_task_box(
     _apply_panel_item_style(container, is_selected, bg_color)
 
     box_layout = QVBoxLayout(container)
-    box_layout.setContentsMargins(4, 2, 5, 2)
-    box_layout.setSpacing(0)
+    if agenda:
+        box_layout.setContentsMargins(12, 10, 12, 10)
+    else:
+        box_layout.setContentsMargins(4, 2, 5, 2)
+    box_layout.setSpacing(6 if agenda else 0)
+
+    if agenda:
+        tokens = _semantic_tokens()
+        metadata = QLabel(" · ".join(part for part in (agenda_time, agenda_source) if part))
+        metadata.setObjectName("selectedDayAgendaTime")
+        metadata.setTextFormat(Qt.TextFormat.PlainText)
+        metadata.setWordWrap(True)
+        metadata.setMinimumWidth(0)
+        metadata.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        metadata.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        metadata.setStyleSheet(
+            f"color: {tokens['text_secondary']}; font-size: {_font_role("caption")}; "
+            "font-weight: 500; border: none; background: transparent;"
+        )
+        box_layout.addWidget(metadata)
 
     top_layout = QHBoxLayout()
     top_layout.setContentsMargins(0, 0, 0, 0)
@@ -1145,13 +1240,13 @@ def create_task_box(
     title_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     _title_txt = _panel_text_color()
     _title_hover_txt = _panel_text_color()
-    _title_hover_bg = "rgba(255,255,255,0.04)"
+    _title_hover_bg = _semantic_tokens()["bg_item_hover"] if agenda else "rgba(255,255,255,0.04)"
     shape = _shape_tokens()
     inline_hover_radius = int(shape.get("panel_inline_hover_radius", 0))
     title_btn.setStyleSheet(f"""
         QPushButton {{
             color: {_title_txt}; text-align: left; padding: 3px 5px 3px 4px; border: none;
-            background: transparent; font-weight: normal; font-size: {_fpt()};
+            background: transparent; font-weight: normal; font-size: {_font_role()};
         }}
         QPushButton:hover {{ color: {_title_hover_txt}; background: {_title_hover_bg}; border-radius: {inline_hover_radius}px; }}
     """)
@@ -1174,8 +1269,13 @@ def create_task_box(
                 )
             )
 
-    title_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-    title_btn.setMinimumHeight(24)
+    title_btn.setSizePolicy(
+        QSizePolicy.Policy.Ignored if agenda else QSizePolicy.Policy.Expanding,
+        QSizePolicy.Policy.Fixed,
+    )
+    if agenda:
+        title_btn.setMinimumWidth(0)
+    title_btn.setMinimumHeight(28 if agenda else 24)
 
     if hover_html:
         install_hover_info(title_btn, hover_html)
@@ -1184,7 +1284,7 @@ def create_task_box(
         _sep_color = _tc_rgba(115)
         _title_color = get_theme_color()
         tooltip_lines = [
-            f"<div style='font-size: {_fpt()};'><b style='color:{_title_color};'>{heading}</b></div>"
+            f"<div style='font-size: {_font_role()};'><b style='color:{_title_color};'>{heading}</b></div>"
         ]
         if info_items:
             _tip_icon_color = _panel_text_muted()
@@ -1230,7 +1330,7 @@ def create_task_box(
 
         # ── Toggle button — quiet text style (테두리/배경 없음) ───────────
         toggle_btn = QPushButton(_toggle_label(is_initially_visible))
-        toggle_btn.setFixedHeight(16)
+        toggle_btn.setObjectName("panel_checklist_toggle")
         toggle_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         toggle_btn.setToolTip(t("panel.checklist_tooltip"))
         _pill_txt = _panel_text_muted()
@@ -1239,12 +1339,14 @@ def create_task_box(
                 color: {_pill_txt};
                 background: transparent;
                 border: none;
-                font-size: {_fpt(-2)};
+                font-size: {_font_role("caption")};
                 padding: 0 4px;
                 font-weight: 600;
             }}
             QPushButton:hover {{ color: {_tc_hex}; }}
         """)
+        toggle_btn.ensurePolished()
+        toggle_btn.setMinimumHeight(max(24, toggle_btn.fontMetrics().height() + 4))
         top_layout.addWidget(toggle_btn)
 
         # ── Progress bar — slim & subtle ──────────────────────────────────
@@ -1294,26 +1396,27 @@ def create_task_box(
                     clickable = False
 
             item_w = QWidget()
+            item_w.setObjectName("panel_checklist_row")
             item_w.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
             item_w.setStyleSheet(
                 "QWidget { background: transparent; border: none; outline: none; }"
                 " QWidget:hover { background: rgba(255,255,255,0.03); border-radius: 3px; }"
             )
-            item_w.setFixedHeight(20)
             item_l = QHBoxLayout(item_w)
             item_l.setContentsMargins(0, 0, 2, 0)
             item_l.setSpacing(1)
 
             ind = QPushButton()
+            ind.setObjectName("panel_checklist_indicator")
             ind.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             ind.setFlat(True)
             # 항목별 박스/색상 태그 제거 — 번호/체크 글리프만 (무배경·무테두리·무테마색)
             _ind_style = (
                 "QPushButton {{ background: transparent; border: none;"
-                " padding: 0; font-size: 10px; color: {color}; font-weight: {weight}; }}"
+                f" padding: 0; font-size: {_font_role('caption')}; "
+                "color: {color}; font-weight: {weight}; }}"
             )
             if is_process:
-                ind.setFixedSize(5, 16)
                 if sis_c:
                     ind.setText("✓")
                     ind.setStyleSheet(_ind_style.format(color=_chk_done_txt, weight=700))
@@ -1322,13 +1425,17 @@ def create_task_box(
                     _num_clr = "rgba(255,255,255,0.30)" if _locked else _chk_pend_txt
                     ind.setStyleSheet(_ind_style.format(color=_num_clr, weight=600))
             else:
-                ind.setFixedSize(5, 14)
                 if sis_c:
                     ind.setText("✓")
                     ind.setStyleSheet(_ind_style.format(color=_chk_done_txt, weight=700))
                 else:
                     ind.setText("–")
                     ind.setStyleSheet(_ind_style.format(color=_chk_pend_txt, weight=400))
+            ind.ensurePolished()
+            ind.setFixedSize(
+                max(16, ind.fontMetrics().horizontalAdvance(ind.text()) + 4),
+                max(22, ind.fontMetrics().height() + 4),
+            )
             if clickable:
                 ind.setCursor(Qt.CursorShape.PointingHandCursor)
                 ind.clicked.connect(chandler)
@@ -1338,23 +1445,28 @@ def create_task_box(
 
             # Text label
             text_lbl = QLabel(stext)
+            text_lbl.setObjectName("panel_checklist_text")
             text_lbl.setWordWrap(False)
             text_lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             if sis_c:
                 text_lbl.setStyleSheet(
-                    f"color: {_chk_done_txt}; font-size: {_fpt(-1)};"
+                    f"color: {_chk_done_txt}; font-size: {_font_role("caption")};"
                     " text-decoration: line-through; background: transparent; border: none;"
                 )
             else:
                 _txt_clr = "rgba(255,255,255,0.35)" if _locked else _chk_pend_txt
                 text_lbl.setStyleSheet(
-                    f"color: {_txt_clr}; font-size: {_fpt(-1)}; background: transparent; border: none;"
+                    f"color: {_txt_clr}; font-size: {_font_role("caption")}; background: transparent; border: none;"
                 )
             if clickable:
                 text_lbl.setCursor(Qt.CursorShape.PointingHandCursor)
 
             item_l.addWidget(ind, 0, Qt.AlignmentFlag.AlignVCenter)
             item_l.addWidget(text_lbl, 1)
+            text_lbl.ensurePolished()
+            item_w.setMinimumHeight(
+                max(24, text_lbl.fontMetrics().height() + 4, ind.minimumHeight())
+            )
 
             # Whole row clickable (text area → same handler)
             if clickable:
@@ -1445,8 +1557,9 @@ def load_left_panel(app):
     app.reset_frame(app.left_frame)
 
     today_items = []
-    panel_mode = _left_panel_mode(app)
-    base_date = QDate.currentDate()
+    panel_mode = left_panel_mode(app)
+    selected_mode = panel_mode == "selected"
+    base_date = selected_schedule_date(app) if selected_mode else QDate.currentDate()
     start_qdate = base_date
     end_qdate = base_date
     if panel_mode == "week":
@@ -1460,9 +1573,18 @@ def load_left_panel(app):
         getattr(app, "search_edit", None).text() if getattr(app, "search_edit", None) else ""
     )
     # Includes schedules whose period overlaps today (middle dates of multi-day schedules too).
-    rows = search_repo.get_schedule_tasks_overlapping_range_with_progress(
-        start_date_str, end_date_str
-    )
+    if selected_mode:
+        gcal_enabled = is_gcal_enabled(app.settings)
+        rows = search_repo.get_schedule_tasks_overlapping_range_with_progress(
+            start_date_str, end_date_str, hide_gcal_items=not gcal_enabled
+        )
+        if gcal_enabled:
+            rows.extend(_selected_day_subscription_rows(app, start_qdate))
+        rows.sort(key=lambda task: str(task.get("deadline") or task.get("target_date") or ""))
+    else:
+        rows = search_repo.get_schedule_tasks_overlapping_range_with_progress(
+            start_date_str, end_date_str
+        )
     checklist_map = checklist_repo.get_task_checklist_items_for_owners(
         [task["id"] for task in rows]
     )
@@ -1520,11 +1642,12 @@ def load_left_panel(app):
             calendar_data = None
         calendar_type = str((calendar_data or {}).get("type") or "").strip().lower()
         source_text = str(
-            task.get("_subscription_summary")
+            task.get("_calendar_name")
+            or task.get("_subscription_summary")
             or task.get("calendar_name")
             or (
                 (calendar_data or {}).get("name")
-                if calendar_type in {"gcal", "shared", "ics"}
+                if selected_mode or calendar_type in {"gcal", "shared", "ics"}
                 else ""
             )
             or task.get("_subscription_calendar_id")
@@ -1537,10 +1660,23 @@ def load_left_panel(app):
             source_text=source_text,
         )
 
+        readonly = selected_mode and (
+            task.get("is_subscription") or calendar_repo.is_calendar_row_read_only(calendar_data)
+        )
+        agenda_time = None
+        if selected_mode:
+            when = next((row for row in hover_info.rows if row.key in ("time", "all_day")), None)
+            agenda_time = when.value if when else ""
+        if readonly:
+            from calendar_app.presentation.calendar.month_renderer import _show_subscription_detail
+
+            def main_handler(checked=False, _task=task):
+                _show_subscription_detail(_task, app)
+
         steps = checklist_map.get(t_id, [])
         checklist_display_type, checklist_items = _build_checklist_items(app, steps)
 
-        if left_group_by_date and date_label != current_group_label:
+        if left_group_by_date and not selected_mode and date_label != current_group_label:
             current_group_label = date_label
             today_items.append(_schedule_group_header(date_label, "📅"))
 
@@ -1550,40 +1686,53 @@ def load_left_panel(app):
             main_handler,
             None,
             checklist_items,
-            tid=t_id,
+            tid=None if readonly else t_id,
             hover_html=hover_html if hover_info.has_more_than_all_day else None,
             bg_color=task.get("bg_color") or _calendar_color_for_task(task),
             checklist_display_type=checklist_display_type,
+            agenda_time=agenda_time,
+            agenda_source=source_text if selected_mode else None,
         )
         today_items.append(task_box)
 
+    def add_schedule():
+        if selected_mode:
+            app.open_task_dialog(initial_date=start_qdate)
+        else:
+            app.open_task_dialog()
+
     if not today_items:
-        empty_message = (
-            t("panel.empty.week", "No schedules registered for this week.")
-            if panel_mode == "week"
-            else t("panel.empty.today", "No items for today.")
-        )
+        if selected_mode:
+            empty_message = t("panel.empty.selected_day", "선택한 날짜에 일정이 없습니다.")
+        elif panel_mode == "week":
+            empty_message = t("panel.empty.week", "No schedules registered for this week.")
+        else:
+            empty_message = t("panel.empty.today", "No items for today.")
         today_items = _panel_empty_items(
             app,
             empty_message,
             t("panel.empty.add_schedule", "일정 만들기"),
-            app.open_task_dialog,
+            add_schedule,
             search_query=search_query,
         )
 
-    panel_title = (
-        t("panel.this_week_schedule", "This Week Schedule")
-        if panel_mode == "week"
-        else t("panel.today_schedule", "Today's Schedule")
-    )
+    if selected_mode:
+        panel_title = t("panel.selected_day_schedule", "선택일 일정")
+        today_items.insert(0, _selected_day_header(app, start_qdate))
+    elif panel_mode == "week":
+        panel_title = t("panel.this_week_schedule", "This Week Schedule")
+    else:
+        panel_title = t("panel.today_schedule", "Today's Schedule")
     new_panel, title_bar = create_panel(
         app,
         panel_title,
         today_items,
-        add_handler=lambda: app.open_task_dialog(),
+        add_handler=add_schedule,
         manage_handler=lambda: app.open_work_management_dialog(start_tab="schedule"),
         trailing_widget=_build_left_panel_mode_switch(app, panel_mode),
     )
+    if selected_mode:
+        new_panel.setMinimumWidth(216)
     apply_dialog_title(app.left_dock, panel_title)
     app.left_dock.setTitleBarWidget(title_bar)
     title_bar.bind_dock(app.left_dock)

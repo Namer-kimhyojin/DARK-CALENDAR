@@ -123,7 +123,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
                 dialog = UnifiedTaskDialog(task_type=task_type)
                 self.addCleanup(dialog.close)
 
-                dialog._update_period_layout_for_width(640)
+                dialog._update_period_layout_for_width(480 if task_type == "schedule" else 640)
                 self.assertEqual(
                     dialog._period_range_layout.direction(),
                     QBoxLayout.Direction.TopToBottom,
@@ -258,7 +258,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
     def test_missing_name_uses_inline_feedback_instead_of_modal_warning(self):
         dialog = UnifiedTaskDialog(task_type="schedule")
         self.addCleanup(dialog.close)
-        dialog.tabs.setCurrentIndex(1)
+        dialog.details_toggle.click()
 
         with patch(
             "calendar_app.presentation.dialogs.task_dialog_unified.QMessageBox.warning"
@@ -323,8 +323,10 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
             UnifiedTaskDialog(task_type="schedule", task_id=task_id),
         ):
             self.addCleanup(dialog.close)
-            dialog.tabs.setCurrentIndex(1)
+            dialog.details_toggle.click()
             dialog.show()
+            self._app.processEvents()
+            dialog.tabs.widget(0).ensureWidgetVisible(dialog.color_swatch)
             self._app.processEvents()
 
             visible = dialog.color_swatch.visibleRegion().boundingRect()

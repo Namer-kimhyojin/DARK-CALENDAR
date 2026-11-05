@@ -529,6 +529,30 @@ class KeyDeckStudioDialog(QDialog):
                 self._load_page(self.deck["page"], list(self.canvas.selection))
         dialog.deleteLater()
 
+    def open_beatmaker_looper(self) -> None:
+        """Keep the four-track loop inside the existing Studio draft/undo flow."""
+        from calendar_app.presentation.widgets.keydeck.looper_dialog import BeatmakerLooperDialog
+
+        if is_app_exiting() or beatmaker_state(self.deck["pages"][self.deck["page"]]) is None:
+            return
+        self._leave_preview()
+        dialog = BeatmakerLooperDialog(self.deck, self, draft=True)
+        self._performance_dialog = dialog
+        try:
+            dialog.exec()
+        finally:
+            self._performance_dialog = None
+        if not is_app_exiting():
+            result = dialog.result_performance()
+            if any(self.deck.get(key) != value for key, value in result.items()):
+                self._push_undo("")
+                self.deck.update(result)
+                if result["beatmaker_looper"] is None:
+                    self.deck.pop("beatmaker_looper", None)
+                self._mark_dirty()
+                self._load_page(self.deck["page"], list(self.canvas.selection))
+        dialog.deleteLater()
+
     def set_beatmaker_bank(self, bank: str) -> None:
         """Use an existing bank page so customized pads survive page switching."""
         state = beatmaker_state(self.deck["pages"][self.deck["page"]])

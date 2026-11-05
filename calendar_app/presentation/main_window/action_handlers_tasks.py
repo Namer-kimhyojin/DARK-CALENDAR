@@ -3,7 +3,7 @@
 
 import logging
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QDate, Qt
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from calendar_app.application import task_delete_usecases, task_usecases
@@ -53,43 +53,29 @@ class TaskActionsMixin:
         count = (len(self.selected_task_ids) if hasattr(self, "selected_task_ids") else 0) + (
             len(self.selected_directive_ids) if hasattr(self, "selected_directive_ids") else 0
         )
-        theme = (
-            self.settings.value("theme_color", "#4da6ff")
-            if hasattr(self, "settings")
-            else "#4da6ff"
-        )
-
-        def hex_to_rgba(hex_color, alpha):
-            hex_color = hex_color.lstrip("#")
-            r, g, b = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
-            return f"rgba({r}, {g}, {b}, {alpha})"
-
         from PyQt6.QtGui import QFont as _QFont
         from PyQt6.QtWidgets import QApplication as _QApp
 
-        lbl_font = _QFont("Segoe UI")
-        lbl_font.setPointSize(max(6, _QApp.instance().font().pointSize() - 1))
+        from calendar_app.presentation.calendar.month_renderer import _calendar_toolbar_style_bundle
+        from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
+        from calendar_app.shared.typography import get_typography_scale
+        from calendar_app.shared.ui_tokens import get_ui_tokens
+
+        settings = getattr(self, "settings", None)
+        tokens = get_ui_tokens(settings=settings)
+        style = _calendar_toolbar_style_bundle(
+            tokens=tokens, shape=get_ui_shape_tokens(settings=settings)
+        )["selection_label"]
+        style += f" color: {tokens['text_primary']};"
+        lbl_font = _QFont(_QApp.instance().font())
+        lbl_font.setPointSizeF(get_typography_scale(settings).caption_pt)
         lbl_font.setBold(count > 0)
         self.selection_status_lbl.setFont(lbl_font)
 
         if count <= 0:
             text = t("panel.multiselect_guide")
-            style = (
-                "color: rgba(255,255,255,0.60); "
-                "background: rgba(255,255,255,0.06); "
-                "border: 1px solid rgba(255,255,255,0.12); "
-                "border-radius: 10px; padding: 2px 12px;"
-            )
         else:
             text = t("panel.n_selected", n=count)
-            bg = hex_to_rgba(theme, 0.22)
-            border = hex_to_rgba(theme, 0.5)
-            style = (
-                "color: white; "
-                f"background-color: {bg}; "
-                f"border: 1px solid {border}; "
-                "border-radius: 10px; padding: 2px 12px;"
-            )
 
         self.selection_status_lbl.setText(text)
         self.selection_status_lbl.setStyleSheet(style)
@@ -153,13 +139,54 @@ class TaskActionsMixin:
 
     def handle_cell_click(self, pack):
         """날짜 셀 클릭(날짜 선택)."""
+        from calendar_app.presentation.panels.side_panel_renderer import left_panel_mode
+
         date = pack[0] if isinstance(pack, tuple) else pack
+        previous_date = getattr(self, "_last_clicked_date", None)
         self._last_clicked_date = date
         self.selected_task_ids.clear()
         if hasattr(self, "selected_directive_ids"):
             self.selected_directive_ids.clear()
-        self.schedule_panel_refresh(center=True)
-        self.update_task_selection_status()
+        center = not self._update_month_day_highlight(previous_date, date)
+        if center:
+            self.update_task_selection_status()
+        else:
+            self._update_selection_visuals()
+        left = left_panel_mode(self) == "selected"
+        if left or center:
+            self.schedule_panel_refresh(left=left, center=center)
+
+    def _update_month_day_highlight(self, previous_date, date):
+        if getattr(self, "view_mode_state", None) != "monthly" or not isinstance(date, QDate):
+            return False
+        cells = getattr(self, "_calendar_cells_by_date", {})
+        target = cells.get(date.toString("yyyy-MM-dd"))
+        if target is None:
+            return False
+        previous = (
+            cells.get(previous_date.toString("yyyy-MM-dd"))
+            if isinstance(previous_date, QDate) and previous_date != date
+            else None
+        )
+        try:
+            for cell, selected in ((previous, False), (target, True)):
+                if cell is not None and bool(cell.property("selected_date")) != selected:
+                    cell.setProperty("selected_date", selected)
+                    cell.style().unpolish(cell)
+                    cell.style().polish(cell)
+                    cell.update()
+        except RuntimeError:
+            return False
+        return True
+
+    def show_month_day_agenda(self, date):
+        from calendar_app.presentation.panels.side_panel_renderer import set_left_panel_mode
+
+        self.handle_cell_click(date)
+        set_left_panel_mode(self, "selected")
+        self.left_dock.show()
+        self.left_dock.raise_()
+        self.sync_panel_menu_state()
 
     def handle_cell_shift_click(self, pack):
         """Shift+클릭으로 날짜 범위 선택 후 일정 추가."""
@@ -174,11 +201,16 @@ class TaskActionsMixin:
         self._open_cell_range_dialog(pack[0], pack[1])
 
     def _open_cell_range_dialog(self, start_d, end_d):
+        from calendar_app.presentation.panels.side_panel_renderer import left_panel_mode
+
         if start_d > end_d:
             start_d, end_d = end_d, start_d
 
         self._last_clicked_date = end_d
-        self.schedule_panel_refresh(center=True)
+        if left_panel_mode(self) == "selected":
+            self.schedule_panel_refresh(left=True, center=True)
+        else:
+            self.schedule_panel_refresh(center=True)
         self.open_task_dialog(start_d, None, end_d)
 
     def handle_task_dropped(self, task_id_list, target_date, target_time, action):

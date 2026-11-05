@@ -43,6 +43,7 @@ from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
+    get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
 
@@ -70,10 +71,10 @@ def _status_value_from_label(label):
 
 def _management_header_style(tokens=None, metrics=None):
     tokens = dict(tokens or get_dialog_theme_tokens())
-    metrics = dict(metrics or {})
+    metrics = {**get_dialog_metric_tokens(), **(metrics or {})}
     return (
         f"color: {tokens.get('accent', '#4da6ff')}; "
-        f"font-size: {int(metrics.get('title_font_pt', 16))}pt; "
+        f"font-size: {int(metrics['title_font_pt'])}px; "
         "font-weight: 700;"
     )
 
@@ -87,25 +88,17 @@ def _token_color(value, fallback):
 
 def _status_background(status, tokens=None):
     status = _normalize_status(status)
-    if tokens:
-        tokens = dict(tokens)
-        if status == "completed":
-            color = _token_color(tokens.get("success_hex"), tokens.get("accent", "#4da6ff"))
-        elif status == "in_progress":
-            color = _token_color(tokens.get("accent"), "#4da6ff")
-        elif status == "pending":
-            color = _token_color(tokens.get("warning_hex"), tokens.get("accent", "#4da6ff"))
-        else:
-            color = _token_color(tokens.get("danger_hex"), tokens.get("accent", "#4da6ff"))
-        color.setAlpha(48)
-        return color
+    tokens = dict(tokens or get_dialog_theme_tokens())
     if status == "completed":
-        return QColor(18, 99, 58)
-    if status == "in_progress":
-        return QColor(111, 76, 16)
-    if status == "pending":
-        return QColor(92, 92, 28)
-    return QColor(95, 39, 39)
+        color = _token_color(tokens.get("success_hex"), tokens.get("accent", "#4da6ff"))
+    elif status == "in_progress":
+        color = _token_color(tokens.get("accent"), "#4da6ff")
+    elif status == "pending":
+        color = _token_color(tokens.get("warning_hex"), tokens.get("accent", "#4da6ff"))
+    else:
+        color = _token_color(tokens.get("danger_hex"), tokens.get("accent", "#4da6ff"))
+    color.setAlpha(48)
+    return color
 
 
 # ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
@@ -153,7 +146,7 @@ class MultiColumnFilterProxyModel(QSortFilterProxyModel):
             if (idx.data() or "") != self._status_text:
                 return False
 
-            # 嶺?瑗????熬곥굤??        if self._calendar_column >= 0 and self._calendar_text:
+        if self._calendar_column >= 0 and self._calendar_text:
             idx = self.sourceModel().index(source_row, self._calendar_column, source_parent)
             if (idx.data() or "") != self._calendar_text:
                 return False
@@ -182,10 +175,14 @@ class BaseManagementDialog(QDialog):
     search_columns = []
     status_filter_items = STATUS_FILTER_ITEMS
 
-    def __init__(self, parent=None, size=(800, 600)):
+    def __init__(self, parent=None, size=(800, 600), *, embedded=False):
         super().__init__(parent)
+        self._embedded_management_page = bool(embedded)
+        if embedded:
+            self.setWindowFlags(Qt.WindowType.Widget)
+            self.setProperty("dcSkipDialogChrome", True)
         apply_dialog_title(self, self.title)
-        apply_common_dialog_style(self, size=size)
+        apply_common_dialog_style(self, size=None if embedded else size)
         self._ui_tokens = get_dialog_theme_tokens()
         self._loading = False
         self._editable_columns = set()
@@ -195,20 +192,31 @@ class BaseManagementDialog(QDialog):
         self._filter_timer.timeout.connect(self._apply_filters)
         self.init_ui()
 
+    def reject(self):
+        # QDialog handles Escape itself even when used as a QWidget page.
+        # Close the containing management modal rather than hiding one tab.
+        if self._embedded_management_page:
+            owner = self.parentWidget()
+            while owner is not None:
+                if isinstance(owner, QDialog):
+                    owner.reject()
+                    return
+                owner = owner.parentWidget()
+        super().reject()
+
     def init_ui(self):
         layout = QVBoxLayout(self)
 
         header_layout = QHBoxLayout()
         header = QLabel(self.header_text)
-        header.setStyleSheet(
-            "font-size: 18px; font-weight: bold; "
-            f"color: {self._ui_tokens.get('accent', '#4da6ff')}; "
-            "margin-bottom: 10px;"
-        )
+        header.setStyleSheet(_management_header_style(self._ui_tokens) + "margin-bottom: 10px;")
         header_layout.addWidget(header)
         header_layout.addStretch()
 
         self.search_input = QLineEdit()
+        search_label = t("common.search", "검색")
+        self.search_input.setPlaceholderText(search_label)
+        self.search_input.setAccessibleName(search_label)
         self.search_input.setFixedWidth(200)
         self.search_input.textChanged.connect(lambda: self._filter_timer.start())
         header_layout.addWidget(self.search_input)
@@ -261,6 +269,8 @@ class BaseManagementDialog(QDialog):
         sep.setFrameShape(QFrame.Shape.HLine)
         layout.addWidget(sep)
 
+        # Keep individual actions together and place batch fields on a second
+        # row so compact windows never squeeze Korean button labels away.
         btn_layout = QHBoxLayout()
         self.refresh_btn = QPushButton(t("dialog.common.refresh"))
         self.refresh_btn.setObjectName("ghost_btn")
@@ -270,15 +280,17 @@ class BaseManagementDialog(QDialog):
         for button in self.extra_buttons():
             btn_layout.addWidget(button)
 
-        for widget in self.bulk_action_widgets():
-            btn_layout.addWidget(widget)
-
         btn_layout.addStretch()
 
         for button in self.tail_buttons():
             btn_layout.addWidget(button)
 
         layout.addLayout(btn_layout)
+        bulk_layout = QHBoxLayout()
+        for widget in self.bulk_action_widgets():
+            bulk_layout.addWidget(widget)
+        bulk_layout.addStretch()
+        layout.addLayout(bulk_layout)
 
     def extra_buttons(self):
         return []
@@ -641,13 +653,13 @@ class DirectiveManagementDialog(BaseManagementDialog):
     status_column = 4
     search_columns = [0, 1]
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, embedded=False):
         self._trash_mode = False
         self._normal_edit_triggers = (
             QAbstractItemView.EditTrigger.EditKeyPressed
             | QAbstractItemView.EditTrigger.SelectedClicked
         )
-        super().__init__(parent, size=(720, 540))
+        super().__init__(parent, size=(720, 540), embedded=embedded)
         self._sync_trash_mode_ui()
 
     def extra_buttons(self):
@@ -838,14 +850,14 @@ class TaskManagementDialog(BaseManagementDialog):
     search_columns = [2, 4, 5]  # name, location, assignee
     _calendar_col = 1
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, embedded=False):
         self._calendar_map = {}  # str(id) ??name
         self._trash_mode = False
         self._normal_edit_triggers = (
             QAbstractItemView.EditTrigger.EditKeyPressed
             | QAbstractItemView.EditTrigger.SelectedClicked
         )
-        super().__init__(parent, size=(960, 650))
+        super().__init__(parent, size=(960, 650), embedded=embedded)
         # 嶺?瑗?????롫맩???熬곣뫁夷???繹먮굞夷?& ?熬곥굤????戮?뻣
         self.proxy.setCalendarColumn(self._calendar_col)
         self._populate_calendar_filter()
@@ -1022,13 +1034,13 @@ class RoutineManagementDialog(BaseManagementDialog):
     status_column = 6
     search_columns = [0, 2, 3]
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, embedded=False):
         self._trash_mode = False
         self._normal_edit_triggers = (
             QAbstractItemView.EditTrigger.EditKeyPressed
             | QAbstractItemView.EditTrigger.SelectedClicked
         )
-        super().__init__(parent, size=(820, 620))
+        super().__init__(parent, size=(820, 620), embedded=embedded)
         self._sync_trash_mode_ui()
 
     def extra_buttons(self):
@@ -1156,6 +1168,7 @@ class WorkManagementTabbedDialog(QDialog):
         layout.setSpacing(8)
 
         self.tabs = QTabWidget(self)
+        self.tabs.setObjectName("WorkManagementTabs")
         self.tabs.setDocumentMode(True)
         layout.addWidget(self.tabs)
 
@@ -1197,10 +1210,8 @@ class WorkManagementTabbedDialog(QDialog):
 
         _key, _label, dialog_cls = self._tab_defs[index]
         host = self._tab_hosts[index]
-        child = dialog_cls(self)
-        child.setWindowFlags(Qt.WindowType.Widget)
+        child = dialog_cls(host, embedded=True)
         host.layout().addWidget(child)
-        child.show()
         self._tab_instances[index] = child
         return child
 

@@ -68,12 +68,20 @@ architecture-mismatched desktop executable inside the MSIX.
 
 ## One-Command Usage
 
-Run this on the native build machine:
+Run this on the native build machine with the Python 3.14.10 build venv active:
 
 ```bat
-python -m pip install -r requirements-build.lock
+python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r requirements-build.lock
 build-release.bat
 ```
+
+Install into a clean build venv. The lock includes SHA-256 hashes for the approved
+Windows wheels and pins the build's pip version. On native ARM64, append
+`--no-binary=cryptography` to the install command. The lock pins that source
+archive because an official Windows ARM64 wheel is unavailable. The ARM64 runner's
+source build toolchain and its isolated build dependencies are separate from the
+artifact hashes in this lock. When updating pins, review the hashes and wheel
+coverage for both architectures before reusing the lock in CI.
 
 Optional local-state cleanup before release (never runs by default):
 

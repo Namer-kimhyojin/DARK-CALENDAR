@@ -382,8 +382,11 @@ def splash_visible(windows: list[dict]) -> bool:
         if (
             window["visible"]
             and window["extended_style"] & 0x88 == 0x88
-            and abs(right - left - round(560 * scale)) <= 2
-            and abs(bottom - top - round(340 * scale)) <= 2
+            and any(
+                abs(right - left - round(width * scale)) <= 2
+                and abs(bottom - top - round(height * scale)) <= 2
+                for width, height in ((560, 340), (480, 280))
+            )
         ):
             return True
     return False
@@ -1133,7 +1136,9 @@ def _launch_cycle(
         if item.path
     }
     bundled = {}
-    for name in ("python313.dll", "qt6core.dll", "sqlite3.dll"):
+    # The release workflow uses the same Python for building and native QA.
+    python_dll = f"python{sys.version_info.major}{sys.version_info.minor}.dll"
+    for name in (python_dll, "qt6core.dll", "sqlite3.dll"):
         if name not in loaded or not loaded[name].is_relative_to((payload / "_internal").resolve()):
             raise RuntimeError(f"Native app did not load bundled {name}")
         bundled[name] = {"path": str(loaded[name]), "sha256": sha256(loaded[name])}

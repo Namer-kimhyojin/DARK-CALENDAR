@@ -82,8 +82,13 @@ def _apply_wizard_theme_tokens(css: str, tokens=None) -> str:
     border_soft = tokens.get("border_soft", "#2d2d35")
     success = tokens.get("success_hex", "#35d06e")
     accent_text = tokens.get("accent_text", "#101318")
+    checked_bg = tokens.get("check_checked_bg", accent)
+    checked_border = tokens.get("check_checked_border", accent)
 
     replacements = {
+        "border: 2px solid #35d06e; background: #35d06e;": (
+            f"border: 2px solid {checked_border}; background: {checked_bg};"
+        ),
         "#4da6ff": accent,
         "#6eb6ff": accent_hover,
         "#1e1e24": surface_alt,
@@ -94,7 +99,7 @@ def _apply_wizard_theme_tokens(css: str, tokens=None) -> str:
         "#33333d": border,
         "#4a4a56": accent,
         "#23232b": surface_top,
-        "#35d06e": success,
+        "#35d06e": checked_bg,
         "#9fe2a3": success,
         "#ffffff": text_primary,
         "#cacedb": text_secondary,
@@ -102,8 +107,8 @@ def _apply_wizard_theme_tokens(css: str, tokens=None) -> str:
         "#0d0d0f": accent_text,
         "#8c8c9a": text_muted,
         "#9aa8b8": text_muted,
-        "rgba(77, 166, 255, 0.1)": tokens.get("button_primary_bg", "rgba(77, 166, 255, 26)"),
-        "rgba(77, 166, 255, 0.25)": tokens.get("button_primary_border", "rgba(77, 166, 255, 140)"),
+        "rgba(77, 166, 255, 0.1)": tokens.get("accent_soft_bg", "rgba(77, 166, 255, 26)"),
+        "rgba(77, 166, 255, 0.25)": tokens.get("accent_soft_border", "rgba(77, 166, 255, 140)"),
     }
     for old, new in replacements.items():
         css = css.replace(old, new)
@@ -251,12 +256,14 @@ class RoutineRecurrenceWizard(QDialog):
         self.config = normalize_recurrence_config(
             self.target_date, self.selected_cycle_type, recurrence
         )
+        settings = getattr(parent, "settings", None)
+        self._ui_tokens = get_dialog_theme_tokens(settings=settings)
 
         apply_dialog_title(self, t("recurrence.title"))
         apply_common_dialog_style(
             self,
             minimum_width=540,
-            extra_stylesheet=_apply_wizard_theme_tokens(WIZARD_STYLE),
+            extra_stylesheet=_apply_wizard_theme_tokens(WIZARD_STYLE, self._ui_tokens),
         )
         self.resize(540, 560)
 
@@ -274,7 +281,7 @@ class RoutineRecurrenceWizard(QDialog):
 
         # 기준일 표시
         base_info = QLabel(t("recurrence.base_date", date=self.target_date.toString("yyyy-MM-dd")))
-        base_info.setStyleSheet("color: #9aa8b8; font-size: 13px;")
+        base_info.setStyleSheet(f"color: {self._ui_tokens['text_secondary']}; font-size: 13px;")
         main_layout.addWidget(base_info)
 
         # 1. 반복 주기 선택 카드
@@ -362,11 +369,13 @@ class RoutineRecurrenceWizard(QDialog):
         preview_layout.setContentsMargins(15, 12, 15, 12)
 
         self.summary_label = QLabel("")
-        self.summary_label.setStyleSheet("color: white; font-weight: bold; font-size: 15px;")
+        self.summary_label.setStyleSheet(
+            f"color: {self._ui_tokens['text_primary']}; font-weight: bold; font-size: 15px;"
+        )
         preview_layout.addWidget(self.summary_label)
 
         self.next_label = QLabel("")
-        self.next_label.setStyleSheet("color: #9fe2a3; font-size: 13px;")
+        self.next_label.setStyleSheet(f"color: {self._ui_tokens['text_secondary']}; font-size: 13px;")
         preview_layout.addWidget(self.next_label)
 
         main_layout.addWidget(preview_card)
@@ -457,12 +466,11 @@ class RoutineRecurrenceWizard(QDialog):
         self.summary_label.setText(
             recurrence_summary(self.target_date, self.selected_cycle_type, recurrence)
         )
-        self.next_label.setText(
-            t(
-                "recurrence.next_occurrence_prefix",
-                date=next_occurrence_text(self.target_date, self.selected_cycle_type, recurrence),
-            )
-        )
+        next_date = next_occurrence_text(self.target_date, self.selected_cycle_type, recurrence)
+        prefix = t("recurrence.next_occurrence_prefix", date=next_date)
+        # Bundled locales use either a prefix or a {date} template. Preserve
+        # both contracts and ensure a plain prefix never hides the actual date.
+        self.next_label.setText(prefix if next_date in prefix else f"{prefix} {next_date}")
 
     def get_result(self):
         recurrence = build_recurrence_rule(self.selected_cycle_type, self.config)

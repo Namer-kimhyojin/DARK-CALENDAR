@@ -39,17 +39,19 @@ def _toggle_dock(app, dock_attr: str, visible: bool) -> None:
         dock.show()
         dock.raise_()
     else:
-        # 도킹 상태: dock_manager에 연결되지 않은 경우 재추가
+        # Keep hidden docks in their current area or tab group when reopening.
         _AREA_MAP = {
             "left_dock": Qt.DockWidgetArea.LeftDockWidgetArea,
             "center_dock": Qt.DockWidgetArea.LeftDockWidgetArea,
             "routine_dock": Qt.DockWidgetArea.RightDockWidgetArea,
             "directive_dock": Qt.DockWidgetArea.RightDockWidgetArea,
         }
-        if hasattr(app, "dock_manager"):
+        manager = getattr(app, "dock_manager", None)
+        if manager is not None and manager.dockWidgetArea(dock) == Qt.DockWidgetArea.NoDockWidgetArea:
             area = _AREA_MAP.get(dock_attr, Qt.DockWidgetArea.LeftDockWidgetArea)
-            app.dock_manager.addDockWidget(area, dock)
+            manager.addDockWidget(area, dock)
         dock.show()
+        dock.raise_()
 
 
 def _update_calendar_visibility_menu(app, menu: "QMenu", menu_style: str) -> None:
@@ -335,12 +337,19 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     from calendar_app.presentation.main_window.dock_sections.dock_layout_presets import (
         LAYOUT_PRESET_DEFS,
         apply_layout_preset,
+        apply_monthly_centered_layout,
     )
 
     layout_menu = self.display_menu.addMenu(_se(t("menu.layout_presets")))
     set_themed_icon(layout_menu, ICON.DISPLAY_STYLE, icon_color)
 
     layout_menu.setStyleSheet(menu_style)
+
+    monthly_layout_action = layout_menu.addAction(
+        t("layout.monthly_centered", "월간 중심"), lambda: apply_monthly_centered_layout(self)
+    )
+    set_themed_icon(monthly_layout_action, ICON.VIEW_CALENDAR, icon_color)
+    layout_menu.addSeparator()
 
     self.layout_preset_actions = []
 

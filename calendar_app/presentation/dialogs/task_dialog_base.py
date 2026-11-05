@@ -73,13 +73,24 @@ class BaseTaskDialog(QDialog):
 
     def _ui_tokens(self):
         if self._dialog_ui_tokens is None:
-            self._dialog_ui_tokens = get_dialog_theme_tokens()
+            self._dialog_ui_tokens = get_dialog_theme_tokens(settings=self._theme_settings())
         return self._dialog_ui_tokens
 
     def _dialog_metrics(self):
         if self._dialog_metric_tokens is None:
-            self._dialog_metric_tokens = get_dialog_metric_tokens(apply_overrides=True)
+            self._dialog_metric_tokens = get_dialog_metric_tokens(
+                apply_overrides=True, settings=self._theme_settings()
+            )
         return self._dialog_metric_tokens
+
+    def _theme_settings(self):
+        owner = self.parentWidget()
+        while owner is not None:
+            settings = getattr(owner, "settings", None)
+            if settings is not None and callable(getattr(settings, "value", None)):
+                return settings
+            owner = owner.parentWidget()
+        return None
 
     def _accent_rgba(self, alpha: float) -> str:
         accent = QColor(self._ui_tokens().get("accent", "#4da6ff"))
@@ -127,10 +138,13 @@ class BaseTaskDialog(QDialog):
         return container, layout
 
     def _set_editor_height(self, *widgets, min_height=34):
+        metrics = self._dialog_metrics()
+        outer_height = int(metrics["field_height"]) + 2 * int(metrics["field_padding_y"]) + 2
+        height = max(min_height, outer_height)
         for widget in widgets:
             if widget is not None:
-                widget.setMinimumHeight(min_height)
-                widget.setMaximumHeight(min_height + 4)
+                widget.setMinimumHeight(height)
+                widget.setMaximumHeight(height + 4)
 
     def _create_additional_info_section(self):
         context_group, context_layout = self._create_section(
@@ -899,13 +913,20 @@ class BaseTaskDialog(QDialog):
         # ── 운영 설정 (우선순위/상태/색상) ────────────────────
         layout.addWidget(self._create_ops_section())
 
-        # ── 상세 메모 ─────────────────────────────────────────
+        layout.addWidget(self._create_memo_section())
+        layout.addStretch()
+        return w
+
+    def _create_memo_section(self, *, compact=False):
+        """Build the same memo editor for the detail tab and schedule sheet."""
         memo_group, memo_layout = self._create_section(
             t("dialog.task.memo_section"), icon=ICON.MEMO
         )
         self.memo_edit = QTextEdit()
         self.memo_edit.setPlaceholderText(t("dialog.task.memo_placeholder_detail"))
-        self.memo_edit.setMinimumHeight(300)
+        self.memo_edit.setMinimumHeight(92 if compact else 300)
+        if compact:
+            self.memo_edit.setMaximumHeight(120)
         from calendar_app.shared.tag_highlighter import HashTagHighlighter
 
         self._memo_highlighter = HashTagHighlighter(self.memo_edit.document())
@@ -923,9 +944,7 @@ class BaseTaskDialog(QDialog):
         )
         memo_layout.addWidget(tag_hint)
 
-        layout.addWidget(memo_group)
-        layout.addStretch()
-        return w
+        return memo_group
 
     def _build_checklist_tab(self):
         w = QWidget()

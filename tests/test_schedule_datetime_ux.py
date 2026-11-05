@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Schedule date/time controls exercised against isolated persistence flows."""
 
+from contextlib import closing
 import os
 from pathlib import Path
+import sqlite3
 import tempfile
 from unittest.mock import patch
 
@@ -70,7 +72,7 @@ class ScheduleDatetimeUxTests(TemporaryDatabaseTestCase):
         self.settings.setValue("gcal_enabled", "false")
         self.host = _ScheduleHost(self.settings)
         self.info_patch = patch.object(QMessageBox, "information")
-        self.info_patch.start()
+        self.information = self.info_patch.start()
         self.addCleanup(self.info_patch.stop)
         self.failure_patch = patch.object(QMessageBox, "critical")
         self.failure = self.failure_patch.start()
@@ -163,6 +165,98 @@ class ScheduleDatetimeUxTests(TemporaryDatabaseTestCase):
         dialog.end_date.setSelectedSection(dialog.end_date.Section.DaySection)
         QTest.keyClick(dialog.end_date, Qt.Key.Key_Tab)
         self.assertIs(self.app.focusWidget(), dialog.start_time)
+
+    def test_schedule_disclosure_keeps_detail_values_when_collapsed(self):
+        dialog = self.dialog()
+        self.assertTrue(dialog.details_panel.isHidden())
+        self.assertTrue(dialog.tabs.tabBar().isHidden())
+        dialog.details_toggle.click()
+        dialog.name_edit.setText("Planning review")
+        dialog.location_edit.setText("Meeting room")
+        dialog.assignee_edit.setText("Team")
+        dialog.memo_edit.setPlainText("Agenda #planning")
+        dialog.color_swatch.set_color("#7986cb")
+        dialog.alarm_checks[1440].setChecked(True)
+        before = dialog._build_task_payload()
+
+        dialog.details_toggle.click()
+        self.assertTrue(dialog.details_panel.isHidden())
+        self.assertEqual(before, dialog._build_task_payload())
+        dialog.details_toggle.click()
+        self.assertFalse(dialog.details_panel.isHidden())
+        self.assertEqual(before, dialog._build_task_payload())
+
+    def test_schedule_primary_footer_continues_then_saves_with_enter(self):
+        dialog = self.dialog()
+        dialog.show()
+        self.app.processEvents()
+        dialog.name_edit.setText("First sheet entry")
+        dialog.continue_schedule_check.setChecked(True)
+        dialog.save_btn.click()
+
+        self.assertTrue(dialog.isVisible())
+        self.assertEqual(dialog.name_edit.text(), "")
+        first = task_repo.get_unified_task(dialog._saved_task_id)
+        self.assertEqual(first["name"], "First sheet entry")
+        self.assertEqual(first["calendar_id"], "local::schedule-ux")
+        self.assertEqual(first["deadline"], "2026-10-22 14:10:00")
+
+        dialog.continue_schedule_check.setChecked(False)
+        dialog.name_edit.setText("Second sheet entry")
+        dialog.name_edit.setFocus()
+        self.assertTrue(dialog.save_btn.isDefault())
+        self.assertTrue(dialog.save_btn.isEnabled())
+        QTest.keyClick(dialog.name_edit, Qt.Key.Key_Return)
+        self.app.processEvents()
+        self.assertEqual(dialog.result(), QDialog.DialogCode.Accepted)
+        second = task_repo.get_unified_task(dialog._saved_task_id)
+        self.assertNotEqual(second["id"], first["id"])
+        self.assertEqual(second["name"], "Second sheet entry")
+        self.assertEqual(second["calendar_id"], first["calendar_id"])
+
+    def test_narrow_sheet_keeps_stacked_times_and_duration_buttons_inside_containers(self):
+        dialog = self.dialog()
+        dialog.setMinimumWidth(420)
+        dialog.setMaximumWidth(480)
+        dialog.resize(480, 680)
+        dialog.show()
+        for _ in range(4):
+            self.app.processEvents()
+
+        group = dialog._schedule_time_group
+        start_bottom = dialog.start_time.mapTo(group, dialog.start_time.rect().bottomLeft()).y()
+        end_top = dialog.end_time.mapTo(group, dialog.end_time.rect().topLeft()).y()
+        self.assertLess(start_bottom, end_top)
+        self.assertGreaterEqual(group.height(), group.minimumSizeHint().height())
+        for button in dialog._duration_actions:
+            self.assertTrue(dialog.end_time_shortcuts.rect().contains(button.geometry()))
+
+    def test_single_schedule_success_notifies_after_commit_without_confirmation(self):
+        from calendar_app.infrastructure.db import database_unified
+
+        def verify_committed(title, message):
+            with closing(sqlite3.connect(database_unified.DB_PATH)) as connection:
+                name = connection.execute(
+                    "SELECT name FROM unified_task WHERE id = ?", (dialog._saved_task_id,)
+                ).fetchone()[0]
+            self.assertEqual(name, dialog.name_edit.text())
+            self.assertEqual(dialog.result(), QDialog.DialogCode.Accepted)
+
+        dialog = self.dialog()
+        dialog.name_edit.setText("Committed schedule")
+        with patch.object(
+            self.host, "show_toast", create=True, side_effect=verify_committed
+        ) as toast:
+            dialog.save_btn.click()
+            toast.assert_called_once()
+        task_id = dialog._saved_task_id
+        dialog = self.dialog(task_id=task_id)
+        dialog.name_edit.setText("Committed schedule revision")
+        with patch.object(self.host, "show_toast", create=True) as toast:
+            dialog.save_btn.click()
+            toast.assert_called_once()
+        self.assertEqual(task_repo.get_unified_task(task_id)["name"], "Committed schedule revision")
+        self.information.assert_not_called()
 
     def test_same_day_date_tracks_start_even_without_automatic_duration(self):
         dialog = self.dialog()

@@ -66,11 +66,14 @@ from calendar_app.presentation.widgets.widget_mode_skins import (
     widget_mode_layouts,
     widget_mode_skins,
 )
+from calendar_app.presentation.widgets.widget_mode_theme import main_widget_mode_tokens
 from calendar_app.presentation.widgets.widget_mode_typography import read_widget_typography
 from calendar_app.presentation.widgets.widget_mode_visibility import (
     read_widget_calendar_visibility,
     write_widget_calendar_visibility,
 )
+from calendar_app.shared.color_utils import composite_color, parse_css_color
+from calendar_app.shared.theme_snapshot import build_theme_snapshot
 
 
 class _DraftSettings:
@@ -105,6 +108,11 @@ class WidgetCustomizationDialog(QDialog):
                 "widget_mode.customization_intro",
                 "배치·모양·표시 항목을 바꾸고 예시 일정에서 확인하세요. "
                 "적용하기 전까지 현재 위젯은 바뀌지 않습니다.",
+            )
+            + " "
+            + t(
+                "widget_mode.main_theme_note",
+                "색상과 투명도는 메인 테마와 연동됩니다. 스킨은 모양과 장식을 바꿉니다.",
             ),
             self,
         )
@@ -281,10 +289,10 @@ class WidgetCustomizationDialog(QDialog):
         layout.addStretch(1)
         return tab
 
-    @staticmethod
-    def _user_layout_icon(data):
+    def _user_layout_icon(self, data):
+        tokens = main_widget_mode_tokens(self.draft)
         pixmap = QPixmap(72, 48)
-        pixmap.fill(QColor("#142235"))
+        pixmap.fill(QColor(tokens["_main_base_color"]))
         painter = QPainter(pixmap)
         width, height = data["canvas"]
         for block in data["blocks"]:
@@ -295,7 +303,9 @@ class WidgetCustomizationDialog(QDialog):
                     3 + round(y * 42 / height),
                     max(2, round(w * 66 / width)),
                     max(2, round(h * 42 / height)),
-                    QColor("#65a7ff" if block["id"] == "agenda" else "#71839b"),
+                    parse_css_color(
+                        tokens["accent"] if block["id"] == "agenda" else tokens["text_muted"]
+                    ),
                 )
         painter.end()
         return QIcon(pixmap)
@@ -507,11 +517,11 @@ class WidgetCustomizationDialog(QDialog):
                 self.font_weight.setCurrentIndex,
                 self.font_weight.findData(self._font_weight_preference()),
             ),
-            (self.text_opacity, self.text_opacity.setValue, read_widget_opacities(self.draft)[0]),
+            (self.text_opacity, self.text_opacity.setValue, 100),
             (
                 self.background_opacity,
                 self.background_opacity.setValue,
-                read_widget_opacities(self.draft)[1],
+                round(build_theme_snapshot(self.draft).opacity_factor * 100),
             ),
         ):
             blocked = control.blockSignals(True)
@@ -547,10 +557,10 @@ class WidgetCustomizationDialog(QDialog):
             weight = 500
         return weight if weight in (400, 500, 600, 700) else 500
 
-    @staticmethod
-    def _layout_icon(spec):
+    def _layout_icon(self, spec):
+        tokens = main_widget_mode_tokens(self.draft)
         pixmap = QPixmap(90, 58)
-        pixmap.fill(QColor("#142235"))
+        pixmap.fill(QColor(tokens["_main_base_color"]))
         painter = QPainter(pixmap)
         rows = max(row + rs for _, row, col, rs, cs in spec.placements)
         cols = max(col + cs for _, row, col, rs, cs in spec.placements)
@@ -560,7 +570,7 @@ class WidgetCustomizationDialog(QDialog):
                 4 + int(row * 50 / rows),
                 max(4, int(cs * 82 / cols) - 3),
                 max(4, int(rs * 50 / rows) - 3),
-                QColor("#65a7ff" if section == "agenda" else "#71839b"),
+                parse_css_color(tokens["accent"] if section == "agenda" else tokens["text_muted"]),
             )
         painter.end()
         return QIcon(pixmap)
@@ -573,20 +583,16 @@ class WidgetCustomizationDialog(QDialog):
         self.skin_combo = QComboBox(tab)
         for skin in widget_mode_skins():
             swatch = QPixmap(20, 20)
-            swatch.fill(
-                QColor(
-                    skin.token_overrides.get(
-                        "accent", "#27374d" if skin.base_theme == "dark" else "#dce8f7"
-                    )
-                )
-            )
+            swatch.fill(QColor(main_widget_mode_tokens(self.draft)["accent"]))
             self.skin_combo.addItem(
                 QIcon(swatch), t(skin.label_key, skin.label_default), skin.skin_id
             )
         self.skin_combo.setCurrentIndex(
             self.skin_combo.findData(read_widget_mode_skin_id(self.draft))
         )
-        self.skin_combo.setAccessibleName(t("widget_mode.style_color_skin", "색상 스킨"))
+        self.skin_combo.setAccessibleName(
+            t("widget_mode.style_shape_skin", "모양 스킨 · 메인 테마 연동")
+        )
         self.skin_combo.currentIndexChanged.connect(
             lambda: self._change("widget_mode_skin", self.skin_combo.currentData())
         )
@@ -621,7 +627,9 @@ class WidgetCustomizationDialog(QDialog):
             )
         )
         self.skin_combo.currentIndexChanged.connect(self._sync_skin_gallery)
-        form.addRow(t("widget_mode.style_color_skin", "색상 스킨"), self.skin_gallery)
+        form.addRow(
+            t("widget_mode.style_shape_skin", "모양 스킨 · 메인 테마 연동"), self.skin_gallery
+        )
         self.font_family = QFontComboBox(tab)
         self.font_family.setCurrentFont(
             QFont(
@@ -699,10 +707,23 @@ class WidgetCustomizationDialog(QDialog):
             background_opacity,
             0,
         )
+        linked_opacity = round(build_theme_snapshot(self.draft).opacity_factor * 100)
+        for control, value in ((self.text_opacity, 100), (self.background_opacity, linked_opacity)):
+            blocked = control.blockSignals(True)
+            control.setValue(value)
+            control.blockSignals(blocked)
+            control._percentage_label.setText(f"{value}%")
+            control.setEnabled(False)
+            control.setToolTip(
+                t(
+                    "widget_mode.main_theme_opacity_help",
+                    "메인 화면의 모양 설정에서 투명도를 변경합니다.",
+                )
+            )
         opacity_help = QLabel(
             t(
-                "widget_mode.split_opacity_help",
-                "값이 높을수록 진하게 표시됩니다. 배경만 낮추면 글자는 선명하게 유지됩니다.",
+                "widget_mode.main_theme_opacity_help",
+                "메인 화면의 모양 설정에서 투명도를 변경합니다.",
             ),
             tab,
         )
@@ -711,22 +732,19 @@ class WidgetCustomizationDialog(QDialog):
         form.addRow(opacity_help)
         return tab
 
-    @staticmethod
-    def _skin_icon(skin):
+    def _skin_icon(self, skin):
         from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor
 
-        values = skin.token_overrides
-        dark = skin.base_theme == "dark"
-        background = values.get("panel_bg", "#142131" if dark else "#edf2f8")
-        surface = values.get("section_bg", "#26384e" if dark else "#ffffff")
-        accent = values.get("accent", "#8dbbff" if dark else "#3568a7")
+        values = main_widget_mode_tokens(self.draft)
+        background, surface, accent = values["panel_bg"], values["section_bg"], values["accent"]
         image = QPixmap(150, 74)
         image.fill(Qt.GlobalColor.transparent)
         painter = QPainter(image)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(css_to_qcolor(background))
-        painter.drawRoundedRect(1, 1, 148, 72, 10, 10)
+        radius = {"paper": 3, "outline": 7, "glass": 16, "compact": 5}.get(skin.surface_style, 10)
+        painter.drawRoundedRect(1, 1, 148, 72, radius, radius)
         painter.setBrush(css_to_qcolor(accent))
         painter.drawRoundedRect(10, 10, 35, 5, 2, 2)
         for row in range(3):
@@ -988,12 +1006,16 @@ class WidgetCustomizationDialog(QDialog):
         self.preview.render(raw, flags=QWidget.RenderFlag.DrawChildren)
         self._preview_pixmap = QPixmap(raw.size())
         self._preview_pixmap.setDevicePixelRatio(raw.devicePixelRatio())
-        self._preview_pixmap.fill(QColor("#26364b"))
+        main = main_widget_mode_tokens(self.draft)
+        preview_base = QColor(main["_main_base_color"])
+        self._preview_pixmap.fill(preview_base)
         painter = QPainter(self._preview_pixmap)
         for y in range(0, self.preview.height(), 24):
             for x in range(0, self.preview.width(), 24):
                 if (x // 24 + y // 24) % 2:
-                    painter.fillRect(x, y, 24, 24, QColor("#35465b"))
+                    painter.fillRect(
+                        x, y, 24, 24, composite_color(main["surface_alt"], preview_base)
+                    )
         painter.drawPixmap(0, 0, raw)
         painter.end()
         self._scale_preview()

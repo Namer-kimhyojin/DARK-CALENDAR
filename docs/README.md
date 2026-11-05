@@ -1,5 +1,11 @@
 # Air Calendar 문서 색인
 
+전체 화면의 글자 역할, pt/논리 px, 버튼·입력·모달 크기는 [글자·크기 디자인 가이드](design/typography-and-sizing.md)를 따릅니다.
+
+글자·24pt 모양 설정, 모달 palette·그림자·중첩 owner, 시간 입력, 요일 4모드와 위젯 메인 테마 상속의 최신 native·회귀 근거는 [2026-11-06 공통 UI 후속 개선](ux-audit/unified-ui-followup-20261106.md)에 모았습니다. 확인 완료와 재촬영 예정, 제외한 실패 fixture를 구분합니다.
+
+기존 단일 녹음을 보존하는 새 4트랙 음악 기능은 [KeyDeck 루프덱 사용 순서·검증 계약](ux-audit/keydeck-loopdeck-20261106.md)을 참고합니다.
+
 버전 증가 기준과 자동 등록은 [버전 규칙](../rules/versioning.md), 변경별 버전·일시·이벤트는 [버전 변경 이력](maintenance/version-history.md)을 참고합니다.
 
 Store 4.3.3의 DB 초기화 오류 재발, 로컬 복구와 배포 검증 절차 수정은 [2026-10-20 장애 조사](maintenance/store-db-recurrence-20261020.md)에 기록했습니다. 안전한 SQLite 런타임을 포함한 새 배포는 별도 미완료 상태입니다.
@@ -59,6 +65,9 @@ CalDAV 변경분 다운로드·UID 주소 복구, 번역 누락 및 테스트 �
 | [AGENTS.md](../AGENTS.md) | 작업 진입점 |
 | [CLAUDE.md](../CLAUDE.md) | Claude 진입 안내 |
 | [design-qa.md](../design-qa.md) | 설계·감사 기록 |
+| [공통 UI 후속 개선·검증](ux-audit/unified-ui-followup-20261106.md) | 2026-11-06 native·회귀 확인과 예정·제외 근거 |
+| [글자·컨트롤·모달 크기 가이드](design/typography-and-sizing.md) | 공통 글자 역할·크기·배율 기준 |
+| [KeyDeck 루프덱 안내](ux-audit/keydeck-loopdeck-20261106.md) | 4트랙 사용 순서·저장/재생·검증 계약 |
 | [docs\assets\screenshots\README.md](../docs/assets/screenshots/README.md) | 참고 문서 |
 | [docs\dialog_datetime_ux_improvement_plan.md](../docs/dialog_datetime_ux_improvement_plan.md) | 설계·감사 기록 |
 | [docs\dialog_usability_accessibility_audit.md](../docs/dialog_usability_accessibility_audit.md) | 설계·감사 기록 |

@@ -485,6 +485,12 @@ class WindowEventsMixin:
         _set_overlay_visible(self, True)
 
     def move_to_next_monitor(self):
+        self._move_to_adjacent_monitor(1)
+
+    def move_to_previous_monitor(self):
+        self._move_to_adjacent_monitor(-1)
+
+    def _move_to_adjacent_monitor(self, step):
         from PyQt6.QtGui import QGuiApplication
 
         screens = QGuiApplication.screens()
@@ -496,8 +502,7 @@ class WindowEventsMixin:
             current_screen = screens[0]
 
         idx = screens.index(current_screen)
-        next_idx = (idx + 1) % len(screens)
-        target_screen = screens[next_idx]
+        target_screen = screens[(idx + step) % len(screens)]
 
         old_geom = current_screen.geometry()
         new_geom = target_screen.geometry()

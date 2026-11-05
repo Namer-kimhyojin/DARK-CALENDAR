@@ -42,15 +42,9 @@ class OverlayApp(MainWindowUiActionsMixin, ActionHandlersMixin, WindowEventsMixi
         """Execute commands from the palette."""
         params = params or {}
         if cmd_id == "theme_dark":
-            self.settings.setValue("text_theme", "dark")
-            self.settings.setValue("panel_base_color", "#1c1c1c")
-            if hasattr(self, "apply_theme_settings"):
-                self.apply_theme_settings()
+            self.change_text_theme("dark")
         elif cmd_id == "theme_light":
-            self.settings.setValue("text_theme", "light")
-            self.settings.setValue("panel_base_color", "#fefefe")
-            if hasattr(self, "apply_theme_settings"):
-                self.apply_theme_settings()
+            self.change_text_theme("light")
         elif cmd_id in {"sync_google", "sync_calendars"}:
             self.sync_calendars()
         elif cmd_id == "toggle_routine":

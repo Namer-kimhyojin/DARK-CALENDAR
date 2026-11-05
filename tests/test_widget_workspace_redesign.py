@@ -132,7 +132,11 @@ def test_gallery_and_layout_changes_cancel_without_persisting(workspace):
     original = dict(host.settings.values)
     dialog = WidgetCustomizationDialog(coordinator.controller, widget)
     assert dialog.skin_gallery.count() >= 16
-    item = dialog.skin_gallery.item(dialog.skin_gallery.count() - 1)
+    item = next(
+        dialog.skin_gallery.item(index)
+        for index in range(dialog.skin_gallery.count())
+        if str(dialog.skin_gallery.item(index).data(Qt.ItemDataRole.UserRole)).startswith("studio_")
+    )
     dialog.skin_gallery.setCurrentItem(item)
     dialog.layout_buttons["work_board"].click()
     assert dialog.draft.value("widget_mode_skin").startswith("studio_")

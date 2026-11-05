@@ -53,10 +53,29 @@ def check_auth_cancelled(is_cancelled):
         raise GoogleAuthError("auth_cancelled")
 
 
+def _oauth_failure_kind(code):
+    if not isinstance(code, str):
+        return "auth"
+    if code == "redirect_uri_mismatch":
+        return "auth_redirect"
+    if code in {"invalid_client", "unauthorized_client"}:
+        return "auth_client_invalid"
+    if code in {"server_error", "temporarily_unavailable"}:
+        return "network_unavailable"
+    if code in {"access_denied", "invalid_scope", "invalid_grant"}:
+        return "auth_denied"
+    return "auth"
+
+
 def run_desktop_auth(flow, *, is_cancelled=None, timeout_seconds=AUTH_TIMEOUT_SECONDS):
     """Keep callback/state handling local; never log OAuth URLs or query values."""
+    from oauthlib.oauth2 import OAuth2Error
+    from requests.exceptions import ConnectionError as RequestConnectionError
+    from requests.exceptions import Timeout
+
     check_auth_cancelled(is_cancelled)
     callback_query = None
+    callback_error = None
     expected_state = None
 
     class CallbackHandler(BaseHTTPRequestHandler):
@@ -68,16 +87,20 @@ def run_desktop_auth(flow, *, is_cancelled=None, timeout_seconds=AUTH_TIMEOUT_SE
             pass
 
         def do_GET(self):
-            nonlocal callback_query
+            nonlocal callback_query, callback_error
             parsed = urlsplit(self.path)
-            query = parse_qs(parsed.query)
+            query = parse_qs(parsed.query, keep_blank_values=True)
+            code = query.get("code", [])
+            error = query.get("error", [])
             valid = (
                 parsed.path == "/"
                 and query.get("state") == [expected_state]
-                and bool(query.get("code") or query.get("error"))
+                and len(code) + len(error) == 1
+                and bool((code or error)[0])
             )
             if valid:
                 callback_query = parsed.query
+                callback_error = error[0] if error else None
             self.send_response(200 if valid else 400)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
@@ -96,7 +119,11 @@ def run_desktop_auth(flow, *, is_cancelled=None, timeout_seconds=AUTH_TIMEOUT_SE
         flow.redirect_uri = f"http://127.0.0.1:{server.server_port}/"
         auth_url, expected_state = flow.authorization_url(prompt="consent")
         check_auth_cancelled(is_cancelled)
-        if not webbrowser.open(auth_url, new=1, autoraise=True):
+        try:
+            browser_opened = webbrowser.open(auth_url, new=1, autoraise=True)
+        except (OSError, webbrowser.Error):
+            raise GoogleAuthError("auth_browser") from None
+        if not browser_opened:
             raise GoogleAuthError("auth_browser")
         deadline = time.monotonic() + timeout_seconds
         while callback_query is None:
@@ -105,12 +132,20 @@ def run_desktop_auth(flow, *, is_cancelled=None, timeout_seconds=AUTH_TIMEOUT_SE
                 raise GoogleAuthError("auth_timeout")
             server.handle_request()
         check_auth_cancelled(is_cancelled)
-        error = parse_qs(callback_query).get("error", [None])[0]
-        if error:
-            kind = "auth_redirect" if error == "redirect_uri_mismatch" else "auth_denied"
-            raise GoogleAuthError(kind)
+        if callback_error:
+            raise GoogleAuthError(_oauth_failure_kind(callback_error))
         # oauthlib requires https when parsing, as in InstalledAppFlow.run_local_server.
         response = flow.redirect_uri.replace("http://", "https://", 1) + "?" + callback_query
-        flow.fetch_token(authorization_response=response, timeout=12)
+        try:
+            flow.fetch_token(authorization_response=response, timeout=12)
+        except OAuth2Error as exc:
+            raise GoogleAuthError(_oauth_failure_kind(exc.error)) from None
+        except (RequestConnectionError, Timeout):
+            raise GoogleAuthError("network_unavailable") from None
+        except Warning as exc:
+            # oauthlib reports a changed consent scope via a structured warning.
+            if hasattr(exc, "new_scope"):
+                raise GoogleAuthError("auth_denied") from None
+            raise
         check_auth_cancelled(is_cancelled)
         return flow.credentials

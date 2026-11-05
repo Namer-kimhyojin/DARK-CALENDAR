@@ -41,6 +41,8 @@ class BeatmakerPerformanceDialog(QDialog):
         self._missing_sounds = False
         self._finished = False
         self._status_ticks = 0
+        self._draft = bool(draft)
+        self._looper_dialog = None
         apply_dialog_title(self, t("beatmaker.performance", "연주·녹음"))
         apply_common_dialog_style(self, minimum_width=520, size=(580, 720))
         root = QVBoxLayout(self)
@@ -66,7 +68,13 @@ class BeatmakerPerformanceDialog(QDialog):
         if self.page_combo.count():
             self.deck["page"] = self.page_combo.currentData()
         self.page_combo.activated.connect(self._page_changed)
-        root.addWidget(self.page_combo)
+        bank_row = QHBoxLayout()
+        bank_row.addWidget(self.page_combo, 1)
+        self.looper_button = self._button(
+            t("beatmaker.looper.open", "루프덱 · 4트랙"), self._open_looper
+        )
+        bank_row.addWidget(self.looper_button)
+        root.addLayout(bank_row)
 
         self.canvas = KeyDeckCanvas(self)
         self.canvas.close_control_enabled = False
@@ -167,6 +175,30 @@ class BeatmakerPerformanceDialog(QDialog):
         self.deck["page"] = self.page_combo.currentData()
         self.canvas.set_deck(self.deck)
         self._focus_pads()
+
+    def _open_looper(self):
+        from calendar_app.presentation.widgets.keydeck.looper_dialog import BeatmakerLooperDialog
+        from calendar_app.shared.app_lifecycle import is_app_exiting
+
+        if self._finished or is_app_exiting():
+            return
+        self._stop()
+        dialog = BeatmakerLooperDialog(self.deck, self, draft=self._draft)
+        self._looper_dialog = dialog
+        try:
+            dialog.exec()
+        finally:
+            self._looper_dialog = None
+        if not self._finished and not is_app_exiting():
+            result = dialog.result_performance()
+            if result["beatmaker_looper"] is not None:
+                self.deck["beatmaker_looper"] = result["beatmaker_looper"]
+            self.sound_check.setChecked(result["sound_enabled"])
+            self.volume_slider.setValue(result["sound_volume"])
+            self.canvas.set_deck(self.deck)
+            self._refresh()
+            self._focus_pads()
+        dialog.deleteLater()
 
     def _navigate_page(self, index):
         selected = self.page_combo.findData(index)
@@ -357,15 +389,20 @@ class BeatmakerPerformanceDialog(QDialog):
         self.warning.setVisible(bool(message))
 
     def result_performance(self):
-        return {
+        result = {
             "beatmaker_recording": deepcopy(self.timeline.take),
             "sound_enabled": self.deck["sound_enabled"],
             "sound_volume": self.deck["sound_volume"],
         }
+        if self.deck.get("beatmaker_looper") is not None:
+            result["beatmaker_looper"] = deepcopy(self.deck["beatmaker_looper"])
+        return result
 
     def done(self, result):
         if not self._finished:
             self._finished = True
+            if self._looper_dialog is not None:
+                self._looper_dialog.reject()
             self._stop()
             self.canvas.set_keyboard_performance(False)
         super().done(result)
@@ -373,5 +410,7 @@ class BeatmakerPerformanceDialog(QDialog):
     def hideEvent(self, event):  # noqa: N802
         # Native hide/parent teardown must not leave a background loop running.
         if hasattr(self, "timer"):
+            if self._looper_dialog is not None:
+                self._looper_dialog.reject()
             self._stop()
         super().hideEvent(event)

@@ -408,15 +408,19 @@ class PanelWidgetModeUiTests(unittest.TestCase):
         finally:
             QLocale.setDefault(original)
 
-    def test_widget_mode_theme_tokens_use_light_aqua_preset(self):
+    def test_widget_mode_theme_tokens_inherit_main_colors(self):
         tokens = pwm._build_widget_mode_theme_tokens(self.host)
         self.assertTrue(tokens)
-        self.assertEqual(tokens.get("accent"), "#22c3ca")
-        self.assertEqual(tokens.get("card_text_primary"), "#31465f")
+        from calendar_app.shared.ui_tokens import get_ui_tokens
+
+        main = get_ui_tokens(self.host.settings)
+        self.assertEqual(tokens.get("accent"), main["accent"])
+        self.assertEqual(tokens.get("card_text_primary"), main["text_primary"])
         self.assertIn("panel_bg_start", tokens)
 
     def test_widget_mode_launcher_palette_uses_resolved_theme_tokens(self):
         self.host.settings.setValue("ui_shape_preset", "modern")
+        self.host.settings.setValue("widget_mode_skin", "classic_light")
         launcher = pwm._WidgetModeLauncher(self.host)
         tokens = pwm._build_widget_mode_theme_tokens(self.host)
 
@@ -428,10 +432,26 @@ class PanelWidgetModeUiTests(unittest.TestCase):
         l_ss = launcher.styleSheet()
         self.assertTrue(f"border-radius: {lr}px;" in l_ss or f"border-radius:{lr}px;" in l_ss)
 
-    def test_widget_mode_theme_tokens_respect_dialog_token_override(self):
+    def test_launcher_without_independent_skin_follows_main_theme(self):
+        from calendar_app.presentation.widgets.widget_mode_theme import main_widget_mode_tokens
+
+        self.host.settings.setValue("text_theme", "dark")
+        self.host.settings.setValue("theme_color", "#c3a1f6")
+        self.host.settings.setValue("panel_base_color", "#131b2a")
+        tokens = main_widget_mode_tokens(self.host.settings)
+        launcher = pwm._WidgetModeLauncher(self.host)
+        self.addCleanup(launcher.close)
+
+        self.assertIn(tokens["panel_bg"], launcher.styleSheet())
+        self.assertIn(tokens["text_primary"], launcher.styleSheet())
+        self.assertIsNone(self.host.settings.value("widget_mode_skin"))
+        self.assertIsNone(self.host.settings.value("widget_mode_panel_theme"))
+
+    def test_widget_mode_keeps_main_colors_separate_from_dialog_expert_override(self):
         self.host.settings.setValue("dialog_token.accent", "#ff00aa")
         tokens = pwm._build_widget_mode_theme_tokens(self.host)
-        self.assertEqual(tokens.get("accent"), "#ff00aa")
+        self.assertEqual(tokens.get("accent"), self.host.settings.value("theme_color"))
+        self.assertEqual(self.host.settings.value("dialog_token.accent"), "#ff00aa")
 
     def test_floating_widget_menu_stylesheet_uses_theme_tokens(self):
         widget = pwm._FloatingWidgetBase(self.host, "Title", "I")
@@ -443,11 +463,12 @@ class PanelWidgetModeUiTests(unittest.TestCase):
         self.assertIn(tokens["panel_border"], menu_qss)
         self.assertIn(tokens["text_secondary"], menu_qss)
 
-    def test_widget_accent_override_updates_widget_palette(self):
+    def test_legacy_widget_accent_is_preserved_while_rendering_main_palette(self):
         widget = pwm._PanelWidget(self.host)
         self.host.settings.setValue(widget._color_setting_key(), "#ff6b6b")
         tokens = widget._read_theme_tokens()
-        self.assertEqual(tokens.get("accent"), "#ff6b6b")
+        self.assertEqual(tokens.get("accent"), self.host.settings.value("theme_color"))
+        self.assertEqual(self.host.settings.value(widget._color_setting_key()), "#ff6b6b")
 
     def test_entry_list_uses_resolved_button_styles(self):
         widget = pwm._EntryListWidget(self.host)
@@ -499,7 +520,7 @@ class PanelWidgetModeUiTests(unittest.TestCase):
 
         self.assertEqual("sunset_glow", self.host.settings.value("widget_mode_skin"))
         self.assertEqual("light", self.host.settings.value("widget_mode_panel_theme"))
-        self.assertEqual("#e46f51", widget.theme_tokens()["accent"])
+        self.assertEqual(self.host.settings.value("theme_color"), widget.theme_tokens()["accent"])
 
     def test_refresh_visible_widgets_keeps_existing_panel_position(self):
         controller = pwm.PanelWidgetModeController(self.host)
@@ -565,7 +586,7 @@ class PanelWidgetModeUiTests(unittest.TestCase):
         self.assertEqual(0, resize_mock.call_count)
         self.assertEqual(0, move_mock.call_count)
 
-    def test_panel_opacity_changes_background_tokens_without_window_opacity(self):
+    def test_panel_preserves_legacy_opacity_but_uses_main_background_alpha(self):
         widget = pwm._PanelWidget(self.host)
         default_tokens = widget._read_theme_tokens()
 
@@ -573,7 +594,11 @@ class PanelWidgetModeUiTests(unittest.TestCase):
         updated_tokens = widget._read_theme_tokens()
 
         self.assertAlmostEqual(1.0, widget.windowOpacity(), places=2)
-        self.assertNotEqual(default_tokens["panel_bg"], updated_tokens["panel_bg"])
+        self.assertEqual(default_tokens["panel_bg"], updated_tokens["panel_bg"])
+        self.assertEqual(self.host.settings.value(widget._opacity_setting_key()), 50)
+        self.host.settings.setValue("last_opacity", 255)
+        self.host.settings.setValue("last_opacity_unit", "byte")
+        self.assertNotEqual(default_tokens["panel_bg"], widget._read_theme_tokens()["panel_bg"])
 
     def test_open_task_dialog_helper_does_not_force_immediate_refresh(self):
         controller = pwm.PanelWidgetModeController(self.host)

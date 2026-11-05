@@ -115,10 +115,11 @@ class FocusHistoryPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
 
+        self.heading_label = None
         if show_heading:
-            heading = QLabel(t("focus_selector.logs_recent"))
-            heading.setStyleSheet(self._styles["heading"])
-            layout.addWidget(heading)
+            self.heading_label = QLabel(t("focus_selector.logs_recent"))
+            self.heading_label.setStyleSheet(self._styles["heading"])
+            layout.addWidget(self.heading_label)
 
         self.summary_label = QLabel()
         self.summary_label.setWordWrap(True)
@@ -172,6 +173,16 @@ class FocusHistoryPanel(QWidget):
             self.delete_button.clicked.connect(self.delete_selected)
             button_row.addWidget(self.delete_button)
         layout.addLayout(button_row)
+
+    def apply_theme(self, tokens=None, metrics=None) -> None:
+        """Refresh presentation without querying or rebuilding persisted rows."""
+        self._styles = _focus_history_style_bundle(tokens, metrics)
+        if self.heading_label is not None:
+            self.heading_label.setStyleSheet(self._styles["heading"])
+        self.summary_label.setStyleSheet(self._styles["summary"])
+        self.table.setStyleSheet(self._styles["table"])
+        if self.refresh_button is not None:
+            self.refresh_button.setStyleSheet(self._styles["button_secondary"])
 
     def reload(self) -> None:
         snapshot = focus_usecases.get_focus_history_snapshot(self.repo, limit=100, stats_limit=5000)

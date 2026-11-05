@@ -23,6 +23,7 @@ class StackBar(QWidget):
             | Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint,
         )
+        self.setProperty("dcWheelValueControl", True)
         self.controller, self.group = controller, group
         self.setWindowTitle(group["name"] or t("widget_studio.stack", "위젯 스택"))
         from calendar_app.presentation.widgets.overlay_manager_dialog import _load_tokens

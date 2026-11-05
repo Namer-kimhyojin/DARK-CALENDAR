@@ -1087,6 +1087,8 @@ class GCalSyncHelperTests(TemporaryDatabaseTestCase):
     def test_authenticate_returns_false_when_token_write_fails(self):
         class FakeCreds:
             valid = True
+            scopes = gcal_service.SCOPES
+            refresh_token = "synthetic"
 
             def to_json(self):
                 return "{}"
@@ -1111,7 +1113,7 @@ class GCalSyncHelperTests(TemporaryDatabaseTestCase):
             ok = svc.authenticate(parent_widget=None, interactive=True)
 
         self.assertFalse(ok)
-        self.assertEqual(svc.last_error_kind, "auth")
+        self.assertEqual(svc.last_error_kind, "auth_token_write")
         self.assertIn("token_write_failed", svc.last_error_message or "")
 
     def test_noninteractive_auth_without_token_reports_auth_required(self):
@@ -1610,14 +1612,16 @@ class GCalSyncHelperTests(TemporaryDatabaseTestCase):
             def __init__(self):
                 self.calendar_id = "primary"
                 self.time_zone = "Asia/Seoul"
-                self.last_error_kind = "fetch"
-                self.last_error_status = 401
-                self.last_error_message = "expired"
+                self.last_error_kind = None
+                self.last_error_status = None
                 self.is_authenticated = True
                 self.service = object()
 
             def authenticate(self, *args, **kwargs):
                 return True
+
+            def list_accessible_calendars(self):
+                return [{"id": "account@example.invalid", "primary": True}]
 
             def fetch_sync_events(self, sync_token, calendar_id=None):
                 self.last_error_status = 401

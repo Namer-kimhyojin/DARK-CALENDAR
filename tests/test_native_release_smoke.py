@@ -305,6 +305,9 @@ def test_runtime_readiness_requires_every_actual_native_marker(missing):
     [
         (560, 340, 96, 0x88, True),
         (840, 510, 144, 0x88, True),
+        (480, 280, 96, 0x88, True),
+        (600, 350, 120, 0x88, True),
+        (720, 420, 144, 0x88, True),
         (1018, 700, 96, 0x80, False),
         (560, 340, 96, 0x80, False),
     ],

@@ -37,7 +37,7 @@ def build_ui_font(family, size):
     font = QFont()
     font.setFamily(safe_family)
     if size is None or size <= 0:
-        size = 10
+        size = 11
     else:
         size = max(1, size)
     font.setPointSize(size)
@@ -495,6 +495,7 @@ class MainWindowUiActionsMixin:
     def apply_panel_background_color(self, color_hex, remember=True):
         hx = self._normalize_hex_color(color_hex)
         self.settings.setValue("panel_base_color", hx)
+        self.settings.setValue("appearance_base_source", "custom")
         if remember:
             self._remember_panel_color(hx)
         self._apply_panel_background_color_refresh()
@@ -564,7 +565,7 @@ class MainWindowUiActionsMixin:
 
         app_font = QApplication.instance().font()
         current_font_family = str(self.settings.value("font_family", app_font.family()))
-        default_font_size = app_font.pointSize() if app_font.pointSize() > 0 else 10
+        default_font_size = app_font.pointSize() if app_font.pointSize() > 0 else 11
         current_font_size = as_int(
             self.settings.value("font_size", default_font_size),
             default_font_size,
@@ -591,6 +592,16 @@ class MainWindowUiActionsMixin:
             current_accent_source=str(
                 self.settings.value("appearance_accent_source", "custom") or "custom"
             ),
+            current_base_source=str(
+                self.settings.value("appearance_base_source", "family") or "family"
+            ),
+            current_original_base=str(
+                self.settings.value("panel_base_color", current_base) or current_base
+            ),
+            current_style_family_variants={
+                key: str(self.settings.value(f"appearance_family_{key}", "") or "")
+                for key in ("dark_base", "dark_accent", "light_base", "light_accent")
+            },
         )
         if dlg.exec() != PanelColorPickerDialog.DialogCode.Accepted:
             return
@@ -603,7 +614,14 @@ class MainWindowUiActionsMixin:
         self._remember_panel_color(new_base)
 
         style_family = dlg.selected_style_family()
+        base_source_getter = getattr(dlg, "selected_base_source", None)
+        base_source = (
+            base_source_getter()
+            if callable(base_source_getter)
+            else ("family" if style_family else "custom")
+        )
         self.settings.setValue("appearance_style_family", style_family)
+        self.settings.setValue("appearance_base_source", base_source)
         self.settings.setValue("appearance_accent_source", dlg.selected_accent_source())
         family_variants = dlg.selected_style_family_variants()
         for variant_key in (
@@ -809,7 +827,7 @@ class MainWindowUiActionsMixin:
         def update_preview():
             current_size = QApplication.instance().font().pointSize()
             if current_size <= 0:
-                current_size = 10
+                current_size = 11
             f = build_ui_font(font_combo.currentFont().family(), current_size)
             preview_lbl.setFont(f)
 
@@ -833,19 +851,19 @@ class MainWindowUiActionsMixin:
             family = font_combo.currentFont().family()
             size = QApplication.instance().font().pointSize()
             if size <= 0:
-                size = 10
+                size = 11
             self.apply_font_settings(family, size)
             self.settings.setValue("font_family", family)
             self.settings.setValue("font_size", size)
 
     def apply_font_settings(self, family, size, refresh=True):
         if size <= 0:
-            size = 10
+            size = 11
         snapshot = build_theme_snapshot(self.settings, persist_opacity=True)
         font = build_ui_font(family, size)
         QApplication.instance().setFont(font)
 
-        safe_size = font.pointSize() if font.pointSize() > 0 else (size if size > 0 else 10)
+        safe_size = font.pointSize() if font.pointSize() > 0 else (size if size > 0 else 11)
         QApplication.instance().setStyleSheet(
             build_tooltip_stylesheet(
                 safe_size,

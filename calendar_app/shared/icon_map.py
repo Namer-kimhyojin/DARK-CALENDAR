@@ -175,6 +175,7 @@ class _IconKeys:
     ERROR: str = "error"
     WARNING: str = "warning"
     INFO: str = "info"
+    QUESTION: str = "question"
     STAR: str = "star"
     STAR_EMPTY: str = "star_empty"
     BROADCAST: str = "broadcast"
@@ -326,6 +327,7 @@ ICON_MAPPING: dict[str, tuple[str, str, str]] = {
     ICON.ERROR: ("fa6s.circle-xmark", "", "오류"),
     ICON.WARNING: ("fa6s.triangle-exclamation", "", "경고"),
     ICON.INFO: ("fa6s.circle-info", "", "정보"),
+    ICON.QUESTION: ("fa6s.circle-question", "", "질문"),
     ICON.STAR: ("fa6s.star", "", "별 (기본 캘린더 표시)"),
     ICON.STAR_EMPTY: ("mdi6.star-outline", "", "빈 별"),
     ICON.BROADCAST: ("mdi6.broadcast", "", "공지 / 브로드캐스트"),

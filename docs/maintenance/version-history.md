@@ -2,10 +2,34 @@
 
 제품 버전은 배포 단위로 결정한다. 변경 기록·Git/CI 빌드·공개·Store·설치 상태는 별도이며 변경 기록만으로 버전을 올리지 않는다.
 
-기준 버전: `3.8.1` · 현재 제품 버전: **`4.9.2`**
+기준 버전: `3.8.1` · 현재 제품 버전: **`5.0.0`**
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.0.0 | 2026-11-06T03:01:23.649545+09:00 | change | QA만: immutable4.3.3 baseline과5.0 Python3.14/Qt6.12의 DLL·정확한 모달창 클래스 구분 및 원본 엄격 게이트 보존 | `release-5.0.0-qa-runtime-adapter-20261106` |
+| 5.0.0 | 2026-11-06T02:45:25.031660+09:00 | release | 사용자 지정 5.0 배포: 통일된 UI·라이트 테마·글자와 입력 UX, 요일 표시, 위젯 테마 계승, 4트랙 루프덱 및 보안 런타임 통합; 미빌드 4.10.0 예약을 대체 | `release-5.0.0-integrated-20261106` |
+| 4.10.0 | 2026-11-06T02:43:02.832653+09:00 | release | 통일된 모달·라이트 테마·글자/입력 UX, 요일 표시 선택, 위젯 테마 계승, 4트랙 루프덱, 보안 런타임 및 전체 현재 실행 입력 통합 | `release-4.10.0-integrated-20261106` |
+| 4.9.2 | 2026-11-06T02:27:59.977195+09:00 | change | Diagnose first calendar startup with isolated Windows phase and font metrics timings: default first frame 31.4s versus diagnostic GDI 4.3s. Record launcher overhead and evidence limits without changing product runtime behavior. | `startup-performance-diagnosis-20261106` |
+| 4.9.2 | 2026-11-06T01:55:53.832775+09:00 | change | Add a four-track sound-only loop deck with pad recording, shared-phase looping, overdub, mute/gain, quantization, persistence, Studio undo and WAV deck sharing. Preserve v1 recordings; verify full pads and tracks at Windows 100/125 percent with actual audio backend. | `beatmaker-loopdeck-four-tracks-20261106` |
+| 4.9.2 | 2026-11-06T01:54:43.339015+09:00 | change | Unify typography, accent modal palette and shadows; fix title geometry, modal ownership and message visibility; cycle weekday placement and inherit main widget theme. Validate Windows 100/125 percent and 322 tests plus 69 subtests. | `unified-ui-typography-modal-weekday-20261106` |
+| 4.9.2 | 2026-11-05T23:21:28.630424+09:00 | change | Pearl Lilac 라이트 시안과 공통 팔레트 적용, 모드 및 직접 색상 출처 보존, 상태·선택 안내 대비와 브리핑·인증 버튼 보완 | `light-mode-pearl-lilac-20261105` |
+| 4.9.2 | 2026-11-05T22:34:25.475576+09:00 | change | Prevent wheel edits globally while preserving content scrolling, make modal reading surfaces opaque, fix management shell ownership and closing, unify widget subtabs and dock tab transparency, and repair keyboard and feedback lifetime UX. | `ui-usability-wheel-and-modal-20261105` |
+| 4.9.2 | 2026-11-05T21:42:10.956204+09:00 | change | Unify native modal chrome and sizing, improve calendar and feedback surfaces, apply theme-aware feather branding and splash, and fix Qt callback lifetimes with physical Windows evidence. | `windows-modal-brand-system-20261105` |
+| 4.9.2 | 2026-11-05T18:38:56.544909+09:00 | change | Audit fresh native dialog states and repair contrast, automatic theme resolution, tables, previews, modal actions, long alarms and focus feedback | `native-ui-consistency-audit-20261105` |
+| 4.9.2 | 2026-11-05T17:43:12.997390+09:00 | change | Extend the selected theme across all native dialog paths, provider and widget settings, alarms, briefing and focus feedback while preserving custom colors and transparency | `shared-native-dialog-visual-system-20261105` |
+| 4.9.2 | 2026-11-05T17:42:35.306301+09:00 | change | Fix duplicate schedule detail actions by reusing two buttons and publishing only fully prepared popup content | `detail-action-row-single-instance-20261105` |
+| 4.9.2 | 2026-11-05T15:07:12.944526+09:00 | change | Native navy and lilac calendar and editor redesign with theme, opacity and free layout preserved | `navy-lilac-native-redesign-20261105` |
+| 4.9.2 | 2026-11-05T12:21:06.467191+09:00 | change | Verify Google calendar-specific and service-wide failures separately | `calendar-subscription-google-failure-scope-tests-20261105` |
+| 4.9.2 | 2026-11-05T12:19:08.702654+09:00 | change | Google first sign-in and incremental sync recovery, cross-provider retry and ICS worker safety | `calendar-subscription-google-recovery-20261105` |
+| 4.9.2 | 2026-11-05T09:27:04.597737+09:00 | change | 실제 Windows 100%·125% 모니터 이동 12건 검증과 11월 16일 통합 배포 범위 기록 | `maintenance-20261105-monitor-physical-dpi-evidence` |
+| 4.9.2 | 2026-11-05T08:45:05.665206+09:00 | change | Keep monthly context while inspecting a date and add a spacious monthly agenda layout | `main-month-agenda-ux-20261105` |
+| 4.9.2 | 2026-11-05T08:07:33.583151+09:00 | change | Patch Qt networking, pyasn1, bundled OpenSSL and setuptools advisories | `dependency-security-qt612-20261105` |
+| 4.9.2 | 2026-11-05T07:53:32.069004+09:00 | change | Move Air Calendar development and release runtime to security-patched CPython 3.14.10 | `python-security-runtime-3-14-10-20261105` |
+| 4.9.2 | 2026-11-05T07:27:55.596490+09:00 | change | Verify locked release dependency archives with SHA-256 and update certifi and pip for certificate trust fixes | `release-dependency-integrity-20261105` |
+| 4.9.2 | 2026-11-05T03:05:29.084961+09:00 | change | 이전·다음 모니터 단축키 방향 분리와 위젯 모드 4일차 점검 기록 | `maintenance-20261105-previous-monitor-shortcut` |
+| 4.9.2 | 2026-11-04T23:53:52.329845+09:00 | change | Document UI UX risks and development environment modernization plan; no runtime changes | `ui-ux-dev-readiness-plan-20261104` |
+| 4.9.2 | 2026-11-04T03:00:34.307691+09:00 | change | Store 4.9.2.0 설치 확인과 주간 보기·선택·키보드 점검 결과 기록 | `maintenance-20261104-store-installed-day03` |
+| 4.9.2 | 2026-11-03T09:02:32.329855+09:00 | change | 상단 동기화 아이콘을 연결 및 구독으로 연결하고 활성 서비스와 필요한 조치를 카드 위주로 표시 | `sync-toolbar-connected-services-20261103` |
 | 4.9.2 | 2026-11-03T03:22:48.049259+09:00 | change | 4.9.2 배포 확인표의 원래 출시일을 유지하고 Store 게시 후속 관찰일을 별도 표시 | `maintenance-20261103-preserve-release-date-contract` |
 | 4.9.2 | 2026-11-03T03:18:49.003067+09:00 | change | Store 4.9.2 게시 확인에 따른 홈페이지 상태와 유지보수 후보·2일차 점검 인수 기록 정합화; 제품 버전 유지 | `maintenance-20261103-store-492-published-day02` |
 | 4.9.2 | 2026-11-02T10:13:36.278627+09:00 | change | QA-only: preserve exact historical 4.3.3 SIP teardown failure as FAILED, independently validate its closed synthetic upgrade DB, and require all six unchanged 4.9.2 candidate exits zero | `native-legacy-upgrade-fixture-20261102` |

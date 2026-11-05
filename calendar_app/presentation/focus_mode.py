@@ -27,6 +27,7 @@ from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.theme_snapshot import build_shared_ui_tokens, build_theme_snapshot
+from calendar_app.shared.typography import get_typography_scale
 
 try:
     from PyQt6 import sip
@@ -37,6 +38,7 @@ from calendar_app.presentation.dialogs.focus_completion_dialog import FocusCompl
 
 FOCUS_MODE_POMODORO = "pomodoro"
 FOCUS_MODE_STOPWATCH = "stopwatch"
+_active_phase_toasts: set[QFrame] = set()
 
 
 def _focus_ui_tokens(app) -> dict[str, str]:
@@ -511,9 +513,16 @@ def _announce_phase_change(app, title: str, msg: str, icon: str) -> None:
     from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
     from PyQt6.QtWidgets import QApplication, QGraphicsOpacityEffect
 
-    theme_color = "#4da6ff"
-    if hasattr(app, "settings"):
-        theme_color = app.settings.value("theme_color", "#4da6ff")
+    from calendar_app.presentation.dialogs.dialog_styles import (
+        get_dialog_metric_tokens,
+        get_dialog_theme_tokens,
+    )
+
+    settings = getattr(app, "settings", None)
+    tokens = get_dialog_theme_tokens(settings=settings)
+    metrics = get_dialog_metric_tokens(settings=settings)
+    theme_color = tokens["accent"]
+    screen = QApplication.primaryScreen()
 
     # Independent top-level window — no parent, so it never overlaps the focus UI
     popup = QFrame(None)
@@ -525,13 +534,17 @@ def _announce_phase_change(app, title: str, msg: str, icon: str) -> None:
     )
     popup.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
     popup.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
-    popup.setFixedSize(360, 90)
+    popup.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+    popup.setObjectName("FocusPhaseToast")
+    width = min(400, max(240, screen.availableGeometry().width() - 48)) if screen else 400
+    popup.setFixedWidth(width)
 
     popup.setStyleSheet(f"""
-        QFrame {{
-            background-color: rgba(18, 20, 30, 220);
-            border: 1px solid {theme_color};
-            border-radius: 12px;
+        QFrame#FocusPhaseToast {{ background: transparent; border: none; }}
+        QFrame#FocusPhaseToastCard {{
+            background: {tokens.get("floating_bg", tokens["surface_bg"])};
+            border: 1px solid {tokens["border"]};
+            border-radius: {metrics["group_radius"]}px;
         }}
         QLabel {{
             background: transparent;
@@ -539,27 +552,38 @@ def _announce_phase_change(app, title: str, msg: str, icon: str) -> None:
         }}
     """)
 
-    layout = QHBoxLayout(popup)
-    layout.setContentsMargins(16, 12, 16, 12)
+    shell_layout = QVBoxLayout(popup)
+    shell_layout.setContentsMargins(0, 0, 0, 0)
+    card = QFrame()
+    card.setObjectName("FocusPhaseToastCard")
+    shell_layout.addWidget(card)
+    layout = QHBoxLayout(card)
+    layout.setContentsMargins(20, 18, 20, 18)
     layout.setSpacing(14)
 
     icon_lbl = QLabel()
-    icon_lbl.setPixmap(_ic(icon).pixmap(36, 36))
-    icon_lbl.setFixedWidth(46)
+    icon_lbl.setPixmap(_ic(icon, color=theme_color).pixmap(28, 28))
+    icon_lbl.setFixedWidth(32)
     layout.addWidget(icon_lbl)
 
     text_col = QVBoxLayout()
     text_col.setSpacing(2)
     title_lbl = QLabel(title)
-    title_lbl.setStyleSheet(f"font-size: 15px; font-weight: bold; color: {theme_color};")
+    title_lbl.setWordWrap(True)
+    title_lbl.setStyleSheet(
+        f"font-size: {get_typography_scale(settings).section_px}px; font-weight: 700; color: {tokens['text_primary']};"
+    )
     msg_lbl = QLabel(msg)
-    msg_lbl.setStyleSheet("font-size: 12px; color: #b0b8cc;")
+    msg_lbl.setWordWrap(True)
+    msg_lbl.setStyleSheet(
+        f"font-size: {metrics['base_font_pt']}px; color: {tokens['text_secondary']};"
+    )
     text_col.addWidget(title_lbl)
     text_col.addWidget(msg_lbl)
-    layout.addLayout(text_col)
+    layout.addLayout(text_col, 1)
+    popup.adjustSize()
 
     # Position: bottom-right of the screen, above the taskbar
-    screen = QApplication.primaryScreen()
     if screen is not None:
         sg = screen.availableGeometry()
         x = sg.right() - popup.width() - 24
@@ -567,10 +591,13 @@ def _announce_phase_change(app, title: str, msg: str, icon: str) -> None:
     else:
         x, y = 1060, 960
     popup.move(x, y)
+    _active_phase_toasts.add(popup)
+    popup.destroyed.connect(lambda: _active_phase_toasts.discard(popup))
     popup.show()
 
     # Fade-out after 3 s display
     opacity_effect = QGraphicsOpacityEffect(popup)
+    opacity_effect.setOpacity(1.0)
     popup.setGraphicsEffect(opacity_effect)
 
     anim = QPropertyAnimation(opacity_effect, b"opacity")

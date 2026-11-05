@@ -1241,6 +1241,13 @@ def _apply_widget_dialog_tokens(
         "#3a4468": resolved_tokens["border"],
         "#5a7aaa": resolved_tokens.get("border_soft") or resolved_tokens["border"],
         "#111522": resolved_tokens.get("surface_top") or resolved_tokens["surface_bg"],
+        "font-size: 8pt;": f"font-size: {bundle['metrics']['subtitle_font_pt']}px;",
+        "font-size: 8.5pt;": f"font-size: {bundle['metrics']['subtitle_font_pt']}px;",
+        "font-size: 9pt;": f"font-size: {bundle['metrics']['subtitle_font_pt']}px;",
+        "font-size: 9.5pt;": f"font-size: {bundle['metrics']['base_font_pt']}px;",
+        "font-size: 10pt;": f"font-size: {bundle['metrics']['base_font_pt']}px;",
+        "font-size: 10.5pt;": f"font-size: {bundle['metrics']['base_font_pt']}px;",
+        "font-size: 12pt;": f"font-size: {bundle['metrics']['title_font_pt']}px;",
         "border-radius: 10px;": f"border-radius: {bundle['panel_radius']}px;",
         "border-radius: 8px;": f"border-radius: {bundle['hint_radius']}px;",
         "border-radius: 0 6px 6px 6px;": f"border-radius: 0 {bundle['tab_pane_radius']}px {bundle['tab_pane_radius']}px {bundle['tab_pane_radius']}px;",
@@ -1292,7 +1299,7 @@ def _overlay_hint_toggle_style(tokens: dict | None = None) -> str:
     text_secondary = bundle["tokens"]["text_secondary"]
     return (
         "QToolButton {"
-        f" color:{text_muted}; font-size:9pt; background:transparent;"
+        f" color:{text_muted}; font-size:{bundle['metrics']['subtitle_font_pt']}px; background:transparent;"
         " border:none; text-align:left; padding:4px 2px; }"
         f"QToolButton:hover {{ color:{text_secondary}; }}"
     )
@@ -1316,8 +1323,8 @@ def _overlay_preview_card_inline_style(metrics: dict | None = None) -> str:
 def _overlay_group_label_style(tokens: dict | None = None, metrics: dict | None = None) -> str:
     bundle = _overlay_dialog_style_bundle(tokens=tokens, metrics=metrics)
     color = bundle["tokens"].get("text_faint") or bundle["tokens"]["text_muted"]
-    font_pt = max(8, int(bundle["metrics"].get("subtitle_font_pt", 11)) - 3)
-    return f"color:{color}; font-size:{font_pt}pt;"
+    font_px = int(bundle["metrics"]["subtitle_font_pt"])
+    return f"color:{color}; font-size:{font_px}px;"
 
 
 # ---------------------------------------------------------------------------

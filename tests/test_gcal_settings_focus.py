@@ -239,6 +239,20 @@ def test_missing_auth_is_reported_on_the_current_import_page(focused_dialog):
     assert dialog._query_worker is None
 
 
+def test_auth_navigation_fits_its_label_and_keeps_the_section_action(focused_dialog):
+    dialog, parent, _ = focused_dialog
+    parent.gcal_sync.is_authenticated = False
+    dialog._switch_section(1)
+    dialog._load_accessible_calendars()
+    QApplication.processEvents()
+    button = dialog.go_to_auth_btn
+    assert button.isVisible()
+    assert button.width() >= button.sizeHint().width()
+    QTest.mouseClick(button, Qt.MouseButton.LeftButton)
+    assert dialog._stack.currentIndex() == 0
+    assert dialog._nav_btns[0].isChecked()
+
+
 def test_refresh_does_not_change_timezone_from_hidden_legacy_combo(focused_dialog):
     dialog, _, _ = focused_dialog
     dialog._populate_timezones("Asia/Seoul")
@@ -440,10 +454,19 @@ def test_auth_requires_verified_primary_before_replacing_credentials(
     module.QMessageBox.information.assert_not_called()
 
 
-def test_verified_auth_saves_token_and_completes_normal_ui(focused_dialog, monkeypatch):
+@pytest.mark.parametrize("all_imports_disabled", [False, True])
+def test_verified_auth_saves_token_and_completes_normal_ui(
+    focused_dialog, monkeypatch, all_imports_disabled
+):
     from calendar_app.infrastructure.google_sync import token_store
 
-    dialog, parent, _, save, calendars = _account_switch_fixture(focused_dialog, monkeypatch)
+    dialog, parent, rows, save, calendars = _account_switch_fixture(focused_dialog, monkeypatch)
+    if all_imports_disabled:
+        for row in rows:
+            if row["type"] == "gcal":
+                row["is_active"] = 0
+        dialog._calendar_import_selection.clear()
+        dialog._refresh_calendar_table()
     calendars[0]["id"] = "old@example.com"
     candidate = SimpleNamespace(
         _pending_token_json="synthetic token",
@@ -472,6 +495,12 @@ def test_verified_auth_saves_token_and_completes_normal_ui(focused_dialog, monke
     assert dialog._auth_calendars_loaded
     assert dialog.auth_btn.isEnabled() and not dialog.save_btn.isEnabled()
     assert dialog._stack.currentIndex() == 1
+    if all_imports_disabled:
+        assert module.t("gcal_ux.connected_choose_import") == dialog.connection_feedback.text()
+        first_check = next(iter(dialog._calendar_import_checks.values()))
+        assert not first_check.isChecked() and first_check.hasFocus()
+        QTest.keyClick(first_check, Qt.Key.Key_Space)
+        assert first_check.isChecked() and dialog.save_btn.isEnabled()
     module.QMessageBox.information.assert_not_called()
 
 

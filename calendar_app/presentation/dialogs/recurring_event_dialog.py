@@ -18,6 +18,8 @@ from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
     build_dialog_footer,
+    get_dialog_metric_tokens,
+    get_dialog_theme_tokens,
 )
 
 
@@ -55,12 +57,44 @@ class RecurringEventScopeDialog(QDialog):
             all_lbl = t("gcal.recurring.edit_all", "모든 일정 수정")
 
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
-        apply_common_dialog_style(self, minimum_width=360)
+        self.setObjectName("RecurringScopeDialog")
+        colors = get_dialog_theme_tokens()
+        metrics = get_dialog_metric_tokens(apply_overrides=True)
+        radius = int(metrics.get("field_radius", 10))
+        apply_common_dialog_style(
+            self,
+            minimum_width=380,
+            size=(440, 360),
+            extra_stylesheet=f"""
+                QDialog#RecurringScopeDialog QLabel#ScopeTitle {{
+                    color: {colors["text_primary"]};
+                    font-size: {int(metrics.get("base_font_pt", 14)) + 5}px;
+                    font-weight: 700;
+                }}
+                QDialog#RecurringScopeDialog QLabel#ScopeHint {{
+                    color: {colors["text_secondary"]};
+                }}
+                QDialog#RecurringScopeDialog QRadioButton {{
+                    padding: 8px 10px;
+                    border-radius: {radius}px;
+                }}
+                QDialog#RecurringScopeDialog QRadioButton:hover {{
+                    background: {colors["surface_hover"]};
+                }}
+                QDialog#RecurringScopeDialog QRadioButton:checked {{
+                    background: {colors["accent_soft_bg"]};
+                }}
+            """,
+        )
         apply_dialog_title(self, title)
 
         layout = QVBoxLayout(self)
-        layout.setSpacing(10)
-        layout.setContentsMargins(14, 10, 14, 10)
+        layout.setSpacing(8)
+        layout.setContentsMargins(20, 18, 20, 18)
+
+        heading = QLabel(title)
+        heading.setObjectName("ScopeTitle")
+        layout.addWidget(heading)
 
         info_label = QLabel(
             t(
@@ -68,6 +102,7 @@ class RecurringEventScopeDialog(QDialog):
                 "이 일정은 반복 일정입니다. 수정/삭제 범위를 선택하세요.",
             )
         )
+        info_label.setObjectName("ScopeHint")
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
 
@@ -92,8 +127,15 @@ class RecurringEventScopeDialog(QDialog):
         layout.addWidget(sep)
 
         footer, ok_btn, cancel_btn = build_dialog_footer(
-            t("btn.ok", "확인"), t("btn.cancel", "취소")
+            t("common.delete", "삭제") if self._mode == "delete" else t("common.edit", "수정"),
+            t("btn.cancel", "취소"),
+            ok_object_name="danger_btn" if self._mode == "delete" else "primary_btn",
         )
+        if self._mode == "delete":
+            ok_btn.setAutoDefault(False)
+            ok_btn.setDefault(False)
+            cancel_btn.setDefault(True)
+            cancel_btn.setAutoDefault(True)
         ok_btn.clicked.connect(self._on_accept)
         cancel_btn.clicked.connect(self.reject)
         layout.addLayout(footer)

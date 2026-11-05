@@ -12,6 +12,10 @@ from calendar_app.application.calendar_provider_catalog import CALDAV_SERVICES
 from calendar_app.infrastructure.google_sync.common import ensure_gcal_startup_defaults
 from calendar_app.presentation.main_window.ui_builder import setup_idle_lock_ui, setup_main_ui
 from calendar_app.preset_manager import PresetManager
+from calendar_app.shared.calendar_display_settings import (
+    read_weekday_display_mode,
+    weekday_display_flags,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +47,12 @@ def initialize_overlay_app(app) -> None:
     app._resize_dir = None
     app._screen_fill_active = False
     app._last_clicked_date = None
+    app.left_panel_mode = app.settings.value("left_panel_mode", "today", type=str)
     app.cal_show_weekends = app.settings.value("cal_show_weekends", True, type=bool)
     app.cal_start_monday = app.settings.value("cal_start_monday", True, type=bool)
     app.cal_show_month = app.settings.value("cal_show_month", False, type=bool)
-    app.cal_show_weekday = app.settings.value("cal_show_weekday", False, type=bool)
+    app.cal_weekday_display_mode = read_weekday_display_mode(app.settings)
+    app.cal_show_weekday = weekday_display_flags(app.cal_weekday_display_mode)[1]
     app.view_mode_state = app.settings.value("view_mode_state", "monthly", type=str)
     app.cal_week_layout = app.settings.value("cal_week_layout", "time", type=str)
     app.setMouseTracking(True)
@@ -72,6 +78,7 @@ def initialize_overlay_app(app) -> None:
     app._unified_widget_controller = None
     app._panel_widget_mode_controller = None
     app._welcome_banner = None
+    app.navigation_rail = None
 
     app.gcal_sync = None
     app._gcal_sync_issue_count = 0

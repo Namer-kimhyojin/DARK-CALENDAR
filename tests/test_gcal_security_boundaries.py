@@ -154,7 +154,9 @@ def test_authentication_constructs_s256_pkce_without_network(monkeypatch, tmp_pa
         captured.update(
             query=parse_qs(urlsplit(url).query), verifier=flow.code_verifier, state=state
         )
-        return SimpleNamespace(valid=True, to_json=lambda: "{}")
+        return SimpleNamespace(
+            valid=True, scopes=service.SCOPES, refresh_token="synthetic", to_json=lambda: "{}"
+        )
 
     monkeypatch.setattr(service, "run_desktop_auth", local_auth)
     monkeypatch.setattr(service, "build", lambda *args, **kwargs: object())

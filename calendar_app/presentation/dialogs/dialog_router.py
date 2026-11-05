@@ -4,7 +4,7 @@
 import logging
 import time
 
-from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox, QWidget
 
 from calendar_app.app_metadata import APP_AUTHOR, APP_EMAIL, APP_VERSION
 from calendar_app.infrastructure.i18n import (
@@ -15,6 +15,27 @@ from calendar_app.infrastructure.i18n import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _bind_task_dialog_modal_owner(dialog, app_context):
+    """Keep business callbacks on the app while stacking above the invoking modal."""
+    if not isinstance(dialog, QDialog) or not isinstance(app_context, QWidget):
+        return
+    owner = QApplication.activeModalWidget()
+    if owner is None or owner is dialog or owner is app_context or not owner.isVisible():
+        return
+    ancestor = owner
+    while ancestor is not None and ancestor is not app_context:
+        ancestor = ancestor.parentWidget()
+    if ancestor is not app_context:
+        return
+    # QWindow's transient parent is the native top-level owner. QObject/QWidget
+    # parenting stays on app_context for editing locks, settings and callbacks.
+    dialog.winId()
+    owner.winId()
+    handle, owner_handle = dialog.windowHandle(), owner.windowHandle()
+    if handle is not None and owner_handle is not None:
+        handle.setTransientParent(owner_handle)
 
 
 _DIALOG_ROUTE_MAP = {
@@ -241,6 +262,7 @@ class DialogActionsMixin:
             )
             if hasattr(dlg, "task_added"):
                 dlg.task_added.connect(self.handle_task_added)
+            _bind_task_dialog_modal_owner(dlg, self)
             return dlg.exec()
         finally:
             if guard_started:
@@ -271,6 +293,7 @@ class DialogActionsMixin:
             if hasattr(dlg, "tabs") and tab_index > 0:
                 dlg.tabs.setCurrentIndex(tab_index)
 
+            _bind_task_dialog_modal_owner(dlg, self)
             result = dlg.exec()
             self._refresh_all_panels()
             if result == QDialog.DialogCode.Accepted and task_type != "routine":

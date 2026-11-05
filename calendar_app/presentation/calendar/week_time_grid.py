@@ -9,8 +9,8 @@ from html import escape
 import math
 import re
 
-from PyQt6.QtCore import QDate, QEvent, QPointF, QRectF, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QPainter, QPalette, QPen
+from PyQt6.QtCore import QDate, QEvent, QLocale, QPointF, QRectF, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPalette, QPen
 from PyQt6.QtWidgets import QApplication, QFrame, QMenu, QScrollArea, QVBoxLayout, QWidget
 
 from calendar_app.application.week_planner_usecases import (
@@ -18,6 +18,12 @@ from calendar_app.application.week_planner_usecases import (
     scheduling_block_reason,
 )
 from calendar_app.infrastructure.i18n import t
+from calendar_app.shared.calendar_display_settings import (
+    normalize_weekday_display_mode,
+    weekday_display_flags,
+)
+from calendar_app.shared.color_utils import contrast_safe_color
+from calendar_app.shared.typography import get_typography_scale
 from calendar_app.shared.ui_tokens import get_ui_tokens
 
 
@@ -177,8 +183,8 @@ class WeekTimeGrid(QWidget):
 
     GUTTER = 62
     HOUR_HEIGHT = 72
-    HEADER_HEIGHT = 52
-    ALL_DAY_ROW = 26
+    HEADER_HEIGHT = 64
+    ALL_DAY_ROW = 30
     SNAP = 15
 
     def __init__(self, parent=None):
@@ -195,6 +201,7 @@ class WeekTimeGrid(QWidget):
             )
         )
         self._dates: list[QDate] = []
+        self._weekday_display_mode = "header"
         self._segments: list[_Segment] = []
         self._all_day: list[_Segment] = []
         self._timed_rects: list[tuple[_Segment, QRectF]] = []
@@ -284,6 +291,7 @@ class WeekTimeGrid(QWidget):
         days=7,
         dates: list[QDate] | None = None,
         tokens=None,
+        weekday_display_mode="header",
     ):
         self._cancel()
         if not isinstance(start_date, QDate) or not start_date.isValid():
@@ -297,6 +305,7 @@ class WeekTimeGrid(QWidget):
                 self._dates.append(QDate(date))
         if not self._dates:
             raise ValueError("At least one visible date is required")
+        self._weekday_display_mode = normalize_weekday_display_mode(weekday_display_mode) or "header"
         self.set_selected_date(self._selected_date)
         self.apply_theme(tokens)
         self._segments = []
@@ -455,6 +464,7 @@ class WeekTimeGrid(QWidget):
         return max(1.0, (self._timeline.width() - self.GUTTER) / max(1, len(self._dates)))
 
     def _relayout(self):
+        self._fit_typography_geometry()
         width = max(self.GUTTER + len(self._dates) * 24, self._scroll.viewport().width())
         if self._timeline.width() != width:
             self._timeline.setFixedWidth(width)
@@ -507,6 +517,8 @@ class WeekTimeGrid(QWidget):
             self, "_gesture"
         ):
             self._cancel()
+        if event.type() == QEvent.Type.FontChange and hasattr(self, "_scroll"):
+            QTimer.singleShot(0, self._relayout)
         return super().event(event)
 
     def _color(self, key: str, role=QPalette.ColorRole.WindowText) -> QColor:
@@ -518,6 +530,35 @@ class WeekTimeGrid(QWidget):
 
     def _reading_surface(self) -> QColor:
         return self._color("content_bg", QPalette.ColorRole.Window)
+
+    def _role_font(self, role="body", *, weight=None) -> QFont:
+        font = QFont(self.font())
+        base = font.pointSizeF()
+        if base <= 0:
+            base = font.pixelSize() * 72 / self.logicalDpiY()
+        scale = get_typography_scale(base_pt=base)
+        font.setPointSizeF(getattr(scale, role + "_pt"))
+        if weight is not None:
+            font.setWeight(weight)
+        return font
+
+    def _fit_typography_geometry(self):
+        caption = QFontMetrics(self._role_font("caption"))
+        section = QFontMetrics(self._role_font("section"))
+        body = QFontMetrics(self._role_font())
+        show_header, _inline = weekday_display_flags(self._weekday_display_mode)
+        self.HEADER_HEIGHT = max(
+            32, section.height() + (caption.height() + 2 if show_header else 0) + 10
+        )
+        self.ALL_DAY_ROW = max(30, body.height() + 8)
+        self.GUTTER = max(62, caption.horizontalAdvance("00:00") + 18)
+        self._header.setFixedHeight(self.HEADER_HEIGHT)
+        rows = max(
+            (sum(item.day == day for item in self._all_day) for day in range(len(self._dates))),
+            default=0,
+        )
+        self._all_day_canvas.setMinimumHeight(max(1, rows) * self.ALL_DAY_ROW + 8)
+        self._all_day_scroll.setFixedHeight(min(max(1, rows), 3) * self.ALL_DAY_ROW + 8)
 
     def paintEvent(self, event):
         # Paint once, rather than once each for the scroll area, viewport and
@@ -534,39 +575,76 @@ class WeekTimeGrid(QWidget):
         primary, muted = self._color("text_primary"), self._color("text_muted")
         column = self._column_width()
         if role == "header":
+            active_text = QColor(contrast_safe_color(accent, self._reading_surface(), minimum=4.5))
+            show_header, show_inline = weekday_display_flags(self._weekday_display_mode)
+            caption_font = self._role_font("caption")
+            caption_metrics = QFontMetrics(caption_font)
             for index, date in enumerate(self._dates):
                 x = self.GUTTER + index * column
                 current = date == QDate.currentDate()
                 selected = date == self._selected_date
-                if selected:
+                if selected or current:
                     highlight = QColor(accent)
-                    highlight.setAlpha(24)
-                    painter.fillRect(
-                        QRectF(x + 2, 2, column - 4, self.HEADER_HEIGHT - 4), highlight
+                    highlight.setAlpha(28 if selected else 12)
+                    tile_width = max(1.0, min(column - 12, 72))
+                    tile = QRectF(
+                        x + (column - tile_width) / 2, 4, tile_width, self.HEADER_HEIGHT - 9
                     )
-                    painter.setPen(QPen(accent, 2))
+                    outline = QColor(accent)
+                    outline.setAlpha(110 if selected else 55)
+                    painter.setPen(QPen(outline, 1))
+                    painter.setBrush(highlight)
+                    painter.drawRoundedRect(tile, 12, 12)
+                if selected:
+                    marker = QPen(accent, 2)
+                    marker.setCapStyle(Qt.PenCapStyle.RoundCap)
+                    painter.setPen(marker)
                     painter.drawLine(
-                        QPointF(x + 10, self.HEADER_HEIGHT - 4),
-                        QPointF(x + column - 10, self.HEADER_HEIGHT - 4),
+                        QPointF(x + column / 2 - 9, self.HEADER_HEIGHT - 4),
+                        QPointF(x + column / 2 + 9, self.HEADER_HEIGHT - 4),
                     )
-                painter.setPen(accent if current else muted)
-                small = QFont(self.font())
-                small.setPointSizeF(max(8, self.font().pointSizeF() - 1))
-                painter.setFont(small)
-                weekdays = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-                label = t(
-                    f"weekday.{weekdays[date.dayOfWeek() - 1]}",
-                    ("월", "화", "수", "목", "금", "토", "일")[date.dayOfWeek() - 1],
+                painter.setPen(active_text if current or selected else muted)
+                painter.setFont(caption_font)
+                weekday = QLocale().dayName(date.dayOfWeek(), QLocale.FormatType.ShortFormat)
+                date_y = 4
+                if show_header:
+                    painter.drawText(
+                        QRectF(x, 4, column, caption_metrics.height()),
+                        Qt.AlignmentFlag.AlignCenter,
+                        weekday,
+                    )
+                    date_y += caption_metrics.height() + 2
+                number = self._role_font(
+                    "section",
+                    weight=QFont.Weight.DemiBold if current or selected else QFont.Weight.Medium,
                 )
-                painter.drawText(QRectF(x, 4, column, 17), Qt.AlignmentFlag.AlignCenter, str(label))
-                number = QFont(self.font())
-                number.setPointSizeF(max(11, self.font().pointSizeF() + 2))
-                number.setBold(current)
                 painter.setFont(number)
-                painter.setPen(accent if current else primary)
+                painter.setPen(active_text if current or selected else primary)
+                number_metrics = painter.fontMetrics()
+                number_text = QLocale().toString(date, "d")
+                number_width = number_metrics.horizontalAdvance(number_text)
+                inline_text = ""
+                if show_inline:
+                    inline_text = caption_metrics.elidedText(
+                        f"({weekday})", Qt.TextElideMode.ElideRight,
+                        max(0, round(column - number_width - 20)),
+                    )
+                inline_width = caption_metrics.horizontalAdvance(inline_text)
+                gap = 4 if inline_text else 0
+                number_x = x + (column - number_width - inline_width - gap) / 2
                 painter.drawText(
-                    QRectF(x, 21, column, 25), Qt.AlignmentFlag.AlignCenter, str(date.day())
+                    QRectF(number_x, date_y, number_width, number_metrics.height() + 2),
+                    Qt.AlignmentFlag.AlignCenter,
+                    number_text,
                 )
+                if inline_text:
+                    painter.setFont(caption_font)
+                    painter.setPen(active_text if current or selected else muted)
+                    painter.drawText(
+                        QRectF(number_x + number_width + gap, date_y, inline_width, number_metrics.height() + 2),
+                        Qt.AlignmentFlag.AlignCenter,
+                        inline_text,
+                    )
             painter.setPen(QPen(border, 1))
             painter.drawLine(
                 QPointF(0, self.HEADER_HEIGHT - 1),
@@ -575,14 +653,20 @@ class WeekTimeGrid(QWidget):
             return
         if role == "all_day":
             painter.setPen(muted)
-            painter.setFont(self.font())
+            painter.setFont(self._role_font("caption"))
             painter.drawText(
                 QRectF(0, 4, self.GUTTER - 8, self.ALL_DAY_ROW - 4),
                 Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
                 t("week_planner.all_day", "종일"),
             )
+            painter.setPen(QPen(border, 1))
+            painter.drawLine(
+                QPointF(0, self._all_day_canvas.height() - 1),
+                QPointF(self._all_day_canvas.width(), self._all_day_canvas.height() - 1),
+            )
             rects = self._all_day_rects
         else:
+            painter.setFont(self._role_font("caption"))
             for index, date in enumerate(self._dates):
                 if date == QDate.currentDate():
                     today_tint = QColor(accent)
@@ -598,7 +682,7 @@ class WeekTimeGrid(QWidget):
                 strong = minute % 60 == 0
                 line_color = QColor(border)
                 if not strong:
-                    line_color.setAlphaF(border.alphaF() * 0.22)
+                    line_color.setAlphaF(border.alphaF() * (0.44 if minute % 30 == 0 else 0.18))
                 painter.setPen(QPen(line_color, 1))
                 painter.drawLine(QPointF(self.GUTTER, y), QPointF(self._timeline.width(), y))
                 if strong:
@@ -606,9 +690,12 @@ class WeekTimeGrid(QWidget):
                     painter.drawText(
                         QRectF(
                             0,
-                            max(self._scroll.verticalScrollBar().value(), y - 9),
+                            max(
+                                self._scroll.verticalScrollBar().value(),
+                                y - painter.fontMetrics().height() / 2,
+                            ),
                             self.GUTTER - 9,
-                            18,
+                            painter.fontMetrics().height(),
                         ),
                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
                         _time_text(minute),
@@ -647,16 +734,14 @@ class WeekTimeGrid(QWidget):
             QPen(accent if selected else _mix(identity, surface, 0.44), 1.5 if selected else 0.8)
         )
         painter.setBrush(fill)
-        painter.drawRoundedRect(rect, 4, 4)
+        painter.drawRoundedRect(rect, 8, 8)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(identity)
         painter.drawRoundedRect(QRectF(rect.left(), rect.top(), 3, rect.height()), 1, 1)
         painter.save()
         painter.setClipRect(rect.adjusted(5, 0, -3, 0))
         painter.setPen(self._color("text_primary"))
-        font = QFont(self.font())
-        font.setPointSizeF(max(8, self.font().pointSizeF() - 0.5))
-        font.setBold(selected)
+        font = self._role_font(weight=QFont.Weight.DemiBold)
         painter.setFont(font)
         title = str(
             item.task.get("name")
@@ -666,17 +751,27 @@ class WeekTimeGrid(QWidget):
         title = painter.fontMetrics().elidedText(
             title, Qt.TextElideMode.ElideRight, max(1, round(rect.width() - 12))
         )
+        title_height = painter.fontMetrics().height()
+        time_font = self._role_font("caption")
+        time_height = QFontMetrics(time_font).height()
+        show_time = not item.all_day and rect.height() >= title_height + time_height + 9
         painter.drawText(
             rect.adjusted(7, 0, -4, 0)
-            if rect.height() < 32
-            else QRectF(rect.left() + 7, rect.top() + 3, rect.width() - 11, 19),
+            if not show_time
+            else QRectF(rect.left() + 7, rect.top() + 3, rect.width() - 11, title_height),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             title,
         )
-        if not item.all_day and rect.height() >= 36:
+        if show_time:
+            painter.setFont(time_font)
             painter.setPen(self._color("text_secondary"))
             painter.drawText(
-                QRectF(rect.left() + 7, rect.top() + 21, rect.width() - 11, 17),
+                QRectF(
+                    rect.left() + 7,
+                    rect.top() + title_height + 5,
+                    rect.width() - 11,
+                    time_height,
+                ),
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                 _fitted_time_text(item.start, item.end, painter.fontMetrics(), rect.width() - 12),
             )
@@ -710,7 +805,7 @@ class WeekTimeGrid(QWidget):
                 column - 6,
                 max(14, height - 2),
             )
-            painter.drawRoundedRect(rect, 4, 4)
+            painter.drawRoundedRect(rect, 8, 8)
             caption = rect.adjusted(4, 2, -4, -2)
             caption.setHeight(min(caption.height(), 39 if rect.height() >= 36 else 18))
             painter.setPen(Qt.PenStyle.NoPen)

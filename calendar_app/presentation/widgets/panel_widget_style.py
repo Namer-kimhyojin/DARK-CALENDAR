@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Premium widget-mode stylesheet helpers.
 
 The widget mode leans on a layered editorial card language:
@@ -13,7 +14,7 @@ import re
 
 from PyQt6.QtGui import QColor
 
-from calendar_app.shared.theme_snapshot import build_widget_mode_tokens
+from calendar_app.presentation.widgets.widget_mode_theme import main_widget_mode_tokens
 
 _RGBA_RE = re.compile(
     r"^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([0-9]*\.?[0-9]+)\s*\)$",
@@ -75,9 +76,8 @@ def resolve_tokens(
     settings=None,
     preset_name: str | None = None,
 ) -> dict[str, str]:
-    resolved = dict(
-        build_widget_mode_tokens(settings=settings, preset_name=preset_name or "Light Aqua Form")
-    )
+    del preset_name  # Legacy skins keep geometry while colors follow the main theme.
+    resolved = main_widget_mode_tokens(settings)
     if tokens:
         resolved.update(tokens)
     return resolved

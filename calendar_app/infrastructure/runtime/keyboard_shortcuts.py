@@ -239,7 +239,7 @@ SHORTCUTS: list[dict] = [
         "key": "Ctrl+Alt+Shift+Left",
         "group": "window",
         "label_ko": "이전 모니터로 이동",
-        "action": "move_to_next_monitor",
+        "action": "move_to_previous_monitor",
     },
     {
         "id": "monitor_right",
@@ -672,11 +672,18 @@ def search_shortcut_guide_entries(query: str) -> list[dict]:
     return [entry for _, _, entry in ranked]
 
 
-def _render_keycaps_html(key_sequence: str, *, accent: bool = False) -> str:
+def _render_keycaps_html(
+    key_sequence: str, *, accent: bool = False, tokens: dict | None = None
+) -> str:
     key_bg = "rgba(77,166,255,0.18)" if accent else "rgba(255,255,255,0.05)"
     key_border = "rgba(77,166,255,0.40)" if accent else "rgba(255,255,255,0.10)"
     key_text = "#eef6ff" if accent else "#d7e5f7"
     separator = "rgba(155, 177, 203, 0.68)"
+    if tokens:
+        key_bg = tokens.get("accent_soft_bg" if accent else "surface_item", key_bg)
+        key_border = tokens.get("accent_soft_border" if accent else "border_soft", key_border)
+        key_text = tokens.get("text_primary", key_text)
+        separator = tokens.get("text_muted", separator)
     parts: list[str] = []
     for idx, raw_part in enumerate(str(key_sequence or "").split("+")):
         part = html.escape(raw_part.strip() or "+")
@@ -693,8 +700,10 @@ def _render_keycaps_html(key_sequence: str, *, accent: bool = False) -> str:
     return "".join(parts)
 
 
-def render_keycaps_html(key_sequence: str, *, accent: bool = False) -> str:
-    return _render_keycaps_html(key_sequence, accent=accent)
+def render_keycaps_html(
+    key_sequence: str, *, accent: bool = False, tokens: dict | None = None
+) -> str:
+    return _render_keycaps_html(key_sequence, accent=accent, tokens=tokens)
 
 
 def _render_info_pill_html(text: str, *, accent: bool = False) -> str:
@@ -1126,10 +1135,6 @@ def register_all(app) -> None:
                     a.delete_selected_tasks()
 
             _register_on_hosts(key, _delete)
-
-        elif shortcut_id in ("monitor_left", "monitor_right"):
-            if hasattr(app, "move_to_next_monitor"):
-                _register_on_hosts(key, app.move_to_next_monitor)
 
         elif shortcut_id == "force_unlock":
             pass

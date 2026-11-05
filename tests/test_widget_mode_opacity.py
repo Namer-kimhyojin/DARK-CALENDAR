@@ -57,10 +57,12 @@ def test_legacy_opacity_is_background_only_and_invalid_values_are_safe():
     assert read_widget_opacities(settings) == (20, 0)
 
 
-def test_actual_render_keeps_text_alpha_independent_from_background(workspace):
+def test_actual_render_uses_main_alpha_and_preserves_unused_legacy_mode_values(workspace):
     host, coordinator, widget = workspace
     host.settings.setValue(TEXT_OPACITY_KEY, 100)
     host.settings.setValue(BACKGROUND_OPACITY_KEY, 100)
+    host.settings.setValue("last_opacity", 255)
+    host.settings.setValue("last_opacity_unit", "byte")
     coordinator.controller.force_refresh()
     _APP.processEvents()
     original_text = _render(widget.clock_label)
@@ -69,19 +71,25 @@ def test_actual_render_keeps_text_alpha_independent_from_background(workspace):
     coordinator.controller.force_refresh()
     _APP.processEvents()
     assert _render(widget.clock_label) == original_text
-    assert _render(widget).pixelColor(5, widget.height() // 2).alpha() == 0
+    assert _render(widget).pixelColor(5, widget.height() // 2) == original_bg
     assert original_bg.alpha() > 0
     host.settings.setValue(TEXT_OPACITY_KEY, 20)
     coordinator.controller.force_refresh()
     _APP.processEvents()
-    assert _max_alpha(_render(widget.clock_label)) < _max_alpha(original_text) * 0.3
+    assert _render(widget.clock_label) == original_text
+    host.settings.setValue("last_opacity", 0)
+    coordinator.controller.refresh_theme()
+    _APP.processEvents()
+    assert _render(widget).pixelColor(5, widget.height() // 2).alpha() == 0
+    assert host.settings.value(TEXT_OPACITY_KEY) == 20
+    assert host.settings.value(BACKGROUND_OPACITY_KEY) == 0
     assert widget.windowOpacity() == 1.0
-    assert "51)" in widget.cal_grid._buttons[0].styleSheet()
 
 
 def test_month_calendar_cells_follow_background_opacity(workspace):
     host, coordinator, widget = workspace
-    host.settings.setValue(BACKGROUND_OPACITY_KEY, 0)
+    host.settings.setValue("last_opacity", 0)
+    host.settings.setValue("last_opacity_unit", "byte")
     coordinator.controller.set_layout("dashboard")
     widget._style_signature = None
     widget.apply_theme()
@@ -102,32 +110,28 @@ def test_month_calendar_cells_follow_background_opacity(workspace):
     assert "background: transparent" in widget.cal_grid.month_calendar.styleSheet()
 
 
-def test_preview_cancel_and_apply_restore_independent_values(workspace, tmp_path):
+def test_preview_and_apply_keep_legacy_values_while_transparency_follows_main(workspace, tmp_path):
     host, coordinator, widget = workspace
     path = str(tmp_path / "opacity.ini")
     host.settings = QSettings(path, QSettings.Format.IniFormat)
     host.settings.setValue("widget_mode_opacity", 71)
+    host.settings.setValue("last_opacity", 128)
+    host.settings.setValue("last_opacity_unit", "byte")
     dialog = WidgetCustomizationDialog(coordinator.controller, widget)
     assert dialog.text_opacity.value() == 100
-    assert dialog.background_opacity.value() == 71
-    before = dialog._preview_pixmap.toImage()
-    dialog.background_opacity.setValue(0)
-    assert dialog._preview_pixmap.toImage() != before
-    assert _render(dialog.preview).pixelColor(5, dialog.preview.height() // 2).alpha() == 0
-    clear_text = _max_alpha(_render(dialog.preview.clock_label))
-    dialog.text_opacity.setValue(35)
-    assert _max_alpha(_render(dialog.preview.clock_label)) < clear_text * 0.4
+    assert dialog.background_opacity.value() == 50
+    assert not dialog.background_opacity.isEnabled()
+    assert not dialog.text_opacity.isEnabled()
     assert host.settings.value(TEXT_OPACITY_KEY) is None
     assert host.settings.value(BACKGROUND_OPACITY_KEY) is None
     dialog.reject()
     dialog.deleteLater()
     dialog = WidgetCustomizationDialog(coordinator.controller, widget)
     assert read_widget_opacities(dialog.draft) == (100, 71)
-    dialog.background_opacity.setValue(25)
-    dialog.text_opacity.setValue(80)
     dialog._apply()
     restored = QSettings(path, QSettings.Format.IniFormat)
-    assert read_widget_opacities(restored) == (80, 25)
+    assert read_widget_opacities(restored) == (100, 71)
+    assert restored.value("last_opacity") == 128
     assert widget.windowOpacity() == 1.0
     assert "color:rgba(" in widget.styleSheet().replace(" ", "")
     assert _max_alpha(_render(widget.clock_label)) == _max_alpha(

@@ -5,7 +5,7 @@
 
 - **앱 이름**: Air Calendar
 - **플랫폼**: Windows 데스크톱 앱
-- **언어/프레임워크**: Python 3.x, PyQt6 6.10.2
+- **언어/프레임워크**: Python 3.x, PyQt6 6.12.0
 - **UI 언어**: 한국어 기본, i18n 지원 (`calendar_app/infrastructure/i18n.py`)
 - **진입점**: `main.py` → `calendar_app/bootstrap.py` → `OverlayApp`
 - **설정 저장**: `QSettings("kimhyojin", "Dark Calendar")`

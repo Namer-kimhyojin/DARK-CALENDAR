@@ -67,6 +67,8 @@ def test_disclosures_toggle_independently_and_update_their_action_labels(disclos
     assert hub.advanced.isHidden()
     assert not hub.more_services.isChecked()
     assert all(hub.service_cards[provider].isHidden() for provider in EXTRA_PROVIDERS)
+    assert hub.service_cards["ics"].isHidden()
+    assert not hub.service_cards["google"].isHidden()
 
     activate(ui, hub.advanced_toggle, action)
     assert hub.advanced_toggle.isChecked()
@@ -82,6 +84,7 @@ def test_disclosures_toggle_independently_and_update_their_action_labels(disclos
     assert hub.more_services.accessibleName() == hub.more_services.text()
     assert not hub.advanced.isHidden()
     assert all(not hub.service_cards[provider].isHidden() for provider in EXTRA_PROVIDERS)
+    assert not hub.service_cards["ics"].isHidden()
 
     activate(ui, hub.advanced_toggle, action)
     assert hub.advanced.isHidden()
@@ -129,6 +132,9 @@ def test_collapsing_additional_accounts_keeps_an_active_or_failed_service_visibl
     activate(ui, hub.more_services)
     assert not hub.more_services.isChecked()
     assert not hub.service_cards[provider].isHidden()
+    assert hub.service_layout.indexOf(hub.service_cards[provider]) < hub.service_layout.indexOf(
+        hub.more_services_header
+    )
     assert hub.labels[provider].text()
     assert all(
         hub.service_cards[other].isHidden() for other in EXTRA_PROVIDERS if other != provider
@@ -143,6 +149,7 @@ def test_all_connected_services_hide_only_the_additional_accounts_header(disclos
         ui.host.settings.setValue(
             prefix_for(provider) + "account_id", "fixture-account-" + provider
         )
+    ui.add_calendar("ics::fixture")
     ui.coordinator.refresh()
     assert hub.more_services_header.isHidden()
     assert all(not hub.service_cards[provider].isHidden() for provider in EXTRA_PROVIDERS)

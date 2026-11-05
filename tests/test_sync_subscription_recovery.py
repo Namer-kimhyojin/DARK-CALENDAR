@@ -337,6 +337,18 @@ def test_stopping_clears_pending_refresh_without_restarting_a_worker(subscriptio
     assert ui.coordinator.ics_worker is None
 
 
+def test_worker_cancellation_does_not_restart_with_queued_subscription(subscriptions):
+    ui, created = subscriptions.ui, subscriptions.created
+    assert ui.coordinator.sync_ics(force=True, calendar_ids=["ics::first"])
+    assert ui.coordinator.sync_ics(force=True, calendar_ids=["ics::second"])
+    created[0].requestInterruption()
+    created[0].finish()
+
+    assert len(created) == 1
+    assert ui.coordinator.ics_worker is None
+    assert not ui.host._bg_workers
+
+
 def test_automatic_or_full_duplicate_requests_do_not_schedule_an_extra_round(subscriptions):
     ui, created = subscriptions.ui, subscriptions.created
     assert ui.coordinator.sync_ics(force=True, calendar_ids=["ics::first"])

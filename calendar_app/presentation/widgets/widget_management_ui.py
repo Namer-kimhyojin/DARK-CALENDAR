@@ -155,6 +155,8 @@ class WidgetModeManagementPanel(QWidget):
 
     def __init__(self, owner, parent=None):
         super().__init__(parent)
+        self.setObjectName("hubModeBody")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         self.owner = owner
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 16, 20, 16)

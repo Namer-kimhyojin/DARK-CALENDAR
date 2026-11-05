@@ -25,8 +25,24 @@ from calendar_app.application import routine_advanced_service as routine_service
 from calendar_app.infrastructure.db import checklist_repo, common_repo
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
-from calendar_app.presentation.dialogs.dialog_styles import apply_common_dialog_style
+from calendar_app.presentation.dialogs.dialog_styles import (
+    apply_common_dialog_style,
+    get_dialog_theme_tokens,
+)
 from calendar_app.presentation.dialogs.time_picker_widget import DatePickerWidget
+from calendar_app.shared.color_utils import parse_css_color
+
+
+def _routine_bulk_row_colors(tokens=None):
+    tokens = {**get_dialog_theme_tokens(), **(tokens or {})}
+    accent_text = tokens["success_hex"]
+    return {
+        "low": parse_css_color(tokens["text_secondary"]),
+        "normal": QColor(accent_text),
+        "high": QColor(accent_text),
+        "urgent": QColor(accent_text),
+        "completed": QColor(accent_text),
+    }
 
 
 class RoutineBulkOperationsDialog(QDialog):
@@ -333,6 +349,9 @@ class RoutineBulkOperationsDialog(QDialog):
         routines = routine_service.search_routines(cycle_type=cycle_type, is_completed=is_completed)
 
         self.bulk_table.setRowCount(0)
+        row_colors = _routine_bulk_row_colors(
+            get_dialog_theme_tokens(settings=getattr(self.parentWidget(), "settings", None))
+        )
 
         for routine in routines:
             row = self.bulk_table.rowCount()
@@ -390,14 +409,7 @@ class RoutineBulkOperationsDialog(QDialog):
 
             priority_item = QTableWidgetItem(priority)
 
-            priority_colors = {
-                "low": QColor(100, 100, 100),
-                "normal": QColor(77, 166, 255),
-                "high": QColor(255, 157, 77),
-                "urgent": QColor(255, 77, 77),
-            }
-
-            color = priority_colors.get(routine.get("priority", "normal"))
+            color = row_colors.get(routine.get("priority", "normal"))
 
             if color:
                 priority_item.setForeground(color)
@@ -417,7 +429,7 @@ class RoutineBulkOperationsDialog(QDialog):
             status_item = QTableWidgetItem(status)
 
             if is_completed:
-                status_item.setForeground(QColor(77, 255, 77))
+                status_item.setForeground(row_colors["completed"])
 
             self.bulk_table.setItem(row, 5, status_item)
 

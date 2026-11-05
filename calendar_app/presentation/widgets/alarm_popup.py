@@ -13,12 +13,15 @@ from PyQt6.QtCore import QDate, QLocale, QSettings, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QCursor, QPainter, QPainterPath
 from PyQt6.QtWidgets import (
     QApplication,
+    QBoxLayout,
     QFrame,
     QHBoxLayout,
     QLabel,
     QMenu,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
+    QStyle,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -26,9 +29,11 @@ from PyQt6.QtWidgets import (
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_styles import get_dialog_metric_tokens
+from calendar_app.shared.color_utils import contrasting_text_color
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
-from calendar_app.shared.ui_tokens import get_ui_tokens
+from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.ui_tokens import get_modal_ui_tokens as get_ui_tokens
 
 # ── Design constants ──────────────────────────────────────────────────────────
 _W_BASE = 440  # logical pixels at 96 DPI — scaled at runtime via _popup_width()
@@ -39,7 +44,6 @@ _ACCENT_WARN = QColor(255, 140, 60)  # orange — soon / overdue
 _ACCENT_OK = QColor(46, 204, 113)  # green — confirmed
 _ACCENT_ERROR = QColor(231, 76, 60)  # red — error/issue
 
-_MIN_TEXT_PT = 11
 _BLACK = QColor(0, 0, 0)
 _WHITE = QColor(255, 255, 255)
 _DEFAULT_CARD_BG = QColor(22, 22, 27)
@@ -56,7 +60,8 @@ def _popup_width() -> int:
         screen = QApplication.primaryScreen()
         if screen:
             dpi_scale = screen.logicalDotsPerInch() / 96.0
-            return int(max(340, min(640, _W_BASE * dpi_scale)))
+            preferred = int(max(340, min(640, _W_BASE * dpi_scale)))
+            return min(preferred, max(240, screen.availableGeometry().width() - 32))
     except Exception:
         pass
     return _W_BASE
@@ -124,20 +129,16 @@ def _composite_opaque_css_color(value: object, fallback: object) -> str:
 
 
 def _get_contrast_text_color(bg_color: QColor) -> str:
-    """Return black or white text depending on background luminance."""
-    # Standard luminance calculation: 0.299*R + 0.587*G + 0.114*B
-    luminance = (
-        0.299 * bg_color.red() + 0.587 * bg_color.green() + 0.114 * bg_color.blue()
-    ) / 255.0
-    return (
-        _BLACK.name(QColor.NameFormat.HexRgb)
-        if luminance > 0.6
-        else _WHITE.name(QColor.NameFormat.HexRgb)
-    )
+    """Use the same accent contrast policy as common dialog actions."""
+    return contrasting_text_color(bg_color)
 
 
 def _alarm_popup_style_bundle(tokens=None, metrics=None, settings=None) -> dict:
-    resolved_tokens = dict(get_ui_tokens(settings=settings, opacity_factor=1.0))
+    resolved_tokens = dict(
+        get_ui_tokens(
+            settings=settings, theme_color=(tokens or {}).get("accent"), opacity_factor=1.0
+        )
+    )
     if tokens:
         resolved_tokens.update(tokens)
     resolved_metrics = dict(get_dialog_metric_tokens(settings=settings))
@@ -163,7 +164,7 @@ def _alarm_popup_style_bundle(tokens=None, metrics=None, settings=None) -> dict:
     button_radius = max(6, int(resolved_metrics.get("button_radius", 5)) + 1)
     menu_radius = max(6, int(resolved_metrics.get("list_radius", 6)))
     menu_item_radius = max(4, int(resolved_metrics.get("list_item_radius", 4)))
-    text_pt = max(_MIN_TEXT_PT, int(resolved_metrics.get("subtitle_font_pt", _MIN_TEXT_PT)))
+    text_px = int(resolved_metrics["subtitle_font_pt"])
     card_bg = _opaque_css_color(resolved_tokens.get("bg_main"), _DEFAULT_CARD_BG)
     card_surface = _opaque_css_color(resolved_tokens.get("bg_alt"), card_bg)
     card_hover = _composite_opaque_css_color(
@@ -194,8 +195,9 @@ def _alarm_popup_style_bundle(tokens=None, metrics=None, settings=None) -> dict:
         "button_radius": button_radius,
         "menu_radius": menu_radius,
         "menu_item_radius": menu_item_radius,
-        "text_pt": text_pt,
-        "title_pt": max(13, int(resolved_metrics.get("title_font_pt", 15)) - 2),
+        "text_px": text_px,
+        "body_px": int(resolved_metrics["base_font_pt"]),
+        "title_px": int(resolved_metrics["title_font_pt"]),
         "card_bg": card_bg,
         "card_border": card_border,
         "card_surface": card_surface,
@@ -204,6 +206,8 @@ def _alarm_popup_style_bundle(tokens=None, metrics=None, settings=None) -> dict:
         "text_secondary": resolved_tokens["text_secondary"],
         "text_muted": resolved_tokens["text_muted"],
         "text_on_accent": text_on_accent,
+        "text_on_accent_hover": _get_contrast_text_color(accent_hover),
+        "text_on_accent_pressed": _get_contrast_text_color(accent_pressed),
         "accent": accent,
         "accent_hover": accent_hover,
         "accent_pressed": accent_pressed,
@@ -221,8 +225,7 @@ QMenu {{
     border: 1px solid {bundle["card_border"]};
     border-radius: {bundle["menu_radius"]}px;
     padding: 4px;
-    font-family: 'Segoe UI Emoji', 'Malgun Gothic', 'Segoe UI', sans-serif;
-    font-size: {bundle["text_pt"]}pt;
+    font-size: {bundle["text_px"]}px;
     color: {bundle["text_primary"]};
 }}
 QMenu::item {{
@@ -244,34 +247,50 @@ QWidget#AlarmPopupRoot {{
 QFrame#AlarmCard {{
     /* background: {bundle.get("card_bg_source", "")}; */
     background: {bundle["card_bg"]};
+    background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
+        stop:0 {bundle["card_bg"]}, stop:1 {bundle["card_surface"]});
     border: 1px solid {bundle["card_border"]};
     border-radius: {bundle["card_radius"]}px;
 }}
-QWidget#AlarmContent {{
+QWidget#AlarmContent, QWidget#AlarmBody {{
     background: transparent;
 }}
+QScrollArea#AlarmBodyScroll, QScrollArea#AlarmBodyScroll > QWidget > QWidget {{
+    background: transparent; border: none;
+}}
+QScrollArea#AlarmBodyScroll QScrollBar:vertical {{
+    background: transparent; width: 8px; margin: 0px;
+}}
+QScrollArea#AlarmBodyScroll QScrollBar::handle:vertical {{
+    background: {bundle["card_border"]}; min-height: 24px; border-radius: 4px;
+}}
+QScrollArea#AlarmBodyScroll QScrollBar::add-line:vertical,
+QScrollArea#AlarmBodyScroll QScrollBar::sub-line:vertical {{ height: 0px; }}
 QLabel#AlarmIcon {{
     color: {bundle["accent"].name(QColor.NameFormat.HexRgb)};
     font-size: 16px;
     background: transparent;
 }}
+QLabel#AlarmHeading {{
+    color: {bundle["text_secondary"]};
+    font-size: {bundle["text_px"]}px;
+    font-weight: 600;
+    background: transparent;
+}}
 QLabel#TaskTitle {{
     color: {bundle["text_primary"]};
-    font-family: 'Malgun Gothic', 'Segoe UI', sans-serif;
-    font-size: {bundle["title_pt"]}pt;
+    font-size: {bundle["title_px"]}px;
     font-weight: bold;
     background: transparent;
 }}
 QLabel#TimeLabel {{
     color: {bundle["text_secondary"]};
-    font-family: 'Malgun Gothic', 'Segoe UI', sans-serif;
-    font-size: {bundle["text_pt"]}pt;
+    font-size: {bundle["text_px"]}px;
     background: transparent;
 }}
-QLabel#LocationLabel {{
+QLabel#LocationLabel, QLabel#AlarmDate {{
     color: {bundle["text_muted"]};
-    font-family: 'Segoe UI Emoji', 'Malgun Gothic', 'Segoe UI', sans-serif;
-    font-size: {bundle["text_pt"]}pt;
+    font-size: {bundle["text_px"]}px;
     background: transparent;
 }}
 QPushButton#ConfirmBtn {{
@@ -279,8 +298,7 @@ QPushButton#ConfirmBtn {{
     color: {bundle["text_on_accent"]};
     border: none;
     border-radius: {bundle["button_radius"]}px;
-    font-family: 'Segoe UI Emoji', 'Malgun Gothic', 'Segoe UI', sans-serif;
-    font-size: 12pt;
+    font-size: {bundle["body_px"]}px;
     font-weight: bold;
     padding: 0px 16px;
     min-height: 32px;
@@ -288,17 +306,18 @@ QPushButton#ConfirmBtn {{
 }}
 QPushButton#ConfirmBtn:hover {{
     background: {bundle["accent_hover"].name(QColor.NameFormat.HexRgb)};
+    color: {bundle["text_on_accent_hover"]};
 }}
 QPushButton#ConfirmBtn:pressed {{
     background: {bundle["accent_pressed"].name(QColor.NameFormat.HexRgb)};
+    color: {bundle["text_on_accent_pressed"]};
 }}
 QToolButton#SnoozeBtn {{
     background: {bundle["card_surface"]};
     color: {bundle["text_primary"]};
     border: 2px solid {bundle["card_border"]};
     border-radius: {bundle["button_radius"]}px;
-    font-family: 'Segoe UI Emoji', 'Malgun Gothic', 'Segoe UI', sans-serif;
-    font-size: {bundle["text_pt"]}pt;
+    font-size: {bundle["text_px"]}px;
     padding: 0px 12px;
     min-height: 32px;
     min-width: 80px;
@@ -313,30 +332,29 @@ QToolButton#SnoozeBtn::menu-indicator {{
     width: 0px;
 }}
 QPushButton#DoneBtn {{
-    background: transparent;
-    color: {bundle["accent_ok"].name(QColor.NameFormat.HexRgb)};
-    border: 2px solid {bundle["accent_ok"].name(QColor.NameFormat.HexRgb)};
+    background: {bundle["card_surface"]};
+    color: {bundle["text_primary"]};
+    border: 1px solid {bundle["card_border"]};
     border-radius: {bundle["button_radius"]}px;
-    font-family: 'Segoe UI Emoji', 'Malgun Gothic', 'Segoe UI', sans-serif;
-    font-size: 11pt;
+    font-size: {bundle["body_px"]}px;
     font-weight: bold;
     padding: 0px 12px;
     min-height: 32px;
     min-width: 60px;
 }}
 QPushButton#DoneBtn:hover {{
-    background: {bundle["accent_ok"].name(QColor.NameFormat.HexRgb)};
-    color: {_get_contrast_text_color(bundle["accent_ok"])};
+    background: {bundle["card_hover"]};
+    border-color: {bundle["accent"].name(QColor.NameFormat.HexRgb)};
 }}
 QPushButton#CloseBtn {{
     background: transparent;
     color: {bundle["text_muted"]};
     border: none;
     font-size: 14px;
-    min-width: 20px;
-    min-height: 20px;
-    max-width: 20px;
-    max-height: 20px;
+    min-width: 28px;
+    min-height: 28px;
+    max-width: 28px;
+    max-height: 28px;
     border-radius: {bundle["card_radius"] - 2}px;
     padding: 0;
 }}
@@ -354,10 +372,7 @@ def _alarm_time_label_style(state: str, bundle: dict) -> str:
         color = bundle["accent_warn"].name(QColor.NameFormat.HexRgb)
     elif state == "danger":
         color = bundle["accent_error"].name(QColor.NameFormat.HexRgb)
-    return (
-        f"color: {color}; font-size: {bundle['text_pt']}pt; background: transparent;"
-        "font-family: 'Malgun Gothic', 'Segoe UI', sans-serif;"
-    )
+    return f"color: {color}; font-size: {bundle['text_px']}px; background: transparent;"
 
 
 class AlarmPopupWindow(QWidget):
@@ -415,7 +430,8 @@ class AlarmPopupWindow(QWidget):
 
         self._build_ui()
         self.setFixedWidth(_popup_width())
-        self.adjustSize()
+        self._update_action_layout()
+        self._fit_content_to_screen()
         self._position_on_screen()
 
         # Live clock — updates "time remaining" label every 30 s
@@ -464,30 +480,44 @@ class AlarmPopupWindow(QWidget):
         content = QWidget(card)
         content.setObjectName("AlarmContent")
         content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(16, 10, 12, 14)
-        content_layout.setSpacing(4)
+        self._content_layout = content_layout
+        content_layout.setContentsMargins(20, 12, 20, 18)
+        content_layout.setSpacing(10)
 
         # Header row: bell + title + close
         header = QHBoxLayout()
+        self._header_layout = header
         header.setSpacing(6)
 
         _bell_icon_key = ICON.WARNING if self._task.get("type") == "sync_issue" else ICON.ALARM
         bell = QLabel(content)
         bell.setObjectName("AlarmIcon")
-        bell.setPixmap(_ic(_bell_icon_key).pixmap(16, 16))
+        bell.setPixmap(
+            _ic(_bell_icon_key, color=self._style_bundle["accent"].name()).pixmap(20, 20)
+        )
         bell.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         header.addWidget(bell)
+
+        heading = QLabel(
+            _se(t("alarm_popup.sync_issue", "동기화 이슈"))
+            if self._task.get("type") == "sync_issue"
+            else t("common.notification", "알림")
+        )
+        heading.setObjectName("AlarmHeading")
+        heading.setWordWrap(True)
+        header.addWidget(heading, 1)
 
         title_text = self._task.get("name") or t("alarm_popup.task", "작업")
         self._title_label = QLabel(title_text, content)
         self._title_label.setObjectName("TaskTitle")
         self._title_label.setWordWrap(True)
         self._title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        header.addWidget(self._title_label, 1)
 
         close_btn = QPushButton("", content)
-        close_btn.setIcon(_ic(ICON.CLOSE))
+        close_btn.setIcon(_ic(ICON.CLOSE, color=self._style_bundle["text_primary"]))
         close_btn.setObjectName("CloseBtn")
+        close_btn.setAccessibleName(t("common.close", "닫기"))
+        close_btn.setToolTip(t("alarm_popup.snooze_min", "{mins}분 후", mins=self._default_snooze))
         # X dismisses with default snooze rather than confirming,
         # so the alarm can re-fire.  Use _on_confirm only for the 확인 button.
         close_btn.clicked.connect(lambda: self._on_snooze(self._default_snooze))
@@ -496,12 +526,43 @@ class AlarmPopupWindow(QWidget):
         header.addWidget(close_btn)
 
         content_layout.addLayout(header)
+        body = QWidget()
+        body.setObjectName("AlarmBody")
+        body.setAutoFillBackground(False)
+        body_layout = QVBoxLayout(body)
+        body_layout.setContentsMargins(0, 0, 0, 0)
+        body_layout.setSpacing(10)
+        self._body_widget = body
+        self._body_layout = body_layout
+        body_layout.addWidget(self._title_label)
+        self._body_scroll = QScrollArea()
+        self._body_scroll.setObjectName("AlarmBodyScroll")
+        self._body_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._body_scroll.setWidgetResizable(True)
+        self._body_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._body_scroll.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self._body_scroll.setAccessibleName(heading.text())
+        self._body_scroll.viewport().setAutoFillBackground(False)
+        self._body_scroll.setWidget(body)
+        content_layout.addWidget(self._body_scroll)
+
+        deadline_label = QLabel(
+            QLocale().toString(
+                QDate(self._deadline_dt.year, self._deadline_dt.month, self._deadline_dt.day),
+                QLocale.FormatType.LongFormat,
+            )
+            + ("" if self._task.get("all_day") else f" · {self._deadline_dt:%H:%M}")
+        )
+        deadline_label.setObjectName("AlarmDate")
+        deadline_label.setWordWrap(True)
+        body_layout.addWidget(deadline_label)
 
         # Time remaining
         self._time_label = QLabel(content)
         self._time_label.setObjectName("TimeLabel")
+        self._time_label.setWordWrap(True)
         self._refresh_time_label()
-        content_layout.addWidget(self._time_label)
+        body_layout.addWidget(self._time_label)
 
         # Location (if present)
         location = str(self._task.get("location") or "").strip()
@@ -509,18 +570,19 @@ class AlarmPopupWindow(QWidget):
             loc_label = QLabel(location, content)
             loc_label.setObjectName("LocationLabel")
             loc_label.setWordWrap(True)
-            content_layout.addWidget(loc_label)
+            body_layout.addWidget(loc_label)
 
         content_layout.addSpacing(6)
 
         # Button row
-        btn_row = QHBoxLayout()
+        btn_row = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._actions_layout = btn_row
         btn_row.setSpacing(8)
         btn_row.setContentsMargins(0, 0, 0, 0)
 
         if self._task.get("type") == "sync_issue":
             # View Issues button
-            view_issues_btn = QPushButton(t("alarm_popup.view_issues", "문제 보기"))
+            view_issues_btn = QPushButton(_se(t("alarm_popup.view_issues", "문제 보기")))
             view_issues_btn.setObjectName("ConfirmBtn")  # Reuse accent styling
             view_issues_btn.clicked.connect(self._on_open_task)
 
@@ -536,7 +598,7 @@ class AlarmPopupWindow(QWidget):
             # Snooze button (with drop-up menu)
             self._snooze_btn = QToolButton()
             self._snooze_btn.setObjectName("SnoozeBtn")
-            self._snooze_btn.setText(t("alarm_popup.snooze_btn", "스누즈"))
+            self._snooze_btn.setText(_se(t("alarm_popup.snooze_btn", "스누즈")))
             self._snooze_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
             # Create menu WITHOUT parent to avoid inheriting transparency/translucency
@@ -555,12 +617,12 @@ class AlarmPopupWindow(QWidget):
             self._snooze_btn.setMenu(snooze_menu)
 
             # Done button
-            done_btn = QPushButton(t("alarm_popup.done_btn", "완료"))
+            done_btn = QPushButton(_se(t("alarm_popup.done_btn", "완료")))
             done_btn.setObjectName("DoneBtn")
             done_btn.clicked.connect(self._on_done)
 
             # Confirm button
-            confirm_btn = QPushButton(t("alarm_popup.confirm_btn", "확인"))
+            confirm_btn = QPushButton(_se(t("alarm_popup.confirm_btn", "확인")))
             confirm_btn.setObjectName("ConfirmBtn")
             confirm_btn.clicked.connect(self._on_confirm)
 
@@ -572,6 +634,61 @@ class AlarmPopupWindow(QWidget):
 
         content_layout.addLayout(btn_row)
         card_layout.addWidget(content)
+
+    def _update_action_layout(self):
+        self._actions_layout.setDirection(
+            QBoxLayout.Direction.TopToBottom
+            if self.width() < 400
+            else QBoxLayout.Direction.LeftToRight
+        )
+
+    def _fit_content_to_screen(self):
+        """Scroll long text without compressing labels or moving actions off screen."""
+        if getattr(self, "_fitting_content", False):
+            return
+        self._fitting_content = True
+        try:
+            self.ensurePolished()
+            screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
+            max_height = max(160, screen.availableGeometry().height() - 32) if screen else 720
+            margins = self._content_layout.contentsMargins()
+            # Accent bar, card border, content margins and inter-row spacing.
+            chrome_height = (
+                4
+                + 2
+                + margins.top()
+                + margins.bottom()
+                + 6
+                + self._content_layout.spacing() * (self._content_layout.count() - 1)
+                + self._header_layout.sizeHint().height()
+                + self._actions_layout.sizeHint().height()
+            )
+            available_body_height = max(40, max_height - chrome_height)
+            body_width = max(1, self.width() - margins.left() - margins.right() - 2)
+            full_height = max(1, self._body_layout.heightForWidth(body_width))
+            overflowing = full_height > available_body_height
+            self._body_scroll.setVerticalScrollBarPolicy(
+                Qt.ScrollBarPolicy.ScrollBarAlwaysOn
+                if overflowing
+                else Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+            )
+            if overflowing:
+                body_width = max(
+                    1, body_width - self.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
+                )
+                full_height = max(1, self._body_layout.heightForWidth(body_width))
+            self._body_widget.setMinimumHeight(full_height)
+            self._body_scroll.setFixedHeight(min(full_height, available_body_height))
+            self.setFixedHeight(chrome_height + self._body_scroll.height())
+        finally:
+            self._fitting_content = False
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, "_actions_layout"):
+            self._update_action_layout()
+        if hasattr(self, "_body_scroll"):
+            self._fit_content_to_screen()
 
     def _pick_accent(self) -> QColor:
         if self._task.get("type") == "sync_issue":

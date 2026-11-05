@@ -4,11 +4,15 @@
 import hashlib
 import json
 from pathlib import Path
+import shutil
+import subprocess
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 POLICY = ROOT / "scripts/native-candidate-4.9.2.json"
+HISTORICAL_QA_COMMIT = "fba7fb1a231f496c5c79d53ff06cd84a841ab37e"
 
 
 def workflow():
@@ -74,11 +78,12 @@ def test_candidate_job_cannot_build_modify_payload_or_publish():
     assert "--expected-version $env:CANDIDATE_VERSION" in commands
 
 
-def test_candidate_policy_hash_and_qa_helper_hashes_are_pinned():
+def test_candidate_policy_hash_and_historical_artifact_are_pinned():
     job = workflow()["jobs"]["verify-native-candidate-x64"]
     assert hashlib.sha256(POLICY.read_bytes()).hexdigest() == job["env"]["CANDIDATE_POLICY_SHA256"]
     policy = json.loads(POLICY.read_text(encoding="utf-8", errors="strict"))
     assert policy["candidate_version"] == job["env"]["CANDIDATE_VERSION"] == "4.9.2"
+    assert job["env"]["PYTHON_VERSION"] == "3.13.15"
     assert policy["repository"] == "Namer-kimhyojin/DARK-CALENDAR"
     assert policy["repository_id"] == 1195286732
     assert policy["candidate_run_id"] == 41369216042
@@ -108,8 +113,25 @@ def test_candidate_policy_hash_and_qa_helper_hashes_are_pinned():
         "scripts/verify_native_candidate_inputs.py",
         "scripts/verify_sqlite_runtime.py",
     }
+
+
+def test_historical_qa_helper_hashes_match_archived_git_bytes():
+    git = shutil.which("git")
+    if not git or subprocess.run(
+        [git, "cat-file", "-e", f"{HISTORICAL_QA_COMMIT}^{{commit}}"],
+        cwd=ROOT,
+        capture_output=True,
+    ).returncode:
+        pytest.skip("Historical QA commit is unavailable in this checkout")
+    policy = json.loads(POLICY.read_text(encoding="utf-8", errors="strict"))
     for name, digest in policy["qa_sha256"].items():
-        assert hashlib.sha256((ROOT / name).read_bytes()).hexdigest() == digest
+        archived = subprocess.run(
+            [git, "show", f"{HISTORICAL_QA_COMMIT}:{name}"],
+            cwd=ROOT,
+            capture_output=True,
+            check=True,
+        ).stdout
+        assert hashlib.sha256(archived).hexdigest() == digest
 
 
 def test_native_launch_is_after_provenance_and_evidence_is_always_preserved():

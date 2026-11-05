@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from PyQt6.QtCore import QDateTime, QEvent, QPoint, QSettings, QSize, Qt
 from PyQt6.QtTest import QTest
+from PyQt6.QtWidgets import QWidget
 import pytest
 
 from calendar_app.domain.widget_workspace import CALENDAR_SCOPE_KEY, STATE_KEY
@@ -67,6 +68,34 @@ def studio(tmp_path):
 
 def prefs(settings):
     return {key: settings.value(key) for key in settings.allKeys()}
+
+
+def test_manager_tabs_share_the_current_modal_surface(studio):
+    from calendar_app.presentation.widgets.overlay_manager_dialog import _load_tokens
+    from calendar_app.shared.color_utils import parse_css_color
+
+    host, manager, _service, _ids = studio
+    host.settings.setValue("panel_base_color", "#24413f")
+    host.settings.setValue("text_theme", "dark")
+    host.settings.setValue("last_opacity", 70)
+    host.settings.setValue("last_opacity_unit", "byte")
+    dialog = OverlayManagerDialog(manager, host)
+    try:
+        dialog.show()
+        _APP.processEvents()
+        expected = parse_css_color(_load_tokens(host.settings)["bg_main"]).name()
+        for index, name in enumerate(("hubDesktopBody", "hubModeBody", "hubWorkspaceBody")):
+            dialog.tabs.setCurrentIndex(index)
+            _APP.processEvents()
+            body = dialog.findChild(QWidget, name)
+            assert body is not None
+            pixel = body.grab().toImage().pixelColor(2, 2)
+            assert pixel.alpha() == 255
+            assert pixel.name() == expected
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+        _APP.processEvents()
 
 
 def test_opening_service_does_not_persist_defaults_or_start_polling(studio):

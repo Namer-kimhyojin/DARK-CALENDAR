@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Factory helpers to construct main dock layout."""
 
 from PyQt6.QtWidgets import QFrame, QWidget
@@ -15,17 +16,17 @@ from calendar_app.shared.theme_settings import get_theme_palette_inputs
 def build_dock_manager_style(settings, theme_color):
     text_theme, panel_base, opacity_factor = get_theme_palette_inputs(settings)
     panel_pal = derive_panel_palette(panel_base, opacity_factor)
-    ui_pal = derive_ui_palette(text_theme, panel_base, opacity_factor)
+    ui_pal = derive_ui_palette(text_theme, panel_base, opacity_factor, theme_color=theme_color)
     tab_bg = panel_pal["topbar_bg"]
     tab_hover = panel_pal["surface_hover_bg"]
-    tab_active = panel_pal["toolbar_bg"]
+    tab_active = ui_pal["selection_bg"]
     tab_text = ui_pal["text_secondary"]
     tab_text_active = ui_pal["text_primary"]
-    tab_border = "rgba(255, 255, 255, 0.10)"
-    pane_line = "rgba(255, 255, 255, 0.08)"
+    tab_border = ui_pal["border_soft"]
+    pane_line = ui_pal["divider"]
     return f"""
         QMainWindow::separator {{
-            background-color: rgba(255, 255, 255, 10);
+            background-color: {ui_pal["separator_bg"]};
             width: 3px; height: 3px;
             margin: 0px;
         }}
@@ -34,6 +35,11 @@ def build_dock_manager_style(settings, theme_color):
         }}
         QMainWindow::tab-bar {{
             alignment: left;
+        }}
+        QMainWindow > QTabBar {{
+            background: transparent;
+            border: none;
+            qproperty-drawBase: 0;
         }}
         QTabBar::tab {{
             background-color: {tab_bg};
@@ -65,7 +71,7 @@ def build_dock_manager_style(settings, theme_color):
         QTabBar::tab:selected {{
             background-color: {tab_active};
             color: {tab_text_active};
-            border-color: rgba(255, 255, 255, 0.16);
+            border-color: {ui_pal["border"]};
             border-top: 2px solid {theme_color};
         }}
         QTabBar::tab:top:!selected {{

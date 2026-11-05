@@ -49,6 +49,25 @@ def _valid_hex(value) -> str | None:
     return color.name(QColor.NameFormat.HexRgb)
 
 
+def resolve_mode_base_color(base: str, mode: str) -> str:
+    """Adapt legacy unpaired colors at render time without replacing user data."""
+    color = QColor(base)
+    hue, saturation, lightness, _alpha = color.getHslF()
+    if mode == "light" and lightness < 0.80:
+        if saturation < 0.08:
+            return "#f6f7fb"
+        return QColor.fromHslF(max(0.0, hue), min(0.22, saturation * 0.35), 0.965).name(
+            QColor.NameFormat.HexRgb
+        )
+    if mode == "dark" and lightness > 0.45:
+        if saturation < 0.08:
+            return "#1c1c1c"
+        return QColor.fromHslF(max(0.0, hue), min(0.40, saturation), 0.12).name(
+            QColor.NameFormat.HexRgb
+        )
+    return base
+
+
 def resolve_effective_appearance(
     settings,
     *,
@@ -62,21 +81,23 @@ def resolve_effective_appearance(
     requested = str(text_theme or "dark").strip().lower()
     base = _valid_hex(panel_base_color) or "#1c1c1c"
     accent = _valid_hex(theme_color) or "#4da6ff"
-    if requested != "auto":
+    if requested not in {"auto", "light", "dark"}:
         return requested, base, accent
 
-    resolved = resolve_system_text_theme()
+    resolved = resolve_system_text_theme() if requested == "auto" else requested
     family = str(settings.value("appearance_style_family", "") or "").strip()
-    if family and allow_family_base:
-        family_base = _valid_hex(settings.value(f"appearance_family_{resolved}_base", ""))
-        if family_base is not None:
-            base = family_base
-    elif resolved == "dark" and base == "#fefefe":
-        base = "#1c1c1c"
-    elif resolved == "light" and base == "#1c1c1c":
-        base = "#fefefe"
+    base_source = str(settings.value("appearance_base_source", "family") or "family").lower()
+    if allow_family_base:
+        family_base = (
+            _valid_hex(settings.value(f"appearance_family_{resolved}_base", ""))
+            if family and base_source == "family"
+            else None
+        )
+        base = family_base if family_base is not None else resolve_mode_base_color(base, resolved)
 
-    accent_source = str(settings.value("appearance_accent_source", "custom") or "custom").lower()
+    accent_source = (
+        str(settings.value("appearance_accent_source", "custom") or "custom").strip().lower()
+    )
     if family and accent_source == "family" and allow_family_accent:
         family_accent = _valid_hex(settings.value(f"appearance_family_{resolved}_accent", ""))
         if family_accent is not None:

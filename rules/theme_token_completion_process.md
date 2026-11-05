@@ -11,7 +11,7 @@ The appearance dialog exposes user goals first and implementation details second
 - The live preview stays outside the settings scroll area. Wide screens use a side-by-side layout, while narrow screens place the preview above the scroll area.
 - Style and Accent start expanded. Readability, Font, and background-detail controls start collapsed so the first viewport prioritizes common choices.
 - Theme mode is explicit: System, Light, or Dark. System follows the operating-system appearance while preserving the selected style family.
-- Style is selected from eight visual families. Each family owns one dark and one light preset.
+- Style is selected from nine visual families. Each family owns one dark and one light preset.
 - The active family uses both a check mark and color treatment, and arrow keys move between family choices.
 - The complete preset catalog remains available through `Show all styles` for users who need it.
 - Readability reports primary and secondary text contrast against the active background.
@@ -74,6 +74,8 @@ System appearance is resolved at runtime instead of rewriting the user's saved i
 
 - `text_theme=auto` remains persisted as the user's mode choice. The current operating-system color scheme is converted to an effective `dark` or `light` value only while building UI tokens.
 - A selected style family persists its dark/light base and accent pair. A system change switches to the paired family variant without changing the family selection.
+- Explicit Light and Dark use the same family resolver as System. Menu and command-palette switches change only the requested mode; rendering never replaces saved base/accent colors.
+- Direct background and accent choices have independent origins. A custom base must not be hidden by a family base, and choosing a custom base must not discard a family-linked accent. Accepting a newly selected style restores family base linkage.
 - Family-linked accents and text colors follow the active family variant. User-customized accent and text colors remain unchanged across system changes.
 - `QStyleHints.colorSchemeChanged` events are coalesced for 50 ms. A burst that settles on one mode causes at most one full theme application.
 - Explicit Light or Dark mode does not restyle the application when the operating-system mode changes.
@@ -83,6 +85,9 @@ System appearance is resolved at runtime instead of rewriting the user's saved i
 
 
 ## Scope Rules
+- Typography and control sizing follow [the shared guide](../docs/design/typography-and-sizing.md). Use `shared.typography.get_typography_scale()` or shared `font_body`/`font_caption`/`font_section`/`font_title`/`font_display` tokens instead of screen-local sizes.
+- `font_size` remains points. Legacy dialog `*_font_pt` metric values remain logical pixels for compatibility; never append `pt` to those values. Qt applies physical DPI scaling once.
+- Metric defaults, editor bounds, reset and sparse persistence must use the same settings-aware resolver. A font change must not clamp an existing valid explicit size override or rewrite saved font preferences.
 - Runtime shell/style code must prefer shared semantic tokens and dialog metrics.
 - Inline raw color/QSS is allowed only for:
   - token/template fixture data that intentionally encodes preset visuals
@@ -110,6 +115,10 @@ System appearance is resolved at runtime instead of rewriting the user's saved i
 - User opacity controls the decorative shell. Calendar and panel reading surfaces use
   `content_bg` with a minimum alpha, while tooltips and modal cards use `floating_bg`
   with a stronger minimum alpha so wallpaper never determines text contrast.
+- App-owned modal tokens composite reading surfaces onto an opaque floating base,
+  including explicit color overrides, so underlying window text cannot show through.
+  This dialog contract preserves decorative main-window/widget opacity and the
+  transparent outer corners of frameless cards.
 - Light-mode reading text uses opaque neutral roles. Do not use alpha-black for labels,
   task titles, empty-state instructions, or other text that users must read.
 - Calendar task chips use neutral mode-aware text and a tinted identity-color surface.

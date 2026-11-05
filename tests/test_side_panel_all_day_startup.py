@@ -6,22 +6,31 @@ from __future__ import annotations
 from contextlib import ExitStack
 import os
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6 import QtCore, sip
 from PyQt6.QtCore import QDate, QSettings, Qt
 from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication, QDockWidget, QLabel, QMainWindow, QPushButton, QWidget
+from PyQt6.QtWidgets import (
+    QApplication,
+    QDockWidget,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QToolButton,
+    QWidget,
+)
 
 from calendar_app.infrastructure.db import task_repo
+from calendar_app.presentation.main_window.action_handlers_tasks import TaskActionsMixin
 from calendar_app.presentation.panels import side_panel_renderer
 from calendar_app.shared import theme_settings, theme_snapshot
 from tests.support import TemporaryDatabaseTestCase
 
 
-class SidePanelHost(QMainWindow):
+class SidePanelHost(TaskActionsMixin, QMainWindow):
     def __init__(self, settings):
         super().__init__()
         self.settings = settings
@@ -33,6 +42,10 @@ class SidePanelHost(QMainWindow):
         self._panel_task_frames = {}
         self._panel_directive_frames = {}
         self.modified_ids = []
+        self.added_dates = []
+        self.refresh_requests = []
+        self.current_date = QDate.currentDate()
+        self.view_mode_state = "monthly"
         self.left_dock = QDockWidget(self)
         self.left_frame = QWidget(self.left_dock)
         self.left_dock.setWidget(self.left_frame)
@@ -49,9 +62,14 @@ class SidePanelHost(QMainWindow):
                     item.widget().deleteLater()
             sip.delete(layout)
 
-    @staticmethod
-    def open_task_dialog(*_args, **_kwargs):
-        return None
+    def open_task_dialog(self, initial_date=None):
+        self.added_dates.append(initial_date)
+
+    def schedule_panel_refresh(self, **kwargs):
+        self.refresh_requests.append(kwargs)
+
+    def sync_panel_menu_state(self):
+        pass
 
     @staticmethod
     def open_work_management_dialog(*_args, **_kwargs):
@@ -141,6 +159,40 @@ class SidePanelAllDayStartupTests(TemporaryDatabaseTestCase):
         self.assertIn("All-day week group", self._task_button(task_id).text())
         self._assert_date_group(target_date)
 
+    def test_month_overflow_opens_selected_date_without_changing_view(self):
+        today = self.host.current_date
+        target = today.addDays(5)
+        today_id = task_repo.create_unified_task(
+            {"name": "Today only", "type": "schedule", "target_date": today.toString("yyyy-MM-dd")}
+        )
+        multi_id = task_repo.create_unified_task(
+            {
+                "name": "Spans selected date",
+                "type": "schedule",
+                "all_day": 1,
+                "deadline": target.addDays(-1).toString("yyyy-MM-dd"),
+                "end_date": target.addDays(1).toString("yyyy-MM-dd"),
+            }
+        )
+        self.host.left_dock.hide()
+        self.host.show_month_day_agenda(target)
+        self._render()
+
+        self.assertEqual(self.host.current_date, today)
+        self.assertEqual(self.host.view_mode_state, "monthly")
+        self.assertEqual(self.settings.value("left_panel_mode"), "selected")
+        self.assertEqual(self.host._last_clicked_date, target)
+        self.assertTrue(self.host.left_dock.isVisible())
+        self.assertNotIn(today_id, self.host._panel_task_frames)
+        self.assertIn("Spans selected date", self._task_button(multi_id).text())
+        add_button = next(
+            button
+            for button in self.host.left_dock.titleBarWidget().findChildren(QPushButton)
+            if button.text() == "+"
+        )
+        add_button.click()
+        self.assertEqual(self.host.added_dates, [target])
+
     def test_timed_schedule_keeps_datetime_and_hover_range(self):
         date = QDate.currentDate()
         date_text = date.toString("yyyy-MM-dd")
@@ -161,3 +213,36 @@ class SidePanelAllDayStartupTests(TemporaryDatabaseTestCase):
         self.assertEqual(f"{date_text} 10:30:00", row["end_date"])
         self._assert_date_group(date)
         self.assertIn("09:00 - 10:30", self._task_button(task_id).property("_hover_info_html"))
+
+    def test_selected_agenda_shrinks_and_keeps_modes_and_actions_reachable(self):
+        self.host.left_panel_mode = "selected"
+        task_repo.create_unified_task(
+            {
+                "name": "Long schedule title " * 8,
+                "type": "schedule",
+                "all_day": 1,
+                "target_date": self.host.current_date.toString("yyyy-MM-dd"),
+            }
+        )
+        self._render()
+
+        toolbar = self.host.left_dock.titleBarWidget()
+        self.assertLessEqual(toolbar.minimumSizeHint().width(), 250)
+        self.assertGreaterEqual(self.host.left_dock.minimumSizeHint().width(), 200)
+        self.assertLessEqual(self.host.left_dock.minimumSizeHint().width(), 250)
+        switch = toolbar.findChild(QToolButton, "schedulePanelMode")
+        self.assertIsNotNone(switch)
+        actions = {action.data(): action for action in switch.menu().actions()}
+        self.assertEqual(set(actions), {"today", "week", "selected"})
+        self.assertTrue(actions["selected"].isChecked())
+        for mode in ("today", "week", "selected"):
+            actions[mode].trigger()
+            self.assertEqual(self.host.left_panel_mode, mode)
+            self.assertEqual(self.settings.value("left_panel_mode"), mode)
+
+        buttons = toolbar.findChildren(QPushButton)
+        next(button for button in buttons if button.text() == "+").click()
+        self.assertEqual(self.host.added_dates, [self.host.current_date])
+        self.host.open_work_management_dialog = Mock()
+        next(button for button in buttons if button.text() == "⋯").click()
+        self.host.open_work_management_dialog.assert_called_once_with(start_tab="schedule")

@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PYTHON_VERSION: "3.13.15"
+  PYTHON_VERSION: "3.14.10"
 
 jobs:
   build-x64:
@@ -45,8 +45,7 @@ jobs:
         shell: powershell
         run: |
           python -m venv .venv
-          .\.venv\Scripts\python.exe -m pip install --upgrade pip
-          .\.venv\Scripts\python.exe -m pip install -r requirements-build.lock
+          .\.venv\Scripts\python.exe -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r requirements-build.lock
 
       - name: Prepare pinned official SQLite runtime
         shell: powershell
@@ -141,7 +140,7 @@ jobs:
           $metadata = Get-Content "calendar_app\app_metadata.py" -Raw -Encoding utf8
           $match = [regex]::Match($metadata, 'APP_VERSION\s*=\s*"([^"]+)"')
           if (-not $match.Success) { throw "APP_VERSION was not found." }
-          .\build\native-smoke-venv\Scripts\python.exe scripts\native_release_smoke.py `
+          .\build\native-smoke-venv\Scripts\python.exe tests\release_qa\native_release_smoke_adapter.py `
             --payload native-payload `
             --baseline-payload "$env:RUNNER_TEMP\native-baseline-4.3.3" `
             --expected-version $match.Groups[1].Value `
@@ -181,8 +180,8 @@ jobs:
         shell: powershell
         run: |
           python -m venv .venv
-          .\.venv\Scripts\python.exe -m pip install --upgrade pip
-          .\.venv\Scripts\python.exe -m pip install -r requirements-build.lock
+          # cryptography has no Windows ARM64 wheel. Its source archive is pinned in the lock.
+          .\.venv\Scripts\python.exe -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: --no-binary=cryptography -r requirements-build.lock
 
       - name: Prepare pinned official SQLite runtime
         shell: powershell

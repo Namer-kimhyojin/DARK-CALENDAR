@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+from collections.abc import Iterator
 from copy import deepcopy
 from dataclasses import dataclass
 import datetime
@@ -87,6 +88,13 @@ def _now() -> str:
     return datetime.datetime.now().isoformat(timespec="seconds")
 
 
+def _recorded_sound_events(content: dict) -> Iterator[dict]:
+    """Visit independent take and looper snapshots, including unused pad sounds."""
+    yield from content.get("beatmaker_recording", {}).get("events", [])
+    for track in content.get("beatmaker_looper", {}).get("tracks", []):
+        yield from track["events"]
+
+
 class _Embedder:
     """Collects files referenced by keys into the document's asset table."""
 
@@ -150,7 +158,7 @@ def build_document(
         body["panorama"]["path"] = embed(body["panorama"]["path"], "image")
         if body["sound_path"]:
             body["sound_path"] = embed(body["sound_path"], "sound")
-        for event in body.get("beatmaker_recording", {}).get("events", []):
+        for event in _recorded_sound_events(body):
             if event["sound_path"]:
                 event["sound_path"] = embed(event["sound_path"], "sound")
         document["deck"] = body
@@ -325,7 +333,7 @@ def _decode_asset(asset: dict) -> bytes | None:
 def _restore_refs(content: dict, resolve) -> None:
     if "sound_path" in content:
         content["sound_path"] = resolve(content["sound_path"])
-    for event in content.get("beatmaker_recording", {}).get("events", []):
+    for event in _recorded_sound_events(content):
         if event["sound_path"]:
             event["sound_path"] = resolve(event["sound_path"])
     pages = content["pages"] if "pages" in content else [content["page"]]

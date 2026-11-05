@@ -16,6 +16,7 @@ from pathlib import PureWindowsPath
 import re
 import uuid
 
+from calendar_app.domain.beatmaker_looper import normalize_looper
 from calendar_app.domain.beatmaker_recording import normalize_recording
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.widgets.keydeck.beatmaker import (
@@ -621,6 +622,9 @@ def normalize_deck(raw: object) -> dict:
     recording = normalize_recording(raw.get("beatmaker_recording"))
     if recording is not None:
         deck["beatmaker_recording"] = recording
+    looper = normalize_looper(raw.get("beatmaker_looper"))
+    if looper is not None:
+        deck["beatmaker_looper"] = looper
     deck["reduce_motion"] = _bool(raw.get("reduce_motion"), False)
     deck["panorama"] = normalize_panorama(raw.get("panorama"))
     theme = str(raw.get("theme") or "")

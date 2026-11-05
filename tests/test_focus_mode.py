@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import gc
 import os
 import unittest
 from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PyQt6.QtCore import QEvent
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QFrame, QLabel, QProgressBar, QPushButton, QVBoxLayout
 
@@ -226,6 +228,36 @@ class FocusModeUiTests(unittest.TestCase):
 
         self.assertTrue(app.isFullScreen())
         self.assertTrue(app.is_focus_mode)
+
+    def test_phase_toast_survives_return_and_releases_on_close(self):
+        app = type("App", (), {})()
+        app.settings = FakeSettings(
+            {"theme_color": "#b799eb", "panel_base_color": "#f1eef8", "text_theme": "light"}
+        )
+        for finish in ("close", "fade"):
+            with self.subTest(finish=finish):
+                before = set(focus_mode._active_phase_toasts)
+                focus_mode._announce_phase_change(
+                    app, "Focus time", "Begin the next focus session.", "pomodoro"
+                )
+                gc.collect()
+                created = focus_mode._active_phase_toasts - before
+                self.assertEqual(len(created), 1)
+                popup = created.pop()
+                self.assertTrue(popup.isVisible())
+                self.assertIn("QFrame#FocusPhaseToastCard", popup.styleSheet())
+                self.assertEqual(popup._opacity_effect.opacity(), 1.0)
+                self.assertEqual(popup._fade_anim.startValue(), 1.0)
+                self.assertEqual(popup._fade_anim.endValue(), 0.0)
+                self.assertEqual(popup._fade_anim.duration(), 800)
+                if finish == "close":
+                    popup.close()
+                else:
+                    popup._fade_anim.setDuration(0)
+                    popup._fade_anim.start()
+                self.qt_app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+                self.qt_app.processEvents()
+                self.assertNotIn(popup, focus_mode._active_phase_toasts)
 
 
 if __name__ == "__main__":

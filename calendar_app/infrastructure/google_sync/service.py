@@ -106,6 +106,24 @@ def is_google_rate_limit_error(status, error=None) -> bool:
     return any(reason.lower() in message for reason in reasons)
 
 
+def is_google_insufficient_scope_error(status, error) -> bool:
+    if status != 403:
+        return False
+    try:
+        payload = json.loads(getattr(error, "content", None)).get("error", {})
+        return any(
+            item.get("reason") == reason
+            for field, reason in (
+                ("errors", "insufficientPermissions"),
+                ("details", "ACCESS_TOKEN_SCOPE_INSUFFICIENT"),
+            )
+            for item in (payload.get(field) or ())
+            if isinstance(item, dict)
+        )
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
 def _google_error_code(kind, error, status=None):
     """Keep remote payloads/URLs out of stored errors and diagnostic messages."""
     if is_google_rate_limit_error(status, error):
@@ -186,38 +204,17 @@ def prepare_calendar_sync_service(
     return service
 
 
+def _supports_scopes(scopes) -> bool:
+    if isinstance(scopes, str):
+        scopes = scopes.split()
+    return isinstance(scopes, (list, tuple, set, frozenset)) and set(SCOPES).issubset(scopes)
+
+
 def _credentials_support_scopes(creds) -> bool:
-    if creds is None:
-        return False
-
-    granted = set(getattr(creds, "scopes", None) or [])
-
-    if not granted:
-        return False
-
-    return set(SCOPES).issubset(granted)
-
-
-def _token_file_supports_scopes(token_path: str) -> bool:
-    try:
-        json_mod = __import__("json")
-
-        from calendar_app.infrastructure.google_sync.token_store import load_token_json
-
-        token_text = load_token_json(token_path)
-        if not token_text:
-            return False
-        payload = json_mod.loads(token_text)
-
-    except Exception:
-        return False
-
-    granted = set(payload.get("scopes") or [])
-
-    if not granted:
-        return False
-
-    return set(SCOPES).issubset(granted)
+    granted = getattr(creds, "granted_scopes", None)
+    if granted is None:
+        granted = getattr(creds, "scopes", None)
+    return _supports_scopes(granted)
 
 
 class CalendarSyncService:
@@ -312,7 +309,7 @@ class CalendarSyncService:
 
             return False
 
-        if isinstance(exc, TimeoutError | socket.timeout | ssl.SSLError):
+        if _google_refresh_failure_kind(exc) == "network_unavailable":
             return True
 
         message = str(exc).lower()
@@ -481,38 +478,27 @@ class CalendarSyncService:
         token_json = None
         self._pending_token_json = None
 
+        try:
+            check_auth_cancelled(is_cancelled)
+        except GoogleAuthError as exc:
+            self._set_last_error(exc.kind, exc.kind)
+            return False
+
         if not force_reauth and os.path.exists(TOKEN_PATH):
             try:
-                if not _token_file_supports_scopes(TOKEN_PATH):
-                    logger.warning(
-                        "authenticate(non-interactive): token file at %s is missing required scopes; "
-                        "re-authentication required.",
-                        TOKEN_PATH,
-                    )
-                    raise ValueError("token_missing_required_scopes")
+                from calendar_app.infrastructure.google_sync.token_store import load_token_json
 
-                import json as _json_load
+                token_text = load_token_json(TOKEN_PATH)
+                token_data = json.loads(token_text) if token_text else None
+                if isinstance(token_data, dict) and _supports_scopes(token_data.get("scopes")):
+                    creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+                else:
+                    logger.warning("Saved Google token is unreadable or missing required scopes.")
 
-                from calendar_app.infrastructure.google_sync.token_store import (
-                    load_token_json as _load_token,
-                )
-
-                _token_text = _load_token()
-                if not _token_text:
-                    raise ValueError("token_unreadable")
-                creds = Credentials.from_authorized_user_info(_json_load.loads(_token_text), SCOPES)
-
-                if not _credentials_support_scopes(creds):
-                    logger.warning(
-                        "authenticate(non-interactive): loaded credentials object is missing required scopes "
-                        "and was discarded."
-                    )
-                    creds = None
-
-            except Exception as _load_exc:
+            except (ValueError, TypeError, AttributeError) as exc:
                 logger.warning(
-                    "authenticate(non-interactive): failed to load/validate token file: %s",
-                    _google_error_code("token_load_failed", _load_exc),
+                    "Saved Google token could not be validated: %s",
+                    _google_error_code("token_load_failed", exc),
                 )
                 creds = None
 
@@ -578,6 +564,10 @@ class CalendarSyncService:
                         config, SCOPES, autogenerate_code_verifier=True
                     )
                     creds = run_desktop_auth(flow, is_cancelled=is_cancelled)
+                    if not (
+                        creds.valid and creds.refresh_token and _credentials_support_scopes(creds)
+                    ):
+                        raise GoogleAuthError("auth_denied")
 
                 except Exception as exc:
                     kind = exc.kind if isinstance(exc, GoogleAuthError) else "auth"
@@ -599,8 +589,8 @@ class CalendarSyncService:
             except GoogleAuthError as exc:
                 self._set_last_error(exc.kind, "Google authentication cancelled")
                 return False
-            except OSError:
-                self._set_last_error("auth", "token_write_failed")
+            except (OSError, ValueError, TypeError):
+                self._set_last_error("auth_token_write", "token_write_failed")
 
                 if parent_widget:
                     QMessageBox.warning(parent_widget, "Google Calendar", "Failed to save token.")
@@ -614,7 +604,7 @@ class CalendarSyncService:
                 import httplib2
 
                 authorized_http = AuthorizedHttp(creds, http=httplib2.Http(timeout=12))
-                self.service = build("calendar", "v3", http=authorized_http, cache_discovery=False)
+                api = build("calendar", "v3", http=authorized_http, cache_discovery=False)
 
                 check_auth_cancelled(is_cancelled)
                 if token_json is not None:
@@ -623,9 +613,18 @@ class CalendarSyncService:
                             save_token_json,
                         )
 
-                        save_token_json(token_json)
+                        try:
+                            save_token_json(token_json)
+                        except OSError:
+                            self._set_last_error("auth_token_write", "token_write_failed")
+                            if parent_widget:
+                                QMessageBox.warning(
+                                    parent_widget, "Google Calendar", "Failed to save token."
+                                )
+                            return False
                     else:
                         self._pending_token_json = token_json
+                self.service = api
                 self.is_authenticated = True
 
             if parent_widget:
@@ -641,10 +640,9 @@ class CalendarSyncService:
 
             if isinstance(exc, GoogleAuthError):
                 self._set_last_error(exc.kind, "Google authentication cancelled")
-            elif isinstance(exc, OSError) and token_json is not None:
-                self._set_last_error("auth", "token_write_failed")
             else:
-                self._set_last_error("auth", "API connection failed")
+                kind = _google_refresh_failure_kind(exc)
+                self._set_last_error(kind, kind, 401 if kind == "auth_required" else None)
 
             if parent_widget:
                 QMessageBox.critical(parent_widget, "Google Calendar", "API connection failed.")
@@ -692,10 +690,9 @@ class CalendarSyncService:
                     "timeMax": time_max,
                     "maxResults": 2500,
                     "singleEvents": True,
+                    "orderBy": "startTime",
                 }
-                if not page_token:
-                    request_params["orderBy"] = "startTime"
-                else:
+                if page_token:
                     request_params["pageToken"] = page_token
 
                 response = self._execute_request(
@@ -718,9 +715,16 @@ class CalendarSyncService:
 
             return events
         except Exception as exc:
-            self._set_last_error("fetch", exc, getattr(getattr(exc, "resp", None), "status", None))
+            self._set_events_fetch_error(exc)
             logger.warning("Google request failed (%s)", self.last_error_message)
             return None
+
+    def _set_events_fetch_error(self, exc: Exception) -> None:
+        status = getattr(getattr(exc, "resp", None), "status", None)
+        kind = _google_refresh_failure_kind(exc)
+        if is_google_insufficient_scope_error(status, exc):
+            kind = "reauth_required"
+        self._set_last_error("fetch" if kind == "operation_failed" else kind, exc, status)
 
     def fetch_sync_events(
         self,
@@ -755,119 +759,67 @@ class CalendarSyncService:
         fetched_pages = 0
 
         try:
-            old_timeout = socket.getdefaulttimeout()
-            socket.setdefaulttimeout(12)
-            try:
-                if event_ids is not None:
-                    # Recover only linked events when importing this calendar is off.
-                    # Feed them through the same validation/conflict transaction as a pull.
-                    for event_id in dict.fromkeys(event_ids):
-                        event = self._execute_request(
-                            lambda event_id=event_id: (
-                                self.service.events()
-                                .get(calendarId=resolved_calendar_id, eventId=event_id)
-                                .execute()
-                            )
-                        )
-                        if not isinstance(event, dict) or event.get("id") != event_id:
-                            raise ValueError("invalid_google_event_identity")
-                        events.append(
-                            self._to_google_event(event, source_calendar_id=resolved_calendar_id)
-                        )
-                    return events, None, False
-                while True:
-                    if page_token:
-                        page_token_str = str(page_token)
-                        if page_token_str in seen_page_tokens:
-                            raise RuntimeError(
-                                f"Duplicate Google events page token detected: {page_token_str}"
-                            )
-                        seen_page_tokens.add(page_token_str)
-
-                    request_params = dict(params)
-                    if page_token:
-                        request_params["pageToken"] = page_token
-
-                    response = self._execute_request(
-                        lambda request_params=request_params: (
-                            self.service.events().list(**request_params).execute()
+            if event_ids is not None:
+                # Recover only linked events when importing this calendar is off.
+                # Feed them through the same validation/conflict transaction as a pull.
+                for event_id in dict.fromkeys(event_ids):
+                    event = self._execute_request(
+                        lambda event_id=event_id: (
+                            self.service.events()
+                            .get(calendarId=resolved_calendar_id, eventId=event_id)
+                            .execute()
                         )
                     )
-                    source_calendar_id = str(
-                        request_params.get("calendarId") or resolved_calendar_id or ""
-                    ).strip()
-                    page_items, page_token, next_sync_token = self._validate_events_page(
-                        response, require_sync_token=True
+                    if not isinstance(event, dict) or event.get("id") != event_id:
+                        raise ValueError("invalid_google_event_identity")
+                    events.append(
+                        self._to_google_event(event, source_calendar_id=resolved_calendar_id)
                     )
-                    events.extend(
-                        self._to_google_event(item, source_calendar_id=source_calendar_id)
-                        for item in page_items
+                return events, None, False
+            while True:
+                if page_token:
+                    page_token_str = str(page_token)
+                    if page_token_str in seen_page_tokens:
+                        raise ValueError("invalid_google_duplicate_page_token")
+                    seen_page_tokens.add(page_token_str)
+
+                request_params = dict(params)
+                if page_token:
+                    request_params["pageToken"] = page_token
+
+                response = self._execute_request(
+                    lambda request_params=request_params: (
+                        self.service.events().list(**request_params).execute()
                     )
+                )
+                page_items, page_token, next_sync_token = self._validate_events_page(
+                    response, require_sync_token=True
+                )
+                events.extend(
+                    self._to_google_event(item, source_calendar_id=resolved_calendar_id)
+                    for item in page_items
+                )
 
-                    fetched_pages += 1
-                    if not page_token:
-                        break
-                    if fetched_pages >= max_pages:
-                        raise RuntimeError(
-                            f"Google events pagination exceeded max pages ({max_pages})"
-                        )
-
-            except HttpError as _page_exc:
-                _page_status = getattr(getattr(_page_exc, "resp", None), "status", None)
-                if _page_status == 410 and event_ids is None:
-                    self._set_last_error("sync_token_expired", _page_exc, 410)
-                    print("Google incremental sync token expired (mid-page). Full resync required.")
-                    socket.setdefaulttimeout(old_timeout)
-                    return None, None, True
-                self._set_last_error("fetch", _page_exc, _page_status)
-                if events:
-                    logger.warning(
-                        "fetch_sync_events: HttpError %s after %d event(s); "
-                        "discarding the incomplete result",
-                        _page_status,
-                        len(events),
-                    )
-                    socket.setdefaulttimeout(old_timeout)
-                    return None, None, False
-                socket.setdefaulttimeout(old_timeout)
-                raise
-
-            except Exception as _page_exc2:
-                self._set_last_error("fetch", _page_exc2)
-                if events:
-                    logger.warning(
-                        "fetch_sync_events: Exception after %d event(s); "
-                        "discarding the incomplete result: %s",
-                        len(events),
-                        self.last_error_message,
-                    )
-                    socket.setdefaulttimeout(old_timeout)
-                    return None, None, False
-                socket.setdefaulttimeout(old_timeout)
-                raise
-
-            finally:
-                socket.setdefaulttimeout(old_timeout)
+                fetched_pages += 1
+                if not page_token:
+                    break
+                if fetched_pages >= max_pages:
+                    raise RuntimeError(f"Google events pagination exceeded max pages ({max_pages})")
 
             return events, next_sync_token, False
 
-        except HttpError as exc:
-            status = getattr(getattr(exc, "resp", None), "status", None)
-            if status == 410 and event_ids is None:
-                self._set_last_error("sync_token_expired", exc, 410)
-                print("Google incremental sync token expired. Full resync required.")
-                return None, None, True
-
-            self._set_last_error("fetch", exc, status)
-            logger.warning("Google request failed (%s)", self.last_error_message)
-            return None, None, False
-
         except Exception as exc:
-            self._set_last_error("fetch", exc)
-            if self._is_transient_error(exc):
-                logger.warning("GCal incremental fetch skipped (%s)", self.last_error_message)
-            else:
-                logger.error("GCal incremental fetch failed (%s)", self.last_error_message)
+            status = getattr(getattr(exc, "resp", None), "status", None)
+            if status == 410 and sync_token and event_ids is None:
+                self._set_last_error("sync_token_expired", exc, 410)
+                logger.info("Google incremental token expired; full resync required")
+                return None, None, True
+            self._set_events_fetch_error(exc)
+            logger.warning(
+                "Google events fetch failed (%s); discarding %d partial result(s)",
+                self.last_error_message,
+                len(events),
+            )
             return None, None, False
 
     def create_metadata_reader(self, *, is_cancelled=None):
@@ -947,21 +899,17 @@ class CalendarSyncService:
             raise
         except Exception as exc:
             status = getattr(getattr(exc, "resp", None), "status", None)
-            if status == 403 and (
-                "insufficient" in str(exc).lower() or "scope" in str(exc).lower()
-            ):
+            kind = _google_refresh_failure_kind(exc)
+            if status == 401 or kind == "auth_required":
+                kind, status = "auth_required", 401
+            elif is_google_insufficient_scope_error(status, exc):
+                kind = "reauth_required"
+            elif kind == "operation_failed":
+                kind = "calendar_list"
+            if kind in {"auth_required", "reauth_required", "auth_client_invalid"}:
                 self._clear_auth_state()
-                self._set_last_error(
-                    "reauth_required",
-                    "Stored token does not have calendar subscription permission. Please re-authenticate.",
-                    403,
-                )
-                logger.warning(
-                    "GCal calendar list fetch requires re-authentication with broader scopes."
-                )
-                return []
 
-            self._set_last_error("calendar_list", exc, status)
+            self._set_last_error(kind, exc, status)
             if calendars:
                 logger.warning(
                     "GCal calendar list fetch failed mid-page (status=%s) after %d calendar(s); "

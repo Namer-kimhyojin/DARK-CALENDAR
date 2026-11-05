@@ -25,12 +25,11 @@ from calendar_app.infrastructure.calendar_sync.repository import CalendarSyncRep
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.outlook_sync.graph import GraphClient
 from calendar_app.presentation.dialogs.dialog_styles import (
-    apply_common_dialog_style,
     build_collapsible_section,
     build_dialog_footer,
-    get_dialog_theme_tokens,
 )
 from calendar_app.presentation.dialogs.provider_settings_widgets import (
+    apply_provider_settings_style,
     calendar_snapshot_key,
     plain_label,
     scroll_page,
@@ -40,7 +39,6 @@ from calendar_app.presentation.dialogs.provider_settings_widgets import (
 from calendar_app.presentation.dialogs.sync_feedback import (
     add_sync_hub_return,
     calendar_recovery_issues,
-    calendar_selection_style,
     conflict_text,
     guard_sync_database,
     recovery_issue_label,
@@ -65,19 +63,23 @@ class OutlookSettingsDialog(QDialog):
         self._available_key = None
         self._was_busy = False
         self.setWindowTitle(t("outlook.title", "Outlook · Microsoft 365 동기화"))
-        apply_common_dialog_style(
-            self,
-            minimum_width=620,
-            extra_stylesheet=calendar_selection_style(get_dialog_theme_tokens()),
-        )
+        apply_provider_settings_style(self, self.settings)
         self.resize(680, 720)
         outer = QVBoxLayout(self)
+        outer.setContentsMargins(24, 20, 24, 18)
+        outer.setSpacing(12)
+        heading = plain_label(self.windowTitle())
+        heading.setProperty("role", "dialogTitle")
+        outer.addWidget(heading)
         add_sync_hub_return(self, outer, app)
         self.account = plain_label()
+        self.account.setProperty("role", "syncServiceTitle")
         outer.addWidget(self.account)
         self.status = plain_label()
+        self.status.setProperty("role", "syncStatus")
         outer.addWidget(self.status)
         self.next_step = plain_label()
+        self.next_step.setProperty("role", "syncMuted")
         outer.addWidget(self.next_step)
         actions = QHBoxLayout()
         self.next_action = QPushButton()

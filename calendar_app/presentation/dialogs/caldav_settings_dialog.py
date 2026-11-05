@@ -29,12 +29,11 @@ from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.main_window.calendar_sync_coordinator import provider_name
 
 from .dialog_styles import (
-    apply_common_dialog_style,
     build_collapsible_section,
     build_dialog_footer,
-    get_dialog_theme_tokens,
 )
 from .provider_settings_widgets import (
+    apply_provider_settings_style,
     calendar_snapshot_key,
     plain_label,
     scroll_page,
@@ -44,7 +43,6 @@ from .provider_settings_widgets import (
 from .sync_feedback import (
     add_sync_hub_return,
     calendar_recovery_issues,
-    calendar_selection_style,
     conflict_text,
     guard_sync_database,
     recovery_issue_label,
@@ -64,13 +62,14 @@ class CalDAVSettingsDialog(QDialog):
         self._cancel_requested = False
         self._was_busy = False
         self.setWindowTitle(t("global_caldav.title", "CalDAV 계정 연결"))
-        apply_common_dialog_style(
-            self,
-            minimum_width=620,
-            extra_stylesheet=calendar_selection_style(get_dialog_theme_tokens()),
-        )
+        apply_provider_settings_style(self, self.settings)
         self.resize(700, 720)
         outer = QVBoxLayout(self)
+        outer.setContentsMargins(24, 20, 24, 18)
+        outer.setSpacing(12)
+        heading = plain_label(self.windowTitle())
+        heading.setProperty("role", "dialogTitle")
+        outer.addWidget(heading)
         add_sync_hub_return(self, outer, app)
         row = QHBoxLayout()
         row.addWidget(QLabel(t("caldav.service", "연결 서비스")))
@@ -81,8 +80,11 @@ class CalDAVSettingsDialog(QDialog):
         row.addWidget(self.service, 1)
         outer.addLayout(row)
         self.account = plain_label()
+        self.account.setProperty("role", "syncServiceTitle")
         self.status = plain_label()
+        self.status.setProperty("role", "syncStatus")
         self.next_step = plain_label()
+        self.next_step.setProperty("role", "syncMuted")
         for label in (self.account, self.status, self.next_step):
             outer.addWidget(label)
         actions = QHBoxLayout()

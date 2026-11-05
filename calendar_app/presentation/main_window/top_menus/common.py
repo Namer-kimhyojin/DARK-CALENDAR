@@ -57,3 +57,8 @@ def refresh_top_menu_icons(owner, role_colors: dict[str, str]):
 
     for attr in ("add_menu", "view_menu", "display_menu", "widgets_menu", "sys_menu"):
         _walk_menu(getattr(owner, attr, None))
+
+    rail = getattr(owner, "navigation_rail", None)
+    if rail is not None:
+        for action in rail.actions():
+            _refresh(action)

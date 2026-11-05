@@ -6,14 +6,19 @@ import threading
 import time
 from types import SimpleNamespace
 from urllib.error import HTTPError
+from urllib.parse import parse_qs, urlencode, urlsplit
 from urllib.request import urlopen
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from oauthlib.oauth2 import InvalidClientError
 from PyQt6.QtCore import QSettings, QTimer
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QDialog, QWidget
 import pytest
+from requests import Request, Response
+from requests.exceptions import ConnectTimeout
+from requests_oauthlib import OAuth2Session
 
 from calendar_app.infrastructure.google_sync import oauth, service, token_store
 from calendar_app.presentation.dialogs import gcal_settings_dialog as dialog_module
@@ -56,26 +61,40 @@ def test_desktop_client_accepted(tmp_path):
 
 
 class FakeFlow:
-    def __init__(self):
+    def __init__(self, fetch_error=None):
         self.credentials = object()
         self.fetch_calls = []
+        self.fetch_error = fetch_error
 
     def authorization_url(self, **kwargs):
         return "https://accounts.google.com/test", "expected-state"
 
     def fetch_token(self, **kwargs):
         self.fetch_calls.append(kwargs)
+        if self.fetch_error:
+            raise self.fetch_error
 
 
-@pytest.mark.parametrize("error", [None, "access_denied", "redirect_uri_mismatch"])
-def test_loopback_state_validation_and_result(monkeypatch, error):
-    flow = FakeFlow()
+@pytest.mark.parametrize(
+    "error, fetch_error, kind",
+    [
+        (None, None, None),
+        ("access_denied", None, "auth_denied"),
+        ("redirect_uri_mismatch", None, "auth_redirect"),
+        (None, InvalidClientError(description="private-response"), "auth_client_invalid"),
+        (None, ConnectTimeout("private-response"), "network_unavailable"),
+    ],
+)
+def test_loopback_state_validation_and_result(monkeypatch, error, fetch_error, kind, caplog):
+    flow = FakeFlow(fetch_error)
     responses = []
 
     def browser_open(*args, **kwargs):
         def callback():
             for query in (
                 "?state=wrong&code=bad",
+                "?state=expected-state&code=one&code=two",
+                "?state=expected-state&code=test-code&error=access_denied",
                 "favicon.ico",
                 "?state=expected-state&" + ("error=" + error if error else "code=test-code"),
             ):
@@ -92,19 +111,23 @@ def test_loopback_state_validation_and_result(monkeypatch, error):
 
     threads = []
     monkeypatch.setattr(oauth.webbrowser, "open", browser_open)
-    if error:
+    if kind:
         with pytest.raises(oauth.GoogleAuthError) as caught:
             oauth.run_desktop_auth(flow, timeout_seconds=2)
-        assert caught.value.kind == ("auth_denied" if error == "access_denied" else "auth_redirect")
-        assert flow.fetch_calls == []
+        assert caught.value.kind == kind
+        assert "private-response" not in str(caught.value)
     else:
         assert oauth.run_desktop_auth(flow, timeout_seconds=2) is flow.credentials
+    if error:
+        assert flow.fetch_calls == []
+    else:
         assert flow.fetch_calls[0]["timeout"] == 12
         assert flow.fetch_calls[0]["authorization_response"].startswith("https://127.0.0.1:")
     for thread in threads:
         thread.join(2)
         assert not thread.is_alive()
-    assert responses == [400, 400, 200]
+    assert responses == [400, 400, 400, 400, 200]
+    assert "private-response" not in caplog.text
     port = int(flow.redirect_uri.split(":")[-1].rstrip("/"))
     with socket.socket() as probe:
         assert probe.connect_ex(("127.0.0.1", port)) != 0
@@ -124,6 +147,15 @@ def test_loopback_stops_without_browser_response(monkeypatch, case, kind):
     with pytest.raises(oauth.GoogleAuthError) as caught:
         oauth.run_desktop_auth(FakeFlow(), is_cancelled=cancelled, timeout_seconds=0.05)
     assert caught.value.kind == kind
+
+
+def test_browser_launch_os_error_has_browser_recovery(monkeypatch):
+    def cannot_open(*args, **kwargs):
+        raise OSError("private-browser-error")
+
+    monkeypatch.setattr(oauth.webbrowser, "open", cannot_open)
+    with pytest.raises(oauth.GoogleAuthError, match="^auth_browser$"):
+        oauth.run_desktop_auth(FakeFlow())
 
 
 def test_service_rejects_web_before_browser_and_preserves_token(monkeypatch, tmp_path):
@@ -164,16 +196,94 @@ def test_service_defers_token_save_until_dialog_accepts_result(monkeypatch, tmp_
     client.write_text(json.dumps(DESKTOP_CONFIG), encoding="utf-8", errors="strict")
     monkeypatch.setattr(service, "CREDENTIALS_PATH", str(client))
     monkeypatch.setattr(service, "TOKEN_PATH", str(tmp_path / "token.json"))
-    creds = SimpleNamespace(valid=True, to_json=lambda: "test-token")
-    monkeypatch.setattr(service, "run_desktop_auth", lambda *a, **k: creds)
+    browser_threads = []
+
+    def browser_open(url, **kwargs):
+        query = parse_qs(urlsplit(url).query)
+        assert query["access_type"] == ["offline"]
+        assert query["code_challenge_method"] == ["S256"]
+        redirect_uri = query["redirect_uri"][0]
+        assert urlsplit(redirect_uri).hostname == "127.0.0.1"
+
+        def callback():
+            params = urlencode({"state": query["state"][0], "code": "synthetic-code"})
+            with urlopen(f"{redirect_uri}?{params}", timeout=2) as response:
+                assert response.status == 200
+
+        thread = threading.Thread(target=callback)
+        thread.start()
+        browser_threads.append(thread)
+        return True
+
+    def request_token(session, method, url, **kwargs):
+        assert method == "POST" and url == "https://oauth2.googleapis.com/token"
+        assert kwargs["timeout"] == 12
+        response = Response()
+        response.status_code = 200
+        response.request = session.prepare_request(Request(method, url, data=kwargs["data"]))
+        response._content = json.dumps(
+            {
+                "access_token": "synthetic-access-token",
+                "refresh_token": "synthetic-refresh-token",
+                "scope": " ".join(service.SCOPES),
+                "expires_in": 3600,
+                "token_type": "Bearer",
+            }
+        ).encode("utf-8", errors="strict")
+        return response
+
+    monkeypatch.setattr(oauth.webbrowser, "open", browser_open)
+    monkeypatch.setattr(OAuth2Session, "request", request_token)
     monkeypatch.setattr(service, "build", lambda *a, **k: object())
     monkeypatch.setattr(
         token_store, "save_token_json", lambda *a: pytest.fail("Must defer token save")
     )
     sync = service.CalendarSyncService()
+    assert not sync.authenticate(interactive=False)
+    assert sync.last_error_kind == "auth_required"
+    assert not browser_threads
     assert sync.authenticate(force_reauth=True, persist_token=False)
-    assert sync._pending_token_json == "test-token"
+    browser_threads[0].join(2)
+    assert not browser_threads[0].is_alive()
+    assert json.loads(sync._pending_token_json)["refresh_token"] == "synthetic-refresh-token"
+    assert not (tmp_path / "token.json").exists()
     assert sync.is_authenticated
+
+
+@pytest.mark.parametrize(
+    "valid, refresh_token, granted_scopes",
+    [
+        (False, "synthetic", service.SCOPES),
+        (True, None, service.SCOPES),
+        (True, "synthetic", []),
+    ],
+)
+def test_incomplete_sign_in_preserves_old_connection(
+    monkeypatch, tmp_path, valid, refresh_token, granted_scopes
+):
+    client = tmp_path / "credentials.json"
+    client.write_text(json.dumps(DESKTOP_CONFIG), encoding="utf-8", errors="strict")
+    token = tmp_path / "token.json"
+    original = b"DCTOK1synthetic-previous-token"
+    token.write_bytes(original)
+    monkeypatch.setattr(service, "CREDENTIALS_PATH", str(client))
+    monkeypatch.setattr(service, "TOKEN_PATH", str(token))
+    creds = SimpleNamespace(
+        valid=valid,
+        refresh_token=refresh_token,
+        scopes=service.SCOPES,
+        granted_scopes=granted_scopes,
+    )
+    monkeypatch.setattr(service, "run_desktop_auth", lambda *a, **k: creds)
+    monkeypatch.setattr(service, "build", lambda *a, **k: pytest.fail("Invalid grant"))
+    sync = service.CalendarSyncService()
+
+    assert not sync.authenticate(force_reauth=True, persist_token=False)
+
+    assert sync.last_error_kind == "auth_denied"
+    assert sync._pending_token_json is None
+    assert not sync.is_authenticated and sync.service is None
+    assert token.read_bytes() == original
 
 
 def test_service_requires_auth_when_legacy_token_protection_fails(monkeypatch, tmp_path):
@@ -212,7 +322,12 @@ def test_service_rejects_auth_when_token_encryption_fails(monkeypatch, tmp_path)
     monkeypatch.setattr(service, "CREDENTIALS_PATH", str(client))
     monkeypatch.setattr(service, "TOKEN_PATH", str(path))
     monkeypatch.setattr(token_store, "TOKEN_PATH", str(path))
-    creds = SimpleNamespace(valid=True, to_json=lambda: "synthetic-token")
+    creds = SimpleNamespace(
+        valid=True,
+        scopes=service.SCOPES,
+        refresh_token="synthetic",
+        to_json=lambda: "synthetic-token",
+    )
     monkeypatch.setattr(service, "run_desktop_auth", lambda *a, **k: creds)
     monkeypatch.setattr(service, "build", lambda *a, **k: object())
 
@@ -222,6 +337,7 @@ def test_service_rejects_auth_when_token_encryption_fails(monkeypatch, tmp_path)
     monkeypatch.setattr(token_store, "_dpapi_crypt", fail)
     sync = service.CalendarSyncService()
     assert not sync.authenticate(force_reauth=True)
+    assert sync.last_error_kind == "auth_token_write"
     assert sync.last_error_message == "token_write_failed"
     assert not sync.is_authenticated
     assert sync.service is None

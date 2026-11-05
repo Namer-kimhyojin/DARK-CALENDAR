@@ -4,6 +4,14 @@
 from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import QApplication
 
+from calendar_app.shared.calendar_display_settings import (
+    WEEKDAY_DISPLAY_KEY,
+    next_weekday_display_mode,
+    normalize_weekday_display_mode,
+    weekday_display_flags,
+    weekday_display_mode_for,
+)
+
 
 class CalendarViewActionsMixin:
     # ------------------------------------------------------------------ #
@@ -66,15 +74,17 @@ class CalendarViewActionsMixin:
         )
 
     def _build_left_render_signature(self):
+        from calendar_app.presentation.panels.side_panel_renderer import (
+            left_panel_mode,
+            selected_schedule_date,
+        )
+
+        mode = left_panel_mode(self)
         return (
-            self.current_date.toString("yyyy-MM-dd")
-            if isinstance(getattr(self, "current_date", None), QDate)
-            else "",
-            str(
-                getattr(self, "left_panel_mode", self.settings.value("left_panel_mode", "today"))
-                if hasattr(self, "settings")
-                else getattr(self, "left_panel_mode", "today")
+            (selected_schedule_date(self) if mode == "selected" else QDate.currentDate()).toString(
+                "yyyy-MM-dd"
             ),
+            mode,
             str(self._directive_panel_option("left_group_by_date", "false")).lower() == "true",
             *self._common_ui_signature_bits(),
         )
@@ -217,7 +227,7 @@ class CalendarViewActionsMixin:
             bool(getattr(self, "cal_show_weekends", True)),
             bool(getattr(self, "cal_start_monday", True)),
             bool(getattr(self, "cal_show_month", False)),
-            bool(getattr(self, "cal_show_weekday", False)),
+            weekday_display_mode_for(self),
             search_text,
             selected_ids,
             *theme_bits,
@@ -227,10 +237,28 @@ class CalendarViewActionsMixin:
 
     def load_center_panel(self, force=True):
         from calendar_app.presentation.calendar.month_renderer import render_calendar
+        from calendar_app.presentation.panels.side_panel_renderer import (
+            _selected_day_subscription_rows,
+            left_panel_mode,
+            selected_schedule_date,
+        )
+
+        selected_date = (
+            selected_schedule_date(self) if left_panel_mode(self) == "selected" else None
+        )
+        old_subscriptions = (
+            _selected_day_subscription_rows(self, selected_date)
+            if selected_date is not None
+            else []
+        )
 
         self._load_panel_cached(
             "center", self._build_center_render_signature(), render_calendar, force
         )
+        if selected_date is not None and old_subscriptions != _selected_day_subscription_rows(
+            self, selected_date
+        ):
+            self.load_left_panel()
         if hasattr(self, "refresh_widget_mode_panels"):
             self.refresh_widget_mode_panels(schedule=True, work=False)
 
@@ -254,7 +282,21 @@ class CalendarViewActionsMixin:
         self._set_calendar_flag("cal_show_month", "cal_show_month", state)
 
     def toggle_show_weekday(self, state):
-        self._set_calendar_flag("cal_show_weekday", "cal_show_weekday", state)
+        self.set_weekday_display_mode("both" if state else "header")
+
+    def set_weekday_display_mode(self, mode):
+        mode = normalize_weekday_display_mode(mode)
+        if mode is None:
+            return
+        self.cal_weekday_display_mode = mode
+        self.cal_show_weekday = weekday_display_flags(mode)[1]
+        if hasattr(self, "settings"):
+            self.settings.setValue(WEEKDAY_DISPLAY_KEY, mode)
+            self.settings.setValue("cal_show_weekday", self.cal_show_weekday)
+        self.load_center_panel()
+
+    def cycle_weekday_display_mode(self):
+        self.set_weekday_display_mode(next_weekday_display_mode(weekday_display_mode_for(self)))
 
     def prev_day(self):
         if self.view_mode_state == "monthly":
@@ -275,7 +317,11 @@ class CalendarViewActionsMixin:
         self.schedule_panel_refresh(left=True, center=True)
 
     def jump_to_today(self):
+        from calendar_app.presentation.panels.side_panel_renderer import left_panel_mode
+
         self.current_date = QDate.currentDate()
+        if left_panel_mode(self) == "selected":
+            self._last_clicked_date = QDate(self.current_date)
         self.schedule_panel_refresh(left=True, center=True)
 
     def change_view_mode(self, mode):

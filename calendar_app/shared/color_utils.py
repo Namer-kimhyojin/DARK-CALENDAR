@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Shared color helpers used by UI rendering/styling modules."""
 
+import re
+
 from PyQt6.QtGui import QColor
 
 
@@ -45,6 +47,42 @@ def parse_hex_color(hex_color: str, fallback: str = "#1c1c1c") -> QColor:
     return c
 
 
+def parse_css_color(value: str | QColor, fallback: str = "#000000") -> QColor:
+    """Read Qt CSS colors, including normalized byte or fractional RGBA alpha."""
+    if isinstance(value, QColor):
+        return QColor(value)
+    raw = str(value or "").strip()
+    match = re.fullmatch(
+        r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)", raw, re.IGNORECASE
+    )
+    if match:
+        red, green, blue, alpha_text = match.groups()
+        try:
+            alpha = float(alpha_text) if alpha_text is not None else 255.0
+            if alpha_text is not None and alpha <= 1.0:
+                alpha *= 255.0
+            return QColor(
+                *(max(0, min(255, round(float(channel)))) for channel in (red, green, blue, alpha))
+            )
+        except (ValueError, OverflowError):
+            pass
+    color = parse_hex_color(raw, fallback)
+    return color if color.isValid() else QColor("#000000")
+
+
+def composite_color(foreground: str | QColor, background: str | QColor) -> QColor:
+    """Resolve a CSS foreground over its opaque reading surface."""
+    front = parse_css_color(foreground)
+    back = parse_css_color(background)
+    alpha = front.alphaF()
+    return QColor(
+        *(
+            round(a * alpha + b * (1.0 - alpha))
+            for a, b in zip(front.getRgb()[:3], back.getRgb()[:3], strict=True)
+        )
+    )
+
+
 def shift_rgb(color: QColor, delta: int) -> QColor:
     return QColor(
         max(0, min(255, color.red() + delta)),
@@ -75,10 +113,19 @@ def contrasting_text_color(
     *,
     light: str = "#ffffff",
     dark: str = "#101318",
+    surface: str | QColor = "#ffffff",
 ) -> str:
     """Choose whichever text color has the stronger contrast on ``background``."""
 
-    return light if contrast_ratio(light, background) >= contrast_ratio(dark, background) else dark
+    resolved = composite_color(background, surface)
+    chosen = light if contrast_ratio(light, resolved) >= contrast_ratio(dark, resolved) else dark
+    if contrast_ratio(chosen, resolved) < 4.5:
+        return (
+            "#ffffff"
+            if contrast_ratio("#ffffff", resolved) >= contrast_ratio("#000000", resolved)
+            else "#000000"
+        )
+    return chosen
 
 
 def contrast_safe_color(
@@ -179,15 +226,15 @@ def derive_text_palette(text_theme: str = "dark", theme_color: str = "#4da6ff") 
             inverse = "#0f1217"
 
     elif is_light:
-        primary = "#101318"
+        primary = "#20283a"
 
         # Reading colors stay opaque in light mode. Alpha-based text changes
         # contrast with the user's wallpaper whenever a panel is translucent.
-        secondary = "#3f4650"
+        secondary = "#5e687c"
 
-        muted = "#68717d"
+        muted = "#6b7487"
 
-        faint = "#838b95"
+        faint = "#778094"
 
         inverse = "#ffffff"
 
@@ -211,6 +258,36 @@ def derive_text_palette(text_theme: str = "dark", theme_color: str = "#4da6ff") 
         "text_accent": rgba_from_qcolor(accent, 255),
         "text_accent_soft": rgba_from_qcolor(accent, 214),
     }
+
+
+def derive_state_palette(text_theme: str = "dark") -> dict[str, str]:
+    """Use readable state text on light cards and their tinted badge surfaces."""
+    if text_theme == "light":
+        return {"success": "#14532d", "warning": "#713f12", "danger": "#881337"}
+    return {"success": "#35b66a", "warning": "#d39a2a", "danger": "#d25a66"}
+
+
+def derive_modal_state_palette(theme_color: str, surface_bg: str) -> dict[str, str]:
+    """Keep modal status/action colors in the accent family with readable tints."""
+    source = parse_hex_color(theme_color, "#4da6ff")
+    surface = parse_css_color(surface_bg)
+    black, white = QColor("#000000"), QColor("#ffffff")
+    target = black if contrast_ratio(black, surface) >= contrast_ratio(white, surface) else white
+    role = target
+    for step in range(101):
+        ratio = step / 100
+        candidate = QColor(
+            *(
+                round(a * (1 - ratio) + b * ratio)
+                for a, b in zip(source.getRgb()[:3], target.getRgb()[:3], strict=True)
+            )
+        )
+        badge = composite_color(hex_to_rgba(candidate.name(), 0.32), surface)
+        if contrast_ratio(candidate, surface) >= 4.5 and contrast_ratio(candidate, badge) >= 4.5:
+            role = candidate
+            break
+    value = role.name(QColor.NameFormat.HexRgb)
+    return {"success": value, "warning": value, "danger": value}
 
 
 def derive_ui_palette(
@@ -259,22 +336,33 @@ def derive_ui_palette(
         "text_accent": text_pal["text_accent"],
         "text_accent_soft": text_pal["text_accent_soft"],
         "text_placeholder": text_placeholder,
-        "border": f"rgba({neutral_rgb},0.16)",
-        "border_soft": f"rgba({neutral_rgb},0.10)",
-        "border_strong": f"rgba({neutral_rgb},0.28)",
-        "control_bg": f"rgba({neutral_rgb},{0.035 if is_light else 0.05})",
-        "control_bg_hover": f"rgba({neutral_rgb},{0.07 if is_light else 0.10})",
-        "control_bg_pressed": f"rgba({neutral_rgb},{0.10 if is_light else 0.04})",
+        "border": "#cbd3e1" if is_light else f"rgba({neutral_rgb},0.16)",
+        "border_soft": "#dde2ed" if is_light else f"rgba({neutral_rgb},0.10)",
+        "border_strong": "#a4b0c4" if is_light else f"rgba({neutral_rgb},0.28)",
+        "divider": "#dde2ed" if is_light else "rgba(255,255,255,0.08)",
+        "separator_bg": "#dde2ed" if is_light else "rgba(255, 255, 255, 10)",
+        "control_bg": rgba_from_qcolor(QColor("#ffffff"), _fa())
+        if is_light
+        else f"rgba({neutral_rgb},0.05)",
+        "control_bg_hover": panel_pal["item_hover_bg"] if is_light else f"rgba({neutral_rgb},0.10)",
+        "control_bg_pressed": panel_pal["surface_hover_bg"]
+        if is_light
+        else f"rgba({neutral_rgb},0.04)",
+        "selection_bg": rgba_from_qcolor(
+            composite_color(hex_to_rgba(theme_color, 0.13), "#ffffff"), _fa()
+        )
+        if is_light
+        else panel_pal["toolbar_bg"],
         "cell_bg": rgba_from_qcolor(base, 0),
         "cell_other_bg": rgba_from_qcolor(base, 0),
         "cell_hover_bg": rgba_from_qcolor(base, 0),
         "task_btn_bg": panel_pal["item_bg"],
         "task_btn_hover": panel_pal["item_hover_bg"],
         "task_btn_text": text_primary,
-        "scrollbar_handle": f"rgba({neutral_rgb},{0.22 if is_light else 0.15})",
+        "scrollbar_handle": "#778094" if is_light else f"rgba({neutral_rgb},0.15)",
         "weekday_label": text_secondary,
-        "weekday_sat": "#8ab7ff",
-        "weekday_sun": "#ff9ea8",
+        "weekday_sat": "#386ec4" if is_light else "#8ab7ff",
+        "weekday_sun": "#ba4961" if is_light else "#ff9ea8",
         "weekday_other": text_pal["text_faint"],
         "weekday_normal": text_secondary,
         "tooltip_bg": panel_pal["toolbar_bg"],
@@ -318,15 +406,25 @@ def derive_panel_palette(base_hex: str, opacity_factor: float = 1.0) -> dict:
     # collapses at full opacity and is unpredictable over desktop wallpaper.
     if base.lightnessF() >= 0.58:
         white = QColor("#ffffff")
-        black = QColor("#000000")
-        surface = _mix(white, 0.42)
-        surface_hover = _mix(black, 0.045)
+        ink = QColor("#20283a")
+        surface = base
+        surface_hover = _mix(ink, 0.045)
         toolbar = _mix(white, 0.66)
-        topbar = _mix(black, 0.025)
-        item = _mix(white, 0.82)
-        item_hover = _mix(black, 0.035)
+        topbar = _mix(white, 0.18)
+        item = white
+        item_hover = _mix(white, 0.45)
+        content = white
+        floating = white
     else:
-        surface = surface_hover = toolbar = topbar = item = item_hover = base
+        white = QColor("#ffffff")
+        surface = base
+        surface_hover = _mix(white, 0.035)
+        toolbar = _mix(white, 0.04)
+        topbar = _mix(white, 0.025)
+        item = _mix(white, 0.055)
+        item_hover = _mix(white, 0.10)
+        content = surface
+        floating = toolbar
 
     return {
         "surface_bg": rgba_from_qcolor(surface, _a(-30)),
@@ -337,6 +435,6 @@ def derive_panel_palette(base_hex: str, opacity_factor: float = 1.0) -> dict:
         "item_hover_bg": rgba_from_qcolor(item_hover, _a(0)),
         # Reading and floating surfaces need stable contrast even when the
         # decorative shell is intentionally translucent.
-        "content_bg": rgba_from_qcolor(surface, max(_a(-30), 220)),
-        "floating_bg": rgba_from_qcolor(toolbar, max(_a(-20), 248)),
+        "content_bg": rgba_from_qcolor(content, max(_a(-30), 220)),
+        "floating_bg": rgba_from_qcolor(floating, max(_a(-20), 248)),
     }

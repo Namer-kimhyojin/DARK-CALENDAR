@@ -136,6 +136,7 @@ class KeyDeckCanvas(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setProperty("dcWheelValueControl", True)
         self.setMouseTracking(True)
         self.setAcceptDrops(True)
         self.setAutoFillBackground(False)

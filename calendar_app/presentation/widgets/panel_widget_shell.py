@@ -27,6 +27,10 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.dialogs.dialog_styles import (
+    apply_common_dialog_style,
+    get_dialog_metric_tokens,
+)
 from calendar_app.presentation.widgets.panel_widget_theme import (
     _WIDGET_COLOR_DEFAULT,
     _WIDGET_COLOR_FOLLOW_MAIN,
@@ -408,24 +412,15 @@ class _FloatingWidgetBase(QWidget):
             action.setChecked(name == current_size)
             action.triggered.connect(lambda _=False, preset=name: self._set_size_preset(preset))
 
-        color_menu = style_menu.addMenu(t("widget_mode.style_color", "색상"))
-        current_mode = self._read_widget_color_mode()
-        for name, label, _color in self._color_presets():
-            action = color_menu.addAction(label)
-            action.setCheckable(True)
-            action.setText(t(f"widget_mode.style_color_{name}", label))
-            action.setChecked(name == current_mode)
-            action.triggered.connect(
-                lambda _=False, selected=name: self._set_widget_color_mode(selected)
-            )
-
-        color_menu.addSeparator()
-        color_menu.addAction(
-            t("widget_mode.style_color_custom", "직접 선택..."), self._pick_widget_accent
+        linked_theme = style_menu.addAction(
+            t("widget_mode.main_theme_linked", "색상 · 메인 테마 연동")
         )
+        linked_theme.setEnabled(False)
 
         style_menu.addSeparator()
-        skin_menu = style_menu.addMenu(t("widget_mode.style_color_skin", "색상 스킨"))
+        skin_menu = style_menu.addMenu(
+            t("widget_mode.style_shape_skin", "모양 스킨 · 메인 테마 연동")
+        )
         current_skin = self._read_widget_mode_skin()
         for skin in widget_mode_skins():
             act = skin_menu.addAction(t(skin.label_key, skin.label_default))
@@ -597,11 +592,32 @@ class _WidgetModeLauncher(QDialog):
 
     def apply_palette(self, scale: float = 1.0) -> None:
         s = scale
+        settings = self._app.settings
         tokens = _resolve_widget_mode_tokens(app=self._app)
-        tokens = _apply_registered_widget_mode_skin(tokens, self._app.settings)
+        tokens = _apply_registered_widget_mode_skin(tokens, settings)
         if not tokens:
             return
-        self.setStyleSheet(_widget_mode_launcher_stylesheet(tokens=tokens, scale=s))
+        for button in (self.schedule_btn, self.work_btn, self.all_btn):
+            button.setObjectName("ghost_btn")
+            button.setProperty("dialogFooter", True)
+        metrics = get_dialog_metric_tokens(settings=settings)
+        button_height = max(30, int(metrics["button_height"])) * s
+        controls = f"""
+            QLabel#widget_mode_launcher_title {{ font-size: {metrics["title_font_pt"] * s}px; }}
+            QLabel#widget_mode_launcher_desc {{ font-size: {metrics["base_font_pt"] * s}px; }}
+            QPushButton#widget_mode_launcher_btn {{
+                font-size: {metrics["base_font_pt"] * s}px;
+                min-height: {button_height}px; max-height: {button_height}px;
+                padding: {metrics["button_padding_y"] * s}px {metrics["button_padding_x"] * s}px;
+                border-radius: {metrics["button_radius"] * s}px;
+            }}
+        """
+        apply_common_dialog_style(
+            self,
+            settings=settings,
+            keep_existing_stylesheet=False,
+            extra_stylesheet=_widget_mode_launcher_stylesheet(tokens=tokens, scale=s) + controls,
+        )
 
 
 def _floating_set_restore_callback(self, callback: Callable[[], None] | None) -> None:
@@ -644,6 +660,7 @@ def _floating_apply_palette(self, scale: float = 1.0) -> None:
         self._read_widget_mode_skin(),
         self._read_widget_color_mode(),
         self._get_individual_opacity(),
+        tuple(sorted(tokens.items())),
     )
     cached_ss = getattr(self, "_ss_cache", None)
     cached_key = getattr(self, "_ss_cache_key", None)

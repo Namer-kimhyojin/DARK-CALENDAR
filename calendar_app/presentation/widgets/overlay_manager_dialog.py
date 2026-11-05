@@ -47,6 +47,7 @@ from calendar_app.presentation.widgets.widget_management_ui import (
     hub_button,
 )
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.typography import get_typography_scale
 
 logger = logging.getLogger(__name__)
 
@@ -102,12 +103,17 @@ def _q(h: str, a: float) -> str:
 def _load_tokens(settings=None) -> dict:
     """dialog_theme 토큰 + metric 토큰을 통합한 번들 반환."""
     tok = get_dialog_theme_tokens(settings=settings)
-    met = get_dialog_metric_tokens(apply_overrides=True)
+    met = get_dialog_metric_tokens(apply_overrides=True, settings=settings)
 
     success_hex = str(tok.get("success_hex") or tok.get("button_success_text") or tok.get("accent"))
     danger_hex = str(tok.get("danger_hex") or tok.get("button_danger_text") or tok.get("accent"))
 
+    typography = get_typography_scale(settings=settings)
     return {
+        "body_px": typography.body_px,
+        "caption_px": typography.caption_px,
+        "section_px": typography.section_px,
+        "title_px": int(met["title_font_pt"]),
         "accent": str(tok.get("accent", "")),
         "accent_soft": str(tok.get("accent_soft_bg", "")),
         "accent_border": str(tok.get("accent_soft_border", "")),
@@ -139,7 +145,7 @@ def _load_tokens(settings=None) -> dict:
 
 def _overlay_manager_style_bundle(tokens=None, metrics=None) -> dict:
     tokens = dict(tokens or get_dialog_theme_tokens())
-    metrics = dict(metrics or get_dialog_metric_tokens(apply_overrides=True))
+    metrics = {**get_dialog_metric_tokens(apply_overrides=True), **(metrics or {})}
     return {
         "accent": str(tokens.get("accent", "")),
         "danger": str(tokens.get("danger_hex", tokens.get("accent", ""))),
@@ -151,19 +157,23 @@ def _overlay_manager_style_bundle(tokens=None, metrics=None) -> dict:
         ),
         "description": (
             f"color: {tokens.get('text_muted', '')}; "
-            f"font-size: {int(metrics.get('subtitle_font_pt', 10))}pt;"
+            f"font-size: {int(metrics['subtitle_font_pt'])}px;"
         ),
         "row_name": (
-            f"color: {tokens.get('text_primary', '')}; "
-            f"font-size: {int(metrics.get('base_font_pt', 10))}pt;"
+            f"color: {tokens.get('text_primary', '')}; font-size: {int(metrics['base_font_pt'])}px;"
         ),
     }
 
 
 def _build_web_ui_stylesheet(tokens=None, metrics=None) -> str:
     tokens = dict(tokens or get_dialog_theme_tokens())
-    metrics = dict(metrics or get_dialog_metric_tokens(apply_overrides=True))
+    metrics = {**get_dialog_metric_tokens(apply_overrides=True), **(metrics or {})}
+    typography = get_typography_scale(base_pt=float(metrics["base_font_pt"]) * 0.75)
     mapped = {
+        "title_px": int(metrics["title_font_pt"]),
+        "body_px": int(metrics["base_font_pt"]),
+        "caption_px": int(metrics["subtitle_font_pt"]),
+        "section_px": typography.section_px,
         "accent": str(tokens.get("accent", "")),
         "accent_soft": str(tokens.get("accent_soft_bg", tokens.get("surface_hover", ""))),
         "accent_border": str(tokens.get("accent_soft_border", tokens.get("border", ""))),
@@ -222,42 +232,32 @@ def _build_manager_css(tok: dict) -> str:
     return (
         f"QDialog {{ background: {tok['bg_main']}; color: {tok['text_primary']}; }}"
         f"QFrame#MgrHdr {{ background: {tok['bg_alt']}; border-bottom: 1px solid {tok['divider']}; }}"
-        f"QLabel#overlayManagerTitle {{ color: {tok['text_primary']}; font-size: 14pt; font-weight: 700; }}"
-        f"QLabel#overlayManagerDesc {{ color: {tok['text_muted']}; font-size: 9pt; }}"
+        f"QLabel#overlayManagerTitle {{ color: {tok['text_primary']}; font-size: {tok['title_px']}px; font-weight: 700; }}"
+        f"QLabel#overlayManagerDesc {{ color: {tok['text_muted']}; font-size: {tok['caption_px']}px; }}"
         f"QFrame#overlayManagerAddBar {{ background: {tok['bg_main']}; border: 1px solid {tok['border']};"
         f" border-radius: {r_md}px; }}"
-        f"QLabel#mgrNewLabel {{ color: {tok['text_muted']}; font-size: 9pt; font-weight: 600;"
+        f"QLabel#mgrNewLabel {{ color: {tok['text_muted']}; font-size: {tok['caption_px']}px; font-weight: 600;"
         f" background: transparent; border: none; }}"
         f"QComboBox#typeCombo {{ background: {tok['bg_item']}; border: 1px solid {tok['border']};"
         f" border-radius: {r_sm}px; padding: 0 10px; color: {tok['text_primary']};"
-        f" font-size: 10pt; font-weight: 500; }}"
+        f" font-size: {tok['body_px']}px; font-weight: 500; }}"
         f"QComboBox#typeCombo:hover {{ border-color: {tok['accent_border']}; }}"
         f"QComboBox#typeCombo::drop-down {{ border: none; width: 20px; }}"
         f"QLineEdit#nameEditBar {{ background: {tok['bg_item']}; border: 1px solid {tok['border']};"
-        f" border-radius: {r_sm}px; padding: 0 10px; color: {tok['text_primary']}; font-size: 10pt; }}"
+        f" border-radius: {r_sm}px; padding: 0 10px; color: {tok['text_primary']}; font-size: {tok['body_px']}px; }}"
         f"QLineEdit#nameEditBar:focus {{ border-color: {tok['accent']}; }}"
-        f"QLabel#secLabel {{ color: {tok['text_faint']}; font-size: 8.5pt;"
+        f"QLabel#secLabel {{ color: {tok['text_faint']}; font-size: {tok['caption_px']}px;"
         f" font-weight: 700; letter-spacing: 1px; }}"
         f"QLabel#countBadge {{ background: {tok['bg_item']}; color: {tok['text_muted']};"
         f" border: 1px solid {tok['border']}; border-radius: {min(r_sm, 10)}px;"
-        f" font-size: 8pt; font-weight: 700; padding: 0 7px; min-height: 18px; }}"
+        f" font-size: {tok['caption_px']}px; font-weight: 700; padding: 0 7px; min-height: 18px; }}"
         f"QScrollArea#widgetListScroll {{ background: {tok['bg_main']}; border: none; }}"
         f"QWidget#widgetListViewport, QWidget#widgetListContainer {{"
         f" background: {tok['bg_main']}; border: none; }}"
-        f"QLabel#emptyLabel {{ color: {tok['text_faint']}; font-size: 10.5pt; padding: 48px; }}"
+        f"QLabel#emptyLabel {{ color: {tok['text_faint']}; font-size: {tok['body_px']}px; padding: 48px; }}"
         f"QFrame#MgrFoot {{ border-top: 1px solid {tok['divider']}; background: {tok['bg_alt']}; }}"
-        f"QLabel#overlayManagerHint {{ color: {tok['text_faint']}; font-size: 9pt;"
+        f"QLabel#overlayManagerHint {{ color: {tok['text_faint']}; font-size: {tok['caption_px']}px;"
         f" border: none; background: transparent; }}"
-        f"QPushButton#primary_btn {{ background: {tok['accent_soft']}; color: {tok['accent']};"
-        f" border: 1px solid {tok['accent_border']}; border-radius: {tok['btn_r']}px;"
-        f" font-size: 9.5pt; font-weight: 700; padding: 0 14px; }}"
-        f"QPushButton#primary_btn:hover {{ background: {tok['accent_hover']}; color: {tok['text_primary']};"
-        f" border-color: {tok['accent']}; }}"
-        f"QPushButton#ghost_btn {{ background: {tok['bg_item']}; color: {tok['text_secondary']};"
-        f" border: 1px solid {tok['border']}; border-radius: {tok['btn_r']}px;"
-        f" font-size: 9.5pt; font-weight: 600; padding: 0 14px; }}"
-        f"QPushButton#ghost_btn:hover {{ background: {tok['bg_item_hover']}; color: {tok['text_primary']};"
-        f" border-color: {tok['border_strong']}; }}"
         f"QFrame#WidgetCard {{ background: {tok['bg_item']}; border: 1px solid {tok['border']};"
         f" border-radius: {r_card}px; border-left: none;"
         f" border-top-left-radius: 0; border-bottom-left-radius: 0; }}"
@@ -265,11 +265,11 @@ def _build_manager_css(tok: dict) -> str:
         f" border-color: {tok['accent_border']}; }}"
         f"QLineEdit#cardNameEdit {{ background: transparent; border: none;"
         f" border-bottom: 1px solid transparent; color: {tok['text_primary']};"
-        f" font-size: 11pt; font-weight: 600; padding: 0; }}"
-        f"QLabel#cardIdLabel {{ color: {tok['text_faint']}; font-size: 8pt; font-weight: 400; }}"
+        f" font-size: {tok['body_px']}px; font-weight: 600; padding: 0; }}"
+        f"QLabel#cardIdLabel {{ color: {tok['text_faint']}; font-size: {tok['caption_px']}px; font-weight: 400; }}"
         f"QPushButton#outlineBtn {{ background: {tok['bg_item']}; color: {tok['text_secondary']};"
         f" border: 1px solid {tok['border']}; border-radius: {r_sm}px;"
-        f" font-size: 9pt; font-weight: 600; padding: 0 12px; }}"
+        f" font-size: {tok['caption_px']}px; font-weight: 600; padding: 0 12px; }}"
         f"QPushButton#outlineBtn:hover {{ background: {tok['bg_item_hover']}; color: {tok['text_primary']};"
         f" border-color: {tok['accent_border']}; }}"
     )
@@ -290,9 +290,9 @@ class _Chip(QLabel):
         self.setStyleSheet(
             f"QLabel {{ background: {_q(color, 0.15)}; color: {color};"
             f" border: 1px solid {_q(color, 0.30)}; border-radius: {r}px;"
-            f" font-size: 8.5pt; font-weight: 700; padding: 1px 8px; }}"
+            f" font-size: {tokens['caption_px']}px; font-weight: 700; padding: 1px 8px; }}"
         )
-        self.setFixedHeight(20)
+        self.setMinimumHeight(max(20, self.fontMetrics().height() + 4))
 
 
 class _ToggleBtn(QPushButton):
@@ -303,7 +303,7 @@ class _ToggleBtn(QPushButton):
         self._tokens = tokens
         self.setCheckable(True)
         self.setChecked(enabled)
-        self.setFixedSize(54, 24)
+        self.setMinimumSize(54, max(24, tokens["caption_px"] + 10))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self._refresh()
         self.toggled.connect(lambda _: self._refresh())
@@ -326,7 +326,7 @@ class _ToggleBtn(QPushButton):
         self.setText("ON" if on else "OFF")
         self.setStyleSheet(
             f"QPushButton {{ background: {bg}; color: {col}; border: 1px solid {brd};"
-            f" border-radius: {r}px; font-weight: 800; font-size: 8pt; letter-spacing: 0.5px; }}"
+            f" border-radius: {r}px; font-weight: 800; font-size: {tok['caption_px']}px; letter-spacing: 0.5px; }}"
             f"QPushButton:hover {{ background: {bh}; }}"
         )
 
@@ -355,7 +355,7 @@ class _OutlineBtn(QPushButton):
     def __init__(self, text: str, tokens: dict, parent=None):
         super().__init__(text, parent)
         self.setObjectName("outlineBtn")
-        self.setFixedHeight(max(tokens["btn_h"] - 8, 24))
+        self.setMinimumHeight(max(tokens["btn_h"] - 8, tokens["body_px"] + 10, 24))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
 
@@ -386,6 +386,7 @@ class WidgetCard(QFrame):
         self.iid, self.wtype, self.widget = iid, wtype, widget
         self._tokens = tokens
         self.setObjectName("WidgetCard")
+        self.setProperty("role", "dialogCard")
         self.setMinimumHeight(86)
         root = QHBoxLayout(self)
         root.setContentsMargins(14, 10, 12, 10)
@@ -407,7 +408,7 @@ class WidgetCard(QFrame):
         root.addLayout(info, 1)
         self.toggle = _ToggleBtn(widget.is_enabled(), tokens)
         self.toggle.setAutoDefault(False)
-        self.toggle.setFixedSize(64, 28)
+        self.toggle.setMinimumSize(64, max(28, tokens["caption_px"] + 10))
         self.toggle.toggled.connect(functools.partial(on_toggle, iid))
         root.addWidget(self.toggle)
         self.find_button = hub_button(t("widget_hub.find", "찾기"), lambda: on_focus(iid))
@@ -487,7 +488,7 @@ class OverlayManagerDialog(QDialog):
     def __init__(self, manager, parent=None):
         super().__init__(parent)
         self._mgr = manager
-        self._tok = _load_tokens()
+        self._tok = _load_tokens(settings=getattr(parent, "settings", None))
         self._cards = {}
         self._instances = []
         self._listening = True
@@ -499,8 +500,12 @@ class OverlayManagerDialog(QDialog):
         self._refresh_timer.setSingleShot(True)
         self._refresh_timer.timeout.connect(self._populate)
         apply_dialog_title(self, t("widget_manager.title", "위젯 관리자"))
-        apply_common_dialog_style(self, minimum_width=760, size=(940, 680))
-        self.setStyleSheet(_build_manager_css(self._tok) + management_styles(self._tok))
+        apply_common_dialog_style(
+            self,
+            minimum_width=760,
+            size=(940, 680),
+            extra_stylesheet=_build_manager_css(self._tok) + management_styles(self._tok),
+        )
         self._build_ui()
         self._populate()
         self._mgr.add_listener(self._sync_from_manager)
@@ -512,6 +517,7 @@ class OverlayManagerDialog(QDialog):
         header = QFrame()
         self._header_frame = header
         header.setObjectName("MgrHdr")
+        header.setProperty("role", "dialogHeader")
         head = QVBoxLayout(header)
         head.setContentsMargins(20, 16, 20, 14)
         title = QLabel(t("widget_manager.title", "위젯 관리자"))
@@ -530,6 +536,8 @@ class OverlayManagerDialog(QDialog):
         self.tabs = QTabWidget()
         self.tabs.setObjectName("hubTabs")
         desktop = QWidget()
+        desktop.setObjectName("hubDesktopBody")
+        desktop.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         body = QVBoxLayout(desktop)
         body.setContentsMargins(18, 14, 18, 8)
         body.setSpacing(12)
@@ -649,6 +657,8 @@ class OverlayManagerDialog(QDialog):
             self._snap_check.toggled.connect(self._snap_action.setChecked)
         self.tabs.addTab(desktop, t("widget_hub.desktop_tab", "바탕화면 위젯"))
         mode_scroll = QScrollArea()
+        mode_scroll.setObjectName("hubModeScroll")
+        mode_scroll.viewport().setObjectName("hubModeViewport")
         mode_scroll.setWidgetResizable(True)
         mode_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.mode_panel = WidgetModeManagementPanel(getattr(self._mgr, "_owner", None), self)
@@ -660,6 +670,7 @@ class OverlayManagerDialog(QDialog):
             )
 
             self.workspace_panel = WidgetWorkspacePanel(self.studio, self)
+            self.workspace_panel.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
             workspace_scroll = QScrollArea()
             workspace_scroll.setObjectName("hubWorkspaceScroll")
             workspace_scroll.viewport().setObjectName("hubWorkspaceViewport")
@@ -671,6 +682,7 @@ class OverlayManagerDialog(QDialog):
         root.addWidget(self.tabs, 1)
         footer = QFrame()
         footer.setObjectName("MgrFoot")
+        footer.setProperty("role", "dialogFooter")
         foot = QHBoxLayout(footer)
         foot.setContentsMargins(20, 10, 20, 10)
         hint = QLabel(
@@ -952,10 +964,14 @@ class OverlayManagerDialog(QDialog):
 
     def showEvent(self, event):
         super().showEvent(event)
-        tokens = _load_tokens()
+        tokens = _load_tokens(settings=getattr(self.parent(), "settings", None))
         if tokens != self._tok:
             self._tok = tokens
-            self.setStyleSheet(_build_manager_css(tokens) + management_styles(tokens))
+            apply_common_dialog_style(
+                self,
+                keep_existing_stylesheet=False,
+                extra_stylesheet=_build_manager_css(tokens) + management_styles(tokens),
+            )
             for card in self._cards.values():
                 card._tokens = card.toggle._tokens = tokens
         if not self._listening:

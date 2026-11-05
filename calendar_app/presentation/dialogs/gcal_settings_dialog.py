@@ -42,6 +42,7 @@ from calendar_app.presentation.dialogs.dialog_editor_styles import (
 )
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
+    apply_common_dialog_style,
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
     schedule_dialog_text_fit,
@@ -57,6 +58,7 @@ from calendar_app.presentation.dialogs.sync_feedback import (
     sync_error_message,
 )
 from calendar_app.shared.calendar_defaults import DEFAULT_CALENDAR_COLOR
+from calendar_app.shared.color_utils import parse_hex_color
 from calendar_app.shared.datetime_utils import timezone_offset_for_name
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
@@ -211,8 +213,10 @@ class GCalSettingsDialog(QDialog):
         self._metadata_load_failed = False
         self._feedback_code = None
         self._nav_btns = []
-        self._ui_tokens = get_dialog_theme_tokens()
-        self._dialog_metrics = get_dialog_metric_tokens(apply_overrides=True)
+        self._ui_tokens = get_dialog_theme_tokens(settings=self.settings)
+        self._dialog_metrics = get_dialog_metric_tokens(
+            settings=self.settings, apply_overrides=True
+        )
         self._style_bundle = build_settings_style_bundle(self._ui_tokens, self._dialog_metrics)
         self._init_ui()
         schedule_dialog_text_fit(self)
@@ -236,7 +240,13 @@ class GCalSettingsDialog(QDialog):
 
     def _init_ui(self):
         # Rebuild stylesheet on each dialog creation so token changes apply immediately.
-        self.setStyleSheet(build_settings_dialog_stylesheet(self._ui_tokens))
+        apply_common_dialog_style(
+            self,
+            settings=self.settings,
+            extra_stylesheet=build_settings_dialog_stylesheet(
+                self._ui_tokens, settings=self.settings, include_common=False
+            ),
+        )
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -267,28 +277,32 @@ class GCalSettingsDialog(QDialog):
     def _build_status_bar(self) -> QFrame:
         bar = QFrame()
         bar.setObjectName("statusBar")
+        bar.setProperty("role", "dialogHeader")
         bar.setStyleSheet(self._style_bundle["status_bar"])
         layout = QGridLayout(bar)
         layout.setContentsMargins(18, 10, 18, 10)
         layout.setHorizontalSpacing(10)
         layout.setVerticalSpacing(4)
+        heading = QLabel(self.windowTitle())
+        heading.setProperty("role", "dialogTitle")
+        layout.addWidget(heading, 0, 0, 1, 6)
 
         # 상태 아이콘 + 텍스트
         self.status_title = QLabel()
         self.status_title.setProperty("role", "statusLabel")
         self.status_title.setStyleSheet(self._style_bundle["status_title_pending"])
-        layout.addWidget(self.status_title, 0, 0)
+        layout.addWidget(self.status_title, 1, 0)
 
         self.status_pill = QLabel()
         self.status_pill.setProperty("role", "pill")
         self.status_pill.setStyleSheet(self._style_bundle["status_pill_pending"])
-        layout.addWidget(self.status_pill, 0, 1, 1, 1, Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self.status_pill, 1, 1, 1, 1, Qt.AlignmentFlag.AlignLeft)
 
         # 계정 메타
         lbl_acc = QLabel(t("gcal_settings.meta_account", "계정"))
         lbl_acc.setProperty("role", "statusBarMeta")
         lbl_acc.setStyleSheet(self._style_bundle["meta_label"])
-        layout.addWidget(lbl_acc, 1, 0)
+        layout.addWidget(lbl_acc, 2, 0)
         self.account_meta = (None, QLabel("-"))
         self.account_meta[1].setProperty("role", "statusBarMetaVal")
         self.account_meta[1].setStyleSheet(self._style_bundle["meta_value"])
@@ -296,26 +310,26 @@ class GCalSettingsDialog(QDialog):
         self.account_meta[1].setWordWrap(True)
         self.account_meta[1].setTextFormat(Qt.TextFormat.PlainText)
         self.account_meta[1].setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        layout.addWidget(self.account_meta[1], 1, 1)
+        layout.addWidget(self.account_meta[1], 2, 1)
 
         lbl_cal = QLabel(t("gcal_focus.import_meta", "가져오기"))
         lbl_cal.setProperty("role", "statusBarMeta")
         lbl_cal.setStyleSheet(self._style_bundle["meta_label"])
-        layout.addWidget(lbl_cal, 1, 2)
+        layout.addWidget(lbl_cal, 2, 2)
         self.calendar_meta = (None, QLabel("-"))
         self.calendar_meta[1].setProperty("role", "statusBarMetaVal")
         self.calendar_meta[1].setStyleSheet(self._style_bundle["meta_value"])
         self.calendar_meta[1].setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        layout.addWidget(self.calendar_meta[1], 1, 3)
+        layout.addWidget(self.calendar_meta[1], 2, 3)
 
         lbl_sync = QLabel(t("gcal_settings.meta_last_sync", "마지막 동기화"))
         lbl_sync.setProperty("role", "statusBarMeta")
         lbl_sync.setStyleSheet(self._style_bundle["meta_label"])
-        layout.addWidget(lbl_sync, 1, 4)
+        layout.addWidget(lbl_sync, 2, 4)
         self.last_sync_meta = (None, QLabel("-"))
         self.last_sync_meta[1].setProperty("role", "statusBarMetaVal")
         self.last_sync_meta[1].setStyleSheet(self._style_bundle["meta_value"])
-        layout.addWidget(self.last_sync_meta[1], 1, 5)
+        layout.addWidget(self.last_sync_meta[1], 2, 5)
         layout.setColumnStretch(1, 1)
         return bar
 
@@ -464,8 +478,8 @@ class GCalSettingsDialog(QDialog):
         sidebar.setStyleSheet(self._style_bundle["sidebar_shell"])
         sidebar.setFixedWidth(152)
         layout = QVBoxLayout(sidebar)
-        layout.setContentsMargins(0, 16, 0, 16)
-        layout.setSpacing(2)
+        layout.setContentsMargins(8, 16, 8, 16)
+        layout.setSpacing(6)
 
         nav_items = [
             (
@@ -578,7 +592,9 @@ class GCalSettingsDialog(QDialog):
 
         auth_row = QHBoxLayout()
         self.auth_btn = QPushButton(t("gcal_focus.connect_account", "Google 계정 연결"))
-        self.auth_btn.setIcon(_ic(ICON.AUTH, color=self._ui_tokens["text_primary"]))
+        self.auth_btn.setIcon(
+            _ic(ICON.AUTH, color=parse_hex_color(self._ui_tokens["button_primary_text"]).name())
+        )
         self._apply_section_button_style(self.auth_btn, "accent")
         self.auth_btn.setAutoDefault(False)
         self.auth_btn.clicked.connect(self.run_auth)
@@ -640,7 +656,9 @@ class GCalSettingsDialog(QDialog):
         test_row = QHBoxLayout()
         test_row.setSpacing(10)
         self.test_access_btn = QPushButton(t("gcal_settings.test_access", "캘린더 접근 테스트"))
-        self.test_access_btn.setIcon(_ic(ICON.SEARCH, color=self._ui_tokens["text_primary"]))
+        self.test_access_btn.setIcon(
+            _ic(ICON.SEARCH, color=parse_hex_color(self._ui_tokens["button_primary_text"]).name())
+        )
         self._apply_section_button_style(self.test_access_btn, "accent")
         self.test_access_btn.clicked.connect(self._test_calendar_access)
         self.test_access_result = QLabel(
@@ -724,10 +742,10 @@ class GCalSettingsDialog(QDialog):
 
         self.go_to_auth_btn = QPushButton(t("gcal_settings.go_to_auth", "인증 설정으로 이동"))
         self._apply_section_button_style(self.go_to_auth_btn, "secondary")
-        self.go_to_auth_btn.setFixedWidth(140)
+        self.go_to_auth_btn.setMinimumWidth(140)
         self.go_to_auth_btn.clicked.connect(lambda: self._switch_section(0))
         self.go_to_auth_btn.hide()
-        cl.addWidget(self.go_to_auth_btn)
+        cl.addWidget(self.go_to_auth_btn, 0, Qt.AlignmentFlag.AlignLeft)
 
         layout.addWidget(cal_card)
         manage_card = self._make_card(
@@ -1288,6 +1306,7 @@ class GCalSettingsDialog(QDialog):
 
     def _build_footer(self) -> QFrame:
         footer = QFrame()
+        footer.setProperty("role", "dialogFooter")
         footer.setStyleSheet(self._style_bundle["footer"])
         layout = QHBoxLayout(footer)
         layout.setContentsMargins(18, 10, 18, 10)
@@ -1300,6 +1319,7 @@ class GCalSettingsDialog(QDialog):
         layout.addStretch(1)
 
         save_btn = QPushButton(t("gcal_settings.save", "설정 저장"))
+        save_btn.setProperty("dialogFooter", True)
         self._apply_section_button_style(save_btn, "accent")
         # save_btn.setFixedHeight(28) # Removed for standardization
         save_btn.setMinimumWidth(80)
@@ -1309,6 +1329,7 @@ class GCalSettingsDialog(QDialog):
         self.save_btn = save_btn
 
         close_btn = QPushButton(t("common.close", "닫기"))
+        close_btn.setProperty("dialogFooter", True)
         self._apply_section_button_style(close_btn, "secondary")
         close_btn.setMinimumWidth(64)
         close_btn.setObjectName("ghost_btn")
@@ -1402,6 +1423,10 @@ class GCalSettingsDialog(QDialog):
     def _apply_section_button_style(
         self, button: QPushButton, tone: str = "secondary"
     ) -> QPushButton:
+        if tone in {"accent", "secondary"}:
+            button.setObjectName("primary_btn" if tone == "accent" else "ghost_btn")
+            button.setStyleSheet("")
+            return button
         disabled_style = (
             "QPushButton:disabled { "
             f"background: {self._ui_tokens['button_disabled_bg']}; "
@@ -2515,14 +2540,24 @@ class GCalSettingsDialog(QDialog):
                     "error",
                 )
                 return
-            self._set_query_feedback(
+            needs_import_choice = bool(self._calendar_import_checks) and not any(
+                self._calendar_import_selection.values()
+            )
+            message = (
                 t(
+                    "gcal_ux.connected_choose_import",
+                    "Google 계정을 연결했습니다. 일정을 가져오려면 캘린더의 ‘가져오기’를 켜고 ‘저장’을 누르세요.",
+                )
+                if needs_import_choice
+                else t(
                     "gcal_ux.connected_next",
                     "Google 계정을 연결했습니다. 가져올 캘린더를 선택하고 설정을 저장하세요.",
-                ),
-                "success",
+                )
             )
+            self._set_query_feedback(message, "success")
             self._switch_section(1)
+            if needs_import_choice:
+                next(iter(self._calendar_import_checks.values())).setFocus()
         else:
             if hasattr(worker.service, "_pending_token_json"):
                 worker.service._pending_token_json = None
@@ -2597,20 +2632,24 @@ class GCalSettingsDialog(QDialog):
         )
         from calendar_app.infrastructure.db import calendar_repo
 
-        selection_result = set_google_calendar_import_selection(
-            self._calendar_import_selection, self.settings, repository=calendar_repo
-        )
-        if not selection_result.success:
-            self._set_feedback_label(
-                self.calendar_choice_hint,
-                t(
-                    "gcal_focus.import_save_failed",
-                    "가져오기 선택을 저장하지 못했습니다. 사용 가능한 기본 저장 캘린더가 있는지 확인하고 다시 시도하세요.",
-                ),
-                "error",
+        # Before the first catalog loads, there is no import selection to save.
+        # An explicit all-off selection still has an entry for every calendar.
+        selection_result = None
+        if self._calendar_import_selection:
+            selection_result = set_google_calendar_import_selection(
+                self._calendar_import_selection, self.settings, repository=calendar_repo
             )
-            self._switch_section(1)
-            return
+            if not selection_result.success:
+                self._set_feedback_label(
+                    self.calendar_choice_hint,
+                    t(
+                        "gcal_focus.import_save_failed",
+                        "가져오기 선택을 저장하지 못했습니다. 사용 가능한 기본 저장 캘린더가 있는지 확인하고 다시 시도하세요.",
+                    ),
+                    "error",
+                )
+                self._switch_section(1)
+                return
         enabled = self.enable_cb.isChecked()
         tz_name = self._current_timezone() or "UTC"
         self.settings.setValue("gcal_enabled", "true" if enabled else "false")
@@ -2629,7 +2668,7 @@ class GCalSettingsDialog(QDialog):
         self._refresh_parent_state()
         self._refresh_status()
         message = t("gcal_settings.saved_body", "Google 동기화 설정이 저장되었습니다.")
-        if selection_result.default_changed:
+        if selection_result is not None and selection_result.default_changed:
             message += "\n" + t(
                 "gcal_focus.default_changed",
                 "가져오기를 끈 캘린더 대신 '{name}'을 새 일정의 기본 저장 캘린더로 지정했습니다. 메인 캘린더에서 변경할 수 있습니다.",
@@ -2640,7 +2679,21 @@ class GCalSettingsDialog(QDialog):
         self.unsaved_label.setText(
             t("gcal_ux.saved", "설정을 저장했습니다. 변경 내용이 적용되었습니다.")
         )
-        self._show_inline_feedback(message, "success")
+        sync = getattr(self.parent_app, "gcal_sync", None)
+        if (
+            enabled
+            and not getattr(sync, "is_authenticated", False)
+            and not os.path.exists(TOKEN_PATH)
+        ):
+            message += "\n" + t(
+                "gcal_ux.login_needed_after_save",
+                "동기화를 시작하려면 ‘Google 계정 연결’을 눌러 브라우저에서 로그인하세요.",
+            )
+            self._switch_section(0)
+            self.auth_btn.setFocus()
+            self._show_inline_feedback(message)
+        else:
+            self._show_inline_feedback(message, "success")
         self.save_btn.setEnabled(False)
 
     def reset_auth(self):

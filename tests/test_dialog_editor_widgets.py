@@ -672,8 +672,10 @@ class DialogEditorWidgetTests(unittest.TestCase):
         button_row = dialog.layout().itemAt(2).layout()
         refresh_btn = button_row.itemAt(1).widget()
         close_btn = button_row.itemAt(2).widget()
-        self.assertIn("color:", refresh_btn.styleSheet())
-        self.assertIn("color:", close_btn.styleSheet())
+        self.assertTrue(refresh_btn.property("dialogFooter"))
+        self.assertTrue(close_btn.property("dialogFooter"))
+        self.assertFalse(refresh_btn.styleSheet())
+        self.assertFalse(close_btn.styleSheet())
 
     def test_focus_log_dialog_hides_internal_id_and_accepts_extended_rows(self):
         logs = [
@@ -730,8 +732,10 @@ class DialogEditorWidgetTests(unittest.TestCase):
         urgent_icon, urgent_text = dialog.prio_fields["urgent"]
         self.assertIn("font-size:", urgent_icon.styleSheet())
         self.assertIn("padding:", urgent_text.styleSheet())
-        self.assertIn("color:", dialog.save_btn.styleSheet())
-        self.assertIn("color:", dialog.cancel_btn.styleSheet())
+        self.assertTrue(dialog.save_btn.property("dialogFooter"))
+        self.assertFalse(dialog.save_btn.styleSheet())
+        self.assertTrue(dialog.cancel_btn.property("dialogFooter"))
+        self.assertFalse(dialog.cancel_btn.styleSheet())
 
     def test_dialog_token_editor_uses_token_style_bundle(self):
         dialog = DialogTokenEditorDialog()
@@ -799,7 +803,9 @@ class DialogEditorWidgetTests(unittest.TestCase):
         height_spin = dialog._metric_spins["button_height"]
 
         self.assertEqual(width_spin.value(), 45)
-        self.assertEqual(height_spin.value(), 24)
+        from calendar_app.shared.theme_snapshot import get_dialog_metric_defaults
+
+        self.assertEqual(height_spin.value(), get_dialog_metric_defaults()["button_height"])
         self.assertEqual(width_spin.minimum(), 15)
         self.assertEqual(height_spin.minimum(), 15)
 
@@ -811,7 +817,7 @@ class DialogEditorWidgetTests(unittest.TestCase):
         dialog._reset_metric_key("button_min_width")
         dialog._reset_metric_key("button_height")
         self.assertEqual(width_spin.value(), 45)
-        self.assertEqual(height_spin.value(), 24)
+        self.assertEqual(height_spin.value(), get_dialog_metric_defaults()["button_height"])
 
     def test_dialog_token_editor_feedback_tracks_preview_and_apply(self):
         dialog = DialogTokenEditorDialog()

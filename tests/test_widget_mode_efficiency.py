@@ -116,7 +116,7 @@ def test_overall_text_size_uses_one_bounded_semantic_scale():
     assert small.title < large.title
     assert small.control < large.control
     assert small.calendar < large.calendar
-    assert large.title == large.body == 11.0
+    assert large.title == large.body == 12.5
     assert large.title - large.control <= 0.5
     assert large.title < large.preference
 

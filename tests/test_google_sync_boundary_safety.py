@@ -681,6 +681,19 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
         self.assertEqual(before_settings, app.settings.data)
         self.assertEqual(before_queue, task_repo.get_gcal_delete_queue())
 
+    def test_primary_discovery_network_failure_can_be_retried_without_reconnecting(self):
+        app = self._account_switch_app()
+        app.gcal_sync.list_accessible_calendars.return_value = []
+        app.gcal_sync.last_error_kind = "network_unavailable"
+        app.gcal_sync.last_error_status = None
+        before_settings = dict(app.settings.data)
+        with patch.object(engine, "_get_default_gcal_id", return_value="primary"):
+            self.assertFalse(engine.sync_google_calendar(app, silent=True))
+        self.assertEqual("network_unavailable", app._last_gcal_sync_error)
+        self.assertEqual(before_settings, app.settings.data)
+        app.gcal_sync.batch_delete_events.assert_not_called()
+        app.gcal_sync.fetch_sync_events.assert_not_called()
+
     def test_invalid_primary_metadata_cannot_replace_known_account_identity(self):
         for calendars in (
             [{"id": 42, "primary": True}],

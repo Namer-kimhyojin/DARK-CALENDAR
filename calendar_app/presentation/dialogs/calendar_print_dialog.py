@@ -281,6 +281,10 @@ class CalendarPrintDialog(QDialog):
         content_layout.addWidget(note)
         content_layout.addStretch(1)
         self.content_scroll.setWidget(content)
+        # QScrollArea.setWidget enables autoFillBackground on its child. Keep
+        # the native gray palette from leaking between themed option cards.
+        content.setAutoFillBackground(False)
+        self.content_scroll.viewport().setAutoFillBackground(False)
         root.addWidget(self.content_scroll, 1)
 
         separator = QFrame()

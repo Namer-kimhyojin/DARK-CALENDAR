@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from PyQt6.QtCore import QSettings
 
@@ -172,6 +172,42 @@ class GCalSyncIntegrationTests(TemporaryDatabaseTestCase):
         self.assertEqual(len(archive_rows), 1)
         self.assertEqual(archive_rows[0]["gcal_event_id"], "evt-missing")
         self.assertEqual(archive_rows[0]["name"], "Local Only")
+
+    def test_expired_token_uses_full_snapshot_for_archive_after_retry(self):
+        local_id = task_repo.create_unified_task(
+            {
+                "name": "Stale Mirror",
+                "type": "schedule",
+                "deadline": "2026-03-14 09:00:00",
+                "end_date": "2026-03-14 10:00:00",
+                "gcal_event_id": "evt-stale",
+                "gcal_dirty": 0,
+            }
+        )
+        sync = FakeSyncService()
+        app = self._build_app(
+            {
+                "gcal_enabled": "true",
+                "gcal_calendar_id": "primary",
+                "gcal_bound_calendar_id": "primary",
+                "gcal_sync_token::primary": "expired",
+            },
+            sync,
+        )
+        with patch.object(
+            sync,
+            "fetch_sync_events",
+            side_effect=[(None, None, True), ([], "replacement", False)],
+        ) as fetch:
+            self.assertTrue(engine.sync_google_calendar(app, silent=True))
+
+        self.assertEqual(
+            fetch.call_args_list,
+            [call("expired", calendar_id="primary"), call(None, calendar_id="primary")],
+        )
+        self.assertIsNone(task_repo.get_unified_task(local_id))
+        self.assertEqual([r["gcal_event_id"] for r in self._archive_rows()], ["evt-stale"])
+        self.assertEqual(app.settings.data["gcal_sync_token::primary"], "replacement")
 
     def test_binding_change_with_auth_failure_keeps_existing_links(self):
         local_id = task_repo.create_unified_task(

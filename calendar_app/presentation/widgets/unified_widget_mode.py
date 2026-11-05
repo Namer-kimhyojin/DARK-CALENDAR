@@ -15,7 +15,6 @@ from PyQt6.QtCore import (
     pyqtSignal,
 )
 from PyQt6.QtGui import (
-    QColor,
     QContextMenuEvent,
     QFont,
     QPainter,
@@ -57,6 +56,7 @@ from calendar_app.presentation.widgets.panel_widget_theme import (
     _apply_registered_widget_mode_skin,
     _widget_mode_menu_stylesheet,
 )
+from calendar_app.presentation.widgets.schedule_info import _is_all_day as _schedule_is_all_day
 from calendar_app.presentation.widgets.week_day_button import ModernWeekDayButton
 from calendar_app.presentation.widgets.widget_mode_density import (
     DENSITIES,
@@ -425,22 +425,26 @@ class _CompletionCheckBox(QCheckBox):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(
-            QPen(QColor(tokens["accent"] if self.isChecked() else tokens["text_secondary"]), 1.5)
-        )
-        background = css_to_qcolor(tokens["section_bg"])
-        background.setAlpha(
-            round(
-                background.alpha()
-                * read_widget_opacities(self._controller.main_window.settings)[1]
-                / 100
+            QPen(
+                css_to_qcolor(tokens["accent"] if self.isChecked() else tokens["text_secondary"]),
+                1.5,
             )
         )
+        background = css_to_qcolor(tokens["section_bg"])
+        if tokens.get("_main_theme_linked") != "true":
+            background.setAlpha(
+                round(
+                    background.alpha()
+                    * read_widget_opacities(self._controller.main_window.settings)[1]
+                    / 100
+                )
+            )
         painter.setBrush(background)
         painter.drawRoundedRect(3, 3, 18, 18, 5, 5)
         if self.isChecked():
             painter.drawPixmap(5, 5, _ic(ICON.CHECK, color=tokens["accent"]).pixmap(14, 14))
         if self.hasFocus():
-            painter.setPen(QPen(QColor(tokens["accent"]), 1, Qt.PenStyle.DotLine))
+            painter.setPen(QPen(css_to_qcolor(tokens["accent"]), 1, Qt.PenStyle.DotLine))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawRoundedRect(1, 1, 22, 22, 6, 6)
         painter.end()
@@ -764,7 +768,10 @@ class _CompactMonthCalendar(QWidget):
             Qt.DayOfWeek.Saturday.value,
             Qt.DayOfWeek.Sunday.value,
         }:
-            text = tk.get("accent_deep", tk["text_primary"])
+            text = tk.get(
+                "calendar_weekday_sat" if day.dayOfWeek() == 6 else "calendar_weekday_sun",
+                tk.get("accent_deep", tk["text_primary"]),
+            )
         background = "transparent"
         border = "transparent"
         weight = 500
@@ -806,6 +813,10 @@ class _CompactMonthCalendar(QWidget):
         weekday_keys = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
         for key, label in zip(weekday_keys, self.weekday_labels, strict=True):
             label.setText(t(f"weekday.{key}", key.title()))
+            color = self._tokens.get(
+                f"calendar_weekday_{key}", self._tokens.get("text_secondary", "")
+            )
+            label.setStyleSheet(f"color: {color};")
         self._dates = []
         today = QDate.currentDate()
         for index, button in enumerate(self.day_buttons):
@@ -1802,7 +1813,11 @@ class UnifiedWidgetWindow(QWidget):
         tokens = _widget_theme_tokens(self.controller.main_window)
         settings = self.controller.main_window.settings
         workspace_skin = get_widget_mode_skin(read_widget_mode_skin_id(settings))
-        opacities = read_widget_opacities(settings)
+        opacities = (
+            (100, 100)
+            if tokens.get("_main_theme_linked") == "true"
+            else read_widget_opacities(settings)
+        )
         family = str(settings.value("widget_mode_font_family", QApplication.font().family()))
         try:
             weight = int(settings.value("widget_mode_font_weight", 500))
@@ -2659,7 +2674,7 @@ class UnifiedWidgetWindow(QWidget):
                     )
                 )
 
-        skin_menu = menu.addMenu(t("widget_mode.style_color_skin", "색상 스킨"))
+        skin_menu = menu.addMenu(t("widget_mode.style_shape_skin", "모양 스킨 · 메인 테마 연동"))
         current_skin = read_widget_mode_skin_id(self.controller.main_window.settings)
         for skin in widget_mode_skins():
             action = skin_menu.addAction(t(skin.label_key, skin.label_default))
@@ -3254,6 +3269,17 @@ class UnifiedWidgetController:
             panel._theme_cache.clear()
             panel.apply_palette(panel._last_scale or 1.0)
 
+    def refresh_theme(self) -> None:
+        """Restyle existing rows without changing mode, geometry or data caches."""
+        if self.widget is not None:
+            self.widget.apply_theme()
+            self.widget.update_agenda(self.widget._last_items)
+        legacy = getattr(self.main_window, "_panel_widget_mode_controller", None)
+        panel = getattr(legacy, "_panel", None)
+        if panel is not None:
+            panel._theme_cache.clear()
+            panel.apply_palette(panel._last_scale or 1.0)
+
     def set_layout(self, layout_id: str) -> None:
         self._save_geometry()
         from calendar_app.presentation.widgets.widget_free_layout import FREE_LAYOUT_MODE_KEY
@@ -3590,11 +3616,16 @@ class UnifiedWidgetController:
             }
         ]
         for row in rows:
+            explicit_all_day = row.get("all_day") is not None and _schedule_is_all_day(row)
             items.append(
                 {
                     "title": _safe_text(row.get("name")) or t("widget_mode.untitled", "Untitled"),
-                    "time": _format_widget_datetime_label(
-                        row.get("deadline"), reference_date=target
+                    "time": (
+                        t("widget_mode.all_day", "종일")
+                        if explicit_all_day
+                        else _format_widget_datetime_label(
+                            row.get("deadline"), reference_date=target
+                        )
                     ),
                     "is_task": False,
                     "item_kind": "schedule",

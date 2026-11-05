@@ -43,17 +43,18 @@ from calendar_app.presentation.dialogs.dialog_editor_styles import (
 )
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
-    DIALOG_METRIC_BOUNDS,
     DIALOG_METRIC_DEFAULTS,
     DIALOG_TOKEN_EDITABLE_KEYS,
     apply_common_dialog_style,
     build_dialog_preview_stylesheet,
+    get_dialog_metric_overrides,
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
     set_dialog_metric_overrides,
     set_dialog_token_overrides,
 )
 from calendar_app.shared.color_utils import parse_css_alpha_to_unit
+from calendar_app.shared.theme_snapshot import get_dialog_metric_bounds
 
 _RGBA_RE = re.compile(
     r"^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([0-9]*\.?[0-9]+)\s*\)$",
@@ -1009,8 +1010,10 @@ class DialogTokenEditorDialog(QDialog):
         initial_color_overrides: dict | None = None,
         initial_metric_overrides: dict | None = None,
         persist_on_apply: bool = True,
+        settings=None,
     ):
         super().__init__(parent)
+        self._settings = settings if settings is not None else getattr(parent, "settings", None)
         apply_dialog_title(self, t("dialog.token_editor.title", "세부 모양 조정"))
         apply_common_dialog_style(
             self,
@@ -1019,6 +1022,7 @@ class DialogTokenEditorDialog(QDialog):
             theme_color=theme_color,
             text_theme=text_theme,
             panel_base_color=panel_base_color,
+            settings=self._settings,
         )
         self.setModal(True)
 
@@ -1036,6 +1040,7 @@ class DialogTokenEditorDialog(QDialog):
                 text_theme=text_theme,
                 panel_base_color=panel_base_color,
                 apply_overrides=False,
+                settings=self._settings,
             )
         )
         if initial_color_overrides is None:
@@ -1044,13 +1049,25 @@ class DialogTokenEditorDialog(QDialog):
                 text_theme=text_theme,
                 panel_base_color=panel_base_color,
                 apply_overrides=True,
+                settings=self._settings,
             )
         else:
             self._current_tokens = dict(self._default_tokens)
             self._current_tokens.update(initial_color_overrides)
-        self._default_metrics = get_dialog_metric_tokens(apply_overrides=False)
+        self._default_metrics = get_dialog_metric_tokens(
+            apply_overrides=False, settings=self._settings
+        )
+        self._metric_bounds = get_dialog_metric_bounds(self._settings)
+        self._original_metric_overrides = dict(
+            get_dialog_metric_overrides(settings=self._settings)
+            if initial_metric_overrides is None
+            else initial_metric_overrides
+        )
+        self._metric_reset_keys: set[str] = set()
         if initial_metric_overrides is None:
-            self._current_metrics = get_dialog_metric_tokens(apply_overrides=True)
+            self._current_metrics = get_dialog_metric_tokens(
+                apply_overrides=True, settings=self._settings
+            )
         else:
             self._current_metrics = dict(self._default_metrics)
             self._current_metrics.update(initial_metric_overrides)
@@ -1111,8 +1128,12 @@ class DialogTokenEditorDialog(QDialog):
         self.preset_mode_light = QRadioButton(t("dialog.token_editor.mode_light", "라이트"))
 
         # Auto-select mode based on current settings
-        settings = QSettings("kimhyojin", "Dark Calendar")
-        text_theme = str(settings.value("text_theme", "dark")).lower()
+        settings = (
+            self._settings
+            if self._settings is not None
+            else QSettings("kimhyojin", "Dark Calendar")
+        )
+        text_theme = str(self._text_theme or settings.value("text_theme", "dark")).lower()
         if text_theme == "light":
             self.preset_mode_light.setChecked(True)
         else:
@@ -1145,7 +1166,7 @@ class DialogTokenEditorDialog(QDialog):
         self._set_expert_mode(False)
 
         # 탭 빌드 후 시그널 초기 실행
-        self._on_color_preset_changed(self.color_preset_combo.currentText())
+        self._refresh_color_preset_list()
         self._on_metric_preset_changed(self.metric_preset_combo.currentText())
         main_row.addWidget(tabs, 1)
 
@@ -1381,7 +1402,7 @@ class DialogTokenEditorDialog(QDialog):
             grid.setColumnStretch(3, 1)
 
             for row, key in enumerate(keys):
-                default = int(DIALOG_METRIC_DEFAULTS[key])
+                default = int(self._default_metrics[key])
                 label = QLabel(_METRIC_LABELS.get(key, _fallback_token_label(key)))
                 label.setToolTip(key)
                 label.setFixedWidth(160)
@@ -1390,7 +1411,7 @@ class DialogTokenEditorDialog(QDialog):
                 spin.installEventFilter(self._wheel_blocker)
                 spin.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
                 spin.setFixedWidth(80)
-                lo, hi = DIALOG_METRIC_BOUNDS.get(key, (0, 999))
+                lo, hi = self._metric_bounds.get(key, (0, 999))
                 spin.setRange(lo, hi)
                 spin.setValue(int(self._current_metrics.get(key, default)))
                 spin.valueChanged.connect(self._schedule_preview_refresh)
@@ -1615,6 +1636,7 @@ class DialogTokenEditorDialog(QDialog):
         self._color_edits[key].setText(self._default_color(key))
 
     def _reset_metric_key(self, key: str):
+        self._metric_reset_keys.add(key)
         self._metric_spins[key].setValue(
             int(self._default_metrics.get(key, DIALOG_METRIC_DEFAULTS[key]))
         )
@@ -1635,7 +1657,10 @@ class DialogTokenEditorDialog(QDialog):
         for key, spin in self._metric_spins.items():
             val = int(spin.value())
             default = int(self._default_metrics.get(key, DIALOG_METRIC_DEFAULTS[key]))
-            if (not diff_only) or (val != default):
+            preserve_explicit = (
+                key in self._original_metric_overrides and key not in self._metric_reset_keys
+            )
+            if (not diff_only) or (val != default) or preserve_explicit:
                 out[key] = val
         return out
 
@@ -1685,6 +1710,7 @@ class DialogTokenEditorDialog(QDialog):
             theme_color=self._theme_color,
             text_theme=self._text_theme,
             panel_base_color=self._panel_base_color,
+            settings=self._settings,
         )
         css = (
             f"{css}\n{_preview_variant_stylesheet(tokens=preview_tokens, metrics=preview_metrics)}"
@@ -1851,12 +1877,7 @@ class DialogTokenEditorDialog(QDialog):
         return overrides
 
     def get_metric_overrides_from_spins(self) -> dict:
-        overrides = {}
-        for key, spin in self._metric_spins.items():
-            val = spin.value()
-            if val != DIALOG_METRIC_DEFAULTS.get(key):
-                overrides[key] = val
-        return overrides
+        return self._collect_metric_overrides(diff_only=True)
 
     def _apply_selected_color_preset(self):
         preset_name = self.color_preset_combo.currentText()
@@ -1875,6 +1896,7 @@ class DialogTokenEditorDialog(QDialog):
         )
 
     def _apply_metric_map(self, metric_map: dict):
+        self._metric_reset_keys.update(self._metric_spins)
         for key in self._metric_spins:
             default = int(self._default_metrics.get(key, DIALOG_METRIC_DEFAULTS[key]))
             value = metric_map.get(key, default)
@@ -1882,13 +1904,14 @@ class DialogTokenEditorDialog(QDialog):
                 value = int(value)
             except Exception:
                 value = default
-            lo, hi = DIALOG_METRIC_BOUNDS.get(key, (0, 999))
+            lo, hi = self._metric_bounds.get(key, (0, 999))
             value = max(lo, min(hi, value))
             self._set_metric_value_silently(key, value)
 
     def _apply_selected_metric_preset(self):
         preset_name = self.metric_preset_combo.currentText()
         if preset_name == "System Default":
+            self._metric_reset_keys.update(self._metric_spins)
             for key in self._metric_spins:
                 default = int(self._default_metrics.get(key, DIALOG_METRIC_DEFAULTS[key]))
                 self._set_metric_value_silently(key, default)
@@ -1906,6 +1929,7 @@ class DialogTokenEditorDialog(QDialog):
         )
 
     def _reset_all(self):
+        self._metric_reset_keys.update(self._metric_spins)
         for key in self._color_edits:
             self._set_color_value_silently(key, self._default_color(key))
         for key in self._metric_spins:
@@ -1939,8 +1963,8 @@ class DialogTokenEditorDialog(QDialog):
         self._result_color_overrides = dict(color_overrides)
         self._result_metric_overrides = dict(metric_overrides)
         if self._persist_on_apply:
-            set_dialog_token_overrides(color_overrides)
-            set_dialog_metric_overrides(metric_overrides)
+            set_dialog_token_overrides(color_overrides, settings=self._settings)
+            set_dialog_metric_overrides(metric_overrides, settings=self._settings)
         self._set_feedback(
             t("dialog.token_editor.apply_done", "Dialog token changes are ready to apply."),
             "success",

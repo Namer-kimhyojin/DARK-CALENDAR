@@ -8,6 +8,7 @@ from PyQt6.QtCore import QDate, QEvent, QLocale, QSettings, QSize, Qt, QTime, QT
 from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import (
     QApplication,
+    QBoxLayout,
     QButtonGroup,
     QCheckBox,
     QDialog,
@@ -26,10 +27,15 @@ from PyQt6.QtWidgets import (
 from calendar_app.infrastructure.db import db_repository_unified as repo
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
-from calendar_app.presentation.dialogs.dialog_styles import get_dialog_theme_tokens
+from calendar_app.presentation.dialogs.dialog_styles import (
+    apply_common_dialog_style,
+    get_dialog_metric_tokens,
+    get_dialog_theme_tokens,
+)
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.typography import get_typography_scale
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +129,11 @@ class DailySummaryDialog(QDialog):
 
     def __init__(self, parent=None, theme_color=None, *, show_settings: bool = False):
         super().__init__(parent)
+        self.setObjectName("DailySummaryDialog")
+        self._visibility_choice_rows = []
+        self._visibility_choice_reflow_timer = QTimer(self)
+        self._visibility_choice_reflow_timer.setSingleShot(True)
+        self._visibility_choice_reflow_timer.timeout.connect(self._reflow_visibility_choices)
         self._theme_color = theme_color
         self._dialog_settings = getattr(parent, "settings", None) or QSettings(
             "kimhyojin", "Dark Calendar"
@@ -149,9 +160,10 @@ class DailySummaryDialog(QDialog):
             theme_color=self._theme_color,
             settings=self._dialog_settings,
         )
+        self._dialog_metrics = get_dialog_metric_tokens(settings=self._dialog_settings)
+        self._typography = get_typography_scale(settings=self._dialog_settings)
         self._build_ui()
-        self.resize(*self.COMPACT_SIZE)
-        self.setMinimumSize(*self.COMPACT_SIZE)
+        self._resize_preserving_screen(*self.COMPACT_SIZE)
         self.setAccessibleName(t("dialog.daily.briefing_title", "오늘의 브리핑"))
         self.setAccessibleDescription(
             t(
@@ -222,6 +234,7 @@ class DailySummaryDialog(QDialog):
 
         self.container = QFrame()
         self.container.setObjectName("dailySummaryShell")
+        self.container.setProperty("dialogCard", True)
         shell_layout = QHBoxLayout(self.container)
         shell_layout.setContentsMargins(0, 0, 0, 0)
         shell_layout.setSpacing(0)
@@ -273,54 +286,72 @@ class DailySummaryDialog(QDialog):
         self.panel_divider.hide()
         shell_layout.addWidget(self.panel_divider)
 
-        self.settings_panel = self._build_settings_panel(text_primary, text_secondary, text_muted)
+        settings_body = self._build_settings_panel(text_primary, text_secondary, text_muted)
+        settings_body.setObjectName("dailySummarySettingsBody")
+        settings_scroll = QScrollArea()
+        self._settings_scroll = settings_scroll
+        settings_scroll.setObjectName("dailySummarySettingsScroll")
+        settings_scroll.setWidgetResizable(True)
+        settings_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        settings_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        settings_scroll.setWidget(settings_body)
+        settings_scroll.viewport().setProperty("dailyVisibilityChoices", True)
+        settings_scroll.viewport().installEventFilter(self)
+        self.settings_panel = QWidget()
+        settings_layout = QVBoxLayout(self.settings_panel)
+        settings_layout.setContentsMargins(0, 0, 0, 0)
+        settings_layout.setSpacing(0)
+        settings_layout.addWidget(settings_scroll, 1)
+        settings_layout.addWidget(self.settings_footer)
         self.settings_panel.setObjectName("dailySummarySettingsPanel")
         self.settings_panel.hide()
         shell_layout.addWidget(self.settings_panel)
         root.addWidget(self.container)
 
-        self.setStyleSheet(
-            f"""
-            QDialog {{
+        radius = self._dialog_metrics["group_radius"]
+        button_radius = self._dialog_metrics["button_radius"]
+        stylesheet = f"""
+            QDialog#DailySummaryDialog {{
                 background: transparent;
-                font-family: 'Malgun Gothic', 'Segoe UI', sans-serif;
-                font-size: 13px;
             }}
             QFrame#dailySummaryShell {{
-                background-color: {surface_bg};
+                background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
+                    stop:0 {surface_bg}, stop:1 {surface_item});
                 border: 1px solid {border};
-                border-radius: 14px;
+                border-radius: {radius}px;
             }}
-            QWidget#dailySummaryPanel, QWidget#dailySummarySettingsPanel,
+            QWidget#dailySummaryPanel, QWidget#dailySummarySettingsBody,
+            QWidget#dailySummarySettingsPanel, QFrame#dailySummarySettingsFooter,
+            QScrollArea#dailySummarySettingsScroll,
             QWidget#dailySummaryScrollContent, QScrollArea#dailySummaryContent {{
                 background: transparent;
                 border: none;
             }}
             QFrame#dailySummaryPanelDivider {{ background-color: {border_soft}; border: none; }}
             QLabel {{ background: transparent; border: none; color: {text_secondary}; }}
-            QLabel[role="title"] {{ color: {text_primary}; font-size: 24px; font-weight: 750; }}
-            QLabel[role="date"] {{ color: {text_muted}; font-size: 13px; font-weight: 600; }}
-            QLabel[role="sectionTitle"] {{ color: {text_primary}; font-size: 14px; font-weight: 700; }}
-            QLabel[role="sectionCount"] {{ color: {text_muted}; font-size: 12px; font-weight: 600; }}
-            QLabel[role="helper"] {{ color: {text_muted}; font-size: 12px; font-weight: 500; }}
+            QLabel[role="title"] {{ color: {text_primary}; font-size: {self._dialog_metrics["title_font_pt"]}px; font-weight: 750; }}
+            QLabel[role="date"] {{ color: {text_muted}; font-size: {self._typography.body_px}px; font-weight: 600; }}
+            QLabel[role="sectionTitle"] {{ color: {text_primary}; font-size: {self._typography.section_px}px; font-weight: 700; }}
+            QLabel[role="sectionCount"] {{ color: {text_muted}; font-size: {self._typography.caption_px}px; font-weight: 600; }}
+            QLabel[role="helper"] {{ color: {text_muted}; font-size: {self._typography.caption_px}px; font-weight: 500; }}
             QFrame#dailySummaryItem {{
-                background-color: {accent_soft};
+                background-color: {surface_item};
                 border: 1px solid {border_soft};
                 border-radius: 10px;
             }}
             QLabel#dailySummaryBadge {{
                 color: {accent_display}; background-color: {accent_soft};
                 border: none; border-radius: 7px; padding: 4px 8px;
-                font-size: 12px; font-weight: 700;
+                font-size: {self._typography.caption_px}px; font-weight: 700;
             }}
             QFrame#dailySummaryStatChip {{
                 background-color: {accent_soft}; border: 1px solid {border_soft};
                 border-radius: 9px;
             }}
             QPushButton, QToolButton {{
-                min-height: 36px; border-radius: 9px; padding: 4px 12px;
+                min-height: 36px; border-radius: {button_radius}px; padding: 4px 12px;
                 color: {text_secondary}; background-color: transparent;
-                border: 1px solid transparent; font-size: 13px; font-weight: 650;
+                border: 1px solid transparent; font-size: {self._typography.body_px}px; font-weight: 650;
             }}
             QPushButton:hover, QToolButton:hover {{ background-color: {surface_hover}; color: {text_primary}; }}
             QPushButton#primary_btn {{
@@ -335,12 +366,19 @@ class DailySummaryDialog(QDialog):
             QPushButton[segment="true"]:checked {{
                 background-color: {accent}; color: {accent_text}; border-color: {accent};
             }}
-            QCheckBox {{ color: {text_secondary}; spacing: 10px; font-size: 13px; font-weight: 600; }}
-            QTimeEdit {{ min-height: 34px; max-height: 34px; min-width: 92px; padding: 0 8px;
+            QCheckBox {{ color: {text_secondary}; spacing: 10px; font-size: {self._typography.body_px}px; font-weight: 600; }}
+            QTimeEdit {{ min-height: {self._dialog_metrics["field_height"]}px; min-width: 92px; padding: 0 8px;
                 color: {text_primary}; background-color: {surface_item};
                 border: 1px solid {border}; border-radius: 8px; }}
             QScrollArea#dailySummaryContent QScrollBar:vertical {{ width: 9px; margin: 4px 0; }}
             """
+        apply_common_dialog_style(
+            self,
+            minimum_width=420,
+            size=self.COMPACT_SIZE,
+            theme_color=self._theme_color,
+            settings=self._dialog_settings,
+            extra_stylesheet=stylesheet,
         )
         self._apply_visibility_preferences()
 
@@ -350,6 +388,9 @@ class DailySummaryDialog(QDialog):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(8)
+        mark = QLabel()
+        mark.setPixmap(_ic(ICON.CALENDAR, color=_icon_hex(accent)).pixmap(28, 28))
+        header_layout.addWidget(mark)
 
         title_col = QVBoxLayout()
         title_col.setSpacing(2)
@@ -388,7 +429,6 @@ class DailySummaryDialog(QDialog):
         stats_row = QHBoxLayout()
         stats_row.setContentsMargins(0, 14, 0, 0)
         stats_row.setSpacing(8)
-        stats_row.addStretch(1)
         self.schedule_stat_value = QLabel("0")
         self.routine_stat_value = QLabel("0")
         stats_row.addWidget(
@@ -420,8 +460,12 @@ class DailySummaryDialog(QDialog):
         icon_label = QLabel()
         icon_label.setPixmap(_ic(icon_key, color=_icon_hex(icon_color)).pixmap(17, 17))
         label = QLabel(label_text)
-        label.setStyleSheet(f"color:{text_color}; font-size:12px; font-weight:650;")
-        value_label.setStyleSheet(f"color:{icon_color}; font-size:17px; font-weight:800;")
+        label.setStyleSheet(
+            f"color:{text_color}; font-size:{self._typography.caption_px}px; font-weight:650;"
+        )
+        value_label.setStyleSheet(
+            f"color:{icon_color}; font-size:{self._typography.section_px}px; font-weight:800;"
+        )
         row.addWidget(icon_label)
         row.addWidget(label)
         row.addWidget(value_label)
@@ -479,7 +523,9 @@ class DailySummaryDialog(QDialog):
                 row.addWidget(badge)
             label = QLabel(item_text)
             label.setWordWrap(True)
-            label.setStyleSheet(f"color:{text_primary}; font-size:13px; font-weight:650;")
+            label.setStyleSheet(
+                f"color:{text_primary}; font-size:{self._typography.body_px}px; font-weight:650;"
+            )
             row.addWidget(label, 1)
             layout.addWidget(frame)
         return section
@@ -513,7 +559,9 @@ class DailySummaryDialog(QDialog):
             text = name + (f"  {pct_text}" if pct_text else "")
             label = QLabel(text)
             label.setWordWrap(True)
-            label.setStyleSheet(f"color:{text_primary}; font-size:13px; font-weight:650;")
+            label.setStyleSheet(
+                f"color:{text_primary}; font-size:{self._typography.body_px}px; font-weight:650;"
+            )
             row.addWidget(label, 1)
             if tags_text:
                 tag = QLabel(tags_text)
@@ -538,9 +586,9 @@ class DailySummaryDialog(QDialog):
 
     def _build_summary_footer(self, layout, text_secondary, text_muted):
         divider = QFrame()
-        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setFixedHeight(1)
         divider.setStyleSheet(
-            f"background:{self._ui_tokens.get('border_soft', 'rgba(0,0,0,0.10)')}; max-height:1px;"
+            f"background:{self._ui_tokens.get('border_soft', 'rgba(0,0,0,0.10)')}; border:none;"
         )
         layout.addWidget(divider)
         footer = QHBoxLayout()
@@ -565,7 +613,6 @@ class DailySummaryDialog(QDialog):
 
     def _build_settings_panel(self, text_primary, text_secondary, text_muted):
         panel = QWidget()
-        panel.setMinimumWidth(390)
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(28, 22, 28, 20)
         layout.setSpacing(14)
@@ -602,9 +649,9 @@ class DailySummaryDialog(QDialog):
         )
 
         divider = QFrame()
-        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setFixedHeight(1)
         divider.setStyleSheet(
-            f"background:{self._ui_tokens.get('border_soft', 'rgba(0,0,0,0.10)')}; max-height:1px;"
+            f"background:{self._ui_tokens.get('border_soft', 'rgba(0,0,0,0.10)')}; border:none;"
         )
         layout.addWidget(divider)
         layout.addSpacing(4)
@@ -618,17 +665,20 @@ class DailySummaryDialog(QDialog):
         self.time_edit = QTimeEdit()
         self.time_edit.setDisplayFormat("HH:mm")
         self.time_edit.setAccessibleName(t("dialog.daily.reminder_time", "알림 시간"))
+        reminder_section = QVBoxLayout()
+        reminder_section.setSpacing(8)
+        self.daily_reminder_label = QLabel(t("dialog.daily.daily_reminder", "매일 다시 알림"))
+        self.daily_reminder_label.setProperty("role", "sectionTitle")
+        self.daily_reminder_label.setWordWrap(True)
+        self.daily_reminder_label.setBuddy(self.time_edit)
+        reminder_section.addWidget(self.daily_reminder_label)
         reminder_controls = QHBoxLayout()
+        reminder_controls.setContentsMargins(0, 0, 0, 0)
         reminder_controls.setSpacing(8)
-        reminder_controls.addWidget(self.time_edit)
+        reminder_controls.addWidget(self.time_edit, 1)
         reminder_controls.addWidget(self.daily_toggle)
-        reminder_widget = QWidget()
-        reminder_widget.setLayout(reminder_controls)
-        layout.addLayout(
-            self._labeled_control_row(
-                t("dialog.daily.daily_reminder", "매일 다시 알림"), reminder_widget
-            )
-        )
+        reminder_section.addLayout(reminder_controls)
+        layout.addLayout(reminder_section)
         self.daily_toggle.toggled.connect(self.time_edit.setEnabled)
 
         self.weekend_checkbox = QCheckBox(t("dialog.daily.hide_weekends", "주말에는 표시하지 않기"))
@@ -645,7 +695,11 @@ class DailySummaryDialog(QDialog):
         layout.addWidget(weekend_help)
         layout.addStretch(1)
 
-        footer = QHBoxLayout()
+        self.settings_footer = QFrame()
+        self.settings_footer.setObjectName("dailySummarySettingsFooter")
+        self.settings_footer.setProperty("dialogFooter", True)
+        footer = QHBoxLayout(self.settings_footer)
+        footer.setContentsMargins(28, 10, 28, 20)
         footer.addStretch(1)
         cancel = QPushButton(t("btn.cancel", "취소"))
         cancel.setObjectName("ghost_btn")
@@ -659,17 +713,23 @@ class DailySummaryDialog(QDialog):
         self.settings_save_btn = save
         footer.addWidget(cancel)
         footer.addWidget(save)
-        layout.addLayout(footer)
         self._load_settings_controls()
         return panel
 
     def _build_visibility_row(self, section_key, label_text, when_text):
-        row = QHBoxLayout()
+        row = QVBoxLayout()
         row.setSpacing(10)
         label = QLabel(_se(label_text))
         label.setProperty("role", "sectionTitle")
-        label.setMinimumWidth(105)
+        label.setWordWrap(True)
         row.addWidget(label)
+        choices_host = QWidget()
+        choices_host.setProperty("dailyVisibilityChoices", True)
+        choices_host.installEventFilter(self)
+        choices = QBoxLayout(QBoxLayout.Direction.LeftToRight, choices_host)
+        choices.setContentsMargins(0, 0, 0, 0)
+        choices.setSpacing(6)
+        self._visibility_choice_rows.append(choices)
         group = QButtonGroup(self)
         group.setExclusive(True)
         buttons = {}
@@ -684,17 +744,51 @@ class DailySummaryDialog(QDialog):
             button.setAutoDefault(False)
             button.setAccessibleName(f"{_se(label_text)}: {text}")
             group.addButton(button)
-            row.addWidget(button, 1)
+            choices.addWidget(button, 1)
             buttons[mode] = button
         self._visibility_buttons[section_key] = buttons
+        row.addWidget(choices_host)
         return row
+
+    def _reflow_visibility_choices(self):
+        """Choose a direction using the actual settings column and styled labels."""
+        for choices in self._visibility_choice_rows:
+            host = choices.parentWidget()
+            if host is None or host.width() <= 0:
+                continue
+            buttons = [choices.itemAt(index).widget() for index in range(choices.count())]
+            buttons = [button for button in buttons if isinstance(button, QPushButton)]
+            if not buttons:
+                continue
+            for button in buttons:
+                button.ensurePolished()
+            # Segments use equal stretch, so every slot must fit the longest label.
+            widest = max(button.sizeHint().width() for button in buttons)
+            required_width = widest * len(buttons) + choices.spacing() * (len(buttons) - 1)
+            available_width = host.contentsRect().width()
+            settings_scroll = getattr(self, "_settings_scroll", None)
+            if settings_scroll is not None:
+                margins = settings_scroll.widget().layout().contentsMargins()
+                available_width = min(
+                    available_width,
+                    settings_scroll.viewport().contentsRect().width()
+                    - margins.left()
+                    - margins.right(),
+                )
+            direction = (
+                QBoxLayout.Direction.TopToBottom
+                if available_width < required_width
+                else QBoxLayout.Direction.LeftToRight
+            )
+            if choices.direction() != direction:
+                choices.setDirection(direction)
 
     def _labeled_control_row(self, label_text, control):
         row = QHBoxLayout()
         label = QLabel(label_text)
         label.setProperty("role", "sectionTitle")
-        row.addWidget(label)
-        row.addStretch(1)
+        label.setWordWrap(True)
+        row.addWidget(label, 1)
         row.addWidget(control)
         return row
 
@@ -814,6 +908,11 @@ class DailySummaryDialog(QDialog):
             self.settings_btn.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _resize_preserving_screen(self, width, height):
+        screen = self.screen()
+        if screen is not None:
+            available = screen.availableGeometry()
+            width = min(width, max(320, available.width() - 32))
+            height = min(height, max(280, available.height() - 48))
         old_top_left = self.frameGeometry().topLeft()
         self.setMinimumSize(0, 0)
         self._shell_layout.invalidate()
@@ -823,7 +922,7 @@ class DailySummaryDialog(QDialog):
             self.layout().activate()
         self.resize(width, height)
         self.setMinimumSize(width, height)
-        screen = self.screen()
+        self.setProperty("_dc_preferred_size", QSize(width, height))
         if screen is None:
             return
         available = screen.availableGeometry()
@@ -831,7 +930,23 @@ class DailySummaryDialog(QDialog):
         y = min(max(old_top_left.y(), available.top()), available.bottom() - height + 1)
         self.move(x, y)
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._visibility_choice_reflow_timer.start(0)
+
     def eventFilter(self, watched, event):
+        if (
+            isinstance(watched, QWidget)
+            and watched.property("dailyVisibilityChoices")
+            and event.type()
+            in (
+                QEvent.Type.Resize,
+                QEvent.Type.Show,
+                QEvent.Type.FontChange,
+                QEvent.Type.LayoutRequest,
+            )
+        ):
+            self._visibility_choice_reflow_timer.start(0)
         if (
             self._priority_guard_active
             and isinstance(watched, QWidget)

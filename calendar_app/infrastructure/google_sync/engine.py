@@ -188,6 +188,10 @@ class _PrimaryAccountMismatchError(RuntimeError):
         super().__init__(code)
 
 
+class _GoogleCalendarDiscoveryError(RuntimeError):
+    """An API failure prevented the account check from completing."""
+
+
 def _assert_primary_account_identity(app, remote_calendars):
     """Keep historical alias ownership evidence before updating the resolved account ID."""
     primary_candidates = [
@@ -246,6 +250,19 @@ def _refresh_resolved_primary_alias_id(app) -> str:
     except Exception:
         logger.exception("Failed to resolve actual primary Google calendar ID")
         calendars = []
+
+    if not calendars:
+        status = getattr(sync_service, "last_error_status", None)
+        kind = getattr(sync_service, "last_error_kind", None)
+        if (
+            isinstance(status, int) and not isinstance(status, bool) and 400 <= status <= 599
+        ) or kind in {
+            "network_unavailable",
+            "auth_required",
+            "reauth_required",
+            "auth_client_invalid",
+        }:
+            raise _GoogleCalendarDiscoveryError
 
     actual_primary_id = _assert_primary_account_identity(app, calendars)
 
@@ -620,6 +637,8 @@ def _capture_google_sync_failure(app, code=None):
             code = "login_required"
         elif is_google_rate_limit_error(status, message):
             code = "remote_http_429"
+        elif kind in {"network_unavailable", "auth_client_invalid"}:
+            code = kind
         elif isinstance(status, int) and not isinstance(status, bool) and 400 <= status <= 599:
             code = f"remote_http_{status}"
         elif isinstance(message, str) and message.startswith(
@@ -1524,6 +1543,12 @@ def sync_google_calendar(app, silent=False):
                 raise _PrimaryAccountMismatchError(
                     getattr(app.gcal_sync, "_account_identity_error_kind", "account_mismatch")
                 )
+        except _GoogleCalendarDiscoveryError:
+            _capture_google_sync_failure(app)
+            app._last_gcal_sync_outcome = SYNC_OUTCOME_FAILED
+            if hasattr(app, "update_sync_status"):
+                app.update_sync_status()
+            return False
         except _PrimaryAccountMismatchError as identity_error:
             app._last_gcal_sync_error = identity_error.code
             app._last_gcal_sync_outcome = SYNC_OUTCOME_FAILED
@@ -1622,6 +1647,7 @@ def sync_google_calendar(app, silent=False):
                 _settings_set(app, token_key, "")
                 _settings_set(app, fail_key, 0)
                 sync_token = None
+                token_fail_count = 0
 
             if targeted_recovery:
                 events, next_sync_token, reset_required = app.gcal_sync.fetch_sync_events(
@@ -1634,102 +1660,44 @@ def sync_google_calendar(app, silent=False):
                     sync_token,
                     calendar_id=sync_calendar_id,
                 )
-            if reset_required:
-                # BUG-B01: 410 sync token 만료 후 full resync 재시도
+            if reset_required and sync_token and not targeted_recovery:
+                # The next response is a full snapshot even though its own
+                # reset_required flag is false. Keep that distinction for archive/backfill.
                 reset_retry_count = token_fail_count + 1
-                if reset_retry_count > _SYNC_TOKEN_FAIL_LIMIT:
-                    pull_fetch_failures += 1
-                    logger.warning(
-                        "GCal full resync retry skipped for calendar %s: token reset retries exceeded (%d/%d)",
-                        sync_calendar_id,
-                        reset_retry_count,
-                        _SYNC_TOKEN_FAIL_LIMIT,
-                    )
-                    continue
                 _settings_set(app, token_key, "")
                 _settings_set(app, fail_key, reset_retry_count)
+                sync_token = None
                 events, next_sync_token, reset_required = app.gcal_sync.fetch_sync_events(
                     None,
                     calendar_id=sync_calendar_id,
                 )
-                if events is None:
-                    _capture_google_sync_failure(app)
-                    # BUG-B01: full resync 재시도도 실패 시 오류 상태코드 처리
-                    err_status = getattr(getattr(app, "gcal_sync", None), "last_error_status", None)
-                    if err_status == 404:
-                        _deactivate_missing_gcal_calendar(app, sync_calendar_id)
-                        pull_fetch_failures += 1
-                        continue
-                    elif err_status == 401:
-                        logger.error(
-                            "GCal full resync after 410 got 401 (auth expired) for calendar %s; "
-                            "marking auth invalid",
-                            sync_calendar_id,
-                        )
-                        if getattr(app, "gcal_sync", None):
-                            app.gcal_sync.is_authenticated = False
-                            app.gcal_sync.service = None
-                        pull_fetch_failures += 1
-                        continue
-                    elif is_google_rate_limit_error(
-                        err_status, getattr(app.gcal_sync, "last_error_message", None)
-                    ):
-                        logger.warning(
-                            "GCal full resync after 410 hit rate limit (%s) for calendar %s; "
-                            "will retry next cycle",
-                            err_status,
-                            sync_calendar_id,
-                        )
-                        pull_fetch_failures += 1
-                        continue
-                    else:
-                        pull_fetch_failures += 1
-                        _settings_set(app, fail_key, reset_retry_count + 1)
-                        logger.error(
-                            "GCal full resync after 410 also failed for calendar %s (status=%s); "
-                            "will retry next cycle",
-                            sync_calendar_id,
-                            err_status,
-                        )
-                        continue
 
-            if events is None:
+            if events is None or reset_required:
                 _capture_google_sync_failure(app)
+                pull_fetch_failures += 1
                 # A fetch 404 may mean lost access; retain selections and report failure.
-                err_status = getattr(getattr(app, "gcal_sync", None), "last_error_status", None)
+                err_status = getattr(app.gcal_sync, "last_error_status", None)
+                err_kind = getattr(app.gcal_sync, "last_error_kind", None)
                 if err_status == 404:
                     _deactivate_missing_gcal_calendar(app, sync_calendar_id)
-                    pull_fetch_failures += 1
                     continue
-                elif err_status == 401:
-                    logger.error(
-                        "GCal fetch got 401 (auth expired) for calendar %s; marking auth invalid",
-                        sync_calendar_id,
+                if err_status == 401 or err_kind in {"auth_required", "reauth_required"}:
+                    app.gcal_sync.is_authenticated = False
+                    app.gcal_sync.service = None
+                    break
+                # Quotas, outages and transport failures do not invalidate a
+                # working incremental token. Do not repeat them for every calendar.
+                if (
+                    err_kind in {"network_unavailable", "auth_client_invalid"}
+                    or err_status in {408, 425, 500, 502, 503, 504}
+                    or is_google_rate_limit_error(
+                        err_status, getattr(app.gcal_sync, "last_error_message", None)
                     )
-                    if getattr(app, "gcal_sync", None):
-                        app.gcal_sync.is_authenticated = False
-                        app.gcal_sync.service = None
-                    pull_fetch_failures += 1
-                    continue
-                elif is_google_rate_limit_error(
-                    err_status, getattr(app.gcal_sync, "last_error_message", None)
                 ):
-                    logger.warning(
-                        "GCal fetch hit rate limit (%s) for calendar %s; will retry next cycle",
-                        err_status,
-                        sync_calendar_id,
-                    )
-                    pull_fetch_failures += 1
-                    continue
-                pull_fetch_failures += 1
-                _settings_set(app, fail_key, token_fail_count + 1)
-                logger.warning(
-                    "GCal fetch failed for calendar %s (status=%s, fail count: %d/%d)",
-                    sync_calendar_id,
-                    err_status,
-                    token_fail_count + 1,
-                    _SYNC_TOKEN_FAIL_LIMIT,
-                )
+                    break
+                if sync_token and err_status == 400:
+                    _settings_set(app, fail_key, token_fail_count + 1)
+                logger.warning("GCal calendar fetch failed (status=%s)", err_status)
                 continue
 
             try:
@@ -1754,7 +1722,7 @@ def sync_google_calendar(app, silent=False):
                 )
                 continue
             _settings_set(app, fail_key, 0)
-            full_sync = not targeted_recovery and (sync_token is None or reset_required)
+            full_sync = not targeted_recovery and sync_token is None
             # Incremental sync can miss pre-existing events if a sync token survives
             # across DB resets/migrations. Probe a near-term window once per day and
             # backfill remote events that are absent locally.

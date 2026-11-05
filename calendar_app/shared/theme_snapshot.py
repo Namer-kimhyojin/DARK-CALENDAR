@@ -11,18 +11,27 @@ from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QColor
 
 from calendar_app.shared.color_utils import (
+    composite_color,
     contrast_ratio,
     contrasting_text_color,
+    derive_modal_state_palette,
     derive_panel_palette,
+    derive_state_palette,
     derive_text_palette,
     derive_ui_palette,
     hex_to_rgba,
     parse_css_alpha_to_unit,
+    parse_css_color,
     parse_hex_color,
     shift_rgb,
 )
 from calendar_app.shared.system_theme import resolve_effective_appearance
 from calendar_app.shared.theme_settings import get_opacity_factor
+from calendar_app.shared.typography import (
+    TypographyScale,
+    control_content_height,
+    get_typography_scale,
+)
 
 _RGBA_COLOR_RE = re.compile(
     r"^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([0-9]*\.?[0-9]+)\s*\)$",
@@ -48,6 +57,7 @@ class ThemeSnapshot:
     shape_preset: str
     shape_tokens: dict[str, int]
     dialog_metrics: dict[str, int]
+    typography: TypographyScale
 
 
 UI_SHAPE_PRESETS: dict[str, dict[str, int]] = {
@@ -141,26 +151,27 @@ UI_SHAPE_PRESETS: dict[str, dict[str, int]] = {
 }
 
 DIALOG_METRIC_DEFAULTS: dict[str, int] = {
-    "base_font_pt": 14,
-    "title_font_pt": 16,
-    "subtitle_font_pt": 12,
+    # Legacy names are retained; these three values have always been QSS pixels.
+    "base_font_pt": 15,
+    "title_font_pt": 22,
+    "subtitle_font_pt": 14,
     "tab_padding_y": 8,
-    "tab_padding_x": 22,
+    "tab_padding_x": 16,
     "tab_min_width": 80,
-    "tab_gap": 3,
-    "tab_radius": 8,
-    "field_height": 34,
+    "tab_gap": 6,
+    "tab_radius": 10,
+    "field_height": 28,
     "field_padding_y": 4,
     "field_padding_x": 10,
-    "field_radius": 7,
+    "field_radius": 10,
     "textedit_padding_y": 10,
     "textedit_padding_x": 12,
-    "textedit_radius": 8,
-    "button_height": 24,
+    "textedit_radius": 10,
+    "button_height": 28,
     "button_min_width": 45,
     "button_padding_y": 4,
     "button_padding_x": 16,
-    "button_radius": 8,
+    "button_radius": 10,
     "toolbutton_height": 28,
     "toolbutton_min_width": 34,
     "toolbutton_padding_y": 4,
@@ -176,7 +187,7 @@ DIALOG_METRIC_DEFAULTS: dict[str, int] = {
     "list_padding": 4,
     "list_item_padding_y": 9,
     "list_item_padding_x": 10,
-    "group_radius": 9,
+    "group_radius": 12,
     "group_margin_top": 18,
 }
 
@@ -219,6 +230,49 @@ DIALOG_METRIC_BOUNDS: dict[str, tuple[int, int]] = {
     "group_radius": (0, 18),
     "group_margin_top": (6, 36),
 }
+
+
+def get_dialog_metric_defaults(settings=None) -> dict[str, int]:
+    """Resolve dialog defaults from saved points while keeping legacy px keys."""
+    scale = get_typography_scale(settings)
+    metrics = dict(DIALOG_METRIC_DEFAULTS)
+    metrics.update(
+        base_font_pt=scale.body_px,
+        title_font_pt=scale.title_px,
+        subtitle_font_pt=scale.caption_px,
+    )
+    for control in ("field", "button", "toolbutton"):
+        metrics[f"{control}_height"] = control_content_height(
+            scale.body_px, metrics[f"{control}_padding_y"], settings=settings
+        )
+    return metrics
+
+
+def get_dialog_metric_bounds(settings=None) -> dict[str, tuple[int, int]]:
+    """The editor must represent every current default without silent clamping."""
+    cfg = _resolve_settings(settings)
+    defaults = get_dialog_metric_defaults(cfg)
+    bounds = {
+        key: (min(low, defaults[key]), max(high, defaults[key]))
+        for key, (low, high) in DIALOG_METRIC_BOUNDS.items()
+    }
+    # A valid override created with a larger base font stays explicit after the
+    # user later reduces the base preference. Keep the general metric safety
+    # ceiling used by the token editor rather than accepting unbounded input.
+    for key, (low, high) in bounds.items():
+        try:
+            saved = int(cfg.value(f"dialog_token.metric.{key}", 0))
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if low <= saved <= 999:
+            bounds[key] = (low, max(high, saved))
+    return bounds
+
+
+def _dialog_metric_contract(defaults, bounds, prefix, settings):
+    if prefix == "dialog_token.metric.":
+        return get_dialog_metric_defaults(settings), get_dialog_metric_bounds(settings)
+    return defaults, bounds
 
 
 def normalize_shape_preset(preset: str | None) -> str:
@@ -330,6 +384,7 @@ def build_theme_snapshot(
         shape_preset=get_shape_preset(cfg),
         shape_tokens=build_shape_tokens(settings=cfg),
         dialog_metrics=build_dialog_metric_tokens(settings=cfg, apply_overrides=True),
+        typography=get_typography_scale(cfg),
     )
 
 
@@ -343,6 +398,7 @@ def build_shared_ui_tokens(
     opacity_factor: float | None = None,
     input_bg: str | None = None,
     persist_opacity: bool = False,
+    modal: bool = False,
 ) -> dict[str, str]:
     snapshot = snapshot or build_theme_snapshot(
         settings=settings,
@@ -360,11 +416,24 @@ def build_shared_ui_tokens(
     text_pal = snapshot.text_palette
     shape = snapshot.shape_tokens
     metrics = snapshot.dialog_metrics
-    success_hex = "#35b66a"
-    warning_hex = "#d39a2a"
-    danger_hex = "#d25a66"
+    typography = snapshot.typography
+    states = (
+        derive_modal_state_palette(
+            accent_hex, composite_color(panel_pal["floating_bg"], snapshot.panel_base_color).name()
+        )
+        if modal
+        else derive_state_palette(snapshot.text_theme)
+    )
+    success_hex = states["success"]
+    warning_hex = states["warning"]
+    danger_hex = states["danger"]
 
     return {
+        "font_body": f"{metrics['base_font_pt']}px",
+        "font_caption": f"{metrics['subtitle_font_pt']}px",
+        "font_section": f"{typography.section_px}px",
+        "font_title": f"{metrics['title_font_pt']}px",
+        "font_display": f"{typography.display_px}px",
         "accent": accent_hex,
         "accent_hover": shift_rgb(accent, 25).name(QColor.NameFormat.HexRgb),
         "accent_soft": hex_to_rgba(accent_hex, 0.15),
@@ -431,6 +500,31 @@ def build_shared_ui_tokens(
     }
 
 
+def build_modal_state_tokens(theme_color: str, surface_bg: str) -> dict[str, str]:
+    """Dependent modal roles; explicit expert overrides may still replace them."""
+    states = derive_modal_state_palette(theme_color, surface_bg)
+    role = states["success"]
+    tokens = {}
+    for state, color in states.items():
+        tokens[f"{state}_hex"] = color
+        tokens[f"{state}_soft_bg"] = hex_to_rgba(color, 0.16)
+    tokens.update(
+        button_success_bg=hex_to_rgba(role, 0.14),
+        button_success_text=role,
+        button_success_border=hex_to_rgba(role, 0.42),
+        button_success_hover_bg=hex_to_rgba(role, 0.22),
+        button_success_hover_text=role,
+        button_success_hover_border=role,
+        button_danger_bg="transparent",
+        button_danger_text=role,
+        button_danger_border=hex_to_rgba(role, 0.35),
+        button_danger_hover_bg=hex_to_rgba(role, 0.12),
+        button_danger_hover_text=role,
+        button_danger_hover_border=hex_to_rgba(role, 0.65),
+    )
+    return tokens
+
+
 def build_dialog_base_tokens(
     settings=None,
     *,
@@ -460,9 +554,11 @@ def build_dialog_base_tokens(
         alpha = max(0.0, min(1.0, float(alpha_0_to_1)))
         return f"rgba({color.red()}, {color.green()}, {color.blue()}, {int(round(alpha * 255))})"
 
-    success = QColor("#35b66a")
-    warning = QColor("#d39a2a")
-    danger = QColor("#d25a66")
+    modal_surface = composite_color(panel_palette["floating_bg"], snapshot.panel_base_color).name()
+    states = derive_modal_state_palette(accent_hex, modal_surface)
+    success = QColor(states["success"])
+    warning = QColor(states["warning"])
+    danger = QColor(states["danger"])
     surface_is_dark = base.lightnessF() < 0.5
     neutral_rgb = "255,255,255" if surface_is_dark else "0,0,0"
 
@@ -473,7 +569,7 @@ def build_dialog_base_tokens(
     accent_role_text = accent_hex if contrast_ratio(accent_hex, base) >= 3.0 else text_primary
     accent_text = contrasting_text_color(accent_hex)
 
-    return {
+    tokens = {
         "accent": accent_hex,
         "accent_hover": shift_rgb(accent, 22).name(QColor.NameFormat.HexRgb),
         "accent_soft_bg": _rgba(accent, 0.16),
@@ -482,8 +578,8 @@ def build_dialog_base_tokens(
         "title_text": str(text_palette.get("text_primary", "#e1e1e6")),
         "title_subtext": str(text_palette.get("text_muted", "#9aa0ad")),
         "tab_strip_bg": panel_palette.get("topbar_bg", "#13131a"),
-        "tab_idle_bg": panel_palette.get("toolbar_bg", "#1c1c23"),
-        "tab_active_bg": panel_palette.get("item_bg", "#111116"),
+        "tab_idle_bg": "transparent",
+        "tab_active_bg": _rgba(accent, 0.16),
         "tab_text": str(text_palette.get("text_muted", "#9aa0ad")),
         "tab_text_hover": str(text_palette.get("text_secondary", "#d0d0da")),
         "tab_text_active": accent_role_text,
@@ -531,12 +627,12 @@ def build_dialog_base_tokens(
         "button_disabled_bg": panel_palette.get("toolbar_bg", "#1c1c23"),
         "button_disabled_text": str(text_palette.get("text_faint", "#7a7a8a")),
         "button_disabled_border": _neutral(0.08),
-        "button_primary_bg": _rgba(accent, 0.10),
-        "button_primary_text": accent_role_text,
+        "button_primary_bg": accent_hex,
+        "button_primary_text": accent_text,
         "accent_text": accent_text,
-        "button_primary_border": _rgba(accent, 0.55),
-        "button_primary_hover_bg": _rgba(accent, 0.18),
-        "button_primary_hover_text": str(text_palette.get("text_primary", "#ffffff")),
+        "button_primary_border": accent_hex,
+        "button_primary_hover_bg": shift_rgb(accent, 22).name(QColor.NameFormat.HexRgb),
+        "button_primary_hover_text": contrasting_text_color(shift_rgb(accent, 22)),
         "button_primary_hover_border": accent_hex,
         "button_secondary_bg": panel_palette.get("surface_hover_bg", "#18181f"),
         "button_secondary_text": str(text_palette.get("text_muted", "#9aa0ad")),
@@ -575,31 +671,12 @@ def build_dialog_base_tokens(
         "toolbutton_disabled_text": str(text_palette.get("text_faint", "#7a7a8a")),
         "toolbutton_disabled_border": _neutral(0.08),
     }
+    tokens.update(build_modal_state_tokens(accent_hex, modal_surface))
+    return tokens
 
 
 def _css_to_qcolor(value: object, fallback: str = "#000000") -> QColor:
-    raw = str(value or "").strip()
-    if raw:
-        match = _RGBA_COLOR_RE.match(raw)
-        if match:
-            try:
-                r, g, b, a_raw = match.groups()
-                alpha = float(a_raw)
-                if alpha <= 1.0:
-                    alpha = alpha * 255.0
-                return QColor(
-                    max(0, min(255, int(r))),
-                    max(0, min(255, int(g))),
-                    max(0, min(255, int(b))),
-                    max(0, min(255, int(round(alpha)))),
-                )
-            except Exception:
-                pass
-        q = QColor(raw)
-        if q.isValid():
-            return q
-    q = QColor(fallback)
-    return q if q.isValid() else QColor("#000000")
+    return parse_css_color(str(value or ""), fallback)
 
 
 def _rgba_with_alpha(value: object, alpha: int, fallback: str = "#000000") -> str:
@@ -708,6 +785,7 @@ def get_metric_token_overrides(
     settings=None,
 ) -> dict[str, int]:
     cfg = _resolve_settings(settings)
+    defaults, bounds = _dialog_metric_contract(defaults, bounds, prefix, cfg)
     overrides: dict[str, int] = {}
     for key in defaults:
         raw = cfg.value(f"{prefix}{key}", None)
@@ -726,13 +804,16 @@ def set_metric_token_overrides(
     settings=None,
 ):
     cfg = _resolve_settings(settings)
+    defaults, bounds = _dialog_metric_contract(defaults, bounds, prefix, cfg)
     payload = overrides if isinstance(overrides, dict) else {}
     for key in defaults:
         qkey = f"{prefix}{key}"
         normalized = normalize_metric_token_value(
             key, payload.get(key), defaults=defaults, bounds=bounds
         )
-        if normalized is None or normalized == defaults[key]:
+        existing = cfg.value(qkey, None)
+        preserve_explicit = prefix == "dialog_token.metric." and existing is not None
+        if normalized is None or (normalized == defaults[key] and not preserve_explicit):
             cfg.remove(qkey)
         else:
             cfg.setValue(qkey, normalized)
@@ -743,16 +824,25 @@ def build_dialog_metric_tokens(
     *,
     apply_overrides: bool = True,
 ) -> dict[str, int]:
-    metrics = dict(DIALOG_METRIC_DEFAULTS)
+    cfg = _resolve_settings(settings)
+    metrics = get_dialog_metric_defaults(cfg)
+    overrides = {}
     if apply_overrides:
-        metrics.update(
-            get_metric_token_overrides(
-                DIALOG_METRIC_DEFAULTS,
-                DIALOG_METRIC_BOUNDS,
-                prefix="dialog_token.metric.",
-                settings=settings,
-            )
+        overrides = get_metric_token_overrides(
+            metrics,
+            get_dialog_metric_bounds(cfg),
+            prefix="dialog_token.metric.",
+            settings=cfg,
         )
+        metrics.update(overrides)
+    # An explicit height keeps its saved meaning. Otherwise larger text or
+    # padding overrides must also expand the surrounding native control.
+    for control in ("field", "button", "toolbutton"):
+        key = f"{control}_height"
+        if key not in overrides:
+            metrics[key] = control_content_height(
+                metrics["base_font_pt"], metrics[f"{control}_padding_y"], settings=cfg
+            )
     return metrics
 
 

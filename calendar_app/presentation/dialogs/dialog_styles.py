@@ -3,6 +3,7 @@
 import re
 
 from PyQt6.QtCore import QEvent, QObject, QSettings, QSize, Qt, QTimer
+from PyQt6.QtCore import QSettings as _QSettingsType
 from PyQt6.QtGui import QColor, QGuiApplication
 from PyQt6.QtWidgets import (
     QAbstractButton,
@@ -11,6 +12,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDateEdit,
     QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QFontDialog,
     QFormLayout,
@@ -18,15 +20,22 @@ from PyQt6.QtWidgets import (
     QInputDialog,
     QLabel,
     QMessageBox,
+    QStyle,
     QTableView,
     QToolButton,
 )
 
+from calendar_app.presentation.theme.control_styles import build_dialog_control_styles
 from calendar_app.shared.color_utils import (
+    composite_color,
+    contrast_ratio,
+    contrasting_text_color,
     parse_css_alpha_to_unit,
+    parse_css_color,
     parse_hex_color,
     shift_rgb,
 )
+from calendar_app.shared.icon_map import ICON, icon
 from calendar_app.shared.theme_snapshot import (
     DIALOG_METRIC_BOUNDS as SHARED_DIALOG_METRIC_BOUNDS,
 )
@@ -35,7 +44,10 @@ from calendar_app.shared.theme_snapshot import (
 )
 from calendar_app.shared.theme_snapshot import (
     build_dialog_base_tokens,
+    build_modal_state_tokens,
     get_color_token_overrides,
+    get_dialog_metric_bounds,
+    get_dialog_metric_defaults,
     get_metric_token_overrides,
     normalize_color_token,
     normalize_metric_token_value,
@@ -45,13 +57,13 @@ from calendar_app.shared.theme_snapshot import (
 from calendar_app.shared.theme_snapshot import (
     build_dialog_metric_tokens as build_shared_dialog_metric_tokens,
 )
-from calendar_app.shared.ui_tokens import get_shared_qss, get_ui_tokens
+from calendar_app.shared.ui_tokens import get_modal_ui_tokens as get_ui_tokens
+from calendar_app.shared.ui_tokens import get_shared_qss
 
 FIXED_DIALOG_STYLE = """
     QDialog {
         background-color: #16161b;
         color: #e1e1e6;
-        font-family: 'Segoe UI Emoji', 'Segoe UI', 'Inter', 'Malgun Gothic', sans-serif;
         font-size: 14px;
     }
     QWidget {
@@ -113,7 +125,7 @@ FIXED_DIALOG_STYLE = """
         margin-top: 2px;
         margin-bottom: 2px;
     }
-    QLineEdit, QComboBox, QDateEdit, QTimeEdit, QSpinBox {
+    QLineEdit, QComboBox, QDateEdit, QTimeEdit, QSpinBox, QDoubleSpinBox {
         background-color: #111116;
         color: #e8e8f0;
         border: 1px solid #2e2e38;
@@ -134,11 +146,11 @@ FIXED_DIALOG_STYLE = """
         selection-background-color: rgba(77, 166, 255, 0.25);
     }
     QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QTimeEdit:focus,
-    QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus {
+    QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
         border: 1px solid #4da6ff;
         background-color: #111116; /* FOCUS_MATCH */
     }
-    QLineEdit:hover, QComboBox:hover, QDateEdit:hover, QTimeEdit:hover, QSpinBox:hover {
+    QLineEdit:hover, QComboBox:hover, QDateEdit:hover, QTimeEdit:hover, QSpinBox:hover, QDoubleSpinBox:hover {
         border-color: #3d3d4a;
     }
     QLineEdit::placeholder {
@@ -162,7 +174,6 @@ FIXED_DIALOG_STYLE = """
     QPushButton {
         background-color: #1e1e26;
         color: #c8ccd4;
-        font-family: 'Segoe UI Emoji', 'Segoe UI', 'Inter', 'Malgun Gothic', sans-serif;
         font-weight: 600;
         padding: 4px 16px;
         border-radius: 8px;
@@ -634,19 +645,19 @@ def clear_dialog_token_overrides(settings: QSettings | None = None):
     set_dialog_token_overrides({}, settings=settings)
 
 
-def _normalize_metric_value(key: str, value) -> int | None:
+def _normalize_metric_value(key: str, value, settings=None) -> int | None:
     return normalize_metric_token_value(
         key,
         value,
-        defaults=DIALOG_METRIC_DEFAULTS,
-        bounds=DIALOG_METRIC_BOUNDS,
+        defaults=get_dialog_metric_defaults(settings),
+        bounds=get_dialog_metric_bounds(settings),
     )
 
 
 def get_dialog_metric_overrides(settings: QSettings | None = None) -> dict:
     return get_metric_token_overrides(
-        DIALOG_METRIC_DEFAULTS,
-        DIALOG_METRIC_BOUNDS,
+        get_dialog_metric_defaults(settings),
+        get_dialog_metric_bounds(settings),
         prefix=f"{_DIALOG_TOKEN_OVERRIDE_PREFIX}metric.",
         settings=settings,
     )
@@ -654,8 +665,8 @@ def get_dialog_metric_overrides(settings: QSettings | None = None) -> dict:
 
 def set_dialog_metric_overrides(overrides: dict | None, settings: QSettings | None = None):
     set_metric_token_overrides(
-        DIALOG_METRIC_DEFAULTS,
-        DIALOG_METRIC_BOUNDS,
+        get_dialog_metric_defaults(settings),
+        get_dialog_metric_bounds(settings),
         overrides,
         prefix=f"{_DIALOG_TOKEN_OVERRIDE_PREFIX}metric.",
         settings=settings,
@@ -678,7 +689,9 @@ def _build_dialog_metric_override_styles(metrics: dict) -> str:
     footer_button_min_width = max(76, int(m["button_min_width"]))
     return f"""
 /* DC_DIALOG_METRIC_OVERRIDES */
-QDialog {{
+QDialog, QLabel, QLineEdit, QComboBox, QDateEdit, QTimeEdit, QSpinBox, QDoubleSpinBox,
+QTextEdit, QPlainTextEdit, QPushButton, QToolButton, QCheckBox, QRadioButton,
+QAbstractItemView, QGroupBox {{
     font-size: {m["base_font_pt"]}px;
 }}
 QLabel[role="dialogTitle"], QLabel#dialogTitle, QLabel#dialog_title {{
@@ -688,13 +701,14 @@ QLabel[role="dialogSubtitle"], QLabel#dialogSubtitle, QLabel#dialog_subtitle {{
     font-size: {m["subtitle_font_pt"]}px;
 }}
 QTabBar::tab {{
+    font-size: {m["base_font_pt"]}px;
     padding: {m["tab_padding_y"]}px {m["tab_padding_x"]}px;
     min-width: {m["tab_min_width"]}px;
     border-top-left-radius: {m["tab_radius"]}px;
     border-top-right-radius: {m["tab_radius"]}px;
     margin-right: {m["tab_gap"]}px;
 }}
-QLineEdit, QComboBox, QDateEdit, QTimeEdit, QSpinBox {{
+QLineEdit, QComboBox, QDateEdit, QTimeEdit, QSpinBox, QDoubleSpinBox {{
     min-height: {m["field_height"]}px;
     max-height: {m["field_height"]}px;
     padding: {m["field_padding_y"]}px {m["field_padding_x"]}px;
@@ -753,49 +767,93 @@ QToolButton {{
 """
 
 
-def _apply_dialog_token_overrides(tokens: dict) -> dict:
+def _apply_dialog_token_overrides(tokens: dict, settings: QSettings | None = None) -> dict:
+    overrides = get_dialog_token_overrides(settings=settings)
+    return _merge_dialog_color_tokens(tokens, overrides)
+
+
+def _opaque_dialog_surfaces(tokens: dict) -> dict:
+    """Keep modal reading surfaces opaque without changing stored shell opacity."""
+    resolved = dict(tokens or {})
+    base = resolved.get("base_hex", "#1c1c1c")
+    floating = resolved.get("floating_bg", base)
+    if parse_css_color(floating).alpha() < 255:
+        floating = composite_color(floating, base).name(QColor.NameFormat.HexRgb)
+        resolved["floating_bg"] = floating
+    for key in (
+        "content_bg",
+        "surface_bg",
+        "surface_alt",
+        "surface_item",
+        "surface_hover",
+        "surface_top",
+    ):
+        value = resolved.get(key)
+        if value is not None and parse_css_color(value).alpha() < 255:
+            resolved[key] = composite_color(value, floating).name(QColor.NameFormat.HexRgb)
+    return resolved
+
+
+def _merge_dialog_color_tokens(tokens: dict, overrides: dict) -> dict:
+    """Update dependent roles only when their source color actually changes."""
     merged = dict(tokens or {})
-    overrides = get_dialog_token_overrides()
     if not overrides:
-        return merged
+        return _opaque_dialog_surfaces(merged)
 
     merged.update(overrides)
     accent = parse_hex_color(merged.get("accent", "#4da6ff"), "#4da6ff")
     accent_hex = accent.name(QColor.NameFormat.HexRgb)
-    if "accent_hover" not in overrides:
-        merged["accent_hover"] = _shift_rgb(accent, 22).name(QColor.NameFormat.HexRgb)
-    if "accent_soft_bg" not in overrides:
-        merged["accent_soft_bg"] = _rgba(accent, 0.16)
-    if "accent_soft_border" not in overrides:
-        merged["accent_soft_border"] = _rgba(accent, 0.42)
-    if "tab_text_active" not in overrides:
-        merged["tab_text_active"] = accent_hex
-    if "check_checked_bg" not in overrides:
-        merged["check_checked_bg"] = accent_hex
-    if "check_checked_border" not in overrides:
-        merged["check_checked_border"] = accent_hex
-    if "list_selected_bg" not in overrides:
-        merged["list_selected_bg"] = _rgba(accent, 0.12)
-    if "list_selected_border" not in overrides:
-        merged["list_selected_border"] = _rgba(accent, 0.25)
-    if "list_selected_text" not in overrides:
-        merged["list_selected_text"] = _shift_rgb(accent, 32).name(QColor.NameFormat.HexRgb)
-    if "list_hover_bg" not in overrides:
-        merged["list_hover_bg"] = _rgba(accent, 0.06)
-    if "button_primary_bg" not in overrides:
-        merged["button_primary_bg"] = _rgba(accent, 0.10)
-    if "button_primary_text" not in overrides:
-        merged["button_primary_text"] = accent_hex
-    if "button_primary_border" not in overrides:
-        merged["button_primary_border"] = _rgba(accent, 0.55)
-    if "button_primary_hover_bg" not in overrides:
-        merged["button_primary_hover_bg"] = _rgba(accent, 0.18)
-    if "button_primary_hover_border" not in overrides:
-        merged["button_primary_hover_border"] = accent_hex
-    return merged
+    if "accent" in overrides:
+        derived = {
+            "accent_hover": _shift_rgb(accent, 22).name(QColor.NameFormat.HexRgb),
+            "accent_soft_bg": _rgba(accent, 0.16),
+            "accent_soft_border": _rgba(accent, 0.42),
+            "tab_active_bg": _rgba(accent, 0.16),
+            "check_checked_bg": accent_hex,
+            "check_checked_border": accent_hex,
+            "list_selected_bg": _rgba(accent, 0.12),
+            "list_selected_border": _rgba(accent, 0.25),
+            "list_hover_bg": _rgba(accent, 0.06),
+            "button_primary_bg": accent_hex,
+            "button_primary_border": accent_hex,
+            "button_primary_hover_bg": merged.get("accent_hover", accent_hex),
+            "button_primary_hover_border": accent_hex,
+        }
+        for key, value in derived.items():
+            if key not in overrides:
+                merged[key] = value
+        if "button_primary_hover_bg" not in overrides:
+            merged["button_primary_hover_bg"] = merged["accent_hover"]
+
+    surface = composite_color(merged["floating_bg"], merged["base_hex"])
+    if {"accent", "floating_bg", "base_hex"}.intersection(overrides):
+        modal_states = build_modal_state_tokens(accent_hex, surface.name(QColor.NameFormat.HexRgb))
+        for key, value in modal_states.items():
+            if key not in overrides:
+                merged[key] = value
+    if {"accent", "tab_active_bg", "floating_bg", "base_hex"}.intersection(
+        overrides
+    ) and "tab_text_active" not in overrides:
+        tab_bg = composite_color(merged["tab_active_bg"], surface)
+        merged["tab_text_active"] = (
+            accent_hex if contrast_ratio(accent_hex, tab_bg) >= 4.5 else merged["text_primary"]
+        )
+    if "text_primary" in overrides and "list_selected_text" not in overrides:
+        merged["list_selected_text"] = merged["text_primary"]
+    for state in ("", "_hover"):
+        bg_key = f"button_primary{state}_bg"
+        text_key = f"button_primary{state}_text"
+        border_key = f"button_primary{state}_border"
+        dependencies = {"accent", bg_key, "floating_bg", "base_hex"}
+        if dependencies.intersection(overrides) and text_key not in overrides:
+            merged[text_key] = contrasting_text_color(merged[bg_key], surface=surface)
+        if bg_key in overrides and border_key not in overrides:
+            merged[border_key] = merged[bg_key]
+    return _opaque_dialog_surfaces(merged)
 
 
 def _build_dialog_token_override_styles(tokens: dict) -> str:
+    tokens = _opaque_dialog_surfaces(tokens)
     accent = parse_hex_color(tokens.get("accent", "#4da6ff"), "#4da6ff")
     accent_hex = accent.name(QColor.NameFormat.HexRgb)
     border = tokens.get("border", "rgba(255,255,255,0.16)")
@@ -946,16 +1004,16 @@ QLabel[role="dialogSubtitle"], QLabel#dialogSubtitle, QLabel#dialog_subtitle {{
 QLabel {{
     color: {text_secondary};
 }}
-QLineEdit, QComboBox, QDateEdit, QTimeEdit, QSpinBox, QTextEdit, QPlainTextEdit {{
+QLineEdit, QComboBox, QDateEdit, QTimeEdit, QSpinBox, QDoubleSpinBox, QTextEdit, QPlainTextEdit {{
     background-color: {input_bg};
     color: {text_primary};
     border: 1px solid {border_soft};
 }}
-QLineEdit:hover, QComboBox:hover, QDateEdit:hover, QTimeEdit:hover, QSpinBox:hover {{
+QLineEdit:hover, QComboBox:hover, QDateEdit:hover, QTimeEdit:hover, QSpinBox:hover, QDoubleSpinBox:hover {{
     border-color: {border};
 }}
 QLineEdit:focus, QComboBox:focus, QDateEdit:focus, QTimeEdit:focus,
-QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus {{
+QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {{
     border: 2px solid {accent_hex};
     background-color: {input_bg};
 }}
@@ -1050,8 +1108,9 @@ QGroupBox::title {{
     background-color: {surface_top};
     color: {accent_hex};
 }}
-QListWidget, QTableView, QTableWidget {{
+QListWidget, QTableView, QTableWidget, QListView, QTreeView {{
     background: {surface_item};
+    alternate-background-color: {surface_hover};
     color: {text_primary};
     border: 1px solid {border_soft};
     gridline-color: {border_soft};
@@ -1103,6 +1162,15 @@ QCalendarWidget QMenu#qt_calendar_monthmenu {{
     color: {text_primary};
     border: 1px solid {border};
 }}
+QHeaderView {{
+    background-color: {table_header_bg};
+    color: {table_header_text};
+    border: none;
+}}
+QTableCornerButton::section {{
+    background-color: {table_header_bg};
+    border: 1px solid {border_soft};
+}}
 QHeaderView::section {{
     background-color: {table_header_bg};
     color: {table_header_text};
@@ -1128,6 +1196,15 @@ QToolButton:disabled {{
     border-color: {toolbutton_disabled_border};
     color: {toolbutton_disabled_text};
 }}
+QLineEdit[state="error"], QTextEdit[state="error"], QComboBox[state="error"] {{
+    border: 1px solid {tokens.get("danger_hex", accent_hex)};
+    background-color: {_rgba(parse_css_color(tokens.get("danger_hex", accent_hex)), 0.06)};
+}}
+QLineEdit[state="error"]:focus, QTextEdit[state="error"]:focus {{
+    border: 1px solid {tokens.get("danger_hex", accent_hex)};
+    background-color: {_rgba(parse_css_color(tokens.get("danger_hex", accent_hex)), 0.08)};
+}}
+QLabel[role="field_error"] {{ color: {tokens.get("danger_hex", accent_hex)}; }}
 """
 
 
@@ -1155,13 +1232,8 @@ def get_dialog_theme_tokens(
     settings: QSettings | None = None,
 ) -> dict:
     """Return reusable dialog color tokens based on current app theme settings."""
-    theme_color, text_theme, panel_base_color = _resolve_dialog_theme(
-        theme_color,
-        text_theme,
-        panel_base_color,
-        settings=settings,
-    )
-
+    # Keep unspecified colors as None: the shared snapshot resolves the active
+    # light/dark family pair. Eagerly filling saved dark values disables that.
     tokens = build_dialog_base_tokens(
         settings=settings,
         theme_color=theme_color,
@@ -1169,8 +1241,71 @@ def get_dialog_theme_tokens(
         panel_base_color=panel_base_color,
     )
     if apply_overrides:
-        return _apply_dialog_token_overrides(tokens)
-    return tokens
+        return _apply_dialog_token_overrides(tokens, settings=settings)
+    return _opaque_dialog_surfaces(tokens)
+
+
+def _build_dialog_visual_system(tokens: dict, metrics: dict) -> str:
+    """Shared native surface hierarchy used by editors, settings and feedback."""
+    tokens = _opaque_dialog_surfaces(tokens)
+    radius = int(metrics["group_radius"])
+    tab_radius = int(metrics["tab_radius"])
+    return f"""
+/* DC_DIALOG_VISUAL_SYSTEM */
+QDialog {{
+    background-color: {tokens["floating_bg"]};
+}}
+QLabel {{ font-weight: 500; }}
+QLabel[role="dialogTitle"], QLabel#dialogTitle, QLabel#dialog_title {{
+    font-weight: 700; margin: 0 0 4px 0;
+}}
+QLabel[role="dialogSubtitle"], QLabel#dialogSubtitle, QLabel#dialog_subtitle {{
+    font-weight: 400; margin: 0 0 8px 0;
+}}
+QFrame[role="dialogCard"], QWidget[role="dialogCard"] {{
+    background-color: {tokens["content_bg"]};
+    border: 1px solid {tokens["border_soft"]};
+    border-radius: {radius}px;
+}}
+QFrame[role="dialogHeader"], QWidget[role="dialogHeader"] {{
+    background: transparent; border: none;
+}}
+QFrame[role="dialogFooter"], QWidget[role="dialogFooter"] {{
+    background: transparent; border: none;
+    border-top: 1px solid {tokens["border_soft"]};
+}}
+QFrame[frameShape="4"], QFrame[role="dialogDivider"] {{
+    background-color: {tokens["border_soft"]}; color: {tokens["border_soft"]};
+    border: none; min-height: 1px; max-height: 1px;
+}}
+QTabWidget, QTabBar {{ background: transparent; }}
+QTabWidget::pane {{ background: transparent; border: none; top: 0px; }}
+QTabBar::tab {{
+    border: 1px solid transparent; border-radius: {tab_radius}px;
+    margin-bottom: 6px; font-weight: 600;
+}}
+QTabBar::tab:selected {{
+    border: 1px solid {tokens["accent_soft_border"]};
+    border-radius: {tab_radius}px; margin-bottom: 6px;
+}}
+QGroupBox {{
+    background-color: {tokens["content_bg"]};
+    border: 1px solid {tokens["border_soft"]}; padding: 20px 12px 12px 12px;
+}}
+QGroupBox::title {{
+    color: {tokens["text_secondary"]}; background-color: {tokens["floating_bg"]};
+    font-weight: 600; padding: 1px 6px;
+}}
+QPushButton[dialogFooter="true"] {{ font-weight: 600; }}
+QPushButton#primary_btn:disabled, QPushButton:default:disabled,
+QPushButton#danger_btn:disabled, QPushButton#ghost_btn:disabled {{
+    background-color: {tokens["button_disabled_bg"]};
+    color: {tokens["button_disabled_text"]};
+    border: 1px solid {tokens["button_disabled_border"]};
+}}
+QMessageBox QLabel#qt_msgbox_label {{ font-size: {metrics["base_font_pt"]}px; font-weight: 600; }}
+QMessageBox QLabel#qt_msgbox_informativelabel {{ color: {tokens["text_secondary"]}; font-weight: 400; }}
+"""
 
 
 def build_dialog_stylesheet(
@@ -1178,20 +1313,23 @@ def build_dialog_stylesheet(
     text_theme: str | None = None,
     panel_base_color: str | None = None,
     palette: dict = None,
+    settings: QSettings | None = None,
+    tokens: dict | None = None,
+    metrics: dict | None = None,
 ) -> str:
     """Return dialog stylesheet aligned with current UI theme settings."""
-    theme_color, text_theme, panel_base_color = _resolve_dialog_theme(
-        theme_color,
-        text_theme,
-        panel_base_color,
-    )
-
-    tokens = get_dialog_theme_tokens(
+    # Resolve derived roles from an explicitly supplied accent before merging
+    # partial bundles, so fields, tabs and primary actions remain one palette.
+    if tokens and tokens.get("accent"):
+        theme_color = str(tokens["accent"])
+    resolved_tokens = get_dialog_theme_tokens(
         theme_color=theme_color,
         text_theme=text_theme,
         panel_base_color=panel_base_color,
         apply_overrides=True,
+        settings=settings,
     )
+    tokens = _merge_dialog_color_tokens(resolved_tokens, tokens or {})
     accent = parse_hex_color(tokens.get("accent", theme_color), "#4da6ff")
     accent_hex = accent.name(QColor.NameFormat.HexRgb)
     panel_palette = {
@@ -1265,10 +1403,13 @@ def build_dialog_stylesheet(
     style = style.replace("rgba(53, 182, 106, 0.42)", f"rgba({sr},{sg},{sb},0.42)")
 
     override_style = _build_dialog_token_override_styles(tokens)
-    metric_style = _build_dialog_metric_override_styles(
-        get_dialog_metric_tokens(apply_overrides=True)
-    )
-    return f"{_DIALOG_BASE_MARKER}\n{style}\n{override_style}\n{metric_style}"
+    resolved_metrics = get_dialog_metric_tokens(apply_overrides=True, settings=settings)
+    resolved_metrics.update(metrics or {})
+    metrics = resolved_metrics
+    metric_style = _build_dialog_metric_override_styles(metrics)
+    system_style = _build_dialog_visual_system(tokens, metrics)
+    control_style = build_dialog_control_styles(tokens, metrics)
+    return f"{_DIALOG_BASE_MARKER}\n{style}\n{override_style}\n{system_style}\n{metric_style}\n{control_style}"
 
 
 def build_dialog_preview_stylesheet(
@@ -1277,11 +1418,13 @@ def build_dialog_preview_stylesheet(
     theme_color: str | None = None,
     text_theme: str | None = None,
     panel_base_color: str | None = None,
+    settings: QSettings | None = None,
 ) -> str:
     base = build_dialog_stylesheet(
         theme_color=theme_color or "#4da6ff",
         text_theme=text_theme or "dark",
         panel_base_color=panel_base_color or "#1c1c1c",
+        settings=settings,
     )
 
     tokens = get_dialog_theme_tokens(
@@ -1289,8 +1432,9 @@ def build_dialog_preview_stylesheet(
         text_theme=text_theme,
         panel_base_color=panel_base_color,
         apply_overrides=True,
+        settings=settings,
     )
-    metrics = get_dialog_metric_tokens(apply_overrides=True)
+    metrics = get_dialog_metric_tokens(apply_overrides=True, settings=settings)
 
     if isinstance(token_overrides, dict):
         for key, value in token_overrides.items():
@@ -1302,14 +1446,16 @@ def build_dialog_preview_stylesheet(
 
     if isinstance(metric_overrides, dict):
         for key, value in metric_overrides.items():
-            normalized = _normalize_metric_value(key, value)
+            normalized = _normalize_metric_value(key, value, settings=settings)
             if normalized is not None:
                 metrics[key] = normalized
 
     return (
         f"{base}\n"
         f"{_build_dialog_token_override_styles(tokens)}\n"
-        f"{_build_dialog_metric_override_styles(metrics)}"
+        f"{_build_dialog_visual_system(tokens, metrics)}\n"
+        f"{_build_dialog_metric_override_styles(metrics)}\n"
+        f"{build_dialog_control_styles(tokens, metrics)}"
     )
 
 
@@ -1395,9 +1541,15 @@ def _fit_dialog_text(dialog: QDialog):
         if isinstance(preferred, QSize) and preferred.isValid():
             target_width = max(dialog.minimumWidth(), preferred.width())
             target_height = max(dialog.minimumHeight(), preferred.height())
+        elif dialog.testAttribute(Qt.WidgetAttribute.WA_Resized):
+            # A deliberate constructor resize is the opening size, not a lower
+            # bound for the largest hidden tab's sizeHint. Scrollable settings
+            # pages must not inflate every modal to near desktop size.
+            target_width = max(dialog.minimumWidth(), current.width())
+            target_height = max(dialog.minimumHeight(), current.height())
         else:
-            target_width = max(current.width(), hint.width())
-            target_height = max(current.height(), hint.height())
+            target_width = max(dialog.minimumWidth(), hint.width())
+            target_height = max(dialog.minimumHeight(), hint.height())
         # Word-wrapped labels give the layout height-for-width. On Windows the
         # native window can never be shorter than heightForWidth(width), so a
         # preferred height below it leaves the Qt geometry smaller than the
@@ -1409,6 +1561,12 @@ def _fit_dialog_text(dialog: QDialog):
         bounds = _available_dialog_bounds(dialog)
         if bounds is not None:
             max_width, max_height = bounds
+            # Leave visual breathing room around initial modals; users retain
+            # their normal resize range up to the active screen's safe bounds.
+            opening_width = min(max_width, max(640, round(max_width * 0.90)))
+            opening_height = min(max_height, max(480, round(max_height * 0.88)))
+            target_width = min(target_width, max(dialog.minimumWidth(), opening_width))
+            target_height = min(target_height, max(dialog.minimumHeight(), opening_height))
             existing_max_width = dialog.maximumWidth()
             existing_max_height = dialog.maximumHeight()
             if existing_max_width < 16777215:
@@ -1461,15 +1619,22 @@ def apply_common_dialog_style(
     panel_base_color: str | None = None,
     extra_stylesheet: str | None = None,
     keep_existing_stylesheet: bool = True,
+    settings: QSettings | None = None,
 ):
     """Apply the shared dialog theme while preserving optional custom styles."""
+    settings = _dialog_settings(dialog, settings)
+    from calendar_app.presentation.dialogs.dialog_chrome import prepare_dialog_chrome
+
+    prepare_dialog_chrome(dialog, settings=settings)
     base = build_dialog_stylesheet(
         theme_color=theme_color,
         text_theme=text_theme,
         panel_base_color=panel_base_color,
+        settings=settings,
     )
     current = dialog.styleSheet() if keep_existing_stylesheet else ""
     shared_tokens = get_ui_tokens(
+        settings=settings,
         theme_color=theme_color,
         text_theme=text_theme,
         panel_base_color=panel_base_color,
@@ -1486,6 +1651,7 @@ def apply_common_dialog_style(
         parts.append(str(extra_stylesheet))
 
     dialog.setStyleSheet("\n".join(parts))
+    _apply_message_box_palette_icon(dialog, settings=settings)
     dialog.setProperty("_dc_common_style_applied", True)
     if not dialog.accessibleName() and dialog.windowTitle():
         dialog.setAccessibleName(dialog.windowTitle())
@@ -1501,8 +1667,62 @@ def apply_common_dialog_style(
     schedule_dialog_text_fit(dialog)
 
 
+def _dialog_settings(dialog, settings=None):
+    """Resolve the owning window's profile without writing or copying settings."""
+    if settings is not None:
+        return settings
+    owner = dialog
+    while owner is not None:
+        candidate = getattr(owner, "settings", None)
+        if isinstance(candidate, _QSettingsType):
+            return candidate
+        owner = owner.parent()
+    return None
+
+
+def _apply_message_box_palette_icon(dialog, *, settings=None):
+    """Recolor standard semantic glyphs while leaving user-supplied pixmaps intact."""
+    if not isinstance(dialog, QMessageBox) or dialog.property("dcSkipCommonDialogStyle"):
+        return
+    glyphs = {
+        QMessageBox.Icon.Warning: ICON.WARNING,
+        QMessageBox.Icon.Critical: ICON.ERROR,
+        QMessageBox.Icon.Information: ICON.INFO,
+        QMessageBox.Icon.Question: ICON.QUESTION,
+    }
+    kind = dialog.icon()
+    current = dialog.iconPixmap()
+    applied_key = getattr(dialog, "_dc_message_icon_pixmap_key", None)
+    if kind == QMessageBox.Icon.NoIcon:
+        if current.isNull() or applied_key is None or current.cacheKey() != applied_key:
+            return
+        kind = getattr(dialog, "_dc_message_icon_kind", QMessageBox.Icon.NoIcon)
+    if kind not in glyphs:
+        return
+    profile = _dialog_settings(dialog, settings)
+    tokens = get_dialog_theme_tokens(settings=profile)
+    color = parse_css_color(tokens["danger_hex"]).name(QColor.NameFormat.HexRgb)
+    size = max(24, dialog.style().pixelMetric(QStyle.PixelMetric.PM_MessageBoxIconSize))
+    signature = (kind, color, size, dialog.devicePixelRatioF())
+    if (
+        getattr(dialog, "_dc_message_icon_signature", None) == signature
+        and current.cacheKey() == applied_key
+    ):
+        return
+    glyph = icon(glyphs[kind], color=color)
+    if glyph.isNull():
+        return
+    pixmap = glyph.pixmap(QSize(size, size), dialog.devicePixelRatioF())
+    if pixmap.isNull():
+        return
+    dialog.setIconPixmap(pixmap)
+    dialog._dc_message_icon_kind = kind
+    dialog._dc_message_icon_signature = signature
+    dialog._dc_message_icon_pixmap_key = dialog.iconPixmap().cacheKey()
+
+
 class _CommonDialogStyleFilter(QObject):
-    """Theme standard Qt popups and otherwise-unskinned modal dialogs on show."""
+    """Give every Qt dialog the common base while retaining its scoped skin."""
 
     _standard_dialog_types = (
         QMessageBox,
@@ -1513,33 +1733,78 @@ class _CommonDialogStyleFilter(QObject):
     )
 
     def eventFilter(self, watched, event):
-        if event.type() != QEvent.Type.Show or not isinstance(watched, QDialog):
+        if not isinstance(watched, QDialog):
             return False
-        if watched.property("_dc_common_style_applied"):
+        if event.type() not in (QEvent.Type.Polish, QEvent.Type.Show):
+            return False
+        if watched.property("_dc_common_style_in_progress"):
+            return False
+        watched.setProperty("_dc_common_style_in_progress", True)
+        try:
+            return self._style_dialog(watched, event)
+        finally:
+            watched.setProperty("_dc_common_style_in_progress", False)
+
+    def _style_dialog(self, watched, event):
+        from calendar_app.presentation.dialogs.dialog_chrome import (
+            ensure_dialog_chrome,
+            prepare_dialog_chrome,
+        )
+
+        profile = _dialog_settings(watched, getattr(watched, "_dc_chrome_settings", None))
+        prepare_dialog_chrome(watched, settings=profile)
+        ensure_dialog_chrome(watched, settings=profile)
+        if event.type() != QEvent.Type.Show:
+            return False
+        _apply_message_box_palette_icon(watched, settings=profile)
+        is_standard = isinstance(watched, self._standard_dialog_types)
+        if (
+            watched.property("_dc_common_style_applied")
+            and _DIALOG_BASE_MARKER in watched.styleSheet()
+            and (not is_standard or watched.property("_dc_standard_dialog_controls_styled"))
+        ):
             return False
         if watched.property("dcSkipCommonDialogStyle"):
             return False
 
-        is_standard = isinstance(watched, self._standard_dialog_types)
-        has_custom_style = bool((watched.styleSheet() or "").strip())
         is_translucent = watched.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        if not is_standard and (has_custom_style or is_translucent):
-            return False
 
         watched.setProperty("_dc_common_style_applied", True)
         standard_control_style = None
         if is_standard:
+            for box in watched.findChildren(QDialogButtonBox):
+                for button in box.buttons():
+                    role = box.buttonRole(button)
+                    button.setProperty("dialogFooter", True)
+                    if not button.objectName():
+                        if role == QDialogButtonBox.ButtonRole.DestructiveRole:
+                            button.setObjectName("danger_btn")
+                        elif role in (
+                            QDialogButtonBox.ButtonRole.AcceptRole,
+                            QDialogButtonBox.ButtonRole.YesRole,
+                            QDialogButtonBox.ButtonRole.ApplyRole,
+                        ):
+                            button.setObjectName("primary_btn")
+                        else:
+                            button.setObjectName("ghost_btn")
             standard_control_style = (
                 "QMessageBox QPushButton, QInputDialog QPushButton, "
                 "QColorDialog QPushButton, QFontDialog QPushButton, QFileDialog QPushButton {"
                 "min-height: 36px; max-height: 36px; min-width: 88px; padding: 4px 16px;"
                 "}"
             )
+        if is_translucent:
+            watched.setProperty("dcCommonTranslucent", True)
+            standard_control_style = (standard_control_style or "") + (
+                'QDialog[dcCommonTranslucent="true"] { background: transparent; border: none; }'
+            )
         apply_common_dialog_style(
             watched,
             keep_existing_stylesheet=True,
             extra_stylesheet=standard_control_style,
         )
+        if is_standard:
+            watched.setProperty("_dc_standard_dialog_controls_styled", True)
         if not watched.accessibleName() and watched.windowTitle():
             watched.setAccessibleName(watched.windowTitle())
         return False
@@ -1547,6 +1812,9 @@ class _CommonDialogStyleFilter(QObject):
 
 def install_common_dialog_style_filter(app):
     """Install one application-level safety net for message/input/file popups."""
+    from calendar_app.presentation.widgets.wheel_value_guard import install_wheel_value_guard
+
+    install_wheel_value_guard(app)
     existing = getattr(app, "_dc_common_dialog_style_filter", None)
     if existing is not None:
         return existing

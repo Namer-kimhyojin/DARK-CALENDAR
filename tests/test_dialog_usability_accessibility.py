@@ -33,6 +33,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
 )
 from calendar_app.presentation.dialogs.gcal_settings_dialog import GCalSettingsDialog
 from calendar_app.presentation.dialogs.help_center_dialog import HelpCenterDialog
+from calendar_app.presentation.dialogs.recurring_event_dialog import RecurringEventScopeDialog
 
 
 def _show_and_polish(dialog: QDialog) -> None:
@@ -51,6 +52,32 @@ class DialogUsabilityAccessibilityTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._app = QApplication.instance() or QApplication([])
+
+    def test_recurring_delete_is_compact_and_defaults_to_cancel(self):
+        dialog = RecurringEventScopeDialog(mode="delete")
+        self.addCleanup(dialog.close)
+        _show_and_polish(dialog)
+
+        self.assertLess(dialog.height(), 420)
+        confirm = dialog.findChild(QPushButton, "danger_btn")
+        cancel = dialog.findChild(QPushButton, "ghost_btn")
+        self.assertIsNotNone(confirm)
+        self.assertFalse(confirm.isDefault())
+        self.assertFalse(confirm.autoDefault())
+        self.assertTrue(cancel.isDefault())
+        self.assertEqual(dialog.get_scope(), dialog.SCOPE_SINGLE)
+
+    def test_recurring_scope_choices_keep_their_existing_meaning(self):
+        for mode in ("edit", "delete"):
+            with self.subTest(mode=mode):
+                dialog = RecurringEventScopeDialog(mode=mode, allow_all=False)
+                self.addCleanup(dialog.close)
+                _show_and_polish(dialog)
+                self.assertFalse(dialog._rb_all.isVisible())
+                dialog._rb_following.setChecked(True)
+                dialog._on_accept()
+                self.assertEqual(dialog.get_scope(), dialog.SCOPE_FOLLOWING)
+                self.assertEqual(dialog.result(), QDialog.DialogCode.Accepted)
 
     def test_common_dialog_adds_accessibility_and_fits_active_screen(self):
         dialog = QDialog()

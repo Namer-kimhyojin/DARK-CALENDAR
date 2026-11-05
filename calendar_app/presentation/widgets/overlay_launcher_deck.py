@@ -751,6 +751,27 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
                 self._apply_deck(self._deck_data)
         dialog.deleteLater()
 
+    def _open_beatmaker_looper(self) -> None:
+        from calendar_app.presentation.widgets.keydeck.looper_dialog import BeatmakerLooperDialog
+
+        if is_app_exiting() or beatmaker_state(current_page(self._deck_data)) is None:
+            return
+        self._set_keyboard_performance(False)
+        dialog = BeatmakerLooperDialog(self._deck_data, self)
+        self._performance_dialog = dialog
+        try:
+            dialog.exec()
+        finally:
+            self._performance_dialog = None
+        if not is_app_exiting():
+            result = dialog.result_performance()
+            if any(self._deck_data.get(key) != value for key, value in result.items()):
+                self._deck_data.update(result)
+                if result["beatmaker_looper"] is None:
+                    self._deck_data.pop("beatmaker_looper", None)
+                self._apply_deck(self._deck_data)
+        dialog.deleteLater()
+
     def _set_beatmaker_kit(self, kit: str) -> None:
         state = beatmaker_state(current_page(self._deck_data))
         if state is None or state["kit"] == kit or kit not in {item[0] for item in BEATMAKER_KITS}:
@@ -812,6 +833,7 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             return
         music = menu.addMenu(t("beatmaker.title", "비트메이커"))
         music.addAction(t("beatmaker.performance", "연주·녹음"), self._open_beatmaker_performance)
+        music.addAction(t("beatmaker.looper.open", "루프덱 · 4트랙"), self._open_beatmaker_looper)
         keyboard = music.addAction(
             t("beatmaker.stop_keyboard", "키보드 연주 종료 (Esc)")
             if self._keyboard_performance

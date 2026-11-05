@@ -68,6 +68,7 @@ from calendar_app.presentation.dialogs.routine_recurrence_wizard import (
     _build_routine_wizard_stylesheet,
 )
 from calendar_app.presentation.main_window.app_window import OverlayApp
+from calendar_app.presentation.main_window.theme_actions import ThemeActionsMixin
 from calendar_app.presentation.panels.side_panel_renderer import (
     _panel_menu_style,
     _panel_scroll_style,
@@ -117,7 +118,7 @@ from calendar_app.presentation.widgets.ui_components import (
     _task_detail_card_style,
     _task_title_label_style,
 )
-from calendar_app.shared.color_utils import derive_ui_palette
+from calendar_app.shared.color_utils import composite_color, derive_ui_palette, parse_css_color
 from calendar_app.shared.theme_snapshot import (
     build_shape_tokens,
     build_theme_snapshot,
@@ -140,13 +141,16 @@ class _FakeSettings:
         self.values.pop(key, None)
 
 
-class _FakePaletteHost:
+class _FakePaletteHost(ThemeActionsMixin):
     def __init__(self):
         self.settings = _FakeSettings()
         self.theme_apply_calls = 0
 
     def apply_theme_settings(self):
         self.theme_apply_calls += 1
+
+    def show_toast(self, _title, _message):
+        pass
 
 
 class ThemeContractTests(unittest.TestCase):
@@ -165,15 +169,16 @@ class ThemeContractTests(unittest.TestCase):
 
     def test_command_palette_theme_commands_use_apply_theme_settings(self):
         host = _FakePaletteHost()
+        host.settings.setValue("panel_base_color", "#24413f")
 
         OverlayApp.handle_palette_command(host, "theme_dark", {})
         self.assertEqual(host.settings.value("text_theme"), "dark")
-        self.assertEqual(host.settings.value("panel_base_color"), "#1c1c1c")
+        self.assertEqual(host.settings.value("panel_base_color"), "#24413f")
         self.assertEqual(host.theme_apply_calls, 1)
 
         OverlayApp.handle_palette_command(host, "theme_light", {})
         self.assertEqual(host.settings.value("text_theme"), "light")
-        self.assertEqual(host.settings.value("panel_base_color"), "#fefefe")
+        self.assertEqual(host.settings.value("panel_base_color"), "#24413f")
         self.assertEqual(host.theme_apply_calls, 2)
 
     def test_command_palette_style_bundle_uses_semantic_tokens(self):
@@ -380,7 +385,11 @@ class ThemeContractTests(unittest.TestCase):
         self.assertEqual(shared_tokens["text_primary"], dialog_tokens["text_primary"])
         self.assertEqual(shared_tokens["input_bg"], "#ffffff")
         self.assertEqual(dialog_tokens["input_bg"], "#ffffff")
-        self.assertEqual(shared_tokens["bg_item"], dialog_tokens["surface_item"])
+        self.assertEqual(
+            parse_css_color(dialog_tokens["surface_item"]).name(),
+            composite_color(shared_tokens["bg_item"], dialog_tokens["floating_bg"]).name(),
+        )
+        self.assertEqual(parse_css_color(dialog_tokens["surface_item"]).alpha(), 255)
 
         settings.setValue("text_theme", "custom")
         custom_snapshot = build_theme_snapshot(settings=settings)
@@ -506,7 +515,7 @@ class ThemeContractTests(unittest.TestCase):
         in_progress_bg = _status_background("in_progress", tokens=tokens)
         completed_bg = _status_background("completed", tokens=tokens)
 
-        self.assertIn("font-size: 19pt;", header_style)
+        self.assertIn("font-size: 19px;", header_style)
         self.assertIn("color: #22c3ca;", header_style)
         self.assertEqual(in_progress_bg.name(QColor.NameFormat.HexRgb), "#22c3ca")
         self.assertEqual(in_progress_bg.alpha(), 48)
@@ -780,7 +789,7 @@ class ThemeContractTests(unittest.TestCase):
         self.assertIn("background-color: rgba(16,28,40,220);", wizard_qss)
         self.assertIn("border-radius: 11px;", wizard_qss)
         self.assertIn("QRadioButton::indicator:checked", wizard_qss)
-        self.assertIn("background: #35b66a;", wizard_qss)
+        self.assertIn("background: #22c3ca;", wizard_qss)
 
         self.assertIn("background: rgba(8,18,28,220);", away_styles["rich_editor"])
         self.assertIn("color: #22c3ca;", away_styles["html_editor"])
@@ -878,7 +887,9 @@ class ThemeContractTests(unittest.TestCase):
         checklist_qss = _checklist_dialog_style(tokens=tokens)
         checklist_shell_partial = _checklist_shell_stylesheet(tokens={"accent": "#22c3ca"})
 
-        self.assertIn("background-color: rgba(8,18,28,220);", gcal_qss)
+        dialog_surface = get_dialog_theme_tokens(theme_color=tokens["accent"])["floating_bg"]
+        opaque_surface = composite_color(tokens["surface_bg"], dialog_surface).name()
+        self.assertIn(f"background-color: {opaque_surface};", gcal_qss)
         self.assertIn("border: 1px solid rgba(34,195,202,110);", visible_qss)
         self.assertIn("color: #22c3ca;", visible_qss)
         self.assertIn("color: #93a1b4;", hidden_qss)

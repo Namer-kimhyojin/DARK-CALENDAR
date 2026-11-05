@@ -61,10 +61,10 @@ class LightThemeRuntimeTests(unittest.TestCase):
         palette = derive_ui_palette("light", "#fff0f6", 1.0, "#d6336c")
 
         self.assertGreaterEqual(len(set(panel.values())), 5)
-        self.assertEqual(palette["border"], "rgba(0,0,0,0.16)")
+        self.assertEqual(palette["border"], "#cbd3e1")
         self.assertEqual(palette["weekday_other"], palette["text_faint"])
-        self.assertEqual(palette["text_secondary"], "#3f4650")
-        self.assertEqual(palette["text_muted"], "#68717d")
+        self.assertEqual(palette["text_secondary"], "#5e687c")
+        self.assertEqual(palette["text_muted"], "#6b7487")
         content_alpha = int(re.search(r",\s*(\d+)\)$", panel["content_bg"]).group(1))
         floating_alpha = int(re.search(r",\s*(\d+)\)$", panel["floating_bg"]).group(1))
         self.assertGreaterEqual(content_alpha, 220)
@@ -179,9 +179,9 @@ class LightThemeRuntimeTests(unittest.TestCase):
             }
         )
         styles = build_top_bar_runtime_styles(settings, 10, "#d6336c")
-        self.assertIn("color: #3f4650", styles["label"])
-        self.assertIn("rgba(0,0,0,0.10)", styles["divider"])
-        self.assertIn("color: #101318", styles["search"])
+        self.assertIn("color: #5e687c", styles["label"])
+        self.assertIn("#dde2ed", styles["divider"])
+        self.assertIn("color: #20283a", styles["search"])
 
 
 if __name__ == "__main__":

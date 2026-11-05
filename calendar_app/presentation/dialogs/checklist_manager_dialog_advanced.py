@@ -62,6 +62,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
 )
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
+from calendar_app.shared.typography import get_typography_scale
 
 DIALOG_STYLE = ""
 
@@ -180,6 +181,18 @@ def _checklist_editor_stylesheet(tokens: dict | None = None, metrics: dict | Non
         [
             _dialog_style(tokens=tokens, metrics=metrics),
             build_task_editor_stylesheet(tokens=tokens, metrics=metrics),
+            # This manager shares the editor's input skin, but its same-row
+            # footer actions use the common density instead of editor CTA padding.
+            f"""
+QDialog#TaskEditorDialog QPushButton#primary_btn[dialogFooter="true"] {{
+    padding: {int(metrics["button_padding_y"])}px {int(metrics["button_padding_x"])}px;
+    border: 1px solid transparent;
+    font-size: {int(metrics["base_font_pt"])}px;
+}}
+QDialog#TaskEditorDialog QPushButton#primary_btn[dialogFooter="true"]:focus {{
+    border-color: {tokens["text_primary"]};
+}}
+""",
         ]
     )
 
@@ -188,8 +201,9 @@ def _checklist_main_style_bundle(
     tokens: dict | None = None, metrics: dict | None = None
 ) -> dict[str, str]:
     tokens, metrics = _resolve_checklist_theme_inputs(tokens=tokens, metrics=metrics)
-    title_px = max(18, int(metrics["base_font_pt"]) + 4)
-    section_px = max(14, int(metrics["base_font_pt"]))
+    typography = get_typography_scale(base_pt=float(metrics["base_font_pt"]) * 0.75)
+    title_px = int(metrics["title_font_pt"])
+    section_px = typography.section_px
     empty_radius = max(8, int(metrics["group_radius"]) - 1)
     panel_radius = max(empty_radius, int(metrics["group_radius"]))
     item_radius = max(6, int(metrics["field_radius"]))
@@ -211,9 +225,13 @@ def _checklist_main_style_bundle(
     header_bg = tokens.get("surface_top", surface_bg)
     custom_bundle = {
         "title": build_editor_text_style(tokens, tone="primary", font_px=title_px, weight=700),
-        "subtitle": build_editor_text_style(tokens, tone="muted", font_px=12),
+        "subtitle": build_editor_text_style(
+            tokens, tone="muted", font_px=int(metrics["subtitle_font_pt"])
+        ),
         "section": build_editor_text_style(tokens, tone="accent", font_px=section_px, weight=700),
-        "badge": build_editor_hint_style(tokens, metrics, tone="accent", font_px=12, weight=600),
+        "badge": build_editor_hint_style(
+            tokens, metrics, tone="accent", font_px=int(metrics["subtitle_font_pt"]), weight=600
+        ),
         "button_primary": build_editor_quick_button_style(tokens, metrics, tone="accent"),
         "button_secondary": build_editor_quick_button_style(tokens, metrics, tone="secondary"),
         "button_success": build_editor_quick_button_style(tokens, metrics, tone="success"),
@@ -254,7 +272,7 @@ def _checklist_main_style_bundle(
         "empty": build_editor_text_style(
             tokens,
             tone="faint",
-            font_px=14,
+            font_px=int(metrics["base_font_pt"]),
             padding="24px 16px",
             background=tokens["surface_alt"],
             border_css=f"1px dashed {border}",
@@ -266,7 +284,8 @@ def _checklist_main_style_bundle(
 
 
 def _checklist_footer_button_style(stylesheet: str, metrics: dict) -> str:
-    target_height = max(44, int(metrics.get("button_height", 34)))
+    padding_y = max(2, int(metrics.get("button_padding_y", 4)) - 1)
+    target_height = max(44 - 2 * padding_y - 2, int(metrics["button_height"]))
     return re.sub(
         r"min-height: \d+px; max-height: \d+px;",
         f"min-height: {target_height}px; max-height: {target_height}px;",
@@ -280,8 +299,12 @@ def _checklist_subdialog_style_bundle(
 ) -> dict[str, str]:
     tokens, metrics = _resolve_checklist_theme_inputs(tokens=tokens, metrics=metrics)
     return {
-        "heading": build_editor_text_style(tokens, tone="primary", font_px=18, weight=700),
-        "caption": build_editor_text_style(tokens, tone="muted", font_px=12),
+        "heading": build_editor_text_style(
+            tokens, tone="primary", font_px=int(metrics["title_font_pt"]), weight=700
+        ),
+        "caption": build_editor_text_style(
+            tokens, tone="muted", font_px=int(metrics["subtitle_font_pt"])
+        ),
         "button_primary": _checklist_footer_button_style(
             build_editor_quick_button_style(tokens, metrics, tone="accent"), metrics
         ),
@@ -376,8 +399,19 @@ class ChecklistManagerDialog(QDialog):
     def _make_icon_btn(self, icon_key, label, style_key, tooltip=None, fixed_width=None):
         """아이콘 + 짧은 텍스트 버튼 생성 헬퍼."""
         btn = QPushButton(f"  {label}")
-        btn.setIcon(_ic(icon_key))
-        btn.setStyleSheet(self._main_style_bundle[style_key])
+        button_style = self._main_style_bundle[style_key]
+        color_match = re.search(r"(?:^|[;{])\s*color\s*:\s*([^;{}]+)", button_style)
+        icon_color = _token_qcolor(
+            {
+                "icon": color_match.group(1).strip()
+                if color_match
+                else self._ui_tokens["text_primary"]
+            },
+            "icon",
+            self._ui_tokens["text_primary"],
+        ).name(QColor.NameFormat.HexRgb)
+        btn.setIcon(_ic(icon_key, color=icon_color))
+        btn.setStyleSheet(button_style)
         if tooltip:
             btn.setToolTip(tooltip)
         if fixed_width:
@@ -521,7 +555,9 @@ class ChecklistManagerDialog(QDialog):
         desc_label.setFixedWidth(50)
         desc_row.addWidget(desc_label)
         self.template_desc_edit = QTextEdit()
-        self.template_desc_edit.setFixedHeight(38)
+        self.template_desc_edit.setMinimumHeight(
+            max(38, self.template_desc_edit.fontMetrics().height() + 16)
+        )
         self.template_desc_edit.setPlaceholderText(t("checklist_mgr.placeholder_desc"))
         desc_row.addWidget(self.template_desc_edit, 1)
         content_layout.addLayout(desc_row)
@@ -553,7 +589,10 @@ class ChecklistManagerDialog(QDialog):
         # 순서 이동 (아이콘만, 좁게)
         up_btn = QPushButton()
         up_btn.setObjectName("checklistMoveUpButton")
-        up_btn.setIcon(_ic(ICON.NAV_PREV))
+        neutral_icon_color = _token_qcolor(
+            self._ui_tokens, "text_secondary", self._ui_tokens["text_primary"]
+        ).name(QColor.NameFormat.HexRgb)
+        up_btn.setIcon(_ic(ICON.NAV_PREV, color=neutral_icon_color))
         up_btn.setFixedWidth(32)
         up_label = t("checklist_mgr.btn_up")
         up_btn.setToolTip(f"{up_label}  Ctrl+↑")
@@ -565,7 +604,7 @@ class ChecklistManagerDialog(QDialog):
 
         down_btn = QPushButton()
         down_btn.setObjectName("checklistMoveDownButton")
-        down_btn.setIcon(_ic(ICON.NAV_NEXT))
+        down_btn.setIcon(_ic(ICON.NAV_NEXT, color=neutral_icon_color))
         down_btn.setFixedWidth(32)
         down_label = t("checklist_mgr.btn_down")
         down_btn.setToolTip(f"{down_label}  Ctrl+↓")
@@ -607,7 +646,9 @@ class ChecklistManagerDialog(QDialog):
         self.items_table.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.items_table.setDropIndicatorShown(True)
         self.items_table.verticalHeader().hide()
-        self.items_table.verticalHeader().setDefaultSectionSize(32)
+        self.items_table.verticalHeader().setDefaultSectionSize(
+            max(32, self.items_table.fontMetrics().height() + 12)
+        )
         self.items_table.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeMode.ResizeToContents
         )
@@ -625,17 +666,34 @@ class ChecklistManagerDialog(QDialog):
         self.content_widget.hide()
 
         # ── 하단: 저장 + 닫기 ──────────────────────────────────────────────
-        footer = QHBoxLayout()
-        footer.setSpacing(8)
-        footer.addStretch()
-        self.save_base_btn = self._make_icon_btn(
-            ICON.SAVE, t("common.save"), "button_primary", tooltip="Ctrl+S"
+        footer, self.save_base_btn, close_btn = build_dialog_footer(
+            ok_label=t("common.save"), cancel_label=t("common.close")
         )
+        self.save_base_btn.setIcon(
+            _ic(
+                ICON.SAVE,
+                color=_token_qcolor(self._ui_tokens, "button_primary_text", "#101318").name(
+                    QColor.NameFormat.HexRgb
+                ),
+            )
+        )
+        self.save_base_btn.setToolTip("Ctrl+S")
         self.save_base_btn.clicked.connect(self._save_template_info)
-        footer.addWidget(self.save_base_btn)
-        close_btn = self._make_icon_btn(ICON.CLOSE, t("common.close"), "button_secondary")
+        self._save_base_button_text = self.save_base_btn.text()
+        self._save_base_button_style = self.save_base_btn.styleSheet()
+        self._save_feedback_timer = QTimer(self.save_base_btn)
+        self._save_feedback_timer.setSingleShot(True)
+        self._save_feedback_timer.setInterval(1200)
+        self._save_feedback_timer.timeout.connect(self._restore_save_feedback)
+        close_btn.setIcon(
+            _ic(
+                ICON.CLOSE,
+                color=_token_qcolor(self._ui_tokens, "text_primary", "#e1e1e6").name(
+                    QColor.NameFormat.HexRgb
+                ),
+            )
+        )
         close_btn.clicked.connect(self.accept)
-        footer.addWidget(close_btn)
         editor_layout.addLayout(footer)
 
         body_layout.addWidget(editor_area, 1)
@@ -652,13 +710,15 @@ class ChecklistManagerDialog(QDialog):
 
         QShortcut(QKeySequence("Ctrl+I"), self).activated.connect(self._add_item)
 
-        QShortcut(QKeySequence("Delete"), self).activated.connect(self._delete_items)
-
-        QShortcut(QKeySequence("Return"), self).activated.connect(self._edit_item)
-
-        QShortcut(QKeySequence("Ctrl+Up"), self).activated.connect(lambda: self._move_item(-1))
-
-        QShortcut(QKeySequence("Ctrl+Down"), self).activated.connect(lambda: self._move_item(1))
+        for sequence, handler in (
+            ("Delete", self._delete_items),
+            ("Return", self._edit_item),
+            ("Ctrl+Up", lambda: self._move_item(-1)),
+            ("Ctrl+Down", lambda: self._move_item(1)),
+        ):
+            shortcut = QShortcut(QKeySequence(sequence), self.items_table)
+            shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+            shortcut.activated.connect(handler)
 
     def _set_editor_visible(self, visible):
         self.empty_msg.setVisible(not visible)
@@ -834,7 +894,9 @@ class ChecklistManagerDialog(QDialog):
 
                 if item["is_required"]:
                     required_item.setForeground(required_color)
-                    required_item.setFont(QFont("Malgun Gothic", 9, QFont.Weight.Bold))
+                    required_font = QFont(self.items_table.font())
+                    required_font.setBold(True)
+                    required_item.setFont(required_font)
 
                 else:
                     required_item.setForeground(order_color)
@@ -869,16 +931,10 @@ class ChecklistManagerDialog(QDialog):
         }
 
         if checklist_repo.update_checklist_template(self.current_template_id, updates):
-            original_text = self.save_base_btn.text()
-
+            self._save_feedback_timer.stop()
             self.save_base_btn.setText(t("checklist_mgr.btn_saved"))
             self.save_base_btn.setStyleSheet(self._main_style_bundle["button_success"])
-
-            def restore_button():
-                self.save_base_btn.setText(original_text)
-                self.save_base_btn.setStyleSheet(self._main_style_bundle["button_primary"])
-
-            QTimer.singleShot(1200, restore_button)
+            self._save_feedback_timer.start()
 
             current_id = self.current_template_id
 
@@ -887,6 +943,10 @@ class ChecklistManagerDialog(QDialog):
             self._select_template_in_list(current_id)
 
             self.checklist_changed.emit()
+
+    def _restore_save_feedback(self):
+        self.save_base_btn.setText(self._save_base_button_text)
+        self.save_base_btn.setStyleSheet(self._save_base_button_style)
 
     def _create_new_template(self):
         name, ok = QInputDialog.getText(
@@ -1256,7 +1316,7 @@ class ChecklistItemEditDialog(QDialog):
 
         self.desc_edit = QTextEdit()
 
-        self.desc_edit.setFixedHeight(62)
+        self.desc_edit.setMinimumHeight(max(62, self.desc_edit.fontMetrics().height() * 2 + 16))
 
         self.desc_edit.setPlaceholderText(t("checklist_mgr.placeholder_item_desc"))
         desc_label.setBuddy(self.desc_edit)
@@ -1270,7 +1330,7 @@ class ChecklistItemEditDialog(QDialog):
 
         self.guide_edit = QTextEdit()
 
-        self.guide_edit.setFixedHeight(78)
+        self.guide_edit.setMinimumHeight(max(78, self.guide_edit.fontMetrics().height() * 3 + 16))
 
         self.guide_edit.setPlaceholderText(t("checklist_mgr.placeholder_item_guide"))
         guide_label.setBuddy(self.guide_edit)
@@ -1292,10 +1352,10 @@ class ChecklistItemEditDialog(QDialog):
             cancel_label=t("common.cancel"),
         )
         save_btn.setStyleSheet(self._style_bundle["button_primary"])
-        save_btn.setFixedHeight(max(44, int(self._dialog_metrics["button_height"])))
+        save_btn.setMinimumHeight(44)
         save_btn.clicked.connect(self._save)
         cancel_btn.setStyleSheet(self._style_bundle["button_secondary"])
-        cancel_btn.setFixedHeight(max(44, int(self._dialog_metrics["button_height"])))
+        cancel_btn.setMinimumHeight(44)
         cancel_btn.clicked.connect(self.reject)
 
         layout.addLayout(buttons)
@@ -1430,10 +1490,10 @@ class BulkOperationsDialog(QDialog):
             cancel_label=t("common.cancel"),
         )
         apply_btn.setStyleSheet(self._style_bundle["button_primary"])
-        apply_btn.setFixedHeight(max(44, int(self._dialog_metrics["button_height"])))
+        apply_btn.setMinimumHeight(44)
         apply_btn.clicked.connect(self._apply)
         cancel_btn.setStyleSheet(self._style_bundle["button_secondary"])
-        cancel_btn.setFixedHeight(max(44, int(self._dialog_metrics["button_height"])))
+        cancel_btn.setMinimumHeight(44)
         cancel_btn.clicked.connect(self.reject)
 
         layout.addLayout(buttons)

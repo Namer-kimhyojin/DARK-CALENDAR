@@ -56,7 +56,7 @@ def test_native_job_uses_same_commit_and_pinned_python_only_for_qa_dependencies(
         step for step in native["steps"] if step.get("uses", "").startswith("actions/setup-python@")
     )
     assert python["with"]["python-version"] == "${{ env.PYTHON_VERSION }}"
-    assert configuration["env"]["PYTHON_VERSION"] == "3.13.15"
+    assert configuration["env"]["PYTHON_VERSION"] == "3.14.10"
     assert "python -m venv build\\native-smoke-venv" in commands(native)
     assert "pywinauto==0.6.9 Pillow==13.0.0 psutil==7.2.2" in commands(native)
     assert "requirements-build.lock" not in commands(native)

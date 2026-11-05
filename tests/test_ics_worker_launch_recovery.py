@@ -41,6 +41,7 @@ def launch(monkeypatch):
     config = {"failure": None}
     coordinator = SimpleNamespace(
         ics_worker=None,
+        _ics_pending_ids=set(),
         app=SimpleNamespace(_bg_workers=[]),
         settings=Settings(),
         _calendars=lambda: [
@@ -71,6 +72,9 @@ def launch(monkeypatch):
 
         def isRunning(self):
             return self.running
+
+        def is_cancelled(self):
+            return self.requestInterruption.called
 
     monkeypatch.setattr(module, "IcsSyncWorker", Worker)
     return coordinator, created, config
@@ -130,7 +134,7 @@ def test_native_qthread_remains_alive_until_failed_launch_finishes(monkeypatch):
     import threading
 
     from PyQt6 import sip
-    from PyQt6.QtCore import QCoreApplication, QEvent, QObject, QThread, pyqtSignal
+    from PyQt6.QtCore import QCoreApplication, QEvent, QObject
     from PyQt6.QtWidgets import QApplication
 
     app = QApplication.instance() or QApplication([])
@@ -138,6 +142,7 @@ def test_native_qthread_remains_alive_until_failed_launch_finishes(monkeypatch):
     coordinator = module.CalendarSyncCoordinator.__new__(module.CalendarSyncCoordinator)
     QObject.__init__(coordinator, owner)
     coordinator.ics_worker = None
+    coordinator._ics_pending_ids = set()
     coordinator.app = SimpleNamespace(_bg_workers=[])
     coordinator.settings = Settings()
     coordinator._calendars = lambda: [
@@ -148,11 +153,9 @@ def test_native_qthread_remains_alive_until_failed_launch_finishes(monkeypatch):
     entered, release = threading.Event(), threading.Event()
     created = []
 
-    class Worker(QThread):
-        result = pyqtSignal(object)
-
+    class Worker(module.IcsSyncWorker):
         def __init__(self, calendars, parent, local_zone):
-            super().__init__(parent)
+            super().__init__(calendars, parent, local_zone)
             created.append(self)
 
         def start(self):

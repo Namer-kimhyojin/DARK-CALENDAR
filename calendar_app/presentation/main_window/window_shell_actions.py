@@ -177,6 +177,7 @@ class WindowShellActionsMixin:
             "slider",
             "search_edit",
             "widget_mode_btn",
+            "navigation_rail",
         ]
         for attr in _LOCKABLE:
             widget = getattr(self, attr, None)
@@ -327,7 +328,21 @@ class WindowShellActionsMixin:
     # ------------------------------------------------------------------ #
     # 토스트 / 트레이
     # ------------------------------------------------------------------ #
-    def show_toast(self, title, message):
+    def show_toast(self, title, message, *, system=False):
+        if not system:
+            try:
+                from calendar_app.presentation.widgets.feedback_toast import show_feedback_toast
+
+                if show_feedback_toast(self, title, message) is not None:
+                    return
+            except Exception:
+                # Keep notification delivery available if a transient card cannot
+                # be created, including calls outside the GUI-thread boundary.
+                pass
+        self.show_system_toast(title, message)
+
+    def show_system_toast(self, title, message):
+        """Retain the native route for explicitly requested system notifications."""
         try:
             from winotify import Notification
 

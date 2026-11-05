@@ -16,11 +16,12 @@
 - [x] 홈페이지 최신 버전·Store 상태 안내 반영과 공개 확인
 - [x] Store 원본 listing 보존·18언어 변경 안내·패키지 업로드 검증·심사 제출
 - [x] Store Submission 32 게시·공개 4.9.2.0 x64 패키지 확인
-- [ ] 공식 설치 업데이트·실제 설치 앱 인수 — 실행 중인 4.8.0.0의 사용자 정상 종료 대기
+- [x] 11/04 이 PC의 Store 서명 4.9.2.0 x64 설치 확인. 설치 EXE·SQLite DLL 해시가 공개 패키지와 일치
+- [ ] 실제 설치 앱 시작·재시작 및 사용자 데이터 확인
 
 증거: `artifacts/deployment/4.9.2/20261102-0943/`. [4.9.1 종료 오류 진단](maintenance/native-shutdown-20261102.md)의 실패와 성공 결과를 모두 보존한다. 과거 패키지·태그·원본 증거는 변경하지 않는다.
 
-초기 브라우저 연결 제한은 사용자 설정·로그인 후 해소됐다. 11/02 13시대 기존 Submission 32에 4.9.2.0 x64를 제출했고, **11/03 03:05 KST 인증된 포털에서 제품 업데이트 완료·Store 제공·현재 제출 32를 확인**했다. 해당 공개 제출의 Packages도 4.9.2.0 x64다. 정확한 서버 게시 완료 시각은 추정하지 않는다. 이 PC의 설치판은 별도 조회에서 4.8.0.0이며 사용자 실행 인스턴스를 보존한다.
+초기 브라우저 연결 제한은 사용자 설정·로그인 후 해소됐다. 11/02 13시대 기존 Submission 32에 4.9.2.0 x64를 제출했고, **11/03 03:05 KST 인증된 포털에서 제품 업데이트 완료·Store 제공·현재 제출 32를 확인**했다. 해당 공개 제출의 Packages도 4.9.2.0 x64다. 11/04 별도 조회에서 이 PC의 Store 설치판이 4.9.2.0으로 갱신된 것을 확인했다.
 
 ## 공개 파일과 검증 연결
 
@@ -38,4 +39,4 @@
 
 Store 제출 증거: `artifacts/deployment/4.9.2/20261102-0943/store-submission-32/`의 `submission-receipt.json`, `submission-confirmed.jpg`, `package-upload-verification.json`, `listing-readback-verification.json`.
 
-게시 확인 증거: `artifacts/maintenance/20261103-0302/store-publication-observation.json`, `store-published-overview.png`, `store-published-package.png`. 공식 Store에서 Air Calendar 업데이트 1건이 제공되는 것을 확인했다. 현재 실행 중인 4.8.0.0을 강제 종료하거나 사이드로드하지 않고 사용자에게 정상 종료를 요청했다. 설치 완료·사용자 데이터 비교·설치 앱 정상 종료/재시작은 별도 후속이며, 동일 후보의 새 빌드·버전 증가·재제출은 없다. [11/03 유지보수 기록](maintenance/review-20261103.md).
+게시 확인 증거: `artifacts/maintenance/20261103-0302/store-publication-observation.json`, `store-published-overview.png`, `store-published-package.png`. 설치 확인 증거: `artifacts/maintenance/20261104-0300/store-installation.json`. 설치판의 사용자 프로필 실행 및 데이터 비교는 별도 확인 항목이다.

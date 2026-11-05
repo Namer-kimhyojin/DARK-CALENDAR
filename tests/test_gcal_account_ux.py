@@ -102,6 +102,54 @@ def test_close_after_saved_settings_preserves_caller_refresh_without_saving_late
     save.assert_called_once()
 
 
+@pytest.mark.parametrize("previously_configured", [False, True])
+def test_save_before_first_login_keeps_import_unmodified_and_offers_connect(
+    focused_dialog, monkeypatch, previously_configured
+):
+    from calendar_app.application import calendar_preferences
+
+    dialog, parent, rows = focused_dialog
+    parent.gcal_sync.is_authenticated = False
+    parent.gcal_sync.service = None
+    if not previously_configured:
+        parent.settings.remove("gcal_import_selection_configured")
+    rows[:] = [row for row in rows if row["type"] == "local"]
+    dialog._refresh_calendar_table()
+    dialog._switch_section(2)
+    dialog.interval_spin.setValue(15)
+    save = Mock()
+    auth_worker = Mock()
+    monkeypatch.setattr(calendar_preferences, "set_google_calendar_import_selection", save)
+    monkeypatch.setattr(module, "GCalAuthWorker", auth_worker)
+
+    QTest.mouseClick(dialog.save_btn, Qt.MouseButton.LeftButton)
+
+    save.assert_not_called()
+    auth_worker.assert_not_called()
+    assert parent.settings.contains("gcal_import_selection_configured") == previously_configured
+    assert parent.settings.value("gcal_sync_interval") == "15"
+    assert dialog.isVisible() and dialog._stack.currentIndex() == 0
+    assert dialog.auth_btn.hasFocus() and not dialog.save_btn.isEnabled()
+    assert module.t("gcal_ux.login_needed_after_save") in dialog.connection_feedback.text()
+
+
+def test_save_preserves_explicit_all_off_import_selection(focused_dialog, monkeypatch):
+    from calendar_app.application import calendar_preferences
+    from calendar_app.infrastructure.db import calendar_repo
+
+    dialog, parent, _ = focused_dialog
+    dialog._set_import_selection("gcal::team", False)
+    save = Mock(return_value=CalendarImportSelectionResult(True))
+    monkeypatch.setattr(calendar_preferences, "set_google_calendar_import_selection", save)
+
+    dialog.save_settings()
+
+    save.assert_called_once_with(
+        {"gcal::team": False, "gcal::holidays": False}, parent.settings, repository=calendar_repo
+    )
+    assert dialog._stack.currentIndex() == 1
+
+
 def test_parent_busy_blocks_disconnect_and_cache_reset_before_confirmation(
     focused_dialog, monkeypatch
 ):

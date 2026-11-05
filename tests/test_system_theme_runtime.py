@@ -113,7 +113,7 @@ class SystemThemeRuntimeTests(unittest.TestCase):
         self.assertEqual(get_theme_color(settings), "#1971c2")
         self.assertEqual(settings.set_calls, [])
 
-    def test_auto_theme_preserves_custom_accent_and_explicit_mode_ignores_family(self):
+    def test_auto_theme_preserves_custom_accent_and_explicit_mode_ignores_os_scheme(self):
         settings = _auto_family_settings(accent_source="custom")
         settings.values["theme_color"] = "#aa3377"
         set_runtime_system_text_theme("light")
@@ -279,6 +279,7 @@ class SystemThemeRuntimeTests(unittest.TestCase):
         self.assertEqual(_AcceptedDialog.received_kwargs["current_base"], "#e7f5ff")
         self.assertEqual(_AcceptedDialog.received_kwargs["current_theme"], "#1971c2")
         self.assertEqual(settings.value("appearance_style_family"), "ocean")
+        self.assertEqual(settings.value("appearance_base_source"), "family")
         self.assertEqual(settings.value("appearance_accent_source"), "family")
         self.assertEqual(settings.value("appearance_family_dark_base"), "#0d1b2e")
         self.assertEqual(settings.value("appearance_family_light_accent"), "#1971c2")

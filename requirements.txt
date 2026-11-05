@@ -1,5 +1,5 @@
-PyQt6==6.10.2
-PyQt6-sip==13.12.0
+PyQt6==6.12.0
+PyQt6-sip==13.13.0
 qtawesome>=1.4.2
 winrt-runtime==3.2.1; platform_system == "Windows"
 winrt-Windows.ApplicationModel==3.2.1; platform_system == "Windows"
@@ -11,7 +11,8 @@ google-auth-oauthlib==1.3.0
 httplib2==0.32.0
 requests-oauthlib==2.0.0
 oauthlib==4.0.0
-cryptography==50.0.0
+pyasn1==0.6.5
+cryptography==50.0.2
 urllib3==2.8.0
 msal>=1.31,<2
 tzdata

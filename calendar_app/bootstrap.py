@@ -100,10 +100,10 @@ def _apply_saved_font(app: QApplication, build_ui_font) -> None:
     if not isinstance(family, str) or not family.strip():
         family = "Segoe UI"
         settings.setValue("font_family", family)
-    raw_size = settings.value("font_size", 10)
-    size = as_int(raw_size, 10, maximum=256)
+    raw_size = settings.value("font_size", 11)
+    size = as_int(raw_size, 11, maximum=256)
     if size <= 0:
-        size = 10
+        size = 11
     if raw_size != size:
         settings.setValue("font_size", size)
     app.setFont(build_ui_font(family, size))
