@@ -28,6 +28,8 @@ QA_FILES = frozenset(
         "tests/release_qa/native_capture_diagnostics.py",
         "tests/release_qa/native_modal_owner_adapter.py",
         "tests/release_qa/test_native_modal_owner_adapter.py",
+        "tests/release_qa/native_runner_surface_adapter.py",
+        "tests/release_qa/test_native_runner_surface_adapter.py",
     }
 )
 REQUIRED_QA_HASHES = frozenset(
@@ -43,6 +45,7 @@ REQUIRED_QA_HASHES = frozenset(
         "tests/release_qa/native_release_smoke_adapter.py",
         "tests/release_qa/native_capture_diagnostics.py",
         "tests/release_qa/native_modal_owner_adapter.py",
+        "tests/release_qa/native_runner_surface_adapter.py",
         "tests/release_qa/native_final_smoke.py",
         "tests/release_qa/verify_final_candidate.py",
     }
