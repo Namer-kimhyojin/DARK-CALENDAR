@@ -1,0 +1,96 @@
+name: Diagnose Existing 5.0.0 Native Payload
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: diagnose-native-5.0.0-existing-payload
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  diagnose-native-5-x64:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      PYTHON_VERSION: "3.14.10"
+      CANDIDATE_POLICY_SHA256: "f3680282796403bd8e242e328b4ea1c31b2128673512a4ef64193659bea0d088"
+    steps:
+      - name: Preserve exact Git bytes on disposable QA VM
+        shell: powershell
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Checkout reviewed QA commit and immutable source ancestry
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup native validation Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Verify 718 unchanged inputs and download the pinned existing ZIP
+        id: provenance
+        shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python tests\release_qa\verify_same_payload_candidate.py prepare `
+            --root . `
+            --policy tests\release_qa\native-candidate-5.0.0.json `
+            --policy-sha256 $env:CANDIDATE_POLICY_SHA256 `
+            --qa-commit $env:GITHUB_SHA `
+            --evidence "$env:RUNNER_TEMP\candidate-provenance" `
+            --payload "$env:RUNNER_TEMP\native-candidate-payload"
+          if ($LASTEXITCODE -ne 0) { throw "Pinned diagnostic payload provenance failed; no native launch allowed." }
+
+      - name: Prepare isolated QA dependencies and exact public 4.3.3 baseline
+        shell: powershell
+        run: |
+          python -m venv build\native-smoke-venv
+          if ($LASTEXITCODE -ne 0) { throw "Native QA environment creation failed." }
+          .\build\native-smoke-venv\Scripts\python.exe -m pip install pywinauto==0.6.9 Pillow==13.0.0 psutil==7.2.2
+          if ($LASTEXITCODE -ne 0) { throw "Native QA dependency installation failed." }
+          .\build\native-smoke-venv\Scripts\python.exe scripts\prepare_native_smoke_baseline.py --directory "$env:RUNNER_TEMP\native-baseline-4.3.3"
+          if ($LASTEXITCODE -ne 0) { throw "Pinned previous public release validation failed." }
+
+      - name: Diagnose unchanged original six native cycles without approving this payload
+        shell: powershell
+        run: |
+          .\build\native-smoke-venv\Scripts\python.exe tests\release_qa\native_diagnostic_smoke.py `
+            --payload "$env:RUNNER_TEMP\native-candidate-payload" `
+            --baseline-payload "$env:RUNNER_TEMP\native-baseline-4.3.3" `
+            --expected-version 5.0.0 `
+            --evidence "$env:RUNNER_TEMP\native-release-evidence"
+          if ($LASTEXITCODE -ne 0) { throw "Original native gate failed; diagnostic pixels and window metadata are preserved." }
+
+      - name: Verify complete payload bytes after native success or failure
+        id: payload_after
+        if: always() && steps.provenance.outcome == 'success'
+        shell: powershell
+        run: |
+          python tests\release_qa\verify_same_payload_candidate.py check `
+            --root . `
+            --policy tests\release_qa\native-candidate-5.0.0.json `
+            --policy-sha256 $env:CANDIDATE_POLICY_SHA256 `
+            --qa-commit $env:GITHUB_SHA `
+            --evidence "$env:RUNNER_TEMP\candidate-provenance" `
+            --payload "$env:RUNNER_TEMP\native-candidate-payload"
+          if ($LASTEXITCODE -ne 0) { throw "Diagnostic candidate payload changed during native observation." }
+
+      - name: Preserve diagnostic-only provenance pixels and native evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-5.0.0-diagnostic-only-native-evidence-x64
+          path: |
+            ${{ runner.temp }}/candidate-provenance/candidate-reuse-provenance.json
+            ${{ runner.temp }}/candidate-provenance/payload-after-native.json
+            ${{ runner.temp }}/native-release-evidence
+          if-no-files-found: warn

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "diagnostic_only": true,
+  "publication_blocker": "This diagnostic payload contains a QA compatibility loader; a separately built clean final artifact and its own native gate are required.",
+  "repository": "Namer-kimhyojin/DARK-CALENDAR",
+  "repository_id": 1195286732,
+  "candidate_version": "5.0.0",
+  "candidate_commit": "2557dd940015ee7a404966b6ed9ef76cd57e86f1",
+  "product_source_commit": "d2b89277c07384e8fbe032ba68754f6212ccda4e",
+  "candidate_run_id": 42083557480,
+  "product_input_count": 718,
+  "product_inputs_sha256": "8e0eef6336f7f7d2497d7860784a12f8f9ca4f2e64d804793bebcd76b5640cda",
+  "payload_file_count": 1877,
+  "payload_manifest_sha256": "efeedffd6d51f9139a0adc6803a132fb6386283037ffdcdf70935a6568b95561",
+  "artifacts": {
+    "payload": {
+      "id": 13442635125,
+      "name": "darkcalendar-dist-x64",
+      "sha256": "1a85e998516fc269a17ac9b43fd09b91d8264731a595b60b204a8d5a2b3d0bed"
+    },
+    "msix": {
+      "id": 13440664435,
+      "name": "darkcalendar-msix-x64",
+      "sha256": "ed8df53b62effefc2047c0f060c9ca7fc328b48a8ac63185cf1a0df7c0fa945d5"
+    },
+    "release_assets": {
+      "id": 13440629566,
+      "name": "darkcalendar-github-release-x64",
+      "sha256": "c21b96c70db3919f4da38dc81836641e62fc335fc4459c500d4d5b680ab69f84"
+    }
+  },
+  "qa_sha256": {
+    "scripts/manage_version.py": "72b128508b763379dad47eb3ed711c6da6b5ebe3955df9b0b37be6a7e58b5aa8",
+    "scripts/native_exception_observer.py": "b96c515c81ccdcfa4bc5bb78fecb046893b8abfcd2d0c0540b8c39e2309323cd",
+    "scripts/native_release_smoke.py": "731b6ea491b2917adef1c2dfe7063dbbe47f8ff63b3837375feebb48a23e4a64",
+    "scripts/prepare_native_smoke_baseline.py": "2e9bff8f8cda2252b33b117687f4f1b22f66e35f1ffda78aa6618d58cd69c33a",
+    "scripts/sqlite-runtime-lock.json": "47a19778955bb30901df93e7ed130c6de0e6c070b0b41fba7ef4e7b2bfbb02dd",
+    "scripts/verify_native_candidate_inputs.py": "4ebb9d744c7c9ab0d2edd0167ead50abe58778bcbbac69138c50a48dce813f94",
+    "scripts/verify_sqlite_runtime.py": "35f149eafda0dee38dd9dd2d69133d46e8c0fe2af721ab113f1f10c08619c1d7",
+    "tests/release_qa/native_capture_diagnostics.py": "d4b5ab828d57d26450bc91f87520887d27743f22c88d8a2f7725b3816e34495e",
+    "tests/release_qa/native_diagnostic_smoke.py": "cfe01f45a853325396fd683b69983140143b6391f1c1357ef34fc5e79889648b",
+    "tests/release_qa/native_release_smoke_adapter.py": "2825f11bc838cab7bee0d9e70a7390931cb9b67d37c1ed27df459012300b281b",
+    "tests/release_qa/verify_same_payload_candidate.py": "15ed17ad60406223dbf4debd099d81bed8b4a9350db8a630a7d25b3d1f5bd086"
+  }
+}
