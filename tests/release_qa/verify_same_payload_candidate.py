@@ -22,10 +22,12 @@ QA_FILES = frozenset(
         ".github/workflows/verify-native-5-candidate.yml",
         "tests/release_qa/native_capture_diagnostics.py",
         "tests/release_qa/native_diagnostic_smoke.py",
+        "tests/release_qa/native_modal_owner_adapter.py",
         "tests/release_qa/verify_same_payload_candidate.py",
         "tests/release_qa/native-candidate-5.0.0.json",
         "tests/release_qa/test_native_capture_diagnostics.py",
         "tests/release_qa/test_same_payload_candidate.py",
+        "tests/release_qa/test_native_modal_owner_adapter.py",
     }
 )
 REQUIRED_QA_HASHES = frozenset(
@@ -40,6 +42,7 @@ REQUIRED_QA_HASHES = frozenset(
         "tests/release_qa/native_release_smoke_adapter.py",
         "tests/release_qa/native_capture_diagnostics.py",
         "tests/release_qa/native_diagnostic_smoke.py",
+        "tests/release_qa/native_modal_owner_adapter.py",
         "tests/release_qa/verify_same_payload_candidate.py",
     }
 )
