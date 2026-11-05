@@ -87,6 +87,23 @@ def test_exact_artifact_roles_and_executable_qa_set_are_required():
         candidate.validate_policy(policy)
 
 
+def test_final_allowlist_contains_exact_ten_reviewed_qa_paths():
+    expected = {
+        ".github/workflows/verify-native-5-final.yml",
+        "tests/release_qa/verify_final_candidate.py",
+        "tests/release_qa/native_final_smoke.py",
+        "tests/release_qa/native-final-5.0.0.json",
+        "tests/release_qa/test_final_candidate.py",
+        "tests/release_qa/native_capture_diagnostics.py",
+        "tests/release_qa/native_modal_owner_adapter.py",
+        "tests/release_qa/test_native_modal_owner_adapter.py",
+        "tests/release_qa/native_runner_surface_adapter.py",
+        "tests/release_qa/test_native_runner_surface_adapter.py",
+    }
+    assert expected == candidate.QA_FILES
+    assert "tests/release_qa/native_runner_surface_adapter.py" in candidate.REQUIRED_QA_HASHES
+
+
 @pytest.mark.parametrize("changed", ["immutable_source", "artifact_build", "qa_checkout"])
 def test_all_three_canonical_718_snapshots_must_match(tmp_path, changed):
     policy, inputs = policy_fixture()
@@ -322,7 +339,9 @@ def test_six_cycle_shape_database_and_preservation_are_mandatory(problem):
         candidate.verify_six_cycles(summary, policy)
 
 
-def test_final_entrypoint_composes_runtime_owner_capture_and_original_main(monkeypatch):
+def test_final_entrypoint_composes_runtime_owner_runner_surface_capture_and_original_main(
+    monkeypatch,
+):
     spec = importlib.util.spec_from_file_location(
         "air_final_smoke_qa", Path(__file__).with_name("native_final_smoke.py")
     )
@@ -360,13 +379,20 @@ def test_final_entrypoint_composes_runtime_owner_capture_and_original_main(monke
         "native_capture_diagnostics",
         SimpleNamespace(install_diagnostics=factory("capture")),
     )
+    monkeypatch.setitem(
+        sys.modules,
+        "native_runner_surface_adapter",
+        SimpleNamespace(install_runner_surface_adapter=factory("runner_surface")),
+    )
     assert entrypoint.main(["synthetic"]) == 0
     assert events == [
         "runtime enter",
         "owner enter",
+        "runner_surface enter",
         "capture enter",
         ("main", ["synthetic"]),
         "capture exit",
+        "runner_surface exit",
         "owner exit",
         "runtime exit",
     ]

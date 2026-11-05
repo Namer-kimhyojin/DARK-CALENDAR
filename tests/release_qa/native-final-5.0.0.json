@@ -42,10 +42,11 @@
     "scripts/verify_native_candidate_inputs.py": "4ebb9d744c7c9ab0d2edd0167ead50abe58778bcbbac69138c50a48dce813f94",
     "scripts/verify_sqlite_runtime.py": "35f149eafda0dee38dd9dd2d69133d46e8c0fe2af721ab113f1f10c08619c1d7",
     "tests/release_qa/native_capture_diagnostics.py": "d4b5ab828d57d26450bc91f87520887d27743f22c88d8a2f7725b3816e34495e",
-    "tests/release_qa/native_final_smoke.py": "33aa2f963f399f848dd319a658eef91db61d06a8f7499c5ebd2dff93f9aa3edc",
+    "tests/release_qa/native_final_smoke.py": "44b203414b8d491fa297766cf8cd7f4769938de25048ef1493ca3b6a398bbe1e",
     "tests/release_qa/native_modal_owner_adapter.py": "620f78ea8e906e4fd136dfaa0ece559a1b166e5e1613aa520796a30fbf972532",
     "tests/release_qa/native_release_smoke_adapter.py": "2825f11bc838cab7bee0d9e70a7390931cb9b67d37c1ed27df459012300b281b",
-    "tests/release_qa/verify_final_candidate.py": "64d689e023dbae949293d723228e580fb1bc95fbc0d0da3af98bb571c3bc7fc6"
+    "tests/release_qa/native_runner_surface_adapter.py": "43a8267a145eb8c723c773e02917475d759174039199982419310737ea8680a9",
+    "tests/release_qa/verify_final_candidate.py": "e266e7d7eda96e070fd4ee76b2faf7ea925bfa3c583deff6f55812163622787d"
   },
   "pyinstaller_version": "6.21.0"
 }
