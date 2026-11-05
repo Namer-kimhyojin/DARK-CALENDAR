@@ -1,0 +1,57 @@
+name: Read Back Existing 5.0.2 Release Bytes
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Verify the same fixed release before or after publication
+        required: true
+        type: choice
+        options:
+          - draft
+          - public
+        default: draft
+
+concurrency:
+  group: release-5.0.2-byte-readback
+  cancel-in-progress: false
+
+jobs:
+  readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Draft visibility needs push access; the helper itself only performs GET.
+      # This matches the existing release job, with no additional secret/grant.
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout reviewed QA source without persistent Git credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup byte verification Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14.10"
+
+      - name: GET six fixed release assets and verify actual downloaded bytes
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          READBACK_PHASE: ${{ inputs.phase }}
+        run: |
+          python tests/release_qa/verify_release_asset_readback.py \
+            --phase "$READBACK_PHASE" \
+            --out "$RUNNER_TEMP/release-5.0.2-readback-$READBACK_PHASE"
+
+      - name: Preserve measured report and original three small sidecars only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: air-calendar-5.0.2-release-byte-readback-${{ inputs.phase }}
+          path: |
+            ${{ runner.temp }}/release-5.0.2-readback-${{ inputs.phase }}/readback.json
+            ${{ runner.temp }}/release-5.0.2-readback-${{ inputs.phase }}/*.sha256
+          if-no-files-found: warn
