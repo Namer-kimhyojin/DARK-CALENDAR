@@ -6,6 +6,8 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import shutil
+import subprocess
 from types import SimpleNamespace
 from unittest.mock import Mock
 import zipfile
@@ -137,9 +139,9 @@ def test_reference_archive_reuses_original_canonicalizer_without_importing_produ
 
 
 def test_policy_pins_existing_build_artifact_and_diagnostic_only():
-    policy = json.loads(
-        _PATH.with_name("native-candidate-5.0.0.json").read_text(encoding="utf-8", errors="strict")
-    )
+    path = _PATH.with_name("native-candidate-5.0.0.json")
+    assert b"\r" not in path.read_bytes(), "Pinned policy must use exact Git LF bytes"
+    policy = json.loads(path.read_text(encoding="utf-8", errors="strict"))
     assert policy["candidate_version"] == "5.0.0"
     assert policy["candidate_run_id"] == 42083557480
     assert policy["candidate_commit"] == "2557dd940015ee7a404966b6ed9ef76cd57e86f1"
@@ -152,6 +154,29 @@ def test_policy_pins_existing_build_artifact_and_diagnostic_only():
         "sha256": "1a85e998516fc269a17ac9b43fd09b91d8264731a595b60b204a8d5a2b3d0bed",
     }
     assert set(policy["qa_sha256"]) == candidate.REQUIRED_QA_HASHES
+
+
+def test_policy_raw_bytes_equal_git_clean_bytes_before_pinning():
+    git = shutil.which("git")
+    if git is None:
+        pytest.skip("Git is unavailable")
+    name = "tests/release_qa/native-candidate-5.0.0.json"
+    data = (ROOT / name).read_bytes()
+    raw = subprocess.run(
+        [git, "hash-object", "--no-filters", "--stdin"],
+        cwd=ROOT,
+        input=data,
+        capture_output=True,
+        check=True,
+    ).stdout
+    committed = subprocess.run(
+        [git, "hash-object", "--path", name, "--stdin"],
+        cwd=ROOT,
+        input=data,
+        capture_output=True,
+        check=True,
+    ).stdout
+    assert raw == committed, "Git clean filters would change the policy after its SHA256 was pinned"
 
 
 def test_new_workflow_is_manual_read_only_no_rebuild_and_always_preserves_evidence():
