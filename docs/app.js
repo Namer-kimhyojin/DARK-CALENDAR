@@ -53,7 +53,7 @@
       exploreTitle: "클릭할수록 발견되는<br><em>숨은 기능들</em>",
       exploreLead: "실제 프로그램 화면을 선택해 자세히 살펴보세요. 이미지를 누르면 큰 화면으로 확인할 수 있습니다.",
       screenTabsLabel: "기능 스크린샷", tabMain: "월간 워크스페이스", tabMainSmall: "Calendar + tasks",
-      tabWidgets: "위젯 매니저", tabWidgetsSmall: "7 widget types", tabFocus: "집중 기록", tabFocusSmall: "Focus history",
+      tabWidgets: "위젯 매니저", tabWidgetsSmall: "8 widget types", tabFocus: "집중 기록", tabFocusSmall: "Focus history",
       tabSync: "캘린더 연동", tabSyncSmall: "Google sync", expandScreenshot: "스크린샷 크게 보기", zoomHint: "크게 보기",
       workflowTitle: "하루를 놓치지 않는<br><em>세 번의 움직임</em>",
       workflowLead: "정보를 여러 앱으로 옮기지 않아도 됩니다. 확인에서 몰입까지, 같은 맥락 안에서 이어집니다.",
@@ -107,7 +107,7 @@
       exploreTitle: "Hidden tools,<br><em>revealed screen by screen.</em>",
       exploreLead: "Choose a real product screen to uncover more. Select the image to inspect every detail at full size.",
       screenTabsLabel: "Feature screenshots", tabMain: "Monthly workspace", tabMainSmall: "Calendar + tasks",
-      tabWidgets: "Widget manager", tabWidgetsSmall: "7 widget types", tabFocus: "Focus history", tabFocusSmall: "Session logs",
+      tabWidgets: "Widget manager", tabWidgetsSmall: "8 widget types", tabFocus: "Focus history", tabFocusSmall: "Session logs",
       tabSync: "Calendar sync", tabSyncSmall: "Google sync", expandScreenshot: "Expand screenshot", zoomHint: "View larger",
       workflowTitle: "Three moves that keep<br><em>your day on track.</em>",
       workflowLead: "No need to move information between apps. Stay in context from the first scan to deep focus.",
@@ -161,7 +161,7 @@
       exploreTitle: "画面ごとに見つかる<br><em>隠れた機能</em>",
       exploreLead: "実際の製品画面を選んで詳しく見てください。画像を押すと大きく表示できます。",
       screenTabsLabel: "機能スクリーンショット", tabMain: "月間ワークスペース", tabMainSmall: "Calendar + tasks",
-      tabWidgets: "ウィジェット管理", tabWidgetsSmall: "7 widget types", tabFocus: "集中記録", tabFocusSmall: "Focus history",
+      tabWidgets: "ウィジェット管理", tabWidgetsSmall: "8 widget types", tabFocus: "集中記録", tabFocusSmall: "Focus history",
       tabSync: "カレンダー同期", tabSyncSmall: "Google sync", expandScreenshot: "スクリーンショットを拡大", zoomHint: "拡大表示",
       workflowTitle: "一日を逃さない<br><em>3つの動き</em>",
       workflowLead: "情報を複数のアプリへ移す必要はありません。確認から集中まで、同じ文脈で続きます。",
@@ -215,7 +215,7 @@
       exploreTitle: "逐个界面发现<br><em>隐藏功能</em>",
       exploreLead: "选择真实的产品界面深入了解。点击图片即可放大查看细节。",
       screenTabsLabel: "功能截图", tabMain: "月度工作区", tabMainSmall: "Calendar + tasks",
-      tabWidgets: "小组件管理器", tabWidgetsSmall: "7 widget types", tabFocus: "专注记录", tabFocusSmall: "Focus history",
+      tabWidgets: "小组件管理器", tabWidgetsSmall: "8 widget types", tabFocus: "专注记录", tabFocusSmall: "Focus history",
       tabSync: "日历同步", tabSyncSmall: "Google sync", expandScreenshot: "放大截图", zoomHint: "放大查看",
       workflowTitle: "三个动作，<br><em>让一天井然有序</em>",
       workflowLead: "无需在多个应用间搬运信息。从浏览到深度专注，始终保持同一上下文。",
@@ -653,28 +653,128 @@
   Object.entries(unifiedSyncTranslations).forEach(([locale, copy]) => Object.assign(translations[locale], copy));
   Object.entries({ko: "필요한 서비스만 선택", en: "Connect only what you need", ja: "必要なサービスだけ接続", zh: "仅连接需要的服务"}).forEach(([locale, value]) => { translations[locale].trustGoogle = value; });
 
+  const releaseFiveTranslations = {
+    ko: {
+      fiveExplore: "5.0 미리보기", fiveExplorePublished: "5.0 새 기능 보기",
+      heroTitle: "나의 하루,<br><em>나만의 화면.</em>",
+      fivePreviewStatus: "5.0 미리보기 · 출시 준비 중", fivePublishedStatus: "5.0 새로운 경험",
+      fiveRealWindows: "실제 Windows 화면", fiveHeroLabel: "Air Calendar 5.0 실제 화면 미리보기",
+      fiveTitle: "익숙한 조작.", fiveTitleAccent: "새로운 매일.",
+      fiveLead: "일정을 적는 순간부터 위젯을 보는 순간까지, 같은 색과 같은 사용 흐름으로 이어집니다. 내 취향은 그대로 두고 필요한 순간을 더 편하게 만들었습니다.",
+      fiveCalendarTitle: "요일도, 화면도 내 방식대로.",
+      fiveCalendarBody: "밝은 라일락부터 차분한 네이비까지. 요일은 머리글·날짜 옆·둘 다·숨김 중에서 선택하세요.",
+      fiveCalendarAlt: "밝은 라일락 테마와 날짜 옆 요일, 선택한 날짜의 일정이 보이는 Air Calendar 5.0", fiveCalendarOpen: "새 캘린더 화면 크게 보기",
+      fiveModalTitle: "한 번 익히면, 모든 창에서.",
+      fiveModalBody: "설정·일정·관리·알림에 같은 제목, 입력, 버튼 규칙을 적용했습니다. 읽을 내용과 다음 동작이 자연스럽게 구분됩니다.",
+      fiveModalAlt: "통일된 제목과 날짜·시간 입력, 고정 등록 버튼이 있는 새 일정 창", fiveModalOpen: "새 일정 입력 화면 크게 보기",
+      fiveThemeTitle: "색은 취향대로, 읽기는 편하게.",
+      fiveThemeBody: "라이트·다크 테마, 기본색과 포인트색, 투명도를 자유롭게 선택하세요. 글자 크기와 버튼 간격도 하나의 기준으로 다듬었습니다.",
+      fiveThemeAlt: "밝은 테마와 여러 색상 프리셋을 보여주는 모양 설정", fiveThemeOpen: "새 모양 설정 화면 크게 보기",
+      fiveWidgetTitle: "위젯에서도 이어지는 나의 테마.",
+      fiveWidgetBody: "위젯 전용 모드도 메인의 색상과 투명도를 따릅니다. 원하는 배치와 개별 바탕화면 위젯의 꾸미기 설정은 그대로 유지됩니다.",
+      fiveWidgetAlt: "네이비와 라일락 색상으로 통일된 위젯 전용 모드의 일정 목록", fiveWidgetOpen: "네이비 위젯 전용 모드 크게 보기",
+      fiveLoopTitle: "하나의 루프에, 네 개의 트랙.",
+      fiveLoopBody: "첫 패드로 녹음을 시작하고 다음 트랙에 리듬을 더하세요. 겹쳐 녹음·음소거·음량을 조절하고, WAV를 담아 덱을 공유할 수 있습니다. 기존 단일 녹음도 보존됩니다.",
+      fiveLoopAlt: "16개 패드와 네 트랙, 녹음·재생·정지가 모두 보이는 루프덱", fiveLoopOpen: "4트랙 루프덱 크게 보기",
+      fiveDemoNote: "실제 Windows 검증 화면입니다. 일정은 예시 데이터이며 화면 속 앱 UI는 한국어입니다."
+    },
+    en: {
+      fiveExplore: "Preview 5.0", fiveExplorePublished: "Explore what's new in 5.0",
+      heroTitle: "Your day.<br><em>Your space.</em>",
+      fivePreviewStatus: "5.0 preview · Coming soon", fivePublishedStatus: "The new 5.0 experience",
+      fiveRealWindows: "Actual Windows capture", fiveHeroLabel: "Actual Air Calendar 5.0 screen preview",
+      fiveTitle: "Familiar controls.", fiveTitleAccent: "A fresh day.",
+      fiveLead: "From entering an event to checking your widgets, the same colours and controls carry through. Keep your personal style and make everyday actions easier.",
+      fiveCalendarTitle: "Your weekdays. Your way.",
+      fiveCalendarBody: "From soft lilac to calm navy. Show weekdays in the header, beside dates, in both places, or hide them.",
+      fiveCalendarAlt: "Air Calendar 5.0 in light lilac with weekday labels and selected-day events", fiveCalendarOpen: "Enlarge the new calendar screen",
+      fiveModalTitle: "Learn it once. Use it everywhere.",
+      fiveModalBody: "Settings, events, management and notifications share a consistent title, input and button layout. What to read and what to do next are easy to distinguish.",
+      fiveModalAlt: "New event dialog with a consistent heading, date and time fields, and a fixed save action", fiveModalOpen: "Enlarge the new event dialog",
+      fiveThemeTitle: "Your colours. Clearer reading.",
+      fiveThemeBody: "Choose light or dark, your base and accent colours, and transparency. Text sizes and button spacing now follow one shared system.",
+      fiveThemeAlt: "Appearance settings showing the light theme and colour presets", fiveThemeOpen: "Enlarge the appearance settings",
+      fiveWidgetTitle: "Your theme travels with your widgets.",
+      fiveWidgetBody: "Widget-only mode inherits the main colours and transparency. Your layout and individual desktop widget appearance settings stay yours.",
+      fiveWidgetAlt: "Widget-only workspace using a consistent navy and lilac theme", fiveWidgetOpen: "Enlarge the widget-only workspace",
+      fiveLoopTitle: "One loop. Four tracks.",
+      fiveLoopBody: "Start recording with the first pad, then add a rhythm on the next track. Overdub, mute, adjust volume and share decks with WAV files. Existing single recordings are preserved.",
+      fiveLoopAlt: "Loop deck with all 16 pads, four tracks, record, play and stop controls visible", fiveLoopOpen: "Enlarge the four-track loop deck",
+      fiveDemoNote: "Actual Windows validation captures with sample events. The app UI shown in the images is Korean."
+    },
+    ja: {
+      fiveExplore: "5.0を先行プレビュー", fiveExplorePublished: "5.0の新機能を見る",
+      heroTitle: "毎日を、<br><em>自分らしく。</em>",
+      fivePreviewStatus: "5.0プレビュー · リリース準備中", fivePublishedStatus: "新しい5.0の使い心地",
+      fiveRealWindows: "実際のWindows画面", fiveHeroLabel: "Air Calendar 5.0の実画面プレビュー",
+      fiveTitle: "いつもの操作。", fiveTitleAccent: "新しい毎日。",
+      fiveLead: "予定の入力からウィジェットの確認まで、同じ配色と操作でつながります。自分らしい見た目を保ちながら、日々の操作をより使いやすくしました。",
+      fiveCalendarTitle: "曜日表示も、自分のスタイルで。",
+      fiveCalendarBody: "やわらかなライラックから落ち着いたネイビーまで。曜日は見出し・日付の横・両方・非表示から選べます。",
+      fiveCalendarAlt: "明るいライラック色で曜日と選択日の予定を表示したAir Calendar 5.0", fiveCalendarOpen: "新しいカレンダー画面を拡大",
+      fiveModalTitle: "一度覚えれば、どの画面でも。",
+      fiveModalBody: "設定・予定・管理・通知のタイトル、入力欄、ボタンを統一しました。読む内容と次の操作が自然に見分けられます。",
+      fiveModalAlt: "統一した見出し、日付と時刻の入力欄、固定された登録ボタンのある予定画面", fiveModalOpen: "新しい予定入力画面を拡大",
+      fiveThemeTitle: "好きな色で、読みやすく。",
+      fiveThemeBody: "ライト・ダーク、ベースカラーとアクセント、透明度を自由に選べます。文字の大きさとボタンの余白も共通の基準に整えました。",
+      fiveThemeAlt: "ライトテーマとカラープリセットを表示した外観設定", fiveThemeOpen: "外観設定画面を拡大",
+      fiveWidgetTitle: "ウィジェットでも、同じテーマ。",
+      fiveWidgetBody: "ウィジェット専用モードもメインの色と透明度に連動します。配置と各デスクトップウィジェットの外観設定は保持されます。",
+      fiveWidgetAlt: "ネイビーとライラックで統一したウィジェット専用ワークスペース", fiveWidgetOpen: "ウィジェット専用画面を拡大",
+      fiveLoopTitle: "ひとつのループに、4つのトラック。",
+      fiveLoopBody: "最初のパッドで録音を始め、次のトラックにリズムを追加。重ね録り・ミュート・音量調整やWAVを含むデッキ共有に対応し、従来の単独録音も保持します。",
+      fiveLoopAlt: "16パッドと4トラック、録音・再生・停止が見えるループデッキ", fiveLoopOpen: "4トラックのループデッキを拡大",
+      fiveDemoNote: "Windowsで検証した実画面です。予定はサンプルデータで、画像内のアプリUIは韓国語です。"
+    },
+    zh: {
+      fiveExplore: "预览5.0", fiveExplorePublished: "探索5.0新功能",
+      heroTitle: "每一天，<br><em>都合你心意。</em>",
+      fivePreviewStatus: "5.0预览 · 即将推出", fivePublishedStatus: "全新的5.0体验",
+      fiveRealWindows: "真实Windows截图", fiveHeroLabel: "Air Calendar 5.0真实界面预览",
+      fiveTitle: "熟悉的操作。", fiveTitleAccent: "全新的每一天。",
+      fiveLead: "从输入日程到查看小组件，配色与操作始终一致。保留个人风格，让日常使用更加顺手。",
+      fiveCalendarTitle: "星期显示，也由你决定。",
+      fiveCalendarBody: "从柔和的淡紫到沉静的海军蓝。星期可显示在日历表头、日期旁、两处，或完全隐藏。",
+      fiveCalendarAlt: "采用明亮淡紫配色、显示星期和所选日期日程的Air Calendar 5.0", fiveCalendarOpen: "放大新日历界面",
+      fiveModalTitle: "学会一次，各处通用。",
+      fiveModalBody: "设置、日程、管理和通知采用一致的标题、输入框和按钮规则。要阅读的内容和下一步操作清晰可辨。",
+      fiveModalAlt: "具有统一标题、日期和时间输入框以及固定保存按钮的新日程对话框", fiveModalOpen: "放大新日程对话框",
+      fiveThemeTitle: "色彩随心，阅读清晰。",
+      fiveThemeBody: "自由选择明暗主题、底色、强调色和透明度。字号与按钮间距也遵循同一套标准。",
+      fiveThemeAlt: "展示明亮主题与配色预设的外观设置", fiveThemeOpen: "放大外观设置",
+      fiveWidgetTitle: "小组件也延续你的主题。",
+      fiveWidgetBody: "仅小组件模式跟随主界面的配色与透明度，同时保留现有布局和每个桌面小组件的独立外观设置。",
+      fiveWidgetAlt: "采用统一海军蓝与淡紫配色的仅小组件工作区", fiveWidgetOpen: "放大小组件工作区",
+      fiveLoopTitle: "一个循环，四条音轨。",
+      fiveLoopBody: "从第一个打击垫开始录制，再在下一轨叠加节奏。支持叠录、静音、音量调节及包含WAV文件的面板分享，并保留原有单段录音。",
+      fiveLoopAlt: "完整展示16个打击垫、四条音轨及录制、播放、停止按钮的循环面板", fiveLoopOpen: "放大四轨循环面板",
+      fiveDemoNote: "经Windows验证的真实截图。日程为示例数据，图片中的应用界面为韩语。"
+    }
+  };
+  Object.entries(releaseFiveTranslations).forEach(([locale, copy]) => Object.assign(translations[locale], copy));
+
   const screens = {
     ko: {
       main: { image: "assets/screenshots/main-dashboard.png", alt: "Air Calendar 월간 캘린더와 업무 패널 화면", kicker: "CALENDAR WORKSPACE", title: "달력과 실행 목록 사이의 거리를 없앴습니다.", description: "월간 캘린더 오른쪽에 이번 주 일정, 루틴, 디렉티브가 이어집니다. 날짜를 확인한 자리에서 해야 할 일을 바로 선택할 수 있습니다.", points: ["멀티데이 일정과 드래그 범위 선택", "오늘·이번 주 패널 전환", "루틴과 실행 항목 분리 관리"] },
-      widgets: { image: "assets/screenshots/widget-manager.png", alt: "Air Calendar 위젯 매니저 화면", kicker: "WIDGET MANAGER", title: "일곱 종류의 위젯을 원하는 만큼 배치하세요.", description: "보이기·숨기기·설정·위치 고정과 삭제를 한곳에서 관리합니다. 같은 종류의 위젯도 이름을 달리해 여러 개 만들 수 있습니다.", points: ["시계·날씨·스톱워치·날짜 카드", "카운트다운·D-Day·텍스트 템플릿", "멀티 인스턴스와 위치 저장"] },
+      widgets: { image: "assets/screenshots/widget-manager.png", alt: "Air Calendar 위젯 매니저 화면", kicker: "WIDGET MANAGER", title: "여덟 종류의 위젯을 원하는 만큼 배치하세요.", description: "보이기·숨기기·설정·위치 고정과 삭제를 한곳에서 관리합니다. 같은 종류의 위젯도 이름을 달리해 여러 개 만들 수 있습니다.", points: ["시계·날씨·스톱워치·날짜 카드", "카운트다운·D-Day·텍스트 템플릿", "멀티 인스턴스와 위치 저장"] },
       focus: { image: "assets/screenshots/focus-mode.png", alt: "Air Calendar 집중 모드 기록 화면", kicker: "FOCUS HISTORY", title: "집중한 시간도 일정처럼 기록됩니다.", description: "최근 집중 세션과 누적 시간을 확인하고, 작업을 선택해 Pomodoro 흐름으로 이어갈 수 있습니다.", points: ["작업 선택형 집중 세션", "오늘·이번 달 누적 시간", "세션 기록 확인과 정리"] },
       sync: { image: "assets/screenshots/calendar-sync-air-calendar.png", alt: "Air Calendar Google Calendar 동기화 설정 화면", kicker: "GOOGLE CALENDAR", title: "필요할 때만 연결하는 캘린더 동기화.", description: "연결, 캘린더 선택, 구독, 동기화, 진단을 단계별 탭으로 나누어 설정할 수 있습니다. 로컬 캘린더만으로도 사용할 수 있습니다.", points: ["선택형 Google Calendar 인증", "연결 테스트와 동기화 진단", "로컬·Google·ICS 캘린더 관리"] }
     },
     en: {
       main: { image: "assets/screenshots/main-dashboard.png", alt: "Air Calendar monthly calendar and task panels", kicker: "CALENDAR WORKSPACE", title: "Close the gap between planning and doing.", description: "Weekly schedules, routines, and directives sit beside the monthly calendar, so you can choose what to do from the same place you review the date.", points: ["Multi-day events and drag range selection", "Today and This Week panel views", "Separate routines and action items"] },
-      widgets: { image: "assets/screenshots/widget-manager.png", alt: "Air Calendar Widget Manager", kicker: "WIDGET MANAGER", title: "Place seven types of widgets wherever you need them.", description: "Show, hide, configure, pin, and remove widgets from one manager. Create multiple named instances of the same widget type.", points: ["Clock, weather, stopwatch, and date card", "Countdown, D-Day, and text templates", "Multiple instances with saved positions"] },
+      widgets: { image: "assets/screenshots/widget-manager.png", alt: "Air Calendar Widget Manager", kicker: "WIDGET MANAGER", title: "Place eight types of widgets wherever you need them.", description: "Show, hide, configure, pin, and remove widgets from one manager. Create multiple named instances of the same widget type.", points: ["Clock, weather, stopwatch, and date card", "Countdown, D-Day, and text templates", "Multiple instances with saved positions"] },
       focus: { image: "assets/screenshots/focus-mode.png", alt: "Air Calendar focus session history", kicker: "FOCUS HISTORY", title: "Your focused time becomes part of the record.", description: "Review recent sessions and totals, then choose a task and continue into a Pomodoro-based focus flow.", points: ["Task-based focus sessions", "Daily and monthly totals", "Review and clean up session history"] },
       sync: { image: "assets/screenshots/calendar-sync-air-calendar.png", alt: "Air Calendar Google Calendar sync settings", kicker: "GOOGLE CALENDAR", title: "Calendar sync that connects only when you choose.", description: "Connection, calendars, subscriptions, sync, and diagnostics are arranged in guided tabs. The app also works with the local calendar alone.", points: ["Optional Google Calendar authorization", "Connection tests and sync diagnostics", "Local, Google, and ICS calendars"] }
     },
     ja: {
       main: { image: "assets/screenshots/main-dashboard.png", alt: "Air Calendarの月間カレンダーとタスクパネル", kicker: "CALENDAR WORKSPACE", title: "計画と実行の距離をなくしました。", description: "月間カレンダーの横に今週の予定、ルーティン、ディレクティブを表示。日付を確認した場所で次の行動を選べます。", points: ["複数日予定とドラッグ範囲選択", "今日・今週パネルの切り替え", "ルーティンと実行項目を分けて管理"] },
-      widgets: { image: "assets/screenshots/widget-manager.png", alt: "Air Calendar ウィジェット管理画面", kicker: "WIDGET MANAGER", title: "7種類のウィジェットを好きなだけ配置。", description: "表示、非表示、設定、位置固定、削除を一か所で管理。同じ種類も名前を変えて複数作成できます。", points: ["時計・天気・ストップウォッチ・日付カード", "カウントダウン・D-Day・テキスト", "複数インスタンスと位置保存"] },
+      widgets: { image: "assets/screenshots/widget-manager.png", alt: "Air Calendar ウィジェット管理画面", kicker: "WIDGET MANAGER", title: "8種類のウィジェットを好きなだけ配置。", description: "表示、非表示、設定、位置固定、削除を一か所で管理。同じ種類も名前を変えて複数作成できます。", points: ["時計・天気・ストップウォッチ・日付カード", "カウントダウン・D-Day・テキスト", "複数インスタンスと位置保存"] },
       focus: { image: "assets/screenshots/focus-mode.png", alt: "Air Calendar 集中モード履歴画面", kicker: "FOCUS HISTORY", title: "集中した時間も予定のように記録。", description: "最近の集中セッションと累計時間を確認し、タスクを選んでPomodoroの流れへ続けられます。", points: ["タスク選択型の集中セッション", "今日・今月の累計時間", "セッション履歴の確認と整理"] },
       sync: { image: "assets/screenshots/calendar-sync-air-calendar.png", alt: "Air Calendar Google Calendar同期設定", kicker: "GOOGLE CALENDAR", title: "必要なときだけつなぐカレンダー同期。", description: "接続、カレンダー選択、購読、同期、診断をタブごとに設定できます。ローカルカレンダーだけでも使用できます。", points: ["任意のGoogle Calendar認証", "接続テストと同期診断", "ローカル・Google・ICS管理"] }
     },
     zh: {
       main: { image: "assets/screenshots/main-dashboard.png", alt: "Air Calendar 月历与任务面板", kicker: "CALENDAR WORKSPACE", title: "缩短计划与执行之间的距离。", description: "月历旁就是本周日程、例行任务和指令。查看日期后，无需切换界面即可选择下一步。", points: ["多日事件与拖动范围选择", "今日与本周面板切换", "例行任务与执行项分开管理"] },
-      widgets: { image: "assets/screenshots/widget-manager.png", alt: "Air Calendar 小组件管理器", kicker: "WIDGET MANAGER", title: "七类小组件，按需自由放置。", description: "在一处完成显示、隐藏、设置、锁定位置和删除。同一类型也可命名并创建多个实例。", points: ["时钟、天气、秒表和日期卡", "倒计时、D-Day 和文字模板", "多实例与位置保存"] },
+      widgets: { image: "assets/screenshots/widget-manager.png", alt: "Air Calendar 小组件管理器", kicker: "WIDGET MANAGER", title: "八类小组件，按需自由放置。", description: "在一处完成显示、隐藏、设置、锁定位置和删除。同一类型也可命名并创建多个实例。", points: ["时钟、天气、秒表和日期卡", "倒计时、D-Day 和文字模板", "多实例与位置保存"] },
       focus: { image: "assets/screenshots/focus-mode.png", alt: "Air Calendar 专注模式记录", kicker: "FOCUS HISTORY", title: "专注时间也会成为可回顾的记录。", description: "查看近期专注时段与累计时间，选择任务后继续进入 Pomodoro 专注流程。", points: ["基于任务的专注时段", "今日与本月累计时间", "查看并整理时段历史"] },
       sync: { image: "assets/screenshots/calendar-sync-air-calendar.png", alt: "Air Calendar Google Calendar 同步设置", kicker: "GOOGLE CALENDAR", title: "只在需要时连接日历同步。", description: "连接、日历选择、订阅、同步和诊断按步骤分成标签页。也可以仅使用本地日历。", points: ["可选 Google Calendar 授权", "连接测试与同步诊断", "本地、Google 与 ICS 日历管理"] }
     }
@@ -846,6 +946,7 @@
 
     updateScreen();
     updateShareLinks();
+    updateReleaseFiveStatus();
 
     document.dispatchEvent(new CustomEvent("aircalendar:language", { detail: { language: currentLanguage } }));
 
@@ -859,6 +960,17 @@
       nextUrl.searchParams.set("lang", currentLanguage);
       window.history.replaceState({}, "", nextUrl);
     }
+  }
+
+  function updateReleaseFiveStatus() {
+    const copy = translations[currentLanguage];
+    const published = Number.parseInt(currentConfig.appVersion, 10) >= 5 && currentConfig.storeReleaseStatus === "published";
+    document.querySelectorAll("[data-release-five-status]").forEach((node) => {
+      node.textContent = published ? copy.fivePublishedStatus : copy.fivePreviewStatus;
+    });
+    document.querySelectorAll('[data-i18n="fiveExplore"]').forEach((node) => {
+      node.textContent = published ? copy.fiveExplorePublished : copy.fiveExplore;
+    });
   }
 
   function applyConfig(config) {
@@ -906,6 +1018,7 @@
         // The visible site remains usable if structured data cannot be refreshed.
       }
     }
+    updateReleaseFiveStatus();
     document.dispatchEvent(new CustomEvent("aircalendar:config", { detail: { appVersion: currentConfig.appVersion, requestBoardApi: currentConfig.requestBoardApi } }));
   }
 
@@ -979,8 +1092,7 @@
     const closeButton = document.querySelector("[data-close-lightbox]");
     if (!dialog || !openButton || !closeButton) return;
 
-    function openLightbox() {
-      const data = screens[currentLanguage][currentScreen];
+    function openLightbox(data) {
       const image = dialog.querySelector("[data-lightbox-image]");
       image.src = data.image;
       image.alt = data.alt;
@@ -991,7 +1103,14 @@
       closeButton.focus();
     }
 
-    openButton.addEventListener("click", openLightbox);
+    openButton.addEventListener("click", () => openLightbox(screens[currentLanguage][currentScreen]));
+    document.querySelectorAll("[data-preview-image]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const copy = translations[currentLanguage];
+        const image = button.querySelector("img");
+        openLightbox({ image: image.src, alt: image.alt, kicker: "AIR CALENDAR 5.0", title: copy[button.dataset.previewTitle], description: copy[button.dataset.previewDescription] });
+      });
+    });
     closeButton.addEventListener("click", () => dialog.close());
     dialog.addEventListener("click", (event) => {
       const box = dialog.getBoundingClientRect();

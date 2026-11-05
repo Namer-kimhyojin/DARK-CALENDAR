@@ -28,9 +28,9 @@
   <link rel="alternate" hreflang="zh-CN" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=zh">
   <link rel="alternate" hreflang="x-default" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/">
   <link rel="icon" href="assets/app_icon.png">
-  <link rel="stylesheet" href="styles.css?v=20261102-480-store-published">
+  <link rel="stylesheet" href="styles.css?v=20261106-500-preview">
   <link rel="stylesheet" href="guide.css">
-  <script src="app.js?v=20261103-492-store-published" defer></script>
+  <script src="app.js?v=20261106-500-preview" defer></script>
   <link rel="stylesheet" href="request-board.css?v=3">
   <script src="request-board.js?v=3" defer></script>
   <script type="application/ld+json" id="software-schema">
@@ -114,7 +114,7 @@
   </header>
 
   <main id="main-content">
-    <section class="hero" id="top">
+    <section class="hero hero-five" id="top">
       <div class="hero-glow" aria-hidden="true"></div>
       <div class="hero-copy">
         <p class="eyebrow"><span class="eyebrow-dot"></span><span data-i18n="heroEyebrow">사용자 맞춤형 데스크톱 캘린더 &amp; 위젯</span></p>
@@ -124,29 +124,20 @@
           <a class="button button-primary" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&amp;gl=KR&amp;ocid=pdpshare&amp;cid=aircal-20261005-owned-home" target="_blank" rel="noopener">
             <span data-i18n="heroPrimary">가격 및 설치 확인</span><span aria-hidden="true">↗</span>
           </a>
-          <a class="button button-quiet" href="#desktop-custom"><span data-i18n="heroSecondary">맞춤 기능 둘러보기</span><span aria-hidden="true">↓</span></a>
+          <a class="button button-quiet" href="#new-experience"><span data-i18n="fiveExplore">5.0 미리보기</span><span aria-hidden="true">↓</span></a>
         </div>
         <p class="hero-meta"><span data-i18n="heroPaid">Microsoft Store 유료 앱</span><span aria-hidden="true">·</span><span>v<span data-config-text="appVersion">4.9.2</span></span><span aria-hidden="true">·</span><span>GPLv3</span></p>
         <p class="hero-meta" data-store-release-notice hidden><span data-i18n="storePending">GitHub 4.9.2 공개 완료 · Store 심사 중</span><a data-config-link="releaseSourceUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.9.2" data-i18n="githubLatest">최신 GitHub 배포 보기 ↗</a></p>
       </div>
 
-      <div class="hero-visual" aria-label="Air Calendar product preview" data-i18n-aria="heroVisualLabel">
-        <div class="app-window">
-          <div class="window-bar" aria-hidden="true">
-            <span></span><span></span><span></span>
-            <p>Air Calendar</p>
-            <b>—　□　×</b>
-          </div>
-          <img src="assets/screenshots/main-dashboard.png" alt="Air Calendar 월간 캘린더와 업무 패널 화면" data-i18n-alt="screenMainAlt">
-        </div>
-        <div class="floating-card floating-date" aria-hidden="true">
-          <span data-i18n="floatToday">오늘</span><strong>17</strong><small>AUG · MON</small>
-        </div>
-        <div class="floating-card floating-focus" aria-hidden="true">
-          <span class="focus-ring"><b>42</b></span>
-          <p><strong data-i18n="floatFocus">집중 세션</strong><small>42 min</small></p>
-        </div>
-        <div class="floating-card floating-weather" aria-hidden="true"><span>☼</span><strong>26°</strong><small>Seoul</small></div>
+      <div class="hero-visual release-five-hero" aria-label="Air Calendar 5.0 실제 화면 미리보기" data-i18n-aria="fiveHeroLabel">
+        <div class="five-preview-topline"><span class="five-release-badge" data-release-five-status>5.0 미리보기 · 출시 준비 중</span><span data-i18n="fiveRealWindows">실제 Windows 화면</span></div>
+        <button class="five-image-button five-hero-image" type="button" data-preview-image data-preview-title="fiveCalendarTitle" data-preview-description="fiveCalendarBody" aria-label="새 캘린더 화면 크게 보기" data-i18n-aria="fiveCalendarOpen">
+          <img src="assets/screenshots/5.0/calendar-light.png" width="1488" height="980" fetchpriority="high" alt="밝은 라일락 테마와 날짜 옆 요일, 선택한 날짜의 일정이 보이는 Air Calendar 5.0" data-i18n-alt="fiveCalendarAlt">
+          <span class="zoom-hint" aria-hidden="true"><b>＋</b><small data-i18n="zoomHint">크게 보기</small></span>
+        </button>
+        <p class="five-hero-caption" data-i18n="fiveCalendarBody">밝은 라일락부터 차분한 네이비까지. 요일은 머리글·날짜 옆·둘 다·숨김 중에서 선택하세요.</p>
+        <p class="five-demo-note" data-i18n="fiveDemoNote">출시 준비 중인 5.0의 실제 화면입니다. 화면 속 일정은 예시 데이터이며 앱 UI는 한국어입니다.</p>
       </div>
 
       <div class="hero-scroll" aria-hidden="true"><span></span><small>SCROLL</small></div>
@@ -168,6 +159,35 @@
       <div><span>02</span><p><strong>Microsoft Store</strong><small data-i18n="trustStore">공식 설치 및 업데이트</small></p></div>
       <div><span>03</span><p><strong data-i18n="trustLocalTitle">로컬 우선</strong><small data-i18n="trustLocal">일정과 설정은 내 PC에</small></p></div>
       <div><span>04</span><p><strong data-i18n="navGoogle">캘린더 연동</strong><small data-i18n="trustGoogle">필요한 서비스만 선택</small></p></div>
+    </section>
+
+    <section class="section five-experience" id="new-experience" aria-labelledby="five-experience-title">
+      <div class="section-heading five-heading">
+        <div>
+          <p class="section-index"><span data-release-five-status>5.0 미리보기 · 출시 준비 중</span></p>
+          <h2 id="five-experience-title"><span data-i18n="fiveTitle">익숙한 조작.</span><br><em data-i18n="fiveTitleAccent">새로운 매일.</em></h2>
+        </div>
+        <p data-i18n="fiveLead">일정을 적는 순간부터 위젯을 보는 순간까지, 같은 색과 같은 사용 흐름으로 이어집니다. 내 취향은 그대로 두고 필요한 순간을 더 편하게 만들었습니다.</p>
+      </div>
+      <div class="five-feature-grid">
+        <article class="five-feature-card">
+          <div class="five-card-copy"><p class="micro-label">01 / CONSISTENT BY DESIGN</p><h3 data-i18n="fiveModalTitle">한 번 익히면, 모든 창에서.</h3><p data-i18n="fiveModalBody">설정·일정·관리·알림에 같은 제목, 입력, 버튼 규칙을 적용했습니다. 읽을 내용과 다음 동작이 자연스럽게 구분됩니다.</p></div>
+          <button class="five-image-button five-modal-image" type="button" data-preview-image data-preview-title="fiveModalTitle" data-preview-description="fiveModalBody" aria-label="새 일정 입력 화면 크게 보기" data-i18n-aria="fiveModalOpen"><img src="assets/screenshots/5.0/schedule-dialog.png" width="700" height="660" alt="통일된 제목과 날짜·시간 입력, 고정 등록 버튼이 있는 새 일정 창" data-i18n-alt="fiveModalAlt" loading="lazy" decoding="async"><span class="five-image-open" aria-hidden="true">↗</span></button>
+        </article>
+        <article class="five-feature-card">
+          <div class="five-card-copy"><p class="micro-label">02 / YOUR COLOURS, YOUR WAY</p><h3 data-i18n="fiveThemeTitle">색은 취향대로, 읽기는 편하게.</h3><p data-i18n="fiveThemeBody">라이트·다크 테마, 기본색과 포인트색, 투명도를 자유롭게 선택하세요. 글자 크기와 버튼 간격도 하나의 기준으로 다듬었습니다.</p></div>
+          <button class="five-image-button" type="button" data-preview-image data-preview-title="fiveThemeTitle" data-preview-description="fiveThemeBody" aria-label="새 모양 설정 화면 크게 보기" data-i18n-aria="fiveThemeOpen"><img src="assets/screenshots/5.0/appearance-light.png" width="960" height="740" alt="밝은 테마와 여러 색상 프리셋을 보여주는 모양 설정" data-i18n-alt="fiveThemeAlt" loading="lazy" decoding="async"><span class="five-image-open" aria-hidden="true">↗</span></button>
+        </article>
+        <article class="five-feature-card">
+          <div class="five-card-copy"><p class="micro-label">03 / ONE THEME, TWO WORKSPACES</p><h3 data-i18n="fiveWidgetTitle">위젯에서도 이어지는 나의 테마.</h3><p data-i18n="fiveWidgetBody">위젯 전용 모드도 메인의 색상과 투명도를 따릅니다. 원하는 배치와 개별 바탕화면 위젯의 꾸미기 설정은 그대로 유지됩니다.</p></div>
+          <button class="five-image-button" type="button" data-preview-image data-preview-title="fiveWidgetTitle" data-preview-description="fiveWidgetBody" aria-label="네이비 위젯 전용 모드 크게 보기" data-i18n-aria="fiveWidgetOpen"><img src="assets/screenshots/5.0/widget-workspace.png" width="1475" height="960" alt="네이비와 라일락 색상으로 통일된 위젯 전용 모드의 일정 목록" data-i18n-alt="fiveWidgetAlt" loading="lazy" decoding="async"><span class="five-image-open" aria-hidden="true">↗</span></button>
+        </article>
+        <article class="five-feature-card five-loop-card">
+          <div class="five-card-copy"><p class="micro-label">04 / A LITTLE RHYTHM BREAK</p><h3 data-i18n="fiveLoopTitle">하나의 루프에, 네 개의 트랙.</h3><p data-i18n="fiveLoopBody">첫 패드로 녹음을 시작하고 다음 트랙에 리듬을 더하세요. 겹쳐 녹음·음소거·음량을 조절하고, WAV를 담아 덱을 공유할 수 있습니다. 기존 단일 녹음도 보존됩니다.</p></div>
+          <button class="five-image-button" type="button" data-preview-image data-preview-title="fiveLoopTitle" data-preview-description="fiveLoopBody" aria-label="4트랙 루프덱 크게 보기" data-i18n-aria="fiveLoopOpen"><img src="assets/screenshots/5.0/loopdeck-four-tracks.png" width="1100" height="920" alt="16개 패드와 네 트랙, 녹음·재생·정지가 모두 보이는 루프덱" data-i18n-alt="fiveLoopAlt" loading="lazy" decoding="async"><span class="five-image-open" aria-hidden="true">↗</span></button>
+        </article>
+      </div>
+      <p class="five-proof-note" data-i18n="fiveDemoNote">출시 준비 중인 5.0의 실제 화면입니다. 화면 속 일정은 예시 데이터이며 앱 UI는 한국어입니다.</p>
     </section>
 
     <section class="section desktop-custom" id="desktop-custom">
@@ -305,7 +325,7 @@
       <div class="screen-explorer">
         <div class="screen-tabs" role="tablist" aria-label="Feature screenshots" data-i18n-aria="screenTabsLabel">
           <button type="button" role="tab" aria-selected="true" aria-controls="screen-panel" data-screen="main"><span>01</span><b data-i18n="tabMain">월간 워크스페이스</b><small data-i18n="tabMainSmall">Calendar + tasks</small></button>
-          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="widgets"><span>02</span><b data-i18n="tabWidgets">위젯 매니저</b><small data-i18n="tabWidgetsSmall">7 widget types</small></button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="widgets"><span>02</span><b data-i18n="tabWidgets">위젯 매니저</b><small data-i18n="tabWidgetsSmall">8 widget types</small></button>
           <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="focus"><span>03</span><b data-i18n="tabFocus">집중 기록</b><small data-i18n="tabFocusSmall">Focus history</small></button>
           <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="sync"><span>04</span><b data-i18n="tabSync">캘린더 연동</b><small data-i18n="tabSyncSmall">Connected calendars</small></button>
           <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="weather"><span>05</span><b data-i18n="tabWeather">새 날씨 카드</b><small data-i18n="tabWeatherSmall">6-hour forecast</small></button>
