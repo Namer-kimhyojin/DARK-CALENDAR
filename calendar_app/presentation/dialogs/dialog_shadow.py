@@ -6,7 +6,9 @@ import weakref
 from PyQt6 import sip
 from PyQt6.QtCore import QEvent, QObject, QRectF, Qt
 from PyQt6.QtGui import QColor, QPainter
-from PyQt6.QtWidgets import QApplication, QDialog, QWidget
+from PyQt6.QtWidgets import QDialog, QWidget
+
+from calendar_app.shared.app_lifecycle import is_app_exiting
 
 _SPREAD = 24
 _OFFSET_Y = 5
@@ -76,7 +78,12 @@ class _DialogShadowController(QObject):
         if settings is not None:
             self._settings = settings
         dialog = self._dialog_ref()
-        if dialog is None or sip.isdeleted(dialog) or sip.isdeleted(self.surface):
+        if (
+            dialog is None
+            or sip.isdeleted(dialog)
+            or sip.isdeleted(self.surface)
+            or is_app_exiting()
+        ):
             return
         from calendar_app.presentation.dialogs.dialog_styles import (
             _dialog_settings,
@@ -97,7 +104,7 @@ class _DialogShadowController(QObject):
             dialog is None
             or sip.isdeleted(dialog)
             or sip.isdeleted(self.surface)
-            or QApplication.closingDown()
+            or is_app_exiting()
         ):
             return
         if not dialog.isVisible() or dialog.isMinimized() or not dialog.isWindow():
@@ -114,7 +121,7 @@ class _DialogShadowController(QObject):
     def eventFilter(self, watched, event):
         reference = getattr(self, "_dialog_ref", None)
         surface = getattr(self, "surface", None)
-        if reference is None or surface is None or QApplication.closingDown():
+        if reference is None or surface is None or is_app_exiting():
             return False
         dialog = reference()
         if dialog is None or sip.isdeleted(dialog) or sip.isdeleted(surface):
@@ -144,8 +151,7 @@ def ensure_dialog_shadow(dialog, *, settings=None) -> bool:
         or dialog.property("dcSkipDialogChrome")
         or not dialog.property("dcCommonChrome")
         or dialog.windowType() in (Qt.WindowType.Popup, Qt.WindowType.ToolTip)
-        or QApplication.instance() is None
-        or QApplication.closingDown()
+        or is_app_exiting()
     ):
         return False
     controller = getattr(dialog, "_dc_dialog_shadow_controller", None)

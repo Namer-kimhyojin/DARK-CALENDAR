@@ -26,8 +26,10 @@ def mark_app_exiting(app=None) -> None:
 
 
 def is_app_exiting() -> bool:
+    if QCoreApplication.closingDown():
+        return True
     app = QCoreApplication.instance()
-    if app is None or QCoreApplication.closingDown():
+    if app is None:
         return True
     return bool(app.property(EXITING_PROPERTY))
 

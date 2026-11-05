@@ -11,11 +11,15 @@ import sqlite3
 import sys
 import threading
 import time
+import weakref
 
+from PyQt6 import sip
 from PyQt6.QtCore import (
     QCoreApplication,
+    QEvent,
     QSettings,
     QSharedMemory,
+    QThread,
     QTimer,
     QtMsgType,
     qInstallMessageHandler,
@@ -115,12 +119,18 @@ def _finalize_runtime(app: QApplication, window) -> None:
     if getattr(app, "_runtime_shutdown_complete", False):
         return
     app._runtime_shutdown_complete = True
+    from calendar_app.shared.app_lifecycle import mark_app_exiting
+
+    mark_app_exiting(app)
 
     sigint_pump = getattr(app, "_sigint_pump", None)
     if sigint_pump is not None:
         with contextlib.suppress(AttributeError, RuntimeError):
             sigint_pump.stop()
+            sigint_pump.deleteLater()
+        app._sigint_pump = None
 
+    shutdown_ready = True
     if window is not None:
         shutdown = getattr(window, "shutdown_background_workers", None)
         if callable(shutdown):
@@ -130,8 +140,10 @@ def _finalize_runtime(app: QApplication, window) -> None:
                     logging.getLogger(__name__).warning(
                         "Background shutdown was incomplete; retrying before database close"
                     )
-                    shutdown(wait_ms=1000)
+                    stopped = shutdown(wait_ms=1000)
+                shutdown_ready = stopped is not False
             except Exception:
+                shutdown_ready = False
                 logging.getLogger(__name__).exception("Final application shutdown failed")
         try:
             from calendar_app.presentation.main_window.action_handlers import (
@@ -141,6 +153,16 @@ def _finalize_runtime(app: QApplication, window) -> None:
             _save_window_layout_for_shutdown(window)
         except Exception:
             logging.getLogger(__name__).exception("Final window layout save failed")
+
+    if shutdown_ready:
+        try:
+            _dispose_runtime_qobjects(app)
+        except Exception:
+            logging.getLogger(__name__).exception("Failed to dispose application Qt objects")
+    else:
+        logging.getLogger(__name__).warning(
+            "Skipping Qt object disposal because background shutdown is incomplete"
+        )
 
     try:
         from calendar_app.infrastructure.db.database_unified import db_manager
@@ -157,6 +179,38 @@ def _finalize_runtime(app: QApplication, window) -> None:
         _release_single_instance_lock(app)
     except Exception:
         logging.getLogger(__name__).exception("Failed to release single-instance lock")
+
+
+def _dispose_runtime_qobjects(app: QApplication) -> bool:
+    """Delete stopped UI trees before Python's atexit wrapper-map traversal.
+
+    aboutToQuit still supports DeferredDelete delivery. Do not process unrelated
+    queued work, remove widget settings, or destroy a running QThread's parent.
+    """
+    if not isinstance(app, QCoreApplication) or QCoreApplication.closingDown():
+        return False
+    windows = list(QApplication.topLevelWidgets())
+    threads = list(app.findChildren(QThread))
+    for widget in windows:
+        if not sip.isdeleted(widget):
+            threads.extend(widget.findChildren(QThread))
+    if any(not sip.isdeleted(thread) and thread.isRunning() for thread in threads):
+        logging.getLogger(__name__).warning(
+            "Skipping Qt object disposal while a child QThread is still running"
+        )
+        return False
+    for widget in windows:
+        if not sip.isdeleted(widget):
+            widget.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+    # Client destroyed callbacks may release shared forecast replies. Keep the
+    # network service alive until those clients have finished their teardown.
+    from calendar_app.infrastructure.runtime.network import NetworkManager
+
+    NetworkManager.release()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    return True
 
 
 def _build_startup_phase_ranges(specs=_STARTUP_PHASE_SPECS) -> dict[str, tuple[float, float]]:
@@ -385,6 +439,9 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
         return load_custom_labels()
 
     window_box: dict[str, object | None] = {"window": None}
+    previous_sigint_handler = None
+    sigint_handler = None
+    quit_handler = None
 
     def _start_ui():
         app.setQuitOnLastWindowClosed(False)
@@ -454,13 +511,20 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
         # Connect splash finish to main window's first actual paint event
         # to ensure the transition is seamless when the app UI is actually ready.
         window.first_paint.connect(splash.finish)
+        window_ref = weakref.ref(window)
+        app_ref = weakref.ref(app)
 
         def _restore_widget_workspace():
             from calendar_app.presentation.widgets.widget_mode_coordinator import (
                 restore_saved_widget_workspace,
             )
 
-            QTimer.singleShot(0, lambda: restore_saved_widget_workspace(window))
+            def restore():
+                target = window_ref()
+                if target is not None and not sip.isdeleted(target):
+                    restore_saved_widget_workspace(target)
+
+            QTimer.singleShot(0, restore)
 
         window.first_paint.connect(_restore_widget_workspace)
         window.show()
@@ -468,16 +532,27 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
         def _handle_sigint(*_):
             from calendar_app.shared.app_lifecycle import finish_application_exit
 
-            window._exit_requested = True
-            window.close()
-            finish_application_exit(app)
+            target, application = window_ref(), app_ref()
+            if target is not None and not sip.isdeleted(target):
+                target._exit_requested = True
+                target.close()
+            if application is not None and not sip.isdeleted(application):
+                finish_application_exit(application)
 
+        previous_sigint_handler = signal.getsignal(signal.SIGINT)
         signal.signal(signal.SIGINT, _handle_sigint)
-        app._sigint_pump = QTimer()
+        sigint_handler = _handle_sigint
+        app._sigint_pump = QTimer(app)
         app._sigint_pump.timeout.connect(lambda: None)
         app._sigint_pump.start(200)
 
-        app.aboutToQuit.connect(lambda: _finalize_runtime(app, window))
+        def finalize():
+            application = app_ref()
+            if application is not None and not sip.isdeleted(application):
+                _finalize_runtime(application, window_ref())
+
+        quit_handler = finalize
+        app.aboutToQuit.connect(quit_handler)
         return app.exec()
     except (sqlite3.Error, OSError) as error:
         if phase_name not in ("initializing_db", "migrating_data"):
@@ -495,5 +570,10 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
     finally:
         # Startup failures must release the same resources as event-loop exit.
         _finalize_runtime(app, window_box["window"])
+        if quit_handler is not None:
+            with contextlib.suppress(TypeError, RuntimeError):
+                app.aboutToQuit.disconnect(quit_handler)
+        if sigint_handler is not None and signal.getsignal(signal.SIGINT) is sigint_handler:
+            signal.signal(signal.SIGINT, previous_sigint_handler)
         with contextlib.suppress(RuntimeError):
             splash.close()

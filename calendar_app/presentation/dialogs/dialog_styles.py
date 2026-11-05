@@ -26,6 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.presentation.theme.control_styles import build_dialog_control_styles
+from calendar_app.shared.app_lifecycle import is_app_exiting
 from calendar_app.shared.color_utils import (
     composite_color,
     contrast_ratio,
@@ -1733,6 +1734,8 @@ class _CommonDialogStyleFilter(QObject):
     )
 
     def eventFilter(self, watched, event):
+        if is_app_exiting():
+            return False
         if not isinstance(watched, QDialog):
             return False
         if event.type() not in (QEvent.Type.Polish, QEvent.Type.Show):

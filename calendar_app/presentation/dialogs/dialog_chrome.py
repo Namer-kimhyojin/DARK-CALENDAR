@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.shared.app_lifecycle import is_app_exiting
 from calendar_app.shared.brand_assets import brand_mark_pixmap
 from calendar_app.shared.color_utils import parse_css_color
 from calendar_app.shared.icon_map import ICON, icon, strip_leading_emoji
@@ -34,8 +35,7 @@ def _eligible(dialog) -> bool:
         not isinstance(dialog, QDialog)
         or sip.isdeleted(dialog)
         or not dialog.isWindow()
-        or QApplication.instance() is None
-        or QApplication.closingDown()
+        or is_app_exiting()
         or dialog.property("dcSkipDialogChrome")
     ):
         return False
@@ -116,7 +116,7 @@ class _MessageBoxOwnerTopmostWatcher(QObject):
             getattr(self, "_syncing", True)
             or dialog is None
             or sip.isdeleted(dialog)
-            or QApplication.closingDown()
+            or is_app_exiting()
         ):
             return
         self._syncing = True
@@ -147,7 +147,7 @@ class _MessageBoxOwnerTopmostWatcher(QObject):
             getattr(self, "_syncing", True)
             or dialog is None
             or sip.isdeleted(dialog)
-            or QApplication.closingDown()
+            or is_app_exiting()
         ):
             return False
         kind = event.type()
@@ -394,7 +394,7 @@ class _DialogChromeController(QObject):
             or sip.isdeleted(dialog)
             or sip.isdeleted(header)
             or sip.isdeleted(close_button)
-            or QApplication.closingDown()
+            or is_app_exiting()
         ):
             return
         # Local import avoids a dialog_styles -> chrome -> dialog_styles cycle.
@@ -451,7 +451,7 @@ class _DialogChromeController(QObject):
             or header is None
             or sip.isdeleted(dialog)
             or sip.isdeleted(header)
-            or QApplication.closingDown()
+            or is_app_exiting()
         ):
             return
         self._updating_geometry = True
@@ -504,7 +504,7 @@ class _DialogChromeController(QObject):
         # Python object's dict. A cosmetic filter must never raise into Qt then.
         reference = getattr(self, "_dialog_ref", None)
         header = getattr(self, "header", None)
-        if reference is None or header is None or QApplication.closingDown():
+        if reference is None or header is None or is_app_exiting():
             return False
         dialog = reference()
         if dialog is None or sip.isdeleted(dialog) or sip.isdeleted(header):
