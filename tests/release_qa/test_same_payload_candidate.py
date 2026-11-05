@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """Data-only same-payload provenance contracts; no app or network execution."""
 
+from contextlib import nullcontext
 import hashlib
 import importlib.util
 import io
 import json
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -136,6 +138,49 @@ def test_reference_archive_reuses_original_canonicalizer_without_importing_produ
     assert candidate.read_commit_inputs(tmp_path, "a" * 40, hasher) == {
         "from_original_hasher": "normalized"
     }
+
+
+def test_reference_archive_canonicalizes_temporary_root_for_original_hasher(tmp_path, monkeypatch):
+    from scripts.manage_version import input_hashes
+
+    contents = b"<Package />\n"
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w") as package:
+        package.writestr("AppxManifest.xml", contents)
+    monkeypatch.setattr(candidate, "git_bytes", lambda *_args: output.getvalue())
+    directory = tmp_path / "relative-reference"
+    directory.mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        candidate.tempfile,
+        "TemporaryDirectory",
+        lambda **_kwargs: nullcontext("relative-reference"),
+    )
+    observed = []
+
+    def original_hasher(root):
+        observed.append(root)
+        return input_hashes(root)
+
+    assert candidate.read_commit_inputs(tmp_path, "a" * 40, original_hasher) == {
+        "AppxManifest.xml": hashlib.sha256(contents).hexdigest()
+    }
+    assert observed == [directory.resolve()]
+    assert observed[0].is_absolute()
+
+
+def test_canonical_reference_root_still_rejects_archive_symlink(tmp_path, monkeypatch):
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w") as package:
+        link = zipfile.ZipInfo("calendar_app/escape.py")
+        link.create_system = 3
+        link.external_attr = (stat.S_IFLNK | 0o777) << 16
+        package.writestr(link, "../../outside.py")
+    monkeypatch.setattr(candidate, "git_bytes", lambda *_args: output.getvalue())
+    hasher = Mock()
+    with pytest.raises(ValueError, match="Unsafe Git reference"):
+        candidate.read_commit_inputs(tmp_path, "a" * 40, hasher)
+    hasher.assert_not_called()
 
 
 def test_policy_pins_existing_build_artifact_and_diagnostic_only():

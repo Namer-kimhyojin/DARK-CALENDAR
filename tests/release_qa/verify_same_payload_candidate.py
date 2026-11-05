@@ -60,7 +60,9 @@ def read_commit_inputs(root, commit, input_hasher):
         raise ValueError("Reference commit must be a full SHA")
     archive = git_bytes(root, "archive", "--format=zip", commit)
     with tempfile.TemporaryDirectory(prefix="air-candidate-reference-") as name:
-        directory = Path(name)
+        # The original escape guard compares resolved files with this root.
+        # Windows TEMP may use an 8.3 alias, so canonicalize the root first.
+        directory = Path(name).resolve()
         with zipfile.ZipFile(io.BytesIO(archive)) as package:
             for member in package.infolist():
                 name = member.orig_filename
