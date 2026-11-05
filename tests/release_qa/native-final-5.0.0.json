@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "repository": "Namer-kimhyojin/DARK-CALENDAR",
+  "repository_id": 1195286732,
+  "candidate_version": "5.0.0",
+  "candidate_commit": "b526f5671bc6a844da4ef1b534c5a465675dadae",
+  "product_source_commit": "d2b89277c07384e8fbe032ba68754f6212ccda4e",
+  "candidate_run_id": 42088226591,
+  "product_input_count": 718,
+  "product_inputs_sha256": "8e0eef6336f7f7d2497d7860784a12f8f9ca4f2e64d804793bebcd76b5640cda",
+  "payload_file_count": 1877,
+  "payload_manifest_sha256": "b5b6a69d265bbc94fbc760e6eebecadaee272404dc599a258bb663f883f66352",
+  "diagnostic_only": false,
+  "publication_eligible": false,
+  "qa_pins_finalized": true,
+  "required_native_cycles": 6,
+  "payload_exe_sha256": "ab422ebf8d14e1f5a40b743b7e78c11c1432cd9951228a71543d8b0f99df064b",
+  "artifacts": {
+    "payload": {
+      "id": 13443832079,
+      "name": "darkcalendar-dist-x64",
+      "sha256": "4b5897f0872594b4f87b4741f2e36403bf0d2972d380745d9f35b9ad5f4d3736"
+    },
+    "msix": {
+      "id": 13444631618,
+      "name": "darkcalendar-msix-x64",
+      "sha256": "73ba16d90cbdff9970b1782d832eea141fa9f44cc27a7b3677f1a3e00f28e95d"
+    },
+    "release_assets": {
+      "id": 13442559639,
+      "name": "darkcalendar-github-release-x64",
+      "sha256": "ec6944ec002fb3080e99e8297102b4fdb50d13c08eb126ee3f9fb4f3fb620b31"
+    }
+  },
+  "qa_sha256": {
+    "requirements-build.lock": "b686cb6dece284199aff026b9e921700b5d3653cff4d07c8102ad90ae5d75696",
+    "scripts/manage_version.py": "72b128508b763379dad47eb3ed711c6da6b5ebe3955df9b0b37be6a7e58b5aa8",
+    "scripts/native_exception_observer.py": "b96c515c81ccdcfa4bc5bb78fecb046893b8abfcd2d0c0540b8c39e2309323cd",
+    "scripts/native_release_smoke.py": "731b6ea491b2917adef1c2dfe7063dbbe47f8ff63b3837375feebb48a23e4a64",
+    "scripts/prepare_native_smoke_baseline.py": "2e9bff8f8cda2252b33b117687f4f1b22f66e35f1ffda78aa6618d58cd69c33a",
+    "scripts/sqlite-runtime-lock.json": "47a19778955bb30901df93e7ed130c6de0e6c070b0b41fba7ef4e7b2bfbb02dd",
+    "scripts/verify_native_candidate_inputs.py": "4ebb9d744c7c9ab0d2edd0167ead50abe58778bcbbac69138c50a48dce813f94",
+    "scripts/verify_sqlite_runtime.py": "35f149eafda0dee38dd9dd2d69133d46e8c0fe2af721ab113f1f10c08619c1d7",
+    "tests/release_qa/native_capture_diagnostics.py": "d4b5ab828d57d26450bc91f87520887d27743f22c88d8a2f7725b3816e34495e",
+    "tests/release_qa/native_final_smoke.py": "33aa2f963f399f848dd319a658eef91db61d06a8f7499c5ebd2dff93f9aa3edc",
+    "tests/release_qa/native_modal_owner_adapter.py": "620f78ea8e906e4fd136dfaa0ece559a1b166e5e1613aa520796a30fbf972532",
+    "tests/release_qa/native_release_smoke_adapter.py": "2825f11bc838cab7bee0d9e70a7390931cb9b67d37c1ed27df459012300b281b",
+    "tests/release_qa/verify_final_candidate.py": "64d689e023dbae949293d723228e580fb1bc95fbc0d0da3af98bb571c3bc7fc6"
+  },
+  "pyinstaller_version": "6.21.0"
+}

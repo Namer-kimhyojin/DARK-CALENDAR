@@ -1,0 +1,130 @@
+name: Verify Existing 5.0.0 Final Clean Payload
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: verify-native-5.0.0-final-clean
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify-final-clean-x64:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      PYTHON_VERSION: "3.14.10"
+      CANDIDATE_POLICY_SHA256: "20524d2e3bdaa0bfdc746f8d7db3177763539f81fa7d5219ab142661c4078df9"
+    steps:
+      - name: Preserve exact Git bytes on disposable QA VM
+        shell: powershell
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Checkout final QA commit with immutable clean build ancestry
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup native validation Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Verify frozen QA and 718 exact product inputs before installing dependencies
+        shell: powershell
+        run: |
+          python tests\release_qa\verify_final_candidate.py inputs `
+            --root . --policy tests\release_qa\native-final-5.0.0.json `
+            --policy-sha256 $env:CANDIDATE_POLICY_SHA256 --qa-commit $env:GITHUB_SHA `
+            --evidence "$env:RUNNER_TEMP\final-candidate-provenance" `
+            --payload "$env:RUNNER_TEMP\final-candidate-payload"
+          if ($LASTEXITCODE -ne 0) { throw "Frozen clean QA ancestry or product input verification failed." }
+
+      - name: Prepare isolated QA and build-lock pinned archive reader
+        shell: powershell
+        run: |
+          python -m venv build\native-final-venv
+          if ($LASTEXITCODE -ne 0) { throw "Final native QA venv creation failed." }
+          @'
+          from pathlib import Path
+          import os
+          names = {"pyinstaller", "pyinstaller-hooks-contrib", "altgraph", "packaging", "pefile", "pywin32-ctypes", "setuptools"}
+          lines = Path("requirements-build.lock").read_text(encoding="utf-8", errors="strict").splitlines()
+          selected = [line for line in lines if line.split("==", 1)[0] in names]
+          if {line.split("==", 1)[0] for line in selected} != names or len(selected) != len(names):
+              raise RuntimeError("Pinned archive reader dependency set changed")
+          Path(os.environ["RUNNER_TEMP"], "final-archive-reader.lock").write_text("\n".join(selected) + "\n", encoding="utf-8", errors="strict")
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw "Build-lock archive reader extraction failed." }
+          .\build\native-final-venv\Scripts\python.exe -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r "$env:RUNNER_TEMP\final-archive-reader.lock"
+          if ($LASTEXITCODE -ne 0) { throw "Pinned archive reader install failed." }
+          .\build\native-final-venv\Scripts\python.exe -m pip install pywinauto==0.6.9 Pillow==13.0.0 psutil==7.2.2
+          if ($LASTEXITCODE -ne 0) { throw "Native QA dependency install failed." }
+
+      - name: Download pinned clean bytes and reject QA modules before any native launch
+        id: provenance
+        shell: powershell
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          .\build\native-final-venv\Scripts\python.exe tests\release_qa\verify_final_candidate.py prepare `
+            --root . --policy tests\release_qa\native-final-5.0.0.json `
+            --policy-sha256 $env:CANDIDATE_POLICY_SHA256 --qa-commit $env:GITHUB_SHA `
+            --evidence "$env:RUNNER_TEMP\final-candidate-provenance" `
+            --payload "$env:RUNNER_TEMP\final-candidate-payload"
+          if ($LASTEXITCODE -ne 0) { throw "Final provenance or prelaunch QA-module check failed; no native launch allowed." }
+
+      - name: Prepare exact public 4.3.3 baseline
+        shell: powershell
+        run: |
+          .\build\native-final-venv\Scripts\python.exe scripts\prepare_native_smoke_baseline.py --directory "$env:RUNNER_TEMP\native-baseline-4.3.3"
+          if ($LASTEXITCODE -ne 0) { throw "Pinned previous public release validation failed." }
+
+      - name: Run all six original native cycles with strict owned-window observation
+        id: native
+        shell: powershell
+        run: |
+          .\build\native-final-venv\Scripts\python.exe tests\release_qa\native_final_smoke.py `
+            --payload "$env:RUNNER_TEMP\final-candidate-payload" `
+            --baseline-payload "$env:RUNNER_TEMP\native-baseline-4.3.3" `
+            --expected-version 5.0.0 --evidence "$env:RUNNER_TEMP\final-native-evidence"
+          if ($LASTEXITCODE -ne 0) { throw "An original final native gate failed; no approval is recorded." }
+
+      - name: Check all payload bytes after native success or failure
+        id: payload_after
+        if: always() && steps.provenance.outcome == 'success'
+        shell: powershell
+        run: |
+          .\build\native-final-venv\Scripts\python.exe tests\release_qa\verify_final_candidate.py check `
+            --root . --policy tests\release_qa\native-final-5.0.0.json `
+            --policy-sha256 $env:CANDIDATE_POLICY_SHA256 --qa-commit $env:GITHUB_SHA `
+            --evidence "$env:RUNNER_TEMP\final-candidate-provenance" `
+            --payload "$env:RUNNER_TEMP\final-candidate-payload"
+          if ($LASTEXITCODE -ne 0) { throw "The pinned clean payload changed during native validation." }
+
+      - name: Record six-cycle result separately from publication and screenshot review
+        if: steps.native.outcome == 'success' && steps.payload_after.outcome == 'success'
+        shell: powershell
+        run: |
+          .\build\native-final-venv\Scripts\python.exe tests\release_qa\verify_final_candidate.py accept `
+            --root . --policy tests\release_qa\native-final-5.0.0.json `
+            --policy-sha256 $env:CANDIDATE_POLICY_SHA256 --qa-commit $env:GITHUB_SHA `
+            --evidence "$env:RUNNER_TEMP\final-candidate-provenance" `
+            --payload "$env:RUNNER_TEMP\final-candidate-payload" `
+            --native-summary "$env:RUNNER_TEMP\final-native-evidence\summary.json"
+          if ($LASTEXITCODE -ne 0) { throw "Final six-cycle acceptance verification failed." }
+
+      - name: Preserve clean provenance native pixels and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkcalendar-5.0.0-final-clean-native-evidence-x64
+          path: |
+            ${{ runner.temp }}/final-candidate-provenance/*.json
+            ${{ runner.temp }}/final-native-evidence
+          if-no-files-found: warn
