@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Pure payload/adapter contracts; no frozen process, UI or native API is run."""
 
+import ast
 import hashlib
 import importlib.util
 from pathlib import Path
@@ -172,7 +173,24 @@ def test_original_product_smoke_stays_the_workflow_delegation_target():
         encoding="utf-8", errors="strict"
     )
     assert "native_release_smoke.main(argv)" in source
-    assert "tests\\release_qa\\native_release_smoke_adapter.py" in workflow
+    assert "tests\\release_qa\\native_final_smoke.py" in workflow
+    assert "tests\\release_qa\\native_release_smoke_adapter.py" not in workflow
+    entry = ast.parse(
+        _PATH.with_name("native_final_smoke.py").read_text(encoding="utf-8", errors="strict")
+    )
+    main = next(
+        node for node in entry.body if isinstance(node, ast.FunctionDef) and node.name == "main"
+    )
+    context = next(node for node in main.body if isinstance(node, ast.With))
+    assert [ast.unparse(item.context_expr.func) for item in context.items] == [
+        "install_adapter",
+        "install_owner_adapter",
+        "install_runner_surface_adapter",
+        "install_diagnostics",
+    ]
+    assert len(context.body) == 1 and isinstance(context.body[0], ast.Return)
+    assert ast.unparse(context.body[0].value) == "native_release_smoke.main(argv)"
+    assert "--expected-version $match.Groups[1].Value" in workflow
 
 
 def test_adapter_preserves_original_hosted_runner_rejection(tmp_path):
@@ -185,8 +203,9 @@ def test_adapter_preserves_original_hosted_runner_rejection(tmp_path):
         require_hosted_runner({}, smoke.sys.platform, tmp_path)
 
     smoke._launch_cycle = original
-    with adapter.install_adapter(smoke, version_reader=versions.__getitem__), pytest.raises(
-        RuntimeError, match="only on disposable GitHub-hosted"
+    with (
+        adapter.install_adapter(smoke, version_reader=versions.__getitem__),
+        pytest.raises(RuntimeError, match="only on disposable GitHub-hosted"),
     ):
         smoke._launch_cycle(root, tmp_path, tmp_path)
 

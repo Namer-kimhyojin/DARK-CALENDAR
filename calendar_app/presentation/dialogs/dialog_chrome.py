@@ -73,6 +73,29 @@ def _inherit_message_box_owner_topmost(dialog) -> None:
         dialog.setWindowFlag(flag, True)
 
 
+def _restore_tool_dialog_owner(dialog) -> bool:
+    """Retain the explicit overlay owner after Qt 6.12 skips Tool ancestors."""
+    if not _eligible(dialog) or getattr(dialog, "_dc_native_owner_binding", False):
+        return False
+    parent = dialog.parentWidget()
+    if parent is None or sip.isdeleted(parent):
+        return False
+    owner = parent.window()
+    if owner is dialog or owner.windowType() != Qt.WindowType.Tool:
+        return False
+    handle, owner_handle = dialog.windowHandle(), owner.windowHandle()
+    # Wait for native creation; never create HWNDs early or replace a caller's
+    # explicit manager owner (for example the task router's nested modal).
+    if handle is None or owner_handle is None or handle.transientParent() is not None:
+        return False
+    dialog._dc_native_owner_binding = True
+    try:
+        handle.setTransientParent(owner_handle)
+    finally:
+        dialog._dc_native_owner_binding = False
+    return True
+
+
 class _MessageBoxOwnerTopmostWatcher(QObject):
     """Reconcile a reused hidden message when its owner's native window changes."""
 
@@ -160,6 +183,7 @@ def prepare_dialog_chrome(dialog, *, settings=None) -> bool:
         if dialog.isVisible():
             return False
         dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+    _restore_tool_dialog_owner(dialog)
     dialog.setProperty("dcCommonChrome", True)
     controller = getattr(dialog, "_dc_dialog_chrome_controller", None)
     if controller is not None:
@@ -486,6 +510,8 @@ class _DialogChromeController(QObject):
         if dialog is None or sip.isdeleted(dialog) or sip.isdeleted(header):
             return False
         kind = event.type()
+        if watched is dialog and kind in (QEvent.Type.WinIdChange, QEvent.Type.Show):
+            _restore_tool_dialog_owner(dialog)
         if watched is self.dialog and kind == QEvent.Type.WindowTitleChange:
             if self.title_label is not None:
                 self.title_label.setText(_title(self.dialog))

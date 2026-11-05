@@ -142,7 +142,7 @@ jobs:
           $metadata = Get-Content "calendar_app\app_metadata.py" -Raw -Encoding utf8
           $match = [regex]::Match($metadata, 'APP_VERSION\s*=\s*"([^"]+)"')
           if (-not $match.Success) { throw "APP_VERSION was not found." }
-          .\build\native-smoke-venv\Scripts\python.exe tests\release_qa\native_release_smoke_adapter.py `
+          .\build\native-smoke-venv\Scripts\python.exe tests\release_qa\native_final_smoke.py `
             --payload native-payload `
             --baseline-payload "$env:RUNNER_TEMP\native-baseline-4.3.3" `
             --expected-version $match.Groups[1].Value `
