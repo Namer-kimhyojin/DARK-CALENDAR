@@ -8,7 +8,9 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import zipfile
 
+from PyInstaller.archive.readers import CArchiveReader
 from PyInstaller.archive.writers import CArchiveWriter, ZlibArchiveWriter
 import pytest
 import yaml
@@ -30,6 +32,18 @@ def copy_loader(repository):
 def run_child(argv, *, cwd, loader=None):
     environment = os.environ.copy()
     environment.pop("PYTHONPATH", None)
+    sandbox = Path(cwd) / ".qa-environment"
+    for key, folder in (
+        ("LOCALAPPDATA", "local"),
+        ("APPDATA", "roaming"),
+        ("TEMP", "tmp"),
+        ("TMP", "tmp"),
+        ("PYINSTALLER_CONFIG_DIR", "pyinstaller"),
+    ):
+        target = sandbox / folder
+        target.mkdir(parents=True, exist_ok=True)
+        environment[key] = str(target)
+    environment["PYTHONIOENCODING"] = "utf-8:strict"
     if loader is not None:
         environment["PYTHONPATH"] = str(loader)
     return subprocess.run(
@@ -161,14 +175,134 @@ def test_real_pyinstaller_entrypoint_keeps_default_json_behavior(tmp_path):
     assert result.returncode == 0 and "pyinstaller-json-unchanged" in result.stdout, result.stderr
 
 
+def test_real_minimal_pyinstaller_payload_excludes_qa_loader(tmp_path):
+    """Build an actual tiny fixture; inspect archives without executing its EXE."""
+    loader = copy_loader(tmp_path / "fixture-repository")
+    entry = tmp_path / "minimal.py"
+    entry.write_text(
+        "import site\nimport json\nprint(json.dumps({'fixture': True}))\n",
+        encoding="utf-8",
+        errors="strict",
+    )
+    result = run_child(
+        [
+            "-m",
+            "PyInstaller",
+            "--noconfirm",
+            "--clean",
+            "--noupx",
+            "--distpath",
+            tmp_path / "dist",
+            "--workpath",
+            tmp_path / "build",
+            "--specpath",
+            tmp_path / "spec",
+            entry,
+        ],
+        cwd=tmp_path,
+        loader=loader,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    executable = tmp_path / "dist/minimal" / ("minimal.exe" if os.name == "nt" else "minimal")
+    archive = CArchiveReader(str(executable))
+    pyz = archive.open_embedded_archive(next(name for name in archive.toc if name.endswith(".pyz")))
+    with zipfile.ZipFile(executable.parent / "_internal/base_library.zip") as library:
+        base_names = library.namelist()
+    forbidden = ("sitecustomize", "release_qa", "fingerprint_compat")
+    matches = {
+        kind: [name for name in names if any(token in name.casefold() for token in forbidden)]
+        for kind, names in (
+            ("carchive", archive.toc),
+            ("pyz", pyz.toc),
+            ("base_library", base_names),
+        )
+    }
+    evidence = os.environ.get("AIR_FINGERPRINT_BUILD_EVIDENCE")
+    if evidence:
+        target = Path(evidence)
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "minimal-build.log").write_text(
+            result.stdout + result.stderr, encoding="utf-8", errors="strict"
+        )
+        (target / "minimal-payload.json").write_text(
+            json.dumps(
+                {
+                    "python_executable": sys.executable,
+                    "python_version": sys.version,
+                    "entry_source": entry.read_text(encoding="utf-8", errors="strict"),
+                    "carchive_entries": sorted(archive.toc),
+                    "pyz_entries": sorted(pyz.toc),
+                    "qa_matches": matches,
+                    "application_executed": False,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+            errors="strict",
+        )
+    assert matches == {"carchive": [], "pyz": [], "base_library": []}
+
+
+def test_non_target_prunes_owned_paths_only_and_does_not_pop_import(monkeypatch, tmp_path):
+    owned = str(LOADER.parent.resolve())
+    alias = str(LOADER.parent / ".")
+    keep = str(tmp_path / "unrelated-imports")
+    monkeypatch.setattr(sys, "path", [keep, owned, alias, ""])
+    monkeypatch.setenv("PYTHONPATH", os.pathsep.join((owned, keep, alias)))
+    default = json.JSONEncoder.default
+    assert compat.prune_loader_search_path()
+    assert sys.path == [keep, ""]
+    assert os.environ["PYTHONPATH"] == keep
+    assert json.JSONEncoder.default is default
+    assert compat.prune_loader_search_path()
+    assert os.environ["PYTHONPATH"] == keep
+
+
+def test_non_target_removes_only_own_env_value_and_frozen_layout_stays_safe(monkeypatch):
+    monkeypatch.setenv("PYTHONPATH", str(LOADER.parent))
+    assert compat.prune_loader_search_path()
+    assert "PYTHONPATH" not in os.environ
+    monkeypatch.setattr(compat, "__file__", str(ROOT / "_internal/sitecustomize.py"))
+    runtime = str(ROOT / "_internal")
+    monkeypatch.setattr(sys, "path", [runtime])
+    monkeypatch.setenv("PYTHONPATH", runtime)
+    assert compat.prune_loader_search_path() is False
+    assert sys.path == [runtime] and os.environ["PYTHONPATH"] == runtime
+
+
+def test_non_target_child_cannot_rediscover_the_qa_directory(tmp_path):
+    loader = copy_loader(tmp_path)
+    main = tmp_path / "main.py"
+    main.write_text(
+        "import os, pathlib, subprocess, sys, sitecustomize\n"
+        "assert not sitecustomize.ACTIVE\n"
+        "owned=str(pathlib.Path(sitecustomize.__file__).resolve().parent)\n"
+        "assert owned not in sys.path\n"
+        "assert owned not in os.environ.get('PYTHONPATH','').split(os.pathsep)\n"
+        "child=subprocess.run([sys.executable,'-B','-c',"
+        "\"import importlib.util; assert importlib.util.find_spec('sitecustomize') is None\"],"
+        "capture_output=True)\n"
+        "assert child.returncode == 0, child.stderr\n"
+        "print('child-qa-path-absent')\n",
+        encoding="utf-8",
+        errors="strict",
+    )
+    parent_environment = dict(os.environ)
+    result = run_child([main], cwd=tmp_path, loader=loader)
+    assert dict(os.environ) == parent_environment
+    assert result.returncode == 0 and result.stdout.strip() == "child-qa-path-absent", result.stderr
+
+
 def test_canonical_nested_slice_and_other_unsupported_types_remain_strict(tmp_path):
     repository = tmp_path / "repo"
     loader = copy_loader(repository)
     target = repository / "scripts/verify_release_runtime.py"
     target.parent.mkdir()
     target.write_text(
-        "import json,sitecustomize\n"
+        "import json,os,pathlib,sys,sitecustomize\n"
         "assert sitecustomize.ACTIVE\n"
+        "owned=str(pathlib.Path(sitecustomize.__file__).resolve().parent)\n"
+        "assert owned in sys.path and os.environ['PYTHONPATH'] == owned\n"
         "default=json.JSONEncoder.default\n"
         "assert sitecustomize.install() and json.JSONEncoder.default is default\n"
         "assert json.loads(json.dumps(slice(slice(None,-2,-1),None,2))) == "

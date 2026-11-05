@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.0.0 | 2026-11-06T03:49:30.868446+09:00 | change | QA만: 비검증 Python 자식의 QA검색경로 제거로 frozen sitecustomize 혼입 차단; 실제 최소PyInstaller 산출물 비포함과13회귀 검증, 제품718입력 보존 | `release-5.0.0-qa-loader-packaging-isolation-20261106` |
 | 5.0.0 | 2026-11-06T03:24:36.759550+09:00 | change | 홈페이지5.0새인터페이스 실제화면과4언어소개, 반응형과확대보기 검증; 게시버전·Store상태와 출시미리보기 구분 | `release-5.0.0-homepage-ui-preview-20261106` |
 | 5.0.0 | 2026-11-06T03:19:00.718453+09:00 | change | QA만: Python3.14 slice상수의 정규 직렬화 지원, 원본 검증기와 제품718입력 및 구현 불일치 차단 보존; 실패 CI42080904894 증거 유지 | `release-5.0.0-qa-slice-fingerprint-20261106` |
 | 5.0.0 | 2026-11-06T03:01:23.649545+09:00 | change | QA만: immutable4.3.3 baseline과5.0 Python3.14/Qt6.12의 DLL·정확한 모달창 클래스 구분 및 원본 엄격 게이트 보존 | `release-5.0.0-qa-runtime-adapter-20261106` |

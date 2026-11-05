@@ -3,9 +3,12 @@
 
 This module is QA startup configuration, never application runtime code. It is
 inert for -c/-m, PyInstaller, other scripts and a verifier outside this checkout.
+Those processes also lose this QA-only search path before module analysis or
+child startup; the parent build shell's environment is never modified.
 """
 
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -26,9 +29,41 @@ def is_verifier_invocation(argv, repository):
         return False
 
 
+def prune_loader_search_path():
+    """Hide only this QA directory from non-verifier processes and their children."""
+    directory = Path(__file__).resolve().parent
+    # If this file was nevertheless frozen, never remove the application's
+    # runtime directory. This operation belongs only to the known QA layout.
+    if tuple(path.name for path in (directory.parent.parent, directory.parent, directory)) != (
+        "tests",
+        "release_qa",
+        "fingerprint_compat",
+    ):
+        return False
+    own_path = os.path.normcase(str(directory))
+
+    def owned(entry):
+        try:
+            return os.path.normcase(str(Path(entry).resolve())) == own_path
+        except (OSError, TypeError, ValueError):
+            return False
+
+    sys.path[:] = [entry for entry in sys.path if not owned(entry)]
+    if "PYTHONPATH" in os.environ:
+        remaining = [
+            entry for entry in os.environ["PYTHONPATH"].split(os.pathsep) if not owned(entry)
+        ]
+        if remaining:
+            os.environ["PYTHONPATH"] = os.pathsep.join(remaining)
+        else:
+            del os.environ["PYTHONPATH"]
+    return True
+
+
 def install():
     repository = Path(__file__).resolve().parents[3]
     if not is_verifier_invocation(sys.argv, repository):
+        prune_loader_search_path()
         return False
     original = json.JSONEncoder.default
     if getattr(original, "_air_calendar_slice_compat", False):
