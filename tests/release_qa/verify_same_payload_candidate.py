@@ -22,10 +22,12 @@ QA_FILES = frozenset(
         ".github/workflows/verify-native-5-candidate.yml",
         "tests/release_qa/native_capture_diagnostics.py",
         "tests/release_qa/native_diagnostic_smoke.py",
+        "tests/release_qa/native_modal_owner_adapter.py",
         "tests/release_qa/verify_same_payload_candidate.py",
         "tests/release_qa/native-candidate-5.0.0.json",
         "tests/release_qa/test_native_capture_diagnostics.py",
         "tests/release_qa/test_same_payload_candidate.py",
+        "tests/release_qa/test_native_modal_owner_adapter.py",
     }
 )
 REQUIRED_QA_HASHES = frozenset(
@@ -40,6 +42,7 @@ REQUIRED_QA_HASHES = frozenset(
         "tests/release_qa/native_release_smoke_adapter.py",
         "tests/release_qa/native_capture_diagnostics.py",
         "tests/release_qa/native_diagnostic_smoke.py",
+        "tests/release_qa/native_modal_owner_adapter.py",
         "tests/release_qa/verify_same_payload_candidate.py",
     }
 )
@@ -48,6 +51,21 @@ REQUIRED_QA_HASHES = frozenset(
 def canonical_digest(value):
     data = json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8", errors="strict")
     return hashlib.sha256(data).hexdigest()
+
+
+def validate_policy_digests(policy):
+    digests = {
+        "product_inputs_sha256": policy["product_inputs_sha256"],
+        "payload_manifest_sha256": policy["payload_manifest_sha256"],
+    }
+    digests.update(
+        (f"artifacts.{role}.sha256", artifact["sha256"])
+        for role, artifact in policy["artifacts"].items()
+    )
+    digests.update((f"qa_sha256.{name}", value) for name, value in policy["qa_sha256"].items())
+    for name, value in digests.items():
+        if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+            raise ValueError(f"Invalid SHA256 policy pin: {name}")
 
 
 def git_bytes(root, *arguments):
@@ -60,7 +78,9 @@ def read_commit_inputs(root, commit, input_hasher):
         raise ValueError("Reference commit must be a full SHA")
     archive = git_bytes(root, "archive", "--format=zip", commit)
     with tempfile.TemporaryDirectory(prefix="air-candidate-reference-") as name:
-        directory = Path(name)
+        # The original escape guard compares resolved files with this root.
+        # Windows TEMP may use an 8.3 alias, so canonicalize the root first.
+        directory = Path(name).resolve()
         with zipfile.ZipFile(io.BytesIO(archive)) as package:
             for member in package.infolist():
                 name = member.orig_filename
@@ -137,6 +157,7 @@ def verify_checkout(root, policy, qa_commit, original, input_hasher):
 
 
 def verify_and_download(root, policy, qa_commit, evidence, payload, original, input_hasher):
+    validate_policy_digests(policy)
     result = verify_checkout(root, policy, qa_commit, original, input_hasher)
     opener = urllib.request.build_opener(original.SafeRedirect())
     metadata = {}
@@ -238,6 +259,7 @@ def main(argv=None):
         else "payload-after-native.json"
     )
     try:
+        validate_policy_digests(policy)
         if args.operation == "prepare":
             result = verify_and_download(
                 root,

@@ -174,8 +174,10 @@ def test_diagnostic_entrypoint_delegates_original_six_cycles():
         encoding="utf-8", errors="strict"
     )
     assert "return native_release_smoke.main(argv)" in source
+    compact = "".join(source.split())
     assert (
-        "install_adapter(native_release_smoke), install_diagnostics(native_release_smoke)" in source
+        "install_adapter(native_release_smoke),install_owner_adapter(native_release_smoke),install_diagnostics(native_release_smoke)"
+        in compact
     )
     for forbidden in (
         "SetForegroundWindow",
