@@ -3,7 +3,7 @@
 
   const fallbackConfig = {
     appVersion: "5.0.2",
-    storeReleaseStatus: "submission_pending",
+    storeReleaseStatus: "published",
     requestBoardApi: "https://air-calendar-requests.kimhj.chatgpt.site",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
