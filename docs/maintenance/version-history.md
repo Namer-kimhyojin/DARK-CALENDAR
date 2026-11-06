@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.0.2 | 2026-11-07T03:24:59.551839+09:00 | change | Restore published 5.0.2 release checklist with observed Store and installation evidence | `release-5-0-2-checklist-20261107` |
 | 5.0.2 | 2026-11-07T03:15:27.135179+09:00 | change | Store 5.0.2 게시 확인 및 홈페이지 심사 대기 안내 해제 | `store-5-0-2-publication-20261107` |
 | 5.0.2 | 2026-11-06T07:19:48.326311+09:00 | change | 실제 GitHub 5.0.2 공개 및 Store33 심사 제출 관찰에 맞춰 홈페이지4언어·소스제공URL·마지막공개메타데이터를 갱신하고 가격·이벤트·이미지·제품718입력 보존 | `publication-5.0.2-store33-metadata-20261106` |
 | 5.0.2 | 2026-11-06T06:59:22.708713+09:00 | change | 로컬 CDN 연결 제한에 대응해 고정 릴리스 6자산을 격리 CI에서 GET 재다운로드하고 draft/public 바이트와 공개 무인증 가시성을 검증하는 QA 보완 | `release-5.0.2-asset-readback-qa-20261106` |
