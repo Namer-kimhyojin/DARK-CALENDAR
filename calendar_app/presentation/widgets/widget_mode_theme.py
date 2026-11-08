@@ -12,31 +12,26 @@ def main_widget_mode_tokens(settings=None) -> dict[str, str]:
     ui = get_ui_tokens(settings, snapshot=snapshot)
     palette = snapshot.ui_palette
     tokens = dict(ui)
-    # Geometry has no dependency on modal presets or expert dialog color overrides.
-    shape = snapshot.shape_tokens
-    surface = int(shape.get("panel_surface_radius", 14))
-    item = int(shape.get("panel_item_radius", 10))
-    toolbar = int(shape.get("panel_toolbar_button_radius", 8))
-    switch = int(shape.get("panel_mode_switch_radius", 12))
-    menu = int(shape.get("panel_menu_radius", 10))
-    menu_item = int(shape.get("panel_menu_item_radius", 8))
+    # Workspace cards have their own compact shape; registered skin overrides
+    # remain independent of the main calendar's deliberately square panels.
+    surface, item, toolbar, switch, menu, menu_item = 10, 8, 8, 8, 10, 8
     geometry = {
-        "launcher_radius": surface + 8,
-        "launcher_button_radius": item + 6,
-        "widget_surface_radius": surface + 2,
-        "widget_header_radius": max(0, surface - 4),
-        "widget_control_radius": toolbar + 2,
-        "widget_entry_radius": item + 2,
-        "widget_secondary_radius": toolbar + 2,
-        "widget_input_radius": item + 2,
-        "widget_submit_radius": toolbar + 3,
-        "widget_chip_radius": max(0, switch - 2),
-        "widget_summary_radius": surface,
-        "widget_menu_radius": menu + 4,
-        "widget_menu_item_radius": menu_item + 2,
+        "launcher_radius": surface,
+        "launcher_button_radius": item,
+        "widget_surface_radius": surface,
+        "widget_header_radius": max(0, surface - 2),
+        "widget_control_radius": toolbar,
+        "widget_entry_radius": item,
+        "widget_secondary_radius": toolbar,
+        "widget_input_radius": item,
+        "widget_submit_radius": toolbar,
+        "widget_chip_radius": switch,
+        "widget_summary_radius": item,
+        "widget_menu_radius": menu,
+        "widget_menu_item_radius": menu_item,
         "widget_calendar_nav_radius": toolbar,
-        "widget_calendar_cell_radius": max(item, toolbar + 2),
-        "widget_calendar_today_radius": max(item + 1, toolbar + 3),
+        "widget_calendar_cell_radius": min(8, max(item, toolbar)),
+        "widget_calendar_today_radius": min(8, max(item, toolbar)),
     }
     tokens.update({key: str(value) for key, value in geometry.items()})
     aliases = {

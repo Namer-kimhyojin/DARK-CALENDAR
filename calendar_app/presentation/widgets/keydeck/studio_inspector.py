@@ -480,17 +480,17 @@ class BeatmakerControls(QWidget):
         self.preview_button.setObjectName("ghost_btn")
         self.preview_button.setAutoDefault(False)
         self.preview_button.clicked.connect(controller.preview_beatmaker_pad)
-        self.performance_button = QPushButton(t("beatmaker.performance", "연주·녹음"), self)
-        self.performance_button.setObjectName("ghost_btn")
-        self.performance_button.setAutoDefault(False)
-        self.performance_button.clicked.connect(controller.open_beatmaker_performance)
-        self.performance_button.setToolTip(
-            t("beatmaker.performance_tip", "키보드 연주 · 녹음 · 반복 재생 전용 화면 열기")
-        )
-        self.looper_button = QPushButton(t("beatmaker.looper.open", "루프덱 · 4트랙"), self)
+        self.looper_button = QPushButton(t("loop_mixer.open", "루프 믹서 위젯 열기"), self)
         self.looper_button.setObjectName("primary_btn")
         self.looper_button.setAutoDefault(False)
-        self.looper_button.clicked.connect(controller.open_beatmaker_looper)
+        self.looper_button.clicked.connect(controller.open_loop_mixer)
+        self.looper_button.setToolTip(
+            t(
+                "loop_mixer.open_hint",
+                "여러 키덱과 마이크를 독립 루프 믹서에서 함께 녹음합니다.",
+            )
+        )
+        self.performance_button = self.looper_button  # Compatibility for existing controllers.
         if compact:
             self.kit_combo.setMaximumWidth(260)
             self.bank_combo.setMaximumWidth(150)
@@ -498,7 +498,6 @@ class BeatmakerControls(QWidget):
             row.addWidget(self.bank_combo)
             row.addStretch()
             row.addWidget(self.preview_button)
-            row.addWidget(self.performance_button)
             row.addWidget(self.looper_button)
             layout.addLayout(row)
         else:
@@ -507,7 +506,6 @@ class BeatmakerControls(QWidget):
             form.addRow(t("beatmaker.bank", "연주 종류"), self.bank_combo)
             layout.addLayout(form)
             layout.addWidget(self.preview_button)
-            layout.addWidget(self.performance_button)
             layout.addWidget(self.looper_button)
         self.hint = _hint(
             t(

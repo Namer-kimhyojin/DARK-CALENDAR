@@ -1674,6 +1674,14 @@ def _dialog_settings(dialog, settings=None):
         return settings
     owner = dialog
     while owner is not None:
+        draft_profile = getattr(owner, "_dc_chrome_settings", None)
+        if all(
+            callable(getattr(draft_profile, method, None))
+            for method in ("value", "contains", "allKeys")
+        ):
+            # Appearance settings can expose a read-only draft. Nested selectors
+            # must preview that draft without reading or writing the saved theme.
+            return draft_profile
         candidate = getattr(owner, "settings", None)
         if isinstance(candidate, _QSettingsType):
             return candidate

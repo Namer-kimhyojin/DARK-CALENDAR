@@ -8,19 +8,20 @@ import re
 from PyQt6.QtCore import QEvent, QObject, QSettings, Qt, QTimer
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
+    QBoxLayout,
     QCheckBox,
     QColorDialog,
     QComboBox,
     QDialog,
     QFormLayout,
     QFrame,
-    QGridLayout,
-    QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
     QListWidget,
+    QListWidgetItem,
+    QMenu,
     QMessageBox,
     QPushButton,
     QRadioButton,
@@ -54,6 +55,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     set_dialog_token_overrides,
 )
 from calendar_app.shared.color_utils import parse_css_alpha_to_unit
+from calendar_app.shared.icon_map import ICON, icon
 from calendar_app.shared.theme_snapshot import get_dialog_metric_bounds
 
 _RGBA_RE = re.compile(
@@ -376,7 +378,9 @@ def _color_hex(value: str | None, fallback: str) -> str:
 
 def _rgba(color: QColor, alpha: int) -> str:
     a = max(0, min(255, int(alpha)))
-    return f"rgba({color.red()}, {color.green()}, {color.blue()}, {a})"
+    # CSS 1 is opaque, but a QColor alpha byte of 1 is almost transparent.
+    value = "0.0039215686" if a == 1 else str(a)
+    return f"rgba({color.red()}, {color.green()}, {color.blue()}, {value})"
 
 
 def _blend(base: QColor, mix: QColor, ratio: float) -> QColor:
@@ -866,14 +870,14 @@ def _normalize_color(value: str | None) -> str | None:
             b = max(0, min(255, int(match.group(3))))
             a = parse_css_alpha_to_unit(match.group(4))
             a_i = int(round(a * 255))
-            return f"rgba({r}, {g}, {b}, {a_i})"
+            return _rgba(QColor(r, g, b), a_i)
         except Exception:
             return None
 
     q = QColor(raw)
     if q.isValid():
         if q.alpha() < 255:
-            return f"rgba({q.red()}, {q.green()}, {q.blue()}, {q.alpha()})"
+            return _rgba(q, q.alpha())
         return q.name(QColor.NameFormat.HexRgb)
     return None
 
@@ -884,11 +888,18 @@ def _fallback_token_label(key: str) -> str:
 
 def _to_qcolor(color_text: str | None, fallback: str = "#4da6ff") -> QColor:
     normalized = _normalize_color(color_text)
-    if not normalized or normalized == "transparent":
+    if normalized == "transparent":
+        return QColor(Qt.GlobalColor.transparent)
+    if not normalized:
         return QColor(fallback)
     match = _RGBA_RE.match(normalized)
     if match:
-        return QColor(int(match.group(1)), int(match.group(2)), int(match.group(3)))
+        return QColor(
+            int(match.group(1)),
+            int(match.group(2)),
+            int(match.group(3)),
+            round(parse_css_alpha_to_unit(match.group(4)) * 255),
+        )
     q = QColor(normalized)
     return q if q.isValid() else QColor(fallback)
 
@@ -907,6 +918,57 @@ def _collect_grouped_keys(
     if rest:
         out.append(("기타", rest))
     return out
+
+
+_RECOMMENDED_COLORS = frozenset(
+    {
+        "accent",
+        "surface_bg",
+        "surface_alt",
+        "surface_item",
+        "text_primary",
+        "text_secondary",
+        "border",
+        "button_primary_bg",
+        "button_primary_text",
+        "button_base_bg",
+        "button_base_text",
+        "placeholder_text",
+        "check_checked_bg",
+        "list_selected_bg",
+        "list_selected_text",
+        "table_header_bg",
+        "table_header_text",
+    }
+)
+_RECOMMENDED_METRICS = frozenset(
+    {
+        "base_font_pt",
+        "title_font_pt",
+        "field_height",
+        "field_radius",
+        "button_height",
+        "button_min_width",
+        "button_radius",
+        "list_item_padding_y",
+        "list_radius",
+        "tab_padding_y",
+        "checkbox_indicator_size",
+    }
+)
+
+
+def _control_category(key: str, *, metric: bool = False) -> str:
+    if key.startswith(("button_", "toolbutton_")):
+        return "buttons"
+    if key.startswith(("field_", "textedit_", "check", "radio")) or key in {
+        "surface_item",
+        "placeholder_text",
+    }:
+        return "fields"
+    if key.startswith(("list_", "table_")):
+        return "lists"
+    return "appearance"
 
 
 class WheelBlocker(QObject):
@@ -998,6 +1060,48 @@ def _preview_variant_stylesheet(tokens=None, metrics=None) -> str:
     )
 
 
+class _TokenDraftSettings:
+    """Keep normalizing readers' writes in memory until the editor is accepted."""
+
+    def __init__(self, source):
+        self.source = source
+        self._values = {}
+        self._removed = set()
+
+    def value(self, key, default=None, type=None):  # noqa: A002
+        if key in self._removed:
+            return default
+        if key not in self._values:
+            if type is not None:
+                return self.source.value(key, default, type=type)
+            return self.source.value(key, default)
+        value = self._values[key]
+        if type is bool and isinstance(value, str):
+            return value.strip().lower() not in {"", "0", "false", "no", "off"}
+        return type(value) if type is not None and value is not None else value
+
+    def contains(self, key):
+        if key in self._removed:
+            return False
+        if key in self._values:
+            return True
+        contains = getattr(self.source, "contains", None)
+        return contains(key) if callable(contains) else self.source.value(key, None) is not None
+
+    def allKeys(self):  # noqa: N802
+        method = getattr(self.source, "allKeys", None)
+        original = set(method()) if callable(method) else set()
+        return sorted((original | self._values.keys()) - self._removed)
+
+    def setValue(self, key, value):  # noqa: N802
+        self._removed.discard(key)
+        self._values[key] = value
+
+    def remove(self, key):
+        self._values.pop(key, None)
+        self._removed.add(key)
+
+
 class DialogTokenEditorDialog(QDialog):
     def __init__(
         self,
@@ -1014,15 +1118,22 @@ class DialogTokenEditorDialog(QDialog):
     ):
         super().__init__(parent)
         self._settings = settings if settings is not None else getattr(parent, "settings", None)
+        source = (
+            self._settings
+            if self._settings is not None
+            else QSettings("kimhyojin", "Dark Calendar")
+        )
+        self._read_settings = _TokenDraftSettings(source)
+        self._dc_chrome_settings = self._read_settings
         apply_dialog_title(self, t("dialog.token_editor.title", "세부 모양 조정"))
         apply_common_dialog_style(
             self,
-            minimum_width=1080,
+            minimum_width=760,
             size=(1200, 820),
             theme_color=theme_color,
             text_theme=text_theme,
             panel_base_color=panel_base_color,
-            settings=self._settings,
+            settings=self._read_settings,
         )
         self.setModal(True)
 
@@ -1040,7 +1151,7 @@ class DialogTokenEditorDialog(QDialog):
                 text_theme=text_theme,
                 panel_base_color=panel_base_color,
                 apply_overrides=False,
-                settings=self._settings,
+                settings=self._read_settings,
             )
         )
         if initial_color_overrides is None:
@@ -1049,24 +1160,24 @@ class DialogTokenEditorDialog(QDialog):
                 text_theme=text_theme,
                 panel_base_color=panel_base_color,
                 apply_overrides=True,
-                settings=self._settings,
+                settings=self._read_settings,
             )
         else:
             self._current_tokens = dict(self._default_tokens)
             self._current_tokens.update(initial_color_overrides)
         self._default_metrics = get_dialog_metric_tokens(
-            apply_overrides=False, settings=self._settings
+            apply_overrides=False, settings=self._read_settings
         )
-        self._metric_bounds = get_dialog_metric_bounds(self._settings)
+        self._metric_bounds = get_dialog_metric_bounds(self._read_settings)
         self._original_metric_overrides = dict(
-            get_dialog_metric_overrides(settings=self._settings)
+            get_dialog_metric_overrides(settings=self._read_settings)
             if initial_metric_overrides is None
             else initial_metric_overrides
         )
         self._metric_reset_keys: set[str] = set()
         if initial_metric_overrides is None:
             self._current_metrics = get_dialog_metric_tokens(
-                apply_overrides=True, settings=self._settings
+                apply_overrides=True, settings=self._read_settings
             )
         else:
             self._current_metrics = dict(self._default_metrics)
@@ -1074,12 +1185,15 @@ class DialogTokenEditorDialog(QDialog):
         self._style_bundle = _dialog_token_editor_style_bundle(
             self._current_tokens, self._current_metrics
         )
-        self._style_bundle = _dialog_token_editor_style_bundle(
-            self._current_tokens, self._current_metrics
-        )
 
         self._wheel_blocker = WheelBlocker(self)
 
+        self._color_rows: dict[str, QFrame] = {}
+        self._metric_rows: dict[str, QFrame] = {}
+        self._search_query = ""
+        self._responsive_mode = None
+        self._color_category = "appearance"
+        self._metric_category = "metrics"
         self._color_edits: dict[str, QLineEdit] = {}
         self._color_swatches: dict[str, QLabel] = {}
         self._metric_spins: dict[str, QSpinBox] = {}
@@ -1098,369 +1212,449 @@ class DialogTokenEditorDialog(QDialog):
         root.setContentsMargins(16, 12, 16, 12)
         root.setSpacing(8)
 
-        desc = QLabel(
-            t(
-                "dialog.token_editor.desc",
-                "프리셋으로 세부 모양을 조정하고 오른쪽에서 결과를 확인하세요. 개별 값은 전문가 보기에서 직접 바꿀 수 있습니다.",
-            )
-        )
+        heading = QHBoxLayout()
+        desc = QLabel(t("dialog.token_editor.desc", "필요한 항목을 찾아 색상과 간격을 조정하세요."))
         desc.setWordWrap(True)
         desc.setStyleSheet(self._style_bundle["desc"])
-        root.addWidget(desc)
-
+        heading.addWidget(desc, 1)
         self.expert_mode_check = QCheckBox(
             t("dialog.token_editor.expert_mode", "개별 값 직접 조정 (전문가)"),
         )
         self.expert_mode_check.setToolTip(
             t(
-                "dialog.token_editor.expert_mode_tip",
-                "색상·크기·간격의 내부 값을 직접 편집합니다.",
+                "dialog.token_editor.expert_help",
+                "전문가 보기에서는 모든 내부 값을 조정할 수 있습니다.",
             )
         )
-        self.expert_mode_check.setAccessibleName(self.expert_mode_check.text())
-        root.addWidget(self.expert_mode_check)
+        heading.addWidget(self.expert_mode_check)
+        self.file_button = QToolButton()
+        self.file_button.setText(t("dialog.token_editor.file_tools", "파일"))
+        self.file_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.file_menu = QMenu(self.file_button)
+        self.export_btn = self.file_menu.addAction(
+            t("dialog.token_editor.export", "JSON 내보내기"), self._export_tokens
+        )
+        self.import_btn = self.file_menu.addAction(
+            t("dialog.token_editor.import", "JSON 가져오기"), self._import_tokens
+        )
+        self.file_button.setMenu(self.file_menu)
+        heading.addWidget(self.file_button)
+        root.addLayout(heading)
 
-        # 프리셋 콤보/버튼/노트는 각 탭 내부(_build_color_tab/_build_metric_tab)에 배치.
-        # 여기서는 콤보박스/노트 위젯만 미리 생성해 두고 탭 빌더에서 레이아웃에 삽입한다.
         self.color_preset_combo = QComboBox()
         self.preset_mode_all = QRadioButton(t("dialog.token_editor.mode_all", "모두"))
         self.preset_mode_dark = QRadioButton(t("dialog.token_editor.mode_dark", "다크"))
         self.preset_mode_light = QRadioButton(t("dialog.token_editor.mode_light", "라이트"))
-
-        # Auto-select mode based on current settings
-        settings = (
-            self._settings
-            if self._settings is not None
-            else QSettings("kimhyojin", "Dark Calendar")
-        )
+        settings = self._read_settings
         text_theme = str(self._text_theme or settings.value("text_theme", "dark")).lower()
-        if text_theme == "light":
-            self.preset_mode_light.setChecked(True)
-        else:
-            self.preset_mode_dark.setChecked(True)
-
-        self.preset_mode_all.toggled.connect(self._refresh_color_preset_list)
-        self.preset_mode_dark.toggled.connect(self._refresh_color_preset_list)
-        self.preset_mode_light.toggled.connect(self._refresh_color_preset_list)
-
+        (self.preset_mode_light if text_theme == "light" else self.preset_mode_dark).setChecked(
+            True
+        )
+        for button in (self.preset_mode_all, self.preset_mode_dark, self.preset_mode_light):
+            button.toggled.connect(self._refresh_color_preset_list)
         self.color_preset_note = QLabel("")
         self.color_preset_note.setWordWrap(True)
         self.color_preset_note.setProperty("role", "dialogSubtitle")
         self.color_preset_combo.currentTextChanged.connect(self._on_color_preset_changed)
-
         self.metric_preset_combo = QComboBox()
         self.metric_preset_combo.addItems(list(_METRIC_PRESETS.keys()))
         self.metric_preset_note = QLabel("")
         self.metric_preset_note.setWordWrap(True)
         self.metric_preset_note.setProperty("role", "dialogSubtitle")
         self.metric_preset_combo.currentTextChanged.connect(self._on_metric_preset_changed)
+        for combo in (self.color_preset_combo, self.metric_preset_combo):
+            combo.installEventFilter(self._wheel_blocker)
 
-        main_row = QHBoxLayout()
-        main_row.setSpacing(12)
-        root.addLayout(main_row, 1)
+        self._main_layout = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._main_layout.setSpacing(12)
+        root.addLayout(self._main_layout, 1)
+        self.editor_tabs = QTabWidget()
+        self.editor_tabs.setObjectName("tokenEditorTabs")
+        self.editor_tabs.setMinimumWidth(0)
+        self.editor_tabs.addTab(self._build_color_tab(), t("dialog.token_editor.tab_color", "색상"))
+        self.editor_tabs.addTab(
+            self._build_metric_tab(), t("dialog.token_editor.tab_metric", "크기·간격")
+        )
+        self._main_layout.addWidget(self.editor_tabs, 3)
 
-        tabs = QTabWidget()
-        tabs.addTab(self._build_color_tab(), t("dialog.token_editor.tab_color", "색상 토큰"))
-        tabs.addTab(self._build_metric_tab(), t("dialog.token_editor.tab_metric", "크기/간격 토큰"))
-        self.expert_mode_check.toggled.connect(self._set_expert_mode)
-        self._set_expert_mode(False)
-
-        # 탭 빌드 후 시그널 초기 실행
-        self._refresh_color_preset_list()
-        self._on_metric_preset_changed(self.metric_preset_combo.currentText())
-        main_row.addWidget(tabs, 1)
-
-        preview_wrap = QFrame()
-        preview_wrap.setObjectName("tokenPreviewWrap")
-        preview_wrap.setStyleSheet(self._style_bundle["preview_wrap"])
-        preview_lay = QVBoxLayout(preview_wrap)
-        preview_lay.setContentsMargins(8, 8, 8, 8)
+        self.preview_wrap = QFrame()
+        self.preview_wrap.setObjectName("tokenPreviewWrap")
+        self.preview_wrap.setStyleSheet(self._style_bundle["preview_wrap"])
+        self.preview_wrap.setMinimumWidth(0)
+        preview_lay = QVBoxLayout(self.preview_wrap)
+        preview_lay.setContentsMargins(12, 10, 12, 10)
         preview_lay.setSpacing(8)
         preview_caption = QLabel(t("dialog.token_editor.preview_title", "실시간 미리보기"))
         preview_caption.setProperty("role", "dialogTitle")
         preview_lay.addWidget(preview_caption)
         self.preview_root = self._build_preview_widget()
-        preview_lay.addWidget(self.preview_root, 1)
-        preview_wrap.setMinimumWidth(430)
-        main_row.addWidget(preview_wrap, 1)
+        self.preview_scroll = QScrollArea()
+        self.preview_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.preview_scroll.setWidgetResizable(True)
+        self.preview_scroll.viewport().setAutoFillBackground(False)
+        self.preview_scroll.setWidget(self.preview_root)
+        preview_lay.addWidget(self.preview_scroll, 1)
+        self._main_layout.addWidget(self.preview_wrap, 2)
 
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.HLine)
-        root.addWidget(sep)
-
-        footer_row = QHBoxLayout()
-        footer_row.setSpacing(10)
         self.feedback_label = QLabel("")
         self.feedback_label.setWordWrap(True)
         self.feedback_label.setStyleSheet(self._style_bundle["feedback_info"])
         self.feedback_label.setVisible(False)
-        footer_row.addWidget(self.feedback_label, 1)
-
-        btn_row = QHBoxLayout()
+        root.addWidget(self.feedback_label)
+        footer = QHBoxLayout()
+        footer.setSpacing(10)
         self.reset_all_btn = QPushButton(t("dialog.token_editor.reset_all", "전체 기본값 복원"))
         self.reset_all_btn.setObjectName("danger_btn")
+        self.change_summary = QLabel()
+        self.change_summary.setProperty("role", "dialogSubtitle")
         self.cancel_btn = QPushButton(t("dialog.common.cancel", "취소"))
         self.cancel_btn.setObjectName("ghost_btn")
         self.apply_btn = QPushButton(t("dialog.common.apply", "적용"))
         self.apply_btn.setObjectName("primary_btn")
-
+        for button in (self.reset_all_btn, self.cancel_btn, self.apply_btn):
+            button.setAutoDefault(False)
         self.reset_all_btn.clicked.connect(self._reset_all)
         self.cancel_btn.clicked.connect(self.reject)
         self.apply_btn.clicked.connect(self._apply)
+        footer.addWidget(self.reset_all_btn)
+        footer.addWidget(self.change_summary, 1)
+        footer.addWidget(self.cancel_btn)
+        footer.addWidget(self.apply_btn)
+        root.addLayout(footer)
 
-        btn_row.addWidget(self.reset_all_btn)
-        btn_row.addStretch(1)
-        btn_row.addWidget(self.cancel_btn)
-        btn_row.addWidget(self.apply_btn)
-        footer_row.addLayout(btn_row, 1)
-        root.addLayout(footer_row)
-
+        self._opening_colors, _ = self._collect_color_overrides(diff_only=False)
+        self._opening_metric_overrides = self._collect_metric_overrides(diff_only=True)
+        self.expert_mode_check.toggled.connect(self._set_expert_mode)
+        self._set_expert_mode(False)
+        self._refresh_color_preset_list()
+        self._on_metric_preset_changed(self.metric_preset_combo.currentText())
         self._refresh_preview(force=True)
+        self._update_responsive_layout()
+
+    def _build_control_browser(self, *, metric: bool):
+        browser = QWidget()
+        layout = QVBoxLayout(browser)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        search = QLineEdit()
+        search.setClearButtonEnabled(True)
+        search.setPlaceholderText(
+            t("dialog.token_editor.search_placeholder", "이름 또는 내부 키로 검색")
+        )
+        search.setAccessibleName(t("dialog.token_editor.search_label", "조정 항목 검색"))
+        search.textChanged.connect(lambda text: self._set_search_query(text, metric=metric))
+        layout.addWidget(search)
+        row = QHBoxLayout()
+        row.setSpacing(10)
+        layout.addLayout(row, 1)
+        navigation = QListWidget()
+        navigation.setObjectName("tokenCategoryNavigation")
+        navigation.setAccessibleName(t("dialog.token_editor.nav_title", "조정할 영역"))
+        navigation.setWordWrap(True)
+        navigation.setTextElideMode(Qt.TextElideMode.ElideNone)
+        navigation.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        navigation.setMinimumWidth(112)
+        navigation.setMaximumWidth(158)
+        for category, key, fallback in (
+            ("appearance", "group_appearance", "배경과 글자"),
+            ("buttons", "group_buttons", "버튼"),
+            ("fields", "group_fields", "입력 필드"),
+            ("lists", "group_lists", "목록과 표"),
+            ("metrics", "group_metrics", "크기·간격"),
+        ):
+            item = QListWidgetItem(t("dialog.token_editor." + key, fallback))
+            item.setData(Qt.ItemDataRole.UserRole, category)
+            navigation.addItem(item)
+        row.addWidget(navigation)
+        area = QScrollArea()
+        area.setFrameShape(QFrame.Shape.NoFrame)
+        area.setWidgetResizable(True)
+        area.viewport().setAutoFillBackground(False)
+        area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        body = QWidget()
+        body.setAutoFillBackground(False)
+        body.setMinimumWidth(0)
+        rows = QVBoxLayout(body)
+        rows.setContentsMargins(0, 0, 4, 0)
+        rows.setSpacing(8)
+        area.setWidget(body)
+        # setWidget() turns auto-fill back on; keep the editor's reading surface.
+        body.setAutoFillBackground(False)
+        row.addWidget(area, 1)
+        empty = QLabel(t("dialog.token_editor.no_results", "검색 결과가 없습니다."))
+        empty.setWordWrap(True)
+        empty.setProperty("role", "dialogSubtitle")
+        rows.addWidget(empty)
+        if metric:
+            self.metric_search_edit, self.metric_category_nav = search, navigation
+            self.metric_token_area, self._metric_empty = area, empty
+        else:
+            self.search_edit, self.category_nav = search, navigation
+            self.color_token_area, self._color_empty = area, empty
+        navigation.currentRowChanged.connect(lambda _: self._category_changed(metric=metric))
+        return browser, rows
+
+    def _row_shell(self, key: str, label_text: str):
+        row = QFrame()
+        row.setObjectName("tokenControlRow")
+        row.setProperty("role", "dialogCard")
+        layout = QVBoxLayout(row)
+        layout.setContentsMargins(8, 6, 8, 8)
+        layout.setSpacing(5)
+        label = QLabel(label_text)
+        label.setWordWrap(True)
+        label.setToolTip(key)
+        layout.addWidget(label)
+        controls = QHBoxLayout()
+        controls.setSpacing(8)
+        layout.addLayout(controls)
+        reset = QToolButton()
+        reset.setIcon(
+            icon(ICON.REFRESH, color=_to_qcolor(self._current_tokens.get("text_primary")).name())
+        )
+        reset.setToolTip(t("dialog.token_editor.reset_one", "기본값"))
+        reset.setAccessibleName(label_text + " · " + reset.toolTip())
+        return row, controls, reset
 
     def _build_color_tab(self) -> QWidget:
-        # 탭 전체 래퍼 (프리셋 바 + 스크롤 콘텐츠)
         wrapper = QWidget()
-        wrapper_lay = QVBoxLayout(wrapper)
-        wrapper_lay.setContentsMargins(0, 0, 0, 0)
-        wrapper_lay.setSpacing(0)
-        self.color_tab_layout = wrapper_lay
-
-        # ── 프리셋 바 ─────────────────────────────────────────────────────────
-        preset_bar = QFrame()
-        preset_bar.setObjectName("presetBar")
-        preset_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
-        preset_bar.setStyleSheet(self._style_bundle["preset_bar"])
-        bar_lay = QVBoxLayout(preset_bar)
-        bar_lay.setContentsMargins(10, 8, 10, 8)
-        bar_lay.setSpacing(6)
-
-        # 1행: 테마 모드 라디오 + Export/Import 버튼 (우측)
-        row1 = QHBoxLayout()
-        row1.setSpacing(6)
-        mode_label = QLabel(t("dialog.token_editor.preset_color_mode", "테마 모드:"))
-        row1.addWidget(mode_label)
-        row1.addWidget(self.preset_mode_all)
-        row1.addWidget(self.preset_mode_dark)
-        row1.addWidget(self.preset_mode_light)
-        row1.addStretch(1)
-        self.export_btn = QPushButton(t("dialog.token_editor.export", "JSON 내보내기"))
-        self.export_btn.setStyleSheet(self._style_bundle["button_ghost"])
-        self.export_btn.setFixedWidth(100)
-        self.export_btn.clicked.connect(self._export_tokens)
-        self.import_btn = QPushButton(t("dialog.token_editor.import", "JSON 가져오기"))
-        self.import_btn.setStyleSheet(self._style_bundle["button_ghost"])
-        self.import_btn.setFixedWidth(100)
-        self.import_btn.clicked.connect(self._import_tokens)
-        row1.addWidget(self.export_btn)
-        row1.addWidget(self.import_btn)
-        bar_lay.addLayout(row1)
-
-        # 2행: 프리셋 선택 콤보 + 적용 버튼
-        row2 = QHBoxLayout()
-        row2.setSpacing(6)
-        row2.addWidget(QLabel(t("dialog.token_editor.preset_color", "색상 프리셋:")))
-        row2.addWidget(self.color_preset_combo, 1)
-        color_preset_apply_btn = QPushButton(
-            t("dialog.token_editor.apply_color_preset", "프리셋 적용")
-        )
-        color_preset_apply_btn.setStyleSheet(self._style_bundle["button_secondary"])
-        color_preset_apply_btn.setFixedWidth(90)
-        color_preset_apply_btn.clicked.connect(self._apply_selected_color_preset)
-        row2.addWidget(color_preset_apply_btn)
-        bar_lay.addLayout(row2)
-
-        wrapper_lay.addWidget(preset_bar)
+        layout = QVBoxLayout(wrapper)
+        layout.setContentsMargins(6, 8, 6, 6)
+        layout.setSpacing(8)
+        self.color_tab_layout = layout
+        bar = QFrame()
+        bar.setObjectName("presetBar")
+        bar.setStyleSheet(self._style_bundle["preset_bar"])
+        bar_layout = QVBoxLayout(bar)
+        bar_layout.setContentsMargins(8, 6, 8, 6)
+        bar_layout.setSpacing(6)
+        modes = QHBoxLayout()
+        modes.addWidget(QLabel(t("dialog.token_editor.preset_filter_label", "프리셋 분류")))
+        for button in (self.preset_mode_all, self.preset_mode_dark, self.preset_mode_light):
+            modes.addWidget(button)
+        modes.addStretch(1)
+        bar_layout.addLayout(modes)
+        presets = QHBoxLayout()
+        presets.addWidget(self.color_preset_combo, 1)
+        apply_preset = QPushButton(t("dialog.token_editor.apply_color_preset", "프리셋 적용"))
+        apply_preset.setAutoDefault(False)
+        apply_preset.clicked.connect(self._apply_selected_color_preset)
+        presets.addWidget(apply_preset)
+        bar_layout.addLayout(presets)
+        layout.addWidget(bar)
         self.color_preset_note.setStyleSheet(self._style_bundle["preset_note"])
-        wrapper_lay.addWidget(self.color_preset_note)
-
-        # ── 스크롤 토큰 목록 ─────────────────────────────────────────────────
-        area = QScrollArea()
-        area.setWidgetResizable(True)
-        area.setFrameShape(QScrollArea.Shape.NoFrame)
-
-        body = QWidget()
-        body_lay = QVBoxLayout(body)
-        body_lay.setContentsMargins(4, 4, 4, 4)
-        body_lay.setSpacing(10)
-
-        for title, keys in self._grouped_color_keys:
-            box = QGroupBox(title)
-            grid = QGridLayout(box)
-            grid.setHorizontalSpacing(8)
-            grid.setVerticalSpacing(6)
-            grid.setContentsMargins(12, 14, 12, 10)
-            # col 0: 토큰명(고정), col 1: 색상값 입력(stretch), col 2: 스와치(고정), col 3: 선택버튼(고정), col 4: 기본값버튼(고정)
-            grid.setColumnStretch(1, 1)
-            grid.setColumnMinimumWidth(0, 140)
-            grid.setColumnMinimumWidth(2, 36)
-            grid.setColumnMinimumWidth(3, 66)
-            grid.setColumnMinimumWidth(4, 72)
-
-            # 헤더 행
-            for col, text in enumerate(
-                [
-                    t("dialog.token_editor.header_token", "토큰"),
-                    t("dialog.token_editor.header_value", "색상값"),
-                    t("dialog.token_editor.header_preview", "미리보기"),
-                    "",
-                    "",
-                ]
-            ):
-                lbl = QLabel(text)
-                if col == 0:
-                    lbl.setFixedWidth(140)
-                grid.addWidget(lbl, 0, col)
-
-            row = 1
+        layout.addWidget(self.color_preset_note)
+        browser, rows = self._build_control_browser(metric=False)
+        layout.addWidget(browser, 1)
+        for _title, keys in self._grouped_color_keys:
             for key in keys:
-                label = QLabel(_TOKEN_LABELS.get(key, _fallback_token_label(key)))
-                label.setToolTip(key)
-                label.setFixedWidth(140)
-                edit = QLineEdit()
+                row, controls, reset = self._row_shell(
+                    key, _TOKEN_LABELS.get(key, _fallback_token_label(key))
+                )
+                edit = QLineEdit(self._current_color(key))
+                edit.setMinimumWidth(230)
                 edit.setPlaceholderText("hex / rgba(r,g,b,a) / transparent")
-                edit.setText(self._current_color(key))
-                swatch = QLabel()
-                swatch.setFixedSize(32, 22)
-                pick_btn = QPushButton(t("dialog.token_editor.pick", "선택"))
-                pick_btn.setStyleSheet(self._style_bundle["button_secondary"])
-                pick_btn.setFixedWidth(66)
-                reset_btn = QPushButton(t("dialog.token_editor.reset_one", "기본값"))
-                reset_btn.setStyleSheet(self._style_bundle["button_ghost"])
-                reset_btn.setFixedWidth(72)
-
+                edit.setAccessibleName(_TOKEN_LABELS.get(key, key))
+                swatch = QToolButton()
+                swatch.setMinimumSize(34, 28)
+                swatch.setToolTip(t("dialog.token_editor.pick", "선택") + " · " + key)
+                swatch.setAccessibleName(swatch.toolTip())
+                swatch.clicked.connect(lambda _=False, k=key: self._pick_color(k))
+                reset.clicked.connect(lambda _=False, k=key: self._reset_color_key(k))
                 edit.textChanged.connect(lambda _text, k=key: self._on_color_changed(k))
-                pick_btn.clicked.connect(lambda _=False, k=key: self._pick_color(k))
-                reset_btn.clicked.connect(lambda _=False, k=key: self._reset_color_key(k))
-
-                grid.addWidget(label, row, 0)
-                grid.addWidget(edit, row, 1)
-                grid.addWidget(swatch, row, 2, alignment=Qt.AlignmentFlag.AlignCenter)
-                grid.addWidget(pick_btn, row, 3)
-                grid.addWidget(reset_btn, row, 4)
-
+                controls.addWidget(swatch)
+                controls.addWidget(edit, 1)
+                controls.addWidget(reset)
                 self._color_edits[key] = edit
                 self._color_swatches[key] = swatch
+                self._color_rows[key] = row
+                rows.addWidget(row)
                 self._update_color_row(key)
-                row += 1
-
-            body_lay.addWidget(box)
-
-        body_lay.addStretch(1)
-        area.setWidget(body)
-        self.color_token_area = area
-        wrapper_lay.addWidget(area, 1)
+        rows.addStretch(1)
+        self.category_nav.setCurrentRow(0)
         return wrapper
 
     def _build_metric_tab(self) -> QWidget:
-        # 탭 전체 래퍼 (프리셋 바 + 스크롤 콘텐츠)
         wrapper = QWidget()
-        wrapper_lay = QVBoxLayout(wrapper)
-        wrapper_lay.setContentsMargins(0, 0, 0, 0)
-        wrapper_lay.setSpacing(0)
-        self.metric_tab_layout = wrapper_lay
-
-        # ── 프리셋 바 ─────────────────────────────────────────────────────────
-        preset_bar = QFrame()
-        preset_bar.setObjectName("presetBar")
-        preset_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
-        preset_bar.setStyleSheet(self._style_bundle["preset_bar"])
-        bar_lay = QHBoxLayout(preset_bar)
-        bar_lay.setContentsMargins(8, 6, 8, 6)
-        bar_lay.setSpacing(8)
-
-        bar_lay.addWidget(QLabel(t("dialog.token_editor.preset_metric", "프리셋")))
-        bar_lay.addWidget(self.metric_preset_combo, 1)
-        metric_preset_apply_btn = QPushButton(t("dialog.token_editor.apply_metric_preset", "적용"))
-        metric_preset_apply_btn.setStyleSheet(self._style_bundle["button_secondary"])
-        metric_preset_apply_btn.setFixedWidth(72)
-        metric_preset_apply_btn.clicked.connect(self._apply_selected_metric_preset)
-        bar_lay.addWidget(metric_preset_apply_btn)
-        wrapper_lay.addWidget(preset_bar)
+        layout = QVBoxLayout(wrapper)
+        layout.setContentsMargins(6, 8, 6, 6)
+        layout.setSpacing(8)
+        self.metric_tab_layout = layout
+        bar = QFrame()
+        bar.setObjectName("presetBar")
+        bar.setStyleSheet(self._style_bundle["preset_bar"])
+        presets = QHBoxLayout(bar)
+        presets.setContentsMargins(8, 6, 8, 6)
+        presets.addWidget(self.metric_preset_combo, 1)
+        button = QPushButton(t("dialog.token_editor.apply_metric_preset", "적용"))
+        button.setAutoDefault(False)
+        button.clicked.connect(self._apply_selected_metric_preset)
+        presets.addWidget(button)
+        layout.addWidget(bar)
         self.metric_preset_note.setStyleSheet(self._style_bundle["preset_note"])
-        wrapper_lay.addWidget(self.metric_preset_note)
-
-        # ── 스크롤 토큰 목록 ─────────────────────────────────────────────────
-        area = QScrollArea()
-        area.setWidgetResizable(True)
-        area.setFrameShape(QScrollArea.Shape.NoFrame)
-
-        body = QWidget()
-        body_lay = QVBoxLayout(body)
-        body_lay.setContentsMargins(4, 4, 4, 4)
-        body_lay.setSpacing(10)
-
-        for title, keys in self._grouped_metric_keys:
-            box = QGroupBox(title)
-            grid = QGridLayout(box)
-            grid.setHorizontalSpacing(10)
-            grid.setVerticalSpacing(6)
-            grid.setContentsMargins(12, 14, 12, 10)
-            # col 0: 항목명(고정), col 1: 스핀박스(고정), col 2: 기본값버튼(고정), col 3: 힌트(stretch)
-            grid.setColumnMinimumWidth(0, 160)
-            grid.setColumnMinimumWidth(1, 80)
-            grid.setColumnMinimumWidth(2, 72)
-            grid.setColumnStretch(3, 1)
-
-            for row, key in enumerate(keys):
+        layout.addWidget(self.metric_preset_note)
+        browser, rows = self._build_control_browser(metric=True)
+        layout.addWidget(browser, 1)
+        for _title, keys in self._grouped_metric_keys:
+            for key in keys:
                 default = int(self._default_metrics[key])
-                label = QLabel(_METRIC_LABELS.get(key, _fallback_token_label(key)))
-                label.setToolTip(key)
-                label.setFixedWidth(160)
-
+                text = _METRIC_LABELS.get(key, _fallback_token_label(key))
+                row, controls, reset = self._row_shell(key, text)
                 spin = QSpinBox()
                 spin.installEventFilter(self._wheel_blocker)
                 spin.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-                spin.setFixedWidth(80)
-                lo, hi = self._metric_bounds.get(key, (0, 999))
-                spin.setRange(lo, hi)
+                spin.setAccessibleName(text)
+                spin.setSuffix(" px")
+                spin.setRange(*self._metric_bounds.get(key, (0, 999)))
                 spin.setValue(int(self._current_metrics.get(key, default)))
                 spin.valueChanged.connect(self._schedule_preview_refresh)
-
-                reset_btn = QPushButton(t("dialog.token_editor.reset_one", "기본값"))
-                reset_btn.setStyleSheet(self._style_bundle["button_ghost"])
-                reset_btn.setFixedWidth(72)
-                reset_btn.clicked.connect(lambda _=False, k=key: self._reset_metric_key(k))
-
-                hint = QLabel(f"기본: {default}")
-                hint.setStyleSheet(self._style_bundle["metric_hint"])
-                hint.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-
-                grid.addWidget(label, row, 0)
-                grid.addWidget(spin, row, 1)
-                grid.addWidget(reset_btn, row, 2)
-                grid.addWidget(hint, row, 3)
+                reset.clicked.connect(lambda _=False, k=key: self._reset_metric_key(k))
+                controls.addWidget(spin, 1)
+                controls.addWidget(reset)
                 self._metric_spins[key] = spin
-
-            body_lay.addWidget(box)
-
-        body_lay.addStretch(1)
-        area.setWidget(body)
-        self.metric_token_area = area
-        wrapper_lay.addWidget(area, 1)
+                self._metric_rows[key] = row
+                rows.addWidget(row)
+        rows.addStretch(1)
+        self.metric_category_nav.setCurrentRow(4)
         return wrapper
 
+    def _set_search_query(self, text: str, *, metric: bool):
+        self._search_query = text.strip().casefold()
+        peer = self.search_edit if metric else getattr(self, "metric_search_edit", None)
+        if peer is not None and peer.text() != text:
+            blocked = peer.blockSignals(True)
+            peer.setText(text)
+            peer.blockSignals(blocked)
+        self._filter_control_rows()
+
+    def _category_changed(self, *, metric: bool):
+        navigation = self.metric_category_nav if metric else self.category_nav
+        item = navigation.currentItem()
+        category = item.data(Qt.ItemDataRole.UserRole) if item else "appearance"
+        if metric:
+            self._metric_category = category
+        elif category == "metrics" and self.editor_tabs.count() > 1:
+            # This is a shortcut, not an empty color category. Preserve the
+            # last color section when the user returns through the top tab.
+            self.metric_category_nav.setCurrentRow(4)
+            self.editor_tabs.setCurrentIndex(1)
+            blocked = navigation.blockSignals(True)
+            for index in range(navigation.count()):
+                if navigation.item(index).data(Qt.ItemDataRole.UserRole) == self._color_category:
+                    navigation.setCurrentRow(index)
+                    break
+            navigation.blockSignals(blocked)
+        else:
+            self._color_category = category
+        self._filter_control_rows()
+
     def _set_expert_mode(self, enabled: bool):
-        """Reveal raw token controls only when the user explicitly asks for them."""
-        for widget_name in (
-            "color_token_area",
-            "metric_token_area",
-            "export_btn",
-            "import_btn",
+        del enabled
+        self._filter_control_rows()
+
+    def _filter_control_rows(self):
+        expert = self.expert_mode_check.isChecked()
+        for metric, rows, category, recommended, labels, empty_name in (
+            (
+                False,
+                self._color_rows,
+                self._color_category,
+                _RECOMMENDED_COLORS,
+                _TOKEN_LABELS,
+                "_color_empty",
+            ),
+            (
+                True,
+                self._metric_rows,
+                self._metric_category,
+                _RECOMMENDED_METRICS,
+                _METRIC_LABELS,
+                "_metric_empty",
+            ),
         ):
-            widget = getattr(self, widget_name, None)
-            if widget is not None:
-                widget.setVisible(bool(enabled))
-        for layout_name, area_name in (
-            ("color_tab_layout", "color_token_area"),
-            ("metric_tab_layout", "metric_token_area"),
-        ):
-            layout = getattr(self, layout_name, None)
-            area = getattr(self, area_name, None)
-            if layout is not None and area is not None:
-                layout.setStretchFactor(area, 1 if enabled else 0)
+            visible = 0
+            for key, row in rows.items():
+                matches = category == "metrics" if metric else False
+                matches = (
+                    bool(self._search_query)
+                    or matches
+                    or _control_category(key, metric=metric) == category
+                )
+                text = (labels.get(key, "") + " " + key).casefold()
+                show = (
+                    matches
+                    and (expert or key in recommended)
+                    and (not self._search_query or self._search_query in text)
+                )
+                row.setVisible(show)
+                visible += int(show)
+            empty = getattr(self, empty_name, None)
+            if empty is not None:
+                empty.setVisible(visible == 0)
+
+    def _update_change_summary(self):
+        if not hasattr(self, "_opening_colors"):
+            return
+        colors, invalid = self._collect_color_overrides(diff_only=False)
+        changed = sum(
+            (_normalize_color(edit.text()) or edit.text().strip()).lower()
+            != self._opening_colors[key].lower()
+            for key, edit in self._color_edits.items()
+        )
+        metrics = self._collect_metric_overrides(diff_only=True)
+        missing = object()
+        changed += sum(
+            metrics.get(key, missing) != self._opening_metric_overrides.get(key, missing)
+            for key in metrics.keys() | self._opening_metric_overrides.keys()
+        )
+        self.change_count = changed
+        self.change_summary.setText(
+            t("dialog.token_editor.changes_count", "변경 {count}개", count=changed)
+            if changed
+            else t("dialog.token_editor.no_changes", "변경 사항 없음")
+        )
+        self.apply_btn.setEnabled(bool(changed) and invalid is None)
+
+    def _reveal_color_key(self, key):
+        self.editor_tabs.setCurrentIndex(0)
+        self.search_edit.clear()
+        if key not in _RECOMMENDED_COLORS:
+            self.expert_mode_check.setChecked(True)
+        category = _control_category(key)
+        for index in range(self.category_nav.count()):
+            if self.category_nav.item(index).data(Qt.ItemDataRole.UserRole) == category:
+                self.category_nav.setCurrentRow(index)
+                break
+        self._filter_control_rows()
+        self.color_token_area.ensureWidgetVisible(self._color_rows[key])
+        self._color_edits[key].setFocus()
+
+    def resizeEvent(self, event):  # noqa: N802
+        super().resizeEvent(event)
+        if hasattr(self, "preview_wrap"):
+            self._update_responsive_layout()
+
+    def _update_responsive_layout(self):
+        narrow = self.width() < 1060
+        if narrow == self._responsive_mode:
+            return
+        self._responsive_mode = narrow
+        self._main_layout.removeWidget(self.editor_tabs)
+        self._main_layout.removeWidget(self.preview_wrap)
+        self._main_layout.setDirection(
+            QBoxLayout.Direction.TopToBottom if narrow else QBoxLayout.Direction.LeftToRight
+        )
+        self.preview_wrap.setMaximumHeight(230 if narrow else 16777215)
+        self._main_layout.addWidget(
+            self.preview_wrap if narrow else self.editor_tabs, 2 if narrow else 3
+        )
+        self._main_layout.addWidget(
+            self.editor_tabs if narrow else self.preview_wrap, 3 if narrow else 2
+        )
 
     def _build_preview_widget(self) -> QWidget:
         root = QWidget()
+        root.setObjectName("tokenLivePreview")
         lay = QVBoxLayout(root)
         lay.setContentsMargins(6, 6, 6, 6)
         lay.setSpacing(8)
@@ -1478,11 +1672,21 @@ class DialogTokenEditorDialog(QDialog):
         lay.addWidget(subtitle)
 
         tabs = QTabWidget()
+        tabs.setObjectName("tokenPreviewTabs")
 
         tab_form = QWidget()
-        form = QFormLayout(tab_form)
+        tab_form.setObjectName("tokenPreviewPage")
+        form_page = QVBoxLayout(tab_form)
+        form_page.setContentsMargins(0, 0, 0, 0)
+        form_body = QWidget()
+        form_body.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        form_page.addWidget(form_body, 0, Qt.AlignmentFlag.AlignTop)
+        form_page.addStretch(1)
+        form = QFormLayout(form_body)
+        form.setFormAlignment(Qt.AlignmentFlag.AlignTop)
         form.setContentsMargins(8, 8, 8, 8)
-        form.setSpacing(8)
+        form.setHorizontalSpacing(10)
+        form.setVerticalSpacing(10)
         form.addRow(
             QLabel(t("dialog.token_editor.preview.title_label", "제목")),
             QLineEdit(t("dialog.token_editor.preview.title_value", "신규 업무")),
@@ -1512,6 +1716,7 @@ class DialogTokenEditorDialog(QDialog):
         tabs.addTab(tab_form, t("dialog.token_editor.preview.tab_form", "폼"))
 
         tab_buttons = QWidget()
+        tab_buttons.setObjectName("tokenPreviewPage")
         btn_lay = QVBoxLayout(tab_buttons)
         btn_lay.setContentsMargins(8, 8, 8, 8)
         btn_lay.setSpacing(8)
@@ -1562,6 +1767,7 @@ class DialogTokenEditorDialog(QDialog):
         tabs.addTab(tab_buttons, t("dialog.token_editor.preview.tab_buttons", "버튼"))
 
         tab_list = QWidget()
+        tab_list.setObjectName("tokenPreviewPage")
         list_lay = QVBoxLayout(tab_list)
         list_lay.setContentsMargins(8, 8, 8, 8)
         list_lay.setSpacing(8)
@@ -1612,6 +1818,7 @@ class DialogTokenEditorDialog(QDialog):
         edit = self._color_edits[key]
         swatch = self._color_swatches[key]
         normalized = _normalize_color(edit.text())
+        edit.setToolTip(edit.text())
         if normalized:
             edit.setStyleSheet("")
             swatch.setStyleSheet(self._style_bundle["swatch_frame"].format(fill=normalized))
@@ -1627,10 +1834,18 @@ class DialogTokenEditorDialog(QDialog):
         edit = self._color_edits[key]
         initial = _to_qcolor(edit.text(), fallback=self._default_color(key))
         chosen = QColorDialog.getColor(
-            initial, self, t("dialog.token_editor.pick_title", "색상 선택")
+            initial,
+            self,
+            t("dialog.token_editor.pick_title", "색상 선택"),
+            QColorDialog.ColorDialogOption.ShowAlphaChannel
+            | QColorDialog.ColorDialogOption.DontUseNativeDialog,
         )
         if chosen.isValid():
-            edit.setText(chosen.name(QColor.NameFormat.HexRgb))
+            edit.setText(
+                chosen.name(QColor.NameFormat.HexRgb)
+                if chosen.alpha() == 255
+                else _rgba(chosen, chosen.alpha())
+            )
 
     def _reset_color_key(self, key: str):
         self._color_edits[key].setText(self._default_color(key))
@@ -1683,6 +1898,7 @@ class DialogTokenEditorDialog(QDialog):
         spin.blockSignals(blocked)
 
     def _schedule_preview_refresh(self):
+        self._update_change_summary()
         self._preview_timer.start()
 
     def _invalid_feedback_text(self) -> str:
@@ -1692,6 +1908,7 @@ class DialogTokenEditorDialog(QDialog):
         )
 
     def _refresh_preview(self, force: bool = False):
+        self._update_change_summary()
         token_overrides, invalid_key = self._collect_color_overrides(diff_only=False)
         invalid_feedback = self._invalid_feedback_text()
         if invalid_key:
@@ -1710,10 +1927,17 @@ class DialogTokenEditorDialog(QDialog):
             theme_color=self._theme_color,
             text_theme=self._text_theme,
             panel_base_color=self._panel_base_color,
-            settings=self._settings,
+            settings=self._read_settings,
         )
+        preview_surface = preview_tokens["surface_bg"]
+        preview_text = preview_tokens["text_primary"]
         css = (
-            f"{css}\n{_preview_variant_stylesheet(tokens=preview_tokens, metrics=preview_metrics)}"
+            f"{css}\n{_preview_variant_stylesheet(tokens=preview_tokens, metrics=preview_metrics)}\n"
+            "QWidget#tokenLivePreview, QWidget#tokenPreviewPage { "
+            f"background: {preview_surface}; color: {preview_text}; "
+            "}\nQTabWidget#tokenPreviewTabs::pane { "
+            f"background: {preview_surface}; "
+            "}"
         )
         if (not force) and css == self._last_preview_css:
             return
@@ -1956,7 +2180,7 @@ class DialogTokenEditorDialog(QDialog):
                     "잘못된 색상 형식이 있습니다. 16진 색상 또는 rgba(r,g,b,a) 또는 transparent 형식으로 입력해 주세요.",
                 ),
             )
-            self._color_edits[invalid_key].setFocus()
+            self._reveal_color_key(invalid_key)
             return
 
         metric_overrides = self._collect_metric_overrides(diff_only=True)

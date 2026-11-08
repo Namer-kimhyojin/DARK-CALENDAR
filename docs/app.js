@@ -2,15 +2,15 @@
   "use strict";
 
   const fallbackConfig = {
-    appVersion: "5.0.2",
-    storeReleaseStatus: "published",
+    appVersion: "5.1.0",
+    storeReleaseStatus: "submission_pending",
     requestBoardApi: "https://air-calendar-requests.kimhj.chatgpt.site",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
     promotionKitUrl: "promo.html",
-    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.0.2",
-    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.0.2/LICENSE",
-    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.0.2/THIRD_PARTY_NOTICES.md",
+    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.1.0",
+    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.1.0/LICENSE",
+    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.1.0/THIRD_PARTY_NOTICES.md",
     eventUrl: "https://account.microsoft.com/billing/redeem?mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ",
     event: { enabled: true }
   };
@@ -657,7 +657,7 @@
     ko: {
       fiveExplore: "5.0 새 기능 보기", fiveExplorePublished: "5.0 새 기능 보기",
       heroTitle: "나의 하루,<br><em>나만의 화면.</em>",
-      fivePreviewStatus: "5.0 공개 · Store 심사 중", fivePublishedStatus: "5.0 새로운 경험",
+      fivePreviewStatus: "5.0 공개 · Store 업데이트 준비 중", fivePublishedStatus: "5.0 새로운 경험",
       fiveRealWindows: "실제 Windows 화면", fiveHeroLabel: "Air Calendar 5.0 실제 화면 미리보기",
       fiveTitle: "익숙한 조작.", fiveTitleAccent: "새로운 매일.",
       fiveLead: "일정을 적는 순간부터 위젯을 보는 순간까지, 같은 색과 같은 사용 흐름으로 이어집니다. 내 취향은 그대로 두고 필요한 순간을 더 편하게 만들었습니다.",
@@ -681,7 +681,7 @@
     en: {
       fiveExplore: "Explore what's new in 5.0", fiveExplorePublished: "Explore what's new in 5.0",
       heroTitle: "Your day.<br><em>Your space.</em>",
-      fivePreviewStatus: "5.0 released on GitHub · Store certification in progress", fivePublishedStatus: "The new 5.0 experience",
+      fivePreviewStatus: "5.0 released on GitHub · Store update preparation in progress", fivePublishedStatus: "The new 5.0 experience",
       fiveRealWindows: "Actual Windows capture", fiveHeroLabel: "Actual Air Calendar 5.0 screen preview",
       fiveTitle: "Familiar controls.", fiveTitleAccent: "A fresh day.",
       fiveLead: "From entering an event to checking your widgets, the same colours and controls carry through. Keep your personal style and make everyday actions easier.",
@@ -705,7 +705,7 @@
     ja: {
       fiveExplore: "5.0の新機能を見る", fiveExplorePublished: "5.0の新機能を見る",
       heroTitle: "毎日を、<br><em>自分らしく。</em>",
-      fivePreviewStatus: "5.0公開 · Storeで審査中", fivePublishedStatus: "新しい5.0の使い心地",
+      fivePreviewStatus: "5.0公開 · Store更新を準備中", fivePublishedStatus: "新しい5.0の使い心地",
       fiveRealWindows: "実際のWindows画面", fiveHeroLabel: "Air Calendar 5.0の実画面プレビュー",
       fiveTitle: "いつもの操作。", fiveTitleAccent: "新しい毎日。",
       fiveLead: "予定の入力からウィジェットの確認まで、同じ配色と操作でつながります。自分らしい見た目を保ちながら、日々の操作をより使いやすくしました。",
@@ -729,7 +729,7 @@
     zh: {
       fiveExplore: "探索5.0新功能", fiveExplorePublished: "探索5.0新功能",
       heroTitle: "每一天，<br><em>都合你心意。</em>",
-      fivePreviewStatus: "5.0已在GitHub发布 · Store审核中", fivePublishedStatus: "全新的5.0体验",
+      fivePreviewStatus: "5.0已在GitHub发布 · Store更新准备中", fivePublishedStatus: "全新的5.0体验",
       fiveRealWindows: "真实Windows截图", fiveHeroLabel: "Air Calendar 5.0真实界面预览",
       fiveTitle: "熟悉的操作。", fiveTitleAccent: "全新的每一天。",
       fiveLead: "从输入日程到查看小组件，配色与操作始终一致。保留个人风格，让日常使用更加顺手。",
@@ -830,10 +830,10 @@
   });
 
   const releaseAvailabilityCopy = {
-    ko: { storePending: "GitHub 5.0.2 공개 완료 · Store 심사 중", githubLatest: "최신 GitHub 배포 보기 ↗" },
-    en: { storePending: "5.0.2 released on GitHub · Store certification in progress", githubLatest: "View the latest GitHub release ↗" },
-    ja: { storePending: "5.0.2はGitHubで公開済み · Storeで審査中", githubLatest: "最新のGitHubリリースを見る ↗" },
-    zh: { storePending: "5.0.2已在GitHub发布 · Store审核中", githubLatest: "查看最新GitHub版本 ↗" }
+    ko: { storePending: "GitHub 5.1.0 공개 완료 · Store 업데이트 준비 중", githubLatest: "최신 GitHub 배포 보기 ↗" },
+    en: { storePending: "5.1.0 released on GitHub · Store update preparation in progress", githubLatest: "View the latest GitHub release ↗" },
+    ja: { storePending: "5.1.0はGitHubで公開済み · Store更新を準備中", githubLatest: "最新のGitHubリリースを見る ↗" },
+    zh: { storePending: "5.1.0已在GitHub发布 · Store更新准备中", githubLatest: "查看最新GitHub版本 ↗" }
   };
   Object.entries(releaseAvailabilityCopy).forEach(([locale, copy]) => Object.assign(translations[locale], copy));
 

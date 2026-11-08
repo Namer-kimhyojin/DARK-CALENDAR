@@ -95,21 +95,10 @@ class WindowEventsMixin:
     def _target_screen_geometry(self):
         from PyQt6.QtGui import QGuiApplication
 
-        frame = self.frameGeometry()
-        probe_points = [
-            frame.center(),
-            frame.topLeft(),
-            frame.topRight(),
-            frame.bottomLeft(),
-            frame.bottomRight(),
-        ]
-        for point in probe_points:
-            screen = QGuiApplication.screenAt(point)
-            if screen:
-                return screen.availableGeometry()
+        from calendar_app.presentation.widgets.widget_mode_geometry import best_screen_for_rect
 
-        primary = QGuiApplication.primaryScreen()
-        return primary.availableGeometry() if primary else None
+        screen = best_screen_for_rect(QGuiApplication.screens(), self.frameGeometry())
+        return screen.availableGeometry() if screen is not None else None
 
     def _apply_resize_delta(self, delta):
         rect = self.geometry()
@@ -147,6 +136,7 @@ class WindowEventsMixin:
         )
 
     def mousePressEvent(self, event):
+        self._native_window_drag = False
         if hasattr(self, "_reset_idle_timer"):
             self._reset_idle_timer()
 
@@ -162,11 +152,32 @@ class WindowEventsMixin:
             return
 
         if event.pos().y() <= TITLE_DRAG_HEIGHT:
+            self.old_pos_drag = None
+            if self._try_start_system_move():
+                self._native_window_drag = True
+                event.accept()
+                return
             self.old_pos_drag = event.globalPosition().toPoint()
             return
 
         self.old_pos_drag = None
         return super().mousePressEvent(event)
+
+    def _try_start_system_move(self):
+        if (
+            self.isMaximized()
+            or self.isFullScreen()
+            or getattr(self, "is_fullscreen", False)
+            or getattr(self, "_screen_fill_active", False)
+        ):
+            return False
+        try:
+            handle = self.windowHandle()
+            return handle is not None and handle.startSystemMove()
+        except RuntimeError:
+            # Keep the existing logical-coordinate fallback if the platform
+            # cannot start an OS move (including a disappearing native handle).
+            return False
 
     def mouseMoveEvent(self, event):
         if getattr(self, "is_locked", False):
@@ -213,7 +224,12 @@ class WindowEventsMixin:
         _set_window_bottom(int(self.winId()))
 
     def mouseReleaseEvent(self, event):
-        was_interacting = self.old_pos_drag is not None or self._resize_dir is not None
+        was_interacting = (
+            self.old_pos_drag is not None
+            or self._resize_dir is not None
+            or getattr(self, "_native_window_drag", False)
+        )
+        self._native_window_drag = False
         self.old_pos_drag = None
         self._resize_dir = None
         self.setCursor(Qt.CursorShape.ArrowCursor)
@@ -230,6 +246,7 @@ class WindowEventsMixin:
         return super().mouseReleaseEvent(event)
 
     def leaveEvent(self, event):
+        self._native_window_drag = False
         self.old_pos_drag = None
         self._resize_dir = None
         self.setCursor(Qt.CursorShape.ArrowCursor)
@@ -493,27 +510,60 @@ class WindowEventsMixin:
     def _move_to_adjacent_monitor(self, step):
         from PyQt6.QtGui import QGuiApplication
 
+        from calendar_app.presentation.widgets.widget_mode_geometry import best_screen_for_rect
+
         screens = QGuiApplication.screens()
         if len(screens) <= 1:
             return
 
-        current_screen = QGuiApplication.screenAt(self.geometry().center())
-        if not current_screen:
-            current_screen = screens[0]
+        current_screen = best_screen_for_rect(screens, self.frameGeometry())
+        if current_screen is None:
+            return
 
         idx = screens.index(current_screen)
         target_screen = screens[(idx + step) % len(screens)]
 
-        old_geom = current_screen.geometry()
-        new_geom = target_screen.geometry()
+        old_available = current_screen.availableGeometry()
+        new_available = target_screen.availableGeometry()
+        if not old_available.isValid() or not new_available.isValid():
+            return
 
-        rel_x = (self.x() - old_geom.x()) / old_geom.width()
-        rel_y = (self.y() - old_geom.y()) / old_geom.height()
-
-        new_x = new_geom.x() + int(rel_x * new_geom.width())
-        new_y = new_geom.y() + int(rel_y * new_geom.height())
-
-        self.move(new_x, new_y)
+        if getattr(self, "_screen_fill_active", False):
+            # Screen-fill is a windowed mode: fill the destination, not the old
+            # monitor's dimensions. Keep its saved toggle/restore state intact.
+            self.setGeometry(new_available)
+        elif self.isMaximized() or self.isFullScreen() or getattr(self, "is_fullscreen", False):
+            # QWidget.setGeometry() would clear native maximized/fullscreen state.
+            self.move(new_available.topLeft())
+        else:
+            old_safe = old_available.adjusted(
+                SAFE_SCREEN_MARGIN, SAFE_SCREEN_MARGIN, -SAFE_SCREEN_MARGIN, -SAFE_SCREEN_MARGIN
+            )
+            new_safe = new_available.adjusted(
+                SAFE_SCREEN_MARGIN, SAFE_SCREEN_MARGIN, -SAFE_SCREEN_MARGIN, -SAFE_SCREEN_MARGIN
+            )
+            if not old_safe.isValid() or not new_safe.isValid():
+                return
+            rect = self.geometry()
+            old_travel_x = old_safe.width() - rect.width()
+            old_travel_y = old_safe.height() - rect.height()
+            rel_x = (
+                min(1.0, max(0.0, (rect.x() - old_safe.x()) / old_travel_x))
+                if old_travel_x > 0
+                else 0.5
+            )
+            rel_y = (
+                min(1.0, max(0.0, (rect.y() - old_safe.y()) / old_travel_y))
+                if old_travel_y > 0
+                else 0.5
+            )
+            # Qt already reports device-independent geometry. Preserve that size
+            # across DPI changes, shrinking only when the available area is smaller.
+            width = min(rect.width(), new_safe.width())
+            height = min(rect.height(), new_safe.height())
+            x = new_safe.x() + round((new_safe.width() - width) * rel_x)
+            y = new_safe.y() + round((new_safe.height() - height) * rel_y)
+            self.setGeometry(x, y, width, height)
         self.ensure_window_on_screen()
 
     def snap_to_edge(self, edge):

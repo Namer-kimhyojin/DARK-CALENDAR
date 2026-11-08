@@ -681,7 +681,10 @@ def _css_to_qcolor(value: object, fallback: str = "#000000") -> QColor:
 
 def _rgba_with_alpha(value: object, alpha: int, fallback: str = "#000000") -> str:
     q = value if isinstance(value, QColor) else _css_to_qcolor(value, fallback)
-    return f"rgba({q.red()}, {q.green()}, {q.blue()}, {max(0, min(255, int(alpha)))})"
+    byte_alpha = max(0, min(255, int(alpha)))
+    # CSS alpha 1 means fully opaque; byte 1 needs an unambiguous fraction.
+    alpha_text = "0.0039215686" if byte_alpha == 1 else str(byte_alpha)
+    return f"rgba({q.red()}, {q.green()}, {q.blue()}, {alpha_text})"
 
 
 def _blend_qcolor(base: QColor, mix: QColor, ratio: float) -> QColor:

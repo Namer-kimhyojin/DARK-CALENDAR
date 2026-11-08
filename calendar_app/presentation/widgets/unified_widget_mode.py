@@ -50,7 +50,7 @@ from calendar_app.presentation.widgets.panel_widget_mode import (
     _parse_quick_add_text,
     _resolve_widget_mode_tokens,
 )
-from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor
+from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor, int_token
 from calendar_app.presentation.widgets.panel_widget_theme import (
     _apply_configured_widget_color,
     _apply_registered_widget_mode_skin,
@@ -132,6 +132,10 @@ def _relative_widget_day(date: QDate) -> str:
 
 def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
     tk = tokens
+    surface_radius = int_token(tk, "widget_surface_radius", 10)
+    header_radius = int_token(tk, "widget_header_radius", 8)
+    item_radius = int_token(tk, "widget_entry_radius", 8)
+    control_radius = int_token(tk, "widget_control_radius", 8)
     return f"""
         QFrame#unified_container {{
             background: qlineargradient(
@@ -141,16 +145,12 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
                 stop: 1 {tk.get("panel_bg_end", tk["panel_bg"])}
             );
             border: 1px solid {tk.get("panel_border", "rgba(255,255,255,22)")};
-            border-radius: 28px;
+            border-radius: {surface_radius}px;
         }}
         QFrame#unified_hero {{
-            background: qlineargradient(
-                x1: 0, y1: 0, x2: 1, y2: 0,
-                stop: 0 {tk.get("header_shell_bg", tk["surface_bg"])},
-                stop: 1 {tk.get("surface_alt", tk["section_bg"])}
-            );
-            border: 1px solid {tk.get("header_shell_border", tk.get("panel_border_soft", "rgba(255,255,255,16)"))};
-            border-radius: 22px;
+            background: transparent;
+            border: none;
+            border-radius: {header_radius}px;
         }}
         QFrame#unified_filter_section,
         QFrame#unified_agenda_section {{
@@ -166,30 +166,30 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
         QFrame#unified_container[widgetLayout="magazine"] QFrame#unified_agenda_section {{
             background: {tk.get("card_bg", tk["section_bg"])};
             border: 1px solid {tk.get("card_border", tk.get("panel_border_soft", tk["panel_border"]))};
-            border-radius: 20px;
+            border-radius: {item_radius}px;
         }}
         QFrame#unified_container[widgetLayout="agenda_first"] QFrame#unified_agenda_section,
         QFrame#unified_container[widgetLayout="minimal"] QFrame#unified_agenda_section {{
             background: {tk.get("section_bg", tk["surface_bg"])};
             border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", tk["panel_border"]))};
-            border-radius: 18px;
+            border-radius: {item_radius}px;
         }}
         QFrame#unified_container[widgetLayout="dashboard"] QWidget#unified_calendar_section,
         QFrame#unified_container[widgetLayout="magazine"] QWidget#unified_calendar_section,
         QFrame#unified_container[widgetLayout="agenda_first"] QWidget#unified_calendar_section {{
             background: {tk.get("surface_alt", tk["section_bg"])};
             border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", tk["panel_border"]))};
-            border-radius: 18px;
+            border-radius: {item_radius}px;
         }}
         QFrame#unified_container[widgetLayout="dashboard"] QFrame#unified_filter_section,
         QFrame#unified_container[widgetLayout="magazine"] QFrame#unified_filter_section,
         QFrame#unified_container[widgetLayout="minimal"] QFrame#unified_filter_section {{
             background: {tk.get("hero_bg", tk["section_bg"])};
             border: 1px solid {tk.get("hero_border", tk.get("panel_border_soft", tk["panel_border"]))};
-            border-radius: 16px;
+            border-radius: {item_radius}px;
         }}
         QFrame#unified_container[widgetLayout="minimal"] QFrame#unified_hero {{
-            border-radius: 18px;
+            border-radius: {header_radius}px;
         }}
         QLabel#unified_eyebrow {{
             color: {tk.get("text_faint", tk["text_secondary"])};
@@ -226,7 +226,7 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             color: {tk.get("button_text", tk["text_secondary"])};
             background: {tk.get("button_bg", tk["section_bg"])};
             border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", "rgba(255,255,255,14)"))};
-            border-radius: 14px;
+            border-radius: {control_radius}px;
             padding: 7px 12px;
             font-size: 8.8pt;
             font-weight: 700;
@@ -240,7 +240,7 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             border: 1px solid {tk.get("hero_border", tk["panel_border"])};
         }}
         QToolButton#unified_filter_btn {{
-            border-radius: 12px;
+            border-radius: {control_radius}px;
             padding: 5px 11px;
             font-size: 8.1pt;
         }}
@@ -281,7 +281,7 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
         }}
         QLabel#unified_chip,
         QLabel#unified_chip_accent {{
-            border-radius: 12px;
+            border-radius: {control_radius}px;
             padding: 3px 9px;
             font-size: 7.8pt;
             font-weight: 700;
@@ -322,7 +322,7 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
         QFrame#unified_empty_state {{
             background: {tk.get("surface_alt", tk["section_bg"])};
             border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", tk["panel_border"]))};
-            border-radius: 16px;
+            border-radius: {item_radius}px;
         }}
         QFrame#agenda_item_schedule,
         QFrame#agenda_item_task {{
@@ -332,7 +332,7 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
                 stop: 1 {tk.get("surface_alt", tk["section_bg_alt"])}
             );
             border: 1px solid {tk.get("card_border", tk.get("section_border_soft", "rgba(255,255,255,14)"))};
-            border-radius: 18px;
+            border-radius: {item_radius}px;
         }}
         QFrame#agenda_item_schedule:hover,
         QFrame#agenda_item_task:hover {{
@@ -1848,7 +1848,8 @@ class UnifiedWidgetWindow(QWidget):
                 + f"""
             QWidget {{ font-family: "{css_family}"; }}
             QFrame#unified_surface {{ background: {tokens["panel_bg"]};
-                border: 1px solid {tokens["panel_border"]}; border-radius: 16px; }}
+                border: 1px solid {tokens["panel_border_soft"]};
+                border-radius: {int_token(tokens, "widget_surface_radius", 10)}px; }}
             QFrame#unified_toolbar, QFrame#unified_container, QFrame#unified_hero {{
                 background: transparent; border: none; border-radius: 0; }}
             QFrame#unified_container[widgetLayout] QFrame#unified_agenda_section,
@@ -1876,7 +1877,8 @@ class UnifiedWidgetWindow(QWidget):
                 background: {tokens.get("button_primary_hover_bg", tokens["section_bg_alt"])};
                 border: 1px solid {tokens.get("button_primary_hover_border", tokens["accent"])}; }}
             QFrame#agenda_item_task, QFrame#agenda_item_schedule {{
-                background: {tokens["section_bg"]}; border: 1px solid {tokens["panel_border"]}; border-radius: 10px; }}
+                background: {tokens["card_bg"]}; border: 1px solid {tokens["card_border"]};
+                border-radius: {int_token(tokens, "widget_entry_radius", 8)}px; }}
             QPushButton#agenda_item_title {{ color: {tokens["text_primary"]}; text-align: left;
                 background: transparent; border: none; padding: 0; font-size: {typography.title:.1f}pt; font-weight: {weight}; }}
             QLabel#agenda_item_title {{ font-size: {typography.title:.1f}pt; font-weight: {weight}; }}

@@ -122,7 +122,9 @@ def test_profiles_restore_combination_style_position_and_preserve_content_and_ca
     profile = service.save_profile("업무용")
     clock._set("font_size", 50)
     clock._apply_and_resize()
-    clock.move(500, 400)
+    # Keep the enlarged clock inside the default 800px offscreen desktop;
+    # this assertion covers undo, while fit_rect tests cover screen clamping.
+    clock.move(100, 300)
     manager.show_instance(ids[1])
     extra = manager.add_instance("date_card", "나중에 추가")
     manager.show_instance(extra)
@@ -136,7 +138,7 @@ def test_profiles_restore_combination_style_position_and_preserve_content_and_ca
     assert host.settings.value("widget_mode_resume", type=bool) is False
     assert host._widget_mode_coordinator.state is WidgetModeState.CLOSED
     service.undo()
-    assert clock._get("font_size") == 50 and clock.pos() == QPoint(500, 400)
+    assert clock._get("font_size") == 50 and clock.pos() == QPoint(100, 300)
     assert note.is_enabled() and manager.get_widget(extra).is_enabled()
 
 

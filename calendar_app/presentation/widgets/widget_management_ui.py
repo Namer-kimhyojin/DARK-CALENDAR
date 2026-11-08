@@ -73,6 +73,7 @@ _TYPE_HELP = {
     "text": ("text", "메모와 정보 템플릿을 표시해요"),
     "weather": ("weather", "현재 날씨와 시간별 예보를 봐요"),
     "launcher_deck": ("launcher_deck", "자주 쓰는 앱과 단축키를 실행해요"),
+    "loop_deck": ("loop_deck", "여러 키덱과 마이크를 하나의 루프로 믹싱해요"),
 }
 
 

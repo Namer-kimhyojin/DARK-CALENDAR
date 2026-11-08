@@ -2,12 +2,31 @@
 
 제품 버전은 배포 단위로 결정한다. 변경 기록·Git/CI 빌드·공개·Store·설치 상태는 별도이며 변경 기록만으로 버전을 올리지 않는다.
 
-기준 버전: `3.8.1` · 현재 제품 버전: **`5.0.2`**
+기준 버전: `3.8.1` · 현재 제품 버전: **`5.1.0`**
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
-| 5.0.2 | 2026-11-07T03:24:59.551839+09:00 | change | Restore published 5.0.2 release checklist with observed Store and installation evidence | `release-5-0-2-checklist-20261107` |
-| 5.0.2 | 2026-11-07T03:15:27.135179+09:00 | change | Store 5.0.2 게시 확인 및 홈페이지 심사 대기 안내 해제 | `store-5-0-2-publication-20261107` |
+| 5.1.0 | 2026-11-09T03:12:14.871687+09:00 | change | Prepare isolated 5.1.0 publication documents and preserve exact legacy QA Git bytes | `release-5.1.0-publication-docs-20261109` |
+| 5.1.0 | 2026-11-09T03:11:34.592548+09:00 | change | 11월 9일 기타 오버레이 728건·Windows 화면 점검 및 기존 5.1.0 배포 재개 기록 | `maintenance-20261109-review-checkpoint` |
+| 5.1.0 | 2026-11-09T01:09:30.520075+09:00 | release | 독립 루프믹서와 다중 키덱·마이크 레이어, 모양 설정 재구성, 모달·배율·시작 성능 개선 | `release-5.1.0-20261109` |
+| 5.0.2 | 2026-11-08T03:15:59.869539+09:00 | change | 11월 8일 KeyDeck·루프 믹서 점검과 11월 16일 후보·검증 근거 기록 | `maintenance-20261108-review-checkpoint` |
+| 5.0.2 | 2026-11-08T03:15:34.598438+09:00 | change | 루프 믹서 복원 검사를 충분한 작업 영역과 사용자 크기 변경 저장 경로로 격리 | `maintenance-20261108-loop-mixer-persistence-fixture` |
+| 5.0.2 | 2026-11-08T03:15:32.931346+09:00 | change | 겹쳐 녹음 중간 정지 시 미녹음 구간의 기존 오디오 보존 및 저장·복원·WAV 회귀 검증 | `maintenance-20261108-partial-overdub-preservation` |
+| 5.0.2 | 2026-11-07T03:26:50.169074+09:00 | change | 편집기 및 프리셋 425건 점검과 5.0.2 게시 설치 후속을 11월16일 계획에 기록 | `maintenance-20261107-review-checkpoint` |
+| 5.0.2 | 2026-11-07T03:26:48.507113+09:00 | change | Restore published 5.0.2 release checklist with observed Store and installation evidence | `release-5-0-2-checklist-20261107` |
+| 5.0.2 | 2026-11-07T03:26:46.896605+09:00 | change | Store 5.0.2 게시 확인 및 홈페이지 심사 대기 안내 해제 | `store-5-0-2-publication-20261107` |
+| 5.0.2 | 2026-11-07T03:26:45.123860+09:00 | change | WYSIWYG 편집기에서 메인 테마 투명도 연동을 명시하고 적용 시 기존 설정 보존 | `maintenance-20261107-editor-linked-opacity` |
+| 5.0.2 | 2026-11-06T17:47:53.898501+09:00 | change | 모양 설정과 세부 조정 재구성, 초안·라이트 대비·검색·미리보기 및 408건 격리 회귀 검증 | `appearance-settings-redesign-20261106` |
+| 5.0.2 | 2026-11-06T17:28:06.300613+09:00 | change | 색상 선택창의 전체 폭 제목과 네이티브 경계, 하위 초안 테마 계승 및 알파 저장 왕복 보완 | `color-picker-modal-chrome-alpha-20261106` |
+| 5.0.2 | 2026-11-06T17:28:04.472388+09:00 | change | 모양 설정 팔레트 아이콘과 단일 기어 아이콘의 여백 및 DPI별 잘림 개선 | `appearance-toolbar-icons-20261106` |
+| 5.0.2 | 2026-11-06T17:28:02.662429+09:00 | change | 모달 사방의 대칭 그림자와 외곽 대비 강화 및 그림자 버퍼 상한 검증 | `modal-four-sided-shadow-20261106` |
+| 5.0.2 | 2026-11-06T16:31:07.277759+09:00 | change | Document mixed-monitor verification, audio fixes, widget styling and the interrupted native recording check. | `loop-mixer-native-qa-report-20261106` |
+| 5.0.2 | 2026-11-06T16:28:28.690969+09:00 | change | Remove the top-level mixer shortcut and refine widget-mode surfaces with compact radii while retaining main theme roles. | `widget-menu-surface-refinement-20261106` |
+| 5.0.2 | 2026-11-06T16:28:27.140827+09:00 | change | Keep logical widget sizes stable across mixed-DPI monitors and bound restored geometry and native buffers. | `mixed-dpi-placement-fixes-20261106` |
+| 5.0.2 | 2026-11-06T16:28:25.544714+09:00 | change | Prevent backing WAV amplification during overdubs and preserve WinMM microphone buffer order. | `loop-mixer-native-capture-fixes-20261106` |
+| 5.0.2 | 2026-11-06T15:28:35.784938+09:00 | change | Expose the independent Loop Mixer directly in the top Widgets menu and every KeyDeck context menu. | `loop-mixer-visible-entrypoints-20261106` |
+| 5.0.2 | 2026-11-06T15:28:33.948115+09:00 | change | Reduce Windows first font initialization latency with a process-local Qt startup policy while preserving explicit platform choices. | `startup-windows-font-initialization-20261106` |
+| 5.0.2 | 2026-11-06T14:51:30.245915+09:00 | module | Add an independent touch loop mixer with multiple KeyDeck sources, opt-in microphone capture, six PCM layers, local projects, and source identity preservation | `loop-mixer-touch-widget-20261106` |
 | 5.0.2 | 2026-11-06T07:19:48.326311+09:00 | change | 실제 GitHub 5.0.2 공개 및 Store33 심사 제출 관찰에 맞춰 홈페이지4언어·소스제공URL·마지막공개메타데이터를 갱신하고 가격·이벤트·이미지·제품718입력 보존 | `publication-5.0.2-store33-metadata-20261106` |
 | 5.0.2 | 2026-11-06T06:59:22.708713+09:00 | change | 로컬 CDN 연결 제한에 대응해 고정 릴리스 6자산을 격리 CI에서 GET 재다운로드하고 draft/public 바이트와 공개 무인증 가시성을 검증하는 QA 보완 | `release-5.0.2-asset-readback-qa-20261106` |
 | 5.0.2 | 2026-11-06T06:20:42.951359+09:00 | release | 현재 전체 5.0 UI UX 및 Loop Deck와 Qt 정상 종료 객체 수명 보완을 통합한 배포판 | `release-5.0.2-qt-shutdown-20261106` |

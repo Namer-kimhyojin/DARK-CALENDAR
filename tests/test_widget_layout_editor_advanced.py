@@ -175,16 +175,43 @@ def test_appearance_updates_native_pixels_and_only_apply_writes_preferences(edit
     dialog.canvas.set_selection(set())
     dialog._refresh_preview()
     before = dialog.canvas._preview_image.toImage()
-    dialog.skin_combo.setCurrentIndex(dialog.skin_combo.findData("classic_dark"))
-    dialog.text_opacity.setValue(75)
-    dialog.background_opacity.setValue(60)
+    dialog.font_size.setValue(18)
+    dialog.font_weight.setCurrentIndex(dialog.font_weight.findData(700))
     dialog._refresh_preview()
     assert dialog.canvas._preview_image.toImage() != before
     expected = deepcopy(dialog.appearance)
     dialog.apply_btn.click()
-    assert all(settings.value(key) == value for key, value in expected.items())
+    assert all(
+        settings.value(key) == value
+        for key, value in expected.items()
+        if key not in {"widget_mode_text_opacity", "widget_mode_background_opacity"}
+    )
     assert read_free_layout(settings) == dialog.draft
     dialog.controller.apply_free_layout.assert_called_once()
+
+
+def test_linked_opacity_is_read_only_and_apply_preserves_legacy_preferences(editor):
+    dialog, settings, _ = editor
+    settings.setValue("last_opacity", 128)
+    settings.setValue("last_opacity_unit", "byte")
+    settings.setValue("widget_mode_text_opacity", 70)
+    settings.setValue("widget_mode_background_opacity", 30)
+    dialog._sync_fields()
+    assert not dialog.text_opacity.isEnabled()
+    assert not dialog.background_opacity.isEnabled()
+    assert dialog.text_opacity.value() == 100
+    assert dialog.background_opacity.value() == 50
+    original = deepcopy(dialog.appearance)
+    dialog._change_appearance("widget_mode_text_opacity", 20)
+    dialog._change_appearance("widget_mode_background_opacity", 0)
+    assert dialog.appearance == original
+    dialog.font_size.setValue(18)
+    dialog.undo()
+    assert dialog.background_opacity.value() == 50
+    dialog._apply()
+    assert settings.value("widget_mode_text_opacity") == 70
+    assert settings.value("widget_mode_background_opacity") == 30
+    assert settings.value("last_opacity") == 128
 
 
 def test_current_widget_cache_date_filter_and_clock_are_previewed_without_mutating(editor):

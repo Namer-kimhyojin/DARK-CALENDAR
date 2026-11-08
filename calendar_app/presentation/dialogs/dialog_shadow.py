@@ -1,18 +1,33 @@
 # -*- coding: utf-8 -*-
 """A noninteractive outer shadow that leaves each dialog's client layout intact."""
 
+from math import ceil
 import weakref
 
 from PyQt6 import sip
 from PyQt6.QtCore import QEvent, QObject, QRectF, Qt
-from PyQt6.QtGui import QColor, QPainter
+from PyQt6.QtGui import QColor, QPainter, QPen, QRegion
 from PyQt6.QtWidgets import QDialog, QWidget
 
 from calendar_app.shared.app_lifecycle import is_app_exiting
 
-_SPREAD = 24
-_OFFSET_Y = 5
-_BOTTOM_MARGIN = _SPREAD + _OFFSET_Y + 1
+_SPREAD = 28
+_OFFSET_Y = 0
+_BOTTOM_MARGIN = _SPREAD
+_MAX_BUFFER_BYTES = 64 * 1024 * 1024
+
+
+def _shadow_buffer_fits(width: int, height: int, ratio: float) -> bool:
+    """Bound the tool's ARGB backing allocation before creating/resizing it."""
+    try:
+        physical_width, physical_height = ceil(width * ratio), ceil(height * ratio)
+    except (TypeError, ValueError, OverflowError):
+        return False
+    return (
+        physical_width > 0
+        and physical_height > 0
+        and physical_width * physical_height * 4 <= _MAX_BUFFER_BYTES
+    )
 
 
 class _DialogShadowSurface(QWidget):
@@ -48,7 +63,10 @@ class _DialogShadowSurface(QWidget):
             max(0, self.height() - _SPREAD - _BOTTOM_MARGIN),
         )
         cast = owner_rect.translated(0, _OFFSET_Y)
-        strength = 16 if self.dark else 11
+        # Paint the perimeter only, rather than repeatedly filling the client's
+        # much larger reading area before clearing it again.
+        painter.setClipRegion(QRegion(self.rect()).subtracted(QRegion(owner_rect.toRect())))
+        strength = 36 if self.dark else 28
         for spread in range(_SPREAD, 0, -1):
             alpha = round(strength * (1 - spread / (_SPREAD + 1)) ** 2)
             if alpha:
@@ -58,8 +76,16 @@ class _DialogShadowSurface(QWidget):
                     self.radius + spread,
                     self.radius + spread,
                 )
+        # A black shadow alone disappears against an equally black desktop.
+        # A narrow neutral halo makes each edge readable without tinting text.
+        edge = QColor(Qt.GlobalColor.white if self.dark else Qt.GlobalColor.black)
+        edge.setAlpha(88 if self.dark else 52)
+        painter.setPen(QPen(edge, 2.0))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRoundedRect(cast.adjusted(-1, -1, 1, 1), self.radius + 1, self.radius + 1)
         # The tool is above its owner on Windows. Clear the entire owner rect,
         # including its corners, so no text, controls or existing alpha changes.
+        painter.setClipping(False)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
         painter.fillRect(owner_rect, Qt.GlobalColor.transparent)
 
@@ -111,12 +137,19 @@ class _DialogShadowController(QObject):
             self.surface.hide()
             return
         geometry = dialog.geometry()
-        self.surface.setGeometry(geometry.adjusted(-_SPREAD, -_SPREAD, _SPREAD, _BOTTOM_MARGIN))
+        target = geometry.adjusted(-_SPREAD, -_SPREAD, _SPREAD, _BOTTOM_MARGIN)
+        if not _shadow_buffer_fits(target.width(), target.height(), dialog.devicePixelRatioF()):
+            self.surface.hide()
+            return
+        resized = self.surface.size() != target.size()
+        if self.surface.geometry() != target:
+            self.surface.setGeometry(target)
         if not self.surface.isVisible():
             # ShowWithoutActivating + WindowDoesNotAcceptFocus preserve the
             # modal's focus; the tool has no global AlwaysOnTop hint.
             self.surface.show()
-        self.surface.update()
+        if resized:
+            self.surface.update()
 
     def eventFilter(self, watched, event):
         reference = getattr(self, "_dialog_ref", None)

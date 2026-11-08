@@ -117,6 +117,9 @@ class KeyboardShortcutTests(unittest.TestCase):
         self._app.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
     def test_previous_and_next_monitor_shortcuts_move_to_different_screens(self):
+        # This disposable monitor host must not quit the shared test QApplication.
+        self.enterContext(patch("calendar_app.shared.app_lifecycle.finish_application_exit"))
+
         class MonitorHost(WindowEventsMixin, _ShortcutHost):
             pass
 
@@ -124,12 +127,21 @@ class KeyboardShortcutTests(unittest.TestCase):
         self.addCleanup(self._dispose_host, host)
         host.settings = Mock()
         host.setGeometry(100, 200, 400, 300)
-        host.move = Mock()
+        host.setGeometry = Mock()
         host.ensure_window_on_screen = Mock()
         screens = [
-            SimpleNamespace(geometry=lambda: QRect(0, 0, 1000, 800)),
-            SimpleNamespace(geometry=lambda: QRect(1000, 0, 1500, 1200)),
-            SimpleNamespace(geometry=lambda: QRect(-800, 0, 800, 600)),
+            SimpleNamespace(
+                geometry=lambda: QRect(0, 0, 1000, 800),
+                availableGeometry=lambda: QRect(0, 0, 1000, 800),
+            ),
+            SimpleNamespace(
+                geometry=lambda: QRect(1000, 0, 1500, 1200),
+                availableGeometry=lambda: QRect(1000, 0, 1500, 1200),
+            ),
+            SimpleNamespace(
+                geometry=lambda: QRect(-800, 0, 800, 600),
+                availableGeometry=lambda: QRect(-800, 0, 800, 600),
+            ),
         ]
         register_all(host)
         bindings = {shortcut.key().toString(): shortcut for shortcut in host._global_shortcuts}
@@ -138,10 +150,10 @@ class KeyboardShortcutTests(unittest.TestCase):
             patch.object(QGuiApplication, "screenAt", return_value=screens[0]),
         ):
             bindings["Ctrl+Alt+Shift+Left"].activated.emit()
-            host.move.assert_called_once_with(-720, 150)
-            host.move.reset_mock()
+            host.setGeometry.assert_called_once_with(-732, 120, 400, 300)
+            host.setGeometry.reset_mock()
             bindings["Ctrl+Alt+Shift+Right"].activated.emit()
-            host.move.assert_called_once_with(1150, 300)
+            host.setGeometry.assert_called_once_with(1180, 359, 400, 300)
         self.assertEqual(2, host.ensure_window_on_screen.call_count)
 
     def test_register_all_attaches_ctrl_k_to_main_window(self):

@@ -248,7 +248,7 @@ def test_gallery_cancel_never_creates_a_widget_and_add_reveals_the_new_row(hub):
 def test_gallery_native_keyboard_selection_and_optional_name(hub):
     dialog, _, _, _ = hub
     gallery = WidgetAddDialog(dialog)
-    assert len(gallery.kind_buttons) == 8
+    assert len(gallery.kind_buttons) == 9
     button = gallery.kind_buttons["weather"]
     gallery.show()
     button.setFocus()

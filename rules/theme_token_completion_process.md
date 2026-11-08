@@ -33,7 +33,7 @@ Appearance sections use one reusable checkable-button pattern.
 - Collapsed and expanded states use both a directional marker and the button's checked state.
 - Section toggles use strong keyboard focus and support Enter/Space through native button behavior.
 - The initial focus lands on the active System/Light/Dark control and the settings scroll starts at the top.
-- Family grids use two columns beside the persistent preview and three columns in the narrow stacked layout; arrow-key movement follows the rendered column count.
+- Family grids follow the actual editor width with three, two, or one compact columns; arrow-key movement follows the rendered column count. Family names appear once, with variant details in the accessible label and tooltip.
 - Each section header exposes an icon-based revert action only when that section differs from the opening snapshot; reverting one section preserves changes in all others.
 - The footer-level Revert All action restores Style, Accent, Readability, Font, and staged expert-token changes together, with at most one preview render.
 - Reset boundaries follow the visible controls: Style includes background and opacity controls, while Readability owns the role-based text and input colors.

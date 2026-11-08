@@ -165,12 +165,8 @@ def panel_stylesheet(tokens: dict[str, str], *, scale: float = 1.0) -> str:
             border-radius: {surface_radius}px;
         }}
         QFrame#widget_mode_header {{
-            background: qlineargradient(
-                x1: 0, y1: 0, x2: 1, y2: 0,
-                stop: 0 {tk.get("header_shell_bg", tk["header_bg"])},
-                stop: 1 {tk.get("surface_alt", tk["header_bg"])}
-            );
-            border: 1px solid {tk.get("header_shell_border", tk.get("panel_border_soft", "rgba(255,255,255,18)"))};
+            background: transparent;
+            border: none;
             border-radius: {header_radius}px;
         }}
         QLabel#widget_mode_header_icon {{

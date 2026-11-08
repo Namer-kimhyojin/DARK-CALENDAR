@@ -243,7 +243,7 @@ def _setup_navigation_rail(owner, styles, icon_color, accent_color):
     appearance_action = rail.addAction(
         _se(t("menu.ui_theme_open", "모양 설정...")), owner.open_panel_background_color_dialog
     )
-    set_themed_icon(appearance_action, ICON.SETTINGS, icon_color)
+    set_themed_icon(appearance_action, ICON.DISPLAY_STYLE, icon_color)
     rail.setEnabled(not bool(getattr(owner, "is_locked", False)))
     owner.addToolBar(Qt.ToolBarArea.LeftToolBarArea, rail)
     owner.navigation_rail = rail

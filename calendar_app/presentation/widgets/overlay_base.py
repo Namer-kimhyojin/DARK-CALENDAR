@@ -20,7 +20,7 @@ import os as _os
 import re as _re
 import time
 
-from PyQt6.QtCore import QDate, QEvent, QPoint, QRect, QRectF, QSize, Qt, QTime
+from PyQt6.QtCore import QDate, QEvent, QPoint, QRect, QRectF, QSize, Qt, QTime, QTimer
 from PyQt6.QtGui import (
     QColor,
     QFont,
@@ -101,6 +101,7 @@ from calendar_app.presentation.widgets.overlay_template_validation import (
     validate_widget_template,
 )
 from calendar_app.presentation.widgets.widget_graphic_runtime import WidgetGraphicRuntimeMixin
+from calendar_app.presentation.widgets.widget_mode_geometry import best_screen_for_rect
 from calendar_app.presentation.widgets.widget_placement import (
     NoWheelComboBox,
     NoWheelFontComboBox,
@@ -1611,6 +1612,12 @@ class _BaseOverlayWidget(WidgetGraphicRuntimeMixin, QWidget):
         self._resizing: bool = False
         self._interaction_locked: bool = False
         self._placement_origin = None
+        self._screen_fit_handle = None
+        self._screen_fit_pending = False
+        self._screen_fitting = False
+        self._screen_intent_size = None
+        self._placement_screen_override = None
+        self._gesture_pointer_global = None
         self._last_placement = None
         self._last_content_reset = None
         self._gesture_press_global = None
@@ -1861,6 +1868,55 @@ class _BaseOverlayWidget(WidgetGraphicRuntimeMixin, QWidget):
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
         self._apply_shape_mask()
+        if (
+            hasattr(self, "_screen_fitting")
+            and not self._screen_fitting
+            and not self._screen_fit_pending
+            and self._placement_origin is None
+            and not event.spontaneous()
+        ):
+            self._screen_intent_size = QSize(event.size())
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        super().showEvent(event)
+        handle = self.windowHandle()
+        if handle is not None and handle is not self._screen_fit_handle:
+            handle.screenChanged.connect(self._queue_screen_geometry_fit)
+            self._screen_fit_handle = handle
+        if self._screen_intent_size is None:
+            self._screen_intent_size = QSize(self.size())
+
+    def event(self, event):
+        result = super().event(event)
+        if event.type() == QEvent.Type.DevicePixelRatioChange and hasattr(
+            self, "_screen_fit_pending"
+        ):
+            self._queue_screen_geometry_fit()
+        return result
+
+    def _queue_screen_geometry_fit(self, *_):
+        if self._screen_fit_pending:
+            return
+        self._screen_fit_pending = True
+        QTimer.singleShot(0, self._apply_screen_geometry_fit)
+
+    def _apply_screen_geometry_fit(self):
+        self._screen_fit_pending = False
+        if self._screen_fitting or self._resizing:
+            return
+        state = self._placement_origin
+        if state is not None and self._drag_offset is not None:
+            self._move_placement_to(self._gesture_pointer_global)
+            return
+        desired = self._screen_intent_size or self.size()
+        try:
+            width, height = int(self._get("fixed_w")), int(self._get("fixed_h"))
+        except (TypeError, ValueError, OverflowError):
+            pass
+        else:
+            if width > 0 and height > 0:
+                desired = QSize(width, height)
+        self._fit_screen_rect(QRect(self.pos(), desired), clamp_position=True)
 
     def hideEvent(self, event) -> None:  # noqa: N802
         if getattr(self, "_placement_origin", None) is not None:
@@ -1882,7 +1938,9 @@ class _BaseOverlayWidget(WidgetGraphicRuntimeMixin, QWidget):
 
     def _screen_bounds(self) -> tuple[int, int]:
         app = QApplication.instance()
-        screen = self.screen() if app is not None else None
+        screen = self._placement_screen_override
+        if screen is None:
+            screen = self.screen() if app is not None else None
         if screen is None and app is not None:
             screen = app.primaryScreen()
         if screen is None:
@@ -3971,32 +4029,75 @@ class _BaseOverlayWidget(WidgetGraphicRuntimeMixin, QWidget):
                 target = self.owner.frameGeometry().topRight() + default_offset
         self.move(self._clamp_restored_position(target))
 
-    def _clamp_restored_position(self, target: QPoint) -> QPoint:
-        """Keep a restored overlay reachable after monitor/layout changes."""
+    def _fit_screen_rect(self, rect: QRect, *, preferred_point=None, clamp_position=False):
+        """Fit only in Qt logical coordinates; a screen DPR never scales placement."""
         app = QApplication.instance()
-        if app is None:
-            return target
-
-        size = self.sizeHint().expandedTo(self.minimumSizeHint())
-        width = max(1, self.width(), size.width())
-        height = max(1, self.height(), size.height())
-        center = target + QPoint(width // 2, height // 2)
-        screen = app.screenAt(center)
-        if screen is None and hasattr(self.owner, "screen"):
-            with contextlib.suppress(RuntimeError):
-                screen = self.owner.screen()
+        if app is None or self._screen_fitting:
+            return rect.topLeft()
+        screen = best_screen_for_rect(app.screens(), rect, preferred_point)
         if screen is None:
-            screen = app.primaryScreen()
-        if screen is None:
-            return target
-
+            return rect.topLeft()
         available = screen.availableGeometry()
-        max_x = max(available.left(), available.right() - width + 1)
-        max_y = max(available.top(), available.bottom() - height + 1)
-        return QPoint(
-            min(max(target.x(), available.left()), max_x),
-            min(max(target.y(), available.top()), max_y),
+        width, height = max(1, rect.width()), max(1, rect.height())
+        high_w, high_h = max(1, available.width()), max(1, available.height())
+        if self._resize_keeps_aspect():
+            scale = min(1.0, high_w / width, high_h / height)
+            width, height = max(1, round(width * scale)), max(1, round(height * scale))
+        else:
+            width, height = min(width, high_w), min(height, high_h)
+        self._screen_fitting = True
+        self._placement_screen_override = screen
+        try:
+            if self.size() != QSize(width, height):
+                self._release_layout_constraints()
+                if isinstance(getattr(self, "_deck_data", None), dict):
+                    # Fit only the canvas preview; preserve the user's stored 60–220% zoom.
+                    self._fit_font_to_size(width, height, live=True)
+                    if self.width() > width or self.height() > height:
+                        # Integer zoom percentages can round the rendered case up.
+                        # Retry below that step, retaining the intrinsic 60% floor.
+                        self._fit_font_to_size(
+                            max(1, int(width * 0.98)), max(1, int(height * 0.98)), live=True
+                        )
+                else:
+                    self.resize(width, height)
+        finally:
+            self._placement_screen_override = None
+            self._screen_fitting = False
+        target = QPoint(rect.topLeft())
+        if clamp_position:
+            target.setX(
+                min(
+                    max(target.x(), available.left()),
+                    max(available.left(), available.right() - self.width() + 1),
+                )
+            )
+            target.setY(
+                min(
+                    max(target.y(), available.top()),
+                    max(available.top(), available.bottom() - self.height() + 1),
+                )
+            )
+            self.move(target)
+        return target
+
+    def _clamp_restored_position(self, target: QPoint) -> QPoint:
+        """Fit a restored window on its nearest/intersecting available monitor."""
+        return self._fit_screen_rect(QRect(target, self.size()), clamp_position=True)
+
+    def _move_placement_to(self, pointer):
+        if pointer is None or self._drag_offset is None or self._placement_origin is None:
+            return
+        self._gesture_pointer_global = QPoint(pointer)
+        origin = self._placement_origin["rect"]
+        target = pointer - self._drag_offset
+        self._fit_screen_rect(QRect(target, origin.size()), preferred_point=pointer)
+        # Keep the grab point at the same fraction if a smaller screen requires a fit.
+        grab = QPoint(
+            round(self._drag_offset.x() * self.width() / max(1, origin.width())),
+            round(self._drag_offset.y() * self.height() / max(1, origin.height())),
         )
+        self.move(pointer - grab)
 
     def reset_position(self, default_offset: QPoint):
         target = self.owner.frameGeometry().topRight() + default_offset
@@ -4099,6 +4200,7 @@ class _BaseOverlayWidget(WidgetGraphicRuntimeMixin, QWidget):
         self._resize_corner = None
         self._resizing = False
         self._gesture_press_global = None
+        self._gesture_pointer_global = None
         self._gesture_active = False
         self._placement_origin = None
         self.face.show_grip = False
@@ -4472,6 +4574,7 @@ class _BaseOverlayWidget(WidgetGraphicRuntimeMixin, QWidget):
             if btn == Qt.MouseButton.LeftButton:
                 self._placement_origin = self._capture_placement()
                 self._gesture_press_global = event.globalPosition().toPoint()
+                self._gesture_pointer_global = QPoint(self._gesture_press_global)
                 self._gesture_active = False
                 local = self.face.mapFromGlobal(event.globalPosition().toPoint())
                 corner = self._resize_corner_at(local)
@@ -4566,7 +4669,7 @@ class _BaseOverlayWidget(WidgetGraphicRuntimeMixin, QWidget):
                 return True
             if self._drag_offset is not None and event.buttons() & Qt.MouseButton.LeftButton:
                 self.setCursor(Qt.CursorShape.ClosedHandCursor)
-                self.move(event.globalPosition().toPoint() - self._drag_offset)
+                self._move_placement_to(event.globalPosition().toPoint())
                 event.accept()
                 return True
 
@@ -4614,6 +4717,11 @@ class _BaseOverlayWidget(WidgetGraphicRuntimeMixin, QWidget):
                 snap_cb = getattr(self, "_overlay_manager_snap", None)
                 if callable(snap_cb) and not event.modifiers() & Qt.KeyboardModifier.AltModifier:
                     self.move(snap_cb(self.pos()))
+                self._fit_screen_rect(
+                    self.geometry(),
+                    preferred_point=event.globalPosition().toPoint(),
+                    clamp_position=True,
+                )
                 self.save_position()
                 if state is not None and self.geometry() != state["rect"]:
                     self._last_placement = state

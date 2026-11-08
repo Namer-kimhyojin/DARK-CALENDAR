@@ -62,6 +62,7 @@ _TYPE_META: dict[str, tuple[str, str]] = {
     "dday": ("📆", QColor(52, 211, 153).name(QColor.NameFormat.HexRgb)),
     "text": ("✏️", QColor(148, 163, 184).name(QColor.NameFormat.HexRgb)),
     "launcher_deck": ("⌨", QColor(96, 165, 250).name(QColor.NameFormat.HexRgb)),
+    "loop_deck": ("♪", QColor(167, 139, 250).name(QColor.NameFormat.HexRgb)),
 }
 
 
@@ -415,10 +416,17 @@ class WidgetCard(QFrame):
         self.find_button.setToolTip(t("widget_hub.find_hint", "이 화면 중앙으로 가져와 표시합니다"))
         root.addWidget(self.find_button)
         self.graphics_button = hub_button(
-            t("widget_hub.decorate", "꾸미기"), lambda: on_graphics(iid), primary=True
+            t("loopdeck.open", "루프 믹서 열기")
+            if wtype == "loop_deck"
+            else t("widget_hub.decorate", "꾸미기"),
+            lambda: on_graphics(iid),
+            primary=True,
         )
         self.graphics_button.setEnabled(
-            callable(on_graphics) and hasattr(widget, "_open_graphic_collections")
+            callable(on_graphics)
+            and hasattr(
+                widget, "_open_settings" if wtype == "loop_deck" else "_open_graphic_collections"
+            )
         )
         root.addWidget(self.graphics_button)
         self.more_button = hub_button(t("widget_hub.more", "더보기"), lambda: None)
@@ -942,6 +950,10 @@ class OverlayManagerDialog(QDialog):
                 self.gallery.cache.clear()
 
     def _on_graphics(self, iid):
+        kind = next((row[2] for row in self._mgr.all_instances() if row[0] == iid), None)
+        if kind == "loop_deck":
+            self._on_settings(iid)
+            return
         widget = self._mgr.get_widget(iid)
         if widget is not None and hasattr(widget, "_open_graphic_collections"):
             widget._open_graphic_collections()

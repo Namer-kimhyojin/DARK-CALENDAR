@@ -8,6 +8,7 @@ from PyQt6.QtCore import QEvent, QMargins, QObject, QPoint, Qt, QTimer
 from PyQt6.QtWidgets import (
     QAbstractButton,
     QApplication,
+    QColorDialog,
     QDialog,
     QFileDialog,
     QFrame,
@@ -16,6 +17,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QMessageBox,
     QSizeGrip,
+    QSizePolicy,
     QToolButton,
     QWidget,
 )
@@ -45,8 +47,14 @@ def _eligible(dialog) -> bool:
     # Native operating-system file pickers do not expose a Qt client layout.
     # The Qt fallback is styled while preserving its file mode and filters.
     return not (
-        isinstance(dialog, QFileDialog)
-        and not dialog.testOption(QFileDialog.Option.DontUseNativeDialog)
+        (
+            isinstance(dialog, QFileDialog)
+            and not dialog.testOption(QFileDialog.Option.DontUseNativeDialog)
+        )
+        or (
+            isinstance(dialog, QColorDialog)
+            and not dialog.testOption(QColorDialog.ColorDialogOption.DontUseNativeDialog)
+        )
     )
 
 
@@ -309,6 +317,15 @@ class _DialogChromeController(QObject):
             self.title_label.setProperty("role", "dialogTitle")
             self.title_label.setTextFormat(Qt.TextFormat.PlainText)
             self.title_label.setWordWrap(True)
+            if isinstance(dialog, QColorDialog):
+                # Qt's color-selector layout can finish after the shared chrome.
+                # A selector caption is a single row, never a narrow text column.
+                self.title_label.setWordWrap(False)
+                self.title_label.setSizePolicy(
+                    QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+                )
+                self.title_label.setMinimumWidth(0)
+                self.title_label.setToolTip(_title(dialog))
             row.addWidget(self.title_label, 1)
             self.close_button = QToolButton(self.header)
             self.close_button.setObjectName("CommonDialogClose")
@@ -460,7 +477,9 @@ class _DialogChromeController(QObject):
                 margins = self._base_margins
                 width = max(1, self.dialog.width() - margins.left() - margins.right())
                 layout = self.header.layout()
-                height = max(48, layout.heightForWidth(width))
+                height = max(48, layout.sizeHint().height(), layout.heightForWidth(width))
+                if isinstance(dialog, QColorDialog):
+                    self.header.setFixedWidth(width)
                 self.dialog.setContentsMargins(
                     margins.left(), margins.top() + height, margins.right(), margins.bottom()
                 )
@@ -512,6 +531,9 @@ class _DialogChromeController(QObject):
         kind = event.type()
         if watched is dialog and kind in (QEvent.Type.WinIdChange, QEvent.Type.Show):
             _restore_tool_dialog_owner(dialog)
+            if kind == QEvent.Type.Show and isinstance(dialog, QColorDialog):
+                # Reconcile once Qt has completed the selector's deferred layout.
+                QTimer.singleShot(0, self._update_header_geometry)
         if watched is self.dialog and kind == QEvent.Type.WindowTitleChange:
             if self.title_label is not None:
                 self.title_label.setText(_title(self.dialog))

@@ -115,9 +115,20 @@ _WIDGET_TYPES: dict[str, dict] = {
         "default_offset": QPoint(-520, 120),
         "init_method": "_init_launcher_deck_instance",
     },
+    "loop_deck": {
+        "label_key": "menu.widget_loop_deck",
+        "label_default": "루프 믹서",
+        "class": "OverlayLoopDeckWidget",
+        "icon": ICON.WIDGET_LAUNCHER,
+        "default_offset": QPoint(-520, 120),
+        "init_method": "_init_loop_deck_instance",
+    },
 }
 
 _SETTINGS_KEY = "overlay_instances"
+_AUDIO_COUNTERS_KEY = "overlay_audio_instance_counters"
+_AUDIO_WIDGET_TYPES = frozenset({"launcher_deck", "loop_deck"})
+_MAX_AUDIO_COUNTER = 2**31 - 1
 
 
 def widget_type_label(widget_type: str) -> str:
@@ -168,6 +179,7 @@ class OverlayWidgetManager:
         self._id_lock = threading.Lock()
         self._listeners: list = []
         self._workspace_service = None
+        self._counters.update(self._read_audio_counters())
 
     def workspace_service(self):
         """One owner-scoped workspace runtime, shared by every management entry."""
@@ -190,12 +202,67 @@ class OverlayWidgetManager:
     def _gen_id(self, widget_type: str) -> str:
         """Generate a unique id for a new instance of widget_type."""
         with self._id_lock:
+            if widget_type in _AUDIO_WIDGET_TYPES:
+                for kind, counter in self._read_audio_counters().items():
+                    self._counters[kind] = max(self._counters.get(kind, 0), counter)
             used = {m["_id"] for m in self._meta.values()} if self._meta else set()
             n = self._counters.get(widget_type, 0)
             while f"{widget_type}_{n}" in used:
                 n += 1
+            if widget_type in _AUDIO_WIDGET_TYPES and n >= _MAX_AUDIO_COUNTER:
+                raise ValueError("Audio widget instance ID counter is exhausted")
             self._counters[widget_type] = n + 1
+            if widget_type in _AUDIO_WIDGET_TYPES:
+                self._persist_audio_counters()
             return f"{widget_type}_{n}"
+
+    def _read_audio_counters(self) -> dict[str, int]:
+        raw = self._settings().value(_AUDIO_COUNTERS_KEY, "")
+        if not raw:
+            return {}
+        try:
+            if not isinstance(raw, str) or len(raw) > 1024:
+                raise ValueError("invalid audio instance counters")
+            values = json.loads(raw)
+            if not isinstance(values, dict):
+                raise ValueError("invalid audio instance counters")
+        except (TypeError, ValueError):
+            logger.warning("Ignoring invalid audio widget instance counters")
+            return {}
+        return {
+            kind: value
+            for kind, value in values.items()
+            if kind in _AUDIO_WIDGET_TYPES
+            and type(value) is int
+            and 0 <= value <= _MAX_AUDIO_COUNTER
+        }
+
+    def _persist_audio_counters(self) -> None:
+        """Reserve audio identities across deletion, restart and older-instance restore."""
+        stored = self._read_audio_counters()
+        counters = {
+            kind: max(stored.get(kind, 0), self._counters.get(kind, 0))
+            for kind in _AUDIO_WIDGET_TYPES
+        }
+        for item in self._meta.values():
+            kind = item.get("type")
+            identity = item.get("_id", "")
+            if kind not in _AUDIO_WIDGET_TYPES or not identity.startswith(f"{kind}_"):
+                continue
+            try:
+                number = int(identity.rsplit("_", 1)[1])
+            except ValueError:
+                continue
+            counters[kind] = max(counters[kind], number + 1)
+        counters = {kind: min(value, _MAX_AUDIO_COUNTER) for kind, value in counters.items()}
+        self._counters.update(counters)
+        if counters == stored or not any(counters.values()) and not stored:
+            return
+        settings = self._settings()
+        settings.setValue(_AUDIO_COUNTERS_KEY, json.dumps(counters, sort_keys=True))
+        sync = getattr(settings, "sync", None)
+        if callable(sync):
+            sync()
 
     def _settings_prefix(self, inst_id: str) -> str:
         return f"oi_{inst_id}"
@@ -208,6 +275,7 @@ class OverlayWidgetManager:
             OverlayDateCardWidget,
             OverlayDDayWidget,
             OverlayLauncherDeckWidget,
+            OverlayLoopDeckWidget,
             OverlayStopwatchWidget,
             OverlayTextWidget,
             OverlayWeatherWidget,
@@ -222,6 +290,7 @@ class OverlayWidgetManager:
             "text": OverlayTextWidget,
             "weather": OverlayWeatherWidget,
             "launcher_deck": OverlayLauncherDeckWidget,
+            "loop_deck": OverlayLoopDeckWidget,
         }
         cls = cls_map.get(widget_type)
         if cls is None:
@@ -299,6 +368,8 @@ class OverlayWidgetManager:
     ) -> None:
         """A group action touches the source and visible widgets, never hidden instances."""
         for inst_id, widget in list(self._widgets.items()):
+            if self._meta.get(inst_id, {}).get("type") == "loop_deck":
+                continue
             if inst_id == source_id or widget.isVisible():
                 widget.apply_graphic_collection(
                     collection_id, motion=motion, auto_contrast=auto_contrast
@@ -351,12 +422,23 @@ class OverlayWidgetManager:
             if not key_text.startswith(source_prefix):
                 continue
             suffix = key_text[len(source_prefix) :]
-            if suffix in {"pos_x", "pos_y"}:
+            if suffix in {"pos_x", "pos_y"} or (
+                source_meta["type"] == "loop_deck" and suffix == "overlay_loop_deck_project_path"
+            ):
                 continue
             settings.setValue(f"{destination_prefix}{suffix}", settings.value(key_text))
 
         copy_widget = self._widgets[new_id]
         copy_widget.apply_initial_settings()
+        if source_meta["type"] == "loop_deck":
+            clone = getattr(copy_widget, "clone_project_from", None)
+            try:
+                if not callable(clone) or clone(source_widget) is False:
+                    self.remove_instance(new_id)
+                    return None
+            except Exception:
+                self.remove_instance(new_id)
+                raise
         copy_widget.move(source_widget.pos() + QPoint(24, 24))
         copy_widget.save_position()
         if source_widget.is_enabled():
@@ -411,9 +493,13 @@ class OverlayWidgetManager:
 
     def remove_instance(self, inst_id: str):
         """Hide and destroy the instance."""
+        if self._meta.get(inst_id, {}).get("type") in _AUDIO_WIDGET_TYPES:
+            self._persist_audio_counters()
         widget = self._widgets.pop(inst_id, None)
         if widget is not None:
             widget.set_enabled(False)
+            if self._meta.get(inst_id, {}).get("type") == "loop_deck":
+                widget.shutdown()
             widget.deleteLater()
         self._meta.pop(inst_id, None)
         self._remove_instance_settings(inst_id)
@@ -849,6 +935,8 @@ class OverlayWidgetManager:
                 needs_repair = True
         if needs_repair:
             self._save()
+        # An older restored deck may be deleted before the first new allocation.
+        self._persist_audio_counters()
         self._notify_listeners()
         if self._settings().value("widget_studio_state", ""):
             self.workspace_service()
@@ -868,9 +956,12 @@ class OverlayWidgetManager:
         if self._workspace_service is not None:
             self._workspace_service.shutdown()
         self.save_all()
-        for widget in self._widgets.values():
+        for iid, widget in self._widgets.items():
             with contextlib.suppress(Exception):
                 widget._set_runtime_active(False)
+            if self._meta.get(iid, {}).get("type") == "loop_deck":
+                with contextlib.suppress(Exception):
+                    widget.shutdown()
             with contextlib.suppress(RuntimeError):
                 widget.hide()
 

@@ -267,10 +267,14 @@ def graphic_collection(value: object) -> GraphicCollection | None:
 
 
 def graphic_collections(kind: str) -> tuple[GraphicCollection, ...]:
+    if kind == "loop_deck":
+        return ()
     return COLLECTIONS + DESIGNS_BY_KIND.get(kind, ())
 
 
 def collection_for_kind(value: object, kind: str) -> GraphicCollection | None:
+    if kind == "loop_deck":
+        return None
     design = graphic_collection(value)
     if design and design.widget_kind and design.widget_kind != kind:
         return DESIGNS_BY_KIND.get(kind, ())[design.slot] if kind in DESIGNS_BY_KIND else None

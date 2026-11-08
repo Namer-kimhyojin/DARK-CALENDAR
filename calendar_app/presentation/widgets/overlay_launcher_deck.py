@@ -76,6 +76,29 @@ DATA_KEY = "keydeck_data"
 LEGACY_DATA_KEY = "launcher_deck_data"
 
 
+def open_loop_mixer_widget(context):
+    """Open the independent mixer once, using the existing app-owned widget manager."""
+    if is_app_exiting():
+        return None
+    seen = set()
+    while context is not None and id(context) not in seen:
+        seen.add(id(context))
+        manager = getattr(context, "overlay_manager", None)
+        if manager is not None:
+            instances = manager.instances_of("loop_deck")
+            inst_id = instances[0][0] if instances else manager.add_instance("loop_deck")
+            manager.show_instance(inst_id)
+            widget = manager.get_widget(inst_id)
+            if widget is not None:
+                widget.raise_()
+                widget.activateWindow()
+            return widget
+        owner = getattr(context, "owner", None)
+        parent = getattr(context, "parentWidget", None)
+        context = owner if owner is not None else parent() if callable(parent) else None
+    return None
+
+
 class OverlayLauncherDeckWidget(_BaseOverlayWidget):
     _PREFIX = "overlay_launcher_deck"
     _DEFAULT_BG_RGBA = "#00000000"
@@ -159,6 +182,7 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         if not active and self._keyboard_performance:
             self._set_keyboard_performance(False)
         if self._canvas is not None:
+            self._canvas.audio_source_id = str(getattr(self, "_overlay_inst_id", ""))
             self._canvas.set_runtime_active(active)
         if not active and is_app_exiting():
             self._close_studio_for_exit()
@@ -300,6 +324,7 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         self._fit_window()
 
     def _show_with_correct_size(self):
+        self._canvas.audio_source_id = str(getattr(self, "_overlay_inst_id", ""))
         super()._show_with_correct_size()
         self._fit_window()
 
@@ -731,46 +756,13 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         self._canvas.stop_sounds()
 
     def _open_beatmaker_performance(self) -> None:
-        from calendar_app.presentation.widgets.keydeck.beatmaker_dialog import (
-            BeatmakerPerformanceDialog,
-        )
-
-        if is_app_exiting() or beatmaker_state(current_page(self._deck_data)) is None:
-            return
-        self._set_keyboard_performance(False)
-        dialog = BeatmakerPerformanceDialog(self._deck_data, self)
-        self._performance_dialog = dialog
-        try:
-            dialog.exec()
-        finally:
-            self._performance_dialog = None
-        if not is_app_exiting():
-            result = dialog.result_performance()
-            if any(self._deck_data.get(key) != value for key, value in result.items()):
-                self._deck_data.update(result)
-                self._apply_deck(self._deck_data)
-        dialog.deleteLater()
+        self._open_loop_mixer()
 
     def _open_beatmaker_looper(self) -> None:
-        from calendar_app.presentation.widgets.keydeck.looper_dialog import BeatmakerLooperDialog
+        self._open_loop_mixer()
 
-        if is_app_exiting() or beatmaker_state(current_page(self._deck_data)) is None:
-            return
-        self._set_keyboard_performance(False)
-        dialog = BeatmakerLooperDialog(self._deck_data, self)
-        self._performance_dialog = dialog
-        try:
-            dialog.exec()
-        finally:
-            self._performance_dialog = None
-        if not is_app_exiting():
-            result = dialog.result_performance()
-            if any(self._deck_data.get(key) != value for key, value in result.items()):
-                self._deck_data.update(result)
-                if result["beatmaker_looper"] is None:
-                    self._deck_data.pop("beatmaker_looper", None)
-                self._apply_deck(self._deck_data)
-        dialog.deleteLater()
+    def _open_loop_mixer(self) -> None:
+        open_loop_mixer_widget(self)
 
     def _set_beatmaker_kit(self, kit: str) -> None:
         state = beatmaker_state(current_page(self._deck_data))
@@ -832,8 +824,6 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         if state is None:
             return
         music = menu.addMenu(t("beatmaker.title", "비트메이커"))
-        music.addAction(t("beatmaker.performance", "연주·녹음"), self._open_beatmaker_performance)
-        music.addAction(t("beatmaker.looper.open", "루프덱 · 4트랙"), self._open_beatmaker_looper)
         keyboard = music.addAction(
             t("beatmaker.stop_keyboard", "키보드 연주 종료 (Esc)")
             if self._keyboard_performance
@@ -874,6 +864,14 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             t("widget.launcher.menu.studio", "KeyDeck 스튜디오 열기..."), self._open_settings
         )
         studio.setIcon(_ic(ICON.EDIT))
+        loop_mixer = menu.addAction(
+            t("loop_mixer.open", "루프 믹서 위젯 열기"), self._open_loop_mixer
+        )
+        loop_mixer.setObjectName("openLoopMixer")
+        loop_mixer.setIcon(_ic(ICON.REPEAT))
+        loop_mixer.setToolTip(
+            t("loop_mixer.open_hint", "여러 키덱과 마이크를 독립 루프 믹서에서 함께 녹음합니다.")
+        )
         key = self._canvas.key_at(self._canvas.mapFromGlobal(global_pos)) if self._canvas else None
         if key is not None:
             name = key["label"] or t("widget.launcher.unnamed_key", "이름 없는 키")

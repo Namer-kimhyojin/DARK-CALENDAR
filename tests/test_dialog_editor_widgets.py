@@ -752,21 +752,22 @@ class DialogEditorWidgetTests(unittest.TestCase):
         self.assertIn("border: 1px solid", dialog._color_edits[first_key].styleSheet())
         self.assertIn("background: transparent", dialog._color_swatches[first_key].styleSheet())
 
-    def test_dialog_token_editor_hides_raw_values_until_expert_mode(self):
+    def test_dialog_token_editor_recommends_controls_until_expert_mode(self):
         dialog = DialogTokenEditorDialog()
         self.addCleanup(_safe_close, dialog)
 
-        self.assertTrue(dialog.color_token_area.isHidden())
-        self.assertTrue(dialog.metric_token_area.isHidden())
-        self.assertTrue(dialog.export_btn.isHidden())
-        self.assertTrue(dialog.import_btn.isHidden())
+        self.assertFalse(dialog.color_token_area.isHidden())
+        self.assertFalse(dialog._color_rows["surface_bg"].isHidden())
+        self.assertTrue(dialog._color_rows["surface_hover"].isHidden())
+        self.assertEqual(len(dialog.file_menu.actions()), 2)
+        self.assertTrue(dialog.export_btn.isVisible())
+        self.assertTrue(dialog.import_btn.isVisible())
 
         dialog.expert_mode_check.setChecked(True)
 
-        self.assertFalse(dialog.color_token_area.isHidden())
-        self.assertFalse(dialog.metric_token_area.isHidden())
-        self.assertFalse(dialog.export_btn.isHidden())
-        self.assertFalse(dialog.import_btn.isHidden())
+        self.assertFalse(dialog._color_rows["surface_hover"].isHidden())
+        self.assertEqual(len(dialog._color_edits), len(dialog._color_rows))
+        self.assertEqual(len(dialog._metric_spins), len(dialog._metric_rows))
 
     def test_dialog_token_editor_can_stage_changes_without_persisting(self):
         dialog = DialogTokenEditorDialog(

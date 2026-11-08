@@ -71,7 +71,7 @@ class BeatmakerPerformanceDialog(QDialog):
         bank_row = QHBoxLayout()
         bank_row.addWidget(self.page_combo, 1)
         self.looper_button = self._button(
-            t("beatmaker.looper.open", "루프덱 · 4트랙"), self._open_looper
+            t("loop_mixer.open", "루프 믹서 위젯 열기"), self._open_looper
         )
         bank_row.addWidget(self.looper_button)
         root.addLayout(bank_row)
@@ -177,28 +177,13 @@ class BeatmakerPerformanceDialog(QDialog):
         self._focus_pads()
 
     def _open_looper(self):
-        from calendar_app.presentation.widgets.keydeck.looper_dialog import BeatmakerLooperDialog
+        from calendar_app.presentation.widgets.overlay_launcher_deck import open_loop_mixer_widget
         from calendar_app.shared.app_lifecycle import is_app_exiting
 
         if self._finished or is_app_exiting():
             return
         self._stop()
-        dialog = BeatmakerLooperDialog(self.deck, self, draft=self._draft)
-        self._looper_dialog = dialog
-        try:
-            dialog.exec()
-        finally:
-            self._looper_dialog = None
-        if not self._finished and not is_app_exiting():
-            result = dialog.result_performance()
-            if result["beatmaker_looper"] is not None:
-                self.deck["beatmaker_looper"] = result["beatmaker_looper"]
-            self.sound_check.setChecked(result["sound_enabled"])
-            self.volume_slider.setValue(result["sound_volume"])
-            self.canvas.set_deck(self.deck)
-            self._refresh()
-            self._focus_pads()
-        dialog.deleteLater()
+        open_loop_mixer_widget(self)
 
     def _navigate_page(self, index):
         selected = self.page_combo.findData(index)

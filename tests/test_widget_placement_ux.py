@@ -217,6 +217,13 @@ def test_snap_ignores_far_neighbors_and_aligns_nearby_right_edges(clock):
     b.resize(200, 100)
     b.move(300, 700)
     b.show()
+    # This tests snapping unequal boxes, independent of the live clock text's
+    # changing size hint (e.g. narrower digits at a different wall-clock time).
+    a._release_layout_constraints()
+    b._release_layout_constraints()
+    a.resize(240, 100)
+    b.resize(200, 100)
+    assert a.width() == 240 and b.width() == 200
     screen = Mock()
     screen.availableGeometry.return_value = QRect(-1000, -1000, 3000, 3000)
     with patch(

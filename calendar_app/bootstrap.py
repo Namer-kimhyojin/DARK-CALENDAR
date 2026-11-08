@@ -34,6 +34,7 @@ from calendar_app.infrastructure.i18n import i18n, t
 from calendar_app.infrastructure.runtime.crash_bootstrap import (
     show_database_startup_error as _show_database_startup_error,
 )
+from calendar_app.infrastructure.runtime.qt_startup_options import resolve_qt_startup_options
 from calendar_app.shared.value_parsers import as_int
 
 set_domain_translator(t)
@@ -340,10 +341,19 @@ def _run_splash_phase(
 
 
 def run(overlay_cls=None, build_ui_font=None) -> int:
+    startup_options = resolve_qt_startup_options(sys.argv, os.environ, sys.platform)
+    logging.getLogger(__name__).info(
+        "Qt startup policy=%s reason=%s",
+        startup_options.source,
+        startup_options.reason,
+    )
     QCoreApplication.setOrganizationName("kimhyojin")
     QCoreApplication.setApplicationName(APP_NAME)
 
-    app = QApplication(sys.argv)
+    # Font-database initialization happens at the first font query/paint. Select
+    # the Windows compatibility backend before constructing QApplication, while
+    # leaving explicit Qt options and saved family/size/DPI settings untouched.
+    app = QApplication(list(startup_options.argv))
     i18n.apply_application_locale()
     _install_qt_message_handler()
     from calendar_app.presentation.dialogs.dialog_styles import (

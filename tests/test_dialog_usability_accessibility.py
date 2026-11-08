@@ -208,6 +208,17 @@ class DialogUsabilityAccessibilityTests(unittest.TestCase):
         self.assertTrue(save_button.isVisible())
 
     def test_gcal_navigation_and_calendar_actions_expose_state_and_targets(self):
+        # UI targets use a deterministic empty repository, never a personal DB.
+        for target, value in (
+            ("calendar_app.infrastructure.db.calendar_repo.list_calendars", []),
+            ("calendar_app.infrastructure.db.task_repo.count_unified_task_gcal_errors", 0),
+            ("calendar_app.infrastructure.db.task_repo.count_gcal_delete_queue_errors", 0),
+            ("calendar_app.infrastructure.db.task_repo.count_gcal_sync_conflicts", 0),
+            ("calendar_app.infrastructure.db.task_repo.get_gcal_delete_queue", []),
+        ):
+            repository = patch(target, return_value=value)
+            repository.start()
+            self.addCleanup(repository.stop)
         parent = _SettingsParent("GCalDialogUsability")
         dialog = GCalSettingsDialog(parent=parent, initial_tab="calendar")
         self.addCleanup(dialog.close)

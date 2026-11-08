@@ -34,7 +34,7 @@ class AppearanceIconContrastTests(unittest.TestCase):
                 advanced = next(
                     button
                     for button in dialog.findChildren(QPushButton)
-                    if button.text() == t("dialog.theme.advanced", "고급 사용자 설정")
+                    if button.text() == t("dialog.theme.details_action", "세부 모양 조정…")
                 )
                 buttons = (
                     advanced,

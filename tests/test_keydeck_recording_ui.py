@@ -260,12 +260,11 @@ def test_shared_deck_embeds_custom_recording_sound_and_keeps_receiving_recording
     )
 
 
-def test_studio_entry_keeps_text_editing_silent_and_performance_is_undoable_draft(
-    app, bank, player
-):
+def test_studio_entry_keeps_text_editing_silent_and_opens_independent_mixer(app, bank, player):
     view, clock = player
     recording = _perform(view, clock)
     source = model.build_template_deck("beatmaker_4x4")
+    source["beatmaker_recording"] = recording
     before = deepcopy(source)
     studio = KeyDeckStudioDialog(source)
     studio.show()
@@ -280,27 +279,26 @@ def test_studio_entry_keeps_text_editing_silent_and_performance_is_undoable_draf
         bank.play.assert_not_called()
         prior = deepcopy(studio.deck)
 
-        def perform(dialog):
-            dialog.timeline.take = deepcopy(recording)
-            dialog.reject()
-            return QDialog.DialogCode.Rejected
-
-        with patch.object(BeatmakerPerformanceDialog, "exec", new=perform):
+        dirty = studio._dirty
+        with (
+            patch(
+                "calendar_app.presentation.widgets.overlay_launcher_deck.open_loop_mixer_widget"
+            ) as open_mixer,
+            patch.object(studio, "_ask_unsaved_changes", return_value="keep"),
+        ):
             studio.open_beatmaker_performance()
-        assert studio.deck["beatmaker_recording"] == recording
-        assert source == before
-        assert studio._dirty
-        studio.undo()
+            open_mixer.assert_not_called()
         assert studio.deck == prior
-        studio.redo()
-        assert studio.result_deck()["beatmaker_recording"] == recording
+        assert source == before
+        assert studio._dirty == dirty
+        assert studio.isVisible()
     finally:
         studio.force_close()
         studio.deleteLater()
         app.processEvents()
 
 
-def test_widget_session_saves_recording_in_instance_settings_and_reloads(
+def test_widget_mixer_entry_preserves_saved_recording_in_instance_settings(
     app, bank, player, tmp_path
 ):
     view, clock = player
@@ -308,16 +306,16 @@ def test_widget_session_saves_recording_in_instance_settings_and_reloads(
     owner = QWidget()
     owner.settings = QSettings(str(tmp_path / "recording.ini"), QSettings.Format.IniFormat)
     widget = OverlayLauncherDeckWidget(owner)
-    widget._apply_deck(model.build_template_deck("beatmaker_4x4"))
-
-    def perform(dialog):
-        dialog.timeline.take = deepcopy(recording)
-        dialog.reject()
-        return QDialog.DialogCode.Rejected
+    source = model.build_template_deck("beatmaker_4x4")
+    source["beatmaker_recording"] = recording
+    widget._apply_deck(source)
 
     try:
-        with patch.object(BeatmakerPerformanceDialog, "exec", new=perform):
+        with patch(
+            "calendar_app.presentation.widgets.overlay_launcher_deck.open_loop_mixer_widget"
+        ) as open_mixer:
             widget._open_beatmaker_performance()
+            open_mixer.assert_called_once_with(widget)
         assert widget._load_deck()["beatmaker_recording"] == recording
         assert widget._performance_dialog is None
     finally:
@@ -328,12 +326,16 @@ def test_widget_session_saves_recording_in_instance_settings_and_reloads(
         app.processEvents()
 
 
-def test_modal_player_accepts_keyboard_from_non_focus_overlay_parent(app, bank, tmp_path):
+def test_legacy_modal_class_still_accepts_keyboard_from_non_focus_overlay_parent(
+    app, bank, tmp_path
+):
     owner = QWidget()
     owner.settings = QSettings(str(tmp_path / "focus.ini"), QSettings.Format.IniFormat)
     widget = OverlayLauncherDeckWidget(owner)
     widget._apply_deck(model.build_template_deck("beatmaker_4x4"))
     widget.show()
+    dialog = BeatmakerPerformanceDialog(widget.deck(), widget)
+    widget._performance_dialog = dialog
     result = {}
 
     def perform():
@@ -353,13 +355,15 @@ def test_modal_player_accepts_keyboard_from_non_focus_overlay_parent(app, bank, 
 
     try:
         QTimer.singleShot(100, perform)
-        widget._open_beatmaker_performance()
+        dialog.exec()
         assert result["dialog_accepts_focus"]
         assert result["canvas_focused"]
         assert result["take"]["events"][0]["sound"] == "beat_lofi_tom_low"
-        assert widget._load_deck()["beatmaker_recording"] == result["take"]
+        assert "beatmaker_recording" not in widget.deck()
         assert widget.windowFlags() & Qt.WindowType.WindowDoesNotAcceptFocus
     finally:
+        widget._performance_dialog = None
+        dialog.deleteLater()
         widget.close()
         widget.deleteLater()
         owner.close()

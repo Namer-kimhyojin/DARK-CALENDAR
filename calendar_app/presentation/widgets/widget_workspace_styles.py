@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Semantic styles for widget-only navigation, summaries and surface treatments."""
 
+from calendar_app.presentation.widgets.panel_widget_style import int_token
+
 
 def workspace_styles(tokens, skin):
     ink, secondary = tokens["text_primary"], tokens["text_secondary"]
@@ -21,12 +23,14 @@ def workspace_styles(tokens, skin):
     if skin.surface_style == "legacy":
         return css
     radius, item_radius = {
-        "soft": (18, 10),
+        "soft": (10, 8),
         "paper": (6, 2),
-        "outline": (12, 6),
-        "glass": (24, 14),
+        "outline": (10, 6),
+        "glass": (10, 8),
         "compact": (8, 4),
     }[skin.surface_style]
+    radius = int_token(skin.token_overrides, "widget_surface_radius", radius)
+    item_radius = int_token(skin.token_overrides, "widget_entry_radius", item_radius)
     item_bg = "transparent" if skin.surface_style in {"outline", "paper"} else tokens["card_bg"]
     item_border = (
         f"border: 1px solid {edge};"

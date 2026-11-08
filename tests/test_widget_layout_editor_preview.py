@@ -95,6 +95,8 @@ def test_source_appearance_and_fitted_readouts_are_used_in_native_image(renderer
             "widget_mode_font_size": 18,
             "widget_mode_text_opacity": 70,
             "widget_mode_background_opacity": 30,
+            "last_opacity": 128,
+            "last_opacity_unit": "byte",
         }
     )
     data = seed_free_layout("stacked")
@@ -108,7 +110,10 @@ def test_source_appearance_and_fitted_readouts_are_used_in_native_image(renderer
     image = preview.render(data)
     assert data == original
     assert preview.window.font().family() == "Arial"
-    assert preview.window._style_signature[-1] == (70, 30)
+    # The main theme already supplies alpha; legacy widget opacity is not multiplied twice.
+    assert preview.window._style_signature[-1] == (100, 100)
+    assert settings.values["widget_mode_text_opacity"] == 70
+    assert settings.values["widget_mode_background_opacity"] == 30
     # An empty canvas pixel includes the parent's translucent surface, rather
     # than a black or fully transparent QWidget.grab() background.
     alpha = image.toImage().pixelColor(1, image.height() - 2).alpha()

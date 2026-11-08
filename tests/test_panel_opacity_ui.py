@@ -179,13 +179,15 @@ class PanelOpacityUiTests(unittest.TestCase):
 
         ocean = dialog._family_btns["ocean"]
         self.assertEqual(ocean.objectName(), "appearanceFamilyCard")
-        self.assertEqual(ocean.iconSize().width(), 64 if dialog._family_columns == 3 else 88)
-        self.assertIn("블루\n네이비", ocean.text())
+        self.assertEqual(ocean.iconSize().width(), 44)
+        self.assertEqual(ocean.text().removeprefix("✓ "), "블루")
+        self.assertIn("네이비", ocean.accessibleName())
         self.assertEqual(ocean.property("variant_label"), "네이비")
 
         dialog._set_appearance_mode("light")
 
-        self.assertIn("블루\n파스텔 스카이", ocean.text())
+        self.assertEqual(ocean.text().removeprefix("✓ "), "블루")
+        self.assertIn("파스텔 스카이", ocean.accessibleName())
         self.assertEqual(ocean.property("variant_label"), "파스텔 스카이")
 
     def test_appearance_bounds_and_family_cards_preserve_visible_content(self):
@@ -201,7 +203,8 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.assertLessEqual(dialog.height(), 740)
         self.assertEqual(len(dialog._family_btns), 9)
         heights = {button.height() for button in dialog._family_btns.values()}
-        self.assertEqual(heights, {72})
+        self.assertEqual(len(heights), 1)
+        self.assertLess(next(iter(heights)), 72)
         self.assertTrue(
             all(
                 button.height() >= button.iconSize().height() + 16
@@ -225,7 +228,7 @@ class PanelOpacityUiTests(unittest.TestCase):
             original_buttons = list(dialog._family_btns.values())
             original_preview = dialog._preview_frame
             draft = (dialog.selected_base_hex(), dialog.selected_point_hex(), dialog._opacity)
-            for width, wide, columns in ((960, True, 2), (700, False, 3), (960, True, 2)):
+            for width, wide, columns in ((960, True, 3), (700, False, 3), (960, True, 3)):
                 with self.subTest(width=width, wide=wide):
                     dialog.resize(width, 740)
                     for _ in range(3):
@@ -287,7 +290,7 @@ class PanelOpacityUiTests(unittest.TestCase):
         changed_preview = dialog._preview_frame.styleSheet()
 
         self.assertNotEqual(changed_preview, initial_preview)
-        self.assertIn("스타일", dialog._change_summary_label.text())
+        self.assertIn("스타일", dialog._change_summary_label.toolTip())
         self.assertTrue(dialog._preview_compare_btn.isEnabled())
 
         dialog._preview_compare_btn.click()
@@ -421,7 +424,8 @@ class PanelOpacityUiTests(unittest.TestCase):
         dialog._select_style_family("ocean")
         selected = dialog._family_btns["ocean"]
         self.assertTrue(selected.text().startswith("✓ "))
-        self.assertEqual(selected.accessibleName(), selected.text().replace("\n", ", "))
+        self.assertIn(selected.text().replace("\n", ", "), selected.accessibleName())
+        self.assertIn(selected.property("variant_label"), selected.accessibleName())
 
         first = list(dialog._family_btns.values())[0]
         navigation = QSignalSpy(first.navigate_requested)

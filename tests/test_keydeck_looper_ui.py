@@ -597,38 +597,52 @@ def perform_and_close(dialog):
     return QDialog.DialogCode.Rejected
 
 
-def test_studio_loop_is_an_undoable_draft_and_v1_recording_is_unchanged(app, bank):
+def test_studio_loop_entry_opens_independent_mixer_and_v1_recording_is_unchanged(app, bank):
     source = model.build_template_deck("beatmaker_4x4")
     source["beatmaker_recording"] = legacy_take()
     before = deepcopy(source)
     studio = KeyDeckStudioDialog(source)
     try:
         assert studio.beatmaker_controls.looper_button is not None
-        with patch.object(BeatmakerLooperDialog, "exec", new=perform_and_close):
+        with patch(
+            "calendar_app.presentation.widgets.overlay_launcher_deck.open_loop_mixer_widget"
+        ) as open_mixer:
             studio.open_beatmaker_looper()
-        assert normalize_looper(studio.deck["beatmaker_looper"]) is not None
+            app.processEvents()
+            open_mixer.assert_called_once_with(None)
+        assert studio.deck == before
         assert studio.deck["beatmaker_recording"] == legacy_take()
         assert source == before
-        assert studio._dirty
-        studio.undo()
-        assert "beatmaker_looper" not in studio.deck
-        studio.redo()
-        assert studio.result_deck()["beatmaker_looper"]["tracks"][0]["events"]
+        assert not studio._dirty
     finally:
         studio.force_close()
         studio.deleteLater()
         app.processEvents()
 
 
-def test_widget_saves_loop_in_temporary_settings_and_reopens_silently(app, bank, tmp_path):
+def test_widget_mixer_entry_preserves_saved_loop_and_reopens_silently(app, bank, tmp_path):
     owner = QWidget()
     owner.settings = QSettings(str(tmp_path / "loop.ini"), QSettings.Format.IniFormat)
     widget = OverlayLauncherDeckWidget(owner)
     reopened = None
     try:
-        widget._apply_deck(model.build_template_deck("beatmaker_4x4"))
-        with patch.object(BeatmakerLooperDialog, "exec", new=perform_and_close):
+        source = model.build_template_deck("beatmaker_4x4")
+        source["beatmaker_looper"] = default_looper()
+        source["beatmaker_looper"]["tracks"][0]["events"] = [
+            {
+                "at_tick": 0,
+                "sound": "beat_lofi_kick",
+                "sound_path": "",
+                "volume": 100,
+                "key_id": "pad",
+            }
+        ]
+        widget._apply_deck(source)
+        with patch(
+            "calendar_app.presentation.widgets.overlay_launcher_deck.open_loop_mixer_widget"
+        ) as open_mixer:
             widget._open_beatmaker_looper()
+            open_mixer.assert_called_once_with(widget)
         saved = widget._load_deck()["beatmaker_looper"]
         assert saved["tracks"][0]["events"]
         assert widget._performance_dialog is None
@@ -646,16 +660,19 @@ def test_widget_saves_loop_in_temporary_settings_and_reopens_silently(app, bank,
         app.processEvents()
 
 
-def test_existing_single_performance_opens_loop_without_replacing_v1(app, bank):
+def test_existing_single_performance_routes_to_mixer_without_replacing_v1(app, bank):
     source = model.build_template_deck("beatmaker_4x4")
     source["beatmaker_recording"] = legacy_take()
     performance = BeatmakerPerformanceDialog(source)
     try:
-        with patch.object(BeatmakerLooperDialog, "exec", new=perform_and_close):
+        with patch(
+            "calendar_app.presentation.widgets.overlay_launcher_deck.open_loop_mixer_widget"
+        ) as open_mixer:
             performance.looper_button.click()
+            open_mixer.assert_called_once_with(performance)
         result = performance.result_performance()
         assert result["beatmaker_recording"] == legacy_take()
-        assert result["beatmaker_looper"]["tracks"][0]["events"]
+        assert "beatmaker_looper" not in result
         assert "beatmaker_looper" not in source
         assert performance._looper_dialog is None
         assert not performance.timer.isActive()

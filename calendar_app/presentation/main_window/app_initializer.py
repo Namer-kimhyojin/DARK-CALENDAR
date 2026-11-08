@@ -26,6 +26,7 @@ def initialize_overlay_app(app) -> None:
     ensure_gcal_startup_defaults(app.settings)
     _initialize_focus_timer_defaults(app)
     app.old_pos_drag = None
+    app._native_window_drag = False
     app.is_visible = True
     app._exit_requested = False
     app._tray_available = False

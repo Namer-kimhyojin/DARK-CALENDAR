@@ -10,7 +10,7 @@ from copy import deepcopy
 from pathlib import Path
 import time
 
-from PyQt6.QtCore import QSize, Qt, QUrl
+from PyQt6.QtCore import QSize, Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor, QIcon, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QDialog,
@@ -504,54 +504,25 @@ class KeyDeckStudioDialog(QDialog):
         self._load_page(self.deck["page"], [])
 
     def open_beatmaker_performance(self) -> None:
-        """A dedicated keyboard target keeps musical input out of inspector text fields."""
-        from calendar_app.presentation.widgets.keydeck.beatmaker_dialog import (
-            BeatmakerPerformanceDialog,
-        )
-
-        if is_app_exiting() or beatmaker_state(self.deck["pages"][self.deck["page"]]) is None:
-            return
-        self._leave_preview()
-        dialog = BeatmakerPerformanceDialog(self.deck, self, draft=True)
-        self._performance_dialog = dialog
-        try:
-            dialog.exec()
-        finally:
-            self._performance_dialog = None
-        if not is_app_exiting():
-            result = dialog.result_performance()
-            if any(self.deck.get(key) != value for key, value in result.items()):
-                self._push_undo("")
-                self.deck.update(result)
-                if result["beatmaker_recording"] is None:
-                    self.deck.pop("beatmaker_recording", None)
-                self._mark_dirty()
-                self._load_page(self.deck["page"], list(self.canvas.selection))
-        dialog.deleteLater()
+        self.open_loop_mixer()
 
     def open_beatmaker_looper(self) -> None:
-        """Keep the four-track loop inside the existing Studio draft/undo flow."""
-        from calendar_app.presentation.widgets.keydeck.looper_dialog import BeatmakerLooperDialog
+        self.open_loop_mixer()
 
-        if is_app_exiting() or beatmaker_state(self.deck["pages"][self.deck["page"]]) is None:
+    def open_loop_mixer(self) -> None:
+        """Finish the existing save/discard/cancel flow before opening a separate tool."""
+        from calendar_app.presentation.widgets.overlay_launcher_deck import open_loop_mixer_widget
+
+        if is_app_exiting():
             return
         self._leave_preview()
-        dialog = BeatmakerLooperDialog(self.deck, self, draft=True)
-        self._performance_dialog = dialog
-        try:
-            dialog.exec()
-        finally:
-            self._performance_dialog = None
-        if not is_app_exiting():
-            result = dialog.result_performance()
-            if any(self.deck.get(key) != value for key, value in result.items()):
-                self._push_undo("")
-                self.deck.update(result)
-                if result["beatmaker_looper"] is None:
-                    self.deck.pop("beatmaker_looper", None)
-                self._mark_dirty()
-                self._load_page(self.deck["page"], list(self.canvas.selection))
-        dialog.deleteLater()
+        context = self.parentWidget()
+        self.reject()
+        if self.isVisible() or is_app_exiting():
+            return
+        # The caller applies an accepted draft after exec() unwinds. Open only then,
+        # with the durable owner rather than a dialog scheduled for deleteLater().
+        QTimer.singleShot(0, lambda: open_loop_mixer_widget(context))
 
     def set_beatmaker_bank(self, bank: str) -> None:
         """Use an existing bank page so customized pads survive page switching."""

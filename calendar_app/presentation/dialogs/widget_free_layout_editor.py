@@ -74,6 +74,7 @@ from calendar_app.presentation.widgets.widget_mode_skins import (
     widget_mode_skins,
 )
 from calendar_app.presentation.widgets.widget_mode_typography import read_widget_typography
+from calendar_app.shared.theme_snapshot import build_theme_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -506,6 +507,17 @@ class WidgetFreeLayoutEditorDialog(QDialog):
                 control.valueChanged.connect(
                     lambda value, key=key: self._change_appearance(key, value)
                 )
+        opacity_help = t(
+            "widget_mode.main_theme_opacity_help",
+            "색상과 투명도는 메인 화면의 모양 설정을 따릅니다.",
+        )
+        for control in (self.text_opacity, self.background_opacity):
+            control.setEnabled(False)
+            control.setToolTip(opacity_help)
+        help_label = QLabel(opacity_help, tab)
+        help_label.setWordWrap(True)
+        help_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        form.addRow(help_label)
         layout.addStretch()
         return tab
 
@@ -669,6 +681,8 @@ class WidgetFreeLayoutEditorDialog(QDialog):
             self.delete_selected_preset()
 
     def _change_appearance(self, key, value):
+        if key in {"widget_mode_text_opacity", "widget_mode_background_opacity"}:
+            return
         self.appearance[key] = value
         self._commit()
 
@@ -746,6 +760,15 @@ class WidgetFreeLayoutEditorDialog(QDialog):
         for key, control, _label, _fallback in self._appearance_controls:
             control.blockSignals(True)
             value = self.appearance[key]
+            if key == "widget_mode_text_opacity":
+                value = 100
+            elif key == "widget_mode_background_opacity":
+                value = round(
+                    build_theme_snapshot(
+                        self.controller.main_window.settings, persist_opacity=False
+                    ).opacity_factor
+                    * 100
+                )
             if isinstance(control, QFontComboBox):
                 control.setCurrentFont(QFont(value))
             elif isinstance(control, QComboBox):
@@ -1023,7 +1046,8 @@ class WidgetFreeLayoutEditorDialog(QDialog):
             write_layout_presets(settings, self.presets)
         settings.setValue(SELECTED_LAYOUT_PRESET_KEY, self.selected_preset_id)
         for key, value in self.appearance.items():
-            settings.setValue(key, value)
+            if key not in {"widget_mode_text_opacity", "widget_mode_background_opacity"}:
+                settings.setValue(key, value)
         self.controller.apply_free_layout(data)
         if hasattr(settings, "sync"):
             settings.sync()
