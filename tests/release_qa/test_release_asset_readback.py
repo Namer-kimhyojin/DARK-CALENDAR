@@ -326,7 +326,7 @@ def test_sanitized_failure_report_does_not_contain_token_or_signed_url(tmp_path,
         "RUNNER_TEMP": str(tmp_path),
     }.items():
         monkeypatch.setenv(key, value)
-    monkeypatch.setattr(readback, "verify_product_inputs", lambda: {"count": 718})
+    monkeypatch.setattr(readback, "verify_product_inputs", lambda: {"count": 722})
     monkeypatch.setattr(
         readback,
         "Reader",
@@ -344,15 +344,15 @@ def test_sanitized_failure_report_does_not_contain_token_or_signed_url(tmp_path,
 
 
 def test_fixed_pins_and_manual_workflow_never_build_publish_or_upload_large_files():
-    assert readback.RELEASE_ID == 435765529 and readback.NATIVE_RUN_ID == 42112237912
-    assert readback.SOURCE_COMMIT == "39b335c54d4a944d32ecd1d7ebe76628e4bbe753"
+    assert readback.RELEASE_ID == 438437417 and readback.NATIVE_RUN_ID == 42509937063
+    assert readback.SOURCE_COMMIT == "86b0ba9350ea24d8641d657b628d6d9177607860"
     assert {item["id"] for item in readback.EXPECTED_ASSETS} == {
-        714883145,
-        714883147,
-        714883149,
-        714883163,
-        714883148,
-        714883187,
+        724824820,
+        724824819,
+        724824814,
+        724824818,
+        724824816,
+        724824837,
     }
     assert len(readback.EXPECTED_CI_ARTIFACTS) == 3
     assert all(
