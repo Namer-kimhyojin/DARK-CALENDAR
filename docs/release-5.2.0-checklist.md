@@ -1,5 +1,7 @@
 # Air Calendar 5.2.0 release checklist
 
+**Date:** 2026-11-11
+
 - Release ID: release-5.2.0-20261111; release date 2026-11-11 (Asia/Seoul).
 - Build commit: 731bca88a82bec5e200d315dec73321730ad0d96; Actions run 42940491243.
 - Complete current runtime input: 726 files. Source integration, encoding guard, pinned SQLite 3.54.1 and official ValidateOnly passed.
