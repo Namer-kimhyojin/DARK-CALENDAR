@@ -3,24 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Air Calendar | 일정과 할 일을 바탕화면 한 곳에</title>
-  <meta name="description" content="Google·Outlook·iCloud·네이버·ICS 캘린더를 한곳에서 관리하세요. 선택형 동기화와 충돌 보호, 자유 배치 위젯을 제공하는 Windows 데스크톱 캘린더 Air Calendar.">
+  <title>Air Calendar — 위젯과 색상까지 내 방식으로</title>
+  <meta name="description" content="Windows 바탕화면에 달력과 8종 위젯을 배치하세요. 색상과 투명도, 글꼴과 레이아웃을 꾸미고 Google·Outlook·iCloud 캘린더를 연동하세요.">
   <meta name="keywords" content="Air Calendar, Windows 캘린더, 데스크톱 캘린더, 바탕화면 위젯, 일정 관리, Pomodoro, Google Calendar, Outlook, iCloud, 네이버 CalDAV 동기화">
   <meta name="robots" content="index, follow, max-image-preview:large">
-  <meta name="theme-color" content="#0a0a0b">
-  <meta property="og:title" content="Air Calendar">
-  <meta property="og:description" content="캘린더와 위젯을 바탕화면에 바로 배치하고 크기, 위치, 레이아웃과 색상을 내 방식대로 구성하세요.">
-  <meta property="og:image" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/og-air-calendar.png">
-  <meta property="og:image:alt" content="Air Calendar — Plan, Focus, Flow">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="color-scheme" content="light dark">
+  <meta property="og:title" content="Air Calendar — 위젯과 색상까지 내 방식으로">
+  <meta property="og:description" content="Windows 바탕화면에 달력과 8종 위젯을 배치하세요. 색상과 투명도, 글꼴과 레이아웃을 꾸미고 Google·Outlook·iCloud 캘린더를 연동하세요.">
+  <meta property="og:image" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/og-air-calendar.png?v=20261111-interactive">
+  <meta property="og:image:alt" content="Air Calendar의 실제 달력과 바탕화면 위젯">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/">
   <meta property="og:site_name" content="Air Calendar">
   <meta property="og:locale" content="ko_KR">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Air Calendar">
-  <meta name="twitter:description" content="캘린더와 위젯을 바탕화면에 바로 배치하고 크기, 위치, 레이아웃과 색상을 내 방식대로 구성하세요.">
-  <meta name="twitter:image" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/og-air-calendar.png">
-  <meta name="twitter:image:alt" content="Air Calendar — Plan, Focus, Flow">
+  <meta name="twitter:title" content="Air Calendar — 위젯과 색상까지 내 방식으로">
+  <meta name="twitter:description" content="Windows 바탕화면에 달력과 8종 위젯을 배치하세요. 색상과 투명도, 글꼴과 레이아웃을 꾸미고 Google·Outlook·iCloud 캘린더를 연동하세요.">
+  <meta name="twitter:image" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/og-air-calendar.png?v=20261111-interactive">
+  <meta name="twitter:image:alt" content="Air Calendar의 실제 달력과 바탕화면 위젯">
   <link rel="canonical" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/">
   <link rel="alternate" hreflang="ko" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ko">
   <link rel="alternate" hreflang="en" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=en">
@@ -28,11 +29,12 @@
   <link rel="alternate" hreflang="zh-CN" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=zh">
   <link rel="alternate" hreflang="x-default" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/">
   <link rel="icon" href="assets/app_icon.png">
-  <link rel="stylesheet" href="styles.css?v=20261106-500-preview">
-  <link rel="stylesheet" href="guide.css">
-  <script src="app.js?v=20261106-502-public" defer></script>
+  <script src="home-content.js?v=20261111-interactive" defer></script>
+  <script src="app.js?v=20261111-showcase" defer></script>
+  <script src="home-interactions.js?v=20261111-interactive" defer></script>
   <link rel="stylesheet" href="request-board.css?v=3">
   <script src="request-board.js?v=3" defer></script>
+  <link rel="stylesheet" href="home.css?v=20261111-interactive">
   <script type="application/ld+json" id="software-schema">
     {
       "@context": "https://schema.org",
@@ -45,15 +47,18 @@
       "url": "https://namer-kimhyojin.github.io/DARK-CALENDAR/",
       "downloadUrl": "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.2.0",
       "license": "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.2.0/LICENSE",
-      "image": "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/og-air-calendar.png",
+      "image": "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/og-air-calendar.png?v=20261111-interactive",
       "screenshot": [
-        "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/screenshots/main-dashboard.png",
-        "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/screenshots/widget-manager.png"
+        "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/screenshots/5.0/calendar-light.png",
+        "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/screenshots/5.0/widget-workspace.png",
+        "https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/screenshots/interactive/appearance-dark.webp"
       ],
       "featureList": [
         "Place calendars and widgets directly on the Windows desktop",
         "Move and resize widgets freely",
-        "Create custom layouts and color themes",
+        "Save widget workspaces and switch layouts by rules",
+        "Switch among light, dark and system modes and customize colors and opacity",
+        "Add clocks, date cards, weather, D-Day, countdown, stopwatch, text and KeyDeck widgets",
         "Focus sessions and Pomodoro tracking",
         "Optional Google, Outlook and iCloud event synchronization",
         "Read-only Naver CalDAV and ICS subscriptions",
@@ -64,7 +69,6 @@
 </head>
 <body data-store-cid="aircal-20261005-owned-home">
   <a class="skip-link" href="#main-content" data-i18n="skip">본문으로 건너뛰기</a>
-
   <header class="site-header" data-header>
     <div class="header-inner">
       <a class="brand" href="#top" aria-label="Air Calendar home">
@@ -73,15 +77,14 @@
       </a>
 
       <nav class="desktop-nav" aria-label="Primary navigation">
-        <a href="#features" data-i18n="navFeatures">기능</a>
-        <a href="#explore" data-i18n="navScreens">제품 화면</a>
-        <a href="#calendar-sync" data-i18n="navGoogle">캘린더 연동</a>
-        <a href="#workflow" data-i18n="navWorkflow">사용 흐름</a>
-        <a href="#faq" data-i18n="navFaq">FAQ</a>
+        <a href="#desktop-custom" data-i18n="navFeatures">위젯과 꾸미기</a>
+        <a href="#explore" data-i18n="navScreens">화면 둘러보기</a>
+        <a href="#calendar-sync" data-i18n="navGoogle">캘린더 연결</a>
         <a href="#requests" data-i18n="navRequests">사용자 요청</a>
       </nav>
 
       <div class="header-actions">
+        <button class="theme-toggle" type="button" data-site-theme-toggle data-i18n-aria="siteDarkMode" aria-label="사이트 다크 모드" aria-pressed="false" hidden><span aria-hidden="true"></span></button>
         <label class="language-picker">
           <span class="sr-only" data-i18n="languageLabel">언어 선택</span>
           <select data-language-select aria-label="언어 선택">
@@ -92,7 +95,7 @@
           </select>
         </label>
         <a class="header-cta" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&amp;gl=KR&amp;ocid=pdpshare&amp;cid=aircal-20261005-owned-home" target="_blank" rel="noopener">
-          <span data-i18n="navStore">Store에서 보기</span>
+          <span data-i18n="navStore">설치하기</span>
           <span aria-hidden="true">↗</span>
         </a>
         <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu" data-menu-toggle>
@@ -103,46 +106,51 @@
     </div>
 
     <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile navigation" hidden data-mobile-menu>
-      <a href="#features" data-i18n="navFeatures">기능</a>
-      <a href="#explore" data-i18n="navScreens">제품 화면</a>
-      <a href="#calendar-sync" data-i18n="navGoogle">캘린더 연동</a>
-      <a href="#workflow" data-i18n="navWorkflow">사용 흐름</a>
-      <a href="#faq" data-i18n="navFaq">FAQ</a>
+      <a href="#desktop-custom" data-i18n="navFeatures">위젯과 꾸미기</a>
+      <a href="#explore" data-i18n="navScreens">화면 둘러보기</a>
+      <a href="#calendar-sync" data-i18n="navGoogle">캘린더 연결</a>
       <a href="#requests" data-i18n="navRequests">사용자 요청</a>
-      <a data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&amp;gl=KR&amp;ocid=pdpshare&amp;cid=aircal-20261005-owned-home" target="_blank" rel="noopener" data-i18n="navStore">Store에서 보기</a>
+      <a data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&amp;gl=KR&amp;ocid=pdpshare&amp;cid=aircal-20261005-owned-home" target="_blank" rel="noopener" data-i18n="navStore">설치하기</a>
     </nav>
   </header>
 
   <main id="main-content">
-    <section class="hero hero-five" id="top">
-      <div class="hero-glow" aria-hidden="true"></div>
-      <div class="hero-copy">
-        <p class="eyebrow"><span class="eyebrow-dot"></span><span data-i18n="heroEyebrow">사용자 맞춤형 데스크톱 캘린더 &amp; 위젯</span></p>
-        <h1 data-i18n="heroTitle">바탕화면을<br><em>나만의 시간 공간으로.</em></h1>
-        <p class="hero-description" data-i18n="heroDescription">캘린더와 업무 패널, 시계·날씨·D-Day 위젯을 바탕화면에 바로 띄우세요. 크기와 위치, 레이아웃과 색상까지 내 방식대로 자유롭게 완성할 수 있습니다.</p>
-        <div class="hero-actions">
-          <a class="button button-primary" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&amp;gl=KR&amp;ocid=pdpshare&amp;cid=aircal-20261005-owned-home" target="_blank" rel="noopener">
-            <span data-i18n="heroPrimary">가격 및 설치 확인</span><span aria-hidden="true">↗</span>
-          </a>
-          <a class="button button-quiet" href="#new-experience"><span data-i18n="fiveExplore">5.0 새 기능 보기</span><span aria-hidden="true">↓</span></a>
+    <section class="hero home-width" id="top">
+      <div class="hero-intro">
+        <div class="hero-copy">
+          <p class="eyebrow" data-i18n="heroEyebrow">Windows 데스크톱 캘린더</p>
+          <h1 data-i18n="heroTitle">내가 꾸미는<br><em>캘린더와 위젯.</em></h1>
+          <p class="hero-description" data-i18n="heroDescription">달력과 할 일을 원하는 자리에 놓고, 색상과 투명도를 맞춰보세요. Google·Outlook·iCloud 일정과 시계·날씨·D-Day 위젯을 바탕화면에서 함께 볼 수 있습니다.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&amp;gl=KR&amp;ocid=pdpshare&amp;cid=aircal-20261005-owned-home" target="_blank" rel="noopener"><span data-i18n="heroPrimary">Microsoft Store에서 보기</span><span aria-hidden="true">↗</span></a>
+            <a class="button button-quiet" href="#appearance"><span data-i18n="heroSecondary">다크 모드·투명도 체험</span><span aria-hidden="true">↓</span></a>
+          </div>
+          <p class="hero-meta"><span data-i18n="heroPaid">Microsoft Store 유료 앱</span><span>·</span><span>Windows 10 / 11</span></p>
         </div>
-        <p class="hero-meta"><span data-i18n="heroPaid">Microsoft Store 유료 앱</span><span aria-hidden="true">·</span><span>v<span data-config-text="appVersion">5.2.0</span></span><span aria-hidden="true">·</span><span>GPLv3</span></p>
-        <p class="hero-meta" data-store-release-notice hidden><span data-i18n="storePending">GitHub 5.2.0 공개 완료 · Store 인증 심사 중</span><a data-config-link="releaseSourceUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.2.0" data-i18n="githubLatest">최신 GitHub 배포 보기 ↗</a></p>
+        <figure class="hero-product">
+          <div class="product-topline"><span data-i18n="productLabel">달력과 바탕화면 위젯</span><span data-i18n="productHint">이미지를 눌러 자세히 보세요</span></div>
+          <div class="hero-demo">
+            <button class="product-image" type="button" data-preview-image data-preview-title="mainScreenTitle" data-preview-description="mainScreenBody" aria-label="Air Calendar 월간 달력 화면 크게 보기" data-i18n-aria="mainScreenTitle">
+              <img src="assets/screenshots/5.0/calendar-light.png" width="1488" height="980" alt="Air Calendar 월간 달력과 선택한 날짜의 일정" fetchpriority="high">
+              <span class="image-open" aria-hidden="true"><span data-i18n="zoomHint">크게 보기</span> ↗</span>
+            </button>
+            <div class="hero-widget-samples">
+              <img src="assets/screenshots/showcase/clock.webp" width="320" height="220" alt="디지털 시계 위젯" data-i18n-alt="widgetClock">
+              <img src="assets/screenshots/showcase/weather.webp" width="320" height="220" alt="날씨 위젯" data-i18n-alt="widgetWeather">
+            </div>
+          </div>
+          <figcaption class="product-caption" data-i18n="sampleNote">실제 앱 화면을 조합한 예시입니다.</figcaption>
+        </figure>
       </div>
-
-      <div class="hero-visual release-five-hero" aria-label="Air Calendar 5.0 실제 화면 미리보기" data-i18n-aria="fiveHeroLabel">
-        <div class="five-preview-topline"><span class="five-release-badge" data-release-five-status>5.0 새로운 경험</span><span data-i18n="fiveRealWindows">실제 Windows 화면</span></div>
-        <button class="five-image-button five-hero-image" type="button" data-preview-image data-preview-title="fiveCalendarTitle" data-preview-description="fiveCalendarBody" aria-label="새 캘린더 화면 크게 보기" data-i18n-aria="fiveCalendarOpen">
-          <img src="assets/screenshots/5.0/calendar-light.png" width="1488" height="980" fetchpriority="high" alt="밝은 라일락 테마와 날짜 옆 요일, 선택한 날짜의 일정이 보이는 Air Calendar 5.0" data-i18n-alt="fiveCalendarAlt">
-          <span class="zoom-hint" aria-hidden="true"><b>＋</b><small data-i18n="zoomHint">크게 보기</small></span>
-        </button>
-        <p class="five-hero-caption" data-i18n="fiveCalendarBody">밝은 라일락부터 차분한 네이비까지. 요일은 머리글·날짜 옆·둘 다·숨김 중에서 선택하세요.</p>
-        <p class="five-demo-note" data-i18n="fiveDemoNote">출시 준비 중인 5.0의 실제 화면입니다. 화면 속 일정은 예시 데이터이며 앱 UI는 한국어입니다.</p>
-      </div>
-
-      <div class="hero-scroll" aria-hidden="true"><span></span><small>SCROLL</small></div>
+      <nav class="feature-nav" aria-label="Air Calendar 주요 기능" data-i18n-aria="featureNavLabel">
+        <a href="#desktop-custom"><strong data-i18n="jumpLayout">자유로운 위젯 배치</strong><span aria-hidden="true">↓</span><small data-i18n="jumpLayoutBody">크기·위치·작업 공간 저장</small></a>
+        <a href="#appearance"><strong data-i18n="jumpAppearance">다크 모드와 투명도</strong><span aria-hidden="true">↓</span><small data-i18n="jumpAppearanceBody">배경색과 비치는 정도 직접 체험</small></a>
+        <a href="#widget-gallery"><strong data-i18n="jumpWidgets">추가 위젯 8종</strong><span aria-hidden="true">↓</span><small data-i18n="jumpWidgetsBody">시계·날씨·D-Day·KeyDeck 등</small></a>
+        <a href="#calendar-sync"><strong data-i18n="jumpSync">캘린더 연동</strong><span aria-hidden="true">↓</span><small data-i18n="jumpSyncBody">Google·Outlook·iCloud와 구독</small></a>
+      </nav>
+      <p class="product-facts"><span data-i18n="localFact">계정 없이 로컬로 시작</span><span data-i18n="languageFact">19개 언어 지원</span></p>
+      <p class="release-line" data-store-release-notice hidden><span data-i18n="storePending">GitHub 5.2.0 공개 완료 · Store 인증 심사 중</span><a data-config-link="releaseSourceUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.2.0" data-i18n="githubLatest">최신 GitHub 배포 보기 ↗</a></p>
     </section>
-
     <section class="event-band" data-event-band hidden>
       <div class="event-band-inner">
         <div>
@@ -154,188 +162,153 @@
       </div>
     </section>
 
-    <section class="trust-strip" aria-label="Product details" data-i18n-aria="trustLabel">
-      <div><span>01</span><p><strong>Windows 10 / 11</strong><small data-i18n="trustWindows">바탕화면에 바로 배치</small></p></div>
-      <div><span>02</span><p><strong>Microsoft Store</strong><small data-i18n="trustStore">공식 설치 및 업데이트</small></p></div>
-      <div><span>03</span><p><strong data-i18n="trustLocalTitle">로컬 우선</strong><small data-i18n="trustLocal">일정과 설정은 내 PC에</small></p></div>
-      <div><span>04</span><p><strong data-i18n="navGoogle">캘린더 연동</strong><small data-i18n="trustGoogle">필요한 서비스만 선택</small></p></div>
-    </section>
 
-    <section class="section five-experience" id="new-experience" aria-labelledby="five-experience-title">
-      <div class="section-heading five-heading">
-        <div>
-          <p class="section-index"><span data-release-five-status>5.0 새로운 경험</span></p>
-          <h2 id="five-experience-title"><span data-i18n="fiveTitle">익숙한 조작.</span><br><em data-i18n="fiveTitleAccent">새로운 매일.</em></h2>
-        </div>
-        <p data-i18n="fiveLead">일정을 적는 순간부터 위젯을 보는 순간까지, 같은 색과 같은 사용 흐름으로 이어집니다. 내 취향은 그대로 두고 필요한 순간을 더 편하게 만들었습니다.</p>
-      </div>
-      <div class="five-feature-grid">
-        <article class="five-feature-card">
-          <div class="five-card-copy"><p class="micro-label">01 / CONSISTENT BY DESIGN</p><h3 data-i18n="fiveModalTitle">한 번 익히면, 모든 창에서.</h3><p data-i18n="fiveModalBody">설정·일정·관리·알림에 같은 제목, 입력, 버튼 규칙을 적용했습니다. 읽을 내용과 다음 동작이 자연스럽게 구분됩니다.</p></div>
-          <button class="five-image-button five-modal-image" type="button" data-preview-image data-preview-title="fiveModalTitle" data-preview-description="fiveModalBody" aria-label="새 일정 입력 화면 크게 보기" data-i18n-aria="fiveModalOpen"><img src="assets/screenshots/5.0/schedule-dialog.png" width="700" height="660" alt="통일된 제목과 날짜·시간 입력, 고정 등록 버튼이 있는 새 일정 창" data-i18n-alt="fiveModalAlt" loading="lazy" decoding="async"><span class="five-image-open" aria-hidden="true">↗</span></button>
-        </article>
-        <article class="five-feature-card">
-          <div class="five-card-copy"><p class="micro-label">02 / YOUR COLOURS, YOUR WAY</p><h3 data-i18n="fiveThemeTitle">색은 취향대로, 읽기는 편하게.</h3><p data-i18n="fiveThemeBody">라이트·다크 테마, 기본색과 포인트색, 투명도를 자유롭게 선택하세요. 글자 크기와 버튼 간격도 하나의 기준으로 다듬었습니다.</p></div>
-          <button class="five-image-button" type="button" data-preview-image data-preview-title="fiveThemeTitle" data-preview-description="fiveThemeBody" aria-label="새 모양 설정 화면 크게 보기" data-i18n-aria="fiveThemeOpen"><img src="assets/screenshots/5.0/appearance-light.png" width="960" height="740" alt="밝은 테마와 여러 색상 프리셋을 보여주는 모양 설정" data-i18n-alt="fiveThemeAlt" loading="lazy" decoding="async"><span class="five-image-open" aria-hidden="true">↗</span></button>
-        </article>
-        <article class="five-feature-card">
-          <div class="five-card-copy"><p class="micro-label">03 / ONE THEME, TWO WORKSPACES</p><h3 data-i18n="fiveWidgetTitle">위젯에서도 이어지는 나의 테마.</h3><p data-i18n="fiveWidgetBody">위젯 전용 모드도 메인의 색상과 투명도를 따릅니다. 원하는 배치와 개별 바탕화면 위젯의 꾸미기 설정은 그대로 유지됩니다.</p></div>
-          <button class="five-image-button" type="button" data-preview-image data-preview-title="fiveWidgetTitle" data-preview-description="fiveWidgetBody" aria-label="네이비 위젯 전용 모드 크게 보기" data-i18n-aria="fiveWidgetOpen"><img src="assets/screenshots/5.0/widget-workspace.png" width="1475" height="960" alt="네이비와 라일락 색상으로 통일된 위젯 전용 모드의 일정 목록" data-i18n-alt="fiveWidgetAlt" loading="lazy" decoding="async"><span class="five-image-open" aria-hidden="true">↗</span></button>
-        </article>
-        <article class="five-feature-card five-loop-card">
-          <div class="five-card-copy"><p class="micro-label">04 / A LITTLE RHYTHM BREAK</p><h3 data-i18n="fiveLoopTitle">하나의 루프에, 네 개의 트랙.</h3><p data-i18n="fiveLoopBody">첫 패드로 녹음을 시작하고 다음 트랙에 리듬을 더하세요. 겹쳐 녹음·음소거·음량을 조절하고, WAV를 담아 덱을 공유할 수 있습니다. 기존 단일 녹음도 보존됩니다.</p></div>
-          <button class="five-image-button" type="button" data-preview-image data-preview-title="fiveLoopTitle" data-preview-description="fiveLoopBody" aria-label="4트랙 루프덱 크게 보기" data-i18n-aria="fiveLoopOpen"><img src="assets/screenshots/5.0/loopdeck-four-tracks.png" width="1100" height="920" alt="16개 패드와 네 트랙, 녹음·재생·정지가 모두 보이는 루프덱" data-i18n-alt="fiveLoopAlt" loading="lazy" decoding="async"><span class="five-image-open" aria-hidden="true">↗</span></button>
-        </article>
-      </div>
-      <p class="five-proof-note" data-i18n="fiveDemoNote">출시 준비 중인 5.0의 실제 화면입니다. 화면 속 일정은 예시 데이터이며 앱 UI는 한국어입니다.</p>
-    </section>
-
-    <section class="section desktop-custom" id="desktop-custom">
-      <div class="section-heading desktop-custom-heading">
-        <div>
-          <p class="section-index">01 / DESKTOP, YOUR WAY</p>
-          <h2 data-i18n="desktopTitle">프로그램 창을 넘어<br><em>바탕화면 자체가 캘린더</em></h2>
-        </div>
-        <p data-i18n="desktopLead">Air Calendar의 가장 큰 장점은 필요한 기능을 바탕화면에 직접 구현하는 것입니다. 정해진 틀에 맞추는 대신, 사용자가 자신의 화면과 업무 방식에 맞춰 공간을 설계합니다.</p>
-      </div>
-
-      <figure class="desktop-custom-visual">
-        <img src="assets/desktop-customization.webp" alt="바탕화면 위에서 캘린더와 위젯의 크기, 위치, 색상, 레이아웃을 조정하는 개념 이미지" data-i18n-alt="desktopImageAlt" loading="lazy" decoding="async">
-        <figcaption data-i18n="desktopImageCaption">이동·크기 조절·정렬·색상 선택을 한 화면에서 이해할 수 있도록 구성한 맞춤형 데스크톱 예시입니다.</figcaption>
-      </figure>
-
-      <div class="freedom-grid">
-        <article><span>01</span><div><h3 data-i18n="freedomDirectTitle">바탕화면에 바로</h3><p data-i18n="freedomDirectBody">앱을 열어 찾아다니지 않아도 캘린더, 업무 목록과 위젯이 데스크톱 위에 계속 보입니다.</p></div></article>
-        <article><span>02</span><div><h3 data-i18n="freedomMoveTitle">위치와 크기를 자유롭게</h3><p data-i18n="freedomMoveBody">각 요소를 원하는 곳으로 이동하고 화면 크기와 정보량에 맞춰 넓이와 높이를 조절할 수 있습니다.</p></div></article>
-        <article><span>03</span><div><h3 data-i18n="freedomLayoutTitle">레이아웃은 내 흐름대로</h3><p data-i18n="freedomLayoutBody">캘린더 중심, 업무 패널 중심, 위젯 중심 등 사용 목적에 따라 서로 다른 화면 구성을 만들 수 있습니다.</p></div></article>
-        <article><span>04</span><div><h3 data-i18n="freedomColorTitle">색상과 표현까지 내 취향으로</h3><p data-i18n="freedomColorBody">테마와 강조 색상, 패널과 위젯의 표현 방식을 조합해 나만의 시각 체계를 완성합니다.</p></div></article>
-      </div>
-    </section>
-
-    <section class="section features" id="features">
+    <div id="new-experience">
+    <section class="section appearance" id="appearance">
       <div class="section-heading">
-        <div>
-          <p class="section-index">02 / PRODUCTIVITY SYSTEM</p>
-          <h2 data-i18n="featuresTitle">달력 너머의<br><em>하루 운영 시스템</em></h2>
+        <div><p class="section-index" data-i18n="storyTheme">투명도와 커스텀 색상</p><h2 data-i18n="fiveThemeTitle">배경부터 테두리까지, 직접 고르세요.</h2></div>
+        <p data-i18n="fiveThemeBody">달력의 배경·테두리·강조색을 각각 고르고, 배경과 테두리가 비치는 정도를 조절하세요. 라이트·다크·시스템 모드와 색상 프리셋에서 시작해 나만의 색으로 바꿀 수 있습니다.</p>
+      </div>
+      <div class="appearance-lab" data-widget-demo>
+        <div class="widget-stage" data-widget-stage data-mode="light">
+          <p class="widget-stage-label" data-i18n="widgetClock">시계</p>
+          <div class="widget-preview">
+            <img data-widget-back src="assets/screenshots/interactive/light-blue.webp" width="480" height="280" alt="" decoding="async">
+            <img data-widget-ink src="assets/screenshots/interactive/light-ink.webp" width="480" height="280" alt="14:30">
+          </div>
         </div>
-        <p data-i18n="featuresLead">기록만 하는 캘린더가 아닙니다. 확인하고, 선택하고, 집중하는 흐름이 한 화면 안에서 이어집니다.</p>
+        <div class="widget-controls">
+          <h3 data-i18n="demoTitle">시계 위젯 꾸며보기</h3>
+          <p data-i18n="demoDescription">모드와 배경색을 고르고, 슬라이더로 바탕화면이 비치는 정도를 바꿔보세요.</p>
+          <div class="widget-inputs" data-widget-inputs hidden>
+            <fieldset>
+              <legend data-i18n="demoMode">위젯 모드</legend>
+              <div class="mode-options">
+                <label><input type="radio" name="widget-mode" value="light" checked><span data-i18n="modeLight">라이트 모드</span></label>
+                <label><input type="radio" name="widget-mode" value="dark"><span data-i18n="modeDark">다크 모드</span></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend data-i18n="demoColor">배경색</legend>
+              <div class="color-options">
+                <label><input type="radio" name="widget-color" value="blue" checked><span class="color-option" data-color="blue"><i aria-hidden="true"></i><span data-i18n="colorBlue">블루</span></span></label>
+                <label><input type="radio" name="widget-color" value="lilac"><span class="color-option" data-color="lilac"><i aria-hidden="true"></i><span data-i18n="colorLilac">라일락</span></span></label>
+                <label><input type="radio" name="widget-color" value="mint"><span class="color-option" data-color="mint"><i aria-hidden="true"></i><span data-i18n="colorMint">민트</span></span></label>
+                <label><input type="radio" name="widget-color" value="rose"><span class="color-option" data-color="rose"><i aria-hidden="true"></i><span data-i18n="colorRose">로즈</span></span></label>
+              </div>
+            </fieldset>
+            <div class="opacity-control">
+              <div class="opacity-heading"><label for="widget-opacity" data-i18n="demoOpacity">배경 불투명도</label><span data-widget-opacity-value aria-hidden="true">78%</span></div>
+              <input id="widget-opacity" data-widget-opacity type="range" min="0" max="100" value="78" aria-describedby="widget-opacity-hint" aria-valuetext="78%">
+              <div class="opacity-scale" id="widget-opacity-hint"><span data-i18n="opacityClear">0% 투명</span><span data-i18n="opacitySolid">100% 불투명</span></div>
+            </div>
+          </div>
+        </div>
       </div>
-
-      <div class="bento-grid">
-        <article class="bento-card bento-calendar">
-          <div class="card-number">01</div>
-          <div class="calendar-demo" aria-hidden="true">
-            <div class="mini-month"><b>AUGUST</b><span>2026</span></div>
-            <div class="mini-week"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
-            <div class="mini-days"><i>10</i><i>11</i><i>12</i><i>13</i><i>14</i><i>15</i><i>16</i><i>17</i><i class="active">18</i><i>19</i><i>20</i><i>21</i><i>22</i><i>23</i></div>
+      <div class="appearance-demos">
+        <figure class="appearance-demo">
+          <div class="demo-media">
+            <img class="motion-image" data-motion-image src="assets/screenshots/interactive/theme-opacity-poster.webp" data-animation="assets/screenshots/interactive/theme-opacity.gif" width="720" height="420" alt="라이트·다크 모드에서 시계 위젯의 배경만 투명해지는 애니메이션" data-i18n-alt="motionAlt" loading="lazy" decoding="async">
           </div>
-          <div class="card-copy"><p class="micro-label" data-i18n="cardCalendarLabel">MONTH VIEW</p><h3 data-i18n="cardCalendarTitle">일정과 업무 패널을 나란히</h3><p data-i18n="cardCalendarBody">월간 일정, 이번 주 업무, 루틴과 디렉티브를 한눈에 확인하고 바로 처리합니다.</p></div>
-        </article>
-
-        <article class="bento-card bento-widgets">
-          <div class="card-number">02</div>
-          <div class="widget-stack" aria-hidden="true">
-            <div><small>SEOUL</small><strong>26°</strong><span>Mostly clear</span></div>
-            <div><small>D-DAY</small><strong>D-18</strong><span>Launch day</span></div>
-            <div><small>FOCUS</small><strong>42:18</strong><span>Deep work</span></div>
-          </div>
-          <div class="card-copy"><p class="micro-label" data-i18n="cardWidgetLabel">DESKTOP WIDGETS</p><h3 data-i18n="cardWidgetTitle">중요한 정보는 창 밖에서도</h3><p data-i18n="cardWidgetBody">시계, 날씨, 스톱워치, 날짜 카드, 카운트다운, D-Day, 텍스트 위젯을 여러 개 띄워두세요.</p></div>
-        </article>
-
-        <article class="bento-card bento-focus">
-          <div class="card-number">03</div>
-          <div class="focus-demo" aria-hidden="true"><div><span>FOCUS</span><strong>24:36</strong><small>Session 2 of 4</small></div><b>Ⅱ</b></div>
-          <div class="card-copy"><p class="micro-label" data-i18n="cardFocusLabel">FOCUS MODE</p><h3 data-i18n="cardFocusTitle">할 일을 고르고 곧바로 몰입</h3><p data-i18n="cardFocusBody">작업 선택, Pomodoro 타이머, 완료 기록을 끊김 없이 연결해 집중 시간을 쌓습니다.</p></div>
-        </article>
-
-        <article class="bento-card bento-custom">
-          <div class="card-number">04</div>
-          <div class="custom-demo" aria-hidden="true">
-            <span style="--swatch:#3ca8ff"></span><span style="--swatch:#8b5cf6"></span><span style="--swatch:#ff6b35"></span><span style="--swatch:#34d399"></span>
-            <div><b>12:04</b><small>MONDAY · AUG 17</small></div>
-          </div>
-          <div class="card-copy"><p class="micro-label" data-i18n="cardCustomLabel">MAKE IT YOURS</p><h3 data-i18n="cardCustomTitle">레이아웃부터 표현 방식까지</h3><p data-i18n="cardCustomBody">테마, 패널, 위젯 배치와 텍스트 템플릿을 나의 데스크톱 흐름에 맞게 조정합니다.</p></div>
-        </article>
-      </div>
-
-      <div class="feature-atlas">
-        <figure class="feature-atlas-visual">
-          <img src="assets/feature-ecosystem.webp" alt="캘린더를 중심으로 업무, 집중, 위젯, 동기화 기능이 연결된 전체 기능 지도" data-i18n-alt="atlasImageAlt" loading="lazy" decoding="async">
-          <figcaption data-i18n="atlasImageCaption">캘린더를 중심으로 계획·실행·집중·위젯·동기화가 연결됩니다.</figcaption>
+          <figcaption class="appearance-caption">
+            <div><h3 data-i18n="motionTitle">다크 모드와 투명도 변화</h3><p data-i18n="motionCaption">앱의 실제 시계 위젯으로 만든 8초 GIF</p></div>
+            <div class="motion-actions">
+              <button class="demo-action" type="button" data-motion-toggle data-i18n="motionPlay" hidden>재생</button>
+              <a class="demo-action" href="assets/screenshots/interactive/theme-opacity.gif" download data-i18n="motionDownload">GIF 저장</a>
+            </div>
+          </figcaption>
         </figure>
-        <div class="feature-atlas-heading">
-          <p class="micro-label">COMPLETE FEATURE MAP</p>
-          <h3 data-i18n="atlasTitle">보이는 기능부터<br>숨은 도구까지 한눈에</h3>
-          <p data-i18n="atlasLead">단순한 월간 달력처럼 보여도, 안에는 하루를 설계하고 실행하는 세부 기능이 촘촘하게 연결되어 있습니다.</p>
-        </div>
-        <div class="feature-groups">
-          <article class="feature-group">
-            <p><span>01</span><b data-i18n="groupPlanTitle">일정과 업무</b></p>
-            <ul>
-              <li><strong data-i18n="featureMonthTitle">월간 캘린더</strong><small data-i18n="featureMonthBody">일정과 업무 패널을 한 화면에서 확인</small></li>
-              <li><strong data-i18n="featureMultidayTitle">멀티데이 일정</strong><small data-i18n="featureMultidayBody">드래그로 날짜 범위를 선택하고 이동·복사</small></li>
-              <li><strong data-i18n="featureRoutineTitle">루틴과 디렉티브</strong><small data-i18n="featureRoutineBody">반복 업무와 실행 항목을 분리 관리</small></li>
-              <li><strong data-i18n="featureNlpTitle">자연어 빠른 등록</strong><small data-i18n="featureNlpBody">문장으로 날짜와 시간을 입력해 일정 생성</small></li>
-              <li><strong data-i18n="featureChecklistTitle">체크리스트와 우선순위</strong><small data-i18n="featureChecklistBody">세부 단계와 중요도를 일정 안에서 관리</small></li>
-            </ul>
-          </article>
-          <article class="feature-group">
-            <p><span>02</span><b data-i18n="groupDesktopTitle">바탕화면과 위젯</b></p>
-            <ul>
-              <li><strong data-i18n="featureOverlayTitle">데스크톱 직접 배치</strong><small data-i18n="featureOverlayBody">필요한 정보가 다른 창 위와 바탕화면에 상시 표시</small></li>
-              <li><strong data-i18n="featureResizeTitle">자유 이동·크기 조절</strong><small data-i18n="featureResizeBody">화면과 작업 방식에 맞춘 위치와 크기</small></li>
-              <li><strong data-i18n="featureMultiWidgetTitle">멀티 위젯</strong><small data-i18n="featureMultiWidgetBody">같은 종류도 이름을 달리해 여러 개 배치</small></li>
-              <li><strong data-i18n="featureTemplateTitle">텍스트 템플릿</strong><small data-i18n="featureTemplateBody">시간·D-Day·다음 일정 값을 조합</small></li>
-              <li><strong data-i18n="featureThemeTitle">테마와 색상</strong><small data-i18n="featureThemeBody">강조색과 패널 표현을 취향대로 설정</small></li>
-            </ul>
-          </article>
-          <article class="feature-group">
-            <p><span>03</span><b data-i18n="groupFocusTitle">집중과 유틸리티</b></p>
-            <ul>
-              <li><strong data-i18n="featureFocusTitle">집중 모드·Pomodoro</strong><small data-i18n="featureFocusBody">할 일을 고른 뒤 바로 타이머 시작</small></li>
-              <li><strong data-i18n="featureFocusLogTitle">집중 기록</strong><small data-i18n="featureFocusLogBody">오늘과 이번 달 세션 시간을 확인</small></li>
-              <li><strong data-i18n="featureTimeWidgetsTitle">시간 도구 5종</strong><small data-i18n="featureTimeWidgetsBody">시계·스톱워치·날짜·카운트다운·D-Day</small></li>
-              <li><strong data-i18n="featureWeatherTitle">날씨 위젯</strong><small data-i18n="featureWeatherBody">선택한 도시의 날씨를 데스크톱에서 확인</small></li>
-              <li><strong data-i18n="featureScreenTitle">화면 고정과 자석 배치</strong><small data-i18n="featureScreenBody">창의 위치를 유지하고 가장자리에 맞춰 정렬</small></li>
-            </ul>
-          </article>
-          <article class="feature-group">
-            <p><span>04</span><b data-i18n="groupConnectTitle">연동과 관리</b></p>
-            <ul>
-              <li><strong data-i18n="featureGoogleTitle">여러 서비스 통합 동기화</strong><small data-i18n="featureGoogleBody">연결·선택·동기화·문제 확인을 한 화면에서</small></li>
-              <li><strong data-i18n="featureCalendarTypesTitle">다양한 캘린더 연결</strong><small data-i18n="featureCalendarTypesBody">로컬·Google·공유·ICS를 한곳에서 관리</small></li>
-              <li><strong data-i18n="featureDiagnosticsTitle">동기화 진단</strong><small data-i18n="featureDiagnosticsBody">연결 상태, 오류, 삭제 재시도를 확인</small></li>
-              <li><strong data-i18n="featurePrintTitle">인쇄와 PDF</strong><small data-i18n="featurePrintBody">달력과 일정 세부 정보를 문서로 출력</small></li>
-              <li><strong data-i18n="featureLanguagesTitle">19개 언어</strong><small data-i18n="featureLanguagesBody">한국어를 포함한 다국어 인터페이스</small></li>
-            </ul>
-          </article>
-        </div>
+        <figure class="appearance-demo">
+          <button class="product-image settings-proof" type="button" data-preview-image data-preview-title="demoSettingsTitle" data-preview-description="fiveThemeBody" data-i18n-aria="demoSettingsTitle" aria-label="실제 앱의 모양 설정">
+            <img data-demo-settings src="assets/screenshots/interactive/appearance-light.webp" width="1040" height="800" alt="Air Calendar의 모양 설정" data-i18n-alt="demoSettingsTitle" loading="lazy" decoding="async">
+            <span class="image-open" aria-hidden="true"><span data-i18n="zoomHint">크게 보기</span> ↗</span>
+          </button>
+          <figcaption class="appearance-caption">
+            <div><h3 data-i18n="demoSettingsTitle">실제 앱의 모양 설정</h3><p data-i18n="demoSettingsCaption">배경·테두리 투명도, 강조색, 글꼴을 각각 조절</p></div>
+          </figcaption>
+        </figure>
       </div>
     </section>
+<section class="workspace" id="desktop-custom"><span id="features"></span><div class="home-width">
+      <div class="section-heading"><div><p class="section-index" data-i18n="storyWorkspace">위젯 인터페이스</p><h2 data-i18n="fiveWidgetTitle">메인 달력부터 위젯 전용 모드까지.</h2></div><p data-i18n="fiveWidgetBody">한 달 전체를 보거나, 오늘의 일정과 할 일만 따로 띄우세요. 위젯의 크기와 위치를 바꾸고, 배치 편집기에서 여러 위젯을 정렬해 나에게 맞는 작업 공간을 만들 수 있습니다.</p></div>
+      <div class="workspace-screens">
+        <figure>
+          <button class="product-image" type="button" data-preview-image data-preview-title="widgetScreenTitle" data-preview-description="fiveWidgetBody" aria-label="위젯 전용 모드 화면 크게 보기" data-i18n-aria="widgetScreenTitle"><img src="assets/screenshots/5.0/widget-workspace.png" width="1475" height="960" alt="Air Calendar 위젯 전용 모드의 날짜와 일정 목록" loading="lazy" decoding="async"><span class="image-open" aria-hidden="true"><span data-i18n="zoomHint">크게 보기</span> ↗</span></button>
+          <figcaption data-i18n="tabWidgets">위젯 모드</figcaption>
+        </figure>
+        <figure>
+          <button class="product-image" type="button" data-preview-image data-preview-title="layoutScreenTitle" data-preview-description="layoutScreenBody" aria-label="위젯 배치 편집기 화면 크게 보기" data-i18n-aria="layoutScreenTitle"><img src="assets/screenshots/showcase/desktop-layout.webp" width="1000" height="976" alt="모니터 위에 여러 위젯을 배치하는 편집기" loading="lazy" decoding="async"><span class="image-open" aria-hidden="true"><span data-i18n="zoomHint">크게 보기</span> ↗</span></button>
+          <figcaption data-i18n="layoutScreenTitle">바탕화면 배치 편집기</figcaption>
+        </figure>
+      </div>
+      <div class="workspace-notes"><article><h3 data-i18n="workspaceOne">원하는 위치와 크기</h3><p data-i18n="workspaceOneBody">위젯을 이동하고 크기를 조절하세요. 항상 위 표시, 위치 고정과 가장자리 맞춤을 함께 제공합니다.</p></article><article><h3 data-i18n="workspaceTwo">작업 공간 저장과 전환</h3><p data-i18n="workspaceTwoBody">자주 쓰는 구성을 저장해 다시 불러오고, 직접 정한 시간·요일 규칙으로 자동 전환할 수 있습니다.</p></article><article><h3 data-i18n="workspaceThree">여러 개를 띄우거나, 스택으로</h3><p data-i18n="workspaceThreeBody">같은 종류의 위젯도 여러 개 만들고, 선택한 위젯은 스택으로 묶어 같은 자리에서 전환합니다.</p></article></div>
+    </div></section>
+    </div>
 
+    <section class="section widget-showcase" id="widget-gallery">
+      <div class="section-heading">
+        <h2 data-i18n="galleryTitle">바탕화면에 더하는 8가지 위젯</h2>
+        <p data-i18n="galleryBody">시계, 날짜 카드, D-Day, 스톱워치, 카운트다운, 텍스트, 날씨, KeyDeck. 필요한 위젯만 추가하고 같은 종류도 여러 개 배치하세요.</p>
+      </div>
+      <div class="widget-showcase-grid">
+        <figure>
+          <button class="product-image" type="button" data-preview-image data-preview-title="galleryTitle" data-preview-description="galleryBody" aria-label="추가 위젯 8종 크게 보기" data-i18n-aria="galleryTitle"><img src="assets/screenshots/showcase/widget-gallery.webp" width="1320" height="620" alt="시계, 날짜, D-Day, 스톱워치, 카운트다운, 텍스트, 날씨, KeyDeck 위젯" loading="lazy" decoding="async"><span class="image-open" aria-hidden="true"><span data-i18n="zoomHint">크게 보기</span> ↗</span></button>
+          <figcaption class="showcase-caption" data-i18n="widgetSampleNote">실제 소스로 렌더한 위젯 디자인 · 날짜와 날씨는 예시 데이터입니다.</figcaption>
+        </figure>
+        <ul class="widget-directory">
+          <li data-i18n="widgetClock">시계</li><li data-i18n="widgetDate">날짜 카드</li><li>D-Day</li><li data-i18n="widgetStopwatch">스톱워치</li>
+          <li data-i18n="widgetCountdown">카운트다운</li><li data-i18n="widgetText">텍스트</li><li data-i18n="widgetWeather">날씨</li><li>KeyDeck</li>
+        </ul>
+      </div>
+      <div class="widget-uses">
+        <article><h3 data-i18n="widgetLookTitle">위젯마다 다른 디자인</h3><p data-i18n="widgetLookBody">글자·배경·테두리의 색과 투명도를 위젯별로 조절하고, 디자인 프리셋과 모양을 고르세요. 텍스트 위젯은 시간·D-Day·다음 일정 같은 값을 템플릿으로 조합할 수 있습니다.</p></article>
+        <article><h3>KeyDeck</h3><p data-i18n="keydeckBody">앱·폴더·웹사이트·단축키를 키 하나에 연결하세요. 비트메이커의 4트랙 루프덱으로 연주를 겹쳐 녹음하고 트랙별 음량도 조절할 수 있습니다.</p></article>
+      </div>
+    </section>
+    <section class="section unified-sync" id="calendar-sync"><span id="google-sync"></span>
+      <div class="section-heading">
+        <div><p class="section-index" data-i18n="syncEyebrow">필요할 때, 필요한 연결만</p><h2 data-i18n="unifiedTitle">여러 캘린더를<br><em>하나의 바탕화면에.</em></h2></div>
+        <p data-i18n="unifiedLead">연결한 서비스의 일정을 함께 확인하고, 편집 가능한 캘린더에는 변경 내용을 동기화하세요. 연결할 서비스와 표시할 캘린더는 직접 선택합니다.</p>
+      </div>
+      <div class="sync-overview">
+        <figure class="sync-overview-art"><img src="assets/screenshots/sync-services-ko.png" width="1030" height="798" alt="다양한 캘린더가 Air Calendar의 한 흐름으로 연결되는 모습" data-i18n-alt="syncImageAlt" loading="lazy" decoding="async"></figure>
+        <div class="sync-service-list">
+          <article><span class="service-dot google-dot" aria-hidden="true"></span><div><h3>Google Calendar</h3><p data-i18n="serviceGoogle">양방향 일정 · 데스크톱 OAuth 인증 파일 필요</p></div></article>
+          <article><span class="service-dot outlook-dot" aria-hidden="true"></span><div><h3>Outlook · Microsoft 365</h3><p data-i18n="serviceOutlook">양방향 일정 · 최초 캘린더용 Microsoft 앱 등록 필요</p></div></article>
+          <article><span class="service-dot icloud-dot" aria-hidden="true"></span><div><h3>iCloud</h3><p data-i18n="serviceIcloud">개인 일정 양방향 · Apple 앱 전용 암호 사용</p></div></article>
+          <article><span class="service-dot naver-dot" aria-hidden="true"></span><div><h3>NAVER</h3><p data-i18n="serviceNaver">읽기 전용 · 서비스의 CalDAV 연결 정책에 따름</p></div></article>
+          <article><span class="service-dot ics-dot" aria-hidden="true"></span><div><h3>ICS</h3><p data-i18n="serviceIcs">읽기 전용 구독 · 공휴일과 공개 일정 피드</p></div></article>
+        </div>
+      </div>
+      <p class="sync-compatibility" data-i18n="unifiedLimit">외부 서비스는 계정 준비와 권한이 필요하며 호환성은 서비스 정책에 따릅니다. 네이버·ICS·권한 없는 캘린더와 반복/초대 일정의 편집은 제한됩니다. 로컬 캘린더는 계정 없이 사용할 수 있습니다.</p>
+      <a class="text-link" href="sync-guide.html" data-sync-guide-link><span data-i18n="unifiedGuide">서비스별 연결 안내와 지원 범위</span><span aria-hidden="true">↗</span></a>
+    </section>
     <section class="section explorer" id="explore">
       <div class="section-heading explorer-heading">
         <div>
-          <p class="section-index">03 / FEATURE EXPLORER</p>
-          <h2 data-i18n="exploreTitle">클릭할수록 발견되는<br><em>숨은 기능들</em></h2>
+          <p class="section-index" data-i18n="exploreEyebrow">화면으로 살펴보기</p>
+          <h2 data-i18n="exploreTitle">설명보다,<br><em>직접 보는 게 빠르니까.</em></h2>
         </div>
-        <p data-i18n="exploreLead">실제 프로그램 화면을 선택해 자세히 살펴보세요. 이미지를 누르면 큰 화면으로 확인할 수 있습니다.</p>
+        <p data-i18n="exploreLead">앱 화면과 예시 데이터로 렌더한 위젯을 직접 살펴보세요. 이미지를 누르면 크게 볼 수 있습니다.</p>
       </div>
 
       <div class="screen-explorer">
         <div class="screen-tabs" role="tablist" aria-label="Feature screenshots" data-i18n-aria="screenTabsLabel">
-          <button type="button" role="tab" aria-selected="true" aria-controls="screen-panel" data-screen="main"><span>01</span><b data-i18n="tabMain">월간 워크스페이스</b><small data-i18n="tabMainSmall">Calendar + tasks</small></button>
-          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="widgets"><span>02</span><b data-i18n="tabWidgets">위젯 매니저</b><small data-i18n="tabWidgetsSmall">8 widget types</small></button>
-          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="focus"><span>03</span><b data-i18n="tabFocus">집중 기록</b><small data-i18n="tabFocusSmall">Focus history</small></button>
-          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="sync"><span>04</span><b data-i18n="tabSync">캘린더 연동</b><small data-i18n="tabSyncSmall">Connected calendars</small></button>
-          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="weather"><span>05</span><b data-i18n="tabWeather">새 날씨 카드</b><small data-i18n="tabWeatherSmall">6-hour forecast</small></button>
-          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="beatmaker"><span>06</span><b data-i18n="tabBeatmaker">비트메이커</b><small data-i18n="tabBeatmakerSmall">Record + loop</small></button>
+          <button type="button" role="tab" aria-selected="true" aria-controls="screen-panel" data-screen="main"><b data-i18n="tabMain">월간 달력</b></button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="widgets"><b data-i18n="tabWidgets">위젯 모드</b></button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="layout"><b data-i18n="layoutScreenTitle">바탕화면 배치 편집기</b></button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="manager"><b data-i18n="jumpWidgets">추가 위젯 8종</b></button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="appearance"><b data-i18n="tabAppearance">모양 설정</b></button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="schedule"><b data-i18n="tabSchedule">일정 입력</b></button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="sync"><b data-i18n="tabSync">캘린더 연결</b></button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="weather"><b data-i18n="tabWeather">날씨</b></button>
+          <button type="button" role="tab" aria-selected="false" aria-controls="screen-panel" data-screen="beatmaker"><b data-i18n="tabBeatmaker">루프덱</b></button>
         </div>
 
         <div class="screen-panel" id="screen-panel" role="tabpanel" tabindex="0">
           <button class="screen-shot" type="button" data-open-lightbox aria-label="스크린샷 크게 보기" data-i18n-aria="expandScreenshot">
             <span class="screen-chrome" aria-hidden="true"><i></i><i></i><i></i><b>Air Calendar</b></span>
-            <img src="assets/screenshots/main-dashboard.png" alt="Air Calendar 월간 캘린더와 업무 패널 화면" data-active-screen>
+            <img src="assets/screenshots/5.0/calendar-light.png" alt="Air Calendar 월간 캘린더와 업무 패널 화면" data-active-screen>
             <span class="zoom-hint"><b>＋</b><small data-i18n="zoomHint">크게 보기</small></span>
           </button>
           <div class="screen-detail">
@@ -352,149 +325,31 @@
       </div>
     </section>
 
-    <section class="section unified-sync" id="calendar-sync">
-      <div class="section-heading">
-        <div><p class="section-index">04 / CONNECT YOUR CALENDARS</p><h2 data-i18n="unifiedTitle">여러 캘린더를<br><em>하나의 흐름으로.</em></h2></div>
-        <p data-i18n="unifiedLead">Google·Outlook·iCloud·네이버·ICS를 한곳에서 선택하고 관리하세요. 연결한 서비스별로 동기화하며, 서로 다른 서비스 사이에 일정을 자동 복사하지 않습니다.</p>
-      </div>
-      <div class="sync-overview">
-        <figure class="sync-overview-art"><img src="assets/sync-unified-hero.png" width="1920" height="1080" alt="다양한 캘린더가 Air Calendar의 한 흐름으로 연결되는 모습" data-i18n-alt="unifiedImageAlt" loading="lazy" decoding="async"></figure>
-        <div class="sync-service-list">
-          <article><span class="service-dot google-dot" aria-hidden="true"></span><div><h3>Google Calendar</h3><p data-i18n="serviceGoogle">양방향 일정 · 데스크톱 OAuth 인증 파일 필요</p></div></article>
-          <article><span class="service-dot outlook-dot" aria-hidden="true"></span><div><h3>Outlook · Microsoft 365</h3><p data-i18n="serviceOutlook">양방향 일정 · 최초 캘린더용 Microsoft 앱 등록 필요</p></div></article>
-          <article><span class="service-dot icloud-dot" aria-hidden="true"></span><div><h3>iCloud</h3><p data-i18n="serviceIcloud">개인 일정 양방향 · Apple 앱 전용 암호 사용</p></div></article>
-          <article><span class="service-dot naver-dot" aria-hidden="true"></span><div><h3>NAVER</h3><p data-i18n="serviceNaver">읽기 전용 · 서비스의 CalDAV 연결 정책에 따름</p></div></article>
-          <article><span class="service-dot ics-dot" aria-hidden="true"></span><div><h3>ICS</h3><p data-i18n="serviceIcs">읽기 전용 구독 · 공휴일과 공개 일정 피드</p></div></article>
-        </div>
-      </div>
-      <ol class="sync-steps">
-        <li><span>01</span><h3 data-i18n="unifiedStep1">서비스 연결</h3><p data-i18n="unifiedStep1Body">통합 설정에서 필요한 계정만 연결합니다.</p></li>
-        <li><span>02</span><h3 data-i18n="unifiedStep2">캘린더 선택</h3><p data-i18n="unifiedStep2Body">가져올 캘린더와 자동 갱신을 정합니다.</p></li>
-        <li><span>03</span><h3 data-i18n="unifiedStep3">함께 동기화</h3><p data-i18n="unifiedStep3Body">상단 버튼이나 F5로 연결된 캘린더를 갱신합니다.</p></li>
-        <li><span>04</span><h3 data-i18n="unifiedStep4">문제 해결</h3><p data-i18n="unifiedStep4Body">충돌 내용을 비교하고, 실패한 서비스만 다시 확인합니다.</p></li>
-      </ol>
-      <div class="sync-behavior">
-        <article><span>ONE PLACE</span><h3 data-i18n="unifiedManage">연결·목록·문제, 한곳에서.</h3><p data-i18n="unifiedManageBody">서비스 상태와 전체 캘린더, 확인할 문제를 이어진 탭에서 관리합니다.</p></article>
-        <article><span>YOUR CHANGES</span><h3 data-i18n="unifiedProtect">양쪽의 변경을 보존합니다.</h3><p data-i18n="unifiedProtectBody">동시에 수정한 일정은 비교 후 선택합니다. 원격 변경이 있는 삭제는 보류하고 로컬 사본을 보호합니다.</p></article>
-        <article><span>LESS DOWNLOAD</span><h3 data-i18n="unifiedEfficient">CalDAV 변경분만 다운로드.</h3><p data-i18n="unifiedEfficientBody">변경되지 않은 본문은 캐시로 재사용하고, UID가 기록된 일정은 서버 주소가 바뀌어도 연결을 복구합니다.</p></article>
-      </div>
-      <p class="sync-compatibility" data-i18n="unifiedLimit">외부 서비스는 계정 준비와 권한이 필요하며 호환성은 서비스 정책에 따릅니다. 네이버·ICS·권한 없는 캘린더와 반복/초대 일정의 편집은 제한됩니다. 로컬 캘린더는 계정 없이 사용할 수 있습니다.</p>
-      <a class="text-link" href="sync-guide.html" data-sync-guide-link><span data-i18n="unifiedGuide">서비스별 연결 안내와 지원 범위</span><span aria-hidden="true">↗</span></a>
+
+
+
+
+    <section class="section story" id="planning">
+      <div class="story-copy"><p class="section-index" data-i18n="storySchedule">일정을 담는 방식</p><h2 data-i18n="fiveModalTitle">적는 일은 가볍게. 확인할 일은 또렷하게.</h2><p data-i18n="fiveModalBody">날짜를 고르고, 시간을 정하고, 저장할 캘린더를 선택하세요. 월간 달력과 일정 목록이 나란히 있어 약속의 흐름과 하루의 세부 내용을 함께 볼 수 있습니다.</p>
+        <ul class="story-points"><li data-i18n="schedulePoint1">날짜를 드래그해 여러 날의 일정 등록</li><li data-i18n="schedulePoint2">일정·할 일·반복 업무를 함께 확인</li><li data-i18n="schedulePoint3">문장으로 날짜와 시간을 빠르게 입력</li></ul>
+      </div><figure class="story-visual"><button class="product-image" type="button" data-preview-image data-preview-title="fiveModalTitle" data-preview-description="fiveModalBody" aria-label="Air Calendar 날짜와 시간, 캘린더를 선택하는 새 일정 창" data-i18n-aria="fiveModalTitle"><img src="assets/screenshots/5.0/schedule-dialog.png" width="700" height="660" alt="Air Calendar 날짜와 시간, 캘린더를 선택하는 새 일정 창" loading="lazy" decoding="async"><span class="image-open" aria-hidden="true"><span data-i18n="zoomHint">크게 보기</span> ↗</span></button><figcaption data-i18n="screenshotLanguage">화면 속 앱 UI는 한국어입니다.</figcaption></figure>
     </section>
-
-    <details class="section google-guide sync-google-details" id="google-sync">
-      <summary data-i18n="unifiedGoogleGuide">Google 연결 상세 안내 보기</summary>
-      <div class="section-heading google-heading">
-        <div>
-          <p class="section-index">04 / GOOGLE CALENDAR</p>
-          <h2 data-i18n="googleTitle">처음이어도 괜찮은<br><em>Google Calendar 연동</em></h2>
-        </div>
-        <p data-i18n="googleLead">연동은 선택 기능입니다. 한 번만 Google Cloud에서 데스크톱용 인증 파일을 준비하면, 이후에는 Air Calendar 안에서 캘린더를 선택하고 동기화할 수 있습니다.</p>
-      </div>
-
-      <div class="google-reassurance">
-        <p><span>OPTIONAL</span><strong data-i18n="googleOptionalTitle">연동하지 않아도 사용 가능</strong><small data-i18n="googleOptionalBody">로컬 캘린더와 위젯 기능은 Google 계정 없이도 동작합니다.</small></p>
-        <p><span>ONE TIME</span><strong data-i18n="googleOnceTitle">인증 준비는 처음 한 번</strong><small data-i18n="googleOnceBody">같은 Google 계정의 여러 캘린더는 인증 후 목록에서 선택합니다.</small></p>
-        <p><span>YOUR CONTROL</span><strong data-i18n="googleControlTitle">연결과 해제는 사용자가 결정</strong><small data-i18n="googleControlBody">동기화를 끄거나 인증을 초기화하면 언제든 연결을 중단할 수 있습니다.</small></p>
-      </div>
-
-      <figure class="google-flow-visual">
-        <img src="assets/google-calendar-setup.webp" alt="Google Cloud 프로젝트 준비, 인증 파일 다운로드, 브라우저 권한 승인, 양방향 캘린더 동기화의 네 단계" data-i18n-alt="googleImageAlt" loading="lazy" decoding="async">
-        <figcaption>
-          <span><b>1</b><small data-i18n="googleFlowOne">Cloud 준비</small></span>
-          <span><b>2</b><small data-i18n="googleFlowTwo">JSON 다운로드</small></span>
-          <span><b>3</b><small data-i18n="googleFlowThree">브라우저 인증</small></span>
-          <span><b>4</b><small data-i18n="googleFlowFour">양방향 동기화</small></span>
-        </figcaption>
-      </figure>
-
-      <div class="google-setup-layout">
-        <div class="google-setup-intro">
-          <p class="micro-label">BEGINNER SETUP</p>
-          <h3 data-i18n="googleSetupTitle">이 순서대로만 진행하세요.</h3>
-          <p data-i18n="googleSetupLead">Google의 화면 이름이 바뀌더라도 핵심은 프로젝트 → API → 동의 화면 → 데스크톱 클라이언트 → 앱 인증 순서입니다.</p>
-          <div class="google-official-links">
-            <a href="https://developers.google.com/workspace/calendar/api/quickstart/python" target="_blank" rel="noopener"><span data-i18n="googleDocsLink">Google 공식 빠른 시작</span><b aria-hidden="true">↗</b></a>
-            <a href="https://console.cloud.google.com/" target="_blank" rel="noopener"><span data-i18n="googleConsoleLink">Google Cloud Console</span><b aria-hidden="true">↗</b></a>
-          </div>
-        </div>
-        <ol class="google-steps">
-          <li><span>01</span><div><h4 data-i18n="googleStepOneTitle">Google Cloud 프로젝트 만들기</h4><p data-i18n="googleStepOneBody">Cloud Console에서 새 프로젝트를 만들거나 기존 프로젝트를 선택합니다. 개인용이라면 알아보기 쉬운 이름이면 충분합니다.</p></div></li>
-          <li><span>02</span><div><h4 data-i18n="googleStepTwoTitle">Google Calendar API 켜기</h4><p data-i18n="googleStepTwoBody">API 라이브러리에서 Google Calendar API를 찾아 ‘사용’으로 설정합니다. 이 단계가 빠지면 인증 후에도 캘린더를 읽을 수 없습니다.</p></div></li>
-          <li><span>03</span><div><h4 data-i18n="googleStepThreeTitle">OAuth 동의 화면 준비하기</h4><p data-i18n="googleStepThreeBody">Google Auth Platform의 Branding과 Audience를 설정합니다. 외부(External)·테스트 상태라면 로그인할 본인 Google 계정을 테스트 사용자로 추가합니다.</p></div></li>
-          <li><span>04</span><div><h4 data-i18n="googleStepFourTitle">데스크톱 앱 인증 파일 받기</h4><p data-i18n="googleStepFourBody">Clients에서 OAuth 클라이언트를 만들고 유형은 반드시 ‘Desktop app’을 선택합니다. 생성 후 JSON 파일을 다운로드합니다.</p><strong data-i18n="googleStepFourWarning">Web application 유형은 Air Calendar에서 동작하지 않습니다.</strong></div></li>
-          <li><span>05</span><div><h4 data-i18n="googleStepFiveTitle">Air Calendar에서 인증하기</h4><p data-i18n="googleStepFiveBody">설정 → Calendar & Sync → 연결에서 ‘Google Calendar 동기화 사용’을 켜고 JSON 파일을 선택한 뒤 ‘인증’을 누릅니다. 브라우저가 열리면 계정을 선택하고 권한을 허용합니다.</p></div></li>
-          <li><span>06</span><div><h4 data-i18n="googleStepSixTitle">캘린더 선택·테스트·저장</h4><p data-i18n="googleStepSixBody">연결 후 캘린더 목록에서 사용할 항목을 선택하고 ‘캘린더 접근 테스트’를 실행합니다. 성공 메시지를 확인한 뒤 설정을 저장하면 준비가 끝납니다.</p></div></li>
-        </ol>
-      </div>
-
-      <div class="sync-behavior">
-        <article><span>GOOGLE → AIR CALENDAR</span><h3 data-i18n="syncPullTitle">Google 일정을 가져옵니다.</h3><p data-i18n="syncPullBody">제목, 날짜·시간, 종일 일정, 설명, 장소, 색상과 반복 일정 정보를 Air Calendar에서 함께 볼 수 있습니다.</p></article>
-        <article><span>AIR CALENDAR → GOOGLE</span><h3 data-i18n="syncPushTitle">내 변경 사항을 보냅니다.</h3><p data-i18n="syncPushBody">Air Calendar에서 만든 일정과 수정한 시간·내용이 선택한 Google 캘린더에 반영됩니다.</p></article>
-        <article><span>SAFETY FIRST</span><h3 data-i18n="syncSafetyTitle">먼저 확인하고 안전하게 반영합니다.</h3><p data-i18n="syncSafetyBody">동기화할 때 Google 변경 사항을 먼저 확인한 뒤 로컬 변경을 전송합니다. 양쪽이 함께 바뀐 충돌은 기록을 보존하고 선택할 수 있게 안내합니다.</p></article>
-      </div>
-
-      <aside class="permission-note">
-        <div><span aria-hidden="true">!</span><p><strong data-i18n="permissionTitle">권한 요청이 크게 보이는 이유</strong><small data-i18n="permissionBody">현재 버전은 여러 캘린더의 일정을 가져오고 만들고 수정·삭제하기 위해 Google Calendar 전체 접근 권한을 사용합니다. 인증 파일과 토큰은 사용자 PC에 저장되며 개발자 서버로 전송되지 않습니다.</small></p></div>
-        <a href="privacy.html" data-i18n="permissionLink">개인정보 처리 방식 확인 ↗</a>
-      </aside>
-    </details>
-
-    <section class="marquee" aria-hidden="true"><div><span>PLAN</span><i>◆</i><span>FOCUS</span><i>◆</i><span>SYNC</span><i>◆</i><span>CUSTOMIZE</span><i>◆</i><span>PLAN</span><i>◆</i><span>FOCUS</span><i>◆</i><span>SYNC</span><i>◆</i><span>CUSTOMIZE</span></div></section>
-
-    <section class="section workflow" id="workflow">
-      <div class="section-heading">
-        <div>
-          <p class="section-index">05 / DAILY FLOW</p>
-          <h2 data-i18n="workflowTitle">하루를 놓치지 않는<br><em>세 번의 움직임</em></h2>
-        </div>
-        <p data-i18n="workflowLead">정보를 여러 앱으로 옮기지 않아도 됩니다. 확인에서 몰입까지, 같은 맥락 안에서 이어집니다.</p>
-      </div>
-
-      <ol class="flow-list">
-        <li><span>01</span><div><p class="micro-label" data-i18n="flowOneLabel">SCAN</p><h3 data-i18n="flowOneTitle">한눈에 확인합니다.</h3><p data-i18n="flowOneBody">월간 일정과 오늘의 루틴, 이번 주 업무를 같은 화면에서 훑어봅니다.</p></div><b aria-hidden="true">→</b></li>
-        <li><span>02</span><div><p class="micro-label" data-i18n="flowTwoLabel">CHOOSE</p><h3 data-i18n="flowTwoTitle">지금 할 일을 선택합니다.</h3><p data-i18n="flowTwoBody">일정, 루틴, 디렉티브를 구분해 우선순위를 정하고 실행 항목을 고릅니다.</p></div><b aria-hidden="true">→</b></li>
-        <li><span>03</span><div><p class="micro-label" data-i18n="flowThreeLabel">FOCUS</p><h3 data-i18n="flowThreeTitle">집중하고 기록합니다.</h3><p data-i18n="flowThreeBody">집중 모드와 Pomodoro를 시작하고 완료한 시간은 기록으로 남깁니다.</p></div><b aria-hidden="true">✓</b></li>
-      </ol>
-      <figure class="workflow-art">
-        <img src="assets/og-air-calendar.png" alt="Air Calendar — Plan, Focus, Flow">
-        <figcaption data-i18n="workflowArtCaption">계획하고, 집중하고, 나만의 흐름을 완성하세요.</figcaption>
-      </figure>
-    </section>
-
-    <section class="section details">
-      <div class="details-grid">
-        <article class="detail-primary">
-          <p class="section-index">06 / PRIVACY &amp; OPEN SOURCE</p>
-          <h2 data-i18n="privacyTitle">내 일정은<br><em>내 컴퓨터에.</em></h2>
-          <p data-i18n="privacyBody">계정 서버와 광고, 사용자 분석 도구 없이 로컬 저장을 기본으로 합니다. Google·Outlook·iCloud·네이버 연결, 날씨와 ICS 구독은 사용자가 켠 기능에 한해 해당 서비스와 직접 통신합니다.</p>
-          <a class="text-link" href="privacy.html"><span data-i18n="privacyLink">개인정보 처리 방식 자세히 보기</span><span aria-hidden="true">↗</span></a>
-        </article>
-        <article class="detail-card"><span>LOCAL</span><h3 data-i18n="detailLocalTitle">로컬 데이터 저장</h3><p data-i18n="detailLocalBody">일정, 업무, 설정은 기본적으로 사용자 PC 안에 머뭅니다.</p></article>
-        <article class="detail-card"><span>GPLv3</span><h3 data-i18n="detailSourceTitle">공개된 전체 소스</h3><p data-i18n="detailSourceBody">배포 버전과 같은 태그의 전체 대응 소스와 라이선스를 GitHub에서 제공합니다.</p><a data-config-link="releaseSourceUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.2.0" target="_blank" rel="noopener" data-i18n="detailSourceLink">버전별 소스 보기 ↗</a></article>
-        <article class="detail-card"><span>19 LANG</span><h3 data-i18n="detailLangTitle">19개 언어 인터페이스</h3><p data-i18n="detailLangBody">한국어를 기본으로 영어, 일본어, 중국어 등 다양한 언어 전환을 지원합니다.</p></article>
-      </div>
-    </section>
-
-    <section class="section faq" id="faq">
-      <div class="faq-intro"><p class="section-index">07 / FAQ</p><h2 data-i18n="faqTitle">설치 전에<br><em>궁금한 것들</em></h2></div>
+    <section class="section daily-flow" id="workflow"><div class="section-heading"><h2 data-i18n="workflowTitle">일정 관리에서 업무와 집중까지.</h2></div><ol class="workflow-steps">
+      <li><h3 data-i18n="workflowOneTitle">문장과 드래그로 일정 입력</h3><p data-i18n="workflowOneBody">날짜 범위를 드래그하거나 한국어·영어 문장으로 일정을 빠르게 등록하세요.</p></li>
+      <li><h3 data-i18n="workflowTwoTitle">반복 업무와 체크리스트</h3><p data-i18n="workflowTwoBody">루틴·할 일·지시·협조를 구분하고, 우선순위와 체크리스트로 실행 항목을 관리합니다.</p></li>
+      <li><h3 data-i18n="workflowThreeTitle">집중 시간과 기록</h3><p data-i18n="workflowThreeBody">집중 모드와 Pomodoro를 시작하고 완료한 세션과 누적 시간을 확인하세요.</p></li>
+    </ol></section>
+    <section class="section faq" id="faq"><div class="section-heading"><p class="section-index" data-i18n="faqEyebrow">설치와 데이터</p><h2 data-i18n="faqTitle">시작하기 전에.</h2><div class="privacy-note"><h3 data-i18n="privacyTitle">일정은 기본적으로 내 PC에.</h3><p data-i18n="privacyBody">일정과 설정은 로컬에 저장합니다. 외부 캘린더·날씨·ICS는 연결한 기능에 한해 해당 서비스와 통신합니다. 앱에는 개발자 분석 서버가 없습니다.</p><a class="text-link" href="privacy.html" data-i18n="privacyLink">개인정보 처리 방식 자세히 보기</a></div></div>
       <div class="faq-list">
         <details><summary><span data-i18n="faqOneQ">어떤 운영체제를 지원하나요?</span><b></b></summary><p data-i18n="faqOneA">Air Calendar는 Windows 데스크톱 환경에 맞춰 설계되었습니다. 정확한 최신 요구 사항은 Microsoft Store 제품 페이지에서 확인할 수 있습니다.</p></details>
         <details><summary><span data-i18n="faqTwoQ">외부 캘린더 연결은 필수인가요?</span><b></b></summary><p data-i18n="faqTwoA">아닙니다. 로컬 캘린더만으로 사용할 수 있으며 필요한 서비스만 선택해 연결합니다. 외부 서비스는 계정과 권한이 필요합니다.</p></details>
         <details><summary><span data-i18n="faqThreeQ">무료 프로그램인가요?</span><b></b></summary><p data-i18n="faqThreeA">Microsoft Store에서 판매되는 유료 앱입니다. 현재 가격과 구매 조건은 Store에서 확인하세요. 소스 코드는 GPLv3 조건에 따라 공개됩니다.</p></details>
-        <details><summary><span data-i18n="faqFourQ">어떤 위젯을 사용할 수 있나요?</span><b></b></summary><p data-i18n="faqFourA">시계, 스톱워치, 날짜 카드, 카운트다운, D-Day, 텍스트, 날씨 위젯을 지원하며 같은 종류를 여러 개 배치할 수도 있습니다.</p></details>
+        <details><summary><span data-i18n="faqFourQ">어떤 위젯을 사용할 수 있나요?</span><b></b></summary><p data-i18n="faqFourA">시계, 스톱워치, 날짜 카드, 카운트다운, D-Day, 텍스트, 날씨, KeyDeck을 지원합니다. 같은 종류의 위젯도 여러 개 배치할 수 있습니다.</p></details>
         <details><summary><span data-i18n="faqFiveQ">내 데이터가 외부 서버로 전송되나요?</span><b></b></summary><p data-i18n="faqFiveA">기본 데이터는 로컬에 저장됩니다. Google Calendar, 날씨, ICS 등 사용자가 활성화한 외부 기능만 해당 제공자와 직접 통신합니다.</p></details>
       </div>
     </section>
-
-    <section class="section guide-library" id="guides">
-      <div class="section-heading">
-        <div>
-          <p class="section-index">08 / ENGLISH GUIDES</p>
-          <h2>Find Air Calendar by<br><em>the way you work.</em></h2>
-        </div>
-        <p>English guides for people looking for a Windows desktop calendar, Google Calendar overlay, D-Day widget, or a calendar-based Pomodoro workflow.</p>
-      </div>
+    <details class="section guide-library" id="guides"><summary data-i18n="guideTitle">사용 목적별 가이드 · English</summary>
+      <p lang="en">English guides for people looking for a Windows desktop calendar, Google Calendar overlay, D-Day widget, or a calendar-based Pomodoro workflow.</p>
       <div class="guide-library-grid">
         <a class="guide-library-card" href="offline-desktop-calendar-windows/"><span>LOCAL PLANNING</span><h3>Calendar without Google Setup</h3><p>Plan locally on Windows and see which features need internet.</p><b>Read guide →</b></a>
         <a class="guide-library-card" href="desktop-calendar-widget-windows/"><span>WINDOWS DESKTOP</span><h3>Desktop Calendar Widget</h3><p>Keep the calendar, schedules, tasks, and useful widgets visible.</p><b>Read guide →</b></a>
@@ -502,11 +357,11 @@
         <a class="guide-library-card" href="dday-countdown-widget-windows/"><span>COUNTDOWN</span><h3>D-Day Widget for Windows</h3><p>Keep deadlines and important dates visible while you work.</p><b>Read guide →</b></a>
         <a class="guide-library-card" href="pomodoro-calendar-workflow/"><span>FOCUS</span><h3>Pomodoro Calendar Workflow</h3><p>Move from planning to a timed focus session without losing context.</p><b>Read guide →</b></a>
       </div>
-    </section>
+    </details>
 
     <section class="request-board" id="requests" data-request-board data-api="https://air-calendar-requests.kimhj.chatgpt.site" aria-labelledby="request-board-title">
       <div class="board-heading">
-        <div><p class="section-index">09 / COMMUNITY</p><h2 id="request-board-title" data-board-i18n="heading">더 나은 캘린더를<br><em>함께 만들어가요.</em></h2><p class="board-intro" data-board-i18n="intro">불편했던 점, 필요한 기능, 작은 아이디어까지. 여러분의 의견을 기다립니다.</p></div>
+        <div><p class="section-index" data-i18n="communityEyebrow">함께 다듬는 Air Calendar</p><h2 id="request-board-title" data-board-i18n="heading">더 나은 캘린더를<br><em>함께 만들어가요.</em></h2><p class="board-intro" data-board-i18n="intro">불편했던 점, 필요한 기능, 작은 아이디어까지. 여러분의 의견을 기다립니다.</p></div>
         <button type="button" class="board-primary" data-board-compose disabled><span aria-hidden="true">＋</span><span data-board-i18n="write">수정 요청 작성</span></button>
       </div>
       <div class="board-summary" aria-label="요청 처리 현황" data-board-aria="summary">
@@ -535,35 +390,25 @@
       <noscript><p>게시판을 사용하려면 브라우저의 JavaScript를 활성화해주세요.</p></noscript>
     </section>
 
-    <section class="final-cta">
-      <div class="cta-orbit" aria-hidden="true"><span></span><span></span><span></span></div>
-      <p class="section-index">AIR CALENDAR FOR WINDOWS</p>
-      <h2 data-i18n="ctaTitle">오늘의 화면을<br><em>나만의 방식으로.</em></h2>
-      <p data-i18n="ctaBody">일정, 할 일, 집중 도구와 위젯을 한곳에 모아보세요.</p>
-      <div class="hero-actions">
-        <a class="button button-primary" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&amp;gl=KR&amp;ocid=pdpshare&amp;cid=aircal-20261005-owned-home" target="_blank" rel="noopener"><span data-i18n="ctaPrimary">Microsoft Store에서 확인</span><span aria-hidden="true">↗</span></a>
-        <a class="button button-quiet" data-config-link="sourceCodeUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR" target="_blank" rel="noopener"><span data-i18n="ctaSecondary">GitHub 소스 보기</span><span aria-hidden="true">↗</span></a>
-      </div>
-    </section>
 
+    <section class="final-cta"><p class="micro-label">AIR CALENDAR FOR WINDOWS</p><h2 data-i18n="ctaTitle">달력과 위젯을,<br><em>내 바탕화면에.</em></h2><p data-i18n="ctaBody">배치, 색상, 투명도와 캘린더 연결까지. 나에게 맞는 작업 공간을 만들어보세요.</p><div class="cta-actions"><a class="button button-primary" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&amp;gl=KR&amp;ocid=pdpshare&amp;cid=aircal-20261005-owned-home" target="_blank" rel="noopener"><span data-i18n="ctaStore">Microsoft Store에서 가격·설치 확인</span><span aria-hidden="true">↗</span></a><a class="button button-quiet" data-config-link="releaseSourceUrl" href="https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.2.0"><span data-i18n="sourceLink">버전별 소스 보기</span><span aria-hidden="true">↗</span></a></div><p class="hero-meta" style="justify-content:center"><span data-i18n="heroPaid">Microsoft Store 유료 앱</span><span>·</span><span>v<span data-config-text="appVersion">5.2.0</span></span><span>· GPLv3</span></p></section>
     <section class="share-panel" id="share" aria-labelledby="share-title">
       <div class="share-copy">
         <p class="section-index">SHARE AIR CALENDAR</p>
-        <h2 id="share-title" data-i18n="shareTitle">바탕화면을 더 잘 쓰고 싶은 사람에게<br><em>Air Calendar를 알려주세요.</em></h2>
-        <p data-i18n="shareBody">일정과 위젯을 자기 방식대로 배치하고 싶은 친구나 동료에게 이 페이지를 공유해 주세요.</p>
+        <h2 id="share-title" data-i18n="shareTitle">이런 바탕화면이 필요한 사람에게.</h2>
+        <p data-i18n="shareBody">친구나 동료에게 Air Calendar를 알려주세요.</p>
       </div>
       <div class="share-actions" aria-label="공유 방법" data-i18n-aria="shareActionsLabel">
-        <a class="share-link" data-share-channel="x" href="https://twitter.com/intent/tweet" target="_blank" rel="noopener"><span aria-hidden="true">X</span><b data-i18n="shareX">X에 공유</b></a>
-        <a class="share-link" data-share-channel="facebook" href="https://www.facebook.com/sharer/sharer.php" target="_blank" rel="noopener"><span aria-hidden="true">f</span><b data-i18n="shareFacebook">Facebook</b></a>
-        <a class="share-link" data-share-channel="linkedin" href="https://www.linkedin.com/sharing/share-offsite/" target="_blank" rel="noopener"><span aria-hidden="true">in</span><b data-i18n="shareLinkedIn">LinkedIn</b></a>
-        <a class="share-link" data-share-channel="email" href="mailto:"><span aria-hidden="true">@</span><b data-i18n="shareEmail">이메일</b></a>
-        <button class="share-link" type="button" data-copy-share><span aria-hidden="true">↗</span><b data-i18n="shareCopy">링크 복사</b></button>
+        <a class="share-button" data-share-channel="x" href="https://twitter.com/intent/tweet" target="_blank" rel="noopener"><b data-i18n="shareX">X에 공유</b></a>
+        <a class="share-button" data-share-channel="facebook" href="https://www.facebook.com/sharer/sharer.php" target="_blank" rel="noopener"><b data-i18n="shareFacebook">Facebook</b></a>
+        <a class="share-button" data-share-channel="linkedin" href="https://www.linkedin.com/sharing/share-offsite/" target="_blank" rel="noopener"><b data-i18n="shareLinkedIn">LinkedIn</b></a>
+        <a class="share-button" data-share-channel="email" href="mailto:"><b data-i18n="shareEmail">이메일</b></a>
+        <button class="share-button" type="button" data-copy-share><b data-i18n="shareCopy">링크 복사</b></button>
         <p class="share-status" role="status" aria-live="polite" data-share-status></p>
         <a class="share-kit-link" data-config-link="promotionKitUrl" href="promo.html"><span data-i18n="shareKit">공식 홍보자료 내려받기</span><b aria-hidden="true">→</b></a>
       </div>
     </section>
   </main>
-
   <footer class="site-footer">
     <div class="footer-brand"><img src="assets/app_icon.png" width="40" height="40" alt=""><div><strong>Air Calendar</strong><small data-i18n="footerTagline">Windows desktop calendar &amp; widgets</small></div></div>
     <div class="footer-links">
@@ -585,7 +430,7 @@
       <label><span data-board-i18n="titleLabel">제목</span><input name="title" required minlength="3" maxlength="100" placeholder="어떤 점을 개선하면 좋을까요?" data-board-placeholder="titlePlaceholder"></label>
       <label><span data-board-i18n="bodyLabel">요청 내용</span><textarea name="body" required minlength="10" maxlength="5000" rows="7" placeholder="불편한 상황과 원하는 개선 내용을 알려주세요. 오류라면 재현 방법도 함께 적어주세요." data-board-placeholder="bodyPlaceholder"></textarea></label>
       <fieldset class="board-upload"><legend data-board-i18n="imagesLabel">이미지 첨부 (선택)</legend><div class="board-upload-zone" data-board-drop><button type="button" class="board-secondary" data-board-add-image><span aria-hidden="true">＋</span><span data-board-i18n="addImages">이미지 선택</span></button><span data-board-i18n="dropImages">여기로 끌어놓거나 Ctrl+V로 붙여넣으세요.</span><input type="file" accept="image/png,image/jpeg,image/webp" multiple hidden data-board-image-picker></div><p class="board-upload-help" data-board-i18n="imagesHelp">PNG·JPG·WebP, 최대 3장 · 장당 5MB. 첨부 이미지는 공개되며 웹용으로 최적화됩니다.</p><div class="board-upload-list" data-board-upload-list></div><p class="board-upload-status" data-board-upload-status role="status" aria-live="polite"></p></fieldset>
-      <div class="board-form-grid"><label><span data-board-i18n="version">앱 버전 (선택)</span><input name="appVersion" maxlength="30" placeholder="3.8.1"></label><label><span data-board-i18n="platform">사용 환경 (선택)</span><select name="platform"><option value="" data-board-i18n="selectOptional">선택하지 않음</option><option value="Windows 11">Windows 11</option><option value="Windows 10">Windows 10</option><option value="Other" data-board-i18n="other">기타</option></select></label></div>
+      <div class="board-form-grid"><label><span data-board-i18n="version">앱 버전 (선택)</span><input name="appVersion" maxlength="30" placeholder="5.2.0"></label><label><span data-board-i18n="platform">사용 환경 (선택)</span><select name="platform"><option value="" data-board-i18n="selectOptional">선택하지 않음</option><option value="Windows 11">Windows 11</option><option value="Windows 10">Windows 10</option><option value="Other" data-board-i18n="other">기타</option></select></label></div>
       <label><span data-board-i18n="editPassword">수정·삭제 비밀번호</span><input name="password" type="password" required minlength="8" maxlength="128" autocomplete="new-password"><small data-board-i18n="passwordHelp">8자 이상으로 설정하세요. 글을 수정·삭제할 때 필요하며, 비밀번호는 복구할 수 없습니다.</small></label>
       <label class="board-honeypot" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
       <p class="board-form-error" data-board-error role="alert"></p><p class="board-form-notice" data-board-i18n="formNotice">닉네임과 요청 내용은 게시판에 공개됩니다. 개인 일정이나 연락처를 포함하지 마세요.</p>
@@ -606,7 +451,7 @@
 
   <dialog class="lightbox" data-lightbox aria-labelledby="lightbox-title">
     <button type="button" class="lightbox-close" data-close-lightbox><span class="sr-only" data-i18n="close">닫기</span><span aria-hidden="true">×</span></button>
-    <div class="lightbox-image-wrap"><img src="assets/screenshots/main-dashboard.png" alt="" data-lightbox-image></div>
+    <div class="lightbox-image-wrap"><img src="assets/screenshots/5.0/calendar-light.png" alt="" data-lightbox-image></div>
     <div class="lightbox-caption"><p class="micro-label" data-lightbox-kicker>CALENDAR WORKSPACE</p><h2 id="lightbox-title" data-lightbox-title>월간 워크스페이스</h2><p data-lightbox-description></p></div>
   </dialog>
 </body>

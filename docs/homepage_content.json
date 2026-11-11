@@ -3,8 +3,8 @@
     "appName": "Air Calendar",
     "platform": "Windows Desktop",
     "languageDefault": "ko-KR",
-    "sourceBasis": "Repository-derived product summary generated from the current codebase",
-    "generatedOn": "2026-06-30"
+    "sourceBasis": "Current application UI, real sample-data captures, and a disposable-settings render of current appearance settings",
+    "generatedOn": "2026-11-11"
   },
   "releaseLinks": {
     "microsoftStoreUrl": "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
@@ -26,14 +26,14 @@
     "disclaimer": "수량 또는 기간에 따라 조기 종료될 수 있습니다."
   },
   "brand": {
-    "oneLiner": "일정, 루틴, 디렉티브, 위젯을 한 화면에 모아두는 Windows 데스크톱 캘린더",
+    "oneLiner": "위젯·배치·색상·투명도·캘린더 연동까지 내 방식으로 꾸미는 Windows 캘린더",
     "shortDescription": "Air Calendar는 월간 캘린더와 업무 패널, 오버레이 위젯, 집중 도구를 결합한 개인 생산성 앱입니다.",
     "toneKeywords": [
-      "몰입감 있는",
-      "데스크톱 중심",
-      "실용적인",
-      "커스터마이즈 가능한",
-      "다크 UI"
+      "제품 중심",
+      "선명한",
+      "구체적인",
+      "커스터마이즈",
+      "밝은 배경과 코발트"
     ]
   },
   "positioning": {
@@ -51,57 +51,82 @@
     ]
   },
   "hero": {
-    "headline": "Calendar, your way.",
-    "subheadline": "캘린더를 고정하고, 패널을 띄우고, 위젯을 남겨두세요.",
-    "primaryCta": "배치 살펴보기",
-    "secondaryCta": "Store에서 보기",
+    "headline": "내가 꾸미는 캘린더와 위젯.",
+    "subheadline": "달력과 할 일을 원하는 자리에 놓고, 색상과 투명도를 맞춰보세요. Google·Outlook·iCloud 일정과 시계·날씨·D-Day 위젯을 바탕화면에서 함께 볼 수 있습니다.",
+    "primaryCta": "Microsoft Store에서 보기",
+    "secondaryCta": "다크 모드·투명도 체험",
     "highlightBullets": [
-      "월간 캘린더 + 업무 패널 통합",
-      "멀티 오버레이 위젯 지원",
-      "Google Calendar 연동",
-      "집중 모드와 Pomodoro 내장",
-      "한국어 기본, 다국어 전환 지원"
+      "자유로운 위젯 배치",
+      "다크 모드와 투명도",
+      "추가 위젯 8종",
+      "캘린더 연동"
     ],
     "image": {
       "slotId": "hero-main-visual",
-      "assetType": "placeholder-composite",
-      "title": "메인 히어로 비주얼",
-      "description": "Air Calendar의 대표 화면을 보여주는 핵심 이미지입니다. 월간 캘린더, 오른쪽 업무 패널, 상단 바, 오버레이 위젯이 함께 보이는 구성이 적합합니다.",
-      "recommendedContent": [
-        "메인 앱 창 전체 스크린샷",
-        "시계 또는 D-Day 오버레이 위젯이 함께 보이는 장면",
-        "다크 테마 분위기가 드러나는 UI"
-      ],
-      "alt": "Air Calendar 메인 화면과 오버레이 위젯이 함께 보이는 대표 이미지",
-      "layoutHint": "desktop-wide",
-      "replacementNotes": "초기에는 모니터 프레임 목업 안에 앱 스크린샷과 위젯을 합성한 플레이스홀더를 사용하고, 추후 실제 앱 사용 장면 이미지로 교체합니다."
+      "assetType": "application-screenshot",
+      "path": "assets/screenshots/5.0/calendar-light.png",
+      "alt": "Air Calendar 라일락 테마의 월간 달력과 선택한 날짜의 일정",
+      "sampleData": true
     }
   },
   "homepageSections": [
     {
-      "id": "overview",
-      "title": "앱 소개",
-      "description": "Air Calendar는 단순히 일정을 기록하는 앱이 아니라, 바탕화면 위에서 계속 보이고 바로 조작할 수 있는 생산성 허브를 지향합니다. 캘린더, 루틴, 디렉티브, 포커스 도구, 위젯을 하나의 흐름으로 연결해 일과 생활의 맥락 전환 비용을 줄여줍니다."
+      "id": "top",
+      "title": "캘린더와 바탕화면 위젯",
+      "description": "달력과 할 일을 원하는 자리에 놓고, 색상과 투명도를 맞춰보세요. Google·Outlook·iCloud 일정과 시계·날씨·D-Day 위젯을 바탕화면에서 함께 볼 수 있습니다."
     },
     {
-      "id": "features",
-      "title": "주요 기능",
-      "description": "사용자가 실제로 체감하는 핵심 기능들을 중심으로 설명하는 섹션입니다."
+      "id": "desktop-custom",
+      "title": "메인 달력부터 위젯 전용 모드까지.",
+      "description": "한 달 전체를 보거나, 오늘의 일정과 할 일만 따로 띄우세요. 위젯의 크기와 위치를 바꾸고, 배치 편집기에서 여러 위젯을 정렬해 나에게 맞는 작업 공간을 만들 수 있습니다."
     },
     {
-      "id": "customization",
-      "title": "커스터마이징",
-      "description": "레이아웃, 위젯, 테마, 언어, 표시 방식 등 사용자 환경에 맞게 세부 조정 가능한 요소를 소개합니다."
+      "id": "appearance",
+      "title": "배경부터 테두리까지, 직접 고르세요.",
+      "description": "달력의 배경·테두리·강조색을 각각 고르고, 배경과 테두리가 비치는 정도를 조절하세요. 라이트·다크·시스템 모드와 색상 프리셋에서 시작해 나만의 색으로 바꿀 수 있습니다.",
+      "interactivePreview": {
+        "widget": "clock",
+        "modes": ["light", "dark"],
+        "backgroundColors": ["blue", "lilac", "mint", "rose"],
+        "backgroundOpacityRange": [0, 100],
+        "foregroundOpacity": 100,
+        "layerSource": "calendar_app/presentation/widgets/widget_graphics.py"
+      }
+    },
+    {
+      "id": "widget-gallery",
+      "title": "바탕화면에 더하는 8가지 위젯",
+      "description": "시계, 날짜 카드, D-Day, 스톱워치, 카운트다운, 텍스트, 날씨, KeyDeck. 필요한 위젯만 추가하고 같은 종류도 여러 개 배치하세요."
+    },
+    {
+      "id": "calendar-sync",
+      "title": "캘린더 연동",
+      "description": "연결한 서비스의 일정을 함께 확인하고, 편집 가능한 캘린더에는 변경 내용을 동기화하세요. 연결할 서비스와 표시할 캘린더는 직접 선택합니다."
+    },
+    {
+      "id": "explore",
+      "title": "실제 화면 둘러보기",
+      "description": "앱 화면과 예시 데이터로 렌더한 위젯을 직접 살펴보세요. 이미지를 누르면 크게 볼 수 있습니다."
+    },
+    {
+      "id": "planning",
+      "title": "일정 입력",
+      "description": "날짜를 고르고, 시간을 정하고, 저장할 캘린더를 선택하세요. 월간 달력과 일정 목록이 나란히 있어 약속의 흐름과 하루의 세부 내용을 함께 볼 수 있습니다."
     },
     {
       "id": "workflow",
-      "title": "사용 흐름",
-      "description": "일정 확인부터 실행, 집중, 잠금, 회고까지 이어지는 하루 업무 흐름을 설명하는 섹션입니다."
+      "title": "일정 관리에서 업무와 집중까지.",
+      "description": "반복 업무, 체크리스트, 집중 모드와 Pomodoro"
     },
     {
       "id": "faq",
-      "title": "자주 묻는 질문",
-      "description": "설치 대상, 동기화 범위, 커스터마이징 범위 같은 방문자 질문에 답하는 섹션입니다."
+      "title": "시작하기 전에.",
+      "description": "지원 환경과 데이터 저장"
+    },
+    {
+      "id": "requests",
+      "title": "사용자 요청",
+      "description": "기존 요청 게시판"
     }
   ],
   "featureGroups": [
@@ -329,202 +354,108 @@
   ],
   "imageLibrary": [
     {
-      "id": "brand-app-icon",
-      "category": "brand-asset",
-      "sourceType": "existing-local-asset",
-      "path": "Assets/app_icon.png",
-      "purpose": "파비콘, 앱 아이콘, 메타 썸네일, 카드형 소개 블록",
-      "alt": "Air Calendar 앱 아이콘"
+      "id": "main-calendar",
+      "path": "docs/assets/screenshots/5.0/calendar-light.png",
+      "sourceType": "application-capture",
+      "sampleData": true
     },
     {
-      "id": "brand-poster-art",
-      "category": "brand-asset",
-      "sourceType": "existing-local-asset",
-      "path": "Assets/PosterArt.png",
-      "purpose": "오픈그래프 이미지, 앱 소개 상단 비주얼, 스토어 느낌의 배너",
-      "alt": "Air Calendar 포스터 아트"
+      "id": "schedule-dialog",
+      "path": "docs/assets/screenshots/5.0/schedule-dialog.png",
+      "sourceType": "application-capture",
+      "sampleData": true
     },
     {
-      "id": "brand-splash",
-      "category": "brand-asset",
-      "sourceType": "existing-local-asset",
-      "path": "Assets/SplashScreen.png",
-      "purpose": "앱 로딩 화면 소개, 브랜드 분위기 전달",
-      "alt": "Air Calendar 스플래시 화면"
+      "id": "appearance-current",
+      "path": "docs/assets/screenshots/current/appearance-light.png",
+      "sourceType": "current-source-qt-render",
+      "renderedOn": "2026-11-11",
+      "sampleData": true
+    },
+    {
+      "id": "appearance-dark",
+      "path": "docs/assets/screenshots/interactive/appearance-dark.webp",
+      "sourceType": "current-source-qt-render",
+      "renderedOn": "2026-11-11",
+      "sampleData": true
+    },
+    {
+      "id": "theme-opacity-animation",
+      "path": "docs/assets/screenshots/interactive/theme-opacity.gif",
+      "poster": "docs/assets/screenshots/interactive/theme-opacity-poster.webp",
+      "sourceType": "animation-from-native-clock-widget-render",
+      "durationSeconds": 8,
+      "frames": 80,
+      "sampleData": true
+    },
+    {
+      "id": "widget-workspace",
+      "path": "docs/assets/screenshots/5.0/widget-workspace.png",
+      "sourceType": "application-capture",
+      "sampleData": true
+    },
+    {
+      "id": "loopdeck",
+      "path": "docs/assets/screenshots/5.0/loopdeck-four-tracks.png",
+      "sourceType": "application-capture",
+      "sampleData": true
+    },
+    {
+      "id": "share-preview",
+      "path": "docs/assets/og-air-calendar.png",
+      "sourceType": "browser-rendered-editorial-layout-with-real-app-capture",
+      "size": [
+        1200,
+        630
+      ]
+    },
+    {
+      "id": "showcase-clock",
+      "path": "docs/assets/screenshots/showcase/clock.webp",
+      "sourceType": "application-source-render",
+      "source": "artifacts/widget-designs-20261101/clock-320.png",
+      "sampleData": true
+    },
+    {
+      "id": "showcase-weather",
+      "path": "docs/assets/screenshots/showcase/weather.webp",
+      "sourceType": "application-source-render",
+      "source": "artifacts/widget-designs-20261101/weather-320.png",
+      "sampleData": true
+    },
+    {
+      "id": "showcase-desktop-layout",
+      "path": "docs/assets/screenshots/showcase/desktop-layout.webp",
+      "sourceType": "application-source-render",
+      "source": "artifacts/widget-studio-20261101/screens/light/desktop-editor.png",
+      "sampleData": true
+    },
+    {
+      "id": "showcase-widget-gallery",
+      "path": "docs/assets/screenshots/showcase/widget-gallery.webp",
+      "sourceType": "application-source-render",
+      "source": "artifacts/widget-graphics-20261101/air_instrument.png",
+      "sampleData": true
+    },
+    {
+      "id": "showcase-widget-manager",
+      "path": "docs/assets/screenshots/showcase/widget-manager.webp",
+      "sourceType": "application-source-render",
+      "source": "artifacts/widget-studio-20261101/screens/light/gallery.png",
+      "sampleData": true
     }
   ],
-  "imagePlaceholders": [
-    {
-      "id": "hero-main-visual",
-      "section": "hero",
-      "assetType": "placeholder-composite",
-      "title": "대표 메인 화면 이미지",
-      "goal": "방문자가 첫 화면에서 앱의 정체성을 즉시 이해하도록 돕는 대표 비주얼",
-      "description": "월간 캘린더, 루틴/디렉티브 패널, 상단 메뉴, 오버레이 위젯이 한 프레임에 담긴 데스크톱 앱 화면입니다.",
-      "suggestedComposition": [
-        "왼쪽에는 월간 캘린더",
-        "오른쪽에는 루틴 또는 디렉티브 패널",
-        "상단에는 앱 메뉴 바",
-        "전면 또는 주변에는 시계, D-Day, 카운트다운 위젯 1~2개"
-      ],
-      "preferredAspectRatio": "16:10",
-      "preferredSize": "1600x1000+",
-      "backgroundStyle": "dark desktop or neutral gradient",
-      "alt": "Air Calendar 메인 UI와 위젯을 함께 보여주는 대표 화면",
-      "caption": "캘린더와 업무 패널, 위젯이 하나의 흐름으로 이어지는 데스크톱 경험",
-      "replacementNotes": "초기에는 UI 와이어프레임이나 목업으로 대체 가능하며, 실제 제품 캡처 확보 후 교체"
-    },
-    {
-      "id": "overview-lifestyle",
-      "section": "overview",
-      "assetType": "concept-illustration-or-mockup",
-      "title": "데스크톱 워크플로 콘셉트 이미지",
-      "goal": "Air Calendar가 단순 캘린더가 아니라 데스크톱 업무 허브라는 인상을 강화",
-      "description": "작업용 데스크톱 배경 위에 Air Calendar 창과 위젯이 자연스럽게 배치된 사용 장면",
-      "suggestedComposition": [
-        "실제 모니터 또는 노트북 화면 목업",
-        "앱 창은 좌측 또는 중앙",
-        "우측 또는 하단에 오버레이 위젯이 떠 있는 구성"
-      ],
-      "preferredAspectRatio": "3:2",
-      "alt": "데스크톱 환경에서 Air Calendar를 사용하는 콘셉트 이미지",
-      "caption": "일정을 보는 순간에서 실행하는 순간까지 한 화면에서",
-      "replacementNotes": "실제 사용 사진이 없으면 제품 중심 3D 목업 또는 평면 UI 합성으로 대체"
-    },
-    {
-      "id": "feature-calendar-panel",
-      "section": "features",
-      "assetType": "ui-screenshot",
-      "title": "캘린더와 패널 통합 화면",
-      "goal": "월간 캘린더와 업무 패널 구조를 직관적으로 설명",
-      "description": "월간 캘린더, 오늘 패널, 루틴 또는 디렉티브 패널이 동시에 보이는 실제 UI 캡처",
-      "suggestedComposition": [
-        "캘린더 셀 내용이 어느 정도 보이게 확대",
-        "패널 타이틀과 카드형 업무 항목이 읽히는 수준의 해상도"
-      ],
-      "preferredAspectRatio": "16:9",
-      "alt": "월간 캘린더와 업무 패널이 함께 보이는 Air Calendar 화면",
-      "caption": "일정 확인과 실행 관리가 분리되지 않는 구조",
-      "replacementNotes": "초기에는 기능 영역에 라벨을 표시한 annotated placeholder도 적합"
-    },
-    {
-      "id": "feature-overlay-widgets",
-      "section": "features",
-      "assetType": "ui-collage",
-      "title": "오버레이 위젯 모음 이미지",
-      "goal": "지원 위젯 종류와 개별 스타일 다양성을 보여주기 위한 비주얼",
-      "description": "시계, 날짜 카드, 카운트다운, D-Day, 텍스트, 날씨 위젯을 카드형 콜라주로 배치한 이미지",
-      "suggestedComposition": [
-        "각 위젯을 개별 카드로 잘라 모아둔 콜라주",
-        "배경은 어둡고 위젯 대비가 잘 보이게 구성"
-      ],
-      "preferredAspectRatio": "4:3",
-      "alt": "Air Calendar에서 제공하는 다양한 오버레이 위젯 예시",
-      "caption": "필요한 정보만 골라 바탕화면 위에 고정",
-      "replacementNotes": "실제 위젯 스크린샷이 확보되면 하나씩 교체하고, 초기에는 아이콘+텍스트 기반 타일로 대체 가능"
-    },
-    {
-      "id": "feature-focus-mode",
-      "section": "features",
-      "assetType": "ui-screenshot",
-      "title": "집중 모드 화면",
-      "goal": "Focus Mode와 Pomodoro 흐름을 시각적으로 전달",
-      "description": "집중 중인 작업명, 남은 시간, 세션 상태가 강조된 Focus UI 화면",
-      "suggestedComposition": [
-        "중앙 카드형 인터페이스",
-        "타이머 숫자가 잘 보이는 확대 구도",
-        "배경은 최소화해 집중감을 강조"
-      ],
-      "preferredAspectRatio": "16:9",
-      "alt": "Air Calendar의 집중 모드와 타이머 인터페이스",
-      "caption": "선택한 작업에 몰입할 수 있도록 설계된 집중 화면",
-      "replacementNotes": "초기에는 타이머 중심 일러스트 또는 개념 mock screen으로 대체 가능"
-    },
-    {
-      "id": "feature-google-sync",
-      "section": "features",
-      "assetType": "ui-screenshot-or-diagram",
-      "title": "Google Calendar 연동 화면",
-      "goal": "외부 캘린더 연동 가능성을 명확히 보여주기 위한 설명 비주얼",
-      "description": "Google Calendar 설정 다이얼로그 또는 Air Calendar와 Google Calendar 간 연결 개념도",
-      "suggestedComposition": [
-        "좌측은 앱 설정 UI",
-        "우측은 Google Calendar 아이콘 또는 캘린더 개념 그래픽",
-        "연결 화살표나 sync 상태 배지"
-      ],
-      "preferredAspectRatio": "16:9",
-      "alt": "Air Calendar의 Google Calendar 연동을 설명하는 이미지",
-      "caption": "데스크톱 일정 관리와 Google Calendar를 자연스럽게 연결",
-      "replacementNotes": "실제 설정 화면이 정리되기 전에는 다이어그램형 플레이스홀더 사용 가능"
-    },
-    {
-      "id": "customization-layouts",
-      "section": "customization",
-      "assetType": "multi-shot-grid",
-      "title": "레이아웃 프리셋 비교 이미지",
-      "goal": "한 앱이 다양한 작업 배치를 지원한다는 점을 한눈에 설명",
-      "description": "서로 다른 3~5개 레이아웃 프리셋을 작은 썸네일로 나란히 보여주는 비교 이미지",
-      "suggestedComposition": [
-        "각 썸네일에 preset 이름 또는 번호 라벨 추가",
-        "캘린더 중심 / 업무 중심 / 플로팅 형태가 구분되게 배열"
-      ],
-      "preferredAspectRatio": "16:9",
-      "alt": "Air Calendar의 다양한 레이아웃 프리셋 비교 이미지",
-      "caption": "상황에 따라 화면 구성을 바로 전환",
-      "replacementNotes": "처음에는 동일 화면의 와이어프레임 썸네일 변형본으로도 충분"
-    },
-    {
-      "id": "workflow-sequence",
-      "section": "workflow",
-      "assetType": "step-illustration",
-      "title": "하루 사용 흐름 단계 이미지",
-      "goal": "앱 사용 흐름을 스토리처럼 설명하는 보조 비주얼",
-      "description": "오늘 일정 확인, 디렉티브 정리, 집중 모드 시작, D-Day 확인 단계를 연결한 4단계 흐름 그래픽",
-      "suggestedComposition": [
-        "4개의 카드 또는 스텝 블록",
-        "각 단계마다 작은 앱 UI 썸네일 또는 아이콘",
-        "좌에서 우로 이어지는 흐름선"
-      ],
-      "preferredAspectRatio": "21:9",
-      "alt": "Air Calendar의 하루 업무 흐름을 보여주는 단계형 이미지",
-      "caption": "확인, 실행, 집중, 추적이 한 흐름으로 이어집니다",
-      "replacementNotes": "실제 UI 캡처 대신 아이콘 기반 인포그래픽으로 먼저 제작 가능"
-    },
-    {
-      "id": "faq-supportive-visual",
-      "section": "faq",
-      "assetType": "simple-support-graphic",
-      "title": "FAQ 보조 비주얼",
-      "goal": "텍스트가 많은 FAQ 구간의 시각적 밀도를 완화",
-      "description": "앱 아이콘, 말풍선, 캘린더 심볼을 활용한 가벼운 장식 그래픽",
-      "suggestedComposition": [
-        "브랜드 아이콘 중심",
-        "복잡한 UI 대신 심플한 도형과 작은 캘린더 모티프"
-      ],
-      "preferredAspectRatio": "1:1",
-      "alt": "Air Calendar FAQ 영역용 보조 그래픽",
-      "caption": "궁금한 점을 빠르게 확인하세요",
-      "replacementNotes": "실제 제품 이미지가 없어도 바로 사용 가능한 가장 단순한 플레이스홀더 영역"
-    }
-  ],
+  "imagePlaceholders": [],
   "imageUsageGuide": {
     "visualStyle": [
-      "다크 테마를 유지하되 배경은 너무 검게 뭉치지 않도록 대비를 확보합니다.",
-      "제품 스크린샷은 텍스트가 읽히는 수준으로 선명해야 합니다.",
-      "위젯 이미지는 개별 오브젝트처럼 잘라내거나 그림자 처리해 독립성을 강조하는 편이 좋습니다.",
-      "설명용 이미지는 실제 UI 캡처와 개념 그래픽을 혼합해도 괜찮습니다."
+      "앱의 밝은 라일락과 네이비 색상을 기준으로 삼습니다.",
+      "앱 원본 화면의 종횡비와 내용은 보존합니다.",
+      "설명은 화면 옆에 두고 짧고 구체적인 사용 동작을 적습니다."
     ],
-    "placeholderRules": [
-      "실제 이미지가 없을 때는 slotId를 유지한 채 동일 비율 플레이스홀더로 먼저 배치합니다.",
-      "플레이스홀더 안에는 제목, 용도, 예상 이미지 유형을 짧게 표기하면 교체 작업이 쉬워집니다.",
-      "hero와 features 이미지는 가장 먼저 실제 화면으로 교체하는 우선순위가 높습니다."
-    ],
-    "recommendedPriority": [
-      "hero-main-visual",
-      "feature-calendar-panel",
-      "feature-overlay-widgets",
-      "feature-focus-mode",
-      "customization-layouts"
+    "capturePolicy": [
+      "샘플 데이터 또는 임시 설정으로 만든 실제 앱 화면을 사용합니다.",
+      "현재 소스에서 렌더한 화면과 기존 네이티브 캡처의 출처를 구분합니다.",
+      "개념 이미지나 생성한 앱 화면을 실제 UI처럼 제시하지 않습니다."
     ]
   },
   "layoutFreedom": {
@@ -633,8 +564,8 @@
     }
   ],
   "seo": {
-    "title": "Air Calendar | Windows 데스크톱 캘린더와 오버레이 위젯 앱",
-    "description": "Air Calendar는 월간 캘린더, 루틴 관리, Google Calendar 연동, Focus Mode, D-Day와 카운트다운 위젯을 제공하는 Windows 데스크톱 생산성 앱입니다.",
+    "title": "Air Calendar — 위젯과 색상까지 내 방식으로",
+    "description": "Windows 바탕화면에 달력과 8종 위젯을 배치하세요. 색상과 투명도, 글꼴과 레이아웃을 꾸미고 Google·Outlook·iCloud 캘린더를 연동하세요.",
     "keywords": [
       "Windows 캘린더 앱",
       "데스크톱 일정 관리",
@@ -652,5 +583,17 @@
     "downloadNotice": "현재 Air Calendar는 Windows 데스크톱 환경에 맞춰 설계된 앱입니다.",
     "trustNote": "사용자 설정, 위젯 배치, 언어 환경, 캘린더 연결 상태를 로컬 앱 흐름 안에서 지속적으로 유지하도록 설계되어 있습니다.",
     "footerSummary": "Air Calendar는 일정 확인용 캘린더를 넘어, 실제 실행과 집중까지 이어지는 데스크톱 생산성 환경을 만드는 앱입니다."
+  },
+  "designSource": {
+    "repository": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+    "commit": "6ae86f6",
+    "pattern": "Product Demo + Features",
+    "style": "Flat Design",
+    "adaptations": [
+      "Existing Korean system typography",
+      "Cobalt product accents",
+      "Actual application captures and native widget layers",
+      "Keyboard-operable widget preview and reduced-motion playback"
+    ]
   }
 }

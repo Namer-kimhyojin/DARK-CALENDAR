@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.2.0 | 2026-11-11T15:59:10.246722+09:00 | change | Publish the redesigned homepage, interactive dark mode and opacity demo, and native clock animation | `homepage-interactive-showcase-20261111` |
 | 5.2.0 | 2026-11-11T10:59:38.311439+09:00 | change | Use the required publication date marker in the observed 5.2.0 release checklist | `release-5.2.0-publication-date-marker-20261111` |
 | 5.2.0 | 2026-11-11T10:53:54.381554+09:00 | store | Published the native-tested Air Calendar 5.2.0 GitHub release and verified all six public asset byte hashes | `release-5.2.0-github-published-20261111` |
 | 5.2.0 | 2026-11-11T10:48:40.998839+09:00 | change | Pin GET-only six-asset readback to the unchanged 5.2.0 native-tested candidate | `release-5.2.0-asset-readback-20261111` |

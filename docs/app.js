@@ -837,6 +837,19 @@
   };
   Object.entries(releaseAvailabilityCopy).forEach(([locale, copy]) => Object.assign(translations[locale], copy));
 
+  // Keep the homepage's editorial content separate from the shared guide copy.
+  Object.entries(window.AirCalendarHomepage || {}).forEach(([locale, copy]) => {
+    Object.assign(translations[locale], copy);
+    const view = screens[locale];
+    view.main = { ...view.main, image: "assets/screenshots/5.0/calendar-light.png", title: copy.mainScreenTitle, description: copy.mainScreenBody };
+    view.widgets = { image: "assets/screenshots/5.0/widget-workspace.png", alt: copy.fiveWidgetTitle, kicker: "WIDGET WORKSPACE", title: copy.widgetScreenTitle, description: copy.fiveWidgetBody, points: [copy.workspaceOne, copy.workspaceTwo, copy.workspaceThree] };
+    view.appearance = { image: "assets/screenshots/current/appearance-light.png", alt: copy.fiveThemeTitle, kicker: "YOUR COLOURS", title: copy.fiveThemeTitle, description: copy.fiveThemeBody, points: [copy.themePoint1, copy.themePoint2, copy.themePoint3] };
+    view.schedule = { image: "assets/screenshots/5.0/schedule-dialog.png", alt: copy.fiveModalTitle, kicker: "ADD AN EVENT", title: copy.fiveModalTitle, description: copy.fiveModalBody, points: [copy.schedulePoint1, copy.schedulePoint2, copy.schedulePoint3] };
+    view.layout = { image: "assets/screenshots/showcase/desktop-layout.webp", alt: copy.layoutScreenTitle, kicker: "DESKTOP LAYOUT", title: copy.layoutScreenTitle, description: copy.layoutScreenBody, points: [copy.workspaceOne, copy.workspaceTwo, copy.workspaceThree] };
+    view.manager = { image: "assets/screenshots/showcase/widget-manager.webp", alt: copy.galleryTitle, kicker: "WIDGET MANAGER", title: copy.galleryTitle, description: copy.galleryBody, points: [copy.widgetLookTitle, copy.workspaceOne, copy.workspaceThree] };
+    view.beatmaker = { image: "assets/screenshots/5.0/loopdeck-four-tracks.png", alt: copy.tabBeatmaker, kicker: "FOUR TRACKS", title: translations[locale].fiveLoopTitle, description: copy.loopScreenBody, points: view.beatmaker.points };
+  });
+
   const richTextKeys = new Set(["unifiedTitle", "heroTitle", "desktopTitle", "featuresTitle", "atlasTitle", "exploreTitle", "googleTitle", "workflowTitle", "privacyTitle", "faqTitle", "ctaTitle", "shareTitle"]);
   let currentLanguage = "ko";
   let currentScreen = "main";
@@ -914,6 +927,7 @@
     document.querySelector('meta[property="og:description"]')?.setAttribute("content", copy.metaDescription);
     document.querySelector('meta[name="twitter:description"]')?.setAttribute("content", copy.metaDescription);
     document.querySelector('meta[name="twitter:title"]')?.setAttribute("content", copy.metaTitle);
+    document.querySelector('meta[property="og:title"]')?.setAttribute("content", copy.metaTitle);
     document.querySelector('meta[property="og:locale"]')?.setAttribute("content", ({ ko: "ko_KR", en: "en_US", ja: "ja_JP", zh: "zh_CN" })[currentLanguage]);
 
     document.querySelectorAll("[data-i18n]").forEach((node) => {
@@ -931,6 +945,13 @@
     document.querySelectorAll("[data-i18n-alt]").forEach((node) => {
       const value = copy[node.dataset.i18nAlt];
       if (value) node.setAttribute("alt", value);
+    });
+
+    document.querySelectorAll("[data-preview-image]").forEach((button) => {
+      const title = copy[button.dataset.previewTitle];
+      if (!title) return;
+      button.setAttribute("aria-label", `${title} — ${copy.zoomHint}`);
+      button.querySelector("img")?.setAttribute("alt", title);
     });
 
     document.querySelectorAll("[data-language-select]").forEach((select) => {
@@ -1067,10 +1088,12 @@
         item.tabIndex = active ? 0 : -1;
       });
       updateScreen();
+      document.querySelector("#screen-panel")?.setAttribute("aria-labelledby", tab.id);
       if (focus) tab.focus();
     }
 
     tabs.forEach((tab, index) => {
+      tab.id = `screen-tab-${tab.dataset.screen}`;
       tab.addEventListener("click", () => activate(tab, false));
       tab.addEventListener("keydown", (event) => {
         if (!["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
@@ -1108,7 +1131,7 @@
       button.addEventListener("click", () => {
         const copy = translations[currentLanguage];
         const image = button.querySelector("img");
-        openLightbox({ image: image.src, alt: image.alt, kicker: "AIR CALENDAR 5.0", title: copy[button.dataset.previewTitle], description: copy[button.dataset.previewDescription] });
+        openLightbox({ image: image.src, alt: image.alt, kicker: "AIR CALENDAR", title: copy[button.dataset.previewTitle], description: copy[button.dataset.previewDescription] });
       });
     });
     closeButton.addEventListener("click", () => dialog.close());
