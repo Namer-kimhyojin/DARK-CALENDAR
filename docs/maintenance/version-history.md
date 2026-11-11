@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.2.0 | 2026-11-11T10:53:54.381554+09:00 | store | Published the native-tested Air Calendar 5.2.0 GitHub release and verified all six public asset byte hashes | `release-5.2.0-github-published-20261111` |
 | 5.2.0 | 2026-11-11T10:48:40.998839+09:00 | change | Pin GET-only six-asset readback to the unchanged 5.2.0 native-tested candidate | `release-5.2.0-asset-readback-20261111` |
 | 5.2.0 | 2026-11-11T10:42:00.128912+09:00 | change | Install Qt for isolated encoding tests and compare visible menu ampersands in locale-dependent QA | `release-5.2.0-ci-test-environment-20261111` |
 | 5.2.0 | 2026-11-11T10:38:57.372651+09:00 | change | Refresh homepage around actual application UI, lilac/navy visual identity, multilingual editorial copy and real-screen sharing artwork | `homepage-redesign-20261111` |
