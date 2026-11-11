@@ -58,7 +58,7 @@
     "highlightBullets": [
       "자유로운 위젯 배치",
       "다크 모드와 투명도",
-      "추가 위젯 8종",
+      "추가 위젯 9종",
       "캘린더 연동"
     ],
     "image": {
@@ -77,8 +77,8 @@
     },
     {
       "id": "desktop-custom",
-      "title": "메인 달력부터 위젯 전용 모드까지.",
-      "description": "한 달 전체를 보거나, 오늘의 일정과 할 일만 따로 띄우세요. 위젯의 크기와 위치를 바꾸고, 배치 편집기에서 여러 위젯을 정렬해 나에게 맞는 작업 공간을 만들 수 있습니다."
+      "title": "위젯 모드와 전체 업무 관리",
+      "description": "바탕화면 위젯으로 오늘 일정을 확인하고, 전체 업무 관리에서 일정·일반업무·지시·협조사항을 목록으로 정리하세요."
     },
     {
       "id": "appearance",
@@ -86,17 +86,28 @@
       "description": "달력의 배경·테두리·강조색을 각각 고르고, 배경과 테두리가 비치는 정도를 조절하세요. 라이트·다크·시스템 모드와 색상 프리셋에서 시작해 나만의 색으로 바꿀 수 있습니다.",
       "interactivePreview": {
         "widget": "clock",
-        "modes": ["light", "dark"],
-        "backgroundColors": ["blue", "lilac", "mint", "rose"],
-        "backgroundOpacityRange": [0, 100],
+        "modes": [
+          "light",
+          "dark"
+        ],
+        "backgroundColors": [
+          "blue",
+          "lilac",
+          "mint",
+          "rose"
+        ],
+        "backgroundOpacityRange": [
+          0,
+          100
+        ],
         "foregroundOpacity": 100,
         "layerSource": "calendar_app/presentation/widgets/widget_graphics.py"
       }
     },
     {
       "id": "widget-gallery",
-      "title": "바탕화면에 더하는 8가지 위젯",
-      "description": "시계, 날짜 카드, D-Day, 스톱워치, 카운트다운, 텍스트, 날씨, KeyDeck. 필요한 위젯만 추가하고 같은 종류도 여러 개 배치하세요."
+      "title": "바탕화면에 더하는 9가지 위젯",
+      "description": "시계, 날짜 카드, D-Day, 스톱워치, 카운트다운, 텍스트, 날씨, KeyDeck, 루프 믹서. 필요한 위젯만 골라 배치하세요."
     },
     {
       "id": "calendar-sync",
@@ -395,9 +406,9 @@
       "sampleData": true
     },
     {
-      "id": "loopdeck",
-      "path": "docs/assets/screenshots/5.0/loopdeck-four-tracks.png",
-      "sourceType": "application-capture",
+      "id": "loop-mixer",
+      "path": "docs/design/loop-mixer-implemented-wide.png",
+      "sourceType": "application-source-render",
       "sampleData": true
     },
     {
@@ -424,11 +435,12 @@
       "sampleData": true
     },
     {
-      "id": "showcase-desktop-layout",
-      "path": "docs/assets/screenshots/showcase/desktop-layout.webp",
-      "sourceType": "application-source-render",
-      "source": "artifacts/widget-studio-20261101/screens/light/desktop-editor.png",
-      "sampleData": true
+      "id": "work-management",
+      "path": "docs/assets/screenshots/showcase/work-management.webp",
+      "sourceType": "current-source-qt-render",
+      "source": "calendar_app/presentation/dialogs/management_dialogs.py",
+      "sampleData": true,
+      "renderedOn": "2026-11-11"
     },
     {
       "id": "showcase-widget-gallery",
@@ -565,7 +577,7 @@
   ],
   "seo": {
     "title": "Air Calendar — 위젯과 색상까지 내 방식으로",
-    "description": "Windows 바탕화면에 달력과 8종 위젯을 배치하세요. 색상과 투명도, 글꼴과 레이아웃을 꾸미고 Google·Outlook·iCloud 캘린더를 연동하세요.",
+    "description": "Windows 바탕화면에 달력과 9종 위젯을 배치하세요. 색상과 투명도, 글꼴과 레이아웃을 꾸미고 Google·Outlook·iCloud 캘린더를 연동하세요.",
     "keywords": [
       "Windows 캘린더 앱",
       "데스크톱 일정 관리",

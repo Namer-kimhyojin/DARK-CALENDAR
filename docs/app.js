@@ -845,9 +845,9 @@
     view.widgets = { image: "assets/screenshots/5.0/widget-workspace.png", alt: copy.fiveWidgetTitle, kicker: "WIDGET WORKSPACE", title: copy.widgetScreenTitle, description: copy.fiveWidgetBody, points: [copy.workspaceOne, copy.workspaceTwo, copy.workspaceThree] };
     view.appearance = { image: "assets/screenshots/current/appearance-light.png", alt: copy.fiveThemeTitle, kicker: "YOUR COLOURS", title: copy.fiveThemeTitle, description: copy.fiveThemeBody, points: [copy.themePoint1, copy.themePoint2, copy.themePoint3] };
     view.schedule = { image: "assets/screenshots/5.0/schedule-dialog.png", alt: copy.fiveModalTitle, kicker: "ADD AN EVENT", title: copy.fiveModalTitle, description: copy.fiveModalBody, points: [copy.schedulePoint1, copy.schedulePoint2, copy.schedulePoint3] };
-    view.layout = { image: "assets/screenshots/showcase/desktop-layout.webp", alt: copy.layoutScreenTitle, kicker: "DESKTOP LAYOUT", title: copy.layoutScreenTitle, description: copy.layoutScreenBody, points: [copy.workspaceOne, copy.workspaceTwo, copy.workspaceThree] };
+    view.work = { image: "assets/screenshots/showcase/work-management.webp", alt: copy.workScreenTitle, kicker: "WORK MANAGEMENT", title: copy.workScreenTitle, description: copy.workScreenBody, points: copy.workScreenPoints };
     view.manager = { image: "assets/screenshots/showcase/widget-manager.webp", alt: copy.galleryTitle, kicker: "WIDGET MANAGER", title: copy.galleryTitle, description: copy.galleryBody, points: [copy.widgetLookTitle, copy.workspaceOne, copy.workspaceThree] };
-    view.beatmaker = { image: "assets/screenshots/5.0/loopdeck-four-tracks.png", alt: copy.tabBeatmaker, kicker: "FOUR TRACKS", title: translations[locale].fiveLoopTitle, description: copy.loopScreenBody, points: view.beatmaker.points };
+    view.beatmaker = { image: "design/loop-mixer-implemented-wide.png", alt: copy.tabBeatmaker, kicker: "LOOP MIXER", title: copy.fiveLoopTitle, description: copy.loopScreenBody, points: copy.loopPoints };
   });
 
   const richTextKeys = new Set(["unifiedTitle", "heroTitle", "desktopTitle", "featuresTitle", "atlasTitle", "exploreTitle", "googleTitle", "workflowTitle", "privacyTitle", "faqTitle", "ctaTitle", "shareTitle"]);

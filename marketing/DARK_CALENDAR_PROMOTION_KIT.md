@@ -8,9 +8,9 @@ GitHub: <https://github.com/Namer-kimhyojin/DARK-CALENDAR>
 
 Public media kit: <https://namer-kimhyojin.github.io/DARK-CALENDAR/promo.html>
 
-Seven-day execution plan: [`LAUNCH_CAMPAIGN_2026-08-31.md`](LAUNCH_CAMPAIGN_2026-08-31.md)
+Product facts checked on 2026-11-11 against the [Air Calendar 5.2.0 release](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.2.0), the [official homepage](https://namer-kimhyojin.github.io/DARK-CALENDAR/), and the [Microsoft Store product page](https://apps.microsoft.com/detail/9mxq08rf22k8). Air Calendar is a paid Windows app. Store availability and purchase terms are shown on the Store product page.
 
-Generated asset prompts: [`GENERATED_PROMO_ASSETS.md`](GENERATED_PROMO_ASSETS.md)
+The [August 31 launch plan](LAUNCH_CAMPAIGN_2026-08-31.md) and [original generated asset notes](GENERATED_PROMO_ASSETS.md) document the earlier campaign.
 
 ## Campaign assumptions
 
@@ -22,16 +22,14 @@ Generated asset prompts: [`GENERATED_PROMO_ASSETS.md`](GENERATED_PROMO_ASSETS.md
 
 ## Campaign concept
 
-Campaign name: **Your Desktop, Your Time**
-
-Core message: **Air Calendar puts your calendar and essential widgets directly on the Windows desktop, with the freedom to move, resize, arrange, and recolor everything around the way you work.**
+**Air Calendar puts your calendar and widgets on the Windows desktop. Move and resize widgets, choose light or dark mode, and adjust colors and background opacity.**
 
 Supporting messages:
 
 1. Desktop-first: schedules, tasks, clocks, weather, D-Day, and other widgets remain visible where work happens.
-2. Personal layout: every element can be moved and resized; calendar-first, task-first, and widget-first layouts are all possible.
-3. Personal color system: themes, accents, panels, and widget styling can be tuned to the user.
-4. One connected workflow: tasks, routines, focus sessions, optional Google Calendar sync, printing, and multilingual UI live in one Windows app.
+2. Personal layout: move and resize widgets, save a workspace, and open more than one instance of a widget.
+3. Appearance: choose light, dark, or system mode. The app supports custom colors and separate background and border opacity settings. The [interactive clock demo](https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=en#appearance) shows background opacity with the text still visible.
+4. Connected calendars: use local calendars without an account or connect Google Calendar, Outlook, and iCloud. Naver and ICS connections are read-only. The [connection guide](https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide.html?lang=en) explains account setup, permissions, and service limits.
 
 ## Channel strategy
 
@@ -51,11 +49,11 @@ Do not post the same text repeatedly or enter communities only to drop a link. L
 
 | Week | Content piece | Channel | Owner / notes | Status |
 |---|---|---|---|---|
-| 1 | “The desktop itself becomes a calendar” launch post | X, Threads, LinkedIn | Use `desktop-customization.webp`; link to website | Ready |
+| 1 | Put a calendar and widgets on the desktop | X, Threads, LinkedIn | Use the official landscape image and link to the homepage | Copy ready |
 | 1 | Product-led README and repository About metadata | GitHub | Keep Store, website, GPL, and release links current | Ready |
-| 2 | Move, resize, layout, and color carousel | LinkedIn, Instagram | Four frames; one benefit per frame | Copy ready |
-| 2 | Widget manager screenshot post | X, productivity communities | Explain seven widget types and multiple instances | Copy ready |
-| 3 | Beginner Google Calendar setup guide | Blog/community | Link directly to `#google-sync`; emphasize that sync is optional | Ready on website |
+| 2 | Light and dark mode with adjustable opacity | LinkedIn, Instagram, X | Use the 8-second clock GIF or the official square image | Assets ready |
+| 2 | Widget gallery and Loop Mixer | X, productivity communities | Show the nine widget types, including KeyDeck and the six-track Loop Mixer | Assets ready |
+| 3 | Beginner calendar connection guide | Blog/community | Link to `sync-guide.html` in the post language | Ready on website |
 | 3 | Focus/Pomodoro workflow post | LinkedIn, X | Use `focus-mode.png`; show plan → focus → review | Copy ready |
 | 4 | “Show your layout” participation post | Social/community | Invite screenshots without exposing private schedules | Copy ready |
 | 4 | Review results and refresh strongest creative | All active channels | Compare reach, saves, link clicks, Store acquisition | Pending data |
@@ -66,59 +64,71 @@ Keep roughly 20% of slots open for release news, user questions, or an unexpecte
 
 ### Korean — launch
 
-바탕화면을 단순한 배경이 아니라 ‘나만의 시간 공간’으로 만들어 보세요.
+Air Calendar는 유료 Windows 앱입니다. 달력과 할 일을 바탕화면에 배치하고, 시계·날씨·D-Day·KeyDeck·루프 믹서 등 필요한 위젯의 위치와 크기를 조절할 수 있습니다.
 
-Air Calendar는 캘린더, 할 일, 시계, 날씨, D-Day 위젯을 Windows 바탕화면에 직접 배치할 수 있는 데스크톱 앱입니다. 각 요소의 위치와 크기를 자유롭게 바꾸고, 업무 방식에 맞는 레이아웃과 색상으로 구성할 수 있습니다.
+라이트·다크 모드를 고르고, 원하는 배경색과 투명도로 꾸며 보세요. 로컬 일정은 계정 없이 사용할 수 있고, Google·Outlook·iCloud 일정 연결은 선택 기능입니다. 네이버와 ICS는 읽기 전용으로 연결할 수 있습니다.
 
-일정 확인부터 집중 모드, 선택형 Google Calendar 동기화까지 한곳에서 이어집니다.
+전체 업무 관리에서 일정·일반업무·지시·협조사항을 검색하고, 중요도와 상태를 한 번에 변경할 수 있습니다.
 
-공식 홈페이지: https://namer-kimhyojin.github.io/DARK-CALENDAR/
+바탕화면 위젯과 투명도를 체험해 보세요.
+<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ko#appearance>
 
 #AirCalendar #Windows앱 #바탕화면위젯 #일정관리 #생산성
 
 ### Korean — short
 
-캘린더와 위젯을 바탕화면에 바로. 위치·크기·레이아웃·색상은 내 방식대로. Windows 데스크톱을 나만의 시간 공간으로 만드는 Air Calendar를 만나보세요.
+Air Calendar로 달력과 위젯을 Windows 바탕화면에 배치하세요. 라이트·다크 모드와 배경 투명도를 홈페이지에서 직접 바꿔볼 수 있습니다.
 
-https://namer-kimhyojin.github.io/DARK-CALENDAR/
+<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ko#appearance>
 
 ### English
 
-Your desktop can be more than a background. Air Calendar puts calendars, tasks, clocks, weather, D-Day, and other widgets directly on Windows—then lets you move, resize, recolor, and arrange everything around the way you work.
+Air Calendar is a paid Windows app that puts your calendar and tasks on the desktop. Add, move and resize widgets such as a clock, weather, D-Day, KeyDeck and Loop Mixer.
 
-Explore the app: https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=en
+Choose light or dark mode, then adjust background color and opacity. Use local calendars without an account, or connect Google Calendar, Outlook or iCloud. Naver and ICS subscriptions are read-only.
+
+In Work Management, find schedules, recurring tasks and requests, then update their status or priority in bulk.
+
+Try the widget appearance demo.
+<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=en#appearance>
 
 #AirCalendar #WindowsApps #DesktopWidgets #Productivity #Calendar
 
 ### Japanese
 
-デスクトップを、ただの背景から「自分だけの時間空間」へ。Air Calendarなら、カレンダー、タスク、時計、天気、D-DayをWindowsデスクトップに直接配置し、位置・サイズ・レイアウト・色を自由に調整できます。
+Air Calendarは有料のWindowsアプリです。カレンダーとタスクをデスクトップに配置し、時計、天気、D-Day、KeyDeck、ループミキサーなどの位置やサイズを調整できます。
 
-公式サイト: https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ja
+ライトモードとダークモードを選び、背景色や透明度も調整できます。ローカルの予定はアカウントなしで管理でき、Google カレンダー、Outlook、iCloudとの連携も選べます。NAVERとICSは読み取り専用です。
+
+業務管理では予定、定期業務、指示・依頼事項を検索し、状態や優先度を一括変更できます。
+
+ウィジェットの外観をお試しください。
+<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ja#appearance>
 
 #AirCalendar #Windowsアプリ #デスクトップウィジェット #予定管理 #生産性
 
 ### Simplified Chinese
 
-让桌面不再只是背景。Air Calendar 可将日历、任务、时钟、天气和 D-Day 小组件直接放在 Windows 桌面，并自由调整位置、大小、布局和颜色。
+Air Calendar 是一款付费 Windows 应用，可将日历和待办事项放在桌面上。按需添加时钟、天气、D-Day、KeyDeck 和循环混音器等小组件，并调整位置和大小。
 
-官方网站: https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=zh
+选择浅色或深色模式，并调整背景颜色和透明度。本地日历无需账号，也可以按需连接 Google 日历、Outlook 或 iCloud。NAVER 和 ICS 订阅为只读。
+
+在任务管理中搜索日程、周期性任务和协作事项，批量修改状态与优先级。
+
+试试小组件外观设置。
+<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=zh#appearance>
 
 #AirCalendar #Windows应用 #桌面小组件 #日程管理 #效率工具
 
 ## Creative directions
 
-Use the existing assets so every post looks connected to the official website:
+The PNGs combine actual app screens with light and dark clock widget renders. The square image features Work Management with sample tasks. The English artwork can accompany any of the four localized posts.
 
-- `docs/assets/desktop-customization.webp`: hero creative for move, resize, layout, and color.
-- `docs/assets/screenshots/widget-manager.png`: widget variety and multiple-instance story.
-- `docs/assets/screenshots/focus-mode.png`: focus and Pomodoro story.
-- `docs/assets/google-calendar-setup.webp`: beginner Google Calendar education.
-- `docs/assets/og-dark-calendar.png`: general link preview and campaign cover.
-- `docs/assets/promo-social-square.png`: square social creative with the campaign line “Your Desktop, Your Time.”
-- `docs/assets/promo-social-landscape.png`: 16:9 launch banner for LinkedIn, X, and rich link previews.
-- `docs/assets/promo-social-story.png`: 9:16 cover for Stories and short-form video.
-- `docs/assets/promo-google-sync-landscape.png`: beginner-friendly four-step Google Calendar sync overview.
+- [Landscape PNG](../docs/assets/promo-air-calendar-landscape.png) · 1920 × 1080 for blogs and link previews.
+- [Square PNG](../docs/assets/promo-air-calendar-square.png) · 1080 × 1080 for social feeds.
+- [Story PNG](../docs/assets/promo-air-calendar-story.png) · 1080 × 1920 for Stories and short-video covers.
+- [Theme and opacity GIF](../docs/assets/screenshots/interactive/theme-opacity.gif) · 8 seconds showing the native clock widget.
+- [Widget gallery](../docs/assets/screenshots/showcase/widget-gallery.webp), [Work Management](../docs/assets/screenshots/showcase/work-management.webp), [dark appearance settings](../docs/assets/screenshots/interactive/appearance-dark.webp), [connection settings](../docs/assets/screenshots/sync-services-ko.png), and the [six-track Loop Mixer](../docs/design/loop-mixer-implemented-wide.png) for feature-specific posts.
 
 For screenshot posts, blur or replace any personal schedule, account, location, or notification content before publishing.
 
@@ -147,7 +157,7 @@ Review weekly. After four weeks, retain the top two messages and top two visuals
 
 ## Immediate next steps
 
-1. Publish the Week 1 launch copy with `desktop-customization.webp` on the product's active social account.
+1. Pair the product introduction with the landscape PNG or the theme and opacity GIF when preparing an authorized post.
 2. Reuse the same message in a longer LinkedIn post, adjusting the opening to the audience's workflow problem.
 3. Update Microsoft Store screenshots and description when the next product release changes visible functionality.
 4. Record platform metrics once per week in a simple campaign log.
