@@ -270,6 +270,11 @@ def _calendar_surface_style(tokens=None, shape=None):
     """
 
 
+_WEEKDAY_BAND_PADDING = 8
+# Qt's default layout margin around the calendar surface's content.
+_SURFACE_CONTENT_MARGIN = 9
+
+
 def _build_month_weekday_header(dates, tokens):
     header = QWidget()
     header.setObjectName("calendar_weekday_header")
@@ -277,7 +282,9 @@ def _build_month_weekday_header(dates, tokens):
     # consistently over the Windows translucent calendar surface.
     header.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
     layout = QHBoxLayout(header)
-    layout.setContentsMargins(0, 2, 0, 2)
+    # The names sit in the band between the calendar toolbar and the grid; equal
+    # padding inside the header centers them there (see the caller's margins).
+    layout.setContentsMargins(0, _WEEKDAY_BAND_PADDING, 0, _WEEKDAY_BAND_PADDING)
     layout.setSpacing(0)
     for date in dates:
         label = QLabel(QLocale().dayName(date.dayOfWeek(), QLocale.FormatType.ShortFormat))
@@ -2494,6 +2501,16 @@ def render_calendar(app):
         weekday_height = 0
         if show_weekday_header:
             weekday_header = _build_month_weekday_header(dates_to_render[:cols], tokens)
+            # Space above the header used to stack up outside it (surface 9px + days
+            # 4px), pushing the names toward the grid. The header's own padding now
+            # holds all of it, evenly above and below.
+            day_margins = days_layout.contentsMargins()
+            days_layout.setContentsMargins(
+                day_margins.left(), 0, day_margins.right(), day_margins.bottom()
+            )
+            inner_v.setContentsMargins(
+                _SURFACE_CONTENT_MARGIN, 0, _SURFACE_CONTENT_MARGIN, _SURFACE_CONTENT_MARGIN
+            )
             days_layout.addWidget(weekday_header)
             weekday_height = weekday_header.sizeHint().height()
 

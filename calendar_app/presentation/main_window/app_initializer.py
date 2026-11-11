@@ -45,6 +45,8 @@ def initialize_overlay_app(app) -> None:
     app._focus_entry_was_maximized = False
     app._focus_windowed_was_maximized = False
     app._focus_fullscreen_btn = None
+    app._top_bar_menu_wrapper = None
+    app.act_topbar_auto_hide = None
     app._resize_dir = None
     app._screen_fill_active = False
     app._last_clicked_date = None

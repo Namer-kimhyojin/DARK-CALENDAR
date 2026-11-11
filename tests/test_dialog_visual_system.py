@@ -21,6 +21,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
 )
 from calendar_app.presentation.widgets.ui_components import DraggableTaskButton
 from calendar_app.shared.color_utils import contrast_ratio
+from calendar_app.shared.color_utils import contrasting_text_color as _accent_text
 
 
 class DialogVisualSystemTests(unittest.TestCase):
@@ -68,7 +69,7 @@ class DialogVisualSystemTests(unittest.TestCase):
         stylesheet = build_dialog_stylesheet(settings=self.settings, tokens={"accent": "#f1cc55"})
         primary = re.findall(r"QPushButton#primary_btn\s*\{([^}]+)\}", stylesheet)[-1]
         self.assertIn("background-color: #f1cc55;", primary)
-        self.assertIn("color: #101318;", primary)
+        self.assertIn(f"color: {_accent_text('#f1cc55')};", primary)
 
     def test_common_style_inherits_nearest_owner_profile(self):
         owner = QWidget()

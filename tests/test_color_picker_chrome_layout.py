@@ -9,6 +9,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication, QColorDialog, QDialog, QDialogButtonBox
 import pytest
 
+from calendar_app.presentation.dialogs import dialog_chrome
 from calendar_app.presentation.dialogs.dialog_chrome import prepare_dialog_chrome
 from calendar_app.presentation.dialogs.dialog_styles import (
     _dialog_settings,
@@ -110,7 +111,7 @@ def test_static_qt_color_picker_preserves_alpha_and_cancel_result(accept):
         active = _APP.activeModalWidget()
         observed["color_dialog"] = isinstance(active, QColorDialog)
         if isinstance(active, QColorDialog):
-            controller = getattr(active, "_dc_dialog_chrome_controller", None)
+            controller = dialog_chrome.dialog_chrome_controller(active)
             observed["header_width"] = controller.header.width() if controller else 0
             observed["width"] = active.width()
             active.setCurrentColor(QColor(20, 40, 60, 91))

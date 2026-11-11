@@ -17,6 +17,7 @@ from PyQt6 import sip
 from PyQt6.QtCore import (
     QCoreApplication,
     QEvent,
+    QProcess,
     QSettings,
     QSharedMemory,
     QThread,
@@ -31,6 +32,12 @@ from calendar_app.app_metadata import APP_NAME, APP_VERSION
 from calendar_app.app_paths import APP_ICON_PATH
 from calendar_app.domain.i18n import set_translator as set_domain_translator
 from calendar_app.infrastructure.i18n import i18n, t
+from calendar_app.infrastructure.runtime.crash_bootstrap import (
+    is_database_corruption as _is_database_corruption,
+)
+from calendar_app.infrastructure.runtime.crash_bootstrap import (
+    show_database_restore_failure as _show_database_restore_failure,
+)
 from calendar_app.infrastructure.runtime.crash_bootstrap import (
     show_database_startup_error as _show_database_startup_error,
 )
@@ -340,6 +347,51 @@ def _run_splash_phase(
     return state["result"]
 
 
+_DATABASE_SNAPSHOT_CHECK_MS = 6 * 60 * 60 * 1000
+
+
+def _create_daily_database_snapshot() -> None:
+    """Keep a verified daily copy; a snapshot failure never blocks the app."""
+    from calendar_app.infrastructure.db import database_unified, db_backup
+
+    try:
+        db_backup.create_daily_backup(database_unified.DB_PATH)
+    except (sqlite3.Error, OSError):
+        logging.getLogger(__name__).warning("Daily database snapshot skipped", exc_info=True)
+
+
+def _start_database_snapshot_worker() -> None:
+    # Tray sessions can run for weeks, so the daily check repeats off the UI thread.
+    threading.Thread(
+        target=_create_daily_database_snapshot, name="database-snapshot", daemon=True
+    ).start()
+
+
+def _restore_database_from_snapshot(database_path) -> bool:
+    from calendar_app.infrastructure.db import db_backup
+    from calendar_app.infrastructure.db.database_unified import db_manager
+
+    db_manager.close_all_connections()
+    try:
+        restored = db_backup.restore_latest_backup(database_path)
+    except (sqlite3.Error, OSError) as error:
+        logging.getLogger(__name__).exception("Database restore from snapshot failed")
+        _show_database_restore_failure(error)
+        return False
+    if restored is None:
+        _show_database_restore_failure(None)
+        return False
+    return True
+
+
+def _relaunch_application() -> None:
+    # A frozen build's argv[0] is its own executable; a source run needs main.py.
+    arguments = sys.argv[1:] if getattr(sys, "frozen", False) else sys.argv
+    started = QProcess.startDetached(sys.executable, list(arguments), os.getcwd())
+    if not (started[0] if isinstance(started, tuple) else started):
+        logging.getLogger(__name__).error("Relaunch after database restore failed")
+
+
 def run(overlay_cls=None, build_ui_font=None) -> int:
     startup_options = resolve_qt_startup_options(sys.argv, os.environ, sys.platform)
     logging.getLogger(__name__).info(
@@ -428,6 +480,7 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
         )
         if not initialize_unified_database(raise_on_error=True):
             raise RuntimeError("Database initialization failed")
+        _create_daily_database_snapshot()
         return True
 
     def _migrate_calendar_data():
@@ -452,6 +505,7 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
     previous_sigint_handler = None
     sigint_handler = None
     quit_handler = None
+    relaunch_after_restore = False
 
     def _start_ui():
         app.setQuitOnLastWindowClosed(False)
@@ -555,6 +609,9 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
         app._sigint_pump = QTimer(app)
         app._sigint_pump.timeout.connect(lambda: None)
         app._sigint_pump.start(200)
+        app._database_snapshot_timer = QTimer(app)
+        app._database_snapshot_timer.timeout.connect(_start_database_snapshot_worker)
+        app._database_snapshot_timer.start(_DATABASE_SNAPSHOT_CHECK_MS)
 
         def finalize():
             application = app_ref()
@@ -574,12 +631,26 @@ def run(overlay_cls=None, build_ui_font=None) -> int:
         with contextlib.suppress(RuntimeError):
             splash.close()
         from calendar_app.app_paths import DB_PATH
+        from calendar_app.infrastructure.db import db_backup
 
-        _show_database_startup_error(error, database_path=DB_PATH)
+        offer_restore = (
+            _is_database_corruption(error)
+            and db_backup.find_restorable_backup(DB_PATH) is not None
+        )
+        if (
+            _show_database_startup_error(
+                error, database_path=DB_PATH, offer_restore=offer_restore
+            )
+            is True
+        ):
+            relaunch_after_restore = _restore_database_from_snapshot(DB_PATH)
         return 1
     finally:
         # Startup failures must release the same resources as event-loop exit.
         _finalize_runtime(app, window_box["window"])
+        if relaunch_after_restore:
+            # Only now is the single-instance lock released for the new process.
+            _relaunch_application()
         if quit_handler is not None:
             with contextlib.suppress(TypeError, RuntimeError):
                 app.aboutToQuit.disconnect(quit_handler)

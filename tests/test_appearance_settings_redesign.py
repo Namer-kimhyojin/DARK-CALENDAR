@@ -87,7 +87,9 @@ def test_mode_surfaces_cards_and_preview_follow_draft_without_settings_writes(pi
     dialog._flush_preview_refresh()
     settle()
     light = mode in {"light", "auto"}
-    button = next(button for button in dialog._family_btns.values() if not button.isChecked())
+    button = next(
+        button for button in dialog._appearance_mode_btns.values() if not button.isChecked()
+    )
     image = surface(button, dialog._ui_tokens["bg_main"])
     background = image.pixelColor(image.width() - 6, image.height() // 2)
     foreground = button.palette().color(QPalette.ColorRole.ButtonText)
@@ -123,18 +125,17 @@ def test_compact_first_view_reaches_accent_and_keeps_equal_mode_segments(picker)
     dialog = picker[0]()
     dialog.resize(960, 740)
     settle()
-    assert dialog._family_columns == 3
+    assert dialog._point_columns == len(dialog._family_btns) == 9
     assert max(button.height() for button in dialog._family_btns.values()) < 72
     widths = [button.width() for button in dialog._appearance_mode_btns.values()]
     assert max(widths) - min(widths) <= 1
     viewport = dialog._settings_scroll.viewport()
-    first_accent = dialog._point_btns[0]
+    first_accent = next(iter(dialog._family_btns.values()))
     assert viewport.rect().contains(first_accent.mapTo(viewport, first_accent.rect().center()))
 
 
 def test_enabled_custom_actions_and_icons_keep_contrast_when_switching_draft_modes(picker):
     dialog = picker[0]()
-    dialog._style_details_toggle.setChecked(True)
     dialog._section_toggles["readability"].setChecked(True)
     original = {key: picker[1].value(key) for key in picker[1].allKeys()}
     for mode in ("dark", "light", "dark", "light"):
@@ -143,8 +144,15 @@ def test_enabled_custom_actions_and_icons_keep_contrast_when_switching_draft_mod
         dialog._flush_preview_refresh()
         settle()
         expected = QColor(dialog._ui_tokens["text_primary"]).name()
+        # The background choice is a segmented control drawn over its section; this
+        # helper paints an opaque backdrop, so check the inactive (opaque) segment.
+        segment = dialog._btn_custom
+        assert segment.isEnabled() and not segment.isChecked()
+        image = surface(segment, dialog._ui_tokens["bg_main"])
+        background = image.pixelColor(image.width() - 6, image.height() // 2)
+        foreground = segment.palette().color(QPalette.ColorRole.ButtonText)
+        assert _contrast_ratio(foreground.name(), background.name()) >= 4.5
         for button in (
-            dialog._btn_custom,
             dialog._point_custom_btn,
             dialog._btn_apply_preset_text,
         ):
@@ -179,9 +187,9 @@ def test_form_width_reflows_existing_cards_and_keeps_keyboard_columns_and_draft(
     dialog._slider.setValue(153)
     cards = list(dialog._family_btns.values())
     original = dialog._appearance_state()
-    for width, columns in ((900, 3), (420, 2), (230, 1), (900, 3)):
+    for width, columns in ((900, 9), (420, 7), (230, 3), (900, 9)):
         dialog._reflow_family_grid(width)
-        assert dialog._family_columns == columns
+        assert dialog._point_columns == columns
         assert all(button.property("navigation_columns") == columns for button in cards)
         assert list(dialog._family_btns.values()) == cards
         assert dialog._appearance_state() == original

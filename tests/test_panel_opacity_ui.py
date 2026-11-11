@@ -7,12 +7,11 @@ from unittest.mock import patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QFontDatabase
+from PyQt6.QtGui import QColor, QFont, QFontDatabase
 from PyQt6.QtTest import QSignalSpy, QTest
 from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QLabel, QPushButton, QScrollArea
 
 from calendar_app.presentation.dialogs.panel_color_picker_dialog import (
-    _POINT_COLORS,
     PanelColorPickerDialog,
 )
 from calendar_app.presentation.panels.side_panel_renderer import (
@@ -66,15 +65,16 @@ class PanelOpacityUiTests(unittest.TestCase):
 
     def test_theme_dialog_opacity_labels_use_percent_text(self):
         dialog = PanelColorPickerDialog(
-            current_opacity=51,
-            current_border_opacity=128,
-            current_text_opacity=255,
+            current_opacity=51, current_border_opacity=128, current_text_opacity=255
         )
         self.addCleanup(dialog.close)
 
         self.assertEqual(dialog._op_lbl.text(), opacity_percent_label(51))
         self.assertEqual(dialog._bd_op_lbl.text(), opacity_percent_label(128))
         self.assertEqual(dialog._txt_op_lbl.text(), opacity_percent_label(255))
+        # Text opacity lives in Readability, not with the background sliders.
+        self.assertTrue(dialog._section_contents["readability"].isAncestorOf(dialog._text_slider))
+        self.assertFalse(dialog._section_contents["background"].isAncestorOf(dialog._text_slider))
 
         dialog._slider.setValue(102)
         dialog._border_slider.setValue(64)
@@ -93,7 +93,7 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.assertFalse(settings_scroll.isAncestorOf(dialog._preview_frame))
         sections = [
             dialog.findChild(QFrame, f"appearanceSection_{section_id}")
-            for section_id in ("style", "accent", "readability", "font")
+            for section_id in ("style", "accent", "background", "readability", "font")
         ]
         self.assertTrue(all(section is not None for section in sections))
         self.assertEqual(
@@ -101,7 +101,7 @@ class PanelOpacityUiTests(unittest.TestCase):
                 section.findChild(QPushButton, "appearanceSectionToggle").accessibleName()
                 for section in sections
             ],
-            ["스타일", "포인트 색상", "가독성", "글꼴"],
+            ["화면 모드", "포인트 색상", "배경 및 투명도", "가독성", "글꼴"],
         )
         self.assertLessEqual(dialog.height(), dialog.screen().availableGeometry().height() - 48)
 
@@ -115,37 +115,88 @@ class PanelOpacityUiTests(unittest.TestCase):
 
         self.assertEqual(dialog.windowTitle(), "모양 설정")
 
-        self.assertTrue(dialog._preset_grid_widget.isHidden())
-        self.assertTrue(all(button.isHidden() for button in dialog._preset_filter_btns.values()))
-        self.assertFalse(dialog._preset_buttons_built)
+        # Mode, accent and background each live in one place: no style-card grid
+        # beside a second accent palette, and no hidden "background details".
+        for removed in (
+            "_show_all_styles",
+            "_preset_grid_widget",
+            "_preset_filter_btns",
+            "_preset_btns",
+            "_point_btns",
+            "_style_details_toggle",
+            "_style_details_content",
+        ):
+            self.assertFalse(hasattr(dialog, removed), removed)
+        self.assertEqual(set(dialog._appearance_mode_btns), {"auto", "light", "dark"})
         self.assertEqual(len(dialog._family_btns), 9)
         self.assertIn("navy_lilac", dialog._family_btns)
         self.assertTrue(all(not button.isHidden() for button in dialog._family_btns.values()))
 
-        dialog._style_details_toggle.click()
-        dialog._show_all_styles.setChecked(True)
-        self.assertTrue(dialog._preset_buttons_built)
-        self.assertTrue(dialog._preset_btns)
-        self.assertFalse(dialog._preset_grid_widget.isHidden())
+        background = dialog._section_contents["background"]
+        for control in (dialog._btn_auto_base, dialog._btn_custom, dialog._slider):
+            self.assertTrue(background.isAncestorOf(control))
+            self.assertFalse(control.isHidden())
+        # The default draft's background is not a preset tone, so "custom" is shown.
+        self.assertEqual(dialog._btn_custom.isChecked(), dialog._base_source == "custom")
+        self.assertNotEqual(dialog._btn_auto_base.isChecked(), dialog._btn_custom.isChecked())
+        dialog._select_style_family("ocean")
+        self.assertTrue(dialog._btn_auto_base.isChecked())
+
+    def test_preview_selected_day_is_readable_on_every_accent(self):
+        """White text on a pale accent (e.g. #f1fa8c) made today's date invisible."""
+        from PyQt6.QtGui import QColor
+
+        from calendar_app.presentation.dialogs import panel_color_picker_dialog as module
+        from calendar_app.shared.color_utils import contrast_ratio
+
+        accents = [preset[3] for preset in module._PRESETS]
+        for accent in accents + [
+            "#f1fa8c",
+            "#ffffff",
+            "#000000",
+        ]:
+            for base in ("#121827", "#f8f1e7"):
+                with self.subTest(accent=accent, base=base):
+                    frame = module._build_preview_widget(base, accent, 1.0)
+                    self.addCleanup(frame.deleteLater)
+                    css = frame.styleSheet()
+                    marker = 'QLabel#previewDay[selected="true"] {'
+                    rule = css[css.index(marker) : css.index("}", css.index(marker))]
+                    color = rule.split("color:")[-1].split(";")[0].strip()
+                    self.assertTrue(QColor(color).isValid(), color)
+                    self.assertGreaterEqual(contrast_ratio(color, accent), 4.5, (color, accent))
+
+    def test_footer_has_a_single_separator_line(self):
+        dialog = PanelColorPickerDialog()
+        self.addCleanup(dialog.close)
+        dialog.show()
+        self._app.processEvents()
+
+        footer = dialog.findChild(QFrame, "appearanceFooter")
+        self.assertIsNotNone(footer)
+        # The separator above the footer is the only rule; the footer must not add
+        # its own border-top through the shared dialogFooter role.
+        self.assertNotEqual(footer.property("role"), "dialogFooter")
+        root = dialog.layout()
+        index = root.indexOf(footer)
+        previous = root.itemAt(index - 1).widget()
+        self.assertEqual(previous.frameShape(), QFrame.Shape.HLine)
+        two_back = root.itemAt(index - 2)
         self.assertTrue(
-            all(not button.isHidden() for button in dialog._preset_filter_btns.values())
+            two_back.widget() is None or two_back.widget().frameShape() != QFrame.Shape.HLine
         )
 
     def test_quick_settings_progressively_disclose_detailed_controls(self):
         dialog = PanelColorPickerDialog()
         self.addCleanup(dialog.close)
 
-        self.assertFalse(dialog._section_contents["style"].isHidden())
-        self.assertFalse(dialog._section_contents["accent"].isHidden())
+        for section_id in ("style", "accent", "background"):
+            self.assertFalse(dialog._section_contents[section_id].isHidden(), section_id)
         self.assertTrue(dialog._section_contents["readability"].isHidden())
         self.assertTrue(dialog._section_contents["font"].isHidden())
-        self.assertTrue(dialog._style_details_content.isHidden())
-        self.assertEqual(dialog._style_details_toggle.accessibleName(), "배경 세부 설정")
-        self.assertTrue(dialog._style_details_toggle.text().startswith("▸"))
-
-        dialog._style_details_toggle.click()
-        self.assertFalse(dialog._style_details_content.isHidden())
-        self.assertTrue(dialog._style_details_toggle.text().startswith("▾"))
+        # Opacity is a first-level control now, not behind a details toggle.
+        for slider in (dialog._slider, dialog._border_slider):
+            self.assertFalse(slider.isHidden())
 
         dialog._section_toggles["readability"].click()
         self.assertFalse(dialog._section_contents["readability"].isHidden())
@@ -178,17 +229,36 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.addCleanup(dialog.close)
 
         ocean = dialog._family_btns["ocean"]
-        self.assertEqual(ocean.objectName(), "appearanceFamilyCard")
-        self.assertEqual(ocean.iconSize().width(), 44)
-        self.assertEqual(ocean.text().removeprefix("✓ "), "블루")
+        self.assertEqual(ocean.objectName(), "appearanceFamilySwatch")
+        self.assertEqual(ocean.text(), "")
+        self.assertIn("블루", ocean.accessibleName())
         self.assertIn("네이비", ocean.accessibleName())
         self.assertEqual(ocean.property("variant_label"), "네이비")
+        self.assertIn("#4da6ff", ocean.toolTip())
 
         dialog._set_appearance_mode("light")
 
-        self.assertEqual(ocean.text().removeprefix("✓ "), "블루")
+        self.assertIn("블루", ocean.accessibleName())
         self.assertIn("파스텔 스카이", ocean.accessibleName())
         self.assertEqual(ocean.property("variant_label"), "파스텔 스카이")
+        self.assertIn("#1971c2", ocean.toolTip())
+
+    def test_accent_readout_follows_the_preset_variant_when_the_mode_changes(self):
+        dialog = PanelColorPickerDialog()
+        self.addCleanup(dialog.close)
+        dialog._select_style_family("ocean")
+        self.assertEqual(dialog._point_hex_lbl.text(), "#4da6ff")
+
+        dialog._set_appearance_mode("light")
+
+        self.assertEqual(dialog.selected_point_hex(), "#1971c2")
+        self.assertEqual(dialog._point_hex_lbl.text(), "#1971c2")
+        self.assertTrue(dialog._family_btns["ocean"].isChecked())
+
+        dialog._apply_custom_point_color("#123456")
+        self.assertTrue(dialog._point_custom_btn.isChecked())
+        self.assertFalse(any(button.isChecked() for button in dialog._family_btns.values()))
+        self.assertEqual(dialog._point_hex_lbl.text(), "#123456")
 
     def test_appearance_bounds_and_family_cards_preserve_visible_content(self):
         dialog = PanelColorPickerDialog()
@@ -228,13 +298,15 @@ class PanelOpacityUiTests(unittest.TestCase):
             original_buttons = list(dialog._family_btns.values())
             original_preview = dialog._preview_frame
             draft = (dialog.selected_base_hex(), dialog.selected_point_hex(), dialog._opacity)
-            for width, wide, columns in ((960, True, 3), (700, False, 3), (960, True, 3)):
+            for width, wide in ((960, True), (700, False), (960, True)):
                 with self.subTest(width=width, wide=wide):
                     dialog.resize(width, 740)
                     for _ in range(3):
                         self._app.processEvents()
                     self.assertEqual(dialog._wide_appearance_layout, wide)
-                    self.assertEqual(dialog._family_columns, columns)
+                    viewport = dialog._settings_scroll.viewport().width()
+                    columns = min(9, max(1, (viewport - 54 + 8) // 52))
+                    self.assertEqual(dialog._point_columns, columns)
                     self.assertEqual(list(dialog._family_btns.values()), original_buttons)
                     self.assertIs(dialog._preview_frame, original_preview)
                     self.assertEqual(
@@ -290,7 +362,7 @@ class PanelOpacityUiTests(unittest.TestCase):
         changed_preview = dialog._preview_frame.styleSheet()
 
         self.assertNotEqual(changed_preview, initial_preview)
-        self.assertIn("스타일", dialog._change_summary_label.toolTip())
+        self.assertIn("배경 및 투명도", dialog._change_summary_label.toolTip())
         self.assertTrue(dialog._preview_compare_btn.isEnabled())
 
         dialog._preview_compare_btn.click()
@@ -310,16 +382,13 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.addCleanup(dialog.close)
         original_point = dialog.selected_point_hex()
         original_opacity = dialog._slider.value()
-        point_index = next(
-            index
-            for index, (_, _, code) in enumerate(_POINT_COLORS)
-            if code.lower() != original_point.lower()
-        )
+        custom_accent = "#e74c3c" if original_point.lower() != "#e74c3c" else "#29b6f6"
 
-        dialog._select_point_color(point_index)
+        dialog._apply_custom_point_color(custom_accent)
         dialog._slider.setValue(original_opacity - 1)
         self.assertTrue(dialog._section_reset_buttons["accent"].isEnabled())
-        self.assertTrue(dialog._section_reset_buttons["style"].isEnabled())
+        self.assertTrue(dialog._section_reset_buttons["background"].isEnabled())
+        self.assertFalse(dialog._section_reset_buttons["style"].isEnabled())
         self.assertEqual(
             dialog._section_reset_buttons["accent"].accessibleName(),
             "포인트 색상 변경 되돌리기",
@@ -331,10 +400,10 @@ class PanelOpacityUiTests(unittest.TestCase):
         self.assertEqual(dialog.selected_point_hex(), original_point)
         self.assertEqual(dialog._slider.value(), original_opacity - 1)
         self.assertFalse(dialog._section_reset_buttons["accent"].isEnabled())
-        self.assertTrue(dialog._section_reset_buttons["style"].isEnabled())
+        self.assertTrue(dialog._section_reset_buttons["background"].isEnabled())
         self.assertTrue(dialog._apply_btn.isEnabled())
 
-        dialog._section_reset_buttons["style"].click()
+        dialog._section_reset_buttons["background"].click()
         self.assertEqual(dialog._slider.value(), original_opacity)
         self.assertFalse(dialog._apply_btn.isEnabled())
 
@@ -423,9 +492,10 @@ class PanelOpacityUiTests(unittest.TestCase):
         dialog._set_appearance_mode("light")
         dialog._select_style_family("ocean")
         selected = dialog._family_btns["ocean"]
-        self.assertTrue(selected.text().startswith("✓ "))
-        self.assertIn(selected.text().replace("\n", ", "), selected.accessibleName())
+        self.assertTrue(selected.isChecked())
+        self.assertTrue(selected.accessibleName().startswith("✓ 블루"))
         self.assertIn(selected.property("variant_label"), selected.accessibleName())
+        self.assertFalse(dialog._point_custom_btn.isChecked())
 
         first = list(dialog._family_btns.values())[0]
         navigation = QSignalSpy(first.navigate_requested)
@@ -513,26 +583,25 @@ class PanelOpacityUiTests(unittest.TestCase):
         labels = [label.text() for label in dialog.findChildren(QLabel)]
         self.assertIn("0% = 완전 투명, 100% = 완전 불투명", labels)
 
-    def test_border_and_text_opacity_update_preview_immediately(self):
+    def test_border_opacity_updates_preview_and_text_stays_opaque(self):
         dialog = PanelColorPickerDialog(
             current_opacity=255,
             current_border_opacity=255,
-            current_text_opacity=255,
             current_text_primary="#ffffff",
             current_text_secondary="#cccccc",
             current_text_muted="#999999",
         )
         self.addCleanup(dialog.close)
 
+        border = QColor(dialog._current_border_hex())
         dialog._border_slider.setValue(0)
         dialog._flush_preview_refresh()
-        self.assertIn("border: 1px solid rgba(255,255,255,0.0)", dialog._preview_frame.styleSheet())
-
-        dialog._text_slider.setValue(0)
-        dialog._flush_preview_refresh()
         stylesheet = dialog._preview_frame.styleSheet()
-        self.assertIn("QLabel#previewItemText1 { color: rgba(255, 255, 255, 0);", stylesheet)
-        self.assertIn("QLabel#previewInputHint { color: rgba(153, 153, 153, 0);", stylesheet)
+        self.assertIn(
+            f"border: 1px solid rgba({border.red()}, {border.green()}, {border.blue()}, 0)",
+            stylesheet,
+        )
+        self.assertIn("QLabel#previewItemText1 { color: rgba(255, 255, 255, 255);", stylesheet)
 
     def test_rapid_preview_changes_are_coalesced(self):
         dialog = PanelColorPickerDialog()
@@ -542,7 +611,6 @@ class PanelOpacityUiTests(unittest.TestCase):
         dialog._slider.setValue(180)
         dialog._slider.setValue(160)
         dialog._border_slider.setValue(90)
-        dialog._text_slider.setValue(220)
 
         self.assertEqual(dialog._preview_apply_count, baseline)
         dialog._flush_preview_refresh()

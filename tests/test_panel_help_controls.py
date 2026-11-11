@@ -127,7 +127,7 @@ class PanelHelpControlTests(unittest.TestCase):
                 "panel.help.quick_title": "{panel} 빠른 도움말",
                 "panel.help.recovery_intro": "메뉴바가 보이지 않을 때 빠르게 복구하는 단축키",
                 "panel.help.magnet": "자석모드 활성화/비활성화",
-                "panel.help.topbar": "메뉴바 보이기/숨기기",
+                "menu.auto_hide_topbar": "상단 바 자동 숨기기",
                 "panel.help.lock": "고정모드 활성화/비활성화",
             }
             value = translations.get(key, default if default is not None else key)
@@ -147,7 +147,7 @@ class PanelHelpControlTests(unittest.TestCase):
         self.assertIn(get_key("topbar"), text)
         self.assertIn(get_key("lock_mode"), text)
         self.assertIn("자석모드 활성화/비활성화", text)
-        self.assertIn("메뉴바 보이기/숨기기", text)
+        self.assertIn("상단 바 자동 숨기기", text)
         self.assertIn("고정모드 활성화/비활성화", text)
 
     def test_calendar_help_includes_quick_recovery_shortcuts(self):
@@ -163,7 +163,7 @@ class PanelHelpControlTests(unittest.TestCase):
                 "panel.help.quick_title": "{panel} 빠른 도움말",
                 "panel.help.recovery_intro": "메뉴바가 보이지 않을 때 빠르게 복구하는 단축키",
                 "panel.help.magnet": "자석모드 활성화/비활성화",
-                "panel.help.topbar": "메뉴바 보이기/숨기기",
+                "menu.auto_hide_topbar": "상단 바 자동 숨기기",
                 "panel.help.lock": "고정모드 활성화/비활성화",
             }
             value = translations.get(key, default if default is not None else key)

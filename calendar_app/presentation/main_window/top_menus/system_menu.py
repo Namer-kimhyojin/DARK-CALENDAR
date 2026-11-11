@@ -14,6 +14,7 @@ from calendar_app.presentation.main_window.top_menus.common import (
 )
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.qt_helpers import mnemonic_safe
 
 HOMEPAGE_URL = "https://namer-kimhyojin.github.io/dark_calendar/"
 
@@ -56,7 +57,7 @@ def build_system_menu(self, top_bar, menu_btn_style="", menu_style=""):
     act_away = self.sys_menu.addAction(_se(t("menu.away_settings")), self.open_away_settings_dialog)
     set_themed_icon(act_away, ICON.BREAK_LONG, icon_color)
     act_daily = self.sys_menu.addAction(
-        _se(t("menu.daily_briefing_settings", "오늘 브리핑·노출 설정...")),
+        mnemonic_safe(_se(t("menu.daily_briefing_settings", "오늘 브리핑·노출 설정..."))),
         self.open_daily_summary_dialog,
     )
     set_themed_icon(act_daily, ICON.STATUS_TODAY, icon_color)

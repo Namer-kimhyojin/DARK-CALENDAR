@@ -112,8 +112,15 @@ SHORTCUTS: list[dict] = [
         "id": "topbar",
         "key": "Ctrl+Shift+B",
         "group": "view",
-        "label_ko": "상단 바 토글",
+        "label_ko": "상단 바 자동 숨기기",
         "action": "toggle_top_bar",
+    },
+    {
+        "id": "navigation_rail",
+        "key": "Ctrl+Shift+R",
+        "group": "view",
+        "label_ko": "빠른 이동 표시",
+        "action": "toggle_navigation_rail",
     },
     {
         "id": "cal_toolbar",
@@ -325,7 +332,7 @@ _GUIDE_PRIORITY_SHORTCUT_IDS: list[str] = [
     "force_unlock",
 ]
 _GUIDE_PRIORITY_META_KO: dict[str, tuple[str, str]] = {
-    "topbar": ("메뉴바 복구", "상단 바가 사라졌을 때 가장 먼저 확인하세요."),
+    "topbar": ("상단 바 고정", "자동 숨기기를 켜고 끄며, 숨은 상단 바를 바로 고정합니다."),
     "magnet_mode": ("자석 전환", "패널 이동과 부착 가능 상태를 빠르게 바꿉니다."),
     "lock_mode": ("고정 해제", "잠금 상태에서도 메인 화면에서 바로 토글합니다."),
     "force_unlock": ("긴급 복구", "예상치 못한 잠금 상태를 강제로 해제합니다."),
@@ -409,9 +416,14 @@ _SHORTCUT_HELP_META_KO: dict[str, dict] = {
         "tags": ["자리비움", "away", "lock"],
     },
     "topbar": {
-        "description": "상단 메뉴 바 표시 상태를 전환합니다.",
-        "menu_path": "화면 > 상단 바",
-        "tags": ["메뉴바", "상단 바", "topbar", "복구"],
+        "description": "상단 바 자동 숨기기를 켜거나 끕니다. 끄면 상단 바가 고정됩니다.",
+        "menu_path": "화면 > 화면 및 창 > 상단 바 자동 숨기기",
+        "tags": ["메뉴바", "상단 바", "topbar", "자동 숨기기", "고정", "복구"],
+    },
+    "navigation_rail": {
+        "description": "왼쪽 빠른 이동 막대를 표시하거나 숨깁니다.",
+        "menu_path": "화면 > 화면 및 창 > 빠른 이동",
+        "tags": ["빠른 이동", "레일", "navigation", "rail"],
     },
     "cal_toolbar": {
         "description": "캘린더 툴바를 숨기거나 다시 표시합니다.",
@@ -910,7 +922,7 @@ def build_shortcut_guide_html(
     spotlight_html = _render_card_grid_html(spotlight_cards, columns=2, gap_px=12)
     reference_html = _render_card_grid_html(reference_columns, columns=2, gap_px=14)
     html_content = (
-        '<div style=\'font-family:"Malgun Gothic", "Segoe UI", sans-serif; padding:4px 6px 14px 6px;\'>'
+        "<div style='padding:4px 6px 14px 6px;'>"
         "<div style='padding:22px 24px; background:rgba(10,15,25,0.98); "
         "border:1px solid rgba(77,166,255,0.14); border-radius:22px;'>"
         "<table cellspacing='0' cellpadding='0' style='width:100%; border:none;'>"

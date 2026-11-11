@@ -29,7 +29,7 @@ def setup_idle_lock_ui(self):
     self.lock_clock_lbl = QLabel()
     self.lock_clock_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
     self.lock_clock_lbl.setStyleSheet(
-        "color: white; font-family: 'Segoe UI Semibold', 'Malgun Gothic'; font-weight: bold;"
+        "color: white; font-weight: bold;"
     )
     lock_lay.addWidget(self.lock_clock_lbl)
 

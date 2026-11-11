@@ -14,12 +14,13 @@
 """
 
 from datetime import datetime
+from html import escape
 import json
 import os
 import re
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QKeySequence, QShortcut
+from PyQt6.QtCore import QSignalBlocker, QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QFontMetrics, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -34,9 +35,13 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMenu,
     QMessageBox,
     QPushButton,
     QRadioButton,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
     QTableWidget,
     QTableWidgetItem,
     QTextEdit,
@@ -57,6 +62,7 @@ from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
     build_dialog_footer,
+    build_dialog_menu_stylesheet,
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
@@ -113,8 +119,8 @@ def _checklist_shell_stylesheet(tokens: dict | None = None, metrics: dict | None
 QWidget#sidebar {{
     background-color: {surface_alt};
     border-right: 1px solid {border_soft};
-    min-width: 280px;
-    max-width: 320px;
+    min-width: 244px;
+    max-width: 300px;
 }}
 QWidget#editor_area {{
     background-color: {surface_bg};
@@ -366,6 +372,63 @@ def _checklist_row_palette(tokens: dict | None = None) -> dict[str, QColor]:
     }
 
 
+_TEMPLATE_META_ROLE = Qt.ItemDataRole.UserRole + 1
+_TEMPLATE_SEARCH_ROLE = Qt.ItemDataRole.UserRole + 2
+
+
+class _TemplateListDelegate(QStyledItemDelegate):
+    """Give the name and its details independent space and elision."""
+
+    def __init__(self, view, tokens):
+        super().__init__(view)
+        self._primary = _token_qcolor(tokens, "text_primary", "#e1e1e6")
+        self._secondary = _token_qcolor(tokens, "text_secondary", "#abb1bd")
+        self._selected = _token_qcolor(tokens, "list_selected_text", self._primary.name())
+
+    def sizeHint(self, option, index):
+        del index
+        return QSize(0, 2 * option.fontMetrics.height() + 16)
+
+    def paint(self, painter, option, index):
+        styled = QStyleOptionViewItem(option)
+        self.initStyleOption(styled, index)
+        styled.text = ""
+        widget = styled.widget
+        widget.style().drawControl(QStyle.ControlElement.CE_ItemViewItem, styled, painter, widget)
+
+        painter.save()
+        rect = option.rect.adjusted(12, 6, -12, -6)
+        painter.setClipRect(rect)
+        selected = bool(option.state & QStyle.StateFlag.State_Selected)
+        title_font = QFont(option.font)
+        title_font.setBold(True)
+        painter.setFont(title_font)
+        painter.setPen(self._selected if selected else self._primary)
+        title_metrics = QFontMetrics(title_font)
+        title = title_metrics.elidedText(index.data(), Qt.TextElideMode.ElideRight, rect.width())
+        align = Qt.AlignmentFlag.AlignLeading | Qt.AlignmentFlag.AlignTop
+        painter.drawText(rect, align, title)
+
+        painter.setFont(option.font)
+        painter.setPen(self._selected if selected else self._secondary)
+        meta = option.fontMetrics.elidedText(
+            index.data(_TEMPLATE_META_ROLE) or "", Qt.TextElideMode.ElideRight, rect.width()
+        )
+        painter.drawText(rect.adjusted(0, title_metrics.height() + 2, 0, 0), align, meta)
+        painter.restore()
+
+
+class _ChecklistItemsTable(QTableWidget):
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.columnCount() != 5:
+            return
+        content_width = self.viewport().width() - self.columnWidth(0) - self.columnWidth(4)
+        minimum = self.horizontalHeader().minimumSectionSize()
+        self.setColumnWidth(2, max(minimum, round(content_width * 0.32)))
+        self.setColumnWidth(3, max(minimum, round(content_width * 0.17)))
+
+
 class ChecklistManagerDialog(QDialog):
     checklist_changed = pyqtSignal()
 
@@ -382,13 +445,15 @@ class ChecklistManagerDialog(QDialog):
         )
         apply_common_dialog_style(
             self,
-            minimum_width=1060,
+            minimum_width=880,
             extra_stylesheet=_checklist_editor_stylesheet(self._ui_tokens, self._dialog_metrics),
         )
         self.resize(1060, 680)
         checklist_repo.seed_default_templates()
 
         self.current_template_id = None
+        self._loaded_template_id = None
+        self._saved_template_fields = None
 
         self.init_ui()
 
@@ -398,7 +463,7 @@ class ChecklistManagerDialog(QDialog):
 
     def _make_icon_btn(self, icon_key, label, style_key, tooltip=None, fixed_width=None):
         """아이콘 + 짧은 텍스트 버튼 생성 헬퍼."""
-        btn = QPushButton(f"  {label}")
+        btn = QPushButton(label)
         button_style = self._main_style_bundle[style_key]
         color_match = re.search(r"(?:^|[;{])\s*color\s*:\s*([^;{}]+)", button_style)
         icon_color = _token_qcolor(
@@ -436,7 +501,9 @@ class ChecklistManagerDialog(QDialog):
         # 제목 + 배지 한 줄
         header_row = QHBoxLayout()
         header_row.setSpacing(6)
-        title_label = QLabel(t("checklist_mgr.title"), objectName="main_title")
+        title_label = QLabel(
+            t("checklist_mgr.template_library", "체크리스트"), objectName="main_title"
+        )
         title_label.setStyleSheet(self._main_style_bundle["title"])
         header_row.addWidget(title_label)
         header_row.addStretch()
@@ -445,14 +512,33 @@ class ChecklistManagerDialog(QDialog):
         header_row.addWidget(self.template_count_badge)
         sidebar_layout.addLayout(header_row)
 
-        # 체크리스트 목록
+        self.template_search = QLineEdit(sidebar)
+        search_label = t("checklist_mgr.search_templates", "이름·설명 검색")
+        self.template_search.setPlaceholderText(search_label)
+        self.template_search.setAccessibleName(search_label)
+        self.template_search.setClearButtonEnabled(True)
+        self.template_search.textChanged.connect(self._filter_templates)
+        sidebar_layout.addWidget(self.template_search)
+
         self.template_list = QListWidget()
         self.template_list.setStyleSheet(self._main_style_bundle["template_list"])
         self.template_list.setSpacing(1)
         self.template_list.setUniformItemSizes(True)
         self.template_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.template_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.template_list.setAccessibleName(title_label.text())
+        self.template_list.setItemDelegate(
+            _TemplateListDelegate(self.template_list, self._ui_tokens)
+        )
         self.template_list.currentItemChanged.connect(self._on_template_selected)
         sidebar_layout.addWidget(self.template_list, 1)
+        self.no_templates_found = QLabel(
+            t("checklist_mgr.no_search_results", "검색 결과가 없습니다.")
+        )
+        self.no_templates_found.setWordWrap(True)
+        self.no_templates_found.setStyleSheet(self._main_style_bundle["subtitle"])
+        self.no_templates_found.hide()
+        sidebar_layout.addWidget(self.no_templates_found)
 
         # 새로 만들기 (가장 중요 — 단독 전체 너비)
         self.new_btn = self._make_icon_btn(
@@ -461,35 +547,24 @@ class ChecklistManagerDialog(QDialog):
         self.new_btn.clicked.connect(self._create_new_template)
         sidebar_layout.addWidget(self.new_btn)
 
-        # 복제 / 삭제
-        dup_del_row = QHBoxLayout()
-        dup_del_row.setSpacing(6)
-        self.dup_btn = self._make_icon_btn(
-            ICON.EDIT, t("checklist_mgr.btn_dup"), "button_secondary", tooltip="Ctrl+D"
+        options_btn = self._make_icon_btn(
+            ICON.SETTINGS, t("checklist_mgr.template_actions", "관리 옵션"), "button_secondary"
         )
-        self.dup_btn.clicked.connect(self._duplicate_template)
-        dup_del_row.addWidget(self.dup_btn, 1)
-
-        self.del_btn = self._make_icon_btn(ICON.DELETE, t("common.delete"), "button_danger")
-        self.del_btn.clicked.connect(self._delete_template)
-        dup_del_row.addWidget(self.del_btn, 1)
-        sidebar_layout.addLayout(dup_del_row)
-
-        # 내보내기 / 가져오기
-        io_row = QHBoxLayout()
-        io_row.setSpacing(6)
-        self.export_btn = self._make_icon_btn(
-            ICON.SAVE, t("checklist_mgr.btn_export"), "button_secondary"
+        options_menu = QMenu(options_btn)
+        options_menu.setStyleSheet(
+            build_dialog_menu_stylesheet(settings=getattr(self.parent(), "settings", None))
         )
-        self.export_btn.clicked.connect(self._export_template)
-        io_row.addWidget(self.export_btn, 1)
-
-        self.import_btn = self._make_icon_btn(
-            ICON.FOLDER, t("checklist_mgr.btn_import"), "button_secondary"
+        self.dup_btn = options_menu.addAction(t("checklist_mgr.btn_dup"), self._duplicate_template)
+        self.del_btn = options_menu.addAction(t("common.delete"), self._delete_template)
+        options_menu.addSeparator()
+        self.import_btn = options_menu.addAction(
+            t("checklist_mgr.btn_import"), self._import_with_draft_check
         )
-        self.import_btn.clicked.connect(self._import_template)
-        io_row.addWidget(self.import_btn, 1)
-        sidebar_layout.addLayout(io_row)
+        self.export_btn = options_menu.addAction(
+            t("checklist_mgr.btn_export"), self._export_template
+        )
+        options_btn.setMenu(options_menu)
+        sidebar_layout.addWidget(options_btn)
 
         body_layout.addWidget(sidebar)
 
@@ -522,8 +597,10 @@ class ChecklistManagerDialog(QDialog):
         self.template_name_edit = QLineEdit()
         self.template_name_edit.setObjectName("TaskTitleEdit")
         self.template_name_edit.setPlaceholderText(t("checklist_mgr.placeholder_name"))
+        self.template_name_edit.setAccessibleName(name_label.text())
+        name_label.setBuddy(self.template_name_edit)
         name_col.addWidget(self.template_name_edit)
-        meta_row.addLayout(name_col, 3)
+        meta_row.addLayout(name_col, 1)
 
         # 오른쪽: 유형
         type_col = QVBoxLayout()
@@ -544,75 +621,74 @@ class ChecklistManagerDialog(QDialog):
         radio_row.addWidget(self.type_process_radio)
         radio_row.addStretch()
         type_col.addLayout(radio_row)
-        meta_row.addLayout(type_col, 2)
+        meta_row.addLayout(type_col)
 
         content_layout.addLayout(meta_row)
 
-        # 설명
-        desc_row = QHBoxLayout()
-        desc_row.setSpacing(10)
+        desc_row = QVBoxLayout()
+        desc_row.setSpacing(4)
         desc_label = QLabel(t("checklist_mgr.label_desc"), objectName="TaskDialogFieldLabel")
-        desc_label.setFixedWidth(50)
         desc_row.addWidget(desc_label)
         self.template_desc_edit = QTextEdit()
-        self.template_desc_edit.setMinimumHeight(
-            max(38, self.template_desc_edit.fontMetrics().height() + 16)
+        self.template_desc_edit.setAcceptRichText(False)
+        self.template_desc_edit.setFixedHeight(
+            max(56, 2 * self.template_desc_edit.fontMetrics().height() + 20)
         )
         self.template_desc_edit.setPlaceholderText(t("checklist_mgr.placeholder_desc"))
-        desc_row.addWidget(self.template_desc_edit, 1)
+        self.template_desc_edit.setAccessibleName(desc_label.text())
+        desc_label.setBuddy(self.template_desc_edit)
+        desc_row.addWidget(self.template_desc_edit)
         content_layout.addLayout(desc_row)
 
         # ── 항목 테이블 툴바 ────────────────────────────────────────────────
+        items_heading = QHBoxLayout()
+        items_title = QLabel(t("checklist_mgr.group_items"))
+        items_title.setStyleSheet(self._main_style_bundle["section"])
+        items_heading.addWidget(items_title)
+        self.item_count_badge = QLabel(t("checklist_mgr.n_items", n=0), objectName="meta_badge")
+        self.item_count_badge.setStyleSheet(self._main_style_bundle["badge"])
+        items_heading.addWidget(self.item_count_badge)
+        items_heading.addStretch()
+        content_layout.addLayout(items_heading)
+
         tool_row = QHBoxLayout()
         tool_row.setSpacing(4)
 
-        add_item_btn = self._make_icon_btn(
+        self.add_item_btn = self._make_icon_btn(
             ICON.ADD, t("checklist_mgr.btn_add_item"), "button_success", tooltip="Ctrl+I"
         )
-        add_item_btn.clicked.connect(self._add_item)
-        tool_row.addWidget(add_item_btn)
+        self.add_item_btn.clicked.connect(self._add_item)
+        tool_row.addWidget(self.add_item_btn)
 
-        edit_item_btn = self._make_icon_btn(
+        self.edit_item_btn = self._make_icon_btn(
             ICON.EDIT, t("common.edit"), "button_secondary", tooltip="Enter"
         )
-        edit_item_btn.clicked.connect(self._edit_item)
-        tool_row.addWidget(edit_item_btn)
+        self.edit_item_btn.clicked.connect(self._edit_item)
+        tool_row.addWidget(self.edit_item_btn)
 
-        delete_item_btn = self._make_icon_btn(
+        self.delete_item_btn = self._make_icon_btn(
             ICON.DELETE, t("common.delete"), "button_danger", tooltip="Del"
         )
-        delete_item_btn.clicked.connect(self._delete_items)
-        tool_row.addWidget(delete_item_btn)
+        self.delete_item_btn.clicked.connect(self._delete_items)
+        tool_row.addWidget(self.delete_item_btn)
 
         tool_row.addStretch()
 
-        # 순서 이동 (아이콘만, 좁게)
-        up_btn = QPushButton()
-        up_btn.setObjectName("checklistMoveUpButton")
-        neutral_icon_color = _token_qcolor(
-            self._ui_tokens, "text_secondary", self._ui_tokens["text_primary"]
-        ).name(QColor.NameFormat.HexRgb)
-        up_btn.setIcon(_ic(ICON.NAV_PREV, color=neutral_icon_color))
-        up_btn.setFixedWidth(32)
-        up_label = t("checklist_mgr.btn_up")
-        up_btn.setToolTip(f"{up_label}  Ctrl+↑")
-        up_btn.setAccessibleName(up_label)
-        up_btn.setAccessibleDescription(up_label)
-        up_btn.setStyleSheet(self._main_style_bundle["button_secondary"])
-        up_btn.clicked.connect(lambda: self._move_item(-1))
-        tool_row.addWidget(up_btn)
-
-        down_btn = QPushButton()
-        down_btn.setObjectName("checklistMoveDownButton")
-        down_btn.setIcon(_ic(ICON.NAV_NEXT, color=neutral_icon_color))
-        down_btn.setFixedWidth(32)
-        down_label = t("checklist_mgr.btn_down")
-        down_btn.setToolTip(f"{down_label}  Ctrl+↓")
-        down_btn.setAccessibleName(down_label)
-        down_btn.setAccessibleDescription(down_label)
-        down_btn.setStyleSheet(self._main_style_bundle["button_secondary"])
-        down_btn.clicked.connect(lambda: self._move_item(1))
-        tool_row.addWidget(down_btn)
+        self.move_up_btn = QPushButton("↑", objectName="checklistMoveUpButton")
+        self.move_down_btn = QPushButton("↓", objectName="checklistMoveDownButton")
+        for button, label, direction in (
+            (self.move_up_btn, t("checklist_mgr.btn_up"), -1),
+            (self.move_down_btn, t("checklist_mgr.btn_down"), 1),
+        ):
+            button.setToolTip(f"{label}  Ctrl+{button.text()}")
+            button.setAccessibleName(label)
+            button.setStyleSheet(
+                self._main_style_bundle["button_secondary"]
+                + "QPushButton { min-width: 34px; max-width: 34px; padding: 3px 0; }"
+            )
+            button.setFixedWidth(36)
+            button.clicked.connect(lambda _checked=False, step=direction: self._move_item(step))
+            tool_row.addWidget(button)
 
         self.bulk_btn = self._make_icon_btn(
             ICON.CHECKLIST, t("checklist_mgr.btn_bulk"), "button_secondary"
@@ -622,9 +698,17 @@ class ChecklistManagerDialog(QDialog):
 
         content_layout.addLayout(tool_row)
 
+        self.empty_items_label = QLabel(
+            t("checklist_mgr.empty_items", "아직 항목이 없습니다. 항목 추가로 시작하세요.")
+        )
+        self.empty_items_label.setStyleSheet(self._main_style_bundle["subtitle"])
+        self.empty_items_label.setWordWrap(True)
+        content_layout.addWidget(self.empty_items_label)
+
         # ── 항목 테이블 (공간 최대 확보) ───────────────────────────────────
-        self.items_table = QTableWidget()
+        self.items_table = _ChecklistItemsTable()
         self.items_table.setStyleSheet(self._main_style_bundle["items_table"])
+        self.items_table.setAccessibleName(t("checklist_mgr.group_items"))
         self.items_table.setColumnCount(5)
         self.items_table.setHorizontalHeaderLabels(
             [
@@ -637,29 +721,30 @@ class ChecklistManagerDialog(QDialog):
         )
         self.items_table.setAlternatingRowColors(True)
         self.items_table.setShowGrid(False)
+        self.items_table.setWordWrap(False)
         self.items_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.items_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.items_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.items_table.setDragEnabled(True)
         self.items_table.setAcceptDrops(True)
         self.items_table.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.items_table.setDragDropOverwriteMode(False)
         self.items_table.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.items_table.setDropIndicatorShown(True)
         self.items_table.verticalHeader().hide()
-        self.items_table.verticalHeader().setDefaultSectionSize(
-            max(32, self.items_table.fontMetrics().height() + 12)
+        line_height = self.items_table.fontMetrics().height()
+        self.items_table.verticalHeader().setDefaultSectionSize(max(32, line_height + 12))
+        header = self.items_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        self.items_table.model().rowsMoved.connect(
+            self._sync_dragged_order, Qt.ConnectionType.QueuedConnection
         )
-        self.items_table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.ResizeToContents
-        )
-        self.items_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-        self.items_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self.items_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
-        self.items_table.horizontalHeader().setSectionResizeMode(
-            4, QHeaderView.ResizeMode.ResizeToContents
-        )
-        self.items_table.model().rowsMoved.connect(self._on_rows_moved)
         self.items_table.itemDoubleClicked.connect(lambda _: self._edit_item())
+        self.items_table.itemSelectionChanged.connect(self._update_item_actions)
         content_layout.addWidget(self.items_table, 1)
 
         editor_layout.addWidget(self.content_widget, 1)
@@ -725,8 +810,6 @@ class ChecklistManagerDialog(QDialog):
 
         self.content_widget.setVisible(visible)
 
-        self.bulk_btn.setEnabled(visible)
-
         self.save_base_btn.setEnabled(visible)
 
         self.type_list_radio.setEnabled(visible)
@@ -738,6 +821,7 @@ class ChecklistManagerDialog(QDialog):
         self.dup_btn.setEnabled(visible)
 
         self.export_btn.setEnabled(visible)
+        self._update_item_actions()
 
     def _current_checklist_type(self) -> str:
         return "process" if self.type_process_radio.isChecked() else "list"
@@ -748,9 +832,6 @@ class ChecklistManagerDialog(QDialog):
 
         else:
             self.type_list_radio.setChecked(True)
-
-    def _set_selected_template_meta(self, template):
-        return
 
     def _select_template_in_list(self, template_id):
         for row in range(self.template_list.count()):
@@ -764,123 +845,120 @@ class ChecklistManagerDialog(QDialog):
         return False
 
     def load_templates(self):
-        self.template_list.clear()
-
         templates = checklist_repo.get_all_checklist_templates(active_only=False)
+        templates.sort(key=lambda item: item["name"].casefold())
+        template_ids = {template["id"] for template in templates}
+        target = self.current_template_id
+        if target not in template_ids:
+            target = templates[0]["id"] if templates else None
 
-        templates.sort(key=lambda item: item["name"].lower())
+        with QSignalBlocker(self.template_list):
+            self.template_list.clear()
+            for template in templates:
+                template_id = template["id"]
+                name = template["name"]
+                description = template.get("description") or ""
+                item_count = len(checklist_repo.get_checklist_items(template_id))
+                type_label = (
+                    t("checklist_mgr.type_process")
+                    if template.get("checklist_type") == "process"
+                    else t("checklist_mgr.type_list")
+                )
+                details = f"{type_label} · {t('checklist_mgr.n_items', n=item_count)}"
+                item = QListWidgetItem(name)
+                item.setData(Qt.ItemDataRole.UserRole, template_id)
+                item.setData(_TEMPLATE_META_ROLE, details)
+                item.setData(_TEMPLATE_SEARCH_ROLE, f"{name} {description}".casefold())
+                item.setData(Qt.ItemDataRole.AccessibleTextRole, f"{name} · {details}")
+                item.setToolTip(f"<qt>{escape(name)}<br>{escape(details)}</qt>")
+                self.template_list.addItem(item)
+            self._select_template_in_list(target)
 
-        for template in templates:
-            item_count = len(checklist_repo.get_checklist_items(template["id"]))
+        if target != self._loaded_template_id and self.template_search.text():
+            self.template_search.clear()
+        else:
+            self._filter_templates()
+        if target != self._loaded_template_id:
+            self._load_template_detail(target)
 
-            type_str = (
-                t("checklist_mgr.type_list")
-                if template.get("checklist_type") == "list"
-                else t("checklist_mgr.type_process")
-            )
+    def _filter_templates(self):
+        terms = self.template_search.text().casefold().split()
+        shown = 0
+        with QSignalBlocker(self.template_list):
+            for row in range(self.template_list.count()):
+                item = self.template_list.item(row)
+                haystack = item.data(_TEMPLATE_SEARCH_ROLE) or ""
+                matches = all(term in haystack for term in terms)
+                item.setHidden(not matches)
+                shown += int(matches)
+        self.template_count_badge.setText(t("checklist_mgr.n_items", n=shown))
+        self.no_templates_found.setVisible(bool(terms) and shown == 0)
 
-            item = QListWidgetItem(
-                f"{template['name']} [{type_str}] ({t('checklist_mgr.n_items', n=item_count)})"
-            )
-
-            item.setData(Qt.ItemDataRole.UserRole, template["id"])
-
-            self.template_list.addItem(item)
-
-        self.template_count_badge.setText(t("checklist_mgr.n_items", n=len(templates)))
-
-        if self.current_template_id and self._select_template_in_list(self.current_template_id):
+    def _on_template_selected(self, current, _previous=None):
+        if current is None:
             return
-
-        if not templates:
-            self.current_template_id = None
-
-            self._set_editor_visible(False)
-
-            self._set_selected_template_meta(None)
-
-        elif not self.current_template_id:
-            self.template_list.setCurrentRow(0)
-
-    def _on_template_selected(self, current, previous=None):
-        if not current:
-            self.current_template_id = None
-
-            self._set_editor_visible(False)
-
-            self._set_selected_template_meta(None)
-
+        target = current.data(Qt.ItemDataRole.UserRole)
+        if target == self._loaded_template_id:
             return
-
-        self.current_template_id = current.data(Qt.ItemDataRole.UserRole)
-
-        self._set_editor_visible(True)
-
-        self._load_template_detail(self.current_template_id)
+        allowed = self._confirm_template_edits()
+        with QSignalBlocker(self.template_list):
+            self._select_template_in_list(target if allowed else self._loaded_template_id)
+        if allowed:
+            self._load_template_detail(target)
 
     def _load_template_detail(self, template_id):
-        template = checklist_repo.get_checklist_template(template_id)
+        template = (
+            checklist_repo.get_checklist_template(template_id) if template_id is not None else None
+        )
+        self._loaded_template_id = template_id if template else None
+        self.current_template_id = self._loaded_template_id
+        self._saved_template_fields = None
+        self._save_feedback_timer.stop()
+        self._restore_save_feedback()
 
         if not template:
             self._set_editor_visible(False)
-
-            self._set_selected_template_meta(None)
-
             return
-
         self.template_name_edit.setText(template["name"])
-
+        self.template_name_edit.setCursorPosition(0)
+        self.template_name_edit.setToolTip(f"<qt>{escape(template['name'])}</qt>")
         self.template_desc_edit.setPlainText(template["description"] or "")
-
-        tmpl_type = template.get("checklist_type", "list")
-
-        self._set_checklist_type(tmpl_type)
-
-        self._set_selected_template_meta(template)
-
+        self._set_checklist_type(template.get("checklist_type", "list"))
+        self._saved_template_fields = self._template_fields()
+        self._set_editor_visible(True)
         self._load_items(template_id)
 
-    def _load_items(self, template_id):
+    def _load_items(self, template_id, selected_item_id=None):
         items = checklist_repo.get_checklist_items(template_id)
+        if selected_item_id is None:
+            selected_item_id = self._selected_item_id()
 
         self.items_table.setUpdatesEnabled(False)
-        self.items_table.blockSignals(True)
-        self.items_table.setRowCount(len(items))
-
-        template = checklist_repo.get_checklist_template(template_id)
-
-        is_process = (template.get("checklist_type") == "process") if template else False
+        was_blocked = self.items_table.blockSignals(True)
         palette = _checklist_row_palette(getattr(self, "_ui_tokens", None))
         order_color = palette["order"]
         desc_color = palette["description"]
         required_color = palette["required"]
 
         try:
+            self.items_table.setRowCount(len(items))
+            selected_row = -1
             for row, item in enumerate(items):
-                order_item = QTableWidgetItem(str(row + 1))
-
+                order_item = self._row_cell(str(row + 1))
                 order_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-
                 order_item.setForeground(order_color)
                 self.items_table.setItem(row, 0, order_item)
 
-                prefix = f"{row + 1}. " if is_process else ""
-
-                text_item = QTableWidgetItem(f"{prefix}{item['item_text']}")
-
-                text_item.setData(Qt.ItemDataRole.UserRole, item["id"])
-
-                self.items_table.setItem(row, 1, text_item)
-
-                desc_item = QTableWidgetItem(item["item_description"] or "-")
-
-                desc_item.setForeground(desc_color)
-                self.items_table.setItem(row, 2, desc_item)
-
-                guide_item = QTableWidgetItem(item["item_guide"] or "-")
-
-                guide_item.setForeground(desc_color)
-                self.items_table.setItem(row, 3, guide_item)
+                for column, key in enumerate(("item_text", "item_description", "item_guide"), 1):
+                    value = item[key] or ""
+                    text_item = self._row_cell(value or "—")
+                    if value:
+                        text_item.setToolTip("<qt>" + escape(value).replace("\n", "<br>") + "</qt>")
+                    if column == 1:
+                        text_item.setData(Qt.ItemDataRole.UserRole, item["id"])
+                    else:
+                        text_item.setForeground(desc_color)
+                    self.items_table.setItem(row, column, text_item)
 
                 required_text = (
                     t("checklist_mgr.item_required")
@@ -888,7 +966,7 @@ class ChecklistManagerDialog(QDialog):
                     else t("checklist_mgr.item_optional")
                 )
 
-                required_item = QTableWidgetItem(required_text)
+                required_item = self._row_cell(required_text)
 
                 required_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -901,48 +979,85 @@ class ChecklistManagerDialog(QDialog):
                 else:
                     required_item.setForeground(order_color)
                 self.items_table.setItem(row, 4, required_item)
+                if item["id"] == selected_item_id:
+                    selected_row = row
 
             self.items_table.clearSelection()
+            self.items_table.setCurrentCell(selected_row, 1 if selected_row >= 0 else -1)
         finally:
-            self.items_table.blockSignals(False)
+            self.items_table.blockSignals(was_blocked)
             self.items_table.setUpdatesEnabled(True)
 
-        template = checklist_repo.get_checklist_template(template_id)
+        self._update_item_actions()
 
-        if template:
-            self._set_selected_template_meta(template)
+    def _template_fields(self):
+        return (
+            self.template_name_edit.text().strip(),
+            self.template_desc_edit.toPlainText().strip(),
+            self._current_checklist_type(),
+        )
+
+    def _confirm_template_edits(self):
+        if (
+            self._saved_template_fields is None
+            or self._template_fields() == self._saved_template_fields
+        ):
+            return True
+        button = QMessageBox.question(
+            self,
+            t("checklist_mgr.unsaved_title", "저장하지 않은 변경사항"),
+            t(
+                "checklist_mgr.unsaved_prompt",
+                "체크리스트의 이름, 유형 또는 설명 변경사항을 저장할까요?",
+            ),
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if button == QMessageBox.StandardButton.Save:
+            return self._save_template_info()
+        return button == QMessageBox.StandardButton.Discard
+
+    def done(self, result):
+        if self._confirm_template_edits():
+            super().done(result)
 
     def _save_template_info(self):
         if not self.current_template_id:
-            return
+            return False
 
-        name = self.template_name_edit.text().strip()
-
+        name, description, checklist_type = self._template_fields()
         if not name:
             QMessageBox.warning(self, t("common.warning"), t("checklist_mgr.err_name_required"))
-
-            return
+            self.template_name_edit.setFocus()
+            return False
 
         updates = {
             "name": name,
-            "description": self.template_desc_edit.toPlainText().strip(),
-            "category": "공통",
-            "checklist_type": self._current_checklist_type(),
+            "description": description,
+            "checklist_type": checklist_type,
         }
+        current_id = self.current_template_id
+        if not checklist_repo.update_checklist_template(current_id, updates):
+            QMessageBox.warning(
+                self,
+                t("common.warning"),
+                t("checklist_mgr.save_failed", "체크리스트 정보를 저장하지 못했습니다."),
+            )
+            return False
 
-        if checklist_repo.update_checklist_template(self.current_template_id, updates):
-            self._save_feedback_timer.stop()
-            self.save_base_btn.setText(t("checklist_mgr.btn_saved"))
-            self.save_base_btn.setStyleSheet(self._main_style_bundle["button_success"])
-            self._save_feedback_timer.start()
-
-            current_id = self.current_template_id
-
-            self.load_templates()
-
-            self._select_template_in_list(current_id)
-
-            self.checklist_changed.emit()
+        previous_fields = self._saved_template_fields
+        self._saved_template_fields = (name, description, checklist_type)
+        self._save_feedback_timer.stop()
+        self.save_base_btn.setText(t("checklist_mgr.btn_saved"))
+        self.save_base_btn.setStyleSheet(self._main_style_bundle["button_success"])
+        self._save_feedback_timer.start()
+        self.load_templates()
+        if previous_fields is not None and previous_fields[2] != checklist_type:
+            self._load_items(current_id)
+        self.checklist_changed.emit()
+        return True
 
     def _restore_save_feedback(self):
         self.save_base_btn.setText(self._save_base_button_text)
@@ -953,14 +1068,15 @@ class ChecklistManagerDialog(QDialog):
             self, t("checklist_mgr.new_list_title"), t("checklist_mgr.new_list_prompt")
         )
 
-        if not ok or not name.strip():
+        if not ok or not name.strip() or not self._confirm_template_edits():
             return
 
+        checklist_type = self._saved_template_fields[2] if self._saved_template_fields else "list"
         template_id = checklist_repo.create_checklist_template(
             name=name.strip(),
             description="",
             category="공통",
-            checklist_type=self._current_checklist_type(),
+            checklist_type=checklist_type,
         )
 
         if template_id:
@@ -988,7 +1104,7 @@ class ChecklistManagerDialog(QDialog):
             text=f"{template['name']} {t('checklist_mgr.dup_list_suffix')}",
         )
 
-        if not ok or not new_name.strip():
+        if not ok or not new_name.strip() or not self._confirm_template_edits():
             return
 
         new_id = checklist_repo.duplicate_checklist_template(
@@ -1083,6 +1199,10 @@ class ChecklistManagerDialog(QDialog):
                 self, t("common.error"), f"{t('checklist_mgr.export_err_fail')}\n{exc}"
             )
 
+    def _import_with_draft_check(self):
+        if self._confirm_template_edits():
+            self._import_template()
+
     def _import_template(self):
         filename, _ = QFileDialog.getOpenFileName(
             self,
@@ -1131,17 +1251,45 @@ class ChecklistManagerDialog(QDialog):
                 self, t("common.error"), f"{t('checklist_mgr.import_err_fail')}\n{exc}"
             )
 
+    def _selected_item_rows(self):
+        return sorted(index.row() for index in self.items_table.selectionModel().selectedRows())
+
+    @staticmethod
+    def _row_cell(text):
+        cell = QTableWidgetItem(text)
+        cell.setFlags(cell.flags() & ~Qt.ItemFlag.ItemIsDropEnabled)
+        return cell
+
+    def _item_id_at(self, row):
+        item = self.items_table.item(row, 1)
+        return item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+
+    def _selected_item_id(self):
+        rows = self._selected_item_rows()
+        return self._item_id_at(rows[0]) if len(rows) == 1 else None
+
+    def _update_item_actions(self):
+        row_count = self.items_table.rowCount()
+        rows = self._selected_item_rows()
+        single_row = rows[0] if len(rows) == 1 else -1
+        available = self.current_template_id is not None and not self.content_widget.isHidden()
+        self.item_count_badge.setText(t("checklist_mgr.n_items", n=row_count))
+        self.empty_items_label.setVisible(available and row_count == 0)
+        self.add_item_btn.setEnabled(available)
+        self.edit_item_btn.setEnabled(available and single_row >= 0)
+        self.delete_item_btn.setEnabled(available and bool(rows))
+        self.move_up_btn.setEnabled(available and single_row > 0)
+        self.move_down_btn.setEnabled(available and 0 <= single_row < row_count - 1)
+        self.bulk_btn.setEnabled(available and row_count > 0)
+
     def _open_bulk_operations(self):
-        if not self.current_template_id:
+        if not self.current_template_id or not self.items_table.rowCount():
             return
 
         dialog = BulkOperationsDialog(self.current_template_id, self)
 
         if dialog.exec():
             self._load_items(self.current_template_id)
-
-            self.load_templates()
-
             self.checklist_changed.emit()
 
     def _add_item(self):
@@ -1151,33 +1299,25 @@ class ChecklistManagerDialog(QDialog):
         dialog = ChecklistItemEditDialog(self.current_template_id, parent=self)
 
         if dialog.exec():
-            self._load_items(self.current_template_id)
-
+            self._load_items(self.current_template_id, selected_item_id=dialog.item_id)
             self.load_templates()
-
             self.checklist_changed.emit()
 
     def _edit_item(self):
-        row = self.items_table.currentRow()
-
-        if row < 0:
+        item_id = self._selected_item_id()
+        if not self.current_template_id or item_id is None:
             return
-
-        item_id = self.items_table.item(row, 1).data(Qt.ItemDataRole.UserRole)
 
         dialog = ChecklistItemEditDialog(self.current_template_id, item_id=item_id, parent=self)
 
         if dialog.exec():
-            self._load_items(self.current_template_id)
-
+            self._load_items(self.current_template_id, selected_item_id=item_id)
             self.checklist_changed.emit()
 
     def _delete_items(self):
-        selected_rows = sorted(
-            {item.row() for item in self.items_table.selectedItems()}, reverse=True
-        )
-
-        if not selected_rows:
+        selected_rows = self._selected_item_rows()
+        item_ids = [self._item_id_at(row) for row in selected_rows]
+        if not self.current_template_id or not item_ids or None in item_ids:
             return
 
         reply = QMessageBox.question(
@@ -1190,63 +1330,49 @@ class ChecklistManagerDialog(QDialog):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        for row in selected_rows:
-            item_id = self.items_table.item(row, 1).data(Qt.ItemDataRole.UserRole)
-
-            checklist_repo.delete_checklist_item(item_id)
-
+        results = [checklist_repo.delete_checklist_item(item_id) for item_id in item_ids]
         self._load_items(self.current_template_id)
-
-        self.load_templates()
-
-        self.checklist_changed.emit()
-
-    def _move_item(self, direction):
-        row = self.items_table.currentRow()
-
-        if row < 0:
-            return
-
-        new_row = row + direction
-
-        if new_row < 0 or new_row >= self.items_table.rowCount():
-            return
-
-        self._commit_reorder(row, new_row)
-
-    def _on_rows_moved(self, parent, start, end, destination, row):
-        self._sync_order_to_db()
-
-    def _sync_order_to_db(self):
-        if not self.current_template_id:
-            return
-
-        item_ids = []
-
-        for row in range(self.items_table.rowCount()):
-            item_ids.append(self.items_table.item(row, 1).data(Qt.ItemDataRole.UserRole))
-
-        if checklist_repo.reorder_checklist_items(self.current_template_id, item_ids):
-            self._load_items(self.current_template_id)
-
+        row_count = self.items_table.rowCount()
+        if row_count and self.items_table.currentRow() < 0:
+            self.items_table.setCurrentCell(min(selected_rows[0], row_count - 1), 1)
+        if any(results):
+            self.load_templates()
             self.checklist_changed.emit()
 
+    def _move_item(self, direction):
+        rows = self._selected_item_rows()
+        if len(rows) == 1:
+            self._commit_reorder(rows[0], rows[0] + direction)
+
     def _commit_reorder(self, old_index, new_index):
-        if not self.current_template_id:
+        row_count = self.items_table.rowCount()
+        if not self.current_template_id or not (
+            0 <= old_index < row_count and 0 <= new_index < row_count
+        ):
             return
 
-        item_ids = []
-
-        for row in range(self.items_table.rowCount()):
-            item_ids.append(self.items_table.item(row, 1).data(Qt.ItemDataRole.UserRole))
-
+        item_ids = [self._item_id_at(row) for row in range(row_count)]
+        moved_item_id = item_ids[old_index]
         item_ids[old_index], item_ids[new_index] = item_ids[new_index], item_ids[old_index]
+        self._persist_item_order(item_ids, moved_item_id)
 
-        if checklist_repo.reorder_checklist_items(self.current_template_id, item_ids):
-            self._load_items(self.current_template_id)
+    def _sync_dragged_order(self):
+        # Qt may move several selected rows during one drop. The queued signal
+        # lets the drop finish before reading or rebuilding the table.
+        if not self.current_template_id:
+            return
+        item_ids = [self._item_id_at(row) for row in range(self.items_table.rowCount())]
+        self._persist_item_order(item_ids, self._selected_item_id())
 
-            self.items_table.selectRow(new_index)
-
+    def _persist_item_order(self, item_ids, selected_item_id):
+        template_id = self.current_template_id
+        saved_ids = [item["id"] for item in checklist_repo.get_checklist_items(template_id)]
+        if item_ids == saved_ids:
+            return
+        complete = len(item_ids) == len(saved_ids) and set(item_ids) == set(saved_ids)
+        saved = complete and checklist_repo.reorder_checklist_items(template_id, item_ids)
+        self._load_items(template_id, selected_item_id=selected_item_id)
+        if saved:
             self.checklist_changed.emit()
 
 
@@ -1390,23 +1516,27 @@ class ChecklistItemEditDialog(QDialog):
         }
 
         if self.item_id:
-            if checklist_repo.update_checklist_item(self.item_id, data):
-                self.accept()
-
-            return
-
-        items = checklist_repo.get_checklist_items(self.template_id)
-
-        checklist_repo.create_checklist_item(
-            self.template_id,
-            text,
-            data["item_description"],
-            data["item_guide"],
-            len(items),
-            data["is_required"],
-        )
-
-        self.accept()
+            saved = checklist_repo.update_checklist_item(self.item_id, data)
+        else:
+            items = checklist_repo.get_checklist_items(self.template_id)
+            next_order = max((item["item_order"] or 0 for item in items), default=-1) + 1
+            self.item_id = checklist_repo.create_checklist_item(
+                self.template_id,
+                text,
+                data["item_description"],
+                data["item_guide"],
+                next_order,
+                data["is_required"],
+            )
+            saved = self.item_id is not None
+        if saved:
+            self.accept()
+        else:
+            QMessageBox.warning(
+                self,
+                t("common.error"),
+                t("checklist_mgr.err_item_save", "항목을 저장하지 못했습니다. 다시 시도해 주세요."),
+            )
 
 
 class BulkOperationsDialog(QDialog):

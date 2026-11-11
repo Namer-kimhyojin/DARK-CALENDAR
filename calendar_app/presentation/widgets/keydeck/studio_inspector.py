@@ -93,6 +93,7 @@ from calendar_app.presentation.widgets.keydeck.resources import (
 )
 from calendar_app.presentation.widgets.launcher_keycap_assets import KEYCAP_ASSETS
 from calendar_app.presentation.widgets.launcher_keycap_icons import KEYCAP_ICON_ASSETS
+from calendar_app.shared.qt_helpers import mnemonic_safe
 
 CAP_SWATCHES = (
     "#e8f0ff",
@@ -1542,7 +1543,7 @@ class KeyInspector(QWidget):
         self.tabs.addTab(
             self._build_cap_tab(),
             ui_icon("mdi6.keyboard-outline"),
-            t("widget.launcher.studio.tab_cap", "모양·소리"),
+            mnemonic_safe(t("widget.launcher.studio.tab_cap", "모양·소리")),
         )
         self.tabs.setIconSize(QSize(16, 16))
         layout.addWidget(self.tabs, 1)

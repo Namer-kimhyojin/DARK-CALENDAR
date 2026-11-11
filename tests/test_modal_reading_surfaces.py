@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QSettings, Qt
+from PyQt6.QtCore import QPoint, QSettings, Qt
 from PyQt6.QtWidgets import QApplication, QWidget
 import pytest
 
@@ -14,6 +14,7 @@ from calendar_app.presentation.dialogs.daily_summary_dialog import DailySummaryD
 from calendar_app.presentation.dialogs.dialog_styles import (
     build_dialog_stylesheet,
     get_dialog_theme_tokens,
+    install_common_dialog_style_filter,
 )
 from calendar_app.shared.color_utils import parse_css_color
 from calendar_app.shared.ui_tokens import get_ui_tokens
@@ -80,10 +81,11 @@ def test_translucent_expert_modal_overrides_are_composited_without_rewriting_set
 @pytest.mark.parametrize(
     "mode,base", [("dark", "#121827"), ("light", "#f3f1fa"), ("custom", "#24413f")]
 )
-def test_daily_briefing_gradient_is_opaque_while_rounded_shell_remains_translucent(
+def test_daily_briefing_is_one_opaque_card_rounded_by_the_shared_window_mask(
     modal_settings, mode, base
 ):
     app, settings = modal_settings
+    install_common_dialog_style_filter(app)  # the shared chrome rounds the window
     settings.setValue("text_theme", mode)
     settings.setValue("panel_base_color", base)
     settings.setValue("last_opacity", 50)
@@ -97,7 +99,12 @@ def test_daily_briefing_gradient_is_opaque_while_rounded_shell_remains_transluce
     try:
         dialog.show()
         app.processEvents()
-        assert dialog.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        # No see-through margin: the card fills the window like every other modal,
+        # and the shared shadow controller rounds the real window.
+        assert not dialog.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        assert dialog.container.geometry() == dialog.rect()
+        assert not dialog.mask().isEmpty()
+        assert not dialog.mask().contains(QPoint(0, 0))
         image = dialog.container.grab().toImage()
         for x, y in ((20, 20), (image.width() - 20, image.height() - 20)):
             assert image.pixelColor(x, y).alpha() == 255

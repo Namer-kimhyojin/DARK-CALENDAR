@@ -51,6 +51,7 @@ from calendar_app.presentation.dialogs.time_picker_widget import DatePickerWidge
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.qt_helpers import mnemonic_safe
 
 
 class UnifiedTaskDialog(BaseTaskDialog):
@@ -513,7 +514,9 @@ class UnifiedTaskDialog(BaseTaskDialog):
             btn_row.addWidget(manage_btn)
 
         if is_schedule and not self._is_modify:
-            self.continue_schedule_check = QCheckBox(t("dialog.common.save_continue", "연속 등록"))
+            self.continue_schedule_check = QCheckBox(
+                mnemonic_safe(t("dialog.common.save_continue", "연속 등록"))
+            )
             self.continue_schedule_check.setObjectName("TaskDialogOptionCheck")
             btn_row.addWidget(self.continue_schedule_check)
         btn_row.addStretch()
@@ -538,7 +541,9 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
         # 신규 등록 모드일 때만 연속 등록 버튼 배치
         if not self._is_modify and not is_schedule:
-            save_continue_btn = QPushButton(t("dialog.common.save_continue", "연속 등록"))
+            save_continue_btn = QPushButton(
+                mnemonic_safe(t("dialog.common.save_continue", "연속 등록"))
+            )
             save_continue_btn.setObjectName("ghost_btn")
             self._fit_action_button_width(save_continue_btn, 90)
             save_continue_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1135,7 +1140,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
         mode_row.addStretch()
         outer_layout.addLayout(mode_row)
 
-        self.routine_wizard_group = QGroupBox(t("dialog.recurrence.wizard_title"))
+        self.routine_wizard_group = QGroupBox(mnemonic_safe(t("dialog.recurrence.wizard_title")))
         inner_layout = QVBoxLayout()
         inner_layout.setSpacing(8)
 

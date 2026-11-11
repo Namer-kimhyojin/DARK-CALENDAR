@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
 
 from calendar_app.app_metadata import APP_NAME
 from calendar_app.infrastructure.i18n import t
+from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key
 from calendar_app.presentation.main_window.top_bar_menu_factory import build_top_left_menus
 from calendar_app.presentation.main_window.top_menus.common import set_themed_icon
 from calendar_app.presentation.theme.style_builder import apply_top_menu_theme
@@ -249,7 +250,10 @@ def _setup_navigation_rail(owner, styles, icon_color, accent_color):
     owner.navigation_rail = rail
     window_menu = getattr(owner, "display_window_menu", None)
     if window_menu is not None:
-        window_menu.addAction(rail.toggleViewAction())
+        toggle_action = rail.toggleViewAction()
+        # Text only: the global shortcut registry owns Ctrl+Shift+R itself.
+        toggle_action.setText(f"{rail.windowTitle()}\t{get_key('navigation_rail')}")
+        window_menu.addAction(toggle_action)
 
 
 def setup_top_bar(self, _size, _theme, _ta):

@@ -124,6 +124,24 @@ def test_selection_label_uses_effective_foreground_and_contrast(
         assert {key: host.settings.value(key) for key in host.settings.allKeys()} == before
 
 
+def test_custom_text_colors_come_from_the_settings_passed_to_the_snapshot(tmp_path):
+    """A snapshot resolved from one store must not read the user's global settings."""
+    QApplication.instance() or QApplication([])
+    settings = QSettings(str(tmp_path / "custom.ini"), QSettings.Format.IniFormat)
+    for key, value in {
+        "text_theme": "custom",
+        "panel_base_color": "#24413f",
+        "custom_text_primary": "#112233",
+        "custom_text_secondary": "#223344",
+    }.items():
+        settings.setValue(key, value)
+
+    snapshot = build_theme_snapshot(settings=settings)
+
+    assert snapshot.text_palette["text_primary"].lower() == "#112233"
+    assert snapshot.ui_palette["text_primary"].lower() == "#112233"
+
+
 def test_system_family_switch_repaints_existing_selection_label(selection_host):
     app, host = selection_host
     _configure(host.settings, "auto-family-light")

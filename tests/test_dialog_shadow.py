@@ -89,12 +89,18 @@ def test_shadow_has_real_outer_pixels_and_a_fully_clear_owner_rect(modal, ratio)
     assert alpha(_SPREAD - 2, middle) > 0
     assert alpha(0, middle) == 0
     assert alpha(_SPREAD + dialog.width() + 2, middle) > 0
+    radius = surface.radius
     for x, y in (
-        (_SPREAD, _SPREAD),
+        # inside the rounded window, near but not on the corner
+        (_SPREAD + radius, _SPREAD + 1),
         (_SPREAD + 10, middle),
         (_SPREAD + dialog.width() - 1, middle),
     ):
         assert alpha(x, y) == 0
+    # The window corner is rounded, so the corner pixel of the old square owner
+    # rectangle now lies outside the window and carries shadow.
+    assert alpha(_SPREAD, _SPREAD) > 0
+    assert alpha(_SPREAD + dialog.width() - 1, _SPREAD) > 0
 
 
 def test_move_resize_hide_show_and_delete_follow_the_owner(modal):

@@ -23,6 +23,11 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.dialogs.dialog_lifetime import (
+    dialog_helper,
+    keep_dialog_helper,
+    owning_dialog,
+)
 from calendar_app.shared.app_lifecycle import is_app_exiting
 from calendar_app.shared.brand_assets import brand_mark_pixmap
 from calendar_app.shared.color_utils import parse_css_color
@@ -109,7 +114,6 @@ class _MessageBoxOwnerTopmostWatcher(QObject):
 
     def __init__(self, dialog):
         super().__init__(dialog)
-        self._dialog_ref = weakref.ref(dialog)
         self._owners = []
         self._syncing = False
         self._timer = QTimer(self)
@@ -118,8 +122,7 @@ class _MessageBoxOwnerTopmostWatcher(QObject):
         dialog.installEventFilter(self)
 
     def refresh(self):
-        reference = getattr(self, "_dialog_ref", None)
-        dialog = reference() if reference is not None else None
+        dialog = owning_dialog(self)
         if (
             getattr(self, "_syncing", True)
             or dialog is None
@@ -149,8 +152,7 @@ class _MessageBoxOwnerTopmostWatcher(QObject):
             self._syncing = False
 
     def eventFilter(self, watched, event):
-        reference = getattr(self, "_dialog_ref", None)
-        dialog = reference() if reference is not None else None
+        dialog = owning_dialog(self)
         if (
             getattr(self, "_syncing", True)
             or dialog is None
@@ -182,10 +184,11 @@ def prepare_dialog_chrome(dialog, *, settings=None) -> bool:
     if settings is not None:
         dialog._dc_chrome_settings = settings
     if isinstance(dialog, QMessageBox):
-        watcher = getattr(dialog, "_dc_owner_topmost_watcher", None)
+        watcher = dialog_helper(dialog, "owner_topmost_watcher")
         if watcher is None:
-            watcher = _MessageBoxOwnerTopmostWatcher(dialog)
-            dialog._dc_owner_topmost_watcher = watcher
+            watcher = keep_dialog_helper(
+                dialog, "owner_topmost_watcher", _MessageBoxOwnerTopmostWatcher(dialog)
+            )
         watcher.refresh()
     if not dialog.windowFlags() & Qt.WindowType.FramelessWindowHint:
         if dialog.isVisible():
@@ -193,10 +196,24 @@ def prepare_dialog_chrome(dialog, *, settings=None) -> bool:
         dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
     _restore_tool_dialog_owner(dialog)
     dialog.setProperty("dcCommonChrome", True)
-    controller = getattr(dialog, "_dc_dialog_chrome_controller", None)
+    controller = dialog_chrome_controller(dialog)
     if controller is not None:
         controller.refresh_style()
     return True
+
+
+def dialog_chrome_controller(dialog):
+    """Return the dialog's live header controller, if it has one."""
+    return dialog_helper(dialog, "chrome")
+
+
+def _controllers_for(dialog):
+    """Every header controller ever attached, including any orphaned by a lost wrapper."""
+    return [
+        child
+        for child in dialog.children()
+        if isinstance(child, QObject) and child.objectName() == "DialogChromeController"
+    ]
 
 
 def _title(dialog) -> str:
@@ -290,7 +307,7 @@ def _existing_header(dialog):
 class _DialogChromeController(QObject):
     def __init__(self, dialog):
         super().__init__(dialog)
-        self._dialog_ref = weakref.ref(dialog)
+        self.setObjectName("DialogChromeController")
         self._drag_origin = None
         self._resize_origin = None
         self._resize_targets = []
@@ -369,8 +386,7 @@ class _DialogChromeController(QObject):
 
     @property
     def dialog(self):
-        reference = getattr(self, "_dialog_ref", None)
-        return reference() if reference is not None else None
+        return owning_dialog(self)
 
     def _hide_duplicate_title(self):
         if isinstance(self.dialog, (QMessageBox, QInputDialog)):
@@ -415,13 +431,9 @@ class _DialogChromeController(QObject):
         ):
             return
         # Local import avoids a dialog_styles -> chrome -> dialog_styles cycle.
-        from calendar_app.presentation.dialogs.dialog_styles import (
-            _dialog_settings,
-            get_dialog_theme_tokens,
-        )
+        from calendar_app.presentation.dialogs.dialog_styles import dialog_theme_tokens
 
-        settings = getattr(self.dialog, "_dc_chrome_settings", None)
-        tokens = get_dialog_theme_tokens(settings=_dialog_settings(self.dialog, settings))
+        tokens = dialog_theme_tokens(self.dialog, getattr(self.dialog, "_dc_chrome_settings", None))
         foreground = parse_css_color(tokens["text_primary"]).name()
         if foreground != self._icon_color:
             self.close_button.setIcon(icon(ICON.CLOSE, color=foreground))
@@ -521,12 +533,11 @@ class _DialogChromeController(QObject):
     def eventFilter(self, watched, event):
         # Qt can deliver final events while cyclic GC has already cleared this
         # Python object's dict. A cosmetic filter must never raise into Qt then.
-        reference = getattr(self, "_dialog_ref", None)
         header = getattr(self, "header", None)
-        if reference is None or header is None or is_app_exiting():
+        if header is None or is_app_exiting():
             return False
-        dialog = reference()
-        if dialog is None or sip.isdeleted(dialog) or sip.isdeleted(header):
+        dialog = owning_dialog(self)
+        if dialog is None or sip.isdeleted(header):
             return False
         kind = event.type()
         if watched is dialog and kind in (QEvent.Type.WinIdChange, QEvent.Type.Show):
@@ -579,11 +590,12 @@ def ensure_dialog_chrome(dialog, *, settings=None) -> bool:
         return False
     if getattr(dialog, "_dc_dialog_chrome_installing", False):
         return False
-    controller = getattr(dialog, "_dc_dialog_chrome_controller", None)
+    controller = dialog_chrome_controller(dialog)
     if controller is None:
         dialog._dc_dialog_chrome_installing = True
         try:
-            controller = _DialogChromeController(dialog)
+            controller = keep_dialog_helper(dialog, "chrome", _DialogChromeController(dialog))
+            # Python-created dialogs keep this attribute; existing callers read it.
             dialog._dc_dialog_chrome_controller = controller
         finally:
             dialog._dc_dialog_chrome_installing = False

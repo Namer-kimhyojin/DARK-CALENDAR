@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 import re
 
@@ -23,6 +23,8 @@ from calendar_app.shared.color_utils import (
     parse_css_alpha_to_unit,
     parse_css_color,
     parse_hex_color,
+    resolve_border_tokens,
+    resolve_text_opacity,
     shift_rgb,
 )
 from calendar_app.shared.system_theme import resolve_effective_appearance
@@ -58,6 +60,14 @@ class ThemeSnapshot:
     shape_tokens: dict[str, int]
     dialog_metrics: dict[str, int]
     typography: TypographyScale
+    # Empty unless the user chose a border in Appearance; then every border
+    # token comes from that color and the border opacity.
+    border_tokens: dict[str, str] = field(default_factory=dict)
+    text_opacity: int = 255
+
+
+
+
 
 
 UI_SHAPE_PRESETS: dict[str, dict[str, int]] = {
@@ -348,14 +358,21 @@ def build_theme_snapshot(
 
     accent_color = parse_hex_color(resolved_theme, "#4da6ff")
     accent_hex = accent_color.name(QColor.NameFormat.HexRgb)
-    text_palette = derive_text_palette(resolved_text_theme, accent_hex)
+    text_palette = derive_text_palette(
+        resolved_text_theme, accent_hex, cfg, background=resolved_panel_base
+    )
     panel_palette = derive_panel_palette(resolved_panel_base, resolved_opacity)
     ui_palette = derive_ui_palette(
         resolved_text_theme,
         resolved_panel_base,
         resolved_opacity,
         accent_hex,
+        cfg,
     )
+    # derive_ui_palette already carries the user's border tokens.
+    border_tokens = resolve_border_tokens(cfg, resolved_panel_base, accent_hex)
+    # Both palettes already carry Readability's text opacity.
+    text_opacity = resolve_text_opacity(cfg)
 
     default_input_bg = (
         "#ffffff"
@@ -385,6 +402,8 @@ def build_theme_snapshot(
         shape_tokens=build_shape_tokens(settings=cfg),
         dialog_metrics=build_dialog_metric_tokens(settings=cfg, apply_overrides=True),
         typography=get_typography_scale(cfg),
+        border_tokens=border_tokens,
+        text_opacity=text_opacity,
     )
 
 
@@ -463,16 +482,22 @@ def build_shared_ui_tokens(
         "danger_soft_bg": hex_to_rgba(danger_hex, 0.16),
         "info": accent_hex,
         "info_hex": accent_hex,
-        "border": "rgba(255,255,255,0.12)" if snapshot.text_theme == "dark" else "rgba(0,0,0,0.12)",
-        "border_strong": "rgba(255,255,255,0.25)"
-        if snapshot.text_theme == "dark"
-        else "rgba(0,0,0,0.25)",
-        "border_soft": "rgba(255,255,255,0.08)"
-        if snapshot.text_theme == "dark"
-        else "rgba(0,0,0,0.08)",
-        "divider": "rgba(255,255,255,0.08)"
-        if snapshot.text_theme == "dark"
-        else "rgba(0,0,0,0.08)",
+        "border": snapshot.border_tokens.get(
+            "border",
+            "rgba(255,255,255,0.12)" if snapshot.text_theme == "dark" else "rgba(0,0,0,0.12)",
+        ),
+        "border_strong": snapshot.border_tokens.get(
+            "border_strong",
+            "rgba(255,255,255,0.25)" if snapshot.text_theme == "dark" else "rgba(0,0,0,0.25)",
+        ),
+        "border_soft": snapshot.border_tokens.get(
+            "border_soft",
+            "rgba(255,255,255,0.08)" if snapshot.text_theme == "dark" else "rgba(0,0,0,0.08)",
+        ),
+        "divider": snapshot.border_tokens.get(
+            "divider",
+            "rgba(255,255,255,0.08)" if snapshot.text_theme == "dark" else "rgba(0,0,0,0.08)",
+        ),
         "radius_sm": f"{metrics.get('toolbutton_radius', 6)}px",
         "radius_md": f"{metrics.get('field_radius', 8)}px",
         "radius_lg": f"{shape.get('panel_surface_radius', metrics.get('group_radius', 12))}px",
@@ -595,8 +620,8 @@ def build_dialog_base_tokens(
         "content_bg": panel_palette.get("content_bg", panel_palette.get("surface_bg", "#16161b")),
         "floating_bg": panel_palette.get("floating_bg", panel_palette.get("toolbar_bg", "#1c1c23")),
         "base_hex": base.name(QColor.NameFormat.HexRgb),
-        "border_soft": _neutral(0.10),
-        "border": _neutral(0.16),
+        "border_soft": snapshot.border_tokens.get("border_soft", _neutral(0.10)),
+        "border": snapshot.border_tokens.get("border", _neutral(0.16)),
         "success_hex": success.name(QColor.NameFormat.HexRgb),
         "success_soft_bg": _rgba(success, 0.16),
         "warning_hex": warning.name(QColor.NameFormat.HexRgb),

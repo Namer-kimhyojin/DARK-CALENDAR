@@ -165,7 +165,9 @@ def test_template_weekday_and_strftime_names_follow_ui_language(app, code, tmp_p
 
 def test_bootstrap_applies_language_after_application_creation():
     source = (ROOT / "calendar_app/bootstrap.py").read_text(encoding="utf-8", errors="strict")
-    assert source.index("app = QApplication(") < source.index("i18n.apply_application_locale()")
+    assert source.index("app = QApplication(") < source.index(
+        "i18n.apply_application_locale()"
+    )
 
 
 def test_partial_user_override_keeps_bundle_and_english_fallbacks(app, tmp_path):

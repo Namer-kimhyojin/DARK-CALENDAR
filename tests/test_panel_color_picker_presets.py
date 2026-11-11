@@ -140,3 +140,22 @@ class PanelColorPickerPresetTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_accent_swatches_are_distinct_in_both_modes():
+    from itertools import combinations
+
+    from PyQt6.QtGui import QColor
+
+    from calendar_app.presentation.dialogs.panel_color_picker_dialog import (
+        _PRESET_BY_KEY,
+        _STYLE_FAMILIES,
+    )
+
+    for column in (1, 2):  # dark variant, light variant
+        accents = {family[0]: QColor(_PRESET_BY_KEY[family[column]][3]) for family in _STYLE_FAMILIES}
+        for (first, a), (second, b) in combinations(accents.items(), 2):
+            distance = (
+                (a.red() - b.red()) ** 2 + (a.green() - b.green()) ** 2 + (a.blue() - b.blue()) ** 2
+            ) ** 0.5
+            assert distance > 60, (column, first, second, a.name(), b.name(), round(distance))

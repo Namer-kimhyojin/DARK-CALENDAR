@@ -8,6 +8,9 @@ from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QFont, QFontMetricsF, QGuiApplication
 
 DEFAULT_FONT_PT = 11
+# Saved points are preserved, but no real font is this large; such values are
+# corrupt settings that would overflow Qt's int pixel sizes.
+_MAX_VALID_FONT_PT = 4096
 
 
 @dataclass(frozen=True)
@@ -48,7 +51,7 @@ def get_typography_scale(settings=None, *, base_pt=None) -> TypographyScale:
         body = float(base_pt)
     except (TypeError, ValueError, OverflowError):
         body = float(DEFAULT_FONT_PT)
-    if not math.isfinite(body) or body <= 0:
+    if not math.isfinite(body) or body <= 0 or body > _MAX_VALID_FONT_PT:
         body = float(DEFAULT_FONT_PT)
     return TypographyScale(body, max(9.5, body - 1), body + 2, body + 5, body + 7)
 

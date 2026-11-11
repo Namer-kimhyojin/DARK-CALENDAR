@@ -53,19 +53,20 @@ def test_repeated_dpr_like_requests_never_feed_exponential_size_back_to_qt(mixer
     assert max(width * height * 1.25**2 for width, height in requested) < 16 * 1024 * 1024
 
 
-def test_reflow_only_repositions_controls_when_breakpoint_changes(mixer, monkeypatch):
+def test_reflow_only_repositions_tracks_when_breakpoint_changes(mixer, monkeypatch):
     _host, _manager, _iid, widget, _devices = mixer
     widget.resize(1120, 820)
     widget._reflow_for_width()
-    original = widget.transport.removeWidget
+    original = widget.grid.removeWidget
     spy = Mock(side_effect=original)
-    monkeypatch.setattr(widget.transport, "removeWidget", spy)
+    monkeypatch.setattr(widget.grid, "removeWidget", spy)
+    widget.resize(1090, 820)
     for _ in range(20):
         widget._reflow_for_width()
     assert spy.call_count == 0
     widget.resize(520, 820)
     widget._reflow_for_width()
-    assert spy.call_count == 5
+    assert spy.call_count == 6
 
 
 def test_screen_and_dpr_changes_restore_user_dip_size_instead_of_current_qt_size(

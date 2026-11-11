@@ -28,6 +28,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
 )
 from calendar_app.shared.color_utils import composite_color, contrast_ratio, contrasting_text_color
+from calendar_app.shared.color_utils import contrasting_text_color as _accent_text
 from calendar_app.shared.system_theme import set_runtime_system_text_theme
 
 
@@ -106,7 +107,7 @@ class DialogThemeConsistencyTests(unittest.TestCase):
         primary = re.findall(r"QPushButton#primary_btn\s*\{([^}]+)\}", stylesheet)[-1]
         self.assertIn("background-color: #ffff00;", primary)
         self.assertIn("border-color: #ffff00;", primary)
-        self.assertIn("color: #101318;", primary)
+        self.assertIn(f"color: {_accent_text('#ffff00')};", primary)
 
     def test_explicit_expert_text_override_is_retained(self):
         self.settings.setValue("dialog_token.button_primary_bg", "rgba(255,255,0,255)")

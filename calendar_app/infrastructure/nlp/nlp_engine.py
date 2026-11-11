@@ -3,7 +3,14 @@ from datetime import datetime, timedelta
 import re
 
 _TIME_PATTERNS = (
-    ("kr_meridiem", re.compile(r"(오전|오후|저녁|밤|아침|새벽)\s*(\d+)[:시](?:\s*(\d+)분?)?")),
+    (
+        "kr_meridiem",
+        re.compile(
+            r"(오전|오후|저녁|밤|아침|새벽)\s*(\d+)"
+            # After 시, a bare minute must end before the next word.
+            r"(?::(?:\s*(\d+)분?)?|시(?:\s*(\d+)(?:분(?!기)|(?!\w)))?)"
+        ),
+    ),
     ("en_meridiem", re.compile(r"\b(\d+)(?::(\d+))?\s*(am|pm)\b", re.IGNORECASE)),
     ("kr_clock", re.compile(r"(?<!\d)(\d+)시(?:\s*(\d+)분)?")),
     ("clock", re.compile(r"\b(\d+):(\d{2})\b")),
@@ -20,7 +27,8 @@ def _extract_time(title):
         return title, None
     _, _, kind, match = min(candidates, key=lambda item: item[:2])
     if kind == "kr_meridiem":
-        marker, hour, minute = match.groups()
+        marker, hour, colon_minute, hour_marker_minute = match.groups()
+        minute = colon_minute or hour_marker_minute
     elif kind == "en_meridiem":
         hour, minute, marker = match.groups()
         marker = marker.lower()

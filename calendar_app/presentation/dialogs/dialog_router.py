@@ -71,7 +71,7 @@ def _panel_shortcut_help_html(panel_name: str) -> str:
     )
     rows = [
         (get_key("magnet_mode"), t("panel.help.magnet", "Toggle magnet mode")),
-        (get_key("topbar"), t("panel.help.topbar", "Show or hide the menu bar")),
+        (get_key("topbar"), t("menu.auto_hide_topbar", "Auto-hide top bar")),
         (get_key("lock_mode"), t("panel.help.lock", "Toggle lock mode")),
     ]
     items = "".join(f"<li><b>{shortcut}</b> - {label}</li>" for shortcut, label in rows)

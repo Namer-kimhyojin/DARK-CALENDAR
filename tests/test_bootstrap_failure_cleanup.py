@@ -104,3 +104,69 @@ def test_database_failure_reports_original_error_and_exits_cleanly(failure):
         finalize.assert_called_once_with(app, None)
         overlay.assert_not_called()
         app.exec.assert_not_called()
+
+
+@pytest.mark.parametrize("choice", ["restore", "close", "restore-fails"])
+def test_corruption_offers_snapshot_restore_and_relaunches_only_after_cleanup(choice):
+    app, splash, lock = Mock(), Mock(), Mock()
+    error = sqlite3.DatabaseError("database disk image is malformed")
+    error.sqlite_errorcode = sqlite3.SQLITE_CORRUPT
+    error.sqlite_errorname = "SQLITE_CORRUPT"
+    order = Mock()
+
+    def phase(*args, work=None, **kwargs):
+        return work() if work else None
+
+    with (
+        patch.object(bootstrap, "QApplication", return_value=app),
+        patch.object(bootstrap, "_install_qt_message_handler"),
+        patch.object(bootstrap, "_acquire_single_instance_lock", return_value=(True, lock)),
+        patch.object(bootstrap, "_apply_saved_font"),
+        patch.object(bootstrap, "_run_splash_phase", side_effect=phase),
+        patch.object(bootstrap, "_finalize_runtime", side_effect=lambda *a: order.finalize()),
+        patch.object(bootstrap, "_relaunch_application", side_effect=order.relaunch),
+        patch.object(bootstrap, "_show_database_restore_failure") as restore_failure,
+        patch.object(
+            bootstrap, "_show_database_startup_error", return_value=choice != "close"
+        ) as explain,
+        patch("calendar_app.presentation.splash_screen.SplashScreen", return_value=splash),
+        patch("calendar_app.presentation.dialogs.dialog_styles.install_common_dialog_style_filter"),
+        patch("calendar_app.infrastructure.runtime.network.NetworkManager.instance"),
+        patch(
+            "calendar_app.infrastructure.db.database_unified.initialize_unified_database",
+            side_effect=error,
+        ),
+        patch(
+            "calendar_app.infrastructure.db.db_backup.find_restorable_backup",
+            return_value="snapshot.db",
+        ),
+        patch(
+            "calendar_app.infrastructure.db.db_backup.restore_latest_backup",
+            return_value=None if choice == "restore-fails" else "snapshot.db",
+        ) as restore,
+    ):
+        assert bootstrap.run(overlay_cls=Mock(), build_ui_font=Mock()) == 1
+
+    assert explain.call_args.kwargs["offer_restore"] is True
+    if choice == "close":
+        restore.assert_not_called()
+    else:
+        restore.assert_called_once_with(explain.call_args.kwargs["database_path"])
+    if choice == "restore":
+        assert [call[0] for call in order.mock_calls] == ["finalize", "relaunch"]
+        restore_failure.assert_not_called()
+    else:
+        assert [call[0] for call in order.mock_calls] == ["finalize"]
+    if choice == "restore-fails":
+        restore_failure.assert_called_once_with(None)
+
+
+def test_successful_startup_takes_daily_snapshot_without_blocking_on_failure():
+    with (
+        patch(
+            "calendar_app.infrastructure.db.db_backup.create_daily_backup",
+            side_effect=sqlite3.DatabaseError("Database snapshot failed its integrity check"),
+        ) as snapshot,
+    ):
+        bootstrap._create_daily_database_snapshot()
+    snapshot.assert_called_once()

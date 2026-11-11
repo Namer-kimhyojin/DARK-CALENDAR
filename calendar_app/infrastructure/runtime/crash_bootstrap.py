@@ -18,10 +18,22 @@ _LOG_MAX_BYTES = 5 * 1024 * 1024
 _LOG_BACKUP_COUNT = 2
 
 
+def is_database_corruption(error: BaseException) -> bool:
+    code = (getattr(error, "sqlite_errorcode", 0) or 0) & 0xFF
+    return code in (sqlite3.SQLITE_CORRUPT, sqlite3.SQLITE_NOTADB)
+
+
 def show_database_startup_error(
-    error: sqlite3.Error | OSError, *, database_path: str | None = None
-) -> None:
-    """Show a data-preserving diagnostic, including failures before bootstrap imports."""
+    error: sqlite3.Error | OSError,
+    *,
+    database_path: str | None = None,
+    offer_restore: bool = False,
+) -> bool:
+    """Show a data-preserving diagnostic, including failures before bootstrap imports.
+
+    With ``offer_restore`` a corruption diagnostic also offers the newest verified
+    snapshot. Returns True only when the user chose to restore it.
+    """
     from PyQt6.QtCore import Qt
     from PyQt6.QtWidgets import QApplication, QMessageBox
 
@@ -68,8 +80,47 @@ def show_database_startup_error(
         f"{context}\n{getattr(error, 'sqlite_errorname', type(error).__name__)}\n{error}"
     )
     dialog.setStandardButtons(QMessageBox.StandardButton.Close)
+    restore_button = None
+    if offer_restore and code in (sqlite3.SQLITE_CORRUPT, sqlite3.SQLITE_NOTADB):
+        dialog.setInformativeText(
+            t(
+                "startup_database.restore_hint",
+                "자동 백업으로 복구할 수 있습니다. 손상된 파일은 삭제하지 않고 같은 폴더에 보관합니다.",
+            )
+        )
+        restore_button = dialog.addButton(
+            t("startup_database.restore", "최근 백업으로 복구"),
+            QMessageBox.ButtonRole.AcceptRole,
+        )
+        dialog.setDefaultButton(restore_button)
     dialog.exec()
     # An application created only for this failure has no main event loop to enter.
+    application.processEvents()
+    return restore_button is not None and dialog.clickedButton() is restore_button
+
+
+def show_database_restore_failure(error: BaseException | None = None) -> None:
+    """Explain that restore did not happen; the damaged database is left as it was."""
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtWidgets import QApplication, QMessageBox
+
+    from calendar_app.domain.i18n import t
+
+    application = QApplication.instance() or QApplication(sys.argv)
+    dialog = QMessageBox()
+    dialog.setIcon(QMessageBox.Icon.Critical)
+    dialog.setWindowTitle(t("startup_database.title", "Air Calendar를 시작할 수 없습니다"))
+    dialog.setTextFormat(Qt.TextFormat.PlainText)
+    dialog.setText(
+        t(
+            "startup_database.restore_failed",
+            "백업으로 복구하지 못했습니다. 손상된 파일은 삭제하지 않았습니다.",
+        )
+    )
+    if error is not None:
+        dialog.setDetailedText(f"{getattr(error, 'sqlite_errorname', type(error).__name__)}\n{error}")
+    dialog.setStandardButtons(QMessageBox.StandardButton.Close)
+    dialog.exec()
     application.processEvents()
 
 

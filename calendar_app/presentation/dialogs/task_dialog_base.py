@@ -17,6 +17,8 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QSizePolicy,
+    QStyle,
+    QStyleOptionComboBox,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -790,6 +792,54 @@ class BaseTaskDialog(QDialog):
 
         if hasattr(self, "_update_routine_preview"):
             self._update_routine_preview()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Widths depend on the dialog stylesheet, which applies once polished.
+        self._fit_repeat_mode_widths()
+
+    def _fit_repeat_mode_widths(self):
+        """Size the repeat cycle/rule selectors to their longest translated option.
+
+        Fixed 86/116px selectors clipped the labels in 18 of 19 locales. The
+        hidden placeholder shares the stack width so switching single/repeat
+        does not shift the row.
+        """
+        controls = getattr(self, "repeat_mode_controls", None)
+        stack = getattr(self, "repeat_mode_stack", None)
+        placeholder = getattr(self, "repeat_mode_placeholder", None)
+        if controls is None or stack is None or placeholder is None:
+            return
+        widths = []
+        for combo, minimum in (
+            (getattr(self, "repeat_cycle_combo", None), 86),
+            (getattr(self, "rule_mode_combo", None), 116),
+        ):
+            if combo is None:
+                continue
+            combo.ensurePolished()
+            option = QStyleOptionComboBox()
+            combo.initStyleOption(option)
+            field = combo.style().subControlRect(
+                QStyle.ComplexControl.CC_ComboBox,
+                option,
+                QStyle.SubControl.SC_ComboBoxEditField,
+                combo,
+            )
+            chrome = max(0, combo.width() - field.width())
+            metrics = combo.fontMetrics()
+            longest = max(
+                (metrics.horizontalAdvance(combo.itemText(i)) for i in range(combo.count())),
+                default=0,
+            )
+            width = max(minimum, longest + chrome + 4)
+            combo.setFixedWidth(width)
+            widths.append(width)
+        spacing = max(0, controls.layout().spacing()) if controls.layout() else 0
+        total = max(210, sum(widths) + spacing * max(0, len(widths) - 1))
+        placeholder.setFixedSize(total, placeholder.height() or 34)
+        stack.setMinimumWidth(total)
+        stack.setMaximumWidth(total)
 
     def _sync_routine_stable_heights(self):
         """반복업무 설정 변경 시 레이아웃 흔들림을 방지하기 위해 높이를 고정합니다."""

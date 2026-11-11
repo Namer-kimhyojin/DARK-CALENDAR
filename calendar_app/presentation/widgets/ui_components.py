@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+from functools import partial
 import logging
 import sys
 
+from PyQt6 import sip
 from PyQt6.QtCore import (
     QDataStream,
     QEasingCurve,
@@ -396,7 +398,6 @@ class HoverInfoPopup(QFrame):
             }}
             QLabel {{
                 color: {label_color};
-                font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
                 font-size: 9pt;
                 line-height: 1.25;
                 background: transparent;
@@ -543,8 +544,7 @@ class HoverInfoEventFilter(QObject):
         if event.type() == QEvent.Type.Enter:
             html = watched.property("_hover_info_html")
             if html:
-                detail_overlay = globals().get("_detail_overlay")
-                if detail_overlay is not None and detail_overlay.isVisible():
+                if _visible_detail_overlay() is not None:
                     return super().eventFilter(watched, event)
                 self._current_watched = watched
                 self._delay_timer.start()
@@ -574,8 +574,7 @@ class HoverInfoEventFilter(QObject):
             self._current_watched = None
 
     def _do_show_popup(self):
-        detail_overlay = globals().get("_detail_overlay")
-        if detail_overlay is not None and detail_overlay.isVisible():
+        if _visible_detail_overlay() is not None:
             return
         if self._current_watched and self._current_watched.isVisible():
             html = self._current_watched.property("_hover_info_html")
@@ -588,9 +587,16 @@ _hover_info_popup = None
 _hover_info_filter = None
 
 
+def _is_alive(obj) -> bool:
+    """A module-level Qt singleton can outlive its C++ object (window teardown)."""
+    return obj is not None and not sip.isdeleted(obj)
+
+
 def get_hover_info_popup():
     global _hover_info_popup
-    if _hover_info_popup is None:
+    if not _is_alive(_hover_info_popup):
+        # The app-wide event filter calls this for every event; handing back a
+        # deleted wrapper raised RuntimeError from inside Qt's event dispatch.
         _hover_info_popup = HoverInfoPopup()
     return _hover_info_popup
 
@@ -612,7 +618,7 @@ def hide_hover_info(widget=None):
     """Cancel a pending preview and hide the active hover card."""
     if _hover_info_filter is not None:
         _hover_info_filter.cancel_for(widget)
-    if _hover_info_popup is None:
+    if not _is_alive(_hover_info_popup):
         return
     if widget is None:
         _hover_info_popup._stop_popup()
@@ -632,6 +638,7 @@ class _DetailExpandOverlay(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setObjectName("detailExpandOverlay")
         self._owner = None
+        self._owner_token = None
         lyt = QVBoxLayout(self)
         lyt.setContentsMargins(0, 0, 0, 0)
         lyt.setSpacing(0)
@@ -812,6 +819,7 @@ class _DetailExpandOverlay(QFrame):
                 pass
 
         self._owner = owner
+        self._track_owner(owner)
 
         # Style the single floating host rather than every hidden calendar card.
         # It also refreshes the actions when the user changes the active theme.
@@ -834,6 +842,34 @@ class _DetailExpandOverlay(QFrame):
             self.show()
             self.raise_()
 
+    def _on_owner_destroyed(self, token, *_args):
+        """Drop a detail card whose calendar item was deleted by a re-render.
+
+        The detail container lives in this overlay while expanded, so it would
+        otherwise outlive its owner and keep actions bound to a deleted item.
+        """
+        if token is not self._owner_token:
+            return
+        self._owner = None
+        self._owner_token = None
+        lyt = self.layout()
+        while lyt.count():
+            item = lyt.takeAt(0)
+            widget = item.widget() if item else None
+            if widget is not None and not sip.isdeleted(widget):
+                widget.hide()
+                widget.setParent(None)
+                widget.deleteLater()
+        self.hide()
+
+    def _track_owner(self, owner):
+        token = getattr(owner, "_detail_overlay_token", None)
+        if token is None:
+            token = object()
+            owner._detail_overlay_token = token
+            owner.destroyed.connect(partial(self._on_owner_destroyed, token))
+        self._owner_token = token
+
     def hide_for(self, owner):
         """Hide overlay and return detail_container to owner."""
         if self._owner is not owner:
@@ -848,9 +884,17 @@ _detail_overlay = None
 
 def get_detail_overlay():
     global _detail_overlay
-    if _detail_overlay is None:
+    if _detail_overlay is None or sip.isdeleted(_detail_overlay):
         _detail_overlay = _DetailExpandOverlay()
     return _detail_overlay
+
+
+def _visible_detail_overlay():
+    """The detail card if it exists, is alive and is showing; otherwise None."""
+    overlay = globals().get("_detail_overlay")
+    if overlay is not None and not sip.isdeleted(overlay) and overlay.isVisible():
+        return overlay
+    return None
 
 
 class DraggableTaskButton(QFrame):
@@ -1368,10 +1412,21 @@ class DraggableTaskButton(QFrame):
         return True
 
     def _request_edit_from_detail(self):
+        if sip.isdeleted(self):
+            get_detail_overlay()._do_collapse()
+            return
         get_detail_overlay()._do_collapse(self)
-        QTimer.singleShot(0, lambda: self.doubleClicked.emit(self.task_id))
+        QTimer.singleShot(0, self._emit_edit_from_detail)
+
+    def _emit_edit_from_detail(self):
+        if not sip.isdeleted(self):
+            self.doubleClicked.emit(self.task_id)
 
     def _request_status_from_detail(self, status):
+        if sip.isdeleted(self):
+            # The calendar was rebuilt while this detail card stayed open.
+            get_detail_overlay()._do_collapse()
+            return
         get_detail_overlay()._do_collapse(self)
         self.taskStatusChanged.emit(self.task_id, status)
 

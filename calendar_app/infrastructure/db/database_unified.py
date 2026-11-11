@@ -1528,7 +1528,10 @@ class ThreadLocalDatabaseManager:
 
             conn.close()
 
-            logger.info("Database connection closed for thread %s.", thread_id)
+            # Every background sync worker closes its connection (about twice a
+            # minute); INFO here crowded real diagnostics out of the rotating log.
+            # Shutdown closes in close_all_connections, which stays at INFO.
+            logger.debug("Database connection closed for thread %s.", thread_id)
 
     def close_all_connections(self):
         with self._lock:

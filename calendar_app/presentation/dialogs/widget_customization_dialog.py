@@ -66,13 +66,17 @@ from calendar_app.presentation.widgets.widget_mode_skins import (
     widget_mode_layouts,
     widget_mode_skins,
 )
-from calendar_app.presentation.widgets.widget_mode_theme import main_widget_mode_tokens
+from calendar_app.presentation.widgets.widget_mode_theme import (
+    WIDGET_SHELL_MIN_ALPHA,
+    main_widget_mode_tokens,
+)
 from calendar_app.presentation.widgets.widget_mode_typography import read_widget_typography
 from calendar_app.presentation.widgets.widget_mode_visibility import (
     read_widget_calendar_visibility,
     write_widget_calendar_visibility,
 )
 from calendar_app.shared.color_utils import composite_color, parse_css_color
+from calendar_app.shared.qt_helpers import mnemonic_safe
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
 
 
@@ -87,6 +91,32 @@ class _DraftSettings:
 
     def setValue(self, key, value):
         self.values[key] = value
+
+
+class _WrappedTextPage(QWidget):
+    """A scroll page whose minimum height follows its word-wrapped labels.
+
+    QTabWidget does not forward height-for-width, so a short dialog sized the
+    page from the labels' one-line hints. The box layout then shrank every row
+    proportionally and the layout cards painted over each other.
+    """
+
+    def _refresh_minimum_height(self, width: int) -> None:
+        layout = self.layout()
+        if layout is not None and layout.hasHeightForWidth() and width > 0:
+            needed = layout.totalHeightForWidth(width)
+            if needed > 0 and needed != self.minimumHeight():
+                self.setMinimumHeight(needed)
+
+    def resizeEvent(self, event):  # noqa: N802 - Qt API
+        super().resizeEvent(event)
+        self._refresh_minimum_height(event.size().width())
+
+    def event(self, event):
+        # Rows are added or revealed (e.g. "show all layouts") without a resize.
+        if event.type() == QEvent.Type.LayoutRequest:
+            self._refresh_minimum_height(self.width())
+        return super().event(event)
 
 
 class WidgetCustomizationDialog(QDialog):
@@ -131,7 +161,10 @@ class WidgetCustomizationDialog(QDialog):
         controls.setWidget(tabs)
         body.addWidget(controls, 1)
         tabs.addTab(self._layout_tab(), t("widget_workspace.preferences_view", "화면 형태"))
-        tabs.addTab(self._appearance_tab(), t("widget_workspace.preferences_style", "스킨·글꼴"))
+        tabs.addTab(
+            self._appearance_tab(),
+            mnemonic_safe(t("widget_workspace.preferences_style", "스킨·글꼴")),
+        )
         tabs.addTab(self._visibility_tab(), t("widget_mode.preferences_visibility", "표시 항목"))
         tabs.currentChanged.connect(self._scroll_active_skin)
 
@@ -206,7 +239,7 @@ class WidgetCustomizationDialog(QDialog):
             self.resize(min(940, available.width() - 40), min(680, available.height() - 40))
 
     def _layout_tab(self):
-        tab = QWidget(self)
+        tab = _WrappedTextPage(self)
         layout = QVBoxLayout(tab)
         self.layout_group = QButtonGroup(self)
         self.layout_buttons = {}
@@ -222,20 +255,26 @@ class WidgetCustomizationDialog(QDialog):
         for spec in widget_mode_layouts():
             button = QToolButton(tab)
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-            button.setText(t(spec.label_key, spec.label_default))
-            button.setAccessibleName(button.text())
+            label = t(spec.label_key, spec.label_default)
+            button.setText(mnemonic_safe(label))
+            button.setAccessibleName(label)
             button.setIcon(self._layout_icon(spec))
             button.setIconSize(QSize(90, 42))
             button.setCheckable(True)
             button.ensurePolished()
             minimum_width = max(160, button.fontMetrics().horizontalAdvance(button.text()) + 28)
             minimum_height = max(76, button.fontMetrics().height() + 54)
+            # The dialog stylesheet caps every QToolButton at 32px; measure the
+            # icon+label card once with that cap lifted, then pin min and max
+            # to the same content height. A max below the size hint made grid
+            # rows shorter than the painted cards, which overlapped in short dialogs.
             button.setStyleSheet(
-                f"QToolButton {{ min-width: {minimum_width}px; min-height: {minimum_height}px; "
-                f"max-height: {minimum_height}px; "
-                "padding: 4px; }"
-                "QToolButton:checked { border: 2px solid #65a7ff; border-radius: 6px; }"
+                self._layout_card_style(minimum_width, minimum_height, max_height=4096)
             )
+            button.ensurePolished()
+            frame_extra = max(0, button.minimumHeight() - minimum_height)
+            card_height = max(minimum_height, button.sizeHint().height() - frame_extra)
+            button.setStyleSheet(self._layout_card_style(minimum_width, card_height))
             button.setChecked(spec.layout_id == current and not custom_id)
             button.setVisible(spec.layout_id in recommended or spec.layout_id == current)
             button.clicked.connect(
@@ -489,6 +528,13 @@ class WidgetCustomizationDialog(QDialog):
         self._sync_appearance_controls()
         self._refresh_preview()
 
+    def _linked_background_opacity(self) -> int:
+        """Show what the widget uses: main opacity, but never below its readability floor."""
+        return max(
+            round(build_theme_snapshot(self.draft).opacity_factor * 100),
+            round(WIDGET_SHELL_MIN_ALPHA * 100 / 255),
+        )
+
     def _sync_appearance_controls(self):
         for control, setter, value in (
             (
@@ -521,7 +567,7 @@ class WidgetCustomizationDialog(QDialog):
             (
                 self.background_opacity,
                 self.background_opacity.setValue,
-                round(build_theme_snapshot(self.draft).opacity_factor * 100),
+                self._linked_background_opacity(),
             ),
         ):
             blocked = control.blockSignals(True)
@@ -537,6 +583,15 @@ class WidgetCustomizationDialog(QDialog):
         self.all_layouts_btn.hide()
         self._reflow_layout_cards()
         self.layout_buttons[read_widget_mode_layout_id(self.draft)].setFocus()
+
+    @staticmethod
+    def _layout_card_style(width: int, height: int, *, max_height: int | None = None) -> str:
+        return (
+            f"QToolButton {{ min-width: {width}px; min-height: {height}px; "
+            f"max-height: {max_height if max_height is not None else height}px; "
+            "padding: 4px; }"
+            "QToolButton:checked { border: 2px solid #65a7ff; border-radius: 6px; }"
+        )
 
     def _reflow_layout_cards(self):
         grid = self._layout_card_grid
@@ -707,7 +762,7 @@ class WidgetCustomizationDialog(QDialog):
             background_opacity,
             0,
         )
-        linked_opacity = round(build_theme_snapshot(self.draft).opacity_factor * 100)
+        linked_opacity = self._linked_background_opacity()
         for control, value in ((self.text_opacity, 100), (self.background_opacity, linked_opacity)):
             blocked = control.blockSignals(True)
             control.setValue(value)

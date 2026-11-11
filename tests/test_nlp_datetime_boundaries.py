@@ -66,6 +66,8 @@ def test_explicit_week_is_relative_to_the_current_calendar_week(phrase, date):
         ("15시", "15:00"),
         ("3시 30분", "03:30"),
         ("오후 4:30", "16:30"),
+        ("오후 4시30분", "16:30"),
+        ("오후 4시 30", "16:30"),
         ("오전 12시", "00:00"),
         ("오후 12시", "12:00"),
         ("밤 12시", "00:00"),
@@ -83,6 +85,15 @@ def test_supported_clock_formats_are_valid_and_removed_from_the_title(expression
         "title": "회의",
         "date": "2026-10-15",
         "time": time,
+    }
+
+
+@pytest.mark.parametrize("title", ["2차 회의", "2027년 사업계획", "2분기 보고"])
+def test_hour_marker_preserves_a_number_at_the_start_of_the_title(title):
+    assert nlp_engine.parse_nlp_task(f"내일 오후 3시 {title}") == {
+        "title": title,
+        "date": "2026-10-15",
+        "time": "15:00",
     }
 
 

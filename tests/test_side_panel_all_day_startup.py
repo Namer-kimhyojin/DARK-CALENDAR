@@ -232,6 +232,14 @@ class SidePanelAllDayStartupTests(TemporaryDatabaseTestCase):
         self.assertLessEqual(self.host.left_dock.minimumSizeHint().width(), 250)
         switch = toolbar.findChild(QToolButton, "schedulePanelMode")
         self.assertIsNotNone(switch)
+        # It reads as the panel title: no toolbar padding pushing it right, the
+        # title color and weight, and its menu cue right after the words.
+        self.assertIs(toolbar.layout().itemAt(0).widget(), switch)
+        self.assertTrue(switch.text().endswith(" ▾"))
+        self.assertEqual(switch.accessibleName(), switch.text().strip().removesuffix(" ▾"))
+        self.assertIn("padding: 2px 6px 2px 0px", switch.styleSheet())
+        self.assertIn("::menu-indicator { image: none;", switch.styleSheet())
+        self.assertIn("font-weight: bold", switch.styleSheet())
         actions = {action.data(): action for action in switch.menu().actions()}
         self.assertEqual(set(actions), {"today", "week", "selected"})
         self.assertTrue(actions["selected"].isChecked())

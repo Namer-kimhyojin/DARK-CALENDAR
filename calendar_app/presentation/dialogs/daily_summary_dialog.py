@@ -152,7 +152,9 @@ class DailySummaryDialog(QDialog):
             | Qt.WindowType.Dialog
             | Qt.WindowType.WindowStaysOnTopHint
         )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        # Like every other modal, the window itself is the card: the shared shadow
+        # rounds and outlines it. A translucent window with an inset card showed
+        # its empty margin as a see-through band on all four sides.
         self.setModal(True)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.setSizeGripEnabled(False)
@@ -229,7 +231,7 @@ class DailySummaryDialog(QDialog):
         accent_soft = tokens.get("accent_soft") or "rgba(77,166,255,0.10)"
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(10, 10, 10, 10)
+        root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
         self.container = QFrame()
@@ -317,7 +319,7 @@ class DailySummaryDialog(QDialog):
             QFrame#dailySummaryShell {{
                 background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
                     stop:0 {surface_bg}, stop:1 {surface_item});
-                border: 1px solid {border};
+                border: none;
                 border-radius: {radius}px;
             }}
             QWidget#dailySummaryPanel, QWidget#dailySummarySettingsBody,

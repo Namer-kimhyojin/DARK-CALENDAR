@@ -342,20 +342,31 @@ def test_legacy_modal_class_still_accepts_keyboard_from_non_focus_overlay_parent
         dialog = widget._performance_dialog
         try:
             dialog._focus_pads()
+            # Window activation is delivered through the event loop.
+            QApplication.processEvents()
             result["dialog_accepts_focus"] = not bool(
                 dialog.windowFlags() & Qt.WindowType.WindowDoesNotAcceptFocus
             )
             result["canvas_focused"] = dialog.canvas.hasFocus()
             dialog._record()
-            QTest.keyClick(QApplication.focusWidget(), Qt.Key.Key_Q)
+            focused = QApplication.focusWidget()
+            # QTest.keyClick(None) trips a Qt assertion that aborts the process.
+            assert focused is not None, "no focus widget after _focus_pads()"
+            QTest.keyClick(focused, Qt.Key.Key_Q)
             dialog._stop()
             result["take"] = dialog.timeline.take
+        except BaseException as exc:  # noqa: BLE001 - re-raised after the modal loop
+            # An exception escaping a Qt timer slot aborts the interpreter
+            # (PyQt6 calls qFatal), which killed the whole suite with 0xC0000409.
+            result["error"] = exc
         finally:
             dialog.reject()
 
     try:
         QTimer.singleShot(100, perform)
         dialog.exec()
+        if "error" in result:
+            raise result["error"]
         assert result["dialog_accepts_focus"]
         assert result["canvas_focused"]
         assert result["take"]["events"][0]["sound"] == "beat_lofi_tom_low"

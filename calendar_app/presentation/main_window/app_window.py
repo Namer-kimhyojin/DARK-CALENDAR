@@ -47,6 +47,14 @@ class OverlayApp(MainWindowUiActionsMixin, ActionHandlersMixin, WindowEventsMixi
             self.change_text_theme("light")
         elif cmd_id in {"sync_google", "sync_calendars"}:
             self.sync_calendars()
+        elif cmd_id == "toggle_top_bar":
+            self.toggle_top_bar()
+        elif cmd_id == "toggle_top_bar_auto_hide":
+            self.toggle_top_bar_auto_hide()
+        elif cmd_id == "toggle_navigation_rail":
+            self.toggle_navigation_rail()
+        elif cmd_id == "open_checklist_manager":
+            self.open_checklist_manager()
         elif cmd_id == "toggle_routine":
             if hasattr(self, "routine_dock"):
                 self.routine_dock.setVisible(not self.routine_dock.isVisible())

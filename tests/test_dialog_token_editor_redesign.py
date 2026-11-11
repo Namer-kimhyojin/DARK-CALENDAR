@@ -152,6 +152,44 @@ def test_color_and_metric_presets_keep_the_other_tier_unchanged(editor):
     assert dialog._collect_metric_overrides(True) == {}
 
 
+def test_generic_preset_names_are_shown_translated_but_selected_by_key(editor):
+    """The shown label is localized; logic must still resolve the internal key."""
+    from calendar_app.infrastructure.i18n import t
+    from calendar_app.presentation.dialogs import dialog_token_editor_dialog as module
+
+    dialog, _ = editor
+    for key, (locale_key, fallback) in module._PRESET_NAME_LABELS.items():
+        label = t(f"dialog.token_editor.preset_name.{locale_key}", fallback)
+        assert module._preset_label(key) == label
+        assert module._preset_key(label) == module._preset_key(key) == key
+    # Design names are proper names and are shown unchanged.
+    assert module._preset_label("Light Aqua Form") == module._preset_key("Light Aqua Form")
+
+    shown = [
+        dialog.color_preset_combo.itemText(i) for i in range(dialog.color_preset_combo.count())
+    ]
+    assert shown[:2] == [
+        module._preset_label("Default (Auto)"),
+        module._preset_label("System Default"),
+    ]
+    assert [dialog.metric_preset_combo.itemText(i) for i in range(2)] == [
+        module._preset_label("Default (Auto)"),
+        module._preset_label("System Default"),
+    ]
+
+    # Choosing "System Default" by its shown label still resets every color to default.
+    dialog._color_edits["accent"].setText("#123456")
+    dialog.color_preset_combo.setCurrentText(module._preset_label("System Default"))
+    dialog._apply_selected_color_preset()
+    assert dialog._color_edits["accent"].text() == dialog._default_color("accent")
+    # The note under each combo is localized too (no raw English source text left).
+    for note in module._PRESET_NOTE_LABELS:
+        assert module._preset_note(note) == t(
+            f"dialog.token_editor.preset_note.{module._PRESET_NOTE_LABELS[note][0]}",
+            module._PRESET_NOTE_LABELS[note][1],
+        )
+
+
 def test_json_export_import_includes_hidden_keys_and_does_not_persist(editor, tmp_path):
     dialog, settings = editor
     before = snapshot(settings)

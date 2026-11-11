@@ -328,9 +328,11 @@
     "dup_list_prompt": "New checklist name:",
     "dup_list_suffix": "Copy",
     "dup_list_title": "Duplicate Checklist",
+    "empty_items": "No items yet. Use Add item to get started.",
     "err_bulk_fail": "Bulk operation failed.",
     "err_bulk_selection": "Please select an operation to apply.",
     "err_item_required": "Please enter an item name.",
+    "err_item_save": "Could not save the item. Please try again.",
     "err_name_required": "Please enter a template name.",
     "err_prefix_required": "Please enter a prefix.",
     "export_done_msg": "Saved as file.\n\n{path}",
@@ -362,6 +364,7 @@
     "n_items": "{n} items",
     "new_list_prompt": "Enter the name for the new checklist.",
     "new_list_title": "New Checklist",
+    "no_search_results": "No checklists found.",
     "placeholder_desc": "Briefly note when and how to use this template.",
     "placeholder_item_desc": "State why the item is needed or the inspection criteria.",
     "placeholder_item_guide": "Enter execution order, precautions, and reference notes.",
@@ -369,10 +372,16 @@
     "placeholder_name": "e.g., Monthly Report Checklist",
     "placeholder_prefix": "e.g., [Important]",
     "prompt_empty": "Select a checklist or start with the New button.",
+    "save_failed": "Could not save the checklist details.",
+    "search_templates": "Search names and descriptions",
     "sub_title": "Organize your frequently used checklists\nand quickly edit details.",
+    "template_actions": "Manage checklists",
+    "template_library": "Checklists",
     "title": "Checklist Management",
     "type_list": "List Type",
-    "type_process": "Process Type"
+    "type_process": "Process Type",
+    "unsaved_prompt": "Save changes to the checklist name, type, or description?",
+    "unsaved_title": "Unsaved changes"
   },
   "color": {
     "banana": "Banana",
@@ -933,17 +942,27 @@
       "advanced": "Advanced Settings",
       "advanced_tip": "Fine-tune colors, sizes, and spacing",
       "bg": {
+        "auto": "Automatic",
         "auto_apply_text": "Auto-apply recommended text colors when selecting a preset",
         "auto_apply_text_tip": "When enabled, text colors are automatically adjusted to match the selected preset.",
+        "auto_tip": "Use the background that goes with the accent color.",
+        "color": "Background",
         "custom_picker_title": "Choose Background Color",
         "details": "Background details",
         "subtitle": "Choose a preset palette or pick a custom background color."
+      },
+      "border": {
+        "auto_tip": "Use a border that goes with the background and accent color.",
+        "color": "Border",
+        "current": "Current border color",
+        "custom_picker_title": "Choose Border Color"
       },
       "changes_count": "{count} changes",
       "changes_none": "No changes",
       "changes_summary": "{count} changes: {items}",
       "color_picker_title": "Pick Color",
       "custom_color": "Custom Color",
+      "custom_pick": "Choose…",
       "details_action": "Detailed appearance…",
       "family": {
         "navy_lilac": "Navy · Lilac"
@@ -955,7 +974,7 @@
         "size": "Size:",
         "subtitle": "Set the app-wide UI font."
       },
-      "intro": "Choose a style and check the preview",
+      "intro": "Choose a display mode and accent color, then check the preview",
       "opacity": "Opacity",
       "opacity_bg": "Background:",
       "opacity_border": "Border:",
@@ -966,6 +985,7 @@
         "emerald": "Emerald",
         "gold": "Gold",
         "gray": "Gray",
+        "lime": "Lime",
         "mint": "Mint",
         "orange": "Orange",
         "pink": "Pink",
@@ -987,6 +1007,7 @@
         "filter_label": "Preset Type",
         "filter_light": "Light",
         "lilac_day": "Lilac Day",
+        "lime_night": "Lime Night",
         "midnight": "Midnight",
         "navy": "Navy",
         "navy_lilac": "Navy Lilac",
@@ -1024,7 +1045,9 @@
       "tab": {
         "accent": "Accent Color",
         "background": "Style",
+        "background_opacity": "Background and opacity",
         "font": "Font",
+        "mode": "Display mode",
         "text": "Readability"
       },
       "text": {
@@ -1040,6 +1063,8 @@
         "hint_short": "Primary: main text / Secondary: supporting / Muted: meta / Faint: hint",
         "input_bg": "Input Background",
         "muted": "Muted",
+        "opacity": "Text opacity",
+        "opacity_tip": "Lower values blend text into the background, down to 30%.",
         "primary": "Primary",
         "reset_all": "↩ Reset All Text Colors",
         "secondary": "Secondary",
@@ -1100,6 +1125,31 @@
       "preset_color_mode": "Theme Mode:",
       "preset_filter_label": "Preset filter",
       "preset_metric": "Preset",
+      "preset_name": {
+        "comfortable_spacious": "Comfortable Spacious",
+        "compact_dense": "Compact Dense",
+        "default_auto": "Default (Auto)",
+        "system_default": "System Default"
+      },
+      "preset_note": {
+        "balanced_blue": "Balanced blue preset for general use.",
+        "calm_indigo": "Calm indigo palette for long work sessions.",
+        "color_only": "Preset applies color tokens only.",
+        "comfortable_note": "Larger controls and wider spacing for readability.",
+        "compact_note": "Dense spacing for information-heavy views.",
+        "default_metrics": "Use default dialog metric tokens.",
+        "default_theme": "Dialog defaults from current theme.",
+        "emerald_dusk": "Emerald accent with softened dark backgrounds.",
+        "light_aqua": "Light card UI with aqua accent.",
+        "metric_only": "Preset applies spacing/size metric tokens only.",
+        "minimal_light": "Minimalist light theme.",
+        "neutral_dark": "Neutral dark preset with clear contrast.",
+        "soft_light": "A softer light variation.",
+        "strong_contrast": "Strong contrast for focus-heavy workflows.",
+        "system_color_reset": "Resets every color setting to the system default.",
+        "system_metric_reset": "Resets every size and spacing setting to the system default.",
+        "warm_amber": "Warm amber accent with high readability."
+      },
       "preview": {
         "btn_danger": "Danger",
         "btn_default": "Default",
@@ -1664,7 +1714,7 @@
     "zoho_guide": "Zoho Calendar: enable calendars for CalDAV in the web settings first. Select your account data center server. Use an app password when two-factor authentication is enabled."
   },
   "help": {
-    "content": "<h3>How to Use Calendar</h3>\n        <hr>\n        <b>1) Add Schedule</b><br>\n        Double-click a date or <b>Ctrl + N</b><br><br>\n\n        <b>2) Modify Schedule</b><br>\n        Double-click a schedule to edit details<br><br>\n\n        <b>3) Move/Copy Schedule</b><br>\n        Drag: Move, <b>Shift + Drag</b>: Copy<br><br>\n\n        <b>4) Delete Schedule</b><br>\n        Select schedule and press <b>Delete</b><br>\n        Press <b>Delete</b> on a date to clear all schedules for that day.",
+    "content": "<h3>How to Use Calendar</h3>\n        <hr>\n        <b>1) Add Schedule</b><br>\n        Double-click a date or <b>Ctrl + N</b><br><br>\n\n        <b>2) Modify Schedule</b><br>\n        Double-click a schedule to edit details<br><br>\n\n        <b>3) Move/Copy Schedule</b><br>\n        Drag: Move, <b>Ctrl + Drag</b>: Copy<br><br>\n\n        <b>4) Delete Schedule</b><br>\n        Select schedule and press <b>Delete</b><br>\n        Press <b>Delete</b> on a date to clear all schedules for that day.",
     "title": "How to Use Calendar"
   },
   "labels": {
@@ -1714,11 +1764,13 @@
   "loop_mixer": {
     "add_drums": "Add drum KeyDeck",
     "add_keydeck": "+ KeyDeck",
+    "add_keydeck_hint": "Add a KeyDeck instrument",
     "add_melody": "Add melody KeyDeck",
     "arm": "● Arm",
     "arm_hint": "Record all armed tracks together for one loop.",
     "bar_count": "{number} bars",
     "bars": "Loop length",
+    "beat_timeline": "Loop bars and beat position",
     "bpm": "Loop tempo BPM",
     "choose_armed": "Select an input and arm a track before recording.",
     "clear": "Clear",
@@ -1763,12 +1815,15 @@
     "output_level": "Output level",
     "overdub": "Overdub",
     "pan": "Pan",
+    "pan_center_hint": "Stereo balance · double-click to center",
     "play": "▶ Play",
     "playing": "Loop playing",
+    "project": "Project",
     "project_open": "Open project",
     "project_save": "Save",
     "record": "● Record",
     "recording": "Recording one loop",
+    "refresh_microphones": "Refresh microphone devices",
     "replace_project": "Open the selected project instead? Unsaved changes will not be retained.",
     "replace_take": "Replace the existing audio on armed tracks? Enable Overdub to retain the existing sound.",
     "solo": "Solo",
@@ -1779,6 +1834,7 @@
     "stop": "■ Stop",
     "title": "Loop mixer",
     "touch_hint": "Multiple KeyDecks + microphone · build your rhythm by touch",
+    "track_actions": "Track {number} actions",
     "track_name": "Track {number} name",
     "track_pan": "Track {number} balance",
     "track_volume": "Track {number} volume",
@@ -1805,6 +1861,7 @@
     "add_routine": "⭐ Register Routine",
     "add_schedule": "📅Add Schedule",
     "appearance_style": "🖥️Screen Style",
+    "auto_hide_topbar": "Auto-hide top bar",
     "autostart": "🚀 Auto-launch on Windows Startup",
     "away_settings": "🔒Away Mode Settings",
     "bulk_ops": "📦 Bulk Operations",
@@ -2410,6 +2467,12 @@
         "menu_path": "Window control",
         "tags": ["monitor", "display", "right"]
       },
+      "navigation_rail": {
+        "description": "Shows or hides the quick navigation rail on the left.",
+        "label": "Show quick navigation",
+        "menu_path": "View > Screen and window > Quick navigation",
+        "tags": ["quick navigation", "rail", "sidebar"]
+      },
       "new_directive": {
         "description": "Opens the window for entering a directive or cooperation item.",
         "label": "Register directive",
@@ -2489,10 +2552,10 @@
         "tags": ["today", "date"]
       },
       "topbar": {
-        "description": "Switches whether the top menu bar is shown.",
-        "label": "Toggle top bar",
-        "menu_path": "View > Top bar",
-        "tags": ["menu bar", "top bar", "recovery"]
+        "description": "Turns top bar auto-hide on or off. Turning it off pins the top bar.",
+        "label": "Auto-hide top bar",
+        "menu_path": "View > Screen and window > Auto-hide top bar",
+        "tags": ["menu bar", "top bar", "auto-hide", "pin", "recovery"]
       },
       "widget_mode": {
         "description": "Opens widget-only panel mode.",
@@ -2593,8 +2656,8 @@
         "note": "Quickly switches whether panels can move and snap."
       },
       "topbar": {
-        "badge": "Recover menu bar",
-        "note": "The first thing to check when the top bar disappears."
+        "badge": "Pin top bar",
+        "note": "Turns auto-hide on or off and pins a hidden top bar right away."
       }
     },
     "search": "Search help",
@@ -2639,6 +2702,9 @@
     "corrupt": "The schedule database is damaged. Preserve the original file and recover it before restarting.",
     "details": "The database path and original error are available in Details.",
     "locked": "The schedule database is busy. Close other Air Calendar processes and try again.",
+    "restore": "Restore latest backup",
+    "restore_failed": "The backup could not be restored. The damaged file was not deleted.",
+    "restore_hint": "You can restore an automatic backup. The damaged file is kept in the same folder, not deleted.",
     "title": "Air Calendar could not start",
     "unavailable": "The schedule database could not be opened. Check storage space and folder permissions."
   },
@@ -3019,6 +3085,8 @@
     "navigation_rail": "Quick navigation",
     "opacity": "Opacity:",
     "opacity_tooltip": "Adjust Overlay Opacity",
+    "pin": "Pin top bar",
+    "reveal_hint": "Point at or click here to show the top bar.",
     "search_accessible_hint": "Search schedules, routines, and directives.",
     "search_placeholder": "🔎 Search... (e.g. #tech)",
     "sync_btn": "Go",
@@ -3026,6 +3094,7 @@
     "sync_label": "Sync",
     "sync_now": "Sync Google Calendar now",
     "sync_waiting": "Sync Waiting",
+    "unpin": "Auto-hide top bar",
     "widget_mode_btn": "Widget Mode",
     "widget_mode_hint": "Open widget-only mode"
   },

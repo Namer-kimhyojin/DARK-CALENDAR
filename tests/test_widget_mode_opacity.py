@@ -15,6 +15,7 @@ from calendar_app.presentation.widgets.widget_mode_opacity import (
     apply_widget_opacity,
     read_widget_opacities,
 )
+from calendar_app.presentation.widgets.widget_mode_theme import WIDGET_SHELL_MIN_ALPHA
 from tests.test_widget_mode_ux import _APP, Settings, workspace  # noqa: F401
 
 
@@ -80,7 +81,9 @@ def test_actual_render_uses_main_alpha_and_preserves_unused_legacy_mode_values(w
     host.settings.setValue("last_opacity", 0)
     coordinator.controller.refresh_theme()
     _APP.processEvents()
-    assert _render(widget).pixelColor(5, widget.height() // 2).alpha() == 0
+    # The widget floats over wallpaper: a fully transparent main window must not
+    # make the widget's reading surface disappear.
+    assert _render(widget).pixelColor(5, widget.height() // 2).alpha() >= WIDGET_SHELL_MIN_ALPHA
     assert host.settings.value(TEXT_OPACITY_KEY) == 20
     assert host.settings.value(BACKGROUND_OPACITY_KEY) == 0
     assert widget.windowOpacity() == 1.0
@@ -106,7 +109,9 @@ def test_month_calendar_cells_follow_background_opacity(workspace):
     )
     background = re.search(r"background:\s*rgba\([^)]*,\s*(\d+)\)", selected.styleSheet())
     assert background is not None
-    assert int(background.group(1)) == 0
+    # The selected day keeps a visible tint even at main opacity 0; the cell
+    # viewport itself stays transparent over the widget's own shell.
+    assert int(background.group(1)) > 0
     assert "background: transparent" in widget.cal_grid.month_calendar.styleSheet()
 
 
@@ -119,7 +124,8 @@ def test_preview_and_apply_keep_legacy_values_while_transparency_follows_main(wo
     host.settings.setValue("last_opacity_unit", "byte")
     dialog = WidgetCustomizationDialog(coordinator.controller, widget)
     assert dialog.text_opacity.value() == 100
-    assert dialog.background_opacity.value() == 50
+    # Main opacity 50% is shown as the widget's effective readability floor.
+    assert dialog.background_opacity.value() == round(WIDGET_SHELL_MIN_ALPHA * 100 / 255)
     assert not dialog.background_opacity.isEnabled()
     assert not dialog.text_opacity.isEnabled()
     assert host.settings.value(TEXT_OPACITY_KEY) is None

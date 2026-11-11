@@ -328,9 +328,11 @@
     "dup_list_prompt": "새 체크리스트 이름:",
     "dup_list_suffix": "사본",
     "dup_list_title": "체크리스트 복제",
+    "empty_items": "아직 항목이 없습니다. 항목 추가로 시작하세요.",
     "err_bulk_fail": "일괄 작업에 실패했습니다.",
     "err_bulk_selection": "적용할 작업을 선택하세요.",
     "err_item_required": "항목명을 입력하세요.",
+    "err_item_save": "항목을 저장하지 못했습니다. 다시 시도해 주세요.",
     "err_name_required": "템플릿 이름을 입력하세요.",
     "err_prefix_required": "접두어를 입력하세요.",
     "export_done_msg": "파일로 저장되었습니다.\n\n{path}",
@@ -362,6 +364,7 @@
     "n_items": "{n}개",
     "new_list_prompt": "추가할 체크리스트의 이름을 입력하세요.",
     "new_list_title": "새 체크리스트",
+    "no_search_results": "검색 결과가 없습니다.",
     "placeholder_desc": "이 템플릿을 언제, 어떻게 사용하는지 간단히 적어두세요.",
     "placeholder_item_desc": "해당 항목이 필요한 이유나 점검 기준을 적어두세요.",
     "placeholder_item_guide": "실행 순서, 주의사항, 참고 메모를 입력하세요.",
@@ -369,10 +372,16 @@
     "placeholder_name": "예: 월간 보고 마감 체크리스트",
     "placeholder_prefix": "예: [중요] ",
     "prompt_empty": "체크리스트를 선택하거나 좌측의 새 버튼으로 시작하세요.",
+    "save_failed": "체크리스트 정보를 저장하지 못했습니다.",
+    "search_templates": "이름·설명 검색",
     "sub_title": "자주 쓰는 체크리스트를 정리하고\n세부 항목을 빠르게 수정하세요.",
+    "template_actions": "관리 옵션",
+    "template_library": "체크리스트",
     "title": "체크리스트 관리",
     "type_list": "목록형",
-    "type_process": "프로세스형"
+    "type_process": "프로세스형",
+    "unsaved_prompt": "체크리스트의 이름, 유형 또는 설명 변경사항을 저장할까요?",
+    "unsaved_title": "저장하지 않은 변경사항"
   },
   "color": {
     "banana": "바나나",
@@ -933,17 +942,27 @@
       "advanced": "고급 사용자 설정",
       "advanced_tip": "색상, 크기와 간격을 세부 조정",
       "bg": {
+        "auto": "자동",
         "auto_apply_text": "프리셋 선택 시 권장 글자색 자동 적용",
         "auto_apply_text_tip": "활성화 시 프리셋에 맞는 글자색이 자동으로 조정됩니다.",
+        "auto_tip": "포인트 색상에 어울리는 배경을 사용합니다.",
+        "color": "배경색",
         "custom_picker_title": "배경 색상 선택",
         "details": "배경 세부 설정",
         "subtitle": "배경 프리셋을 선택하거나 직접 색상을 지정합니다."
+      },
+      "border": {
+        "auto_tip": "배경과 포인트 색상에 어울리는 테두리를 사용합니다.",
+        "color": "테두리색",
+        "current": "현재 테두리색",
+        "custom_picker_title": "테두리색 선택"
       },
       "changes_count": "변경사항 {count}개",
       "changes_none": "변경사항 없음",
       "changes_summary": "변경사항 {count}개: {items}",
       "color_picker_title": "색상 선택",
       "custom_color": "직접 색상",
+      "custom_pick": "직접 지정",
       "details_action": "세부 모양 조정…",
       "family": {
         "navy_lilac": "네이비 · 라일락"
@@ -955,7 +974,7 @@
         "size": "크기:",
         "subtitle": "앱 전체 UI 글꼴을 설정합니다."
       },
-      "intro": "스타일을 고르고, 미리보기에서 확인하세요",
+      "intro": "화면 모드와 포인트 색상을 고르고, 미리보기에서 확인하세요",
       "opacity": "투명도 및 불투명도",
       "opacity_bg": "배경:",
       "opacity_border": "테두리:",
@@ -966,6 +985,7 @@
         "emerald": "에메랄드",
         "gold": "골드",
         "gray": "그레이",
+        "lime": "라임",
         "mint": "민트",
         "orange": "오렌지",
         "pink": "핑크",
@@ -987,6 +1007,7 @@
         "filter_label": "프리셋 유형",
         "filter_light": "라이트",
         "lilac_day": "라일락 데이",
+        "lime_night": "라임 나이트",
         "midnight": "미드나이트",
         "navy": "네이비",
         "navy_lilac": "네이비 라일락",
@@ -1024,7 +1045,9 @@
       "tab": {
         "accent": "포인트 색상",
         "background": "스타일",
+        "background_opacity": "배경 및 투명도",
         "font": "글꼴",
+        "mode": "화면 모드",
         "text": "가독성"
       },
       "text": {
@@ -1040,6 +1063,8 @@
         "hint_short": "기본: 주요 텍스트 / 보조: 부가 / 흐림: 메타 / 희미: 힌트",
         "input_bg": "입력 배경",
         "muted": "흐린 글자",
+        "opacity": "글씨 투명도",
+        "opacity_tip": "낮출수록 글자가 배경에 스며듭니다. 최소 30%까지 낮출 수 있습니다.",
         "primary": "기본 글자",
         "reset_all": "↩ 모든 글자색 초기화",
         "secondary": "보조 글자",
@@ -1100,14 +1125,39 @@
       "preset_color_mode": "테마 모드:",
       "preset_filter_label": "프리셋 분류",
       "preset_metric": "프리셋",
+      "preset_name": {
+        "comfortable_spacious": "여유 있게",
+        "compact_dense": "촘촘하게",
+        "default_auto": "기본값 (자동)",
+        "system_default": "시스템 기본값"
+      },
+      "preset_note": {
+        "balanced_blue": "일반 용도에 알맞은 균형 잡힌 파랑 프리셋입니다.",
+        "calm_indigo": "오래 작업해도 편안한 차분한 남색 팔레트입니다.",
+        "color_only": "이 프리셋은 색상 값만 바꿉니다.",
+        "comfortable_note": "읽기 편한 큰 컨트롤과 넓은 간격입니다.",
+        "compact_note": "정보가 많은 화면을 위한 촘촘한 간격입니다.",
+        "default_metrics": "기본 대화상자 크기·간격 값을 사용합니다.",
+        "default_theme": "현재 테마의 대화상자 기본값입니다.",
+        "emerald_dusk": "부드러운 어두운 배경에 에메랄드 포인트를 더했습니다.",
+        "light_aqua": "아쿠아 포인트의 밝은 카드형 UI입니다.",
+        "metric_only": "이 프리셋은 크기·간격 값만 바꿉니다.",
+        "minimal_light": "미니멀한 라이트 테마입니다.",
+        "neutral_dark": "대비가 또렷한 중립 다크 프리셋입니다.",
+        "soft_light": "더 부드러운 라이트 변형입니다.",
+        "strong_contrast": "집중 작업에 알맞은 강한 대비입니다.",
+        "system_color_reset": "시스템 기본값으로 모든 색상 설정을 초기화합니다.",
+        "system_metric_reset": "시스템 기본값으로 모든 크기 및 간격 설정을 초기화합니다.",
+        "warm_amber": "가독성이 높은 따뜻한 호박색 포인트입니다."
+      },
       "preview": {
-        "btn_danger": "Danger",
+        "btn_danger": "위험",
         "btn_default": "기본",
-        "btn_disabled": "Disabled",
-        "btn_ghost": "Ghost",
-        "btn_primary": "Primary",
-        "btn_secondary": "Secondary",
-        "btn_success": "Success",
+        "btn_disabled": "비활성",
+        "btn_ghost": "고스트",
+        "btn_primary": "기본",
+        "btn_secondary": "보조",
+        "btn_success": "성공",
         "header_desc": "설명",
         "header_status": "상태",
         "header_type": "유형",
@@ -1714,11 +1764,13 @@
   "loop_mixer": {
     "add_drums": "드럼 키덱 추가",
     "add_keydeck": "+ 키덱",
+    "add_keydeck_hint": "연주용 키덱 추가",
     "add_melody": "멜로디 키덱 추가",
     "arm": "● 대기",
     "arm_hint": "녹음을 누르면 대기 중인 트랙을 함께 한 바퀴 녹음합니다.",
     "bar_count": "{number}마디",
     "bars": "루프 길이",
+    "beat_timeline": "루프 마디와 박자 진행",
     "bpm": "루프 빠르기 BPM",
     "choose_armed": "입력을 선택하고 트랙의 ‘● 대기’를 켠 뒤 녹음하세요.",
     "clear": "비우기",
@@ -1763,12 +1815,15 @@
     "output_level": "출력 음량 표시",
     "overdub": "겹쳐 녹음",
     "pan": "좌우",
+    "pan_center_hint": "좌우 밸런스 · 두 번 눌러 가운데로",
     "play": "▶ 재생",
     "playing": "반복 재생 중",
+    "project": "프로젝트",
     "project_open": "프로젝트 열기",
     "project_save": "저장",
     "record": "● 녹음",
     "recording": "한 바퀴 녹음 중",
+    "refresh_microphones": "마이크 장치 새로고침",
     "replace_project": "현재 프로젝트 대신 선택한 프로젝트를 열까요? 저장하지 않은 변경은 유지되지 않습니다.",
     "replace_take": "대기 중인 트랙의 기존 녹음을 새 녹음으로 바꿀까요? 겹쳐 녹음을 켜면 기존 소리를 유지합니다.",
     "solo": "솔로",
@@ -1779,6 +1834,7 @@
     "stop": "■ 정지",
     "title": "루프 믹서",
     "touch_hint": "여러 키덱 + 마이크 · 터치로 리듬을 쌓으세요",
+    "track_actions": "트랙 {number} 작업",
     "track_name": "트랙 {number} 이름",
     "track_pan": "트랙 {number} 좌우 밸런스",
     "track_volume": "트랙 {number} 음량",
@@ -1805,6 +1861,7 @@
     "add_routine": "⭐ 일반업무 등록",
     "add_schedule": "📅 일정 등록",
     "appearance_style": "🖥️ 화면 스타일",
+    "auto_hide_topbar": "상단 바 자동 숨기기",
     "autostart": "🚀 윈도우 시작 시 자동 실행",
     "away_settings": "🔒 자리비움 설정",
     "bulk_ops": "📦 일괄 작업",
@@ -2016,7 +2073,7 @@
     "task_registered": "등록됨: {title}",
     "theme_dark": "테마: 다크 모드로 변경",
     "theme_light": "테마: 라이트 모드로 변경",
-    "title": "Command Palette"
+    "title": "커맨드 팔레트"
   },
   "panel": {
     "checklist_tooltip": "체크리스트 보기/숨기기",
@@ -2250,7 +2307,7 @@
       "badge_recovery": "핵심 복구 키 4개",
       "badge_search": "검색 지원",
       "badge_total": "전체 단축키 {count}개",
-      "eyebrow": "F1 HELP CENTER",
+      "eyebrow": "F1 도움말 센터",
       "footer_hint": "검색은 기능 이름, 단축키, 메뉴 위치 기준으로 동작합니다.",
       "header_subtitle": "기능 이름, 키 이름, 메뉴 위치로 검색하고 자주 하는 작업부터 빠르게 찾아보세요.",
       "header_title": "단축키와 기능을 바로 찾는 도움말 센터",
@@ -2410,6 +2467,12 @@
         "menu_path": "창 제어",
         "tags": ["모니터", "화면", "right", "display"]
       },
+      "navigation_rail": {
+        "description": "왼쪽 빠른 이동 막대를 표시하거나 숨깁니다.",
+        "label": "빠른 이동 표시",
+        "menu_path": "화면 > 화면 및 창 > 빠른 이동",
+        "tags": ["빠른 이동", "레일", "navigation", "rail"]
+      },
       "new_directive": {
         "description": "지시나 협조 항목 입력 창을 엽니다.",
         "label": "지시사항 등록",
@@ -2489,10 +2552,10 @@
         "tags": ["오늘", "날짜", "today"]
       },
       "topbar": {
-        "description": "상단 메뉴 바 표시 상태를 전환합니다.",
-        "label": "상단 바 토글",
-        "menu_path": "화면 > 상단 바",
-        "tags": ["메뉴바", "상단 바", "topbar", "복구"]
+        "description": "상단 바 자동 숨기기를 켜거나 끕니다. 끄면 상단 바가 고정됩니다.",
+        "label": "상단 바 자동 숨기기",
+        "menu_path": "화면 > 화면 및 창 > 상단 바 자동 숨기기",
+        "tags": ["메뉴바", "상단 바", "topbar", "자동 숨기기", "고정", "복구"]
       },
       "widget_mode": {
         "description": "위젯 전용 패널 모드를 엽니다.",
@@ -2593,8 +2656,8 @@
         "note": "패널 이동과 부착 가능 상태를 빠르게 바꿉니다."
       },
       "topbar": {
-        "badge": "메뉴바 복구",
-        "note": "상단 바가 사라졌을 때 가장 먼저 확인하세요."
+        "badge": "상단 바 고정",
+        "note": "자동 숨기기를 켜고 끄며, 숨은 상단 바를 바로 고정합니다."
       }
     },
     "search": "도움말 검색",
@@ -2639,6 +2702,9 @@
     "corrupt": "일정 데이터베이스의 손상이 확인됐습니다. 원본 파일을 보존한 뒤 복구가 필요합니다.",
     "details": "자세히 보기를 열면 데이터베이스 경로와 원래 오류를 확인할 수 있습니다.",
     "locked": "다른 프로세스가 일정 데이터베이스를 사용 중입니다. 다른 Air Calendar 실행을 닫고 다시 시도해 주세요.",
+    "restore": "최근 백업으로 복구",
+    "restore_failed": "백업으로 복구하지 못했습니다. 손상된 파일은 삭제하지 않았습니다.",
+    "restore_hint": "자동 백업으로 복구할 수 있습니다. 손상된 파일은 삭제하지 않고 같은 폴더에 보관합니다.",
     "title": "Air Calendar를 시작할 수 없습니다",
     "unavailable": "일정 데이터베이스를 열 수 없습니다. 저장 공간과 앱 데이터 폴더의 접근 권한을 확인해 주세요."
   },
@@ -3019,6 +3085,8 @@
     "navigation_rail": "빠른 이동",
     "opacity": "투명도:",
     "opacity_tooltip": "오버레이 투명도 조절",
+    "pin": "상단 바 고정",
+    "reveal_hint": "마우스를 올리거나 클릭하면 상단 바가 나타납니다.",
     "search_accessible_hint": "일정, 루틴, 지시사항을 검색합니다.",
     "search_placeholder": "🔎 검색... (예: #테크)",
     "sync_btn": "동기",
@@ -3026,6 +3094,7 @@
     "sync_label": "연결",
     "sync_now": "구글 캘린더 즉시 동기화",
     "sync_waiting": "동기화 대기",
+    "unpin": "상단 바 자동 숨기기",
     "widget_mode_btn": "위젯 모드",
     "widget_mode_hint": "위젯 전용 모드 열기"
   },
@@ -4343,7 +4412,7 @@
       "asset_preview": "일러스트 미리보기",
       "cached": "저장된 최신 날씨",
       "design": {
-        "air_atmosphere": "Air Atmosphere",
+        "air_atmosphere": "에어 분위기",
         "amber_bulletin": "앰버 불리틴",
         "aurora_panel": "오로라 패널",
         "candy_cloud": "캔디 클라우드",
@@ -4365,7 +4434,7 @@
         "sage_card": "세이지 카드",
         "soft_capsule": "소프트 캡슐",
         "soft_cloud": "소프트 클라우드",
-        "soft_object": "Soft Object",
+        "soft_object": "소프트 오브젝트",
         "sticker_weather": "스티커 웨더",
         "temperature_type": "템퍼러처 타입",
         "terminal_station": "터미널 스테이션",

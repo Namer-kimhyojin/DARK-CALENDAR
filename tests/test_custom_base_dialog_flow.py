@@ -7,12 +7,13 @@ from PyQt6.QtWidgets import QApplication, QColorDialog, QDialog, QWidget
 import pytest
 
 from calendar_app.presentation.dialogs.panel_color_picker_dialog import (
-    _POINT_COLORS,
     PanelColorPickerDialog,
 )
 from calendar_app.presentation.main_window.window_ui_actions import MainWindowUiActionsMixin
 from calendar_app.shared.system_theme import set_runtime_system_text_theme
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
+
+_CUSTOM_ACCENT = "#4da6ff"
 
 
 class _Settings:
@@ -95,7 +96,7 @@ def test_reopened_custom_background_draft_preserves_origin_and_saved_pairs(
         assert QColor(dialog._base_hex).lightnessF() >= 0.94
         assert dialog.selected_point_hex() == "#7454ac"
         if action == "accent":
-            dialog._select_point_color(0)
+            dialog._apply_custom_point_color(_CUSTOM_ACCENT)
         elif action == "family":
             dialog._select_style_family("navy_lilac")
         return QDialog.DialogCode.Rejected if action == "cancel" else QDialog.DialogCode.Accepted
@@ -131,7 +132,7 @@ def test_reopened_custom_background_draft_preserves_origin_and_saved_pairs(
             "custom" if action == "accent" else "family"
         )
         if action == "accent":
-            assert host.settings.value("theme_color") == _POINT_COLORS[0][2]
+            assert host.settings.value("theme_color") == _CUSTOM_ACCENT
         snapshot = build_theme_snapshot(host.settings, persist_opacity=False)
         assert QColor(snapshot.panel_base_color).lightnessF() >= 0.94
 
@@ -205,7 +206,7 @@ def test_legacy_family_pair_survives_accent_only_accept_and_later_mode_switch(ho
         assert dialog._appearance_change_categories() == []
         assert dialog.selected_base_source() == "family"
         assert dialog.selected_style_family() == "ocean"
-        dialog._select_point_color(0)
+        dialog._apply_custom_point_color(_CUSTOM_ACCENT)
         return QDialog.DialogCode.Accepted
 
     monkeypatch.setattr(PanelColorPickerDialog, "exec", execute)
@@ -218,4 +219,42 @@ def test_legacy_family_pair_survives_accent_only_accept_and_later_mode_switch(ho
     host.settings.values["text_theme"] = "light"
     snapshot = build_theme_snapshot(host.settings, persist_opacity=False)
     assert snapshot.panel_base_color == "#eef8ed"
-    assert snapshot.theme_color == _POINT_COLORS[0][2]
+    assert snapshot.theme_color == _CUSTOM_ACCENT
+
+
+@pytest.mark.parametrize("action", ["untouched", "opacity", "custom", "custom_then_auto"])
+def test_border_settings_are_saved_only_once_a_border_is_chosen(host, monkeypatch, action):
+    def execute(dialog):
+        dialog._slider.setValue(dialog._slider.value() - 1)  # some unrelated change
+        if action == "opacity":
+            dialog._border_slider.setValue(dialog._border_slider.value() + 20)
+        elif action in {"custom", "custom_then_auto"}:
+            monkeypatch.setattr(QColorDialog, "getColor", lambda *_a, **_k: QColor("#335577"))
+            dialog._open_custom_border_color()
+            if action == "custom_then_auto":
+                dialog._use_auto_border()
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(PanelColorPickerDialog, "exec", execute)
+    host.open_panel_background_color_dialog()
+    expected_source = {
+        "untouched": None,
+        "opacity": "auto",
+        "custom": "custom",
+        "custom_then_auto": None,  # back to where it started: nothing to save
+    }[action]
+    assert host.settings.value("appearance_border_source") == expected_source
+    expected_color = "#335577" if action == "custom" else None
+    assert host.settings.value("panel_border_color") == expected_color
+
+
+def test_readability_text_opacity_is_saved_on_its_own_key(host, monkeypatch):
+    def execute(dialog):
+        dialog._section_toggles["readability"].setChecked(True)
+        dialog._text_slider.setValue(200)
+        return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(PanelColorPickerDialog, "exec", execute)
+    host.open_panel_background_color_dialog()
+    assert host.settings.value("text_opacity") == 200
+    assert host.settings.value("last_text_opacity") == 240  # the retired key is left alone

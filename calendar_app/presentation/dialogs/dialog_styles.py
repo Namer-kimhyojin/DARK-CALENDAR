@@ -1246,6 +1246,77 @@ def get_dialog_theme_tokens(
     return _opaque_dialog_surfaces(tokens)
 
 
+def build_dialog_menu_stylesheet(
+    settings=None,
+    *,
+    theme_color: str | None = None,
+    text_theme: str | None = None,
+    panel_base_color: str | None = None,
+) -> str:
+    """A popup menu that follows the dialog it opens from, in light and dark.
+
+    A bare QMenu takes its surface from the operating system (a dark menu while
+    Windows is in dark mode) but its text color from the dialog stylesheet, so a
+    light dialog showed dark text on a dark menu. The family is set explicitly
+    because Windows gives menus their own font instead of the application's.
+    """
+    from calendar_app.shared.typography import get_typography_scale
+
+    tokens = get_dialog_theme_tokens(
+        theme_color=theme_color,
+        text_theme=text_theme,
+        panel_base_color=panel_base_color,
+        settings=settings,
+    )
+    metrics = get_dialog_metric_tokens(settings=settings)
+    typography = get_typography_scale(settings)
+    family = QGuiApplication.font().family().replace('"', "").replace("\\", "")
+    radius = min(int(metrics["group_radius"]), 14)
+    item_radius = max(0, min(int(metrics["list_radius"]), radius - 2))
+    return f"""
+QMenu {{
+    background-color: {tokens["floating_bg"]}; color: {tokens["text_primary"]};
+    border: 1px solid {tokens["border"]}; border-radius: {radius}px; padding: 4px;
+    font-family: "{family}"; font-size: {typography.body_px}px;
+}}
+QMenu::item {{
+    background: transparent; color: {tokens["text_primary"]};
+    padding: 7px 28px 7px 12px; margin: 2px; border-radius: {item_radius}px; min-width: 150px;
+}}
+QMenu::item:selected {{
+    background-color: {tokens["list_selected_bg"]}; color: {tokens["list_selected_text"]};
+    border: 1px solid {tokens["list_selected_border"]};
+}}
+QMenu::item:disabled {{ color: {tokens["text_faint"]}; }}
+QMenu::separator {{ height: 1px; background: {tokens["border_soft"]}; margin: 4px 10px; }}
+"""
+
+
+def dialog_theme_tokens(dialog, settings=None) -> dict:
+    """Theme tokens for a dialog's own chrome (header, shadow), draft theme included."""
+    return get_dialog_theme_tokens(
+        **getattr(dialog, "_dc_theme_args", {}),
+        settings=_dialog_settings(dialog, settings),
+    )
+
+
+def style_dialog_menu(menu, settings=None, **theme) -> None:
+    """Apply ``build_dialog_menu_stylesheet`` to a menu and its submenus."""
+    stylesheet = build_dialog_menu_stylesheet(settings, **theme)
+    seen = set()
+
+    def apply(target):
+        if target is None or id(target) in seen:
+            return
+        seen.add(id(target))
+        if target.styleSheet() != stylesheet:
+            target.setStyleSheet(stylesheet)
+        for action in target.actions():
+            apply(action.menu())
+
+    apply(menu)
+
+
 def _build_dialog_visual_system(tokens: dict, metrics: dict) -> str:
     """Shared native surface hierarchy used by editors, settings and feedback."""
     tokens = _opaque_dialog_surfaces(tokens)
@@ -1624,6 +1695,20 @@ def apply_common_dialog_style(
 ):
     """Apply the shared dialog theme while preserving optional custom styles."""
     settings = _dialog_settings(dialog, settings)
+    # The header and the outer shadow are separate widgets that must follow the
+    # theme this dialog is painted with. A dialog previewing a draft theme (the
+    # appearance settings do) otherwise got a header and shadow from the *saved*
+    # theme: a light header under a dark body, and its light-colored title
+    # unreadable on it.
+    dialog._dc_theme_args = {
+        key: value
+        for key, value in (
+            ("theme_color", theme_color),
+            ("text_theme", text_theme),
+            ("panel_base_color", panel_base_color),
+        )
+        if value is not None
+    }
     from calendar_app.presentation.dialogs.dialog_chrome import prepare_dialog_chrome
 
     prepare_dialog_chrome(dialog, settings=settings)

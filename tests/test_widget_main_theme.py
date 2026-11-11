@@ -6,12 +6,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 from PyQt6.QtCore import QSettings
-from PyQt6.QtGui import QFont, QPalette
+from PyQt6.QtGui import QColor, QFont, QPalette
 from PyQt6.QtWidgets import QApplication
 import pytest
 
 from calendar_app.presentation.dialogs.widget_customization_dialog import WidgetCustomizationDialog
 from calendar_app.presentation.main_window.theme_actions import ThemeActionsMixin
+from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor
 from calendar_app.presentation.widgets.panel_widget_theme import _build_widget_mode_theme_tokens
 from calendar_app.presentation.widgets.unified_widget_mode import _widget_theme_tokens
 from calendar_app.presentation.widgets.widget_mode_coordinator import (
@@ -19,6 +20,8 @@ from calendar_app.presentation.widgets.widget_mode_coordinator import (
     WidgetModeState,
 )
 from calendar_app.presentation.widgets.widget_mode_skins import widget_mode_skins
+from calendar_app.presentation.widgets.widget_mode_theme import WIDGET_SHELL_MIN_ALPHA
+from calendar_app.shared.color_utils import contrast_ratio
 from calendar_app.shared.system_theme import set_runtime_system_text_theme
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
 from calendar_app.shared.ui_tokens import get_ui_tokens
@@ -27,22 +30,57 @@ from tests.test_widget_mode_ux import (
     workspace,  # noqa: F401
 )
 
+# Identity roles follow the main theme exactly. Reading roles (text, surfaces)
+# keep the main base and accent but are hardened for a widget that floats over
+# arbitrary wallpaper: see assert_widget_reads_like_main().
 ROLE_MAP = {
     "accent": "accent",
-    "text_primary": "text_primary",
-    "text_secondary": "text_secondary",
-    "text_faint": "text_faint",
-    "input_bg": "input_bg",
     "input_border": "input_border",
-    "panel_bg": "bg_main",
-    "header_bg": "bg_top",
-    "section_bg": "content_bg",
-    "card_bg": "bg_item",
-    "card_hover": "bg_item_hover",
-    "calendar_text": "text_primary",
-    "calendar_muted": "text_muted",
-    "panel_border": "border",
 }
+TEXT_FLOORS = {
+    "text_primary": 7.0,
+    "card_text_primary": 7.0,
+    "calendar_text": 7.0,
+    "text_secondary": 5.5,
+    "card_text_secondary": 5.5,
+    "button_text": 5.5,
+    "calendar_muted": 4.5,
+    "text_faint": 4.5,
+    "accent_deep": 4.5,
+    "calendar_weekday_sat": 4.5,
+    "calendar_weekday_sun": 4.5,
+}
+
+
+def _over(color, backdrop):
+    front = css_to_qcolor(color)
+    alpha = front.alphaF()
+    return QColor(
+        *(
+            round(a * alpha + b * (1 - alpha))
+            for a, b in zip(front.getRgb()[:3], QColor(backdrop).getRgb()[:3], strict=True)
+        )
+    )
+
+
+def assert_widget_reads_like_main(tokens, main):
+    """Same identity as the main window; legible on black and on white wallpaper."""
+    for target, source in ROLE_MAP.items():
+        assert tokens[target] == main[source], target
+    shell = css_to_qcolor(tokens["panel_bg"])
+    base = css_to_qcolor(main["bg_main"])
+    assert shell.getRgb()[:3] == base.getRgb()[:3]
+    assert shell.alpha() >= WIDGET_SHELL_MIN_ALPHA
+    backdrops = [_over(tokens["panel_bg"], wall) for wall in ("#000000", "#ffffff")]
+    for role, minimum in TEXT_FLOORS.items():
+        for backdrop in backdrops:
+            ink = _over(tokens[role], backdrop)
+            assert contrast_ratio(ink.name(), backdrop.name()) >= minimum, (role, tokens[role])
+    for surface in ("card_bg", "button_bg", "surface_alt"):
+        ink = _over(tokens["text_secondary"], _over(tokens[surface], backdrops[0]))
+        assert contrast_ratio(ink.name(), _over(tokens[surface], backdrops[0]).name()) >= 5.5
+    # The selected day tile stays visible on the opaque shell.
+    assert css_to_qcolor(tokens["hero_bg_strong"]).getRgb()[:3] != shell.getRgb()[:3]
 
 
 @pytest.mark.parametrize(
@@ -81,14 +119,10 @@ def test_every_skin_reuses_main_roles_and_keeps_saved_widget_identity(
             expected = get_ui_tokens(host.settings)
             tokens = _widget_theme_tokens(host)
             assert _build_widget_mode_theme_tokens(host) == tokens
-            for target, source in ROLE_MAP.items():
-                assert tokens[target] == expected[source], (skin.skin_id, target)
+            assert_widget_reads_like_main(tokens, expected)
             snapshot = build_theme_snapshot(host.settings)
             assert tokens["_main_base_color"] == snapshot.panel_base_color
             assert float(tokens["_main_opacity"]) == snapshot.opacity_factor
-            assert tokens["calendar_weekday_sat"] == snapshot.ui_palette["weekday_sat"]
-            assert tokens["calendar_weekday_sun"] == snapshot.ui_palette["weekday_sun"]
-            assert tokens["hero_bg_strong"] == snapshot.ui_palette["selection_bg"]
             assert {key: host.settings.value(key) for key in host.settings.allKeys()} == before
         output = Path("artifacts/widget-main-theme-20261106/role-metadata")
         output.mkdir(parents=True, exist_ok=True)
@@ -228,8 +262,7 @@ def test_auto_mode_uses_effective_main_family_without_rewriting_stored_colors():
             set_runtime_system_text_theme(mode)
             tokens = _widget_theme_tokens(host)
             main = get_ui_tokens(host.settings)
-            for target, source in ROLE_MAP.items():
-                assert tokens[target] == main[source]
+            assert_widget_reads_like_main(tokens, main)
             assert tokens["_main_text_theme"] == mode
             assert host.settings.values == before
     finally:

@@ -221,6 +221,81 @@ class DraggableTaskButtonRenderTests(unittest.TestCase):
 
         host.close()
 
+    def test_hover_and_detail_singletons_are_recreated_after_deletion(self):
+        """Window teardown deletes the shared popups; later events must not raise."""
+        from PyQt6 import sip
+        from PyQt6.QtCore import QEvent
+
+        from calendar_app.presentation.widgets import ui_components
+
+        popup = ui_components.get_hover_info_popup()
+        overlay = get_detail_overlay()
+        sip.delete(popup)
+        sip.delete(overlay)
+
+        fresh_popup = ui_components.get_hover_info_popup()
+        fresh_overlay = get_detail_overlay()
+        self.assertFalse(sip.isdeleted(fresh_popup))
+        self.assertFalse(sip.isdeleted(fresh_overlay))
+        self.assertIsNot(fresh_popup, popup)
+        self.assertIsNot(fresh_overlay, overlay)
+
+        # Deleted again: the app-wide filter and the cancel helper must stay quiet.
+        sip.delete(ui_components.get_hover_info_popup())
+        sip.delete(get_detail_overlay())
+        ui_components.hide_hover_info()
+        watched = QWidget()
+        event_filter = ui_components.HoverInfoEventFilter()
+        try:
+            for kind in (QEvent.Type.MouseMove, QEvent.Type.Leave, QEvent.Type.Enter):
+                self.assertFalse(
+                    event_filter.eventFilter(watched, QEvent(kind)),
+                    kind,
+                )
+        finally:
+            watched.deleteLater()
+            event_filter.deleteLater()
+
+    def test_detail_card_closes_when_its_calendar_item_is_rebuilt(self):
+        """A refresh may delete the item while its floating detail card is open."""
+        from PyQt6 import sip
+
+        task = {"id": 78, "name": "Refresh", "status": "pending", "deadline": "2026-09-22"}
+        host = QWidget()
+        layout = QVBoxLayout(host)
+        button = DraggableTaskButton(78, "Refresh")
+        layout.addWidget(button)
+        host.show()
+        with (
+            patch(
+                "calendar_app.presentation.widgets.ui_components.task_repo.get_unified_task",
+                return_value=task,
+            ),
+            patch(
+                "calendar_app.presentation.widgets.ui_components.checklist_repo.get_task_checklist_items",
+                return_value=[],
+            ),
+        ):
+            button.toggle_expand()
+            self._app.processEvents()
+        overlay = get_detail_overlay()
+        self.assertTrue(overlay.isVisible())
+        action_buttons = button.actions_widget.findChildren(QPushButton)
+        self.assertEqual(2, len(action_buttons))
+
+        sip.delete(button)
+        self._app.processEvents()
+
+        self.assertFalse(overlay.isVisible())
+        self.assertIsNone(overlay._owner)
+        self.assertEqual(0, overlay.layout().count())
+        # Stale action rows must not reach the deleted item's signals.
+        for action in action_buttons:
+            if not sip.isdeleted(action):
+                action.click()
+        self._app.processEvents()
+        host.close()
+
 
 class MonthRendererMonthRangeTests(unittest.TestCase):
     @classmethod

@@ -74,6 +74,32 @@ def test_google_mid_page_transport_failure_keeps_only_safe_error(monkeypatch, ca
     assert "private-request" not in caplog.text
 
 
+def test_offline_httplib2_failures_are_network_errors(monkeypatch):
+    """httplib2 reports a missing network as ServerNotFoundError, not ConnectionError."""
+    import httplib2
+
+    for error in (
+        httplib2.ServerNotFoundError("Unable to find the server at private.example"),
+        OSError(10051, "A socket operation was attempted to an unreachable network"),
+    ):
+        assert service._google_refresh_failure_kind(error) == "network_unavailable"
+
+    sync = service.CalendarSyncService()
+    sync.is_authenticated = True
+    sync.service = SimpleNamespace(
+        calendarList=lambda: SimpleNamespace(list=lambda **_kwargs: object())
+    )
+
+    def offline(*_args, **_kwargs):
+        raise httplib2.ServerNotFoundError("Unable to find the server")
+
+    monkeypatch.setattr(sync, "_execute_request", offline)
+    assert sync.list_accessible_calendars() == []
+    # Discovery must treat an outage as unavailable, not as an empty account.
+    assert sync.last_error_kind == "network_unavailable"
+    assert service._google_refresh_failure_kind(OSError(2, "missing")) == "operation_failed"
+
+
 @pytest.mark.parametrize("reason", ["rateLimitExceeded", "userRateLimitExceeded"])
 def test_google_403_rate_limits_retry_and_recover(monkeypatch, reason):
     sync = service.CalendarSyncService()

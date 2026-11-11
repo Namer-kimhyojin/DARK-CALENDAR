@@ -141,7 +141,6 @@ def _build_command_palette_stylesheet(bundle: dict) -> str:
                 padding: {bundle["input_padding_y"]}px {bundle["input_padding_x"]}px;
                 font-size: 17px;
                 color: {bundle["item_text"]};
-                font-family: 'Segoe UI', 'Malgun Gothic', 'Inter', sans-serif;
             }}
             QLineEdit:focus {{
                 border-color: {bundle["focus_border"]};
@@ -660,11 +659,19 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="toggle_top_bar",
-                title=t("menu.hide_topbar", "Toggle Top Bar"),
+                title=t("menu.auto_hide_topbar", "Auto-hide top bar"),
+                group="View",
+                icon_key=ICON.TOOLBAR,
+                shortcut_id="topbar",
+                keywords=("auto hide", "top bar", "menu bar", "pin", "상단 바", "고정"),
+            ),
+            dict(
+                command_id="toggle_navigation_rail",
+                title=t("topbar.navigation_rail", "Quick navigation"),
                 group="View",
                 icon_key=ICON.SCREEN_MGMT,
-                shortcut_id="topbar",
-                keywords=("top bar", "menu bar"),
+                shortcut_id="navigation_rail",
+                keywords=("quick navigation", "rail", "sidebar", "빠른 이동"),
             ),
             dict(
                 command_id="toggle_calendar_toolbar",

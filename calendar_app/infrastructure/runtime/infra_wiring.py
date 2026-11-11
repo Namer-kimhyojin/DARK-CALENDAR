@@ -56,7 +56,6 @@ def _tray_menu_style():
             padding: 4px;
             border-radius: 6px;
             font-size: 10pt;
-            font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Segoe UI', sans-serif;
         }
         QMenu::item {
             padding: 6px 35px 6px 12px;
@@ -167,9 +166,9 @@ def init_tray_icon(app):
     view_menu = QMenu(_se(t("tray.view_options", "화면 및 창")), tray_menu)
     view_menu.setIcon(_ic(ICON.SCREEN_MGMT))
     view_menu.setStyleSheet(style)
-    _create_action(app, t("tray.topbar"), app.toggle_top_bar, "topbar", view_menu).setIcon(
-        _ic(ICON.SCREEN_MGMT)
-    )
+    _create_action(
+        app, t("menu.auto_hide_topbar", "상단 바 자동 숨기기"), app.toggle_top_bar, "topbar", view_menu
+    ).setIcon(_ic(ICON.TOOLBAR))
     _create_action(
         app, t("tray.calendar_topbar"), app.toggle_calendar_toolbar, "cal_toolbar", view_menu
     ).setIcon(_ic(ICON.TOOLBAR))

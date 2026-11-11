@@ -53,11 +53,12 @@ def test_large_style_cards_and_font_controls_fit_without_rewriting_preferences(a
     assert dialog._font_size_spin.value() == scale.body_pt
     assert dialog._font_combo.height() >= dialog._font_combo.fontMetrics().height()
     assert dialog._font_popup_btn.height() >= dialog._font_popup_btn.iconSize().height()
-    card = next(iter(dialog._family_btns.values()))
-    assert card.height() >= card.fontMetrics().lineSpacing() * 2 + 4
+    swatch = next(iter(dialog._family_btns.values()))
+    assert swatch.height() >= swatch.iconSize().height() + 8
     assert not dialog._apply_btn.visibleRegion().isEmpty()
     if scale.body_px > 20:
-        assert dialog._family_columns == 1
+        viewport = dialog._settings_scroll.viewport().width()
+        assert dialog._point_columns * 52 - 8 <= max(52, viewport - 54)
         assert not dialog._wide_appearance_layout
         assert dialog._settings_scroll.width() >= dialog.width() - 60
         assert dialog._settings_scroll.height() > dialog.height() // 3

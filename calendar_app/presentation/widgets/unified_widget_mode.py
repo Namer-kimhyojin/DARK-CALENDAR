@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from collections import Counter
+import contextlib
+import sys
 
 from PyQt6 import sip
 from PyQt6.QtCore import (
@@ -103,6 +105,9 @@ from calendar_app.presentation.widgets.widget_placement import (
 )
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
+
+# Windows posts this when its modal move/size loop ends (startSystemMove).
+_WM_EXITSIZEMOVE = 0x0232
 
 
 def _safe_text(value) -> str:
@@ -1024,6 +1029,8 @@ class UnifiedWidgetWindow(QWidget):
         self._last_placement = None
         self._placement_drag_active = False
         self._placement_press_global = None
+        self._system_move_active = False
+        self._system_move_alt = False
         self._feedback_timer = QTimer(self)
         self._feedback_timer.setSingleShot(True)
         self._feedback_timer.timeout.connect(self._expire_feedback)
@@ -1506,7 +1513,27 @@ class UnifiedWidgetWindow(QWidget):
                         return True
                     self._placement_drag_active = True
                     self.toolbar.setCursor(Qt.CursorShape.ClosedHandCursor)
+                    # Let the OS move the window. Qt's logical coordinates are not
+                    # continuous between monitors with different scaling, so moving
+                    # to "cursor - offset" made the window jump and flip DPI on every
+                    # mouse event near the boundary (stalls and size creep).
+                    if self._try_start_system_move():
+                        self._system_move_active = True
+                        self._system_move_alt = bool(
+                            event.modifiers() & Qt.KeyboardModifier.AltModifier
+                        )
+                        self._drag_offset = None
+                        return True
                 self.move(event.globalPosition().toPoint() - self._drag_offset)
+                return True
+            if (
+                event.type() == QEvent.Type.MouseButtonRelease
+                and event.button() == Qt.MouseButton.LeftButton
+                and self._system_move_active
+            ):
+                self._complete_placement_move(
+                    snap=not event.modifiers() & Qt.KeyboardModifier.AltModifier
+                )
                 return True
             if (
                 event.type() == QEvent.Type.MouseButtonRelease
@@ -1515,31 +1542,73 @@ class UnifiedWidgetWindow(QWidget):
             ):
                 self._drag_offset = None
                 if self._placement_drag_active:
-                    settings = self.controller.main_window.settings
-                    if (
-                        settings.value("widget_mode_snap_enabled", True, type=bool)
-                        and not event.modifiers() & Qt.KeyboardModifier.AltModifier
-                    ):
-                        screen = QApplication.screenAt(self.geometry().center()) or self.screen()
-                        if screen is not None:
-                            area = screen.availableGeometry()
-                            x, y = self.x(), self.y()
-                            for value in (area.left(), area.right() - self.width() + 1):
-                                if abs(value - x) <= 12:
-                                    x = value
-                                    break
-                            for value in (area.top(), area.bottom() - self.height() + 1):
-                                if abs(value - y) <= 12:
-                                    y = value
-                                    break
-                            self.move(x, y)
-                    self._finish_placement_edit()
+                    self._complete_placement_move(
+                        snap=not event.modifiers() & Qt.KeyboardModifier.AltModifier
+                    )
                 else:
                     self._placement_origin = None
                 self.toolbar.setCursor(Qt.CursorShape.OpenHandCursor)
                 self._placement_drag_active = False
                 return True
         return super().eventFilter(watched, event)
+
+    def _try_start_system_move(self) -> bool:
+        try:
+            handle = self.windowHandle()
+            return handle is not None and bool(handle.startSystemMove())
+        except RuntimeError:
+            # The native handle can disappear; keep the logical-coordinate fallback.
+            return False
+
+    def nativeEvent(self, event_type, message):
+        if self._system_move_active and sys.platform == "win32":
+            with contextlib.suppress(Exception):
+                if bytes(event_type) == b"windows_generic_MSG":
+                    import ctypes.wintypes
+
+                    msg = ctypes.wintypes.MSG.from_address(int(message))
+                    if msg.message == _WM_EXITSIZEMOVE:
+                        # Finish after Windows has fully left its move loop.
+                        QTimer.singleShot(0, self._complete_system_move)
+        # QWidget's default declines every message. Calling super() here crashes
+        # PyQt6 6.12 with an access violation, so return the default directly.
+        return False, 0
+
+    def _complete_system_move(self) -> None:
+        if self._system_move_active:
+            self._complete_placement_move(snap=not self._system_move_alt)
+
+    def _complete_placement_move(self, *, snap: bool) -> None:
+        """Settle a toolbar move: keep size, fit the destination screen, snap, save."""
+        self._system_move_active = False
+        self._system_move_alt = False
+        self._drag_offset = None
+        self._placement_drag_active = False
+        self.toolbar.setCursor(Qt.CursorShape.OpenHandCursor)
+        state = self._placement_origin
+        screen = QApplication.screenAt(self.frameGeometry().center()) or self.screen()
+        if screen is not None:
+            area = screen.availableGeometry()
+            rect = QRect(self.geometry())
+            if state is not None and state[0] == self.active_layout_id():
+                # Moving never resizes. A DPI hop can round the size by a pixel
+                # each way; restore the size the drag started with.
+                rect.setSize(state[1].size())
+            rect = clamp_rect(rect, area)
+            if snap and self.controller.main_window.settings.value(
+                "widget_mode_snap_enabled", True, type=bool
+            ):
+                for value in (area.left(), area.right() - rect.width() + 1):
+                    if abs(value - rect.x()) <= 12:
+                        rect.moveLeft(value)
+                        break
+                for value in (area.top(), area.bottom() - rect.height() + 1):
+                    if abs(value - rect.y()) <= 12:
+                        rect.moveTop(value)
+                        break
+            if rect != self.geometry():
+                self.setGeometry(rect)
+        self._finish_placement_edit()
 
     def placement_is_locked(self):
         return self.controller.main_window.settings.value(
@@ -1570,6 +1639,8 @@ class UnifiedWidgetWindow(QWidget):
         self._placement_origin = None
         self._drag_offset = None
         self._placement_drag_active = False
+        self._system_move_active = False
+        self._system_move_alt = False
         self.toolbar.setCursor(Qt.CursorShape.OpenHandCursor)
         self.size_grip.cancel_edit()
         if (
@@ -2800,9 +2871,15 @@ class UnifiedWidgetController:
         app = QApplication.instance()
         if app is not None:
             app.screenRemoved.connect(self._handle_screen_change)
-            main_window.destroyed.connect(
-                lambda: app.screenRemoved.disconnect(self._handle_screen_change)
-            )
+            main_window.destroyed.connect(self._disconnect_screen_change)
+
+    def _disconnect_screen_change(self, *_args) -> None:
+        app = QApplication.instance()
+        if app is None:
+            return
+        # Already disconnected, or the application is shutting down.
+        with contextlib.suppress(TypeError, RuntimeError):
+            app.screenRemoved.disconnect(self._handle_screen_change)
 
     def _current_date(self) -> QDate:
         target = getattr(self.main_window, "current_date", None)

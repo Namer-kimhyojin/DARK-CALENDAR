@@ -2,6 +2,7 @@
 
 from datetime import date, datetime
 import os
+import re
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -61,6 +62,7 @@ def _render_pdf(
     *,
     grayscale: bool = False,
     detail_page_mode: str = "overflow",
+    font_family: str | None = None,
 ):
     request = CalendarPrintRequest(
         date(2026, 4, 1),
@@ -83,7 +85,41 @@ def _render_pdf(
         CalendarPrintRenderOptions(document_title="Calendar print test"),
         grayscale=grayscale,
     )
-    return render_calendar_document(printer, document)
+    return render_calendar_document(printer, document, font_family=font_family)
+
+
+def _pdf_base_fonts(path) -> set[str]:
+    """Font names embedded in a PDF, without subset prefixes (``ABCDEF+Name``)."""
+    names = set()
+    for raw in re.findall(rb"/BaseFont\s*/([^\s/<>\[\]]+)", path.read_bytes()):
+        names.add(raw.decode("utf-8", errors="replace").split("+", 1)[-1])
+    return names
+
+
+def test_printed_text_uses_the_users_chosen_font(tmp_path):
+    """Printing used a fixed Malgun Gothic even when the user had chosen another font."""
+    from PyQt6.QtGui import QFont, QFontInfo
+    import pytest
+
+    # The offscreen platform has no Pretendard and substitutes an unrelated font,
+    # so the check only means something on the real Windows font database.
+    # Only a family the font database really resolves is a meaningful choice;
+    # offscreen substitutes an unrelated font for anything it does not have.
+    chosen = next(
+        (
+            family
+            for family in ("Pretendard", "Arial", "Calibri")
+            if QFontInfo(QFont(family)).family() == family
+        ),
+        None,
+    )
+    if chosen is None:
+        pytest.skip("no alternate UI font installed on this machine")
+    pdf = tmp_path / "chosen.pdf"
+    _render_pdf(pdf, 2, font_family=chosen)
+    fonts = _pdf_base_fonts(pdf)
+    wanted = chosen.replace(" ", "")
+    assert any(wanted.lower() in name.replace(" ", "").lower() for name in fonts), (chosen, fonts)
 
 
 def test_vector_pdf_is_created_without_missing_events(tmp_path):

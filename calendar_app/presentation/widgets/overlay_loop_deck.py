@@ -5,10 +5,21 @@ import math
 import os
 from pathlib import Path
 
-from PyQt6.QtCore import QEvent, QPoint, QSignalBlocker, QSize, QStandardPaths, Qt, QTimer
+from PyQt6.QtCore import (
+    QEvent,
+    QPoint,
+    QPointF,
+    QRectF,
+    QSignalBlocker,
+    QSize,
+    QStandardPaths,
+    Qt,
+    QTimer,
+)
 from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import (
     QAbstractButton,
+    QBoxLayout,
     QComboBox,
     QFileDialog,
     QFrame,
@@ -19,46 +30,69 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMenu,
     QMessageBox,
-    QProgressBar,
     QPushButton,
     QScrollArea,
     QScroller,
     QSizePolicy,
     QSlider,
     QSpinBox,
+    QStyle,
+    QStyleOptionComboBox,
+    QStylePainter,
     QVBoxLayout,
     QWidget,
 )
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_styles import (
+    build_dialog_menu_stylesheet,
     build_dialog_stylesheet,
     get_dialog_theme_tokens,
 )
+from calendar_app.presentation.widgets.loop_mixer_visuals import BeatTimeline, StereoMeter
 from calendar_app.presentation.widgets.overlay_base import _BaseOverlayWidget, _GripFrame
 from calendar_app.presentation.widgets.widget_placement import NoWheelComboBox, NoWheelSpinBox
 from calendar_app.shared.app_lifecycle import is_app_exiting
+from calendar_app.shared.color_utils import parse_css_color
+from calendar_app.shared.icon_map import ICON, icon, strip_leading_emoji
 from calendar_app.shared.typography import get_typography_scale
 
 
 class TouchMixerComboBox(NoWheelComboBox):
     """Keep the input selector recognizable even when a platform arrow is absent."""
 
+    _ARROW_WIDTH = 28
+
     def paintEvent(self, event):  # noqa: N802
-        super().paintEvent(event)
-        painter = QPainter(self)
+        del event
+        painter = QStylePainter(self)
+        option = QStyleOptionComboBox()
+        self.initStyleOption(option)
+        painter.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, option)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         color = self.palette().text().color()
         if not self.isEnabled():
-            color.setAlpha(100)
+            color.setAlpha(160)
+        rtl = self.isRightToLeft()
+        arrow_width = self._ARROW_WIDTH
+        field = self.rect().adjusted(arrow_width if rtl else 8, 0, -8 if rtl else -arrow_width, 0)
+        label = self.fontMetrics().elidedText(
+            option.currentText, Qt.TextElideMode.ElideRight, max(0, field.width())
+        )
+        painter.setPen(color)
+        alignment = Qt.AlignmentFlag.AlignRight if rtl else Qt.AlignmentFlag.AlignLeft
+        painter.drawText(field, alignment | Qt.AlignmentFlag.AlignVCenter, label)
         painter.setPen(QPen(color, 1.7, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        x, y = self.width() - 20, self.height() // 2
+        x = arrow_width // 2 if rtl else self.width() - arrow_width // 2
+        y = self.height() // 2
         painter.drawLine(x - 4, y - 2, x, y + 2)
         painter.drawLine(x, y + 2, x + 4, y - 2)
 
 
 class TouchMixerSlider(QSlider):
-    """The entire 44px groove is a direct-position touch target; wheel never edits."""
+    """Direct-position fader with a grip and a center reference for stereo pan."""
+
+    _INSET = 14
 
     def __init__(self, label, low, high, parent=None):
         super().__init__(Qt.Orientation.Horizontal, parent)
@@ -66,12 +100,57 @@ class TouchMixerSlider(QSlider):
         self.setMinimumHeight(44)
         self.setAccessibleName(label)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        self._centered = low < 0 < high
+        self._accent = QColor("#b9a0f2")
+        self._rail = QColor("#484452")
+        self._grip = QColor("#e4dfeb")
+        self._cut = QColor("#241e30")
+
+    def set_theme(self, tokens):
+        self._accent = parse_css_color(tokens["accent"])
+        self._rail = parse_css_color(tokens["border_soft"])
+        self._grip = parse_css_color(tokens["text_primary"])
+        self._cut = parse_css_color(tokens["floating_bg"])
+        self.update()
+
+    def paintEvent(self, event):  # noqa: N802
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if not self.isEnabled():
+            painter.setOpacity(0.45)
+        x = self._INSET
+        span = max(1, self.width() - x * 2)
+        y = self.height() / 2
+        fraction = (self.value() - self.minimum()) / (self.maximum() - self.minimum())
+        if self.invertedAppearance():
+            fraction = 1 - fraction
+        handle_x = x + span * fraction
+        origin = x + span / 2 if self._centered else x
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(self._rail)
+        painter.drawRoundedRect(QRectF(x, y - 3, span, 6), 3, 3)
+        painter.setBrush(self._accent)
+        painter.drawRoundedRect(
+            QRectF(min(origin, handle_x), y - 3, abs(handle_x - origin), 6), 3, 3
+        )
+        for index in range(5):
+            tick = x + span * index / 4
+            color = self._grip if self._centered and index == 2 else self._rail
+            painter.setPen(QPen(color, 1.4))
+            painter.drawLine(QPointF(tick, y + 12), QPointF(tick, y + 17))
+        painter.setPen(QPen(self._accent, 2) if self.hasFocus() else Qt.PenStyle.NoPen)
+        painter.setBrush(self._grip)
+        painter.drawRoundedRect(QRectF(handle_x - 7, y - 11, 14, 22), 3, 3)
+        painter.setPen(QPen(self._cut, 1.5))
+        painter.drawLine(QPointF(handle_x, y - 5), QPointF(handle_x, y + 5))
 
     def wheelEvent(self, event):  # noqa: N802
         event.ignore()
 
     def _position(self, event):
-        fraction = max(0.0, min(1.0, (event.position().x() - 14) / max(1, self.width() - 28)))
+        x = self._INSET
+        fraction = max(0.0, min(1.0, (event.position().x() - x) / max(1, self.width() - 2 * x)))
         if self.invertedAppearance():
             fraction = 1.0 - fraction
         self.setValue(round(self.minimum() + fraction * (self.maximum() - self.minimum())))
@@ -91,6 +170,14 @@ class TouchMixerSlider(QSlider):
         else:
             super().mouseMoveEvent(event)
 
+    def mouseDoubleClickEvent(self, event):  # noqa: N802
+        if self._centered and event.button() == Qt.MouseButton.LeftButton:
+            self.setSliderDown(False)
+            self.setValue(0)
+            event.accept()
+        else:
+            super().mouseDoubleClickEvent(event)
+
     def mouseReleaseEvent(self, event):  # noqa: N802
         if self.isSliderDown():
             self._position(event)
@@ -103,30 +190,70 @@ class TouchMixerSlider(QSlider):
 class _Waveform(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setMinimumHeight(34)
-        self.peaks = []
+        self.setFixedHeight(40)
+        self.peaks = ()
+        self.clip_ratio = 0.0
+        self.bars = 4
         self.position = None
+        self.mode = "idle"
+        self.suppressed = False
         self.accent = QColor("#b9a0f2")
+        self.danger = QColor("#e58088")
+        self.background = QColor("#211d2a")
+        self.grid = QColor("#514a5e")
+        self.foreground = QColor("#eeeaf4")
+
+    def set_theme(self, tokens):
+        self.accent = parse_css_color(tokens["accent"])
+        self.danger = parse_css_color(tokens["danger_hex"])
+        self.background = parse_css_color(tokens["input_bg"])
+        self.grid = parse_css_color(tokens["border_soft"])
+        self.foreground = parse_css_color(tokens["text_primary"])
+        self.update()
+
+    def sync(self, peaks, clip_ratio, bars, position, mode, suppressed):
+        state = (tuple(peaks), clip_ratio, bars, position, mode, suppressed)
+        if state != (
+            self.peaks,
+            self.clip_ratio,
+            self.bars,
+            self.position,
+            self.mode,
+            self.suppressed,
+        ):
+            self.peaks, self.clip_ratio, self.bars, self.position, self.mode, self.suppressed = (
+                state
+            )
+            self.update()
 
     def paintEvent(self, event):  # noqa: N802
         del event
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        center = self.height() / 2
-        faded = QColor(self.accent)
-        faded.setAlpha(55)
-        painter.setPen(QPen(faded, 1))
-        painter.drawLine(8, round(center), self.width() - 8, round(center))
-        painter.setPen(QPen(self.accent, 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        count = len(self.peaks)
+        painter.setBrush(self.background)
+        painter.setPen(QPen(self.danger if self.mode == "recording" else self.grid, 1))
+        painter.drawRoundedRect(QRectF(self.rect()).adjusted(1, 1, -1, -1), 5, 5)
+        center, left, span = self.height() / 2, 6, max(1, self.width() - 12)
+        painter.setPen(QPen(self.grid, 1))
+        painter.drawLine(QPointF(left, center), QPointF(left + span, center))
+        for bar in range(1, self.bars):
+            x = left + span * bar / self.bars
+            painter.drawLine(QPointF(x, 5), QPointF(x, self.height() - 5))
+        wave_color = QColor(self.accent)
+        if self.suppressed:
+            wave_color.setAlphaF(0.38)
+        painter.setPen(QPen(wave_color, 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+        step = span * self.clip_ratio / max(1, len(self.peaks))
         for index, value in enumerate(self.peaks):
-            height = max(1, min(1.0, abs(float(value))) * (center - 3))
-            x = 8 + index * max(1, self.width() - 16) / max(1, count - 1)
-            painter.drawLine(round(x), round(center - height), round(x), round(center + height))
+            x = left + (index + 0.5) * step
+            if x > left + span:
+                break
+            height = max(0.5, value * (center - 4))
+            painter.drawLine(QPointF(x, center - height), QPointF(x, center + height))
         if self.position is not None:
-            x = round(8 + self.position * (self.width() - 16))
-            painter.setPen(QPen(self.accent, 2))
-            painter.drawLine(x, 1, x, self.height() - 1)
+            x = left + self.position * span
+            painter.setPen(QPen(self.danger if self.mode == "recording" else self.foreground, 2))
+            painter.drawLine(QPointF(x, 4), QPointF(x, self.height() - 4))
 
 
 def _button(text, parent, callback=None, *, toggle=False):
@@ -140,9 +267,23 @@ def _button(text, parent, callback=None, *, toggle=False):
     return button
 
 
+def _compact_button(symbol, label, parent, callback=None, *, toggle=False, icon_key=None):
+    button = _button(symbol, parent, callback, toggle=toggle)
+    button.setProperty("mixerCompact", True)
+    button.setAccessibleName(strip_leading_emoji(label).lstrip("▶■● "))
+    button.setToolTip(button.accessibleName())
+    button.setMinimumWidth(44)
+    button.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+    if icon_key:
+        button.setProperty("mixerIcon", icon_key)
+        button.setProperty("mixerSymbol", symbol)
+    return button
+
+
 def _touch_combo(combo):
-    combo.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+    combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     combo.setMinimumWidth(80)
+    combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
     combo.view().setStyleSheet("QAbstractItemView::item {min-height:44px; padding:3px 8px;}")
     QScroller.grabGesture(combo.view().viewport(), QScroller.ScrollerGestureType.TouchGesture)
 
@@ -153,15 +294,20 @@ class _TrackCard(QFrame):
         self.panel, self.index = mixer_widget, index
         self.setObjectName("loopTrack")
         self.setProperty("role", "dialogCard")
-        self.setMinimumWidth(280)
+        self.setMinimumWidth(258)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         root = QVBoxLayout(self)
-        root.setContentsMargins(12, 10, 12, 10)
-        root.setSpacing(2)
+        root.setContentsMargins(10, 8, 10, 8)
+        root.setSpacing(3)
         title = QHBoxLayout()
         self.number = QLabel(f"{index + 1:02d}", self)
+        self.number.setObjectName("mixerChannelNumber")
+        self.number.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.number.setMinimumWidth(32)
         title.addWidget(self.number)
         self.name = QLineEdit(self)
+        self.name.setObjectName("mixerTrackName")
+        self.name.setMinimumWidth(60)
         self.name.setMaxLength(40)
         self.name.setAccessibleName(
             t("loop_mixer.track_name", "트랙 {number} 이름", number=index + 1)
@@ -169,6 +315,19 @@ class _TrackCard(QFrame):
         self.name.setMinimumHeight(44)
         self.name.editingFinished.connect(lambda: self._edit(name=self.name.text()))
         title.addWidget(self.name, 1)
+        self.tools_button = _compact_button(
+            "···", t("loop_mixer.track_actions", "트랙 {number} 작업", number=index + 1), self
+        )
+        self.tools_button.setFixedWidth(44)
+        self.tools_menu = QMenu(self.tools_button)
+        self.load_action = self.tools_menu.addAction(
+            t("loop_mixer.wav_load", "WAV 담기"), lambda: mixer_widget._load_track(index)
+        )
+        self.clear_action = self.tools_menu.addAction(
+            t("loop_mixer.clear", "비우기"), lambda: mixer_widget._clear_track(index)
+        )
+        self.tools_button.setMenu(self.tools_menu)
+        title.addWidget(self.tools_button)
         root.addLayout(title)
         self.source = TouchMixerComboBox(self)
         self.source.setMinimumHeight(44)
@@ -180,17 +339,6 @@ class _TrackCard(QFrame):
         root.addWidget(self.source)
         self.wave = _Waveform(self)
         root.addWidget(self.wave)
-        controls = QHBoxLayout()
-        self.arm = _button(t("loop_mixer.arm", "● 대기"), self, toggle=True)
-        self.arm.setToolTip(
-            t("loop_mixer.arm_hint", "녹음을 누르면 대기 중인 트랙을 함께 한 바퀴 녹음합니다.")
-        )
-        self.mute = _button(t("loop_mixer.mute", "음소거"), self, toggle=True)
-        self.solo = _button(t("loop_mixer.solo", "솔로"), self, toggle=True)
-        for button, key in ((self.arm, "armed"), (self.mute, "muted"), (self.solo, "solo")):
-            controls.addWidget(button, 1)
-            button.toggled.connect(lambda value, field=key: self._edit(**{field: value}))
-        root.addLayout(controls)
         self.volume = TouchMixerSlider(
             t("loop_mixer.track_volume", "트랙 {number} 음량", number=index + 1), 0, 100, self
         )
@@ -204,32 +352,45 @@ class _TrackCard(QFrame):
         )
         self.pan_value = QLabel(self)
         self.pan.valueChanged.connect(lambda value: self._edit(pan=value))
+        self.pan.setToolTip(t("loop_mixer.pan_center_hint", "좌우 밸런스 · 두 번 눌러 가운데로"))
+        self.faders = QBoxLayout(QBoxLayout.Direction.TopToBottom)
+        self.faders.setSpacing(8)
+        self.fader_labels = []
         for label, slider, value_label in (
             (t("loop_mixer.volume", "음량"), self.volume, self.volume_value),
             (t("loop_mixer.pan", "좌우"), self.pan, self.pan_value),
         ):
             row = QHBoxLayout()
-            row.addWidget(QLabel(label, self))
+            caption = QLabel(label, self)
+            self.fader_labels.append(caption)
+            row.addWidget(caption)
             row.addWidget(slider, 1)
-            value_label.setMinimumWidth(40)
+            value_label.setProperty("mixerReadout", True)
+            value_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            value_label.setMinimumWidth(42)
             row.addWidget(value_label)
-            root.addLayout(row)
-        tools = QHBoxLayout()
-        self.load = _button(
-            t("loop_mixer.wav_load", "WAV 담기"), self, lambda: mixer_widget._load_track(index)
+            self.faders.addLayout(row, 1)
+        root.addLayout(self.faders)
+        self.volume.setToolTip(self.volume.accessibleName())
+        controls = QHBoxLayout()
+        self.arm = _compact_button("●", t("loop_mixer.arm", "● 대기"), self, toggle=True)
+        self.arm.setToolTip(
+            t("loop_mixer.arm_hint", "녹음을 누르면 대기 중인 트랙을 함께 한 바퀴 녹음합니다.")
         )
-        self.clear = _button(
-            t("loop_mixer.clear", "비우기"), self, lambda: mixer_widget._clear_track(index)
-        )
-        tools.addWidget(self.load, 1)
-        tools.addWidget(self.clear, 1)
-        root.addLayout(tools)
+        self.mute = _compact_button("M", t("loop_mixer.mute", "음소거"), self, toggle=True)
+        self.solo = _compact_button("S", t("loop_mixer.solo", "솔로"), self, toggle=True)
+        for button, key in ((self.arm, "armed"), (self.mute, "muted"), (self.solo, "solo")):
+            button.setObjectName(f"mixer_{key}")
+            controls.addWidget(button, 1)
+            button.toggled.connect(lambda value, field=key: self._edit(**{field: value}))
+        root.addLayout(controls)
 
     def _edit(self, **values):
         self.panel._edit_track(self.index, **values)
 
-    def sync(self, data, options, fraction, running):
-        if not self.name.hasFocus():
+    def sync(self, data, options, fraction, mode, any_solo, loop_frames=1, bars=4):
+        running = mode in ("playing", "recording")
+        if not self.name.hasFocus() and self.name.text() != data.get("name", ""):
             with QSignalBlocker(self.name):
                 self.name.setText(data.get("name", ""))
         current = data.get("source", "none")
@@ -256,13 +417,24 @@ class _TrackCard(QFrame):
         self.volume_value.setText(f"{data.get('volume', 100)}%")
         pan = data.get("pan", 0)
         self.pan_value.setText("C" if pan == 0 else f"{'L' if pan < 0 else 'R'}{abs(pan)}")
-        self.wave.peaks = data.get("peaks", [])
-        self.wave.position = fraction if running and data.get("has_audio") else None
-        self.wave.update()
-        for control in (self.source, self.load, self.clear):
-            control.setEnabled(not running)
-        self.clear.setEnabled(not running and bool(data.get("has_audio")))
-        self.arm.setEnabled(not running)
+        capturing = (
+            mode == "recording" and data.get("armed") and current not in ("none", "file", "")
+        )
+        clip_mode = "recording" if capturing else "playing" if running else "idle"
+        has_audio = bool(data.get("has_audio"))
+        suppressed = bool(data.get("muted") or (any_solo and not data.get("solo")))
+        self.wave.sync(
+            data.get("peaks", ()),
+            data.get("audio_frames", loop_frames if has_audio else 0) / loop_frames,
+            bars,
+            fraction if capturing or (running and has_audio) else None,
+            clip_mode,
+            suppressed,
+        )
+        self.source.setEnabled(not running)
+        self.tools_button.setEnabled(not running)
+        self.load_action.setEnabled(not running)
+        self.clear_action.setEnabled(not running and has_audio)
 
 
 class OverlayLoopDeckWidget(_BaseOverlayWidget):
@@ -290,6 +462,7 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         super().__init__(owner)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, False)
         self._install_geometry_limits()
+        self._reflow_for_width()
         self._poll = QTimer(self)
         self._poll.setInterval(50)
         self._poll.timeout.connect(self._refresh_face)
@@ -324,47 +497,75 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         root.setSpacing(8)
         self.header = QFrame(face)
         header = QHBoxLayout(self.header)
+        self.header_row = header
         header.setContentsMargins(0, 0, 0, 0)
         title = QLabel(t("loop_mixer.title", "루프 믹서"), self.header)
         title.setProperty("role", "dialogTitle")
-        header.addWidget(title)
-        self.subtitle = QLabel(
-            t("loop_mixer.touch_hint", "여러 키덱 + 마이크 · 터치로 리듬을 쌓으세요"), self.header
+        header.addWidget(title, 1)
+        self.sources_label = QLabel(face)
+        header.addWidget(self.sources_label)
+        close = _compact_button(
+            "×",
+            t("loop_mixer.hide_label", "루프 믹서 숨기기"),
+            self.header,
+            lambda: self.set_enabled(False),
+            icon_key=ICON.CLOSE,
         )
-        header.addWidget(self.subtitle, 1)
-        close = _button(t("loop_mixer.hide", "×"), self.header, lambda: self.set_enabled(False))
-        close.setAccessibleName(t("loop_mixer.hide_label", "루프 믹서 숨기기"))
-        close.setFixedWidth(48)
+        close.setFixedWidth(44)
+        self.project_button = _compact_button(
+            "▣", t("loop_mixer.project", "프로젝트"), self.header, icon_key=ICON.FOLDER
+        )
+        self.project_button.setFixedWidth(44)
+        self.project_menu = QMenu(self.project_button)
+        self.open_action = self.project_menu.addAction(
+            t("loop_mixer.project_open", "프로젝트 열기"), self._open_project
+        )
+        self.save_action = self.project_menu.addAction(
+            t("loop_mixer.project_save", "저장"), self._save_project_as
+        )
+        self.export_action = self.project_menu.addAction(
+            t("loop_mixer.export", "WAV 내보내기"), self._export
+        )
+        self.project_button.setMenu(self.project_menu)
+        header.addWidget(self.project_button)
         header.addWidget(close)
         root.addWidget(self.header)
         self.transport = QGridLayout()
-        self.play_button = _button(t("loop_mixer.play", "▶ 재생"), face, self._play)
+        self.transport.setSpacing(5)
+        self.play_button = _compact_button(
+            "▶", t("loop_mixer.play", "▶ 재생"), face, self._play, icon_key=ICON.PLAY
+        )
         self.play_button.setObjectName("primary_btn")
-        self.stop_button = _button(t("loop_mixer.stop", "■ 정지"), face, self._stop)
-        self.record_button = _button(t("loop_mixer.record", "● 녹음"), face, self._record)
+        self.stop_button = _compact_button("■", t("loop_mixer.stop", "■ 정지"), face, self._stop)
+        self.record_button = _compact_button(
+            "●", t("loop_mixer.record", "● 녹음"), face, self._record
+        )
         self.record_button.setObjectName("danger_btn")
         self.bpm = NoWheelSpinBox(face)
         self.bpm.setRange(40, 240)
         self.bpm.setSuffix(" BPM")
         self.bpm.setMinimumHeight(48)
+        self.bpm.setMinimumWidth(90)
         self.bpm.setAccessibleName(t("loop_mixer.bpm", "루프 빠르기 BPM"))
+        self.bpm.setToolTip(self.bpm.accessibleName())
         self.bpm.valueChanged.connect(self._configure)
         self.bars = TouchMixerComboBox(face)
         _touch_combo(self.bars)
         self.bars.setMinimumHeight(48)
         self.bars.setAccessibleName(t("loop_mixer.bars", "루프 길이"))
+        self.bars.setToolTip(self.bars.accessibleName())
         for number in (1, 2, 4, 8):
             self.bars.addItem(t("loop_mixer.bar_count", "{number}마디", number=number), number)
         self.bars.activated.connect(self._configure)
-        for column, control in enumerate(
-            (self.play_button, self.stop_button, self.record_button, self.bpm, self.bars)
-        ):
-            self.transport.addWidget(control, 0, column)
+        self.progress = BeatTimeline(face)
         root.addLayout(self.transport)
-        self.inputs = QHBoxLayout()
-        self.sources_label = QLabel(face)
-        self.inputs.addWidget(self.sources_label)
-        self.add_deck_button = _button(t("loop_mixer.add_keydeck", "+ 키덱"), face)
+        self.input_panel = QWidget(face)
+        self.inputs = QHBoxLayout(self.input_panel)
+        self.inputs.setContentsMargins(0, 0, 0, 0)
+        self.add_deck_button = _compact_button(
+            "+", t("loop_mixer.add_keydeck_hint", "연주용 키덱 추가"), face, icon_key=ICON.ADD
+        )
+        self.add_deck_button.setFixedWidth(44)
         self.add_deck_button.clicked.connect(self._add_deck_menu)
         self.inputs.addWidget(self.add_deck_button)
         self.mic_combo = TouchMixerComboBox(face)
@@ -374,16 +575,24 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         self.mic_combo.addItem(t("loop_mixer.mic_default", "마이크 · 시스템 기본"), "default")
         self.mic_combo.activated.connect(self._microphone_selected)
         self.inputs.addWidget(self.mic_combo, 1)
-        self.mic_refresh = _button(t("loop_mixer.devices", "장치"), face, self._refresh_devices)
+        self.mic_refresh = _compact_button(
+            "↻",
+            t("loop_mixer.refresh_microphones", "마이크 장치 새로고침"),
+            face,
+            self._refresh_devices,
+            icon_key=ICON.REFRESH,
+        )
+        self.mic_refresh.setFixedWidth(44)
         self.inputs.addWidget(self.mic_refresh)
         self.mic_badge = QLabel(t("loop_mixer.mic_off", "마이크 꺼짐"), face)
         self.inputs.addWidget(self.mic_badge)
-        root.addLayout(self.inputs)
-        self.progress = QProgressBar(face)
-        self.progress.setRange(0, 1000)
-        self.progress.setTextVisible(False)
-        self.progress.setFixedHeight(5)
-        root.addWidget(self.progress)
+        self.overdub = _compact_button(
+            "↻", t("loop_mixer.overdub", "겹쳐 녹음"), face, toggle=True, icon_key=ICON.REPEAT
+        )
+        self.overdub.setFixedWidth(44)
+        self.overdub.setChecked(True)
+        self.inputs.addWidget(self.overdub)
+        root.addWidget(self.input_panel)
         self.scroll = QScrollArea(face)
         self.scroll.setWidgetResizable(True)
         self.scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -398,39 +607,26 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         self.scroll.setWidget(self.cards_body)
         root.addWidget(self.scroll, 1)
         self.master_row = QHBoxLayout()
-        self.master_row.addWidget(QLabel(t("loop_mixer.master", "마스터"), face))
+        master_label = QLabel(t("loop_mixer.master", "마스터"), face)
+        master_label.setProperty("mixerReadout", True)
+        self.master_row.addWidget(master_label)
         self.master = TouchMixerSlider(t("loop_mixer.master_volume", "마스터 음량"), 0, 100, face)
+        self.master.setToolTip(self.master.accessibleName())
         self.master.valueChanged.connect(self._master_changed)
-        self.master_row.addWidget(self.master, 1)
+        self.master_row.addWidget(self.master, 2)
         self.master_value = QLabel(face)
+        self.master_value.setProperty("mixerReadout", True)
+        self.master_value.setMinimumWidth(42)
         self.master_row.addWidget(self.master_value)
-        self.level = QProgressBar(face)
-        self.level.setRange(0, 1000)
-        self.level.setTextVisible(False)
-        self.level.setFixedWidth(100)
-        self.level.setAccessibleName(t("loop_mixer.output_level", "출력 음량 표시"))
-        self.master_row.addWidget(self.level)
-        self.overdub = _button(t("loop_mixer.overdub", "겹쳐 녹음"), face, toggle=True)
-        self.overdub.setChecked(True)
-        self.master_row.addWidget(self.overdub)
+        self.level = StereoMeter(face)
+        self.master_row.addWidget(self.level, 1)
         root.addLayout(self.master_row)
-        self.footer = QGridLayout()
-        self.open_button = _button(
-            t("loop_mixer.project_open", "프로젝트 열기"), face, self._open_project
-        )
-        self.save_button = _button(
-            t("loop_mixer.project_save", "저장"), face, self._save_project_as
-        )
-        self.export_button = _button(t("loop_mixer.export", "WAV 내보내기"), face, self._export)
-        for column, button in enumerate((self.open_button, self.save_button, self.export_button)):
-            self.footer.addWidget(button, 0, column)
-        root.addLayout(self.footer)
         self.status = QLabel(face)
+        self.status.setObjectName("mixerStatus")
         self.status.setWordWrap(True)
         self.status.setTextFormat(Qt.TextFormat.PlainText)
-        self.status.setMinimumHeight(36)
+        self.status.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         root.addWidget(self.status)
-        self._reflow(3)
         return face
 
     def _real_settings(self):
@@ -439,8 +635,22 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
     def _apply_appearance(self):
         tokens = get_dialog_theme_tokens(settings=self._real_settings())
         typography = get_typography_scale(self._real_settings())
-        accent = QColor(tokens["accent"])
-        selected = f"rgba({accent.red()}, {accent.green()}, {accent.blue()}, 0.20)"
+        dark = parse_css_color(tokens["floating_bg"]).lightnessF() < 0.5
+        signal_tokens = {
+            **tokens,
+            "danger_hex": "#ff8494" if dark else "#b22143",
+            "warning_hex": "#ffc16d" if dark else "#8b5304",
+            "success_hex": "#63d6ac" if dark else "#167653",
+        }
+
+        def tint(role, opacity):
+            color = parse_css_color(signal_tokens[role])
+            return f"rgba({color.red()}, {color.green()}, {color.blue()}, {opacity})"
+
+        selected = tint("accent", 0.20)
+        armed = tint("danger_hex", 0.20)
+        solo = tint("warning_hex", 0.20)
+        control_height = max(46, typography.body_px + 12)
         self.face.setStyleSheet(
             build_dialog_stylesheet(settings=self._real_settings(), tokens=tokens)
             + f"""
@@ -448,24 +658,70 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
             border:1px solid {tokens["border_soft"]}; border-radius:14px; }}
         QWidget#loopCardsBody {{background:transparent;}}
         QFrame#loopTrack {{background:{tokens["content_bg"]}; border:1px solid {tokens["border_soft"]}; border-radius:12px;}}
-        QPushButton, QComboBox, QLineEdit, QSpinBox {{min-height:36px; font-size:{typography.body_px}px;}}
-        QPushButton {{padding:3px 10px;}}
+        QPushButton, QComboBox, QLineEdit, QSpinBox {{font-size:{typography.body_px}px;}}
+        QPushButton[mixerCompact="true"] {{
+            min-width:34px; min-height:{control_height}px; max-height:{control_height}px;
+            padding:0 4px; font-weight:700;
+        }}
+        QComboBox, QLineEdit, QSpinBox {{
+            min-height:{control_height - 8}px; max-height:{control_height - 8}px;
+            padding:3px 8px;
+        }}
+        QPushButton[mixerCompact="true"]::menu-indicator {{width:0; image:none;}}
         QPushButton#ghost_btn:checked {{background:{selected}; color:{tokens["text_primary"]}; border:1px solid {tokens["accent"]};}}
-        QPushButton#ghost_btn:focus {{border:1px solid {tokens["accent"]};}}
-        QComboBox::drop-down {{width:36px; border:0;}}
+        QPushButton#danger_btn {{color:{signal_tokens["danger_hex"]}; border-color:{armed};}}
+        QPushButton#mixer_armed:checked, QPushButton#danger_btn[active="true"] {{
+            background:{armed}; color:{signal_tokens["danger_hex"]};
+            border:1px solid {signal_tokens["danger_hex"]};}}
+        QPushButton#mixer_muted:checked {{
+            background:{selected}; color:{tokens["text_primary"]}; border:1px solid {tokens["accent"]};}}
+        QPushButton#mixer_solo:checked {{
+            background:{solo}; color:{tokens["text_primary"]}; border:1px solid {signal_tokens["warning_hex"]};}}
+        QPushButton#primary_btn[active="true"] {{
+            background:{selected}; border:1px solid {tokens["accent"]};}}
+        QPushButton[mixerCompact="true"]:focus {{border:2px solid {tokens["accent"]};}}
+        QComboBox::drop-down {{width:{TouchMixerComboBox._ARROW_WIDTH}px; border:0;}}
         QComboBox::down-arrow {{image:none; width:0; height:0;}}
         QLabel {{font-size:{typography.caption_px}px;}}
+        QLabel#mixerStatus {{color:{tokens["text_secondary"]};}}
+        QLabel[mixerReadout="true"], QLineEdit#mixerTrackName {{font-weight:600;}}
+        QLabel#mixerChannelNumber {{
+            background:{selected}; color:{tokens["text_primary"]}; border-radius:6px;
+            font-weight:700; padding:6px 3px;
+        }}
+        QLineEdit#mixerTrackName {{border:1px solid transparent; background:transparent;}}
+        QLineEdit#mixerTrackName:hover, QLineEdit#mixerTrackName:focus {{
+            border-color:{tokens["border_soft"]}; background:{tokens["input_bg"]};
+        }}
         QLabel[role="dialogTitle"] {{font-size:{typography.title_px}px; font-weight:700;}}
-        QSlider::groove:horizontal {{height:6px; border-radius:3px; background:{tokens["border_soft"]};}}
-        QSlider::sub-page:horizontal {{background:{tokens["accent"]}; border-radius:3px;}}
-        QSlider::handle:horizontal {{background:{tokens["text_primary"]}; width:26px; height:26px; margin:-11px 0; border-radius:13px;}}
-        QProgressBar {{background:{tokens["content_bg"]}; border:0; border-radius:2px;}}
-        QProgressBar::chunk {{background:{tokens["accent"]}; border-radius:2px;}}
         """
         )
+        for button in self.face.findChildren(QPushButton):
+            key = button.property("mixerIcon")
+            if key:
+                role = "button_primary_text" if button is self.play_button else "text_primary"
+                button.setIcon(icon(key, color=parse_css_color(tokens[role]).name()))
+                button.setIconSize(QSize(19, 19))
+                button.setText(button.property("mixerSymbol") if button.icon().isNull() else "")
+        self.bpm.setMinimumWidth(max(90, self.bpm.fontMetrics().horizontalAdvance("240 BPM") + 24))
+        bar_metrics = self.bars.fontMetrics()
+        bar_text_width = max(
+            bar_metrics.horizontalAdvance(self.bars.itemText(i)) for i in range(self.bars.count())
+        )
+        self.bars.setMinimumWidth(max(80, bar_text_width + TouchMixerComboBox._ARROW_WIDTH + 8))
+        menu_style = (
+            build_dialog_menu_stylesheet(settings=self._real_settings())
+            + "QMenu::item {min-height:38px;}"
+        )
+        self.project_menu.setStyleSheet(menu_style)
+        for control in (self.master, self.progress, self.level):
+            control.set_theme(signal_tokens)
         for card in self.cards:
-            card.wave.accent = QColor(tokens["accent"])
-            card.wave.update()
+            card.tools_menu.setStyleSheet(menu_style)
+            for control in (card.wave, card.volume, card.pan):
+                control.set_theme(signal_tokens)
+        self._layout_mode = None
+        self._reflow_for_width()
         self.setWindowOpacity(self.widget_opacity())
 
     def apply_initial_settings(self):
@@ -570,39 +826,60 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
 
     def _reflow_for_width(self):
         width = self.width()
+        columns = 3 if width >= 1000 else 2 if width >= 680 else 1
+        timing_minimum = self.bpm.minimumWidth() + self.bars.minimumWidth()
         mode = (
-            3 if width >= 1000 else 2 if width >= 680 else 1,
-            width >= 900,
-            width >= 680,
-            width >= 800,
-            width < 500,
+            columns,
+            width >= 760,
+            width >= 1000,
+            width < timing_minimum + 3 * 44 + 50,
+            width >= columns * 336 + (columns - 1) * 10 + 40,
         )
         if self._reflowing or mode == self._layout_mode:
             return
         self._layout_mode = mode
         self._reflowing = True
         try:
-            self._apply_responsive_layout(width)
+            self._apply_responsive_layout(*mode)
         finally:
             self._reflowing = False
 
-    def _apply_responsive_layout(self, width):
-        self._reflow(3 if width >= 1000 else 2 if width >= 680 else 1)
-        narrow = width < 680
-        self.subtitle.setVisible(width >= 900)
-        self.sources_label.setVisible(width >= 680)
-        self.mic_badge.setVisible(width >= 800)
-        self.level.setVisible(width >= 680)
-        for index, control in enumerate(
-            (self.play_button, self.stop_button, self.record_button, self.bpm, self.bars)
-        ):
+    def _apply_responsive_layout(self, columns, show_mic_badge, dock_inputs, stacked, split_faders):
+        self._reflow(columns)
+        self.sources_label.setVisible(columns >= 2)
+        self.mic_badge.setVisible(show_mic_badge)
+        root = self.face.layout()
+        if dock_inputs and self.header_row.indexOf(self.input_panel) < 0:
+            root.removeWidget(self.input_panel)
+            self.header_row.insertWidget(2, self.input_panel, 2)
+            self.input_panel.show()
+        elif not dock_inputs and root.indexOf(self.input_panel) < 0:
+            self.header_row.removeWidget(self.input_panel)
+            root.insertWidget(2, self.input_panel)
+            self.input_panel.show()
+        fader_direction = (
+            QBoxLayout.Direction.LeftToRight if split_faders else QBoxLayout.Direction.TopToBottom
+        )
+        for card in self.cards:
+            card.faders.setDirection(fader_direction)
+            for label in card.fader_labels:
+                label.setVisible(not split_faders)
+        wide = columns >= 2
+        controls = (self.play_button, self.stop_button, self.record_button, self.bpm, self.bars)
+        for control in (*controls, self.progress):
             self.transport.removeWidget(control)
-            self.transport.addWidget(
-                control, index // 3 if narrow else 0, index % 3 if narrow else index
-            )
-        for index, control in enumerate((self.open_button, self.save_button, self.export_button)):
-            self.footer.removeWidget(control)
-            self.footer.addWidget(control, index if width < 500 else 0, 0 if width < 500 else index)
+        for column, control in enumerate(controls[:3] if stacked else controls):
+            self.transport.addWidget(control, 0, column)
+        if stacked:
+            self.transport.addWidget(self.bpm, 1, 0, 1, 2)
+            self.transport.addWidget(self.bars, 1, 2, 1, 3)
+        if wide:
+            self.transport.addWidget(self.progress, 0, 5)
+        else:
+            self.transport.addWidget(self.progress, 1 + int(stacked), 0, 1, 5)
+        for column in range(6):
+            stretch = column == 5 if wide else column in (3, 4)
+            self.transport.setColumnStretch(column, int(stretch))
 
     def _reflow(self, columns):
         if columns == self._columns:
@@ -993,32 +1270,44 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         running = mode in ("playing", "recording")
         loop_frames = max(1, snapshot.get("loop_frames", 1))
         fraction = snapshot.get("position_frames", 0) / loop_frames
+        bars = snapshot.get("bars", 4)
+        any_solo = any(track.get("solo") for track in snapshot["tracks"])
         self._source_refresh_ticks += 1
         if not self._source_options or self._source_refresh_ticks >= 20:
             self._source_options = self._sources()
             self._source_refresh_ticks = 0
         for card, track in zip(self.cards, snapshot["tracks"], strict=True):
-            card.sync(track, self._source_options, fraction, running)
+            card.sync(track, self._source_options, fraction, mode, any_solo, loop_frames, bars)
             card.setEnabled(not busy)
             card.arm.setEnabled(mode != "recording" and not busy)
-        for control in (self.bpm, self.bars, self.mic_combo, self.mic_refresh, self.open_button):
+        for control in (self.bpm, self.bars, self.mic_combo, self.mic_refresh, self.open_action):
             control.setEnabled(not running and not busy)
         self.record_button.setEnabled(mode != "recording" and not busy)
         self.play_button.setEnabled(not running and not busy)
-        self.save_button.setEnabled(not busy and mode != "recording")
-        self.export_button.setEnabled(not busy and mode != "recording")
+        self.save_action.setEnabled(not busy and mode != "recording")
+        self.export_action.setEnabled(not busy and mode != "recording")
+        self.project_button.setEnabled(not busy and mode != "recording")
+        self.overdub.setEnabled(not busy and mode != "recording")
         self.master.setEnabled(not busy)
         self.stop_button.setEnabled(running)
+        for button, active in (
+            (self.play_button, mode == "playing"),
+            (self.record_button, mode == "recording"),
+        ):
+            if button.property("active") != active:
+                button.setProperty("active", active)
+                button.style().unpolish(button)
+                button.style().polish(button)
+                button.update()
         with QSignalBlocker(self.bpm), QSignalBlocker(self.bars):
             self.bpm.setValue(snapshot.get("bpm", 120))
-            self.bars.setCurrentIndex(max(0, self.bars.findData(snapshot.get("bars", 4))))
+            self.bars.setCurrentIndex(max(0, self.bars.findData(bars)))
         if not self.master.isSliderDown():
             with QSignalBlocker(self.master):
                 self.master.setValue(snapshot.get("master_volume", 80))
         self.master_value.setText(f"{snapshot.get('master_volume', 80)}%")
-        levels = snapshot.get("output_levels", [0, 0])
-        self.level.setValue(round(min(1, max(levels or [0])) * 1000))
-        self.progress.setValue(round(fraction * 1000))
+        self.level.set_levels(snapshot.get("output_levels", (0.0, 0.0)))
+        self.progress.set_playback(bars, fraction, mode)
         recording_mic = mode == "recording" and any(
             track.get("armed") and track.get("source") == "mic" for track in snapshot["tracks"]
         )
@@ -1034,7 +1323,11 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         description = {
             "idle": t("loop_mixer.idle", "준비"),
             "playing": t("loop_mixer.playing", "반복 재생 중"),
-            "recording": t("loop_mixer.recording", "한 바퀴 녹음 중"),
+            "recording": (
+                t("loop_mixer.mic_recording", "● 마이크 녹음 중")
+                if recording_mic
+                else t("loop_mixer.recording", "한 바퀴 녹음 중")
+            ),
         }.get(mode, mode)
         count = sum(bool(track.get("has_audio")) for track in snapshot["tracks"])
         seconds = loop_frames / max(1, snapshot.get("sample_rate", 22050))
@@ -1045,21 +1338,25 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
             count=count,
             seconds=f"{seconds:.1f}",
         )
+        status = (
+            t("loop_mixer.file_busy", "파일 작업 중…")
+            if busy
+            else self._notice
+            or (self._error_message(snapshot) if snapshot.get("error") else "")
+            or summary
+        )
+        if status != self.status.text():
+            self.status.setText(status)
         hint = (
             t(
                 "loop_mixer.idle_hint",
                 "입력 선택 → ● 대기 → 녹음. 마이크는 녹음할 때만 켜지며 내 목소리는 즉시 출력하지 않습니다.",
             )
-            if not running
-            else ""
+            if not running and status == summary
+            else status
         )
-        self.status.setText(
-            t("loop_mixer.file_busy", "파일 작업 중…")
-            if busy
-            else self._notice
-            or (self._error_message(snapshot) if snapshot.get("error") else "")
-            or f"{summary}\n{hint}".rstrip()
-        )
+        if hint != self.status.toolTip():
+            self.status.setToolTip(hint)
         if not self.isVisible() and self._pending_io is None and hasattr(self, "_poll"):
             self._poll.stop()
 

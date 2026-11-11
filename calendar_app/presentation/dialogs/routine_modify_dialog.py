@@ -40,6 +40,7 @@ from calendar_app.presentation.dialogs.routine_recurrence_wizard import (
 )
 from calendar_app.presentation.dialogs.task_dialog_base import BaseTaskDialog
 from calendar_app.presentation.dialogs.time_picker_widget import DatePickerWidget, TimePickerWidget
+from calendar_app.shared.qt_helpers import mnemonic_safe
 
 
 class RoutineModifyDialog(BaseTaskDialog):
@@ -353,7 +354,9 @@ class RoutineModifyDialog(BaseTaskDialog):
         mode_row.addStretch()
         outer_layout.addLayout(mode_row)
 
-        self.routine_wizard_group = QGroupBox(t("dialog.recurrence.wizard_title", "반복 상세 설정"))
+        self.routine_wizard_group = QGroupBox(
+            mnemonic_safe(t("dialog.recurrence.wizard_title", "반복 상세 설정"))
+        )
         inner_layout = QVBoxLayout()
         inner_layout.setSpacing(8)
 

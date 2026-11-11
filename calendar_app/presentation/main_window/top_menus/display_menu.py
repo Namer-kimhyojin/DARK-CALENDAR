@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QMenu, QToolButton
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key
+from calendar_app.presentation.main_window.top_bar_shelf import TOP_BAR_AUTO_HIDE_KEY
 from calendar_app.presentation.main_window.top_menus.common import (
     format_top_menu_button_text,
     set_themed_icon,
@@ -13,6 +14,7 @@ from calendar_app.shared.color_utils import contrast_safe_color
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.qt_helpers import mnemonic_safe
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
 
 
@@ -241,15 +243,16 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     set_themed_icon(self.display_window_menu, ICON.SCREEN_MGMT, icon_color)
     self.display_window_menu.setStyleSheet(menu_style)
 
-    self.act_topbar = self.display_window_menu.addAction(
-        f"{_se(t('menu.hide_topbar'))}\t{get_key('topbar')}"
+    # Hiding the bar outright was folded into auto-hide; Ctrl+Shift+B toggles it.
+    self.act_topbar_auto_hide = self.display_window_menu.addAction(
+        f"{t('menu.auto_hide_topbar', '상단 바 자동 숨기기')}\t{get_key('topbar')}"
     )
-    set_themed_icon(self.act_topbar, ICON.HIDE, icon_color)
-    self.act_topbar.setCheckable(True)
-
-    self.act_topbar.setChecked(True)
-
-    self.act_topbar.triggered.connect(self.toggle_top_bar)
+    set_themed_icon(self.act_topbar_auto_hide, ICON.TOOLBAR, icon_color)
+    self.act_topbar_auto_hide.setCheckable(True)
+    self.act_topbar_auto_hide.setChecked(
+        self.settings.value(TOP_BAR_AUTO_HIDE_KEY, False, type=bool)
+    )
+    self.act_topbar_auto_hide.triggered.connect(self.set_top_bar_auto_hide)
 
     self.act_calendar_toolbar = self.display_window_menu.addAction(
         f"{_se(t('menu.hide_calendar_toolbar'))}\t{get_key('cal_toolbar')}"
@@ -346,7 +349,8 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
     layout_menu.setStyleSheet(menu_style)
 
     monthly_layout_action = layout_menu.addAction(
-        t("layout.monthly_centered", "월간 중심"), lambda: apply_monthly_centered_layout(self)
+        mnemonic_safe(t("layout.monthly_centered", "월간 중심")),
+        lambda: apply_monthly_centered_layout(self),
     )
     set_themed_icon(monthly_layout_action, ICON.VIEW_CALENDAR, icon_color)
     layout_menu.addSeparator()
@@ -398,14 +402,7 @@ def build_display_menu(self, top_bar, menu_btn_style, menu_style):
 
     def _on_display_menu_show():
         _refresh_display_menu_i18n(self)
-        if hasattr(self, "act_topbar") and hasattr(self, "top_bar_frame"):
-            self.act_topbar.setChecked(self.top_bar_frame.isVisible())
-            any_floating = any(
-                getattr(self, attr).isFloating()
-                for attr in ("left_dock", "center_dock", "routine_dock", "directive_dock")
-                if hasattr(self, attr)
-            )
-            self.act_topbar.setEnabled(not any_floating)
+        self._sync_top_bar_visibility()
 
     self.display_menu.aboutToShow.connect(_on_display_menu_show)
     top_bar.addWidget(self.display_menu_btn)

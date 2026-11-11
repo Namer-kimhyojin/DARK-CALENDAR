@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 
-from PyQt6.QtCore import QDate, QEvent, QLocale, QObject, Qt, QTimer
+from PyQt6.QtCore import QDate, QEvent, QLocale, QObject, QSize, Qt, QTimer
 from PyQt6.QtGui import QActionGroup, QColor, QMouseEvent
 from PyQt6.QtWidgets import (
     QApplication,
@@ -964,16 +964,36 @@ def _build_left_panel_mode_switch(app, mode):
         ("week", t("panel.this_week_schedule", "This Week Schedule")),
         ("selected", t("panel.selected_day_schedule", "선택일 일정")),
     )
+    tokens = _semantic_tokens()
+    label = next(label for value, label in modes if value == mode)
     button = QToolButton()
     button.setObjectName("schedulePanelMode")
     button.setProperty("panelTitleControl", True)
-    button.setText(next(label for value, label in modes if value == mode))
-    button.setAccessibleName(button.text())
-    button.setToolTip(button.text())
-    button.setIcon(_ic(ICON.ALL_SCHEDULES, color=_semantic_tokens()["accent"]))
+    # It stands where other panels show their title, so it reads as one: same left
+    # edge, color, size and weight, with the menu cue right after the words.
+    # The leading space matches the icon-to-title gap of the label-based titles.
+    button.setText(f" {label} ▾")
+    button.setAccessibleName(label)
+    button.setToolTip(label)
+    button.setIcon(_ic(ICON.ALL_SCHEDULES, color=tokens["accent"]))
+    button.setIconSize(QSize(16, 16))
     button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
     button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-    button.setStyleSheet(_toolbar_button_style().replace("QPushButton", "QToolButton"))
+    radius = int(_shape_tokens().get("panel_toolbar_button_radius", 0))
+    button.setStyleSheet(
+        f"""
+        QToolButton#schedulePanelMode {{
+            color: {_panel_text_color()}; background: transparent;
+            border: 1px solid transparent; border-radius: {radius}px;
+            font-weight: bold; font-size: {_font_role()};
+            padding: 2px 6px 2px 0px; margin-left: -1px;
+        }}
+        QToolButton#schedulePanelMode:hover {{
+            background: {tokens.get("bg_item_hover", "rgba(255, 255, 255, 0.08)")};
+        }}
+        QToolButton#schedulePanelMode::menu-indicator {{ image: none; width: 0px; }}
+        """
+    )
     menu = QMenu(button)
     menu.setStyleSheet(_panel_menu_style())
     group = QActionGroup(menu)

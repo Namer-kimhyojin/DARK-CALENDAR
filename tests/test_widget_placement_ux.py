@@ -12,6 +12,7 @@ import pytest
 from calendar_app.presentation.widgets.overlay_clock import OverlayClockWidget
 from calendar_app.presentation.widgets.overlay_launcher_deck import OverlayLauncherDeckWidget
 from calendar_app.presentation.widgets.overlay_manager import OverlayWidgetManager
+from calendar_app.presentation.widgets.widget_mode_geometry import clamp_rect
 from calendar_app.presentation.widgets.widget_placement import WidgetPlacementDialog
 from tests.test_widget_mode_ux import _APP, workspace  # noqa: F401
 
@@ -290,3 +291,52 @@ def test_unified_grip_shift_resize_is_deliberate_proportional_and_reversible(wor
     assert abs(widget.width() / widget.height() - before.width() / before.height()) < 0.005
     widget._undo_placement()
     assert widget.geometry() == before
+
+
+def test_unified_toolbar_drag_uses_os_move_and_never_resizes(workspace):
+    """Mixed-DPI monitors: the OS moves the window, and a move keeps its size."""
+    host, coordinator, widget = workspace
+    before = QRect(widget.geometry())
+    start = widget.toolbar.rect().center()
+    with patch.object(widget, "_try_start_system_move", return_value=True) as system_move:
+        QTest.mousePress(
+            widget.toolbar, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start
+        )
+        mouse_move(widget.toolbar, start + QPoint(40, 30))
+    system_move.assert_called_once()
+    assert widget._system_move_active
+    # Logical coordinates are not continuous across monitors with different
+    # scaling, so the widget must not reposition itself while the OS moves it.
+    assert widget.geometry() == before
+
+    # Windows rescales the window on each DPI hop; rounding can add a pixel.
+    host.settings.setValue("widget_mode_snap_enabled", False)
+    moved = QRect(before.x() + 60, before.y() + 50, before.width() + 1, before.height() + 1)
+    widget.setGeometry(moved)
+    widget._complete_system_move()
+
+    assert not widget._system_move_active
+    assert widget.size() == before.size()
+    # The destination screen still bounds the window.
+    area = widget.screen().availableGeometry()
+    assert widget.geometry() == clamp_rect(QRect(moved.topLeft(), before.size()), area)
+    widget._undo_placement()
+    assert widget.geometry() == before
+
+
+def test_unified_system_move_completion_is_idempotent_and_declines_native_messages(workspace):
+    host, coordinator, widget = workspace
+    widget._complete_system_move()  # No move in progress: nothing happens.
+    assert widget._placement_origin is None
+    widget._begin_placement_edit()
+    widget._system_move_active = True
+    QTest.mouseRelease(
+        widget.toolbar,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+        widget.toolbar.rect().center(),
+    )
+    assert not widget._system_move_active
+    widget._complete_system_move()
+    assert not widget._system_move_active
+    assert widget.nativeEvent(b"windows_generic_MSG", 0) == (False, 0)

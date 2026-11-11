@@ -192,9 +192,18 @@ class CalendarWeekdayDisplayTests(TemporaryDatabaseTestCase):
                 self.app.setFont(font)
                 self.render("monthly", "header")
                 header = self.host.findChild(QWidget, "calendar_weekday_header")
+                padding = month_renderer._WEEKDAY_BAND_PADDING
+                # The band under the toolbar is all inside the header: nothing stacks
+                # above it, and the names sit in its vertical middle.
+                self.assertLessEqual(header.y(), 1)
                 for label in header.findChildren(QLabel):
                     self.assertGreaterEqual(label.height(), label.fontMetrics().height())
-                    self.assertLessEqual(header.height(), label.fontMetrics().height() + 8)
+                    self.assertLessEqual(
+                        header.height(), label.fontMetrics().height() + 2 * padding + 4
+                    )
+                    above = label.geometry().top()
+                    below = header.height() - label.geometry().bottom() - 1
+                    self.assertLessEqual(abs(above - below), 1)
 
     def test_time_grid_paints_dates_in_every_mode_and_only_requested_weekdays(self):
         for mode in WEEKDAY_DISPLAY_MODES:

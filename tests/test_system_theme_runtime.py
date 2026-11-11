@@ -9,7 +9,6 @@ from PyQt6.QtCore import QObject, Qt, QTimer
 from PyQt6.QtWidgets import QApplication, QDialog
 
 from calendar_app.presentation.dialogs.panel_color_picker_dialog import (
-    _POINT_COLORS,
     PanelColorPickerDialog,
 )
 from calendar_app.presentation.main_window.theme_actions import ThemeActionsMixin
@@ -182,12 +181,8 @@ class SystemThemeRuntimeTests(unittest.TestCase):
             current_accent_source="family",
         )
         self.addCleanup(dialog.close)
-        point_index = next(
-            index
-            for index, (_, _, code) in enumerate(_POINT_COLORS)
-            if code.lower() != dialog.selected_point_hex().lower()
-        )
-        dialog._select_point_color(point_index)
+        custom_accent = "#e74c3c" if dialog.selected_point_hex().lower() != "#e74c3c" else "#29b6f6"
+        dialog._apply_custom_point_color(custom_accent)
         dialog._row_primary.set_value("#abcdef")
         point_draft = dialog.selected_point_hex()
         text_draft = dialog._row_primary.hex_value()

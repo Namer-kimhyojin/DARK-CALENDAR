@@ -351,6 +351,81 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
                 required = button.fontMetrics().horizontalAdvance(button.text())
                 self.assertGreaterEqual(button.width(), required)
 
+    def test_translated_ampersand_stays_visible_on_buttons_and_groups(self):
+        """Qt hides a single "&" (mnemonic marker): "Save & Continue" lost it."""
+        from PyQt6.QtWidgets import QCheckBox
+
+        labels = {
+            "dialog.common.save_continue": "Save & Continue",
+            "dialog.recurrence.wizard_title": "Repeat & Rules",
+        }
+
+        def translated(key, default=None, **kwargs):
+            return labels.get(key) or t(key, default, **kwargs)
+
+        with patch(
+            "calendar_app.presentation.dialogs.task_dialog_unified.t", side_effect=translated
+        ):
+            schedule = UnifiedTaskDialog(task_type="schedule")
+            routine = UnifiedTaskDialog(task_type="routine")
+        self.addCleanup(schedule.close)
+        self.addCleanup(routine.close)
+
+        texts = [w.text() for w in schedule.findChildren(QCheckBox)]
+        texts += [b.text() for b in routine.findChildren(QPushButton)]
+        self.assertIn("Save && Continue", texts)
+        self.assertNotIn("Save & Continue", texts)
+        self.assertEqual("Repeat && Rules", routine.routine_wizard_group.title())
+
+    def test_repeat_selectors_fit_longest_translated_option(self):
+        """Cycle/rule selectors were fixed at 86/116px and clipped in 18 locales."""
+        from PyQt6.QtWidgets import QStyle, QStyleOptionComboBox
+
+        long_labels = {
+            "recurrence.half_yearly": "Nửa năm một lần (half-yearly)",
+            "dialog.recurrence.nth_weekday": "Ngày thứ N trong tuần của tháng",
+        }
+
+        def translated(key, default=None, **kwargs):
+            return long_labels.get(key) or t(key, default, **kwargs)
+
+        with (
+            patch("calendar_app.domain.routine_cycle.t", side_effect=translated),
+            patch(
+                "calendar_app.presentation.dialogs.task_dialog_unified.t",
+                side_effect=translated,
+            ),
+        ):
+            dialog = UnifiedTaskDialog(task_type="routine")
+        self.addCleanup(dialog.close)
+        dialog.repeat_task_radio.setChecked(True)
+        dialog.repeat_cycle_combo.setCurrentIndex(dialog.repeat_cycle_combo.findData("monthly"))
+        dialog.show()
+        self._app.processEvents()
+
+        for combo in (dialog.repeat_cycle_combo, dialog.rule_mode_combo):
+            option = QStyleOptionComboBox()
+            combo.initStyleOption(option)
+            field = combo.style().subControlRect(
+                QStyle.ComplexControl.CC_ComboBox,
+                option,
+                QStyle.SubControl.SC_ComboBoxEditField,
+                combo,
+            )
+            longest = max(
+                combo.fontMetrics().horizontalAdvance(combo.itemText(i))
+                for i in range(combo.count())
+            )
+            with self.subTest(combo=combo.currentText()):
+                self.assertGreaterEqual(field.width(), longest)
+        stack_need = (
+            dialog.repeat_cycle_combo.width()
+            + dialog.repeat_mode_controls.layout().spacing()
+            + dialog.rule_mode_combo.width()
+        )
+        self.assertGreaterEqual(dialog.repeat_mode_stack.width(), stack_need)
+        self.assertEqual(dialog.repeat_mode_placeholder.width(), dialog.repeat_mode_stack.width())
+
 
 if __name__ == "__main__":
     unittest.main()

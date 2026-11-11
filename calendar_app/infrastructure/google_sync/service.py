@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from dataclasses import dataclass
 import datetime
+import errno
 import json
 import logging
 import math
@@ -61,9 +62,38 @@ except ImportError:
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 
+# Plain OSError codes for an unavailable network/host (POSIX and WinSock).
+_NETWORK_UNAVAILABLE_ERRNOS = frozenset(
+    code
+    for code in (
+        getattr(errno, "ENETDOWN", None),
+        getattr(errno, "ENETUNREACH", None),
+        getattr(errno, "EHOSTDOWN", None),
+        getattr(errno, "EHOSTUNREACH", None),
+        10050,  # WSAENETDOWN
+        10051,  # WSAENETUNREACH
+        10064,  # WSAEHOSTDOWN
+        10065,  # WSAEHOSTUNREACH
+    )
+    if code is not None
+)
+
+
+def _is_network_unavailable_error(error) -> bool:
+    if isinstance(error, (ConnectionError, TimeoutError, socket.gaierror, ssl.SSLError)):
+        return True
+    if isinstance(error, OSError) and error.errno in _NETWORK_UNAVAILABLE_ERRNOS:
+        return True
+    # httplib2 (the Calendar API transport) wraps DNS failures while offline in
+    # ServerNotFoundError, which is not a ConnectionError subclass.
+    return type(error).__name__ == "ServerNotFoundError" and type(error).__module__.startswith(
+        "httplib2"
+    )
+
+
 def _google_refresh_failure_kind(error):
     """Only a confirmed OAuth rejection should send an existing user to sign-in."""
-    if isinstance(error, (ConnectionError, TimeoutError, socket.gaierror, ssl.SSLError)):
+    if _is_network_unavailable_error(error):
         return "network_unavailable"
     if google_auth_exceptions is not None:
         if isinstance(error, google_auth_exceptions.TransportError):

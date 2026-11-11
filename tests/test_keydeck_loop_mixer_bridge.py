@@ -89,7 +89,7 @@ def test_mute_and_empty_paths_never_reach_bus_and_stop_is_source_owned(surface, 
     bank.stop_all.assert_called_once()
 
 
-def test_open_reuses_mixer_or_adds_one_then_shows_and_raises():
+def test_open_reuses_mixer_or_adds_one_then_shows_and_raises(app):
     mixer = Mock()
     manager = Mock()
     manager.instances_of.return_value = []

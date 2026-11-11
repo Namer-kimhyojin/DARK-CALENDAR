@@ -42,7 +42,7 @@ class DailySummaryDialogTests(unittest.TestCase):
         QApplication.processEvents()
 
         self.assertTrue(dialog.windowFlags() & Qt.WindowType.FramelessWindowHint)
-        self.assertTrue(dialog.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
+        self.assertFalse(dialog.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground))
         self.assertFalse(dialog.settings_panel.isVisible())
 
         dialog.settings_btn.click()

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Real mixer UI/domain with temporary settings and an unopened device boundary."""
 
+from array import array
 import json
 from pathlib import Path
 import threading
 from types import SimpleNamespace
+import wave
 
 from PyQt6 import sip
 from PyQt6.QtCore import QCoreApplication, QEvent, QPoint, QPointF, QRect, QSettings, Qt
@@ -13,6 +15,7 @@ from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QWidget
 import pytest
 
+from calendar_app.domain.loop_mixer import BLOCK_FRAMES, SAMPLE_RATE, pcm_bytes
 from calendar_app.infrastructure.runtime import loop_mixer_audio
 from calendar_app.presentation.widgets.overlay_loop_deck import OverlayLoopDeckWidget
 from calendar_app.presentation.widgets.overlay_manager import OverlayWidgetManager
@@ -101,6 +104,40 @@ def test_responsive_columns_keep_the_same_six_track_controls(mixer, width, colum
     assert all(card.volume.minimumHeight() >= 44 for card in cards)
 
 
+def test_compact_mixer_keeps_the_transport_and_project_menu_reachable(mixer):
+    _, manager, iid, widget, _ = mixer
+    manager.show_instance(iid)
+    widget._resize_within_limits(360, 480)
+    _APP.processEvents()
+    assert widget._columns == 1
+    assert widget.scroll.viewport().height() >= 96
+    assert widget.scroll.horizontalScrollBar().maximum() == 0
+    assert widget.scroll.verticalScrollBar().maximum() > 0
+    controls = []
+    for name in (
+        "play_button",
+        "stop_button",
+        "record_button",
+        "progress",
+        "add_deck_button",
+        "mic_combo",
+        "mic_refresh",
+        "overdub",
+        "master",
+        "level",
+        "project_button",
+    ):
+        control = getattr(widget, name)
+        bounds = QRect(control.mapTo(widget, QPoint()), control.size())
+        assert control.isVisible() and widget.rect().contains(bounds), name
+        assert not any(bounds.intersects(other) for other in controls), name
+        controls.append(bounds)
+    project_actions = [
+        action for action in widget.project_button.menu().actions() if not action.isSeparator()
+    ]
+    assert len(project_actions) == 3 and all(action.isEnabled() for action in project_actions)
+
+
 def test_track_buttons_and_direct_slider_changes_do_not_drag_the_window(mixer):
     _, manager, iid, widget, _ = mixer
     manager.show_instance(iid)
@@ -116,6 +153,99 @@ def test_track_buttons_and_direct_slider_changes_do_not_drag_the_window(mixer):
     assert widget._mixer.snapshot()["tracks"][0]["volume"] >= 80
     assert widget.pos() == before
     assert widget._placement_origin is None
+
+
+def test_double_click_centers_pan_without_leaving_the_fader_dragging(mixer):
+    _, manager, iid, widget, _ = mixer
+    manager.show_instance(iid)
+    card = widget.cards[0]
+    card.pan.setValue(-70)
+    assert widget._mixer.snapshot()["tracks"][0]["pan"] == -70
+    edge = QPoint(card.pan.width() - 20, card.pan.height() // 2)
+    QTest.mouseDClick(card.pan, Qt.MouseButton.LeftButton, pos=edge)
+    assert widget._mixer.snapshot()["tracks"][0]["pan"] == 0
+    assert not card.pan.isSliderDown()
+
+
+def test_loop_cursor_stereo_output_and_waveform_follow_the_mixer(mixer, monkeypatch):
+    _, manager, iid, widget, _ = mixer
+    manager.show_instance(iid)
+    card, other = widget.cards[:2]
+    timeline, levels = [], []
+    set_playback, set_levels = widget.progress.set_playback, widget.level.set_levels
+
+    def show_playback(bars, fraction, mode):
+        timeline.append((bars, fraction, mode))
+        set_playback(bars, fraction, mode)
+
+    def show_levels(stereo):
+        levels.append(tuple(stereo))
+        set_levels(stereo)
+
+    monkeypatch.setattr(widget.progress, "set_playback", show_playback)
+    monkeypatch.setattr(widget.level, "set_levels", show_levels)
+    widget._edit_track(0, source="mic")
+    QTest.mouseClick(card.arm, Qt.MouseButton.LeftButton)
+    QTest.mouseClick(widget.record_button, Qt.MouseButton.LeftButton)
+    take = pcm_bytes(array("h", [12000, 3000]) * BLOCK_FRAMES)
+    widget._mixer._process_block(take)
+    widget._refresh_face()
+    position = BLOCK_FRAMES / widget._mixer.snapshot()["loop_frames"]
+    assert timeline[-1] == (4, position, "recording")
+    assert card.wave.mode == "recording"
+    assert levels[-1] == (0, 0)  # The microphone is not monitored live.
+
+    QTest.mouseClick(widget.stop_button, Qt.MouseButton.LeftButton)
+    assert timeline[-1] == (4, 0, "idle")
+    QTest.mouseClick(widget.play_button, Qt.MouseButton.LeftButton)
+    widget._mixer._process_block()
+    widget._refresh_face()
+    assert timeline[-1] == (4, position, "playing")
+    assert card.wave.mode == "playing" and not card.wave.suppressed
+    assert levels[-1] == (9600 / 32768, 2400 / 32768)
+
+    QTest.mouseClick(other.solo, Qt.MouseButton.LeftButton)
+    assert card.wave.suppressed
+    assert not card.mute.isChecked()
+    QTest.mouseClick(other.solo, Qt.MouseButton.LeftButton)
+    assert not card.wave.suppressed
+    QTest.mouseClick(card.mute, Qt.MouseButton.LeftButton)
+    assert card.wave.suppressed
+
+
+def test_track_tools_import_and_clear_their_own_clip(mixer, tmp_path, monkeypatch):
+    _, _, _, widget, _ = mixer
+    from calendar_app.presentation.widgets.overlay_loop_deck import QFileDialog
+
+    card, other = widget.cards[:2]
+    source = tmp_path / "fixture.wav"
+    with wave.open(str(source), "wb") as wav:
+        wav.setparams((2, 2, SAMPLE_RATE, 0, "NONE", "not compressed"))
+        wav.writeframes(pcm_bytes(array("h", [5000, -6000]) * BLOCK_FRAMES))
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *_args: (str(source), ""))
+    assert card.load_action in card.tools_button.menu().actions()
+    assert card.clear_action in card.tools_button.menu().actions()
+    assert card.load_action.isEnabled() and not card.clear_action.isEnabled()
+    card.load_action.trigger()
+    other.load_action.trigger()
+    assert card.source.currentData() == "file"
+    assert card.clear_action.isEnabled()
+    loop_frames = widget._mixer.snapshot()["loop_frames"]
+    assert card.wave.peaks and card.wave.clip_ratio == BLOCK_FRAMES / loop_frames
+
+    widget._play()
+    assert not card.load_action.isEnabled() and not card.clear_action.isEnabled()
+    widget._stop()
+    assert card.load_action.isEnabled() and card.clear_action.isEnabled()
+
+    monkeypatch.setattr(widget, "_confirm", lambda _message: False)
+    card.clear_action.trigger()
+    assert widget._mixer.snapshot()["tracks"][0]["has_audio"]
+    monkeypatch.setattr(widget, "_confirm", lambda _message: True)
+    card.clear_action.trigger()
+    first, second = widget._mixer.snapshot()["tracks"][:2]
+    assert not first["has_audio"] and second["has_audio"]
+    assert not card.clear_action.isEnabled() and not card.wave.peaks
 
 
 def test_wheel_never_changes_a_track_fader_or_bpm(mixer):

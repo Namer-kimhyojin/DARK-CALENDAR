@@ -1207,7 +1207,7 @@ def _overlay_menu_style(tokens: dict | None = None, metrics: dict | None = None)
     return (
         f"QMenu {{ background: {resolved_tokens['surface_alt']}; color: {resolved_tokens['text_primary']}; "
         f"border: 1px solid {resolved_tokens['border']}; border-radius: {bundle['menu_radius']}px; "
-        "font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Segoe UI', 'Malgun Gothic', sans-serif; font-size: 13px; padding: 4px; }"
+        "font-size: 13px; padding: 4px; }"
         "QMenu::item { padding: 6px 24px 6px 28px; border-radius: 4px; }"
         f"QMenu::item:selected {{ background: {selected_bg}; border-radius: {bundle['menu_item_radius']}px; }}"
         "QMenu::icon { left: 8px; }"

@@ -53,6 +53,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
     set_dialog_metric_overrides,
     set_dialog_token_overrides,
+    style_dialog_menu,
 )
 from calendar_app.shared.color_utils import parse_css_alpha_to_unit
 from calendar_app.shared.icon_map import ICON, icon
@@ -813,7 +814,7 @@ _LIGHT_COLOR_PRESETS = {
                 "border_soft": "rgba(122, 143, 166, 78)",
             },
         ),
-        note="Softer light variation variation.",
+        note="A softer light variation.",
     ),
 }
 
@@ -852,6 +853,90 @@ _METRIC_PRESETS = {
         note="Larger controls and wider spacing for readability.",
     ),
 }
+
+
+# Preset keys double as internal identifiers, so only the text shown is translated.
+_PRESET_NAME_LABELS = {
+    "Default (Auto)": ("default_auto", "기본값 (자동)"),
+    "System Default": ("system_default", "시스템 기본값"),
+    "Compact Dense": ("compact_dense", "촘촘하게"),
+    "Comfortable Spacious": ("comfortable_spacious", "여유 있게"),
+}
+
+_PRESET_NOTE_LABELS = {
+    "Balanced blue preset for general use.": (
+        "balanced_blue",
+        "일반 용도에 알맞은 균형 잡힌 파랑 프리셋입니다.",
+    ),
+    "Neutral dark preset with clear contrast.": (
+        "neutral_dark",
+        "대비가 또렷한 중립 다크 프리셋입니다.",
+    ),
+    "Calm indigo palette for long work sessions.": (
+        "calm_indigo",
+        "오래 작업해도 편안한 차분한 남색 팔레트입니다.",
+    ),
+    "Emerald accent with softened dark backgrounds.": (
+        "emerald_dusk",
+        "부드러운 어두운 배경에 에메랄드 포인트를 더했습니다.",
+    ),
+    "Warm amber accent with high readability.": (
+        "warm_amber",
+        "가독성이 높은 따뜻한 호박색 포인트입니다.",
+    ),
+    "Strong contrast for focus-heavy workflows.": (
+        "strong_contrast",
+        "집중 작업에 알맞은 강한 대비입니다.",
+    ),
+    "Minimalist light theme.": ("minimal_light", "미니멀한 라이트 테마입니다."),
+    "Light card UI with aqua accent.": ("light_aqua", "아쿠아 포인트의 밝은 카드형 UI입니다."),
+    "A softer light variation.": ("soft_light", "더 부드러운 라이트 변형입니다."),
+    "Dialog defaults from current theme.": ("default_theme", "현재 테마의 대화상자 기본값입니다."),
+    "시스템 기본값으로 모든 색상 설정을 초기화합니다.": (
+        "system_color_reset",
+        "시스템 기본값으로 모든 색상 설정을 초기화합니다.",
+    ),
+    "Use default dialog metric tokens.": (
+        "default_metrics",
+        "기본 대화상자 크기·간격 값을 사용합니다.",
+    ),
+    "시스템 기본값으로 모든 크기 및 간격 설정을 초기화합니다.": (
+        "system_metric_reset",
+        "시스템 기본값으로 모든 크기 및 간격 설정을 초기화합니다.",
+    ),
+    "Dense spacing for information-heavy views.": (
+        "compact_note",
+        "정보가 많은 화면을 위한 촘촘한 간격입니다.",
+    ),
+    "Larger controls and wider spacing for readability.": (
+        "comfortable_note",
+        "읽기 편한 큰 컨트롤과 넓은 간격입니다.",
+    ),
+    "Preset applies color tokens only.": ("color_only", "이 프리셋은 색상 값만 바꿉니다."),
+    "Preset applies spacing/size metric tokens only.": (
+        "metric_only",
+        "이 프리셋은 크기·간격 값만 바꿉니다.",
+    ),
+}
+
+
+def _preset_label(name: str) -> str:
+    """The localized name shown for a preset key (design names are proper names)."""
+    entry = _PRESET_NAME_LABELS.get(name)
+    return t(f"dialog.token_editor.preset_name.{entry[0]}", entry[1]) if entry else name
+
+
+def _preset_key(label: str) -> str:
+    """The preset key for a displayed label (the inverse of ``_preset_label``)."""
+    for key in _PRESET_NAME_LABELS:
+        if label == key or label == _preset_label(key):
+            return key
+    return label
+
+
+def _preset_note(note: str) -> str:
+    entry = _PRESET_NOTE_LABELS.get(note)
+    return t(f"dialog.token_editor.preset_note.{entry[0]}", entry[1]) if entry else note
 
 
 def _normalize_color(value: str | None) -> str | None:
@@ -1238,6 +1323,13 @@ class DialogTokenEditorDialog(QDialog):
             t("dialog.token_editor.import", "JSON 가져오기"), self._import_tokens
         )
         self.file_button.setMenu(self.file_menu)
+        style_dialog_menu(
+            self.file_menu,
+            self._read_settings,
+            theme_color=theme_color,
+            text_theme=text_theme,
+            panel_base_color=panel_base_color,
+        )
         heading.addWidget(self.file_button)
         root.addLayout(heading)
 
@@ -1257,7 +1349,7 @@ class DialogTokenEditorDialog(QDialog):
         self.color_preset_note.setProperty("role", "dialogSubtitle")
         self.color_preset_combo.currentTextChanged.connect(self._on_color_preset_changed)
         self.metric_preset_combo = QComboBox()
-        self.metric_preset_combo.addItems(list(_METRIC_PRESETS.keys()))
+        self.metric_preset_combo.addItems([_preset_label(key) for key in _METRIC_PRESETS])
         self.metric_preset_note = QLabel("")
         self.metric_preset_note.setWordWrap(True)
         self.metric_preset_note.setProperty("role", "dialogSubtitle")
@@ -1964,16 +2056,14 @@ class DialogTokenEditorDialog(QDialog):
         return {}, ""
 
     def _on_color_preset_changed(self, preset_name: str):
-        _, note = self._resolve_color_preset_payload(preset_name)
-        if not note:
-            note = "Preset applies color tokens only."
-        self.color_preset_note.setText(note)
+        _, note = self._resolve_color_preset_payload(_preset_key(preset_name))
+        self.color_preset_note.setText(_preset_note(note or "Preset applies color tokens only."))
 
     def _on_metric_preset_changed(self, preset_name: str):
-        _, note = self._resolve_metric_preset_payload(preset_name)
-        if not note:
-            note = "Preset applies spacing/size metric tokens only."
-        self.metric_preset_note.setText(note)
+        _, note = self._resolve_metric_preset_payload(_preset_key(preset_name))
+        self.metric_preset_note.setText(
+            _preset_note(note or "Preset applies spacing/size metric tokens only.")
+        )
 
     def _set_feedback(self, text: str = "", tone: str = "info"):
         self.feedback_label.setText(text)
@@ -1984,7 +2074,7 @@ class DialogTokenEditorDialog(QDialog):
 
     def _refresh_color_preset_list(self):
         self.color_preset_combo.blockSignals(True)
-        current = self.color_preset_combo.currentText()
+        current = _preset_key(self.color_preset_combo.currentText())
         self.color_preset_combo.clear()
 
         items = ["Default (Auto)", "System Default"]
@@ -1995,9 +2085,9 @@ class DialogTokenEditorDialog(QDialog):
         elif self.preset_mode_light.isChecked():
             items += list(_LIGHT_COLOR_PRESETS.keys())
 
-        self.color_preset_combo.addItems(items)
+        self.color_preset_combo.addItems([_preset_label(item) for item in items])
         if current in items:
-            self.color_preset_combo.setCurrentText(current)
+            self.color_preset_combo.setCurrentText(_preset_label(current))
         else:
             self.color_preset_combo.setCurrentIndex(0)
         self.color_preset_combo.blockSignals(False)
@@ -2104,7 +2194,7 @@ class DialogTokenEditorDialog(QDialog):
         return self._collect_metric_overrides(diff_only=True)
 
     def _apply_selected_color_preset(self):
-        preset_name = self.color_preset_combo.currentText()
+        preset_name = _preset_key(self.color_preset_combo.currentText())
         if preset_name == "System Default":
             for key in DIALOG_TOKEN_EDITABLE_KEYS:
                 self._set_color_value_silently(key, self._default_color(key))
@@ -2133,7 +2223,7 @@ class DialogTokenEditorDialog(QDialog):
             self._set_metric_value_silently(key, value)
 
     def _apply_selected_metric_preset(self):
-        preset_name = self.metric_preset_combo.currentText()
+        preset_name = _preset_key(self.metric_preset_combo.currentText())
         if preset_name == "System Default":
             self._metric_reset_keys.update(self._metric_spins)
             for key in self._metric_spins:

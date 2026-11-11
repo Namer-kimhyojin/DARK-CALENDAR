@@ -35,6 +35,8 @@ class CalendarPrintRenderOptions:
     orientation: str = "landscape"
     margin_mm: float = 10.0
     document_title: str = APP_NAME
+    # The user's chosen UI font; None keeps the system UI font.
+    font_family: str | None = None
 
 
 @dataclass(frozen=True)
@@ -137,8 +139,8 @@ def _event_color(event: CalendarPrintEvent, grayscale: bool) -> tuple[QColor, QC
     return accent.darker(115), fill
 
 
-def _font(size_pt: float, *, bold: bool = False) -> QFont:
-    font = QFont("Malgun Gothic")
+def _font(size_pt: float, *, bold: bool = False, family: str | None = None) -> QFont:
+    font = QFont(family) if family else QFont()
     font.setStyleHint(QFont.StyleHint.SansSerif)
     font.setPointSizeF(size_pt)
     font.setBold(bold)
@@ -211,9 +213,10 @@ def _details_event_sort_key(event: CalendarPrintEvent):
 
 
 class _RenderContext:
-    def __init__(self, painter: QPainter, printer: QPrinter):
+    def __init__(self, painter: QPainter, printer: QPrinter, font_family: str | None = None):
         self.painter = painter
         self.printer = printer
+        self.font_family = font_family
         self.scale = max(1.0, float(printer.resolution()) / 72.0)
         viewport = painter.viewport()
         self.width_pt = float(viewport.width()) / self.scale
@@ -244,7 +247,7 @@ class _RenderContext:
         elide: bool = False,
     ) -> None:
         self.painter.setPen(QColor(color) if isinstance(color, str) else color)
-        font = _font(size, bold=bold)
+        font = _font(size, bold=bold, family=self.font_family)
         self.painter.setFont(font)
         value = str(text or "")
         if elide:
@@ -879,6 +882,8 @@ def _draw_footer(
 def render_calendar_document(
     printer: QPrinter,
     document: CalendarPrintDocument,
+    *,
+    font_family: str | None = None,
 ) -> CalendarPrintRenderReport:
     if not printer.isValid() and printer.outputFormat() != QPrinter.OutputFormat.PdfFormat:
         raise RuntimeError(t("print.error_invalid_printer", "사용 가능한 프린터가 없습니다."))
@@ -904,7 +909,7 @@ def render_calendar_document(
                     t("print.error_new_page", "다음 인쇄 페이지를 만들지 못했습니다.")
                 )
             painter.fillRect(painter.viewport(), QBrush(QColor("#ffffff")))
-            ctx = _RenderContext(painter, printer)
+            ctx = _RenderContext(painter, printer, font_family)
             if sheet.kind == "details":
                 drawn.update(_draw_details_sheet(ctx, sheet, document))
             else:

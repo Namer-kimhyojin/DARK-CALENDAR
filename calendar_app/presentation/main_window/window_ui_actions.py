@@ -541,12 +541,10 @@ class MainWindowUiActionsMixin:
         current_border_opacity = as_int(
             self.settings.value("last_border_opacity", 80), 80, minimum=0, maximum=255
         )
-        current_text_opacity = as_int(
-            self.settings.value("last_text_opacity", 255), 255, minimum=0, maximum=255
-        )
 
         current_text_theme = str(self.settings.value("text_theme", "dark"))
-        _tpal = derive_text_palette(current_snapshot.text_theme, current_theme)
+        # The editor shows chosen colors, not the faded result on screen.
+        _tpal = derive_text_palette(current_snapshot.text_theme, current_theme, faded=False)
         if current_text_theme == "custom":
             current_text_primary = str(
                 self.settings.value("custom_text_primary", _tpal["text_primary"])
@@ -579,7 +577,9 @@ class MainWindowUiActionsMixin:
             current_theme=current_theme,
             current_opacity=current_opacity,
             current_border_opacity=current_border_opacity,
-            current_text_opacity=current_text_opacity,
+            current_text_opacity=as_int(
+                self.settings.value("text_opacity", 255), 255, minimum=0, maximum=255
+            ),
             current_text_primary=current_text_primary,
             current_text_secondary=current_text_secondary,
             current_text_muted=current_text_muted,
@@ -602,6 +602,8 @@ class MainWindowUiActionsMixin:
                 key: str(self.settings.value(f"appearance_family_{key}", "") or "")
                 for key in ("dark_base", "dark_accent", "light_base", "light_accent")
             },
+            current_border_source=str(self.settings.value("appearance_border_source", "") or ""),
+            current_border_color=str(self.settings.value("panel_border_color", "") or ""),
         )
         if dlg.exec() != PanelColorPickerDialog.DialogCode.Accepted:
             return
@@ -641,7 +643,19 @@ class MainWindowUiActionsMixin:
 
         set_opacity_byte(self.settings, new_opacity)
         self.settings.setValue("last_border_opacity", dlg.selected_border_opacity())
-        self.settings.setValue("last_text_opacity", dlg.selected_text_opacity())
+        text_opacity_getter = getattr(dlg, "selected_text_opacity", None)
+        if callable(text_opacity_getter):
+            self.settings.setValue("text_opacity", text_opacity_getter())
+        # Until a border is chosen the app keeps its neutral lines; once chosen,
+        # border color and border opacity both apply app-wide.
+        border_source = getattr(dlg, "selected_border_source", lambda: "")()
+        if border_source:
+            self.settings.setValue("appearance_border_source", border_source)
+            border_hex = getattr(dlg, "selected_border_hex", lambda: "")()
+            if border_hex:
+                self.settings.setValue("panel_border_color", border_hex)
+            else:
+                self.settings.remove("panel_border_color")
         if hasattr(self, "slider"):
             self.slider.blockSignals(True)
             self.slider.setValue(new_opacity)
@@ -712,7 +726,7 @@ class MainWindowUiActionsMixin:
         setting_key, label_key, fallback_label = role_map[role]
         theme_color = self.settings.value("theme_color", "#4da6ff")
         current_theme = self.settings.value("text_theme", "dark")
-        pal = derive_text_palette(current_theme, theme_color)
+        pal = derive_text_palette(current_theme, theme_color, faded=False)
         fallback_map = {
             "primary": pal["text_primary"],
             "secondary": pal["text_secondary"],
@@ -873,6 +887,9 @@ class MainWindowUiActionsMixin:
                 snapshot.ui_palette,
             )
         )
+        from calendar_app.presentation.main_window.dock_factory import build_dock_manager_style
+
+        # Keep the panel separator rules: this window is also the dock manager.
         self.setStyleSheet(
             build_global_stylesheet(
                 font.family(),
@@ -882,6 +899,8 @@ class MainWindowUiActionsMixin:
                 snapshot.panel_base_color,
                 snapshot.ui_palette,
             )
+            + "\n"
+            + build_dock_manager_style(self.settings, snapshot.theme_color)
         )
 
         if refresh:

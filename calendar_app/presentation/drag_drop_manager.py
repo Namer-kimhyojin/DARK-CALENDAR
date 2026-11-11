@@ -4,7 +4,17 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QByteArray, QDataStream, QIODevice, QMimeData, QPoint, QRect, Qt
-from PyQt6.QtGui import QBrush, QColor, QDrag, QFont, QFontMetrics, QPainter, QPen, QPixmap
+from PyQt6.QtGui import (
+    QBrush,
+    QColor,
+    QDrag,
+    QFont,
+    QFontMetrics,
+    QGuiApplication,
+    QPainter,
+    QPen,
+    QPixmap,
+)
 
 from calendar_app.infrastructure import task_drop_service
 from calendar_app.infrastructure.db import task_repo
@@ -40,6 +50,14 @@ def _span_days_for_task(task):
         return max(1, (d2 - d1).days + 1)
     except Exception:
         return 1
+
+
+def _drag_font(point_size: int, weight=QFont.Weight.Normal) -> QFont:
+    """The drag card text uses the user's chosen UI font, not a fixed family."""
+    font = QFont(QGuiApplication.font())
+    font.setPointSize(point_size)
+    font.setWeight(weight)
+    return font
 
 
 def _drag_color(tokens, key, fallback, alpha=None):
@@ -118,7 +136,7 @@ def build_task_drag_pixmap(task_ids, task_map=None):
     else:
         title = f"{count}개 일정"
 
-    title_font = QFont("Malgun Gothic", 11, QFont.Weight.DemiBold)
+    title_font = _drag_font(11, QFont.Weight.DemiBold)
     title_metrics = QFontMetrics(title_font)
     title = title_metrics.elidedText(title, Qt.TextElideMode.ElideRight, 142)
     painter.setFont(title_font)
@@ -130,7 +148,7 @@ def build_task_drag_pixmap(task_ids, task_map=None):
     )
 
     hint_text = t("drag.hint_copy", "Ctrl: 복사  /  기본: 이동")
-    hint_font = QFont("Malgun Gothic", 8)
+    hint_font = _drag_font(8)
     painter.setFont(hint_font)
     painter.setPen(text_secondary)
     _ic(ICON.NAV_NEXT, color=text_secondary.name()).paint(painter, QRect(72, 49, 12, 12))
@@ -145,7 +163,7 @@ def build_task_drag_pixmap(task_ids, task_map=None):
         painter.setBrush(QBrush(accent))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawEllipse(badge_rect)
-        badge_font = QFont("Malgun Gothic", 9, QFont.Weight.Bold)
+        badge_font = _drag_font(9, QFont.Weight.Bold)
         painter.setFont(badge_font)
         painter.setPen(_drag_color(tokens, "text_inverse", "#ffffff", 255))
         painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, str(count))

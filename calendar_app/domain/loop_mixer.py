@@ -395,7 +395,12 @@ class LoopMixerState:
         result = []
         for track in self.tracks:
             result.append(
-                {**track.metadata(), "has_audio": bool(track.audio), "peaks": list(track.peaks)}
+                {
+                    **track.metadata(),
+                    "has_audio": bool(track.audio),
+                    "audio_frames": len(track.audio) // 2,
+                    "peaks": list(track.peaks),
+                }
             )
         return {
             "mode": self.mode,

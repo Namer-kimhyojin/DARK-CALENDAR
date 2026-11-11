@@ -6,6 +6,15 @@ from PyQt6.QtWidgets import QApplication, QDockWidget
 from calendar_app.shared.typography import DEFAULT_FONT_PT
 
 
+def mnemonic_safe(text) -> str:
+    """Show a literal "&" on buttons, tabs, menus and group boxes.
+
+    Qt treats "&" in those labels as a keyboard-mnemonic marker and hides it, so
+    translated labels such as "Save & Continue" rendered as "Save  Continue".
+    """
+    return str(text or "").replace("&", "&&")
+
+
 def find_parent_dock(widget, dock_ref=None):
     """Return cached dock or walk parent chain to locate QDockWidget."""
     if dock_ref is not None:

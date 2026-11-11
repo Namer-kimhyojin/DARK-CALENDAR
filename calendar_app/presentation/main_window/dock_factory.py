@@ -16,7 +16,9 @@ from calendar_app.shared.theme_settings import get_theme_palette_inputs
 def build_dock_manager_style(settings, theme_color):
     text_theme, panel_base, opacity_factor = get_theme_palette_inputs(settings)
     panel_pal = derive_panel_palette(panel_base, opacity_factor)
-    ui_pal = derive_ui_palette(text_theme, panel_base, opacity_factor, theme_color=theme_color)
+    ui_pal = derive_ui_palette(
+        text_theme, panel_base, opacity_factor, theme_color=theme_color, settings=settings
+    )
     tab_bg = panel_pal["topbar_bg"]
     tab_hover = panel_pal["surface_hover_bg"]
     tab_active = ui_pal["selection_bg"]

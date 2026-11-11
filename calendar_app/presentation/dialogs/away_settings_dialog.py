@@ -39,6 +39,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
+from calendar_app.shared.qt_helpers import mnemonic_safe
 from calendar_app.shared.value_parsers import as_bool, as_int
 
 # ?? 怨듯넻 移섏닔 ?곸닔 ????????????????????????????????????????????????
@@ -201,8 +202,8 @@ class AwaySettingsDialog(QDialog):
             options_label,
             "awayOptionsScroll",
         )
-        self.section_tabs.addTab(self.message_scroll, message_label)
-        self.section_tabs.addTab(self.options_scroll, options_label)
+        self.section_tabs.addTab(self.message_scroll, mnemonic_safe(message_label))
+        self.section_tabs.addTab(self.options_scroll, mnemonic_safe(options_label))
         self.section_tabs.setTabToolTip(
             0,
             t(

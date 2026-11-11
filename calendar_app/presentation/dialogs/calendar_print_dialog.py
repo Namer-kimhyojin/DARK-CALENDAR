@@ -577,6 +577,7 @@ class CalendarPrintDialog(QDialog):
             orientation=str(self.orientation_combo.currentData() or "landscape"),
             margin_mm=float(self.margin_spin.value()),
             document_title=t("print.document_name", f"{APP_NAME} 일정"),
+            font_family=str(self.settings.value("font_family", "") or "") or None,
         )
 
     def _new_printer(self, *, pdf_path: str | None = None) -> QPrinter:
@@ -627,7 +628,11 @@ class CalendarPrintDialog(QDialog):
 
             def _paint(target_printer):
                 try:
-                    report = render_calendar_document(target_printer, document)
+                    report = render_calendar_document(
+                        target_printer,
+                        document,
+                        font_family=self._render_options().font_family,
+                    )
                     if report.missing_event_keys:
                         raise RuntimeError(
                             t(
@@ -655,7 +660,9 @@ class CalendarPrintDialog(QDialog):
             dialog.setWindowTitle(t("print.native_title", "캘린더 인쇄"))
             if dialog.exec() != QDialog.DialogCode.Accepted:
                 return
-            report = render_calendar_document(printer, document)
+            report = render_calendar_document(
+                printer, document, font_family=self._render_options().font_family
+            )
             if report.missing_event_keys:
                 raise RuntimeError(
                     t(
@@ -684,7 +691,9 @@ class CalendarPrintDialog(QDialog):
                 output = output.with_suffix(".pdf")
             document = self._build_document()
             printer = self._new_printer(pdf_path=str(output))
-            report = render_calendar_document(printer, document)
+            report = render_calendar_document(
+                printer, document, font_family=self._render_options().font_family
+            )
             if report.missing_event_keys:
                 raise RuntimeError(
                     t(

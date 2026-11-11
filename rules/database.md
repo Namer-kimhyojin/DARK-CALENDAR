@@ -89,6 +89,25 @@ DB_PATH          # 개인 DB (기본 경로)
 SHARED_DB_PATH   # C:\Users\Public\DarkCalendar\shared.db (PC공유 캘린더)
 ```
 
+## 자동 백업과 손상 복구
+
+`infrastructure/db/db_backup.py`가 개인 DB를 보호합니다.
+
+- 시작 시 DB 초기화가 성공하면, 그리고 실행 중 6시간마다(백그라운드 스레드) 최근 스냅샷이
+  20시간보다 오래됐을 때만 `backups/desk_calendar-YYYYMMDD-HHMMSS.db`를 만듭니다.
+  SQLite backup API로 복사하므로 WAL 사용 중에도 일관되며, 사본이 `PRAGMA quick_check`를
+  통과해야만 저장하고 최신 7개만 보관합니다. 손상된 원본은 정상 스냅샷을 밀어내지 못합니다.
+- 시작 시 `SQLITE_CORRUPT`/`SQLITE_NOTADB`이고 검증되는 스냅샷이 있으면 오류 창에
+  "최근 백업으로 복구"를 제공합니다. 손상 파일과 `-wal`/`-shm`은 삭제하지 않고
+  `desk_calendar.db.corrupt-<시각>`으로 옮긴 뒤 복원하고, 단일 실행 잠금을 푼 다음 재시작합니다.
+- 스냅샷 실패는 경고 로그만 남기고 시작을 막지 않습니다.
+
+## 테스트 격리
+
+`tests/conftest.py`가 모든 pytest 실행의 `LOCALAPPDATA`를 임시 폴더로 바꿉니다. `DB_PATH`,
+로그, OAuth 토큰이 실제 앱 데이터를 가리키면 세션 시작 단계에서 실패합니다. 테스트나 진단
+스크립트가 개발자 실제 DB(`%LOCALAPPDATA%\kimhyojin\Dark Calendar`)를 열지 않게 하세요.
+
 ## 레포지토리 진입점
 
 Outlook 연결은 기존 Google 필드를 재사용하지 않습니다. `infrastructure/calendar_sync/repository.py`가

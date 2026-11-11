@@ -2,7 +2,7 @@
 """Orderly Qt disposal before interpreter exit, without deleting widget data."""
 
 import json
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 from PyQt6 import sip
 from PyQt6.QtCore import QCoreApplication, QEvent, QSettings, QThread, QTimer, QUrl
@@ -303,7 +303,8 @@ def test_bootstrap_restores_sigint_and_parents_its_pump():
         ),
     ):
         assert bootstrap.run(overlay_cls=Mock(return_value=window), build_ui_font=Mock()) == 0
-    timer.assert_called_once_with(application)
+    # The SIGINT pump and the daily database snapshot timer are both app-owned.
+    assert timer.call_args_list == [call(application)] * 2
     assert current_handler["value"] is original
     application.aboutToQuit.disconnect.assert_called_once_with(
         application.aboutToQuit.connect.call_args.args[0]

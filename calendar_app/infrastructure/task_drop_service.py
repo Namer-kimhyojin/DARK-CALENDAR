@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime
 import logging
 
-from calendar_app.infrastructure.db import calendar_repo, task_repo
+from calendar_app.infrastructure.db import calendar_repo, checklist_repo, task_repo
 from calendar_app.infrastructure.db import db_repository_unified as _dbu
 
 logger = logging.getLogger(__name__)
@@ -269,6 +269,15 @@ def handle_task_drop(app, task_id_list, target_date, target_time, action):
                 )
                 if not new_id:
                     raise RuntimeError(f"Failed to copy task {task_id}")
+                for item in checklist_repo.get_task_checklist_items(task_id):
+                    if not checklist_repo.add_checklist_item(
+                        new_id,
+                        item["item_text"],
+                        item["item_order"],
+                        item["display_type"],
+                        commit=False,
+                    ):
+                        raise RuntimeError(f"Failed to copy checklist for task {task_id}")
                 changed += 1
                 copied_ids.append(new_id)
                 continue

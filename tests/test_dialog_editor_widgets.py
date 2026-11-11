@@ -57,6 +57,7 @@ from calendar_app.presentation.widgets.command_palette import CommandPalette
 from calendar_app.presentation.widgets.overlay_base import _apply_span
 from calendar_app.presentation.widgets.overlay_manager_dialog import OverlayManagerDialog
 from calendar_app.presentation.widgets.overlay_text import OverlayTextWidget
+from calendar_app.shared.color_utils import contrasting_text_color as _accent_text
 
 
 def _safe_close(widget):
@@ -155,10 +156,11 @@ class DialogEditorWidgetTests(unittest.TestCase):
             panel_base_color="#fefefe",
         )
 
-        self.assertEqual(tokens["accent_text"], "#101318")
+        self.assertEqual(tokens["accent_text"], _accent_text("#50fa7b"))
+        self.assertNotIn(tokens["accent_text"], {"#101318", "#000000"})
         self.assertTrue(tokens["border"].startswith("rgba(0,0,0,"))
         self.assertTrue(tokens["border_soft"].startswith("rgba(0,0,0,"))
-        self.assertIn("color: #101318;", stylesheet)
+        self.assertIn(f"color: {_accent_text('#50fa7b')};", stylesheet)
         self.assertIn("background-color: #fefefe;", common_stylesheet)
 
     def test_color_swatch_and_popup_follow_dialog_tokens(self):

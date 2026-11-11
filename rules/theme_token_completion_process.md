@@ -84,6 +84,22 @@ System appearance is resolved at runtime instead of rewriting the user's saved i
 - A runtime theme refresh redraws affected panels without notifying data-only consumers.
 
 
+### Widget-Only Mode Readability Contract
+
+The widget-only workspace inherits the main theme's identity (mode, base color, accent) but
+floats over arbitrary wallpaper, so `widget_mode_theme.harden_widget_readability()` owns its
+reading roles. Do not compare widget reading roles to main-window roles for equality.
+
+- The shell keeps the main base RGB with at least `WIDGET_SHELL_MIN_ALPHA` (242) alpha. Main
+  window opacity below that no longer shows wallpaper through the widget.
+- Rows, buttons, the empty-state card and the selected chip use an opaque ladder derived from
+  the base color (dark: toward white, light: toward ink); the selected chip and day tile use an
+  accent tint so selection never depends on translucency.
+- Text roles meet contrast floors against the shell over black and over white wallpaper:
+  primary 7:1, secondary and button text 5.5:1, muted/faint, accent text and weekend labels
+  4.5:1. Colors keep their hue and move toward white (dark) or ink (light) only as needed.
+- Accent and input-border identity roles remain identical to the main theme.
+
 ## Scope Rules
 - Typography and control sizing follow [the shared guide](../docs/design/typography-and-sizing.md). Use `shared.typography.get_typography_scale()` or shared `font_body`/`font_caption`/`font_section`/`font_title`/`font_display` tokens instead of screen-local sizes.
 - `font_size` remains points. Legacy dialog `*_font_pt` metric values remain logical pixels for compatibility; never append `pt` to those values. Qt applies physical DPI scaling once.

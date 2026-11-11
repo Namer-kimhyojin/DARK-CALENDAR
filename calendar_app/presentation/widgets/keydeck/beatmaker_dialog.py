@@ -169,6 +169,10 @@ class BeatmakerPerformanceDialog(QDialog):
 
     def _focus_pads(self):
         if not self._finished and self.isVisible():
+            if not self.isActiveWindow():
+                # Opened from a WindowDoesNotAcceptFocus overlay, the modal is not
+                # always the active window yet; keyboard input needs it to be.
+                self.activateWindow()
             self.canvas.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _page_changed(self):
