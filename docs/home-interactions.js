@@ -89,9 +89,9 @@
     }
   }
 
-  function setupGif() {
-    const image = document.querySelector("[data-motion-image]");
-    const button = document.querySelector("[data-motion-toggle]");
+  function setupGif(demo) {
+    const image = demo.querySelector("[data-motion-image]");
+    const button = demo.querySelector("[data-motion-toggle]");
     const poster = image.getAttribute("src");
     const animation = image.dataset.animation;
     let enabled = !reducedMotion.matches;
@@ -147,6 +147,6 @@
 
   setupSiteTheme();
   setupWidgetDemo();
-  setupGif();
+  document.querySelectorAll("[data-gif-demo]").forEach(setupGif);
   setupEntranceMotion();
 })();

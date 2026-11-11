@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.2.0 | 2026-11-11T18:10:40.349943+09:00 | change | Feature calendar movement, magnet docking and opacity in the homepage and media kit GIF | `homepage-desktop-arrangement-20261111` |
 | 5.2.0 | 2026-11-11T17:04:03.167593+09:00 | change | Refresh the official media kit and replace the layout editor feature with Work Management; document all nine widgets | `official-media-kit-20261111` |
 | 5.2.0 | 2026-11-11T15:59:10.246722+09:00 | change | Publish the redesigned homepage, interactive dark mode and opacity demo, and native clock animation | `homepage-interactive-showcase-20261111` |
 | 5.2.0 | 2026-11-11T10:59:38.311439+09:00 | change | Use the required publication date marker in the observed 5.2.0 release checklist | `release-5.2.0-publication-date-marker-20261111` |

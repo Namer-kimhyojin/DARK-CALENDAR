@@ -22,13 +22,13 @@ The [August 31 launch plan](LAUNCH_CAMPAIGN_2026-08-31.md) and [original generat
 
 ## Campaign concept
 
-**Air Calendar puts your calendar and widgets on the Windows desktop. Move and resize widgets, choose light or dark mode, and adjust colors and background opacity.**
+**Air Calendar puts a calendar where you want it on the Windows desktop. Move agenda and task panels independently, dock them to the calendar with magnet mode, and adjust background opacity.**
 
 Supporting messages:
 
-1. Desktop-first: schedules, tasks, clocks, weather, D-Day, and other widgets remain visible where work happens.
+1. Desktop-first: place the calendar on the desktop and move the agenda or task panels independently. In magnet mode, bring a detached panel to the calendar window’s edge to dock it again.
 2. Personal layout: move and resize widgets, save a workspace, and open more than one instance of a widget.
-3. Appearance: choose light, dark, or system mode. The app supports custom colors and separate background and border opacity settings. The [interactive clock demo](https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=en#appearance) shows background opacity with the text still visible.
+3. Appearance: choose light, dark, or system mode. The app supports custom colors and separate background and border opacity settings. The [interactive clock demo](https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=en#desktop-demo) shows background opacity with the text still visible.
 4. Connected calendars: use local calendars without an account or connect Google Calendar, Outlook, and iCloud. Naver and ICS connections are read-only. The [connection guide](https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide.html?lang=en) explains account setup, permissions, and service limits.
 
 ## Channel strategy
@@ -49,7 +49,7 @@ Do not post the same text repeatedly or enter communities only to drop a link. L
 
 | Week | Content piece | Channel | Owner / notes | Status |
 |---|---|---|---|---|
-| 1 | Put a calendar and widgets on the desktop | X, Threads, LinkedIn | Use the official landscape image and link to the homepage | Copy ready |
+| 1 | Move the desktop calendar and snap panels together | X, Threads, LinkedIn | Use the desktop arrangement GIF and link to the homepage demo | Copy ready |
 | 1 | Product-led README and repository About metadata | GitHub | Keep Store, website, GPL, and release links current | Ready |
 | 2 | Light and dark mode with adjustable opacity | LinkedIn, Instagram, X | Use the 8-second clock GIF or the official square image | Assets ready |
 | 2 | Widget gallery and Loop Mixer | X, productivity communities | Show the nine widget types, including KeyDeck and the six-track Loop Mixer | Assets ready |
@@ -64,14 +64,14 @@ Keep roughly 20% of slots open for release news, user questions, or an unexpecte
 
 ### Korean — launch
 
-Air Calendar는 유료 Windows 앱입니다. 달력과 할 일을 바탕화면에 배치하고, 시계·날씨·D-Day·KeyDeck·루프 믹서 등 필요한 위젯의 위치와 크기를 조절할 수 있습니다.
+Air Calendar는 Windows 바탕화면에 달력을 띄워 원하는 곳에 놓을 수 있는 유료 앱입니다. 오늘 일정이나 업무 패널을 따로 옮기고, 자석 모드로 달력 창에 다시 붙일 수 있습니다. 배경이 비치는 정도도 조절할 수 있습니다.
 
 라이트·다크 모드를 고르고, 원하는 배경색과 투명도로 꾸며 보세요. 로컬 일정은 계정 없이 사용할 수 있고, Google·Outlook·iCloud 일정 연결은 선택 기능입니다. 네이버와 ICS는 읽기 전용으로 연결할 수 있습니다.
 
 전체 업무 관리에서 일정·일반업무·지시·협조사항을 검색하고, 중요도와 상태를 한 번에 변경할 수 있습니다.
 
-바탕화면 위젯과 투명도를 체험해 보세요.
-<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ko#appearance>
+달력과 패널을 움직이는 시연을 확인해 보세요.
+<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ko#desktop-demo>
 
 #AirCalendar #Windows앱 #바탕화면위젯 #일정관리 #생산성
 
@@ -79,54 +79,55 @@ Air Calendar는 유료 Windows 앱입니다. 달력과 할 일을 바탕화면�
 
 Air Calendar로 달력과 위젯을 Windows 바탕화면에 배치하세요. 라이트·다크 모드와 배경 투명도를 홈페이지에서 직접 바꿔볼 수 있습니다.
 
-<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ko#appearance>
+<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ko#desktop-demo>
 
 ### English
 
-Air Calendar is a paid Windows app that puts your calendar and tasks on the desktop. Add, move and resize widgets such as a clock, weather, D-Day, KeyDeck and Loop Mixer.
+Air Calendar is a paid Windows app that puts a calendar where you want it on the desktop. Move agenda and task panels independently, snap them back to the calendar window with magnet mode and adjust background opacity.
 
 Choose light or dark mode, then adjust background color and opacity. Use local calendars without an account, or connect Google Calendar, Outlook or iCloud. Naver and ICS subscriptions are read-only.
 
 In Work Management, find schedules, recurring tasks and requests, then update their status or priority in bulk.
 
-Try the widget appearance demo.
-<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=en#appearance>
+Watch the desktop arrangement demo.
+<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=en#desktop-demo>
 
 #AirCalendar #WindowsApps #DesktopWidgets #Productivity #Calendar
 
 ### Japanese
 
-Air Calendarは有料のWindowsアプリです。カレンダーとタスクをデスクトップに配置し、時計、天気、D-Day、KeyDeck、ループミキサーなどの位置やサイズを調整できます。
+Air Calendarは、Windowsのデスクトップにカレンダーを自由に配置できる有料アプリです。予定や業務のパネルを個別に移動し、マグネットモードでカレンダーに結合できます。背景の透明度も調整できます。
 
 ライトモードとダークモードを選び、背景色や透明度も調整できます。ローカルの予定はアカウントなしで管理でき、Google カレンダー、Outlook、iCloudとの連携も選べます。NAVERとICSは読み取り専用です。
 
 業務管理では予定、定期業務、指示・依頼事項を検索し、状態や優先度を一括変更できます。
 
-ウィジェットの外観をお試しください。
-<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ja#appearance>
+デスクトップ配置のデモをご覧ください。
+<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=ja#desktop-demo>
 
 #AirCalendar #Windowsアプリ #デスクトップウィジェット #予定管理 #生産性
 
 ### Simplified Chinese
 
-Air Calendar 是一款付费 Windows 应用，可将日历和待办事项放在桌面上。按需添加时钟、天气、D-Day、KeyDeck 和循环混音器等小组件，并调整位置和大小。
+Air Calendar 是一款付费 Windows 应用，可将日历放在桌面的任意位置。单独移动日程与任务面板，用磁吸模式重新停靠到日历窗口，并按需调整背景透明度。
 
 选择浅色或深色模式，并调整背景颜色和透明度。本地日历无需账号，也可以按需连接 Google 日历、Outlook 或 iCloud。NAVER 和 ICS 订阅为只读。
 
 在任务管理中搜索日程、周期性任务和协作事项，批量修改状态与优先级。
 
-试试小组件外观设置。
-<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=zh#appearance>
+观看桌面布局演示。
+<https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=zh#desktop-demo>
 
 #AirCalendar #Windows应用 #桌面小组件 #日程管理 #效率工具
 
 ## Creative directions
 
-The PNGs combine actual app screens with light and dark clock widget renders. The square image features Work Management with sample tasks. The English artwork can accompany any of the four localized posts.
+The landscape and story PNGs show the calendar and agenda panel placed separately on a desktop. The square image features Work Management with sample tasks. The English artwork can accompany any of the four localized posts.
 
 - [Landscape PNG](../docs/assets/promo-air-calendar-landscape.png) · 1920 × 1080 for blogs and link previews.
 - [Square PNG](../docs/assets/promo-air-calendar-square.png) · 1080 × 1080 for social feeds.
 - [Story PNG](../docs/assets/promo-air-calendar-story.png) · 1080 × 1920 for Stories and short-video covers.
+- [Desktop arrangement GIF](../docs/assets/screenshots/interactive/desktop-arrangement.gif) · 13.5 seconds showing calendar movement, independent panel movement, magnet docking and background opacity from 100% to 40%. The animation combines native Air Calendar captures with a demonstration desktop background.
 - [Theme and opacity GIF](../docs/assets/screenshots/interactive/theme-opacity.gif) · 8 seconds showing the native clock widget.
 - [Widget gallery](../docs/assets/screenshots/showcase/widget-gallery.webp), [Work Management](../docs/assets/screenshots/showcase/work-management.webp), [dark appearance settings](../docs/assets/screenshots/interactive/appearance-dark.webp), [connection settings](../docs/assets/screenshots/sync-services-ko.png), and the [six-track Loop Mixer](../docs/design/loop-mixer-implemented-wide.png) for feature-specific posts.
 

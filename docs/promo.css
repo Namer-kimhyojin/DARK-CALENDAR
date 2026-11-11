@@ -7,6 +7,8 @@
 .promo-intro h1 { margin-block: 10px 18px; font-size: clamp(36px, 4.5vw, 66px); }
 .promo-lead { max-width: 34em; color: var(--muted-strong); font-size: clamp(16px, 1.5vw, 19px); line-height: 1.75; }
 .promo-cover { width: 100%; border: 1px solid var(--line); border-radius: 14px; }
+.promo-desktop-demo { margin: 0; }
+.promo-desktop-demo figcaption { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 8px 14px; padding-top: 10px; color: var(--muted-strong); font-size: 13px; }
 .promo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 22px; }
 .promo-source { margin-top: 17px; color: var(--muted); font-size: 13px; }
 .promo-source a, .promo-note a { text-decoration: underline; text-underline-offset: .2em; }

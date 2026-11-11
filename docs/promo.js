@@ -45,9 +45,9 @@
     });
   });
 
-  const motion = document.querySelector("[data-promo-motion]");
-  const play = document.querySelector("[data-promo-play]");
-  if (motion && play) {
+  document.querySelectorAll("[data-promo-gif]").forEach((demo) => {
+    const motion = demo.querySelector("[data-promo-motion]");
+    const play = demo.querySelector("[data-promo-play]");
     const poster = motion.getAttribute("src");
     const animation = motion.dataset.animatedSrc;
     const setPlaying = (playing) => {
@@ -59,5 +59,5 @@
     motion.addEventListener("error", () => {
       if (motion.getAttribute("src") === animation) setPlaying(false);
     });
-  }
+  });
 })();

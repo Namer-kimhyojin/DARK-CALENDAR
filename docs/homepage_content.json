@@ -51,29 +51,30 @@
     ]
   },
   "hero": {
-    "headline": "내가 꾸미는 캘린더와 위젯.",
-    "subheadline": "달력과 할 일을 원하는 자리에 놓고, 색상과 투명도를 맞춰보세요. Google·Outlook·iCloud 일정과 시계·날씨·D-Day 위젯을 바탕화면에서 함께 볼 수 있습니다.",
+    "headline": "바탕화면 달력, 원하는 자리에.",
+    "subheadline": "Windows 바탕화면에 달력을 띄워 원하는 곳으로 옮기세요. 오늘 일정이나 업무 패널은 따로 배치하거나 자석 모드로 한 창에 붙이고, 배경이 비치는 정도를 조절할 수 있습니다.",
     "primaryCta": "Microsoft Store에서 보기",
-    "secondaryCta": "다크 모드·투명도 체험",
+    "secondaryCta": "시연 보기",
     "highlightBullets": [
-      "자유로운 위젯 배치",
+      "달력과 패널 배치",
       "다크 모드와 투명도",
       "추가 위젯 9종",
       "캘린더 연동"
     ],
     "image": {
       "slotId": "hero-main-visual",
-      "assetType": "application-screenshot",
-      "path": "assets/screenshots/5.0/calendar-light.png",
-      "alt": "Air Calendar 라일락 테마의 월간 달력과 선택한 날짜의 일정",
+      "assetType": "desktop-arrangement-demo",
+      "path": "assets/screenshots/interactive/desktop-arrangement-poster.webp",
+      "animationPath": "assets/screenshots/interactive/desktop-arrangement.gif",
+      "alt": "달력 창과 오늘 일정 패널을 각각 옮긴 뒤 자석 모드로 붙이고 배경 불투명도를 100%에서 40%로 낮추는 시연",
       "sampleData": true
     }
   },
   "homepageSections": [
     {
       "id": "top",
-      "title": "캘린더와 바탕화면 위젯",
-      "description": "달력과 할 일을 원하는 자리에 놓고, 색상과 투명도를 맞춰보세요. Google·Outlook·iCloud 일정과 시계·날씨·D-Day 위젯을 바탕화면에서 함께 볼 수 있습니다."
+      "title": "바탕화면 달력, 원하는 자리에.",
+      "description": "Windows 바탕화면에 달력을 띄워 원하는 곳으로 옮기세요. 오늘 일정이나 업무 패널은 따로 배치하거나 자석 모드로 한 창에 붙이고, 배경이 비치는 정도를 조절할 수 있습니다."
     },
     {
       "id": "desktop-custom",
@@ -455,6 +456,15 @@
       "sourceType": "application-source-render",
       "source": "artifacts/widget-studio-20261101/screens/light/gallery.png",
       "sampleData": true
+    },
+    {
+      "id": "desktop-arrangement-demo",
+      "path": "docs/assets/screenshots/interactive/desktop-arrangement.gif",
+      "poster": "docs/assets/screenshots/interactive/desktop-arrangement-poster.webp",
+      "sourceType": "animated-composition-of-native-calendar-and-dock-captures",
+      "durationSeconds": 13.5,
+      "frames": 135,
+      "sampleData": true
     }
   ],
   "imagePlaceholders": [],
@@ -576,8 +586,8 @@
     }
   ],
   "seo": {
-    "title": "Air Calendar — 위젯과 색상까지 내 방식으로",
-    "description": "Windows 바탕화면에 달력과 9종 위젯을 배치하세요. 색상과 투명도, 글꼴과 레이아웃을 꾸미고 Google·Outlook·iCloud 캘린더를 연동하세요.",
+    "title": "Air Calendar — 원하는 자리에 놓는 Windows 바탕화면 달력",
+    "description": "Windows 바탕화면에 달력을 띄우고 일정과 업무 패널을 따로 옮기세요. 자석 모드로 한 창에 붙이고 배경 투명도를 조절할 수 있습니다.",
     "keywords": [
       "Windows 캘린더 앱",
       "데스크톱 일정 관리",
