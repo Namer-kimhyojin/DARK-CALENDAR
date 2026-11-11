@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.2.0 | 2026-11-11T10:48:40.998839+09:00 | change | Pin GET-only six-asset readback to the unchanged 5.2.0 native-tested candidate | `release-5.2.0-asset-readback-20261111` |
 | 5.2.0 | 2026-11-11T10:42:00.128912+09:00 | change | Install Qt for isolated encoding tests and compare visible menu ampersands in locale-dependent QA | `release-5.2.0-ci-test-environment-20261111` |
 | 5.2.0 | 2026-11-11T10:38:57.372651+09:00 | change | Refresh homepage around actual application UI, lilac/navy visual identity, multilingual editorial copy and real-screen sharing artwork | `homepage-redesign-20261111` |
 | 5.2.0 | 2026-11-11T10:26:53.494626+09:00 | release | Release integrated toolbar auto-hide, verified DB backup and recovery, appearance and widget readability improvements, translations, checklist copy and NLP fixes | `release-5.2.0-20261111` |

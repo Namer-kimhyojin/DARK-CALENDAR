@@ -1,4 +1,4 @@
-name: Read Back Existing 5.1.1 Release Bytes
+name: Read Back Existing 5.2.0 Release Bytes
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
         default: draft
 
 concurrency:
-  group: release-5.1.1-byte-readback
+  group: release-5.2.0-byte-readback
   cancel-in-progress: false
 
 jobs:
@@ -44,14 +44,14 @@ jobs:
         run: |
           python tests/release_qa/verify_release_asset_readback.py \
             --phase "$READBACK_PHASE" \
-            --out "$RUNNER_TEMP/release-5.1.1-readback-$READBACK_PHASE"
+            --out "$RUNNER_TEMP/release-5.2.0-readback-$READBACK_PHASE"
 
       - name: Preserve measured report and original three small sidecars only
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: air-calendar-5.1.1-release-byte-readback-${{ inputs.phase }}
+          name: air-calendar-5.2.0-release-byte-readback-${{ inputs.phase }}
           path: |
-            ${{ runner.temp }}/release-5.1.1-readback-${{ inputs.phase }}/readback.json
-            ${{ runner.temp }}/release-5.1.1-readback-${{ inputs.phase }}/*.sha256
+            ${{ runner.temp }}/release-5.2.0-readback-${{ inputs.phase }}/readback.json
+            ${{ runner.temp }}/release-5.2.0-readback-${{ inputs.phase }}/*.sha256
           if-no-files-found: warn
