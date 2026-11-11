@@ -6,6 +6,8 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.2.0 | 2026-11-11T10:42:00.128912+09:00 | change | Install Qt for isolated encoding tests and compare visible menu ampersands in locale-dependent QA | `release-5.2.0-ci-test-environment-20261111` |
+| 5.2.0 | 2026-11-11T10:38:57.372651+09:00 | change | Refresh homepage around actual application UI, lilac/navy visual identity, multilingual editorial copy and real-screen sharing artwork | `homepage-redesign-20261111` |
 | 5.2.0 | 2026-11-11T10:26:53.494626+09:00 | release | Release integrated toolbar auto-hide, verified DB backup and recovery, appearance and widget readability improvements, translations, checklist copy and NLP fixes | `release-5.2.0-20261111` |
 | 5.1.1 | 2026-11-11T10:26:51.140359+09:00 | change | Complete reviewed locale translations before the current release | `release-locale-finalization-20261111` |
 | 5.1.1 | 2026-11-11T02:58:32.763032+09:00 | change | 자연어 일정 입력에서 시각 뒤에 이어지는 차수·연도·분기 제목을 보존 | `maintenance-20261111-nlp-numbered-title` |
