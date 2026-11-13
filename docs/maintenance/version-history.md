@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.5.1 | 2026-11-14T08:22:58.700121+09:00 | change | Pin the GET-only hosted public asset verifier to the exact 5.5.1 release, source commit, native run and six asset hashes. | `release-5.5.1-public-readback-20261114` |
 | 5.5.1 | 2026-11-14T08:08:57.978385+09:00 | change | Provide libEGL for Linux encoding checks and isolate the Windows sound import in the Qt popup lifetime regression. | `release-5.5.1-ci-environment-20261114` |
 | 5.5.1 | 2026-11-14T08:00:22.606048+09:00 | release | Release the completed UI and keyboard accessibility improvements with canonical localized guidance and accumulated reliability fixes. | `release-5.5.1-20261114` |
 | 5.5.0 | 2026-11-14T07:53:38.048041+09:00 | change | Canonicalize UI accessibility and draft confirmation translations; localize 17 languages and track review status. | `uiux-release-localization-20261114` |

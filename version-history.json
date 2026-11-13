@@ -29075,6 +29075,24 @@
         ".github/workflows/encoding-policy.yml": "65079a69889bc5e0d22179eecbe3bddcdf1e360b424b5051c0a9ff194ab5bdb1",
         "tests/test_qt_destroyed_hooks.py": "809be1f19bd52974ac49cf57d46c634f8d9908e6f1e2118342fd9ec65d58c2cf"
       }
+    },
+    {
+      "id": "release-5.5.1-public-readback-20261114",
+      "created_at": "2026-11-14T08:22:58.700121+09:00",
+      "kind": "change",
+      "previous_version": "5.5.1",
+      "version": "5.5.1",
+      "summary": "Pin the GET-only hosted public asset verifier to the exact 5.5.1 release, source commit, native run and six asset hashes.",
+      "files": [
+        ".github/workflows/verify-release-assets-5.0.2.yml",
+        "tests/release_qa/test_release_asset_readback.py",
+        "tests/release_qa/verify_release_asset_readback.py"
+      ],
+      "scoped_hashes": {
+        ".github/workflows/verify-release-assets-5.0.2.yml": "2a4fbcd6970311867ec528291225e6085f57619ad68061190f6973c9643fb287",
+        "tests/release_qa/test_release_asset_readback.py": "dc6d2e94798454b5940babe3038cc11b5e8d3f4e49dc37aff4a70888e69dbf42",
+        "tests/release_qa/verify_release_asset_readback.py": "4c47bb785e7087f9d32b13abcc6277529292cbfcf8b067e204104951be07c7df"
+      }
     }
   ],
   "observed_inputs": {

@@ -16,69 +16,69 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[2]
 REPOSITORY = "Namer-kimhyojin/DARK-CALENDAR"
 REPOSITORY_ID = 1195286732
-RELEASE_ID = 441140736
-TAG = "v5.2.0"
-SOURCE_COMMIT = "731bca88a82bec5e200d315dec73321730ad0d96"
-NATIVE_RUN_ID = 42940491243
+RELEASE_ID = 444832213
+TAG = "v5.5.1"
+SOURCE_COMMIT = "106661905f524d50d7432cce4f63328678d6f35c"
+NATIVE_RUN_ID = 43524534524
 EXPECTED_ASSETS = [
     {
-        "id": 733702128,
-        "name": "DarkCalendar-5.2.0-corresponding-source.zip",
-        "size": 188835900,
-        "sha256": "a62893df79bc2fdc225dafb443cf123813c75bd257ef9f263b4266cbd4e08463",
+        "id": 745526336,
+        "name": "DarkCalendar-5.5.1-corresponding-source.zip",
+        "size": 194493678,
+        "sha256": "7f6170a20a0ddf9a13a88784a0336b658ce4fbfe346b6658719b4f4841c3179d",
     },
     {
-        "id": 733702127,
-        "name": "DarkCalendar-5.2.0-corresponding-source.zip.sha256",
+        "id": 745526333,
+        "name": "DarkCalendar-5.5.1-corresponding-source.zip.sha256",
         "size": 109,
-        "sha256": "03e223af4c417014cf818179bfe35d67bb43bdfed7d962702514d279027676e1",
+        "sha256": "dbdd767bc5020bc5b72d7767a174550557ea3cf69543de1b9ab0151d81c8f7f1",
     },
     {
-        "id": 733702130,
-        "name": "DarkCalendar-5.2.0-x64.msix",
-        "size": 97257193,
-        "sha256": "7bcfe89cb3d7bec5cd63ee7a93af8f692f87b170a3f13291bf531069a0e036a8",
+        "id": 745526330,
+        "name": "DarkCalendar-5.5.1-x64.msix",
+        "size": 109739916,
+        "sha256": "6e132053ac5601c25c20df1ca616102544069ac9ed8d01d32a8d14ea8ffdaad5",
     },
     {
-        "id": 733702133,
-        "name": "DarkCalendar-5.2.0-x64.msix.sha256",
+        "id": 745526334,
+        "name": "DarkCalendar-5.5.1-x64.msix.sha256",
         "size": 93,
-        "sha256": "b649f3ffd64ab7929a6a71deda139e7603a465d6a2b5610e5dd70f951fbc7350",
+        "sha256": "87df86b40faa1c3cb84a97c24f488d761a65cd34254002ee41d7dd077f6dae62",
     },
     {
-        "id": 733702129,
-        "name": "DarkCalendar-5.2.0.0-x64.msixupload",
-        "size": 95293554,
-        "sha256": "54b3888f4b5e69f9d826ca53c115f4afc36e2399bfda5a00c2586291854d9c5b",
+        "id": 745526332,
+        "name": "DarkCalendar-5.5.1.0-x64.msixupload",
+        "size": 107744001,
+        "sha256": "2751c2500b5e0ff05f077377be8613b8edbe5be49e8881b1c9f0c42ead6be1d9",
     },
     {
-        "id": 733702147,
-        "name": "DarkCalendar-5.2.0.0-x64.msixupload.sha256",
+        "id": 745526343,
+        "name": "DarkCalendar-5.5.1.0-x64.msixupload.sha256",
         "size": 101,
-        "sha256": "4cb634b49279c720e99692034c98cde48b3e43e25caece8db15517a59d68c4a6",
+        "sha256": "6e982af1a13e6f76b1bbfbea8fe5ae897c9819755c0faf8f027dd95ac42d1b92",
     },
 ]
 EXPECTED_CI_ARTIFACTS = [
     {
-        "id": 13820288007,
-        "name": "darkcalendar-github-release-x64",
-        "size": 378420923,
-        "sha256": "eea2b36601f9770aaa3caefedd6888f37cc2fee46dda52f1ee769ffad3399000",
-    },
-    {
-        "id": 13820148301,
+        "id": 14083584219,
         "name": "darkcalendar-dist-x64",
-        "size": 94181542,
-        "sha256": "76c3543f47e0e884ce1e16d82f006586fa14d8fc99843cbf90d698661a5398b7",
+        "size": 106595393,
+        "sha256": "016910146142560a96acd5577a7ff2ffd4040beb2395ce1f07a560251cc5692e",
     },
     {
-        "id": 13819534476,
+        "id": 14083214949,
         "name": "darkcalendar-msix-x64",
-        "size": 95285078,
-        "sha256": "69fdcc76cd4d3136c3a8f4dfe8e78b36d30934a2a9f441be224eec0c99557e73",
+        "size": 107735522,
+        "sha256": "f07ec843a55a945a37b4f4ed28e88014ed99c33bc429a06d43bf1c5a2cfe615a",
+    },
+    {
+        "id": 14083164842,
+        "name": "darkcalendar-github-release-x64",
+        "size": 409051279,
+        "sha256": "28100b09f022268574120e20ac0c0e6ae4d17fdeb4645fd03f6a9559ca0a2bd5",
     },
 ]
-EXPECTED_PRODUCT_DIGEST = "782db7b80e85affaf0810a6cb4aa81bc5412ec2a85bae4ff26763ab1970e10c6"
+EXPECTED_PRODUCT_DIGEST = "7f2140bf5decf82d4e1a64a64cbc9b826a1b2fdec4fd2302cf02b8ea24dc21fe"
 EXPECTED_CANONICALIZER_SHA256 = "38925dedfb1a81bb309e66d0a3ebb7637a09545c28214a47b58714d0d2ee9e39"
 OFFICIAL_HOSTS = frozenset({"api.github.com", "github.com", "release-assets.githubusercontent.com"})
 
@@ -279,8 +279,8 @@ def verify_product_inputs():
     digest = hashlib.sha256(
         json.dumps(inputs, sort_keys=True, separators=(",", ":")).encode("utf-8", errors="strict")
     ).hexdigest()
-    if len(inputs) != 726 or digest != EXPECTED_PRODUCT_DIGEST:
-        raise ValueError("The reviewed 726 product inputs changed")
+    if len(inputs) != 741 or digest != EXPECTED_PRODUCT_DIGEST:
+        raise ValueError("The reviewed 741 product inputs changed")
     return {"count": len(inputs), "sha256": digest}
 
 
