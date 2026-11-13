@@ -209,6 +209,16 @@ class FocusUsecasesTests(unittest.TestCase):
             ["Today task", "Soon directive"],
         )
 
+    def test_task_only_filters_never_include_directives(self):
+        repo = _FakeFocusRepo(
+            tasks_by_date={"2026-04-02": []},
+            directive_rows=[(12, "Directive 12", "pending", "", "2026-04-02 10:00:00", "", None)],
+        )
+
+        for selected in ("today", "incomplete", "urgent"):
+            tasks = focus_usecases.get_filtered_focus_tasks(repo, selected, "2026-04-02")
+            self.assertEqual([], [t for t in tasks if t.get("type") == "directive"], selected)
+
     def test_auto_select_fallback_skips_out_of_window_tasks(self):
         repo = _FakeFocusRepo(urgent_task=(None, None))
 

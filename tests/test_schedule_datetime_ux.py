@@ -88,7 +88,7 @@ class ScheduleDatetimeUxTests(TemporaryDatabaseTestCase):
         # child controls, just as the modal event loop does in the app.
         self.app.processEvents()
         for dialog in self.dialogs:
-            dialog.close()
+            dialog.done(0)  # Teardown bypasses user discard confirmation.
             dialog.deleteLater()
         self.host.close()
         self.host.deleteLater()

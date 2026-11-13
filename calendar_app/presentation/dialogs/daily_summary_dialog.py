@@ -683,9 +683,14 @@ class DailySummaryDialog(QDialog):
         layout.addLayout(reminder_section)
         self.daily_toggle.toggled.connect(self.time_edit.setEnabled)
 
-        self.weekend_checkbox = QCheckBox(t("dialog.daily.hide_weekends", "주말에는 표시하지 않기"))
-        self.weekend_checkbox.setAccessibleName(self.weekend_checkbox.text())
-        layout.addWidget(self.weekend_checkbox)
+        # A wrapping label, like the rows above: a QCheckBox caption cannot wrap and
+        # widened the whole settings column at large font sizes.
+        self.weekend_checkbox = self._switch(
+            t("dialog.daily.hide_weekends", "주말에는 표시하지 않기")
+        )
+        layout.addLayout(
+            self._labeled_control_row(self.weekend_checkbox.accessibleName(), self.weekend_checkbox)
+        )
         weekend_help = QLabel(
             t(
                 "dialog.daily.hide_weekends_help",

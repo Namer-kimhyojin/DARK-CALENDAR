@@ -17,6 +17,7 @@ from calendar_app.infrastructure.calendar_sync.http_response import (
     read_calendar_response,
 )
 from calendar_app.infrastructure.calendar_sync.http_retry import retry_after_seconds
+from calendar_app.infrastructure.google_sync.common import sync_time_zone
 
 from .conversion import edited_calendar, new_calendar, records
 from .profiles import PROFILES, validate_url
@@ -87,7 +88,7 @@ class CalDAVClient:
         password,
         session=None,
         cancelled=lambda: False,
-        local_zone="Asia/Seoul",
+        local_zone=None,
         resource_cache=None,
         server_url=None,
     ):
@@ -100,7 +101,7 @@ class CalDAVClient:
         self.auth = (username.strip(), password)
         self.session = session or requests.Session()
         self.cancelled = cancelled
-        self.local_zone = local_zone
+        self.local_zone = local_zone or sync_time_zone(None)
         self.cache = {}
         self.resource_cache = resource_cache
         self.missing_resources = set()
@@ -276,7 +277,7 @@ class CalDAVClient:
                 resources[url] = (etag.text, content.text)
             elif url in cached and cached[url][0] == etag.text:
                 try:
-                    records(url, *cached[url], start_time, end_time, self.local_zone)
+                    records(url, *cached[url], start_time, end_time, zone=self.local_zone)
                     resources[url] = cached[url]
                 except CalendarSyncError:
                     requested[url] = etag.text
@@ -301,7 +302,7 @@ class CalDAVClient:
         for url, (etag, content) in resources.items():
             if self.cancelled():
                 raise CalendarSyncError("cancelled")
-            result.extend(records(url, etag, content, start_time, end_time, self.local_zone))
+            result.extend(records(url, etag, content, start_time, end_time, zone=self.local_zone))
             if len(result) > 10000:
                 raise CalendarSyncError("too_many_events")
         if (
@@ -400,7 +401,7 @@ class CalDAVClient:
                 data,
                 target - timedelta(days=2),
                 target + timedelta(days=2),
-                self.local_zone,
+                zone=self.local_zone,
             )
         else:
             events = records(href, etag, data, zone=self.local_zone)
@@ -410,7 +411,7 @@ class CalDAVClient:
         return match
 
     @staticmethod
-    def to_task(event, local_zone="Asia/Seoul"):
+    def to_task(event, local_zone):
         # Event records store canonical local task fields to make conflicts JSON-safe.
         task = dict(event["task"])
         original_zone = event.get("zone", local_zone)
@@ -426,11 +427,11 @@ class CalDAVClient:
         return task
 
     @staticmethod
-    def from_task(task, local_zone="Asia/Seoul"):
+    def from_task(task, local_zone):
         return {"task": dict(task), "zone": local_zone}
 
     @staticmethod
-    def edit_payload(task, remote, local_zone="Asia/Seoul"):
+    def edit_payload(task, remote, local_zone):
         return edited_calendar(task, remote, local_zone)
 
     def create(self, calendar, payload, transaction_id):

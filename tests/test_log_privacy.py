@@ -121,3 +121,20 @@ def test_both_startup_handlers_protect_oauth_diagnostics(tmp_path, monkeypatch, 
 def test_safe_error_codes_remain_diagnostic():
     message = "network_unavailable; HTTP 429; sqlite SQLITE_BUSY"
     assert redact_diagnostic_text(message) == message
+
+
+def test_large_log_rotates_before_handles_open_and_keeps_writing(tmp_path, monkeypatch):
+    from calendar_app.infrastructure.runtime import crash_bootstrap
+
+    log_path = tmp_path / "crash.log"
+    log_path.write_bytes(b"x" * 64)
+    monkeypatch.setattr(crash_bootstrap, "_LOG_MAX_BYTES", 32)
+
+    crash_bootstrap._rotate_log_at_startup(str(log_path))
+
+    assert not log_path.exists()
+    assert (tmp_path / "crash.log.1").read_bytes() == b"x" * 64
+    log_path.write_bytes(b"y" * 64)
+    crash_bootstrap._rotate_log_at_startup(str(log_path))
+    assert (tmp_path / "crash.log.2").read_bytes() == b"x" * 64
+    assert (tmp_path / "crash.log.1").read_bytes() == b"y" * 64

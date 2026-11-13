@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Initial modal sizes should honor intent instead of the widest hidden page."""
+
 import os
 import unittest
 from unittest.mock import patch
@@ -29,7 +30,10 @@ class DialogSizePolicyTests(unittest.TestCase):
         layout.addWidget(QLabel("설정"))
         apply_common_dialog_style(dialog)
         dialog.resize(700, 520)
-        with patch("calendar_app.presentation.dialogs.dialog_styles._available_dialog_bounds", return_value=(1800, 1000)):
+        with patch(
+            "calendar_app.presentation.dialogs.dialog_styles._available_dialog_bounds",
+            return_value=(1800, 1000),
+        ):
             dialog.show()
             for _ in range(3):
                 self.app.processEvents()
@@ -40,7 +44,10 @@ class DialogSizePolicyTests(unittest.TestCase):
         self.addCleanup(dialog.close)
         layout = QVBoxLayout(dialog)
         layout.addWidget(QLabel("스크롤되는 설정"))
-        with patch("calendar_app.presentation.dialogs.dialog_styles._available_dialog_bounds", return_value=(1000, 700)):
+        with patch(
+            "calendar_app.presentation.dialogs.dialog_styles._available_dialog_bounds",
+            return_value=(1000, 700),
+        ):
             apply_common_dialog_style(dialog, size=(1400, 1000))
             dialog.show()
             for _ in range(4):

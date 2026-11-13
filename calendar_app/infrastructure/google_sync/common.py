@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 import os
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +69,23 @@ def is_gcal_enabled(settings, default: bool | None = None) -> bool:
             default = infer_initial_gcal_enabled(settings)
         return bool(default)
     return _coerce_bool_setting(explicit, default=bool(default) if default is not None else False)
+
+
+def _system_time_zone() -> str:
+    from PyQt6.QtCore import QTimeZone
+
+    zone = QTimeZone.systemTimeZoneId().data().decode("utf-8", errors="replace")
+    try:
+        ZoneInfo(zone)
+    except (KeyError, ValueError):
+        return "UTC"
+    return zone
+
+
+def sync_time_zone(settings) -> str:
+    """The zone saved for calendar sync, else this PC's zone."""
+    zone = str(_setting_value(settings, "gcal_timezone", "") or "").strip()
+    return zone or _system_time_zone()
 
 
 def is_gcal_import_selection_configured(settings) -> bool:
@@ -149,6 +168,46 @@ def get_default_gcal_calendar_id(settings=None) -> str:
 def normalize_calendar_id(calendar_id) -> str:
     value = str(calendar_id or "").strip()
     return value or "primary"
+
+
+def untitled_event_name() -> str:
+    """Task name stored for a Google event without a title, in the UI language."""
+    from calendar_app.infrastructure.i18n import t
+
+    return t("dialog.task.untitled", "제목 없음")
+
+
+@functools.lru_cache(maxsize=1)
+def _bundled_untitled_names() -> frozenset[str]:
+    # "Untitled" is what older versions stored for an empty Google title.
+    names = {"Untitled"}
+    try:
+        from calendar_app.infrastructure import i18n
+
+        for code in i18n.list_available_locale_codes():
+            path = i18n.resolve_locale_file_path(code, prefer_user=False)
+            node = i18n._read_locale_dict(path, code) if path else {}
+            for part in ("dialog", "task", "untitled"):
+                node = node.get(part) if isinstance(node, dict) else None
+            if isinstance(node, str) and node.strip():
+                names.add(node.strip())
+    except Exception:
+        logger.exception("Failed to read the untitled event names")
+    return frozenset(names)
+
+
+def google_summary_for_task_name(name, remote_summary=None) -> str:
+    """Title to write to Google: an untitled placeholder in any language stays empty.
+
+    On an update, a Google event whose real title is that very word keeps it.
+    """
+    text = str(name or "")
+    stripped = text.strip()
+    if not stripped:
+        return ""
+    if stripped in _bundled_untitled_names() or stripped == untitled_event_name():
+        return text if str(remote_summary or "").strip() == stripped else ""
+    return text
 
 
 def google_create_idempotency_key(task) -> str | None:

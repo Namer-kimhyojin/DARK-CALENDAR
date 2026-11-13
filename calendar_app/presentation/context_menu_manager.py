@@ -280,7 +280,7 @@ def show_right_context_menu(app, pos):
     act_sort_deadline.setCheckable(True)
     act_sort_deadline.setChecked(cur_sort == "deadline")
 
-    act_sort_reg = sort_menu.addAction(t("context_menu.sort_reg", default="Sort by Registration"))
+    act_sort_reg = sort_menu.addAction(t("context_menu.sort_reg", default="Sort by Date Added"))
     act_sort_reg.setIcon(icon(ICON.GROUP_BY_DATE))
     act_sort_reg.setCheckable(True)
     act_sort_reg.setChecked(cur_sort == "registration")

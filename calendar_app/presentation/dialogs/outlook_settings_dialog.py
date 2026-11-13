@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 
 from calendar_app.app_paths import DB_PATH
 from calendar_app.infrastructure.calendar_sync.repository import CalendarSyncRepository
+from calendar_app.infrastructure.google_sync.common import sync_time_zone
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.outlook_sync.graph import GraphClient
 from calendar_app.presentation.dialogs.dialog_styles import (
@@ -37,12 +38,17 @@ from calendar_app.presentation.dialogs.provider_settings_widgets import (
     update_issue_items,
 )
 from calendar_app.presentation.dialogs.sync_feedback import (
+    DELETE_REMOVE_ONLY,
     add_sync_hub_return,
     calendar_recovery_issues,
+    confirm_reviewed_delete,
     conflict_text,
+    delete_queue_text,
+    delete_wait_label,
     guard_sync_database,
     recovery_issue_label,
     recovery_issue_text,
+    remote_event_summary,
     sync_error_message,
 )
 from calendar_app.presentation.dialogs.sync_recovery import (
@@ -469,29 +475,46 @@ class OutlookSettingsDialog(QDialog):
         item = self.issues.currentItem()
         task_id = item.data(Qt.ItemDataRole.UserRole) if item else None
         detail = item.data(int(Qt.ItemDataRole.UserRole) + 2) if item else None
+        queued = (item.data(int(Qt.ItemDataRole.UserRole) + 3) if item else None) or {}
         conflict = isinstance(task_id, int) and bool(detail and detail.get("kind") == "conflict")
         recovery = bool(detail and detail.get("recovery_issue"))
+        reason = queued.get("reason")
+        reviewed = reason == "delete_conflict"
         busy = self.controller.busy
+        zone = sync_time_zone(self.settings)
         self.local.setEnabled(conflict and not busy)
         self.remote.setEnabled(conflict and not busy)
+        self.retry_delete.setVisible(reason not in DELETE_REMOVE_ONLY)
         self.retry_delete.setEnabled(
             isinstance(task_id, str)
             and not busy
             and not getattr(self.controller, "retry_remaining_seconds", 0)
+            and (not reviewed or bool(remote_event_summary(queued, GraphClient, zone)))
         )
         self.cancel_delete.setEnabled(isinstance(task_id, str) and not busy and not recovery)
         self.retry_delete.setText(
             t("sync_recovery.recheck", "다시 확인")
             if recovery
+            else t("sync_delete.force", "그래도 삭제")
+            if reviewed
             else t("outlook.retry_delete", "선택 삭제 다시 시도")
         )
+        self.cancel_delete.setText(
+            t("sync_delete.reimport", "원격 일정 다시 가져오기")
+            if reviewed
+            else t("sync_delete.remove_from_list", "목록에서 제거")
+            if reason in DELETE_REMOVE_ONLY
+            else t("outlook.cancel_delete", "선택 삭제 취소 · Outlook 일정 유지")
+        )
         preview = (
-            conflict_text(
-                detail, GraphClient, self.settings.value("gcal_timezone", "Asia/Seoul", type=str)
-            )
+            conflict_text(detail, GraphClient, zone)
             if conflict
             else recovery_issue_text(detail)
             if recovery
+            else delete_queue_text(queued, GraphClient, zone)
+            if queued
+            else sync_error_message(detail["kind"])
+            if detail and detail.get("kind")
             else ""
         )
         if self.preview.toPlainText() != preview:
@@ -514,7 +537,7 @@ class OutlookSettingsDialog(QDialog):
             if CalendarSyncRepository(conn).resolve(
                 task_id,
                 choice,
-                self.settings.value("gcal_timezone", "Asia/Seoul", type=str),
+                sync_time_zone(self.settings),
                 GraphClient,
             ):
                 resolved = True
@@ -544,32 +567,45 @@ class OutlookSettingsDialog(QDialog):
                 self.controller.sync(force=True)
             return
         calendar_id = item.data(int(Qt.ItemDataRole.UserRole) + 1)
-        conn = self._connection()
-        try:
-            with conn:
-                if choice == "retry":
+        queued = item.data(int(Qt.ItemDataRole.UserRole) + 3) or {}
+        reason = queued.get("reason")
+        account = self.settings.value("outlook_account_id", "", type=str)
+        if choice == "retry" and reason in DELETE_REMOVE_ONLY:
+            return
+        if choice == "retry" and reason == "delete_conflict":
+            # Never delete a changed remote event without showing what goes away.
+            if not confirm_reviewed_delete(
+                self, queued, GraphClient, sync_time_zone(self.settings)
+            ):
+                return
+            conn = self._connection()
+            try:
+                changed = CalendarSyncRepository(conn).confirm_delete(
+                    account, calendar_id, event_id, queued.get("remote_json")
+                )
+            finally:
+                conn.close()
+            if not changed:
+                self.controller.status = "conflict_snapshot_changed"
+        else:
+            conn = self._connection()
+            try:
+                with conn:
                     changed = conn.execute(
-                        "UPDATE calendar_sync_delete_queue SET attempts=0,error=NULL WHERE event_id=? AND calendar_id=? AND calendar_id IN (SELECT local_id FROM calendar_sync_calendar WHERE account_id=?)",
                         (
-                            event_id,
-                            calendar_id,
-                            self.settings.value("outlook_account_id", "", type=str),
-                        ),
+                            "UPDATE calendar_sync_delete_queue SET attempts=0,error=NULL "
+                            if choice == "retry"
+                            else "DELETE FROM calendar_sync_delete_queue "
+                        )
+                        + "WHERE event_id=? AND calendar_id=? AND calendar_id IN (SELECT local_id FROM calendar_sync_calendar WHERE account_id=?)",
+                        (event_id, calendar_id, account),
                     ).rowcount
-                elif choice == "cancel":
-                    conn.execute(
-                        "DELETE FROM calendar_sync_delete_queue WHERE event_id=? AND calendar_id=? AND calendar_id IN (SELECT local_id FROM calendar_sync_calendar WHERE account_id=?)",
-                        (
-                            event_id,
-                            calendar_id,
-                            self.settings.value("outlook_account_id", "", type=str),
-                        ),
-                    )
-        finally:
-            conn.close()
+            finally:
+                conn.close()
         self._available_key = None
         self._refresh()
-        if choice == "retry" and changed:
+        # Dropping a conflicted delete lets the next sync bring the remote event back.
+        if changed and (choice == "retry" or reason == "delete_conflict"):
             self.controller.sync(force=True)
 
     @staticmethod
@@ -584,6 +620,7 @@ class OutlookSettingsDialog(QDialog):
                 "outlook.issue_move", "캘린더 이동 미지원 · 원래 캘린더로 되돌려 주세요"
             ),
             "calendar_read_only": t("outlook.issue_read_only", "캘린더 쓰기 권한이 없음"),
+            "calendar_not_selected": delete_wait_label("calendar_not_selected"),
             "recurrence_not_supported": t("outlook.issue_recurrence", "반복 규칙 편집 미지원"),
             "online_meeting_body_not_supported": t(
                 "outlook.issue_meeting", "온라인 회의 본문은 Outlook에서 편집해 주세요"
@@ -718,15 +755,14 @@ class OutlookSettingsDialog(QDialog):
                     )
                     entries.append((label, {0: issue["task_id"], 2: issue}))
                 account_id = self.settings.value("outlook_account_id", "", type=str)
-                for row in conn.execute(
-                    "SELECT q.* FROM calendar_sync_delete_queue q JOIN calendar_sync_calendar c ON c.local_id=q.calendar_id WHERE c.account_id=?",
-                    (account_id,),
-                ):
+                for row in repo.delete_queue(account_id):
                     label = t("outlook.delete_issue", "삭제 대기 · {attempts}/5회 · {kind}").format(
                         attempts=row["attempts"],
-                        kind=self._issue_label(row["error"] or t("outlook.pending", "대기 중")),
+                        kind=self._issue_label(row["reason"])
+                        if row["reason"]
+                        else t("outlook.pending", "대기 중"),
                     )
-                    entries.append((label, {0: row["event_id"], 1: row["calendar_id"]}))
+                    entries.append((label, {0: row["event_id"], 1: row["calendar_id"], 3: row}))
                 for row in calendar_recovery_issues(repo, self.settings, "outlook_", account_id):
                     entries.append(
                         (

@@ -155,11 +155,7 @@ class _DialogShadowController(QObject):
         if settings is not None:
             self._settings = settings
         dialog = owning_dialog(self)
-        if (
-            dialog is None
-            or sip.isdeleted(self.surface)
-            or is_app_exiting()
-        ):
+        if dialog is None or sip.isdeleted(self.surface) or is_app_exiting():
             return
         from calendar_app.presentation.dialogs.dialog_styles import (
             _dialog_settings,
@@ -191,11 +187,7 @@ class _DialogShadowController(QObject):
 
     def sync_geometry(self):
         dialog = owning_dialog(self)
-        if (
-            dialog is None
-            or sip.isdeleted(self.surface)
-            or is_app_exiting()
-        ):
+        if dialog is None or sip.isdeleted(self.surface) or is_app_exiting():
             return
         if not dialog.isVisible() or dialog.isMinimized() or not dialog.isWindow():
             self.surface.hide()

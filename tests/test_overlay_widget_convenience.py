@@ -52,7 +52,11 @@ def test_clock_quick_timezone_uses_existing_offset_and_preserves_format(owner):
     widget._set("format", "hm")
     menu = QMenu()
     widget._build_context_menu(menu)
-    zones = next(action.menu() for action in menu.actions() if action.menu())
+    zones = next(
+        action.menu()
+        for action in menu.actions()
+        if action.menu() and action.text() == t("widget.usage.timezone", "시간대 빠른 선택")
+    )
     zone = widget._timezone_items()[11]
     next(action for action in zones.actions() if action.text() == zone[0]).trigger()
     assert widget._tz_offset_minutes() == zone[1]

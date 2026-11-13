@@ -2,7 +2,7 @@
 """Shared base class for unified task add/modify dialogs."""
 
 from PyQt6.QtCore import QDate, QDateTime, Qt, QTime
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QFontMetricsF, QPalette
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QStyle,
     QStyleOptionComboBox,
+    QStylePainter,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -53,6 +54,73 @@ from calendar_app.presentation.dialogs.routine_recurrence_wizard import (
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.typography import fitted_text_width, font_scaled_width
+
+# Widths the Korean layout was designed with; translations widen up to the cap.
+_INFO_LABEL_MIN_WIDTH = 52
+_INFO_LABEL_MAX_WIDTH = 120
+_OPS_COMBO_MIN_WIDTH = 155
+_OPS_COMBO_MAX_WIDTH = 240
+# Native styles add label insets inside the combo edit field.
+_TEXT_FIT_SLACK = 12
+
+
+def _label_text_overhead(label: QLabel) -> int:
+    """Pixels of a plain-text QLabel's width that its text cannot use.
+
+    Mirrors QLabel's size hint: contents margins, margin() on both sides and the
+    indent. A label with a frame and the default indent (-1) paints its text half
+    an 'x' in and reserves a whole 'x' when it computes heightForWidth, so a fit
+    that ignores the indent clips single words and wraps multi-word labels.
+    """
+    margins = label.contentsMargins()
+    overhead = margins.left() + margins.right() + 2 * label.margin()
+    indent = label.indent()
+    if indent < 0 and label.frameWidth() > 0:
+        indent = label.fontMetrics().horizontalAdvance("x") - 2 * label.margin()
+    return overhead + max(0, indent)
+
+
+class _ElidingComboBox(QComboBox):
+    """QComboBox that elides its current text instead of clipping it mid-word.
+
+    Same drawing as QComboBox::paintEvent; only the label text is elided to the
+    edit field. The full text stays in currentText() and the tooltip.
+    """
+
+    def paintEvent(self, event):  # noqa: N802 - Qt override
+        painter = QStylePainter(self)
+        painter.setPen(self.palette().color(QPalette.ColorRole.Text))
+        option = QStyleOptionComboBox()
+        self.initStyleOption(option)
+        painter.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, option)
+        if self.currentIndex() < 0 and self.placeholderText():
+            option.palette.setBrush(QPalette.ColorRole.ButtonText, option.palette.placeholderText())
+            option.currentText = self.placeholderText()
+        field = self.style().subControlRect(
+            QStyle.ComplexControl.CC_ComboBox,
+            option,
+            QStyle.SubControl.SC_ComboBoxEditField,
+            self,
+        )
+        room = field.width() - _TEXT_FIT_SLACK
+        if not option.currentIcon.isNull():
+            room -= option.iconSize.width() + 4
+        metrics = self.fontMetrics()
+        original_text = option.currentText
+        room = max(0, room)
+        elide_width = room
+        while elide_width > 0:
+            text = metrics.elidedText(original_text, Qt.TextElideMode.ElideRight, elide_width)
+            overflow = metrics.horizontalAdvance(text) - room
+            if overflow <= 0:
+                break
+            # Font fallback can reshape emoji and the ellipsis after truncation.
+            elide_width -= overflow
+        else:
+            text = ""
+        option.currentText = text
+        painter.drawControl(QStyle.ControlElement.CE_ComboBoxLabel, option)
 
 
 class BaseTaskDialog(QDialog):
@@ -154,6 +222,7 @@ class BaseTaskDialog(QDialog):
         )
         context_layout.setSpacing(8)
 
+        self._info_row_labels = []
         for lbl_key, placeholder_key, attr in [
             (t("dialog.task.assignee"), t("dialog.task.assignee_placeholder"), "assignee_edit"),
             (t("dialog.task.location"), t("dialog.task.location_placeholder"), "location_edit"),
@@ -161,7 +230,8 @@ class BaseTaskDialog(QDialog):
             row = QHBoxLayout()
             row.setSpacing(10)
             lbl = QLabel(lbl_key)
-            lbl.setFixedWidth(52)
+            lbl.setFixedWidth(_INFO_LABEL_MIN_WIDTH)
+            self._info_row_labels.append((lbl, lbl_key))
             edit = QLineEdit()
             edit.setPlaceholderText(placeholder_key)
             self._set_editor_height(edit)
@@ -188,14 +258,14 @@ class BaseTaskDialog(QDialog):
             col = QVBoxLayout()
             col.setSpacing(5)
             col.addWidget(QLabel(lbl_key))
-            combo = QComboBox()
+            combo = _ElidingComboBox()
             for label, value in items:
                 combo.addItem(label, value)
             if default_data:
                 idx = combo.findData(default_data)
                 combo.setCurrentIndex(idx if idx >= 0 else 0)
             self._set_editor_height(combo)
-            combo.setFixedWidth(155)
+            combo.setFixedWidth(_OPS_COMBO_MIN_WIDTH)
             col.addWidget(combo)
             setattr(self, attr, combo)
             combo_row.addLayout(col)
@@ -562,10 +632,32 @@ class BaseTaskDialog(QDialog):
             )
         )
 
+    def _mark_rule_chosen_by_user(self, *_args):
+        self._rule_chosen_by_user = True
+
+    def _reseed_rule_from_start_date(self, *_args):
+        """Until a rule is chosen, keep the rule controls on the start date.
+
+        The controls otherwise keep their first items (Monday, day 1), so the
+        preview and the created series disagreed with the picked start date.
+        """
+        if self.task_type != "routine" or getattr(self, "_rule_chosen_by_user", False):
+            return
+        if not hasattr(self, "rule_mode_combo") or getattr(self, "start_date", None) is None:
+            return
+        self._routine_cycle_type = self.repeat_cycle_combo.currentData() or "monthly"
+        self._recurrence_config = normalize_recurrence_config(
+            self.start_date.date(), self._routine_cycle_type, ""
+        )
+        self._apply_recurrence_to_controls()
+        self._sync_from_recurrence_controls()
+
     def _apply_routine_recurrence(self, cycle_type=None, recurrence=None):
         if self.task_type != "routine":
             return
         cycle_type = cycle_type or "single"
+        if recurrence and cycle_type != "single":
+            self._rule_chosen_by_user = True
         self._routine_cycle_type = "monthly" if cycle_type == "single" else cycle_type
         self._routine_recurrence = recurrence
 
@@ -797,6 +889,82 @@ class BaseTaskDialog(QDialog):
         super().showEvent(event)
         # Widths depend on the dialog stylesheet, which applies once polished.
         self._fit_repeat_mode_widths()
+        self._fit_info_label_widths()
+        self._fit_ops_combo_widths()
+
+    def _fit_info_label_widths(self):
+        """Fit the assignee/location labels to their translation; Korean keeps 52px.
+
+        Single words such as "Assignee" (59px) or "Исполнитель" (92px) cannot wrap,
+        so a fixed 52px clipped them. Both rows share one width to keep the fields
+        aligned; past the cap the label is elided with the full text as tooltip.
+        The fit counts QLabel's frame indent, or near-full labels wrap or clip.
+        """
+        rows = getattr(self, "_info_row_labels", None)
+        if not rows:
+            return
+        for label, _text in rows:
+            label.ensurePolished()
+        # Float advances: QLabel wraps on the unrounded width, so no extra slack
+        # is needed and Korean keeps exactly 52px.
+        metrics = QFontMetricsF(rows[0][0].font())
+        pad = _label_text_overhead(rows[0][0])
+        width = fitted_text_width(
+            metrics,
+            [text for _label, text in rows],
+            minimum=_INFO_LABEL_MIN_WIDTH,
+            maximum=font_scaled_width(metrics, _INFO_LABEL_MAX_WIDTH),
+            padding=pad,
+        )
+        for label, text in rows:
+            label.setFixedWidth(width)
+            fits = metrics.horizontalAdvance(text) + pad <= width
+            elided = metrics.elidedText(text, Qt.TextElideMode.ElideRight, width - pad)
+            label.setText(text if fits else elided)
+            label.setToolTip("" if fits else text)
+
+    def _fit_ops_combo_widths(self):
+        """Size the priority/status selectors to their longest option; Korean keeps 155px.
+
+        de "Aufgeschoben" and ru "Нормальный" were clipped at 155px. Both share
+        one width so the row stays even. The cap keeps both within the dialog's
+        minimum width (no sideways scrolling); text past it, e.g. at 24pt, is
+        elided by _ElidingComboBox with the full text as tooltip.
+        """
+        combos = [
+            combo
+            for combo in (
+                getattr(self, "priority_combo", None),
+                getattr(self, "status_combo", None),
+            )
+            if combo is not None
+        ]
+        if not combos:
+            return
+        widths = []
+        for combo in combos:
+            combo.ensurePolished()
+            option = QStyleOptionComboBox()
+            combo.initStyleOption(option)
+            field = combo.style().subControlRect(
+                QStyle.ComplexControl.CC_ComboBox,
+                option,
+                QStyle.SubControl.SC_ComboBoxEditField,
+                combo,
+            )
+            chrome = max(0, combo.width() - field.width())
+            widths.append(
+                fitted_text_width(
+                    combo.fontMetrics(),
+                    [combo.itemText(i) for i in range(combo.count())],
+                    minimum=_OPS_COMBO_MIN_WIDTH,
+                    maximum=_OPS_COMBO_MAX_WIDTH,
+                    padding=chrome + 4,
+                )
+            )
+        width = max(widths)
+        for combo in combos:
+            combo.setFixedWidth(width)
 
     def _fit_repeat_mode_widths(self):
         """Size the repeat cycle/rule selectors to their longest translated option.
@@ -1068,8 +1236,10 @@ class BaseTaskDialog(QDialog):
                 if t_item.get("checklist_type") == "list"
                 else t("dialog.checklist.type_process")
             )
+            # Same text the checklist manager shows for a template's item count.
+            count_text = t("checklist_mgr.n_items", "{n}개", n=item_count)
             self.checklist_template_combo.addItem(
-                f"  {t_item['name']} [{type_str}] ({item_count}{t('dialog.checklist.item_unit')})",
+                f"  {t_item['name']} [{type_str}] ({count_text})",
                 t_item["id"],
             )
 

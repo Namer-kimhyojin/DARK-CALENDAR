@@ -13,6 +13,8 @@ from PyQt6 import sip
 from PyQt6.QtCore import QByteArray, QObject, QTimer, pyqtSignal
 from PyQt6.QtNetwork import QNetworkReply, QNetworkRequest
 
+from calendar_app.shared.qt_lifetime import call_when_destroyed
+
 _HEADERS = (b"Expires", b"Last-Modified", b"Retry-After")
 _MAX_BODY = 2 * 1024 * 1024
 
@@ -88,9 +90,7 @@ class WeatherForecastPool(QObject):
     def acquire(self, request: QNetworkRequest, parent=None) -> ForecastReply:
         key = request.url().toString()
         client = ForecastReply(self, key, parent)
-        client.destroyed.connect(
-            lambda _obj=None, ident=id(client): self._release_destroyed(key, ident)
-        )
+        call_when_destroyed(client, self._release_destroyed, key, id(client))
         cached = self.cache.get(key)
         if cached is not None and cached.fresh():
             self.cache.move_to_end(key)
@@ -123,6 +123,10 @@ class WeatherForecastPool(QObject):
             clients.remove(client)
         if not clients:
             self.pending.pop(client.key, None)
+            # At shutdown the physical reply can be destroyed before its last client,
+            # whose destroyed hook lands here; touching it would raise inside Qt.
+            if sip.isdeleted(physical):
+                return
             if physical.isRunning():
                 physical.abort()
             physical.deleteLater()

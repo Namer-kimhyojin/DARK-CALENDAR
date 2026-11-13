@@ -298,10 +298,7 @@ class TopBarShelf(QWidget):
 
     def _can_reveal(self):
         return (
-            self.auto_hide
-            and self.available
-            and self.isVisible()
-            and not self._owner.isMinimized()
+            self.auto_hide and self.available and self.isVisible() and not self._owner.isMinimized()
         )
 
     def _sync_hover_timer(self):
@@ -408,7 +405,10 @@ class TopBarShelf(QWidget):
             return
         painter = QPainter(self)
         painter.fillRect(
-            0, self.height() - _GAP_HEIGHT, self.width(), _GAP_HEIGHT,
+            0,
+            self.height() - _GAP_HEIGHT,
+            self.width(),
+            _GAP_HEIGHT,
             getattr(self, "_gap_color", QColor(255, 255, 255, 10)),
         )
         painter.end()

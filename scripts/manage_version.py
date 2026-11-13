@@ -481,8 +481,11 @@ def record(root, kind, event_id, summary, files=()):
         "summary": summary,
         "files": scopes,
         "scoped_hashes": scoped,
-        "inputs": inputs,
     }
+    if kind == "store":
+        # Only store events are compared with a later full input map. Writing it on
+        # every change/module event added about 88 KB of unread hashes each time.
+        event["inputs"] = inputs
     ledger["events"].append(event)
     observed = dict(ledger.get("observed_inputs", inputs))
     if not scopes:

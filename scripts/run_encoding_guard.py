@@ -11,7 +11,6 @@ ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
 SOURCE_PATHS = [path.name for path in sorted(ROOT.glob("*.py"))] + [
     "calendar_app",
-    "infrastructure",
     "scripts",
     "tests",
 ]

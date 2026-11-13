@@ -11,7 +11,7 @@
 |---|---|
 | `presentation/panels/side_panel_renderer.py` | 패널 렌더링 + `_PanelItemFilter` |
 | `presentation/main_window/app_initializer.py` | 상태 변수 초기화 |
-| `presentation/main_window/window_ui_actions.py` | `keyPressEvent` 처리 |
+| `presentation/main_window/window_shell_actions.py` | `keyPressEvent`·`handle_escape_key` (Esc) |
 | `presentation/main_window/action_handlers_tasks.py` | `TaskActionsMixin` — 삭제 액션 |
 
 ## 앱 상태 변수
@@ -40,8 +40,9 @@ Ctrl+클릭으로 다중 선택 가능.
 ## 키보드 처리 (keyPressEvent)
 
 ```python
-# window_ui_actions.py
-ESC → clear_panel_selections(app)     # 선택 해제
+# window_shell_actions.py (떠 있는 패널은 floating_dock_behavior가 같은 handle_escape_key로 넘김)
+ESC → 집중 모드 전체 화면이면 해제, 아니면 clear_task_selection()
+      전역 단축키로 등록하지 않는다(명령 팔레트·대화상자의 Esc를 가로채지 않도록)
 Del → 디렉티브 삭제 우선
       → 선택된 디렉티브 없으면 태스크 삭제
 ```

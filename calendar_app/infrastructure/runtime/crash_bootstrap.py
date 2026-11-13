@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import faulthandler
 import logging
-import logging.handlers
 import os
 import sqlite3
 import sys
@@ -118,19 +117,28 @@ def show_database_restore_failure(error: BaseException | None = None) -> None:
         )
     )
     if error is not None:
-        dialog.setDetailedText(f"{getattr(error, 'sqlite_errorname', type(error).__name__)}\n{error}")
+        dialog.setDetailedText(
+            f"{getattr(error, 'sqlite_errorname', type(error).__name__)}\n{error}"
+        )
     dialog.setStandardButtons(QMessageBox.StandardButton.Close)
     dialog.exec()
     application.processEvents()
 
 
-def _trim_oversized_log(log_path: str) -> None:
-    """로테이션 도입 전 무한히 커진 기존 로그 파일을 정리한다."""
+def _rotate_log_at_startup(log_path: str) -> None:
+    """Rotate before any handle is open.
+
+    The log stays open twice (logging + faulthandler), so Windows refuses the
+    rename a size-based handler would do mid-session and every later record
+    was silently dropped.
+    """
     try:
-        if os.path.exists(log_path) and os.path.getsize(log_path) > _LOG_MAX_BYTES * (
-            _LOG_BACKUP_COUNT + 1
-        ):
-            os.remove(log_path)
+        if not os.path.exists(log_path) or os.path.getsize(log_path) <= _LOG_MAX_BYTES:
+            return
+        for index in range(_LOG_BACKUP_COUNT, 0, -1):
+            source = log_path if index == 1 else f"{log_path}.{index - 1}"
+            if os.path.exists(source):
+                os.replace(source, f"{log_path}.{index}")
     except OSError:
         pass
 
@@ -159,18 +167,12 @@ def setup_crash_logging(log_path: str | None = None) -> TextIO | None:
             # Fallback to temp dir if AppData fails
             log_path = os.path.join(os.environ.get("TEMP", "."), "desk_calendar_crash.log")
 
-    _trim_oversized_log(log_path)
+    _rotate_log_at_startup(log_path)
 
     # 개인정보 최소 기록 원칙: 기본 INFO. 진단 시에만 환경변수로 DEBUG 활성화.
     debug_enabled = os.environ.get("DARK_CALENDAR_DEBUG", "").strip() in ("1", "true", "on")
     handlers = [
-        logging.handlers.RotatingFileHandler(
-            log_path,
-            maxBytes=_LOG_MAX_BYTES,
-            backupCount=_LOG_BACKUP_COUNT,
-            encoding="utf-8",
-            errors="strict",
-        ),
+        logging.FileHandler(log_path, "a", encoding="utf-8", errors="strict"),
         logging.StreamHandler(sys.stdout),
     ]
     formatter = PrivacyFormatter(

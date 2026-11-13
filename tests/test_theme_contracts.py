@@ -64,9 +64,6 @@ from calendar_app.presentation.dialogs.management_dialogs import (
 from calendar_app.presentation.dialogs.panel_color_picker_dialog import (
     _build_picker_extra_stylesheet,
 )
-from calendar_app.presentation.dialogs.routine_recurrence_wizard import (
-    _build_routine_wizard_stylesheet,
-)
 from calendar_app.presentation.main_window.app_window import OverlayApp
 from calendar_app.presentation.main_window.theme_actions import ThemeActionsMixin
 from calendar_app.presentation.panels.side_panel_renderer import (
@@ -753,7 +750,7 @@ class ThemeContractTests(unittest.TestCase):
             "QStackedWidget#RepeatModeStack { background: transparent; border: none; }",
         )
 
-    def test_routine_wizard_and_away_helpers_follow_dialog_tokens(self):
+    def test_away_helpers_follow_dialog_tokens(self):
         tokens = {
             "accent": "#22c3ca",
             "accent_soft_bg": "rgba(34,195,202,40)",
@@ -782,14 +779,7 @@ class ThemeContractTests(unittest.TestCase):
             "toolbutton_radius": 6,
         }
 
-        wizard_qss = _build_routine_wizard_stylesheet(tokens=tokens, metrics=metrics)
         away_styles = _away_style_bundle(tokens=tokens, metrics=metrics)
-
-        self.assertIn("QFrame.card", wizard_qss)
-        self.assertIn("background-color: rgba(16,28,40,220);", wizard_qss)
-        self.assertIn("border-radius: 11px;", wizard_qss)
-        self.assertIn("QRadioButton::indicator:checked", wizard_qss)
-        self.assertIn("background: #22c3ca;", wizard_qss)
 
         self.assertIn("background: rgba(8,18,28,220);", away_styles["rich_editor"])
         self.assertIn("color: #22c3ca;", away_styles["html_editor"])

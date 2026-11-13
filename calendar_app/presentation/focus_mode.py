@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import weakref
+
 from PyQt6.QtCore import QSize, Qt, QTimer
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -14,18 +16,19 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from calendar_app.application import focus_usecases
+from calendar_app.application import focus_usecases, task_usecases
 from calendar_app.application.pomodoro_engine import (
     PHASE_FOCUS,
     PHASE_LONG_BREAK,
     PomodoroEngine,
 )
-from calendar_app.infrastructure.db import checklist_repo, legacy_focus_repo
+from calendar_app.infrastructure.db import checklist_repo, legacy_focus_repo, task_repo
 from calendar_app.infrastructure.i18n import t
 from calendar_app.shared.color_utils import hex_to_rgba, parse_hex_color, shift_rgb
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.qt_lifetime import call_when_destroyed
 from calendar_app.shared.theme_snapshot import build_shared_ui_tokens, build_theme_snapshot
 from calendar_app.shared.typography import get_typography_scale
 
@@ -39,6 +42,12 @@ from calendar_app.presentation.dialogs.focus_completion_dialog import FocusCompl
 FOCUS_MODE_POMODORO = "pomodoro"
 FOCUS_MODE_STOPWATCH = "stopwatch"
 _active_phase_toasts: set[QFrame] = set()
+
+
+def _forget_phase_toast(ref) -> None:
+    popup = ref()
+    if popup is not None:
+        _active_phase_toasts.discard(popup)
 
 
 def _focus_ui_tokens(app) -> dict[str, str]:
@@ -374,7 +383,12 @@ def _persist_stopwatch_log(app) -> None:
     task_id = getattr(app, "_focus_task_id", None)
     if elapsed_secs <= 0 or not task_id:
         return
-    if focus_usecases.persist_focus_log(legacy_focus_repo, task_id, elapsed_secs):
+    if focus_usecases.persist_focus_log(
+        legacy_focus_repo,
+        task_id,
+        elapsed_secs,
+        task_type=getattr(app, "_focus_task_type", None),
+    ):
         app.show_toast(
             t("focus.toast_title"),
             t(
@@ -400,7 +414,12 @@ def _persist_completed_pomodoro_focus(app, duration_secs: int) -> None:
     print(f"[Focus] Persisting session: task_id={task_id}, duration={duration_secs}s")
 
     try:
-        if focus_usecases.persist_focus_log(legacy_focus_repo, task_id, duration_secs):
+        if focus_usecases.persist_focus_log(
+            legacy_focus_repo,
+            task_id,
+            duration_secs,
+            task_type=getattr(app, "_focus_task_type", None),
+        ):
             # Update local counters
             app._focus_sessions_saved = int(getattr(app, "_focus_sessions_saved", 0) or 0) + 1
             app._focus_saved_secs = int(getattr(app, "_focus_saved_secs", 0) or 0) + duration_secs
@@ -457,7 +476,7 @@ def _render_pomodoro_state(app) -> None:
         summary_lbl.setText(
             t(
                 "focus.pomodoro_summary",
-                "Completed: {sessions} sessions | Focus: {minutes}m {seconds}s",
+                "완료: {sessions}세션 | 집중: {minutes}분 {seconds}초",
                 sessions=snapshot.focus_sessions_completed,
                 minutes=mins,
                 seconds=secs,
@@ -592,7 +611,7 @@ def _announce_phase_change(app, title: str, msg: str, icon: str) -> None:
         x, y = 1060, 960
     popup.move(x, y)
     _active_phase_toasts.add(popup)
-    popup.destroyed.connect(lambda: _active_phase_toasts.discard(popup))
+    call_when_destroyed(popup, _forget_phase_toast, weakref.ref(popup))
     popup.show()
 
     # Fade-out after 3 s display
@@ -673,6 +692,7 @@ def _reset_focus_runtime_refs(app) -> None:
     app._focus_pomodoro = None
     app._focus_mode_type = FOCUS_MODE_POMODORO
     app._focus_task_id = None
+    app._focus_task_type = None
     app._focus_elapsed_secs = 0
     app._focus_saved_secs = 0
     app._focus_sessions_saved = 0
@@ -687,6 +707,11 @@ def _build_focus_checklist_panel(app, layout):
     """Build a compact checklist surface for the selected task."""
     task_id = getattr(app, "_focus_task_id", None)
     if not task_id:
+        return
+    # Directives have no checklist; checklist owner ids are unified_task ids, so a
+    # directive must never show (or toggle) the task that shares its number.
+    kind = focus_usecases.focus_target_kind(getattr(app, "_focus_task_type", None))
+    if kind == focus_usecases.FOCUS_TARGET_DIRECTIVE:
         return
 
     tokens = _focus_ui_tokens(app)
@@ -728,7 +753,7 @@ def _build_focus_checklist_panel(app, layout):
     section_layout.addLayout(title_row)
 
     if not items:
-        empty_lbl = QLabel(t("dialog.label_settings.none_to_load", "체크리스트 항목이 없습니다."))
+        empty_lbl = QLabel(t("focus.checklist_empty", "체크리스트 항목이 없습니다."))
         empty_lbl.setStyleSheet(
             f"color: {tokens['text_faint']}; font-size: 12px; padding: 2px 0 4px 0;"
         )
@@ -754,31 +779,52 @@ def _build_focus_checklist_panel(app, layout):
         scroll_layout.setSpacing(7)
         scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
+        boxes = {}
+
+        def _sync_boxes():
+            # A process step can be refused or can uncheck the steps after it.
+            done = {
+                row["id"]: bool(row["is_completed"])
+                for row in checklist_repo.get_task_checklist_items(task_id)
+            }
+            for box_id, box in boxes.items():
+                box.blockSignals(True)
+                box.setChecked(done.get(box_id, False))
+                box.blockSignals(False)
+                _set_focus_checklist_style(box, checked=box.isChecked(), tokens=tokens)
+
         for item in items:
             cb = QCheckBox(item.get("item_text", ""))
             cb.setChecked(bool(item.get("is_completed", False)))
             cb.setCursor(Qt.CursorShape.PointingHandCursor)
             _set_focus_checklist_style(cb, checked=cb.isChecked(), tokens=tokens)
             link_id = item.get("id")
+            boxes[link_id] = cb
 
-            def _make_toggle_handler(l_id, checkbox):
-                def _handle(checked):
-                    checklist_repo.toggle_checklist_item(l_id)
-                    _set_focus_checklist_style(
-                        checkbox,
-                        checked=checked,
-                        tokens=tokens,
-                    )
+            def _make_toggle_handler(l_id):
+                def _handle(_checked):
+                    task_usecases.toggle_checklist_item(checklist_repo, task_repo, l_id)
+                    _sync_boxes()
 
                 return _handle
 
-            cb.toggled.connect(_make_toggle_handler(link_id, cb))
+            cb.toggled.connect(_make_toggle_handler(link_id))
             scroll_layout.addWidget(cb)
 
         scroll.setWidget(scroll_content)
         section_layout.addWidget(scroll)
 
     layout.addWidget(section)
+
+
+def _apply_focus_selection(app, selector_dlg):
+    """Store the selected focus target (id and kind) on the app; return its name."""
+    app._focus_task_id, task_name = selector_dlg.get_selected_task()
+    get_kind = getattr(selector_dlg, "get_selected_task_type", None)
+    app._focus_task_type = focus_usecases.focus_target_kind(
+        get_kind() if callable(get_kind) else None
+    )
+    return task_name
 
 
 def _enter_focus_mode(app) -> None:
@@ -790,7 +836,7 @@ def _enter_focus_mode(app) -> None:
 
     selector_dlg = FocusTaskSelectorDialog(app.current_date, app)
     if selector_dlg.exec():
-        app._focus_task_id, task_name = selector_dlg.get_selected_task()
+        task_name = _apply_focus_selection(app, selector_dlg)
         if not app._focus_task_id:
             if hasattr(app, "show_toast"):
                 app.show_toast(

@@ -33,13 +33,18 @@ from calendar_app.presentation.dialogs.dialog_styles import (
 from calendar_app.presentation.widgets.overlay_base import _build_face_ss
 from calendar_app.presentation.widgets.overlay_color_utils import _parse_rgba, _rgba_css
 from calendar_app.presentation.widgets.overlay_display_presets import overlay_display_preset
-from calendar_app.presentation.widgets.weather_asset_packs import get_weather_asset_pack
+from calendar_app.presentation.widgets.weather_asset_packs import (
+    get_weather_asset_pack,
+    weather_condition_id,
+)
 from calendar_app.presentation.widgets.weather_designs import (
+    GIF_WEATHER_SCENE_ID,
     WEATHER_DESIGN_CATEGORIES,
     WeatherDesign,
     weather_design,
     weather_designs,
 )
+from calendar_app.presentation.widgets.weather_scene import WeatherSceneSurface
 from calendar_app.presentation.widgets.weather_template import render_weather_template
 from calendar_app.presentation.widgets.widget_placement import NoWheelComboBox
 from calendar_app.presentation.widgets.widget_shapes import get_widget_shape
@@ -383,6 +388,10 @@ class WeatherDesignGalleryDialog(QDialog):
             t("widget.weather.designs.preview", "디자인 미리보기")
         )
         layout.addWidget(self.detail_preview)
+        self.detail_animation = WeatherSceneSurface(panel)
+        self.detail_animation.setFixedSize(_DETAIL)
+        self.detail_animation.hide()
+        layout.addWidget(self.detail_animation)
         self.detail_name = QLabel(panel)
         self.detail_name.setObjectName("weatherDesignName")
         self.detail_name.setWordWrap(True)
@@ -471,6 +480,8 @@ class WeatherDesignGalleryDialog(QDialog):
         self.apply_button.setEnabled(design_id is not None)
         if design_id is None:
             self._preview_id = None
+            self.detail_animation.hide()
+            self.detail_preview.show()
             for label in (
                 self.detail_preview,
                 self.detail_name,
@@ -486,16 +497,35 @@ class WeatherDesignGalleryDialog(QDialog):
         design = weather_design(design_id)
         self.detail_name.setText(str(t(design.label_key, design.label_default)))
         self.detail_description.setText(str(t(design.description_key, design.description_default)))
+        animated = design.scene_id == GIF_WEATHER_SCENE_ID
         pack = get_weather_asset_pack(design.asset_pack_id)
         preset = overlay_display_preset(design.appearance_preset_id)
         shape = get_widget_shape(design.shape)
         self.detail_meta.setText(
-            f"{t(pack.label_key, pack.label_default)}\n"
-            f"{t(preset.label_key, preset.label_default)} · {t(shape.label_key, shape.label_default)}"
+            ("" if animated else f"{t(pack.label_key, pack.label_default)}\n")
+            + f"{t(preset.label_key, preset.label_default)} · {t(shape.label_key, shape.label_default)}"
         )
-        self.detail_preview.setPixmap(
-            weather_design_preview_pixmap(design, self._weather_data, _DETAIL, dpr=2.0)
-        )
+        self.detail_preview.setVisible(not animated)
+        self.detail_animation.setVisible(animated)
+        if animated:
+            data = self._weather_data
+            if (
+                weather_condition_id(data.get("_wmo", -1), data.get("_day_period", "day"))
+                == "unknown"
+            ):
+                data = {**data, "_wmo": 2, "_day_period": "day"}
+            self.detail_animation.configure(
+                scene_id=design.scene_id,
+                data=data,
+                pack=design.asset_pack_id,
+                family=QApplication.font().family(),
+                hourly=False,
+            )
+            self.detail_animation.set_runtime_active(True)
+        else:
+            self.detail_preview.setPixmap(
+                weather_design_preview_pixmap(design, self._weather_data, _DETAIL, dpr=2.0)
+            )
 
     def _schedule_thumbnails(self, *_args) -> None:
         if self.isVisible() and not self._thumb_timer.isActive():

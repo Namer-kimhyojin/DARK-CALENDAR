@@ -131,7 +131,8 @@ def find_restorable_backup(db_path) -> Path | None:
 def restore_latest_backup(db_path, *, now: datetime | None = None) -> Path | None:
     """Replace a damaged database with the newest verified snapshot.
 
-    The damaged database and its companions are kept as ``<name>.corrupt-<stamp>``.
+    The damaged database and its companions are kept as ``<name>.corrupt-<stamp>``,
+    with a numeric suffix if that archive name is already in use.
     Returns the snapshot used, or ``None`` when no usable snapshot exists. All
     database connections to ``db_path`` must be closed by the caller.
     """
@@ -142,22 +143,38 @@ def restore_latest_backup(db_path, *, now: datetime | None = None) -> Path | Non
     staged = db_path.with_name(db_path.name + ".restoring")
     _copy_verified(candidate, staged)
     stamp = (now or datetime.now()).strftime(_STAMP_FORMAT)
+    archive_base = db_path.with_name(f"{db_path.name}.corrupt-{stamp}")
+    archive = archive_base
+    suffixes = (*_COMPANION_SUFFIXES, "")
+    moved: list[tuple[Path, Path]] = []
     try:
-        # Companions first: if the main file cannot move, it stays as it was
-        # instead of meeting the restored file's missing WAL halfway.
-        for suffix in (*_COMPANION_SUFFIXES, ""):
+        sequence = 1
+        while any(Path(f"{archive}{suffix}").exists() for suffix in suffixes):
+            archive = archive_base.with_name(f"{archive_base.name}-{sequence}")
+            sequence += 1
+        # Keep the old companions away from the new database.
+        for suffix in suffixes:
             current = Path(f"{db_path}{suffix}")
             if current.exists():
-                os.replace(current, Path(f"{db_path}.corrupt-{stamp}{suffix}"))
+                archived = Path(f"{archive}{suffix}")
+                os.replace(current, archived)
+                moved.append((current, archived))
         os.replace(staged, db_path)
     except BaseException:
+        for current, archived in reversed(moved):
+            try:
+                if current.exists():
+                    logger.error("Restore rollback kept %s because %s exists", archived, current)
+                else:
+                    os.replace(archived, current)
+            except OSError:
+                logger.exception("Restore rollback could not return %s to %s", archived, current)
         with contextlib.suppress(OSError):
             staged.unlink()
         raise
     logger.warning(
-        "Database restored from snapshot %s; damaged file kept as %s.corrupt-%s",
+        "Database restored from snapshot %s; damaged file kept as %s",
         candidate.name,
-        db_path.name,
-        stamp,
+        archive.name,
     )
     return candidate

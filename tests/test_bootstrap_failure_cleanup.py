@@ -9,6 +9,12 @@ import pytest
 from calendar_app import bootstrap
 
 
+@pytest.fixture(autouse=True)
+def isolate_app_icon(monkeypatch):
+    # The startup tests substitute QApplication, so icon loading must not create a pixmap.
+    monkeypatch.setattr(bootstrap, "QIcon", Mock())
+
+
 @pytest.mark.parametrize(
     "failure", ["database", "migration", "constructor", "show", "deleted-splash", "ui-storage"]
 )

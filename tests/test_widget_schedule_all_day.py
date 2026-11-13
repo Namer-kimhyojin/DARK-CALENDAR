@@ -2,15 +2,17 @@
 """Actual widget rows honor explicit all-day flags without hiding real midnight times."""
 
 from copy import deepcopy
-from unittest.mock import patch
 
-from PyQt6.QtCore import QLocale
+from PyQt6.QtCore import QDate, QLocale, QTime
 from PyQt6.QtWidgets import QLabel, QPushButton
 import pytest
 
 from calendar_app.infrastructure.i18n import t
-from calendar_app.presentation.widgets import panel_widget_mode as legacy
-from calendar_app.presentation.widgets.unified_widget_mode import _widget_theme_tokens
+from calendar_app.presentation.widgets.panel_widget_common import (
+    _format_compact_date,
+    _format_compact_date_with_weekday,
+    _format_widget_datetime_label,
+)
 from tests.test_widget_mode_ux import workspace  # noqa: F401
 
 
@@ -25,7 +27,7 @@ from tests.test_widget_mode_ux import workspace  # noqa: F401
         ("normal_time", 0, 0, 0, False),
     ],
 )
-def test_actual_unified_and_legacy_rows_keep_all_day_and_midnight_distinct(
+def test_actual_unified_rows_keep_all_day_and_midnight_distinct(
     workspace, case, flag, start_offset, end_offset, date_only
 ):
     host, coordinator, widget = workspace
@@ -46,7 +48,7 @@ def test_actual_unified_and_legacy_rows_keep_all_day_and_midnight_distinct(
     items = controller._schedule_items_for_date(target)
     assert [item["item_id"] for item in items if not item.get("is_section")] == [41]
     expected_unified = (
-        all_day if flag else legacy._format_widget_datetime_label(start, reference_date=target)
+        all_day if flag else _format_widget_datetime_label(start, reference_date=target)
     )
     assert items[1]["time"] == expected_unified
     widget.update_agenda(items)
@@ -55,38 +57,6 @@ def test_actual_unified_and_legacy_rows_keep_all_day_and_midnight_distinct(
     assert current_row.findChild(QLabel, "agenda_item_time").text() == expected_unified
     current_row.findChild(QPushButton, "agenda_item_title").click()
     host.open_modify_task_dialog.assert_called_once_with(41)
-
-    old_controller = legacy.PanelWidgetModeController(host)
-    with patch.object(
-        legacy.search_repo, "get_schedule_tasks_overlapping_range_with_progress", return_value=[row]
-    ):
-        entries = old_controller._collect_schedule_entries_for_date(target)
-    assert len(entries) == 1
-    if flag:
-        expected_legacy = all_day
-    elif date_only:
-        expected_legacy = ""
-    else:
-        locale = QLocale()
-        expected_legacy = "~".join(
-            locale.toString(
-                legacy._parse_qdatetime(value).time(), QLocale.FormatType.ShortFormat
-            ).strip()
-            for value in (start, end)
-        )
-    assert entries[0].subtitle == expected_legacy
-    old_rows = legacy._EntryListWidget(host)
-    try:
-        old_rows.set_entries(entries, _widget_theme_tokens(host), "Empty")
-        labels = old_rows.findChildren(QLabel, "widget_entry_time_label")
-        assert [label.text() for label in labels] == [expected_legacy]
-        with patch.object(old_controller, "_open_task") as open_task:
-            entries[0].callback()
-            open_task.assert_called_once_with(41)
-    finally:
-        old_rows.close()
-        old_rows.deleteLater()
-        old_controller._debounce_timer.stop()
     assert row == original
     assert host.settings.values == settings_before
 
@@ -103,10 +73,34 @@ def test_all_day_presentation_preserves_existing_chronological_order(workspace):
     host._latest_calendar_range_data["rows"] = rows
     items = coordinator.controller._schedule_items_for_date(target)
     assert [item["item_id"] for item in items if not item.get("is_section")] == [2, 3, 7]
-    old_controller = legacy.PanelWidgetModeController(host)
-    with patch.object(
-        legacy.search_repo, "get_schedule_tasks_overlapping_range_with_progress", return_value=rows
-    ):
-        entries = old_controller._collect_schedule_entries_for_date(target)
-    assert [entry.title for entry in entries] == ["Midnight", "All day", "Afternoon"]
-    old_controller._debounce_timer.stop()
+
+
+# Moved from the retired tests/test_panel_widget_mode_ui.py: these helpers still
+# format the unified widget's dates and times.
+def test_widget_mode_date_helpers_are_locale_aware():
+    locale = QLocale(QLocale.Language.English, QLocale.Country.UnitedStates)
+    target = QDate(2026, 3, 28)
+
+    compact = _format_compact_date(target, locale)
+    with_weekday = _format_compact_date_with_weekday(target, locale)
+
+    assert "2026" not in compact
+    assert locale.dayName(target.dayOfWeek(), QLocale.FormatType.ShortFormat) in with_weekday
+    assert compact in with_weekday
+
+
+def test_widget_mode_datetime_label_uses_locale_short_time_and_compact_date():
+    locale = QLocale(QLocale.Language.English, QLocale.Country.UnitedStates)
+    reference = QDate(2026, 3, 28)
+
+    same_day = _format_widget_datetime_label(
+        "2026-03-28 14:30:00", reference_date=reference, locale=locale
+    )
+    other_day = _format_widget_datetime_label(
+        "2026-03-30 09:15:00", reference_date=reference, locale=locale
+    )
+
+    assert same_day == locale.toString(QTime(14, 30), QLocale.FormatType.ShortFormat)
+    assert _format_compact_date(QDate(2026, 3, 30), locale) in other_day
+    assert locale.toString(QTime(9, 15), QLocale.FormatType.ShortFormat) in other_day
+    assert "2026-03-30" not in other_day

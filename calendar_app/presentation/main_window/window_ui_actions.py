@@ -16,8 +16,10 @@ from calendar_app.presentation.theme.style_builder import (
     build_tooltip_stylesheet,
 )
 from calendar_app.shared.color_utils import derive_text_palette, parse_hex_color
+from calendar_app.shared.qt_lifetime import call_when_destroyed
 from calendar_app.shared.theme_settings import get_opacity_byte, set_opacity_byte
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
+from calendar_app.shared.typography import DEFAULT_UI_FONT
 from calendar_app.shared.value_parsers import as_int
 
 logger = logging.getLogger(__name__)
@@ -28,7 +30,7 @@ def build_ui_font(family, size):
 
     available_families = set(QFontDatabase.families())
     fallback_family = (
-        QApplication.instance().font().family() if QApplication.instance() else "Segoe UI"
+        QApplication.instance().font().family() if QApplication.instance() else DEFAULT_UI_FONT
     )
     safe_family = (
         family if family in available_families or not available_families else fallback_family
@@ -109,7 +111,7 @@ class MainWindowUiActionsMixin:
 
         dlg = OverlayManagerDialog(self.overlay_manager, parent=self)
         self._widget_manager_dlg = dlg
-        dlg.destroyed.connect(lambda: setattr(self, "_widget_manager_dlg", None))
+        call_when_destroyed(dlg, setattr, self, "_widget_manager_dlg", None)
         dlg.show()  # non-modal — 메인 창 조작하면서 동시에 사용 가능
 
     def create_dday_widget_for_task(self, task_id: int):
@@ -123,8 +125,8 @@ class MainWindowUiActionsMixin:
         if not task:
             if hasattr(self, "show_toast"):
                 self.show_toast(
-                    t("widget.dday.toast_title", "D-Day Widget"),
-                    t("widget.dday.toast_task_missing", "Could not find the selected schedule."),
+                    t("widget.dday.toast_title", "D-Day 위젯"),
+                    t("widget.dday.toast_task_missing", "선택된 일정을 찾을 수 없습니다."),
                 )
             return
 
@@ -133,8 +135,8 @@ class MainWindowUiActionsMixin:
         if not target_date.isValid():
             if hasattr(self, "show_toast"):
                 self.show_toast(
-                    t("widget.dday.toast_title", "D-Day Widget"),
-                    t("widget.dday.toast_no_date", "This schedule does not have a valid date."),
+                    t("widget.dday.toast_title", "D-Day 위젯"),
+                    t("widget.dday.toast_no_date", "이 일정에 유효한 날짜가 없습니다."),
                 )
             return
 
@@ -153,10 +155,10 @@ class MainWindowUiActionsMixin:
 
         if hasattr(self, "show_toast"):
             self.show_toast(
-                t("widget.dday.toast_title", "D-Day Widget"),
+                t("widget.dday.toast_title", "D-Day 위젯"),
                 t(
                     "widget.dday.toast_created",
-                    "Created a D-Day widget for '{name}'.",
+                    "D-Day 위젯이 생성되었습니다: {name}",
                     name=task_name,
                 ),
             )

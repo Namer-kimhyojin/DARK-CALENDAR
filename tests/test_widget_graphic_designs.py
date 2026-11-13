@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Eighty selectable designs must render, persist and restore the original data."""
+"""Selectable designs must render, persist and restore the original data."""
 
 from copy import deepcopy
 
@@ -29,16 +29,17 @@ KINDS = {
 DESIGNS = [design for designs in DESIGNS_BY_KIND.values() for design in designs]
 
 
-def test_catalog_has_ten_additional_stable_designs_for_each_widget():
+def test_catalog_has_ten_stable_designs_for_each_widget_and_flipbook_for_clock():
     assert len(DESIGNS_BY_KIND) == 8
-    assert len(DESIGNS) == len({design.collection_id for design in DESIGNS}) == 80
+    assert len(DESIGNS) == len({design.collection_id for design in DESIGNS}) == 84
     for kind, designs in DESIGNS_BY_KIND.items():
-        assert len(designs) == len({design.layout for design in designs}) == 10
+        assert len(designs) == (14 if kind == "clock" else 10)
+        assert len({design.layout for design in designs[:10]}) == 10
         assert graphic_collections(kind) == COLLECTIONS + designs
 
 
 @pytest.mark.parametrize("design", DESIGNS, ids=lambda design: design.collection_id)
-def test_all_eighty_designs_render_in_compact_standard_and_large_sizes(make_widget, design):
+def test_all_designs_render_in_compact_standard_and_large_sizes(make_widget, design):
     module, name = KINDS[design.widget_kind]
     widget = make_widget(module, name)
     if module == "text":
@@ -76,13 +77,11 @@ def test_all_eighty_designs_render_in_compact_standard_and_large_sizes(make_widg
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_gallery_offers_thirteen_designs_and_one_original_with_exclusive_selection(
-    make_widget, kind
-):
+def test_gallery_offers_all_designs_and_one_original_with_exclusive_selection(make_widget, kind):
     widget = make_widget(*KINDS[kind])
     before = {key: widget._s().value(key) for key in widget._s().allKeys()}
     dialog = GraphicCollectionDialog(widget)
-    assert len(dialog.radios) == 14
+    assert len(dialog.radios) == len(graphic_collections(kind)) + 1
     last = DESIGNS_BY_KIND[kind][-1]
     dialog.radios[last.collection_id].click()
     assert sum(radio.isChecked() for radio in dialog.radios.values()) == 1

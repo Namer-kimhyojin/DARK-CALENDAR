@@ -47,14 +47,20 @@ from calendar_app.presentation.widgets.keydeck.resources import (
     pattern_image,
     source_image,
 )
+from calendar_app.shared.typography import DEFAULT_UI_FONT, ui_font_families
 
-_FONT_FAMILIES = [
-    "Segoe UI Variable Text",
-    "Segoe UI",
-    "Malgun Gothic",
-    "Apple SD Gothic Neo",
-    "Noto Sans CJK KR",
-]
+_NON_WINDOWS_CJK_FAMILIES = ("Apple SD Gothic Neo", "Noto Sans CJK KR")
+
+
+def _font_families() -> list[str]:
+    """Keycap fonts; CJK fallbacks follow the UI language (Korean: Malgun Gothic first)."""
+    return [
+        "Segoe UI Variable Text",
+        *ui_font_families(DEFAULT_UI_FONT),
+        *_NON_WINDOWS_CJK_FAMILIES,
+    ]
+
+
 _WEIGHTS = {
     "regular": QFont.Weight.Normal,
     "medium": QFont.Weight.DemiBold,
@@ -142,7 +148,7 @@ def _mix(first: QColor, second: QColor, amount: float) -> QColor:
 
 def legend_font(pixel_size: float, weight: str = "bold") -> QFont:
     font = QFont()
-    font.setFamilies(_FONT_FAMILIES)
+    font.setFamilies(_font_families())
     font.setPixelSize(max(6, int(round(pixel_size))))
     font.setWeight(_WEIGHTS.get(weight, QFont.Weight.Bold))
     font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)

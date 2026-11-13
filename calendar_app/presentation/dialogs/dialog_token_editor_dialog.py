@@ -971,6 +971,18 @@ def _fallback_token_label(key: str) -> str:
     return key.replace("_", " ").title()
 
 
+def _token_label(key: str) -> str:
+    """The localized row label of a color token; the Korean table is the default."""
+    label = _TOKEN_LABELS.get(key)
+    return t(f"dialog.token_editor.token.{key}", label) if label else _fallback_token_label(key)
+
+
+def _metric_label(key: str) -> str:
+    """The localized row label of a size/spacing metric; the Korean table is the default."""
+    label = _METRIC_LABELS.get(key)
+    return t(f"dialog.token_editor.metric.{key}", label) if label else _fallback_token_label(key)
+
+
 def _to_qcolor(color_text: str | None, fallback: str = "#4da6ff") -> QColor:
     normalized = _normalize_color(color_text)
     if normalized == "transparent":
@@ -1540,13 +1552,12 @@ class DialogTokenEditorDialog(QDialog):
         layout.addWidget(browser, 1)
         for _title, keys in self._grouped_color_keys:
             for key in keys:
-                row, controls, reset = self._row_shell(
-                    key, _TOKEN_LABELS.get(key, _fallback_token_label(key))
-                )
+                label = _token_label(key)
+                row, controls, reset = self._row_shell(key, label)
                 edit = QLineEdit(self._current_color(key))
                 edit.setMinimumWidth(230)
                 edit.setPlaceholderText("hex / rgba(r,g,b,a) / transparent")
-                edit.setAccessibleName(_TOKEN_LABELS.get(key, key))
+                edit.setAccessibleName(label)
                 swatch = QToolButton()
                 swatch.setMinimumSize(34, 28)
                 swatch.setToolTip(t("dialog.token_editor.pick", "선택") + " · " + key)
@@ -1590,7 +1601,7 @@ class DialogTokenEditorDialog(QDialog):
         for _title, keys in self._grouped_metric_keys:
             for key in keys:
                 default = int(self._default_metrics[key])
-                text = _METRIC_LABELS.get(key, _fallback_token_label(key))
+                text = _metric_label(key)
                 row, controls, reset = self._row_shell(key, text)
                 spin = QSpinBox()
                 spin.installEventFilter(self._wheel_blocker)
@@ -1646,13 +1657,13 @@ class DialogTokenEditorDialog(QDialog):
 
     def _filter_control_rows(self):
         expert = self.expert_mode_check.isChecked()
-        for metric, rows, category, recommended, labels, empty_name in (
+        for metric, rows, category, recommended, label_of, empty_name in (
             (
                 False,
                 self._color_rows,
                 self._color_category,
                 _RECOMMENDED_COLORS,
-                _TOKEN_LABELS,
+                _token_label,
                 "_color_empty",
             ),
             (
@@ -1660,7 +1671,7 @@ class DialogTokenEditorDialog(QDialog):
                 self._metric_rows,
                 self._metric_category,
                 _RECOMMENDED_METRICS,
-                _METRIC_LABELS,
+                _metric_label,
                 "_metric_empty",
             ),
         ):
@@ -1672,7 +1683,8 @@ class DialogTokenEditorDialog(QDialog):
                     or matches
                     or _control_category(key, metric=metric) == category
                 )
-                text = (labels.get(key, "") + " " + key).casefold()
+                # Search the name shown on the row, so it works in every language.
+                text = (label_of(key) + " " + key).casefold()
                 show = (
                     matches
                     and (expert or key in recommended)
@@ -1816,26 +1828,26 @@ class DialogTokenEditorDialog(QDialog):
         row1 = QHBoxLayout()
         row1.setSpacing(8)
         row1.addWidget(QPushButton(t("dialog.token_editor.preview.btn_default", "기본")))
-        primary = QPushButton(t("dialog.token_editor.preview.btn_primary", "Primary"))
+        primary = QPushButton(t("dialog.token_editor.preview.btn_primary", "주요"))
         primary.setProperty("previewVariant", "primary")
         row1.addWidget(primary)
-        secondary = QPushButton(t("dialog.token_editor.preview.btn_secondary", "Secondary"))
+        secondary = QPushButton(t("dialog.token_editor.preview.btn_secondary", "보조"))
         secondary.setProperty("previewVariant", "secondary")
         row1.addWidget(secondary)
-        ghost = QPushButton(t("dialog.token_editor.preview.btn_ghost", "Ghost"))
+        ghost = QPushButton(t("dialog.token_editor.preview.btn_ghost", "고스트"))
         ghost.setProperty("previewVariant", "ghost")
         row1.addWidget(ghost)
         btn_lay.addLayout(row1)
 
         row2 = QHBoxLayout()
         row2.setSpacing(8)
-        success = QPushButton(t("dialog.token_editor.preview.btn_success", "Success"))
+        success = QPushButton(t("dialog.token_editor.preview.btn_success", "성공"))
         success.setProperty("previewVariant", "success")
         row2.addWidget(success)
-        danger = QPushButton(t("dialog.token_editor.preview.btn_danger", "Danger"))
+        danger = QPushButton(t("dialog.token_editor.preview.btn_danger", "위험"))
         danger.setProperty("previewVariant", "danger")
         row2.addWidget(danger)
-        disabled = QPushButton(t("dialog.token_editor.preview.btn_disabled", "Disabled"))
+        disabled = QPushButton(t("dialog.token_editor.preview.btn_disabled", "비활성"))
         disabled.setEnabled(False)
         row2.addWidget(disabled)
         row2.addStretch(1)
@@ -1996,7 +2008,7 @@ class DialogTokenEditorDialog(QDialog):
     def _invalid_feedback_text(self) -> str:
         return t(
             "dialog.token_editor.invalid_short",
-            "One or more color values are invalid. Use a hex color, rgba(r,g,b,a), or transparent.",
+            "하나 이상의 색상값이 올바르지 않습니다.",
         )
 
     def _refresh_preview(self, force: bool = False):
@@ -2102,7 +2114,7 @@ class DialogTokenEditorDialog(QDialog):
             self,
             t("dialog.token_editor.export_title", "UI 토큰 내보내기"),
             "dc_theme_tokens.json",
-            "JSON Files (*.json)",
+            t("common.file_filter_json", "JSON 파일 (*.json)"),
         )
         if path:
             try:
@@ -2114,7 +2126,7 @@ class DialogTokenEditorDialog(QDialog):
                 with open(path, "w", encoding="utf-8", errors="strict") as f:
                     json.dump(data, f, indent=4, ensure_ascii=False)
                 self._set_feedback(
-                    t("dialog.token_editor.export_success", "UI tokens exported successfully."),
+                    t("dialog.token_editor.export_success", "UI 토큰을 성공적으로 내보냈습니다."),
                     "success",
                 )
             except Exception as e:
@@ -2123,7 +2135,7 @@ class DialogTokenEditorDialog(QDialog):
                 self._set_feedback(
                     t(
                         "dialog.token_editor.export_failed",
-                        "Failed to export UI tokens: {error}",
+                        "UI 토큰 내보내기 실패: {error}",
                         error=str(e),
                     ),
                     "error",
@@ -2141,7 +2153,7 @@ class DialogTokenEditorDialog(QDialog):
             self,
             t("dialog.token_editor.import_title", "UI 토큰 가져오기"),
             "",
-            "JSON Files (*.json)",
+            t("common.file_filter_json", "JSON 파일 (*.json)"),
         )
         if path:
             try:
@@ -2165,7 +2177,7 @@ class DialogTokenEditorDialog(QDialog):
                 self._set_feedback(
                     t(
                         "dialog.token_editor.import_success",
-                        "UI tokens imported successfully. Preview updated.",
+                        "UI 토큰을 성공적으로 가져왔습니다. 미리보기가 업데이트되었습니다.",
                     ),
                     "success",
                 )
@@ -2173,7 +2185,7 @@ class DialogTokenEditorDialog(QDialog):
                 self._set_feedback(
                     t(
                         "dialog.token_editor.import_failed",
-                        "Could not load JSON: {error}",
+                        "JSON 파일을 불러오지 못했습니다: {error}",
                         error=str(e),
                     ),
                     "error",
@@ -2205,7 +2217,11 @@ class DialogTokenEditorDialog(QDialog):
                 self._set_color_value_silently(key, target)
         self._refresh_preview(force=True)
         self._set_feedback(
-            t("dialog.token_editor.preset_applied", "Applied preset: {name}", name=preset_name),
+            t(
+                "dialog.token_editor.preset_applied",
+                "프리셋 적용됨: {name}",
+                name=_preset_label(preset_name),
+            ),
             "info",
         )
 
@@ -2236,8 +2252,8 @@ class DialogTokenEditorDialog(QDialog):
         self._set_feedback(
             t(
                 "dialog.token_editor.metric_preset_applied",
-                "Applied metric preset: {name}",
-                name=preset_name,
+                "크기 프리셋 적용됨: {name}",
+                name=_preset_label(preset_name),
             ),
             "info",
         )
@@ -2254,7 +2270,10 @@ class DialogTokenEditorDialog(QDialog):
         self.metric_preset_combo.setCurrentIndex(0)
         self._refresh_preview(force=True)
         self._set_feedback(
-            t("dialog.token_editor.reset_done", "All dialog tokens were reset to defaults."),
+            t(
+                "dialog.token_editor.reset_done",
+                "모든 다이얼로그 토큰이 기본값으로 복원되었습니다.",
+            ),
             "warning",
         )
 
@@ -2267,7 +2286,7 @@ class DialogTokenEditorDialog(QDialog):
                 t("dialog.token_editor.invalid_title", "입력 오류"),
                 t(
                     "dialog.token_editor.invalid_msg",
-                    "잘못된 색상 형식이 있습니다. 16진 색상 또는 rgba(r,g,b,a) 또는 transparent 형식으로 입력해 주세요.",
+                    "잘못된 색상 형식이 있습니다. 16진 색상 또는 rgba(r,g,b,a) 또는 transparent를 사용하세요.",
                 ),
             )
             self._reveal_color_key(invalid_key)
@@ -2280,7 +2299,10 @@ class DialogTokenEditorDialog(QDialog):
             set_dialog_token_overrides(color_overrides, settings=self._settings)
             set_dialog_metric_overrides(metric_overrides, settings=self._settings)
         self._set_feedback(
-            t("dialog.token_editor.apply_done", "Dialog token changes are ready to apply."),
+            t(
+                "dialog.token_editor.apply_done",
+                "다이얼로그 토큰 변경사항을 적용할 준비가 됐습니다.",
+            ),
             "success",
         )
         self.accept()

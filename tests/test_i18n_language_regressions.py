@@ -4,12 +4,29 @@
 from pathlib import Path
 from unittest.mock import patch
 
-from PyQt6.QtCore import QCoreApplication, QDate, QDateTime, QLocale, QSettings, Qt
+from PyQt6 import sip
+from PyQt6.QtCore import (
+    QCoreApplication,
+    QDate,
+    QDateTime,
+    QLibraryInfo,
+    QLocale,
+    QSettings,
+    Qt,
+    QTranslator,
+)
 from PyQt6.QtWidgets import QApplication, QDialogButtonBox, QWidget
 import pytest
 from scripts.i18n_sync import load_locale
 
-from calendar_app.infrastructure.i18n import I18nManager, _StandardButtonTranslator, i18n
+from calendar_app.infrastructure.i18n import (
+    _QT_CATALOG_CODES,
+    _SOURCE_LANGUAGE,
+    I18nManager,
+    _StandardButtonTranslator,
+    _with_mnemonic,
+    i18n,
+)
 from calendar_app.presentation.widgets.overlay_text import OverlayTextWidget
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,11 +74,26 @@ def test_region_and_script_aliases(tag, expected):
     assert I18nManager.canonical_locale_code(tag, available) == expected
 
 
+# One QApplication for the rest of the session: destroying it would also delete the
+# translators the global manager installs on it in the teardown below.
+_APPS = []
+
+
 @pytest.fixture(scope="module")
 def app():
     application = QApplication.instance() or QApplication([])
+    _APPS.append(application)
     yield application
     i18n.apply_application_locale()
+
+
+def _release_translators(app, manager):
+    for name in ("_button_translator", "_qt_translator"):
+        translator = getattr(manager, name, None)
+        if translator is not None and not sip.isdeleted(translator):
+            app.removeTranslator(translator)
+            translator.deleteLater()
+        setattr(manager, name, None)
 
 
 @pytest.mark.parametrize("layer", ["translations", "bundled_translations", "fallback_translations"])
@@ -81,7 +113,8 @@ def test_legacy_aliases_work_at_every_fallback_layer(layer):
         },
     )
     assert manager.get("dialog.shortcut.title") == "Shortcuts"
-    assert manager.get("weekday.mon") == "M"
+    # Weekday names come from QLocale (presentation/locale_names.py), not this alias.
+    assert manager.get("weekday.mon", "월") == "월"
     assert manager.get("common.save") == "Save"
     assert manager.get("recurrence.finish") == "Done"
 
@@ -100,6 +133,9 @@ def test_malformed_user_format_uses_bundled_then_english():
 
 @pytest.mark.parametrize("code", [p.stem for p in sorted((ROOT / "locales").glob("*.json"))])
 def test_qt_direction_and_standard_buttons_follow_language(app, code):
+    # The global manager's translators would answer for English; the finally block
+    # reinstalls them.
+    _release_translators(app, i18n)
     manager = manager_for(code)
     manager.apply_application_locale()
     try:
@@ -115,25 +151,32 @@ def test_qt_direction_and_standard_buttons_follow_language(app, code):
             | QDialogButtonBox.StandardButton.Yes
             | QDialogButtonBox.StandardButton.No
         )
-        for name, key in (
-            ("Cancel", "common.cancel"),
-            ("Save", "common.save"),
-            ("Ok", "dialog.common.ok"),
-            ("Apply", "common.apply"),
-            ("Close", "common.close"),
-            ("Yes", "dialog.common.yes"),
-            ("No", "dialog.common.no"),
+        # Qt's own catalog wins; the app's words only fill languages it lacks.
+        # Korean is the source language: its own words win, exactly as written.
+        catalog = QTranslator()
+        catalog.load(
+            f"qtbase_{_QT_CATALOG_CODES.get(code, code)}",
+            QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath),
+        )
+        for name, source, key in (
+            ("Cancel", "Cancel", "common.cancel"),
+            ("Save", "Save", "common.save"),
+            ("Ok", "OK", "dialog.common.ok"),
+            ("Apply", "Apply", "common.apply"),
+            ("Close", "Close", "common.close"),
+            ("Yes", "&Yes", "dialog.common.yes"),
+            ("No", "&No", "dialog.common.no"),
         ):
-            assert box.button(getattr(QDialogButtonBox.StandardButton, name)).text().replace(
-                "&", ""
-            ) == manager.get(key).replace("&", "")
+            expected = catalog.translate("QPlatformTheme", source)
+            if code == _SOURCE_LANGUAGE:
+                expected = manager.get(key)
+            elif not expected:
+                expected = source if code == "en" else _with_mnemonic(manager.get(key), source)
+            assert box.button(getattr(QDialogButtonBox.StandardButton, name)).text() == expected
+        assert (manager._button_translator is None) == (code == "en")
         box.deleteLater()
     finally:
-        for name in ("_button_translator", "_qt_translator"):
-            translator = getattr(manager, name, None)
-            if translator is not None:
-                app.removeTranslator(translator)
-                translator.deleteLater()
+        _release_translators(app, manager)
         i18n.apply_application_locale()
 
 
@@ -165,9 +208,7 @@ def test_template_weekday_and_strftime_names_follow_ui_language(app, code, tmp_p
 
 def test_bootstrap_applies_language_after_application_creation():
     source = (ROOT / "calendar_app/bootstrap.py").read_text(encoding="utf-8", errors="strict")
-    assert source.index("app = QApplication(") < source.index(
-        "i18n.apply_application_locale()"
-    )
+    assert source.index("app = QApplication(") < source.index("i18n.apply_application_locale()")
 
 
 def test_partial_user_override_keeps_bundle_and_english_fallbacks(app, tmp_path):
@@ -206,11 +247,7 @@ def test_partial_user_override_keeps_bundle_and_english_fallbacks(app, tmp_path)
         assert manager.get("count", count=2) == "2件"
         assert (user / "ja.json").read_bytes() == before
     finally:
-        for name in ("_button_translator", "_qt_translator"):
-            translator = getattr(manager, name, None)
-            if translator is not None:
-                app.removeTranslator(translator)
-                translator.deleteLater()
+        _release_translators(app, manager)
         i18n.apply_application_locale()
 
 

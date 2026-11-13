@@ -20,6 +20,12 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.locale_names import month_name as locale_month_name
+from calendar_app.presentation.locale_names import weekday_names
+from calendar_app.presentation.widgets.datecard_animations import (
+    AnimatedDateSurface,
+    date_animation,
+)
 from calendar_app.presentation.widgets.moment_asset_packs import (
     DEFAULT_MOMENT_ASSET_PACK_ID,
     EMPTY_MOMENT_ART,
@@ -123,15 +129,8 @@ def _week_strip_label_style(color: QColor | str, *, bold: bool = False) -> str:
 
 
 def _weekday_labels_mon_first() -> list[str]:
-    return [
-        t("weekday.mon", "월"),
-        t("weekday.tue", "화"),
-        t("weekday.wed", "수"),
-        t("weekday.thu", "목"),
-        t("weekday.fri", "금"),
-        t("weekday.sat", "토"),
-        t("weekday.sun", "일"),
-    ]
+    # Narrow names: the mini calendar and week strip cells are one glyph wide.
+    return weekday_names(narrow=True)
 
 
 # ---------------------------------------------------------------------------
@@ -202,7 +201,7 @@ class _CalendarGridWidget(QWidget):
         hdr_font.setBold(True)
         p.setFont(hdr_font)
 
-        month_name = QLocale().toString(QDate(now_y, now_m, 1), "MMMM")
+        month_name = locale_month_name(now_m)
         hdr_text = f"{now_y}. {now_m:02d}  {month_name}"
         header_color = QColor(self._fg_color)
         header_color.setAlpha(230)
@@ -317,6 +316,7 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
         ("retro", "Retro - Double Border"),
         ("banner", "Banner - Left Accent"),
         ("mini_grid", "Mini Grid - Monthly Calendar"),
+        ("animated", "움직이는 GIF · 일러스트 날짜 카드"),
     ]
     _STYLE_I18N_PREFIX = "widget.datecard"
     _TEMPLATE_KEY = "dc_template"
@@ -361,6 +361,10 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
         outer.setSpacing(2)
         outer.setAlignment(Qt.AlignmentFlag.AlignTop)
 
+        self._animated_date_surface = AnimatedDateSurface(frame)
+        self._animated_date_surface.hide()
+        outer.addWidget(self._animated_date_surface)
+
         # Basic labels
         self._labels = {
             "weekday": QLabel("", frame),
@@ -389,10 +393,13 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
         ws_layout.setContentsMargins(0, 0, 0, 0)
         ws_layout.setSpacing(4)
         # 7 day cells for the improved week-strip
-        _dow_names = ["월", "화", "수", "목", "금", "토", "일"]
         self._ws_cells: list[QLabel] = []
-        for name in _dow_names:
+        for name, long_name in zip(
+            _weekday_labels_mon_first(), weekday_names(long=True), strict=True
+        ):
             lbl = QLabel(name, self._ws_row)
+            # Narrow letters are ambiguous ("T" is Tue and Thu); screen readers get the full name.
+            lbl.setAccessibleName(long_name)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             ws_layout.addWidget(lbl)
@@ -440,6 +447,7 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
 
     def _set_runtime_active(self, active: bool) -> None:
         self._set_graphics_runtime_active(active)
+        self._animated_date_surface.set_runtime_active(active)
         if active:
             if not self._dc_timer.isActive():
                 self._dc_timer.start(60_000)
@@ -450,6 +458,24 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
 
     def _tick(self):
         if self._render_graphic_face():
+            return
+        animated = self.display_style() == "animated"
+        self._animated_date_surface.setVisible(animated)
+        if animated:
+            for child in (
+                self._h_row,
+                self._ws_row,
+                self._grid_widget,
+                self._template_label,
+                *self._labels.values(),
+            ):
+                child.hide()
+            self._animated_date_surface.configure(
+                self._get("datecard_animation", "sakura"),
+                family=self.font_family(),
+                base_size=self.font_size(),
+                motion=self._get("datecard_animation_motion", True, type_=bool),
+            )
             return
         if self._resizing and not self._measuring:
             return
@@ -574,6 +600,12 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
         if self._render_graphic_face(appearance=True):
             return
         self._apply_base_appearance()
+        if self.display_style() == "animated":
+            self.face.setStyleSheet("QFrame#dateCardFace {background:transparent;border:none;}")
+            self.face.layout().setContentsMargins(0, 0, 0, 0)
+            self.face.layout().setSpacing(0)
+            self._tick()
+            return
         size = self.font_size()
         family = self.font_family()
         style = self.display_style()
@@ -683,6 +715,10 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
                 val = locale.toString(now_dt, "ddd")
             elif key == "weekday:en":
                 val = _en[(q.dayOfWeek() - 1) % 7]
+            elif key == "month:standalone":
+                # Month shown alone as a heading: nominative ("ноябрь"); {month} stays the
+                # format form ("ноября") for "{day} {month}" templates.
+                val = locale_month_name(q.month())
             else:
                 val = str(vals.get(key, ""))
             return _apply_span(escape(val), hints)
@@ -758,6 +794,10 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
 
     def _build_context_menu(self, menu: QMenu):
         menu.addAction(
+            t("date_animation.choose", "움직이는 GIF 꾸미기…"),
+            self._open_date_animations,
+        )
+        menu.addAction(
             t("widget.datecard.settings", "Date Card Settings..."),
             self._open_settings,
         )
@@ -780,6 +820,23 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
     def _set_moment_pack(self, pack_id: str) -> None:
         self._set("datecard_asset_pack", get_moment_asset_pack(pack_id).pack_id)
         self._refresh_face()
+
+    def _open_date_animations(self) -> None:
+        from calendar_app.presentation.widgets.datecard_animation_dialog import DateAnimationDialog
+
+        dialog = DateAnimationDialog(self)
+        try:
+            if dialog.exec() == dialog.DialogCode.Accepted:
+                self._set_date_animation(dialog.animation_id, motion=dialog.motion)
+        finally:
+            dialog.deleteLater()
+
+    def _set_date_animation(self, animation_id: str, *, motion=True) -> None:
+        self.apply_graphic_collection("")
+        self._set("datecard_animation", date_animation(animation_id).animation_id)
+        self._set("datecard_animation_motion", bool(motion))
+        self._set("display_style", "animated")
+        self._apply_and_resize()
 
     def _action_reset_position(self):
         self.center_on_owner()

@@ -8,10 +8,14 @@ import contextlib
 import html
 import logging
 import re
+import weakref
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QGuiApplication, QKeySequence, QShortcut, QWindow
 from PyQt6.QtWidgets import QApplication, QDockWidget, QWidget
+
+from calendar_app.infrastructure.runtime import win32_input
+from calendar_app.infrastructure.runtime.menu_paths import SELECTED_ITEM_MENU_KEY, format_menu_path
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +212,8 @@ SHORTCUTS: list[dict] = [
     },
     {
         "id": "show_hide",
-        "key": "Ctrl+F1",
+        # System-wide hotkey; Ctrl+F1 would take Office's ribbon toggle away.
+        "key": "Ctrl+Alt+Shift+F1",
         "group": "window",
         "label_ko": "창 표시/숨기기",
         "action": "toggle_overlay",
@@ -274,7 +279,9 @@ SHORTCUTS: list[dict] = [
         "key": "Escape",
         "group": "edit",
         "label_ko": "선택 해제",
-        "action": "clear_task_selection",
+        # Guide entry only: the main window's keyPressEvent handles Esc so open
+        # popups such as the command palette still receive it first.
+        "action": None,
     },
     {
         "id": "force_unlock",
@@ -348,25 +355,51 @@ _GUIDE_REFERENCE_COLUMNS: list[list[str]] = [
     ["register", "navigate", "view", "edit"],
     ["mode", "window", "admin", "system", "emergency"],
 ]
+# Shortcuts that also live in a menu: the path is the i18n keys the menu builder
+# passes to t(), rendered live so a renamed item cannot leave a stale help path.
+# Other shortcuts keep a translatable category in shortcut.entries.<id>.menu_path.
+_LAYOUT_PRESETS_PATH = ("menu.display_btn", "menu.layout_presets")
+SHORTCUT_MENU_PATHS: dict[str, tuple[str, ...]] = {
+    "new_schedule": ("menu.register_btn", "menu.add_schedule"),
+    "new_routine": ("menu.register_btn", "menu.add_routine"),
+    "new_directive": ("menu.register_btn", "menu.add_directive"),
+    "checklist": ("menu.work_btn", "menu.checklist_mgmt"),
+    "routine_mgr": ("menu.work_btn", "menu.routine_status"),
+    "focus_mode": ("menu.display_btn", "menu.focus_view_options", "menu.focus_mode"),
+    "widget_mode": ("menu.display_btn", "menu.focus_view_options", "menu.widget_mode_toggle"),
+    "away_lock": ("menu.display_btn", "menu.focus_view_options", "menu.instant_away"),
+    "topbar": ("menu.display_btn", "menu.window_view_options", "menu.auto_hide_topbar"),
+    "navigation_rail": ("menu.display_btn", "menu.window_view_options", "topbar.navigation_rail"),
+    "cal_toolbar": ("menu.display_btn", "menu.window_view_options", "menu.hide_calendar_toolbar"),
+    "fullscreen": ("menu.display_btn", "menu.window_view_options", "menu.fullscreen"),
+    "save_layout": (*_LAYOUT_PRESETS_PATH, "menu.save_layout"),
+    "layout_1": _LAYOUT_PRESETS_PATH,
+    "layout_2": _LAYOUT_PRESETS_PATH,
+    "layout_3": _LAYOUT_PRESETS_PATH,
+    "layout_4": _LAYOUT_PRESETS_PATH,
+    "layout_5": _LAYOUT_PRESETS_PATH,
+    "sync_gcal": ("menu.system", "sync_unified.menu", "sync_unified.sync_all"),
+    "help": ("menu.system", "menu.shortcuts"),
+    # The calendar panel's own toolbar, not the top bar.
+    "calendar_print": ("panel.main_calendar", "calendar.options", "print.menu"),
+    # The calendar and the side panels label this submenu with the same keys.
+    "color_assign": (SELECTED_ITEM_MENU_KEY, "context_menu.color_tag", "context_menu.color_auto"),
+}
 _SHORTCUT_HELP_META_KO: dict[str, dict] = {
     "new_schedule": {
         "description": "일정 입력 창을 바로 엽니다.",
-        "menu_path": "등록 > 새 일정",
         "tags": ["일정", "추가", "등록", "schedule"],
     },
     "new_routine": {
         "description": "반복 업무 루틴을 빠르게 추가합니다.",
-        "menu_path": "등록 > 루틴",
         "tags": ["루틴", "업무", "반복", "routine"],
     },
     "new_directive": {
         "description": "지시나 협조 항목 입력 창을 엽니다.",
-        "menu_path": "등록 > 지시사항",
         "tags": ["지시", "협조", "directive"],
     },
     "checklist": {
         "description": "체크리스트 템플릿과 항목 구성을 관리합니다.",
-        "menu_path": "작업 > 체크리스트 관리",
         "tags": ["체크리스트", "템플릿", "checklist"],
     },
     "today": {
@@ -391,7 +424,6 @@ _SHORTCUT_HELP_META_KO: dict[str, dict] = {
     },
     "focus_mode": {
         "description": "집중 모드를 켜거나 끕니다.",
-        "menu_path": "화면 > 집중 모드",
         "tags": ["집중", "focus", "pomodoro"],
         "aliases": ["Ctrl+Space"],
     },
@@ -402,92 +434,76 @@ _SHORTCUT_HELP_META_KO: dict[str, dict] = {
     },
     "lock_mode": {
         "description": "데스크톱 잠금 모드를 전환합니다.",
-        "menu_path": "화면 > 잠금 모드",
+        "menu_path": "상단 바 버튼",
         "tags": ["잠금", "lock"],
     },
     "magnet_mode": {
         "description": "패널 정렬과 부착을 돕는 자석 모드를 전환합니다.",
-        "menu_path": "화면 > 자석 모드",
+        "menu_path": "상단 바 버튼",
         "tags": ["자석", "패널", "magnet"],
     },
     "away_lock": {
         "description": "자리비움 잠금을 즉시 시작합니다.",
-        "menu_path": "화면 > 자리비움 잠금",
         "tags": ["자리비움", "away", "lock"],
     },
     "topbar": {
         "description": "상단 바 자동 숨기기를 켜거나 끕니다. 끄면 상단 바가 고정됩니다.",
-        "menu_path": "화면 > 화면 및 창 > 상단 바 자동 숨기기",
         "tags": ["메뉴바", "상단 바", "topbar", "자동 숨기기", "고정", "복구"],
     },
     "navigation_rail": {
         "description": "왼쪽 빠른 이동 막대를 표시하거나 숨깁니다.",
-        "menu_path": "화면 > 화면 및 창 > 빠른 이동",
         "tags": ["빠른 이동", "레일", "navigation", "rail"],
     },
     "cal_toolbar": {
         "description": "캘린더 툴바를 숨기거나 다시 표시합니다.",
-        "menu_path": "화면 > 캘린더 툴바",
         "tags": ["캘린더", "툴바", "toolbar"],
     },
     "fullscreen": {
         "description": "전체화면 표시를 전환합니다.",
-        "menu_path": "화면 > 전체화면",
         "tags": ["전체화면", "fullscreen"],
     },
     "widget_mode": {
         "description": "위젯 전용 패널 모드를 엽니다.",
-        "menu_path": "화면 > 위젯 전용 모드",
         "tags": ["위젯", "widget", "panel"],
     },
     "save_layout": {
         "description": "현재 패널 배치를 프리셋으로 저장합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋 > 저장",
         "tags": ["레이아웃", "프리셋", "저장", "layout"],
     },
     "layout_1": {
         "description": "기본 4패널 도킹 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "프리셋", "도킹", "1"],
     },
     "layout_2": {
         "description": "캘린더 중심 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "캘린더", "2"],
     },
     "layout_3": {
         "description": "업무 중심 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "업무", "3"],
     },
     "layout_4": {
         "description": "탭 분할 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "탭", "분할", "4"],
     },
     "layout_5": {
         "description": "분리형 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "분리", "부동", "5"],
     },
     "calendar_print": {
         "description": "현재 보기 또는 지정 기간의 캘린더를 미리보고 인쇄합니다.",
-        "menu_path": "캘린더 > 옵션 > 인쇄",
         "tags": ["인쇄", "프린터", "PDF", "print"],
     },
     "sync_gcal": {
         "description": "연결된 모든 캘린더의 동기화를 바로 시작합니다.",
-        "menu_path": "시스템 > 캘린더 및 동기화",
         "tags": ["Google", "Outlook", "iCloud", "네이버", "ICS", "동기화", "캘린더", "F5", "sync"],
     },
     "routine_mgr": {
         "description": "루틴 관리자 탭을 바로 엽니다.",
-        "menu_path": "작업 > 루틴 현황",
         "tags": ["루틴", "관리", "routine"],
     },
     "color_assign": {
         "description": "선택 항목에 색상을 자동으로 배정합니다.",
-        "menu_path": "작업 > 색상 자동 지정",
         "tags": ["색상", "태그", "자동", "color"],
     },
     "show_hide": {
@@ -522,7 +538,6 @@ _SHORTCUT_HELP_META_KO: dict[str, dict] = {
     },
     "help": {
         "description": "도움말 센터를 엽니다.",
-        "menu_path": "시스템 > 단축키 안내",
         "tags": ["도움말", "help", "F1"],
     },
     "delete": {
@@ -594,7 +609,12 @@ def get_shortcut_guide_entries() -> list[dict]:
         entry["description_ko"] = t(
             f"{ns}.description", str(help_meta.get("description", "") or "")
         )
-        entry["menu_path_ko"] = t(f"{ns}.menu_path", str(help_meta.get("menu_path", "") or ""))
+        menu_keys = SHORTCUT_MENU_PATHS.get(shortcut_id)
+        entry["menu_path_ko"] = (
+            format_menu_path(menu_keys)
+            if menu_keys
+            else t(f"{ns}.menu_path", str(help_meta.get("menu_path", "") or ""))
+        )
         entry["aliases"] = aliases
         translated_tags = t(f"{ns}.tags", None)
         entry["tags_ko"] = (
@@ -1036,6 +1056,196 @@ def _make_shortcut(host: QWidget, owner, key: str, handler: Callable) -> QShortc
     return shortcut
 
 
+# OS-wide hotkeys (RegisterHotKey). Only show/hide is global: after the window is
+# hidden to the tray no window is active, so an in-app shortcut cannot reach it.
+GLOBAL_HOTKEY_IDS: dict[str, int] = {"show_hide": 0x0A1C}
+
+
+def _native_hotkeys_supported() -> bool:
+    """RegisterHotKey needs Win32 and real native windows (not offscreen/minimal)."""
+    if not win32_input.HOTKEYS_AVAILABLE or QGuiApplication.instance() is None:
+        return False
+    return QGuiApplication.platformName() == "windows"
+
+
+class _HotkeyWindow(QWindow):
+    """Never-shown native window whose HWND receives WM_HOTKEY.
+
+    Owning a window keeps the handler's lifetime tied to this object (no filter on
+    the application), and its HWND is not recreated when the main window changes
+    flags for always-on-top or desktop mode.
+    """
+
+    def __init__(self, on_hotkey: Callable[[int], None]):
+        super().__init__()
+        self._on_hotkey = on_hotkey
+        self.create()
+
+    def nativeEvent(self, event_type, message):
+        # A Python exception escaping a Qt virtual aborts the process.
+        try:
+            address = int(message) if message is not None else 0
+            hotkey_id = win32_input.hotkey_id_from_message(address)
+            if hotkey_id is not None:
+                self._on_hotkey(hotkey_id)
+                return True, 0
+        except Exception:
+            logger.exception("Global hotkey message handling failed")
+        return False, 0
+
+
+class GlobalHotkeys:
+    """The app's RegisterHotKey registrations, keyed by shortcut id."""
+
+    def __init__(self, on_activated: Callable[[str], None]):
+        self._on_activated = on_activated
+        self._keys: dict[str, str] = {}
+        self.notified_failures: set[str] = set()
+        self.window = _HotkeyWindow(self._dispatch)
+
+    def _hwnd(self) -> int:
+        return int(self.window.winId()) if self.window is not None else 0
+
+    def _dispatch(self, hotkey_id: int) -> None:
+        for shortcut_id, known_id in GLOBAL_HOTKEY_IDS.items():
+            if known_id == hotkey_id and shortcut_id in self._keys:
+                # Run the action after the native message handler has returned.
+                QTimer.singleShot(0, lambda sid=shortcut_id: self._on_activated(sid))
+                return
+
+    def owns(self, shortcut_id: str, key: str) -> bool:
+        return bool(key) and self._keys.get(shortcut_id) == key
+
+    def register(self, shortcut_id: str, key: str) -> tuple[bool, int]:
+        """Register ``key`` for ``shortcut_id``, replacing an older key; (ok, error)."""
+        if self.owns(shortcut_id, key):
+            return True, 0
+        self.unregister(shortcut_id)
+        codes = win32_input.parse_hotkey(key)
+        if codes is None or self.window is None:
+            return False, 0
+        ok, error = win32_input.register_hotkey(
+            self._hwnd(), GLOBAL_HOTKEY_IDS[shortcut_id], codes[0], codes[1]
+        )
+        if ok:
+            self._keys[shortcut_id] = key
+        return ok, error
+
+    def unregister(self, shortcut_id: str) -> None:
+        if self._keys.pop(shortcut_id, None) is not None:
+            win32_input.unregister_hotkey(self._hwnd(), GLOBAL_HOTKEY_IDS[shortcut_id])
+
+    def release(self) -> None:
+        for shortcut_id in list(self._keys):
+            self.unregister(shortcut_id)
+        window, self.window = self.window, None
+        if window is not None:
+            window.destroy()
+
+
+def _shortcut_action(app, shortcut_id: str):
+    item = _shortcut_by_id(shortcut_id) or {}
+    handler = getattr(app, str(item.get("action") or ""), None)
+    return handler if callable(handler) else None
+
+
+def _run_global_hotkey(app_ref, shortcut_id: str) -> None:
+    app = app_ref()
+    handler = _shortcut_action(app, shortcut_id) if app is not None else None
+    if handler is None:
+        return
+    try:
+        handler()
+    except Exception:
+        logger.exception("Global hotkey action '%s' failed", shortcut_id)
+
+
+def _notify_global_hotkey_unavailable(app, controller, shortcut_id: str, key: str) -> None:
+    if shortcut_id in controller.notified_failures:
+        return
+    controller.notified_failures.add(shortcut_id)
+    # Tell the user once per key, not on every start while another program keeps it.
+    settings = getattr(app, "settings", None)
+    seen_setting = f"global_hotkey_notice_{shortcut_id}"
+    if settings is not None and str(settings.value(seen_setting, "") or "") == key:
+        return
+    show_toast = getattr(app, "show_toast", None)
+    if not callable(show_toast):
+        return
+    from calendar_app.infrastructure.i18n import t
+
+    item = _shortcut_by_id(shortcut_id) or {}
+    title = t(f"shortcut.entries.{shortcut_id}.label", str(item.get("label_ko") or ""))
+    message = t(
+        "shortcut.global_hotkey.unavailable",
+        "다른 프로그램이 {shortcut} 키를 사용 중이라 이 단축키는 앱 창이 활성일 때만 "
+        "동작합니다. 숨긴 창은 트레이 아이콘으로 다시 열 수 있습니다.",
+        shortcut=key,
+    )
+    try:
+        show_toast(title, message)
+    except Exception:
+        logger.exception("Failed to show the global hotkey notice")
+        return
+    if settings is not None:
+        settings.setValue(seen_setting, key)
+
+
+def sync_global_hotkeys(app) -> None:
+    """Register OS-wide hotkeys with their current keys; re-run after a key change.
+
+    A key another program owns stays an in-app shortcut: it is logged on every run
+    and the user is told once per key.
+    """
+    if not _native_hotkeys_supported():
+        return
+    controller = getattr(app, "_global_hotkeys", None)
+    if controller is None:
+        app_ref = weakref.ref(app)
+        controller = GlobalHotkeys(lambda sid: _run_global_hotkey(app_ref, sid))
+        app._global_hotkeys = controller
+    for shortcut_id in GLOBAL_HOTKEY_IDS:
+        key = get_key(shortcut_id)
+        if not key or _shortcut_action(app, shortcut_id) is None:
+            controller.unregister(shortcut_id)
+            continue
+        ok, error = controller.register(shortcut_id, key)
+        if ok:
+            logger.info("Global hotkey %s registered for '%s'", key, shortcut_id)
+            continue
+        logger.warning(
+            "Global hotkey %s for '%s' is unavailable (Win32 error %s); "
+            "keeping the in-app shortcut",
+            key,
+            shortcut_id,
+            error,
+        )
+        _notify_global_hotkey_unavailable(app, controller, shortcut_id, key)
+
+
+def release_global_hotkeys(app) -> None:
+    """Unregister every OS-wide hotkey and drop the message window (idempotent)."""
+    controller = getattr(app, "_global_hotkeys", None)
+    if controller is None:
+        return
+    app._global_hotkeys = None
+    try:
+        controller.release()
+    except Exception:
+        logger.exception("Failed to release global hotkeys")
+
+
+def _owned_by_global_hotkey(app, shortcut_id: str, key: str) -> bool:
+    owns = getattr(getattr(app, "_global_hotkeys", None), "owns", None)
+    return bool(callable(owns) and owns(shortcut_id, key))
+
+
+def register_app_shortcuts(app) -> None:
+    """Register OS-wide hotkeys, then the in-app shortcuts they do not cover."""
+    sync_global_hotkeys(app)
+    register_all(app)
+
+
 def register_all(app) -> None:
     """Register shortcuts on the main window only.
 
@@ -1052,9 +1262,13 @@ def register_all(app) -> None:
         _make_shortcut(app, app, key, handler)
 
     for shortcut in SHORTCUTS:
-        key = shortcut["key"]
-        action_name = shortcut["action"]
         shortcut_id = shortcut["id"]
+        key = get_key(shortcut_id, shortcut["key"])
+        action_name = shortcut["action"]
+
+        if _owned_by_global_hotkey(app, shortcut_id, key):
+            # The OS-wide hotkey consumes the key; a QShortcut would only double-fire.
+            continue
 
         if action_name and hasattr(app, action_name):
             _register_on_hosts(key, getattr(app, action_name))

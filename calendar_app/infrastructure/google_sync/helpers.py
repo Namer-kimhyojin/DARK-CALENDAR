@@ -8,6 +8,7 @@ import logging
 
 from calendar_app.infrastructure.google_sync.common import (
     google_create_idempotency_key,
+    google_summary_for_task_name,
 )
 from calendar_app.infrastructure.google_sync.common import (
     is_gcal_enabled as _common_is_gcal_enabled,
@@ -281,7 +282,10 @@ def sync_task_to_google(
             error_message="local_task_changed_before_push",
         )
 
-    summary = task_data.get("name") or task_data.get("summary") or "Untitled"
+    task_name = task_data.get("name") or task_data.get("summary") or ""
+    # An update sends the name as is: the service compares it with the current
+    # Google title, so a real title such as "Untitled" is not erased.
+    summary = google_summary_for_task_name(task_name)
     start_iso = task_data.get("deadline") or ""
     end_iso = task_data.get("end_date") or ""
     description = task_data.get("description") or ""
@@ -414,7 +418,7 @@ def sync_task_to_google(
         )
         ok = sync.update_event(
             _update_target_id,
-            summary,
+            task_name,
             start_iso,
             end_iso,
             description,
@@ -475,7 +479,7 @@ def sync_task_to_google(
         for recovery_calendar_id in recovery_candidates:
             recovered = sync.update_event(
                 _update_target_id,
-                summary,
+                task_name,
                 start_iso,
                 end_iso,
                 description,

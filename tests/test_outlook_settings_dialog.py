@@ -6,7 +6,9 @@ from PyQt6.QtCore import QObject, QSettings, Qt, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from calendar_app.infrastructure.calendar_sync.repository import CalendarSyncRepository
+from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs import outlook_settings_dialog as module
+from calendar_app.presentation.dialogs.sync_feedback import sync_error_message
 
 
 def test_pending_create_deletion_can_be_rechecked_without_discarding_guard(tmp_path, monkeypatch):
@@ -230,3 +232,29 @@ def test_retry_deletion_starts_outlook_immediately(tmp_path, monkeypatch):
     conn.close()
     dialog.close()
     window.close()
+
+
+def test_waiting_deletion_is_labeled_pending_not_failed(tmp_path, monkeypatch):
+    app, window = host(tmp_path)
+    path = tmp_path / "calendar.db"
+    database(path)
+    monkeypatch.setattr(module, "DB_PATH", str(path))
+    window.settings.setValue("outlook_account_id", "microsoft::test")
+    controller = Controller()
+    conn = sqlite3.connect(path)
+    key = CalendarSyncRepository(conn).register("microsoft::test", controller.available[0])
+    with conn:
+        conn.execute(
+            "INSERT INTO calendar_sync_delete_queue(event_id,calendar_id,etag) "
+            "VALUES('queued',?,'etag')",
+            (key,),
+        )
+    conn.close()
+    dialog = module.OutlookSettingsDialog(window, controller)
+    try:
+        label = dialog.issues.item(0).text()
+        assert label.endswith(t("outlook.pending", "대기 중"))
+        assert sync_error_message("operation_failed") not in label
+    finally:
+        dialog.close()
+        window.close()

@@ -304,9 +304,11 @@ class _ToggleBtn(QPushButton):
         self._tokens = tokens
         self.setCheckable(True)
         self.setChecked(enabled)
-        self.setMinimumSize(54, max(24, tokens["caption_px"] + 10))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self._refresh()
+        # Fonts with tall line spacing (Segoe UI, Malgun Gothic) need more than px + 10.
+        self.ensurePolished()
+        self.setMinimumSize(54, max(24, tokens["caption_px"] + 10, self.fontMetrics().height() + 4))
         self.toggled.connect(lambda _: self._refresh())
 
     def _refresh(self):
@@ -324,7 +326,7 @@ class _ToggleBtn(QPushButton):
             col = tok["text_muted"]
             brd = tok["border"]
 
-        self.setText("ON" if on else "OFF")
+        self.setText(t("common.toggle_on", "ON") if on else t("common.toggle_off", "OFF"))
         self.setStyleSheet(
             f"QPushButton {{ background: {bg}; color: {col}; border: 1px solid {brd};"
             f" border-radius: {r}px; font-weight: 800; font-size: {tok['caption_px']}px; letter-spacing: 0.5px; }}"
@@ -409,7 +411,7 @@ class WidgetCard(QFrame):
         root.addLayout(info, 1)
         self.toggle = _ToggleBtn(widget.is_enabled(), tokens)
         self.toggle.setAutoDefault(False)
-        self.toggle.setMinimumSize(64, max(28, tokens["caption_px"] + 10))
+        self.toggle.setMinimumSize(64, max(28, self.toggle.minimumHeight()))
         self.toggle.toggled.connect(functools.partial(on_toggle, iid))
         root.addWidget(self.toggle)
         self.find_button = hub_button(t("widget_hub.find", "찾기"), lambda: on_focus(iid))

@@ -176,5 +176,8 @@ def test_dark_surfaces_keep_user_opacity_with_visible_surface_hierarchy():
 def test_shell_surfaces_share_one_see_through_level_at_any_opacity():
     for opacity in (0.35, 0.59, 0.9):
         palette = derive_panel_palette("#121827", opacity)
-        alphas = {role: palette[role].rsplit(",", 1)[1].strip(" )") for role in ("surface_bg", "topbar_bg")}
+        alphas = {
+            role: palette[role].rsplit(",", 1)[1].strip(" )")
+            for role in ("surface_bg", "topbar_bg")
+        }
         assert alphas["surface_bg"] == alphas["topbar_bg"], (opacity, alphas)

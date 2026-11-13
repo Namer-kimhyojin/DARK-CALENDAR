@@ -40,7 +40,10 @@ def test_static_color_dialog_header_spans_the_dialog_and_shows_its_title():
 
     QTimer.singleShot(0, inspect)
     QColorDialog.getColor(
-        QColor("#bd93f9"), host, "포인트 색상 선택", QColorDialog.ColorDialogOption.DontUseNativeDialog
+        QColor("#bd93f9"),
+        host,
+        "포인트 색상 선택",
+        QColorDialog.ColorDialogOption.DontUseNativeDialog,
     )
     host.close()
 

@@ -3,7 +3,7 @@ import datetime
 import html as _html_mod
 import logging
 
-from PyQt6.QtCore import QDate, QEvent, QLocale, QPoint, QSize, Qt, QTime
+from PyQt6.QtCore import QDate, QEvent, QLocale, QPoint, QSize, Qt, QTime, QTimer
 from PyQt6.QtGui import QAction, QBrush, QColor, QFont, QFontMetrics, QIcon, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -20,11 +20,22 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from calendar_app.application.week_planner_usecases import _timed_datetime
 from calendar_app.domain.calendar_visibility import CalendarVisibility
-from calendar_app.domain.date_range import inclusive_day_count, inclusive_end_from_exclusive
+from calendar_app.domain.date_range import (
+    inclusive_end_from_exclusive,
+    timed_span_last_day,
+)
 from calendar_app.domain.task_constants import priority_icon
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.locale_names import (
+    calendar_display_name,
+    weekday_name,
+)
+from calendar_app.presentation.locale_names import (
+    month_name as locale_month_name,
+)
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.presentation.widgets.schedule_info import build_schedule_hover_html
 from calendar_app.shared.calendar_display_settings import (
@@ -245,6 +256,10 @@ def _calendar_surface_style(tokens=None, shape=None):
             border: 2px solid {accent_selected_border};
             border-radius: {selection_radius}px;
         }}
+        ClickableCell[keyboardFocused="true"] {{
+            border: 2px dashed {tokens["accent"]};
+            border-radius: {min(4, selection_radius)}px;
+        }}
         QLabel#dayNumLabel {{
             color: {tokens["text_primary"]};
             background: transparent;
@@ -292,7 +307,7 @@ def _build_month_weekday_header(dates, tokens):
         color = tokens["danger"] if date.dayOfWeek() == 7 else tokens["text_secondary"]
         label.setStyleSheet(
             f"color: {color}; background: transparent; border: none; "
-            f"font-size: {_font_role("caption")}; font-weight: 600; padding: 0px 4px;"
+            f"font-size: {_font_role('caption')}; font-weight: 600; padding: 0px 4px;"
         )
         label.ensurePolished()
         label.setMinimumHeight(label.fontMetrics().height() + 2)
@@ -513,7 +528,7 @@ def _calendar_toolbar_style_bundle(tokens=None, shape=None):
             f"border-radius: {selection_radius}px;"
         ),
         "more_btn": (
-            f"QPushButton {{ color: {btn_subtxt}; font-size: {_font_role("caption")}; font-weight: bold; "
+            f"QPushButton {{ color: {btn_subtxt}; font-size: {_font_role('caption')}; font-weight: bold; "
             f"background: transparent; border: none; text-align: left; padding: 2px 5px; "
             f"border-radius: {more_radius}px; }} "
             f"QPushButton:hover {{ background-color: {btn_hover}; color: {btn_txt}; }}"
@@ -526,7 +541,8 @@ def _format_toolbar_date(date: QDate, is_month_mode: bool, *, compact=False) -> 
     if compact:
         return QLocale().toString(date, "yyyy.MM" if is_month_mode else "MM.dd")
     if is_month_mode:
-        month_name = QLocale().monthName(date.month(), QLocale.FormatType.LongFormat)
+        # Standalone (nominative) name: Russian "ноябрь 2026", not "ноября 2026".
+        month_name = locale_month_name(date.month())
         template = t("calendar.month_title", "{month_name} {year}")
         try:
             return str(template).format(
@@ -537,8 +553,7 @@ def _format_toolbar_date(date: QDate, is_month_mode: bool, *, compact=False) -> 
         except (KeyError, ValueError):
             return f"{month_name} {date.year()}"
 
-    day_names = t("calendar.weekdays")
-    target_day_name = day_names[date.dayOfWeek() - 1]
+    target_day_name = weekday_name(date.dayOfWeek() - 1)
     return date.toString("yyyy.MM.dd") + f" ({target_day_name})"
 
 
@@ -547,18 +562,18 @@ def _subscription_detail_style_bundle(tokens=None, shape=None):
     shape = _resolve_calendar_shape(shape=shape)
     detail_radius = int(shape.get("calendar_menu_item_radius", 4))
     return {
-        "title": f"font-size: {_font_role("section")}; font-weight: bold; color: {tokens['accent']}; padding-bottom: 10px;",
+        "title": f"font-size: {_font_role('section')}; font-weight: bold; color: {tokens['accent']}; padding-bottom: 10px;",
         "separator": f"color: {tokens['divider']}; margin-bottom: 10px;",
         "scroll": _calendar_scroll_style(),
         "inner": "background: transparent;",
         "key_label": (
-            f"color: {tokens['text_secondary']}; font-size: {_font_role("caption")}; "
+            f"color: {tokens['text_secondary']}; font-size: {_font_role('caption')}; "
             "min-width: 78px; max-width: 78px;"
         ),
         "value": f"color: {tokens['text_primary']}; font-size: {_font_role()};",
         "value_muted": f"color: {tokens['text_muted']}; font-size: {_font_role()};",
         "copy_btn": (
-            f"QPushButton {{ color: {tokens['text_secondary']}; font-size: {_font_role("caption")}; "
+            f"QPushButton {{ color: {tokens['text_secondary']}; font-size: {_font_role('caption')}; "
             f"border: 1px solid {tokens['border']}; "
             f"border-radius: {detail_radius}px; padding: 1px 4px; }} "
             f"QPushButton:hover {{ color: {tokens['accent']}; "
@@ -683,6 +698,7 @@ class _CalendarSurfaceFrame(QFrame):
         self._drag_delegating = False
         self._sys_drag_active = False
         self._sys_drag_mode = None
+        self._press_global = None
         self.setMouseTracking(True)
 
     def _center_dock(self):
@@ -862,6 +878,7 @@ class _CalendarSurfaceFrame(QFrame):
         return True
 
     def mousePressEvent(self, event):
+        self._press_global = event.globalPosition().toPoint()
         if event.button() == Qt.MouseButton.LeftButton and self._toolbar_collapsed():
             dock = self._center_dock()
             if dock is not None:
@@ -925,11 +942,20 @@ class _CalendarSurfaceFrame(QFrame):
 
     def mouseReleaseEvent(self, event):
         dock = self._center_dock()
-        if self._sys_drag_active and self._sys_drag_mode == "move":
-            self._relaxed_redock(event.globalPosition().toPoint())
+        release_global = event.globalPosition().toPoint()
+        press_global, self._press_global = self._press_global, None
+        # A plain click on a day cell must not re-dock the floating calendar.
+        dragged = (
+            press_global is not None
+            and (release_global - press_global).manhattanLength()
+            >= QApplication.startDragDistance()
+        )
+        if dragged and self._sys_drag_active and self._sys_drag_mode == "move":
+            self._relaxed_redock(release_global)
         if self._drag_delegating and dock is not None:
             dock.mouseReleaseEvent(event)
-            self._relaxed_redock(event.globalPosition().toPoint())
+            if dragged:
+                self._relaxed_redock(release_global)
             event.accept()
             self._drag_delegating = False
             self._sys_drag_active = False
@@ -1005,6 +1031,10 @@ def _task_date_range(task_row):
         return None, None
 
     end_date = _coerce_qdate(task_row.get("end_date")) or start_date
+    if not int(task_row.get("all_day") or 0):
+        last_day = timed_span_last_day(task_row.get("deadline"), task_row.get("end_date"))
+        if last_day is not None:
+            end_date = QDate(last_day.year, last_day.month, last_day.day)
     if end_date < start_date:
         end_date = start_date
     task_row["_cached_start_qdate"] = start_date
@@ -1049,7 +1079,9 @@ def _prepare_calendar_display_rows(tasks, calendar_rows, primary_gcal_id="primar
         row = dict(task)
         calendar = policy.calendar_for_task(row)
         if calendar:
-            row["_calendar_name"] = str(calendar.get("name") or "").strip()
+            row["_calendar_name"] = calendar_display_name(
+                calendar.get("id"), str(calendar.get("name") or "").strip()
+            )
         elif not row.get("_subscription_summary"):
             google = not policy.is_visible(row, hide_gcal_items=True)
             row["_calendar_name"] = "Google Calendar" if google else t("sync_unified.local", "로컬")
@@ -1137,8 +1169,17 @@ def _normalize_subscription_event(subscription_row, event, index):
             except Exception:
                 end_str = f"{end_value[:10]} 00:00:00"
     else:
-        start_str = start_value.replace("T", " ")[:19]
-        end_str = end_value.replace("T", " ")[:19]
+        # Google sends the event's own offset; show it in local wall time like the week view.
+        start_dt = _timed_datetime(start_value, None)
+        end_dt = _timed_datetime(end_value, None)
+        start_str = (
+            start_dt.strftime("%Y-%m-%d %H:%M:%S")
+            if start_dt
+            else start_value.replace("T", " ")[:19]
+        )
+        end_str = (
+            end_dt.strftime("%Y-%m-%d %H:%M:%S") if end_dt else end_value.replace("T", " ")[:19]
+        )
 
     summary = (
         subscription_row.get("summary") or subscription_row.get("calendar_id") or "Subscription"
@@ -1347,13 +1388,6 @@ _ICON_TIME = "🕒"
 _ICON_LOCATION = "📍"
 _ICON_ASSIGNEE = "👤"
 _ICON_DESC = "📝"
-
-
-def _task_span_days(task_row):
-    start_date, end_date = _task_date_range(task_row)
-    if not start_date or not end_date:
-        return 1
-    return inclusive_day_count(start_date.toPyDate(), end_date.toPyDate())
 
 
 def _theme_harmonized_color(theme_hex, seed_value, tokens=None):
@@ -1587,94 +1621,9 @@ def _assign_lane(start_col: int, end_col: int, lane_occupancy: list) -> int:
     return len(lane_occupancy) - 1
 
 
-def _build_multiday_segments(tasks, visible_dates, cols):
-    if not tasks or not visible_dates or cols <= 0:
-        return [], {}
-
-    date_info = [
-        {"week": i // cols, "col": i % cols, "date": d} for i, d in enumerate(visible_dates)
-    ]
-    week_segments = {}
-
-    for task_row in tasks:
-        start_date, end_date = _task_date_range(task_row)
-        if not start_date or not end_date or start_date >= end_date:
-            continue
-
-        active_indices = [i for i, d in enumerate(visible_dates) if start_date <= d <= end_date]
-        # Even if only one day is visible (e.g., Fri->Sun with weekends hidden),
-        # keep a segment so the multiday task does not disappear.
-        if len(active_indices) < 1:
-            continue
-
-        seg_list = []
-        segment_start_idx = active_indices[0]
-        prev_idx = active_indices[0]
-        prev_week = date_info[prev_idx]["week"]
-
-        for idx in active_indices[1:]:
-            curr_week = date_info[idx]["week"]
-            if idx != prev_idx + 1 or curr_week != prev_week:
-                start_info = date_info[segment_start_idx]
-                end_info = date_info[prev_idx]
-                seg_list.append(
-                    {
-                        "task": task_row,
-                        "week": start_info["week"],
-                        "start_col": start_info["col"],
-                        "end_col": end_info["col"],
-                        "segment_start": start_info["date"] == start_date,
-                        "segment_end": end_info["date"] == end_date,
-                    }
-                )
-                segment_start_idx = idx
-            prev_idx = idx
-            prev_week = curr_week
-
-        start_info = date_info[segment_start_idx]
-        end_info = date_info[prev_idx]
-        seg_list.append(
-            {
-                "task": task_row,
-                "week": start_info["week"],
-                "start_col": start_info["col"],
-                "end_col": end_info["col"],
-                "segment_start": start_info["date"] == start_date,
-                "segment_end": end_info["date"] == end_date,
-            }
-        )
-
-        for seg in seg_list:
-            week_segments.setdefault(seg["week"], []).append(seg)
-
-    if not week_segments:
-        return [], {}
-
-    placed_segments = []
-    week_lane_counts = {}
-
-    for week, segments in week_segments.items():
-        # Keep placement deterministic within the week.
-        sorted_segments = sorted(
-            segments,
-            key=lambda seg: (
-                seg["start_col"],
-                -(seg["end_col"] - seg["start_col"] + 1),
-                str(seg["task"].get("id", id(seg["task"]))),
-            ),
-        )
-
-        lane_occupancy = []  # list[list[(start_col, end_col)]]
-        for seg in sorted_segments:
-            seg["lane"] = _assign_lane(seg["start_col"], seg["end_col"], lane_occupancy)
-            placed_segments.append(seg)
-
-        week_lane_counts[week] = len(lane_occupancy)
-
-    return placed_segments, week_lane_counts
-
-
 def render_calendar(app):
+    focused = QApplication.focusWidget()
+    restore_month_focus = bool(focused and focused.property("monthKeyboardCell"))
     raw_mode = str(getattr(app, "view_mode_state", "") or "")
 
     # Normalization & Backward compatibility mapping
@@ -1765,7 +1714,14 @@ def render_calendar(app):
 
     prev_btn = QPushButton()
     prev_btn.setObjectName("calendar_previous")
-    prev_btn.setIcon(_ic(ICON.NAV_PREV, color=_icon_color))
+    # The nav row is mirrored right-to-left, so "previous" sits on the right and its
+    # chevron has to point right (and "next" left) to point away from the date.
+    prev_icon, next_icon = (
+        (ICON.NAV_NEXT, ICON.NAV_PREV)
+        if prev_btn.isRightToLeft()
+        else (ICON.NAV_PREV, ICON.NAV_NEXT)
+    )
+    prev_btn.setIcon(_ic(prev_icon, color=_icon_color))
     prev_btn.setIconSize(QSize(14, 14))
     prev_btn.setStyleSheet(nav_btn_style)
     prev_btn.setAccessibleName(t("calendar.previous_period", "이전 기간"))
@@ -1775,7 +1731,7 @@ def render_calendar(app):
 
     next_btn = QPushButton()
     next_btn.setObjectName("calendar_next")
-    next_btn.setIcon(_ic(ICON.NAV_NEXT, color=_icon_color))
+    next_btn.setIcon(_ic(next_icon, color=_icon_color))
     next_btn.setIconSize(QSize(14, 14))
     next_btn.setStyleSheet(nav_btn_style)
     next_btn.setAccessibleName(t("calendar.next_period", "다음 기간"))
@@ -1792,7 +1748,7 @@ def render_calendar(app):
     date_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     date_label_style = toolbar_styles["date_label"]
     if is_month_mode:
-        date_label_style += f"QPushButton {{ font-size: {_font_role("display")}; }}"
+        date_label_style += f"QPushButton {{ font-size: {_font_role('display')}; }}"
     date_btn.setStyleSheet(date_label_style)
 
     date_menu = QMenu(date_btn)
@@ -1809,7 +1765,7 @@ def render_calendar(app):
     for year in range(current_year - 1, current_year + 2):
         year_menu = date_menu.addMenu(str(year))
         for month in range(1, 13):
-            month_name = locale.monthName(month, QLocale.FormatType.LongFormat)
+            month_name = locale_month_name(month, locale=locale)
             action = year_menu.addAction(month_name)
             action.setCheckable(year == current_year)
             action.setChecked(year == current_year and month == current_month)
@@ -1947,7 +1903,7 @@ def render_calendar(app):
     print_action.triggered.connect(app.open_calendar_print_dialog)
     opt_menu.addAction(print_action)
 
-    # ?? 캘린더蹂닿린/?④린湲??좉? ?????????????????????????????????????????
+    # 캘린더 보기/숨기기 토글
     def _rebuild_calendar_visibility_actions():
         for act in list(opt_menu.actions()):
             if getattr(act, "_cal_vis_action", False):
@@ -2001,7 +1957,7 @@ def render_calendar(app):
             # If read-only, we could potentially stack icons, but for now we prioritize visibility
             final_icon = _ic(type_icon, color=cal_color)
 
-            act = QAction(cal["name"], opt_menu, checkable=True)
+            act = QAction(calendar_display_name(cal["id"], cal["name"]), opt_menu, checkable=True)
             act.setIcon(final_icon)
             act.setChecked(bool(cal.get("is_visible", 1)))
             if is_read_only:
@@ -2048,7 +2004,7 @@ def render_calendar(app):
     sync_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     sync_btn.clicked.connect(app.sync_calendars)
 
-    # 선택 상태 ?쒖떆 ?쇰꺼 (캘린더?대컮 ?곗륫 諛곗튂)
+    # 선택 상태 표시 라벨 (캘린더 툴바 우측 배치)
     from PyQt6.QtGui import QFont as _QFont
     from PyQt6.QtWidgets import QLabel as _QLabel
 
@@ -2079,7 +2035,9 @@ def render_calendar(app):
     more_btn.setToolTip(more_btn.accessibleName())
     more_btn.setCursor(Qt.CursorShape.PointingHandCursor)
     compact_icon_style = icon_btn_style + "QPushButton::menu-indicator { image: none; width: 0; }"
-    more_btn.setStyleSheet(compact_icon_style + f"QPushButton {{ font-size: {_font_role("section")}; }}")
+    more_btn.setStyleSheet(
+        compact_icon_style + f"QPushButton {{ font-size: {_font_role('section')}; }}"
+    )
     more_btn.setFixedWidth(32)
     more_menu = QMenu(more_btn)
     more_menu.setStyleSheet(dropdown_menu_style)
@@ -2186,7 +2144,8 @@ def render_calendar(app):
         date_btn.setText(_format_toolbar_date(app.current_date, is_month_mode, compact=compact))
         date_style = date_label_style
         date_btn.setStyleSheet(
-            date_style + f"QPushButton {{ min-width: 0; padding: 2px 6px; font-size: {_font_role()}; }}"
+            date_style
+            + f"QPushButton {{ min-width: 0; padding: 2px 6px; font-size: {_font_role()}; }}"
             if compact
             else date_style
         )
@@ -2225,7 +2184,7 @@ def render_calendar(app):
     if hasattr(app, "_calendar_toolbar_visible_setting"):
         cal_toolbar_widget.set_toolbar_expanded(app._calendar_toolbar_visible_setting())
 
-    # 珥덇린 ?곹깭 諛섏쁺
+    # 초기 상태 반영
     if hasattr(app, "update_task_selection_status"):
         app.update_task_selection_status()
 
@@ -2277,7 +2236,7 @@ def render_calendar(app):
     app._create_range_preview_cells = []
 
     if not is_grid_view:
-        # ?쇨컙 紐⑤뱶 ??湲고? ?덈퉬 泥섎━
+        # 일간 모드 등 기타 너비 처리
         pass
     else:
         weeks = []
@@ -2538,7 +2497,11 @@ def render_calendar(app):
             week_height_hint = max(80, available_days_height // week_count)
         else:
             week_height_hint = 140 if is_month_mode else 220
-        event_slot_height = 26 if is_month_mode else 24
+        event_slot_height = max(26, QFontMetrics(date_font).height() + 6) if is_month_mode else 24
+        if is_month_mode:
+            # Preserve user dock arrangements; expose every column through scrolling
+            # when the selected font no longer fits in the available calendar width.
+            frame.setMinimumWidth(cols * max(84, round(QFontMetrics(date_font).height() * 3.2)))
         total_event_slots = max(
             1, (max(0, week_height_hint - chrome_height - 8)) // event_slot_height
         )
@@ -2547,10 +2510,12 @@ def render_calendar(app):
             week_start_qdate = week_dates[0]
             week_end_qdate = week_dates[-1]
 
-            # 二??⑥쐞 而⑦뀒?대꼫 (洹몃━???덉씠?꾩썐)
+            # 주 단위 컨테이너 (그리드 레이아웃)
             week_widget = QWidget()
             week_widget.setObjectName("week_grid_container")
-            week_widget.setMinimumHeight(0)
+            week_widget.setMinimumHeight(
+                chrome_height + event_slot_height + 8 if is_month_mode else 0
+            )
             week_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
             week_grid = QGridLayout(week_widget)
             week_grid.setSpacing(0)
@@ -2563,7 +2528,9 @@ def render_calendar(app):
             for col_idx, target_date in enumerate(week_dates):
                 day_str = target_date.toString("M/d") if show_month else target_date.toString("d")
                 if show_weekday_beside_date:
-                    day_name = QLocale().dayName(target_date.dayOfWeek(), QLocale.FormatType.ShortFormat)
+                    day_name = QLocale().dayName(
+                        target_date.dayOfWeek(), QLocale.FormatType.ShortFormat
+                    )
                     day_str = f"{day_str} ({day_name})"
 
                 is_today = target_date == today_qdate
@@ -2601,27 +2568,27 @@ def render_calendar(app):
                 cell_frame.setProperty("create_range_end", False)
                 app._calendar_cells_by_date[target_date.toString("yyyy-MM-dd")] = cell_frame
 
-                # ?대? ?섏쭅 ?덉씠?꾩썐 (諛곌꼍??
+                # 내부 수직 레이아웃 (배경용)
                 bg_v = QVBoxLayout(cell_frame)
                 bg_v.setContentsMargins(0, 0, 0, 0)
                 bg_v.setSpacing(0)
                 bg_v.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-                # ?좎쭨 ?쇰꺼 (泥?以?怨좎젙)
+                # 날짜 라벨 (첫 줄 고정)
                 day_lbl = QLabel(day_str)
                 day_lbl.setObjectName("dayNumLabel")
                 day_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
                 day_lbl.setFixedHeight(chrome_height)
                 bg_v.addWidget(day_lbl)
 
-                # 諛곌꼍 ????ш쾶 諛곗튂 (Row Span 理쒕???
-                # ?ㅼ젣 일정??異붽????뚮쭏??Grid??Row媛 ?섏뼱?섏?留?
-                # 諛곌꼍 ?? ??긽 Row 0遺??留됰컮吏源뚯? ?뺤옣?섎룄濡???Row Span??以??
+                # 배경 셀을 크게 배치 (Row Span 최대)
+                # 실제 일정이 추가될 때마다 Grid의 Row가 늘어나지만
+                # 배경 셀은 항상 Row 0부터 끝까지 확장되도록 큰 Row Span을 준다.
                 week_grid.addWidget(cell_frame, 0, col_idx, 999, 1)
                 cell_frame.lower()
                 week_grid.setColumnStretch(col_idx, 1)
 
-            # 2. ??二쇱감(Week)???랁븳 일정???꾪꽣留?諛??좊떦
+            # 2. 이 주차(Week)에 속한 일정을 필터링 및 할당
             week_multi_tasks = []
             week_single_tasks = {}  # col_idx -> list
             for c in range(cols):
@@ -2632,26 +2599,26 @@ def render_calendar(app):
                 if not s_date:
                     continue
 
-                # ?대떦 二쇱감? 寃뱀튂?붿? 확인
+                # 해당 주차와 겹치는지 확인
                 if e_date < week_start_qdate or s_date > week_end_qdate:
                     continue
 
                 if _is_multi_day_task(task):
                     week_multi_tasks.append(task)
                 else:
-                    # ?⑥씪 일정??寃쎌슦 ?대뒓 ??Col)?몄? 李얜뒗??
+                    # 단일 일정은 어느 열(Col)인지 찾는다
                     try:
                         col_idx = week_dates.index(s_date)
                         week_single_tasks[col_idx].append(task)
                     except ValueError:
-                        pass  # 二쇰쭚 ?④? ?깆뿉 ?섑빐 由ъ뒪?몄뿉 ?놁쓣 ???덉쓬
+                        pass  # 주말 숨김 등으로 목록에 없을 수 있음
 
-            # 3. ?ㅼ쨷 일정 諛곗튂 怨꾩궛 (Lane ?좊떦)
-            # ?곗냽 留됰?媛 寃뱀튂吏 ?딅룄濡?Lane(?????좊떦?쒕떎.
+            # 3. 다중 일정 배치 계산 (Lane 할당)
+            # 연속 막대가 겹치지 않도록 Lane(줄)을 할당한다.
             lanes = []  # list of lists, each sublist contains (start_col, end_col)
             multiday_placements = []  # list of dicts
 
-            # 일정???쒖옉???? 洹몃━怨?湲?테스트?쒖쑝濡??뺣젹?섏뿬 諛곗튂
+            # 일정을 시작일 순, 그다음 긴 기간 순으로 정렬하여 배치
             sorted_multi = sorted(
                 week_multi_tasks,
                 key=lambda t: (
@@ -2666,14 +2633,14 @@ def render_calendar(app):
             for task in sorted_multi:
                 s_date, e_date = _task_date_range(task)
 
-                # ?꾩옱 ?쒖떆以묒씤 二쇱쓽 ??Col) ?몃뜳?ㅻ줈 蹂??
+                # 현재 표시 중인 주의 열(Col) 인덱스로 변환
                 display_s_date = max(s_date, week_start_qdate)
                 display_e_date = min(e_date, week_end_qdate)
 
                 try:
                     start_col = week_dates.index(display_s_date)
                 except ValueError:
-                    # ?쒖옉?쇱씠 ?쒖떆 ????됱씪 ?쒖떆 紐⑤뱶?먯꽌 二쇰쭚 ?????꾨땺寃쎌슦, 媛??媛源뚯슫 ?쒖떆?섎뒗 ?붿씪 李얘린
+                    # 평일만 표시하는 모드에서 시작일이 주말이라 보이지 않으면 가장 가까운 표시 요일을 찾는다
                     found = False
                     for c_idx, wd in enumerate(week_dates):
                         if wd >= display_s_date:
@@ -2698,7 +2665,7 @@ def render_calendar(app):
                 if start_col > end_col:
                     continue
 
-                # 鍮?Lane 李얘린
+                # 빈 Lane 찾기
                 lane_idx = _assign_lane(start_col, end_col, lanes)
 
                 multiday_placements.append(
@@ -2712,7 +2679,7 @@ def render_calendar(app):
                     }
                 )
 
-            # 理쒕? Lane ???쒗븳 泥섎━ + ?꾩옱 ? ?믪씠??留욌뒗 ?쒖떆 媛??????諛섏쁺
+            # 최대 Lane 수 제한 처리 + 현재 셀 높이에 맞는 표시 가능 수 반영
             static_multiday_limit = 5 if is_month_mode else 15
             hidden_multiday_exists = len(lanes) > min(static_multiday_limit, total_event_slots)
             lane_budget = (
@@ -2803,10 +2770,10 @@ def render_calendar(app):
 
                 return btn
 
-            # ?ㅼ쨷 일정 ?꾩젽 異붽?
+            # 다중 일정 위젯 추가
             visible_lane_count = min(len(lanes), max_multiday_lanes)
             for lane_idx in range(visible_lane_count):
-                # ??lane_idx ???대떦?섎뒗 일정??
+                # 이 lane_idx에 해당하는 일정들
                 lane_tasks = [p for p in visible_multiday if p["lane"] == lane_idx]
                 for p in lane_tasks:
                     task = p["task"]
@@ -2829,20 +2796,20 @@ def render_calendar(app):
                     if not is_origin:
                         btn.set_title_watermark(True)
 
-                    # ?쎄컙???곹븯 ?щ갚怨?醫뚯슦 ?덉쓣 ?꾪빐 而⑦뀒?대꼫 ?ъ슜
+                    # 약간의 상하 여백과 좌우 틈을 위해 컨테이너 사용
                     container = QWidget()
                     vbox = QVBoxLayout(container)
                     vbox.setContentsMargins(3, 0, 3, 3)
                     vbox.setSpacing(0)
                     vbox.addWidget(btn)
 
-                    # 洹몃━??諛곗튂: ??start_col), ??event_base_row + lane_idx)
+                    # 그리드 배치: 열(start_col), 행(event_base_row + lane_idx)
                     week_grid.addWidget(
                         container, event_base_row + lane_idx, p["start_col"], 1, span
                     )
 
-            # 媛??댁씠 ?ㅼ젣濡???씤 硫?곕뜲??lane ?섎? 怨꾩궛??
-            # ?ㅻⅨ ?댁쓽 硫?곕뜲???뚮Ц??遺덊븘?뷀븳 鍮?以꾩씠 ?앷린吏 ?딄쾶 ?쒕떎.
+            # 각 열이 실제로 겹치는 멀티데이 lane 수를 계산해
+            # 다른 열의 멀티데이 때문에 불필요한 빈 줄이 생기지 않게 한다.
             lane_count_by_col = {c: 0 for c in range(cols)}
             for c in range(cols):
                 lane_ids = {
@@ -2850,7 +2817,7 @@ def render_calendar(app):
                 }
                 lane_count_by_col[c] = max(lane_ids) + 1 if lane_ids else 0
 
-            # ?⑥씪 일정/?붾낫湲곕뒗 ?대퀎濡??쒖옉 ?됱쓣 ?낅┰ 怨꾩궛?쒕떎.
+            # 단일 일정/더보기는 열별로 시작 행을 독립 계산한다.
             max_row_used = event_base_row + visible_lane_count - 1
             for c in range(cols):
                 tasks_for_col = week_single_tasks[c]
@@ -2909,8 +2876,11 @@ def render_calendar(app):
                 total_hidden = hidden_counts_by_col[c] + remaining_single
                 if total_hidden > 0:
                     more_btn = QPushButton(
-                        t("calendar.more_items", "+ {count} more", count=total_hidden)
+                        t("calendar.more_count_short", "+{count}", count=total_hidden)
                     )
+                    more_label = t("calendar.more_items", "+ {count} more", count=total_hidden)
+                    more_btn.setToolTip(more_label)
+                    more_btn.setAccessibleName(more_label)
                     more_btn.setCursor(Qt.CursorShape.PointingHandCursor)
                     more_btn.setStyleSheet(toolbar_styles["more_btn"])
                     more_btn.clicked.connect(
@@ -2919,7 +2889,7 @@ def render_calendar(app):
 
                     container = QWidget()
                     vbox = QVBoxLayout(container)
-                    vbox.setContentsMargins(0, 0, 0, 0)  # 醫뚯슦 ?⑤뵫 ?쒓굅?섏뿬 ?뺣젹
+                    vbox.setContentsMargins(0, 0, 0, 0)  # 좌우 패딩 제거하여 정렬
                     vbox.addWidget(more_btn)
 
                     more_row = event_base_row + multiday_rows + len(visible_single_tasks)
@@ -2927,26 +2897,62 @@ def render_calendar(app):
                     if more_row > max_row_used:
                         max_row_used = more_row
 
-            # 洹몃━?쒖쓽 ?⑤뒗 怨듦컙??理쒗븯???щ챸 ?됱쑝濡?梨꾩썙???꾩젽?ㅼ씠 ?꾨줈 ?뺣젹?섎룄濡???
+            # 그리드의 남는 공간을 최하단 투명 행으로 채워 위젯들이 위로 정렬되도록 한다
             week_grid.setRowStretch(max_row_used + 1, 1)
 
             days_layout.addWidget(week_widget, 1)
 
-            # 援щ텇?????? 寃쎄퀎留??ъ슜???ㅼ젣 ?щ젰??媛源뚯슫 ?쒓컖 援ъ“ ?좎?.
+            # 구분선 없이 셀 경계만 사용해 실제 달력에 가까운 시각 구조를 유지한다.
 
     inner_v.addLayout(days_layout, 1)
     frame.setLayout(inner_v)
     app._multiday_bridge_overlay = None
 
     scroll = QScrollArea()
+    scroll.setObjectName("calendar_grid_scroll")
     scroll.setWidgetResizable(True)
     scroll.setFrameShape(QScrollArea.Shape.NoFrame)
-    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    scroll.setHorizontalScrollBarPolicy(
+        Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        if is_month_mode
+        else Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    )
     scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
     scroll.setStyleSheet(_calendar_scroll_style())
+    if is_month_mode:
+        scroll.setStyleSheet(
+            _calendar_scroll_style()
+            + f"""
+            QScrollBar:horizontal {{
+                background: {tokens["bg_main"]}; height: 12px; border: none;
+            }}
+            QScrollBar::handle:horizontal {{
+                background: {tokens["text_muted"]}; min-width: 40px; border-radius: 5px;
+            }}
+            QScrollBar::handle:horizontal:hover {{ background: {tokens["accent"]}; }}
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0px; }}
+            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{ background: none; }}
+            QScrollBar:vertical {{
+                background: {tokens["bg_main"]}; width: 12px; border: none;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {tokens["text_muted"]}; min-height: 40px; border-radius: 5px;
+            }}
+            QScrollBar::handle:vertical:hover {{ background: {tokens["accent"]}; }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0px; }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
+            QScrollArea::corner {{ background: {tokens["bg_main"]}; }}
+        """
+        )
     scroll.setWidget(frame)
 
     new_layout.addWidget(scroll)
+    if is_month_mode and app._calendar_cells_by_date:
+        from calendar_app.presentation.calendar.month_navigation import MonthGridNavigation
+
+        navigation = MonthGridNavigation(app, scroll)
+        if restore_month_focus:
+            QTimer.singleShot(0, navigation.restore_focus)
 
 
 def _jump_to_daily_view(app, target_qdate):

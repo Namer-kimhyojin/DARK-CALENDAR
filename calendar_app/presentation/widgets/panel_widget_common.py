@@ -1,38 +1,13 @@
-from collections.abc import Callable
-from dataclasses import dataclass
+# -*- coding: utf-8 -*-
 import re
 
-from PyQt6.QtCore import QDate, QDateTime, QLocale, QPoint, QTime
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtCore import QDate, QDateTime, QLocale, QTime
 
 from calendar_app.infrastructure.i18n import t
 
 
-@dataclass
-class _WidgetEntry:
-    title: str
-    subtitle: str = ""
-    callback: Callable[[], None] | None = None
-    double_click_callback: Callable[[], None] | None = None
-    is_section: bool = False
-    secondary_text: str = ""
-    secondary_tooltip: str = ""
-    secondary_callback: Callable[[], None] | None = None
-    delete_callback: Callable[[], None] | None = None
-    context_menu_callback: Callable[[QWidget, QPoint], None] | None = None
-    memo: str = ""  # 40자 이하로 잘린 메모 표시용
-    memo_full: str = ""  # 팝업용 전체 메모
-
-
 def _safe_text(value: object) -> str:
     return str(value or "").strip()
-
-
-def _top_level_widget(parent: QWidget | None) -> QWidget | None:
-    ref = parent
-    while ref is not None and ref.parentWidget() is not None:
-        ref = ref.parentWidget()
-    return ref
 
 
 def _parse_qdate(raw_value: object) -> QDate:
@@ -167,25 +142,14 @@ def _normalize_status(raw_status: object) -> str:
     return _safe_text(raw_status).lower() or "pending"
 
 
-def _priority_rank(raw_priority: object) -> int:
-    key = _safe_text(raw_priority).lower()
-    return {"urgent": 0, "high": 1, "normal": 2, "low": 3}.get(key, 2)
-
-
-_REF_SCREEN_WIDTH = 1920
-_WIDGET_PANEL_WIDTH_REF = 372
-_SCHEDULE_WIDGET_HEIGHT_REF = 528
-_WORK_WIDGET_DEFAULT_HEIGHT_REF = 356
-_WORK_WIDGET_MIN_HEIGHT_REF = 284
-
-
 def _parse_quick_add_text(text: str) -> tuple[str | None, str]:
     """Uses the central NLP engine to extract time and name."""
     try:
         from calendar_app.infrastructure.nlp.nlp_engine import parse_nlp_task
 
         parsed = parse_nlp_task(text)
-        return parsed.get("time"), parsed.get("title")
+        # The parser leaves the title empty for time-only input such as "3pm".
+        return parsed.get("time"), parsed.get("title") or t("dialog.task.untitled", "제목 없음")
     except Exception:
         # Fallback to basic search
         time_str, name = None, text

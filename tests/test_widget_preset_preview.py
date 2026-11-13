@@ -171,10 +171,12 @@ def test_all_shipped_preset_names_are_defined_in_bundled_locales():
         data = json.loads(path.read_text(encoding="utf-8", errors="strict"))
         for kind in _CLASSES:
             for entry in _PRESET_FALLBACK[kind]:
-                value = data
-                for key in entry["label_key"].split("."):
-                    value = value.get(key, {}) if isinstance(value, dict) else {}
-                assert isinstance(value, str) and value.strip(), (path.name, entry["label_key"])
+                text_keys = [spec[0] for spec in entry.get("text_keys", {}).values()]
+                for dotted in [entry["label_key"], *text_keys]:
+                    value = data
+                    for key in dotted.split("."):
+                        value = value.get(key, {}) if isinstance(value, dict) else {}
+                    assert isinstance(value, str) and value.strip(), (path.name, dotted)
 
 
 def test_actual_dday_default_expansion_is_available():

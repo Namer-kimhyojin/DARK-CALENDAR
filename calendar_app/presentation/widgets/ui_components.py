@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from functools import partial
 import logging
 import sys
 
@@ -38,11 +37,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from calendar_app.application import task_usecases
 from calendar_app.domain.task_constants import PRIORITY_MENU_ITEMS, STATUS_MENU_ITEMS
 from calendar_app.infrastructure.db import calendar_repo, checklist_repo, task_repo
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation import drag_drop_manager as ddm
 from calendar_app.presentation.dialogs.dialog_styles import build_dialog_stylesheet
+from calendar_app.presentation.locale_names import calendar_display_name
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.presentation.widgets.schedule_info import build_schedule_info
 from calendar_app.shared.color_utils import derive_ui_palette
@@ -50,15 +51,48 @@ from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.qt_helpers import apply_hover_state
+from calendar_app.shared.qt_lifetime import call_when_destroyed
 from calendar_app.shared.theme_settings import (
     get_opacity_factor,
     get_theme_color,
     get_theme_palette_inputs,
 )
+from calendar_app.shared.typography import fitted_text_width
 from calendar_app.shared.ui_tokens import get_ui_tokens
 from calendar_app.shared.value_parsers import as_int
 
 logger = logging.getLogger(__name__)
+
+# The detail card's label column fits Korean at 70px; translations widen it up to
+# the cap so the value column keeps most of the 320px card.
+_INFO_LABEL_MIN_WIDTH = 70
+_INFO_LABEL_MAX_WIDTH = 128
+
+
+def _fit_info_label_column(rows):
+    """Give the detail labels one width that shows the longest translation.
+
+    A fixed 70px without wrap clipped "📝 Description" (79px) and id
+    "👤 Penanggung jawab" (121px). Past the cap a label is elided with the
+    full text as its tooltip.
+    """
+    if not rows:
+        return
+    for label, _text in rows:
+        label.ensurePolished()
+    metrics = rows[0][0].fontMetrics()
+    width = fitted_text_width(
+        metrics,
+        [text for _label, text in rows],
+        minimum=_INFO_LABEL_MIN_WIDTH,
+        maximum=_INFO_LABEL_MAX_WIDTH,
+        padding=2,
+    )
+    for label, text in rows:
+        label.setFixedWidth(width)
+        if metrics.horizontalAdvance(text) + 2 > width:
+            label.setText(metrics.elidedText(text, Qt.TextElideMode.ElideRight, width - 2))
+            label.setToolTip(text)
 
 
 def _clear_layout(layout):
@@ -867,7 +901,7 @@ class _DetailExpandOverlay(QFrame):
         if token is None:
             token = object()
             owner._detail_overlay_token = token
-            owner.destroyed.connect(partial(self._on_owner_destroyed, token))
+            call_when_destroyed(owner, _on_detail_owner_destroyed, token)
         self._owner_token = token
 
     def hide_for(self, owner):
@@ -880,6 +914,13 @@ class _DetailExpandOverlay(QFrame):
 
 
 _detail_overlay = None
+
+
+def _on_detail_owner_destroyed(token) -> None:
+    # The singleton can be recreated after the owner was first tracked.
+    overlay = _detail_overlay
+    if overlay is not None and not sip.isdeleted(overlay):
+        overlay._on_owner_destroyed(token)
 
 
 def get_detail_overlay():
@@ -1333,6 +1374,7 @@ class DraggableTaskButton(QFrame):
         text_pal = derive_ui_palette(text_theme, panel_base, opacity_factor)
 
         _clear_layout(self.info_layout)
+        row_labels = []
 
         def _add_info(label, text):
             if not text:
@@ -1340,11 +1382,11 @@ class DraggableTaskButton(QFrame):
             row = QHBoxLayout()
             row.setSpacing(5)
             llbl = QLabel(label)
-            llbl.setFixedWidth(70)
             llbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
             llbl.setStyleSheet(
                 f"background:transparent; color: {text_pal['text_secondary']}; font-size: 9pt;"
             )
+            row_labels.append((llbl, label))
             tlbl = QLabel()
             tlbl.setTextFormat(Qt.TextFormat.PlainText)
             tlbl.setText(text)
@@ -1366,10 +1408,13 @@ class DraggableTaskButton(QFrame):
             calendar_data = calendar_repo.get_calendar(calendar_id) if calendar_id else None
         except Exception:
             calendar_data = None
-        source_text = str((calendar_data or {}).get("name") or "").strip()
+        source_text = str(
+            calendar_display_name(calendar_id, calendar_data.get("name")) if calendar_data else ""
+        ).strip()
         info = build_schedule_info(task, source_text=source_text, detail=True)
         for row in info.rows:
             _add_info(row.label, row.value)
+        _fit_info_label_column(row_labels)
 
         return self.info_layout.count() > 0
 
@@ -1519,9 +1564,16 @@ class DraggableTaskButton(QFrame):
         self._apply_tag_frame_style()
 
     def _handle_item_toggled(self, item_id, checked):
-        """????? ?? ?? ??"""
-        checklist_repo.toggle_checklist_item(item_id)
+        """체크리스트 항목을 토글하고 진행 표시를 갱신한다."""
+        before = (task_repo.get_unified_task(self.task_id) or {}).get("status")
+        task_usecases.toggle_checklist_item(checklist_repo, task_repo, item_id)
+        self._refresh_checklist_progress()
+        after = (task_repo.get_unified_task(self.task_id) or {}).get("status")
+        if after and after != before:
+            # 프로세스를 끝내면 일정이 완료되므로 앱이 모든 화면을 다시 그리게 한다.
+            self.taskStatusChanged.emit(self.task_id, after)
 
+    def _refresh_checklist_progress(self):
         progress = checklist_repo.get_task_checklist_progress(self.task_id)
         if progress["total"] > 0:
             base_title = self.raw_text.split(" (")[0]

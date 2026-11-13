@@ -6,11 +6,13 @@ import datetime
 import logging
 import os
 
+from PyQt6 import sip
 from PyQt6.QtCore import QThread, pyqtSlot
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
+from calendar_app.infrastructure.runtime.menu_paths import GOOGLE_SYNC_SETUP_PATH, format_menu_path
 from calendar_app.presentation.dialogs.sync_feedback import (
     google_sync_error_code,
     sync_error_message,
@@ -326,11 +328,14 @@ class GCalActionsMixin:
 
             return False
 
-        from calendar_app.infrastructure.google_sync.common import get_default_gcal_calendar_id
+        from calendar_app.infrastructure.google_sync.common import (
+            get_default_gcal_calendar_id,
+            sync_time_zone,
+        )
 
         cal_id = get_default_gcal_calendar_id(self.settings)
 
-        tz = self.settings.value("gcal_timezone", "Asia/Seoul")
+        tz = sync_time_zone(self.settings)
 
         try:
             import os
@@ -411,21 +416,38 @@ class GCalActionsMixin:
 
     def notify_gcal_setup_needed(self, disabled=False):
         title = t("gcal.setup_guide_title", "동기화 안내")
+        # Built from the live menu labels, so a renamed menu cannot leave a stale path.
+        path = format_menu_path(GOOGLE_SYNC_SETUP_PATH)
+        auth_hint = t(
+            "gcal.setup_needed_auth_hint",
+            "Google Calendar 항목에서 Google 인증을 완료해 주세요.",
+        )
         if disabled:
             message = t(
                 "gcal.setup_disabled_guide",
-                "Google Calendar 동기화가 아직 켜져 있지 않습니다.\n시스템 > 캘린더 통합 설정에서 사용을 켜고 인증해 주세요.",
+                "Google Calendar 동기화가 아직 켜져 있지 않습니다.\n{path}에서 활성화하세요.",
+                path=path,
             )
+            # A paused account keeps its Google card among the active services. Without
+            # an account the card sits in the collapsed service list, so name it.
+            sync = getattr(self, "gcal_sync", None)
+            if not (sync is not None and getattr(sync, "is_authenticated", False)):
+                from calendar_app.app_paths import TOKEN_PATH
+
+                if not os.path.exists(TOKEN_PATH):
+                    message += "\n" + auth_hint
         else:
-            message = t(
-                "gcal.setup_needed_msg",
-                "Google Calendar 동기화가 아직 설정되지 않았습니다.\n시스템 > 캘린더 통합 설정에서 인증을 완료해 주세요.",
-            )
-            if "인증" not in message:
-                message = f"{message}\n" + t(
-                    "gcal.setup_needed_auth_hint",
-                    "캘린더 통합 설정에서 Google 인증을 완료해 주세요.",
+            # Not configured always needs Google sign-in, so the hint is not
+            # chosen by searching the translated message.
+            message = (
+                t(
+                    "gcal.setup_needed_msg",
+                    "Google Calendar 동기화가 아직 설정되지 않았습니다.\n{path}에서 구성하세요.",
+                    path=path,
                 )
+                + "\n"
+                + auth_hint
+            )
         QMessageBox.information(self, title, message)
 
     def _manual_sync_setup_state(self):
@@ -753,7 +775,10 @@ class GCalActionsMixin:
     def _show_sync_issue_popup(self, message):
         """Show a proactive alarm-style popup for sync issues."""
 
-        if not message or getattr(self, "_sync_issue_popup_active", False):
+        if not message:
+            return
+        existing = getattr(self, "_sync_issue_popup", None)
+        if existing is not None and not sip.isdeleted(existing) and existing.isVisible():
             return
 
         from datetime import datetime
@@ -776,10 +801,12 @@ class GCalActionsMixin:
             parent=None,
         )
 
-        self._sync_issue_popup_active = True
-
-        popup.destroyed.connect(lambda: setattr(self, "_sync_issue_popup_active", False))
-
+        # Parentless and referenced only by its own lambdas, the popup was freed by the
+        # cyclic GC while on screen, and with it the destroyed lambda that cleared the
+        # busy flag: no sync issue was shown again for the rest of the session. Qt owns
+        # it now (WA_DeleteOnClose deletes it); the reference keeps its lambdas alive.
+        sip.transferto(popup, None)
+        self._sync_issue_popup = popup
         popup.show()
 
     def _sync_ics_calendars(self):

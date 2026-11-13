@@ -35,6 +35,7 @@ from calendar_app.infrastructure.db import (
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
+from calendar_app.presentation.locale_names import calendar_display_name, weekday_name
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.presentation.widgets.schedule_info import build_schedule_hover_html
 from calendar_app.presentation.widgets.ui_components import install_hover_info
@@ -351,22 +352,7 @@ def _app_locale() -> QLocale:
 
 
 def _localized_weekday_short(qd: QDate) -> str:
-    try:
-        short_name = _app_locale().standaloneDayName(qd.dayOfWeek(), QLocale.FormatType.ShortFormat)
-        if short_name:
-            return short_name
-    except Exception:
-        pass
-    day_names = [
-        t("weekday.mon", "Mon"),
-        t("weekday.tue", "Tue"),
-        t("weekday.wed", "Wed"),
-        t("weekday.thu", "Thu"),
-        t("weekday.fri", "Fri"),
-        t("weekday.sat", "Sat"),
-        t("weekday.sun", "Sun"),
-    ]
-    return day_names[qd.dayOfWeek() - 1]
+    return weekday_name(qd.dayOfWeek() - 1, locale=_app_locale())
 
 
 def _panel_surface_style(tokens=None, shape=None):
@@ -501,7 +487,7 @@ def _directive_group_header(receiver_name):
     row.setContentsMargins(2, 8, 2, 4)
     row.setSpacing(8)
 
-    badge = QLabel("BY")
+    badge = QLabel(t("panel.directive_receiver_badge", "BY"))
     shape = _shape_tokens()
     badge_radius = int(shape.get("panel_group_badge_radius", 0))
     badge.setFixedSize(20, 20)
@@ -510,13 +496,17 @@ def _directive_group_header(receiver_name):
         f"background-color: {_tc_rgba(30)}; "
         f"border: 1px solid {_tc_rgba(80)}; "
         f"border-radius: {badge_radius}px; "
-        f"color: {get_theme_color()}; font-size: {_font_role("caption")};"
+        f"color: {get_theme_color()}; font-size: {_font_role('caption')};"
     )
+    # The square fits "BY"; text wider than its inside (1px border each side) widens
+    # it instead of being clipped.
+    badge.ensurePolished()
+    badge.setFixedWidth(max(20, badge.fontMetrics().horizontalAdvance(badge.text()) + 2))
     row.addWidget(badge)
 
     name = QLabel(receiver_name)
     name.setStyleSheet(
-        f"color: {_panel_text_color()}; font-size: {_font_role("caption")}; font-weight: bold; "
+        f"color: {_panel_text_color()}; font-size: {_font_role('caption')}; font-weight: bold; "
         "background: transparent; border: none; padding: 0 2px 0 0;"
     )
     row.addWidget(name)
@@ -546,13 +536,13 @@ def _deadline_group_header(deadline_text):
         f"background-color: {_tc_rgba(30)}; "
         f"border: 1px solid {_tc_rgba(80)}; "
         f"border-radius: {badge_radius}px; "
-        f"color: {get_theme_color()}; font-size: {_font_role("caption")};"
+        f"color: {get_theme_color()}; font-size: {_font_role('caption')};"
     )
     row.addWidget(badge)
 
     name = QLabel(f"{deadline_text}{t('panel.deadline_suffix', ' 마감')}")
     name.setStyleSheet(
-        f"color: {_panel_text_color()}; font-size: {_font_role("caption")}; font-weight: bold; "
+        f"color: {_panel_text_color()}; font-size: {_font_role('caption')}; font-weight: bold; "
         "background: transparent; border: none; padding: 0 2px 0 0;"
     )
     row.addWidget(name)
@@ -582,13 +572,13 @@ def _schedule_group_header(label_text, icon="📅"):
         f"background-color: {_tc_rgba(30)}; "
         f"border: 1px solid {_tc_rgba(80)}; "
         f"border-radius: {badge_radius}px; "
-        f"color: {get_theme_color()}; font-size: {_font_role("caption")};"
+        f"color: {get_theme_color()}; font-size: {_font_role('caption')};"
     )
     row.addWidget(badge)
 
     name = QLabel(label_text)
     name.setStyleSheet(
-        f"color: {_panel_text_color()}; font-size: {_font_role("caption")}; font-weight: bold; "
+        f"color: {_panel_text_color()}; font-size: {_font_role('caption')}; font-weight: bold; "
         "background: transparent; border: none; padding: 0 2px 0 0;"
     )
     row.addWidget(name)
@@ -618,13 +608,13 @@ def _routine_group_header(label_text, icon="🔄"):
         f"background-color: {_tc_rgba(30)}; "
         f"border: 1px solid {_tc_rgba(80)}; "
         f"border-radius: {badge_radius}px; "
-        f"color: {get_theme_color()}; font-size: {_font_role("caption")};"
+        f"color: {get_theme_color()}; font-size: {_font_role('caption')};"
     )
     row.addWidget(badge)
 
     name = QLabel(label_text)
     name.setStyleSheet(
-        f"color: {_panel_text_color()}; font-size: {_font_role("caption")}; font-weight: bold; "
+        f"color: {_panel_text_color()}; font-size: {_font_role('caption')}; font-weight: bold; "
         "background: transparent; border: none; padding: 0 2px 0 0;"
     )
     row.addWidget(name)
@@ -695,7 +685,7 @@ class DockTitleBar(QWidget):
         else:
             icon = QLabel(icon_text)
             icon.setStyleSheet(
-                f"color: {get_theme_color()}; font-size: {_font_role("caption")}; background: transparent; border: none;"
+                f"color: {get_theme_color()}; font-size: {_font_role('caption')}; background: transparent; border: none;"
             )
             layout.addWidget(icon)
 
@@ -846,7 +836,7 @@ def create_panel(
             lbl = QLabel(str(item))
             _empty_txt = _panel_text_faint()
             lbl.setStyleSheet(
-                f"color: {_empty_txt}; padding: 6px 8px; font-size: {_font_role("caption")}; font-style: italic;"
+                f"color: {_empty_txt}; padding: 6px 8px; font-size: {_font_role('caption')}; font-style: italic;"
             )
             lbl.setWordWrap(True)
             layout.addWidget(lbl)
@@ -1025,7 +1015,7 @@ def _selected_day_header(app, date):
     label.setMinimumWidth(0)
     label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
     label.setStyleSheet(
-        f"color: {tokens['text_primary']}; font-size: {_font_role("section")}; "
+        f"color: {tokens['text_primary']}; font-size: {_font_role('section')}; "
         "font-weight: 700; background: transparent; border: none;"
     )
     layout.addWidget(label)
@@ -1101,10 +1091,11 @@ def show_side_panel_context_menu(app, widget, pos, tid, task_name, is_routine=Fa
         action_map[status_menu.addAction(_se(label))] = value
     menu.addSeparator()
 
-    color_menu = menu.addMenu(_se(t("menu.color_tag_settings")))
+    # Same labels as the calendar's item menu: the shortcut guide quotes this path.
+    color_menu = menu.addMenu(_se(t("context_menu.color_tag")))
     color_menu.setIcon(_ic(ICON.COLOR_PICKER))
     color_menu.setStyleSheet(menu_style)
-    act_color_auto = color_menu.addAction(_se(t("menu.color_auto")))
+    act_color_auto = color_menu.addAction(_se(t("context_menu.color_auto")))
     act_color_change = color_menu.addAction(_se(t("dialog.common.modify")))
     act_color_clear = color_menu.addAction(_se(t("menu.color_clear")))
 
@@ -1171,10 +1162,11 @@ def show_directive_context_menu(app, widget, pos, did, task_name):
         action_map[status_menu.addAction(_se(label))] = value
     menu.addSeparator()
 
-    color_menu = menu.addMenu(_se(t("menu.color_tag_settings")))
+    # Same labels as the calendar's item menu: the shortcut guide quotes this path.
+    color_menu = menu.addMenu(_se(t("context_menu.color_tag")))
     color_menu.setIcon(_ic(ICON.COLOR_PICKER))
     color_menu.setStyleSheet(menu_style)
-    act_color_auto = color_menu.addAction(_se(t("menu.color_auto")))
+    act_color_auto = color_menu.addAction(_se(t("context_menu.color_auto")))
     act_color_change = color_menu.addAction(_se(t("dialog.common.modify")))
     act_color_clear = color_menu.addAction(_se(t("menu.color_clear")))
 
@@ -1248,7 +1240,7 @@ def create_task_box(
         metadata.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         metadata.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         metadata.setStyleSheet(
-            f"color: {tokens['text_secondary']}; font-size: {_font_role("caption")}; "
+            f"color: {tokens['text_secondary']}; font-size: {_font_role('caption')}; "
             "font-weight: 500; border: none; background: transparent;"
         )
         box_layout.addWidget(metadata)
@@ -1375,7 +1367,14 @@ def create_task_box(
         prog_bar.setValue(done_cnt)
         prog_bar.setFixedHeight(2)
         prog_bar.setTextVisible(False)
-        prog_bar.setToolTip(f"완료 {done_cnt}개 / 전체 {total_cnt}개")
+        prog_bar.setToolTip(
+            t(
+                "panel.checklist.progress_tooltip",
+                "완료 {done}개 / 전체 {total}개",
+                done=done_cnt,
+                total=total_cnt,
+            )
+        )
         prog_bar.setStyleSheet(f"""
             QProgressBar {{
                 background: rgba(255,255,255,0.08);
@@ -1404,14 +1403,18 @@ def create_task_box(
                     # 완료 청루: 이전 항목이 모두 완료되어야 함
                     _locked = not all(checklist_items[i][1] for i in range(idx))
                     if _locked:
-                        _lock_reason = "이전 단계를 먼저 완료하세요"
+                        _lock_reason = t(
+                            "panel.checklist.locked_previous", "이전 단계를 먼저 완료하세요"
+                        )
                 else:
                     # 취소: 이후 항목이 모두 미완료여야 함
                     _locked = not all(
                         not checklist_items[i][1] for i in range(idx + 1, len(checklist_items))
                     )
                     if _locked:
-                        _lock_reason = "이후 단계를 먼저 취소하세요"
+                        _lock_reason = t(
+                            "panel.checklist.locked_next", "이후 단계를 먼저 취소하세요"
+                        )
                 if _locked:
                     clickable = False
 
@@ -1470,13 +1473,13 @@ def create_task_box(
             text_lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             if sis_c:
                 text_lbl.setStyleSheet(
-                    f"color: {_chk_done_txt}; font-size: {_font_role("caption")};"
+                    f"color: {_chk_done_txt}; font-size: {_font_role('caption')};"
                     " text-decoration: line-through; background: transparent; border: none;"
                 )
             else:
                 _txt_clr = "rgba(255,255,255,0.35)" if _locked else _chk_pend_txt
                 text_lbl.setStyleSheet(
-                    f"color: {_txt_clr}; font-size: {_font_role("caption")}; background: transparent; border: none;"
+                    f"color: {_txt_clr}; font-size: {_font_role('caption')}; background: transparent; border: none;"
                 )
             if clickable:
                 text_lbl.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1666,8 +1669,8 @@ def load_left_panel(app):
             or task.get("_subscription_summary")
             or task.get("calendar_name")
             or (
-                (calendar_data or {}).get("name")
-                if selected_mode or calendar_type in {"gcal", "shared", "ics"}
+                calendar_display_name(calendar_id, calendar_data.get("name"))
+                if calendar_data and (selected_mode or calendar_type in {"gcal", "shared", "ics"})
                 else ""
             )
             or task.get("_subscription_calendar_id")

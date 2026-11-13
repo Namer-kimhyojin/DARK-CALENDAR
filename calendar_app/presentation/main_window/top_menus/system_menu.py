@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QAction, QDesktopServices
+from PyQt6.QtGui import QAction, QActionGroup, QDesktopServices
 from PyQt6.QtWidgets import QMenu, QToolButton
 
 from calendar_app.app_metadata import APP_LICENSE_URL, APP_RELEASE_SOURCE_URL
@@ -99,6 +99,9 @@ def build_system_menu(self, top_bar, menu_btn_style="", menu_style=""):
 
     current_lang = self.settings.value("language", "ko")
 
+    # Exclusive group: clicking the current language keeps its check mark.
+    self.lang_action_group = QActionGroup(self.lang_menu)
+    self.lang_action_group.setExclusive(True)
     lang_codes = sorted(list_available_locale_codes())
     lang_set = set(lang_codes)
     for lang_code in lang_codes:
@@ -107,7 +110,9 @@ def build_system_menu(self, top_bar, menu_btn_style="", menu_style=""):
         lang_name = get_locale_display_name(lang_code)
         act = QAction(lang_name, self)
         act.setCheckable(True)
+        act.setData(lang_code)
         act.setChecked(current_lang == lang_code)
+        self.lang_action_group.addAction(act)
         act.triggered.connect(lambda checked, lc=lang_code: self.set_language(lc))
         self.lang_menu.addAction(act)
 

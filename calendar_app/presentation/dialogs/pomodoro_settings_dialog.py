@@ -53,7 +53,7 @@ class _PremiumToggleBtn(QPushButton):
         from calendar_app.presentation.dialogs.dialog_styles import get_dialog_theme_tokens
 
         on = self.isChecked()
-        self.setText("ON" if on else "OFF")
+        self.setText(t("common.toggle_on", "ON") if on else t("common.toggle_off", "OFF"))
         tokens = get_dialog_theme_tokens()
         bg = tokens.get("success_hex", "#47d27e") if on else tokens.get("surface_item", "#111116")
         color = tokens.get("text_primary", "#e1e1e6") if on else tokens.get("text_muted", "#9aa0ad")
@@ -171,7 +171,12 @@ class PomodoroSettingsPanel(QWidget):
         mode_card = self._make_card(t("dialog.pomodoro_settings.mode_label", "타이머 모드"))
         mode_card.layout().addWidget(
             self._make_row(
-                "실행 모드", self.mode_combo, "선택한 모드에 따라 타이머 동작 방식이 결정됩니다."
+                t("dialog.pomodoro_settings.run_mode", "실행 모드"),
+                self.mode_combo,
+                t(
+                    "dialog.pomodoro_settings.run_mode_help",
+                    "선택한 모드에 따라 타이머 동작 방식이 결정됩니다.",
+                ),
             )
         )
         layout.addWidget(mode_card)
@@ -263,7 +268,10 @@ class PomodoroSettingsPanel(QWidget):
             self._make_row(
                 t("dialog.pomodoro_settings.auto_start_break", "집중 완료 후 자동으로 휴식 시작"),
                 self.auto_start_break_cb,
-                "집중 시간이 끝나면 휴식 타이머가 즉시 시작됩니다.",
+                t(
+                    "dialog.pomodoro_settings.auto_start_break_help",
+                    "집중 시간이 끝나면 휴식 타이머가 즉시 시작됩니다.",
+                ),
             )
         )
         bl.addWidget(self._make_divider())
@@ -276,7 +284,10 @@ class PomodoroSettingsPanel(QWidget):
                     "휴식 완료 후 자동으로 다음 집중 시작",
                 ),
                 self.auto_start_focus_cb,
-                "휴식 시간이 끝나면 다음 집중 사이클이 즉시 시작됩니다.",
+                t(
+                    "dialog.pomodoro_settings.auto_start_focus_help",
+                    "휴식 시간이 끝나면 다음 집중 사이클이 즉시 시작됩니다.",
+                ),
             )
         )
 

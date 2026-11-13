@@ -274,14 +274,6 @@ def test_unified_widget_font_weight_recovers(owner, value):
     assert "font-weight: 500" in window.setStyleSheet.call_args.args[0]
 
 
-def test_panel_widget_opacity_recovers_nonfinite_value(owner):
-    from calendar_app.presentation.widgets.panel_widget_shell import _FloatingWidgetBase
-
-    owner.settings.setValue("panel_opacity", float("inf"))
-    panel = SimpleNamespace(_app=owner, _opacity_setting_key=lambda: "panel_opacity")
-    assert _FloatingWidgetBase._get_individual_opacity(panel) == 100
-
-
 def test_keydeck_invalid_local_image_path_uses_fallback():
     from calendar_app.presentation.widgets.keydeck.resources import file_stamp, source_image
 

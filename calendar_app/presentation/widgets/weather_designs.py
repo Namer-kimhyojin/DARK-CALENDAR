@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+GIF_WEATHER_SCENE_ID = "gif_weather"
+
 
 @dataclass(frozen=True, slots=True)
 class WeatherDesign:
@@ -308,6 +310,16 @@ _DESIGNS = (
     ),
 )
 _DESIGNS += (
+    _recipe(
+        GIF_WEATHER_SCENE_ID,
+        "움직이는 날씨 · GIF",
+        "premium",
+        "해안 등대에 비치는 햇살, 별빛, 비와 눈이 현재 날씨에 맞춰 움직입니다.",
+        "midnight_glass",
+        "air_soft",
+        "{city|size=14}\n{icon|size=98}\n{temp|size=52|bold}{unit|size=20}\n{desc|size=15}\n{humidity|size=11}% · {wind|size=11} m/s",
+        scene_id=GIF_WEATHER_SCENE_ID,
+    ),
     _recipe(
         "air_atmosphere",
         "Air Atmosphere",

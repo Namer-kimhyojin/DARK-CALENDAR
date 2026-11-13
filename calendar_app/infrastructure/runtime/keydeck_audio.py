@@ -30,6 +30,12 @@ _MAX_FILE_BYTES = 25 * 1024 * 1024
 _MAX_CACHE_BYTES = 64 * 1024 * 1024
 _MAX_GAIN_CACHE_BYTES = 32 * 1024 * 1024
 _MAX_NATIVE_VOICES = 32
+# While a deck is visible some voices per sound format stay open: waveOutOpen took
+# 57-79 ms for the process's first device and 10-20 ms for each later one, and a
+# voice opened on a tap delayed exactly that tap. Beatmaker pads ring up to 1.2 s,
+# so a quick run over eight pads keeps eight voices busy at once.
+_PRIMED_VOICES = 8
+_PRIMED_FORMATS = 2
 _WHDR_DONE = 0x00000001
 _WAVE_MAPPER = 0xFFFFFFFF
 # Failed drivers must not leave Python freeing memory still owned by Windows.
@@ -176,15 +182,17 @@ def _check(code: int, operation: str) -> None:
 
 
 class _Voice:
-    def __init__(self, api, path: str, pcm: _PcmWave):
-        self.api, self.path = api, path
-        self.format_key = (pcm.channels, pcm.width, pcm.rate)
+    """One waveOut handle; it plays any sound of its format, one at a time."""
+
+    def __init__(self, api, format_key: tuple[int, int, int]):
+        self.api, self.path = api, ""
+        self.format_key = format_key
         self.handle = ctypes.c_void_p()
         self.header: _WaveHeader | None = None
         self.buffer = None
         self.prepared = False
         self.used_at = time.monotonic()
-        fmt = pcm.format()
+        fmt = _PcmWave(*format_key, b"").format()
         _check(
             api.waveOutOpen(ctypes.byref(self.handle), _WAVE_MAPPER, ctypes.byref(fmt), 0, 0, 0),
             "waveOutOpen",
@@ -213,8 +221,9 @@ class _Voice:
         self.buffer = None
         return True
 
-    def play(self, pcm: _PcmWave, gain: float, *, samples: bytes | None = None) -> None:
+    def play(self, path: str, pcm: _PcmWave, gain: float, *, samples: bytes | None = None) -> None:
         self.finish(stop=self.busy)
+        self.path = path
         data = samples if samples is not None else _apply_gain(pcm.frames, pcm.width, gain)
         self.buffer = ctypes.create_string_buffer(data, len(data))
         self.header = _WaveHeader()
@@ -257,9 +266,46 @@ class _Player:
         self.gains: OrderedDict[tuple, bytes] = OrderedDict()
         self.gain_cache_bytes = 0
 
-    def preload(self, paths, voices: int | None = None) -> None:
+    def preload(self, paths, voices: int | None = None, volume: float | None = None) -> None:
         for path in paths:
-            self._asset(path)
+            pcm = self._asset(path)
+            if volume is not None:
+                # A custom pad always plays at its key volume: scale it now, not on the
+                # first tap (a 1 s 48 kHz 24-bit clip took 56 ms on this worker).
+                self._samples(path, pcm, volume)
+
+    def _format_keys(self) -> list[tuple[int, int, int]]:
+        keys: list[tuple[int, int, int]] = []
+        for _stamp, pcm in reversed(self.assets.values()):
+            key = (pcm.channels, pcm.width, pcm.rate)
+            if key not in keys:
+                keys.append(key)
+        return keys[:_PRIMED_FORMATS]
+
+    def prime_step(self) -> bool:
+        """Open one more idle voice for a loaded sound format; False when none is missing."""
+        if len(self.voices) >= _MAX_NATIVE_VOICES:
+            return False
+        counts: dict[tuple[int, int, int], int] = {}
+        for voice in self.voices:
+            counts[voice.format_key] = counts.get(voice.format_key, 0) + 1
+        # Every format gets its first voice before any format gets another.
+        for wanted in range(1, _PRIMED_VOICES + 1):
+            for key in self._format_keys():
+                if counts.get(key, 0) < wanted:
+                    self.voices.append(_Voice(self.api, key))
+                    return True
+        return False
+
+    def close_idle(self) -> None:
+        """Release every voice Windows is not playing; busy ones close once finished."""
+        for voice in [item for item in self.voices if not item.busy]:
+            self.voices.remove(voice)
+            try:
+                voice.close()
+            except OSError:
+                logger.warning("Could not release native KeyDeck audio voice", exc_info=True)
+                _RETAINED_VOICES.append(voice)
 
     def _asset(self, path: str) -> _PcmWave:
         stamp_info = Path(path).stat()
@@ -282,6 +328,9 @@ class _Player:
     def _samples(self, path: str, pcm: _PcmWave, volume: float) -> bytes:
         if volume >= 1.0:
             return pcm.frames
+        # Switch sounds add a random gain per hit; without rounding the cache never
+        # hit and every press paid the gain math before the sound could start.
+        volume = round(volume, 2)
         stamp = self.assets[path][0]
         identity = (path, stamp, volume)
         cached = self.gains.get(identity)
@@ -310,14 +359,20 @@ class _Player:
     def play(self, path: str, volume: float, voices: int | None = None) -> None:
         pcm = self._asset(path)
         self.reap()
-        matching = [
-            voice
-            for voice in self.voices
-            if voice.path == path and voice.format_key == (pcm.channels, pcm.width, pcm.rate)
+        key = (pcm.channels, pcm.width, pcm.rate)
+        # Overlapping copies of one sound stay capped, but any idle voice of the same
+        # format may play it, so a voice opened in advance serves every pad's first tap.
+        copies = [
+            item
+            for item in self.voices
+            if item.busy and item.path == path and item.format_key == key
         ]
-        voice = next((item for item in matching if not item.busy), None)
-        if voice is None and len(matching) >= max(1, min(8, voices or 2)):
-            voice = min(matching, key=lambda item: item.used_at)
+        if len(copies) >= max(1, min(8, voices or 2)):
+            voice = min(copies, key=lambda item: item.used_at)
+        else:
+            voice = next(
+                (item for item in self.voices if not item.busy and item.format_key == key), None
+            )
         if voice is None:
             if len(self.voices) >= _MAX_NATIVE_VOICES:
                 idle = [item for item in self.voices if not item.busy]
@@ -326,9 +381,9 @@ class _Player:
                 oldest = min(idle, key=lambda item: item.used_at)
                 oldest.close()
                 self.voices.remove(oldest)
-            voice = _Voice(self.api, path, pcm)
+            voice = _Voice(self.api, key)
             self.voices.append(voice)
-        voice.play(pcm, volume, samples=self._samples(path, pcm, volume))
+        voice.play(path, pcm, volume, samples=self._samples(path, pcm, volume))
 
     def close(self) -> None:
         for voice in self.voices:
@@ -352,8 +407,10 @@ class NativeSoundBank:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
-        self._pending_preloads: set[str] = set()
+        self._pending_preloads: set[tuple[str, float | None]] = set()
         self._reported: set[tuple[str, str]] = set()
+        self._holders: set = set()
+        self._held = False
         atexit.register(self._shutdown)
 
     def _start(self) -> bool:
@@ -380,18 +437,36 @@ class NativeSoundBank:
         except queue.Full:
             return False
 
-    def preload(self, paths, voices: int | None = None) -> None:
+    def preload(self, paths, voices: int | None = None, volume: float | None = None) -> None:
         # Separate items keep one corrupt custom file from skipping other sounds.
         for path in paths:
             if path:
                 path = str(path)
+                key = (path, volume)
                 with self._lock:
-                    if path in self._pending_preloads:
+                    if key in self._pending_preloads:
                         continue
-                    self._pending_preloads.add(path)
-                if not self._submit("preload", path, voices=voices):
+                    self._pending_preloads.add(key)
+                if not self._submit("preload", path, volume, voices):
                     with self._lock:
-                        self._pending_preloads.discard(path)
+                        self._pending_preloads.discard(key)
+
+    def hold_output(self, token, held: bool) -> None:
+        """Keep the output device open while any visible deck holds it.
+
+        Opening it on the first tap delayed that tap by the open itself. Preloading
+        stays device-free; the device closes once the last holder lets go.
+        """
+        with self._lock:
+            if held:
+                self._holders.add(token)
+            else:
+                self._holders.discard(token)
+            wanted = bool(self._holders)
+            changed, self._held = wanted != self._held, wanted
+            running = self._thread is not None
+        if changed and (wanted or running):
+            self._submit("hold", "")
 
     def play(self, path: str, volume: float, voices: int | None = None) -> bool:
         try:
@@ -419,23 +494,39 @@ class NativeSoundBank:
         player = None
         try:
             player = _Player()
+            held = primed = False
             while not self._stop.is_set():
+                if self._held != held:
+                    held, primed = self._held, False
+                    if not held:
+                        player.close_idle()
                 try:
-                    timeout = 0.02 if any(voice.busy for voice in player.voices) else None
-                    operation, value, volume, voices = self._queue.get(timeout=timeout)
+                    if held and not primed:
+                        # Voices open one at a time so a tap queued meanwhile goes first.
+                        operation, value, volume, voices = self._queue.get_nowait()
+                    else:
+                        timeout = 0.02 if any(voice.busy for voice in player.voices) else None
+                        operation, value, volume, voices = self._queue.get(timeout=timeout)
                 except queue.Empty:
-                    operation, value, volume, voices = "reap", "", 0.0, None
+                    operation = "prime" if held and not primed else "reap"
+                    value, volume, voices = "", 0.0, None
                 if self._stop.is_set():
                     break
                 try:
                     if operation == "play":
                         player.play(value, volume, voices)
                     elif operation == "preload":
-                        player.preload([value], voices)
+                        primed = False  # a new sound may bring a new format
+                        player.preload([value], voices, volume)
+                    elif operation == "prime":
+                        primed = True  # a failing driver is not retried in a loop
+                        primed = not player.prime_step()
                     elif operation == "silence":
                         player.stop_all()
                     else:
                         player.reap()
+                        if not held and player.voices:
+                            player.close_idle()
                 except (OSError, ValueError, EOFError, wave.Error) as error:
                     identity = (value, str(error))
                     if identity not in self._reported:
@@ -444,7 +535,7 @@ class NativeSoundBank:
                 finally:
                     if operation == "preload":
                         with self._lock:
-                            self._pending_preloads.discard(value)
+                            self._pending_preloads.discard((value, volume))
         except OSError as error:
             logger.warning("Native KeyDeck audio unavailable: %s", error)
         finally:

@@ -480,13 +480,119 @@ def sync_error_message(code):
     )
 
 
-def conflict_text(issue, provider, zone="Asia/Seoul"):
+# Queued deletes that can never be sent as they are: only removal is offered.
+DELETE_REMOVE_ONLY = {"event_read_only", "calendar_not_selected", "calendar_read_only"}
+
+
+def delete_wait_label(reason):
+    """Short list label for a delete waiting on its calendar, else None."""
+    return {
+        "calendar_not_selected": t("sync_delete.not_selected", "캘린더 선택 해제됨"),
+        "calendar_read_only": t("outlook.issue_read_only", "캘린더 쓰기 권한이 없음"),
+    }.get(reason)
+
+
+def remote_event_summary(row, provider, zone):
+    """Title and time of the remote revision a delete conflicted with, or ""."""
+    try:
+        task = provider.to_task(json.loads(row.get("remote_json") or ""), zone)
+    except (ValueError, KeyError, TypeError, AttributeError, OverflowError, CalendarSyncError):
+        return ""
+    if not isinstance(task, dict):
+        return ""
+    start, end = (
+        str(task.get(key) or "").replace("T", " ")[:16] for key in ("deadline", "end_date")
+    )
+    return (
+        str(task.get("name") or "") + "\n" + start + (" ~ " + end if end and end != start else "")
+    )
+
+
+def delete_queue_text(row, provider, zone):
+    """Explain in plain words why a queued remote deletion is not progressing."""
+    reason = row.get("reason")
+    if reason == "delete_conflict":
+        remote = remote_event_summary(row, provider, zone)
+        return (
+            t(
+                "sync_delete.conflict_hint",
+                "앱에서 지운 뒤 서비스에서 이 일정이 수정되어 삭제를 멈췄습니다. 수정된 일정을 "
+                "남기려면 '원격 일정 다시 가져오기'를, 그래도 지우려면 '그래도 삭제'를 누르세요.",
+            )
+            + "\n\n"
+            + (
+                t("sync_ui.remote", "서비스 내용") + "\n" + remote
+                if remote
+                else t(
+                    "sync_delete.remote_unknown",
+                    "서비스의 현재 내용은 다음 동기화 뒤에 여기에 표시됩니다.",
+                )
+            )
+        )
+    if reason == "event_read_only":
+        return t(
+            "sync_delete.event_read_only_hint",
+            "반복 일정의 한 회차나 초대받은 일정은 앱에서 삭제할 수 없습니다. 원래 서비스에서 "
+            "삭제하세요. '목록에서 제거'를 누르면 이 대기 항목만 지웁니다. 원격 일정은 남아 다음 "
+            "동기화 때 다시 표시됩니다.",
+        )
+    if reason == "calendar_not_selected":
+        return t(
+            "sync_delete.not_selected_hint",
+            "이 캘린더를 가져오기에서 제외해 삭제를 보내지 않고 기다립니다. 캘린더를 다시 선택하면 "
+            "삭제합니다. '목록에서 제거'를 누르면 원격 일정은 지우지 않고 대기만 취소합니다.",
+        )
+    if reason == "calendar_read_only":
+        return t(
+            "sync_delete.read_only_calendar_hint",
+            "이 캘린더에 쓰기 권한이 없어 삭제를 보내지 않고 기다립니다. 권한이 생기면 삭제합니다. "
+            "'목록에서 제거'를 누르면 원격 일정은 지우지 않고 대기만 취소합니다.",
+        )
+    return sync_error_message(reason) if reason else ""
+
+
+def confirm_reviewed_delete(parent, row, provider, zone):
+    """Ask before deleting a remote event that changed after the local delete."""
+    from PyQt6.QtWidgets import QMessageBox
+
+    summary = remote_event_summary(row, provider, zone)
+    if not summary:
+        return False
+    return (
+        QMessageBox.question(
+            parent,
+            t("sync_delete.force", "그래도 삭제"),
+            t(
+                "sync_delete.force_confirm",
+                "앱에서 지운 뒤 서비스에서 수정된 일정입니다. 아래 내용 그대로 서비스에서도 "
+                "삭제할까요? 되돌릴 수 없습니다.\n\n{event}",
+                event=summary,
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        == QMessageBox.StandardButton.Yes
+    )
+
+
+def subscription_error_message(code):
+    """For ICS this code only means an event-less feed whose copies were kept."""
+    if code == "calendar_report_incomplete":
+        return t(
+            "sync_subscription.empty_feed_hint",
+            "원본 피드에 일정이 하나도 없어 가져온 일정을 그대로 두었습니다. 원본 "
+            "캘린더를 실제로 비웠다면 '비어 있음 확인'을 누르세요.",
+        )
+    return sync_error_message(code)
+
+
+def conflict_text(issue, provider, zone):
     if not issue or not issue.get("remote_json") or not issue.get("local_json"):
         return ""
     try:
         local = json.loads(issue["local_json"])
         remote = provider.to_task(json.loads(issue["remote_json"]), zone)
-    except (ValueError, KeyError, TypeError, CalendarSyncError):
+    except (ValueError, KeyError, TypeError, OverflowError, CalendarSyncError):
         return ""
     if not isinstance(local, dict) or not isinstance(remote, dict):
         return ""

@@ -134,8 +134,12 @@ class CalendarWeekdayDisplayTests(TemporaryDatabaseTestCase):
         self.host = WeekdayRenderHost(self.settings)
         self.host.resize(1400, 900)
         self.host.cal_week_layout = "date"
-        self.enterContext(patch("calendar_app.shared.theme_settings.QSettings", return_value=self.settings))
-        self.enterContext(patch("calendar_app.shared.theme_snapshot.QSettings", return_value=self.settings))
+        self.enterContext(
+            patch("calendar_app.shared.theme_settings.QSettings", return_value=self.settings)
+        )
+        self.enterContext(
+            patch("calendar_app.shared.theme_snapshot.QSettings", return_value=self.settings)
+        )
 
     def tearDown(self):
         self.host.close()
@@ -167,12 +171,15 @@ class CalendarWeekdayDisplayTests(TemporaryDatabaseTestCase):
                     labels = self.host.findChildren(QLabel, "dayNumLabel")
                     self.assertTrue(labels)
                     self.assertTrue(all(label.text().strip() for label in labels))
-                    self.assertTrue(all(("(" in label.text()) == (mode in {"date", "both"}) for label in labels))
+                    self.assertTrue(
+                        all(("(" in label.text()) == (mode in {"date", "both"}) for label in labels)
+                    )
 
     def test_real_options_action_cycles_label_mode_and_rebuilds_once(self):
         self.render("monthly", "header")
         action = next(
-            action for action in self.host.findChildren(month_renderer.QAction)
+            action
+            for action in self.host.findChildren(month_renderer.QAction)
             if action.objectName() == "calendar_weekday_display"
         )
         self.assertFalse(action.isCheckable())
@@ -212,15 +219,22 @@ class CalendarWeekdayDisplayTests(TemporaryDatabaseTestCase):
                 grid = self.host.findChild(WeekTimeGrid)
                 self.assertEqual(grid._weekday_display_mode, mode)
                 self.assertEqual(grid._selected_date, self.host.current_date)
-                image = QImage(grid._header.width(), grid.HEADER_HEIGHT, QImage.Format.Format_ARGB32)
+                image = QImage(
+                    grid._header.width(), grid.HEADER_HEIGHT, QImage.Format.Format_ARGB32
+                )
                 painter = RecordingPainter(image)
                 try:
                     grid._paint(painter, "header", QRectF(image.rect()))
                 finally:
                     painter.end()
                 date_texts = {QLocale().toString(date, "d") for date in grid._dates}
-                self.assertTrue(date_texts.issubset({text for _rect, text, _height in painter.text}))
-                self.assertEqual(len(painter.text), len(grid._dates) * {"header": 2, "date": 2, "both": 3, "hidden": 1}[mode])
+                self.assertTrue(
+                    date_texts.issubset({text for _rect, text, _height in painter.text})
+                )
+                self.assertEqual(
+                    len(painter.text),
+                    len(grid._dates) * {"header": 2, "date": 2, "both": 3, "hidden": 1}[mode],
+                )
                 for rect, _text, text_height in painter.text:
                     self.assertGreaterEqual(rect.height(), text_height)
                     self.assertGreaterEqual(rect.top(), 0)

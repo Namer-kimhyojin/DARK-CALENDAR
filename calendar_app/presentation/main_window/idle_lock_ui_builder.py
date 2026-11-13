@@ -28,9 +28,7 @@ def setup_idle_lock_ui(self):
     # 시계 레이블
     self.lock_clock_lbl = QLabel()
     self.lock_clock_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    self.lock_clock_lbl.setStyleSheet(
-        "color: white; font-weight: bold;"
-    )
+    self.lock_clock_lbl.setStyleSheet("color: white; font-weight: bold;")
     lock_lay.addWidget(self.lock_clock_lbl)
 
     # 상태 메시지 레이블

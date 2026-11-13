@@ -9,6 +9,7 @@ from calendar_app.presentation.dialogs.panel_color_picker_dialog import (
     _LIGHT_PRESETS,
     _PRESETS,
     _STYLE_FAMILIES,
+    _STYLE_FAMILY_LABELS,
     _accessible_text_palette,
     _contrast_ratio,
     _preset_mode_for_key,
@@ -87,18 +88,10 @@ class PanelColorPickerPresetTests(unittest.TestCase):
     def test_en_ko_have_preset_and_point_labels(self):
         locale_dir = Path(__file__).resolve().parents[1] / "locales"
         required_preset_keys = [name_key.split(".")[-1] for name_key, *_ in _PRESETS]
-        required_preset_filter_keys = ["filter_label", "filter_all", "filter_dark", "filter_light"]
         required_point_keys = [
-            "blue",
-            "sky",
-            "emerald",
-            "mint",
-            "violet",
-            "pink",
-            "orange",
-            "red",
-            "gold",
-            "gray",
+            key.split(".")[-1]
+            for key, _fallback in _STYLE_FAMILY_LABELS.values()
+            if key.startswith("dialog.theme.point.")
         ]
 
         for lang in ("en", "ko"):
@@ -108,20 +101,13 @@ class PanelColorPickerPresetTests(unittest.TestCase):
             theme = data["dialog"]["theme"]
             preset_dict = theme.get("preset", {})
             point_dict = theme.get("point", {})
-            bg_dict = theme.get("bg", {})
             self.assertTrue(
                 all(k in preset_dict for k in required_preset_keys),
                 msg=f"{lang} preset keys missing",
             )
             self.assertTrue(
-                all(k in preset_dict for k in required_preset_filter_keys),
-                msg=f"{lang} preset filter keys missing",
-            )
-            self.assertTrue(
                 all(k in point_dict for k in required_point_keys), msg=f"{lang} point keys missing"
             )
-            self.assertIn("auto_apply_text", bg_dict, msg=f"{lang} auto_apply_text missing")
-            self.assertIn("auto_apply_text_tip", bg_dict, msg=f"{lang} auto_apply_text_tip missing")
 
             if lang == "ko":
                 for key in required_preset_keys:
@@ -153,7 +139,9 @@ def test_accent_swatches_are_distinct_in_both_modes():
     )
 
     for column in (1, 2):  # dark variant, light variant
-        accents = {family[0]: QColor(_PRESET_BY_KEY[family[column]][3]) for family in _STYLE_FAMILIES}
+        accents = {
+            family[0]: QColor(_PRESET_BY_KEY[family[column]][3]) for family in _STYLE_FAMILIES
+        }
         for (first, a), (second, b) in combinations(accents.items(), 2):
             distance = (
                 (a.red() - b.red()) ** 2 + (a.green() - b.green()) ** 2 + (a.blue() - b.blue()) ** 2

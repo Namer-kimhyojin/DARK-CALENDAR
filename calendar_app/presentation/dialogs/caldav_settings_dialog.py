@@ -25,6 +25,7 @@ from calendar_app.application.calendar_provider_catalog import CALDAV_SERVICES
 from calendar_app.infrastructure.caldav_sync.client import CalDAVClient
 from calendar_app.infrastructure.caldav_sync.profiles import PROFILES, server_urls
 from calendar_app.infrastructure.calendar_sync.repository import CalendarSyncRepository
+from calendar_app.infrastructure.google_sync.common import sync_time_zone
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.main_window.calendar_sync_coordinator import provider_name
 
@@ -41,12 +42,17 @@ from .provider_settings_widgets import (
     update_issue_items,
 )
 from .sync_feedback import (
+    DELETE_REMOVE_ONLY,
     add_sync_hub_return,
     calendar_recovery_issues,
+    confirm_reviewed_delete,
     conflict_text,
+    delete_queue_text,
+    delete_wait_label,
     guard_sync_database,
     recovery_issue_label,
     recovery_issue_text,
+    remote_event_summary,
     sync_error_message,
 )
 from .sync_recovery import requires_account_reconnection, sync_recovery_action
@@ -573,26 +579,40 @@ class CalDAVSettingsDialog(QDialog):
         conflict = data.get("kind") == "conflict"
         recovery = bool(data.get("recovery_issue"))
         queued = "event_id" in data or recovery
+        reason = data.get("reason") if "event_id" in data else None
+        reviewed = reason == "delete_conflict"
+        zone = sync_time_zone(self.settings)
         self.local.setEnabled(conflict and not self.controller.busy)
         self.remote.setEnabled(conflict and not self.controller.busy)
+        self.retry.setVisible(reason not in DELETE_REMOVE_ONLY)
         self.retry.setEnabled(
             queued
             and not self.controller.busy
             and not getattr(self.controller, "retry_remaining_seconds", 0)
+            and (not reviewed or bool(remote_event_summary(data, CalDAVClient, zone)))
         )
         self.cancel_delete.setEnabled(queued and not self.controller.busy and not recovery)
         self.retry.setText(
             t("sync_recovery.recheck", "다시 확인")
             if recovery
+            else t("sync_delete.force", "그래도 삭제")
+            if reviewed
             else t("outlook.retry_delete", "선택 삭제 다시 시도")
         )
+        self.cancel_delete.setText(
+            t("sync_delete.reimport", "원격 일정 다시 가져오기")
+            if reviewed
+            else t("sync_delete.remove_from_list", "목록에서 제거")
+            if reason in DELETE_REMOVE_ONLY
+            else t("caldav.cancel_delete", "삭제 취소 · 서비스 일정 유지")
+        )
         preview = (
-            conflict_text(
-                data, CalDAVClient, self.settings.value("gcal_timezone", "Asia/Seoul", type=str)
-            )
+            conflict_text(data, CalDAVClient, zone)
             if conflict
             else recovery_issue_text(data)
             if recovery
+            else delete_queue_text(data, CalDAVClient, zone)
+            if "event_id" in data
             else sync_error_message(data["kind"])
             if data.get("kind")
             else ""
@@ -611,7 +631,7 @@ class CalDAVSettingsDialog(QDialog):
             if CalendarSyncRepository(conn, "caldav").resolve(
                 item.data(Qt.ItemDataRole.UserRole).get("task_id"),
                 choice,
-                self.settings.value("gcal_timezone", "Asia/Seoul", type=str),
+                sync_time_zone(self.settings),
                 CalDAVClient,
             ):
                 resolved = True
@@ -637,31 +657,53 @@ class CalDAVSettingsDialog(QDialog):
             return
         if "event_id" not in row or choice not in {"retry", "cancel"}:
             return
-        conn = self._db()
-        try:
-            with conn:
-                where = "WHERE event_id=? AND calendar_id=? AND calendar_id IN (SELECT local_id FROM calendar_sync_calendar WHERE account_id=?)"
-                sql = (
-                    "UPDATE calendar_sync_delete_queue SET attempts=0,error=NULL "
-                    if choice == "retry"
-                    else "DELETE FROM calendar_sync_delete_queue "
+        reason = row.get("reason")
+        if choice == "retry" and reason in DELETE_REMOVE_ONLY:
+            return
+        if choice == "retry" and reason == "delete_conflict":
+            # Never delete a changed remote event without showing what goes away.
+            if not confirm_reviewed_delete(self, row, CalDAVClient, sync_time_zone(self.settings)):
+                return
+            conn = self._db()
+            try:
+                changed = CalendarSyncRepository(conn, "caldav").confirm_delete(
+                    self.controller.account,
+                    row["calendar_id"],
+                    row["event_id"],
+                    row.get("remote_json"),
                 )
-                changed = conn.execute(
-                    sql + where, (row["event_id"], row["calendar_id"], self.controller.account)
-                ).rowcount
-        finally:
-            conn.close()
+            finally:
+                conn.close()
+            if not changed:
+                self.controller.status = "conflict_snapshot_changed"
+        else:
+            conn = self._db()
+            try:
+                with conn:
+                    where = "WHERE event_id=? AND calendar_id=? AND calendar_id IN (SELECT local_id FROM calendar_sync_calendar WHERE account_id=?)"
+                    sql = (
+                        "UPDATE calendar_sync_delete_queue SET attempts=0,error=NULL "
+                        if choice == "retry"
+                        else "DELETE FROM calendar_sync_delete_queue "
+                    )
+                    changed = conn.execute(
+                        sql + where, (row["event_id"], row["calendar_id"], self.controller.account)
+                    ).rowcount
+            finally:
+                conn.close()
         self._available_key = None
         self._refresh()
-        if changed and choice == "retry":
+        # Dropping a conflicted delete lets the next sync bring the remote event back.
+        if changed and (choice == "retry" or reason == "delete_conflict"):
             self.controller.sync(force=True)
 
     @guard_sync_database
     def _refresh(self):
+        # Any service finishing may be the last busy one; re-enable the selector first.
+        self.service.setEnabled(not any(c.busy for c in self.controllers.values()))
         if self.sender() in self.controllers.values() and self.sender() is not self.controller:
             return
         connected, busy = bool(self.controller.account), self.controller.busy
-        self.service.setEnabled(not any(c.busy for c in self.controllers.values()))
         if not busy and self._cancel_requested:
             self._cancel_requested = False
             if self.controller.status in {"login", "sync", "refresh", "disconnect"}:
@@ -752,16 +794,13 @@ class CalDAVSettingsDialog(QDialog):
                         + sync_error_message(issue["kind"])
                     )
                     entries.append((label, {0: issue}))
-                for row in conn.execute(
-                    "SELECT q.* FROM calendar_sync_delete_queue q JOIN calendar_sync_calendar c ON c.local_id=q.calendar_id WHERE c.account_id=?",
-                    (self.controller.account,),
-                ):
-                    data = dict(row)
-                    data["kind"] = data["error"] or "delete_pending"
+                for data in repo.delete_queue(self.controller.account):
+                    data["kind"] = data["error"]
                     label = t("caldav.delete_pending", "삭제 대기 · {attempts}/5회").format(
                         attempts=data["attempts"]
                     )
-                    entries.append((label, {0: data}))
+                    waiting = delete_wait_label(data["reason"])
+                    entries.append((label + (" · " + waiting if waiting else ""), {0: data}))
                 for row in calendar_recovery_issues(
                     repo, self.settings, self.controller.prefix, self.controller.account
                 ):

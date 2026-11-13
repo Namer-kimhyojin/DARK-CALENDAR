@@ -79,7 +79,7 @@ EXPECTED_CI_ARTIFACTS = [
     },
 ]
 EXPECTED_PRODUCT_DIGEST = "782db7b80e85affaf0810a6cb4aa81bc5412ec2a85bae4ff26763ab1970e10c6"
-EXPECTED_CANONICALIZER_SHA256 = "72b128508b763379dad47eb3ed711c6da6b5ebe3955df9b0b37be6a7e58b5aa8"
+EXPECTED_CANONICALIZER_SHA256 = "38925dedfb1a81bb309e66d0a3ebb7637a09545c28214a47b58714d0d2ee9e39"
 OFFICIAL_HOSTS = frozenset({"api.github.com", "github.com", "release-assets.githubusercontent.com"})
 
 

@@ -39,7 +39,6 @@ calendar_app/
     ics/                        — ICS 구독 fetcher
     nlp/                        — KR/EN 자연어 태스크 파싱
     runtime/                    — 앱 인프라, 단축키, 시스템 연동
-    sync/                       — google_sync 호환 래퍼
   presentation/
     main_window/                — OverlayApp, action mixin, 상단 메뉴, dock
     panels/                     — 좌/우/하단 패널 렌더링
@@ -157,7 +156,6 @@ pytest tests/test_encoding_policy.py tests/test_encoding_utils.py
 - `calendar_app/infrastructure/db/database_unified.py`
 - `calendar_app/infrastructure/db/calendar_repo.py`
 - `calendar_app/infrastructure/db/db_repository_unified.py`
-- `calendar_app/infrastructure/db/shared_db.py`
 
 규칙:
 
@@ -166,7 +164,6 @@ pytest tests/test_encoding_policy.py tests/test_encoding_utils.py
 - `gcal_subscription` 테이블은 삭제하거나 rename하지 않습니다.
 - `calendar` 테이블 마이그레이션은 `calendar_repo.migrate_from_gcal_subscription()`이 담당합니다.
 - 캘린더 타입은 `gcal` | `local` | `shared` | `ics` | `outlook` | `caldav`입니다. CalDAV 연결에서는 네이버와 권한 없는 캘린더를 읽기 전용으로 처리합니다.
-- Shared DB 경로는 `C:\Users\Public\DarkCalendar\shared.db`입니다.
 
 ---
 
@@ -236,7 +233,7 @@ i18n:
 
 - 번역 함수: `calendar_app/infrastructure/i18n.py`의 `t()`
 - 번들 로케일: `locales/`
-- 사용자 오버라이드: `LOCALAPPDATA/DarkCalendar/locales_user/`
+- 사용자 오버라이드: `LOCALAPPDATA/kimhyojin/Dark Calendar/locales_user/`
 - 언어 전환 메뉴: `presentation/main_window/top_menus/system_menu.py`
 
 NLP:

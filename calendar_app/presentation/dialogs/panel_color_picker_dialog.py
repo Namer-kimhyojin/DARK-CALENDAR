@@ -2219,9 +2219,7 @@ class PanelColorPickerDialog(QDialog):
             button.setCheckable(True)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-            button.setAccessibleName(
-                f"{t('dialog.theme.bg.color', '배경색')}: {button.text()}"
-            )
+            button.setAccessibleName(f"{t('dialog.theme.bg.color', '배경색')}: {button.text()}")
             self._base_source_group.addButton(button)
             base_row.addWidget(button)
         self._btn_auto_base.clicked.connect(self._use_family_base)
@@ -2428,7 +2426,10 @@ class PanelColorPickerDialog(QDialog):
         self._text_slider.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._text_slider.setAccessibleName(t("dialog.theme.text.opacity", "글씨 투명도"))
         self._text_slider.setToolTip(
-            t("dialog.theme.text.opacity_tip", "낮출수록 글자가 배경에 스며듭니다. 최소 30%까지 낮출 수 있습니다.")
+            t(
+                "dialog.theme.text.opacity_tip",
+                "낮출수록 글자가 배경에 스며듭니다. 최소 30%까지 낮출 수 있습니다.",
+            )
         )
         text_opacity_row.addWidget(self._text_slider, 1)
         self._txt_op_lbl = QLabel(opacity_percent_label(self._text_opacity))
@@ -2575,7 +2576,9 @@ class PanelColorPickerDialog(QDialog):
     def _update_contrast_status(self):
         if not hasattr(self, "_row_primary") or not hasattr(self, "_contrast_status"):
             return
-        primary_ratio = _contrast_ratio(self._seen_text(self._row_primary.hex_value()), self._base_hex)
+        primary_ratio = _contrast_ratio(
+            self._seen_text(self._row_primary.hex_value()), self._base_hex
+        )
         secondary_ratio = _contrast_ratio(
             self._seen_text(self._row_secondary.hex_value()), self._base_hex
         )
@@ -2697,7 +2700,9 @@ class PanelColorPickerDialog(QDialog):
     def _family_accent(self, family_id: str, mode: str | None = None) -> tuple[str, str]:
         family = next(item for item in _STYLE_FAMILIES if item[0] == family_id)
         _, dark_key, light_key = family
-        preset_key = light_key if (mode or self._effective_appearance_mode()) == "light" else dark_key
+        preset_key = (
+            light_key if (mode or self._effective_appearance_mode()) == "light" else dark_key
+        )
         return preset_key, _PRESET_BY_KEY[preset_key][3]
 
     def _make_family_swatch(self, family_id: str) -> QPushButton:
@@ -3448,7 +3453,7 @@ class PanelColorPickerDialog(QDialog):
         return self._text_opacity
 
     def selected_border_source(self) -> str:
-        """"auto"/"custom" once a border was chosen here or before; "" keeps neutral lines."""
+        """ "auto"/"custom" once a border was chosen here or before; "" keeps neutral lines."""
         chosen = (self._border_source, self.selected_border_hex(), self._border_opacity)
         if self._border_source_saved in {"auto", "custom"} or chosen != self._border_initial:
             return self._border_source

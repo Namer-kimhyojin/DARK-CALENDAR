@@ -15,6 +15,7 @@ from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QWidget
 import pytest
 
+from calendar_app import app_paths
 from calendar_app.domain.loop_mixer import BLOCK_FRAMES, SAMPLE_RATE, pcm_bytes
 from calendar_app.infrastructure.runtime import loop_mixer_audio
 from calendar_app.presentation.widgets.overlay_loop_deck import OverlayLoopDeckWidget
@@ -50,6 +51,7 @@ def mixer(tmp_path, monkeypatch):
     monkeypatch.setattr(OverlayLoopDeckWidget, "screen", lambda self: desktop)
     monkeypatch.setattr(QApplication, "screens", staticmethod(lambda: [desktop]))
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    monkeypatch.setattr(app_paths, "LOOP_MIXER_DIR", str(tmp_path / "local" / "loop-mixer"))
     previous = _APP.property(EXITING_PROPERTY)
     _APP.setProperty(EXITING_PROPERTY, False)
     host = QWidget()
@@ -83,7 +85,8 @@ def test_construct_show_hide_and_settings_use_one_registered_idle_widget(mixer):
     assert not widget._poll.isActive() and devices == []
     manager.show_instance(iid)
     _APP.processEvents()
-    assert widget.isVisible() and widget._poll.isActive()
+    # An idle mixer does not poll; playback starts the timer.
+    assert widget.isVisible() and not widget._poll.isActive()
     manager.hide_instance(iid)
     assert not widget.isVisible() and not widget._poll.isActive()
     assert widget._mixer.snapshot()["mode"] == "idle"

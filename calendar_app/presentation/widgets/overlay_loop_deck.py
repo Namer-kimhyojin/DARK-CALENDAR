@@ -2,7 +2,6 @@
 """Independent, touch-friendly six-channel KeyDeck and microphone loop mixer."""
 
 import math
-import os
 from pathlib import Path
 
 from PyQt6.QtCore import (
@@ -12,7 +11,6 @@ from PyQt6.QtCore import (
     QRectF,
     QSignalBlocker,
     QSize,
-    QStandardPaths,
     Qt,
     QTimer,
 )
@@ -43,6 +41,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from calendar_app import app_paths
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_styles import (
     build_dialog_menu_stylesheet,
@@ -62,6 +61,12 @@ class TouchMixerComboBox(NoWheelComboBox):
     """Keep the input selector recognizable even when a platform arrow is absent."""
 
     _ARROW_WIDTH = 28
+    before_popup = None
+
+    def showPopup(self):  # noqa: N802
+        if self.before_popup is not None:
+            self.before_popup()
+        super().showPopup()
 
     def paintEvent(self, event):  # noqa: N802
         del event
@@ -336,6 +341,7 @@ class _TrackCard(QFrame):
             t("loop_mixer.source", "트랙 {number} 입력 소스", number=index + 1)
         )
         self.source.activated.connect(lambda: self._edit(source=self.source.currentData()))
+        self.source.before_popup = mixer_widget._refresh_sources
         root.addWidget(self.source)
         self.wave = _Waveform(self)
         root.addWidget(self.wave)
@@ -921,6 +927,11 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
             *[(name, identity) for identity, name, _ in decks],
         ]
 
+    def _refresh_sources(self):
+        # An idle mixer does not poll, so read KeyDeck instances when a list opens.
+        self._source_options = self._sources()
+        self._refresh_face()
+
     def _run(self, action):
         try:
             result = action()
@@ -944,6 +955,11 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
             "audio_device_error": (
                 "device",
                 "오디오 장치를 사용할 수 없습니다. 장치 연결과 Windows 마이크 접근 설정을 확인하세요.",
+            ),
+            "audio_device_error_take_saved": (
+                "device_take_saved",
+                "오디오 장치 오류로 녹음을 멈췄습니다. 오류 전까지 녹음한 부분은 저장했습니다. "
+                "장치 연결과 Windows 마이크 접근 설정을 확인하세요.",
             ),
             "audio_cleanup_failed": (
                 "cleanup",
@@ -1094,17 +1110,7 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         # Per-instance identity is metadata, never copied from a different deck.
         identity = getattr(self.owner, "_prefix", None) or self._PREFIX
         identity = "".join(c for c in identity if c.isalnum() or c in "_-+")[:80]
-        directory = (
-            Path(
-                os.environ.get("LOCALAPPDATA")
-                or QStandardPaths.writableLocation(
-                    QStandardPaths.StandardLocation.GenericDataLocation
-                )
-            )
-            / "DarkCalendar/loop-mixer"
-            / identity
-        )
-        return directory / "session.airloop"
+        return Path(app_paths.LOOP_MIXER_DIR) / identity / "session.airloop"
 
     def _restore_session(self):
         path = self._session_path()
@@ -1357,8 +1363,13 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         )
         if hint != self.status.toolTip():
             self.status.setToolTip(hint)
-        if not self.isVisible() and self._pending_io is None and hasattr(self, "_poll"):
-            self._poll.stop()
+        if hasattr(self, "_poll"):
+            # Only playback, recording and file jobs change the snapshot on their own.
+            if self._pending_io is not None or (running and self.isVisible()):
+                if not self._poll.isActive():
+                    self._poll.start()
+            else:
+                self._poll.stop()
 
     def _set_runtime_active(self, active):
         if not active and self._mixer is not None:
@@ -1374,15 +1385,12 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
                 self._autosave()
             if is_app_exiting():
                 self._mixer.shutdown()
-        if hasattr(self, "_poll"):
-            self._poll.start() if (
-                active and self.isVisible()
-            ) or self._pending_io is not None else self._poll.stop()
+        if not active and self._pending_io is None and hasattr(self, "_poll"):
+            self._poll.stop()
 
     def showEvent(self, event):  # noqa: N802
         super().showEvent(event)
-        if hasattr(self, "_poll"):
-            self._poll.start()
+        self._source_options = []
         self._refresh_face()
 
     def hideEvent(self, event):  # noqa: N802

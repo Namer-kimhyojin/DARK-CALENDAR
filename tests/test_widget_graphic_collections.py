@@ -5,12 +5,14 @@ from copy import deepcopy
 import importlib
 from unittest.mock import Mock, patch
 
-from PyQt6.QtCore import QDateTime, QSettings, QSize, Qt
+from PyQt6.QtCore import QDate, QDateTime, QRect, QSettings, QSize, Qt, QTime
 from PyQt6.QtGui import QTextDocument
 from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6.QtWidgets import QApplication, QMenu, QWidget
 import pytest
 
+from calendar_app.presentation.widgets.clock_flipbook import _sticker_frames
+from calendar_app.presentation.widgets.widget_graphic_catalog import CLOCK_FLIPBOOK_STICKER_DESIGNS
 from calendar_app.presentation.widgets.widget_graphics import (
     COLLECTIONS,
     contrast_ratio,
@@ -256,6 +258,138 @@ def test_state_transitions_stop_when_hidden_or_motion_is_disabled(make_widget, a
         assert surface._transition.state() == surface._transition.State.Stopped
     widget.apply_graphic_collection("air_instrument", motion=False)
     assert surface._transition.state() == surface._transition.State.Stopped
+
+
+def test_flipbook_menu_animates_only_changed_digits_at_the_minute_boundary(make_widget, app):
+    widget = make_widget()
+    widget._set("clock_template", "{time:%H:%M}")
+    date = QDate(2026, 11, 11)
+    with (
+        patch.object(widget, "_now_tz", return_value=QDateTime(date, QTime(12, 34, 58))) as clock,
+        patch(
+            "calendar_app.presentation.widgets.widget_graphics.system_allows_weather_motion",
+            return_value=True,
+        ),
+    ):
+        menu = QMenu(widget)
+        widget._build_context_menu(menu)
+        menu.actions()[0].trigger()
+        assert widget.graphic_collection_id() == "clock_flipbook"
+        widget.show()
+        widget._set_graphics_runtime_active(True)
+        app.processEvents()
+        surface = widget._graphic_surface
+        before = surface.grab().toImage()
+        tiles = [box.toAlignedRect() for box in surface._text_bounds[1:-1]]
+        assert len(tiles) == 4
+
+        clock.return_value = QDateTime(date, QTime(12, 34, 59))
+        widget._tick()
+        assert surface._flip_from is None
+        clock.return_value = QDateTime(date, QTime(12, 35, 0))
+        widget._tick()
+        assert surface._flip_from == "12:34"
+        assert surface.data["main"] == "12:35"
+        surface._transition.setCurrentTime(145)
+        frame = surface.grab().toImage()
+        assert all(before.copy(tile) == frame.copy(tile) for tile in tiles[:-1])
+        assert before.copy(tiles[-1]) != frame.copy(tiles[-1])
+        surface._transition.setCurrentTime(surface._transition.duration())
+        assert surface._flip_from is None
+
+        menu = QMenu(widget)
+        widget._build_context_menu(menu)
+        assert menu.actions()[0].isChecked()
+        menu.actions()[0].trigger()
+        assert not widget.graphic_collection_id()
+        assert widget._widget_template() == "{time:%H:%M}"
+
+
+def test_flipbook_snaps_to_time_jumps_and_respects_motion_policy(make_widget, app):
+    widget = make_widget()
+    widget._set("clock_template", "{time:%I:%M:%S %p}")
+    date = QDate(2026, 11, 11)
+    with (
+        patch.object(widget, "_now_tz", return_value=QDateTime(date, QTime(23, 59, 59))) as clock,
+        patch(
+            "calendar_app.presentation.widgets.widget_graphics.system_allows_weather_motion",
+            return_value=True,
+        ),
+    ):
+        widget.apply_graphic_collection("clock_flipbook")
+        widget.show()
+        widget._set_graphics_runtime_active(True)
+        app.processEvents()
+        surface = widget._graphic_surface
+        clock.return_value = QDateTime(date.addDays(1), QTime(0, 0, 0))
+        widget._tick()
+        assert surface._flip_from == "11:59:59"
+        assert surface.data["main"] == "12:00"
+        assert surface.data["minor"] == ":00"
+        assert surface.data["ampm"]
+        surface.set_motion_policy("static")
+        assert surface._flip_from is None
+        clock.return_value = QDateTime(date.addDays(1), QTime(0, 0, 1))
+        widget._tick()
+        assert surface._flip_from is None
+        surface.set_motion_policy("balanced")
+        clock.return_value = QDateTime(date.addDays(1), QTime(9, 0, 1))
+        widget._tick()
+        assert surface._flip_from is None
+        assert surface.data["main"] == "09:00"
+        clock.return_value = QDateTime(date.addDays(1), QTime(9, 0, 2))
+        widget._tick()
+        assert surface._flip_from == "09:00:01"
+        widget.hide()
+        assert surface._flip_from is None
+
+
+@pytest.mark.parametrize("index,design", enumerate(CLOCK_FLIPBOOK_STICKER_DESIGNS))
+def test_transparent_flipbook_gifs_render_only_during_flips(make_widget, app, index, design):
+    frames = tuple(frame.toImage() for frame in _sticker_frames(design.clock_sticker))
+    assert len(frames) == 16
+    assert any(frame != frames[0] for frame in frames[1:])
+    for frame in frames:
+        assert frame.size() == QSize(144, 144)
+        assert frame.pixelColor(0, 0).alpha() == 0
+        assert frame.pixelColor(143, 143).alpha() == 0
+        assert any(
+            frame.pixelColor(x, y).alpha() > 0
+            for x in range(20, 124, 10)
+            for y in range(20, 124, 10)
+        )
+
+    widget = make_widget()
+    widget._set("clock_template", "{time:%H:%M}")
+    date = QDate(2026, 11, 11)
+    with (
+        patch.object(widget, "_now_tz", return_value=QDateTime(date, QTime(12, 34, 59))) as clock,
+        patch(
+            "calendar_app.presentation.widgets.widget_graphics.system_allows_weather_motion",
+            return_value=True,
+        ),
+    ):
+        menu = QMenu(widget)
+        widget._build_context_menu(menu)
+        menu.actions()[1].menu().actions()[index].trigger()
+        assert widget.graphic_collection_id() == design.collection_id
+        widget.show()
+        widget._set_graphics_runtime_active(True)
+        app.processEvents()
+        surface = widget._graphic_surface
+        still = surface.grab().toImage()
+        assert still.pixelColor(1, 1).alpha() == 0
+        assert still.pixelColor(still.width() // 2, 8).alpha() == 0
+        badge = QRect(still.width() * 2 // 3, 0, still.width() // 3, still.height() // 3)
+        clock.return_value = QDateTime(date, QTime(12, 35, 0))
+        widget._tick()
+        assert surface._flip_from == "12:34"
+        surface._transition.setCurrentTime(164)
+        animated = surface.grab().toImage()
+        assert still.copy(badge) != animated.copy(badge)
+        surface.set_motion_policy("static")
+        assert surface._flip_from is None
+        assert still.copy(badge) == surface.grab().toImage().copy(badge)
 
 
 def test_weather_shadow_does_not_overwrite_text_color_and_contrast_is_readable(make_widget):

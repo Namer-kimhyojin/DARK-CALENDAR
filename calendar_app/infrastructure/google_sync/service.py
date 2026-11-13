@@ -15,9 +15,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 logger = logging.getLogger(__name__)
 
 
-from PyQt6.QtWidgets import QMessageBox  # noqa: E402
-
 from calendar_app.app_paths import CREDENTIALS_PATH, TOKEN_PATH  # noqa: E402
+from calendar_app.infrastructure.google_sync.common import (  # noqa: E402
+    google_summary_for_task_name,
+    sync_time_zone,
+    untitled_event_name,
+)
 from calendar_app.infrastructure.google_sync.oauth import (  # noqa: E402
     GoogleAuthError,
     check_auth_cancelled,
@@ -216,10 +219,11 @@ class GoogleEvent:
 
 
 def prepare_calendar_sync_service(
-    existing_service=None, calendar_id="primary", time_zone="Asia/Seoul", reset_auth=False
+    existing_service=None, calendar_id="primary", time_zone=None, reset_auth=False
 ):
     """Return a sync service configured for the requested calendar/timezone."""
 
+    time_zone = time_zone or sync_time_zone(None)
     service = existing_service or CalendarSyncService(calendar_id=calendar_id, time_zone=time_zone)
 
     service.calendar_id = service._normalize_calendar_id(calendar_id)
@@ -248,14 +252,14 @@ def _credentials_support_scopes(creds) -> bool:
 
 
 class CalendarSyncService:
-    def __init__(self, calendar_id="primary", time_zone="Asia/Seoul"):
+    def __init__(self, calendar_id="primary", time_zone=None):
         self.is_authenticated = False
 
         self.service = None
 
         self.calendar_id = self._normalize_calendar_id(calendar_id)
 
-        self.time_zone = time_zone
+        self.time_zone = time_zone or sync_time_zone(None)
 
         # googleapiclient/httplib2 service is not thread-safe.
 
@@ -449,12 +453,16 @@ class CalendarSyncService:
             if not token_text:
                 return True  # 읽을 수 없는 토큰 — 취소할 것 없음
             token_data = _json.loads(token_text)
-            # google-auth 라이브러리가 저장하는 키: "token" (access_token)
-            token = str(token_data.get("token") or token_data.get("access_token") or "").strip()
+            # Revoking the refresh token also ends the access tokens it issued;
+            # an access token alone expires but leaves the grant usable.
+            token = str(
+                token_data.get("refresh_token")
+                or token_data.get("token")
+                or token_data.get("access_token")
+                or ""
+            ).strip()
             if not token:
-                logger.info(
-                    "revoke_token: no access_token found in token file; skipping revoke call"
-                )
+                logger.info("revoke_token: no token found in token file; skipping revoke call")
                 return True
             from urllib.parse import urlencode
 
@@ -480,7 +488,6 @@ class CalendarSyncService:
 
     def authenticate(
         self,
-        parent_widget=None,
         interactive=True,
         *,
         force_reauth=False,
@@ -497,11 +504,6 @@ class CalendarSyncService:
 
         if not HAS_GOOGLE_API:
             self._set_last_error("auth_modules", "Google Calendar modules are not installed")
-            if parent_widget:
-                QMessageBox.warning(
-                    parent_widget, "Google Calendar", "Google Calendar modules are not installed."
-                )
-
             return False
 
         creds = None
@@ -579,13 +581,6 @@ class CalendarSyncService:
 
                 if not os.path.exists(CREDENTIALS_PATH):
                     self._set_last_error("auth_client_missing", "credentials.json was not found")
-                    if parent_widget:
-                        QMessageBox.critical(
-                            parent_widget,
-                            "Google Calendar",
-                            "credentials.json was not found.",
-                        )
-
                     return False
 
                 try:
@@ -602,14 +597,6 @@ class CalendarSyncService:
                 except Exception as exc:
                     kind = exc.kind if isinstance(exc, GoogleAuthError) else "auth"
                     self._set_last_error(kind, "Google authentication failed")
-
-                    if parent_widget:
-                        QMessageBox.warning(
-                            parent_widget,
-                            "Google Calendar",
-                            "Authentication failed. Check the OAuth desktop client file and try again.",
-                        )
-
                     return False
 
             try:
@@ -621,10 +608,6 @@ class CalendarSyncService:
                 return False
             except (OSError, ValueError, TypeError):
                 self._set_last_error("auth_token_write", "token_write_failed")
-
-                if parent_widget:
-                    QMessageBox.warning(parent_widget, "Google Calendar", "Failed to save token.")
-
                 return False
 
         try:
@@ -647,20 +630,11 @@ class CalendarSyncService:
                             save_token_json(token_json)
                         except OSError:
                             self._set_last_error("auth_token_write", "token_write_failed")
-                            if parent_widget:
-                                QMessageBox.warning(
-                                    parent_widget, "Google Calendar", "Failed to save token."
-                                )
                             return False
                     else:
                         self._pending_token_json = token_json
                 self.service = api
                 self.is_authenticated = True
-
-            if parent_widget:
-                QMessageBox.information(
-                    parent_widget, "Google Calendar", "Authentication completed."
-                )
 
             return True
 
@@ -673,9 +647,6 @@ class CalendarSyncService:
             else:
                 kind = _google_refresh_failure_kind(exc)
                 self._set_last_error(kind, kind, 401 if kind == "auth_required" else None)
-
-            if parent_widget:
-                QMessageBox.critical(parent_widget, "Google Calendar", "API connection failed.")
 
             return False
 
@@ -980,78 +951,6 @@ class CalendarSyncService:
             "primary": primary,
         }
 
-    def subscribe_calendar(self, calendar_id: str) -> dict | None:
-        if not self._remote_writes_allowed():
-            return None
-        calendar_id = self._normalize_calendar_id(calendar_id)
-
-        if not self.is_authenticated or not self.service or not calendar_id:
-            return None
-
-        try:
-            response = self._execute_request(
-                lambda: self.service.calendarList().insert(body={"id": calendar_id}).execute()
-            )
-
-            return self._to_calendar_list_entry(response)
-
-        except Exception as exc:
-            status = getattr(getattr(exc, "resp", None), "status", None)
-
-            if status == 403 and (
-                "insufficient" in str(exc).lower() or "scope" in str(exc).lower()
-            ):
-                self._clear_auth_state()
-
-                self._set_last_error(
-                    "reauth_required",
-                    "Stored token does not have calendar subscription permission. Please re-authenticate.",
-                    403,
-                )
-
-            else:
-                self._set_last_error("subscribe", exc, status)
-
-            logger.warning("GCal calendar subscription failed (%s)", self.last_error_message)
-
-            return None
-
-    def unsubscribe_calendar(self, calendar_id: str) -> bool:
-        if not self._remote_writes_allowed():
-            return False
-        calendar_id = self._normalize_calendar_id(calendar_id)
-
-        if not self.is_authenticated or not self.service or not calendar_id:
-            return False
-
-        try:
-            self._execute_request(
-                lambda: self.service.calendarList().delete(calendarId=calendar_id).execute()
-            )
-
-            return True
-
-        except Exception as exc:
-            status = getattr(getattr(exc, "resp", None), "status", None)
-
-            if status == 403 and (
-                "insufficient" in str(exc).lower() or "scope" in str(exc).lower()
-            ):
-                self._clear_auth_state()
-
-                self._set_last_error(
-                    "reauth_required",
-                    "Stored token does not have calendar subscription permission. Please re-authenticate.",
-                    403,
-                )
-
-            else:
-                self._set_last_error("unsubscribe", exc, status)
-
-            logger.warning("GCal calendar unsubscribe failed (%s)", self.last_error_message)
-
-            return False
-
     @staticmethod
     def _validate_events_page(response, *, require_sync_token=False):
         """Reject incomplete or malformed pages before they become a full-sync snapshot."""
@@ -1143,7 +1042,7 @@ class CalendarSyncService:
 
         return GoogleEvent(
             id=event_id,
-            summary=self._event_text(event, "summary", "Untitled") or "Untitled",
+            summary=self._event_text(event, "summary") or untitled_event_name(),
             description=self._event_text(event, "description"),
             start_time=start,
             end_time=end,
@@ -1267,18 +1166,6 @@ class CalendarSyncService:
                 lambda: self.service.events().insert(calendarId=calendar_id, body=event).execute()
             )
 
-            # HTTP 409 Conflict means the event already exists under this id — treat as
-            # idempotent success and return the key as the event_id.
-            _last_status = getattr(self, "_last_error_status", None)
-            if not created_event and _last_status == 409 and _sanitized_key:
-                logger.info(
-                    "create_event: 409 Conflict for idempotency_key %s on calendar %s; "
-                    "treating as idempotent success",
-                    _sanitized_key,
-                    calendar_id,
-                )
-                self._clear_last_error()
-                return _sanitized_key
             if not created_event:
                 logger.error(
                     "create_event: API returned empty response for calendar %s", calendar_id
@@ -1342,6 +1229,7 @@ class CalendarSyncService:
         self._clear_last_error()
 
         calendar_id = self._normalize_calendar_id(calendar_id)
+        same_instant = False
 
         try:
             if all_day:
@@ -1377,6 +1265,7 @@ class CalendarSyncService:
 
                 sdt = parse_datetime_str(start_iso, target_tz_offset=tz_offset)
                 edt = parse_datetime_str(end_iso, target_tz_offset=tz_offset)
+                same_instant = bool(sdt and edt and edt == sdt)
                 if sdt and edt and edt <= sdt:
                     tz_offset = _extract_tz_offset(start_iso) or tz_offset
                     end_iso = (sdt + datetime.timedelta(hours=1)).strftime(
@@ -1407,7 +1296,8 @@ class CalendarSyncService:
                         .get(calendarId=calendar_id, eventId=event_id)
                         .execute()
                     )
-                ev["summary"] = summary
+                # An untitled placeholder stays empty unless Google already has that title.
+                ev["summary"] = google_summary_for_task_name(summary, ev.get("summary"))
                 ev["description"] = description
                 if location:
                     ev["location"] = location
@@ -1417,8 +1307,11 @@ class CalendarSyncService:
                     ev["colorId"] = str(color_id)
                 else:
                     ev.pop("colorId", None)
+                # A pulled zero-length Google event is stored with end == start;
+                # do not stretch it to the one-hour default on every edit.
+                zero_length = same_instant and self._zero_length_event(ev)
                 ev["start"] = start_block
-                ev["end"] = end_block
+                ev["end"] = dict(start_block) if zero_length else end_block
                 # [10] completion status sync
                 if completed:
                     ext = ev.setdefault("extendedProperties", {})
@@ -1476,6 +1369,17 @@ class CalendarSyncService:
             self._set_last_error("update", exc)
             logger.warning("Google request failed (%s)", self.last_error_message)
             return False
+
+    @staticmethod
+    def _zero_length_event(event):
+        try:
+            start, end = (
+                datetime.datetime.fromisoformat(str(event[key]["dateTime"]).replace("Z", "+00:00"))
+                for key in ("start", "end")
+            )
+        except (KeyError, TypeError, ValueError):
+            return False
+        return start == end
 
     def delete_event(self, event_id: str, calendar_id: str | None = None) -> bool:
         if not self._remote_writes_allowed():
@@ -1597,12 +1501,6 @@ class CalendarSyncService:
             return False
         return True
 
-    def batch_update_events(self, operations: list) -> list:
-        """최대 50개의 이벤트 수정을 단일 HTTP 배치 요청으로 처리한다.
-        각 operation: {"event_id", "calendar_id", "summary", "start_iso", "end_iso", ...}
-        """
-        return self._execute_batch("patch", operations)
-
     def batch_delete_events(self, operations: list) -> list:
         """최대 50개의 이벤트 삭제를 단일 HTTP 배치 요청으로 처리한다.
         각 operation: {"event_id", "calendar_id", "local_task_id"}
@@ -1720,46 +1618,6 @@ class CalendarSyncService:
                         self.service.events().insert(calendarId=cal_id, body=body), request_id=rid
                     )
 
-                elif method == "patch":
-                    eid = op.get("event_id")
-                    if not eid:
-                        results.append(
-                            {
-                                "local_task_id": op.get("local_task_id"),
-                                "success": False,
-                                "error": "missing_event_id",
-                            }
-                        )
-                        continue
-                    body = self._build_event_body_from_op(op)
-                    if body is None:
-                        results.append(
-                            {
-                                "local_task_id": op.get("local_task_id"),
-                                "success": False,
-                                "error": "invalid_datetime",
-                            }
-                        )
-                        continue
-                    # Patch completion status
-                    if op.get("completed"):
-                        ext = body.setdefault("extendedProperties", {})
-                        ext.setdefault("private", {})["dark_calendar_completed"] = "1"
-                        if op.get("hide_completed"):
-                            body["status"] = "cancelled"
-                        else:
-                            body["transparency"] = "transparent"
-                    else:
-                        ext = body.setdefault("extendedProperties", {})
-                        ext.setdefault("private", {})["dark_calendar_completed"] = None  # Remove
-                        body["status"] = "confirmed"
-                        body["transparency"] = "opaque"
-
-                    batch.add(
-                        self.service.events().patch(calendarId=cal_id, eventId=eid, body=body),
-                        request_id=rid,
-                    )
-
                 elif method == "delete":
                     eid = op.get("event_id")
                     if not eid:
@@ -1790,7 +1648,8 @@ class CalendarSyncService:
 
     def _build_event_body_from_op(self, op: dict) -> "dict | None":
         return self._build_event_body(
-            summary=op.get("summary") or "Untitled",
+            # The engine maps an untitled placeholder to "": Google keeps no title.
+            summary=op.get("summary") or "",
             start_iso=op.get("start_iso") or "",
             end_iso=op.get("end_iso") or "",
             description=op.get("description") or "",
@@ -1804,7 +1663,7 @@ class CalendarSyncService:
         self, summary, start_iso, end_iso, description, location, color_id, all_day, calendar_id
     ) -> "dict | None":
         """create_event() 과 동일한 event body dict를 생성한다. 파싱 실패 시 None."""
-        tz_name = getattr(self, "time_zone", "Asia/Seoul") or "Asia/Seoul"
+        tz_name = getattr(self, "time_zone", None) or sync_time_zone(None)
         tz_offset = self._tz_offset_for_value(start_iso)
 
         if all_day:

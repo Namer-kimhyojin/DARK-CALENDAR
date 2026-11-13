@@ -186,3 +186,91 @@ def test_empty_touch_begin_is_left_to_existing_overlay_dragging(canvas):
     assert not surface._touch_points
     assert surface._touch_mouse_suppressed_until == 0.0
     bank.play.assert_not_called()
+
+
+def _at(identifier, state, position):
+    return SimpleNamespace(id=lambda: identifier, state=lambda: state, position=lambda: position)
+
+
+def _key_edge(surface, index, dx):
+    key = surface.deck["pages"][surface.deck["page"]]["keys"][index]
+    rect = surface.renderer.geometry.key_rect(key)
+    return QPointF(rect.right() + dx, rect.center().y()) + surface.content_offset()
+
+
+def test_touch_right_after_the_deck_is_shown_still_plays(canvas):
+    import time
+
+    surface, bank = canvas
+    surface._armed_at = time.monotonic() + 10.0
+    touch(surface, QEvent.Type.TouchBegin, point(surface, 1, 0, QEventPoint.State.Pressed))
+    assert bank.play.call_count == 1
+
+
+def test_touch_in_the_gap_beside_a_pad_plays_that_pad(canvas):
+    surface, bank = canvas
+    gap = surface.renderer.geometry.gap
+    contact = _at(1, QEventPoint.State.Pressed, _key_edge(surface, 0, gap / 2.0 - 0.5))
+    assert surface.key_at(contact.position()) is None
+    touch(surface, QEvent.Type.TouchBegin, contact)
+    assert bank.play.call_count == 1
+
+
+def test_second_finger_on_a_macro_key_still_activates(canvas):
+    surface, _bank = canvas
+    surface.set_deck(model.build_template_deck("macro_3x3"))
+    surface.deck["reduce_motion"] = True
+    keys = surface.deck["pages"][0]["keys"]
+    activated = []
+    surface.keyActivated.connect(lambda *args: activated.append(args))
+    touch(surface, QEvent.Type.TouchBegin, point(surface, 1, 0, QEventPoint.State.Pressed))
+    touch(
+        surface,
+        QEvent.Type.TouchUpdate,
+        point(surface, 1, 0, QEventPoint.State.Stationary),
+        point(surface, 2, 1, QEventPoint.State.Pressed),
+    )
+    touch(
+        surface,
+        QEvent.Type.TouchEnd,
+        point(surface, 1, 0, QEventPoint.State.Released),
+        point(surface, 2, 1, QEventPoint.State.Released),
+    )
+    assert sorted(activated) == sorted([(keys[0]["id"], "tap"), (keys[1]["id"], "tap")])
+
+
+def test_macro_finger_drifting_slightly_off_the_edge_still_activates(canvas):
+    surface, _bank = canvas
+    surface.set_deck(model.build_template_deck("macro_3x3"))
+    key = surface.deck["pages"][0]["keys"][0]
+    activated = []
+    surface.keyActivated.connect(lambda *args: activated.append(args))
+    touch(surface, QEvent.Type.TouchBegin, point(surface, 1, 0, QEventPoint.State.Pressed))
+    touch(
+        surface,
+        QEvent.Type.TouchEnd,
+        _at(1, QEventPoint.State.Released, _key_edge(surface, 0, 4.0)),
+    )
+    assert activated == [(key["id"], "tap")]
+
+
+def test_switch_sound_plays_at_contact_and_is_not_repeated_by_the_animation(canvas):
+    surface, bank = canvas
+    surface.set_deck(model.build_template_deck("macro_3x3"))
+    surface.deck["reduce_motion"] = False
+    key = surface.deck["pages"][0]["keys"][0]
+    runtime = surface._runtime[key["id"]]
+    assert runtime.plan is not None
+    bank.play.reset_mock()
+
+    touch(surface, QEvent.Type.TouchBegin, point(surface, 1, 0, QEventPoint.State.Pressed))
+    played_at_contact = bank.play.call_count
+    for _ in range(30):
+        surface._last_tick -= 1.0 / 60.0
+        surface._tick()
+
+    assert played_at_contact >= 1
+    bottom_paths = [
+        str(call.args[0]) for call in bank.play.call_args_list if "bottom" in str(call.args[0])
+    ]
+    assert len(bottom_paths) <= 1

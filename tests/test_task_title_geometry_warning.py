@@ -45,9 +45,7 @@ def test_title_polish_has_no_maximum_size_warning(base_points, sheet_layout):
             dialog.show()
             app.processEvents()
         assert editor.height() >= editor.fontMetrics().height()
-        size_warnings = [
-            message for message in messages if "QWidget::setMaximumSize:" in message
-        ]
+        size_warnings = [message for message in messages if "QWidget::setMaximumSize:" in message]
         assert size_warnings == []
     finally:
         dialog.close()

@@ -115,6 +115,16 @@ class WidgetStyleEditorDialog(QDialog):
         self.accent_btn.setStyleSheet(f"background-color: {color};")
 
     def _save(self) -> None:
+        name_edit = self.skin_name if self.tabs.currentIndex() == 0 else self.layout_name
+        if not name_edit.text().strip():
+            # The model raises an English ValueError for a blank name; ask here instead.
+            QMessageBox.warning(
+                self,
+                t("common.notification", "알림"),
+                t("widget_mode.editor_name_required", "이름을 입력하세요."),
+            )
+            name_edit.setFocus()
+            return
         try:
             if self.tabs.currentIndex() == 0:
                 skin = create_user_widget_skin(
@@ -133,6 +143,10 @@ class WidgetStyleEditorDialog(QDialog):
                 )
                 self.created_kind, self.created_id = "layout", layout.layout_id
         except (OSError, ValueError) as exc:
-            QMessageBox.warning(self, t("common.notification", "알림"), str(exc))
+            QMessageBox.warning(
+                self,
+                t("common.notification", "알림"),
+                f"{t('widget_mode.save_failed', '저장하지 못했습니다. 다시 시도해 주세요.')}\n{exc}",
+            )
             return
         self.accept()

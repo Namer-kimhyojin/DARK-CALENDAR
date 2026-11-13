@@ -13,7 +13,6 @@ import pytest
 from calendar_app.presentation.dialogs.widget_customization_dialog import WidgetCustomizationDialog
 from calendar_app.presentation.main_window.theme_actions import ThemeActionsMixin
 from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor
-from calendar_app.presentation.widgets.panel_widget_theme import _build_widget_mode_theme_tokens
 from calendar_app.presentation.widgets.unified_widget_mode import _widget_theme_tokens
 from calendar_app.presentation.widgets.widget_mode_coordinator import (
     WidgetModeCoordinator,
@@ -118,7 +117,6 @@ def test_every_skin_reuses_main_roles_and_keeps_saved_widget_identity(
             before = {key: host.settings.value(key) for key in host.settings.allKeys()}
             expected = get_ui_tokens(host.settings)
             tokens = _widget_theme_tokens(host)
-            assert _build_widget_mode_theme_tokens(host) == tokens
             assert_widget_reads_like_main(tokens, expected)
             snapshot = build_theme_snapshot(host.settings)
             assert tokens["_main_base_color"] == snapshot.panel_base_color

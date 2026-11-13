@@ -5,17 +5,14 @@ import logging
 import os
 import time
 
-from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QDate, QLocale, QObject
 from PyQt6.QtWidgets import QApplication, QDialog
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.infrastructure.runtime import win32_input
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
+from calendar_app.shared.password_hash import hash_password, is_password_hash, verify_password
 from calendar_app.shared.value_parsers import as_bool, as_int
-
-try:
-    import win32api as _win32api
-except ImportError:
-    _win32api = None
 
 _LOGGER = logging.getLogger(__name__)
 _WIN32_WARNING_LOGGED = False
@@ -23,30 +20,39 @@ _WIN32_WARNING_LOGGED = False
 
 def _warn_win32_unavailable_once():
     global _WIN32_WARNING_LOGGED
-    if _win32api is None and not _WIN32_WARNING_LOGGED:
+    if not win32_input.AVAILABLE and not _WIN32_WARNING_LOGGED:
         _LOGGER.warning(
-            "win32api is unavailable. Away-lock input tracking uses reduced fallback mode."
+            "Win32 input APIs are unavailable. Away-lock input tracking uses reduced fallback mode."
         )
         _WIN32_WARNING_LOGGED = True
 
 
+def _lock_screen_date_text(date: QDate, locale: QLocale | None = None) -> str:
+    """Date line above the lock-screen clock, in the UI locale.
+
+    Korean keeps the compact "2026.11.13 (금)"; other languages get Qt's own long
+    date, which already includes the weekday in the right order and words.
+    """
+    # QLocale default is set by I18nManager._apply_qt_locale() at startup
+    loc = locale if locale is not None else QLocale()
+    if loc.language() == QLocale.Language.Korean:
+        return loc.toString(date, "yyyy.MM.dd (ddd)")
+    return loc.toString(date, QLocale.FormatType.LongFormat)
+
+
 def _safe_get_last_input_tick():
-    if _win32api is None:
-        _warn_win32_unavailable_once()
-        return None
+    _warn_win32_unavailable_once()
     try:
-        return int(_win32api.GetLastInputInfo()) & 0xFFFFFFFF
-    except Exception:
+        return win32_input.last_input_tick()
+    except OSError:
         return None
 
 
 def _safe_get_cursor_pos():
-    if _win32api is None:
-        _warn_win32_unavailable_once()
-        return None
+    _warn_win32_unavailable_once()
     try:
-        return _win32api.GetCursorPos()
-    except Exception:
+        return win32_input.cursor_pos()
+    except OSError:
         return None
 
 
@@ -58,7 +64,7 @@ class _AwayForceUnlockFilter(QObject):
     def eventFilter(self, watched, event):
         owner = self._owner
         if getattr(owner, "is_away_locked", False) and owner._is_force_unlock_key_event(event):
-            owner._do_away_unlock()
+            owner._handle_force_unlock_request()
             return True
         return False
 
@@ -71,7 +77,7 @@ class _AwayAdminUnlockDialog(QDialog):
         from calendar_app.presentation.dialogs.dialog_styles import apply_common_dialog_style
 
         super().__init__(parent)
-        apply_dialog_title(self, "관리자 잠금 해제")
+        apply_dialog_title(self, t("away_settings.method_password", "비밀번호로 해제"))
         self.setModal(True)
         apply_common_dialog_style(self, minimum_width=320, size=(380, 190))
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
@@ -80,11 +86,11 @@ class _AwayAdminUnlockDialog(QDialog):
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(10)
 
-        title = QLabel(t("away_lock.admin_pw_title", "관리자 비밀번호를 입력하세요."))
+        title = QLabel(t("away_lock.placeholder_pw", "비밀번호를 입력하세요"))
         self.password_edit = QLineEdit(self)
         self.password_edit.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_edit.setPlaceholderText(
-            t("away_lock.admin_pw_placeholder", "관리자 비밀번호")
+            t("away_settings.placeholder_pw_input", "비밀번호 입력")
         )
 
         buttons = QDialogButtonBox(
@@ -112,7 +118,6 @@ class _AwayAdminUnlockDialog(QDialog):
 
 class AwayLockMixin:
     AWAY_FORCE_UNLOCK_SHORTCUT = "Ctrl+Alt+Shift+F12"
-    AWAY_ADMIN_UNLOCK_PASSWORD = "admin"
     AWAY_ADMIN_HOTSPOT_SIZE = 44
     AWAY_ADMIN_HOLD_MS = 2000
 
@@ -178,19 +183,38 @@ class AwayLockMixin:
         self._clear_admin_unlock_hold()
         return False
 
-    def _verify_admin_unlock_password(self, password):
-        return str(password or "") == self.AWAY_ADMIN_UNLOCK_PASSWORD
+    def _verify_away_password(self, password):
+        """Check the lock password; upgrade a legacy plain-text value to a hash."""
+        entered = str(password or "")
+        stored = str(self.settings.value("away_password", "") or "")
+        if not stored:
+            return not entered
+        if not verify_password(entered, stored):
+            return False
+        if not is_password_hash(stored):
+            self.settings.setValue("away_password", hash_password(entered))
+        return True
+
+    def _handle_force_unlock_request(self):
+        """Emergency key: never skip the password, only bring its input back."""
+        if self._password_unlock_active():
+            self._ensure_password_entry_ready(force_activate=True)
+        else:
+            self._do_away_unlock()
 
     def _prompt_admin_unlock_password(self, parent=None):
         dialog = _AwayAdminUnlockDialog(parent or self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return False
-        return self._verify_admin_unlock_password(dialog.password_edit.text())
+        return self._verify_away_password(dialog.password_edit.text())
 
     def _trigger_admin_unlock_dialog(self):
         overlay = getattr(self, "_away_admin_hold_overlay", None)
         self._clear_admin_unlock_hold()
         if not getattr(self, "is_away_locked", False):
+            return
+        if not self._password_unlock_active():
+            self._do_away_unlock()
             return
         parent = overlay.get("window") if overlay else self
         if self._prompt_admin_unlock_password(parent=parent):
@@ -480,9 +504,9 @@ class AwayLockMixin:
             win.setAttribute(_Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
             win.setGeometry(screen.geometry())
 
-            # ALT+F4 ?源놁몵占???占쎌쒔??占쎌뵠 占???占쎄돌揶쎛 ???占쏙옙??????
-            # - ??占쏙옙?甕곕뜇??筌뤴뫀占? ?袁⑹읈 筌△뫀??
-            # - idle 筌뤴뫀占? ?袁⑷퍥 ?醫됲닊 ??占쎌젫
+            # ALT+F4 등으로 오버레이 창이 닫히려 할 때:
+            # - 비밀번호 모드: 완전 차단
+            # - idle 모드: 전체 잠금 해제
             _main_ref = self
 
             def _overlay_close_event(event, _ref=_main_ref):
@@ -491,7 +515,7 @@ class AwayLockMixin:
                     return
                 unlock_method = _ref.settings.value("away_unlock_method", "idle")
                 if unlock_method == "password":
-                    return  # ??占쏙옙?甕곕뜇??筌뤴뫀占?占?占쏙옙??ALT+F4 ?袁⑹읈 筌△뫀??
+                    return  # 비밀번호 모드에서는 ALT+F4 완전 차단
                 _ref._do_away_unlock()
 
             win.closeEvent = _overlay_close_event
@@ -635,7 +659,7 @@ class AwayLockMixin:
             _bind_admin_unlock_mouse_handlers(clock_lbl, overlay_ref)
             _bind_admin_unlock_mouse_handlers(msg_lbl, overlay_ref)
 
-            # 揶쏅벡????占쎌젫 ??占쏀뀧????占쏀뒄 (??占쏙옙?甕곕뜇??筌뤴뫀占???占?
+            # 강제 해제 단축키 설치 (비밀번호 모드 포함)
             self._install_force_unlock_shortcut(win)
             self._install_force_unlock_shortcut(_pw_widget)
             self._install_force_unlock_shortcut(_pw_edit)
@@ -685,9 +709,9 @@ class AwayLockMixin:
             self.setWindowOpacity(1.0)
             self._away_prev_geometry = self.geometry()
             self._away_prev_was_maximized = self.isMaximized()
-            # aux ???占쎌뮅???占쎈턄?占쎌럾? 嶺뚮ㅄ維占???占쎌뻼???????占쎌쾵???嶺뚮∥???嶺뚢돦???showFullScreen()?? ?釉띾쐡???
-            # WindowStaysOnBottomHint|Tool 嶺뚢돦?占썼굢??showFullScreen??占쏙옙?owNormal ??????
-            # WA_TranslucentBackground ??占????占쎌뎽?????????????占쎈さ亦껋깢?????紐꾩끋??類ｋ펲.
+            # aux 오버레이가 모든 모니터를 덮으므로 메인 창은 showFullScreen()을 쓰지 않는다.
+            # WindowStaysOnBottomHint|Tool 창은 showFullScreen 뒤 showNormal로 돌아올 때
+            # WA_TranslucentBackground 렌더링이 깨질 수 있다.
             self._away_forced_fullscreen = False
             self.is_away_locked = True
             self._build_aux_away_overlays()
@@ -708,13 +732,13 @@ class AwayLockMixin:
                 len(getattr(self, "_away_aux_overlays", [])),
                 manual,
             )
-            # idle ??占쎌젫 筌뤴뫀占??????占쏙옙?????占????占쏀뒄 (??占쎌퍢????占쎌쟿??占쏙옙?甕곌쑵????占??tick??lock_tick??野껓옙????占?獄쎻뫗?)
+            # idle 해제 모드: 잠금 직후의 입력으로 바로 풀리지 않도록 해제 감지를 조금 늦게 설치
             if not _password_mode:
                 from PyQt6.QtCore import QTimer as _QT
 
                 _QT.singleShot(300, self._install_overlay_unlock_filters)
 
-            # ??占쏙옙?甕곕뜇????占쎌젫 筌뤴뫀占? ?袁⑹삺 ?遺얇늺????占쎌젾筌≪럥占???占쎄쉐?酉占?占???占??? ?占???占쎈뼄.
+            # 비밀번호 해제 모드: 현재 화면의 비밀번호 입력칸에 포커스를 강제로 맞춘다.
             if _password_mode:
                 from PyQt6.QtCore import QTimer as _QTimer
 
@@ -731,7 +755,7 @@ class AwayLockMixin:
             else:
                 self._stop_password_focus_watchdog()
 
-            # ??濡レ쭢 ??占쎈맪??? ??占쎈맪????袁⑸쐩 "?????占쎌졑"?????占쎈굵 ???占???怨몄젷 ???占쎈뮔
+            # 수동 잠금: 잠금 이후 "새 입력"이 있을 때만 해제되도록 기준값 저장
             self._manual_lock_active = bool(manual)
             self._manual_lock_input_tick = None
             if self._manual_lock_active:
@@ -743,20 +767,20 @@ class AwayLockMixin:
             else:
                 self._last_manual_lock_time = None
 
-            # ???占????占????占쎈쪇占???占쎈객占?? ???占썩뵛??(??濡レ쭢 ???占쎈뺄 ??占?占쏙옙????怨몄젷 ??占쎈쪇占???占쎌룇占???????占쎌┣??
+            # alarm_worker도 잠금 상태로 맞춘다 (잠금 직후 idle 감지기가 바로 해제하지 않도록)
             if hasattr(self, "alarm_worker"):
                 self.alarm_worker.is_idle = True
-                self.alarm_worker.suppress_unlock = True  # idle_detector unlock emit 筌△뫀??
+                self.alarm_worker.suppress_unlock = True  # idle_detector unlock emit 차단
                 self.alarm_worker._last_cursor_pos = _safe_get_cursor_pos()
 
-            # ??蹂㎳????占쎌몥??袁⑤콦 ?????????戮곗굚 (??占?占쏙옙??占쎌뼔占??占쎄퍔???
+            # 잠금 화면 시계 갱신 타이머 시작 (시계 표시를 켠 경우)
             if self._away_show_clock_enabled():
                 if not hasattr(self, "_lock_clock_timer"):
                     from PyQt6.QtCore import QTimer
 
                     self._lock_clock_timer = QTimer(self)
                     self._lock_clock_timer.timeout.connect(self._update_lock_clock)
-                self._update_lock_clock()  # 嶺뚯빖占??1?????占쎌몥??袁⑤콦
+                self._update_lock_clock()  # 즉시 1회 갱신
                 self._lock_clock_timer.start(1000)
         else:
             if not getattr(self, "is_away_locked", False):
@@ -767,21 +791,21 @@ class AwayLockMixin:
                 getattr(self, "_manual_lock_active", False),
                 self.settings.value("away_unlock_method", "idle"),
             )
-            # ??濡レ쭢 ??占쎈맪????占쎈객占????????占쎈맪????袁⑸쐩 ???占쎌젷 ???占쎌졑???占쎌룇裕뉑틦??????占썹춯?占승 ??怨몄젷 ?釉띾쐝?
+            # 수동 잠금은 잠금 이후 새 입력이 있었을 때만 해제한다
             if getattr(self, "_manual_lock_active", False):
                 lock_tick = getattr(self, "_manual_lock_input_tick", None)
                 has_new_input = False
                 if lock_tick is not None:
                     current_input_tick = _safe_get_last_input_tick()
                     if current_input_tick is not None:
-                        # tick?? 32??占쏙옙??unsigned??占?占?wrap-around ?占쎌쥓??
+                        # tick은 32비트 unsigned라 wrap-around를 고려
                         diff = (current_input_tick - lock_tick) & 0xFFFFFFFF
                         has_new_input = 0 < diff < 0x80000000
                 else:
-                    # ??占쏙옙? ?醫됲닊 ???占쎌젙 ??占쎌퍢 野껋럡??
+                    # 입력 tick을 읽지 못하면 잠금 후 경과 시간으로 판단
                     if hasattr(self, "_last_manual_lock_time"):
                         has_new_input = (time.time() - self._last_manual_lock_time) >= 2.0
-                # 癰귣똻??揶쏅Ŋ?: GetLastInputInfo揶쎛 筌띾뜆?????占쏙옙????? 筌륁궢占??野껋럩???占썬끉占??袁⑺뒄占??占쎌씤
+                # 보조 감지: GetLastInputInfo가 마우스 이동을 놓치는 경우 커서 위치로 확인
                 if not has_new_input:
                     lock_cursor = getattr(self, "_manual_lock_cursor_pos", None)
                     if lock_cursor is not None:
@@ -811,17 +835,17 @@ class AwayLockMixin:
 
         dlg = AwaySettingsDialog(self)
         if dlg.exec():
-            # ???占쎌젧???占쎄떠??占쎄퍔?占썹뵳???占쎈さ亦껋깢???AlarmScheduler???占쎌룄?占썹댆????占쎌몥??袁⑤콦 ?熬곣뫗??
+            # 변경된 자리비움 시간을 AlarmScheduler에 즉시 반영
             if hasattr(self, "alarm_worker"):
                 interval = as_int(
                     self.settings.value("away_interval", 5), 5, minimum=1, maximum=1440
                 )
                 self.alarm_worker.idle_timeout_ms = interval * 60 * 1000
-            # UI 嶺뚯빖占???占쎌룇占??(??占쎈맪????占쎌뻼????占썬늾????
+            # 잠금 화면 UI 즉시 갱신
             self.refresh_idle_lock_ui()
 
     def refresh_idle_lock_ui(self):
-        """???縕ワ쭕????占쎌젧??怨쀬Ŧ ??占쏙옙???? ??占쎈맪????占쎌뻼??UI???占쎌룄????類ｋ펲."""
+        """저장된 설정으로 잠금 화면 UI를 갱신합니다."""
         if not hasattr(self, "lock_lbl"):
             return
 
@@ -919,7 +943,7 @@ class AwayLockMixin:
 
             frame.setStyleSheet(f"background-color: rgba(10, 10, 10, {alpha});")
 
-            # ??占쏙옙?甕곕뜇??筌뤴뫀占? ?袁⑹삺 ??占쎄쾿????占쎌쒔??占쎌뵠?占?占쏙옙 pw_widget ??占쎈뻻
+            # 비밀번호 모드: 현재 화면의 오버레이에만 pw_widget 표시
             if "pw_widget" in target:
                 pw_widget_obj = target.get("pw_widget")
                 if pw_widget_obj is not None:
@@ -949,7 +973,7 @@ class AwayLockMixin:
                 self._ensure_password_entry_ready(force_activate=False)
 
     def _all_lock_pw_edits(self):
-        """??占쎈맪????占쎌뻼???嶺뚮ㅄ維占??????占쎄퀡??????占쎌졑 ?熬곣뫀占???占쎌룇占???紐껊퉵??"""
+        """잠금 화면의 모든 비밀번호 입력칸을 반환합니다."""
         edits = []
         if hasattr(self, "lock_pw_edit") and not getattr(self, "_away_aux_overlays", []):
             edits.append(self.lock_pw_edit)
@@ -960,19 +984,16 @@ class AwayLockMixin:
         return edits
 
     def _perform_away_unlock(self, pw_edit=None):
-        """?????占쎄퀡???占쎈ご??筌먦끉占??琉우뿰 ??占쏙옙???? ??占쎈맪?????怨몄젷??紐껊퉵??"""
+        """입력한 비밀번호를 확인한 뒤 잠금을 해제합니다."""
         if pw_edit is None:
             pw_edit = getattr(self, "lock_pw_edit", None)
         if pw_edit is None:
             return
 
-        entered = pw_edit.text()
-        stored = str(self.settings.value("away_password", ""))
-
-        if entered == stored:
+        if self._verify_away_password(pw_edit.text()):
             self._do_away_unlock()
         else:
-            # ???占쎈엷?? 嶺뚮ㅄ維占?pw ?熬곣뫀占??貫?占썹뵳??+ ??紐울옙???????
+            # 비밀번호 오류: 모든 pw 입력칸을 비우고 빨간 테두리로 표시
             _err_style = (
                 "QLineEdit { background: rgba(255,255,255,0.15); color: white; "
                 "border: 1px solid #ff4444; border-radius: 4px; "
@@ -989,7 +1010,7 @@ class AwayLockMixin:
             QTimer.singleShot(900, self._reset_pw_field_styles)
 
     def _reset_pw_field_styles(self):
-        """?????占쎄퀡????熬곣뫀占?????占쎌쾼 ?????源녿굵 ?貫?占썹뵳??占승??占???占쎈펲."""
+        """비밀번호 입력칸 스타일을 기본값으로 되돌립니다."""
         _normal_style = (
             "QLineEdit { background: rgba(255,255,255,0.15); color: white; "
             "border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; "
@@ -1000,11 +1021,11 @@ class AwayLockMixin:
             e.setStyleSheet(_normal_style)
 
     def _do_away_unlock(self):
-        """??占쏙옙???? ??占쎈맪?????怨몄젷??紐껊퉵??"""
-        # ?????? ?誘る닔? ??蹂ㅽ깴 (??節딅낵占??熬곣뫗占??Qt ?????? ??關紐든춯????占쎌졑???誘⑹퐛??
+        """자리비움 잠금을 해제합니다."""
+        # 비밀번호 입력칸 포커스 해제 (해제 뒤 숨은 입력칸에 Qt 포커스가 남지 않도록)
         for e in self._all_lock_pw_edits():
             e.clearFocus()
-        # ??占쎌쒔??占쎌뵠 ?袁⑹졐(??占쏙옙??????醫됲돵 ??占쎄볼???醫됲닊 ??占쎌젫 ?袁れ넎 ??繹먯뮆占??獄쎻뫗?
+        # 오버레이 위젯을 잠시 숨겨 잠금 해제 전환 중 깜빡임 방지
         _overlay_manager = getattr(self, "overlay_manager", None)
         _widgets_to_restore = []
         if _overlay_manager is not None:
@@ -1026,7 +1047,7 @@ class AwayLockMixin:
         if hasattr(self, "_lock_clock_timer"):
             self._lock_clock_timer.stop()
         self._restore_away_preview_settings_if_needed()
-        # alarm_worker ??占쎈쪇占???占쎈객占??貫?占썹뵳??(?????占쎄퀡???嶺뚮ㅄ維占?????is_idle??True??占??占썰빳???貫?????占쎈굵 ?????占쎈쾳)
+        # alarm_worker 상태 초기화 (해제 직후 is_idle이 True로 남아 다시 잠기지 않도록)
         if hasattr(self, "alarm_worker"):
             self.alarm_worker.is_idle = False
             self.alarm_worker.suppress_unlock = False
@@ -1034,15 +1055,15 @@ class AwayLockMixin:
 
             self.alarm_worker._suppress_lock_until = (
                 _t_unlock.monotonic() + 3.0
-            )  # 3?占쎈뜃占????占썸묾?獄쎻뫗?
-        # aux ???占쎌뮅???占쎈턄 ??????????占?占쏙옙???占쎄랜占??        # ApplicationShortcut ?? ?繹먮끏??active window?占쎌럾? ???占쎈굵 ???占????占쎌굚?????
-        # ???占쎌뮅???占쎈턄?占쎌럾? ????占쏙옙??嶺뚯쉳???嶺뚮∥???嶺뚢돦???OS ???占쎈낵???????占?占쏙옙??占승?????館???? ?占쎄랜占???
+            )  # 3초 동안 재잠금 방지
+        # aux 오버레이를 닫은 뒤 메인 창을 다시 활성화한다. ApplicationShortcut은 active window가
+        # 있어야 동작하므로, 오버레이가 사라진 뒤 메인 창이 포커스를 받지 못하면 단축키가 멈춘다.
         self.activateWindow()
         self.raise_()
         # Refresh panels after unlocking.
         if hasattr(self, "schedule_panel_refresh"):
             self.schedule_panel_refresh(left=True, center=True, right=True)
-        # ??占쎌쒔??占쎌뵠 ?袁⑹졐 癰귣벊??(筌롫뗄??筌≪럩?????????
+        # 숨겼던 오버레이 위젯 복원 (메인 창이 올라온 뒤)
         if _widgets_to_restore:
             from PyQt6.QtCore import QTimer as _QT_unlock
 
@@ -1081,18 +1102,16 @@ class AwayLockMixin:
                 pass
 
     def _update_lock_clock(self):
-        """??占쎈맪????占쎌뻼?????蹂㎳????占쎈츩?占? ?熬곣뫗????占쏙옙???怨쀬Ŧ ???占쎌몥??袁⑤콦??紐껊퉵??"""
+        """잠금 화면 시계를 현재 시각으로 갱신합니다."""
         if not hasattr(self, "lock_clock_lbl"):
             return
         if not getattr(self, "is_away_locked", False):
             return
-        from PyQt6.QtCore import QDateTime, QLocale
+        from PyQt6.QtCore import QDateTime
 
         now = QDateTime.currentDateTime()
         time_str = now.toString("HH:mm:ss")
-        # QLocale default is set by I18nManager._apply_qt_locale() at startup
-        locale = QLocale()
-        date_str = locale.toString(now.date(), t("away_lock.date_format"))
+        date_str = _lock_screen_date_text(now.date())
         clock_html = f'<div align="center"><span style="font-size: 14pt; color: #bbb;">{date_str}</span><br>{time_str}</div>'
         self.lock_clock_lbl.setText(clock_html)
         for overlay in getattr(self, "_away_aux_overlays", []):
@@ -1101,8 +1120,9 @@ class AwayLockMixin:
                 clock_lbl.setText(clock_html)
 
     def _install_overlay_unlock_filters(self):
-        """idle 筌뤴뫀占??醫됲닊 ???占썬끉占???占쏙옙?????占?占썸에?筌띾뜆?????占쏙옙???占???揶쏅Ŋ???筌욊낯????占쎌젫??占쎈뼄.
-        WindowDoesNotAcceptFocus ??占쎌쒔??占쎌뵠?占?占쏙옙 ??占쏙옙???袁り숲揶쎛 ?醫딉옙??????占쎌몵沃샕占?        QTimer ??占쏙옙??占쎌쨮 GetCursorPos + GetLastInputInfo??筌욊낯???占쎌씤??占쎈뼄."""
+        """idle 모드 잠금 중 마우스·키보드 입력이 들어오면 잠금을 해제합니다.
+        WindowDoesNotAcceptFocus 오버레이는 키 이벤트를 받지 못하므로
+        QTimer 폴링으로 GetCursorPos + GetLastInputInfo를 직접 확인합니다."""
         from PyQt6.QtCore import QTimer
 
         self._overlay_lock_cursor = _safe_get_cursor_pos()
@@ -1111,7 +1131,7 @@ class AwayLockMixin:
         import time as _time
 
         self._overlay_lock_time = _time.monotonic()
-        self._overlay_grace_ticks = 0  # 筌ｌ꼷??占??占? 疫꿸퀣? 揶쏄퉮?占쏙쭕???
+        self._overlay_grace_ticks = 0  # grace 구간 카운터
         if not hasattr(self, "_overlay_unlock_timer"):
             self._overlay_unlock_timer = QTimer(self)
             self._overlay_unlock_timer.timeout.connect(self._poll_overlay_unlock)
@@ -1125,7 +1145,7 @@ class AwayLockMixin:
         )
 
     def _poll_overlay_unlock(self):
-        """200ms筌띾뜄???占썬끉占???占쏙옙??占?占쏙옙 ????占쎌젾???占쎌씤??idle ?醫됲닊????占쎌젫??占쎈뼄."""
+        """200ms마다 커서 위치와 입력 tick을 확인해 idle 잠금을 해제합니다."""
         if not getattr(self, "is_away_locked", False):
             if hasattr(self, "_overlay_unlock_timer"):
                 self._overlay_unlock_timer.stop()
@@ -1143,7 +1163,7 @@ class AwayLockMixin:
         lock_cursor = getattr(self, "_overlay_lock_cursor", None)
         lock_tick = getattr(self, "_overlay_lock_input_tick", None)
 
-        # grace period: ?醫됲닊 ??1.5????占쎈툧?? ?占썬끉占?疫꿸퀣?揶쏉옙????占쎄쑴??揶쏄퉮???占쏙옙???占쎌젫??筌띾맩??
+        # grace period: 잠금 후 1.5초 동안은 기준값만 갱신하고 해제하지 않는다
         import time as _time2
 
         _elapsed = _time2.monotonic() - getattr(self, "_overlay_lock_time", 0)
@@ -1177,10 +1197,10 @@ class AwayLockMixin:
             self._do_away_unlock()
 
     # ------------------------------------------------------------------ #
-    # 揶쏅벡???醫됲닊 ??占쎌젫 ??占쏀뀧??(??占쎌쒔??占쎌뵠??QShortcut ??占쏀뒄) #
+    # 강제 잠금 해제 단축키 (오버레이 창에 QShortcut 등록) #
     # ------------------------------------------------------------------ #
     def _install_force_unlock_shortcut(self, win):
-        """??占쎌쒔??占쎌뵠 筌≪럩占?揶쏅벡????占쎌젫 QShortcut????占쏀뒄??占쎈뼄."""
+        """오버레이 창에 강제 해제 QShortcut을 등록합니다."""
         from PyQt6.QtCore import Qt as _Qt2
         from PyQt6.QtGui import QKeySequence, QShortcut
 
@@ -1188,7 +1208,7 @@ class AwayLockMixin:
         sequence = self.AWAY_FORCE_UNLOCK_SHORTCUT
         sc = QShortcut(QKeySequence(sequence), win)
         sc.setContext(_Qt2.ShortcutContext.ApplicationShortcut)
-        sc.activated.connect(lambda: _main_ref._do_away_unlock())
+        sc.activated.connect(lambda: _main_ref._handle_force_unlock_request())
         if not hasattr(self, "_away_force_unlock_shortcuts"):
             self._away_force_unlock_shortcuts = []
         self._away_force_unlock_shortcuts.append(sc)
@@ -1196,7 +1216,7 @@ class AwayLockMixin:
         if win is not self and not hasattr(self, "_away_main_force_unlock_shortcut"):
             main_sc = QShortcut(QKeySequence(sequence), self)
             main_sc.setContext(_Qt2.ShortcutContext.ApplicationShortcut)
-            main_sc.activated.connect(lambda: _main_ref._do_away_unlock())
+            main_sc.activated.connect(lambda: _main_ref._handle_force_unlock_request())
             self._away_force_unlock_shortcuts.append(main_sc)
             self._away_main_force_unlock_shortcut = main_sc
         return sc

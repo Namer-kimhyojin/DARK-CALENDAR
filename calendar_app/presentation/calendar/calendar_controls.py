@@ -28,6 +28,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     build_dialog_footer,
     get_dialog_theme_tokens,
 )
+from calendar_app.presentation.locale_names import calendar_display_name
 from calendar_app.shared.color_utils import contrast_safe_color
 from calendar_app.shared.icon_map import ICON, icon
 
@@ -116,7 +117,9 @@ class CalendarVisibilityDialog(QDialog):
         except (sqlite3.Error, OSError, RuntimeError):
             calendars, load_failed = [], True
         for calendar in calendars:
-            name = str(calendar.get("name") or calendar["id"])
+            name = str(
+                calendar_display_name(calendar["id"], calendar.get("name")) or calendar["id"]
+            )
             check = QCheckBox(name)
             check.setObjectName("calendar_display_" + calendar["id"])
             check.setAccessibleName(name)
@@ -261,7 +264,9 @@ class CalendarQuickControls(QWidget):
         self.default_combo.blockSignals(True)
         self.default_combo.clear()
         for calendar in writable:
-            name = str(calendar.get("name") or calendar["id"])
+            name = str(
+                calendar_display_name(calendar["id"], calendar.get("name")) or calendar["id"]
+            )
             if not calendar.get("is_visible", 1):
                 name += " · " + t("calendar_controls.hidden_badge", "숨김")
             color = contrast_safe_color(
@@ -288,7 +293,7 @@ class CalendarQuickControls(QWidget):
             t("calendar_controls.no_writable", "저장 가능한 캘린더 없음")
         )
         self.default_combo.setToolTip(
-            str((current or {}).get("name") or "")
+            calendar_display_name((current or {}).get("id"), (current or {}).get("name"))
             + "\n"
             + t("calendar_controls.default_hint", "새 일정을 만들 때 처음 선택되는 캘린더입니다.")
             + (

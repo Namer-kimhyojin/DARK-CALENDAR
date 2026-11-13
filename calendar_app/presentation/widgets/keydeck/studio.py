@@ -226,7 +226,6 @@ class KeyDeckStudioDialog(QDialog):
         self._last_tag_at = 0.0
         self._dirty = False
         self._preview_toggles: dict[str, bool] = {}
-        self._performance_dialog = None
         self._layout_root: Path | None = None  # 테스트에서 라이브러리 위치를 바꿀 때만 사용
         self._style_clipboard: dict | None = None
         self._tokens = get_dialog_theme_tokens()
@@ -1518,8 +1517,6 @@ class KeyDeckStudioDialog(QDialog):
 
     def force_close(self) -> None:
         """Close without prompting (application shutdown)."""
-        if self._performance_dialog is not None:
-            self._performance_dialog.reject()
         self._dirty = False
         super().reject()
 

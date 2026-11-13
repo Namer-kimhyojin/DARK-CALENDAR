@@ -11,7 +11,10 @@ from PyQt6.QtGui import QAction, QIcon, QPixmap
 from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
 from calendar_app.app_paths import APP_ICON_PATH
-from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key, register_all
+from calendar_app.infrastructure.runtime.keyboard_shortcuts import (
+    get_key,
+    register_app_shortcuts,
+)
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
@@ -167,7 +170,11 @@ def init_tray_icon(app):
     view_menu.setIcon(_ic(ICON.SCREEN_MGMT))
     view_menu.setStyleSheet(style)
     _create_action(
-        app, t("menu.auto_hide_topbar", "상단 바 자동 숨기기"), app.toggle_top_bar, "topbar", view_menu
+        app,
+        t("menu.auto_hide_topbar", "상단 바 자동 숨기기"),
+        app.toggle_top_bar,
+        "topbar",
+        view_menu,
     ).setIcon(_ic(ICON.TOOLBAR))
     _create_action(
         app, t("tray.calendar_topbar"), app.toggle_calendar_toolbar, "cal_toolbar", view_menu
@@ -211,7 +218,7 @@ def init_tray_icon(app):
     # Routine Settings (Dialog)
     _create_action(
         app,
-        t("tray.routine_manager").replace("관리자", "설정"),
+        t("tray.routine_settings", "⚙️ 일반업무 설정"),
         app.open_routine_management_dialog,
         "routine_mgr",
         mgr_menu,
@@ -441,8 +448,8 @@ def _toggle_lock_via_shortcut(app):
 
 
 def init_shortcuts(app):
-    """전역 단축키를 keyboard_shortcuts.register_all()에 위임하여 일괄 등록한다."""
-    register_all(app)
+    """OS 전역 단축키(창 표시/숨기기)와 앱 내 단축키를 일괄 등록한다."""
+    register_app_shortcuts(app)
 
 
 def toggle_overlay(app) -> None:

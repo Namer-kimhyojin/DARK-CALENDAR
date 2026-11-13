@@ -139,7 +139,7 @@ def test_ordinary_and_beatmaker_keydecks_expose_one_top_level_entry_without_chan
         assert observations == [True]
         assert owner.overlay_manager.added == ["loop_deck"]
         assert owner.overlay_manager.shown == ["loop_deck_7"]
-        assert widget.deck() == before and widget._performance_dialog is None
+        assert widget.deck() == before
     finally:
         widget.deleteLater()
         owner.deleteLater()

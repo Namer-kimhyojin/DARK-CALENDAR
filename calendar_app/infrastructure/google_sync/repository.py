@@ -186,10 +186,6 @@ def _choose_lookup_row(rows, canonical_calendar_id):
     return min(rows, key=lambda row: _lookup_row_priority(row, canonical_calendar_id))
 
 
-def _has_legacy_gcal_rows(cur):
-    return False
-
-
 def cleanup_duplicate_gcal_rows():
     conn = get_connection()
     if not conn:
@@ -481,82 +477,6 @@ def insert_gcal_event_to_unified(
     }
     # Honor the calendar pull transaction; token advancement follows its commit.
     return task_repo.create_unified_task(task_data, commit=commit)
-
-
-def find_unlinked_unified_task_for_gcal_payload(
-    summary,
-    start_str,
-    end_str,
-    all_day=0,
-    source_calendar_id=None,
-):
-    """
-    Find a local row that matches remote payload but has no gcal_event_id yet.
-    Used to relink rows detached by previous sync failures without creating duplicates.
-    """
-    conn = get_connection()
-    if not conn:
-        return None
-    try:
-        cur = conn.cursor()
-        has_sync_mode = False
-        try:
-            cur.execute("PRAGMA table_info(unified_task)")
-            has_sync_mode = any(
-                (row[1] if isinstance(row, tuple) else row["name"]) == "gcal_sync_mode"
-                for row in cur.fetchall()
-            )
-        except Exception:
-            has_sync_mode = False
-        if has_sync_mode:
-            cur.execute(
-                """
-                SELECT id
-                FROM unified_task
-                WHERE (gcal_event_id IS NULL OR trim(gcal_event_id) = '')
-                  AND type = 'schedule'
-                  AND COALESCE(gcal_sync_mode, 'unknown') IN ('unknown', 'remote_mirror')
-                  AND (
-                        ? IS NULL
-                        OR COALESCE(NULLIF(trim(gcal_source_calendar_id), ''), NULLIF(trim(gcal_target_calendar_id), ''), 'primary') = ?
-                  )
-                  AND name = ?
-                  AND deadline = ?
-                  AND COALESCE(end_date, '') = COALESCE(?, '')
-                  AND COALESCE(all_day, 0) = ?
-                ORDER BY id ASC
-                LIMIT 1
-                """,
-                (
-                    _normalize_calendar_id(source_calendar_id) if source_calendar_id else None,
-                    _normalize_calendar_id(source_calendar_id) if source_calendar_id else None,
-                    summary,
-                    start_str,
-                    end_str or "",
-                    int(bool(all_day)),
-                ),
-            )
-        else:
-            cur.execute(
-                """
-                SELECT id
-                FROM unified_task
-                WHERE (gcal_event_id IS NULL OR trim(gcal_event_id) = '')
-                  AND type = 'schedule'
-                  AND name = ?
-                  AND deadline = ?
-                  AND COALESCE(end_date, '') = COALESCE(?, '')
-                  AND COALESCE(all_day, 0) = ?
-                ORDER BY id ASC
-                LIMIT 1
-                """,
-                (summary, start_str, end_str or "", int(bool(all_day))),
-            )
-        row = cur.fetchone()
-        return int(row["id"]) if row else None
-    except Exception as e:
-        logger.error(f"Error finding unlinked unified task for gcal payload: {e}")
-        return None
 
 
 def delete_task_by_gcal_id(table, local_id, commit=True):

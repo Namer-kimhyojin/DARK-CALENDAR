@@ -20,6 +20,7 @@ import re
 import tempfile
 import threading
 import time
+from types import SimpleNamespace
 import wave
 import weakref
 
@@ -34,7 +35,11 @@ from calendar_app.domain.loop_mixer import (
     pcm_bytes,
 )
 from calendar_app.infrastructure.runtime.keydeck_audio import _WaveFormat, _WaveHeader
+from calendar_app.shared.qt_lifetime import call_when_destroyed
 
+# A live pad hit older than this is dropped (e.g. after suspend) instead of replayed.
+# 100 ms also dropped real taps whenever the UI briefly held the GIL.
+_LIVE_HIT_MAX_AGE_S = 0.25
 _LEASE_LOCK = threading.RLock()
 _ACTIVE = None
 _MIXERS = weakref.WeakSet()
@@ -45,6 +50,30 @@ _MAX_PROJECT_BYTES = 64 * 1024
 _MAX_ASSET_CACHE = 32 * 1024 * 1024
 _WHDR_DONE = 1
 _MAPPER = 0xFFFFFFFF
+_CALLBACK_EVENT = 0x00050000
+_TIME_SAMPLES, _TIME_BYTES = 2, 4
+_OUTPUT_BUFFERS = 3
+_OUTPUT_WAIT_MS = 20
+_OUTPUT_STALL_S = 1.0
+# The stall deadline counts time spent waiting for the device. monotonic() keeps
+# running through a system sleep, so one step longer than this means the thread did
+# not run at all: the deadline starts over instead of reporting a stalled device.
+_CLOCK_JUMP_S = 0.25
+_MIC_OPEN_JOIN_S = 2.0
+# Header, write and position calls return at once and never call back into Python:
+# they keep the GIL, so a busy UI thread cannot hold the audio thread back for a
+# whole switch interval after each one. Open, reset and close may block in the driver.
+_GIL_KEPT = frozenset(
+    {
+        "waveOutPrepareHeader",
+        "waveOutUnprepareHeader",
+        "waveOutWrite",
+        "waveOutGetPosition",
+        "waveInAddBuffer",  # re-queues a capture buffer on every block while recording
+    }
+)
+# Source id -> WAVs that KeyDeck can play (reported by the deck when its sounds change).
+_KEYDECK_SOUNDS = {}
 
 
 class _InputCaps(ctypes.Structure):
@@ -59,10 +88,17 @@ class _InputCaps(ctypes.Structure):
     ]
 
 
+class _MMTime(ctypes.Structure):
+    # MMTIME: a UINT type and an 8-byte union (only the DWORD sample/byte count is used).
+    _fields_ = [("wType", ctypes.c_uint32), ("value", ctypes.c_uint32), ("pad", ctypes.c_uint32)]
+
+
 def _winmm():
     if os.name != "nt":
         raise OSError("windows_audio_required")
     dll = ctypes.WinDLL("winmm.dll")
+    # x64 and ARM64 have a single calling convention, so PyDLL's cdecl is WINAPI there.
+    fast = ctypes.PyDLL("winmm.dll") if ctypes.sizeof(ctypes.c_void_p) == 8 else dll
     signatures = {
         "waveOutOpen": [
             ctypes.POINTER(ctypes.c_void_p),
@@ -93,13 +129,16 @@ def _winmm():
         for operation in ("Reset", "Close"):
             signatures[family + operation] = [ctypes.c_void_p]
     signatures["waveOutWrite"] = [ctypes.c_void_p, ctypes.POINTER(_WaveHeader), ctypes.c_uint32]
+    signatures["waveOutGetPosition"] = [ctypes.c_void_p, ctypes.POINTER(_MMTime), ctypes.c_uint32]
     signatures["waveInAddBuffer"] = [ctypes.c_void_p, ctypes.POINTER(_WaveHeader), ctypes.c_uint32]
     signatures["waveInStart"] = [ctypes.c_void_p]
+    api = SimpleNamespace()
     for name, arguments in signatures.items():
-        function = getattr(dll, name)
+        function = getattr(fast if name in _GIL_KEPT else dll, name)
         function.argtypes = arguments
         function.restype = ctypes.c_uint32
-    return dll
+        setattr(api, name, function)
+    return api
 
 
 def _check(code, operation):
@@ -122,14 +161,77 @@ def _devices(api):
     return rows
 
 
+class _Win32Event:
+    """Auto-reset event the driver signals whenever an output buffer completes.
+
+    Waiting on it releases the GIL and wakes the audio thread as soon as a buffer is
+    free. Polling every 2 ms (about 10 ms in practice) delivered only 36-56% of real
+    time while another thread kept the GIL busy.
+    """
+
+    def __init__(self):
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        create = kernel32.CreateEventW
+        create.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_wchar_p]
+        create.restype = ctypes.c_void_p
+        self._wait = kernel32.WaitForSingleObject
+        self._wait.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+        self._wait.restype = ctypes.c_uint32
+        self._signal = kernel32.SetEvent
+        self._close = kernel32.CloseHandle
+        for function in (self._signal, self._close):
+            function.argtypes = [ctypes.c_void_p]
+            function.restype = ctypes.c_int
+        self._lock = threading.Lock()
+        self.handle = create(None, False, False, None)
+        if not self.handle:
+            raise OSError(f"CreateEventW: Win32 {ctypes.get_last_error()}")
+
+    def wait(self, milliseconds):
+        self._wait(self.handle, milliseconds)
+
+    def wake(self):
+        with self._lock:
+            if self.handle:
+                self._signal(self.handle)
+
+    def close(self):
+        with self._lock:
+            handle, self.handle = self.handle, None
+        if handle:
+            self._close(handle)
+
+
+class _ThreadEvent:
+    """Portable stand-in used with injected test APIs; only ``wake`` signals it."""
+
+    handle = 0
+
+    def __init__(self):
+        self._event = threading.Event()
+
+    def wait(self, milliseconds):
+        if self._event.wait(milliseconds / 1000):
+            self._event.clear()
+
+    def wake(self):
+        self._event.set()
+
+    def close(self):
+        pass
+
+
 class WinMMLoopBackend:
     """One worker owns all headers, buffers and input/output native handles."""
 
-    def __init__(self, stop_event, *, api=None):
+    def __init__(self, stop_event, *, api=None, events=None):
         if _DRIVER_UNSAFE.is_set():
             raise OSError("audio_driver_cleanup_failed_restart_required")
         self.api = api if api is not None else _winmm()
+        self._new_event = events or (_Win32Event if api is None else _ThreadEvent)
+        self.event = None
         self.stop_event = stop_event
+        self.submitted_frames = 0
         self.output = ctypes.c_void_p()
         self.input = ctypes.c_void_p()
         self.outputs = []
@@ -141,10 +243,20 @@ class WinMMLoopBackend:
 
     def open_output(self):
         fmt = _WaveFormat(1, 2, SAMPLE_RATE, SAMPLE_RATE * 4, 4, 16, 0)
-        _check(
-            self.api.waveOutOpen(ctypes.byref(self.output), _MAPPER, ctypes.byref(fmt), 0, 0, 0),
-            "waveOutOpen",
+        event = self._new_event()
+        code = self.api.waveOutOpen(
+            ctypes.byref(self.output), _MAPPER, ctypes.byref(fmt), event.handle, 0, _CALLBACK_EVENT
         )
+        if code:
+            event.close()  # the device never opened, so nothing can signal it
+            _check(code, "waveOutOpen")
+        self.event = event
+
+    def wake(self):
+        """Another thread is stopping playback: end the current buffer wait now."""
+        event = self.event
+        if event is not None:
+            event.wake()
 
     def _release_outputs(self):
         remaining = []
@@ -160,16 +272,23 @@ class WinMMLoopBackend:
                 remaining.append((header, buffer))
         self.outputs = remaining
 
-    def write_output(self, data):
-        deadline = time.monotonic() + 1.0
+    def wait_output(self):
+        """Block until the device frees a buffer; False once stopping."""
+        waited, last = 0.0, time.monotonic()
         while not self.stop_event.is_set():
             self._release_outputs()
-            if len(self.outputs) < 3:
-                break
-            if time.monotonic() >= deadline:
+            if len(self.outputs) < _OUTPUT_BUFFERS:
+                return True
+            now = time.monotonic()
+            step, last = now - last, now
+            waited = waited + step if step < _CLOCK_JUMP_S else 0.0
+            if waited >= _OUTPUT_STALL_S:
                 raise OSError("output_device_stalled")
-            self.stop_event.wait(0.002)
-        if self.stop_event.is_set():
+            self.event.wait(_OUTPUT_WAIT_MS)
+        return False
+
+    def write_output(self, data):
+        if not self.wait_output():
             return False
         buffer = ctypes.create_string_buffer(data, len(data))
         header = _WaveHeader()
@@ -183,7 +302,35 @@ class WinMMLoopBackend:
             self.api.waveOutWrite(self.output, ctypes.byref(header), ctypes.sizeof(header)),
             "waveOutWrite",
         )
+        self.submitted_frames += len(data) // 4
         return True
+
+    def latency_frames(self):
+        """(output, input) frames between the speaker/microphone and the next block."""
+        output = 0
+        if self.output.value:
+            output = (
+                sum(
+                    header.dwBufferLength
+                    for header, _buffer in self.outputs
+                    if not header.dwFlags & _WHDR_DONE
+                )
+                // 4
+            )
+            position = _MMTime(_TIME_SAMPLES, 0, 0)
+            unit = None
+            if not self.api.waveOutGetPosition(
+                self.output, ctypes.byref(position), ctypes.sizeof(position)
+            ):
+                unit = {_TIME_SAMPLES: 1, _TIME_BYTES: 4}.get(position.wType)
+            if unit:
+                # The device position also counts what the audio engine still holds.
+                ahead = ((self.submitted_frames * unit - position.value) % (1 << 32)) // unit
+                if ahead <= output + SAMPLE_RATE // 5:
+                    output = ahead
+        # Captured audio waits in the FIFO, plus about one capture buffer before it.
+        microphone = len(self.fifo) // 4 + BLOCK_FRAMES if self.input.value else 0
+        return output, microphone
 
     def open_input(self, device_id):
         if self.input.value:
@@ -294,6 +441,10 @@ class WinMMLoopBackend:
                 _check(self.api.waveOutClose(self.output), "waveOutClose")
                 self.outputs.clear()
                 self.output = ctypes.c_void_p()
+            if self.event is not None:
+                # Only now: the driver may signal the event until waveOutClose returns.
+                event, self.event = self.event, None
+                event.close()
         except OSError:
             # Preserve native-owned allocations; prevent repeated failed sessions
             # from creating an unbounded retained-buffer collection.
@@ -333,6 +484,38 @@ def _write_wav(path, samples):
         output.writeframes(pcm_bytes(samples))
 
 
+class _MicrophoneOpener:
+    """Opens the microphone on a helper thread while the audio loop keeps playing.
+
+    waveInOpen and buffer setup can take tens of milliseconds; on the audio thread
+    they emptied the output queue when a recording started over a playing loop.
+    """
+
+    def __init__(self, backend, device):
+        self.error = None
+        self.thread = threading.Thread(
+            target=self._open, args=(backend, device), name="LoopMixerMicrophone", daemon=True
+        )
+        self.thread.start()
+
+    def _open(self, backend, device):
+        try:
+            backend.open_input(device)
+        except Exception as error:  # reported on the audio thread
+            self.error = error
+
+    def finished(self):
+        return not self.thread.is_alive()
+
+    def raise_error(self):
+        if self.error is not None:
+            raise self.error
+
+    def join(self, timeout):
+        self.thread.join(timeout)
+        return not self.thread.is_alive()
+
+
 def _active():
     with _LEASE_LOCK:
         return _ACTIVE() if _ACTIVE is not None else None
@@ -346,6 +529,28 @@ def route_keydeck_sound(source_id, path, gain):
 def stop_keydeck_source(source_id):
     mixer = _active()
     return mixer._stop_source(source_id) if mixer is not None else False
+
+
+def set_keydeck_sounds(source_id, paths):
+    """A KeyDeck lists the WAVs it can play; mixers it feeds decode them right away."""
+    source_id = str(source_id)
+    paths = tuple(dict.fromkeys(str(path) for path in paths if path))[:256]
+    with _LEASE_LOCK:
+        _KEYDECK_SOUNDS[source_id] = paths
+        mixers = list(_MIXERS)
+    for mixer in mixers:
+        mixer._warm_source(source_id)
+
+
+def _keydeck_sounds(source_id):
+    with _LEASE_LOCK:
+        return _KEYDECK_SOUNDS.get(source_id, ())
+
+
+def _shutdown_if_alive(ref):
+    mixer = ref()
+    if mixer is not None:
+        mixer.shutdown()
 
 
 class LoopMixer(QObject):
@@ -368,15 +573,19 @@ class LoopMixer(QObject):
         self._operation_id = self._completed_operation_id = 0
         self._operation_success = False
         self._microphone_device = "default"
+        self._backend = None
         self._cache = OrderedDict()
         self._cache_bytes = self._dropped_hits = 0
+        self._decode_errors = OrderedDict()
+        self._warm_queue = OrderedDict()
+        self._warm_thread = None
+        self._awaiting = []
         self._source_epoch = {}
         _MIXERS.add(self)
         app = QCoreApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self.shutdown)
-        ref = weakref.ref(self)
-        self.destroyed.connect(lambda _=None: (value := ref()) is not None and value.shutdown())
+        call_when_destroyed(self, _shutdown_if_alive, weakref.ref(self))
 
     def _fail(self, error, code=None):
         self._error = str(error)
@@ -398,7 +607,12 @@ class LoopMixer(QObject):
         return self._edit(lambda: self._state.configure(bpm, bars))
 
     def set_track(self, index, **settings):
-        return self._edit(lambda: self._state.set_track(index, **settings))
+        changed = self._edit(lambda: self._state.set_track(index, **settings))
+        source = settings.get("source")
+        if changed and isinstance(source, str) and source.startswith("launcher_deck_"):
+            # Decode the deck's sounds before its first hit reaches the audio thread.
+            self._warm(_keydeck_sounds(source))
+        return changed
 
     def set_master_volume(self, value):
         def update():
@@ -480,11 +694,15 @@ class LoopMixer(QObject):
                         target=self._run, name="LoopMixerAudio", daemon=True
                     )
                     self._thread.start()
-                return True
+                sources = self._state.sources()
             except (ValueError, TypeError, RuntimeError) as error:
                 self._state.stop(commit=False)
                 self._release()
                 return self._fail(error)
+        # A restored session or project connects KeyDecks without set_track().
+        for source in sources:
+            self._warm(_keydeck_sounds(source))
+        return True
 
     def play(self):
         return self._start()
@@ -502,8 +720,13 @@ class LoopMixer(QObject):
     def stop(self):
         self._stop_event.set()
         with self._lock:
+            backend = self._backend
             self._state.stop()
             self._drain_commands()
+            self._awaiting.clear()
+        wake = getattr(backend, "wake", None)  # test backends may omit it
+        if wake is not None:
+            wake()  # the audio thread may be waiting up to 20 ms for a buffer
         thread = self._thread
         if thread is not None and thread is not threading.current_thread():
             thread.join(timeout=0.3)
@@ -526,6 +749,8 @@ class LoopMixer(QObject):
         with self._lock:
             self._cache.clear()
             self._cache_bytes = 0
+            self._decode_errors.clear()
+            self._warm_queue.clear()
 
     def _route(self, source_id, path, gain):
         with self._lock:
@@ -566,67 +791,171 @@ class LoopMixer(QObject):
             self._state.stop_source(source_id)
             return True
 
-    def _asset(self, path):
+    @staticmethod
+    def _identity(path):
         stamp = Path(path).stat()
-        identity = (path, stamp.st_mtime_ns, stamp.st_size)
-        if identity in self._cache:
-            self._cache.move_to_end(identity)
-            return self._cache[identity]
-        samples = _read_wav(path)
-        self._cache[identity] = samples
-        self._cache_bytes += len(samples) * 2
-        while self._cache_bytes > _MAX_ASSET_CACHE or len(self._cache) > 64:
-            _old_key, old = self._cache.popitem(last=False)
-            self._cache_bytes -= len(old) * 2
+        return (path, stamp.st_mtime_ns, stamp.st_size)
+
+    def _cached(self, path):
+        """Decoded samples, or None until a decoder thread has them. Never decodes."""
+        identity = self._identity(path)
+        with self._lock:
+            samples = self._cache.get(identity)
+            if samples is not None:
+                self._cache.move_to_end(identity)
+                return samples
+            error = self._decode_errors.get(identity)
+        if error is not None:
+            raise error
+        return None
+
+    def _asset(self, path):
+        """Decoded samples, decoding now when needed (decoder thread or tests only)."""
+        samples = self._cached(path)
+        if samples is not None:
+            return samples
+        identity = self._identity(path)
+        try:
+            samples = _read_wav(path)
+        except (OSError, ValueError, EOFError, wave.Error) as error:
+            with self._lock:
+                self._decode_errors[identity] = error
+                while len(self._decode_errors) > 64:
+                    self._decode_errors.popitem(last=False)
+            raise
+        with self._lock:
+            if not self._closed and identity not in self._cache:
+                self._cache[identity] = samples
+                self._cache_bytes += len(samples) * 2
+                while self._cache_bytes > _MAX_ASSET_CACHE or len(self._cache) > 64:
+                    _old_key, old = self._cache.popitem(last=False)
+                    self._cache_bytes -= len(old) * 2
         return samples
 
-    def _process_block(self, microphone=b"", frames=BLOCK_FRAMES):
+    def _warm(self, paths):
+        """Decode KeyDeck sounds on a helper thread so the audio thread never has to."""
+        with self._lock:
+            if self._closed:
+                return
+            for path in paths:
+                self._warm_queue[str(path)] = None
+                self._warm_queue.move_to_end(str(path))
+            while len(self._warm_queue) > 256:
+                self._warm_queue.popitem(last=False)
+            if not self._warm_queue or self._warm_thread is not None:
+                return
+            thread = None
+            if self._threaded:
+                thread = self._warm_thread = threading.Thread(
+                    target=self._decode_pending, name="LoopMixerDecode", daemon=True
+                )
+        if thread is None:
+            self._decode_pending()
+            return
+        try:
+            thread.start()
+        except RuntimeError:
+            with self._lock:
+                self._warm_thread = None
+
+    def _warm_source(self, source):
+        with self._lock:
+            connected = source in self._state.sources()
+        if connected:
+            self._warm(_keydeck_sounds(source))
+
+    def _decode_pending(self):
+        while True:
+            with self._lock:
+                if self._closed or not self._warm_queue:
+                    self._warm_queue.clear()
+                    self._warm_thread = None
+                    return
+                path, _value = self._warm_queue.popitem(last=False)
+            # A failure is kept for the hit that needs this sound; it reports it.
+            with suppress(OSError, ValueError, EOFError, wave.Error):
+                self._asset(path)
+
+    def _process_block(self, microphone=b"", frames=BLOCK_FRAMES, *, latency=0, input_latency=0):
         # Also used by deterministic tests with threaded=False; never device I/O.
+        with self._lock:
+            commands, self._awaiting = self._awaiting, []
         for _ in range(64):
             try:
-                source, path, gain, created, epoch = self._commands.get_nowait()
+                commands.append(self._commands.get_nowait())
             except queue.Empty:
                 break
-            if time.monotonic() - created > 0.100:
-                self._dropped_hits += 1
+        for command in commands:
+            source, path, gain, created, epoch = command
+            if time.monotonic() - created > _LIVE_HIT_MAX_AGE_S:
+                with self._lock:
+                    self._dropped_hits += 1
                 continue
             try:
-                samples = self._asset(path)
+                # The audio thread never decodes: a 1 s 48 kHz 24-bit WAV took ~95 ms
+                # and cut the loop. Its hit waits here until a decoder thread is done.
+                samples = self._cached(path) if self._threaded else self._asset(path)
             except (OSError, ValueError, EOFError, wave.Error) as error:
                 with self._lock:
                     self._fail(error, "sound_unavailable")
                 continue
+            if samples is None:
+                with self._lock:
+                    if len(self._awaiting) < 64:
+                        self._awaiting.append(command)
+                    else:
+                        self._dropped_hits += 1
+                self._warm((path,))
+                continue
             with self._lock:
                 if (
                     epoch == self._source_epoch.get(source, 0)
-                    and time.monotonic() - created <= 0.100
+                    and time.monotonic() - created <= _LIVE_HIT_MAX_AGE_S
                 ):
                     self._state.add_voice(source, samples, gain)
                 else:
                     self._dropped_hits += 1
         with self._lock:
-            return self._state.render(frames, microphone)
+            return self._state.render(
+                frames, microphone, latency=latency, input_latency=input_latency
+            )
 
     def _run(self):
-        backend = None
+        backend = opener = None
         try:
             backend = self._backend_factory(self._stop_event)
+            with self._lock:
+                self._backend = backend
             backend.open_output()
+            latency = getattr(backend, "latency_frames", None)  # test backends may omit it
             input_open = False
-            while not self._stop_event.is_set():
+            # Render only once the device has a free buffer: a block rendered before
+            # that wait would hold back hits pressed meanwhile by one block (~20 ms).
+            while backend.wait_output():
                 with self._lock:
                     needs_input = self._state.mode == "recording" and any(
                         self._state.tracks[index].source == "mic" for index in self._state._pending
                     )
                     device = self._microphone_device
                 if needs_input and not input_open:
-                    backend.open_input(device)
-                    input_open = True
-                elif input_open and not needs_input:
+                    if not self._threaded:
+                        backend.open_input(device)
+                        input_open = True
+                    elif opener is None:
+                        opener = _MicrophoneOpener(backend, device)
+                    elif opener.finished():
+                        opener, ready = None, opener
+                        ready.raise_error()
+                        input_open = True
+                elif not needs_input and (input_open or (opener is not None and opener.finished())):
+                    opener = None
                     backend.close_input()
                     input_open = False
                 microphone = backend.read_input(BLOCK_FRAMES) if input_open else b""
-                data = self._process_block(microphone)
+                output_latency, input_latency = latency() if latency is not None else (0, 0)
+                data = self._process_block(
+                    microphone, latency=output_latency, input_latency=input_latency
+                )
                 # Auto-commit ends capture before waiting for output buffers. A
                 # stalled output device must never extend a completed mic take.
                 with self._lock:
@@ -637,16 +966,30 @@ class LoopMixer(QObject):
                 if not backend.write_output(data):
                     break
         except Exception as error:
+            # After a failed native cleanup only an app restart helps (see close()).
+            code = "audio_cleanup_failed" if _DRIVER_UNSAFE.is_set() else "audio_device_error"
             with self._lock:
-                self._state.stop(commit=False)
-                self._fail(error, "audio_device_error")
+                # Like pressing Stop: the part of a take recorded before the error stays.
+                if self._state.stop() and code == "audio_device_error":
+                    code = "audio_device_error_take_saved"
+                self._fail(error, code)
         finally:
+            with self._lock:
+                self._backend = None
             if backend is not None:
-                try:
-                    backend.close()
-                except OSError as error:
+                if opener is not None and not opener.join(_MIC_OPEN_JOIN_S):
+                    # The helper still owns a half-open microphone. Freeing the backend
+                    # now could race the driver, so keep it until the process ends.
+                    _DRIVER_UNSAFE.set()
+                    _RETAINED.append(backend)
                     with self._lock:
-                        self._fail(error, "audio_cleanup_failed")
+                        self._fail("microphone_open_timeout", "audio_cleanup_failed")
+                else:
+                    try:
+                        backend.close()
+                    except OSError as error:
+                        with self._lock:
+                            self._fail(error, "audio_cleanup_failed")
             self._release()
             with self._lock:
                 if self._closed:
@@ -857,6 +1200,34 @@ class LoopMixer(QObject):
             finally:
                 with suppress(FileNotFoundError):
                     os.unlink(temporary)
+            # Every take adds a clip; drop the ones this save no longer references so
+            # the folder never reaches the asset limit. Only digest names written above.
+            referenced = {row["pcm_sha256"] + ".wav" for row in rows if "pcm_sha256" in row}
+            # "X.airloop" and "X.json" share "X.assets": keep the other project's clips.
+            for sibling in target.parent.iterdir():
+                if sibling.stem != target.stem or sibling == target or not sibling.is_file():
+                    continue
+                try:
+                    other = json.loads(sibling.read_text(encoding="utf-8", errors="strict"))
+                    tracks = other.get("tracks", []) if isinstance(other, dict) else []
+                    referenced |= {
+                        str(track["pcm_sha256"]) + ".wav"
+                        for track in tracks
+                        if isinstance(track, dict) and "pcm_sha256" in track
+                    }
+                except ValueError:
+                    continue  # not a project file
+                except OSError:
+                    return  # cannot tell what it uses; keep every clip
+            for item in assets.iterdir():
+                if (
+                    re.fullmatch(r"[a-f0-9]{64}\.wav", item.name)
+                    and item.name not in referenced
+                    and item.is_file()
+                    and not item.is_symlink()
+                ):
+                    with suppress(OSError):
+                        item.unlink()
 
         return self._file_job("save_project", save)
 
@@ -922,6 +1293,10 @@ class LoopMixer(QObject):
                 self._check_cancel()
             with self._lock:
                 self._state = state
+            # Decks that reported their sounds before this session connected them are
+            # decoded now, not by the first hits after Play.
+            for source in state.sources():
+                self._warm(_keydeck_sounds(source))
 
         return self._file_job("load_project", load, require_idle=True)
 
@@ -933,4 +1308,4 @@ def _shutdown_mixers():
 
 atexit.register(_shutdown_mixers)
 
-__all__ = ["LoopMixer", "route_keydeck_sound", "stop_keydeck_source"]
+__all__ = ["LoopMixer", "route_keydeck_sound", "set_keydeck_sounds", "stop_keydeck_source"]

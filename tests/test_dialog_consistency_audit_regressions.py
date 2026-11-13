@@ -22,7 +22,6 @@ from calendar_app.presentation.dialogs.checklist_manager_dialog_advanced import 
 from calendar_app.presentation.dialogs.dialog_token_editor_dialog import DialogTokenEditorDialog
 from calendar_app.presentation.dialogs.label_settings_dialog import LabelSettingsDialog
 from calendar_app.presentation.dialogs.management_dialogs import WorkManagementTabbedDialog
-from calendar_app.presentation.dialogs.routine_recurrence_wizard import RoutineRecurrenceWizard
 from calendar_app.shared.color_utils import contrast_ratio
 from calendar_app.shared.icon_map import ICON
 from tests.support import TemporaryDatabaseTestCase
@@ -54,35 +53,6 @@ class DialogConsistencyAuditRegressions(TemporaryDatabaseTestCase):
         self.host.view_mode_state = "monthly"
         self.host.cal_show_weekends = True
         self.host.cal_start_monday = False
-
-    def test_recurrence_preview_keeps_neutral_text_and_displays_actual_date(self):
-        dialog = RoutineRecurrenceWizard(self.host.current_date, parent=self.host)
-        self.addCleanup(dialog.close)
-        self.assertIn(dialog.get_result()["next_occurrence"], dialog.next_label.text())
-        self.assertIn(dialog._ui_tokens["text_primary"], dialog.summary_label.styleSheet())
-        self.assertIn(dialog._ui_tokens["text_secondary"], dialog.next_label.styleSheet())
-        self.assertNotIn("color: white", dialog.summary_label.styleSheet())
-        self.assertNotIn("#9fe2a3", dialog.next_label.styleSheet())
-        self.assertIn(f"background: {dialog._ui_tokens['check_checked_bg']};", dialog.styleSheet())
-
-    def test_recurrence_compatible_with_a_prefix_without_date_placeholder(self):
-        from calendar_app.presentation.dialogs import routine_recurrence_wizard as wizard
-
-        original = wizard.t
-
-        def translate(key, *args, **kwargs):
-            return (
-                "다음:"
-                if key == "recurrence.next_occurrence_prefix"
-                else original(key, *args, **kwargs)
-            )
-
-        with patch.object(wizard, "t", side_effect=translate):
-            dialog = RoutineRecurrenceWizard(self.host.current_date, parent=self.host)
-        self.addCleanup(dialog.close)
-        self.assertEqual(
-            dialog.next_label.text(), f"다음: {dialog.get_result()['next_occurrence']}"
-        )
 
     def test_token_presets_are_ready_on_initial_open_and_follow_explicit_draft_mode(self):
         dialog = DialogTokenEditorDialog(self.host, text_theme="light", persist_on_apply=False)

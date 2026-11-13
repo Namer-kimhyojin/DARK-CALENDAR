@@ -42,8 +42,12 @@ class MainTypographyRoleTests(TemporaryDatabaseTestCase):
         self.settings.setFallbacksEnabled(False)
         self.settings.setValue("gcal_enabled", False)
         self.widgets = []
-        self.enterContext(patch("calendar_app.shared.theme_settings.QSettings", return_value=self.settings))
-        self.enterContext(patch("calendar_app.shared.theme_snapshot.QSettings", return_value=self.settings))
+        self.enterContext(
+            patch("calendar_app.shared.theme_settings.QSettings", return_value=self.settings)
+        )
+        self.enterContext(
+            patch("calendar_app.shared.theme_snapshot.QSettings", return_value=self.settings)
+        )
 
     def tearDown(self):
         for widget in self.widgets:
@@ -143,7 +147,9 @@ class MainTypographyRoleTests(TemporaryDatabaseTestCase):
                     lambda: None,
                     tid=1,
                     checklist_display_type="process",
-                    checklist_items=[(f"{index}번째 확인 항목", False, lambda: None) for index in range(1, 12)],
+                    checklist_items=[
+                        (f"{index}번째 확인 항목", False, lambda: None) for index in range(1, 12)
+                    ],
                 )
                 self.widgets.append(card)
                 card.resize(400, card.sizeHint().height())
@@ -157,7 +163,8 @@ class MainTypographyRoleTests(TemporaryDatabaseTestCase):
                     self.assertAlmostEqual(text.font().pointSizeF(), scale.caption_pt, delta=0.1)
                     self.assertGreaterEqual(row.height(), text.fontMetrics().height() + 4)
                     self.assertGreaterEqual(
-                        indicator.width(), indicator.fontMetrics().horizontalAdvance(indicator.text())
+                        indicator.width(),
+                        indicator.fontMetrics().horizontalAdvance(indicator.text()),
                     )
                     self.assertGreaterEqual(indicator.height(), indicator.fontMetrics().height())
 
@@ -177,7 +184,9 @@ class MainTypographyRoleTests(TemporaryDatabaseTestCase):
                 section = QFontMetrics(grid._role_font("section"))
                 body = QFontMetrics(grid._role_font())
                 self.assertEqual(grid._role_font().pointSizeF(), scale.body_pt)
-                self.assertGreaterEqual(grid.HEADER_HEIGHT, caption.height() + section.height() + 12)
+                self.assertGreaterEqual(
+                    grid.HEADER_HEIGHT, caption.height() + section.height() + 12
+                )
                 self.assertGreaterEqual(grid.ALL_DAY_ROW, body.height() + 8)
                 self.assertGreaterEqual(grid.GUTTER, caption.horizontalAdvance("00:00") + 18)
                 self.assertGreaterEqual(grid.HEADER_HEIGHT, previous)

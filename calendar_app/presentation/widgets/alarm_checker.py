@@ -24,10 +24,12 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
 import time
+import weakref
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSlot
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.shared.qt_lifetime import call_when_destroyed
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,12 @@ _GRACE_PAST_SECS = 7200
 # How far into the future to consider: only the next poll interval.
 # Keeps alarms from firing early; grace window covers missed/past alarms.
 _LOOK_AHEAD_SECS = _POLL_INTERVAL_MS // 1000  # 60 s
+
+
+def _forget_popup(popups: list, ref) -> None:
+    popup = ref()
+    if popup in popups:
+        popups.remove(popup)
 
 
 class TaskAlarmChecker(QObject):
@@ -271,9 +279,7 @@ class TaskAlarmChecker(QObject):
         popup._alarm_key = key  # used by dedup guard above
         # Append before stacking so _stack_popup sees the full list height
         self._active_popups.append(popup)
-        popup.destroyed.connect(
-            lambda: self._active_popups.remove(popup) if popup in self._active_popups else None
-        )
+        call_when_destroyed(popup, _forget_popup, self._active_popups, weakref.ref(popup))
         self._stack_popup(popup)
         popup.show()
 

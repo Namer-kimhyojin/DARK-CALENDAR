@@ -20,7 +20,18 @@ import os as _os
 import re as _re
 import time
 
-from PyQt6.QtCore import QDate, QEvent, QPoint, QRect, QRectF, QSize, Qt, QTime, QTimer
+from PyQt6.QtCore import (
+    QDate,
+    QDateTime,
+    QEvent,
+    QPoint,
+    QRect,
+    QRectF,
+    QSize,
+    Qt,
+    QTime,
+    QTimer,
+)
 from PyQt6.QtGui import (
     QColor,
     QFont,
@@ -627,7 +638,7 @@ _PRESET_FALLBACK: dict = {
         {
             "label_key": "widget.datecard.preset_month_day",
             "label_default": "Month.Day",
-            "template": "{month|size=18|color=muted}\n{day|size=48|bold}",
+            "template": "{month:standalone|size=18|color=muted}\n{day|size=48|bold}",
         },
         {
             "label_key": "widget.datecard.preset_en_week",
@@ -699,7 +710,11 @@ _PRESET_FALLBACK: dict = {
         {
             "label_key": "widget_text.preset_conditional_task",
             "label_default": "Conditional Tasks",
-            "template": "{if task_count > 0}Tasks {task_count|size=28|bold}\n{next_event|size=11|color=muted}{else}No tasks today{/if}",
+            "template": "{if task_count > 0}[[tasks]] {task_count|size=28|bold}\n{next_event|size=11|color=muted}{else}[[no_tasks_today]]{/if}",
+            "text_keys": {
+                "tasks": ["widget_text.preset_body.tasks", "할 일"],
+                "no_tasks_today": ["widget_text.preset_body.no_tasks_today", "오늘 할 일 없음"],
+            },
         },
         {
             "label_key": "widget_text.preset_clock_stopwatch",
@@ -709,7 +724,10 @@ _PRESET_FALLBACK: dict = {
         {
             "label_key": "widget_text.preset_dashboard",
             "label_default": "Dashboard",
-            "template": "{time:%H:%M|size=26|bold}  {date:%m.%d|size=11|color=muted}\nTasks {task_count|size=13|bold}  {next_event|size=10|color=muted}",
+            "template": "{time:%H:%M|size=26|bold}  {date:%m.%d|size=11|color=muted}\n[[tasks]] {task_count|size=13|bold}  {next_event|size=10|color=muted}",
+            "text_keys": {
+                "tasks": ["widget_text.preset_body.tasks", "할 일"],
+            },
         },
         {
             "label_key": "widget_text.preset_time_only",
@@ -719,7 +737,7 @@ _PRESET_FALLBACK: dict = {
         {
             "label_key": "widget_text.preset_world_time",
             "label_default": "World Time",
-            "template": "{time:%H:%M|size=28|bold}  KST\n{time:tz=UTC:%H:%M|size=20|color=muted}  UTC",
+            "template": "{time:%H:%M|size=28|bold}  [[local_tz]]\n{time:tz=UTC:%H:%M|size=20|color=muted}  UTC",
         },
         {
             "label_key": "widget_text.preset_custom_var",
@@ -729,7 +747,10 @@ _PRESET_FALLBACK: dict = {
         {
             "label_key": "widget_text.preset_countdown_alert",
             "label_default": "Countdown Alert",
-            "template": "{if countdown:countdown_0 < 1h}곧 종료!{else}{countdown:countdown_0|size=24|bold}{/if}",
+            "template": "{if countdown:countdown_0 < 1h}[[ending_soon]]{else}{countdown:countdown_0|size=24|bold}{/if}",
+            "text_keys": {
+                "ending_soon": ["widget_text.preset_body.ending_soon", "곧 종료!"],
+            },
         },
     ],
     "weather": [
@@ -917,10 +938,56 @@ def _get_widget_presets(widget_type: str, translate_fn, default_template: str = 
             continue
         if _tmpl == "__DEFAULT__":
             _tmpl = default_template
+        else:
+            _tmpl = _fill_preset_text_slots(_tmpl, _entry.get("text_keys"), translate_fn)
         if validate_widget_template(_kind, _tmpl):
             continue
         _result.append((_label, _tmpl))
     return _result
+
+
+_PRESET_TEXT_SLOT_RE = _re.compile(r"\[\[(\w+)\]\]")
+
+
+def _local_timezone_label() -> str:
+    """Short label for the system time zone: its abbreviation, else ``UTC+9`` style."""
+    now = QDateTime.currentDateTime()
+    abbreviation = now.timeZoneAbbreviation().strip()
+    if _re.fullmatch(r"[A-Z]{2,5}", abbreviation):
+        return abbreviation
+    offset = now.offsetFromUtc() // 60
+    sign = "+" if offset >= 0 else "-"
+    hours, minutes = divmod(abs(offset), 60)
+    return f"UTC{sign}{hours}" if minutes == 0 else f"UTC{sign}{hours}:{minutes:02d}"
+
+
+def _text_engine_has_tz_label() -> bool:
+    """True once text-widget templates accept a live ``{tz_label}`` token."""
+    return not validate_widget_template("text", "{tz_label}")
+
+
+def _fill_preset_text_slots(template: str, text_keys, translate_fn) -> str:
+    """Fill a shipped preset's ``[[slot]]`` markers when the preset is offered.
+
+    ``[[local_tz]]`` becomes the live ``{tz_label}`` token when the text engine
+    supports it, else the current system time-zone label. Other slots come from
+    the entry's ``text_keys`` (slot -> [locale key, Korean default]). Saved user
+    templates never pass through here, so they keep the text they were saved with.
+    """
+    if "[[" not in template:
+        return template
+    slots = text_keys if isinstance(text_keys, dict) else {}
+
+    def _fill(match: _re.Match) -> str:
+        slot = match.group(1)
+        if slot == "local_tz":
+            return "{tz_label}" if _text_engine_has_tz_label() else _local_timezone_label()
+        spec = slots.get(slot)
+        if isinstance(spec, list) and len(spec) == 2:
+            return str(translate_fn(spec[0], spec[1]))
+        return match.group(0)
+
+    return _PRESET_TEXT_SLOT_RE.sub(_fill, template)
 
 
 def _build_face_ss(
@@ -2306,8 +2373,9 @@ class _BaseOverlayWidget(WidgetGraphicRuntimeMixin, QWidget):
 
         def _set_open(open_: bool):
             toggle_btn.setChecked(open_)
+            # The label already names the hints, so no English "Hint" prefix.
             toggle_btn.setText(
-                f"Hint {t('widget.common.hint_label', 'Help')}  {'v' if open_ else '>'}"
+                f"{t('widget.common.hint_label', '문법 힌트')}  {'v' if open_ else '>'}"
             )
             content.setVisible(open_)
             if settings_key:

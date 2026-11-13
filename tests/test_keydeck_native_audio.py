@@ -137,12 +137,22 @@ def test_corrupt_and_truncated_wav_are_rejected(tmp_path):
         audio._load_wave(str(valid))
 
 
-def test_preload_reads_assets_without_opening_audio_device(player, tmp_path):
+def test_preload_stays_device_free_and_a_shown_deck_opens_voices_ahead(player, tmp_path):
     instance, api = player
     path = _wav(tmp_path / "click.wav")
     instance.preload([path], voices=2)
     assert path in instance.assets
     assert api.calls == []
+    # A visible deck holds the device: voices open before the first tap needs one.
+    while instance.prime_step():
+        pass
+    assert api.calls == ["open"] * audio._PRIMED_VOICES
+    instance.play(path, 1.0)
+    assert api.calls[audio._PRIMED_VOICES :] == ["prepare", "write"]
+    # Hiding the deck closes idle voices; the sounding one closes once finished.
+    instance.close_idle()
+    assert api.calls.count("close") == audio._PRIMED_VOICES - 1
+    assert len(instance.voices) == 1 and instance.voices[0].busy
 
 
 def test_overlapping_voices_keep_samples_alive_and_gain_is_per_play(player, tmp_path):
@@ -393,3 +403,11 @@ def test_stop_all_discards_pending_hits_before_next_performance(monkeypatch):
     finally:
         release.set()
         bank._shutdown()
+
+
+def test_nearby_random_gains_share_one_cached_buffer(player, tmp_path):
+    instance, _api = player
+    path = _wav(tmp_path / "bottom.wav")
+    pcm = instance._asset(path)
+    first = instance._samples(path, pcm, 0.5012)
+    assert instance._samples(path, pcm, 0.4996) is first

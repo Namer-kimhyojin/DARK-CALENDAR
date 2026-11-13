@@ -8,7 +8,8 @@ from types import SimpleNamespace
 import webbrowser
 from zoneinfo import ZoneInfo, available_timezones
 
-from PyQt6.QtCore import QSettings, QSize, Qt, QTimer, QTimeZone
+from PyQt6.QtCore import QSettings, QSize, Qt, QTimer
+from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -57,14 +58,19 @@ from calendar_app.presentation.dialogs.sync_feedback import (
     google_sync_error_code,
     sync_error_message,
 )
+from calendar_app.presentation.locale_names import calendar_display_name
 from calendar_app.shared.calendar_defaults import DEFAULT_CALENDAR_COLOR
 from calendar_app.shared.color_utils import parse_hex_color
 from calendar_app.shared.datetime_utils import timezone_offset_for_name
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.typography import fitted_text_width
 
 _GCAL_STYLE_TEMPLATE = ""
+# The nav column was a fixed 152px; longer labels widen it up to the cap.
+_SIDEBAR_MIN_WIDTH = 152
+_SIDEBAR_MAX_WIDTH = 280
 
 
 def _gcal_auth_error_text(kind):
@@ -476,7 +482,7 @@ class GCalSettingsDialog(QDialog):
         sidebar = QFrame()
         sidebar.setObjectName("sidebar")
         sidebar.setStyleSheet(self._style_bundle["sidebar_shell"])
-        sidebar.setFixedWidth(152)
+        sidebar.setFixedWidth(_SIDEBAR_MIN_WIDTH)
         layout = QVBoxLayout(sidebar)
         layout.setContentsMargins(8, 16, 8, 16)
         layout.setSpacing(6)
@@ -516,7 +522,46 @@ class GCalSettingsDialog(QDialog):
             layout.addWidget(btn)
 
         layout.addStretch(1)
+        self._fit_sidebar_width(sidebar, layout)
         return sidebar
+
+    def _fit_sidebar_width(self, sidebar: QFrame, layout: QVBoxLayout):
+        """Widen the nav column to its longest label, never below 152px.
+
+        A fixed 152px clipped most translations ("Account connection" needs about
+        186px) and, with Malgun Gothic, the Korean "가져올 캘린더" by 8px. Past the
+        cap a label is elided and its full text moves to the tooltip.
+        """
+        if not self._nav_btns:
+            return
+        for btn in self._nav_btns:
+            btn.ensurePolished()
+        # Icon, padding and border around the text, from the polished style.
+        chrome = min(
+            btn.sizeHint().width() - btn.fontMetrics().horizontalAdvance(btn.text())
+            for btn in self._nav_btns
+        )
+        # The checked button draws its label bold, the widest state.
+        bold = QFont(self._nav_btns[0].font())
+        bold.setWeight(QFont.Weight.Bold)
+        metrics = QFontMetrics(bold)
+        margins = layout.contentsMargins()
+        # QFrame#sidebar right border, plus 2px for advance rounding between weights.
+        outer = margins.left() + margins.right() + 1 + 2
+        labels = [btn.text() for btn in self._nav_btns]
+        width = fitted_text_width(
+            metrics,
+            labels,
+            minimum=_SIDEBAR_MIN_WIDTH,
+            maximum=_SIDEBAR_MAX_WIDTH,
+            padding=chrome + outer,
+        )
+        sidebar.setFixedWidth(width)
+        room = width - chrome - outer
+        for btn, label in zip(self._nav_btns, labels, strict=True):
+            if metrics.horizontalAdvance(label) > room:
+                btn.setText(metrics.elidedText(label, Qt.TextElideMode.ElideRight, room))
+                btn.setToolTip(label)
 
     def _switch_section(self, idx: int):
         for i, btn in enumerate(self._nav_btns):
@@ -1508,6 +1553,7 @@ class GCalSettingsDialog(QDialog):
         from calendar_app.infrastructure.google_sync.common import (
             get_default_gcal_calendar_id,
             is_gcal_enabled,
+            sync_time_zone,
         )
 
         self.enable_cb.setChecked(is_gcal_enabled(self.settings))
@@ -1523,9 +1569,7 @@ class GCalSettingsDialog(QDialog):
             and not (sync and getattr(sync, "is_authenticated", False))
         )
         self._set_calendar_choices([])
-        self._populate_timezones(
-            str(self.settings.value("gcal_timezone", "Asia/Seoul") or "Asia/Seoul")
-        )
+        self._populate_timezones(sync_time_zone(self.settings))
 
     def _setting_interval(self, key, default, minimum, maximum):
         try:
@@ -1566,17 +1610,9 @@ class GCalSettingsDialog(QDialog):
             )
 
     def _system_timezone(self) -> str:
-        try:
-            # QTimeZone is much more reliable on Windows than standard datetime.astimezone()
-            tz_id = QTimeZone.systemTimeZoneId().data().decode("utf-8", errors="replace")
-            if tz_id:
-                return tz_id
-        except Exception:
-            pass
+        from calendar_app.infrastructure.google_sync.common import _system_time_zone
 
-        local_tz = datetime.now().astimezone().tzinfo
-        key = getattr(local_tz, "key", None)
-        return key or "UTC"
+        return _system_time_zone()
 
     def _apply_system_timezone(self):
         tz_name = self._system_timezone()
@@ -1806,7 +1842,8 @@ class GCalSettingsDialog(QDialog):
                 self,
                 t("gcal_settings.export_diagnostics_save_title", "동기화 진단 리포트 저장"),
                 os.path.join(os.path.expanduser("~"), default_name),
-                "Text Files (*.txt);;All Files (*)",
+                f"{t('common.file_filter_text', '텍스트 파일 (*.txt)')};;"
+                f"{t('common.file_filter_all', '모든 파일 (*)')}",
             )
             if not file_path:
                 return
@@ -2188,7 +2225,7 @@ class GCalSettingsDialog(QDialog):
             self,
             t("gcal_settings.creds_dialog_title", "credentials.json 선택"),
             start_dir,
-            "JSON Files (*.json)",
+            t("common.file_filter_json", "JSON 파일 (*.json)"),
         )
         dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
         dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
@@ -2378,7 +2415,7 @@ class GCalSettingsDialog(QDialog):
         self._set_query_feedback(
             t(
                 "gcal_settings.test_access_ok",
-                "접근 확인: {name} (계정 캘린더 {count}개)",
+                "접근 확인됨: {name} (계정 캘린더 {count}개)",
                 name=(matched or {}).get("summary", cal_id),
                 count=len(worker.calendars),
             )
@@ -2672,7 +2709,10 @@ class GCalSettingsDialog(QDialog):
             message += "\n" + t(
                 "gcal_focus.default_changed",
                 "가져오기를 끈 캘린더 대신 '{name}'을 새 일정의 기본 저장 캘린더로 지정했습니다. 메인 캘린더에서 변경할 수 있습니다.",
-                name=(selection_result.default_calendar or {}).get("name", ""),
+                name=calendar_display_name(
+                    (selection_result.default_calendar or {}).get("id"),
+                    (selection_result.default_calendar or {}).get("name"),
+                ),
             )
         self._settings_dirty = False
         self._applied_changes = True
@@ -2709,10 +2749,14 @@ class GCalSettingsDialog(QDialog):
             return
         reply = QMessageBox.warning(
             self,
-            t("gcal_settings.reset_title", "Disconnect reset"),
+            t("gcal_settings.reset_title", "연동 초기화"),
             t(
                 "gcal_settings.reset_confirm",
-                "Delete Google auth/token data and reset linked calendar/subscription info as well?",
+                "Google 계정 연결을 해제할까요?\n\n"
+                "저장된 인증 정보와 토큰을 삭제하고, 앱에 추가된 Google 캘린더와 구독을 모두 "
+                "제거합니다. 이미 가져온 일정은 앱에 남지만 더 이상 Google과 동기화되지 않으며, "
+                "대기 중인 Google 삭제 요청도 취소됩니다.\n\n"
+                "Google 캘린더의 일정은 변경되지 않습니다.",
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
@@ -2816,10 +2860,11 @@ class GCalSettingsDialog(QDialog):
             return
         QMessageBox.information(
             self,
-            t("gcal_settings.reset_done_title", "Reset complete"),
+            t("gcal_settings.reset_done_title", "초기화 완료"),
             t(
                 "gcal_settings.reset_done_body",
-                "Google auth/linkage data was cleared.\nRemoved calendars: {cal_count}\nRemoved subscriptions: {sub_count}",
+                "Google 동기화 인증 정보가 제거되었습니다.\n"
+                "제거된 캘린더: {cal_count}개\n제거된 구독: {sub_count}개",
                 cal_count=removed_calendar_count,
                 sub_count=removed_subscription_count,
             ),

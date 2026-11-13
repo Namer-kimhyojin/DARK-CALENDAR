@@ -35,7 +35,12 @@ def settings(tmp_path):
 
 @pytest.mark.parametrize(
     ("base", "accent"),
-    [("#0d1b2e", "#4da6ff"), ("#f8f1e7", "#b7791f"), ("#121212", "#f8f8f2"), ("#fff9db", "#e0b100")],
+    [
+        ("#0d1b2e", "#4da6ff"),
+        ("#f8f1e7", "#b7791f"),
+        ("#121212", "#f8f8f2"),
+        ("#fff9db", "#e0b100"),
+    ],
 )
 def test_recommended_border_separates_quietly_and_leans_to_the_accent(base, accent):
     border = recommend_border_color(base, accent)
@@ -157,7 +162,9 @@ def test_every_palette_path_follows_the_chosen_border_but_panel_gaps_stay_neutra
     assert not palette["separator_bg"].startswith("rgba(255, 45, 85,")
     # Grid lines (divider) and the gaps between panels (separator) included.
     assert build_shared_ui_tokens(settings)["divider"].startswith("rgba(255, 45, 85,")
-    separator_rule = build_dock_manager_style(settings, "#4da6ff").split("QMainWindow::separator {")[1]
+    separator_rule = build_dock_manager_style(settings, "#4da6ff").split(
+        "QMainWindow::separator {"
+    )[1]
     assert "255, 45, 85" not in separator_rule.split("}")[0]
 
 
@@ -173,5 +180,7 @@ def test_main_window_keeps_its_panel_separator_rules_after_a_font_change(setting
     )
     monkeypatch.setattr(QApplication.instance(), "setStyleSheet", lambda *_a: None)
     monkeypatch.setattr(QApplication.instance(), "setFont", lambda *_a: None)
-    window_ui_actions.MainWindowUiActionsMixin.apply_font_settings(host, "Malgun Gothic", 11, refresh=False)
+    window_ui_actions.MainWindowUiActionsMixin.apply_font_settings(
+        host, "Malgun Gothic", 11, refresh=False
+    )
     assert "QMainWindow::separator" in applied["css"]

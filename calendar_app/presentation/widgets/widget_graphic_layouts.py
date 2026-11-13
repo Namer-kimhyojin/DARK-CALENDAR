@@ -4,12 +4,19 @@
 from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import QPainterPath, QPen, QRadialGradient
 
-from calendar_app.presentation.widgets.widget_graphic_catalog import graphic_collection
+from calendar_app.presentation.widgets.widget_graphic_catalog import (
+    CLOCK_FLIPBOOK_COLLECTION_IDS,
+    graphic_collection,
+)
 
 
 def paint_design_decoration(surface, painter):
     design = graphic_collection(surface.collection_id)
-    if design is None or not design.widget_kind:
+    if (
+        design is None
+        or not design.widget_kind
+        or design.collection_id in CLOCK_FLIPBOOK_COLLECTION_IDS
+    ):
         return
     w, h = surface.width(), surface.height()
     _, _, accent = surface._palette()

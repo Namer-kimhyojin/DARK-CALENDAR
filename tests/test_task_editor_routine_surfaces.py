@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Routine editor surface and footer regressions from native Windows evidence."""
+
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -60,9 +61,11 @@ class RoutineEditorSurfaceTests(TemporaryDatabaseTestCase):
         pane = dialog.styleSheet()[pane_start:].split("}", 1)[0]
         self.assertIn(f"background: {expected['floating_bg']};", pane)
         self.assertNotIn("rgba(20,110,190,200)", pane)
-        selected_tab = dialog.styleSheet().split(
-            "QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar::tab:selected", 1
-        )[1].split("}", 1)[0]
+        selected_tab = (
+            dialog.styleSheet()
+            .split("QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar::tab:selected", 1)[1]
+            .split("}", 1)[0]
+        )
         self.assertIn(f"background: {expected['tab_active_bg']};", selected_tab)
 
     def test_each_tab_explicitly_keeps_viewport_and_content_transparent(self):
@@ -79,11 +82,15 @@ class RoutineEditorSurfaceTests(TemporaryDatabaseTestCase):
 
     def test_routine_footer_has_one_consistent_height_and_visible_full_labels(self):
         dialog = self._dialog()
-        buttons = [button for button in dialog.findChildren(QPushButton) if button.property("dialogFooter")]
+        buttons = [
+            button for button in dialog.findChildren(QPushButton) if button.property("dialogFooter")
+        ]
         self.assertEqual(len(buttons), 4)
         self.assertEqual(len({button.height() for button in buttons}), 1)
         for button in buttons:
             with self.subTest(label=button.text()):
                 self.assertGreaterEqual(button.height(), 44)
-                self.assertGreaterEqual(button.width(), button.fontMetrics().horizontalAdvance(button.text()))
+                self.assertGreaterEqual(
+                    button.width(), button.fontMetrics().horizontalAdvance(button.text())
+                )
                 self.assertTrue(button.isVisible())

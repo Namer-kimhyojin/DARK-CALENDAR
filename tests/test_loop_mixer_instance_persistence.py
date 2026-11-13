@@ -8,6 +8,7 @@ from PyQt6.QtCore import QCoreApplication, QEvent, QPoint, QRect, QSettings
 from PyQt6.QtWidgets import QApplication, QPushButton, QWidget
 import pytest
 
+from calendar_app import app_paths
 from calendar_app.infrastructure.runtime import loop_mixer_audio
 from calendar_app.presentation.widgets.overlay_launcher_deck import open_loop_mixer_widget
 from calendar_app.presentation.widgets.overlay_loop_deck import OverlayLoopDeckWidget
@@ -21,6 +22,7 @@ def session(tmp_path, monkeypatch):
     previous = app.property(EXITING_PROPERTY)
     app.setProperty(EXITING_PROPERTY, False)
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    monkeypatch.setattr(app_paths, "LOOP_MIXER_DIR", str(tmp_path / "local" / "loop-mixer"))
     # This scenario persists a 960x760 window. Supply a work area that can fit
     # it; small-screen clamping is exercised by test_loop_mixer_geometry.py.
     desktop = SimpleNamespace(

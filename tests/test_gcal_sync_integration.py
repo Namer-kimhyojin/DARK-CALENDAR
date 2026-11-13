@@ -66,7 +66,7 @@ class FakeSyncService:
         self.calendar_id = "primary"
         self.time_zone = "Asia/Seoul"
 
-    def authenticate(self, parent_widget=None, interactive=True):
+    def authenticate(self, interactive=True):
         self.is_authenticated = self.authenticate_result
         return self.authenticate_result
 

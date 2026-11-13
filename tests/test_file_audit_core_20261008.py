@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from calendar_app.domain.task_validation import normalize_task_payload
-from calendar_app.infrastructure.db import shared_db, task_repo
+from calendar_app.infrastructure.db import task_repo
 from calendar_app.shared.datetime_utils import parse_datetime_str, to_iso_with_tz
 from tests.support import TemporaryDatabaseTestCase
 
@@ -83,40 +83,6 @@ class TestTaskValidationPersistence(TemporaryDatabaseTestCase):
 
     def test_invalid_create_does_not_insert_an_undated_task(self):
         assert task_repo.create_unified_task({"name": "Bad time", "deadline": "bad time"}) is None
-
-
-@pytest.fixture
-def shared_connection(tmp_path, monkeypatch):
-    monkeypatch.setattr(shared_db, "SHARED_DIR", str(tmp_path))
-    monkeypatch.setattr(shared_db, "SHARED_DB_PATH", str(tmp_path / "shared.db"))
-    monkeypatch.setattr(shared_db, "_conn", None)
-    yield
-    if shared_db._conn is not None:
-        shared_db._conn.close()
-        shared_db._conn = None
-
-
-def test_shared_schema_failure_is_not_cached_and_can_retry(shared_connection):
-    with patch.object(shared_db, "_initialize_schema", side_effect=RuntimeError("schema failed")):
-        assert shared_db._get_connection() is None
-    assert shared_db._conn is None
-    assert shared_db.upsert_shared_calendar("shared::work", "Work")
-
-
-def test_shared_failed_delete_rolls_back_detachment_before_next_write(shared_connection):
-    assert shared_db.upsert_shared_calendar("shared::work", "Work")
-    task_id = shared_db.insert_shared_task("Keep ownership", calendar_id="shared::work")
-    conn = shared_db._get_connection()
-    conn.execute(
-        "CREATE TRIGGER block_calendar_delete BEFORE DELETE ON shared_calendar "
-        "BEGIN SELECT RAISE(ABORT, 'blocked'); END"
-    )
-    conn.commit()
-    assert not shared_db.delete_shared_calendar("shared::work")
-    assert not conn.in_transaction
-    assert shared_db.upsert_shared_calendar("shared::other", "Other")
-    row = conn.execute("SELECT calendar_id FROM shared_task WHERE id=?", (task_id,)).fetchone()
-    assert row["calendar_id"] == "shared::work"
 
 
 @pytest.mark.parametrize("size", ["bad", float("inf"), [], 10**100])

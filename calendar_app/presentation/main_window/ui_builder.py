@@ -21,6 +21,7 @@ from calendar_app.presentation.theme.style_builder import (
 )
 from calendar_app.shared.theme_settings import get_opacity_byte
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
+from calendar_app.shared.typography import DEFAULT_UI_FONT
 
 
 def setup_main_ui(self):
@@ -34,7 +35,7 @@ def setup_main_ui(self):
     self.setWindowOpacity(1.0)
 
     # 저장된 폰트 설정 로드
-    _family = self.settings.value("font_family", "Segoe UI")
+    _family = self.settings.value("font_family", DEFAULT_UI_FONT)
     _size = self.settings.value("font_size", 10, type=int)
     if _size <= 0:
         _size = 10

@@ -39,7 +39,7 @@ def identity(value):
     return value.isoformat()
 
 
-def to_task_component(event, zone="Asia/Seoul"):
+def to_task_component(event, zone):
     try:
         start = event.decoded("DTSTART")
         end = (
@@ -82,7 +82,7 @@ def to_task_component(event, zone="Asia/Seoul"):
         raise CalendarSyncError("invalid_event_time") from exc
 
 
-def records(href, etag, data, start=None, end=None, zone="Asia/Seoul"):
+def records(href, etag, data, start=None, end=None, *, zone):
     calendar = parse(data)
     components = calendar.walk("VEVENT")
     # An unresolved TZID is not a floating wall time. Reject the complete
@@ -186,7 +186,7 @@ def records(href, etag, data, start=None, end=None, zone="Asia/Seoul"):
     return result
 
 
-def apply_task(event, task, zone="Asia/Seoul", fields=FIELDS):
+def apply_task(event, task, zone, fields=FIELDS):
     if task.get("recurrence"):
         raise CalendarSyncError("recurrence_not_supported")
     if not str(task.get("name") or "").strip():
@@ -226,7 +226,7 @@ def apply_task(event, task, zone="Asia/Seoul", fields=FIELDS):
     event.add("LAST-MODIFIED", datetime.now(UTC))
 
 
-def new_calendar(task, transaction, zone="Asia/Seoul"):
+def new_calendar(task, transaction, zone):
     calendar = Calendar()
     calendar.add("PRODID", "-//Air Calendar//CalDAV//EN")
     calendar.add("VERSION", "2.0")
@@ -238,7 +238,7 @@ def new_calendar(task, transaction, zone="Asia/Seoul"):
     return calendar.to_ical()
 
 
-def edited_calendar(task, remote, zone="Asia/Seoul"):
+def edited_calendar(task, remote, zone):
     if remote.get("read_only"):
         raise CalendarSyncError("event_read_only")
     calendar = parse(remote["data"])

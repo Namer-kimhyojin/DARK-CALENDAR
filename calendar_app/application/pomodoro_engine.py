@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 import time
 
+# Ticks arrive about once a second; a longer gap means sleep or suspend.
+_MAX_TICK_GAP_SECS = 60
+
 PHASE_FOCUS = "focus"
 PHASE_SHORT_BREAK = "short_break"
 PHASE_LONG_BREAK = "long_break"
@@ -109,12 +112,20 @@ class PomodoroEngine:
     def tick(self) -> list[dict]:
         """Advance actual elapsed time and return transition events."""
         now = time.time()
-        delta = max(1, int(now - self._last_tick_time))
+        elapsed = max(0.0, now - self._last_tick_time)
         self._last_tick_time = now
+        if elapsed > _MAX_TICK_GAP_SECS:
+            # The PC slept or the app was suspended; that gap is not focus time.
+            elapsed = 0.0
+        carried = elapsed + getattr(self, "_tick_carry", 0.0)
+        delta = max(1, int(carried))
+        # Keep the fraction: dropping it made a 25 min focus take ~25 min 24 s.
+        self._tick_carry = max(0.0, carried - delta)
 
         if self.paused:
             return []
 
+        delta = min(delta, max(1, self.phase_duration_secs - self.phase_elapsed_secs))
         self.phase_elapsed_secs += delta
         if self.phase == PHASE_FOCUS:
             self.focus_secs_total += delta

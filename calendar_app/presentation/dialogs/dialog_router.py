@@ -69,12 +69,17 @@ def _panel_shortcut_help_html(panel_name: str) -> str:
         "panel.help.recovery_intro",
         "If the menu bar is hidden, use these shortcuts to recover quickly.",
     )
-    rows = [
-        (get_key("magnet_mode"), t("panel.help.magnet", "Toggle magnet mode")),
-        (get_key("topbar"), t("menu.auto_hide_topbar", "Auto-hide top bar")),
-        (get_key("lock_mode"), t("panel.help.lock", "Toggle lock mode")),
-    ]
-    items = "".join(f"<li><b>{shortcut}</b> - {label}</li>" for shortcut, label in rows)
+    # Each label holds a {key} field. t() names its first parameter "key", so the
+    # shortcut cannot be passed as key=; fill the field here so it never shows literally.
+    rows = (
+        ("magnet_mode", t("panel.help.magnet", "{key}: toggle magnet mode")),
+        ("topbar", t("panel.help.topbar", "{key}: show or hide the top bar")),
+        ("lock_mode", t("panel.help.lock", "{key}: toggle lock mode")),
+    )
+    items = "".join(
+        "<li>" + str(label).replace("{key}", f"<b>{get_key(shortcut_id)}</b>") + "</li>"
+        for shortcut_id, label in rows
+    )
     return f"<h3>{quick_title}</h3><p>{intro}</p><ul>{items}</ul>"
 
 
@@ -432,9 +437,11 @@ class DialogActionsMixin:
     def show_panel_shortcut_help(self, panel_name):
         from PyQt6.QtCore import Qt
 
+        # The caller names the panel; panel.help.title is "{panel} shortcuts".
+        panel = str(panel_name or "").strip() or t("panel.help.default_name", "Panel")
         msg = QMessageBox(self)
-        msg.setWindowTitle(t("panel.help.title", "Panel Help"))
-        msg.setText(_panel_shortcut_help_html(str(panel_name or "")))
+        msg.setWindowTitle(t("panel.help.title", "{panel} shortcuts", panel=panel))
+        msg.setText(_panel_shortcut_help_html(panel))
         msg.setTextFormat(Qt.TextFormat.RichText)
         msg.exec()
 

@@ -34,13 +34,6 @@ def _blend_qcolor(base: QColor, mix: QColor, ratio: float) -> QColor:
     return _pws.blend(base, mix, ratio)
 
 
-def _build_widget_mode_theme_tokens(app: QWidget) -> dict[str, str]:
-    settings = getattr(app, "settings", None) if app is not None else None
-    tokens = _resolve_widget_mode_tokens(app=app)
-    tokens = _apply_registered_widget_mode_skin(tokens, settings)
-    return _apply_configured_widget_color(tokens, settings)
-
-
 def _normalize_widget_color_mode(raw_value: object) -> str:
     raw = str(raw_value or "").strip()
     if not raw:

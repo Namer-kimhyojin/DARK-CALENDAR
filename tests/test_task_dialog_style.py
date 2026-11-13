@@ -22,7 +22,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
 
     def test_editor_token_skin_is_applied_to_unified_task_dialog(self):
         dialog = UnifiedTaskDialog(task_type="schedule")
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
 
         self.assertEqual(dialog.objectName(), "TaskEditorDialog")
         self.assertEqual(dialog.tabs.objectName(), "TaskEditorTabs")
@@ -60,7 +60,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
         self.assertIsNotNone(task_id)
 
         dialog = UnifiedTaskDialog(task_type="schedule", task_id=task_id)
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
 
         stylesheet = dialog.styleSheet()
         self.assertIn("QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs::pane", stylesheet)
@@ -74,7 +74,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
             initial_date=QDate(2026, 7, 11),
             initial_time=QTime(14, 30),
         )
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
         dialog.show()
         self._app.processEvents()
 
@@ -86,7 +86,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
 
     def test_all_day_schedule_keeps_date_shortcuts_and_hides_time_actions(self):
         dialog = UnifiedTaskDialog(task_type="schedule", initial_date=QDate(2026, 7, 11))
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
         dialog.show()
         self._app.processEvents()
         date_buttons = [
@@ -108,7 +108,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
             end_date=QDate(2026, 8, 16),
             prefill_dict={"name": "Conference", "all_day": True},
         )
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
         dialog.show()
         self._app.processEvents()
 
@@ -121,7 +121,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
         for task_type in ("schedule", "routine"):
             with self.subTest(task_type=task_type):
                 dialog = UnifiedTaskDialog(task_type=task_type)
-                self.addCleanup(dialog.close)
+                self.addCleanup(dialog.done, 0)
 
                 dialog._update_period_layout_for_width(480 if task_type == "schedule" else 640)
                 self.assertEqual(
@@ -137,7 +137,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
 
     def test_schedule_period_controls_have_accessible_labels(self):
         dialog = UnifiedTaskDialog(task_type="schedule")
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
 
         self.assertTrue(dialog.start_date.accessibleName())
         self.assertTrue(dialog.start_time.accessibleName())
@@ -156,7 +156,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
             initial_date=QDate(2026, 7, 11),
             initial_time=QTime(14, 30),
         )
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
         tomorrow_btn = next(
             button
             for button in dialog.findChildren(QPushButton)
@@ -176,7 +176,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
             initial_date=start,
             end_date=start.addDays(1),
         )
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
         dialog.show()
         self._app.processEvents()
 
@@ -210,7 +210,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
             initial_date=start,
             end_date=start.addDays(1),
         )
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
         dialog.name_edit.setText("Invalid period")
         dialog.end_date.setDate(start.addDays(-1))
 
@@ -235,7 +235,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
             initial_date=QDate(2026, 7, 11),
             initial_time=QTime(14, 30),
         )
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
         quick_buttons = [
             button
             for button in dialog.findChildren(QPushButton)
@@ -257,7 +257,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
 
     def test_missing_name_uses_inline_feedback_instead_of_modal_warning(self):
         dialog = UnifiedTaskDialog(task_type="schedule")
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
         dialog.details_toggle.click()
 
         with patch(
@@ -285,8 +285,8 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
         )
         create_dialog = UnifiedTaskDialog(task_type="routine")
         modify_dialog = UnifiedTaskDialog(task_type="routine", task_id=task_id)
-        self.addCleanup(create_dialog.close)
-        self.addCleanup(modify_dialog.close)
+        self.addCleanup(create_dialog.done, 0)
+        self.addCleanup(modify_dialog.done, 0)
 
         self.assertEqual(create_dialog.size(), modify_dialog.size())
         self.assertGreaterEqual(create_dialog.width(), 640)
@@ -296,7 +296,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
 
     def test_schedule_dialog_stays_compact_and_scrollable(self):
         dialog = UnifiedTaskDialog(task_type="schedule")
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
 
         self.assertLessEqual(dialog.width(), 700)
         self.assertLessEqual(dialog.height(), 620)
@@ -322,7 +322,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
             UnifiedTaskDialog(task_type="schedule"),
             UnifiedTaskDialog(task_type="schedule", task_id=task_id),
         ):
-            self.addCleanup(dialog.close)
+            self.addCleanup(dialog.done, 0)
             dialog.details_toggle.click()
             dialog.show()
             self._app.processEvents()
@@ -335,7 +335,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
 
     def test_routine_action_and_alarm_buttons_fit_translated_labels(self):
         dialog = UnifiedTaskDialog(task_type="routine")
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
         dialog.show()
         self._app.processEvents()
 
@@ -368,8 +368,8 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
         ):
             schedule = UnifiedTaskDialog(task_type="schedule")
             routine = UnifiedTaskDialog(task_type="routine")
-        self.addCleanup(schedule.close)
-        self.addCleanup(routine.close)
+        self.addCleanup(schedule.done, 0)
+        self.addCleanup(routine.done, 0)
 
         texts = [w.text() for w in schedule.findChildren(QCheckBox)]
         texts += [b.text() for b in routine.findChildren(QPushButton)]
@@ -397,7 +397,7 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
             ),
         ):
             dialog = UnifiedTaskDialog(task_type="routine")
-        self.addCleanup(dialog.close)
+        self.addCleanup(dialog.done, 0)
         dialog.repeat_task_radio.setChecked(True)
         dialog.repeat_cycle_combo.setCurrentIndex(dialog.repeat_cycle_combo.findData("monthly"))
         dialog.show()

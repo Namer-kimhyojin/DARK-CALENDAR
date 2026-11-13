@@ -22,6 +22,7 @@ from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_styles import get_dialog_theme_tokens
 from calendar_app.shared.brand_assets import brand_mark_pixmap
 from calendar_app.shared.color_utils import composite_color, contrast_safe_color, parse_css_color
+from calendar_app.shared.typography import DEFAULT_UI_FONT, ui_text_families
 
 _COMPLETE_HOLD_MS = 100  # hold after reaching 100%
 _FADE_MS = 150  # fade-out duration
@@ -38,8 +39,6 @@ class SplashScreen(QWidget):
     W, H = 480, 280
     RADIUS = 16
     finished = pyqtSignal()
-
-    FONT_FAMILY = "Malgun Gothic"
 
     def __init__(self) -> None:
         super().__init__(
@@ -235,6 +234,16 @@ class SplashScreen(QWidget):
         finally:
             painter.end()
 
+    @staticmethod
+    def _text_font(points: int, weight=QFont.Weight.Normal) -> QFont:
+        """Font for translated text: the UI language's own (Korean keeps Malgun Gothic)."""
+        # A fixed base, not QFont() (the app font), so the hinting and style
+        # strategy stay the same before and after the saved font applies.
+        families = ui_text_families()
+        font = QFont(families[0], points, weight)
+        font.setFamilies(families)
+        return font
+
     def _paint(self, painter: QPainter) -> None:
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
@@ -250,14 +259,14 @@ class SplashScreen(QWidget):
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
             painter.drawPixmap(28, 31, 64, 64, self._icon)
         painter.setPen(parse_css_color(tokens["text_primary"]))
-        painter.setFont(QFont("Segoe UI", 22, QFont.Weight.DemiBold))
+        painter.setFont(QFont(DEFAULT_UI_FONT, 22, QFont.Weight.DemiBold))
         painter.drawText(
             QRectF(108, 32, self.W - 136, 40),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             APP_NAME,
         )
         painter.setPen(parse_css_color(tokens["text_muted"]))
-        painter.setFont(QFont("Segoe UI", 9))
+        painter.setFont(QFont(DEFAULT_UI_FONT, 9))
         painter.drawText(
             QRectF(110, 74, self.W - 138, 20),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
@@ -267,7 +276,7 @@ class SplashScreen(QWidget):
         painter.setPen(QPen(parse_css_color(tokens["border_soft"]), 1.0))
         painter.drawLine(28, 114, self.W - 28, 114)
 
-        painter.setFont(QFont(self.FONT_FAMILY, 14, QFont.Weight.DemiBold))
+        painter.setFont(self._text_font(14, QFont.Weight.DemiBold))
         painter.setPen(parse_css_color(tokens["text_primary"]))
         metrics = QFontMetrics(painter.font())
         headline = metrics.elidedText(self._headline_text, Qt.TextElideMode.ElideRight, self.W - 56)
@@ -278,7 +287,7 @@ class SplashScreen(QWidget):
         )
 
         painter.setPen(parse_css_color(tokens["text_secondary"]))
-        painter.setFont(QFont(self.FONT_FAMILY, 10))
+        painter.setFont(self._text_font(10))
         status = QFontMetrics(painter.font()).elidedText(
             self._status_text, Qt.TextElideMode.ElideRight, self.W - 56
         )
@@ -289,7 +298,7 @@ class SplashScreen(QWidget):
         )
 
         painter.setPen(parse_css_color(tokens["text_muted"]))
-        painter.setFont(QFont("Segoe UI", 10, QFont.Weight.DemiBold))
+        painter.setFont(QFont(DEFAULT_UI_FONT, 10, QFont.Weight.DemiBold))
         painter.drawText(
             QRectF(28, 205, self.W - 56, 20),
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,

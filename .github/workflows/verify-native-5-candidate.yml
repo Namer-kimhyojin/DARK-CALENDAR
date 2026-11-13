@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 15
     env:
       PYTHON_VERSION: "3.14.10"
-      CANDIDATE_POLICY_SHA256: "aaf07f7cd91c0a82f333a66bba9d195d65cb6da21b371410c5e76115eda88434"
+      CANDIDATE_POLICY_SHA256: "ca7d258bf987c41972ac6eb37e490550008b3ef3602d36d2c9f0665bb5be0bd8"
     steps:
       - name: Preserve exact Git bytes on disposable QA VM
         shell: powershell

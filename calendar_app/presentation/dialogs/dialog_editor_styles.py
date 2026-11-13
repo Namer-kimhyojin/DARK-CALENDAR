@@ -438,18 +438,13 @@ QDialog#TaskEditorDialog QFrame#TaskEditorFooter {{
     border: none;
     border-top: 1px solid {border_soft};
 }}
-QDialog#TaskEditorDialog[sheetLayout="false"] QFrame#TaskEditorFooter QPushButton#primary_btn,
-QDialog#TaskEditorDialog[sheetLayout="false"] QFrame#TaskEditorFooter QPushButton#ghost_btn,
-QDialog#TaskEditorDialog[sheetLayout="false"] QFrame#TaskEditorFooter QPushButton#danger_btn {{
+QDialog#TaskEditorDialog QFrame#TaskEditorFooter QPushButton#primary_btn,
+QDialog#TaskEditorDialog QFrame#TaskEditorFooter QPushButton#ghost_btn,
+QDialog#TaskEditorDialog QFrame#TaskEditorFooter QPushButton#danger_btn {{
     min-height: {max(34, int(m.get("button_height", 24)))}px;
     max-height: {max(34, int(m.get("button_height", 24)))}px;
     padding: {int(m.get("button_padding_y", 4))}px {int(m.get("button_padding_x", 16))}px;
     border: 1px solid {border_soft};
-}}
-QDialog#TaskEditorDialog[sheetLayout="true"] QFrame#TaskEditorFooter QPushButton#primary_btn,
-QDialog#TaskEditorDialog[sheetLayout="true"] QFrame#TaskEditorFooter QPushButton#ghost_btn,
-QDialog#TaskEditorDialog[sheetLayout="true"] QFrame#TaskEditorFooter QPushButton#danger_btn {{
-    min-height: 36px;
 }}
 QDialog#TaskEditorDialog QListWidget {{
     background: transparent;
@@ -560,6 +555,9 @@ def build_editor_quick_button_style(
     t = _resolve_tokens(tokens)
     m = _resolve_metrics(metrics)
     theme_defaults = get_dialog_theme_tokens()
+    # Only roles the caller passed can customise a tone; roles _resolve_tokens derived
+    # (e.g. the text for a solid accent fill) do not suit these soft buttons.
+    supplied = dict(tokens or {})
     font_px = int(m["base_font_pt"])
     height_offset = -10 if is_quick else 0
     height = max(24 if is_quick else 32, int(m.get("button_height", 34)) + height_offset)
@@ -568,7 +566,7 @@ def build_editor_quick_button_style(
     padding_x = max(6, int(m.get("button_padding_x", 16)) - 8)
 
     def _semantic_value(key: str, fallback: str) -> str:
-        value = t.get(key)
+        value = supplied.get(key)
         if value is None:
             return fallback
         default_value = theme_defaults.get(key)

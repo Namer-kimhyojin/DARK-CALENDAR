@@ -24,7 +24,7 @@ def main():
     ) as temporary:
         os.environ["LOCALAPPDATA"] = temporary
         os.environ["APPDATA"] = temporary
-        from artifacts.isolated_settings import install_settings_sandbox
+        from scripts.isolated_settings import install_settings_sandbox
 
         Settings, verify = install_settings_sandbox(temporary)
         Settings("kimhyojin", "Dark Calendar").setValue("language", "en")

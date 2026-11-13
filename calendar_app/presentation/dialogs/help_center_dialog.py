@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -459,6 +460,8 @@ class HelpCenterDialog(QDialog):
         content_layout.setSpacing(0)
 
         self.page_stack = QStackedWidget()
+        # The pages scroll. Their preferred heights must not inflate the window.
+        self.page_stack.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
         content_layout.addWidget(self.page_stack)
         body.addWidget(content, 1)
         root.addLayout(body, 1)
@@ -597,7 +600,7 @@ class HelpCenterDialog(QDialog):
         page, layout = self._create_scroll_page()
         layout.addWidget(
             self._create_page_hero(
-                "QUICK START",
+                t("shortcut.hero.quickstart.eyebrow", "QUICK START"),
                 t(
                     "shortcut.hero.quickstart.title",
                     "가장 자주 찾는 작업부터 바로 보이게",
@@ -653,7 +656,7 @@ class HelpCenterDialog(QDialog):
         page, layout = self._create_scroll_page()
         layout.addWidget(
             self._create_page_hero(
-                "CORE FLOW",
+                t("shortcut.hero.workflows.eyebrow", "CORE FLOW"),
                 t("shortcut.hero.workflows.title", "상황별로 묶어서 더 빨리 찾기"),
                 t(
                     "shortcut.hero.workflows.desc",
@@ -678,7 +681,7 @@ class HelpCenterDialog(QDialog):
         page, layout = self._create_scroll_page()
         layout.addWidget(
             self._create_page_hero(
-                "RECOVERY",
+                t("shortcut.hero.recovery.eyebrow", "RECOVERY"),
                 t("shortcut.hero.recovery.title", "막혔을 때 먼저 눌러볼 키"),
                 t(
                     "shortcut.hero.recovery.desc",
@@ -716,7 +719,7 @@ class HelpCenterDialog(QDialog):
         page, layout = self._create_scroll_page()
         layout.addWidget(
             self._create_page_hero(
-                "REFERENCE",
+                t("shortcut.hero.reference.eyebrow", "REFERENCE"),
                 t("shortcut.hero.reference.title", "전체 단축키를 분류별로 보기"),
                 t(
                     "shortcut.hero.reference.desc",
@@ -749,7 +752,7 @@ class HelpCenterDialog(QDialog):
         page, layout = self._create_scroll_page()
         layout.addWidget(
             self._create_page_hero(
-                "SEARCH",
+                t("shortcut.hero.search.eyebrow", "SEARCH"),
                 t("shortcut.hero.search.title", "검색 결과"),
                 t(
                     "shortcut.hero.search.desc",

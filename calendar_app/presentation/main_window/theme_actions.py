@@ -14,6 +14,7 @@ from calendar_app.shared.theme_settings import (
     set_opacity_byte,
 )
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
+from calendar_app.shared.typography import DEFAULT_UI_FONT
 
 
 def _set_stylesheet_if_changed(widget, stylesheet: str) -> bool:
@@ -263,7 +264,7 @@ class ThemeActionsMixin:
             build_tooltip_stylesheet,
         )
 
-        family = self.settings.value("font_family", "Malgun Gothic")
+        family = self.settings.value("font_family", DEFAULT_UI_FONT)
         size = self.settings.value("font_size", 11, type=int)
         if size <= 0:
             size = 10

@@ -19,6 +19,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import (
     QContextMenuEvent,
     QFont,
+    QKeySequence,
     QPainter,
     QPen,
     QTextLayout,
@@ -44,18 +45,20 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.infrastructure.i18n import t
-from calendar_app.presentation.widgets.panel_widget_mode import (
+from calendar_app.infrastructure.runtime.keyboard_shortcuts import SHORTCUTS
+from calendar_app.presentation.locale_names import weekday_names
+from calendar_app.presentation.widgets.panel_widget_common import (
     _format_compact_date_with_weekday,
     _format_widget_datetime_label,
     _normalize_status,
     _parse_qdate,
     _parse_quick_add_text,
-    _resolve_widget_mode_tokens,
 )
 from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor, int_token
 from calendar_app.presentation.widgets.panel_widget_theme import (
     _apply_configured_widget_color,
     _apply_registered_widget_mode_skin,
+    _resolve_widget_mode_tokens,
     _widget_mode_menu_stylesheet,
 )
 from calendar_app.presentation.widgets.schedule_info import _is_all_day as _schedule_is_all_day
@@ -667,18 +670,18 @@ class _CompactMonthCalendar(QWidget):
         self.next_btn.clicked.connect(lambda: self._navigate_month(1))
         navigation.addWidget(self.next_btn)
         root.addLayout(navigation)
+        self._sync_nav_arrows()
 
         self.weekday_row = QHBoxLayout()
         self.weekday_row.setContentsMargins(0, 0, 0, 0)
         self.weekday_row.setSpacing(2)
         self.weekday_labels: list[QLabel] = []
-        weekday_keys = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-        for key in weekday_keys:
+        for name in weekday_names(narrow=True):
             label = QLabel(self)
             label.setObjectName("unified_month_weekday")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setFixedHeight(24)
-            label.setText(t(f"weekday.{key}", key.title()))
+            label.setText(name)
             self.weekday_row.addWidget(label, 1)
             self.weekday_labels.append(label)
         root.addLayout(self.weekday_row)
@@ -801,6 +804,18 @@ class _CompactMonthCalendar(QWidget):
             tk.get("_background_opacity", 100),
         )
 
+    def _sync_nav_arrows(self) -> None:
+        # The navigation row mirrors under right-to-left, so "previous" sits on the
+        # right edge; Qt does not mirror arrow types, so point each arrow outward.
+        rtl = self.isRightToLeft()
+        self.previous_btn.setArrowType(Qt.ArrowType.RightArrow if rtl else Qt.ArrowType.LeftArrow)
+        self.next_btn.setArrowType(Qt.ArrowType.LeftArrow if rtl else Qt.ArrowType.RightArrow)
+
+    def changeEvent(self, event) -> None:
+        if event.type() == QEvent.Type.LayoutDirectionChange and hasattr(self, "next_btn"):
+            self._sync_nav_arrows()
+        super().changeEvent(event)
+
     def _navigate_month(self, delta: int) -> None:
         self.dateClicked.emit(self._selected_date.addMonths(int(delta)))
 
@@ -816,8 +831,14 @@ class _CompactMonthCalendar(QWidget):
         grid_start = first.addDays(1 - first.dayOfWeek())
         self.month_label.setText(f"{selected.year()}. {selected.month():02d}")
         weekday_keys = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-        for key, label in zip(weekday_keys, self.weekday_labels, strict=True):
-            label.setText(t(f"weekday.{key}", key.title()))
+        names = weekday_names(narrow=True)
+        long_names = weekday_names(long=True)
+        for key, name, long_name, label in zip(
+            weekday_keys, names, long_names, self.weekday_labels, strict=True
+        ):
+            label.setText(name)
+            # Narrow letters are ambiguous ("T" is Tue and Thu); screen readers get the full name.
+            label.setAccessibleName(long_name)
             color = self._tokens.get(
                 f"calendar_weekday_{key}", self._tokens.get("text_secondary", "")
             )
@@ -1037,6 +1058,17 @@ class UnifiedWidgetWindow(QWidget):
 
         self._build_ui()
         self._setup_refresh_timer()
+
+    def _main_window_key_handler(self, event):
+        """F12 and show/hide reach this window only while the hidden main window cannot."""
+        pressed = QKeySequence(event.keyCombination())
+        for entry in SHORTCUTS:
+            if entry["id"] in ("widget_mode", "show_hide") and pressed == QKeySequence(
+                entry["key"]
+            ):
+                handler = getattr(self.controller.main_window, entry["action"], None)
+                return handler if callable(handler) else None
+        return None
 
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
@@ -1676,6 +1708,11 @@ class UnifiedWidgetWindow(QWidget):
         dialog.deleteLater()
 
     def keyPressEvent(self, event):
+        handler = self._main_window_key_handler(event)
+        if handler is not None:
+            handler()
+            event.accept()
+            return
         if (
             not self._free_layout_active
             and event.key() == Qt.Key.Key_F

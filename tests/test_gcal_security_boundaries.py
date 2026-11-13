@@ -40,17 +40,6 @@ def _remote_error(status=403, reason="forbidden"):
     )
 
 
-@pytest.mark.parametrize("method", ["subscribe_calendar", "unsubscribe_calendar"])
-@pytest.mark.parametrize("kind", ["account_unverified", "account_mismatch"])
-def test_subscription_mutations_share_account_identity_write_guard(method, kind):
-    sync = _sync()
-    sync._account_identity_mismatch = True
-    sync._account_identity_error_kind = kind
-    assert not getattr(sync, method)("team")
-    assert sync.last_error_kind == kind
-    sync.service.calendarList.assert_not_called()
-
-
 @pytest.mark.parametrize(
     "operation",
     [
@@ -61,8 +50,6 @@ def test_subscription_mutations_share_account_identity_write_guard(method, kind)
         "delete",
         "move",
         "list",
-        "subscribe",
-        "unsubscribe",
     ],
 )
 def test_remote_error_payload_is_neither_logged_nor_returned(
@@ -83,8 +70,6 @@ def test_remote_error_payload_is_neither_logged_nor_returned(
         "delete": lambda: sync.delete_event("evt"),
         "move": lambda: sync.move_event("evt", "team", "other"),
         "list": lambda: sync.list_accessible_calendars(),
-        "subscribe": lambda: sync.subscribe_calendar("team"),
-        "unsubscribe": lambda: sync.unsubscribe_calendar("team"),
     }
     calls[operation]()
     assert sync.last_error_message == "http_403"

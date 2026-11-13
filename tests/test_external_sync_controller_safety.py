@@ -160,7 +160,7 @@ def test_retry_after_blocks_manual_auto_and_refresh_until_deadline(controller, m
     monkeypatch.setattr(module, "monotonic", lambda: 100.0, raising=False)
     host.settings.setValue("outlook_client_id", "fixture")
     host.settings.setValue(prefix + "enabled", True)
-    ctrl.worker = SimpleNamespace(operation="sync", retry_after=9_000)
+    ctrl.worker = SimpleNamespace(operation="sync", retry_after=3_000)
     code = "graph_http_429" if prefix == "outlook_" else "remote_http_429"
     ctrl._failed(code)
     ctrl.worker = None
@@ -168,7 +168,7 @@ def test_retry_after_blocks_manual_auto_and_refresh_until_deadline(controller, m
     monkeypatch.setattr(
         module, "OutlookWorker" if prefix == "outlook_" else "CalDAVWorker", worker_factory
     )
-    assert ctrl.timer.interval() >= 9_000_000
+    assert ctrl.timer.interval() >= 3_000_000
     assert ctrl.start("sync") is False
     ctrl.status = "selection_saved"
     assert ctrl.start("refresh") is False
@@ -176,8 +176,8 @@ def test_retry_after_blocks_manual_auto_and_refresh_until_deadline(controller, m
     ctrl.sync(force=True)
     ctrl.sync()
     worker_factory.assert_not_called()
-    assert ctrl.timer.interval() >= 9_000_000
-    monkeypatch.setattr(module, "monotonic", lambda: 9_101.0)
+    assert ctrl.timer.interval() >= 3_000_000
+    monkeypatch.setattr(module, "monotonic", lambda: 3_101.0)
     assert ctrl.start("sync") is True
     worker_factory.assert_called_once()
     ctrl.worker = None
@@ -218,18 +218,18 @@ def test_early_retry_timer_reschedules_remainder_and_restores_normal_interval(
     _, host, ctrl, prefix, module, _ = controller
     monkeypatch.setattr(module, "monotonic", lambda: 100.0)
     host.settings.setValue("outlook_client_id", "fixture")
-    ctrl.worker = SimpleNamespace(operation="sync", retry_after=9_000)
+    ctrl.worker = SimpleNamespace(operation="sync", retry_after=3_000)
     ctrl._failed("graph_http_429" if prefix == "outlook_" else "remote_http_429")
     ctrl.worker = None
     factory = Mock()
     monkeypatch.setattr(
         module, "OutlookWorker" if prefix == "outlook_" else "CalDAVWorker", factory
     )
-    monkeypatch.setattr(module, "monotonic", lambda: 9_099.999)
+    monkeypatch.setattr(module, "monotonic", lambda: 3_099.999)
     assert ctrl.start("sync") is False
     factory.assert_not_called()
     assert 1 <= ctrl.timer.interval() <= 2
-    monkeypatch.setattr(module, "monotonic", lambda: 9_100.001)
+    monkeypatch.setattr(module, "monotonic", lambda: 3_100.001)
     assert ctrl.start("sync") is True
     assert ctrl.timer.interval() == 300_000
     ctrl.worker = None

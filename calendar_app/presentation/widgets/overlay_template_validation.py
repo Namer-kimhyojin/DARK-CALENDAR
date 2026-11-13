@@ -58,7 +58,7 @@ _VARIABLE_RULES = {
             "art",
         },
         "formatted": {"date"},
-        "variants": {"weekday": {"short", "en"}},
+        "variants": {"weekday": {"short", "en"}, "month": {"standalone"}},
     },
     "weather": {
         "plain": {"city", "temp", "unit", "desc", "icon", "humidity", "wind", "error"},
@@ -78,6 +78,7 @@ _VARIABLE_RULES = {
             "directive_count",
             "next_event",
             "custom_var",
+            "tz_label",
         },
         "formatted": {"time", "date"},
         "variants": {"weekday": {"short", "en"}},

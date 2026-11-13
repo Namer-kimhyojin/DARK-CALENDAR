@@ -134,6 +134,10 @@ class KeySpring:
         self.set_target(depth)
         self.velocity = max(self.velocity, FINGER_SPEED)
 
+    def mark_down_cues_played(self) -> None:
+        """The down-stroke sound already played at contact; do not emit it again."""
+        self._clicked = self._bumped = self._bottomed = True
+
     def snap(self, position: float) -> None:
         """Jump to a position without motion (reduce-motion mode)."""
         self.position = self.target = max(MIN_TRAVEL, min(1.0, float(position)))

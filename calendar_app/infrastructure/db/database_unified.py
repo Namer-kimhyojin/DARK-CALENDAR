@@ -3,38 +3,11 @@
 # ruff: noqa: SIM105, E402
 
 import logging
-import logging.handlers
 import os
 import sqlite3
 import threading
 
-from calendar_app.app_paths import DB_PATH, LOG_PATH
-
-
-def _build_logging_handlers():
-    handlers = [logging.StreamHandler()]
-    try:
-        handlers.insert(
-            0,
-            logging.handlers.RotatingFileHandler(
-                LOG_PATH,
-                maxBytes=5 * 1024 * 1024,
-                backupCount=2,
-                encoding="utf-8",
-                errors="strict",
-            ),
-        )
-    except OSError as exc:
-        logging.getLogger(__name__).warning("File logging disabled for %s: %s", LOG_PATH, exc)
-    return handlers
-
-
-# 로깅 설정
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=_build_logging_handlers(),
-)
+from calendar_app.app_paths import DB_PATH
 
 logger = logging.getLogger("Database")
 
@@ -268,7 +241,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
         """)
 
-        # 2. worklog (湲곗〈 ?좎?)
+        # 2. worklog (기존 유지)
 
         cur.execute("""
 
@@ -428,7 +401,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
         """)
 
-        # calendar: 硫??罹섎┛???듯빀 愿由??뚯씠釉?(gcal / local / ics)
+        # calendar: 멀티 캘린더 통합 관리 테이블 (gcal / local / ics)
 
         cur.execute("""
 
@@ -464,7 +437,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
         """)
 
-        # 3. task_directive (吏?쒖궗??- 湲곗〈 ?좎?)
+        # 3. task_directive (지시사항 - 기존 유지)
 
         cur.execute("""
 
@@ -488,7 +461,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
         """)
 
-        # 4. routine_template (?쇰컲?낅Т ?쒗뵆由?
+        # 4. routine_template (일반업무 템플릿)
 
         cur.execute("""
 
@@ -522,7 +495,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
         """)
 
-        # 4-1. template_step (?덇굅??吏?먯슜)
+        # 4-1. template_step (레거시 지원용)
 
         cur.execute("""
 
@@ -542,7 +515,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
         """)
 
-        # 5. checklist_template (泥댄겕由ъ뒪???쒗뵆由?
+        # 5. checklist_template (체크리스트 템플릿)
 
         cur.execute("""
 
@@ -568,7 +541,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
         """)
 
-        # 6. checklist_item (泥댄겕由ъ뒪????ぉ ?뺤쓽)
+        # 6. checklist_item (체크리스트 항목 정의)
 
         cur.execute("""
 
@@ -594,7 +567,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
         """)
 
-        # 7. task_checklist_link (?ㅼ젣 ?섑뻾 泥댄겕由ъ뒪???곌껐)
+        # 7. task_checklist_link (실제 수행 체크리스트 연결)
 
         cur.execute("""
 
@@ -759,7 +732,7 @@ def initialize_unified_database(*, raise_on_error=False):
                 except sqlite3.OperationalError:
                     pass
 
-        # ?몃뜳??異붽? (議고쉶 ?깅뒫 理쒖쟻??
+        # 인덱스 추가 (조회 성능 최적화)
 
         conflict_queue_cols = get_table_columns(cur, "gcal_sync_conflict_queue")
 
@@ -831,22 +804,6 @@ def initialize_unified_database(*, raise_on_error=False):
             """)
             if cur.rowcount:
                 logger.info("Backfilled access_role for %d gcal calendar row(s)", cur.rowcount)
-        except Exception:
-            pass
-
-        # 시작 시 복구: access_role='owner'/'writer' 인 gcal 캘린더가 is_active=0 으로
-        # 잘못 저장된 경우 강제로 재활성화한다.
-        # (is_active=0 은 GCal sync 비활성화를 뜻하며 편집 권한 제거가 아님)
-        try:
-            cur.execute("""
-                UPDATE calendar
-                SET is_active = 1
-                WHERE type = 'gcal'
-                  AND is_active = 0
-                  AND access_role IN ('owner', 'writer')
-            """)
-            if cur.rowcount:
-                logger.info("Restored is_active=1 for %d writable gcal calendar(s)", cur.rowcount)
         except Exception:
             pass
 
@@ -952,7 +909,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
         cur.execute("CREATE INDEX IF NOT EXISTS idx_fired_alarms_task_id ON fired_alarms (task_id)")
 
-        # ?깅뒫 理쒖쟻?? 異붽? 蹂듯빀 ?몃뜳??
+        # 성능 최적화: 추가 복합 인덱스
 
         cur.execute(
             "CREATE INDEX IF NOT EXISTS idx_unified_task_routine_period ON unified_task (type, cycle_type, period_start, period_end)"
@@ -1103,9 +1060,9 @@ def initialize_unified_database(*, raise_on_error=False):
             "UPDATE task_directive SET status='deferred' WHERE status IN ('overdue', 'canceled')"
         )
 
-        # --- 湲곗〈 ?뚯씠釉?留덉씠洹몃젅?댁뀡 濡쒖쭅 ---
+        # --- 기존 테이블 마이그레이션 로직 ---
 
-        # 猷⑦떞 ?덇굅???뚯씠釉??먮뒗 ?쇱젙 ?덇굅???뚯씠釉붿씠 ?덈뒗 寃쎌슦 留덉씠洹몃젅?댁뀡 ?쒕룄
+        # 루틴 레거시 테이블 또는 일정 레거시 테이블이 있는 경우 마이그레이션 시도
 
         cur.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('special_task', 'routine_task')"
@@ -1114,7 +1071,7 @@ def initialize_unified_database(*, raise_on_error=False):
         if cur.fetchone():
             logger.info("Checking for data migration to unified_task...")
 
-            # special_task ?뚯씠釉?議댁옱 ?щ? ?뺤씤
+            # special_task 테이블 존재 여부 확인
 
             cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='special_task'")
 
@@ -1189,12 +1146,12 @@ def initialize_unified_database(*, raise_on_error=False):
 
                 logger.info(f"Migrated {cur.rowcount} records from special_task")
 
-            # routine_task ?뚯씠釉?議댁옱 ?щ? ?뺤씤
+            # routine_task 테이블 존재 여부 확인
 
             cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='routine_task'")
 
             if cur.fetchone():
-                # ID 異⑸룎 諛⑹?瑜??꾪븳 offset 怨꾩궛
+                # ID 충돌 방지를 위한 offset 계산
 
                 cur.execute("SELECT COALESCE(MAX(id), 0) FROM unified_task")
 
@@ -1202,7 +1159,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
                 rt_cols = get_table_columns(cur, "routine_task")
 
-                # 而щ읆 議댁옱 ?щ????곕씪 SELECT 臾??숈쟻 ?앹꽦
+                # 컬럼 존재 여부에 따라 SELECT 문 동적 생성
 
                 template_id_expr = "template_id" if "template_id" in rt_cols else "NULL"
 
@@ -1284,7 +1241,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
                 logger.info(f"Migrated {routine_inserted_count} records from routine_task")
 
-                # task_checklist_link??owner_id ?낅뜲?댄듃
+                # task_checklist_link의 owner_id 업데이트
 
                 # Only shift checklist owner_ids when routine rows were actually
                 # migrated. Without this guard the UPDATE ran on every startup,
@@ -1296,7 +1253,22 @@ def initialize_unified_database(*, raise_on_error=False):
                         f"UPDATE task_checklist_link SET owner_id = owner_id + {max_id} WHERE owner_type = 'routine'"
                     )
 
-        # checklist_template ?? ??
+            # Retire the copied legacy tables so the copy runs exactly once.
+            # Re-running it duplicated routines, re-shifted checklist links and
+            # revived deleted schedules on every start.
+            for legacy_table in ("special_task", "routine_task"):
+                retired = f"{legacy_table}_migrated"
+                cur.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name IN (?, ?)",
+                    (legacy_table, retired),
+                )
+                names = {row[0] for row in cur.fetchall()}
+                if legacy_table in names and retired not in names:
+                    cur.execute(f"ALTER TABLE {legacy_table} RENAME TO {retired}")
+                elif legacy_table in names:
+                    logger.warning("Legacy table %s kept: %s already exists", legacy_table, retired)
+
+        # checklist_template 누락 컬럼 추가
 
         checklist_template_cols = get_table_columns(cur, "checklist_template")
 
@@ -1313,7 +1285,7 @@ def initialize_unified_database(*, raise_on_error=False):
                 except sqlite3.OperationalError:
                     pass
 
-        # routine_template??alarm_time 而щ읆 異붽? (?녿뒗 寃쎌슦)
+        # routine_template에 alarm_time 컬럼 추가 (없는 경우)
 
         tmpl_cols = get_table_columns(cur, "routine_template")
 
@@ -1324,24 +1296,7 @@ def initialize_unified_database(*, raise_on_error=False):
             except sqlite3.OperationalError:
                 pass
 
-        # checklist_template ?? ??
-
-        checklist_template_cols = get_table_columns(cur, "checklist_template")
-
-        for col in [
-            ("category", "TEXT"),
-            ("checklist_type", "TEXT DEFAULT 'list'"),
-            ("is_active", "INTEGER DEFAULT 1"),
-            ("updated_at", "TEXT DEFAULT (datetime('now', 'localtime'))"),
-        ]:
-            if col[0] not in checklist_template_cols:
-                try:
-                    cur.execute(f"ALTER TABLE checklist_template ADD COLUMN {col[0]} {col[1]}")
-
-                except sqlite3.OperationalError:
-                    pass
-
-        # task_checklist_link display_type ?? ??
+        # task_checklist_link display_type 컬럼 추가
 
         tcl_cols = get_table_columns(cur, "task_checklist_link")
 
@@ -1354,7 +1309,7 @@ def initialize_unified_database(*, raise_on_error=False):
             except sqlite3.OperationalError:
                 pass
 
-        # checklist_item ?? ?? 而щ읆 異붽?
+        # checklist_item 누락 컬럼 추가
 
         checklist_item_cols = get_table_columns(cur, "checklist_item")
 
@@ -1370,7 +1325,7 @@ def initialize_unified_database(*, raise_on_error=False):
                 except sqlite3.OperationalError:
                     pass
 
-        # 湲곗〈 routine ????곗씠?곗쓽 period_start, period_end ?먮룞 怨꾩궛
+        # 기존 routine 데이터의 period_start, period_end 자동 계산
 
         cur.execute("""
 
@@ -1416,7 +1371,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
         conn.commit()
 
-        # conn.close()  <-- Singleton ?대?濡??レ? ?딆쓬
+        # conn.close()  <-- Singleton 이므로 닫지 않음
 
         logger.info("Unified database initialized successfully.")
 
@@ -1435,7 +1390,7 @@ def initialize_unified_database(*, raise_on_error=False):
         return False
 
 
-# ?⑥씪 援ы쁽? period_utils.py???덉쓬. ?섏쐞 ?명솚?깆쓣 ?꾪빐 ?ш린??re-export.
+# 단일 구현은 period_utils.py에 있음. 하위 호환성을 위해 여기서 re-export.
 
 from calendar_app.infrastructure.db.period_utils import calculate_period_bounds  # noqa: F401
 

@@ -1,0 +1,37 @@
+{
+ "note": "Hangul still shown by dialogs under a non-Korean UI (known untranslated literals). Rewrite with I18N_LEAK_UPDATE=1 pytest tests/test_i18n_leak_smoke.py.",
+ "dialogs": {
+  "appearance": {
+   "ar": [],
+   "de": []
+  },
+  "checklist": {
+   "ar": [],
+   "de": []
+  },
+  "gcal_settings": {
+   "ar": [],
+   "de": []
+  },
+  "help_center": {
+   "ar": [],
+   "de": []
+  },
+  "pomodoro": {
+   "ar": [],
+   "de": []
+  },
+  "task_dialog": {
+   "ar": [],
+   "de": []
+  },
+  "token_editor": {
+   "ar": [],
+   "de": []
+  },
+  "widget_studio": {
+   "ar": [],
+   "de": []
+  }
+ }
+}

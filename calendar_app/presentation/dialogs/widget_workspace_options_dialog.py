@@ -24,6 +24,7 @@ from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_styles import (
     build_dialog_footer,
 )
+from calendar_app.presentation.locale_names import weekday_names
 from calendar_app.presentation.widgets.widget_management_ui import (
     apply_hub_dialog_style,
     hub_button,
@@ -32,18 +33,7 @@ from calendar_app.presentation.widgets.widget_management_ui import (
 
 
 def weekday_labels():
-    return [
-        t("widget_studio.day_" + key, text)
-        for key, text in (
-            ("mon", "월"),
-            ("tue", "화"),
-            ("wed", "수"),
-            ("thu", "목"),
-            ("fri", "금"),
-            ("sat", "토"),
-            ("sun", "일"),
-        )
-    ]
+    return weekday_names()
 
 
 class WorkspaceRuleDialog(QDialog):

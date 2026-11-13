@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Focus-history theme updates preserve the displayed data and selection."""
+
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -28,12 +29,19 @@ class FocusLogThemeTests(unittest.TestCase):
     def setUp(self):
         self.temp = TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.settings = QSettings(str(Path(self.temp.name) / "focus.ini"), QSettings.Format.IniFormat)
+        self.settings = QSettings(
+            str(Path(self.temp.name) / "focus.ini"), QSettings.Format.IniFormat
+        )
         for key, value in {
-            "text_theme": "auto", "panel_base_color": "#121827", "theme_color": "#c5a3f5",
-            "appearance_style_family": "navy_lilac", "appearance_accent_source": "family",
-            "appearance_family_dark_base": "#121827", "appearance_family_dark_accent": "#c5a3f5",
-            "appearance_family_light_base": "#f3f1fa", "appearance_family_light_accent": "#7950b8",
+            "text_theme": "auto",
+            "panel_base_color": "#121827",
+            "theme_color": "#c5a3f5",
+            "appearance_style_family": "navy_lilac",
+            "appearance_accent_source": "family",
+            "appearance_family_dark_base": "#121827",
+            "appearance_family_dark_accent": "#c5a3f5",
+            "appearance_family_light_base": "#f3f1fa",
+            "appearance_family_light_accent": "#7950b8",
         }.items():
             self.settings.setValue(key, value)
         set_runtime_system_text_theme("dark")
@@ -71,7 +79,9 @@ class FocusLogThemeTests(unittest.TestCase):
         self.assertTrue(all(button.height() >= 44 for button in dialog._footer_buttons))
         self.assertTrue(all(not button.styleSheet() for button in dialog._footer_buttons))
         reload_mock.assert_not_called()
-        self.assertEqual(before_values, {key: self.settings.value(key) for key in self.settings.allKeys()})
+        self.assertEqual(
+            before_values, {key: self.settings.value(key) for key in self.settings.allKeys()}
+        )
 
     def test_explicit_dark_mode_does_not_restyle_on_system_light_event(self):
         self.settings.setValue("text_theme", "dark")

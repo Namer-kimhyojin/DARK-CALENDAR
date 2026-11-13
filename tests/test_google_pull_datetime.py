@@ -159,7 +159,6 @@ class GooglePullDatetimeSnapshotTests(TemporaryDatabaseTestCase):
             patch.object(
                 engine, "_push_local_changes_to_google", wraps=engine._push_local_changes_to_google
             ) as push,
-            patch.object(engine, "auto_heal_google_orphans"),
         ):
             result = engine.sync_google_calendar(app, silent=True)
         return result, app, push
@@ -230,7 +229,9 @@ class GooglePullDatetimeSnapshotTests(TemporaryDatabaseTestCase):
                 self.assertEqual(expected, app._last_gcal_sync_error)
                 self.assertEqual(None if can_continue else status, app.gcal_sync.last_error_status)
                 self.assertEqual(1, app._last_gcal_sync_stats["pull_fetch_failures"])
-                self.assertEqual(2 if can_continue else 1, app.gcal_sync.fetch_sync_events.call_count)
+                self.assertEqual(
+                    2 if can_continue else 1, app.gcal_sync.fetch_sync_events.call_count
+                )
                 self.assertEqual(
                     "Synthetic event" if can_continue else "Existing mirror",
                     task_repo.get_unified_task(original_id)["name"],

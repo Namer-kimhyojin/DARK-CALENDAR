@@ -59,6 +59,6 @@ _DIALOG_ROUTE_MAP = {
 
 ## 수정 다이얼로그
 
-- `modify_task_dialog_unified.py` — `ModifyTaskDialog`
+- `modify_task_dialog_unified.py` — `UnifiedModifyTaskDialog`
 - create와 달리 기존 `task_id`를 받아 DB에서 데이터를 로드합니다
 - `recurring_event_dialog.py` — 반복 이벤트 수정 범위 선택 (이 항목만/이후 전체/전체)

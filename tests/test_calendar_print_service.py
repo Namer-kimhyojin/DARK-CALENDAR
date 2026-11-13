@@ -161,6 +161,20 @@ def test_multiday_event_occurs_on_every_in_scope_date():
     assert events_for_day(page, date(2026, 4, 13)) == ()
 
 
+def test_timed_event_ending_at_midnight_stays_on_its_day():
+    rows = [_row(21, "늦은 회의", "2026-11-13 23:00:00", "2026-11-14 00:00:00")]
+    document = build_calendar_print_document(
+        CalendarPrintRequest(date(2026, 11, 1), date(2026, 11, 30)),
+        rows,
+        CALENDARS,
+        created_at=datetime(2026, 11, 1, 9, 0),
+    )
+    page = document.pages[0]
+
+    assert [event.name for event in events_for_day(page, date(2026, 11, 13))] == ["늦은 회의"]
+    assert events_for_day(page, date(2026, 11, 14)) == ()
+
+
 def test_invalid_and_excessive_ranges_are_rejected():
     with pytest.raises(ValueError):
         CalendarPrintRequest(date(2026, 5, 1), date(2026, 4, 1)).validate()

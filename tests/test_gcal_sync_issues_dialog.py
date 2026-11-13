@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from calendar_app.infrastructure.db import db_repository_unified, task_repo
 from calendar_app.infrastructure.i18n import t
+from calendar_app.infrastructure.runtime.menu_paths import GOOGLE_SYNC_SETUP_PATH, format_menu_path
 from calendar_app.presentation.dialogs.gcal_sync_issues_dialog import GCalSyncIssuesDialog
 from calendar_app.presentation.dialogs.sync_feedback import sync_error_message
 from tests.support import TemporaryDatabaseTestCase
@@ -53,6 +54,30 @@ class GCalSyncIssuesDialogTests(TemporaryDatabaseTestCase):
             )
         finally:
             dialog.close()
+
+    def test_auth_guidance_names_the_live_setup_path(self):
+        task_id = task_repo.create_unified_task(
+            {
+                "name": "Task",
+                "type": "schedule",
+                "deadline": "2026-10-20 09:00:00",
+                "gcal_sync_error": "auth_required",
+                "gcal_dirty": 1,
+            }
+        )
+        self.assertIsNotNone(task_id)
+        dialog = GCalSyncIssuesDialog()
+        self.addCleanup(dialog.close)
+        self.assertEqual(dialog.table.rowCount(), 1)
+        dialog.table.setCurrentCell(0, 0)
+        guidance = dialog.guidance_text.toPlainText()
+        # The dialog fills {path}; a dropped argument would leave the placeholder.
+        self.assertIn(format_menu_path(GOOGLE_SYNC_SETUP_PATH), guidance)
+        self.assertNotIn("{path}", guidance)
+        self.assertIn(
+            t("gcal.guidance.auth", path=format_menu_path(GOOGLE_SYNC_SETUP_PATH)).split("\n")[0],
+            guidance,
+        )
 
     def _create_conflict(self):
         task_id = task_repo.create_unified_task(

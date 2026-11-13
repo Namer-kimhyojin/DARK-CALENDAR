@@ -39,7 +39,9 @@ def weekday_display_mode_for(owner):
 
 def next_weekday_display_mode(mode):
     mode = normalize_weekday_display_mode(mode) or "header"
-    return WEEKDAY_DISPLAY_MODES[(WEEKDAY_DISPLAY_MODES.index(mode) + 1) % len(WEEKDAY_DISPLAY_MODES)]
+    return WEEKDAY_DISPLAY_MODES[
+        (WEEKDAY_DISPLAY_MODES.index(mode) + 1) % len(WEEKDAY_DISPLAY_MODES)
+    ]
 
 
 def weekday_display_flags(mode):

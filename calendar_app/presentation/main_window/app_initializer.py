@@ -45,11 +45,14 @@ def initialize_overlay_app(app) -> None:
     app._focus_entry_was_maximized = False
     app._focus_windowed_was_maximized = False
     app._focus_fullscreen_btn = None
+    app._focus_task_type = None  # 'schedule' | 'directive' for the focus target
+    app._global_hotkeys = None  # keyboard_shortcuts.GlobalHotkeys (RegisterHotKey)
     app._top_bar_menu_wrapper = None
     app.act_topbar_auto_hide = None
     app._resize_dir = None
     app._screen_fill_active = False
     app._last_clicked_date = None
+    app._calendar_keyboard_date = None
     app.left_panel_mode = app.settings.value("left_panel_mode", "today", type=str)
     app.cal_show_weekends = app.settings.value("cal_show_weekends", True, type=bool)
     app.cal_start_monday = app.settings.value("cal_start_monday", True, type=bool)
@@ -214,11 +217,6 @@ def _initialize_alarm_checker(app) -> None:
 def _initialize_routine_rollover(app) -> None:
     try:
         from calendar_app.application import routine_advanced_service as routine_service
-        from calendar_app.infrastructure.db import db_repository as legacy_db_repository
-
-        legacy_db_repository.register_checklist_routine_rollover_hook(
-            routine_service.auto_create_next_routine
-        )
 
         created = routine_service.ensure_overdue_routines_rollover()
         if created:

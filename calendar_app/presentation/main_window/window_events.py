@@ -4,18 +4,12 @@
 import contextlib
 import logging
 
-try:
-    import win32con
-    import win32gui
-
-    HAS_WIN32 = True
-except ImportError:
-    win32con = None
-    win32gui = None
-    HAS_WIN32 = False
-
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon
+
+from calendar_app.infrastructure.runtime import win32_input
+
+HAS_WIN32 = win32_input.AVAILABLE
 
 logger = logging.getLogger(__name__)
 
@@ -38,19 +32,10 @@ def _can_hide_to_tray(window) -> bool:
 
 
 def _set_window_bottom(hwnd):
-    if not HAS_WIN32:
-        return
     try:
-        win32gui.SetWindowPos(
-            hwnd,
-            win32con.HWND_BOTTOM,
-            0,
-            0,
-            0,
-            0,
-            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE,
-        )
-    except Exception:
+        if not win32_input.set_window_bottom(hwnd):
+            logger.debug("SetWindowPos failed; keeping current z-order.")
+    except (OSError, TypeError, ValueError):
         logger.debug("SetWindowPos failed; keeping current z-order.", exc_info=True)
 
 

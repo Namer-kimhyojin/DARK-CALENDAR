@@ -12,6 +12,8 @@ address and released when the dialog itself is destroyed.
 from PyQt6 import sip
 from PyQt6.QtWidgets import QDialog
 
+from calendar_app.shared.qt_lifetime import call_when_destroyed
+
 _HELPERS: dict[tuple[int, str], object] = {}
 _WATCHED: set[int] = set()
 
@@ -36,7 +38,7 @@ def keep_dialog_helper(dialog, name: str, helper):
     _HELPERS[(address, name)] = helper
     if address not in _WATCHED:
         _WATCHED.add(address)
-        dialog.destroyed.connect(lambda *_args, address=address: _forget(address))
+        call_when_destroyed(dialog, _forget, address)
     return helper
 
 

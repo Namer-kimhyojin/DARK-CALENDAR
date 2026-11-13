@@ -38,6 +38,8 @@ STYLE_KEYS = frozenset(
         "weather_scene",
         "weather_motion",
         "weather_asset_pack",
+        "datecard_animation",
+        "datecard_animation_motion",
         "weather_auto_contrast",
         "scale",
     }

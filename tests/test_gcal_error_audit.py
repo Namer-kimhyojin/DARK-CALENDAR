@@ -508,10 +508,6 @@ def test_google_partial_failures_do_not_report_full_success(monkeypatch, failure
     monkeypatch.setattr(
         engine, "_push_local_changes_to_google", lambda *a: (2, int(failure == "push"), 0)
     )
-    heal_calls = []
-    monkeypatch.setattr(engine, "_should_run_auto_heal_orphans", lambda *a, **k: True)
-    monkeypatch.setattr(engine, "auto_heal_google_orphans", lambda *a, **k: heal_calls.append(1))
-    monkeypatch.setattr(engine, "_mark_auto_heal_orphans_run", lambda *a: None)
     result = engine.sync_google_calendar(app, silent=True)
     assert result is (failure is None)
     assert app._last_gcal_sync_outcome == (
@@ -522,4 +518,3 @@ def test_google_partial_failures_do_not_report_full_success(monkeypatch, failure
     assert values.get("gcal_sync_token::team") == (
         None if failure == "pull_apply" else "next-token"
     )
-    assert heal_calls == ([] if failure else [1])

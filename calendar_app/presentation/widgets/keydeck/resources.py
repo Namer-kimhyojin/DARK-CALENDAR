@@ -12,8 +12,10 @@ import logging
 import os
 from pathlib import Path
 import random
+import weakref
 
-from PyQt6.QtCore import QFileInfo, QSize, Qt, QUrl
+from PyQt6 import sip
+from PyQt6.QtCore import QFileInfo, QObject, QSize, Qt, QUrl, pyqtSlot
 from PyQt6.QtGui import QColor, QImage, QImageReader, QPainter, QPixmap
 from PyQt6.QtWidgets import QApplication, QFileIconProvider
 
@@ -321,6 +323,24 @@ def physical_sound_plan(key: dict, deck: dict | None) -> dict[str, tuple[str, fl
     return plan
 
 
+class _HolderDepartures(QObject):
+    """Checks output holders after one is destroyed, on a later event-loop turn.
+
+    Holders' destroyed() reaches this decorated slot through a native queued
+    connection: no Python runs inside the C++ deletion. A Python callable connected
+    to destroyed crashed in cyclic garbage collection while sip deleted the wrapper.
+    """
+
+    def __init__(self, check):
+        # Owned by the application, so garbage collection never deletes it.
+        super().__init__(QApplication.instance())
+        self._check = check
+
+    @pyqtSlot()
+    def holder_destroyed(self) -> None:
+        self._check()
+
+
 class SoundBank:
     """Loads each WAV once and plays it from a small voice pool (overlapping taps)."""
 
@@ -330,6 +350,8 @@ class SoundBank:
         self._pools: dict[str, list] = {}
         self._cursor: dict[str, int] = {}
         self._native: NativeSoundBank | None = None
+        self._holders: dict = {}  # output hold token -> weakref to the holding widget
+        self._departures: _HolderDepartures | None = None
 
     def _native_bank(self) -> NativeSoundBank:
         if self._native is None:
@@ -348,11 +370,12 @@ class SoundBank:
             self._pools[path] = pool
         return pool
 
-    def preload(self, paths, voices: int | None = None) -> None:
+    def preload(self, paths, voices: int | None = None, volume: float | None = None) -> None:
         if QApplication.instance() is None:
             return
         if QSoundEffect is None:
-            self._native_bank().preload(paths, voices=voices)
+            options = {"voices": voices} if volume is None else {"voices": voices, "volume": volume}
+            self._native_bank().preload(paths, **options)
             return
         for path in paths:
             if path:
@@ -370,6 +393,33 @@ class SoundBank:
         self._cursor[path] = index + 1
         effect.setVolume(max(0.0, min(1.0, volume)))
         effect.play()
+
+    def hold_output(self, token, held: bool, owner=None) -> None:
+        """Packaged builds: keep the native device open while a deck that can play is shown.
+
+        ``owner`` is the widget that holds it. A widget deleted without a hide event
+        (its own deleteLater, a deleted parent, garbage collection) lets go on the next
+        event-loop turn instead of keeping the device open until the app exits.
+        """
+        if QSoundEffect is not None or QApplication.instance() is None:
+            return
+        if owner is not None and token not in self._holders:
+            if self._departures is None or sip.isdeleted(self._departures):
+                self._departures = _HolderDepartures(self._release_departed)
+            self._holders[token] = weakref.ref(owner)
+            owner.destroyed.connect(
+                self._departures.holder_destroyed, Qt.ConnectionType.QueuedConnection
+            )
+        if held or self._native is not None:
+            self._native_bank().hold_output(token, held)
+
+    def _release_departed(self) -> None:
+        for token, ref in list(self._holders.items()):
+            owner = ref()
+            if owner is None or sip.isdeleted(owner):
+                del self._holders[token]
+                if self._native is not None:
+                    self._native.hold_output(token, False)
 
     def stop_all(self) -> None:
         """Silence active voices while retaining the preloaded sound cache."""

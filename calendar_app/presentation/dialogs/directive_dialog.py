@@ -89,7 +89,12 @@ class DirectiveDialog(QDialog):
         except Exception:
             logger.exception("DirectiveDialog.__init__ failed")
             QMessageBox.critical(
-                self, t("dialog.common.error"), "지시사항 다이얼로그 초기화 중 오류가 발생했습니다."
+                self,
+                t("dialog.common.error"),
+                t(
+                    "dialog.directive.msg_init_error",
+                    "지시사항 다이얼로그 초기화 중 오류가 발생했습니다.",
+                ),
             )
 
     def _make_deadline_quick_button(self, label):

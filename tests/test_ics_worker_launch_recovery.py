@@ -42,6 +42,7 @@ def launch(monkeypatch):
     coordinator = SimpleNamespace(
         ics_worker=None,
         _ics_pending_ids=set(),
+        _ics_accept_empty={},
         app=SimpleNamespace(_bg_workers=[]),
         settings=Settings(),
         _calendars=lambda: [
@@ -143,6 +144,7 @@ def test_native_qthread_remains_alive_until_failed_launch_finishes(monkeypatch):
     QObject.__init__(coordinator, owner)
     coordinator.ics_worker = None
     coordinator._ics_pending_ids = set()
+    coordinator._ics_accept_empty = {}
     coordinator.app = SimpleNamespace(_bg_workers=[])
     coordinator.settings = Settings()
     coordinator._calendars = lambda: [

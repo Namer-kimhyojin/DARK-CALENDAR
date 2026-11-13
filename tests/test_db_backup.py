@@ -126,6 +126,50 @@ def test_restore_skips_damaged_newest_snapshot(tmp_path):
     assert _count(db) == 3000
 
 
+@pytest.mark.parametrize("failed_source", ["desk_calendar.db-shm", "desk_calendar.db.restoring"])
+def test_failed_restore_puts_original_files_back(tmp_path, monkeypatch, failed_source):
+    db = tmp_path / "desk_calendar.db"
+    _make_database(db)
+    snapshot = db_backup.create_daily_backup(db, now=NOW)
+    _truncate(db)
+    wal = db.with_name(db.name + "-wal")
+    shm = db.with_name(db.name + "-shm")
+    wal.write_bytes(b"original wal")
+    shm.write_bytes(b"original shm")
+    originals = {path: path.read_bytes() for path in (db, wal, shm)}
+    replace = db_backup.os.replace
+
+    def fail_one_move(source, destination):
+        if source.name == failed_source:
+            raise PermissionError("simulated file lock")
+        return replace(source, destination)
+
+    monkeypatch.setattr(db_backup.os, "replace", fail_one_move)
+    with pytest.raises(PermissionError, match="simulated file lock"):
+        db_backup.restore_latest_backup(db, now=NOW)
+
+    assert {path: path.read_bytes() for path in originals} == originals
+    assert _count(snapshot) == 3000
+    assert not list(tmp_path.glob("*.corrupt-*"))
+    assert not list(tmp_path.glob("*.restoring"))
+
+
+def test_restore_keeps_an_earlier_archive_with_the_same_timestamp(tmp_path):
+    db = tmp_path / "desk_calendar.db"
+    _make_database(db)
+    db_backup.create_daily_backup(db, now=NOW)
+    _truncate(db)
+    damaged = db.read_bytes()
+    earlier = tmp_path / "desk_calendar.db.corrupt-20261109-120000"
+    earlier.write_bytes(b"previous recovery attempt")
+
+    assert db_backup.restore_latest_backup(db, now=NOW)
+
+    assert earlier.read_bytes() == b"previous recovery attempt"
+    assert (tmp_path / (earlier.name + "-1")).read_bytes() == damaged
+    assert _count(db) == 3000
+
+
 def test_restore_without_usable_snapshot_changes_nothing(tmp_path):
     db = tmp_path / "desk_calendar.db"
     _make_database(db)

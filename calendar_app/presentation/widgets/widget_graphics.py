@@ -20,13 +20,16 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QWidget
 
+from calendar_app.presentation.widgets.clock_flipbook import clock_flip_text, paint_flipbook_clock
 from calendar_app.presentation.widgets.moment_asset_packs import moment_asset_pixmap
 from calendar_app.presentation.widgets.weather_asset_packs import _trim_transparent
 from calendar_app.presentation.widgets.weather_scene import system_allows_weather_motion
 from calendar_app.presentation.widgets.widget_graphic_catalog import (
+    CLOCK_FLIPBOOK_COLLECTION_IDS,
     COLLECTIONS,
     graphic_collection,
 )
+from calendar_app.shared.typography import DEFAULT_UI_FONT, ui_font_families
 
 
 def contrast_ratio(first: str, second: str) -> float:
@@ -116,7 +119,7 @@ class WidgetGraphicSurface(QWidget):
         self.collection_id = "pure_air"
         self.kind = "clock"
         self.data: dict = {}
-        self.family = "Segoe UI"
+        self.family = DEFAULT_UI_FONT
         self.foreground = "#f5f7fb"
         self.background = "#101a28"
         self.background_alpha = 0.0
@@ -131,6 +134,7 @@ class WidgetGraphicSurface(QWidget):
         self._layer: QPixmap | None = None
         self._background_layer: QPixmap | None = None
         self._old_layer: QPixmap | None = None
+        self._flip_from: str | None = None
         self._blend = 1.0
         self._text_bounds: list[QRectF] = []
         self._transition = QVariantAnimation(self)
@@ -191,8 +195,19 @@ class WidgetGraphicSurface(QWidget):
         state_changed = bool(self.data) and any(
             self.data.get(key) != data.get(key) for key in ("running", "done")
         )
+        previous_second = self.data.get("clock_second_of_day")
+        current_second = data.get("clock_second_of_day")
+        flip_changed = (
+            kind == "clock"
+            and collection_id in CLOCK_FLIPBOOK_COLLECTION_IDS
+            and style == previous_style
+            and previous_second is not None
+            and current_second is not None
+            and (current_second - previous_second) % 86400 in (1, 2)
+            and clock_flip_text(self.data) != clock_flip_text(data)
+        )
         if (
-            state_changed
+            (state_changed or flip_changed)
             and self._active
             and self.isVisible()
             and motion
@@ -200,9 +215,17 @@ class WidgetGraphicSurface(QWidget):
             and not self._studio_motion_paused
             and system_allows_weather_motion()
         ):
-            self._old_layer = self._layer
             self._transition.stop()
+            self._old_layer = None if flip_changed else self._layer
+            self._flip_from = clock_flip_text(self.data) if flip_changed else None
+            self._transition.setDuration(360 if flip_changed else 180)
+            self._transition.setEasingCurve(
+                QEasingCurve.Type.Linear if flip_changed else QEasingCurve.Type.OutCubic
+            )
             self._transition.start()
+        elif self._flip_from is not None:
+            self._transition.stop()
+            self._finish_transition()
         if style != previous_style:
             self._background_layer = None
         (
@@ -247,7 +270,7 @@ class WidgetGraphicSurface(QWidget):
         self.update()
 
     def _finish_transition(self) -> None:
-        self._old_layer, self._blend = None, 1.0
+        self._old_layer, self._flip_from, self._blend = None, None, 1.0
         self.update()
 
     def hideEvent(self, event) -> None:  # noqa: N802
@@ -258,12 +281,12 @@ class WidgetGraphicSurface(QWidget):
     def resizeEvent(self, event) -> None:  # noqa: N802
         self._layer = self._background_layer = None
         self._transition.stop()
-        self._old_layer = None
+        self._finish_transition()
         super().resizeEvent(event)
 
     def _font(self, size: float, bold=False) -> QFont:
         font = QFont(self.family)
-        font.setFamilies([self.family, "Malgun Gothic", "Segoe UI"])
+        font.setFamilies(ui_font_families(self.family))
         font.setPixelSize(max(6, round(size * self.text_scale)))
         font.setWeight(QFont.Weight.DemiBold if bold else QFont.Weight.Normal)
         return font
@@ -379,7 +402,8 @@ class WidgetGraphicSurface(QWidget):
         pixmap = self._pixmap()
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if self.background_alpha > 0:
+        design = graphic_collection(self.collection_id)
+        if self.background_alpha > 0 and not (design and design.clock_sticker):
             path = QPainterPath()
             radius = min(24, self.height() * 0.13)
             path.addRoundedRect(QRectF(1, 1, self.width() - 2, self.height() - 2), radius, radius)
@@ -466,6 +490,9 @@ class WidgetGraphicSurface(QWidget):
         painter.restore()
 
     def _paint_content(self, painter) -> None:
+        if self.kind == "clock" and self.collection_id in CLOCK_FLIPBOOK_COLLECTION_IDS:
+            paint_flipbook_clock(self, painter)
+            return
         design = graphic_collection(self.collection_id)
         if design and design.widget_kind:
             from calendar_app.presentation.widgets.widget_graphic_layouts import (
@@ -616,18 +643,22 @@ class WidgetGraphicSurface(QWidget):
         if self._background_layer is None or self._background_layer.size() != expected:
             self._background_layer = self._paint_background()
             self._layer = None
-        if self._layer is None:
-            self._layer = self._pixmap()
-            painter = QPainter(self._layer)
+        flipping = self._flip_from is not None
+        layer = self._layer
+        if layer is None or flipping:
+            layer = self._pixmap()
+            painter = QPainter(layer)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
             self._paint_content(painter)
             painter.end()
+            if not flipping:
+                self._layer = layer
         painter = QPainter(self)
         painter.drawPixmap(0, 0, self._background_layer)
         if self._old_layer is not None:
             painter.setOpacity(1 - self._blend)
             painter.drawPixmap(0, 0, self._old_layer)
-        painter.setOpacity(self._blend)
-        painter.drawPixmap(0, 0, self._layer)
+        painter.setOpacity(1.0 if flipping else self._blend)
+        painter.drawPixmap(0, 0, layer)
         painter.end()

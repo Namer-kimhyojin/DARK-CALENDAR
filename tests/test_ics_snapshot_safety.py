@@ -105,14 +105,15 @@ def test_failed_row_rolls_back_updates_and_deletions(snapshot):
     assert not conn.in_transaction
 
 
-def test_valid_empty_calendar_removes_only_its_mirrors(snapshot):
+def test_feed_without_current_events_removes_only_its_mirrors(snapshot):
     conn, sync = snapshot
     sync(feed(event("one")))
     conn.execute(
         "INSERT INTO unified_task(name,calendar_id,type) VALUES('Local','local::one','schedule')"
     )
     conn.commit()
-    assert sync(feed()) == (0, 1, None)
+    # The feed still lists an event, but none that is current.
+    assert sync(feed(event("gone", extra="STATUS:CANCELLED\r\n"))) == (0, 1, None)
     assert rows(conn) == [(None, "Local")]
 
 
@@ -264,7 +265,8 @@ def test_real_database_schema_accepts_atomic_ics_snapshot(tmp_path, monkeypatch)
             ics_fetcher, "open_subscription", lambda *a, **k: BytesIO(feed(event("one")))
         )
         assert ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul") == (1, 0, None)
-        monkeypatch.setattr(ics_fetcher, "open_subscription", lambda *a, **k: BytesIO(feed()))
+        cancelled = feed(event("gone", extra="STATUS:CANCELLED\r\n"))
+        monkeypatch.setattr(ics_fetcher, "open_subscription", lambda *a, **k: BytesIO(cancelled))
         assert ics_fetcher.fetch_and_sync(KEY, URL, "Asia/Seoul") == (0, 1, None)
     finally:
         database_unified.db_manager.close_connection()

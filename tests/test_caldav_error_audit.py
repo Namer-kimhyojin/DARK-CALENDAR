@@ -13,6 +13,7 @@ from calendar_app.infrastructure.caldav_sync.client import CalDAVClient
 from calendar_app.infrastructure.caldav_sync.resource_cache import CalDAVResourceCache
 from tests.test_caldav_sync import BASE, HREF, ICS, Response, Session, multi, xml_row
 
+ZONE = "Asia/Seoul"
 NOW = datetime(2026, 10, 5, tzinfo=UTC)
 START, END = NOW - timedelta(days=120), NOW + timedelta(days=400)
 COLLECTION = BASE + "calendar/"
@@ -32,11 +33,13 @@ def _recurring(rule):
     ],
 )
 def test_sparse_filtered_series_retains_stable_read_only_occurrences(rule):
-    first = conversion.records(HREF, "fixture-etag", _recurring(rule), START, END)
+    first = conversion.records(HREF, "fixture-etag", _recurring(rule), START, END, zone=ZONE)
     assert 390 <= len(first) <= 403
     assert len({event["id"] for event in first}) == len(first)
     assert all(event["read_only"] for event in first)
-    assert first == conversion.records(HREF, "fixture-etag", _recurring(rule), START, END)
+    assert first == conversion.records(
+        HREF, "fixture-etag", _recurring(rule), START, END, zone=ZONE
+    )
 
 
 @pytest.mark.parametrize(
@@ -50,7 +53,7 @@ def test_sparse_filtered_series_retains_stable_read_only_occurrences(rule):
 )
 def test_nonpositive_count_or_interval_is_rejected(rule):
     with pytest.raises(CalendarSyncError, match="^invalid_recurrence$"):
-        conversion.records(HREF, "fixture-etag", _recurring(rule), START, END)
+        conversion.records(HREF, "fixture-etag", _recurring(rule), START, END, zone=ZONE)
 
 
 def test_interval_aligned_filter_keeps_pre_expansion_event_limit(monkeypatch):
@@ -64,6 +67,7 @@ def test_interval_aligned_filter_keeps_pre_expansion_event_limit(monkeypatch):
             _recurring(f"FREQ=HOURLY;INTERVAL=24;BYHOUR=1;BYMINUTE={minutes}"),
             START,
             END,
+            zone=ZONE,
         )
     expansion.assert_not_called()
 

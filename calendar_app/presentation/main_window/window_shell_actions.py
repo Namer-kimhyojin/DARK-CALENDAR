@@ -3,7 +3,7 @@
 
 import os
 
-from PyQt6.QtCore import QTimer, QUrl
+from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
@@ -544,6 +544,20 @@ class WindowShellActionsMixin:
         else:
             current = self._calendar_toolbar_visible_setting()
         self.set_calendar_toolbar_visible(not current)
+
+    def keyPressEvent(self, event):
+        """Esc leaves focus fullscreen first, otherwise clears the selection."""
+        if event.key() == Qt.Key.Key_Escape:
+            self.handle_escape_key()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def handle_escape_key(self):
+        from calendar_app.presentation.focus_mode import exit_focus_fullscreen
+
+        if not exit_focus_fullscreen(self):
+            self.clear_task_selection()
 
     def toggle_focus_mode(self):
         from calendar_app.presentation.focus_mode import toggle_focus_mode

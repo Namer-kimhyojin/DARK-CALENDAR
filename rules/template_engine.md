@@ -176,7 +176,7 @@ def resolve_template(
 
 ## 라이브 프리뷰 에디터
 
-`_action_edit_text()` 에서 열리는 템플릿 편집기:
+`overlay_base.py`의 `_build_advanced_template_tab()`이 만드는 템플릿 편집기:
 - `QSplitter`: 좌측 에디터 + 우측 프리뷰 레이블
 - 300ms debounce QTimer로 변경마다 프리뷰 갱신
 - 힌트 패널: 변수 카테고리 + 조건식 예시 표시

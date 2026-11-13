@@ -13,6 +13,7 @@ from calendar_app.app_paths import APP_NAME, APP_VENDOR
 from calendar_app.infrastructure.db import calendar_repo, database_unified, task_repo
 from calendar_app.infrastructure.google_sync import engine, helpers, repository
 from calendar_app.infrastructure.google_sync import service as gcal_service
+from calendar_app.infrastructure.i18n import t
 from tests.support import TemporaryDatabaseTestCase
 from tests.test_gcal_sync_helpers import FakeSyncService
 from tests.test_gcal_sync_integration import FakeDate, FakeGoogleEvent, FakeSettings
@@ -94,7 +95,9 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
         self.assertEqual(0, repository.cleanup_duplicate_gcal_rows())
         self.assertEqual({source_id, target_id}, {row["id"] for row in self._rows()})
 
-    def _pull(self, event, *, failure_status=None, sync_token="", import_enabled=True):
+    def _pull(
+        self, event, *, failure_status=None, sync_token="", import_enabled=True, editing_ids=()
+    ):
         sync = SimpleNamespace(
             is_authenticated=True,
             calendar_id="team",
@@ -126,6 +129,7 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
             gcal_sync=sync,
             update_sync_status=lambda: None,
             mark_panel_dirty=lambda **kwargs: None,
+            active_editing_task_ids=set(editing_ids),
         )
         self._last_app = app
         app.settings.setValue("gcal_sync_token::team", sync_token)
@@ -141,7 +145,6 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
             patch.object(engine, "_should_run_incremental_backfill_probe", return_value=False),
             patch.object(engine, "_process_google_delete_queue", return_value=(0, 0)),
             patch.object(engine, "_push_local_changes_to_google", return_value=(0, 0, 0)) as push,
-            patch.object(engine, "auto_heal_google_orphans"),
         ):
             result = engine.sync_google_calendar(app, silent=True)
             self._last_push = push
@@ -270,16 +273,6 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
                 self.assertEqual([], result)
                 self.assertEqual("calendar_list", sync.last_error_kind)
 
-    def test_subscription_metadata_uses_the_same_account_proof_validator(self):
-        sync = gcal_service.CalendarSyncService()
-        sync.is_authenticated = True
-        sync.service = object()
-        with patch.object(
-            sync, "_execute_request", return_value={"id": "team", "primary": "false"}
-        ):
-            self.assertIsNone(sync.subscribe_calendar("team"))
-        self.assertEqual("subscribe", sync.last_error_kind)
-
     def test_malformed_page_envelope_does_not_become_an_empty_full_sync(self):
         for response in (
             {},
@@ -364,7 +357,8 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
         self.assertFalse(reset)
         self.assertEqual("cancelled", events[0].status)
         self.assertEqual(
-            ("Untitled", "", ""), (events[1].summary, events[1].description, events[1].location)
+            (t("dialog.task.untitled", "제목 없음"), "", ""),
+            (events[1].summary, events[1].description, events[1].location),
         )
 
     def test_invalid_full_sync_is_validated_before_any_row_is_applied_or_archived(self):
@@ -741,7 +735,6 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
             self.assertFalse(sync.move_event("id", "primary", "team"))
             for batch in (
                 sync.batch_create_events,
-                sync.batch_update_events,
                 sync.batch_delete_events,
             ):
                 result = batch([{"local_task_id": 1, "event_id": "id"}])
@@ -853,6 +846,18 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
                 1, observer.execute("SELECT COUNT(*) FROM gcal_deleted_task_archive").fetchone()[0]
             )
 
+    def test_change_to_task_open_in_editor_is_fetched_again_after_close(self):
+        row_id = self._add("Local", "team", target="team")
+        event = FakeGoogleEvent("same-event", "Changed", "2026-10-09", "2026-10-10")
+
+        self._pull(event, sync_token="old-token", editing_ids={row_id})
+        self.assertEqual("old-token", self._last_app.settings.value("gcal_sync_token::team"))
+        self.assertEqual("Local", task_repo.get_unified_task(row_id)["name"])
+
+        self._pull(event, sync_token="old-token")
+        self.assertEqual("next-token", self._last_app.settings.value("gcal_sync_token::team"))
+        self.assertEqual("Changed", task_repo.get_unified_task(row_id)["name"])
+
     def test_failed_cancelled_archive_does_not_advance_the_sync_token(self):
         self._add("Cancelled", "team", target="team")
         event = FakeGoogleEvent("same-event", "Cancelled", "", "", status="cancelled")
@@ -924,48 +929,6 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
     def test_unlinked_scan_delete_queue_exclusion_is_calendar_scoped(self):
         task_repo.queue_gcal_delete("same-event", gcal_calendar_id="family")
         self.assertEqual(["team"], [row["gcal_calendar_id"] for row in self._scan_unlinked()])
-
-    def test_unlinked_remote_event_is_never_automatically_queued_for_deletion(self):
-        app = SimpleNamespace(
-            settings=FakeSettings({"gcal_enabled": "true"}),
-            gcal_sync=SimpleNamespace(is_authenticated=True),
-        )
-        orphan = {
-            "gcal_event_id": "ordinary-event",
-            "gcal_calendar_id": "team",
-            "summary": "Created in Google",
-            "start": "2026-10-09",
-        }
-        with (
-            patch.object(engine, "scan_orphan_remote_events", return_value=[orphan]),
-            patch.object(task_repo, "find_orphan_candidate", return_value=None),
-            patch.object(task_repo, "queue_gcal_delete") as delete,
-        ):
-            engine.auto_heal_google_orphans(app)
-        delete.assert_not_called()
-
-    def test_unlinked_remote_event_is_not_auto_linked_by_same_title_and_date(self):
-        app = SimpleNamespace(
-            settings=FakeSettings({"gcal_enabled": "true"}),
-            gcal_sync=SimpleNamespace(is_authenticated=True),
-        )
-        orphan = {
-            "gcal_event_id": "ordinary-event",
-            "gcal_calendar_id": "team",
-            "summary": "Same Title",
-            "start": "2026-10-09",
-        }
-        with (
-            patch.object(engine, "scan_orphan_remote_events", return_value=[orphan]),
-            patch.object(
-                task_repo,
-                "find_orphan_candidate",
-                side_effect=lambda *args: {"id": 1} if len(args) == 2 else None,
-            ),
-            patch.object(task_repo, "mark_unified_task_gcal_synced") as link,
-        ):
-            engine.auto_heal_google_orphans(app)
-        link.assert_not_called()
 
     def _push_fixture(self, *, linked=True):
         task_id = self._add("Local edit", "team", target="team", dirty=1)

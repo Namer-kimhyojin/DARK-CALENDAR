@@ -34,7 +34,7 @@
   },
   "qa_sha256": {
     "requirements-build.lock": "b686cb6dece284199aff026b9e921700b5d3653cff4d07c8102ad90ae5d75696",
-    "scripts/manage_version.py": "72b128508b763379dad47eb3ed711c6da6b5ebe3955df9b0b37be6a7e58b5aa8",
+    "scripts/manage_version.py": "38925dedfb1a81bb309e66d0a3ebb7637a09545c28214a47b58714d0d2ee9e39",
     "scripts/native_exception_observer.py": "b96c515c81ccdcfa4bc5bb78fecb046893b8abfcd2d0c0540b8c39e2309323cd",
     "scripts/native_release_smoke.py": "731b6ea491b2917adef1c2dfe7063dbbe47f8ff63b3837375feebb48a23e4a64",
     "scripts/prepare_native_smoke_baseline.py": "2e9bff8f8cda2252b33b117687f4f1b22f66e35f1ffda78aa6618d58cd69c33a",

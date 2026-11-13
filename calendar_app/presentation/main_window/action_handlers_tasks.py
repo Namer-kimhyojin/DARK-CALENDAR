@@ -9,7 +9,6 @@ from PyQt6.QtWidgets import QApplication, QMessageBox
 from calendar_app.application import task_delete_usecases, task_usecases
 from calendar_app.infrastructure.db import checklist_repo as db_checklist
 from calendar_app.infrastructure.db import directive_repo as db_directive
-from calendar_app.infrastructure.db import legacy_task_repo as db_legacy_task
 from calendar_app.infrastructure.db import search_repo as db_search
 from calendar_app.infrastructure.db import task_repo as db_task
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
@@ -88,10 +87,6 @@ class TaskActionsMixin:
         if task_data and _is_schedule and self.settings.value("gcal_enabled", "true") == "true":
             gcal_push_queue.enqueue(self, task_data, create_if_missing=True)
         self.schedule_panel_refresh(left=True, center=True, right=True)
-
-    def handle_task_modified(self, modified_data):
-        if task_usecases.apply_task_basic_modification(db_legacy_task, modified_data):
-            self.schedule_panel_refresh(left=True, center=True)
 
     def handle_task_status_changed(self, task_id, status):
         """일정 상태 변경(완료/미완료)."""
@@ -409,6 +404,16 @@ class TaskActionsMixin:
             QMessageBox.information(self, t("dialog.alarm.title"), t("dialog.alarm.removed"))
             self._refresh_all_panels()
 
+    def _drop_read_only_tasks(self, task_ids):
+        """Leave out tasks on read-only calendars; their remote copy would come back."""
+        blocked = set(task_delete_usecases.read_only_task_ids(db_task, task_ids))
+        if blocked and hasattr(self, "show_toast"):
+            self.show_toast(
+                t("dialog.task.calendar_read_only", "읽기 전용 캘린더"),
+                t("gcal.errors.forbidden", "해당 캘린더에 대한 수정 권한이 없습니다."),
+            )
+        return [task_id for task_id in task_ids if task_id not in blocked]
+
     def handle_task_deleted(self, task_id):
         """Delete task(s), supporting multi-selection."""
         target_ids = task_usecases.resolve_delete_target_ids(self.selected_task_ids, task_id)
@@ -429,6 +434,9 @@ class TaskActionsMixin:
         )
 
         if reply != QMessageBox.StandardButton.Yes:
+            return
+        target_ids = self._drop_read_only_tasks(target_ids)
+        if not target_ids:
             return
 
         from calendar_app.shared.background_worker import DbTaskWorker
@@ -562,6 +570,7 @@ class TaskActionsMixin:
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
+        task_ids = self._drop_read_only_tasks(task_ids)
 
         deleted_directives = (
             self._delete_selected_directives_without_prompt() if directive_ids else 0
@@ -643,10 +652,11 @@ class TaskActionsMixin:
         )
 
         tasks = task_usecases.get_tasks_for_date(db_search, date_str)
-        if not tasks:
+        writable = self._drop_read_only_tasks([task.get("id") for task in tasks])
+        if not writable:
             return
 
-        count = len(tasks)
+        count = len(writable)
         msg = (
             t(
                 "dialog.common.delete_all_date_msg",
@@ -732,7 +742,7 @@ class TaskActionsMixin:
             logger.exception("Error updating directive priority for directive_id=%s", directive_id)
 
     def toggle_checklist_item(self, link_id):
-        if task_usecases.toggle_checklist_item(db_checklist, link_id):
+        if task_usecases.toggle_checklist_item(db_checklist, db_task, link_id):
             self._refresh_all_panels()
 
     def reset_checklist_items(self, task_id):

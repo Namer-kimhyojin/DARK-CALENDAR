@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
-"""Validate Retry-After without exposing remote headers or exceeding Qt timers."""
+"""Validate Retry-After without exposing remote headers or pausing sync for long."""
 
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from math import ceil
 
-MAX_RETRY_AFTER_SECONDS = 2_147_483
+# The pause also blocks a manual "sync now"; one server header must not stop sync for days.
+MAX_RETRY_AFTER_SECONDS = 3600
 
 
 def retry_after_seconds(value, *, now=None):
-    """Return positive seconds, capped at the signed 32-bit millisecond limit."""
+    """Return positive seconds, capped at one hour."""
     if not isinstance(value, str) or len(value) > 128:
         return None
     value = value.strip()

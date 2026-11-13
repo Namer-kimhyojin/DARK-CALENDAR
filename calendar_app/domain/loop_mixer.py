@@ -176,6 +176,7 @@ class LoopMixerState:
         self._pending = {}
         self._recorded = 0
         self._overdub = False
+        self._offsets = {}
 
     @property
     def loop_frames(self):
@@ -253,6 +254,7 @@ class LoopMixerState:
             samples.extend(array("h", [0]) * (sample_count - len(samples)))
             pending[index] = samples
         self._pending = pending
+        self._offsets = {}
         self.mode = "recording"
 
     def _commit(self):
@@ -265,6 +267,8 @@ class LoopMixerState:
         self.mode = "playing"
 
     def stop(self, *, commit=True):
+        """Return True when part of a take was kept."""
+        committed = self.mode == "recording" and commit and self._recorded > 0
         if self.mode == "recording" and commit:
             self._commit()
         self._pending = {}
@@ -273,6 +277,7 @@ class LoopMixerState:
         self._voices.clear()
         self.input_level = 0.0
         self.output_levels = (0.0, 0.0)
+        return committed
 
     def clear_track(self, index):
         if self.mode == "recording":
@@ -317,7 +322,41 @@ class LoopMixerState:
         self._voices = [voice for voice in self._voices if voice.position < len(voice.audio)]
         return buffers
 
-    def render(self, frames, microphone=b""):
+    def _capture(self, index, track, position, count, incoming, latency, input_latency):
+        """Write one block of a take where the player heard the loop, not where it rendered.
+
+        A block rendered now reaches the speaker ``latency`` frames later, and the
+        microphone heard the room ``input_latency`` frames before it was read, so a hit
+        or a note belongs that much earlier. The shift is fixed by the first audible
+        input of the take and never jitters; silence written before that changes
+        nothing wherever it lands (zeros, or the old audio when overdubbing).
+        """
+        loop_frames = self.loop_frames
+        kind = "mic" if track.source == "mic" else "live"
+        offset = self._offsets.get(kind)
+        if offset is None:
+            offset = 0
+            if any(incoming):
+                shift = max(0, latency) + (max(0, input_latency) if kind == "mic" else 0)
+                offset = self._offsets[kind] = shift % loop_frames
+        pending = self._pending[index]
+        done = 0
+        while done < count:
+            start = (position + done - offset) % loop_frames
+            chunk = min(count - done, loop_frames - start)
+            at, size, base = start * 2, chunk * 2, done * 2
+            old = track.audio[at : at + size] if self._overdub else ()
+            pending[at : at + size] = array(
+                "h",
+                (
+                    clamp_sample(incoming[base + item] + (old[item] if item < len(old) else 0))
+                    for item in range(size)
+                ),
+            )
+            done += chunk
+
+    def render(self, frames, microphone=b"", *, latency=0, input_latency=0):
+        """Mix one block; ``latency``/``input_latency`` place recorded input (frames)."""
         if type(frames) is not int or not 1 <= frames <= BLOCK_FRAMES:
             raise ValueError("invalid_block")
         if self.mode == "idle":
@@ -348,16 +387,7 @@ class LoopMixerState:
                     incoming = list(incoming) + [0] * (size - len(incoming))
                 capturing = self.mode == "recording" and index in self._pending
                 if capturing:
-                    recorded = array(
-                        "h",
-                        (
-                            clamp_sample(
-                                incoming[offset] + (previous[offset] if self._overdub else 0)
-                            )
-                            for offset in range(size)
-                        ),
-                    )
-                    self._pending[index][sample_at : sample_at + size] = recorded
+                    self._capture(index, track, position, count, incoming, latency, input_latency)
                 if (
                     track.muted
                     or (solo and not track.solo)

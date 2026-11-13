@@ -52,6 +52,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     apply_common_dialog_style,
     build_dialog_footer,
 )
+from calendar_app.presentation.locale_names import calendar_display_name
 from calendar_app.presentation.printing.calendar_print_renderer import (
     CalendarPrintRenderOptions,
     configure_printer,
@@ -176,7 +177,11 @@ class CalendarPrintDialog(QDialog):
         self.calendar_list.setMinimumHeight(145)
         self.calendar_list.setAccessibleName(t("print.calendar_list", "출력할 캘린더"))
         for calendar in self._calendar_rows:
-            name = str(calendar.get("name") or calendar.get("id") or "Calendar")
+            name = str(
+                calendar_display_name(calendar.get("id"), calendar.get("name"))
+                or calendar.get("id")
+                or "Calendar"
+            )
             cal_type = str(calendar.get("type") or "local").upper()
             item = QListWidgetItem(
                 _color_icon(str(calendar.get("color") or "#4d7cff")),
@@ -557,10 +562,18 @@ class CalendarPrintDialog(QDialog):
                 request.end_date.isoformat(),
                 request.selected_calendar_ids,
             )
+            # Printed legends and detail rows use the same calendar names as the screen.
+            calendars = [
+                {
+                    **calendar,
+                    "name": calendar_display_name(calendar.get("id"), calendar.get("name")),
+                }
+                for calendar in source.get("calendars", [])
+            ]
             return build_calendar_print_document(
                 request,
                 source.get("rows", []),
-                source.get("calendars", []),
+                calendars,
                 warnings=(
                     t(
                         "print.warning_stored_data",

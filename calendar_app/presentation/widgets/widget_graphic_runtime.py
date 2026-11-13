@@ -91,6 +91,8 @@ class WidgetGraphicRuntimeMixin:
                 hour=clock.hour() % 12 + clock.minute() / 60,
                 minute=clock.minute() + clock.second() / 60,
                 second=clock.second(),
+                clock_second_of_day=clock.msecsSinceStartOfDay() // 1000,
+                ampm=QLocale().toString(now, "AP") if twelve else "",
             )
         elif kind == "date_card":
             day = QDate.currentDate()
@@ -167,7 +169,7 @@ class WidgetGraphicRuntimeMixin:
             )
         data["accessible"] = " · ".join(
             str(data.get(key, ""))
-            for key in ("title", "main", "minor", "detail", "date", "body")
+            for key in ("title", "main", "minor", "ampm", "detail", "date", "body")
             if data.get(key) not in (None, "")
         )
         return data

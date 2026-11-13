@@ -19,9 +19,6 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
 )
 from calendar_app.presentation.dialogs.management_dialogs import _status_background
-from calendar_app.presentation.dialogs.routine_bulk_operations_dialog import (
-    _routine_bulk_row_colors,
-)
 from calendar_app.presentation.widgets.alarm_popup import _alarm_popup_style_bundle
 from calendar_app.shared.color_utils import (
     composite_color,
@@ -29,7 +26,6 @@ from calendar_app.shared.color_utils import (
     derive_modal_state_palette,
     derive_state_palette,
     hex_to_rgba,
-    parse_css_color,
 )
 from calendar_app.shared.theme_snapshot import build_dialog_base_tokens
 from calendar_app.shared.ui_tokens import get_modal_ui_tokens, get_ui_tokens
@@ -85,10 +81,6 @@ def test_modal_roles_and_actual_button_text_share_the_accent_family(app, tmp_pat
         expected = accent if status == "in_progress" else states["success"]
         assert status_color.name() == expected
         assert status_color.alpha() == 48
-    row_colors = _routine_bulk_row_colors(tokens)
-    for priority in ("normal", "high", "urgent", "completed"):
-        assert row_colors[priority].name() == states["success"]
-    assert row_colors["low"].name() == parse_css_color(tokens["text_secondary"]).name()
 
     dialog = QDialog()
     dialog.setWindowTitle("모달 팔레트 검증")

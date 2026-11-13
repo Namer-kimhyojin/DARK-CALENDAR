@@ -66,10 +66,6 @@ class ThemeSnapshot:
     text_opacity: int = 255
 
 
-
-
-
-
 UI_SHAPE_PRESETS: dict[str, dict[str, int]] = {
     "modern": {
         "panel_item_radius": 10,

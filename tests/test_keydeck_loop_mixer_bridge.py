@@ -26,7 +26,9 @@ def app():
 @pytest.fixture
 def backend(monkeypatch):
     backend = SimpleNamespace(
-        route_keydeck_sound=Mock(return_value=True), stop_keydeck_source=Mock(return_value=True)
+        route_keydeck_sound=Mock(return_value=True),
+        stop_keydeck_source=Mock(return_value=True),
+        set_keydeck_sounds=Mock(),
     )
     monkeypatch.setitem(
         sys.modules, "calendar_app.infrastructure.runtime.loop_mixer_audio", backend
@@ -124,7 +126,6 @@ def test_instance_id_is_bound_after_manager_attach_and_old_entries_preserve_data
         widget._open_beatmaker_looper()
         assert widget.deck() == before
         assert owner.overlay_manager.show_instance.call_count == 2
-        assert widget._performance_dialog is None
     finally:
         widget.close()
         widget.deleteLater()

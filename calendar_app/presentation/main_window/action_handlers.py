@@ -93,6 +93,18 @@ def _detached_process_started(result) -> bool:
     return bool(result)
 
 
+def _check_language_action(window, lang_code) -> None:
+    """Point the language menu's check mark at the saved language."""
+
+    group = getattr(window, "lang_action_group", None)
+    if group is None:
+        return
+    for action in group.actions():
+        if action.data() == lang_code:
+            action.setChecked(True)
+            return
+
+
 class _ExitConfirmationBox(QMessageBox):
     """Exit prompt that is never hidden behind always-on-top desktop widgets."""
 
@@ -208,6 +220,11 @@ class ActionHandlersMixin(
 
         shutdown_succeeded = True
         try:
+            # Give the OS-wide show/hide hotkey back before anything else.
+            from calendar_app.infrastructure.runtime import keyboard_shortcuts
+
+            keyboard_shortcuts.release_global_hotkeys(self)
+
             # Stop every known application timer before waiting for workers so
             # no new refresh/auth/sync work can be scheduled during teardown.
             for timer_name in _SHUTDOWN_TIMER_ATTRS:
@@ -328,6 +345,7 @@ class ActionHandlersMixin(
 
         self.settings.setValue("language", lang_code)
         self.settings.sync()  # Ensure it's saved
+        _check_language_action(self, lang_code)
 
         msg = t(
             "system_msg.lang_saved_msg",
@@ -347,6 +365,7 @@ class ActionHandlersMixin(
             logger.error("Cancelled language restart because session state could not be saved")
             self.settings.setValue("language", previous_language)
             self.settings.sync()
+            _check_language_action(self, previous_language)
             QMessageBox.warning(
                 self,
                 title,
@@ -381,7 +400,7 @@ class ActionHandlersMixin(
                 self,
                 title,
                 t(
-                    "system_msg.restart_failed",
+                    "system_msg.restart_launch_failed",
                     "앱을 자동으로 다시 시작하지 못했습니다. 앱을 직접 다시 실행해 주세요.",
                 ),
             )
@@ -433,7 +452,7 @@ class ActionHandlersMixin(
                 self,
                 t("menu.locale_tools", "로케일 파일 관리"),
                 t(
-                    "system_msg.restart_failed",
+                    "system_msg.restart_launch_failed",
                     "앱을 자동으로 다시 시작하지 못했습니다. 앱을 직접 다시 실행해 주세요.",
                 ),
             )

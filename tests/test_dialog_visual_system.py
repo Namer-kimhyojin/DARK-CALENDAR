@@ -33,7 +33,9 @@ class DialogVisualSystemTests(unittest.TestCase):
     def setUp(self):
         self.temp = TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.settings = QSettings(str(Path(self.temp.name) / "visual.ini"), QSettings.Format.IniFormat)
+        self.settings = QSettings(
+            str(Path(self.temp.name) / "visual.ini"), QSettings.Format.IniFormat
+        )
         self.settings.setValue("theme_color", "#c5a3f5")
         self.settings.setValue("panel_base_color", "#121827")
         self.settings.setValue("text_theme", "dark")
@@ -114,13 +116,17 @@ class DialogVisualSystemTests(unittest.TestCase):
         self.addCleanup(dialog.close)
         dialog.setText("변경 내용을 저장할까요?")
         dialog.setStandardButtons(
-            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel
         )
         dialog.setDefaultButton(QMessageBox.StandardButton.Cancel)
         dialog.show()
         self.app.processEvents()
         self.assertEqual(dialog.button(QMessageBox.StandardButton.Save).objectName(), "primary_btn")
-        self.assertEqual(dialog.button(QMessageBox.StandardButton.Discard).objectName(), "danger_btn")
+        self.assertEqual(
+            dialog.button(QMessageBox.StandardButton.Discard).objectName(), "danger_btn"
+        )
         self.assertEqual(dialog.button(QMessageBox.StandardButton.Cancel).objectName(), "ghost_btn")
         self.assertIs(dialog.defaultButton(), dialog.button(QMessageBox.StandardButton.Cancel))
         self.assertTrue(all(button.property("dialogFooter") for button in dialog.buttons()))
@@ -129,7 +135,9 @@ class DialogVisualSystemTests(unittest.TestCase):
         dialog = QMessageBox()
         self.addCleanup(dialog.close)
         dialog.setText("배치를 저장할까요?")
-        dialog.setStandardButtons(QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel)
+        dialog.setStandardButtons(
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Cancel
+        )
         apply_common_dialog_style(dialog, settings=self.settings)
         dialog.show()
         self.app.processEvents()
@@ -191,8 +199,14 @@ class TaskDetailActionLifecycleTests(unittest.TestCase):
             original_show()
 
         with (
-            patch("calendar_app.presentation.widgets.ui_components.task_repo.get_unified_task", return_value=task),
-            patch("calendar_app.presentation.widgets.ui_components.checklist_repo.get_task_checklist_items", return_value=[]),
+            patch(
+                "calendar_app.presentation.widgets.ui_components.task_repo.get_unified_task",
+                return_value=task,
+            ),
+            patch(
+                "calendar_app.presentation.widgets.ui_components.checklist_repo.get_task_checklist_items",
+                return_value=[],
+            ),
             patch.object(overlay, "show", side_effect=show_populated_card),
         ):
             for button in buttons * 6:
@@ -201,7 +215,12 @@ class TaskDetailActionLifecycleTests(unittest.TestCase):
                 button._fade_anim.setCurrentTime(button._fade_anim.duration())
                 self.app.processEvents()
                 self.assertEqual(len(button.actions_widget.findChildren(QPushButton)), 2)
-                self.assertTrue(all(child.isVisible() for child in button.actions_widget.findChildren(QPushButton)))
+                self.assertTrue(
+                    all(
+                        child.isVisible()
+                        for child in button.actions_widget.findChildren(QPushButton)
+                    )
+                )
                 overlay._do_collapse(button)
         self.assertEqual(show_counts, [2] * 12)
 

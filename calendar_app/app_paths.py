@@ -273,9 +273,12 @@ DB_PATH = str(resolve_database_path(_APP_DATA_DIR / "desk_calendar.db"))
 migrate_legacy_runtime_files(Path(DB_PATH))
 
 APP_DATA_DIR = str(_APP_DATA_DIR)
-LOG_PATH = str(_APP_DATA_DIR / "desk_calendar.log")
+# The one application log; crash_bootstrap writes it (desk_calendar.log stayed empty).
+LOG_PATH = str(_APP_DATA_DIR / "crash.log")
 CREDENTIALS_PATH = str(_APP_DATA_DIR / "credentials.json")
 TOKEN_PATH = str(_APP_DATA_DIR / "token.json")
+# Loop mixer sessions and their WAV clips, inside the folder backups and removal cover.
+LOOP_MIXER_DIR = str(_APP_DATA_DIR / "loop-mixer")
 APP_ICON_PATH = get_resource_path("app_icon.ico")
 APP_ICON_TOAST_PATH = get_resource_path("app_icon.png")
 DEFAULT_PRESETS_PATH = get_resource_path("default_presets.json")

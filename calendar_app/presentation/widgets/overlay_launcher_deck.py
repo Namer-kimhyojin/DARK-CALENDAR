@@ -111,7 +111,6 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
         self._canvas: KeyDeckCanvas | None = None
         self._live_scale_percent: int | None = None
         self._studio = None
-        self._performance_dialog = None
         self._keyboard_performance = False
         super().__init__(owner)
         # 실물 매크로 패드처럼 창이 포커스를 가져가지 않아야 단축키가 작업 중인 앱으로 간다.
@@ -177,8 +176,6 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
             self._canvas.update()
 
     def _set_runtime_active(self, active: bool) -> None:
-        if not active and self._performance_dialog is not None:
-            self._performance_dialog.reject()
         if not active and self._keyboard_performance:
             self._set_keyboard_performance(False)
         if self._canvas is not None:
@@ -190,8 +187,6 @@ class OverlayLauncherDeckWidget(_BaseOverlayWidget):
     def closeEvent(self, event) -> None:  # noqa: N802
         # 창이 닫히는 모든 경로(앱 종료의 창 일괄 닫기 포함)에서 저장·정지만 하고 닫기를 거부하지 않는다.
         # 거부하면 Qt 6의 quit()이 취소되어 프로세스가 남는다.
-        if self._performance_dialog is not None:
-            self._performance_dialog.reject()
         if self._save_timer.isActive():
             self._save_timer.stop()
             self._flush_deck()

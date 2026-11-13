@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import threading
 import time
+from types import SimpleNamespace
 import wave
 
 from PyQt6 import sip
@@ -86,6 +87,15 @@ class FakeWinMM:
 
     def waveOutClose(self, _handle):
         return self._call("out_close")
+
+    played = None  # samples the device reports as played; None: no position available
+
+    def waveOutGetPosition(self, _handle, pointer, _size):
+        if self.played is None:
+            return 8  # MMSYSERR_NOTSUPPORTED
+        position = ctypes.cast(pointer, ctypes.POINTER(audio._MMTime)).contents
+        position.wType, position.value = audio._TIME_SAMPLES, self.played
+        return 0
 
     def waveInOpen(self, handle, _device, _fmt, _callback, _instance, flags):
         result = self._call("in_query" if flags == 1 else "in_open")
@@ -221,7 +231,12 @@ def test_driver_cleanup_failure_retains_buffers_and_blocks_unbounded_retries():
 
 def test_output_stall_has_a_deadline_instead_of_extending_capture_forever(monkeypatch):
     api = FakeWinMM()
-    backend = audio.WinMMLoopBackend(threading.Event(), api=api)
+    waits = []
+
+    def event():
+        return SimpleNamespace(handle=0, wait=waits.append, wake=lambda: None, close=lambda: None)
+
+    backend = audio.WinMMLoopBackend(threading.Event(), api=api, events=event)
     backend.open_output()
 
     def queued(_handle, pointer, _size):
@@ -231,10 +246,16 @@ def test_output_stall_has_a_deadline_instead_of_extending_capture_forever(monkey
     api.waveOutWrite = queued
     for _ in range(3):
         assert backend.write_output(bytes(40))
-    times = iter([0, 2])
-    monkeypatch.setattr(audio.time, "monotonic", lambda: next(times))
+    now = [0.0]
+
+    def monotonic():
+        now[0] += 0.1  # each wait for the device's buffer-done event takes 0.1 s
+        return now[0]
+
+    monkeypatch.setattr(audio.time, "monotonic", monotonic)
     with pytest.raises(OSError, match="output_device_stalled"):
         backend.write_output(bytes(40))
+    assert 8 <= len(waits) <= 11  # about one second of waiting, not forever
     backend.close()
 
 
@@ -350,6 +371,9 @@ def test_threaded_play_never_opens_mic_and_record_while_playing_uses_same_worker
         def read_input(self, frames):
             return bytes(frames * 4)
 
+        def wait_output(self):
+            return not self.stop.is_set()
+
         def write_output(self, _data):
             self.stop.wait(0.005)
             return not self.stop.is_set()
@@ -389,6 +413,9 @@ def test_auto_commit_closes_input_before_output_can_wait_or_stall(monkeypatch):
 
         def close_input(self):
             order.append("input_close")
+
+        def wait_output(self):
+            return not self.stop.is_set()
 
         def write_output(self, _data):
             assert order[-1] == "input_close"
@@ -598,3 +625,13 @@ def test_wav_duration_and_invalid_track_fail_without_mutation(mixer, tmp_path, m
         not mixer.snapshot()["operation_success"] and not mixer.snapshot()["tracks"][0]["has_audio"]
     )
     assert not mixer.set_track(99, muted=True)
+
+
+def test_live_hit_delayed_by_a_short_ui_stall_still_plays(mixer, tmp_path, monkeypatch):
+    mixer.set_track(0, source="launcher_deck_0")
+    mixer.play()
+    monkeypatch.setattr(audio.time, "monotonic", lambda: 100.0)
+    audio.route_keydeck_sound("launcher_deck_0", wav(tmp_path / "pad.wav"), 1)
+    monkeypatch.setattr(audio.time, "monotonic", lambda: 100.15)
+    mixer._process_block(frames=1)
+    assert mixer.snapshot()["dropped_hits"] == 0

@@ -65,7 +65,7 @@ migrate_from_gcal_subscription()
 ## 기본 캘린더 자동 생성
 
 `calendar` 테이블이 비어있을 때 기본 로컬 캘린더를 자동 생성합니다 (5ea7d0a).
-`calendar_repo.py`의 `ensure_default_calendar()` 참조.
+`calendar_repo.migrate_from_gcal_subscription()`이 기본 캘린더가 없을 때 `local::기본`을 만듭니다.
 
 ## calendar_id 필수 전파
 
@@ -125,8 +125,9 @@ CalDAV도 같은 계약을 사용합니다. iCloud·네이버 어댑터는 `infr
 상실 시 자동 삭제하지 않습니다. 원격 서버가 transaction ID를 제거하면 보류 기록을 유지합니다.
 `created_at`은 `ALTER TABLE`로 추가합니다. 새 보류는 삭제 트리거에서 UTC 시각을 기록하고,
 과거 기록의 알 수 없는 시각은 NULL로 보존합니다. 문제 화면에서 계정·캘린더·발생 시각을 확인할 수 있습니다.
+삭제 충돌(`delete_conflict`) 때 받은 원격 일정은 `calendar_sync_delete_queue.remote_json`에 저장하고, "그래도 삭제"는 그 revision이 그대로일 때만 지웁니다. 연결 일정 삭제 트리거는 저장된 SQL이 다를 때만 `BEGIN IMMEDIATE` 한 트랜잭션에서 교체합니다(저장소를 열 때마다 DROP/CREATE하지 않음). 읽기 전용 캘린더의 일정은 앱에서 삭제하지 않습니다(`task_delete_usecases.read_only_task_ids`).
 
-- `infrastructure/db/db_repository.py` — 통합 레포지토리 진입점 (대부분의 코드는 여기서 임포트)
+- `infrastructure/db/db_repository.py` — 업무 기록·지시사항·집중 대상 조회 등 옛 조회 일부만 남은 모듈입니다. 새 코드에서 쓰지 않습니다.
 - 레포지토리를 직접 임포트할 때는 `infrastructure/db/` 하위 모듈에서 직접 가져옵니다:
   ```python
   from calendar_app.infrastructure.db import task_repo, directive_repo

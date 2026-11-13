@@ -166,6 +166,9 @@ def test_worker_captures_two_buses_and_microphone_then_repeats_committed_pcm(
         def close_input(self):
             order.append("input_close")
 
+        def wait_output(self):
+            return not self.stop.is_set()
+
         def write_output(self, data):
             output.append(domain.pcm_samples(data))
             if len(output) == 2:

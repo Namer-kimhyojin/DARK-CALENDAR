@@ -176,9 +176,28 @@ def test_complete_month_day_tokens_keep_supported_formats(expression):
     }
 
 
-def test_empty_input_preserves_existing_fallback_contract():
+def test_empty_input_returns_empty_title_for_caller_fallback():
     assert nlp_engine.parse_nlp_task("  ") == {
-        "title": "제목 없음",
+        "title": "",
         "date": "2026-10-14",
         "time": None,
     }
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("내일은 3시 회의", {"title": "회의", "date": "2026-10-15", "time": "03:00"}),
+        ("내일까지 보고서 제출", {"title": "보고서 제출", "date": "2026-10-15", "time": None}),
+        ("모레에는 이사", {"title": "이사", "date": "2026-10-16", "time": None}),
+        ("수요조사 회의", {"title": "수요조사 회의", "date": "2026-10-14", "time": None}),
+        ("금요일에 회식", {"title": "회식", "date": "2026-10-16", "time": None}),
+        ("3시간 운동", {"title": "3시간 운동", "date": "2026-10-14", "time": None}),
+        ("3.5km 달리기", {"title": "3.5km 달리기", "date": "2026-10-14", "time": None}),
+        ("11/20에 회의", {"title": "회의", "date": "2026-11-20", "time": None}),
+        ("11월 20일에 회의", {"title": "회의", "date": "2026-11-20", "time": None}),
+        ("오늘날의 역사 읽기", {"title": "오늘날의 역사 읽기", "date": "2026-10-14", "time": None}),
+    ],
+)
+def test_korean_particles_units_and_words_are_not_misread(text, expected):
+    assert nlp_engine.parse_nlp_task(text) == expected

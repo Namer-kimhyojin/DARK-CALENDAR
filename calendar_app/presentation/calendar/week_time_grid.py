@@ -163,6 +163,7 @@ class _Canvas(QWidget):
                 t("week_planner.open", "일정 열기"), lambda: self.grid.edit_requested.emit(hit.task)
             )
             menu.exec(event.globalPos())
+            menu.deleteLater()
             event.accept()
 
 
@@ -305,7 +306,9 @@ class WeekTimeGrid(QWidget):
                 self._dates.append(QDate(date))
         if not self._dates:
             raise ValueError("At least one visible date is required")
-        self._weekday_display_mode = normalize_weekday_display_mode(weekday_display_mode) or "header"
+        self._weekday_display_mode = (
+            normalize_weekday_display_mode(weekday_display_mode) or "header"
+        )
         self.set_selected_date(self._selected_date)
         self.apply_theme(tokens)
         self._segments = []
@@ -626,7 +629,8 @@ class WeekTimeGrid(QWidget):
                 inline_text = ""
                 if show_inline:
                     inline_text = caption_metrics.elidedText(
-                        f"({weekday})", Qt.TextElideMode.ElideRight,
+                        f"({weekday})",
+                        Qt.TextElideMode.ElideRight,
                         max(0, round(column - number_width - 20)),
                     )
                 inline_width = caption_metrics.horizontalAdvance(inline_text)
@@ -641,7 +645,12 @@ class WeekTimeGrid(QWidget):
                     painter.setFont(caption_font)
                     painter.setPen(active_text if current or selected else muted)
                     painter.drawText(
-                        QRectF(number_x + number_width + gap, date_y, inline_width, number_metrics.height() + 2),
+                        QRectF(
+                            number_x + number_width + gap,
+                            date_y,
+                            inline_width,
+                            number_metrics.height() + 2,
+                        ),
                         Qt.AlignmentFlag.AlignCenter,
                         inline_text,
                     )

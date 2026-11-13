@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Stable IDs for three shared collections and ten additional designs per widget."""
+"""Stable IDs for shared collections and widget-specific designs."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+
+CLOCK_FLIPBOOK_COLLECTION_ID = "clock_flipbook"
 
 
 @dataclass(frozen=True)
@@ -17,6 +19,7 @@ class GraphicCollection:
     layout: str = "classic"
     slot: int = -1
     weather_scene: str = "air_atmosphere"
+    clock_sticker: str = ""
 
 
 COLLECTIONS = (
@@ -256,6 +259,33 @@ DESIGNS_BY_KIND = {
     )
     for kind, names in _NAMES.items()
 }
+_FLIPBOOK = replace(
+    DESIGNS_BY_KIND["clock"][0],
+    collection_id=CLOCK_FLIPBOOK_COLLECTION_ID,
+    label="플립북 시계",
+    description="시간이 바뀌면 숫자 카드가 책장처럼 넘어갑니다.",
+    layout="flipbook",
+)
+CLOCK_FLIPBOOK_STICKER_DESIGNS = tuple(
+    replace(
+        _FLIPBOOK,
+        collection_id=f"{CLOCK_FLIPBOOK_COLLECTION_ID}_{sticker}",
+        label=label,
+        background=background,
+        foreground=foreground,
+        accent=accent,
+        clock_sticker=sticker,
+    )
+    for sticker, label, background, foreground, accent in (
+        ("blossom", "벚꽃 플립북", "#f8dfe9", "#60273e", "#a34a72"),
+        ("aurora", "오로라 플립북", "#e1f3f7", "#153b58", "#36849e"),
+        ("starlight", "별빛 플립북", "#253354", "#fff0c9", "#ffc66c"),
+    )
+)
+DESIGNS_BY_KIND["clock"] += (_FLIPBOOK, *CLOCK_FLIPBOOK_STICKER_DESIGNS)
+CLOCK_FLIPBOOK_COLLECTION_IDS = frozenset(
+    design.collection_id for design in (_FLIPBOOK, *CLOCK_FLIPBOOK_STICKER_DESIGNS)
+)
 _BY_ID = {
     item.collection_id: item
     for item in (*COLLECTIONS, *(item for designs in DESIGNS_BY_KIND.values() for item in designs))

@@ -2,7 +2,8 @@
 """Pull before push; preserve conflicting local changes and remote deletions."""
 
 from collections import Counter
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
+import json
 import threading
 import uuid
 
@@ -11,11 +12,16 @@ from calendar_app.application.calendar_sync_contract import (
     CalendarSyncError,
     RemoteCalendarError,
 )
+from calendar_app.infrastructure.google_sync.common import sync_time_zone
 
 from .repository import fingerprint
 
 _LEASE_GUARD = threading.Lock()
 _LEASES = {}
+
+
+def _now():
+    return datetime.now(UTC)
 
 
 class CalendarSyncEngine:
@@ -24,12 +30,12 @@ class CalendarSyncEngine:
         client: CalendarProvider,
         repository,
         account,
-        local_zone="Asia/Seoul",
+        local_zone=None,
         cancelled=lambda: False,
         calendar_errors=None,
     ):
         self.client, self.repo, self.account = client, repository, account
-        self.zone, self.cancelled = local_zone, cancelled
+        self.zone, self.cancelled = local_zone or sync_time_zone(None), cancelled
         self.calendar_errors = dict(calendar_errors or {})
 
     def _check(self):
@@ -59,7 +65,7 @@ class CalendarSyncEngine:
     def _run(self):
         counts = {"imported": 0, "updated": 0, "created": 0, "deleted": 0, "issues": 0}
         errors = dict(self.calendar_errors)
-        now = datetime.now(UTC)
+        now = _now()
         start, end = [(now + timedelta(days=n)).isoformat() for n in (-120, 400)]
         for calendar in self.repo.calendars(self.account):
             self._check()
@@ -77,10 +83,8 @@ class CalendarSyncEngine:
             len(self.repo.issues(self.account))
             + len(errors)
             + self.repo.pending_delete_count(self.account)
-            + self.repo.conn.execute(
-                "SELECT COUNT(*) FROM calendar_sync_delete_queue q JOIN calendar_sync_calendar c ON q.calendar_id=c.local_id WHERE c.account_id=? AND q.error IS NOT NULL",
-                (self.account,),
-            ).fetchone()[0]
+            # Failed deletes and deletes waiting on a deselected/read-only calendar.
+            + sum(bool(row["reason"]) for row in self.repo.delete_queue(self.account))
         )
         return counts
 
@@ -220,6 +224,10 @@ class CalendarSyncEngine:
                     continue
                 event = remote.get(link["event_id"])
                 if event is None:
+                    if fingerprint(task) == link["baseline"] and self._ended_before(task, start):
+                        # Unchanged history outside the fetched window: re-reading
+                        # it would cost one request per old event on every sync.
+                        continue
                     event = self.client.event(link["event_id"])
                 if not self._same_identity(link, event):
                     raise CalendarSyncError("remote_identity_changed")
@@ -330,7 +338,7 @@ class CalendarSyncEngine:
         # payload needs explicit review before any remote deletion.
         error = "delete_conflict" if fingerprint(task) != pending["baseline"] else None
         self.repo.conn.execute(
-            "INSERT OR IGNORE INTO calendar_sync_delete_queue(event_id,calendar_id,etag,remote_uid,recurrence_id,error) VALUES(?,?,?,?,?,?)",
+            "INSERT OR IGNORE INTO calendar_sync_delete_queue(event_id,calendar_id,etag,remote_uid,recurrence_id,error,remote_json) VALUES(?,?,?,?,?,?,?)",
             (
                 event["id"],
                 key,
@@ -338,6 +346,7 @@ class CalendarSyncEngine:
                 event.get("uid"),
                 event.get("recurrence_id"),
                 error,
+                json.dumps(event, ensure_ascii=False) if error else None,
             ),
         )
         self.repo.conn.execute(
@@ -424,6 +433,15 @@ class CalendarSyncEngine:
                     )
         return True
 
+    @staticmethod
+    def _ended_before(task, start):
+        """Stored times are local wall clock; a day of margin covers any zone."""
+        try:
+            ended = date.fromisoformat(str(task.get("end_date") or task.get("deadline") or "")[:10])
+        except ValueError:
+            return False
+        return ended < datetime.fromisoformat(start).date() - timedelta(days=1)
+
     def _selected(self, key):
         return (
             self.repo.conn.execute(
@@ -508,14 +526,17 @@ class CalendarSyncEngine:
 
     def _deletions(self, key):
         count = 0
+        # A conflict recorded before its remote revision was kept is re-read
+        # once for review; it is never deleted without the user's confirmation.
         queue = list(
             self.repo.conn.execute(
-                "SELECT * FROM calendar_sync_delete_queue WHERE calendar_id=? AND attempts<5 AND COALESCE(error,'') NOT IN ('event_read_only','delete_conflict')",
+                "SELECT * FROM calendar_sync_delete_queue WHERE calendar_id=? AND attempts<5 AND (COALESCE(error,'') NOT IN ('event_read_only','delete_conflict') OR (error='delete_conflict' AND remote_json IS NULL))",
                 (key,),
             )
         )
         for row in queue:
             self._check()
+            event = None
             try:
                 event = self.client.event(row["event_id"])
                 with self.repo.atomic():
@@ -532,7 +553,11 @@ class CalendarSyncEngine:
                         break
                     if not self._writable(key):
                         raise CalendarSyncError("calendar_read_only")
-                    if not self._same_identity(row, event) or event.get("etag") != row["etag"]:
+                    if (
+                        row["error"] == "delete_conflict"
+                        or not self._same_identity(row, event)
+                        or event.get("etag") != row["etag"]
+                    ):
                         raise CalendarSyncError("delete_conflict")
                 self.client.delete(row["event_id"], row["etag"])
             except RemoteCalendarError as exc:
@@ -546,7 +571,9 @@ class CalendarSyncEngine:
             except CalendarSyncError as exc:
                 if self._service_failure(exc):
                     raise
-                self._delete_failure(row, str(exc))
+                self._delete_failure(
+                    row, str(exc), event if str(exc) == "delete_conflict" else None
+                )
                 continue
             with self.repo.atomic():
                 self.repo.conn.execute(
@@ -556,9 +583,15 @@ class CalendarSyncEngine:
             count += 1
         return count
 
-    def _delete_failure(self, row, code):
+    def _delete_failure(self, row, code, remote=None):
+        # A conflict keeps the remote revision so the user can review it.
         with self.repo.atomic():
             self.repo.conn.execute(
-                "UPDATE calendar_sync_delete_queue SET attempts=attempts+1,error=? WHERE event_id=? AND calendar_id=?",
-                (code, row["event_id"], row["calendar_id"]),
+                "UPDATE calendar_sync_delete_queue SET attempts=attempts+1,error=?,remote_json=? WHERE event_id=? AND calendar_id=?",
+                (
+                    code,
+                    json.dumps(remote, ensure_ascii=False) if remote is not None else None,
+                    row["event_id"],
+                    row["calendar_id"],
+                ),
             )

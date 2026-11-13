@@ -9,6 +9,7 @@ from PyQt6.QtCore import QEventLoop, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QBrush, QColor, QPainter, QPen
 from PyQt6.QtWidgets import QApplication, QFrame, QHBoxLayout, QPushButton, QSizePolicy, QWidget
 
+from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
@@ -16,20 +17,25 @@ from calendar_app.presentation.dialogs.dialog_styles import (
 from calendar_app.shared.google_color_palette import get_google_event_palette
 from calendar_app.shared.theme_snapshot import build_shape_tokens
 
-# Korean names for the 11 GCal palette entries
-_KR_NAMES = {
-    "1": "라벤더",
-    "2": "세이지",
-    "3": "포도",
-    "4": "플라밍고",
-    "5": "바나나",
-    "6": "탄저린",
-    "7": "피콕",
-    "8": "그래파이트",
-    "9": "블루베리",
-    "10": "바질",
-    "11": "토마토",
+# Translation keys for the 11 GCal palette entries
+_COLOR_NAME_KEYS = {
+    "1": ("color.lavender", "라벤더"),
+    "2": ("color.sage", "세이지"),
+    "3": ("color.grape", "포도"),
+    "4": ("color.flamingo", "플라밍고"),
+    "5": ("color.banana", "바나나"),
+    "6": ("color.tangerine", "탠저린"),
+    "7": ("color.peacock", "공작새"),
+    "8": ("color.graphite", "그라파이트"),
+    "9": ("color.blueberry", "블루베리"),
+    "10": ("color.basil", "바질"),
+    "11": ("color.tomato", "토마토"),
 }
+
+
+def _color_name(entry) -> str:
+    key, fallback = _COLOR_NAME_KEYS.get(entry["id"], ("", ""))
+    return t(key, fallback) if key else entry["name"]
 
 
 def _resolve_color_swatch_inputs(
@@ -284,7 +290,7 @@ class GoogleColorSwatch(QWidget):
         layout.setSpacing(1)
 
         # "No color" button first
-        none_btn = _SwatchButton(None, "색상 없음")
+        none_btn = _SwatchButton(None, t("color.none", "색상 없음"))
         none_btn.clicked.connect(lambda: self._on_click(none_btn))
         none_btn.set_theme(self._theme)
         layout.addWidget(none_btn)
@@ -292,7 +298,7 @@ class GoogleColorSwatch(QWidget):
 
         # 11 palette colours
         for entry in get_google_event_palette():
-            name = _KR_NAMES.get(entry["id"], entry["name"])
+            name = _color_name(entry)
             btn = _SwatchButton(entry["hex"], name)
             btn.clicked.connect(lambda _checked, b=btn: self._on_click(b))
             btn.set_theme(self._theme)

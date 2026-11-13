@@ -117,11 +117,14 @@ def test_candidate_policy_hash_and_historical_artifact_are_pinned():
 
 def test_historical_qa_helper_hashes_match_archived_git_bytes():
     git = shutil.which("git")
-    if not git or subprocess.run(
-        [git, "cat-file", "-e", f"{HISTORICAL_QA_COMMIT}^{{commit}}"],
-        cwd=ROOT,
-        capture_output=True,
-    ).returncode:
+    if (
+        not git
+        or subprocess.run(
+            [git, "cat-file", "-e", f"{HISTORICAL_QA_COMMIT}^{{commit}}"],
+            cwd=ROOT,
+            capture_output=True,
+        ).returncode
+    ):
         pytest.skip("Historical QA commit is unavailable in this checkout")
     policy = json.loads(POLICY.read_text(encoding="utf-8", errors="strict"))
     for name, digest in policy["qa_sha256"].items():

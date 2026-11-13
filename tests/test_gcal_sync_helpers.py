@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # -*- coding: utf-8 -*-
-from datetime import datetime, timedelta
 import sqlite3
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -120,35 +119,6 @@ class GCalSyncHelperTests(TemporaryDatabaseTestCase):
                 "primary::evt-2",
             )
 
-    def test_auto_heal_orphan_scan_throttle_uses_last_run_timestamp(self):
-        class FakeSettings:
-            def __init__(self):
-                self.data = {}
-
-            def value(self, key, default=None, type=None):
-                value = self.data.get(key, default)
-                if type is not None and value is not None:
-                    return type(value)
-                return value
-
-            def setValue(self, key, value):
-                self.data[key] = value
-
-        app = SimpleNamespace(settings=FakeSettings())
-        key = engine._auto_heal_orphans_last_run_key()
-
-        self.assertTrue(engine._should_run_auto_heal_orphans(app))
-
-        engine._mark_auto_heal_orphans_run(app)
-        self.assertIn(key, app.settings.data)
-        self.assertFalse(engine._should_run_auto_heal_orphans(app))
-        self.assertTrue(engine._should_run_auto_heal_orphans(app, force=True))
-
-        app.settings.data[key] = (
-            datetime.now() - timedelta(hours=engine._AUTO_HEAL_ORPHANS_INTERVAL_HOURS + 1)
-        ).isoformat(timespec="seconds")
-        self.assertTrue(engine._should_run_auto_heal_orphans(app))
-
     def test_incremental_backfill_probe_is_marked_only_after_success(self):
         class FakeSettings:
             def __init__(self):
@@ -171,57 +141,6 @@ class GCalSyncHelperTests(TemporaryDatabaseTestCase):
         engine._mark_incremental_backfill_probe_run(app, "primary")
 
         self.assertFalse(engine._should_run_incremental_backfill_probe(app, "primary"))
-
-    def test_sync_skips_orphan_auto_heal_scan_inside_throttle_window(self):
-        class FakeSettings:
-            def __init__(self):
-                self.data = {
-                    "gcal_enabled": "true",
-                    "gcal_calendar_id": "primary",
-                    "gcal_timezone": "Asia/Seoul",
-                    "gcal_sync_token::primary": "old-token",
-                    "gcal_sync_token_fails::primary": 0,
-                    "gcal_bound_calendar_id": "primary",
-                    engine._auto_heal_orphans_last_run_key(): datetime.now().isoformat(
-                        timespec="seconds"
-                    ),
-                }
-
-            def value(self, key, default=None, type=None):
-                value = self.data.get(key, default)
-                if type is not None and value is not None:
-                    return type(value)
-                return value
-
-            def setValue(self, key, value):
-                self.data[key] = value
-
-        class FakeDate:
-            def toString(self, fmt):
-                return "2026-03-14"
-
-        app = SimpleNamespace(
-            settings=FakeSettings(),
-            current_date=FakeDate(),
-            gcal_sync=FakeSyncService(update_result=True),
-            update_sync_status=lambda: None,
-        )
-
-        with (
-            patch.object(engine, "_process_google_delete_queue", return_value=(0, 0)),
-            patch.object(engine, "_push_local_changes_to_google", return_value=(0, 0, 0)),
-            patch.object(engine, "_active_sync_calendar_ids", return_value=["primary"]),
-            patch.object(engine, "_should_refresh_calendar_list", return_value=False),
-            patch.object(engine.gcal_db_adapter, "cleanup_duplicate_gcal_rows", return_value=0),
-            patch.object(engine.gcal_db_adapter, "get_all_gcal_tasks_map", return_value={}),
-            patch.object(engine, "auto_heal_google_orphans") as heal_mock,
-        ):
-            ok = engine.sync_google_calendar(app, silent=True)
-
-        self.assertTrue(ok)
-        heal_mock.assert_not_called()
-        self.assertFalse(app._last_gcal_sync_stats["orphan_auto_heal_ran"])
-        self.assertTrue(app._last_gcal_sync_stats["orphan_auto_heal_skipped"])
 
     def test_transient_update_failure_does_not_create_fallback(self):
         app = SimpleNamespace(
@@ -630,54 +549,6 @@ class GCalSyncHelperTests(TemporaryDatabaseTestCase):
         ready_mock.assert_called_once_with(max_retry_count=5)
         self.assertEqual(done_mock.call_count, 2)
 
-    def test_handle_task_dropped_skips_non_gcal_task_push(self):
-        wake_calls = []
-
-        class FakeSettings:
-            def value(self, key, default=None, type=None):
-                if key == "gcal_enabled":
-                    return "true"
-                if key == "gcal_calendar_id":
-                    return "primary"
-                return default
-
-        app = SimpleNamespace(
-            settings=FakeSettings(),
-            wake_gcal_sync=lambda: wake_calls.append(True),
-        )
-
-        local_task = {
-            "id": 501,
-            "name": "Local item",
-            "calendar_id": "local::inbox",
-            "deadline": "2026-03-22 09:00:00",
-            "end_date": "2026-03-22 10:00:00",
-        }
-
-        with (
-            patch(
-                "calendar_app.infrastructure.task_drop_service.handle_task_drop",
-                return_value=(1, [501]),
-            ) as drop_mock,
-            patch.object(
-                engine.task_repo, "get_unified_task", return_value=local_task
-            ) as get_task_mock,
-            patch.object(engine, "sync_task_to_google") as sync_mock,
-        ):
-            changed, copied_ids = engine.handle_task_dropped(
-                app,
-                [123],
-                "2026-03-22",
-                "09:00",
-                "copy",
-            )
-
-        self.assertEqual((changed, copied_ids), (1, [501]))
-        drop_mock.assert_called_once()
-        get_task_mock.assert_called_once_with(501)
-        sync_mock.assert_not_called()
-        self.assertEqual(len(wake_calls), 1)
-
     def test_delete_task_by_gcal_id_archives_remote_deleted_task(self):
         with patch.object(
             repository.task_repo, "archive_gcal_deleted_task", return_value=True
@@ -975,7 +846,6 @@ class GCalSyncHelperTests(TemporaryDatabaseTestCase):
             patch.object(engine.task_repo, "get_unified_task", return_value=local_task),
             patch.object(engine.gcal_db_adapter, "update_task_from_gcal") as update_mock,
             patch.object(engine.task_repo, "queue_gcal_sync_conflict") as conflict_mock,
-            patch.object(engine, "auto_heal_google_orphans"),
         ):
             success = engine.sync_google_calendar(app, silent=True)
 
@@ -1110,7 +980,7 @@ class GCalSyncHelperTests(TemporaryDatabaseTestCase):
             patch.object(gcal_service, "run_desktop_auth", return_value=FakeCreds()),
             patch.object(gcal_service, "InstalledAppFlow"),
         ):
-            ok = svc.authenticate(parent_widget=None, interactive=True)
+            ok = svc.authenticate(interactive=True)
 
         self.assertFalse(ok)
         self.assertEqual(svc.last_error_kind, "auth_token_write")

@@ -18,6 +18,10 @@ from calendar_app.presentation.widgets.overlay_base import (
     _GripFrame,
     _strftime_to_qt,
 )
+from calendar_app.presentation.widgets.widget_graphic_catalog import (
+    CLOCK_FLIPBOOK_COLLECTION_ID,
+    CLOCK_FLIPBOOK_STICKER_DESIGNS,
+)
 
 
 class OverlayClockWidget(_BaseOverlayWidget):
@@ -367,6 +371,22 @@ class OverlayClockWidget(_BaseOverlayWidget):
         )
 
     def _build_context_menu(self, menu: QMenu):
+        flipbook = menu.addAction(t("widget_graphics.designs.clock_flipbook", "플립북 시계"))
+        flipbook.setCheckable(True)
+        flipbook.setChecked(self.graphic_collection_id() == CLOCK_FLIPBOOK_COLLECTION_ID)
+        flipbook.triggered.connect(self._toggle_flipbook)
+        transparent = menu.addMenu(t("widget_graphics.flipbook_transparent", "투명 플립북"))
+        for design in CLOCK_FLIPBOOK_STICKER_DESIGNS:
+            action = transparent.addAction(
+                t(f"widget_graphics.designs.{design.collection_id}", design.label)
+            )
+            action.setCheckable(True)
+            action.setChecked(self.graphic_collection_id() == design.collection_id)
+            action.triggered.connect(
+                lambda checked, selected=design.collection_id: self._apply_flipbook(
+                    selected if checked else ""
+                )
+            )
         menu.addAction(t("widget.clock.settings", "Clock Settings..."), self._open_settings)
         zones = menu.addMenu(t("widget.usage.timezone", "시간대 빠른 선택"))
         current = self._tz_offset_minutes()
@@ -374,6 +394,16 @@ class OverlayClockWidget(_BaseOverlayWidget):
             action = zones.addAction(label, lambda *_, selected=offset: self._set_tz(selected))
             action.setCheckable(True)
             action.setChecked(current == offset)
+
+    def _toggle_flipbook(self, enabled: bool) -> None:
+        self._apply_flipbook(CLOCK_FLIPBOOK_COLLECTION_ID if enabled else "")
+
+    def _apply_flipbook(self, collection_id: str) -> None:
+        self.apply_graphic_collection(
+            collection_id,
+            motion=self._get("graphics_motion", True, type_=bool),
+            auto_contrast=self._get("graphics_auto_contrast", True, type_=bool),
+        )
 
     def _on_double_click(self) -> bool:
         self._open_settings()

@@ -18,12 +18,15 @@ from calendar_app.presentation.dialogs.panel_color_picker_dialog import (
 )
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def application_lifetime():
     application = QApplication.instance() or QApplication([])
+    previous_font = QFont(application.font())
     application.setFont(QFont("Malgun Gothic", 11))
     install_common_dialog_style_filter(application)
     yield application
+    # Later modules measure their layouts against the font they started with.
+    application.setFont(previous_font)
 
 
 @pytest.fixture

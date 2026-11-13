@@ -16,8 +16,9 @@ from calendar_app.application.calendar_provider_catalog import (
     PROVIDERS,
     account_provider,
 )
+from calendar_app.infrastructure.calendar_sync.repository import DELETE_QUEUE_REASON
 from calendar_app.infrastructure.calendar_sync.status import load_calendar_errors
-from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
+from calendar_app.infrastructure.google_sync.common import is_gcal_enabled, sync_time_zone
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.ics.subscriptions import ICS_ERRORS, subscription_errors
 from calendar_app.presentation.dialogs.sync_feedback import (
@@ -110,6 +111,7 @@ class IcsSyncWorker(QThread):
                         calendar["ics_url"],
                         local_zone=self.local_zone,
                         cancelled=self.is_cancelled,
+                        accept_empty=calendar.get("accept_empty"),
                     )
                 except Exception:
                     results[calendar["id"]] = (0, 0, "operation_failed")
@@ -130,6 +132,7 @@ class CalendarSyncCoordinator(QObject):
         self.calendar_source = calendar_source
         self.ics_worker = None
         self._ics_pending_ids = set()
+        self._ics_accept_empty = {}
         self.states = {}
         self.issue_rows = []
         self.calendar_rows = []
@@ -178,11 +181,16 @@ class CalendarSyncCoordinator(QObject):
                         counts[row["account_id"]] = counts.get(row["account_id"], 0) + 1
                         issues.append(dict(row))
                 if "calendar_sync_delete_queue" in tables:
+                    # Failed deletes and deletes waiting on a deselected/read-only calendar.
                     for row in conn.execute(
-                        "SELECT c.account_id,q.event_id,q.error AS kind FROM calendar_sync_delete_queue q JOIN calendar_sync_calendar c ON c.local_id=q.calendar_id WHERE q.error IS NOT NULL"
+                        "SELECT s.account_id,q.event_id," + DELETE_QUEUE_REASON + " AS kind "
+                        "FROM calendar_sync_delete_queue q "
+                        "JOIN calendar_sync_calendar s ON s.local_id=q.calendar_id "
+                        "JOIN calendar v ON v.id=q.calendar_id"
                     ):
-                        counts[row["account_id"]] = counts.get(row["account_id"], 0) + 1
-                        issues.append(dict(row))
+                        if row["kind"]:
+                            counts[row["account_id"]] = counts.get(row["account_id"], 0) + 1
+                            issues.append(dict(row))
                 if "calendar_sync_pending_delete" in tables:
                     for row in conn.execute(
                         "SELECT c.account_id,p.calendar_id,"
@@ -509,6 +517,14 @@ class CalendarSyncCoordinator(QObject):
                 "Automatic sync dispatch failed for provider %s", key
             )
 
+    def accept_empty_ics(self, calendar_id, url, count):
+        """Let the next refresh of this subscription address remove its mirrors once."""
+        self._ics_accept_empty[calendar_id] = (url, count)
+
+    def discard_empty_ics(self, calendar_id):
+        """Drop an acceptance whose refresh did not start; no later refresh may use it."""
+        self._ics_accept_empty.pop(calendar_id, None)
+
     def sync_ics(self, force=False, calendar_ids=None):
         if getattr(self.app, "_is_shutting_down", False):
             return False
@@ -536,6 +552,11 @@ class CalendarSyncCoordinator(QObject):
             return False
         if not calendars:
             return False
+        for index, calendar in enumerate(calendars):
+            # One-shot: consumed by this refresh whatever the feed returns.
+            url, count = self._ics_accept_empty.pop(calendar["id"], (None, None))
+            if url is not None and url == calendar.get("ics_url"):
+                calendars[index] = {**calendar, "accept_empty": count}
         worker = None
         launch_failed = False
 
@@ -544,9 +565,7 @@ class CalendarSyncCoordinator(QObject):
                 self._ics_result(results)
 
         try:
-            worker = IcsSyncWorker(
-                calendars, self, self.settings.value("gcal_timezone", "Asia/Seoul", type=str)
-            )
+            worker = IcsSyncWorker(calendars, self, sync_time_zone(self.settings))
             self.ics_worker = worker
             self.app._bg_workers.append(worker)
             worker.result.connect(deliver_result)

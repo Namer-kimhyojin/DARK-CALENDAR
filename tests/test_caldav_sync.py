@@ -23,6 +23,7 @@ from calendar_app.infrastructure.caldav_sync.profiles import account_key, valida
 
 BASE = "https://caldav.icloud.com/"
 HREF = BASE + "calendar/event.ics"
+ZONE = "Asia/Seoul"
 ICS = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:fixture\r\nDTSTART:20261005T010000Z\r\nDTEND:20261005T020000Z\r\nSUMMARY:Meeting\r\nDESCRIPTION:Original\r\nBEGIN:VALARM\r\nACTION:DISPLAY\r\nTRIGGER:-PT15M\r\nDESCRIPTION:Reminder\r\nEND:VALARM\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
 
 
@@ -148,6 +149,7 @@ def test_report_normalizes_utc_to_local_task_and_requires_same_collection():
         "fixture",
         "synthetic",
         Session(Response(multi(xml_row("/calendar/event.ics", prop)))),
+        local_zone=ZONE,
     )
     event = client.events(
         BASE + "calendar/", "2026-10-01T00:00:00+00:00", "2026-10-09T00:00:00+00:00"
@@ -176,14 +178,19 @@ def test_recurrence_exclusions_and_overrides_have_stable_ids():
         "SUMMARY:Meeting", "RRULE:FREQ=DAILY;COUNT=3\r\nEXDATE:20261006T010000Z\r\nSUMMARY:Meeting"
     )
     events = records(
-        HREF, "1", data, datetime(2026, 10, 1, tzinfo=UTC), datetime(2026, 10, 9, tzinfo=UTC)
+        HREF,
+        "1",
+        data,
+        datetime(2026, 10, 1, tzinfo=UTC),
+        datetime(2026, 10, 9, tzinfo=UTC),
+        zone=ZONE,
     )
     assert len(events) == 2
     assert all(e["read_only"] and "#aircal-rid=" in e["id"] for e in events)
     assert len({e["id"] for e in events}) == 2
     with pytest.raises(CalendarSyncError, match="event_read_only"):
-        edited_calendar(events[0]["task"], events[0])
-    client = CalDAVClient("icloud", "fixture", "synthetic", Session())
+        edited_calendar(events[0]["task"], events[0], ZONE)
+    client = CalDAVClient("icloud", "fixture", "synthetic", Session(), local_zone=ZONE)
     client.cache[HREF] = ("1", data)
     assert client.event(events[1]["id"])["task"]["deadline"] == "2026-10-07T10:00:00"
     with pytest.raises(CalendarSyncError, match="event_read_only"):
@@ -194,7 +201,12 @@ def test_recurrence_exclusions_and_overrides_have_stable_ids():
 def test_removed_occurrence_is_not_replaced_by_master():
     data = ICS.replace("SUMMARY:Meeting", "RRULE:FREQ=DAILY;COUNT=3\r\nSUMMARY:Meeting")
     event = records(
-        HREF, "1", data, datetime(2026, 10, 1, tzinfo=UTC), datetime(2026, 10, 9, tzinfo=UTC)
+        HREF,
+        "1",
+        data,
+        datetime(2026, 10, 1, tzinfo=UTC),
+        datetime(2026, 10, 9, tzinfo=UTC),
+        zone=ZONE,
     )[1]
     client = CalDAVClient("icloud", "fixture", "synthetic", Session())
     client.cache[HREF] = (
@@ -209,8 +221,8 @@ def test_removed_occurrence_is_not_replaced_by_master():
 
 
 def test_edit_preserves_alarm_uid_and_untouched_properties():
-    remote = records(HREF, "1", ICS)[0]
-    data = edited_calendar({**remote["task"], "name": "Changed"}, remote)
+    remote = records(HREF, "1", ICS, zone=ZONE)[0]
+    data = edited_calendar({**remote["task"], "name": "Changed"}, remote, ZONE)
     calendar = Calendar.from_ical(data)
     event = calendar.walk("VEVENT")[0]
     assert str(event["SUMMARY"]) == "Changed"
@@ -226,10 +238,11 @@ def test_invitations_are_read_only():
         ICS.replace(
             "SUMMARY:Meeting", "ORGANIZER:mailto:fixture@example.invalid\r\nSUMMARY:Meeting"
         ),
+        zone=ZONE,
     )[0]
     assert remote["read_only"]
     with pytest.raises(CalendarSyncError):
-        edited_calendar(remote["task"], remote)
+        edited_calendar(remote["task"], remote, ZONE)
 
 
 def test_all_day_inclusive_local_end_round_trip():
@@ -241,9 +254,9 @@ def test_all_day_inclusive_local_end_round_trip():
         "description": "",
         "location": "",
     }
-    data = new_calendar(task, str(uuid.uuid4()))
+    data = new_calendar(task, str(uuid.uuid4()), ZONE)
     assert b"DTEND;VALUE=DATE:20261007" in data
-    assert records(HREF, "1", data)[0]["task"] == task
+    assert records(HREF, "1", data, zone=ZONE)[0]["task"] == task
 
 
 def test_record_timezone_conversion_preserves_instants_and_all_day_dates():
@@ -264,25 +277,27 @@ def test_record_timezone_conversion_preserves_instants_and_all_day_dates():
 
 def test_create_retries_use_fixed_uid_and_conditional_put():
     transaction = str(uuid.uuid4())
-    task = records(HREF, "1", ICS)[0]["task"]
-    data = new_calendar(task, transaction)
+    task = records(HREF, "1", ICS, zone=ZONE)[0]["task"]
+    data = new_calendar(task, transaction, ZONE)
     session = Session(Response(status=412), Response(data, 200, {"ETag": "tag"}))
     client = CalDAVClient("icloud", "fixture", "synthetic", session)
-    event = client.create(BASE + "calendar/", client.from_task(task), transaction)
+    event = client.create(BASE + "calendar/", client.from_task(task, ZONE), transaction)
     assert event["transaction_id"] == transaction
     assert session.calls[0][2]["headers"]["If-None-Match"] == "*"
     assert transaction in session.calls[0][1]
 
 
 def test_conditional_update_and_delete():
-    task = records(HREF, "tag", ICS)[0]["task"]
+    task = records(HREF, "tag", ICS, zone=ZONE)[0]["task"]
     session = Session(
         Response(status=204), Response(ICS, 200, {"ETag": "new"}), Response(status=204)
     )
     client = CalDAVClient("icloud", "fixture", "synthetic", session)
     client.cache[HREF] = ("tag", ICS)
     client.update(
-        HREF, edited_calendar({**task, "name": "Changed"}, records(HREF, "tag", ICS)[0]), "tag"
+        HREF,
+        edited_calendar({**task, "name": "Changed"}, records(HREF, "tag", ICS, zone=ZONE)[0], ZONE),
+        "tag",
     )
     assert session.calls[0][2]["headers"]["If-Match"] == "tag"
     client.delete(HREF, "new")
@@ -339,6 +354,7 @@ def test_override_occurrence_retains_original_recurrence_identity():
         master.replace("END:VCALENDAR", override + "END:VCALENDAR"),
         datetime(2026, 10, 1, tzinfo=UTC),
         datetime(2026, 10, 9, tzinfo=UTC),
+        zone=ZONE,
     )
     changed = next(e for e in events if e["task"]["name"] == "Moved occurrence")
     assert "2026-10-06T01" in changed["id"]
@@ -349,7 +365,12 @@ def test_dense_recurrence_rejected_before_expansion():
     data = ICS.replace("SUMMARY:Meeting", "RRULE:FREQ=SECONDLY\r\nSUMMARY:Meeting")
     with pytest.raises(CalendarSyncError, match="too_many_events"):
         records(
-            HREF, "1", data, datetime(2026, 10, 1, tzinfo=UTC), datetime(2026, 10, 9, tzinfo=UTC)
+            HREF,
+            "1",
+            data,
+            datetime(2026, 10, 1, tzinfo=UTC),
+            datetime(2026, 10, 9, tzinfo=UTC),
+            zone=ZONE,
         )
 
 

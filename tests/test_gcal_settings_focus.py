@@ -253,6 +253,18 @@ def test_auth_navigation_fits_its_label_and_keeps_the_section_action(focused_dia
     assert dialog._nav_btns[0].isChecked()
 
 
+def test_google_settings_default_to_this_pcs_zone_when_none_is_saved(focused_dialog, monkeypatch):
+    from calendar_app.infrastructure.google_sync import common
+
+    dialog, parent, _ = focused_dialog
+    parent.settings.remove("gcal_timezone")
+    monkeypatch.setattr(common, "_system_time_zone", lambda: "Europe/Berlin")
+
+    dialog._load_state()
+
+    assert dialog._current_timezone() == "Europe/Berlin"
+
+
 def test_refresh_does_not_change_timezone_from_hidden_legacy_combo(focused_dialog):
     dialog, _, _ = focused_dialog
     dialog._populate_timezones("Asia/Seoul")

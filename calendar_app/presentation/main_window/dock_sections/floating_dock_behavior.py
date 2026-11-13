@@ -178,6 +178,15 @@ class FloatingDockBehavior(QObject):
         if watched is not self._dock:
             return False
         et = event.type()
+        if (
+            et == QEvent.Type.KeyPress
+            and event.key() == Qt.Key.Key_Escape
+            and self._dock.isFloating()
+            and hasattr(self._app, "handle_escape_key")
+        ):
+            # A floating dock is its own window, so the main window never sees this Esc.
+            self._app.handle_escape_key()
+            return True
         if et in (
             QEvent.Type.Move,
             QEvent.Type.Resize,

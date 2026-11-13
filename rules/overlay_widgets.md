@@ -33,13 +33,15 @@
 
 ## 그래픽 컬렉션
 
-- `widget_graphics.py`는 공통 렌더러, `widget_graphic_runtime.py`는 인스턴스 설정·원복, `widget_graphic_dialog.py`는 쓰기 없는 미리보기를 담당합니다. `widget_graphic_catalog.py`는 공통 3종과 위젯별 10종씩 총 80개 추가 디자인의 안정된 ID를 정의하고, `widget_graphic_layouts.py`는 추가 배치를 그립니다.
-- `graphic_collections(kind)`는 해당 종류에서 선택 가능한 13개 항목을 반환합니다. 신규 ID는 `<kind>_<layout>`이며 `slot`으로 같은 계열을 연결합니다. 전체 적용은 `collection_for_kind()`로 각 위젯에 맞는 ID를 선택합니다. 기존 공통 3개 ID는 변경하지 않습니다.
+- `widget_graphics.py`는 공통 렌더러, `widget_graphic_runtime.py`는 인스턴스 설정·원복, `widget_graphic_dialog.py`는 쓰기 없는 미리보기를 담당합니다. `widget_graphic_catalog.py`는 공통 3종과 위젯별 디자인 ID를 정의하고, `widget_graphic_layouts.py`는 추가 배치를 그립니다.
+- `graphic_collections(kind)`는 해당 종류에서 선택 가능한 항목을 반환합니다. 신규 ID는 `<kind>_<layout>`이며 `slot`으로 같은 계열을 연결합니다. 전체 적용은 `collection_for_kind()`로 각 위젯에 맞는 ID를 선택합니다. 기존 공통 3개 ID는 변경하지 않습니다.
 - 날씨의 추가 디자인은 숨겨진 정적 `WidgetGraphicSurface`로 공통 배치를 재사용하고 원래 `WeatherSceneSurface`에서 움직이는 그림·시간별 예보를 그립니다. 정적 보조 표면에는 런타임 타이머나 네트워크를 추가하지 않습니다.
 - 기본값과 기존 저장 설정은 유지합니다. 컬렉션은 사용자가 적용할 때만 활성화하며 기본 적용 범위는 현재 위젯입니다. 전체 적용은 표시 중인 인스턴스에만 전달합니다.
 - `graphic_collection`, `graphics_template`, `graphics_backup`, `graphics_applied`, `graphics_font_reference`는 기존 인스턴스 prefix 안에서 저장합니다. 복원은 현재 값이 컬렉션 적용값과 같은 외관 필드에만 적용하여 이후 사용자 편집을 보존합니다.
 - 사용자 글꼴·크기·전체 불투명도·본문·목표·위치·키 동작은 컬렉션 선택으로 변경하지 않습니다. 별도 표시 형식이나 전용 디자인의 명시적 선택을 우선합니다.
 - 일반 위젯의 상태 전환은 180ms이며 숨김·비활성화·움직임 끔에서 중단합니다. 별도 상시 타이머를 추가하지 않습니다. 날씨의 기존 움직임·절전 정책을 재사용합니다.
+- 디지털 시계 우클릭 → `플립북 시계`는 `clock_flipbook` 컬렉션을 엽니다. 시계가 갱신될 때 바뀐 숫자만 중앙 축으로 360ms 동안 접힙니다. 시간대 변경 등 시간 차이가 크게 생기면 현재 시각을 즉시 표시합니다.
+- 시계 우클릭 → `투명 플립북`은 벚꽃·오로라·별빛 디자인을 제공합니다. 숫자 카드 바깥은 투명하고 `Assets/flipbook`의 GIF를 숫자 전환과 함께 그립니다. 정지 중에는 첫 프레임을 사용하며, 별도 재생 타이머 없이 위젯 공통 움직임 정책을 따릅니다.
 - 카운트다운 진행률은 `cd_duration_target`과 현재 목표가 같고 `cd_duration_seconds`가 양수일 때만 표시합니다. 기존 사용자 목표의 시작 길이를 임의로 추정하지 않습니다.
 - KeyDeck 컬렉션은 시각 속성만 복사·적용합니다. 키 동작·그림·레이아웃·크기·비트메이커의 사운드 키 의미 색상을 보존합니다.
 - 회귀: `tests/test_widget_graphic_collections.py`, `tests/test_widget_graphic_designs.py`. 실제 소스 화면: `scripts/validate_widget_graphic_collections.py` (`--all-designs`로 종류별 추가 10종). [기본 컬렉션](../docs/ux-audit/widget-graphic-collections-20261101.md), [추가 디자인](../docs/ux-audit/widget-graphic-designs-20261101.md).
@@ -73,6 +75,13 @@
 - 검사: `test_widget_preset_preview.py`, `test_widget_preset_validation.py`,
   `test_widget_preset_rendering.py`, `test_widget_preset_contracts.py`,
   `test_overlay_template_runtime_bounds.py`, `test_overlay_template_validation.py`.
+
+## 날짜 카드의 움직이는 GIF
+
+- 날짜 카드 우클릭 → `움직이는 GIF 꾸미기`에서 내장 6종을 미리 보고 현재 인스턴스에 적용합니다. `표시 형식`에서 다른 형식을 선택하면 저장한 템플릿과 외관을 다시 사용합니다.
+- `display_style=animated`, `datecard_animation`, `datecard_animation_motion`은 인스턴스 설정입니다. 기존 카드의 기본값은 유지하고, 작업 공간의 외관 저장·복원에 포함합니다.
+- `datecard_animations.py`는 `Assets/date_animations`의 GIF 위에 날짜를 합성하지 않고 별도 텍스트로 그립니다. GIF는 QMovie의 전체 프레임 캐시를 사용하지 않으며 숨김·비활성화·움직임 정책에서 재생을 멈춥니다.
+- 회귀: `tests/test_datecard_animations.py`. 격리된 화면 검증: `scripts/validate_datecard_animations.py`.
 
 ## 인스턴스 관리 (`OverlayWidgetManager`)
 
@@ -208,7 +217,7 @@ class OverlayXxxWidget(OverlayBaseWidget):
 - 에셋 로드에 실패하면 기존 qtawesome 날씨 아이콘으로 자동 대체합니다.
 - 날씨 제공처 출처는 위젯 하단에 상시 표시하지 않습니다. 우클릭 → 날씨 데이터 출처와 설정창의 같은 버튼에서 MET Norway·GeoNames 원본/이용 안내, CC BY 4.0, 데이터 변환·비보증 안내를 확인합니다. 출처 화면은 읽기 전용이며 새로고침·설정 저장을 실행하지 않습니다.
 - `weather_template.py`는 위젯과 디자인 미리보기의 공통 렌더러입니다. 그림과 글자는 같은 24pt 기준으로 비례 조절하며, 그림은 16–1536px로 제한합니다. 습도·바람 뒤의 `%`·`m/s`도 해당 값과 같은 크기를 사용합니다. 외부 날씨 값은 HTML escape하고 비유한 크기·줄 간격은 제거합니다.
-- `weather_designs.py`의 27개 디자인(기존 24개와 프리미엄 3개)은 표시 템플릿·공통 외관·일러스트·모양을 함께 적용합니다. 기존 13개 공통 외관 프리셋의 의미와 독립 일러스트 선택 동작은 유지합니다.
+- `weather_designs.py`의 28개 디자인(기존 24개와 프리미엄 4개)은 표시 템플릿·공통 외관·일러스트·모양을 함께 적용합니다. 기존 13개 공통 외관 프리셋의 의미와 독립 일러스트 선택 동작은 유지합니다.
 - 우클릭 및 기본 설정의 디자인 버튼은 `weather_design_dialog.py`의 검색·분류·실제 미리보기 갤러리를 엽니다. 설정창 안에서 선택하면 초안만 바뀌고 부모 설정 저장 시 반영합니다. 갤러리 자체는 설정이나 네트워크에 쓰지 않습니다.
 - 날씨 기본 표시 템플릿은 20개입니다. 디자인 적용은 도시·온도 단위·갱신 주기·날씨 캐시·위치·그림자 설정을 유지하고, 모양 전환은 공통 `_set_widget_shape` 정책을 따릅니다. 현재 선택 표시에는 저장된 디자인 ID보다 실제 템플릿·외관·일러스트·모양의 일치를 사용합니다.
 
@@ -219,6 +228,7 @@ class OverlayXxxWidget(OverlayBaseWidget):
 - GeoNames의 도시 시간대로 표시하며, `남은 오늘` 범위는 현재 예보 시점 이후 같은 도시 날짜의 예보 최고·최저입니다. 예보 시각과 서버 갱신 시각을 구분하고 만료·오류 시 이전 예보임을 표시합니다.
 - `weather_motion=off|subtle|full`, `weather_show_hourly`, `weather_animation_dir`는 인스턴스별 설정입니다. 저장/취소와 기존 복제·재시작 경로를 사용합니다. 내장 그림·빛·비·눈·별·안개의 움직임은 20fps이고, 숨김·비활성화·종료 시 프레임 타이머를 중단합니다. Windows 애니메이션 끄기·배터리 절약 모드를 따르며 표시 중에는 정책 변경을 60초마다 확인합니다.
 - 사용자 폴더의 상태별 `clear_day.webp` 등 14개 이름과 GIF를 지원합니다. 파일·디코딩 크기를 제한하고 프레임 전체 캐시는 사용하지 않습니다. 누락·손상 파일은 내장 그림과 움직임으로 대체합니다.
+- `움직이는 날씨 · GIF`는 `Assets/weather/animations`의 날씨별 13개 GIF를 재생합니다. 현재 날씨를 읽고 같은 장면의 정지 프레임을 미리 그린 뒤, 위젯 또는 선택한 디자인 미리보기가 보일 때 재생합니다. 사용자 그림을 먼저 확인하고, 날씨를 아직 모르면 기본 일러스트로 표시합니다.
 - 배경·글자·시간별 예보를 한 번 그린 뒤 프레임마다 그림 영역만 갱신합니다. 아트 캐시는 DPR을 포함해 최대 24MiB로 제한하고 프리미엄 크기 조절은 기존 HTML 글꼴 이진 탐색을 실행하지 않습니다.
 - `infrastructure/weather/request_pool.py`는 같은 좌표의 요청과 원본 응답을 공유합니다. 단위는 위젯별로 변환하고 한 위젯의 취소는 다른 위젯의 요청을 중단하지 않습니다. `Expires`·조건부 요청과 기존 인스턴스별 디스크 캐시를 유지합니다.
 - 검증: `tests/test_weather_premium.py`와 기존 날씨 회귀. 격리 렌더링: `.venv/Scripts/python.exe scripts/validate_weather_premium.py`. 사용자 설정 보존·외부 요청 0회·샘플 데이터 여부를 결과 JSON에 남깁니다.
@@ -244,9 +254,10 @@ class OverlayXxxWidget(OverlayBaseWidget):
 - 저장: 인스턴스 설정 `keydeck_data`(JSON v4, 페이지 목록). 없으면 구 `launcher_deck_data`(v3)를 `migrate_v3()`로 **비파괴 이관**하고 구 키는 지우지 않습니다. 로드 시 `normalize_deck()`이 색상·열거형·범위·ID 중복·겹침을 모두 검증합니다.
 - 좌표는 u 단위(0.25u 스냅), 키 크기 1–6.25u × 1–4u, 배치 영역 최대 24u × 10u, 페이지 최대 12개·페이지당 키 112개(풀배열 104키 수용). 겹침은 `settle_layout()`이 앵커(방금 옮긴 키)를 유지한 채 가장 가까운 빈 칸으로 밀어냅니다.
 - 렌더링은 **단일 캔버스**(`KeyDeckCanvas`)가 담당합니다. 키별 위젯·타이머를 만들지 않습니다. 배경(케이스·플레이트·스위치·정적 LED)과 키캡 윗면(인서트 아트·레전드·유리 효과)은 픽스맵으로 캐시하고, 애니메이션 프레임에는 합성만 합니다. 편집 후에는 `renderer.invalidate(ids)`로 해당 키만 무효화합니다.
-- 애니메이션 타이머는 캔버스당 1개이며 스프링·LED·피드백이 모두 정지하면 **즉시 멈춰야 합니다**(유휴 CPU 0). 숨김/`_set_runtime_active(False)` 시 타이머와 GIF를 멈춥니다. 숨쉬기 LED만 50ms 저속 틱을 허용합니다.
+- 애니메이션 타이머는 캔버스당 1개이며 스프링·LED·피드백이 모두 정지하면 **즉시 멈춰야 합니다**(유휴 CPU 0). 숨김/`_set_runtime_active(False)` 시 타이머와 GIF를 멈춥니다. 스프링·기울기가 움직이는 동안만 16ms 틱을 쓰고, LED가 흐려지는 구간과 피드백 깜빡임은 33ms, 숨쉬기 LED는 50ms 틱을 씁니다.
 - 이미지·글리프·사운드는 `resources.py`의 프로세스 공유 캐시를 거칩니다. `paintEvent`에서 파일을 직접 열거나 `QSoundEffect`를 새로 만들지 않습니다.
-- 타건 물리(`physics.py`): 누르는 순간 손가락 속도(`FINGER_SPEED`)로 출발해 손가락 힘으로 바닥까지 약 40ms에 닿고(`BOTTOM_BOUNCE` 반동), 떼면 스위치 스프링이 되돌려 윗 하우징에서 멈춥니다(레스트 위로 튀지 않음). `step()`은 `bump`(택타일)·`click`/`click_up`(클리키)·`bottom`·`top` 이벤트를 돌려주며 소리는 이 이벤트에 맞춰 냅니다. 토글 키는 `LATCH_DEPTH`에 걸린 채 유지합니다.
+- 배포판(Qt Multimedia 없음)의 WinMM 출력 장치는 소리가 켜진 덱이 보이고 활성인 동안 열어 둡니다(`SoundBank.hold_output`). 미리 불러오기는 장치를 열지 않고, 덱이 나타나면 미리 불러온 소리 형식마다 voice를 8개까지 미리 열며(형식 2개까지), 마지막 덱이 숨거나 비활성이 되면 닫고 종료 때 모두 닫습니다. 덱이 숨김 이벤트 없이 삭제되면(캔버스 자신의 `deleteLater`, 창 안의 부모 위젯 삭제, 가비지 수집) `SoundBank`가 캔버스의 `destroyed`를 `@pyqtSlot` 슬롯에 큐 연결로 받아 다음 이벤트 루프에서 놓습니다. `destroyed`에는 파이썬 호출 객체(람다·`functools.partial`)를 연결하지 않습니다(순환 GC 중 접근 위반으로 테스트 프로세스가 죽었음). voice는 같은 형식의 어떤 소리든 재생하며 같은 소리의 겹침 수만 제한합니다. 사용자 소리는 미리 불러올 때 키 음량으로 계산해 두어 첫 타에 게인 계산을 하지 않습니다.
+- 타건 물리(`physics.py`): 누르는 순간 손가락 속도(`FINGER_SPEED`)로 출발해 손가락 힘으로 바닥까지 약 40ms에 닿고(`BOTTOM_BOUNCE` 반동), 떼면 스위치 스프링이 되돌려 윗 하우징에서 멈춥니다(레스트 위로 튀지 않음). `step()`은 `bump`(택타일)·`click`/`click_up`(클리키)·`bottom`·`top` 이벤트를 돌려줍니다. 누르는 소리(클릭, 없으면 바닥음)는 손가락이 닿는 순간 바로 내고 `mark_down_cues_played()`로 애니메이션의 같은 이벤트가 다시 소리 내지 않게 합니다. 떼는 소리는 이벤트에 맞춰 냅니다. 토글 키는 `LATCH_DEPTH`에 걸린 채 유지합니다.
 - 빠른 클릭도 바닥(`_COMMIT_DEPTH`)까지 눌린 뒤 올라옵니다. 가장자리를 누르면 `TiltSpring`으로 그쪽으로 기울었다가 떼면 흔들리며 돌아오고, 2u 이상 키는 스태빌라이저처럼 거의 수평을 유지합니다. 호버는 키를 들어 올리지 않고 빛으로만 표시합니다. `모션 최소화`에서는 스프링·기울기를 즉시 스냅하고 바닥음·복귀음만 재생합니다.
 - 렌더링: 눌림 깊이만큼 윗면이 원근으로 작아지고 기울어진 쪽이 짧아지며(`_top_quad`), 옆면은 우물 속으로 어두워지고, 접촉 그림자는 좁고 진해지며, 윗면 가장자리에 차폐광이 생깁니다.
 - 사운드 `auto`(실제 타건음)는 `Assets/keycaps/switch/`의 합성 음원(`scripts/generate_keyswitch_sounds.py`로 재생성)을 씁니다. 톤은 키캡 재질과 케이스로 정해집니다(알루미늄 케이스·PC 키캡 → 밝은 딸깍, PBT·우드·아크릴 → 낮은 도각). 종류마다 변형 4개를 번갈아 재생하고 충돌 속도로 음량을 조절합니다. 다른 사운드 선택지는 누를 때 한 번 재생하는 기존 방식을 유지합니다.
@@ -271,18 +282,21 @@ class OverlayXxxWidget(OverlayBaseWidget):
 - 키캡 프로필: `cylindrical`(체리) · `oem` · `spherical`(SA) · `mt3` · `flat`(DSA) · `xda` · `low`(로우 프로파일, 누름 거리도 짧음) · `round`(원형, 길쭉한 키는 알약 모양). 모양 차이는 `ProfileSpec`(옆면 높이·모서리·윗면 폭·음영)로 정의합니다.
 - 새 페이지는 키 하나가 선택된 상태로 만들어져 바로 이름을 입력할 수 있습니다. '적용하지 않은 변경 사항' 확인창은 긴 문구가 잘리지 않도록 버튼을 세로로 쌓습니다(`UnsavedChangesDialog`).
 - 앱 종료 중(`shared/app_lifecycle.is_app_exiting()`)에는 KeyDeck Studio가 '적용하지 않은 변경' 확인 없이 닫히고, 지연 실행된 키 동작과 스튜디오 열기는 무시합니다. 평상시 스튜디오 닫기는 `적용하고 닫기 / 변경 사항 버리기 / 계속 편집` 3선택이며 Esc는 계속 편집입니다. Ctrl+S·Ctrl+Enter는 적용 후 닫기입니다.
-- 덱이 나타난 직후 0.35초 동안의 키 누름은 무시합니다(덱을 띄운 클릭이 키에 닿아 동작이 실행되는 것을 방지).
+- 덱이 나타난 직후 0.35초 동안의 마우스 누름은 무시합니다(덱을 띄운 클릭이 키에 닿아 동작이 실행되는 것을 방지). 터치는 바로 받습니다.
 - 시각 QA: `.venv\Scripts\python.exe scripts/render_launcher_deck_preview.py` (Windows 플랫폼 플러그인에서 실행 — offscreen에는 한글 글꼴이 없습니다).
 
 ### 비트메이커 녹음·루프
 
-- 스튜디오와 위젯 메뉴의 `연주·녹음`은 `keydeck/beatmaker_dialog.py`의 전용 연주창을 연다. 설정창 텍스트 입력은 연주하지 않는다.
+- 스튜디오와 위젯 메뉴의 `연주·녹음`은 별도 루프 믹서 위젯(`overlay_launcher_deck.open_loop_mixer_widget`)을 연다. 설정창 텍스트 입력은 연주하지 않는다.
 - `domain/beatmaker_recording.py`가 최대 5분·4,096타의 선택 필드 `deck.beatmaker_recording`을 검증한다. 음원 스냅샷만 재생하고 키 동작을 실행하지 않는다. 저장된 녹음을 자동 재생하지 않는다.
 - 스튜디오는 초안·실행 취소·적용 흐름을 유지하며 위젯은 연주창을 닫을 때 저장한다. 빈 녹음은 기존 녹음을 유지하고, 교체·삭제는 확인한다. 닫기·숨김·종료·확인창 중 종료에서 재생과 타이머를 정리한다.
 - 전체 덱 공유는 녹음의 사용자 WAV도 내장/복원한다. 페이지 공유 시 수신 덱의 기존 녹음을 보존한다. 세부 계약·검증은 `docs/ux-audit/keydeck-recording-loop-20261022.md`를 참고한다.
 - `루프덱 · 4트랙`은 기존 단일 녹음과 분리된 `deck.beatmaker_looper`를 사용한다. `domain/beatmaker_looper.py`가 BPM 40~240, 1·2·4·8마디, 16분음표/끄기, 4트랙·트랙당 2,048타·총 8,192타를 검증한다. 기존 `beatmaker_recording` version 1은 변경하거나 자동 변환하지 않는다.
 - 루프덱은 첫 패드부터 한 바퀴를 녹음한 뒤 반복한다. 다음 트랙과 오버더빙은 같은 monotonic epoch를 공유하고 다른 트랙의 반복을 유지한다. 라이브 입력을 녹음 중 중복 재생하지 않으며, 절전 후 지난 타격을 한꺼번에 재생하지 않는다. 닫기·숨김·종료에서는 타이머와 악기 입력을 정리한다.
-- `keydeck/looper_dialog.py`의 전용 입력만 패드를 연주한다. Studio의 초안·실행 취소·적용과 위젯의 닫을 때 저장 계약을 유지한다. 전체 덱 공유는 네 트랙의 사용자 WAV 스냅샷을 함께 내장/복원하고 페이지 가져오기는 수신 덱의 단일 녹음과 루프를 모두 보존한다.
+- 루프 믹서 출력은 20ms 블록·버퍼 3개를 유지하고 `CALLBACK_EVENT` 이벤트로 깨어난다(`stop()`도 이벤트를 깨운다). 헤더 준비·해제·쓰기·위치 호출과 녹음 중 블록마다 하는 마이크 버퍼 재등록(`waveInAddBuffer`)은 GIL을 놓지 않고(x64·ARM64, 32비트는 기존처럼 놓음), 열기·초기화·닫기는 놓는다. 이벤트 핸들은 `waveOutClose`가 성공한 뒤에만 닫고, 정리에 실패하면 백엔드와 함께 보존한다(`_DRIVER_UNSAFE`). 출력 정지 판정 1초는 실제로 기다린 시간만 세며, 절전 복귀처럼 시계가 크게 뛰면 다시 센다.
+- 마이크는 녹음할 때만 보조 스레드에서 열고(`waveInOpen`·버퍼 준비), 준비되면 오디오 루프가 넘겨받는다. 녹음 중 장치 오류는 정지와 같이 그때까지의 녹음을 남기고 `audio_device_error_take_saved`로 알린다. 녹음 위치는 출력 장치에 쌓인 프레임만큼(마이크는 입력 지연을 더해) 앞당겨 들린 자리에 기록하며, 한 테이크 안에서는 첫 소리 때 정한 값을 유지한다.
+- 키덱은 미리 불러올 때 소리 목록을 `set_keydeck_sounds()`로 알리고, 그 키덱이 연결된 믹서는 오디오 스레드 밖에서 미리 디코딩한다. 세션·프로젝트를 불러올 때와 재생을 시작할 때도 연결된 키덱이 알린 소리를 디코딩한다. 오디오 스레드는 디코딩하지 않으며, 아직 준비되지 않은 타격은 0.25초 안에 준비되면 재생하고 아니면 버린다.
+- Studio의 초안·실행 취소·적용과 위젯의 닫을 때 저장 계약을 유지한다. 전체 덱 공유는 네 트랙의 사용자 WAV 스냅샷을 함께 내장/복원하고 페이지 가져오기는 수신 덱의 단일 녹음과 루프를 모두 보존한다.
 - 회귀는 `tests/test_beatmaker_looper.py`, `tests/test_keydeck_looper_ui.py`, `tests/test_keydeck_looper_layouts.py` 및 기존 녹음/KeyDeck 공유 테스트를 포함한다. 사용 순서와 검증 경계는 [루프덱 안내](../docs/ux-audit/keydeck-loopdeck-20261106.md)를 참고한다.
 
 ## 크로스 위젯 참조

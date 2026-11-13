@@ -44,10 +44,17 @@ from calendar_app.presentation.dialogs.ics_subscription_dialog import IcsSubscri
 from calendar_app.presentation.dialogs.provider_settings_widgets import plain_tooltip
 from calendar_app.presentation.dialogs.sync_feedback import (
     guard_calendar_action,
+    subscription_error_message,
     sync_error_message,
 )
+from calendar_app.presentation.locale_names import calendar_display_name
 from calendar_app.shared.color_utils import contrast_safe_color
 from calendar_app.shared.icon_map import ICON, icon
+
+
+def _shown_name(calendar):
+    """Calendar name as shown in the UI; the built-in local calendar follows the language."""
+    return str(calendar_display_name(calendar["id"], calendar.get("name")) or calendar["id"])
 
 
 class _CalendarRowLabel(QLabel):
@@ -272,6 +279,10 @@ class CalendarManagerPage(QWidget):
         self.subscription_info = self._label("", "syncStatus")
         self.subscription_info.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         subscription_layout.addWidget(self.subscription_info)
+        self.accept_empty = self._button(
+            t("sync_subscription.accept_empty", "비어 있음 확인"), self._accept_empty_feed
+        )
+        subscription_layout.addWidget(self.accept_empty)
         self.subscription_active = QCheckBox(t("sync_redesign.subscription_active", "이 구독 갱신"))
         self.subscription_active.toggled.connect(self._subscription_active)
         subscription_layout.addWidget(self.subscription_active)
@@ -394,10 +405,10 @@ class CalendarManagerPage(QWidget):
                 continue
             if provider and source != provider:
                 continue
-            if query and query not in str(calendar.get("name") or calendar["id"]).casefold():
+            if query and query not in _shown_name(calendar).casefold():
                 continue
             readonly = calendar_repo.is_calendar_row_read_only(calendar)
-            name = calendar.get("name") or calendar["id"]
+            name = _shown_name(calendar)
             traits = [self._source_label(calendar)]
             if readonly:
                 traits.append(t("outlook.read_only", "읽기 전용"))
@@ -585,7 +596,7 @@ class CalendarManagerPage(QWidget):
         if self.add_ics is not None:
             self.add_ics.setEnabled(bool(self.coordinator) and not self._ics_busy())
         self.detail_title.setText(
-            str(calendar.get("name") or calendar["id"])
+            _shown_name(calendar)
             if calendar
             else t("sync_redesign.select_calendar", "캘린더를 선택하세요")
         )
@@ -687,9 +698,15 @@ class CalendarManagerPage(QWidget):
             if self._ics_busy():
                 status = t("sync_redesign.fetch_busy", "구독 갱신 중입니다…") + "\n" + status
             error = subscription_errors(self.app.settings).get(calendar["id"])
+            # Only an event-less feed with kept mirrors reports this code for ICS.
+            emptied = error == "calendar_report_incomplete" and calendar.get("is_active", 1)
             if error:
-                status += "\n" + sync_error_message(error)
+                status += "\n" + (
+                    subscription_error_message(error) if emptied else sync_error_message(error)
+                )
             self.subscription_info.setText(status)
+            self.accept_empty.setVisible(bool(emptied))
+            self.accept_empty.setEnabled(bool(self.coordinator) and not self._ics_busy())
             overall_auto = bool(
                 self.coordinator and self.coordinator.states.get("ics", {}).get("auto", True)
             )
@@ -711,6 +728,7 @@ class CalendarManagerPage(QWidget):
             )
         else:
             self.subscription_info.setText("")
+            self.accept_empty.hide()
         self.service.setText(
             t("sync_redesign.refresh_subscription", "이 구독 지금 갱신")
             if ics
@@ -846,6 +864,51 @@ class CalendarManagerPage(QWidget):
             if success and checked and not calendar.get("is_active", 1):
                 self._refresh_subscription(calendar["id"])
 
+    @guard_calendar_action
+    def _accept_empty_feed(self):
+        calendar = self.current()
+        if (
+            not calendar
+            or calendar.get("type") != "ics"
+            or not self.coordinator
+            or self._ics_busy()
+            or subscription_errors(self.app.settings).get(calendar["id"])
+            != "calendar_report_incomplete"
+        ):
+            return
+        from calendar_app.infrastructure.ics import ics_fetcher
+
+        count = ics_fetcher.mirror_count(calendar["id"])
+        if (
+            QMessageBox.question(
+                self,
+                t("sync_subscription.accept_empty", "비어 있음 확인"),
+                t(
+                    "sync_subscription.accept_empty_confirm",
+                    "원본 캘린더에 일정이 없습니다. 이 구독에서 가져온 일정 {count}개를 앱에서 "
+                    "지울까요? 원본 캘린더와 다른 캘린더의 일정은 그대로입니다.",
+                    count=count,
+                ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            != QMessageBox.StandardButton.Yes
+        ):
+            return
+        self.coordinator.accept_empty_ics(calendar["id"], calendar.get("ics_url"), count)
+        started = self._refresh_subscription(calendar["id"])
+        if not started:
+            self.coordinator.discard_empty_ics(calendar["id"])
+        self._refresh_feedback_pending = bool(started)
+        self.feedback.setText(
+            t("sync_unified.refresh_started", "선택한 구독을 새로고침하고 있습니다.")
+            if started
+            else t(
+                "sync_unified.sync_not_started",
+                "동기화를 시작하지 못했습니다. 연결 상태와 진행 중인 작업을 확인하세요.",
+            )
+        )
+
     def _refresh_subscription(self, calendar_id):
         if not self.coordinator:
             return False
@@ -890,13 +953,16 @@ class CalendarManagerPage(QWidget):
         calendar = self.current()
         if not calendar or calendar.get("type") == "gcal":
             return
+        shown = calendar_display_name(calendar["id"], calendar.get("name"))
         name, ok = QInputDialog.getText(
             self,
             t("sync_unified.rename", "이름 변경"),
             t("sync_unified.calendar_name", "캘린더 이름"),
-            text=calendar.get("name") or "",
+            text=shown,
         )
-        if ok and name.strip():
+        # Saving the prefilled name unchanged keeps the stored name, so the
+        # built-in "기본" row is not renamed to the current UI language.
+        if ok and name.strip() and name.strip() != shown.strip():
             self._changed(calendar_repo.rename_calendar(calendar["id"], name.strip()))
 
     @guard_calendar_action
@@ -938,7 +1004,7 @@ class CalendarManagerPage(QWidget):
                     t(
                         "calendar_list_default.saved",
                         "새 일정은 ‘{name}’ 캘린더에 기본 저장됩니다.",
-                        name=str(calendar.get("name") or calendar["id"]),
+                        name=_shown_name(calendar),
                     )
                 )
             return success
@@ -1045,7 +1111,7 @@ class CalendarManagerPage(QWidget):
                 else t(
                     "sync_redesign.remove_local_confirm",
                     "'{name}' 캘린더를 제거할까요? 기존 일정은 로컬 사본으로 남습니다.",
-                ).format(name=calendar.get("name") or calendar["id"]),
+                ).format(name=_shown_name(calendar)),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )

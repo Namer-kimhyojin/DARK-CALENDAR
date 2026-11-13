@@ -105,7 +105,9 @@ class MonthRendererDateParsingTests(unittest.TestCase):
                     bottom = image.height() - 1
                     samples = [image.pixelColor(x, bottom) for x in range(2, image.width() - 2)]
                     self.assertTrue(all(color == samples[0] for color in samples))
-                    self.assertNotEqual(samples[0], image.pixelColor(image.width() // 2, bottom - 2))
+                    self.assertNotEqual(
+                        samples[0], image.pixelColor(image.width() // 2, bottom - 2)
+                    )
                     host.close()
 
 

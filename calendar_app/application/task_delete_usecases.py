@@ -8,6 +8,23 @@ from collections.abc import Callable, Iterable
 QueueDeleteFn = Callable[[str, int | None, str | None], object]
 
 
+def _default_is_read_only(calendar_id):
+    from calendar_app.infrastructure.db.calendar_repo import is_calendar_read_only
+
+    return is_calendar_read_only(calendar_id)
+
+
+def read_only_task_ids(task_repo, task_ids: Iterable[int], *, is_read_only=None) -> list:
+    """Tasks on a calendar the user cannot write to; a delete there cannot reach it."""
+    check = is_read_only or _default_is_read_only
+    blocked = []
+    for task_id in task_ids or []:
+        task = task_repo.get_unified_task(task_id)
+        if task and task.get("calendar_id") and check(task.get("calendar_id")):
+            blocked.append(task_id)
+    return blocked
+
+
 def queue_google_deletes_for_task_ids(
     task_repo, task_ids: Iterable[int], *, queue_delete_fn: QueueDeleteFn
 ) -> int:
@@ -64,12 +81,19 @@ def queue_google_deletes_for_refs(gcal_refs, *, queue_delete_fn: QueueDeleteFn) 
 
 
 def delete_tasks_with_google_queue(
-    task_repo, task_ids: Iterable[int], *, queue_delete_fn: QueueDeleteFn
+    task_repo, task_ids: Iterable[int], *, queue_delete_fn: QueueDeleteFn, is_read_only=None
 ) -> int:
-    """Delete tasks without losing a required Google delete request."""
+    """Delete tasks without losing a required Google delete request.
+
+    Tasks on read-only calendars are skipped: the remote copy would bring them back.
+    """
+    task_ids = list(task_ids or [])
+    blocked = set(read_only_task_ids(task_repo, task_ids, is_read_only=is_read_only))
     deleted = 0
     atomic_delete = getattr(task_repo, "delete_unified_task_with_gcal_outbox", None)
-    for task_id in task_ids or []:
+    for task_id in task_ids:
+        if task_id in blocked:
+            continue
         if callable(atomic_delete):
             if atomic_delete(task_id):
                 deleted += 1
@@ -89,11 +113,20 @@ def delete_tasks_with_google_queue(
 
 
 def delete_tasks_on_date_with_google_queue(
-    search_repo, task_repo, date_str: str, *, queue_delete_fn: QueueDeleteFn
+    search_repo, task_repo, date_str: str, *, queue_delete_fn: QueueDeleteFn, is_read_only=None
 ) -> int:
     """Queue Google deletes for all tasks on date, then delete them locally."""
     tasks = search_repo.get_all_tasks_by_date(date_str)
     schedules = [task for task in tasks if task.get("type") == "schedule"]
+    check = is_read_only or _default_is_read_only
+    if any(task.get("calendar_id") and check(task.get("calendar_id")) for task in schedules):
+        # Keep read-only calendars' events; delete the rest one by one.
+        return delete_tasks_with_google_queue(
+            task_repo,
+            [task.get("id") for task in schedules if task.get("id")],
+            queue_delete_fn=queue_delete_fn,
+            is_read_only=check,
+        )
     atomic_delete = getattr(task_repo, "delete_unified_task_with_gcal_outbox", None)
     if callable(atomic_delete):
         deleted = 0
