@@ -22,6 +22,7 @@ from calendar_app.infrastructure.calendar_sync.status import (
     save_calendar_discovery_errors,
     save_calendar_errors,
 )
+from calendar_app.infrastructure.google_sync.common import sync_time_zone
 
 
 class CalDAVWorker(QThread):
@@ -36,13 +37,13 @@ class CalDAVWorker(QThread):
         parent,
         username="",
         password="",
-        local_zone="Asia/Seoul",
+        local_zone=None,
         server_url=None,
     ):
         super().__init__(parent)
         self.service, self.operation, self.account = service, operation, account
         self.username, self.password = username, password
-        self.local_zone = local_zone
+        self.local_zone = local_zone or sync_time_zone(None)
         self.server_url = server_url
         self.retry_after = None
 
@@ -212,7 +213,7 @@ class CalDAVSyncController(QObject):
                 self,
                 username,
                 password,
-                self.settings.value("gcal_timezone", "Asia/Seoul", type=str),
+                sync_time_zone(self.settings),
                 server_url=server_url,
             )
             self.worker = worker

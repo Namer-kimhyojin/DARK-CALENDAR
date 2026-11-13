@@ -89,6 +89,16 @@ class MyDialog(QDialog):
 - 직접 `setStyleSheet()`로 공통 스타일을 덮어쓰지 않기
 - 모든 라벨/버튼 텍스트는 `t()` 사용
 
+### 공통 디자인 연결
+
+- `apply_common_dialog_style(..., settings=...)`는 명시한 설정을 우선하고, 생략하면 가장 가까운 소유 창의 `QSettings`를 사용합니다. 사용자 색상·투명도·크기 토큰을 전역 기본 설정으로 대체하지 않습니다.
+- 전용 스타일은 `extra_stylesheet`에 대상 objectName을 한정해 추가합니다. 테마를 다시 적용할 때는 `keep_existing_stylesheet=False`로 기본 스타일과 전용 스타일을 한 번만 조합합니다.
+- 기존 objectName을 유지하면서 `setProperty("role", "dialogHeader")`, `dialogCard`, `dialogFooter`로 영역을 표시할 수 있습니다. 제목·설명에는 기존 `dialogTitle`·`dialogSubtitle` 역할을 사용합니다.
+- 투명한 바깥 창과 읽을 수 있는 카드 표면을 구분합니다. 본문은 `content_bg`, 떠 있는 카드와 모달은 `floating_bg` 계약을 따릅니다. 강조 버튼 글자는 `button_primary_text` 또는 `accent_text` 대비 토큰을 사용합니다.
+- 앱 소유 모달의 읽기 표면은 뒤 창의 글자가 비치지 않도록 불투명 색상으로 합성합니다. 사용자 색상·전문가 토큰의 색조는 유지하며, 바깥 모서리의 투명 영역과 메인 화면·위젯의 불투명도 설정은 별도로 유지합니다.
+- 전역 표시 필터는 자체 스타일이 있는 `QDialog`와 기본 확인·입력창에도 공통 기반을 적용합니다. 공통 스타일을 직접 적용한 `QMessageBox`도 버튼 역할과 하단 크기를 적용받아야 합니다. 기존 기본 버튼과 결과 코드를 바꾸지 않습니다.
+- `QWidget` 기반 알림·도구 팝업은 전역 다이얼로그 필터 대상이 아니므로 공통 의미 토큰으로 명시적으로 스타일링합니다. Windows 시스템 토스트는 OS 표시 경로를 유지합니다.
+
 버튼 objectName:
 
 - 기본/저장: `primary_btn`

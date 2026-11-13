@@ -9,6 +9,7 @@ from calendar_app.presentation.main_window.idle_lock_ui_builder import (
     setup_idle_lock_ui,  # noqa: F401
 )
 from calendar_app.presentation.main_window.top_bar_builder import setup_top_bar
+from calendar_app.presentation.main_window.top_bar_shelf import TopBarShelf
 from calendar_app.presentation.main_window.window_restore_helpers import (
     restore_window_and_bind_menu_state,
     setup_size_grip,
@@ -105,20 +106,9 @@ def setup_main_ui(self):
 
     setup_top_bar(self, _size, _theme, _ta)
 
-    # top_bar_frame을 QMainWindow 최상단에 고정.
-    # 하단 패널과의 간격 3px를 위해 wrapper로 감쌈.
-    from PyQt6.QtWidgets import QVBoxLayout as _VBox
-
-    _menu_wrapper = QWidget()
-    _vbox = _VBox(_menu_wrapper)
-    _vbox.setContentsMargins(0, 0, 0, 3)
-    _vbox.setSpacing(3)
-    _vbox.addWidget(self.top_bar_frame)
     self._welcome_banner = build_first_run_banner(self)
-    if self._welcome_banner is not None:
-        _vbox.addWidget(self._welcome_banner)
-    self._top_bar_menu_wrapper = _menu_wrapper
-    self.setMenuWidget(_menu_wrapper)
+    self._top_bar_menu_wrapper = TopBarShelf(self, self.top_bar_frame, self._welcome_banner)
+    self.setMenuWidget(self._top_bar_menu_wrapper)
 
     # 입력 차단용 투명 오버레이
     self.lock_overlay = QWidget(self)

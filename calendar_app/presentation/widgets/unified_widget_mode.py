@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from collections import Counter
+import contextlib
+import sys
 
 from PyQt6 import sip
 from PyQt6.QtCore import (
@@ -15,9 +17,9 @@ from PyQt6.QtCore import (
     pyqtSignal,
 )
 from PyQt6.QtGui import (
-    QColor,
     QContextMenuEvent,
     QFont,
+    QKeySequence,
     QPainter,
     QPen,
     QTextLayout,
@@ -43,20 +45,22 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.infrastructure.i18n import t
-from calendar_app.presentation.widgets.panel_widget_mode import (
+from calendar_app.infrastructure.runtime.keyboard_shortcuts import SHORTCUTS
+from calendar_app.presentation.widgets.panel_widget_common import (
     _format_compact_date_with_weekday,
     _format_widget_datetime_label,
     _normalize_status,
     _parse_qdate,
     _parse_quick_add_text,
-    _resolve_widget_mode_tokens,
 )
-from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor
+from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor, int_token
 from calendar_app.presentation.widgets.panel_widget_theme import (
     _apply_configured_widget_color,
     _apply_registered_widget_mode_skin,
+    _resolve_widget_mode_tokens,
     _widget_mode_menu_stylesheet,
 )
+from calendar_app.presentation.widgets.schedule_info import _is_all_day as _schedule_is_all_day
 from calendar_app.presentation.widgets.week_day_button import ModernWeekDayButton
 from calendar_app.presentation.widgets.widget_mode_density import (
     DENSITIES,
@@ -104,6 +108,9 @@ from calendar_app.presentation.widgets.widget_placement import (
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 
+# Windows posts this when its modal move/size loop ends (startSystemMove).
+_WM_EXITSIZEMOVE = 0x0232
+
 
 def _safe_text(value) -> str:
     return str(value or "").strip()
@@ -132,6 +139,10 @@ def _relative_widget_day(date: QDate) -> str:
 
 def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
     tk = tokens
+    surface_radius = int_token(tk, "widget_surface_radius", 10)
+    header_radius = int_token(tk, "widget_header_radius", 8)
+    item_radius = int_token(tk, "widget_entry_radius", 8)
+    control_radius = int_token(tk, "widget_control_radius", 8)
     return f"""
         QFrame#unified_container {{
             background: qlineargradient(
@@ -141,16 +152,12 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
                 stop: 1 {tk.get("panel_bg_end", tk["panel_bg"])}
             );
             border: 1px solid {tk.get("panel_border", "rgba(255,255,255,22)")};
-            border-radius: 28px;
+            border-radius: {surface_radius}px;
         }}
         QFrame#unified_hero {{
-            background: qlineargradient(
-                x1: 0, y1: 0, x2: 1, y2: 0,
-                stop: 0 {tk.get("header_shell_bg", tk["surface_bg"])},
-                stop: 1 {tk.get("surface_alt", tk["section_bg"])}
-            );
-            border: 1px solid {tk.get("header_shell_border", tk.get("panel_border_soft", "rgba(255,255,255,16)"))};
-            border-radius: 22px;
+            background: transparent;
+            border: none;
+            border-radius: {header_radius}px;
         }}
         QFrame#unified_filter_section,
         QFrame#unified_agenda_section {{
@@ -166,30 +173,30 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
         QFrame#unified_container[widgetLayout="magazine"] QFrame#unified_agenda_section {{
             background: {tk.get("card_bg", tk["section_bg"])};
             border: 1px solid {tk.get("card_border", tk.get("panel_border_soft", tk["panel_border"]))};
-            border-radius: 20px;
+            border-radius: {item_radius}px;
         }}
         QFrame#unified_container[widgetLayout="agenda_first"] QFrame#unified_agenda_section,
         QFrame#unified_container[widgetLayout="minimal"] QFrame#unified_agenda_section {{
             background: {tk.get("section_bg", tk["surface_bg"])};
             border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", tk["panel_border"]))};
-            border-radius: 18px;
+            border-radius: {item_radius}px;
         }}
         QFrame#unified_container[widgetLayout="dashboard"] QWidget#unified_calendar_section,
         QFrame#unified_container[widgetLayout="magazine"] QWidget#unified_calendar_section,
         QFrame#unified_container[widgetLayout="agenda_first"] QWidget#unified_calendar_section {{
             background: {tk.get("surface_alt", tk["section_bg"])};
             border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", tk["panel_border"]))};
-            border-radius: 18px;
+            border-radius: {item_radius}px;
         }}
         QFrame#unified_container[widgetLayout="dashboard"] QFrame#unified_filter_section,
         QFrame#unified_container[widgetLayout="magazine"] QFrame#unified_filter_section,
         QFrame#unified_container[widgetLayout="minimal"] QFrame#unified_filter_section {{
             background: {tk.get("hero_bg", tk["section_bg"])};
             border: 1px solid {tk.get("hero_border", tk.get("panel_border_soft", tk["panel_border"]))};
-            border-radius: 16px;
+            border-radius: {item_radius}px;
         }}
         QFrame#unified_container[widgetLayout="minimal"] QFrame#unified_hero {{
-            border-radius: 18px;
+            border-radius: {header_radius}px;
         }}
         QLabel#unified_eyebrow {{
             color: {tk.get("text_faint", tk["text_secondary"])};
@@ -226,7 +233,7 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             color: {tk.get("button_text", tk["text_secondary"])};
             background: {tk.get("button_bg", tk["section_bg"])};
             border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", "rgba(255,255,255,14)"))};
-            border-radius: 14px;
+            border-radius: {control_radius}px;
             padding: 7px 12px;
             font-size: 8.8pt;
             font-weight: 700;
@@ -240,7 +247,7 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
             border: 1px solid {tk.get("hero_border", tk["panel_border"])};
         }}
         QToolButton#unified_filter_btn {{
-            border-radius: 12px;
+            border-radius: {control_radius}px;
             padding: 5px 11px;
             font-size: 8.1pt;
         }}
@@ -281,7 +288,7 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
         }}
         QLabel#unified_chip,
         QLabel#unified_chip_accent {{
-            border-radius: 12px;
+            border-radius: {control_radius}px;
             padding: 3px 9px;
             font-size: 7.8pt;
             font-weight: 700;
@@ -322,7 +329,7 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
         QFrame#unified_empty_state {{
             background: {tk.get("surface_alt", tk["section_bg"])};
             border: 1px solid {tk.get("section_border_soft", tk.get("panel_border_soft", tk["panel_border"]))};
-            border-radius: 16px;
+            border-radius: {item_radius}px;
         }}
         QFrame#agenda_item_schedule,
         QFrame#agenda_item_task {{
@@ -332,7 +339,7 @@ def _unified_widget_stylesheet(tokens: dict[str, str]) -> str:
                 stop: 1 {tk.get("surface_alt", tk["section_bg_alt"])}
             );
             border: 1px solid {tk.get("card_border", tk.get("section_border_soft", "rgba(255,255,255,14)"))};
-            border-radius: 18px;
+            border-radius: {item_radius}px;
         }}
         QFrame#agenda_item_schedule:hover,
         QFrame#agenda_item_task:hover {{
@@ -425,22 +432,26 @@ class _CompletionCheckBox(QCheckBox):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(
-            QPen(QColor(tokens["accent"] if self.isChecked() else tokens["text_secondary"]), 1.5)
-        )
-        background = css_to_qcolor(tokens["section_bg"])
-        background.setAlpha(
-            round(
-                background.alpha()
-                * read_widget_opacities(self._controller.main_window.settings)[1]
-                / 100
+            QPen(
+                css_to_qcolor(tokens["accent"] if self.isChecked() else tokens["text_secondary"]),
+                1.5,
             )
         )
+        background = css_to_qcolor(tokens["section_bg"])
+        if tokens.get("_main_theme_linked") != "true":
+            background.setAlpha(
+                round(
+                    background.alpha()
+                    * read_widget_opacities(self._controller.main_window.settings)[1]
+                    / 100
+                )
+            )
         painter.setBrush(background)
         painter.drawRoundedRect(3, 3, 18, 18, 5, 5)
         if self.isChecked():
             painter.drawPixmap(5, 5, _ic(ICON.CHECK, color=tokens["accent"]).pixmap(14, 14))
         if self.hasFocus():
-            painter.setPen(QPen(QColor(tokens["accent"]), 1, Qt.PenStyle.DotLine))
+            painter.setPen(QPen(css_to_qcolor(tokens["accent"]), 1, Qt.PenStyle.DotLine))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawRoundedRect(1, 1, 22, 22, 6, 6)
         painter.end()
@@ -764,7 +775,10 @@ class _CompactMonthCalendar(QWidget):
             Qt.DayOfWeek.Saturday.value,
             Qt.DayOfWeek.Sunday.value,
         }:
-            text = tk.get("accent_deep", tk["text_primary"])
+            text = tk.get(
+                "calendar_weekday_sat" if day.dayOfWeek() == 6 else "calendar_weekday_sun",
+                tk.get("accent_deep", tk["text_primary"]),
+            )
         background = "transparent"
         border = "transparent"
         weight = 500
@@ -806,6 +820,10 @@ class _CompactMonthCalendar(QWidget):
         weekday_keys = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
         for key, label in zip(weekday_keys, self.weekday_labels, strict=True):
             label.setText(t(f"weekday.{key}", key.title()))
+            color = self._tokens.get(
+                f"calendar_weekday_{key}", self._tokens.get("text_secondary", "")
+            )
+            label.setStyleSheet(f"color: {color};")
         self._dates = []
         today = QDate.currentDate()
         for index, button in enumerate(self.day_buttons):
@@ -1013,12 +1031,25 @@ class UnifiedWidgetWindow(QWidget):
         self._last_placement = None
         self._placement_drag_active = False
         self._placement_press_global = None
+        self._system_move_active = False
+        self._system_move_alt = False
         self._feedback_timer = QTimer(self)
         self._feedback_timer.setSingleShot(True)
         self._feedback_timer.timeout.connect(self._expire_feedback)
 
         self._build_ui()
         self._setup_refresh_timer()
+
+    def _main_window_key_handler(self, event):
+        """F12 and Ctrl+F1 reach this window only while the hidden main window cannot."""
+        pressed = QKeySequence(event.keyCombination())
+        for entry in SHORTCUTS:
+            if entry["id"] in ("widget_mode", "show_hide") and pressed == QKeySequence(
+                entry["key"]
+            ):
+                handler = getattr(self.controller.main_window, entry["action"], None)
+                return handler if callable(handler) else None
+        return None
 
     def _build_ui(self) -> None:
         main_layout = QVBoxLayout(self)
@@ -1495,7 +1526,27 @@ class UnifiedWidgetWindow(QWidget):
                         return True
                     self._placement_drag_active = True
                     self.toolbar.setCursor(Qt.CursorShape.ClosedHandCursor)
+                    # Let the OS move the window. Qt's logical coordinates are not
+                    # continuous between monitors with different scaling, so moving
+                    # to "cursor - offset" made the window jump and flip DPI on every
+                    # mouse event near the boundary (stalls and size creep).
+                    if self._try_start_system_move():
+                        self._system_move_active = True
+                        self._system_move_alt = bool(
+                            event.modifiers() & Qt.KeyboardModifier.AltModifier
+                        )
+                        self._drag_offset = None
+                        return True
                 self.move(event.globalPosition().toPoint() - self._drag_offset)
+                return True
+            if (
+                event.type() == QEvent.Type.MouseButtonRelease
+                and event.button() == Qt.MouseButton.LeftButton
+                and self._system_move_active
+            ):
+                self._complete_placement_move(
+                    snap=not event.modifiers() & Qt.KeyboardModifier.AltModifier
+                )
                 return True
             if (
                 event.type() == QEvent.Type.MouseButtonRelease
@@ -1504,31 +1555,73 @@ class UnifiedWidgetWindow(QWidget):
             ):
                 self._drag_offset = None
                 if self._placement_drag_active:
-                    settings = self.controller.main_window.settings
-                    if (
-                        settings.value("widget_mode_snap_enabled", True, type=bool)
-                        and not event.modifiers() & Qt.KeyboardModifier.AltModifier
-                    ):
-                        screen = QApplication.screenAt(self.geometry().center()) or self.screen()
-                        if screen is not None:
-                            area = screen.availableGeometry()
-                            x, y = self.x(), self.y()
-                            for value in (area.left(), area.right() - self.width() + 1):
-                                if abs(value - x) <= 12:
-                                    x = value
-                                    break
-                            for value in (area.top(), area.bottom() - self.height() + 1):
-                                if abs(value - y) <= 12:
-                                    y = value
-                                    break
-                            self.move(x, y)
-                    self._finish_placement_edit()
+                    self._complete_placement_move(
+                        snap=not event.modifiers() & Qt.KeyboardModifier.AltModifier
+                    )
                 else:
                     self._placement_origin = None
                 self.toolbar.setCursor(Qt.CursorShape.OpenHandCursor)
                 self._placement_drag_active = False
                 return True
         return super().eventFilter(watched, event)
+
+    def _try_start_system_move(self) -> bool:
+        try:
+            handle = self.windowHandle()
+            return handle is not None and bool(handle.startSystemMove())
+        except RuntimeError:
+            # The native handle can disappear; keep the logical-coordinate fallback.
+            return False
+
+    def nativeEvent(self, event_type, message):
+        if self._system_move_active and sys.platform == "win32":
+            with contextlib.suppress(Exception):
+                if bytes(event_type) == b"windows_generic_MSG":
+                    import ctypes.wintypes
+
+                    msg = ctypes.wintypes.MSG.from_address(int(message))
+                    if msg.message == _WM_EXITSIZEMOVE:
+                        # Finish after Windows has fully left its move loop.
+                        QTimer.singleShot(0, self._complete_system_move)
+        # QWidget's default declines every message. Calling super() here crashes
+        # PyQt6 6.12 with an access violation, so return the default directly.
+        return False, 0
+
+    def _complete_system_move(self) -> None:
+        if self._system_move_active:
+            self._complete_placement_move(snap=not self._system_move_alt)
+
+    def _complete_placement_move(self, *, snap: bool) -> None:
+        """Settle a toolbar move: keep size, fit the destination screen, snap, save."""
+        self._system_move_active = False
+        self._system_move_alt = False
+        self._drag_offset = None
+        self._placement_drag_active = False
+        self.toolbar.setCursor(Qt.CursorShape.OpenHandCursor)
+        state = self._placement_origin
+        screen = QApplication.screenAt(self.frameGeometry().center()) or self.screen()
+        if screen is not None:
+            area = screen.availableGeometry()
+            rect = QRect(self.geometry())
+            if state is not None and state[0] == self.active_layout_id():
+                # Moving never resizes. A DPI hop can round the size by a pixel
+                # each way; restore the size the drag started with.
+                rect.setSize(state[1].size())
+            rect = clamp_rect(rect, area)
+            if snap and self.controller.main_window.settings.value(
+                "widget_mode_snap_enabled", True, type=bool
+            ):
+                for value in (area.left(), area.right() - rect.width() + 1):
+                    if abs(value - rect.x()) <= 12:
+                        rect.moveLeft(value)
+                        break
+                for value in (area.top(), area.bottom() - rect.height() + 1):
+                    if abs(value - rect.y()) <= 12:
+                        rect.moveTop(value)
+                        break
+            if rect != self.geometry():
+                self.setGeometry(rect)
+        self._finish_placement_edit()
 
     def placement_is_locked(self):
         return self.controller.main_window.settings.value(
@@ -1559,6 +1652,8 @@ class UnifiedWidgetWindow(QWidget):
         self._placement_origin = None
         self._drag_offset = None
         self._placement_drag_active = False
+        self._system_move_active = False
+        self._system_move_alt = False
         self.toolbar.setCursor(Qt.CursorShape.OpenHandCursor)
         self.size_grip.cancel_edit()
         if (
@@ -1594,6 +1689,11 @@ class UnifiedWidgetWindow(QWidget):
         dialog.deleteLater()
 
     def keyPressEvent(self, event):
+        handler = self._main_window_key_handler(event)
+        if handler is not None:
+            handler()
+            event.accept()
+            return
         if (
             not self._free_layout_active
             and event.key() == Qt.Key.Key_F
@@ -1802,7 +1902,11 @@ class UnifiedWidgetWindow(QWidget):
         tokens = _widget_theme_tokens(self.controller.main_window)
         settings = self.controller.main_window.settings
         workspace_skin = get_widget_mode_skin(read_widget_mode_skin_id(settings))
-        opacities = read_widget_opacities(settings)
+        opacities = (
+            (100, 100)
+            if tokens.get("_main_theme_linked") == "true"
+            else read_widget_opacities(settings)
+        )
         family = str(settings.value("widget_mode_font_family", QApplication.font().family()))
         try:
             weight = int(settings.value("widget_mode_font_weight", 500))
@@ -1833,7 +1937,8 @@ class UnifiedWidgetWindow(QWidget):
                 + f"""
             QWidget {{ font-family: "{css_family}"; }}
             QFrame#unified_surface {{ background: {tokens["panel_bg"]};
-                border: 1px solid {tokens["panel_border"]}; border-radius: 16px; }}
+                border: 1px solid {tokens["panel_border_soft"]};
+                border-radius: {int_token(tokens, "widget_surface_radius", 10)}px; }}
             QFrame#unified_toolbar, QFrame#unified_container, QFrame#unified_hero {{
                 background: transparent; border: none; border-radius: 0; }}
             QFrame#unified_container[widgetLayout] QFrame#unified_agenda_section,
@@ -1861,7 +1966,8 @@ class UnifiedWidgetWindow(QWidget):
                 background: {tokens.get("button_primary_hover_bg", tokens["section_bg_alt"])};
                 border: 1px solid {tokens.get("button_primary_hover_border", tokens["accent"])}; }}
             QFrame#agenda_item_task, QFrame#agenda_item_schedule {{
-                background: {tokens["section_bg"]}; border: 1px solid {tokens["panel_border"]}; border-radius: 10px; }}
+                background: {tokens["card_bg"]}; border: 1px solid {tokens["card_border"]};
+                border-radius: {int_token(tokens, "widget_entry_radius", 8)}px; }}
             QPushButton#agenda_item_title {{ color: {tokens["text_primary"]}; text-align: left;
                 background: transparent; border: none; padding: 0; font-size: {typography.title:.1f}pt; font-weight: {weight}; }}
             QLabel#agenda_item_title {{ font-size: {typography.title:.1f}pt; font-weight: {weight}; }}
@@ -2659,7 +2765,7 @@ class UnifiedWidgetWindow(QWidget):
                     )
                 )
 
-        skin_menu = menu.addMenu(t("widget_mode.style_color_skin", "색상 스킨"))
+        skin_menu = menu.addMenu(t("widget_mode.style_shape_skin", "모양 스킨 · 메인 테마 연동"))
         current_skin = read_widget_mode_skin_id(self.controller.main_window.settings)
         for skin in widget_mode_skins():
             action = skin_menu.addAction(t(skin.label_key, skin.label_default))
@@ -2783,9 +2889,15 @@ class UnifiedWidgetController:
         app = QApplication.instance()
         if app is not None:
             app.screenRemoved.connect(self._handle_screen_change)
-            main_window.destroyed.connect(
-                lambda: app.screenRemoved.disconnect(self._handle_screen_change)
-            )
+            main_window.destroyed.connect(self._disconnect_screen_change)
+
+    def _disconnect_screen_change(self, *_args) -> None:
+        app = QApplication.instance()
+        if app is None:
+            return
+        # Already disconnected, or the application is shutting down.
+        with contextlib.suppress(TypeError, RuntimeError):
+            app.screenRemoved.disconnect(self._handle_screen_change)
 
     def _current_date(self) -> QDate:
         target = getattr(self.main_window, "current_date", None)
@@ -3254,6 +3366,17 @@ class UnifiedWidgetController:
             panel._theme_cache.clear()
             panel.apply_palette(panel._last_scale or 1.0)
 
+    def refresh_theme(self) -> None:
+        """Restyle existing rows without changing mode, geometry or data caches."""
+        if self.widget is not None:
+            self.widget.apply_theme()
+            self.widget.update_agenda(self.widget._last_items)
+        legacy = getattr(self.main_window, "_panel_widget_mode_controller", None)
+        panel = getattr(legacy, "_panel", None)
+        if panel is not None:
+            panel._theme_cache.clear()
+            panel.apply_palette(panel._last_scale or 1.0)
+
     def set_layout(self, layout_id: str) -> None:
         self._save_geometry()
         from calendar_app.presentation.widgets.widget_free_layout import FREE_LAYOUT_MODE_KEY
@@ -3590,11 +3713,16 @@ class UnifiedWidgetController:
             }
         ]
         for row in rows:
+            explicit_all_day = row.get("all_day") is not None and _schedule_is_all_day(row)
             items.append(
                 {
                     "title": _safe_text(row.get("name")) or t("widget_mode.untitled", "Untitled"),
-                    "time": _format_widget_datetime_label(
-                        row.get("deadline"), reference_date=target
+                    "time": (
+                        t("widget_mode.all_day", "종일")
+                        if explicit_all_day
+                        else _format_widget_datetime_label(
+                            row.get("deadline"), reference_date=target
+                        )
                     ),
                     "is_task": False,
                     "item_kind": "schedule",

@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QDate, QRect, QSize
-from PyQt6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
+from PyQt6.QtCore import QDate, QRect, QSize, Qt
+from PyQt6.QtWidgets import QApplication, QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from calendar_app.infrastructure.db import db_repository_unified as unified_repo
 from calendar_app.presentation import drag_drop_manager
@@ -54,6 +54,12 @@ class MonthRendererDateParsingTests(unittest.TestCase):
         self.assertEqual(start_date.toString("yyyy-MM-dd"), "2026-03-26")
         self.assertEqual(end_date.toString("yyyy-MM-dd"), "2026-03-26")
 
+    def test_monthly_time_uses_start_and_skips_all_day_rows(self):
+        row = {"deadline": "2026-03-26T09:30:00+09:00", "end_date": "2026-03-26 10:30:00"}
+        self.assertEqual(month_renderer._month_start_time(row), "09:30")
+        self.assertEqual(month_renderer._month_start_time({**row, "all_day": True}), "")
+        self.assertEqual(month_renderer._month_start_time({"deadline": "2026-03-26"}), "")
+
     def test_widget_calendar_cache_includes_deduplicated_subscription_rows(self):
         local = [{"id": 1, "name": "Local"}]
         subscription = [{"id": 2, "name": "Subscription", "read_only": True}]
@@ -63,6 +69,46 @@ class MonthRendererDateParsingTests(unittest.TestCase):
         self.assertEqual([1, 2], [row["id"] for row in rows])
         rows[0]["name"] = "Changed"
         self.assertEqual("Local", local[0]["name"])
+
+    def test_month_weekday_separator_paints_continuously_in_each_theme(self):
+        for name, background, divider in (
+            ("dark", "#121827", "rgba(255,255,255,0.16)"),
+            ("light", "#f3f1fa", "rgba(0,0,0,0.16)"),
+            ("custom_glass", "rgba(18,42,46,150)", "rgba(208,232,236,0.25)"),
+        ):
+            for columns in (5, 7):
+                with self.subTest(theme=name, columns=columns):
+                    tokens = month_renderer._resolve_calendar_tokens(
+                        {"bg_main": background, "divider": divider}
+                    )
+                    host = QFrame()
+                    self.addCleanup(host.close)
+                    host.setObjectName("calendar_surface")
+                    host.setStyleSheet(month_renderer._calendar_surface_style(tokens=tokens))
+                    layout = QVBoxLayout(host)
+                    layout.setContentsMargins(0, 0, 0, 0)
+                    layout.setSpacing(0)
+                    start = QDate(2026, 10, 26)
+                    header = month_renderer._build_month_weekday_header(
+                        [start.addDays(index) for index in range(columns)], tokens
+                    )
+                    layout.addWidget(header)
+                    body = QWidget()
+                    body.setFixedHeight(40)
+                    layout.addWidget(body)
+                    host.resize(700, header.sizeHint().height() + 40)
+                    host.show()
+                    self._app.processEvents()
+                    self.assertTrue(header.testAttribute(Qt.WidgetAttribute.WA_StyledBackground))
+                    self.assertEqual(len(header.findChildren(QLabel)), columns)
+                    image = header.grab().toImage()
+                    bottom = image.height() - 1
+                    samples = [image.pixelColor(x, bottom) for x in range(2, image.width() - 2)]
+                    self.assertTrue(all(color == samples[0] for color in samples))
+                    self.assertNotEqual(
+                        samples[0], image.pixelColor(image.width() // 2, bottom - 2)
+                    )
+                    host.close()
 
 
 class DraggableTaskButtonRenderTests(unittest.TestCase):
@@ -77,6 +123,19 @@ class DraggableTaskButtonRenderTests(unittest.TestCase):
         detail_style = btn.detail_container.styleSheet()
         self.assertIn("QFrame#taskDetailCard {", detail_style)
         self.assertNotRegex(detail_style, r"^\s*background-color:")
+
+    def test_timed_chip_keeps_title_when_resized(self):
+        for prefix in ("09:30", "09:30 ⚡"):
+            with self.subTest(prefix=prefix):
+                button = DraggableTaskButton(101, "Review")
+                button.set_title_time_hint(prefix)
+                label = button.title_label
+                full_text = f"{prefix} Review"
+                label.resize(label.fontMetrics().horizontalAdvance(full_text) + 5, 24)
+                self.assertEqual(label._display_text(), full_text)
+                label.resize(label.fontMetrics().horizontalAdvance("Review") + 5, 24)
+                self.assertEqual(label._display_text(), "Review")
+                self.assertEqual(button.raw_text, "Review")
 
     def test_bottom_row_detail_card_opens_above_anchor(self):
         available = QRect(0, 0, 1920, 1040)
@@ -162,6 +221,81 @@ class DraggableTaskButtonRenderTests(unittest.TestCase):
             self.assertEqual(2, len(button.actions_widget.findChildren(QPushButton)))
             overlay._do_collapse()
 
+        host.close()
+
+    def test_hover_and_detail_singletons_are_recreated_after_deletion(self):
+        """Window teardown deletes the shared popups; later events must not raise."""
+        from PyQt6 import sip
+        from PyQt6.QtCore import QEvent
+
+        from calendar_app.presentation.widgets import ui_components
+
+        popup = ui_components.get_hover_info_popup()
+        overlay = get_detail_overlay()
+        sip.delete(popup)
+        sip.delete(overlay)
+
+        fresh_popup = ui_components.get_hover_info_popup()
+        fresh_overlay = get_detail_overlay()
+        self.assertFalse(sip.isdeleted(fresh_popup))
+        self.assertFalse(sip.isdeleted(fresh_overlay))
+        self.assertIsNot(fresh_popup, popup)
+        self.assertIsNot(fresh_overlay, overlay)
+
+        # Deleted again: the app-wide filter and the cancel helper must stay quiet.
+        sip.delete(ui_components.get_hover_info_popup())
+        sip.delete(get_detail_overlay())
+        ui_components.hide_hover_info()
+        watched = QWidget()
+        event_filter = ui_components.HoverInfoEventFilter()
+        try:
+            for kind in (QEvent.Type.MouseMove, QEvent.Type.Leave, QEvent.Type.Enter):
+                self.assertFalse(
+                    event_filter.eventFilter(watched, QEvent(kind)),
+                    kind,
+                )
+        finally:
+            watched.deleteLater()
+            event_filter.deleteLater()
+
+    def test_detail_card_closes_when_its_calendar_item_is_rebuilt(self):
+        """A refresh may delete the item while its floating detail card is open."""
+        from PyQt6 import sip
+
+        task = {"id": 78, "name": "Refresh", "status": "pending", "deadline": "2026-09-22"}
+        host = QWidget()
+        layout = QVBoxLayout(host)
+        button = DraggableTaskButton(78, "Refresh")
+        layout.addWidget(button)
+        host.show()
+        with (
+            patch(
+                "calendar_app.presentation.widgets.ui_components.task_repo.get_unified_task",
+                return_value=task,
+            ),
+            patch(
+                "calendar_app.presentation.widgets.ui_components.checklist_repo.get_task_checklist_items",
+                return_value=[],
+            ),
+        ):
+            button.toggle_expand()
+            self._app.processEvents()
+        overlay = get_detail_overlay()
+        self.assertTrue(overlay.isVisible())
+        action_buttons = button.actions_widget.findChildren(QPushButton)
+        self.assertEqual(2, len(action_buttons))
+
+        sip.delete(button)
+        self._app.processEvents()
+
+        self.assertFalse(overlay.isVisible())
+        self.assertIsNone(overlay._owner)
+        self.assertEqual(0, overlay.layout().count())
+        # Stale action rows must not reach the deleted item's signals.
+        for action in action_buttons:
+            if not sip.isdeleted(action):
+                action.click()
+        self._app.processEvents()
         host.close()
 
 

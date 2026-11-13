@@ -44,6 +44,7 @@ from calendar_app.presentation.dialogs.ics_subscription_dialog import IcsSubscri
 from calendar_app.presentation.dialogs.provider_settings_widgets import plain_tooltip
 from calendar_app.presentation.dialogs.sync_feedback import (
     guard_calendar_action,
+    subscription_error_message,
     sync_error_message,
 )
 from calendar_app.shared.color_utils import contrast_safe_color
@@ -272,6 +273,10 @@ class CalendarManagerPage(QWidget):
         self.subscription_info = self._label("", "syncStatus")
         self.subscription_info.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         subscription_layout.addWidget(self.subscription_info)
+        self.accept_empty = self._button(
+            t("sync_subscription.accept_empty", "비어 있음 확인"), self._accept_empty_feed
+        )
+        subscription_layout.addWidget(self.accept_empty)
         self.subscription_active = QCheckBox(t("sync_redesign.subscription_active", "이 구독 갱신"))
         self.subscription_active.toggled.connect(self._subscription_active)
         subscription_layout.addWidget(self.subscription_active)
@@ -687,9 +692,15 @@ class CalendarManagerPage(QWidget):
             if self._ics_busy():
                 status = t("sync_redesign.fetch_busy", "구독 갱신 중입니다…") + "\n" + status
             error = subscription_errors(self.app.settings).get(calendar["id"])
+            # Only an event-less feed with kept mirrors reports this code for ICS.
+            emptied = error == "calendar_report_incomplete" and calendar.get("is_active", 1)
             if error:
-                status += "\n" + sync_error_message(error)
+                status += "\n" + (
+                    subscription_error_message(error) if emptied else sync_error_message(error)
+                )
             self.subscription_info.setText(status)
+            self.accept_empty.setVisible(bool(emptied))
+            self.accept_empty.setEnabled(bool(self.coordinator) and not self._ics_busy())
             overall_auto = bool(
                 self.coordinator and self.coordinator.states.get("ics", {}).get("auto", True)
             )
@@ -711,6 +722,7 @@ class CalendarManagerPage(QWidget):
             )
         else:
             self.subscription_info.setText("")
+            self.accept_empty.hide()
         self.service.setText(
             t("sync_redesign.refresh_subscription", "이 구독 지금 갱신")
             if ics
@@ -845,6 +857,51 @@ class CalendarManagerPage(QWidget):
             self._changed(success)
             if success and checked and not calendar.get("is_active", 1):
                 self._refresh_subscription(calendar["id"])
+
+    @guard_calendar_action
+    def _accept_empty_feed(self):
+        calendar = self.current()
+        if (
+            not calendar
+            or calendar.get("type") != "ics"
+            or not self.coordinator
+            or self._ics_busy()
+            or subscription_errors(self.app.settings).get(calendar["id"])
+            != "calendar_report_incomplete"
+        ):
+            return
+        from calendar_app.infrastructure.ics import ics_fetcher
+
+        count = ics_fetcher.mirror_count(calendar["id"])
+        if (
+            QMessageBox.question(
+                self,
+                t("sync_subscription.accept_empty", "비어 있음 확인"),
+                t(
+                    "sync_subscription.accept_empty_confirm",
+                    "원본 캘린더에 일정이 없습니다. 이 구독에서 가져온 일정 {count}개를 앱에서 "
+                    "지울까요? 원본 캘린더와 다른 캘린더의 일정은 그대로입니다.",
+                    count=count,
+                ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            != QMessageBox.StandardButton.Yes
+        ):
+            return
+        self.coordinator.accept_empty_ics(calendar["id"], calendar.get("ics_url"), count)
+        started = self._refresh_subscription(calendar["id"])
+        if not started:
+            self.coordinator.discard_empty_ics(calendar["id"])
+        self._refresh_feedback_pending = bool(started)
+        self.feedback.setText(
+            t("sync_unified.refresh_started", "선택한 구독을 새로고침하고 있습니다.")
+            if started
+            else t(
+                "sync_unified.sync_not_started",
+                "동기화를 시작하지 못했습니다. 연결 상태와 진행 중인 작업을 확인하세요.",
+            )
+        )
 
     def _refresh_subscription(self, calendar_id):
         if not self.coordinator:

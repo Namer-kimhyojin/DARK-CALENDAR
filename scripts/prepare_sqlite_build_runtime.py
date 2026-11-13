@@ -242,7 +242,8 @@ def prepare(directory: Path, architecture: str, *, check_only: bool = False) -> 
         raise RuntimeError("Cross-architecture private runtime preparation is not supported")
     cache_root = directory.resolve()
     inputs, files, packages = _inputs(lock)
-    if cache_root.is_relative_to(Path(sys.base_prefix).resolve()) or cache_root.is_relative_to(
+    source_base = Path(sys.base_prefix).resolve()
+    if cache_root.is_relative_to(source_base) or cache_root.is_relative_to(
         Path(sys.prefix).resolve()
     ):
         raise RuntimeError("Private runtime must be outside the source Python and environment")
@@ -261,7 +262,7 @@ def prepare(directory: Path, architecture: str, *, check_only: bool = False) -> 
         ) as staging_name:
             staging = Path(staging_name)
             for source in files:
-                target = staging / source.relative_to(sys.base_prefix)
+                target = staging / source.relative_to(source_base)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, target)
             (staging / "DLLs/sqlite3.dll").write_bytes(dll)

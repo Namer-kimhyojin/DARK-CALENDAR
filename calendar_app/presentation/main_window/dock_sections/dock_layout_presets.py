@@ -1,4 +1,5 @@
-"""Built-in panel layout presets (5 configurations, triggered via Ctrl+Shift+1-5)."""
+# -*- coding: utf-8 -*-
+"""Built-in panel layouts and the five configurable keyboard slots."""
 
 from __future__ import annotations
 
@@ -156,6 +157,43 @@ def _embedded_release_preset_payload(index: int) -> dict | None:
     if 0 <= index < len(_EMBEDDED_RELEASE_PRESET_PAYLOADS):
         return _EMBEDDED_RELEASE_PRESET_PAYLOADS[index]
     return None
+
+
+def apply_monthly_centered_layout(app) -> None:
+    """Place a full-height month beside the selected day and optional work tabs."""
+    from calendar_app.presentation.main_window.window_restore_helpers import persist_dock_layout
+    from calendar_app.presentation.panels.side_panel_renderer import set_left_panel_mode
+
+    _undock_all(app)
+    docks = _all_docks(app)
+    for dock in docks:
+        app.removeDockWidget(dock)
+    app.addDockWidget(_LEFT, app.center_dock)
+    app.addDockWidget(_RIGHT, app.left_dock)
+    for dock in (app.routine_dock, app.directive_dock):
+        app.addDockWidget(_RIGHT, dock)
+        app.tabifyDockWidget(app.left_dock, dock)
+    for dock in docks:
+        dock.show()
+    app.left_dock.raise_()
+    width = app.contentsRect().width()
+    calendar_width = width * 72 // 100
+    app.resizeDocks(
+        [app.center_dock, app.left_dock],
+        [calendar_width, width - calendar_width],
+        Qt.Orientation.Horizontal,
+    )
+
+    app.view_mode_state = "monthly"
+    app.settings.setValue("view_mode_state", "monthly")
+    set_left_panel_mode(app, "selected")
+    app.schedule_panel_refresh(center=True)
+    app.sync_panel_menu_state()
+    persist_dock_layout(app)
+    app.show_toast(
+        t("layout.toast_title"),
+        t("layout.toast_msg").format(name=t("layout.monthly_centered", "월간 중심")),
+    )
 
 
 # ---------------------------------------------------------------------------

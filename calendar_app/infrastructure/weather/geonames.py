@@ -52,6 +52,7 @@ def find_city(query: str) -> GeoNameCity | None:
     if not normalized_query:
         return None
 
+    compact_query = normalized_query.replace(" ", "")
     dataset_path = get_resource_path(*_GEONAMES_RELATIVE_PATH)
     best: GeoNameCity | None = None
     best_score = -1
@@ -59,6 +60,12 @@ def find_city(query: str) -> GeoNameCity | None:
     try:
         with open(dataset_path, encoding="utf-8", errors="strict") as dataset:
             for raw_line in dataset:
+                # Cheap whole-line check first: normalizing every alias of every
+                # line froze the UI for ~0.8 s. A field equal to the query is
+                # always a substring of the line folded the same way, spaces removed.
+                folded_line = unicodedata.normalize("NFKC", raw_line).casefold()
+                if compact_query not in folded_line.replace(" ", ""):
+                    continue
                 fields = raw_line.rstrip("\n").split("\t")
                 if len(fields) < 15:
                     continue

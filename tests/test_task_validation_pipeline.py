@@ -104,6 +104,40 @@ class TaskValidationPipelineTests(TemporaryDatabaseTestCase):
         self.assertEqual([int(row["series_order"]) for row in rows], [1, 2, 3])
         self.assertEqual({int(row["series_total"]) for row in rows}, {3})
 
+    def test_monthly_series_from_jan_31_follows_the_rule_and_stores_it(self):
+        dialog = UnifiedTaskDialog(initial_date=QDate(2026, 1, 31), task_type="routine")
+        self.addCleanup(dialog.close)
+
+        dialog.name_edit.setText("Month End")
+        dialog.repeat_task_radio.setChecked(True)
+        dialog.repeat_cycle_combo.setCurrentIndex(dialog.repeat_cycle_combo.findData("monthly"))
+        dialog.start_date.setDate(QDate(2026, 1, 31))
+        dialog.routine_period_end_date.setDate(QDate(2026, 6, 30))
+
+        with (
+            patch.object(QMessageBox, "information", return_value=QMessageBox.StandardButton.Ok),
+            patch.object(QMessageBox, "warning", return_value=QMessageBox.StandardButton.Ok),
+            patch.object(QMessageBox, "critical", return_value=QMessageBox.StandardButton.Ok),
+        ):
+            dialog._create_task()
+
+        rows = (
+            database_unified.db_manager.get_connection()
+            .execute(
+                "SELECT target_date, recurrence FROM unified_task WHERE name=? "
+                "ORDER BY target_date",
+                ("Month End",),
+            )
+            .fetchall()
+        )
+        self.assertEqual(
+            [row["target_date"][:10] for row in rows],
+            ["2026-01-31", "2026-02-28", "2026-03-31", "2026-04-30", "2026-05-31", "2026-06-30"],
+        )
+        self.assertTrue(
+            all(row["recurrence"] and "single" not in row["recurrence"] for row in rows)
+        )
+
     def test_repeat_routine_rolls_back_entire_series_when_checklist_copy_fails(self):
         dialog = UnifiedTaskDialog(initial_date=QDate(2026, 4, 1), task_type="routine")
         self.addCleanup(dialog.close)

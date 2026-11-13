@@ -11,7 +11,10 @@ from PyQt6.QtGui import QAction, QIcon, QPixmap
 from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
 from calendar_app.app_paths import APP_ICON_PATH
-from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key, register_all
+from calendar_app.infrastructure.runtime.keyboard_shortcuts import (
+    get_key,
+    register_app_shortcuts,
+)
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
@@ -56,7 +59,6 @@ def _tray_menu_style():
             padding: 4px;
             border-radius: 6px;
             font-size: 10pt;
-            font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', 'Segoe UI', sans-serif;
         }
         QMenu::item {
             padding: 6px 35px 6px 12px;
@@ -167,9 +169,13 @@ def init_tray_icon(app):
     view_menu = QMenu(_se(t("tray.view_options", "화면 및 창")), tray_menu)
     view_menu.setIcon(_ic(ICON.SCREEN_MGMT))
     view_menu.setStyleSheet(style)
-    _create_action(app, t("tray.topbar"), app.toggle_top_bar, "topbar", view_menu).setIcon(
-        _ic(ICON.SCREEN_MGMT)
-    )
+    _create_action(
+        app,
+        t("menu.auto_hide_topbar", "상단 바 자동 숨기기"),
+        app.toggle_top_bar,
+        "topbar",
+        view_menu,
+    ).setIcon(_ic(ICON.TOOLBAR))
     _create_action(
         app, t("tray.calendar_topbar"), app.toggle_calendar_toolbar, "cal_toolbar", view_menu
     ).setIcon(_ic(ICON.TOOLBAR))
@@ -442,8 +448,8 @@ def _toggle_lock_via_shortcut(app):
 
 
 def init_shortcuts(app):
-    """전역 단축키를 keyboard_shortcuts.register_all()에 위임하여 일괄 등록한다."""
-    register_all(app)
+    """OS 전역 단축키(창 표시/숨기기)와 앱 내 단축키를 일괄 등록한다."""
+    register_app_shortcuts(app)
 
 
 def toggle_overlay(app) -> None:

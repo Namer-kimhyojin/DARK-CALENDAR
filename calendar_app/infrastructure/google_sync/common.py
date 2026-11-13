@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import os
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,23 @@ def is_gcal_enabled(settings, default: bool | None = None) -> bool:
             default = infer_initial_gcal_enabled(settings)
         return bool(default)
     return _coerce_bool_setting(explicit, default=bool(default) if default is not None else False)
+
+
+def _system_time_zone() -> str:
+    from PyQt6.QtCore import QTimeZone
+
+    zone = QTimeZone.systemTimeZoneId().data().decode("utf-8", errors="replace")
+    try:
+        ZoneInfo(zone)
+    except (KeyError, ValueError):
+        return "UTC"
+    return zone
+
+
+def sync_time_zone(settings) -> str:
+    """The zone saved for calendar sync, else this PC's zone."""
+    zone = str(_setting_value(settings, "gcal_timezone", "") or "").strip()
+    return zone or _system_time_zone()
 
 
 def is_gcal_import_selection_configured(settings) -> bool:

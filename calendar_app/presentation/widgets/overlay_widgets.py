@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Re-export shim: aggregates all overlay widget classes into one import target.
 
 Usage::
@@ -17,6 +18,7 @@ from calendar_app.presentation.widgets.overlay_countdown import OverlayCountdown
 from calendar_app.presentation.widgets.overlay_datecard import OverlayDateCardWidget
 from calendar_app.presentation.widgets.overlay_dday import OverlayDDayWidget
 from calendar_app.presentation.widgets.overlay_launcher_deck import OverlayLauncherDeckWidget
+from calendar_app.presentation.widgets.overlay_loop_deck import OverlayLoopDeckWidget
 from calendar_app.presentation.widgets.overlay_stopwatch import OverlayStopwatchWidget
 from calendar_app.presentation.widgets.overlay_text import OverlayTextWidget
 from calendar_app.presentation.widgets.overlay_weather import OverlayWeatherWidget
@@ -30,4 +32,5 @@ __all__ = [
     "OverlayTextWidget",
     "OverlayWeatherWidget",
     "OverlayLauncherDeckWidget",
+    "OverlayLoopDeckWidget",
 ]

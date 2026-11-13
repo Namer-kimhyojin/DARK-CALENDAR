@@ -4,6 +4,8 @@
 
 def management_styles(tok):
     return f"""
+        QWidget#hubDesktopBody, QScrollArea#hubModeScroll,
+        QWidget#hubModeViewport, QWidget#hubModeBody,
         QScrollArea#hubWorkspaceScroll, QWidget#hubWorkspaceViewport,
         QWidget#hubWorkspaceBody, QScrollArea#hubDialogScroll,
         QWidget#hubDialogViewport, QWidget#hubDialogBody {{
@@ -16,16 +18,16 @@ def management_styles(tok):
             background: {tok["bg_alt"]}; border-bottom: 3px solid transparent; }}
         QTabBar::tab:selected {{ color: {tok["text_primary"]}; font-weight: 700;
             border-bottom-color: {tok["accent"]}; background: {tok["bg_main"]}; }}
-        QLabel#hubTitle {{ font-size: 15pt; font-weight: 700; color: {tok["text_primary"]}; }}
-        QLabel#hubBody {{ color: {tok["text_secondary"]}; font-size: 10pt; }}
-        QLabel#hubEyebrow {{ color: {tok["text_muted"]}; font-size: 9pt; }}
+        QLabel#hubTitle {{ font-size: {tok["title_px"]}px; font-weight: 700; color: {tok["text_primary"]}; }}
+        QLabel#hubBody {{ color: {tok["text_secondary"]}; font-size: {tok["body_px"]}px; }}
+        QLabel#hubEyebrow {{ color: {tok["text_muted"]}; font-size: {tok["caption_px"]}px; }}
         QLabel#hubStatus {{ color: {tok["accent"]}; font-weight: 600; }}
         QFrame#hubSummary {{ background: {tok["bg_alt"]}; border: 1px solid {tok["border"]};
             border-radius: {tok["r_card"]}px; }}
         QPushButton#hubTypeCard {{ background: {tok["bg_item"]}; color: {tok["text_primary"]};
             border: 1px solid {tok["border"]}; border-radius: {tok["r_card"]}px;
-            min-height: 58px; max-height: 90px;
-            text-align: left; padding: 10px; font-size: 10pt; }}
+            min-height: {max(58, 2 * tok["body_px"] + 20)}px;
+            text-align: left; padding: 10px; font-size: {tok["body_px"]}px; }}
         QPushButton#hubTypeCard:checked {{ background: {tok["accent_soft"]};
             border: 2px solid {tok["accent"]}; }}
         QPushButton#hubTypeCard:hover {{ border-color: {tok["accent"]}; }}
@@ -37,7 +39,7 @@ def management_styles(tok):
             border: 1px solid {tok["border"]}; border-radius: {tok["r_md"]}px; padding: 6px 10px; }}
         QFrame#WidgetCard {{ border-radius: {tok["r_card"]}px; border-left: 1px solid {tok["border"]}; }}
         QLineEdit#cardNameEdit:focus {{ border-bottom: 1px solid {tok["accent"]}; }}
-        QLabel#cardIdLabel {{ font-size: 9pt; color: {tok["text_secondary"]}; }}
+        QLabel#cardIdLabel {{ font-size: {tok["caption_px"]}px; color: {tok["text_secondary"]}; }}
         QLabel#emptyLabel {{ padding: 24px; }}
         QComboBox#hubView {{ min-width: 64px; padding: 4px 8px; color: {tok["text_primary"]};
             background: {tok["bg_item"]}; border: 1px solid {tok["border"]}; border-radius: {tok["r_md"]}px; }}

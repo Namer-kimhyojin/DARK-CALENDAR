@@ -16,6 +16,7 @@ ICS_ERRORS = {
     "too_many_events",
     "invalid_recurrence",
     "calendar_access_lost",
+    "calendar_report_incomplete",
     "invalid_subscription_url",
     "ics_fetch_failed",
     "ics_access_denied",

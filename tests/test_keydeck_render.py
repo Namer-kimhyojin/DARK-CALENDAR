@@ -386,7 +386,7 @@ class CanvasTests(_AppCase):
                     "play": lambda _self, path, volume, voices=None: played.append(
                         (os.path.basename(path), round(volume, 2))
                     ),
-                    "preload": lambda _self, paths, voices=None: None,
+                    "preload": lambda _self, paths, voices=None, volume=None: None,
                 },
             )(),
         )
@@ -443,7 +443,7 @@ class CanvasTests(_AppCase):
             self.canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, edge
         )
 
-    def test_switch_sounds_follow_bottom_out_and_upstroke(self):
+    def test_switch_sound_plays_at_contact_and_upstroke_follows(self):
         played = self._record_sounds()
         key = self.deck["pages"][0]["keys"][0]
         key["switch"] = "tactile"
@@ -453,11 +453,12 @@ class CanvasTests(_AppCase):
         QTest.mousePress(
             self.canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, center
         )
-        self.assertEqual(played, [])
+        # The down-stroke cue sounds at contact, not ~40 ms later at the animated bottom.
+        kinds = [name.rsplit("_", 1)[0] for name, _volume in played]
+        self.assertEqual(1, sum(kind.startswith("bottom_") for kind in kinds))
         self._advance(0.1)
         kinds = [name.rsplit("_", 1)[0] for name, _volume in played]
-        self.assertIn("bump", kinds)
-        self.assertTrue(any(kind.startswith("bottom_") for kind in kinds))
+        self.assertEqual(1, sum(kind.startswith("bottom_") for kind in kinds))
         QTest.mouseRelease(
             self.canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, center
         )

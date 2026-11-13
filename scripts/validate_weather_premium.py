@@ -23,11 +23,11 @@ def main() -> None:
     sys.path.insert(0, str(root))
     out = (root / args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
-    os.environ["QT_QPA_PLATFORM"] = "windows" if sys.platform == "win32" else "offscreen"
+    os.environ.setdefault("QT_QPA_PLATFORM", "windows" if sys.platform == "win32" else "offscreen")
 
     from PyQt6 import QtCore
     from PyQt6.QtCore import QRect, QSize, Qt
-    from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
+    from PyQt6.QtGui import QColor, QFont, QFontDatabase, QIcon, QPainter, QPixmap
     from PyQt6.QtWidgets import QApplication, QWidget
 
     native_settings = QtCore.QSettings
@@ -55,6 +55,9 @@ def main() -> None:
 
         QtCore.QSettings = SandboxSettings
         app = QApplication([])
+        if sys.platform == "win32" and os.environ["QT_QPA_PLATFORM"] == "offscreen":
+            for font in ("malgun.ttf", "malgunbd.ttf", "segoeui.ttf", "seguisb.ttf"):
+                QFontDatabase.addApplicationFont(f"C:/Windows/Fonts/{font}")
         app.setFont(QFont("Malgun Gothic", 10))
         settings = SandboxSettings("kimhyojin", "Dark Calendar")
         settings.setValue("language", "ko")
@@ -67,7 +70,10 @@ def main() -> None:
             WeatherDesignGalleryDialog,
             weather_design_preview_pixmap,
         )
-        from calendar_app.presentation.widgets.weather_designs import weather_design
+        from calendar_app.presentation.widgets.weather_designs import (
+            GIF_WEATHER_SCENE_ID,
+            weather_design,
+        )
         from calendar_app.presentation.widgets.weather_scene import SCENE_IDS, WeatherSceneSurface
 
         now = datetime(2026, 10, 31, 6, tzinfo=UTC)
@@ -123,7 +129,9 @@ def main() -> None:
             painter.drawPixmap(QRect(x, y, width, height), image)
             surface.deleteLater()
 
-        image, painter = board(1170, 455, "프리미엄 날씨 카드 3종 · 고정 예시 데이터")
+        image, painter = board(
+            24 + 382 * len(SCENE_IDS), 455, f"프리미엄 날씨 카드 {len(SCENE_IDS)}종 · 예시 데이터"
+        )
         for i, scene_id in enumerate(SCENE_IDS):
             draw_card(painter, 24 + i * 382, 62, 358, 350, scene_id=scene_id)
             painter.setFont(QFont("Malgun Gothic", 10))
@@ -134,7 +142,7 @@ def main() -> None:
         image, painter = board(990, 450, "크기에 따라 정보 구성이 바뀝니다 · 고정 예시 데이터")
         x = 24
         for width, height in ((180, 140), (320, 240), (380, 350)):
-            draw_card(painter, x, 66, width, height)
+            draw_card(painter, x, 66, width, height, scene_id=GIF_WEATHER_SCENE_ID)
             painter.setFont(QFont("Malgun Gothic", 10))
             painter.drawText(x, 55, f"{width} × {height}")
             x += width + 24
@@ -154,11 +162,19 @@ def main() -> None:
         )
         for i, (code, period, label) in enumerate(states):
             data = dict(sample, _wmo=code, _day_period=period, desc=label)
-            draw_card(painter, 20 + (i % 4) * 340, 58 + (i // 4) * 360, 320, 340, data=data)
+            draw_card(
+                painter,
+                20 + (i % 4) * 340,
+                58 + (i // 4) * 360,
+                320,
+                340,
+                scene_id=GIF_WEATHER_SCENE_ID,
+                data=data,
+            )
         painter.end()
         image.save(str(out / "weather-states.png"))
 
-        gallery = WeatherDesignGalleryDialog(sample, current_design_id="air_atmosphere")
+        gallery = WeatherDesignGalleryDialog(sample, current_design_id=GIF_WEATHER_SCENE_ID)
         gallery.resize(1040, 720)
         for row in range(gallery.grid.count()):
             item = gallery.grid.item(row)
@@ -179,7 +195,7 @@ def main() -> None:
         ):
             overlay = OverlayWeatherWidget(owner)
         overlay._weather_data.update(sample)
-        overlay._apply_weather_design("air_atmosphere")
+        overlay._apply_weather_design(GIF_WEATHER_SCENE_ID)
         overlay.render(QPixmap(overlay.size()))
         assert not overlay._scene_surface._timer.isActive()
         overlay._set_runtime_active(False)

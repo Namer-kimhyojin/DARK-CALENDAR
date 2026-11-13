@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Main application window shell."""
 
-from PyQt6.QtCore import QDate, Qt
+from PyQt6.QtCore import QDate
 from PyQt6.QtWidgets import QApplication, QMainWindow
 
 from calendar_app.presentation.main_window.action_handlers import ActionHandlersMixin
@@ -29,30 +29,23 @@ class OverlayApp(MainWindowUiActionsMixin, ActionHandlersMixin, WindowEventsMixi
             rect = target.geometry()
         self.command_palette.show_at_center(rect)
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key.Key_Escape and getattr(self, "is_focus_mode", False):
-            from calendar_app.presentation.focus_mode import exit_focus_fullscreen
-
-            if exit_focus_fullscreen(self):
-                event.accept()
-                return
-        super().keyPressEvent(event)
-
     def handle_palette_command(self, cmd_id: str, params: dict):
         """Execute commands from the palette."""
         params = params or {}
         if cmd_id == "theme_dark":
-            self.settings.setValue("text_theme", "dark")
-            self.settings.setValue("panel_base_color", "#1c1c1c")
-            if hasattr(self, "apply_theme_settings"):
-                self.apply_theme_settings()
+            self.change_text_theme("dark")
         elif cmd_id == "theme_light":
-            self.settings.setValue("text_theme", "light")
-            self.settings.setValue("panel_base_color", "#fefefe")
-            if hasattr(self, "apply_theme_settings"):
-                self.apply_theme_settings()
+            self.change_text_theme("light")
         elif cmd_id in {"sync_google", "sync_calendars"}:
             self.sync_calendars()
+        elif cmd_id == "toggle_top_bar":
+            self.toggle_top_bar()
+        elif cmd_id == "toggle_top_bar_auto_hide":
+            self.toggle_top_bar_auto_hide()
+        elif cmd_id == "toggle_navigation_rail":
+            self.toggle_navigation_rail()
+        elif cmd_id == "open_checklist_manager":
+            self.open_checklist_manager()
         elif cmd_id == "toggle_routine":
             if hasattr(self, "routine_dock"):
                 self.routine_dock.setVisible(not self.routine_dock.isVisible())

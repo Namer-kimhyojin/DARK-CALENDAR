@@ -6,6 +6,7 @@ from dataclasses import dataclass, replace
 from PyQt6.QtCore import QSignalBlocker, Qt
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QColorDialog,
     QDialog,
@@ -26,6 +27,14 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
 )
 from calendar_app.presentation.widgets.widget_placement import NoWheelSlider
+
+
+def _preview_font() -> QFont:
+    """The preview draws with the user's chosen UI font, as the widget will."""
+    font = QFont(QApplication.font())
+    font.setPointSize(32)
+    font.setWeight(QFont.Weight.Bold)
+    return font
 
 
 @dataclass(frozen=True)
@@ -159,7 +168,7 @@ class TextShadowControls(QWidget):
         preview_layout.setContentsMargins(34, 34, 34, 34)
         self.preview = QLabel("18:47", preview)
         self.preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview.setFont(QFont("Malgun Gothic", 32, QFont.Weight.Bold))
+        self.preview.setFont(_preview_font())
         self.preview.setStyleSheet(
             f"color: {tokens['text_primary']}; background: transparent; border: none; "
             "font-size: 32pt; font-weight: 700;"

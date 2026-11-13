@@ -91,10 +91,22 @@ class KeyDeckSoundTests(unittest.TestCase):
         self.deck.update(sound_enabled=False, sound_volume=0)
         self.canvas.set_runtime_active(False)
         self.canvas.press_visual(self.key["id"], force_sound=True)
-        QTest.qWait(210)
+        # A busy combined UI suite can spend one processEvents pass painting old
+        # fixtures. Observe completion with a bound instead of assuming one pass
+        # dispatches every 30..155 ms audition cue.
+        for _ in range(50):
+            if not self.canvas._sound_preview_timer.isActive():
+                break
+            QTest.qWait(20)
         self.assertGreater(self.bank.play.call_count, 0)
         self.assertTrue(
-            any("bottom_" in Path(c.args[0]).name for c in self.bank.play.call_args_list)
+            any("bottom_" in Path(c.args[0]).name for c in self.bank.play.call_args_list),
+            {
+                "calls": self.bank.play.call_args_list,
+                "queued": self.canvas._sound_preview_queue,
+                "timer_active": self.canvas._sound_preview_timer.isActive(),
+                "plan": resources.physical_sound_plan(self.key, self.deck),
+            },
         )
         self.assertFalse(self.canvas._timer.isActive())
         self.assertFalse(self.canvas._sound_preview_timer.isActive())

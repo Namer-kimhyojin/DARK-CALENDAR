@@ -34,7 +34,7 @@ def test_committed_lock_uses_official_pinned_fixed_release(architecture):
     lock = preparation._read_json(preparation.LOCK)
     pin = preparation._pin(lock, architecture)
     assert lock["sqlite_version"] == "3.54.1"
-    assert lock["python_version"] == "3.13.15"
+    assert lock["python_version"] == "3.14.10"
     assert pin["url"].startswith("https://sqlite.org/2026/")
 
 
@@ -104,7 +104,7 @@ def test_download_rejects_redirect_before_reading_response(monkeypatch):
 def test_copy_inventory_omits_installed_packages_caches_and_test_data(tmp_path):
     included = [
         "python.exe",
-        "python313.dll",
+        "python314.dll",
         "LICENSE.txt",
         "DLLs/_sqlite3.pyd",
         "DLLs/sqlite3.dll",

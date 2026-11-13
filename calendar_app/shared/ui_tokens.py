@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Shared UI token accessors built on top of a common theme snapshot."""
 
 from calendar_app.shared.theme_snapshot import ThemeSnapshot, build_shared_ui_tokens
@@ -12,6 +13,7 @@ def get_ui_tokens(
     panel_base_color: str | None = None,
     opacity_factor: float | None = None,
     input_bg: str | None = None,
+    modal: bool = False,
 ):
     """Return semantic UI tokens for the active theme."""
     return build_shared_ui_tokens(
@@ -22,7 +24,13 @@ def get_ui_tokens(
         panel_base_color=panel_base_color,
         opacity_factor=opacity_factor,
         input_bg=input_bg,
+        modal=modal,
     )
+
+
+def get_modal_ui_tokens(settings=None, **kwargs):
+    """Use the restricted modal palette without changing main/widget identities."""
+    return get_ui_tokens(settings, **{**kwargs, "modal": True})
 
 
 def get_shared_qss(tokens=None):
@@ -32,8 +40,13 @@ def get_shared_qss(tokens=None):
     return f"""
     QWidget {{
         color: {t["text_primary"]};
-        font-family: 'Segoe UI', 'Inter', 'Malgun Gothic', sans-serif;
+        font-size: {t["font_body"]};
     }}
+
+    QLabel[role="dialogSubtitle"], QLabel[role="caption"] {{ font-size: {t["font_caption"]}; }}
+    QLabel[role="sectionTitle"] {{ font-size: {t["font_section"]}; font-weight: 600; }}
+    QLabel[role="dialogTitle"] {{ font-size: {t["font_title"]}; font-weight: 600; }}
+    QLabel[role="displayTitle"] {{ font-size: {t["font_display"]}; font-weight: 600; }}
 
     QLineEdit, QComboBox, QDateEdit, QTimeEdit, QSpinBox {{
         background-color: {t["input_bg"]};

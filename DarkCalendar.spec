@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-from PyInstaller.utils.hooks import collect_data_files, copy_metadata
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
 
 block_cipher = None
 
@@ -30,7 +30,7 @@ a = Analysis(
         'calendar_app.presentation.main_window.app_window',
         'calendar_app.infrastructure.runtime.crash_bootstrap',
         'winrt.windows.applicationmodel',
-    ],
+    ] + collect_submodules('calendar_app.presentation.widgets.keydeck'),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

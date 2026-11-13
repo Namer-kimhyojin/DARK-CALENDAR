@@ -328,3 +328,19 @@ def test_writer_lock_blocks_other_writer_but_readonly_check_does_not_write(proje
         assert cli(project, "check").returncode == 0
     # The lock file may be created; no product/history file changes.
     assert {name: snapshot(project)[name] for name in before} == before
+
+
+@pytest.mark.parametrize("kind", ["change", "module"])
+def test_change_events_do_not_store_the_full_input_map(project, kind):
+    edit(project)
+    record(project, kind)
+    event = ledger(project)["events"][-1]
+    assert event["kind"] == kind
+    assert "inputs" not in event
+    assert event["scoped_hashes"]
+
+
+def test_store_events_keep_the_full_input_map(project):
+    edit(project)
+    record(project, "store")
+    assert ledger(project)["events"][-1]["inputs"]

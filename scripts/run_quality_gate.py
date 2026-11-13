@@ -12,7 +12,6 @@ PYTHON = sys.executable
 PYTEST = [PYTHON, "-m", "pytest", "-q"]
 SOURCE_PATHS = [path.name for path in sorted(ROOT.glob("*.py"))] + [
     "calendar_app",
-    "infrastructure",
     "scripts",
     "tests",
 ]
@@ -45,7 +44,6 @@ CHECKS: list[tuple[str, list[str]]] = [
             "tests/test_eod_usecases.py",
             "tests/test_directive_management_usecases.py",
             "tests/test_directive_schema_compat.py",
-            "tests/test_db_repository_hooks.py",
             "tests/test_gcal_sync_helpers.py",
         ],
     ),
@@ -53,9 +51,7 @@ CHECKS: list[tuple[str, list[str]]] = [
         "Run widget, locale, and menu smoke tests",
         [
             *PYTEST,
-            "tests/test_panel_widget_mode_ui.py",
             "tests/test_i18n_runtime_support.py",
-            "tests/test_shared_i18n_compat.py",
             "tests/test_domain_i18n_adapter.py",
             "tests/test_background_worker_helpers.py",
             "tests/test_system_menu_layout.py",

@@ -56,3 +56,42 @@ class InclusiveDateRangeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TimedSpanDayPlacementTests(unittest.TestCase):
+    def test_midnight_end_is_exclusive_and_month_view_agrees(self):
+        from datetime import datetime as _dt
+        from types import SimpleNamespace
+
+        from calendar_app.domain.date_range import timed_span_last_day
+        from calendar_app.presentation.calendar.month_renderer import (
+            _normalize_subscription_event,
+            _task_date_range,
+        )
+
+        self.assertEqual(
+            timed_span_last_day("2026-11-13 23:00:00", "2026-11-14 00:00:00"), date(2026, 11, 13)
+        )
+        self.assertEqual(
+            timed_span_last_day("2026-11-13 23:00:00", "2026-11-14 00:30:00"), date(2026, 11, 14)
+        )
+        self.assertIsNone(timed_span_last_day("2026-11-13", "2026-11-14"))
+
+        start, end = _task_date_range(
+            {"deadline": "2026-11-13 23:00:00", "end_date": "2026-11-14 00:00:00", "all_day": 0}
+        )
+        self.assertEqual(start, end)
+        start, end = _task_date_range(
+            {"deadline": "2026-11-13 00:00:00", "end_date": "2026-11-15 00:00:00", "all_day": 1}
+        )
+        self.assertEqual(start.daysTo(end), 2)
+
+        event = SimpleNamespace(
+            id="e1",
+            summary="NY",
+            start_time="2026-11-13T18:00:00-05:00",
+            end_time="2026-11-13T19:00:00-05:00",
+        )
+        row = _normalize_subscription_event({"calendar_id": "c"}, event, 0)
+        expected = _dt.fromisoformat("2026-11-13T18:00:00-05:00").astimezone().replace(tzinfo=None)
+        self.assertEqual(row["deadline"], expected.strftime("%Y-%m-%d %H:%M:%S"))

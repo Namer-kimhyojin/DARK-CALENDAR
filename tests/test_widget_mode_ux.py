@@ -594,10 +594,11 @@ def test_color_preview_does_not_change_layout_without_an_explicit_saved_layout(w
 
 
 def test_refresh_hides_old_items_before_deferred_deletion(workspace):
-    _, coordinator, widget = workspace
+    host, coordinator, widget = workspace
     old = widget.scroll_layout.itemAt(1).widget()
     assert old.isVisible()
-    coordinator.controller.set_skin("classic_dark")
+    host.settings.setValue("theme_color", "#7653c4")
+    coordinator.controller.refresh_theme()
     assert old.isHidden()
 
 

@@ -93,6 +93,7 @@ from calendar_app.presentation.widgets.keydeck.resources import (
 )
 from calendar_app.presentation.widgets.launcher_keycap_assets import KEYCAP_ASSETS
 from calendar_app.presentation.widgets.launcher_keycap_icons import KEYCAP_ICON_ASSETS
+from calendar_app.shared.qt_helpers import mnemonic_safe
 
 CAP_SWATCHES = (
     "#e8f0ff",
@@ -480,13 +481,17 @@ class BeatmakerControls(QWidget):
         self.preview_button.setObjectName("ghost_btn")
         self.preview_button.setAutoDefault(False)
         self.preview_button.clicked.connect(controller.preview_beatmaker_pad)
-        self.performance_button = QPushButton(t("beatmaker.performance", "연주·녹음"), self)
-        self.performance_button.setObjectName("primary_btn")
-        self.performance_button.setAutoDefault(False)
-        self.performance_button.clicked.connect(controller.open_beatmaker_performance)
-        self.performance_button.setToolTip(
-            t("beatmaker.performance_tip", "키보드 연주 · 녹음 · 반복 재생 전용 화면 열기")
+        self.looper_button = QPushButton(t("loop_mixer.open", "루프 믹서 위젯 열기"), self)
+        self.looper_button.setObjectName("primary_btn")
+        self.looper_button.setAutoDefault(False)
+        self.looper_button.clicked.connect(controller.open_loop_mixer)
+        self.looper_button.setToolTip(
+            t(
+                "loop_mixer.open_hint",
+                "여러 키덱과 마이크를 독립 루프 믹서에서 함께 녹음합니다.",
+            )
         )
+        self.performance_button = self.looper_button  # Compatibility for existing controllers.
         if compact:
             self.kit_combo.setMaximumWidth(260)
             self.bank_combo.setMaximumWidth(150)
@@ -494,7 +499,7 @@ class BeatmakerControls(QWidget):
             row.addWidget(self.bank_combo)
             row.addStretch()
             row.addWidget(self.preview_button)
-            row.addWidget(self.performance_button)
+            row.addWidget(self.looper_button)
             layout.addLayout(row)
         else:
             form = _form()
@@ -502,7 +507,7 @@ class BeatmakerControls(QWidget):
             form.addRow(t("beatmaker.bank", "연주 종류"), self.bank_combo)
             layout.addLayout(form)
             layout.addWidget(self.preview_button)
-            layout.addWidget(self.performance_button)
+            layout.addWidget(self.looper_button)
         self.hint = _hint(
             t(
                 "beatmaker.studio_hint",
@@ -1097,7 +1102,7 @@ class PanoramaPreview(QWidget):
     """The current page's key windows laid over the panorama, as the deck will show it.
 
     Keys that use the panorama show their slice, the rest of the picture is dimmed so the
-    crop is obvious.  Drag aligns the picture, Ctrl+wheel zooms, a double-click centres it,
+    crop is obvious. Drag aligns the picture, explicit controls zoom, a double-click centres it,
     and an image dropped here (or a click while empty) replaces it.
     """
 
@@ -1109,6 +1114,7 @@ class PanoramaPreview(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setProperty("dcWheelValueControl", True)
         self.setMinimumHeight(170)
         self.setAcceptDrops(True)
         self._deck: dict | None = None
@@ -1208,7 +1214,7 @@ class PanoramaPreview(QWidget):
         if self._image is not None:
             hint = t(
                 "widget.launcher.studio.panorama_preview_hint",
-                "드래그: 위치 · Ctrl+휠: 확대 · 더블클릭: 가운데로 · 이미지를 끌어다 놓아 교체",
+                "드래그: 위치 · 더블클릭: 가운데로 · 이미지를 끌어다 놓아 교체",
             )
         elif self._missing:
             painter.setPen(QColor("#ffb86b"))
@@ -1537,7 +1543,7 @@ class KeyInspector(QWidget):
         self.tabs.addTab(
             self._build_cap_tab(),
             ui_icon("mdi6.keyboard-outline"),
-            t("widget.launcher.studio.tab_cap", "모양·소리"),
+            mnemonic_safe(t("widget.launcher.studio.tab_cap", "모양·소리")),
         )
         self.tabs.setIconSize(QSize(16, 16))
         layout.addWidget(self.tabs, 1)

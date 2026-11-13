@@ -24,19 +24,26 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.application.calendar_provider_catalog import CALDAV_SERVICES
+from calendar_app.infrastructure.google_sync.common import sync_time_zone
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.ics.subscriptions import subscription_errors
 from calendar_app.presentation.main_window.calendar_sync_coordinator import (
     provider_name,
     provider_status,
 )
+from calendar_app.shared.color_utils import contrasting_text_color
 from calendar_app.shared.icon_map import ICON, icon
 
 from .calendar_manager_page import CalendarManagerPage
 from .calendar_sync_style import build_sync_workspace_styles
-from .dialog_styles import apply_common_dialog_style, build_dialog_footer, get_dialog_theme_tokens
+from .dialog_styles import (
+    apply_common_dialog_style,
+    build_dialog_footer,
+    get_dialog_metric_tokens,
+    get_dialog_theme_tokens,
+)
 from .provider_settings_widgets import plain_tooltip
-from .sync_feedback import sync_error_message
+from .sync_feedback import subscription_error_message, sync_error_message
 from .sync_recovery import sync_recovery_action
 
 
@@ -58,25 +65,28 @@ class CalendarSyncHub(QDialog):
         apply_common_dialog_style(
             self,
             minimum_width=620,
-            theme_color=app.settings.value("theme_color", "#4da6ff", type=str),
-            text_theme=app.settings.value("text_theme", "dark", type=str),
-            panel_base_color=app.settings.value("panel_base_color", "#0d1b2e", type=str),
-            extra_stylesheet=build_sync_workspace_styles(self.tokens),
+            size=(960, 680),
+            settings=app.settings,
+            extra_stylesheet=build_sync_workspace_styles(
+                self.tokens, get_dialog_metric_tokens(settings=app.settings, apply_overrides=True)
+            ),
         )
-        self.resize(1040, 760)
         root = QVBoxLayout(self)
         root.setContentsMargins(20, 18, 20, 16)
         root.setSpacing(14)
         header = QHBoxLayout()
         heading = QVBoxLayout()
         title = self._label(t("sync_redesign.workspace_title", "캘린더 관리"), "syncWorkspaceTitle")
+        title.setObjectName("dialogTitle")
         heading.addWidget(title)
         self.summary = self._label("", "syncMuted")
         heading.addWidget(self.summary)
         header.addLayout(heading, 1)
         self.sync_all = QPushButton(t("sync_redesign.sync_now", "지금 동기화"))
         self.sync_all.setObjectName("primary_btn")
-        self.sync_all.setIcon(icon(ICON.SYNC, color=self.tokens["accent"]))
+        self.sync_all.setIcon(
+            icon(ICON.SYNC, color=contrasting_text_color(self.tokens["button_primary_bg"]))
+        )
         self.sync_all.clicked.connect(lambda: self._run_sync())
         header.addWidget(self.sync_all)
         root.addLayout(header)
@@ -108,6 +118,7 @@ class CalendarSyncHub(QDialog):
         scroll = self._scroll("SyncServices", "SyncServicesBody", "SyncServicesViewport")
         services_layout.addWidget(scroll, 1)
         cards = QVBoxLayout(scroll.widget())
+        self.service_layout = cards
         cards.setContentsMargins(0, 0, 4, 0)
         cards.setSpacing(12)
         self.labels, self.auto_buttons, self.sync_buttons = {}, {}, {}
@@ -118,6 +129,7 @@ class CalendarSyncHub(QDialog):
             {},
         )
         self.service_action_layouts = {}
+        self.service_capabilities = {}
         specs = [
             (
                 "google",
@@ -156,22 +168,13 @@ class CalendarSyncHub(QDialog):
                 self.more_services_header.setObjectName("SyncAvailableServices")
                 account_heading = QHBoxLayout(self.more_services_header)
                 account_heading.setContentsMargins(16, 12, 16, 12)
-                account_description = QVBoxLayout()
-                account_description.addWidget(
+                account_heading.addWidget(
                     self._label(
-                        t("sync_disclosures.additional_accounts", "추가 계정 연결"),
+                        t("sync_redesign.more_services", "다른 서비스 연결"),
                         "syncSectionTitle",
-                    )
+                    ),
+                    1,
                 )
-                account_description.addWidget(
-                    self._label(
-                        " · ".join(
-                            provider_name(service) for service in ("outlook", *CALDAV_SERVICES)
-                        ),
-                        "syncMuted",
-                    )
-                )
-                account_heading.addLayout(account_description, 1)
                 self.more_services = QPushButton(
                     t("sync_disclosures.show_services", "서비스 목록 펼치기")
                 )
@@ -215,7 +218,7 @@ class CalendarSyncHub(QDialog):
         self.timezone = QComboBox()
         self.timezone.setEditable(True)
         self.timezone.addItems(sorted(available_timezones()))
-        self.timezone.setCurrentText(app.settings.value("gcal_timezone", "Asia/Seoul", type=str))
+        self.timezone.setCurrentText(sync_time_zone(app.settings))
         self.timezone.setAccessibleName(t("sync_redesign.display_timezone", "일정 표시 시간대"))
         timezone_row.addWidget(self.timezone, 1)
         self.save_timezone = QPushButton(t("sync_ui.save_timezone", "시간대 저장"))
@@ -408,7 +411,8 @@ class CalendarSyncHub(QDialog):
         heading.addWidget(badge)
         self.service_badges[provider] = badge
         layout.addLayout(heading)
-        layout.addWidget(self._label(capability, "syncMuted"))
+        self.service_capabilities[provider] = self._label(capability, "syncMuted")
+        layout.addWidget(self.service_capabilities[provider])
         status = self._label("", "syncStatus")
         layout.addWidget(status)
         self.labels[provider] = status
@@ -489,7 +493,7 @@ class CalendarSyncHub(QDialog):
         if provider == "ics" and self.coordinator:
             errors = subscription_errors(self.app.settings)
             failed = [
-                str(c.get("name") or c["id"]) + "\n" + sync_error_message(errors[c["id"]])
+                str(c.get("name") or c["id"]) + "\n" + subscription_error_message(errors[c["id"]])
                 for c in self.coordinator.calendar_rows
                 if c.get("type") == "ics"
                 and c.get("is_active", 1)
@@ -879,6 +883,13 @@ class CalendarSyncHub(QDialog):
                 visible=sum(bool(c.get("is_visible", 1)) for c in rows),
             )
         )
+        if self.tabs.currentWidget() is self.section_pages["services"]:
+            connected = sum(bool(state["connected"]) for state in states.values())
+            self.summary.setText(
+                t("sync_unified.connected_count", "연결 {count}").format(count=connected)
+                if connected
+                else t("sync_unified.local_only", "로컬 모드")
+            )
         self.sync_all.setToolTip(
             t("sync_redesign.sync_available", "연결된 캘린더의 최신 일정을 가져옵니다.")
             if self.sync_all.isEnabled()
@@ -890,7 +901,10 @@ class CalendarSyncHub(QDialog):
         selected = self.issue_list.currentItem()
         selected_provider = selected.data(Qt.ItemDataRole.UserRole) if selected else None
         issue_rows = []
-        extra_disconnected = False
+        active_cards = []
+        available_cards = []
+        for provider in self.service_cards.keys() - states.keys():
+            self.service_cards[provider].hide()
         for provider, state in states.items():
             action = sync_recovery_action(provider, state)
             text = provider_status(state)
@@ -935,6 +949,18 @@ class CalendarSyncHub(QDialog):
                     )
                 )
             self.labels[provider].setText(text)
+            self.labels[provider].setVisible(
+                bool(
+                    state["busy"]
+                    or state.get("paused")
+                    or state.get("error")
+                    or state.get("retry_remaining")
+                    or state.get("needs_selection")
+                    or state.get("import_paused")
+                    or state["issues"]
+                )
+            )
+            self.service_capabilities[provider].setVisible(not state["connected"])
             last = state.get("last_success", "")
             try:
                 last = (
@@ -949,7 +975,7 @@ class CalendarSyncHub(QDialog):
                 if last
                 else t("sync_redesign.never_updated", "아직 가져온 기록이 없습니다.")
             )
-            self.last_sync_labels[provider].setVisible(bool(state["connected"]))
+            self.last_sync_labels[provider].setVisible(bool(state["connected"] and last))
             badge = self.service_badges[provider]
             health = (
                 "busy"
@@ -1017,10 +1043,12 @@ class CalendarSyncHub(QDialog):
             self.sync_buttons[provider].setAccessibleName(
                 provider_name(provider) + " " + self.sync_buttons[provider].text()
             )
-            if provider not in {"google", "ics"}:
-                eligible = bool(state["connected"] or state["busy"] or state.get("error"))
-                extra_disconnected |= not eligible
-                self.service_cards[provider].setVisible(eligible or self.more_services.isChecked())
+            card = self.service_cards[provider]
+            active = bool(
+                state["connected"] or state["busy"] or state.get("error") or state["issues"]
+            )
+            (active_cards if active else available_cards).append(card)
+            card.setVisible(active or self.more_services.isChecked())
             if state["issues"] or state.get("error") or state.get("needs_selection"):
                 issue_rows.append(
                     (provider, provider_name(provider) + "\n" + provider_status(state))
@@ -1060,7 +1088,13 @@ class CalendarSyncHub(QDialog):
         )
         if self.issue_list.count() and self.issue_list.currentItem() is None:
             self.issue_list.setCurrentRow(0)
-        self.more_services_header.setVisible(extra_disconnected)
+        # Common settings stays first. Keep active cards above the optional catalog.
+        for index, card in enumerate(
+            [*active_cards, self.more_services_header, *available_cards], start=1
+        ):
+            if self.service_layout.indexOf(card) != index:
+                self.service_layout.insertWidget(index, card)
+        self.more_services_header.setVisible(bool(available_cards))
         self.issue_list.setVisible(bool(self.issue_list.count()))
         self.issue_panel.setVisible(bool(self.issue_list.count()))
         self.issue_scroll.setVisible(bool(self.issue_list.count()))

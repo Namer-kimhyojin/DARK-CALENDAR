@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 
 from calendar_app.infrastructure import task_drop_service
-from calendar_app.infrastructure.db import calendar_repo, task_repo
+from calendar_app.infrastructure.db import calendar_repo, checklist_repo, task_repo
 from calendar_app.shared.calendar_defaults import DEFAULT_CALENDAR_COLOR
 from tests.support import TemporaryDatabaseTestCase
 
@@ -121,6 +121,66 @@ class TaskDropServiceTests(TemporaryDatabaseTestCase):
                     self.assertEqual(moved[field], original[field])
                 self.assertEqual(moved["deadline"], "2026-04-02 11:00:00")
                 self.assertEqual(moved["end_date"], "2026-04-02 12:00:00")
+
+    def test_copy_keeps_checklist_content_and_resets_checkmarks(self):
+        for task_type in ("schedule", "routine"):
+            with self.subTest(task_type=task_type):
+                task_id = task_repo.create_unified_task(
+                    {
+                        "name": "Work with checklist",
+                        "type": task_type,
+                        "cycle_type": "daily" if task_type == "routine" else None,
+                        "deadline": "2026-03-05 09:00:00",
+                    }
+                )
+                first = checklist_repo.add_checklist_item(task_id, "Prepare", 0, "list")
+                checklist_repo.add_checklist_item(task_id, "Review", 1, "list")
+                self.assertTrue(checklist_repo.toggle_checklist_item(first))
+                original = checklist_repo.get_task_checklist_items(task_id)
+
+                changed, copied_ids = task_drop_service.handle_task_drop(
+                    _DummyApp(), [task_id], "2026-04-02", None, "copy"
+                )
+
+                self.assertEqual(changed, 1)
+                copied = checklist_repo.get_task_checklist_items(copied_ids[0])
+                self.assertEqual(
+                    [
+                        (item["item_text"], item["item_order"], item["display_type"])
+                        for item in copied
+                    ],
+                    [("Prepare", 0, "list"), ("Review", 1, "list")],
+                )
+                self.assertTrue(all(not item["is_completed"] for item in copied))
+                self.assertTrue(all(item["completed_at"] is None for item in copied))
+                self.assertEqual(checklist_repo.get_task_checklist_items(task_id), original)
+
+    def test_copy_rolls_back_task_when_checklist_insert_fails(self):
+        task_id = self._create_schedule_task()
+        checklist_repo.add_checklist_item(task_id, "Prepare", 0, "list")
+        checklist_repo.add_checklist_item(task_id, "Review", 1, "list")
+        app = _DummyApp()
+        add_item = checklist_repo.add_checklist_item
+        conn = task_repo.get_connection()
+        task_count = conn.execute("SELECT count(*) FROM unified_task").fetchone()[0]
+        checklist_count = conn.execute("SELECT count(*) FROM task_checklist_link").fetchone()[0]
+
+        def fail_on_second_item(owner_id, text, order, display_type, *, commit):
+            if order == 1:
+                return None
+            return add_item(owner_id, text, order, display_type, commit=commit)
+
+        with patch.object(checklist_repo, "add_checklist_item", side_effect=fail_on_second_item):
+            result = task_drop_service.handle_task_drop(app, [task_id], "2026-04-02", None, "copy")
+
+        self.assertEqual(result, (0, []))
+        self.assertEqual(app._last_drop_failed_ids, [task_id])
+        self.assertEqual(
+            conn.execute("SELECT count(*) FROM unified_task").fetchone()[0], task_count
+        )
+        self.assertEqual(
+            conn.execute("SELECT count(*) FROM task_checklist_link").fetchone()[0], checklist_count
+        )
 
     def test_copy_creates_new_task_with_moved_datetime(self):
         task_id = self._create_schedule_task()

@@ -71,3 +71,36 @@ def test_import_time_permission_failure_can_show_diagnostic_before_application_e
         assert error.database_path in details
         assert error.database_source in details
     application.processEvents.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("code", "offer", "clicked_restore", "offered", "expected"),
+    [
+        (sqlite3.SQLITE_CORRUPT, True, True, True, True),
+        (sqlite3.SQLITE_NOTADB, True, False, True, False),
+        (sqlite3.SQLITE_CORRUPT, False, False, False, False),
+        (sqlite3.SQLITE_BUSY, True, False, False, False),
+    ],
+)
+def test_restore_is_offered_only_for_corruption_with_a_snapshot(
+    code, offer, clicked_restore, offered, expected
+):
+    error = sqlite3.DatabaseError("database disk image is malformed")
+    error.sqlite_errorcode = code
+    dialog, restore_button = Mock(), Mock()
+    dialog.addButton.return_value = restore_button
+    dialog.clickedButton.return_value = restore_button if clicked_restore else Mock()
+    with (
+        patch("PyQt6.QtWidgets.QApplication") as application_type,
+        patch("PyQt6.QtWidgets.QMessageBox", return_value=dialog),
+        patch("calendar_app.domain.i18n.t", side_effect=lambda key, fallback: key),
+    ):
+        application_type.instance.return_value = Mock()
+        chosen = crash_bootstrap.show_database_startup_error(
+            error, database_path="C:/db.db", offer_restore=offer
+        )
+    assert chosen is expected
+    assert dialog.addButton.called is offered
+    if offered:
+        assert dialog.addButton.call_args.args[0] == "startup_database.restore"
+        dialog.setInformativeText.assert_called_with("startup_database.restore_hint")

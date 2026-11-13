@@ -15,7 +15,6 @@ class QualityGateScriptTests(unittest.TestCase):
         for path in (
             "tests/test_schedule_management_scenarios.py",
             "tests/test_routine_advanced_service.py",
-            "tests/test_panel_widget_mode_ui.py",
             "tests/test_i18n_runtime_support.py",
             "tests/test_eod_usecases.py",
             "tests/test_directive_management_usecases.py",

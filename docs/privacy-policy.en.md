@@ -12,12 +12,12 @@ Air Calendar ("the App") is a Windows desktop calendar application developed and
 
 ## 2. Data stored locally
 
-The App stores the following on your PC under `%LOCALAPPDATA%\kimhyojin\Air Calendar`:
+The App stores the following on your PC under `%LOCALAPPDATA%\kimhyojin\Dark Calendar`:
 
 | Data | Purpose |
 |---|---|
 | Schedule/task/checklist data (SQLite database) | Core calendar features |
-| App settings (Windows registry `HKCU\Software\kimhyojin\Air Calendar`) | Preserving theme, language, layout |
+| App settings (Windows registry `HKCU\Software\kimhyojin\Dark Calendar`) | Preserving theme, language, layout |
 | Google auth token (`token.json`) — only if Google sync is enabled | Keeping sync signed in |
 | Diagnostic log files | Troubleshooting |
 
@@ -45,7 +45,7 @@ This data is never transmitted to the Developer, and the Developer has no access
 
 - All data remains on your PC until you delete it.
 - **Disconnecting Google sync**: revokes and deletes the token. You can also revoke access anytime at [Google Account permissions](https://myaccount.google.com/permissions).
-- **Full deletion**: uninstall the App, then delete the `%LOCALAPPDATA%\kimhyojin\Air Calendar` folder to remove all data.
+- **Full deletion**: uninstall the App, then delete the `%LOCALAPPDATA%\kimhyojin\Dark Calendar` folder to remove all data.
 
 ## 5. Children's privacy
 

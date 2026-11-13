@@ -75,6 +75,46 @@ def clamp_rect(rect: QRect, available: QRect) -> QRect:
     return QRect(x, y, width, height)
 
 
+def best_screen_for_rect(
+    screens: Iterable[object], rect: QRect, preferred_point: QPoint | None = None
+) -> object | None:
+    """Select a real screen in Qt logical coordinates, including Windows DPI gaps.
+
+    A live drag pointer takes precedence. Otherwise prefer the largest overlap,
+    then the nearest rectangle edge, keeping input order only for exact ties.
+    The returned screen's availableGeometry() remains the caller's fit boundary.
+    """
+    candidates = []
+    for screen in screens:
+        try:
+            geometry = getattr(screen, "geometry", None)
+            area = QRect(geometry() if callable(geometry) else screen.availableGeometry())
+        except (AttributeError, RuntimeError):
+            continue  # A screen can disappear between enumeration and placement.
+        if not area.isEmpty():
+            candidates.append((screen, area))
+    if not candidates:
+        return None
+    if preferred_point is not None:
+        for screen, area in candidates:
+            if area.contains(preferred_point):
+                return screen
+
+    target = QRect(rect).normalized()
+    if target.isEmpty():
+        target = QRect(rect.topLeft(), QSize(1, 1))
+
+    def priority(candidate):
+        _screen, area = candidate
+        overlap = target.intersected(area)
+        overlap_area = overlap.width() * overlap.height() if not overlap.isEmpty() else 0
+        horizontal = max(area.left() - target.right(), target.left() - area.right(), 0)
+        vertical = max(area.top() - target.bottom(), target.top() - area.bottom(), 0)
+        return -overlap_area, horizontal * horizontal + vertical * vertical
+
+    return min(candidates, key=priority)[0]
+
+
 def best_available_geometry(
     screens: Iterable[object], *, screen_name: str = "", point: QPoint | None = None
 ) -> tuple[QRect, str] | None:

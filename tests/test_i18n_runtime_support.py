@@ -292,7 +292,6 @@ class I18nRuntimeSupportTests(unittest.TestCase):
             "focus_selector.delete_confirm_msg",
             "focus_selector.delete_confirm_title",
             "focus_selector.delete_no_selection",
-            "focus_selector.filter_today_directives",
             "focus_selector.log_summary",
             "widget.countdown.end_of_day",
             "widget.countdown.quick_presets",

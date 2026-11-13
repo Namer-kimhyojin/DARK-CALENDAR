@@ -2,18 +2,22 @@
 """Independent in-memory regressions for provider-neutral sync safety."""
 
 from copy import deepcopy
+from datetime import UTC, datetime
 import sqlite3
 
 import pytest
 
 from calendar_app.application.calendar_sync_contract import CalendarSyncError, RemoteCalendarError
+from calendar_app.infrastructure.calendar_sync import engine as engine_module
 from calendar_app.infrastructure.calendar_sync.engine import CalendarSyncEngine
 from calendar_app.infrastructure.calendar_sync.repository import CalendarSyncRepository
 from calendar_app.infrastructure.outlook_sync.conversion import from_graph, to_graph
 
 
 @pytest.fixture
-def repo():
+def repo(monkeypatch):
+    # The fixtures use fixed dates; keep them inside the engine's sync window.
+    monkeypatch.setattr(engine_module, "_now", lambda: datetime(2026, 10, 6, tzinfo=UTC))
     conn = sqlite3.connect(":memory:")
     conn.executescript("""
         CREATE TABLE calendar(id TEXT PRIMARY KEY,type TEXT,name TEXT,color TEXT,is_active INTEGER,access_role TEXT);
@@ -391,14 +395,14 @@ def test_calendar_move_is_flagged_without_duplicate(repo):
 
 def test_all_day_inclusive_local_end_round_trips():
     local = {**task(), "all_day": 1, "deadline": "2026-10-05", "end_date": "2026-10-06"}
-    payload = to_graph(local)
+    payload = to_graph(local, "Asia/Seoul")
     assert payload["end"]["dateTime"] == "2026-10-07T00:00:00"
     remote = {
         **payload,
         "start": {"dateTime": "2026-10-04T15:00:00", "timeZone": "UTC"},
         "end": {"dateTime": "2026-10-06T15:00:00", "timeZone": "UTC"},
     }
-    restored = from_graph(remote)
+    restored = from_graph(remote, "Asia/Seoul")
     assert restored["deadline"] == local["deadline"]
     assert restored["end_date"] == local["end_date"]
 
@@ -406,7 +410,7 @@ def test_all_day_inclusive_local_end_round_trips():
 def test_long_plain_text_description_and_time_are_preserved():
     local = task()
     local["description"] = "Long note " * 100
-    assert from_graph(to_graph(local)) == local
+    assert from_graph(to_graph(local, "Asia/Seoul"), "Asia/Seoul") == local
 
 
 def test_provider_neutral_engine_accepts_future_caldav_adapter(repo):

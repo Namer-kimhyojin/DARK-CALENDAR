@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from typing import Literal
 
+from calendar_app.domain.date_range import timed_span_last_day
+
 PageUnit = Literal["month", "week"]
 DetailPageMode = Literal["all", "overflow"]
 
@@ -188,6 +190,8 @@ def _event_from_row(
 
     end_value = row.get("end_date") or start_value
     end_date = _parse_date(end_value) or start_date
+    if not _as_bool(row.get("all_day"), default=False):
+        end_date = timed_span_last_day(start_value, row.get("end_date")) or end_date
     if end_date < start_date:
         end_date = start_date
 

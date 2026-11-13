@@ -8,6 +8,26 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel, QScrollArea, QSizePolicy
 
 
+def apply_provider_settings_style(dialog, settings):
+    from .calendar_sync_style import build_sync_workspace_styles
+    from .dialog_styles import (
+        apply_common_dialog_style,
+        get_dialog_metric_tokens,
+        get_dialog_theme_tokens,
+    )
+    from .sync_feedback import calendar_selection_style
+
+    tokens = get_dialog_theme_tokens(settings=settings)
+    metrics = get_dialog_metric_tokens(settings=settings, apply_overrides=True)
+    apply_common_dialog_style(
+        dialog,
+        minimum_width=620,
+        settings=settings,
+        extra_stylesheet=build_sync_workspace_styles(tokens, metrics)
+        + calendar_selection_style(tokens),
+    )
+
+
 def plain_label(text=""):
     label = QLabel(text)
     label.setTextFormat(Qt.TextFormat.PlainText)
@@ -27,10 +47,13 @@ def plain_tooltip(text):
 
 def scroll_page(content):
     page = QScrollArea()
+    page.setObjectName("ProviderSettingsScroll")
     page.setWidgetResizable(True)
     page.setFrameShape(QScrollArea.Shape.NoFrame)
     page.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
     page.setWidget(content)
+    content.setObjectName("ProviderSettingsPage")
+    page.viewport().setObjectName("ProviderSettingsViewport")
     content.setAutoFillBackground(False)
     page.viewport().setAutoFillBackground(False)
     return page

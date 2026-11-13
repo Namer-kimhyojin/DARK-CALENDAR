@@ -226,25 +226,68 @@ class AwayLockTests(unittest.TestCase):
         self.assertFalse(rejected)
         self.assertFalse(overlay["admin_hint"].isVisible())
 
-    def test_trigger_admin_unlock_dialog_unlocks_with_admin_password(self):
-        host = AwayHost(FakeSettings())
+    def test_trigger_admin_unlock_dialog_unlocks_only_after_password_check(self):
+        host = AwayHost(FakeSettings({"away_unlock_method": "password"}))
         self.addCleanup(host.close)
         host.is_away_locked = True
-        host.prompt_result = True
         overlay = {"window": QWidget(), "admin_hint": QLabel()}
 
+        host.prompt_result = False
         host._away_admin_hold_overlay = overlay
         host._trigger_admin_unlock_dialog()
+        self.assertEqual(host.unlock_count, 0)
+        self.assertTrue(host.is_away_locked)
 
+        host.prompt_result = True
+        host._away_admin_hold_overlay = overlay
+        host._trigger_admin_unlock_dialog()
         self.assertEqual(host.unlock_count, 1)
         self.assertFalse(host.is_away_locked)
 
-    def test_verify_admin_unlock_password_matches_admin(self):
-        host = AwayHost(FakeSettings())
+    def test_force_unlock_key_does_not_skip_password(self):
+        host = AwayHost(FakeSettings({"away_unlock_method": "password"}))
+        self.addCleanup(host.close)
+        host.is_away_locked = True
+        focus_calls = []
+        host._ensure_password_entry_ready = lambda **kw: focus_calls.append(kw)
+
+        host._install_force_unlock_event_filter()
+        event = QKeyEvent(
+            QEvent.Type.KeyPress,
+            Qt.Key.Key_F12,
+            Qt.KeyboardModifier.ControlModifier
+            | Qt.KeyboardModifier.AltModifier
+            | Qt.KeyboardModifier.ShiftModifier,
+        )
+        handled = host._away_force_unlock_filter.eventFilter(host, event)
+        host._remove_force_unlock_event_filter()
+
+        self.assertTrue(handled)
+        self.assertEqual(host.unlock_count, 0)
+        self.assertTrue(host.is_away_locked)
+        self.assertEqual(focus_calls, [{"force_activate": True}])
+
+    def test_verify_away_password_uses_hash_and_rejects_admin(self):
+        from calendar_app.shared.password_hash import hash_password
+
+        settings = FakeSettings({"away_password": hash_password("1234")})
+        host = AwayHost(settings)
         self.addCleanup(host.close)
 
-        self.assertTrue(host._verify_admin_unlock_password("admin"))
-        self.assertFalse(host._verify_admin_unlock_password("ADMIN"))
+        self.assertTrue(host._verify_away_password("1234"))
+        self.assertFalse(host._verify_away_password("12345"))
+        self.assertFalse(host._verify_away_password("admin"))
+
+    def test_verify_away_password_upgrades_legacy_plain_text(self):
+        settings = FakeSettings({"away_password": "1234"})
+        host = AwayHost(settings)
+        self.addCleanup(host.close)
+
+        self.assertFalse(host._verify_away_password("12345"))
+        self.assertEqual(settings.value("away_password"), "1234")
+        self.assertTrue(host._verify_away_password("1234"))
+        self.assertTrue(settings.value("away_password").startswith("scrypt$"))
+        self.assertTrue(host._verify_away_password("1234"))
 
     def test_refresh_idle_lock_ui_uses_saved_color_and_opacity(self):
         settings = FakeSettings(
@@ -292,6 +335,25 @@ class AwayLockTests(unittest.TestCase):
         self.assertEqual(settings.value("away_default_message"), "<p>Original default</p>")
         self.assertIn("Updated message", settings.value("away_message"))
         self.assertEqual(parent.alarm_worker.updated_minutes, 7)
+
+    def test_away_settings_dialog_stores_password_hash_and_keeps_it_when_blank(self):
+        settings = FakeSettings({"away_unlock_method": "password", "away_bg_opacity": 100})
+        parent = AwaySettingsParent(settings)
+        self.addCleanup(parent.close)
+
+        dialog = AwaySettingsDialog(parent)
+        self.addCleanup(dialog.close)
+        dialog.pw_edit.setText("4321")
+        self.assertTrue(dialog._persist_settings())
+        stored = settings.value("away_password")
+        self.assertTrue(stored.startswith("scrypt$"))
+        self.assertNotIn("4321", stored)
+
+        reopened = AwaySettingsDialog(parent)
+        self.addCleanup(reopened.close)
+        self.assertEqual(reopened.pw_edit.text(), "")
+        self.assertTrue(reopened._persist_settings())
+        self.assertEqual(settings.value("away_password"), stored)
 
     def _capture_qt_messages(self):
         messages = []

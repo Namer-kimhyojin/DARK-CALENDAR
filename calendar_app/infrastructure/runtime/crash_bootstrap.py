@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import faulthandler
 import logging
-import logging.handlers
 import os
 import sqlite3
 import sys
@@ -18,10 +17,22 @@ _LOG_MAX_BYTES = 5 * 1024 * 1024
 _LOG_BACKUP_COUNT = 2
 
 
+def is_database_corruption(error: BaseException) -> bool:
+    code = (getattr(error, "sqlite_errorcode", 0) or 0) & 0xFF
+    return code in (sqlite3.SQLITE_CORRUPT, sqlite3.SQLITE_NOTADB)
+
+
 def show_database_startup_error(
-    error: sqlite3.Error | OSError, *, database_path: str | None = None
-) -> None:
-    """Show a data-preserving diagnostic, including failures before bootstrap imports."""
+    error: sqlite3.Error | OSError,
+    *,
+    database_path: str | None = None,
+    offer_restore: bool = False,
+) -> bool:
+    """Show a data-preserving diagnostic, including failures before bootstrap imports.
+
+    With ``offer_restore`` a corruption diagnostic also offers the newest verified
+    snapshot. Returns True only when the user chose to restore it.
+    """
     from PyQt6.QtCore import Qt
     from PyQt6.QtWidgets import QApplication, QMessageBox
 
@@ -68,20 +79,76 @@ def show_database_startup_error(
         f"{context}\n{getattr(error, 'sqlite_errorname', type(error).__name__)}\n{error}"
     )
     dialog.setStandardButtons(QMessageBox.StandardButton.Close)
+    restore_button = None
+    if offer_restore and code in (sqlite3.SQLITE_CORRUPT, sqlite3.SQLITE_NOTADB):
+        dialog.setInformativeText(
+            t(
+                "startup_database.restore_hint",
+                "자동 백업으로 복구할 수 있습니다. 손상된 파일은 삭제하지 않고 같은 폴더에 보관합니다.",
+            )
+        )
+        restore_button = dialog.addButton(
+            t("startup_database.restore", "최근 백업으로 복구"),
+            QMessageBox.ButtonRole.AcceptRole,
+        )
+        dialog.setDefaultButton(restore_button)
     dialog.exec()
     # An application created only for this failure has no main event loop to enter.
     application.processEvents()
+    return restore_button is not None and dialog.clickedButton() is restore_button
 
 
-def _trim_oversized_log(log_path: str) -> None:
-    """로테이션 도입 전 무한히 커진 기존 로그 파일을 정리한다."""
+def show_database_restore_failure(error: BaseException | None = None) -> None:
+    """Explain that restore did not happen; the damaged database is left as it was."""
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtWidgets import QApplication, QMessageBox
+
+    from calendar_app.domain.i18n import t
+
+    application = QApplication.instance() or QApplication(sys.argv)
+    dialog = QMessageBox()
+    dialog.setIcon(QMessageBox.Icon.Critical)
+    dialog.setWindowTitle(t("startup_database.title", "Air Calendar를 시작할 수 없습니다"))
+    dialog.setTextFormat(Qt.TextFormat.PlainText)
+    dialog.setText(
+        t(
+            "startup_database.restore_failed",
+            "백업으로 복구하지 못했습니다. 손상된 파일은 삭제하지 않았습니다.",
+        )
+    )
+    if error is not None:
+        dialog.setDetailedText(
+            f"{getattr(error, 'sqlite_errorname', type(error).__name__)}\n{error}"
+        )
+    dialog.setStandardButtons(QMessageBox.StandardButton.Close)
+    dialog.exec()
+    application.processEvents()
+
+
+def _rotate_log_at_startup(log_path: str) -> None:
+    """Rotate before any handle is open.
+
+    The log stays open twice (logging + faulthandler), so Windows refuses the
+    rename a size-based handler would do mid-session and every later record
+    was silently dropped.
+    """
     try:
-        if os.path.exists(log_path) and os.path.getsize(log_path) > _LOG_MAX_BYTES * (
-            _LOG_BACKUP_COUNT + 1
-        ):
-            os.remove(log_path)
+        if not os.path.exists(log_path) or os.path.getsize(log_path) <= _LOG_MAX_BYTES:
+            return
+        for index in range(_LOG_BACKUP_COUNT, 0, -1):
+            source = log_path if index == 1 else f"{log_path}.{index - 1}"
+            if os.path.exists(source):
+                os.replace(source, f"{log_path}.{index}")
     except OSError:
         pass
+
+
+def _allow_safe_log_record(record: logging.LogRecord) -> bool:
+    # OAuth debug records include raw token exchanges and unlabeled state values.
+    return record.levelno >= logging.WARNING or record.name.partition(".")[0] not in {
+        "oauthlib",
+        "requests_oauthlib",
+    }
 
 
 def setup_crash_logging(log_path: str | None = None) -> TextIO | None:
@@ -100,18 +167,12 @@ def setup_crash_logging(log_path: str | None = None) -> TextIO | None:
             # Fallback to temp dir if AppData fails
             log_path = os.path.join(os.environ.get("TEMP", "."), "desk_calendar_crash.log")
 
-    _trim_oversized_log(log_path)
+    _rotate_log_at_startup(log_path)
 
     # 개인정보 최소 기록 원칙: 기본 INFO. 진단 시에만 환경변수로 DEBUG 활성화.
     debug_enabled = os.environ.get("DARK_CALENDAR_DEBUG", "").strip() in ("1", "true", "on")
     handlers = [
-        logging.handlers.RotatingFileHandler(
-            log_path,
-            maxBytes=_LOG_MAX_BYTES,
-            backupCount=_LOG_BACKUP_COUNT,
-            encoding="utf-8",
-            errors="strict",
-        ),
+        logging.FileHandler(log_path, "a", encoding="utf-8", errors="strict"),
         logging.StreamHandler(sys.stdout),
     ]
     formatter = PrivacyFormatter(
@@ -119,6 +180,7 @@ def setup_crash_logging(log_path: str | None = None) -> TextIO | None:
     )
     for handler in handlers:
         handler.setFormatter(formatter)
+        handler.addFilter(_allow_safe_log_record)
     logging.basicConfig(
         level=logging.DEBUG if debug_enabled else logging.INFO,
         handlers=handlers,

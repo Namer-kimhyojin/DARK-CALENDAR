@@ -108,7 +108,7 @@ class TestSystemMenu(unittest.TestCase):
         layout = QVBoxLayout()
         build_system_menu(host, layout, "")
 
-        action_texts = [action.text() for action in host.sys_menu.actions()]
+        action_texts = [action.text().replace("&&", "&") for action in host.sys_menu.actions()]
         self.assertIn(
             t("menu.daily_briefing_settings", "오늘 브리핑·노출 설정..."),
             action_texts,

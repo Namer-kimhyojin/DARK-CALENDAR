@@ -3,6 +3,8 @@
 
 from dataclasses import dataclass
 
+from calendar_app.shared.typography import get_typography_scale
+
 FONT_SIZE_KEY = "widget_mode_font_size"
 
 
@@ -38,14 +40,17 @@ def read_widget_typography(settings) -> WidgetTypography:
         preference = 12
     preference = max(10, min(18, preference))
     progress = (preference - 10) / 8
+    # This preference belongs to the workspace, independently of large clock
+    # faces and user-authored text in individual overlay widgets.
+    scale = get_typography_scale(base_pt=_step(10.5, 12.5, progress))
     return WidgetTypography(
         preference=preference,
-        body=_step(9.0, 11.0, progress),
+        body=scale.body_pt,
         # Agenda titles use weight, not an oversized font, for emphasis.
-        title=_step(9.0, 11.0, progress),
-        date=_step(9.5, 11.5, progress),
-        control=_step(8.7, 10.7, progress),
-        section=_step(8.4, 9.8, progress),
-        secondary=_step(7.9, 9.3, progress),
-        calendar=_step(8.8, 10.8, progress),
+        title=scale.body_pt,
+        date=scale.section_pt,
+        control=scale.body_pt,
+        section=scale.body_pt,
+        secondary=scale.caption_pt,
+        calendar=scale.body_pt,
     )

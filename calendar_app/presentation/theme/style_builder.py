@@ -30,21 +30,21 @@ def _font_points(raw):
     try:
         points = float(raw)
     except (TypeError, ValueError, OverflowError):
-        return 10
+        return 11
     if not math.isfinite(points) or points <= 0:
-        return 10
+        return 11
     points = min(500.0, points)
     return int(points) if points.is_integer() else points
 
 
-def _scaled_pt(base_pt=10, delta=0, minimum=8):
-    safe_base = max(10, _font_points(base_pt))
+def _scaled_pt(base_pt=11, delta=0, minimum=9.5):
+    safe_base = _font_points(base_pt)
     return max(minimum, safe_base + delta)
 
 
 def build_global_stylesheet(
     family="Outfit, Inter, Segoe UI, sans-serif",
-    base_pt=10,
+    base_pt=11,
     theme_color="#4da6ff",
     text_theme="dark",
     panel_base_color="#1c1c1c",
@@ -264,13 +264,13 @@ def build_global_stylesheet(
         }}
         QMessageBox QLabel {{
             color: {p["text_primary"]};
-            font-size: {_scaled_pt(base_pt, 1)}pt;
+            font-size: {base_pt}pt;
         }}
     """
 
 
 def build_tooltip_stylesheet(
-    base_pt=10, theme_color="#4da6ff", text_theme="dark", panel_base_color="#1c1c1c", palette=None
+    base_pt=11, theme_color="#4da6ff", text_theme="dark", panel_base_color="#1c1c1c", palette=None
 ):
     base_pt = _font_points(base_pt)
     if palette is None:
@@ -322,6 +322,7 @@ def _build_top_menu_button_style(menu_btn_pt, theme_color, text_theme="dark"):
             border-top: 2px solid {theme_color};
         }}
         QToolButton::menu-indicator {{ image: none; }}
+        QToolButton[compactTopMenu="true"] {{ padding: 0; }}
     """
 
 
@@ -412,7 +413,7 @@ def apply_top_menu_theme(
     persist_opacity=True,
 ):
     if base_pt is None:
-        base_pt = self.settings.value("font_size", 10)
+        base_pt = self.settings.value("font_size", 11)
     base_pt = _font_points(base_pt)
     if theme_color is None:
         theme_color = self.settings.value("theme_color", "#4da6ff")
@@ -485,7 +486,7 @@ def apply_top_menu_theme(
 
             snapshot = build_theme_snapshot(_owner.settings)
             fresh_style = _build_app_menu_style(
-                _font_points(_owner.settings.value("font_size", 10)),
+                _font_points(_owner.settings.value("font_size", 11)),
                 snapshot.theme_color,
                 snapshot.text_theme,
                 panel_base_color=snapshot.panel_base_color,

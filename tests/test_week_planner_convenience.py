@@ -180,3 +180,33 @@ class WeekPlannerConvenienceTests(TemporaryDatabaseTestCase):
             self.assertLessEqual(origin.x() + button.width(), scroll.viewport().width())
         self.assertLessEqual(max(centers) - min(centers), 2)
         self.assertEqual(scroll.verticalScrollBar().maximum(), 0)
+
+    def test_compact_toolbar_keeps_core_controls_and_moves_week_jump_to_menu(self):
+        self.host.resize(430, 700)
+        self.render()
+        toolbar = self.host.calendar_toolbar_widget
+        scroll = toolbar.findChild(month_renderer._CalToolbarScroll)
+        more = toolbar.findChild(QPushButton, "calendar_toolbar_more")
+        self.assertTrue(more.isVisible())
+        self.assertEqual(scroll.horizontalScrollBar().maximum(), 0)
+        for name in (
+            "calendar_today",
+            "calendar_previous",
+            "calendar_date_selector",
+            "calendar_next",
+            "calendar_add",
+            "calendar_view",
+        ):
+            self.assertTrue(toolbar.findChild(QPushButton, name).isVisible(), name)
+        work_start = toolbar.findChild(QPushButton, "week_jump_work_start")
+        self.assertFalse(work_start.isVisible())
+        action = next(
+            action for action in more.menu().actions() if action.text() == work_start.toolTip()
+        )
+        action.trigger()
+        self.assertEqual(self.settings.value("cal_week_scroll_minutes", type=int), 540)
+
+        self.host.resize(1200, 700)
+        self.qt_app.processEvents()
+        self.assertFalse(more.isVisible())
+        self.assertTrue(work_start.isVisible())

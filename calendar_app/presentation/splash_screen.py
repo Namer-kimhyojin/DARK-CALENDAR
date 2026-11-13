@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, QSettings, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QColor,
     QFont,
@@ -17,8 +17,11 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from calendar_app.app_metadata import APP_NAME, APP_VERSION_DISPLAY
-from calendar_app.app_paths import APP_ICON_PATH, APP_ICON_TOAST_PATH, get_resource_path
+from calendar_app.app_paths import APP_ICON_PATH
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.dialogs.dialog_styles import get_dialog_theme_tokens
+from calendar_app.shared.brand_assets import brand_mark_pixmap
+from calendar_app.shared.color_utils import composite_color, contrast_safe_color, parse_css_color
 
 _COMPLETE_HOLD_MS = 100  # hold after reaching 100%
 _FADE_MS = 150  # fade-out duration
@@ -32,20 +35,11 @@ class SplashScreen(QWidget):
     targets in small steps so fast startup phases still feel incremental.
     """
 
-    W, H = 560, 340
-    RADIUS = 18
+    W, H = 480, 280
+    RADIUS = 16
     finished = pyqtSignal()
 
-    BG_COLOR_START = QColor("#111D2B")
-    BG_COLOR_END = QColor("#111D2B")
-    NAME_COLOR = QColor(250, 250, 250)
-    META_COLOR = QColor(164, 170, 184, 210)
     FONT_FAMILY = "Malgun Gothic"
-    ACCENT_GRADIENT = [
-        (0.0, QColor(255, 42, 117)),
-        (0.5, QColor(140, 52, 235)),
-        (1.0, QColor(42, 213, 255)),
-    ]
 
     def __init__(self) -> None:
         super().__init__(
@@ -59,8 +53,16 @@ class SplashScreen(QWidget):
         self.setFixedSize(self.W, self.H)
         self._center_on_screen()
 
-        self._status_text = "Initializing..."
+        settings = QSettings("kimhyojin", "Dark Calendar")
+        self._theme_tokens = get_dialog_theme_tokens(
+            settings=settings,
+            theme_color=None if settings.contains("theme_color") else "#c5a3f5",
+            panel_base_color=None if settings.contains("panel_base_color") else "#121827",
+        )
+        self._status_text = t("splash.preparing_runtime", "런타임 준비 중...")
         self._headline_text = t("splash.organizing_today", "오늘을 정리하는 중")
+        self.setAccessibleName(APP_NAME)
+        self.setAccessibleDescription(self._headline_text)
         self._progress = 0.0
         self._progress_anim = 0.0
         self._finish_requested = False
@@ -74,9 +76,13 @@ class SplashScreen(QWidget):
         self._glow_pulse = 0.0
         self._glow_direction = 1
 
-        self._icon = QPixmap(get_resource_path("Assets/splash_icon.png"))
-        if self._icon.isNull():
-            self._icon = QPixmap(APP_ICON_TOAST_PATH)
+        self._icon = brand_mark_pixmap(
+            self._theme_tokens["accent"],
+            64,
+            background=self._theme_tokens["floating_bg"],
+            base=self._theme_tokens["base_hex"],
+            dpr=self.devicePixelRatioF(),
+        )
         if self._icon.isNull():
             self._icon = QPixmap(APP_ICON_PATH)
 
@@ -89,6 +95,7 @@ class SplashScreen(QWidget):
     def set_status(self, text: str, progress: float | None = None) -> None:
         """Directly update status and target progress."""
         self._status_text = text
+        self.setAccessibleDescription(str(text))
         if progress is not None:
             target = max(0.0, min(1.0, progress))
             if 0.0 < target < 1.0:
@@ -205,11 +212,16 @@ class SplashScreen(QWidget):
             self.update()
         self._start_fade_out()
 
-    @staticmethod
-    def _make_accent_grad(x: float, w: float) -> QLinearGradient:
+    def _display_progress_percent(self) -> int:
+        """Match the visible bar, never announce 100% before it is complete."""
+        return max(0, min(100, int(self._progress_anim * 100 + 1e-9)))
+
+    def _make_accent_grad(self, x: float, w: float) -> QLinearGradient:
         grad = QLinearGradient(x, 0, x + w, 0)
-        for pos, col in SplashScreen.ACCENT_GRADIENT:
-            grad.setColorAt(pos, col)
+        surface = composite_color(self._theme_tokens["floating_bg"], self._theme_tokens["base_hex"])
+        for position, key in ((0.0, "accent"), (1.0, "accent_hover")):
+            color = contrast_safe_color(self._theme_tokens[key], surface, minimum=3.0)
+            grad.setColorAt(position, QColor(color))
         return grad
 
     # ------------------------------------------------------------------
@@ -226,44 +238,68 @@ class SplashScreen(QWidget):
     def _paint(self, painter: QPainter) -> None:
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        tokens = self._theme_tokens
         background = QPainterPath()
         background.addRoundedRect(QRectF(0, 0, self.W, self.H), self.RADIUS, self.RADIUS)
-        painter.fillPath(background, QColor("#111D2B"))
+        painter.fillPath(background, parse_css_color(tokens["floating_bg"]))
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        painter.setPen(QPen(QColor("#293B4B"), 1.0))
+        painter.setPen(QPen(parse_css_color(tokens["border"]), 1.0))
         painter.drawRoundedRect(QRectF(0.5, 0.5, self.W - 1, self.H - 1), self.RADIUS, self.RADIUS)
 
         if not self._icon.isNull():
-            # The symbol has transparent margins; the displayed mark is 82px tall.
-            painter.drawPixmap(212, 35, 136, 136, self._icon)
-        painter.setPen(self.NAME_COLOR)
-        painter.setFont(QFont("Segoe UI", 25, QFont.Weight.DemiBold))
-        painter.drawText(QRectF(32, 166, self.W - 64, 44), Qt.AlignmentFlag.AlignCenter, APP_NAME)
-
-        painter.setFont(QFont(self.FONT_FAMILY, 10))
-        painter.setPen(QColor("#A8BAC6"))
-        metrics = QFontMetrics(painter.font())
-        headline = metrics.elidedText(self._headline_text, Qt.TextElideMode.ElideRight, 440)
-        painter.drawText(QRectF(60, 214, 440, 24), Qt.AlignmentFlag.AlignCenter, headline)
-
-        bar_x, bar_y, bar_w, bar_h = 140, 254, 280, 3
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor("#304353"))
-        painter.drawRoundedRect(QRectF(bar_x, bar_y, bar_w, bar_h), 1.5, 1.5)
-        if self._progress_anim > 0:
-            painter.setBrush(QColor("#43CDB9"))
-            painter.drawRoundedRect(
-                QRectF(bar_x, bar_y, bar_w * self._progress_anim, bar_h), 1.5, 1.5
-            )
-
-        painter.setPen(QColor("#A8BAC6"))
-        painter.setFont(QFont(self.FONT_FAMILY, 9))
-        status = QFontMetrics(painter.font()).elidedText(
-            self._status_text, Qt.TextElideMode.ElideRight, 440
-        )
-        painter.drawText(QRectF(60, 271, 440, 22), Qt.AlignmentFlag.AlignCenter, status)
-        painter.setPen(QColor("#7F94A5"))
-        painter.setFont(QFont("Segoe UI", 8))
+            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+            painter.drawPixmap(28, 31, 64, 64, self._icon)
+        painter.setPen(parse_css_color(tokens["text_primary"]))
+        painter.setFont(QFont("Segoe UI", 22, QFont.Weight.DemiBold))
         painter.drawText(
-            QRectF(32, 307, self.W - 64, 18), Qt.AlignmentFlag.AlignCenter, APP_VERSION_DISPLAY
+            QRectF(108, 32, self.W - 136, 40),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            APP_NAME,
         )
+        painter.setPen(parse_css_color(tokens["text_muted"]))
+        painter.setFont(QFont("Segoe UI", 9))
+        painter.drawText(
+            QRectF(110, 74, self.W - 138, 20),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            APP_VERSION_DISPLAY,
+        )
+
+        painter.setPen(QPen(parse_css_color(tokens["border_soft"]), 1.0))
+        painter.drawLine(28, 114, self.W - 28, 114)
+
+        painter.setFont(QFont(self.FONT_FAMILY, 14, QFont.Weight.DemiBold))
+        painter.setPen(parse_css_color(tokens["text_primary"]))
+        metrics = QFontMetrics(painter.font())
+        headline = metrics.elidedText(self._headline_text, Qt.TextElideMode.ElideRight, self.W - 56)
+        painter.drawText(
+            QRectF(28, 133, self.W - 56, 30),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            headline,
+        )
+
+        painter.setPen(parse_css_color(tokens["text_secondary"]))
+        painter.setFont(QFont(self.FONT_FAMILY, 10))
+        status = QFontMetrics(painter.font()).elidedText(
+            self._status_text, Qt.TextElideMode.ElideRight, self.W - 56
+        )
+        painter.drawText(
+            QRectF(28, 170, self.W - 56, 24),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            status,
+        )
+
+        painter.setPen(parse_css_color(tokens["text_muted"]))
+        painter.setFont(QFont("Segoe UI", 10, QFont.Weight.DemiBold))
+        painter.drawText(
+            QRectF(28, 205, self.W - 56, 20),
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+            f"{self._display_progress_percent()}%",
+        )
+
+        bar_x, bar_y, bar_w, bar_h = 28, 235, self.W - 56, 4
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(parse_css_color(tokens["border"]))
+        painter.drawRoundedRect(QRectF(bar_x, bar_y, bar_w, bar_h), 2, 2)
+        if self._progress_anim > 0:
+            painter.setBrush(self._make_accent_grad(bar_x, bar_w))
+            painter.drawRoundedRect(QRectF(bar_x, bar_y, bar_w * self._progress_anim, bar_h), 2, 2)

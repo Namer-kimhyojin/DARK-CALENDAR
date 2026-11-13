@@ -175,6 +175,7 @@ class _IconKeys:
     ERROR: str = "error"
     WARNING: str = "warning"
     INFO: str = "info"
+    QUESTION: str = "question"
     STAR: str = "star"
     STAR_EMPTY: str = "star_empty"
     BROADCAST: str = "broadcast"
@@ -293,7 +294,7 @@ ICON_MAPPING: dict[str, tuple[str, str, str]] = {
     ICON.PERSON: ("fa6s.user-ninja", "", "담당자/수신자"),
     ICON.STATUS_TODAY: ("fa6s.sun", "", "오늘"),
     # ── 위젯 UI ──────────────────────────────────────────────────────────────
-    ICON.SETTINGS: ("fa6s.gears", "", "설정"),
+    ICON.SETTINGS: ("fa6s.gear", "", "설정"),
     ICON.WIDGET_MGR: ("fa6s.window-restore", "", "위젯 관리자"),
     ICON.ALWAYS_ON_TOP: ("mdi6.pin-outline", "", "항상 위에"),
     ICON.SHOW: ("fa6s.eye", "", "표시하기"),
@@ -326,6 +327,7 @@ ICON_MAPPING: dict[str, tuple[str, str, str]] = {
     ICON.ERROR: ("fa6s.circle-xmark", "", "오류"),
     ICON.WARNING: ("fa6s.triangle-exclamation", "", "경고"),
     ICON.INFO: ("fa6s.circle-info", "", "정보"),
+    ICON.QUESTION: ("fa6s.circle-question", "", "질문"),
     ICON.STAR: ("fa6s.star", "", "별 (기본 캘린더 표시)"),
     ICON.STAR_EMPTY: ("mdi6.star-outline", "", "빈 별"),
     ICON.BROADCAST: ("mdi6.broadcast", "", "공지 / 브로드캐스트"),
@@ -397,6 +399,9 @@ def icon(key: str, color: str | None = None, **kwargs):
         import qtawesome as qta  # type: ignore[import]
 
         options: dict = {}
+        if key in (ICON.SETTINGS, ICON.DISPLAY_STYLE):
+            # Keep the full silhouette inside compact toolbars at fractional DPI.
+            options["scale_factor"] = 0.82
         if color:
             options["color"] = color
         options.update(kwargs)

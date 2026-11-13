@@ -9,6 +9,31 @@ import threading
 
 FIELDS = ("name", "deadline", "end_date", "all_day", "description", "location")
 _SCHEMA_GUARD = threading.RLock()
+# Capture the stable identity before the local row and its link are removed.
+# sqlite_master keeps this text as written, so it doubles as the version check.
+_CAPTURE_DELETE = (
+    "CREATE TRIGGER calendar_sync_capture_delete BEFORE DELETE ON unified_task\n"
+    "BEGIN\n"
+    "    INSERT OR IGNORE INTO calendar_sync_pending_delete"
+    "(calendar_id,transaction_id,baseline,created_at)\n"
+    "    SELECT calendar_id,transaction_id,baseline,datetime('now') FROM calendar_sync_event\n"
+    "    WHERE task_id=OLD.id AND event_id IS NULL AND remote_deleted=0;\n"
+    "    INSERT OR IGNORE INTO calendar_sync_delete_queue"
+    "(event_id,calendar_id,etag,remote_uid,recurrence_id)\n"
+    "    SELECT event_id,calendar_id,etag,remote_uid,recurrence_id FROM calendar_sync_event\n"
+    "    WHERE task_id=OLD.id AND event_id IS NOT NULL AND remote_deleted=0;\n"
+    "    DELETE FROM calendar_sync_issue WHERE task_id=OLD.id;\n"
+    "    DELETE FROM calendar_sync_event WHERE task_id=OLD.id;\n"
+    "END"
+)
+# Why a queued remote deletion is not progressing (NULL: it runs on the next sync).
+# Mirrors CalendarSyncEngine._selected/_writable; q=queue, s=link, v=calendar.
+DELETE_QUEUE_REASON = (
+    "CASE WHEN q.error IS NOT NULL THEN q.error "
+    "WHEN COALESCE(v.is_active,0)!=1 THEN 'calendar_not_selected' "
+    "WHEN s.can_edit!=1 OR COALESCE(v.access_role,'') NOT IN ('owner','writer') "
+    "THEN 'calendar_read_only' END"
+)
 
 
 def fingerprint(task):
@@ -69,14 +94,6 @@ def _initialize(conn):
             calendar_id TEXT NOT NULL, transaction_id TEXT NOT NULL,
             baseline TEXT NOT NULL, PRIMARY KEY(calendar_id,transaction_id)
         );
-        CREATE TRIGGER IF NOT EXISTS calendar_sync_capture_delete BEFORE DELETE ON unified_task
-        BEGIN
-            INSERT OR IGNORE INTO calendar_sync_delete_queue(event_id,calendar_id,etag)
-            SELECT event_id,calendar_id,etag FROM calendar_sync_event
-            WHERE task_id=OLD.id AND event_id IS NOT NULL AND remote_deleted=0;
-            DELETE FROM calendar_sync_issue WHERE task_id=OLD.id;
-            DELETE FROM calendar_sync_event WHERE task_id=OLD.id;
-        END;
         CREATE TRIGGER IF NOT EXISTS calendar_sync_capture_move AFTER UPDATE OF calendar_id ON unified_task
         WHEN COALESCE(OLD.calendar_id,'') != COALESCE(NEW.calendar_id,'')
         BEGIN
@@ -98,21 +115,22 @@ def _initialize(conn):
         row[1] for row in conn.execute("PRAGMA table_info(calendar_sync_pending_delete)")
     }:
         conn.execute("ALTER TABLE calendar_sync_pending_delete ADD COLUMN created_at TEXT")
-    # Capture the stable identity before the local row and its link are removed.
-    conn.executescript("""
-        DROP TRIGGER IF EXISTS calendar_sync_capture_delete;
-        CREATE TRIGGER calendar_sync_capture_delete BEFORE DELETE ON unified_task
-        BEGIN
-            INSERT OR IGNORE INTO calendar_sync_pending_delete(calendar_id,transaction_id,baseline,created_at)
-            SELECT calendar_id,transaction_id,baseline,datetime('now') FROM calendar_sync_event
-            WHERE task_id=OLD.id AND event_id IS NULL AND remote_deleted=0;
-            INSERT OR IGNORE INTO calendar_sync_delete_queue(event_id,calendar_id,etag,remote_uid,recurrence_id)
-            SELECT event_id,calendar_id,etag,remote_uid,recurrence_id FROM calendar_sync_event
-            WHERE task_id=OLD.id AND event_id IS NOT NULL AND remote_deleted=0;
-            DELETE FROM calendar_sync_issue WHERE task_id=OLD.id;
-            DELETE FROM calendar_sync_event WHERE task_id=OLD.id;
-        END;
-    """)
+    # The remote revision a delete conflicted with, shown before "delete anyway".
+    if "remote_json" not in {
+        row[1] for row in conn.execute("PRAGMA table_info(calendar_sync_delete_queue)")
+    }:
+        conn.execute("ALTER TABLE calendar_sync_delete_queue ADD COLUMN remote_json TEXT")
+    current = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='trigger' AND name='calendar_sync_capture_delete'"
+    ).fetchone()
+    if current is None or current[0] != _CAPTURE_DELETE:
+        # Replace in one transaction: a task deleted on another connection must
+        # never fall between DROP and CREATE and skip its remote deletion.
+        with conn:
+            if not conn.in_transaction:
+                conn.execute("BEGIN IMMEDIATE")
+            conn.execute("DROP TRIGGER IF EXISTS calendar_sync_capture_delete")
+            conn.execute(_CAPTURE_DELETE)
 
 
 class CalendarSyncRepository:
@@ -290,6 +308,40 @@ class CalendarSyncRepository:
             )
         ]
 
+    def delete_queue(self, account):
+        """Queued remote deletions of this account, each with its blocking reason."""
+        return [
+            dict(row)
+            for row in self.conn.execute(
+                "SELECT q.*,v.name AS calendar_name," + DELETE_QUEUE_REASON + " AS reason "
+                "FROM calendar_sync_delete_queue q "
+                "JOIN calendar_sync_calendar s ON s.local_id=q.calendar_id "
+                "JOIN calendar v ON v.id=q.calendar_id WHERE s.account_id=? "
+                "ORDER BY q.calendar_id,q.event_id",
+                (account,),
+            )
+        ]
+
+    def confirm_delete(self, account, calendar_id, event_id, remote_json):
+        """Delete the remote revision the user reviewed; a newer one conflicts again."""
+        try:
+            etag = json.loads(remote_json).get("etag")
+        except (AttributeError, TypeError, ValueError):
+            return False
+        if not isinstance(etag, str) or not etag:
+            return False
+        with self.atomic():
+            return (
+                self.conn.execute(
+                    "UPDATE calendar_sync_delete_queue SET etag=?,error=NULL,attempts=0,"
+                    "remote_json=NULL WHERE calendar_id=? AND event_id=? "
+                    "AND error='delete_conflict' AND remote_json=? AND calendar_id IN "
+                    "(SELECT local_id FROM calendar_sync_calendar WHERE account_id=?)",
+                    (etag, calendar_id, event_id, remote_json, account),
+                ).rowcount
+                == 1
+            )
+
     def pending_deletes(self, account):
         """Unconfirmed creates deleted locally, retained until identity is proven."""
         return [
@@ -336,7 +388,11 @@ class CalendarSyncRepository:
                 or fingerprint(local) != fingerprint(snapshot)
             ):
                 return False
-            task = provider.to_task(remote, local_zone)
+            try:
+                task = provider.to_task(remote, local_zone)
+            except (KeyError, ValueError, TypeError, OverflowError):
+                # Unreadable stored revision: the next sync records a fresh one.
+                return False
             if choice == "remote":
                 self.apply_remote(task_id, task)
             elif choice != "local":

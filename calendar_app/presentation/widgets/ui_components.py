@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+from functools import partial
 import logging
 import sys
 
+from PyQt6 import sip
 from PyQt6.QtCore import (
     QDataStream,
     QEasingCurve,
@@ -36,10 +38,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from calendar_app.application import task_usecases
 from calendar_app.domain.task_constants import PRIORITY_MENU_ITEMS, STATUS_MENU_ITEMS
 from calendar_app.infrastructure.db import calendar_repo, checklist_repo, task_repo
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation import drag_drop_manager as ddm
+from calendar_app.presentation.dialogs.dialog_styles import build_dialog_stylesheet
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.presentation.widgets.schedule_info import build_schedule_info
 from calendar_app.shared.color_utils import derive_ui_palette
@@ -164,6 +168,7 @@ def _task_detail_card_style(tokens=None, shape=None):
         f"QFrame#taskDetailCard {{ background-color: {background}; "
         f"color: {palette['text_secondary']}; "
         f"border: 1px solid {palette['border_soft']}; "
+        f"border-radius: {radius}px; "
         f"border-bottom-left-radius: {radius}px; "
         f"border-bottom-right-radius: {radius}px; }}"
     )
@@ -237,15 +242,30 @@ class _ChecklistTextLabel(QLabel):
 class _ElidingLabel(QLabel):
     """?띿뒪?멸? 湲몃㈃ ?ㅻⅨ履쎌쓣 '...'?쇰줈 ?섎씪???쒖떆?섎뒗 QLabel."""
 
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self._optional_prefix = ""
+
+    def set_optional_prefix(self, prefix: str):
+        self._optional_prefix = prefix
+        self.update()
+
+    def _display_text(self):
+        fm = self.fontMetrics()
+        text = self.text()
+        if self._optional_prefix:
+            prefixed = f"{self._optional_prefix} {text}"
+            if fm.horizontalAdvance(prefixed) <= self.width():
+                return prefixed
+        return fm.elidedText(text, Qt.TextElideMode.ElideRight, self.width())
+
     def paintEvent(self, _event):
         from PyQt6.QtGui import QPainter
 
         p = QPainter(self)
-        fm = self.fontMetrics()
-        elided = fm.elidedText(self.text(), Qt.TextElideMode.ElideRight, self.width())
         p.setPen(self.palette().color(self.foregroundRole()))
         p.setFont(self.font())
-        p.drawText(self.rect(), int(self.alignment()), elided)
+        p.drawText(self.rect(), int(self.alignment()), self._display_text())
         p.end()
 
 
@@ -379,7 +399,6 @@ class HoverInfoPopup(QFrame):
             }}
             QLabel {{
                 color: {label_color};
-                font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
                 font-size: 9pt;
                 line-height: 1.25;
                 background: transparent;
@@ -526,8 +545,7 @@ class HoverInfoEventFilter(QObject):
         if event.type() == QEvent.Type.Enter:
             html = watched.property("_hover_info_html")
             if html:
-                detail_overlay = globals().get("_detail_overlay")
-                if detail_overlay is not None and detail_overlay.isVisible():
+                if _visible_detail_overlay() is not None:
                     return super().eventFilter(watched, event)
                 self._current_watched = watched
                 self._delay_timer.start()
@@ -557,8 +575,7 @@ class HoverInfoEventFilter(QObject):
             self._current_watched = None
 
     def _do_show_popup(self):
-        detail_overlay = globals().get("_detail_overlay")
-        if detail_overlay is not None and detail_overlay.isVisible():
+        if _visible_detail_overlay() is not None:
             return
         if self._current_watched and self._current_watched.isVisible():
             html = self._current_watched.property("_hover_info_html")
@@ -571,9 +588,16 @@ _hover_info_popup = None
 _hover_info_filter = None
 
 
+def _is_alive(obj) -> bool:
+    """A module-level Qt singleton can outlive its C++ object (window teardown)."""
+    return obj is not None and not sip.isdeleted(obj)
+
+
 def get_hover_info_popup():
     global _hover_info_popup
-    if _hover_info_popup is None:
+    if not _is_alive(_hover_info_popup):
+        # The app-wide event filter calls this for every event; handing back a
+        # deleted wrapper raised RuntimeError from inside Qt's event dispatch.
         _hover_info_popup = HoverInfoPopup()
     return _hover_info_popup
 
@@ -595,7 +619,7 @@ def hide_hover_info(widget=None):
     """Cancel a pending preview and hide the active hover card."""
     if _hover_info_filter is not None:
         _hover_info_filter.cancel_for(widget)
-    if _hover_info_popup is None:
+    if not _is_alive(_hover_info_popup):
         return
     if widget is None:
         _hover_info_popup._stop_popup()
@@ -615,6 +639,7 @@ class _DetailExpandOverlay(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         self.setObjectName("detailExpandOverlay")
         self._owner = None
+        self._owner_token = None
         lyt = QVBoxLayout(self)
         lyt.setContentsMargins(0, 0, 0, 0)
         lyt.setSpacing(0)
@@ -769,8 +794,10 @@ class _DetailExpandOverlay(QFrame):
             self.hide()
             self._owner = None
 
-    def show_for(self, owner):
+    def show_for(self, owner, *, defer_show=False):
         """Collapse any previous owner, host owner's detail_container, then show."""
+        if defer_show:
+            self.hide()
         if self._owner is not None and self._owner is not owner:
             prev = self._owner
             self._owner = None
@@ -793,6 +820,16 @@ class _DetailExpandOverlay(QFrame):
                 pass
 
         self._owner = owner
+        self._track_owner(owner)
+
+        # Style the single floating host rather than every hidden calendar card.
+        # It also refreshes the actions when the user changes the active theme.
+        overlay_style = (
+            build_dialog_stylesheet()
+            + "\nQFrame#detailExpandOverlay { background: transparent; border: none; }"
+        )
+        if self.styleSheet() != overlay_style:
+            self.setStyleSheet(overlay_style)
 
         lyt = self.layout()
         while lyt.count():
@@ -801,9 +838,38 @@ class _DetailExpandOverlay(QFrame):
                 item.widget().setParent(None)
         lyt.addWidget(owner.detail_container)
 
-        self._reposition()
-        self.show()
-        self.raise_()
+        if not defer_show:
+            self._reposition()
+            self.show()
+            self.raise_()
+
+    def _on_owner_destroyed(self, token, *_args):
+        """Drop a detail card whose calendar item was deleted by a re-render.
+
+        The detail container lives in this overlay while expanded, so it would
+        otherwise outlive its owner and keep actions bound to a deleted item.
+        """
+        if token is not self._owner_token:
+            return
+        self._owner = None
+        self._owner_token = None
+        lyt = self.layout()
+        while lyt.count():
+            item = lyt.takeAt(0)
+            widget = item.widget() if item else None
+            if widget is not None and not sip.isdeleted(widget):
+                widget.hide()
+                widget.setParent(None)
+                widget.deleteLater()
+        self.hide()
+
+    def _track_owner(self, owner):
+        token = getattr(owner, "_detail_overlay_token", None)
+        if token is None:
+            token = object()
+            owner._detail_overlay_token = token
+            owner.destroyed.connect(partial(self._on_owner_destroyed, token))
+        self._owner_token = token
 
     def hide_for(self, owner):
         """Hide overlay and return detail_container to owner."""
@@ -819,9 +885,17 @@ _detail_overlay = None
 
 def get_detail_overlay():
     global _detail_overlay
-    if _detail_overlay is None:
+    if _detail_overlay is None or sip.isdeleted(_detail_overlay):
         _detail_overlay = _DetailExpandOverlay()
     return _detail_overlay
+
+
+def _visible_detail_overlay():
+    """The detail card if it exists, is alive and is showing; otherwise None."""
+    overlay = globals().get("_detail_overlay")
+    if overlay is not None and not sip.isdeleted(overlay) and overlay.isVisible():
+        return overlay
+    return None
 
 
 class DraggableTaskButton(QFrame):
@@ -927,6 +1001,9 @@ class DraggableTaskButton(QFrame):
         self.actions_layout.setContentsMargins(0, 2, 0, 0)
         self.actions_layout.setSpacing(6)
         self.detail_layout.addWidget(self.actions_widget)
+        self._detail_edit_button = None
+        self._detail_status_button = None
+        self._detail_status_target = "completed"
 
         # detail_container is a free child (not in main_layout) so grid rows
         # are never resized by expansion; overlay manages its geometry.
@@ -1023,6 +1100,10 @@ class DraggableTaskButton(QFrame):
             self._watermark_title = enabled
             self._apply_title_label_style()
             self._apply_tag_frame_style()
+
+    def set_title_time_hint(self, start_time: str):
+        """Paint a time before the title only when both fit."""
+        self.title_label.set_optional_prefix(start_time)
 
     def set_multiday_segment_shape(self, left_open=False, right_open=False):
         left_open = bool(left_open)
@@ -1294,14 +1375,31 @@ class DraggableTaskButton(QFrame):
         return self.info_layout.count() > 0
 
     def _render_detail_actions(self, task):
-        _clear_layout(self.actions_layout)
+        # Keep one action row for the lifetime of this card. Rebuilding visible
+        # controls on every expansion can leave stale child surfaces during a fade
+        # or a queued delete, particularly in floating Windows tool windows.
+        if self._detail_edit_button is None:
+            edit_btn = QPushButton(_se(t("context_menu.edit_schedule", "일정 수정")))
+            edit_btn.setObjectName("ghost_btn")
+            edit_btn.setProperty("dialogFooter", True)
+            edit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            edit_btn.setMinimumHeight(32)
+            edit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            edit_btn.clicked.connect(self._request_edit_from_detail)
+            self.actions_layout.addWidget(edit_btn, 1)
+            self._detail_edit_button = edit_btn
 
-        edit_btn = QPushButton(_se(t("context_menu.edit_schedule", "일정 수정")))
-        edit_btn.setObjectName("ghost_btn")
-        edit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        edit_btn.setMinimumHeight(32)
-        edit_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        edit_btn.clicked.connect(self._request_edit_from_detail)
+            status_btn = QPushButton()
+            status_btn.setObjectName("primary_btn")
+            status_btn.setProperty("dialogFooter", True)
+            status_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            status_btn.setMinimumHeight(32)
+            status_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            status_btn.clicked.connect(
+                lambda checked=False: self._request_status_from_detail(self._detail_status_target)
+            )
+            self.actions_layout.addWidget(status_btn, 1)
+            self._detail_status_button = status_btn
 
         status = str(task.get("status") or "pending").strip().lower()
         is_completed = status in {"completed", "done"}
@@ -1310,26 +1408,26 @@ class DraggableTaskButton(QFrame):
             if is_completed
             else t("widget_mode.menu_complete_task", "완료 처리")
         )
-        status_btn = QPushButton(_se(status_label))
-        status_btn.setObjectName("primary_btn")
-        status_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        status_btn.setMinimumHeight(32)
-        status_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        status_btn.clicked.connect(
-            lambda checked=False, new_status="pending" if is_completed else "completed": (
-                self._request_status_from_detail(new_status)
-            )
-        )
-
-        self.actions_layout.addWidget(edit_btn, 1)
-        self.actions_layout.addWidget(status_btn, 1)
+        self._detail_status_target = "pending" if is_completed else "completed"
+        self._detail_status_button.setText(_se(status_label))
         return True
 
     def _request_edit_from_detail(self):
+        if sip.isdeleted(self):
+            get_detail_overlay()._do_collapse()
+            return
         get_detail_overlay()._do_collapse(self)
-        QTimer.singleShot(0, lambda: self.doubleClicked.emit(self.task_id))
+        QTimer.singleShot(0, self._emit_edit_from_detail)
+
+    def _emit_edit_from_detail(self):
+        if not sip.isdeleted(self):
+            self.doubleClicked.emit(self.task_id)
 
     def _request_status_from_detail(self, status):
+        if sip.isdeleted(self):
+            # The calendar was rebuilt while this detail card stayed open.
+            get_detail_overlay()._do_collapse()
+            return
         get_detail_overlay()._do_collapse(self)
         self.taskStatusChanged.emit(self.task_id, status)
 
@@ -1362,8 +1460,9 @@ class DraggableTaskButton(QFrame):
         if expand:
             hide_hover_info()
             # Move detail_container into floating overlay (no grid impact)
-            ov.show_for(self)
+            ov.show_for(self, defer_show=True)
             # Populate content
+            self.detail_container.setStyleSheet(_task_detail_card_style())
             self.detail_container.setVisible(True)
             self.detail_container.setMaximumHeight(16777215)
             task = task_repo.get_unified_task(self.task_id) or {}
@@ -1394,6 +1493,10 @@ class DraggableTaskButton(QFrame):
             self._info_opacity_fx.setOpacity(0.0)
             self._fade_anim.setStartValue(0.0)
             self._fade_anim.setEndValue(1.0)
+            # Publish a fully populated, sized card in one frame. Showing the
+            # old contents before rebuilding can expose the previous action row.
+            ov.show()
+            ov.raise_()
             self._fade_anim.start()
         else:
             self._detail_anim_expanding = False
@@ -1417,9 +1520,16 @@ class DraggableTaskButton(QFrame):
         self._apply_tag_frame_style()
 
     def _handle_item_toggled(self, item_id, checked):
-        """????? ?? ?? ??"""
-        checklist_repo.toggle_checklist_item(item_id)
+        """체크리스트 항목을 토글하고 진행 표시를 갱신한다."""
+        before = (task_repo.get_unified_task(self.task_id) or {}).get("status")
+        task_usecases.toggle_checklist_item(checklist_repo, task_repo, item_id)
+        self._refresh_checklist_progress()
+        after = (task_repo.get_unified_task(self.task_id) or {}).get("status")
+        if after and after != before:
+            # 프로세스를 끝내면 일정이 완료되므로 앱이 모든 화면을 다시 그리게 한다.
+            self.taskStatusChanged.emit(self.task_id, after)
 
+    def _refresh_checklist_progress(self):
         progress = checklist_repo.get_task_checklist_progress(self.task_id)
         if progress["total"] > 0:
             base_title = self.raw_text.split(" (")[0]

@@ -99,6 +99,7 @@ def test_caldav_unresolved_timezone_is_not_silently_imported_as_floating(propert
             data,
             datetime(2026, 10, 1, tzinfo=UTC),
             datetime(2026, 11, 1, tzinfo=UTC),
+            zone="Asia/Seoul",
         )
 
 
@@ -282,7 +283,6 @@ class GooglePullOwnershipAuditTests(TemporaryDatabaseTestCase):
             patch.object(engine, "_should_refresh_calendar_list", return_value=False),
             patch.object(engine, "_active_sync_calendar_ids", return_value=["team"]),
             patch.object(engine, "_push_local_changes_to_google", return_value=(0, 0, 0)),
-            patch.object(engine, "_should_run_auto_heal_orphans", return_value=False),
         ):
             assert engine.sync_google_calendar(app, silent=True)
         local = engine.task_repo.get_unified_task(local_id)

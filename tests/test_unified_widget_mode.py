@@ -389,7 +389,7 @@ class UnifiedWidgetModeTests(unittest.TestCase):
         self.assertEqual("dark", self.host.settings.value("widget_mode_panel_theme"))
         self.assertEqual("stacked", self.host.settings.value("widget_mode_layout"))
         self.assertEqual("stacked", self.controller.widget.active_layout_id())
-        self.assertNotEqual(before, self.controller.widget._style_signature)
+        self.assertEqual(before, self.controller.widget._style_signature)
 
     def test_layout_skins_rearrange_existing_sections_without_recreating_them(self):
         self.controller = uwm.UnifiedWidgetController(self.host)

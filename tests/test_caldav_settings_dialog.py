@@ -11,6 +11,7 @@ import pytest
 from calendar_app.infrastructure.calendar_sync.repository import CalendarSyncRepository, fingerprint
 from calendar_app.presentation.dialogs import caldav_settings_dialog as module
 from calendar_app.presentation.dialogs.calendar_sync_hub import CalendarSyncHub
+from calendar_app.presentation.dialogs.sync_feedback import sync_error_message
 from calendar_app.presentation.main_window.caldav_sync_controller import CalDAVSyncController
 
 
@@ -297,3 +298,41 @@ def test_retry_deletion_starts_selected_service_only(ui):
     host._caldav_sync_controllers["naver"].sync.assert_not_called()
     conn.close()
     dialog.close()
+
+
+def test_waiting_deletion_preview_is_not_a_failure(ui):
+    app, host, path = ui
+    controller = host._caldav_sync_controllers["icloud"]
+    conn = sqlite3.connect(path)
+    key = CalendarSyncRepository(conn, "caldav").register(
+        controller.account, controller.available[0]
+    )
+    with conn:
+        conn.execute(
+            "INSERT INTO calendar_sync_delete_queue(event_id,calendar_id,etag) "
+            "VALUES('https://example.invalid/icloud/event.ics',?,'etag')",
+            (key,),
+        )
+    conn.close()
+    dialog = module.CalDAVSettingsDialog(host, host._caldav_sync_controllers)
+    try:
+        dialog.issues.setCurrentRow(0)
+        assert sync_error_message("operation_failed") not in dialog.preview.toPlainText()
+    finally:
+        dialog.close()
+
+
+def test_service_selector_returns_when_another_service_finishes(ui):
+    app, host, path = ui
+    controllers = host._caldav_sync_controllers
+    dialog = module.CalDAVSettingsDialog(host, controllers)
+    try:
+        assert dialog.controller is controllers["icloud"]
+        controllers["naver"].busy = True
+        controllers["icloud"].changed.emit()
+        assert not dialog.service.isEnabled()
+        controllers["naver"].busy = False
+        controllers["naver"].changed.emit()
+        assert dialog.service.isEnabled()
+    finally:
+        dialog.close()

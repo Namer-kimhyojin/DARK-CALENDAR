@@ -31,7 +31,7 @@ from calendar_app.presentation.dialogs.dialog_styles import get_dialog_metric_to
 from calendar_app.shared.color_utils import parse_css_alpha_to_unit
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
-from calendar_app.shared.ui_tokens import get_ui_tokens
+from calendar_app.shared.ui_tokens import get_modal_ui_tokens as get_ui_tokens
 
 _RGBA_COLOR_RE = re.compile(
     r"^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([0-9]*\.?[0-9]+)\s*\)$",
@@ -80,7 +80,9 @@ def _palette_qcolor(value, fallback="#101418"):
 
 
 def _command_palette_style_bundle(tokens=None, metrics=None, settings=None):
-    resolved_tokens = dict(get_ui_tokens(settings=settings))
+    resolved_tokens = dict(
+        get_ui_tokens(settings=settings, theme_color=(tokens or {}).get("accent"))
+    )
     if tokens:
         resolved_tokens.update(tokens)
     resolved_metrics = dict(get_dialog_metric_tokens(settings=settings))
@@ -114,6 +116,7 @@ def _command_palette_style_bundle(tokens=None, metrics=None, settings=None):
         "divider": resolved_tokens.get("divider") or resolved_tokens["border"],
         "hint_bg": resolved_tokens["bg_hover"],
         "hint_text": resolved_tokens["text_muted"],
+        "caption_px": int(resolved_metrics["subtitle_font_pt"]),
         "preview_text": resolved_tokens["accent"],
         "focus_border": resolved_tokens["accent"],
         "shadow_color": shadow,
@@ -138,7 +141,6 @@ def _build_command_palette_stylesheet(bundle: dict) -> str:
                 padding: {bundle["input_padding_y"]}px {bundle["input_padding_x"]}px;
                 font-size: 17px;
                 color: {bundle["item_text"]};
-                font-family: 'Segoe UI', 'Malgun Gothic', 'Inter', sans-serif;
             }}
             QLineEdit:focus {{
                 border-color: {bundle["focus_border"]};
@@ -182,7 +184,7 @@ def _build_command_palette_stylesheet(bundle: dict) -> str:
             }}
             QLabel#paletteHintLabel {{
                 color: {bundle["hint_text"]};
-                font-size: 10px;
+                font-size: {bundle["caption_px"]}px;
             }}
         """
 
@@ -657,11 +659,19 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="toggle_top_bar",
-                title=t("menu.hide_topbar", "Toggle Top Bar"),
+                title=t("menu.auto_hide_topbar", "Auto-hide top bar"),
+                group="View",
+                icon_key=ICON.TOOLBAR,
+                shortcut_id="topbar",
+                keywords=("auto hide", "top bar", "menu bar", "pin", "상단 바", "고정"),
+            ),
+            dict(
+                command_id="toggle_navigation_rail",
+                title=t("topbar.navigation_rail", "Quick navigation"),
                 group="View",
                 icon_key=ICON.SCREEN_MGMT,
-                shortcut_id="topbar",
-                keywords=("top bar", "menu bar"),
+                shortcut_id="navigation_rail",
+                keywords=("quick navigation", "rail", "sidebar", "빠른 이동"),
             ),
             dict(
                 command_id="toggle_calendar_toolbar",

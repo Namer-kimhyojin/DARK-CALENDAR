@@ -208,6 +208,11 @@ class ActionHandlersMixin(
 
         shutdown_succeeded = True
         try:
+            # Give the OS-wide show/hide hotkey back before anything else.
+            from calendar_app.infrastructure.runtime import keyboard_shortcuts
+
+            keyboard_shortcuts.release_global_hotkeys(self)
+
             # Stop every known application timer before waiting for workers so
             # no new refresh/auth/sync work can be scheduled during teardown.
             for timer_name in _SHUTDOWN_TIMER_ATTRS:

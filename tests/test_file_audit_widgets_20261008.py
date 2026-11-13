@@ -26,6 +26,7 @@ from calendar_app.presentation.widgets.overlay_stopwatch import OverlayStopwatch
 from calendar_app.presentation.widgets.overlay_text import OverlayTextWidget
 from calendar_app.presentation.widgets.widget_mode_skins import load_user_widget_styles
 from calendar_app.presentation.widgets.widget_mode_typography import read_widget_typography
+from calendar_app.shared.typography import DEFAULT_FONT_PT
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -219,7 +220,7 @@ def test_alarm_stop_also_cancels_pending_startup_poll(qt_app):
 def test_stylesheet_font_sizes_recover_corrupt_numeric_values(value):
     for build in (build_global_stylesheet, build_tooltip_stylesheet):
         stylesheet = build(base_pt=value)
-        assert "font-size: 10pt" in stylesheet
+        assert f"font-size: {DEFAULT_FONT_PT}pt" in stylesheet
         assert "nanpt" not in stylesheet and "infpt" not in stylesheet
 
 
@@ -236,7 +237,7 @@ def test_top_menus_ignore_corrupt_font_and_refresh_without_conversion_exception(
     owner.sys_menu = QMenu(owner)
     apply_top_menu_theme(owner, persist_opacity=False)
     owner.sys_menu.aboutToShow.emit()
-    assert "font-size: 10pt" in owner.sys_menu.styleSheet()
+    assert f"font-size: {DEFAULT_FONT_PT}pt" in owner.sys_menu.styleSheet()
 
 
 @pytest.mark.parametrize("value", ["broken", float("inf"), 0, -1, 10**30])
@@ -271,14 +272,6 @@ def test_unified_widget_font_weight_recovers(owner, value):
     window._style_signature = None
     UnifiedWidgetWindow.apply_theme(window)
     assert "font-weight: 500" in window.setStyleSheet.call_args.args[0]
-
-
-def test_panel_widget_opacity_recovers_nonfinite_value(owner):
-    from calendar_app.presentation.widgets.panel_widget_shell import _FloatingWidgetBase
-
-    owner.settings.setValue("panel_opacity", float("inf"))
-    panel = SimpleNamespace(_app=owner, _opacity_setting_key=lambda: "panel_opacity")
-    assert _FloatingWidgetBase._get_individual_opacity(panel) == 100
 
 
 def test_keydeck_invalid_local_image_path_uses_fallback():

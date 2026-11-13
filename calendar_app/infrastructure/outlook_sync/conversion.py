@@ -15,7 +15,7 @@ def _datetime(text, zone):
         raise OutlookError("invalid_event_time") from exc
 
 
-def to_graph(task, local_zone="Asia/Seoul"):
+def to_graph(task, local_zone):
     if task.get("recurrence"):
         raise OutlookError("recurrence_not_supported")
     if not str(task.get("name") or "").strip():
@@ -53,7 +53,7 @@ def to_graph(task, local_zone="Asia/Seoul"):
     }
 
 
-def from_graph(event, local_zone="Asia/Seoul"):
+def from_graph(event, local_zone):
     all_day = bool(event.get("isAllDay"))
     try:
         start = _datetime(event["start"]["dateTime"], "UTC")

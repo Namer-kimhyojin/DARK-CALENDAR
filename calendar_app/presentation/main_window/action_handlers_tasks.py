@@ -3,13 +3,12 @@
 
 import logging
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QDate, Qt
 from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from calendar_app.application import task_delete_usecases, task_usecases
 from calendar_app.infrastructure.db import checklist_repo as db_checklist
 from calendar_app.infrastructure.db import directive_repo as db_directive
-from calendar_app.infrastructure.db import legacy_task_repo as db_legacy_task
 from calendar_app.infrastructure.db import search_repo as db_search
 from calendar_app.infrastructure.db import task_repo as db_task
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
@@ -53,43 +52,29 @@ class TaskActionsMixin:
         count = (len(self.selected_task_ids) if hasattr(self, "selected_task_ids") else 0) + (
             len(self.selected_directive_ids) if hasattr(self, "selected_directive_ids") else 0
         )
-        theme = (
-            self.settings.value("theme_color", "#4da6ff")
-            if hasattr(self, "settings")
-            else "#4da6ff"
-        )
-
-        def hex_to_rgba(hex_color, alpha):
-            hex_color = hex_color.lstrip("#")
-            r, g, b = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
-            return f"rgba({r}, {g}, {b}, {alpha})"
-
         from PyQt6.QtGui import QFont as _QFont
         from PyQt6.QtWidgets import QApplication as _QApp
 
-        lbl_font = _QFont("Segoe UI")
-        lbl_font.setPointSize(max(6, _QApp.instance().font().pointSize() - 1))
+        from calendar_app.presentation.calendar.month_renderer import _calendar_toolbar_style_bundle
+        from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
+        from calendar_app.shared.typography import get_typography_scale
+        from calendar_app.shared.ui_tokens import get_ui_tokens
+
+        settings = getattr(self, "settings", None)
+        tokens = get_ui_tokens(settings=settings)
+        style = _calendar_toolbar_style_bundle(
+            tokens=tokens, shape=get_ui_shape_tokens(settings=settings)
+        )["selection_label"]
+        style += f" color: {tokens['text_primary']};"
+        lbl_font = _QFont(_QApp.instance().font())
+        lbl_font.setPointSizeF(get_typography_scale(settings).caption_pt)
         lbl_font.setBold(count > 0)
         self.selection_status_lbl.setFont(lbl_font)
 
         if count <= 0:
             text = t("panel.multiselect_guide")
-            style = (
-                "color: rgba(255,255,255,0.60); "
-                "background: rgba(255,255,255,0.06); "
-                "border: 1px solid rgba(255,255,255,0.12); "
-                "border-radius: 10px; padding: 2px 12px;"
-            )
         else:
             text = t("panel.n_selected", n=count)
-            bg = hex_to_rgba(theme, 0.22)
-            border = hex_to_rgba(theme, 0.5)
-            style = (
-                "color: white; "
-                f"background-color: {bg}; "
-                f"border: 1px solid {border}; "
-                "border-radius: 10px; padding: 2px 12px;"
-            )
 
         self.selection_status_lbl.setText(text)
         self.selection_status_lbl.setStyleSheet(style)
@@ -102,10 +87,6 @@ class TaskActionsMixin:
         if task_data and _is_schedule and self.settings.value("gcal_enabled", "true") == "true":
             gcal_push_queue.enqueue(self, task_data, create_if_missing=True)
         self.schedule_panel_refresh(left=True, center=True, right=True)
-
-    def handle_task_modified(self, modified_data):
-        if task_usecases.apply_task_basic_modification(db_legacy_task, modified_data):
-            self.schedule_panel_refresh(left=True, center=True)
 
     def handle_task_status_changed(self, task_id, status):
         """일정 상태 변경(완료/미완료)."""
@@ -153,13 +134,54 @@ class TaskActionsMixin:
 
     def handle_cell_click(self, pack):
         """날짜 셀 클릭(날짜 선택)."""
+        from calendar_app.presentation.panels.side_panel_renderer import left_panel_mode
+
         date = pack[0] if isinstance(pack, tuple) else pack
+        previous_date = getattr(self, "_last_clicked_date", None)
         self._last_clicked_date = date
         self.selected_task_ids.clear()
         if hasattr(self, "selected_directive_ids"):
             self.selected_directive_ids.clear()
-        self.schedule_panel_refresh(center=True)
-        self.update_task_selection_status()
+        center = not self._update_month_day_highlight(previous_date, date)
+        if center:
+            self.update_task_selection_status()
+        else:
+            self._update_selection_visuals()
+        left = left_panel_mode(self) == "selected"
+        if left or center:
+            self.schedule_panel_refresh(left=left, center=center)
+
+    def _update_month_day_highlight(self, previous_date, date):
+        if getattr(self, "view_mode_state", None) != "monthly" or not isinstance(date, QDate):
+            return False
+        cells = getattr(self, "_calendar_cells_by_date", {})
+        target = cells.get(date.toString("yyyy-MM-dd"))
+        if target is None:
+            return False
+        previous = (
+            cells.get(previous_date.toString("yyyy-MM-dd"))
+            if isinstance(previous_date, QDate) and previous_date != date
+            else None
+        )
+        try:
+            for cell, selected in ((previous, False), (target, True)):
+                if cell is not None and bool(cell.property("selected_date")) != selected:
+                    cell.setProperty("selected_date", selected)
+                    cell.style().unpolish(cell)
+                    cell.style().polish(cell)
+                    cell.update()
+        except RuntimeError:
+            return False
+        return True
+
+    def show_month_day_agenda(self, date):
+        from calendar_app.presentation.panels.side_panel_renderer import set_left_panel_mode
+
+        self.handle_cell_click(date)
+        set_left_panel_mode(self, "selected")
+        self.left_dock.show()
+        self.left_dock.raise_()
+        self.sync_panel_menu_state()
 
     def handle_cell_shift_click(self, pack):
         """Shift+클릭으로 날짜 범위 선택 후 일정 추가."""
@@ -174,11 +196,16 @@ class TaskActionsMixin:
         self._open_cell_range_dialog(pack[0], pack[1])
 
     def _open_cell_range_dialog(self, start_d, end_d):
+        from calendar_app.presentation.panels.side_panel_renderer import left_panel_mode
+
         if start_d > end_d:
             start_d, end_d = end_d, start_d
 
         self._last_clicked_date = end_d
-        self.schedule_panel_refresh(center=True)
+        if left_panel_mode(self) == "selected":
+            self.schedule_panel_refresh(left=True, center=True)
+        else:
+            self.schedule_panel_refresh(center=True)
         self.open_task_dialog(start_d, None, end_d)
 
     def handle_task_dropped(self, task_id_list, target_date, target_time, action):
@@ -377,6 +404,16 @@ class TaskActionsMixin:
             QMessageBox.information(self, t("dialog.alarm.title"), t("dialog.alarm.removed"))
             self._refresh_all_panels()
 
+    def _drop_read_only_tasks(self, task_ids):
+        """Leave out tasks on read-only calendars; their remote copy would come back."""
+        blocked = set(task_delete_usecases.read_only_task_ids(db_task, task_ids))
+        if blocked and hasattr(self, "show_toast"):
+            self.show_toast(
+                t("dialog.task.calendar_read_only", "읽기 전용 캘린더"),
+                t("gcal.errors.forbidden", "해당 캘린더에 대한 수정 권한이 없습니다."),
+            )
+        return [task_id for task_id in task_ids if task_id not in blocked]
+
     def handle_task_deleted(self, task_id):
         """Delete task(s), supporting multi-selection."""
         target_ids = task_usecases.resolve_delete_target_ids(self.selected_task_ids, task_id)
@@ -397,6 +434,9 @@ class TaskActionsMixin:
         )
 
         if reply != QMessageBox.StandardButton.Yes:
+            return
+        target_ids = self._drop_read_only_tasks(target_ids)
+        if not target_ids:
             return
 
         from calendar_app.shared.background_worker import DbTaskWorker
@@ -530,6 +570,7 @@ class TaskActionsMixin:
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
+        task_ids = self._drop_read_only_tasks(task_ids)
 
         deleted_directives = (
             self._delete_selected_directives_without_prompt() if directive_ids else 0
@@ -611,10 +652,11 @@ class TaskActionsMixin:
         )
 
         tasks = task_usecases.get_tasks_for_date(db_search, date_str)
-        if not tasks:
+        writable = self._drop_read_only_tasks([task.get("id") for task in tasks])
+        if not writable:
             return
 
-        count = len(tasks)
+        count = len(writable)
         msg = (
             t(
                 "dialog.common.delete_all_date_msg",
@@ -700,7 +742,7 @@ class TaskActionsMixin:
             logger.exception("Error updating directive priority for directive_id=%s", directive_id)
 
     def toggle_checklist_item(self, link_id):
-        if task_usecases.toggle_checklist_item(db_checklist, link_id):
+        if task_usecases.toggle_checklist_item(db_checklist, db_task, link_id):
             self._refresh_all_panels()
 
     def reset_checklist_items(self, task_id):

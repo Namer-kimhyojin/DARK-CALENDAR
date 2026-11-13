@@ -134,6 +134,16 @@ class WeatherWidgetLoadingTests(unittest.TestCase):
         )
         self.widget._set("met_cache_last_modified", "Mon, 05 Oct 2026 01:00:00 GMT")
 
+    def test_loading_status_uses_app_caption_without_changing_weather_template_size(self):
+        from calendar_app.shared.typography import get_typography_scale
+
+        self.owner.settings.setValue("font_size", 24)
+        template_size = self.widget._get("font_size")
+        self.widget._apply_appearance()
+        caption_px = get_typography_scale(self.owner.settings).caption_px
+        self.assertIn(f"font-size: {caption_px}px", self.widget._status_label.styleSheet())
+        self.assertEqual(self.widget._get("font_size"), template_size)
+
     def test_legacy_combo_tuple_is_repaired_and_timer_starts(self):
         self.widget._set("refresh_interval", ("분", 5))
         self.widget._update_refresh_interval()

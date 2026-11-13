@@ -26,7 +26,11 @@ class CalendarSyncActionsMixin:
             return []
         started = coordinator.sync(provider)
         if not started and not any(s["busy"] for s in coordinator.states.values()):
-            self.open_calendar_sync_hub()
+            google = coordinator.states.get("google", {})
+            if provider in (None, "google") and google.get("waiting_for_auth"):
+                self.open_calendar_sync_hub(section="services")
+            else:
+                self.open_calendar_sync_hub()
         return started
 
     @pyqtSlot()

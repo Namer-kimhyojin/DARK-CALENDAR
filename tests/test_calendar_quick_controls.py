@@ -178,6 +178,29 @@ class CalendarQuickControlsTests(TemporaryDatabaseTestCase):
         finally:
             dialog.deleteLater()
 
+    def test_display_form_uses_effective_light_family_without_overwriting_saved_base(self):
+        for key, value in {
+            "text_theme": "light",
+            "panel_base_color": "#121827",
+            "theme_color": "#c5a3f5",
+            "appearance_style_family": "navy_lilac",
+            "appearance_accent_source": "family",
+            "appearance_family_light_base": "#f6f7fb",
+            "appearance_family_light_accent": "#7653c4",
+        }.items():
+            self.settings.setValue(key, value)
+        dialog = controls.CalendarVisibilityDialog(self.host)
+        try:
+            dialog.show()
+            self.qapp.processEvents()
+            image = dialog.grab().toImage()
+            self.assertGreater(image.pixelColor(3, image.height() // 2).lightnessF(), 0.85)
+            self.assertEqual(self.settings.value("panel_base_color"), "#121827")
+            self.assertEqual(self.settings.value("theme_color"), "#c5a3f5")
+        finally:
+            dialog.close()
+            dialog.deleteLater()
+
     def test_main_toolbar_uses_options_without_duplicate_preferences(self):
         for mode, layout in (("monthly", "date"), ("weekly_1", "time"), ("weekly_1", "date")):
             with self.subTest(mode=mode, layout=layout):

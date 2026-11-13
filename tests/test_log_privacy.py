@@ -66,15 +66,18 @@ def test_formatter_covers_chained_exceptions_and_preserves_record():
     assert record.exc_text is None
 
 
-def test_both_startup_handlers_use_privacy_formatter(tmp_path, monkeypatch):
+def test_both_startup_handlers_protect_oauth_diagnostics(tmp_path, monkeypatch, capsys):
     from calendar_app.infrastructure.runtime import crash_bootstrap
 
     configured = {}
     monkeypatch.setattr(logging, "basicConfig", lambda **kwargs: configured.update(kwargs))
     monkeypatch.setattr(crash_bootstrap.faulthandler, "enable", lambda **kwargs: None)
     monkeypatch.setattr(sys, "excepthook", sys.excepthook)
-    stream = crash_bootstrap.setup_crash_logging(str(tmp_path / "isolated.log"))
+    monkeypatch.setenv("DARK_CALENDAR_DEBUG", "1")
+    log_path = tmp_path / "isolated.log"
+    stream = crash_bootstrap.setup_crash_logging(str(log_path))
     try:
+        assert configured["level"] == logging.DEBUG
         assert len(configured["handlers"]) == 2
         for handler in configured["handlers"]:
             assert isinstance(handler.formatter, PrivacyFormatter)
@@ -88,6 +91,26 @@ def test_both_startup_handlers_use_privacy_formatter(tmp_path, monkeypatch):
                 None,
             )
             assert "SYNTHETIC_PRIVATE_VALUE" not in handler.format(record)
+            for name, level, message in (
+                (
+                    "requests_oauthlib.oauth2_session",
+                    logging.DEBUG,
+                    "Generated new state SYNTHETIC_PRIVATE_STATE.",
+                ),
+                ("oauthlib.oauth2", logging.DEBUG, "SYNTHETIC_PRIVATE_PAYLOAD"),
+                ("requests_oauthlib.oauth2_session", logging.WARNING, "safe library warning"),
+                ("calendar_app.infrastructure.google_sync.service", logging.DEBUG, "auth_denied"),
+            ):
+                handler.handle(logging.LogRecord(name, level, __file__, 1, message, (), None))
+
+        for output in (
+            capsys.readouterr().out,
+            log_path.read_text(encoding="utf-8", errors="strict"),
+        ):
+            assert "SYNTHETIC_PRIVATE_STATE" not in output
+            assert "SYNTHETIC_PRIVATE_PAYLOAD" not in output
+            assert "safe library warning" in output
+            assert "auth_denied" in output
     finally:
         if stream:
             stream.close()
@@ -98,3 +121,20 @@ def test_both_startup_handlers_use_privacy_formatter(tmp_path, monkeypatch):
 def test_safe_error_codes_remain_diagnostic():
     message = "network_unavailable; HTTP 429; sqlite SQLITE_BUSY"
     assert redact_diagnostic_text(message) == message
+
+
+def test_large_log_rotates_before_handles_open_and_keeps_writing(tmp_path, monkeypatch):
+    from calendar_app.infrastructure.runtime import crash_bootstrap
+
+    log_path = tmp_path / "crash.log"
+    log_path.write_bytes(b"x" * 64)
+    monkeypatch.setattr(crash_bootstrap, "_LOG_MAX_BYTES", 32)
+
+    crash_bootstrap._rotate_log_at_startup(str(log_path))
+
+    assert not log_path.exists()
+    assert (tmp_path / "crash.log.1").read_bytes() == b"x" * 64
+    log_path.write_bytes(b"y" * 64)
+    crash_bootstrap._rotate_log_at_startup(str(log_path))
+    assert (tmp_path / "crash.log.2").read_bytes() == b"x" * 64
+    assert (tmp_path / "crash.log.1").read_bytes() == b"y" * 64

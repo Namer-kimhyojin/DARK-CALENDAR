@@ -3,12 +3,13 @@
 
 import os
 
-from PyQt6.QtCore import QTimer, QUrl
+from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import QApplication, QMessageBox, QSystemTrayIcon
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.runtime import system_manager
+from calendar_app.presentation.main_window.top_bar_shelf import TopBarShelf
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 
@@ -151,10 +152,7 @@ class WindowShellActionsMixin:
         self._apply_lock_mode_to_docks(is_checked)
         self._update_lock_overlay_geometry()
 
-        # 타이틀바 숨김/표시
-        top_bar_frame = getattr(self, "top_bar_frame", None)
-        if top_bar_frame is not None:
-            top_bar_frame.setVisible(not is_checked)
+        self._sync_top_bar_visibility()
 
         # 오버레이 위젯 드래그/리사이즈 잠금
         if hasattr(self, "overlay_manager"):
@@ -177,6 +175,7 @@ class WindowShellActionsMixin:
             "slider",
             "search_edit",
             "widget_mode_btn",
+            "navigation_rail",
         ]
         for attr in _LOCKABLE:
             widget = getattr(self, attr, None)
@@ -327,7 +326,21 @@ class WindowShellActionsMixin:
     # ------------------------------------------------------------------ #
     # 토스트 / 트레이
     # ------------------------------------------------------------------ #
-    def show_toast(self, title, message):
+    def show_toast(self, title, message, *, system=False):
+        if not system:
+            try:
+                from calendar_app.presentation.widgets.feedback_toast import show_feedback_toast
+
+                if show_feedback_toast(self, title, message) is not None:
+                    return
+            except Exception:
+                # Keep notification delivery available if a transient card cannot
+                # be created, including calls outside the GUI-thread boundary.
+                pass
+        self.show_system_toast(title, message)
+
+    def show_system_toast(self, title, message):
+        """Retain the native route for explicitly requested system notifications."""
         try:
             from winotify import Notification
 
@@ -371,23 +384,61 @@ class WindowShellActionsMixin:
         toggle_fullscreen(self)
 
     def toggle_top_bar(self):
-        visible = self.top_bar_frame.isVisible()
-        self.top_bar_frame.setVisible(not visible)
+        """Ctrl+Shift+B: switch between a pinned and an auto-hidden top bar."""
+        shelf = getattr(self, "_top_bar_menu_wrapper", None)
+        if isinstance(shelf, TopBarShelf):
+            shelf.toggle()
+            self._sync_top_bar_visibility()
+        else:
+            self.set_top_bar_visible(not self.top_bar_frame.isVisible())
+
+    def set_top_bar_visible(self, visible):
+        """Compatibility: showing pins the bar, hiding turns on auto-hide."""
+        shelf = getattr(self, "_top_bar_menu_wrapper", None)
+        if isinstance(shelf, TopBarShelf):
+            shelf.set_user_visible(visible)
+            self._sync_top_bar_visibility()
+        else:
+            self.top_bar_frame.setVisible(visible)
+
+    def toggle_navigation_rail(self):
+        rail = getattr(self, "navigation_rail", None)
+        if rail is not None and rail.isEnabled():
+            rail.toggleViewAction().trigger()
+
+    def set_top_bar_auto_hide(self, enabled):
+        shelf = getattr(self, "_top_bar_menu_wrapper", None)
+        if isinstance(shelf, TopBarShelf):
+            shelf.set_auto_hide(enabled)
+            self._sync_top_bar_visibility()
+
+    def toggle_top_bar_auto_hide(self):
+        shelf = getattr(self, "_top_bar_menu_wrapper", None)
+        if isinstance(shelf, TopBarShelf):
+            self.set_top_bar_auto_hide(not shelf.auto_hide)
 
     def _on_any_dock_float_changed(self):
-        """하나라도 분리되면 상단바 숨김, 모두 도킹 상태일 때만 상단바 표시."""
+        self._sync_top_bar_visibility()
+
+    def _sync_top_bar_visibility(self):
+        """Keep lock, detached panels, and both top-bar preferences in agreement."""
         any_floating = any(
-            getattr(self, attr).isFloating()
+            dock.isFloating()
             for attr in ("left_dock", "center_dock", "routine_dock", "directive_dock")
-            if hasattr(self, attr)
+            if (dock := getattr(self, attr, None)) is not None
         )
-        frame = getattr(self, "top_bar_frame", None)
-        if frame is not None:
-            frame.setVisible(not any_floating)
-        act = getattr(self, "act_topbar", None)
-        if act is not None:
-            act.setChecked(not any_floating)
-            act.setEnabled(not any_floating)
+        suppressed = bool(getattr(self, "is_locked", False)) or any_floating
+        shelf = getattr(self, "_top_bar_menu_wrapper", None)
+        if isinstance(shelf, TopBarShelf):
+            shelf.set_suppressed(suppressed)
+        else:
+            frame = getattr(self, "top_bar_frame", None)
+            if frame is not None:
+                frame.setVisible(not suppressed)
+        auto_hide = getattr(self, "act_topbar_auto_hide", None)
+        if auto_hide is not None and isinstance(shelf, TopBarShelf):
+            auto_hide.setChecked(shelf.auto_hide)
+            auto_hide.setEnabled(not suppressed)
 
     def _ensure_widget_mode_controller(self):
         """Compatibility entry point backed by the unified coordinator."""
@@ -493,6 +544,20 @@ class WindowShellActionsMixin:
         else:
             current = self._calendar_toolbar_visible_setting()
         self.set_calendar_toolbar_visible(not current)
+
+    def keyPressEvent(self, event):
+        """Esc leaves focus fullscreen first, otherwise clears the selection."""
+        if event.key() == Qt.Key.Key_Escape:
+            self.handle_escape_key()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def handle_escape_key(self):
+        from calendar_app.presentation.focus_mode import exit_focus_fullscreen
+
+        if not exit_focus_fullscreen(self):
+            self.clear_task_selection()
 
     def toggle_focus_mode(self):
         from calendar_app.presentation.focus_mode import toggle_focus_mode

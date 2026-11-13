@@ -34,13 +34,6 @@ def _blend_qcolor(base: QColor, mix: QColor, ratio: float) -> QColor:
     return _pws.blend(base, mix, ratio)
 
 
-def _build_widget_mode_theme_tokens(app: QWidget) -> dict[str, str]:
-    settings = getattr(app, "settings", None) if app is not None else None
-    tokens = _resolve_widget_mode_tokens(app=app)
-    tokens = _apply_registered_widget_mode_skin(tokens, settings)
-    return _apply_configured_widget_color(tokens, settings)
-
-
 def _normalize_widget_color_mode(raw_value: object) -> str:
     raw = str(raw_value or "").strip()
     if not raw:
@@ -282,6 +275,8 @@ def _apply_widget_color_override(
 
 def _apply_configured_widget_color(tokens: dict[str, str], settings) -> dict[str, str]:
     """Apply a user accent, or the selected skin's accent when no override exists."""
+    if tokens.get("_main_theme_linked") == "true":
+        return dict(tokens)
     mode = _read_widget_color_mode_from_settings(settings)
     if mode == _WIDGET_COLOR_DEFAULT:
         skin = get_widget_mode_skin(read_widget_mode_skin_id(settings))
@@ -292,6 +287,8 @@ def _apply_configured_widget_color(tokens: dict[str, str], settings) -> dict[str
 def _apply_widget_background_opacity(
     tokens: dict[str, str], opacity_percent: int
 ) -> dict[str, str]:
+    if tokens.get("_main_theme_linked") == "true":
+        return dict(tokens)
     factor = max(0.30, min(1.0, int(opacity_percent) / 100.0))
     updated = dict(tokens)
     background_keys = {
@@ -364,6 +361,12 @@ def _apply_panel_theme_override(tokens: dict[str, str], theme: str) -> dict[str,
 def _apply_registered_widget_mode_skin(tokens: dict[str, str], settings) -> dict[str, str]:
     skin_id = read_widget_mode_skin_id(settings)
     skin = get_widget_mode_skin(skin_id)
+    if tokens.get("_main_theme_linked") == "true":
+        themed = dict(tokens)
+        for key, value in skin.token_overrides.items():
+            if str(value).isdigit():
+                themed[key] = value
+        return themed
     themed = _apply_panel_theme_override(tokens, skin.base_theme)
     return apply_widget_mode_skin(themed, skin.skin_id)
 

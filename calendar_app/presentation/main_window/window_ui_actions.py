@@ -37,7 +37,7 @@ def build_ui_font(family, size):
     font = QFont()
     font.setFamily(safe_family)
     if size is None or size <= 0:
-        size = 10
+        size = 11
     else:
         size = max(1, size)
     font.setPointSize(size)
@@ -495,6 +495,7 @@ class MainWindowUiActionsMixin:
     def apply_panel_background_color(self, color_hex, remember=True):
         hx = self._normalize_hex_color(color_hex)
         self.settings.setValue("panel_base_color", hx)
+        self.settings.setValue("appearance_base_source", "custom")
         if remember:
             self._remember_panel_color(hx)
         self._apply_panel_background_color_refresh()
@@ -540,12 +541,10 @@ class MainWindowUiActionsMixin:
         current_border_opacity = as_int(
             self.settings.value("last_border_opacity", 80), 80, minimum=0, maximum=255
         )
-        current_text_opacity = as_int(
-            self.settings.value("last_text_opacity", 255), 255, minimum=0, maximum=255
-        )
 
         current_text_theme = str(self.settings.value("text_theme", "dark"))
-        _tpal = derive_text_palette(current_snapshot.text_theme, current_theme)
+        # The editor shows chosen colors, not the faded result on screen.
+        _tpal = derive_text_palette(current_snapshot.text_theme, current_theme, faded=False)
         if current_text_theme == "custom":
             current_text_primary = str(
                 self.settings.value("custom_text_primary", _tpal["text_primary"])
@@ -564,7 +563,7 @@ class MainWindowUiActionsMixin:
 
         app_font = QApplication.instance().font()
         current_font_family = str(self.settings.value("font_family", app_font.family()))
-        default_font_size = app_font.pointSize() if app_font.pointSize() > 0 else 10
+        default_font_size = app_font.pointSize() if app_font.pointSize() > 0 else 11
         current_font_size = as_int(
             self.settings.value("font_size", default_font_size),
             default_font_size,
@@ -578,7 +577,9 @@ class MainWindowUiActionsMixin:
             current_theme=current_theme,
             current_opacity=current_opacity,
             current_border_opacity=current_border_opacity,
-            current_text_opacity=current_text_opacity,
+            current_text_opacity=as_int(
+                self.settings.value("text_opacity", 255), 255, minimum=0, maximum=255
+            ),
             current_text_primary=current_text_primary,
             current_text_secondary=current_text_secondary,
             current_text_muted=current_text_muted,
@@ -591,6 +592,18 @@ class MainWindowUiActionsMixin:
             current_accent_source=str(
                 self.settings.value("appearance_accent_source", "custom") or "custom"
             ),
+            current_base_source=str(
+                self.settings.value("appearance_base_source", "family") or "family"
+            ),
+            current_original_base=str(
+                self.settings.value("panel_base_color", current_base) or current_base
+            ),
+            current_style_family_variants={
+                key: str(self.settings.value(f"appearance_family_{key}", "") or "")
+                for key in ("dark_base", "dark_accent", "light_base", "light_accent")
+            },
+            current_border_source=str(self.settings.value("appearance_border_source", "") or ""),
+            current_border_color=str(self.settings.value("panel_border_color", "") or ""),
         )
         if dlg.exec() != PanelColorPickerDialog.DialogCode.Accepted:
             return
@@ -603,7 +616,14 @@ class MainWindowUiActionsMixin:
         self._remember_panel_color(new_base)
 
         style_family = dlg.selected_style_family()
+        base_source_getter = getattr(dlg, "selected_base_source", None)
+        base_source = (
+            base_source_getter()
+            if callable(base_source_getter)
+            else ("family" if style_family else "custom")
+        )
         self.settings.setValue("appearance_style_family", style_family)
+        self.settings.setValue("appearance_base_source", base_source)
         self.settings.setValue("appearance_accent_source", dlg.selected_accent_source())
         family_variants = dlg.selected_style_family_variants()
         for variant_key in (
@@ -623,7 +643,19 @@ class MainWindowUiActionsMixin:
 
         set_opacity_byte(self.settings, new_opacity)
         self.settings.setValue("last_border_opacity", dlg.selected_border_opacity())
-        self.settings.setValue("last_text_opacity", dlg.selected_text_opacity())
+        text_opacity_getter = getattr(dlg, "selected_text_opacity", None)
+        if callable(text_opacity_getter):
+            self.settings.setValue("text_opacity", text_opacity_getter())
+        # Until a border is chosen the app keeps its neutral lines; once chosen,
+        # border color and border opacity both apply app-wide.
+        border_source = getattr(dlg, "selected_border_source", lambda: "")()
+        if border_source:
+            self.settings.setValue("appearance_border_source", border_source)
+            border_hex = getattr(dlg, "selected_border_hex", lambda: "")()
+            if border_hex:
+                self.settings.setValue("panel_border_color", border_hex)
+            else:
+                self.settings.remove("panel_border_color")
         if hasattr(self, "slider"):
             self.slider.blockSignals(True)
             self.slider.setValue(new_opacity)
@@ -694,7 +726,7 @@ class MainWindowUiActionsMixin:
         setting_key, label_key, fallback_label = role_map[role]
         theme_color = self.settings.value("theme_color", "#4da6ff")
         current_theme = self.settings.value("text_theme", "dark")
-        pal = derive_text_palette(current_theme, theme_color)
+        pal = derive_text_palette(current_theme, theme_color, faded=False)
         fallback_map = {
             "primary": pal["text_primary"],
             "secondary": pal["text_secondary"],
@@ -809,7 +841,7 @@ class MainWindowUiActionsMixin:
         def update_preview():
             current_size = QApplication.instance().font().pointSize()
             if current_size <= 0:
-                current_size = 10
+                current_size = 11
             f = build_ui_font(font_combo.currentFont().family(), current_size)
             preview_lbl.setFont(f)
 
@@ -833,19 +865,19 @@ class MainWindowUiActionsMixin:
             family = font_combo.currentFont().family()
             size = QApplication.instance().font().pointSize()
             if size <= 0:
-                size = 10
+                size = 11
             self.apply_font_settings(family, size)
             self.settings.setValue("font_family", family)
             self.settings.setValue("font_size", size)
 
     def apply_font_settings(self, family, size, refresh=True):
         if size <= 0:
-            size = 10
+            size = 11
         snapshot = build_theme_snapshot(self.settings, persist_opacity=True)
         font = build_ui_font(family, size)
         QApplication.instance().setFont(font)
 
-        safe_size = font.pointSize() if font.pointSize() > 0 else (size if size > 0 else 10)
+        safe_size = font.pointSize() if font.pointSize() > 0 else (size if size > 0 else 11)
         QApplication.instance().setStyleSheet(
             build_tooltip_stylesheet(
                 safe_size,
@@ -855,6 +887,9 @@ class MainWindowUiActionsMixin:
                 snapshot.ui_palette,
             )
         )
+        from calendar_app.presentation.main_window.dock_factory import build_dock_manager_style
+
+        # Keep the panel separator rules: this window is also the dock manager.
         self.setStyleSheet(
             build_global_stylesheet(
                 font.family(),
@@ -864,6 +899,8 @@ class MainWindowUiActionsMixin:
                 snapshot.panel_base_color,
                 snapshot.ui_palette,
             )
+            + "\n"
+            + build_dock_manager_style(self.settings, snapshot.theme_color)
         )
 
         if refresh:

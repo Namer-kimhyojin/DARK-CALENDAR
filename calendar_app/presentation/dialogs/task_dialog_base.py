@@ -17,6 +17,8 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QSizePolicy,
+    QStyle,
+    QStyleOptionComboBox,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -73,13 +75,24 @@ class BaseTaskDialog(QDialog):
 
     def _ui_tokens(self):
         if self._dialog_ui_tokens is None:
-            self._dialog_ui_tokens = get_dialog_theme_tokens()
+            self._dialog_ui_tokens = get_dialog_theme_tokens(settings=self._theme_settings())
         return self._dialog_ui_tokens
 
     def _dialog_metrics(self):
         if self._dialog_metric_tokens is None:
-            self._dialog_metric_tokens = get_dialog_metric_tokens(apply_overrides=True)
+            self._dialog_metric_tokens = get_dialog_metric_tokens(
+                apply_overrides=True, settings=self._theme_settings()
+            )
         return self._dialog_metric_tokens
+
+    def _theme_settings(self):
+        owner = self.parentWidget()
+        while owner is not None:
+            settings = getattr(owner, "settings", None)
+            if settings is not None and callable(getattr(settings, "value", None)):
+                return settings
+            owner = owner.parentWidget()
+        return None
 
     def _accent_rgba(self, alpha: float) -> str:
         accent = QColor(self._ui_tokens().get("accent", "#4da6ff"))
@@ -127,10 +140,13 @@ class BaseTaskDialog(QDialog):
         return container, layout
 
     def _set_editor_height(self, *widgets, min_height=34):
+        metrics = self._dialog_metrics()
+        outer_height = int(metrics["field_height"]) + 2 * int(metrics["field_padding_y"]) + 2
+        height = max(min_height, outer_height)
         for widget in widgets:
             if widget is not None:
-                widget.setMinimumHeight(min_height)
-                widget.setMaximumHeight(min_height + 4)
+                widget.setMinimumHeight(height)
+                widget.setMaximumHeight(height + 4)
 
     def _create_additional_info_section(self):
         context_group, context_layout = self._create_section(
@@ -546,10 +562,32 @@ class BaseTaskDialog(QDialog):
             )
         )
 
+    def _mark_rule_chosen_by_user(self, *_args):
+        self._rule_chosen_by_user = True
+
+    def _reseed_rule_from_start_date(self, *_args):
+        """Until a rule is chosen, keep the rule controls on the start date.
+
+        The controls otherwise keep their first items (Monday, day 1), so the
+        preview and the created series disagreed with the picked start date.
+        """
+        if self.task_type != "routine" or getattr(self, "_rule_chosen_by_user", False):
+            return
+        if not hasattr(self, "rule_mode_combo") or getattr(self, "start_date", None) is None:
+            return
+        self._routine_cycle_type = self.repeat_cycle_combo.currentData() or "monthly"
+        self._recurrence_config = normalize_recurrence_config(
+            self.start_date.date(), self._routine_cycle_type, ""
+        )
+        self._apply_recurrence_to_controls()
+        self._sync_from_recurrence_controls()
+
     def _apply_routine_recurrence(self, cycle_type=None, recurrence=None):
         if self.task_type != "routine":
             return
         cycle_type = cycle_type or "single"
+        if recurrence and cycle_type != "single":
+            self._rule_chosen_by_user = True
         self._routine_cycle_type = "monthly" if cycle_type == "single" else cycle_type
         self._routine_recurrence = recurrence
 
@@ -777,6 +815,54 @@ class BaseTaskDialog(QDialog):
         if hasattr(self, "_update_routine_preview"):
             self._update_routine_preview()
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Widths depend on the dialog stylesheet, which applies once polished.
+        self._fit_repeat_mode_widths()
+
+    def _fit_repeat_mode_widths(self):
+        """Size the repeat cycle/rule selectors to their longest translated option.
+
+        Fixed 86/116px selectors clipped the labels in 18 of 19 locales. The
+        hidden placeholder shares the stack width so switching single/repeat
+        does not shift the row.
+        """
+        controls = getattr(self, "repeat_mode_controls", None)
+        stack = getattr(self, "repeat_mode_stack", None)
+        placeholder = getattr(self, "repeat_mode_placeholder", None)
+        if controls is None or stack is None or placeholder is None:
+            return
+        widths = []
+        for combo, minimum in (
+            (getattr(self, "repeat_cycle_combo", None), 86),
+            (getattr(self, "rule_mode_combo", None), 116),
+        ):
+            if combo is None:
+                continue
+            combo.ensurePolished()
+            option = QStyleOptionComboBox()
+            combo.initStyleOption(option)
+            field = combo.style().subControlRect(
+                QStyle.ComplexControl.CC_ComboBox,
+                option,
+                QStyle.SubControl.SC_ComboBoxEditField,
+                combo,
+            )
+            chrome = max(0, combo.width() - field.width())
+            metrics = combo.fontMetrics()
+            longest = max(
+                (metrics.horizontalAdvance(combo.itemText(i)) for i in range(combo.count())),
+                default=0,
+            )
+            width = max(minimum, longest + chrome + 4)
+            combo.setFixedWidth(width)
+            widths.append(width)
+        spacing = max(0, controls.layout().spacing()) if controls.layout() else 0
+        total = max(210, sum(widths) + spacing * max(0, len(widths) - 1))
+        placeholder.setFixedSize(total, placeholder.height() or 34)
+        stack.setMinimumWidth(total)
+        stack.setMaximumWidth(total)
+
     def _sync_routine_stable_heights(self):
         """반복업무 설정 변경 시 레이아웃 흔들림을 방지하기 위해 높이를 고정합니다."""
         # 1. 반복 주기 선택 영역 (매월/매주 등 콤보박스)
@@ -899,13 +985,20 @@ class BaseTaskDialog(QDialog):
         # ── 운영 설정 (우선순위/상태/색상) ────────────────────
         layout.addWidget(self._create_ops_section())
 
-        # ── 상세 메모 ─────────────────────────────────────────
+        layout.addWidget(self._create_memo_section())
+        layout.addStretch()
+        return w
+
+    def _create_memo_section(self, *, compact=False):
+        """Build the same memo editor for the detail tab and schedule sheet."""
         memo_group, memo_layout = self._create_section(
             t("dialog.task.memo_section"), icon=ICON.MEMO
         )
         self.memo_edit = QTextEdit()
         self.memo_edit.setPlaceholderText(t("dialog.task.memo_placeholder_detail"))
-        self.memo_edit.setMinimumHeight(300)
+        self.memo_edit.setMinimumHeight(92 if compact else 300)
+        if compact:
+            self.memo_edit.setMaximumHeight(120)
         from calendar_app.shared.tag_highlighter import HashTagHighlighter
 
         self._memo_highlighter = HashTagHighlighter(self.memo_edit.document())
@@ -923,9 +1016,7 @@ class BaseTaskDialog(QDialog):
         )
         memo_layout.addWidget(tag_hint)
 
-        layout.addWidget(memo_group)
-        layout.addStretch()
-        return w
+        return memo_group
 
     def _build_checklist_tab(self):
         w = QWidget()

@@ -9,14 +9,18 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
+from calendar_app.shared.typography import get_typography_scale
 
 
 def _resolve_tokens(tokens: dict | None = None) -> dict:
-    return dict(tokens or get_dialog_theme_tokens())
+    supplied = dict(tokens or {})
+    resolved = get_dialog_theme_tokens(theme_color=supplied.get("accent"))
+    resolved.update(supplied)
+    return resolved
 
 
 def _resolve_metrics(metrics: dict | None = None) -> dict:
-    return dict(metrics or get_dialog_metric_tokens(apply_overrides=True))
+    return {**get_dialog_metric_tokens(apply_overrides=True), **(metrics or {})}
 
 
 def _qcolor(value: object, fallback: str) -> QColor:
@@ -85,10 +89,11 @@ def build_task_editor_stylesheet(tokens: dict | None = None, metrics: dict | Non
     border = t.get("border", "rgba(255,255,255,0.16)")
     border_soft = t.get("border_soft", "rgba(255,255,255,0.10)")
     surface_bg = t.get("surface_bg", "#16161b")
+    floating_bg = t.get("floating_bg", surface_bg)
     surface_item = t.get("surface_item", "#111116")
     surface_hover = t.get("surface_hover", "#18181f")
     tab_idle_bg = t.get("tab_idle_bg", "rgba(255,255,255,0.02)")
-    tab_active_bg = t.get("tab_active_bg", "rgba(255,255,255,0.04)")
+    tab_active_bg = t.get("tab_active_bg", accent_soft)
     tab_text = t.get("tab_text", t.get("text_muted", "#9aa0ad"))
     tab_text_hover = t.get("tab_text_hover", t.get("text_secondary", "#c8ccd4"))
     tab_text_active = t.get("tab_text_active", accent)
@@ -103,12 +108,13 @@ def build_task_editor_stylesheet(tokens: dict | None = None, metrics: dict | Non
     tab_radius = int(m.get("tab_radius", 12))
     pane_radius = max(int(m.get("group_radius", 14)), tab_radius + 2)
     dialog_radius = max(pane_radius, int(m.get("field_radius", 10)) + 3)
-    label_font_px = max(13, int(m.get("base_font_pt", 14)) - 1)
-    title_font_px = max(17, int(m.get("base_font_pt", 14)) + 3)
+    typography = get_typography_scale(base_pt=float(m["base_font_pt"]) * 0.75)
+    label_font_px = typography.body_px
+    title_font_px = int(m["title_font_pt"])
 
     return f"""
 QDialog#TaskEditorDialog {{
-    background-color: {surface_bg};
+    background-color: {floating_bg};
     border: 1px solid {border};
     border-radius: {dialog_radius}px;
 }}
@@ -119,10 +125,16 @@ QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs {{
 }}
 QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs::pane {{
     border: 1px solid {border_soft};
-    background: {tab_active_bg};
+    background: {floating_bg};
     border-radius: {pane_radius}px;
     top: -1px;
     padding: 2px;
+}}
+QDialog#TaskEditorDialog QScrollArea#TaskEditorScroll,
+QDialog#TaskEditorDialog QWidget#TaskEditorViewport,
+QDialog#TaskEditorDialog QWidget#TaskEditorPage {{
+    background: transparent;
+    border: none;
 }}
 QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar {{
     background: transparent;
@@ -147,7 +159,7 @@ QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar::tab:hover {{
     border-color: {border};
 }}
 QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar::tab:selected {{
-    background: {accent_soft};
+    background: {tab_active_bg};
     color: {tab_text_active};
     border: 2px solid {accent};
     margin-bottom: 8px;
@@ -174,6 +186,7 @@ QDialog#TaskEditorDialog QLabel#TaskWeekdayBadge {{
 QDialog#TaskEditorDialog QLineEdit#TaskTitleEdit {{
     color: {text_primary};
     font-size: {title_font_px}px;
+    min-height: {max(int(m["field_height"]), round(title_font_px * 1.5))}px;
     font-weight: 700;
     border: none;
     border-bottom: 2px solid {border_soft};
@@ -339,6 +352,105 @@ QDialog#TaskEditorDialog QStackedWidget {{
     background: transparent;
     border: none;
 }}
+
+/* Schedule sheet keeps the active theme's surfaces and accent. */
+QDialog#TaskEditorDialog[sheetLayout="true"] {{
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 {surface_bg}, stop:1 {surface_item});
+}}
+QDialog#TaskEditorDialog[sheetLayout="true"] QTabWidget#TaskEditorTabs::pane {{
+    border: none;
+    background: transparent;
+    padding: 0px;
+    top: 0px;
+}}
+QDialog#TaskEditorDialog QFrame#TaskEditorHeader {{
+    background: transparent;
+    border: none;
+}}
+QDialog#TaskEditorDialog QLabel#TaskEditorHeading {{
+    color: {text_primary};
+    font-size: {title_font_px}px;
+    font-weight: 700;
+}}
+QDialog#TaskEditorDialog QLabel#TaskEditorDate {{
+    color: {text_muted};
+    font-size: {label_font_px}px;
+}}
+QDialog#TaskEditorDialog QToolButton#TaskEditorClose {{
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: {int(m.get("field_radius", 10))}px;
+    padding: 6px;
+    min-width: 22px;
+    min-height: 22px;
+}}
+QDialog#TaskEditorDialog QToolButton#TaskEditorClose:hover {{
+    background: {surface_hover};
+    border-color: {border_soft};
+}}
+QDialog#TaskEditorDialog QToolButton#TaskEditorClose:focus {{
+    border-color: {accent};
+}}
+QDialog#TaskEditorDialog[sheetLayout="true"] QLineEdit#TaskTitleEdit {{
+    font-size: {typography.section_px}px;
+    padding: 4px 0px 10px 0px;
+    border-bottom: 2px solid {list_selected_border};
+}}
+QDialog#TaskEditorDialog[sheetLayout="true"] QLineEdit#TaskTitleEdit:focus {{
+    border-bottom-color: {accent};
+}}
+QDialog#TaskEditorDialog[sheetLayout="true"] QDateEdit,
+QDialog#TaskEditorDialog[sheetLayout="true"] QTimeEdit,
+QDialog#TaskEditorDialog[sheetLayout="true"] QComboBox#TaskCalendarCombo {{
+    min-height: 32px;
+    background: {surface_item};
+    border-color: {border};
+}}
+QDialog#TaskEditorDialog[sheetLayout="true"] QTextEdit {{
+    background: {surface_item};
+    border: 1px solid {border};
+    border-radius: {int(m.get("field_radius", 10))}px;
+    padding: 9px;
+}}
+QDialog#TaskEditorDialog QPushButton#TaskEditorDetailsToggle {{
+    background: transparent;
+    color: {text_primary};
+    border: none;
+    border-top: 1px solid {border_soft};
+    border-bottom: 1px solid {border_soft};
+    border-radius: 0px;
+    text-align: left;
+    font-size: {label_font_px + 1}px;
+    font-weight: 700;
+    padding: 14px 2px;
+}}
+QDialog#TaskEditorDialog QPushButton#TaskEditorDetailsToggle:hover,
+QDialog#TaskEditorDialog QPushButton#TaskEditorDetailsToggle:checked {{
+    color: {tab_text_active};
+    background: {accent_soft};
+}}
+QDialog#TaskEditorDialog QPushButton#TaskEditorDetailsToggle:focus {{
+    border: 1px solid {accent};
+}}
+QDialog#TaskEditorDialog QFrame#TaskEditorFooter {{
+    background: transparent;
+    border: none;
+    border-top: 1px solid {border_soft};
+}}
+QDialog#TaskEditorDialog[sheetLayout="false"] QFrame#TaskEditorFooter QPushButton#primary_btn,
+QDialog#TaskEditorDialog[sheetLayout="false"] QFrame#TaskEditorFooter QPushButton#ghost_btn,
+QDialog#TaskEditorDialog[sheetLayout="false"] QFrame#TaskEditorFooter QPushButton#danger_btn {{
+    min-height: {max(34, int(m.get("button_height", 24)))}px;
+    max-height: {max(34, int(m.get("button_height", 24)))}px;
+    padding: {int(m.get("button_padding_y", 4))}px {int(m.get("button_padding_x", 16))}px;
+    border: 1px solid {border_soft};
+}}
+QDialog#TaskEditorDialog[sheetLayout="true"] QFrame#TaskEditorFooter QPushButton#primary_btn,
+QDialog#TaskEditorDialog[sheetLayout="true"] QFrame#TaskEditorFooter QPushButton#ghost_btn,
+QDialog#TaskEditorDialog[sheetLayout="true"] QFrame#TaskEditorFooter QPushButton#danger_btn {{
+    min-height: 36px;
+}}
 QDialog#TaskEditorDialog QListWidget {{
     background: transparent;
     border: 1px solid {border_soft};
@@ -358,7 +470,7 @@ def build_editor_text_style(
     *,
     tone: str = "muted",
     color: str | None = None,
-    font_px: int = 13,
+    font_px: int | None = None,
     weight: str | int | None = None,
     padding: str | None = None,
     margin_top: int | None = None,
@@ -367,6 +479,7 @@ def build_editor_text_style(
     radius: int | None = None,
 ) -> str:
     t = _resolve_tokens(tokens)
+    font_px = get_typography_scale().body_px if font_px is None else font_px
     parts = [
         f"color: {color or _tone_color(t, tone)}",
         f"font-size: {int(font_px)}px",
@@ -391,11 +504,16 @@ def build_editor_hint_style(
     metrics: dict | None = None,
     *,
     tone: str = "accent",
-    font_px: int = 11,
+    font_px: int | None = None,
     weight: str | int = "normal",
 ) -> str:
     t = _resolve_tokens(tokens)
     m = _resolve_metrics(metrics)
+    font_px = (
+        get_typography_scale(base_pt=float(m["base_font_pt"]) * 0.75).caption_px
+        if font_px is None
+        else font_px
+    )
     text_color, background, border = _hint_surface(t, tone)
     return build_editor_text_style(
         t,
@@ -414,9 +532,10 @@ def build_editor_counter_style(
     tokens: dict | None = None,
     *,
     level: str = "normal",
-    font_px: int = 11,
+    font_px: int | None = None,
 ) -> str:
     t = _resolve_tokens(tokens)
+    font_px = get_typography_scale().caption_px if font_px is None else font_px
     level_key = str(level or "normal").lower()
     if level_key == "danger":
         color = t.get("danger_hex", "#ff6b6b")
@@ -441,7 +560,7 @@ def build_editor_quick_button_style(
     t = _resolve_tokens(tokens)
     m = _resolve_metrics(metrics)
     theme_defaults = get_dialog_theme_tokens()
-    font_px = max(11, int(m.get("base_font_pt", 14)) - 3)
+    font_px = int(m["base_font_pt"])
     height_offset = -10 if is_quick else 0
     height = max(24 if is_quick else 32, int(m.get("button_height", 34)) + height_offset)
     radius = max(5, int(m.get("button_radius", 8)) - 1)
@@ -526,9 +645,10 @@ def build_settings_style_bundle(
     accent = t.get("accent", "#4da6ff")
     success = t.get("success_hex", "#5ecb8a")
     danger = t.get("danger_hex", "#d25a66")
-    base_font_px = max(12, int(m.get("base_font_pt", 14)))
-    group_radius = max(10, int(m.get("group_radius", 10)))
-    field_radius = max(6, int(m.get("field_radius", 7)))
+    base_font_px = int(m["base_font_pt"])
+    typography = get_typography_scale(base_pt=base_font_px * 0.75)
+    group_radius = max(0, int(m.get("group_radius", 10)))
+    field_radius = max(0, int(m.get("field_radius", 7)))
     surface_item = t.get("surface_item", "#161b28")
     surface_hover = t.get("surface_hover", "#1a2232")
     surface_alt = t.get("surface_alt", surface_item)
@@ -548,7 +668,6 @@ def build_settings_style_bundle(
     input_disabled_bg = t.get("input_disabled_bg", surface_item)
     selection_bg = t.get("list_selected_bg", t.get("accent_soft_bg", _rgba(accent, 0.12, accent)))
     selection_text = t.get("list_selected_text", text_primary)
-    combo_arrow = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%239bacc8' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E"
 
     return {
         "card": (
@@ -558,18 +677,16 @@ def build_settings_style_bundle(
         ),
         "status_bar": (
             "QFrame#statusBar { "
-            f"background-color: {surface_top}; border-bottom: 1px solid {border_soft}; border-radius: 0; "
+            f"background-color: transparent; border-bottom: 1px solid {border_soft}; border-radius: 0; "
             "}"
         ),
         "sidebar_shell": (
             "QFrame#sidebar { "
-            f"background-color: {surface_top}; border-right: 1px solid {border_soft}; border-radius: 0; "
+            f"background-color: transparent; border-right: 1px solid {border_soft}; border-radius: 0; "
             "}"
         ),
         "content_area": (
-            "QWidget#contentArea { "
-            f"background-color: {t.get('surface_bg', '#13161f')}; border-radius: 0; "
-            "}"
+            "QWidget#contentArea { background-color: transparent; border-radius: 0; }"
         ),
         "scroll_shell": (
             "QScrollArea { background-color: transparent; border: none; }"
@@ -589,24 +706,22 @@ def build_settings_style_bundle(
         ),
         "divider": f"QFrame#divider {{ background-color: {border_soft}; min-height: 1px; max-height: 1px; border: none; }}",
         "card_title": build_editor_text_style(
-            t, tone="primary", font_px=base_font_px + 2, weight=700
+            t, tone="primary", font_px=typography.section_px, weight=700
         ),
         "eyebrow": build_editor_text_style(
-            t, tone="accent", font_px=max(11, base_font_px - 2), weight=700
+            t, tone="accent", font_px=typography.caption_px, weight=700
         ),
         "field_label": build_editor_text_style(
-            t, tone="secondary", font_px=max(13, base_font_px - 1), weight=700
+            t, tone="secondary", font_px=base_font_px, weight=700
         ),
-        "help": build_editor_text_style(t, tone="muted", font_px=max(12, base_font_px - 2)),
-        "tip_title": build_editor_text_style(
-            t, tone="primary", font_px=max(13, base_font_px - 1), weight=700
-        ),
-        "tip_body": build_editor_text_style(t, tone="muted", font_px=max(12, base_font_px - 2)),
+        "help": build_editor_text_style(t, tone="muted", font_px=typography.caption_px),
+        "tip_title": build_editor_text_style(t, tone="primary", font_px=base_font_px, weight=700),
+        "tip_body": build_editor_text_style(t, tone="muted", font_px=typography.caption_px),
         "meta_label": build_editor_text_style(
-            t, tone="muted", font_px=max(11, base_font_px - 3), weight=600
+            t, tone="muted", font_px=typography.caption_px, weight=600
         ),
         "meta_value": build_editor_text_style(
-            t, tone="secondary", font_px=max(12, base_font_px - 1), weight=600
+            t, tone="secondary", font_px=typography.caption_px, weight=600
         ),
         "button_secondary": build_editor_quick_button_style(t, m, tone="secondary", is_quick=False),
         "button_accent": build_editor_quick_button_style(t, m, tone="accent", is_quick=False),
@@ -646,9 +761,6 @@ def build_settings_style_bundle(
             f"color: {text_faint}; background-color: {input_disabled_bg}; border-color: {border_soft}; "
             "}"
             "QComboBox::drop-down { border: none; width: 32px; }"
-            "QComboBox::down-arrow { "
-            f'image: url("{combo_arrow}"); width: 10px; height: 6px; '
-            "}"
         ),
         "input_spin": (
             "QSpinBox { "
@@ -675,7 +787,7 @@ def build_settings_style_bundle(
         ),
         "check_toggle": (
             "QCheckBox { "
-            f"color: {text_secondary}; spacing: 8px; font-weight: 600; font-size: {max(13, base_font_px - 1)}px; "
+            f"color: {text_secondary}; spacing: 8px; font-weight: 600; font-size: {base_font_px}px; "
             "}"
             "QCheckBox::indicator { "
             f"border: 2px solid {t.get('check_indicator_border', border)}; "
@@ -689,8 +801,8 @@ def build_settings_style_bundle(
         ),
         "nav_button": (
             "QPushButton { "
-            "background: transparent; border: none; border-left: 3px solid transparent; border-radius: 0; "
-            f"color: {text_muted}; font-size: {max(12, base_font_px - 1)}px; font-weight: 600; "
+            f"background: transparent; border: none; border-left: 3px solid transparent; border-radius: {field_radius}px; "
+            f"color: {text_muted}; font-size: {typography.caption_px}px; font-weight: 600; "
             "padding: 11px 16px; text-align: left; "
             "}"
             "QPushButton:hover { "
@@ -701,27 +813,27 @@ def build_settings_style_bundle(
         "nav_button_active": (
             "QPushButton { "
             f"background: {t.get('accent_soft_bg', _rgba(accent, 0.10, accent))}; "
-            f"border: none; border-left: 3px solid {t.get('accent', accent)}; border-radius: 0; "
-            f"color: {text_primary}; font-size: {max(12, base_font_px - 1)}px; font-weight: 700; "
+            f"border: none; border-left: 3px solid {t.get('accent', accent)}; border-radius: {field_radius}px; "
+            f"color: {text_primary}; font-size: {typography.caption_px}px; font-weight: 700; "
             "padding: 11px 16px; text-align: left; "
             "}"
             "QPushButton:hover { "
-            f"background: {t.get('button_primary_hover_bg', _rgba(accent, 0.18, accent))}; color: {text_primary}; "
+            f"background: {t.get('accent_soft_bg', _rgba(accent, 0.18, accent))}; color: {text_primary}; "
             f"border-left-color: {t.get('button_primary_hover_border', accent)}; "
             "}"
         ),
         "status_separator": f"color: {border_soft}; background: {border_soft};",
         "calendar_row": (
             "QFrame#calRow { "
-            f"background: {surface_item}; border: 1px solid {border_soft}; border-radius: 10px; "
+            f"background: {surface_item}; border: 1px solid {border_soft}; border-radius: {group_radius}px; "
             "}"
             "QFrame#calRow:hover { "
             f"background: {surface_hover}; border-color: {border}; "
             "}"
         ),
-        "calendar_name": f"color: {text_primary}; font-size: 14px; font-weight: 600; background: transparent;",
-        "calendar_meta": f"color: {text_muted}; font-size: 12px; background: transparent;",
-        "calendar_meta_compact": f"color: {text_muted}; font-size: 12px; margin-right: 4px;",
+        "calendar_name": f"color: {text_primary}; font-size: {base_font_px}px; font-weight: 600; background: transparent;",
+        "calendar_meta": f"color: {text_muted}; font-size: {typography.caption_px}px; background: transparent;",
+        "calendar_meta_compact": f"color: {text_muted}; font-size: {typography.caption_px}px; margin-right: 4px;",
         "default_active": build_editor_quick_button_style(t, m, tone="warning"),
         "default_idle": build_editor_quick_button_style(t, m, tone="secondary"),
         "action_separator": f"background: {border}; margin: 8px 4px;",
@@ -730,28 +842,26 @@ def build_settings_style_bundle(
         "empty_state": build_editor_text_style(
             t,
             tone="faint",
-            font_px=max(13, base_font_px - 1),
+            font_px=base_font_px,
             padding="24px 0",
         ),
-        "notice_warning": build_editor_text_style(
-            t, tone="warning", font_px=max(12, base_font_px - 2)
-        ),
+        "notice_warning": build_editor_text_style(t, tone="warning", font_px=typography.caption_px),
         "footer": (
-            "QFrame { "
-            f"background-color: {surface_top}; border-top: 1px solid {border_soft}; border-radius: 0; "
+            'QFrame[role="dialogFooter"] { '
+            f"background-color: transparent; border-top: 1px solid {border_soft}; border-radius: 0; "
             "}"
         ),
         "step_badge": build_editor_hint_style(
-            t, m, tone="accent", font_px=max(12, base_font_px - 2), weight=700
+            t, m, tone="accent", font_px=typography.caption_px, weight=700
         ),
         "feedback_error": build_editor_text_style(
-            t, tone="danger", font_px=max(13, base_font_px - 1), weight=600
+            t, tone="danger", font_px=base_font_px, weight=600
         ),
         "feedback_warning": build_editor_text_style(
-            t, tone="warning", font_px=max(13, base_font_px - 1), weight=600
+            t, tone="warning", font_px=base_font_px, weight=600
         ),
         "feedback_success": build_editor_text_style(
-            t, tone="success", font_px=max(13, base_font_px - 1), weight=600
+            t, tone="success", font_px=base_font_px, weight=600
         ),
         "status_title_connected": build_editor_text_style(
             t, color=text_secondary, font_px=base_font_px, weight=600
@@ -763,13 +873,13 @@ def build_settings_style_bundle(
             f"background-color: {t.get('success_soft_bg', _rgba(success, 0.10, success))}; "
             f"color: {t.get('success_hex', success)}; "
             "border-radius: 10px; "
-            "padding: 2px 10px; max-height: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;"
+            f"padding: 2px 10px; font-size: {typography.caption_px}px; font-weight: 700; letter-spacing: 0.5px;"
         ),
         "status_pill_pending": (
             f"background-color: {t.get('surface_hover', surface_hover)}; "
             f"color: {t.get('danger_hex', danger)}; "
             "border-radius: 10px; "
-            "padding: 2px 10px; max-height: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;"
+            f"padding: 2px 10px; font-size: {typography.caption_px}px; font-weight: 700; letter-spacing: 0.5px;"
         ),
         "status_label_success": build_editor_text_style(
             t, tone="success", font_px=base_font_px, weight=600
@@ -777,9 +887,7 @@ def build_settings_style_bundle(
         "status_label_muted": build_editor_text_style(
             t, color=text_muted, font_px=base_font_px, weight=600
         ),
-        "status_text_faint": build_editor_text_style(
-            t, color=text_faint, font_px=max(13, base_font_px - 1)
-        ),
+        "status_text_faint": build_editor_text_style(t, color=text_faint, font_px=base_font_px),
         "meta_box": (
             "QFrame#subtleCard { "
             f"background-color: {surface_item}; border: 1px solid {border_soft}; border-radius: {group_radius}px; "
@@ -799,23 +907,16 @@ def build_settings_style_bundle(
     }
 
 
-def build_settings_dialog_stylesheet(tokens: dict | None = None) -> str:
+def build_settings_dialog_stylesheet(
+    tokens: dict | None = None, *, settings=None, metrics=None, include_common: bool = True
+) -> str:
     """Build settings-dialog stylesheet using current dialog tokens."""
     t = _resolve_tokens(tokens)
-    surface_bg = t.get("surface_bg", "#13161f")
     surface_top = t.get("surface_top", "#0e1118")
-    text_primary = t.get("text_primary", "#e7ecf4")
-    text_secondary = t.get("text_secondary", "#d4dceb")
     border = t.get("border", "rgba(255,255,255,0.16)")
     from calendar_app.presentation.dialogs.dialog_styles import build_dialog_stylesheet
 
     global_stylesheet = (
-        "QDialog { "
-        f"background-color: {surface_bg}; color: {text_primary}; "
-        "}"
-        "QLabel { "
-        f"color: {text_secondary}; "
-        "}"
         "QScrollArea { background-color: transparent; border: none; }"
         "QScrollBar:vertical { "
         f"background: {surface_top}; width: 6px; border-radius: 3px; "
@@ -825,7 +926,15 @@ def build_settings_dialog_stylesheet(tokens: dict | None = None) -> str:
         "}"
         "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
     )
-    return "\n".join([build_dialog_stylesheet(), global_stylesheet])
+    if include_common:
+        metrics = metrics or get_dialog_metric_tokens(settings=settings, apply_overrides=True)
+        return "\n".join(
+            [
+                build_dialog_stylesheet(settings=settings, tokens=t, metrics=metrics),
+                global_stylesheet,
+            ]
+        )
+    return global_stylesheet
 
 
 def build_settings_swatch_style(color_str: str, tokens: dict | None = None) -> str:

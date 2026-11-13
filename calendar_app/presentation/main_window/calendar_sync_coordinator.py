@@ -16,15 +16,19 @@ from calendar_app.application.calendar_provider_catalog import (
     PROVIDERS,
     account_provider,
 )
+from calendar_app.infrastructure.calendar_sync.repository import DELETE_QUEUE_REASON
 from calendar_app.infrastructure.calendar_sync.status import load_calendar_errors
-from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
+from calendar_app.infrastructure.google_sync.common import is_gcal_enabled, sync_time_zone
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.ics.subscriptions import ICS_ERRORS, subscription_errors
 from calendar_app.presentation.dialogs.sync_feedback import (
     google_sync_error_code,
     sync_error_message,
 )
-from calendar_app.presentation.dialogs.sync_recovery import requires_account_reconnection
+from calendar_app.presentation.dialogs.sync_recovery import (
+    requires_account_reconnection,
+    sync_recovery_action,
+)
 from calendar_app.presentation.main_window.top_bar_builder import build_sync_toolbar_styles
 from calendar_app.shared.icon_map import ICON, icon
 
@@ -107,6 +111,7 @@ class IcsSyncWorker(QThread):
                         calendar["ics_url"],
                         local_zone=self.local_zone,
                         cancelled=self.is_cancelled,
+                        accept_empty=calendar.get("accept_empty"),
                     )
                 except Exception:
                     results[calendar["id"]] = (0, 0, "operation_failed")
@@ -127,6 +132,7 @@ class CalendarSyncCoordinator(QObject):
         self.calendar_source = calendar_source
         self.ics_worker = None
         self._ics_pending_ids = set()
+        self._ics_accept_empty = {}
         self.states = {}
         self.issue_rows = []
         self.calendar_rows = []
@@ -135,6 +141,10 @@ class CalendarSyncCoordinator(QObject):
         self.local_change_timer.setSingleShot(True)
         self.local_change_timer.timeout.connect(self._flush_local_change)
         self._local_change_include_google = False
+        self._deferred_local_changes = {}
+        self._deferred_local_timer = QTimer(self)
+        self._deferred_local_timer.setSingleShot(True)
+        self._deferred_local_timer.timeout.connect(self._flush_deferred_local_changes)
         for controller in self.controllers().values():
             if controller:
                 controller.changed.connect(self.refresh)
@@ -171,11 +181,16 @@ class CalendarSyncCoordinator(QObject):
                         counts[row["account_id"]] = counts.get(row["account_id"], 0) + 1
                         issues.append(dict(row))
                 if "calendar_sync_delete_queue" in tables:
+                    # Failed deletes and deletes waiting on a deselected/read-only calendar.
                     for row in conn.execute(
-                        "SELECT c.account_id,q.event_id,q.error AS kind FROM calendar_sync_delete_queue q JOIN calendar_sync_calendar c ON c.local_id=q.calendar_id WHERE q.error IS NOT NULL"
+                        "SELECT s.account_id,q.event_id," + DELETE_QUEUE_REASON + " AS kind "
+                        "FROM calendar_sync_delete_queue q "
+                        "JOIN calendar_sync_calendar s ON s.local_id=q.calendar_id "
+                        "JOIN calendar v ON v.id=q.calendar_id"
                     ):
-                        counts[row["account_id"]] = counts.get(row["account_id"], 0) + 1
-                        issues.append(dict(row))
+                        if row["kind"]:
+                            counts[row["account_id"]] = counts.get(row["account_id"], 0) + 1
+                            issues.append(dict(row))
                 if "calendar_sync_pending_delete" in tables:
                     for row in conn.execute(
                         "SELECT c.account_id,p.calendar_id,"
@@ -242,9 +257,7 @@ class CalendarSyncCoordinator(QObject):
         enabled = is_gcal_enabled(self.settings)
         authenticated = bool(google and getattr(google, "is_authenticated", False))
         connected = authenticated or Path(TOKEN_PATH).exists()
-        waiting = (
-            enabled and not authenticated and getattr(self.app, "_gcal_waiting_for_auth", False)
-        )
+        waiting = enabled and not connected
         busy = (
             getattr(self.app, "_gcal_sync_in_progress", False)
             or self._worker_running("_sync_worker")
@@ -255,12 +268,10 @@ class CalendarSyncCoordinator(QObject):
             )
         )
         google_error = (
-            "login_required"
-            if waiting
-            else self.settings.value("sync_google_last_error", "", type=str)
-            if enabled
-            else ""
+            self.settings.value("sync_google_last_error", "", type=str) if enabled else ""
         )
+        if waiting and not google_error:
+            google_error = "login_required"
         google_selected = sum(
             bool(c.get("is_active", 1)) for c in self.calendar_rows if c.get("type") == "gcal"
         )
@@ -277,6 +288,7 @@ class CalendarSyncCoordinator(QObject):
                 "busy": busy,
                 "auto": enabled and self.settings.value("sync_google_auto", True, type=bool),
                 "paused": connected and not enabled,
+                "waiting_for_auth": waiting,
                 "selected": google_selected,
                 "import_paused": google_has_calendars and not google_selected,
                 "needs_selection": google_needs_selection,
@@ -284,7 +296,6 @@ class CalendarSyncCoordinator(QObject):
                 "can_sync": bool(
                     connected
                     and enabled
-                    and not waiting
                     and not google_needs_selection
                     and not requires_account_reconnection(google_error)
                 ),
@@ -371,6 +382,10 @@ class CalendarSyncCoordinator(QObject):
             or previous_issues != self.issue_rows
         )
         self.states = states
+        if not self._deferred_local_timer.isActive() and any(
+            not states.get(key, {}).get("busy") for key in self._deferred_local_changes
+        ):
+            self._deferred_local_timer.start(0)
         self._paint_status()
         if changed:
             self.changed.emit()
@@ -395,7 +410,7 @@ class CalendarSyncCoordinator(QObject):
         started = []
         for key in [provider] if provider in PROVIDERS else PROVIDERS:
             state = self.states.get(key, {})
-            if not state.get("can_sync") or state.get("busy"):
+            if not sync_recovery_action(key, state)["can_retry"]:
                 continue
             try:
                 if key == "google":
@@ -418,6 +433,8 @@ class CalendarSyncCoordinator(QObject):
                     self.settings.setValue("sync_ics_last_error", "operation_failed")
                 else:
                     self.controllers()[key].status = "operation_failed"
+        for key in started:
+            self._deferred_local_changes.pop(key, None)
         self.refresh()
         return started
 
@@ -458,25 +475,55 @@ class CalendarSyncCoordinator(QObject):
             + tuple(service for service in CALDAV_SERVICES if service != "naver")
         ):
             state = self.states.get(key, {})
-            if (
-                not state.get("auto")
-                or not state.get("can_sync")
-                or state.get("busy")
-                or state.get("error")
-            ):
+            if not state.get("auto") or not state.get("can_sync") or state.get("error"):
                 continue
-            try:
-                if key == "google":
-                    self.app.sync_google_calendar_silent()
-                else:
-                    self.controllers()[key].sync()
-            except Exception:
-                import logging
-
-                logging.getLogger(__name__).warning(
-                    "Automatic sync dispatch failed for provider %s", key
-                )
+            if state.get("busy"):
+                self._deferred_local_changes[key] = state.get("account")
+                continue
+            self._deferred_local_changes.pop(key, None)
+            self._dispatch_local_change(key)
         self.refresh(refresh_issues=False)
+
+    def _flush_deferred_local_changes(self):
+        if not self._deferred_local_changes or getattr(self.app, "_is_shutting_down", False):
+            return
+        # A running worker may already have read its outbound changes. Wake it
+        # once more only if the account is still eligible when it finishes.
+        for key, account in list(self._deferred_local_changes.items()):
+            state = self.states.get(key, {})
+            if state.get("busy"):
+                continue
+            del self._deferred_local_changes[key]
+            if (
+                state.get("account") == account
+                and state.get("auto")
+                and state.get("can_sync")
+                and not state.get("error")
+                and not state.get("cancelled")
+            ):
+                self._dispatch_local_change(key)
+        self.refresh(refresh_issues=False)
+
+    def _dispatch_local_change(self, key):
+        try:
+            if key == "google":
+                self.app.sync_google_calendar_silent()
+            else:
+                self.controllers()[key].sync()
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Automatic sync dispatch failed for provider %s", key
+            )
+
+    def accept_empty_ics(self, calendar_id, url, count):
+        """Let the next refresh of this subscription address remove its mirrors once."""
+        self._ics_accept_empty[calendar_id] = (url, count)
+
+    def discard_empty_ics(self, calendar_id):
+        """Drop an acceptance whose refresh did not start; no later refresh may use it."""
+        self._ics_accept_empty.pop(calendar_id, None)
 
     def sync_ics(self, force=False, calendar_ids=None):
         if getattr(self.app, "_is_shutting_down", False):
@@ -505,6 +552,11 @@ class CalendarSyncCoordinator(QObject):
             return False
         if not calendars:
             return False
+        for index, calendar in enumerate(calendars):
+            # One-shot: consumed by this refresh whatever the feed returns.
+            url, count = self._ics_accept_empty.pop(calendar["id"], (None, None))
+            if url is not None and url == calendar.get("ics_url"):
+                calendars[index] = {**calendar, "accept_empty": count}
         worker = None
         launch_failed = False
 
@@ -513,9 +565,7 @@ class CalendarSyncCoordinator(QObject):
                 self._ics_result(results)
 
         try:
-            worker = IcsSyncWorker(
-                calendars, self, self.settings.value("gcal_timezone", "Asia/Seoul", type=str)
-            )
+            worker = IcsSyncWorker(calendars, self, sync_time_zone(self.settings))
             self.ics_worker = worker
             self.app._bg_workers.append(worker)
             worker.result.connect(deliver_result)
@@ -547,9 +597,12 @@ class CalendarSyncCoordinator(QObject):
             if any(row[0] or row[1] for row in results.values()):
                 self.app.schedule_panel_refresh(left=True, center=True, right=True)
             return
-        if not results:
-            return
         committed = any(row[0] or row[1] for row in results.values())
+        results = {key: row for key, row in results.items() if row[2] != "cancelled"}
+        if not results:
+            if committed:
+                self.app.schedule_panel_refresh(left=True, center=True, right=True)
+            return
         current_calendars = self.calendar_rows
         original = getattr(self.ics_worker, "calendars", None)
         if isinstance(original, list):
@@ -577,8 +630,6 @@ class CalendarSyncCoordinator(QObject):
                 return
         error_codes = subscription_errors(self.settings)
         for key, row in results.items():
-            if row[2] == "cancelled":
-                continue
             if row[2]:
                 error_codes[key] = (
                     row[2]
@@ -613,9 +664,10 @@ class CalendarSyncCoordinator(QObject):
         pending = set()
         if worker in self.app._bg_workers:
             self.app._bg_workers.remove(worker)
-        if self.ics_worker is worker:
+        if worker is not None and self.ics_worker is worker:
             self.ics_worker = None
-            pending = getattr(self, "_ics_pending_ids", set())
+            if not worker.is_cancelled():
+                pending = self._ics_pending_ids
             self._ics_pending_ids = set()
         if worker:
             worker.deleteLater()
@@ -632,6 +684,9 @@ class CalendarSyncCoordinator(QObject):
 
     def stop(self):
         self.local_change_timer.stop()
+        self._local_change_include_google = False
+        self._deferred_local_timer.stop()
+        self._deferred_local_changes.clear()
         self._ics_pending_ids.clear()
         if self.ics_worker:
             self.ics_worker.requestInterruption()
@@ -641,46 +696,42 @@ class CalendarSyncCoordinator(QObject):
         busy = sum(s["busy"] for s in self.states.values())
         issues = sum(s["issues"] for s in self.states.values())
         failed = any(s.get("error") and s["connected"] for s in self.states.values())
+        google_waiting = self.states["google"]["waiting_for_auth"]
         if busy:
             text, symbol = (
                 t("sync_unified.running", "동기화 중 {count}").format(count=busy),
                 ICON.SYNC,
             )
+        elif google_waiting:
+            text = f"Google · {t('gcal.status.auth_needed', '인증 필요')}"
+            symbol = ICON.WARNING
         elif issues or failed:
             text, symbol = t("sync_unified.attention", "동기화 확인 필요"), ICON.WARNING
         elif connected:
             text, symbol = (
                 t("sync_unified.connected_count", "연결 {count}").format(count=connected),
-                ICON.SYNC_SETTINGS,
+                ICON.SYNC,
             )
         else:
-            text, symbol = t("sync_unified.local_only", "로컬 모드"), ICON.SYNC_SETTINGS
-        tooltip = (
-            t("sync_ui.hub_title", "캘린더 · 계정 및 동기화")
-            + "\n"
-            + text
-            + "\n"
-            + "\n".join(
-                provider_name(k) + ": " + provider_status(s) for k, s in self.states.items()
-            )
-        )
+            text, symbol = t("sync_unified.local_only", "로컬 모드"), ICON.SYNC
+        title = t("sync_redesign.connections_tab", "연결 및 구독")
         styles = build_sync_toolbar_styles(
-            self.settings, busy=bool(busy), attention=bool(issues or failed)
+            self.settings, busy=bool(busy), attention=bool(issues or failed or google_waiting)
         )
         button = getattr(self.app, "sync_action_btn", None)
         if button:
             button.setIcon(icon(symbol, color=styles["icon_color"]))
             if button.styleSheet() != styles["button"]:
                 button.setStyleSheet(styles["button"])
-            button.setToolTip(tooltip)
-            button.setAccessibleName(t("sync_ui.hub_title", "캘린더 · 계정 및 동기화"))
-            button.setAccessibleDescription(tooltip)
+            button.setToolTip(title)
+            button.setAccessibleName(title)
+            button.setAccessibleDescription(text)
         label = getattr(self.app, "sync_status_text_lbl", None)
         if label:
             label.setText(text)
             if label.styleSheet() != styles["label"]:
                 label.setStyleSheet(styles["label"])
-            label.setToolTip(tooltip)
+            label.setToolTip("")
             label.setAccessibleDescription(text)
         old_label = getattr(self.app, "sync_status_lbl", None)
         if old_label and button:

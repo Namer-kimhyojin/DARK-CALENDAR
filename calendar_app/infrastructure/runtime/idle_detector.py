@@ -1,48 +1,37 @@
 # -*- coding: utf-8 -*-
-"""Idle detection worker using win32api when available."""
+"""Idle detection worker using the Win32 input APIs when available."""
 
 import logging
 import time
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from calendar_app.infrastructure.runtime import win32_input
 from calendar_app.shared.value_parsers import as_int
 
-try:
-    import win32api
-
-    HAS_WIN32 = True
-except ImportError:
-    win32api = None
-    HAS_WIN32 = False
+HAS_WIN32 = win32_input.AVAILABLE
 
 logger = logging.getLogger(__name__)
 
 
 def _safe_last_input_tick():
-    if not HAS_WIN32:
-        return None
     try:
-        return int(win32api.GetLastInputInfo()) & 0xFFFFFFFF
-    except Exception:
+        return win32_input.last_input_tick()
+    except OSError:
         return None
 
 
 def _safe_tick_count():
-    if not HAS_WIN32:
-        return None
     try:
-        return int(win32api.GetTickCount()) & 0xFFFFFFFF
-    except Exception:
+        return win32_input.tick_count()
+    except OSError:
         return None
 
 
 def _safe_cursor_pos():
-    if not HAS_WIN32:
-        return None
     try:
-        return win32api.GetCursorPos()
-    except Exception:
+        return win32_input.cursor_pos()
+    except OSError:
         return None
 
 
@@ -106,7 +95,7 @@ class AlarmWorker(QThread):
 
     def run(self):
         if not HAS_WIN32:
-            logger.warning("win32api not found. Idle detection is disabled on this device.")
+            logger.warning("Win32 input APIs not found. Idle detection is disabled.")
             while self.is_running and not self.isInterruptionRequested():
                 self.msleep(500)
             return
@@ -138,19 +127,20 @@ class AlarmWorker(QThread):
                     self.idle_status_changed.emit(True)
                 elif self._is_idle and self._has_activity_resumed(elapsed):
                     if self.suppress_unlock:
-                        self._last_elapsed_ms = max(0, int(elapsed))
+                        # Keep tracking input but fall through to the sleep below;
+                        # a bare `continue` here spun one CPU core while locked.
                         pos = _safe_cursor_pos()
                         if pos is not None:
                             self._last_cursor_pos = pos
-                        continue
-                    self._is_idle = False
-                    logger.info(
-                        "[UNLOCK] Activity detected. elapsed=%s last_elapsed=%s cursor=%s",
-                        elapsed,
-                        self._last_elapsed_ms,
-                        self._last_cursor_pos,
-                    )
-                    self.idle_status_changed.emit(False)
+                    else:
+                        self._is_idle = False
+                        logger.info(
+                            "[UNLOCK] Activity detected. elapsed=%s last_elapsed=%s cursor=%s",
+                            elapsed,
+                            self._last_elapsed_ms,
+                            self._last_cursor_pos,
+                        )
+                        self.idle_status_changed.emit(False)
                 elif self._is_idle:
                     logger.debug(
                         "[IDLE-WAIT] elapsed=%s last_elapsed=%s cursor=%s",

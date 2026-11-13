@@ -79,7 +79,7 @@ def test_title_edit_does_not_replace_online_meeting_body():
         "location": "",
         "all_day": 0,
     }
-    event = {**to_graph(task), "isOnlineMeeting": True}
+    event = {**to_graph(task, "Asia/Seoul"), "isOnlineMeeting": True}
     payload = GraphClient.edit_payload({**task, "name": "New"}, event, "Asia/Seoul")
     assert payload == {"subject": "New"}
     with pytest.raises(OutlookError, match="online_meeting_body_not_supported"):

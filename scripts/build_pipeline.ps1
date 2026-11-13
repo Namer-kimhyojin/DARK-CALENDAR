@@ -437,7 +437,7 @@ function Test-PythonEnv {
     if ($LASTEXITCODE -ne 0) { throw "venv Python not executable: $Python" }
     Write-Info "Python $ver"
 
-    $releasePythonVersion = "3.13.15"
+    $releasePythonVersion = "3.14.10"
     if ([string]$ver -ne $releasePythonVersion) {
         throw "Release builds require Python $releasePythonVersion (found $ver). Recreate .venv with Python $releasePythonVersion before packaging."
     }
@@ -448,7 +448,7 @@ function Test-PythonEnv {
         if ($LASTEXITCODE -ne 0) { $missing += $pkg }
     }
     if ($missing.Count -gt 0) {
-        throw "Missing packages in venv: $($missing -join ', '). Run: pip install -r requirements-build.lock"
+        throw "Missing packages in venv: $($missing -join ', '). Follow the hashed installation steps in rules/store_release_process.md."
     }
     Write-Info "venv OK (PyInstaller, PyQt6 present)"
 }

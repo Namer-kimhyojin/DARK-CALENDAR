@@ -4,7 +4,6 @@
 from importlib import import_module
 
 _LAZY_EXPORTS = {
-    "handle_task_dropped": ("engine", "handle_task_dropped"),
     "sync_google_calendar": ("engine", "sync_google_calendar"),
     "delete_task_from_google": ("helpers", "delete_task_from_google"),
     "queue_task_delete_from_google": ("helpers", "queue_task_delete_from_google"),
@@ -28,7 +27,6 @@ __all__ = [
     "delete_task_by_gcal_id",
     "delete_task_from_google",
     "get_all_gcal_tasks_map",
-    "handle_task_dropped",
     "insert_gcal_event_to_unified",
     "queue_task_delete_from_google",
     "queue_task_sync_to_google",

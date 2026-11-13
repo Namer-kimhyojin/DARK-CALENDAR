@@ -5,7 +5,7 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication, QMenu
 
 from calendar_app.infrastructure.i18n import t
-from calendar_app.shared.color_utils import contrast_safe_color
+from calendar_app.shared.color_utils import contrast_safe_color, contrasting_text_color
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.theme_settings import (
@@ -188,7 +188,7 @@ class ThemeActionsMixin:
         """Apply unified menu style so hover/selection colors stay consistent."""
         from calendar_app.presentation.theme.style_builder import _build_app_menu_style
 
-        size = self.settings.value("font_size", 10, type=int)
+        size = self.settings.value("font_size", 11, type=int)
         if size <= 0:
             size = 10
         snapshot = build_theme_snapshot(self.settings)
@@ -226,6 +226,7 @@ class ThemeActionsMixin:
     def change_theme_color(self, color_hex):
         """Change the main theme color."""
         self.settings.setValue("theme_color", color_hex)
+        self.settings.setValue("appearance_accent_source", "custom")
         self.apply_theme_settings()
         self.show_toast(t("theme.toast_title"), t("theme.toast_msg"))
 
@@ -236,7 +237,7 @@ class ThemeActionsMixin:
         self.show_toast(t("theme.toast_title"), t("theme.system_default", "시스템 기본"))
 
     def change_text_theme(self, text_theme: str):
-        """Change the text theme."""
+        """Select an appearance mode while keeping the stored color choices."""
         self.settings.setValue("text_theme", text_theme)
         self.apply_theme_settings()
         from calendar_app.infrastructure.i18n import t as i18n_t
@@ -263,7 +264,7 @@ class ThemeActionsMixin:
         )
 
         family = self.settings.value("font_family", "Malgun Gothic")
-        size = self.settings.value("font_size", 10, type=int)
+        size = self.settings.value("font_size", 11, type=int)
         if size <= 0:
             size = 10
         snapshot = build_theme_snapshot(self.settings, persist_opacity=persist_opacity)
@@ -288,8 +289,11 @@ class ThemeActionsMixin:
         # Application-wide styling (QMessageBox, dialogs, etc.)
         _set_stylesheet_if_changed(QApplication.instance(), combined_qss)
 
-        # Explicit window styling
-        _set_stylesheet_if_changed(self, global_qss)
+        # Explicit window styling. The dock manager is this window, so its separator
+        # rules belong in the same stylesheet; writing them separately replaced one
+        # with the other and left Qt's bright default separators showing.
+        dock_qss = build_dock_manager_style(self.settings, theme)
+        _set_stylesheet_if_changed(self, f"{global_qss}\n{dock_qss}")
 
         # Container specific styling
         if hasattr(self, "top_bar_frame"):
@@ -297,11 +301,9 @@ class ThemeActionsMixin:
                 self.top_bar_frame,
                 build_top_bar_frame_style(self.settings, opacity_factor),
             )
-        if hasattr(self, "dock_manager"):
-            _set_stylesheet_if_changed(
-                self.dock_manager,
-                build_dock_manager_style(self.settings, theme),
-            )
+        dock_manager = getattr(self, "dock_manager", None)
+        if dock_manager is not None and dock_manager is not self:
+            _set_stylesheet_if_changed(dock_manager, dock_qss)
         if getattr(self, "_welcome_banner", None) is not None:
             from calendar_app.presentation.main_window.first_run_banner import (
                 apply_first_run_banner_theme,
@@ -330,6 +332,11 @@ class ThemeActionsMixin:
                 _set_stylesheet_if_changed(getattr(self, attr), topbar_styles["mode_button"])
         if getattr(self, "widget_mode_btn", None) is not None:
             _set_stylesheet_if_changed(self.widget_mode_btn, topbar_styles["tool_button"])
+        top_bar_shelf = getattr(self, "_top_bar_menu_wrapper", None)
+        if hasattr(top_bar_shelf, "refresh_theme"):
+            top_bar_shelf.refresh_theme(snapshot)
+        if getattr(self, "navigation_rail", None) is not None:
+            _set_stylesheet_if_changed(self.navigation_rail, topbar_styles["navigation_rail"])
 
         apply_top_menu_theme(
             self,
@@ -346,6 +353,7 @@ class ThemeActionsMixin:
 
         role_colors = {
             "neutral": _txt_primary,
+            "on_accent": contrasting_text_color(theme),
             "accent": contrast_safe_color(theme, panel_base, minimum=3.0),
             "warning": contrast_safe_color("#d39a2a", panel_base, minimum=3.0),
             "danger": contrast_safe_color("#d25a66", panel_base, minimum=3.0),
@@ -402,3 +410,8 @@ class ThemeActionsMixin:
             right=True,
             notify_data_consumers=False,
         )
+        coordinator = getattr(self, "_widget_mode_coordinator", None)
+        controller = getattr(coordinator, "controller", None)
+        refresh_theme = getattr(controller, "refresh_theme", None)
+        if callable(refresh_theme):
+            refresh_theme()

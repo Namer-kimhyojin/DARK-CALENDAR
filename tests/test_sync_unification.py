@@ -269,5 +269,6 @@ def test_toolbar_sync_opens_hub_and_status_has_separate_geometry(host, monkeypat
     QTest.mouseClick(button, Qt.MouseButton.LeftButton)
     QTest.keyClick(button, Qt.Key.Key_Space)
     assert host.open_calendar_sync_hub.call_count == 2
+    host.open_calendar_sync_hub.assert_called_with(section="services")
     host.sync_calendars.assert_not_called()
     assert host.top_bar_frame.isVisible()

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Premium widget-mode stylesheet helpers.
 
 The widget mode leans on a layered editorial card language:
@@ -13,7 +14,7 @@ import re
 
 from PyQt6.QtGui import QColor
 
-from calendar_app.shared.theme_snapshot import build_widget_mode_tokens
+from calendar_app.presentation.widgets.widget_mode_theme import main_widget_mode_tokens
 
 _RGBA_RE = re.compile(
     r"^rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*([0-9]*\.?[0-9]+)\s*\)$",
@@ -75,9 +76,8 @@ def resolve_tokens(
     settings=None,
     preset_name: str | None = None,
 ) -> dict[str, str]:
-    resolved = dict(
-        build_widget_mode_tokens(settings=settings, preset_name=preset_name or "Light Aqua Form")
-    )
+    del preset_name  # Legacy skins keep geometry while colors follow the main theme.
+    resolved = main_widget_mode_tokens(settings)
     if tokens:
         resolved.update(tokens)
     return resolved
@@ -165,12 +165,8 @@ def panel_stylesheet(tokens: dict[str, str], *, scale: float = 1.0) -> str:
             border-radius: {surface_radius}px;
         }}
         QFrame#widget_mode_header {{
-            background: qlineargradient(
-                x1: 0, y1: 0, x2: 1, y2: 0,
-                stop: 0 {tk.get("header_shell_bg", tk["header_bg"])},
-                stop: 1 {tk.get("surface_alt", tk["header_bg"])}
-            );
-            border: 1px solid {tk.get("header_shell_border", tk.get("panel_border_soft", "rgba(255,255,255,18)"))};
+            background: transparent;
+            border: none;
             border-radius: {header_radius}px;
         }}
         QLabel#widget_mode_header_icon {{

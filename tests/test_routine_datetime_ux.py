@@ -8,12 +8,11 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QDate, QDateTime, QEvent, QLocale, QSettings, Qt, QTime
+from PyQt6.QtCore import QDate, QEvent, QLocale, QSettings, Qt, QTime
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QMessageBox, QPushButton
 
 from calendar_app.infrastructure.db import task_repo
-from calendar_app.presentation.dialogs.routine_modify_dialog import RoutineModifyDialog
 from calendar_app.presentation.dialogs.task_dialog_unified import UnifiedTaskDialog
 from tests.support import TemporaryDatabaseTestCase
 
@@ -67,24 +66,6 @@ class RoutineDatetimeUxTests(TemporaryDatabaseTestCase):
         self.dialogs.append(dialog)
         return dialog
 
-    def existing_dialog(self, **overrides):
-        data = {
-            "name": "Routine clock test",
-            "type": "routine",
-            "deadline": "2026-10-22 09:10:00",
-            "target_date": "2026-10-22",
-            "cycle_type": "single",
-            "recurrence": "mode=single",
-            "description": "Keep memo",
-            "tags": "keep-tag",
-        }
-        data.update(overrides)
-        task_id = task_repo.create_unified_task(data)
-        self.assertIsNotNone(task_id)
-        dialog = RoutineModifyDialog(task_id)
-        self.dialogs.append(dialog)
-        return dialog, task_id
-
     def choose_time(self, dialog, value):
         dialog.show()
         self.app.processEvents()
@@ -122,61 +103,12 @@ class RoutineDatetimeUxTests(TemporaryDatabaseTestCase):
         self.assertEqual(task["cycle_type"], "single")
         self.assertEqual(task["recurrence"], "mode=single")
 
-    def test_modify_routine_saves_date_time_without_losing_other_fields(self):
-        dialog, task_id = self.existing_dialog()
-        self.choose_time(dialog, QTime(15, 30))
-        dialog.start_date.setDate(QDate(2026, 10, 24))
-        dialog._save_changes()
-        task = task_repo.get_unified_task(task_id)
-        self.assertEqual(task["deadline"], "2026-10-24 15:30:00")
-        self.assertEqual(task["target_date"], "2026-10-24")
-        self.assertEqual(task["description"], "Keep memo")
-        self.assertEqual(task["tags"], "keep-tag")
-        self.assertEqual(task["recurrence"], "mode=single")
-
     def test_unified_routine_quick_date_keeps_weekday_badge_current(self):
         dialog = self.create_dialog()
         self.quick_button(dialog, "tomorrow").click()
         expected = QDate.currentDate().addDays(1)
         self.assertEqual(dialog.start_date.date(), expected)
         self.assertEqual(dialog.start_weekday_label.text(), QLocale().toString(expected, "ddd"))
-
-    def test_modify_today_tomorrow_keep_time_and_now_uses_current_minute(self):
-        dialog, _ = self.existing_dialog()
-        dialog.start_time.setTime(QTime(14, 10))
-        self.quick_button(dialog, "today").click()
-        self.assertEqual(dialog.start_date.date(), QDate.currentDate())
-        self.assertEqual(dialog.start_time.time(), QTime(14, 10))
-        self.quick_button(dialog, "tomorrow").click()
-        self.assertEqual(dialog.start_date.date(), QDate.currentDate().addDays(1))
-        self.assertEqual(dialog.start_time.time(), QTime(14, 10))
-        before = QDateTime.currentDateTime()
-        self.quick_button(dialog, "now").click()
-        after = QDateTime.currentDateTime()
-        selected = QDateTime(dialog.start_date.date(), dialog.start_time.time())
-        self.assertLessEqual(before.addSecs(-60), selected)
-        self.assertLessEqual(selected, after)
-
-    def test_modify_repeat_rule_and_series_metadata_survive_date_change(self):
-        dialog, task_id = self.existing_dialog(
-            cycle_type="weekly",
-            recurrence="mode=weekly;weekday=3",
-            series_id="routine-clock-series",
-            series_order=2,
-            series_total=4,
-        )
-        self.assertTrue(dialog.repeat_task_radio.isChecked())
-        self.assertTrue(dialog._routine_time_group.isHidden())
-        self.assertEqual(dialog._build_recurrence_rule(), "mode=weekly;weekday=3")
-        dialog.start_date.setDate(QDate(2026, 10, 29))
-        dialog._save_changes()
-        task = task_repo.get_unified_task(task_id)
-        self.assertEqual(task["deadline"], "2026-10-29 09:10:00")
-        self.assertEqual(task["cycle_type"], "weekly")
-        self.assertEqual(task["recurrence"], "mode=weekly;weekday=3")
-        self.assertEqual(task["series_id"], "routine-clock-series")
-        self.assertEqual(task["series_order"], 2)
-        self.assertEqual(task["series_total"], 4)
 
     def test_create_repeat_series_keeps_dates_and_chosen_clock(self):
         dialog = self.create_dialog()

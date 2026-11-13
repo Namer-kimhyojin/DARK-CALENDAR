@@ -32,13 +32,15 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import QWidget
 
+from calendar_app.app_paths import get_resource_path
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.widgets.weather_asset_packs import (
     weather_asset_pixmap,
     weather_condition_id,
 )
+from calendar_app.presentation.widgets.weather_designs import GIF_WEATHER_SCENE_ID
 
-SCENE_IDS = ("air_atmosphere", "soft_object", "editorial_mono")
+SCENE_IDS = ("air_atmosphere", "soft_object", "editorial_mono", GIF_WEATHER_SCENE_ID)
 _ART_CACHE: OrderedDict[tuple, QPixmap] = OrderedDict()
 _ART_BUDGET = 24 * 1024 * 1024
 
@@ -452,8 +454,13 @@ class WeatherSceneSurface(QWidget):
             art_size = min(art_size, h - 165 * min(1.15, scale) - pad - 30 * scale)
         self._art_rect = QRectF(w - pad - art_size, pad + 22 * scale, art_size, art_size)
         available = max(30, self._art_rect.left() - pad - 6)
+        unit = str(self.data.get("unit", "°C"))
+        temperature_room = available
+        if self.scene_id == GIF_WEATHER_SCENE_ID:
+            unit_font = self._font(max(12, temp_size * 0.32))
+            temperature_room -= QFontMetricsF(unit_font).horizontalAdvance(unit) + 3
         while (
-            QFontMetricsF(self._font(temp_size, True)).horizontalAdvance(temp) > available
+            QFontMetricsF(self._font(temp_size, True)).horizontalAdvance(temp) > temperature_room
             and temp_size > 22
         ):
             temp_size -= 1
@@ -461,7 +468,7 @@ class WeatherSceneSurface(QWidget):
         temp_width = QFontMetricsF(self._font(temp_size, True)).horizontalAdvance(temp)
         self._text(
             painter,
-            self.data.get("unit", "°C"),
+            unit,
             pad + temp_width + 3,
             temp_y - temp_size * 0.42,
             max(12, temp_size * 0.32),
@@ -469,7 +476,13 @@ class WeatherSceneSurface(QWidget):
         )
         desc_y = min(h - 20, temp_y + 27 * scale)
         self._text(
-            painter, self.data.get("desc", "--"), pad, desc_y, 14 * scale, fg, width=w - 2 * pad
+            painter,
+            self.data.get("desc", "--"),
+            pad,
+            desc_y,
+            14 * scale,
+            fg,
+            width=available if self.scene_id == GIF_WEATHER_SCENE_ID else w - 2 * pad,
         )
         if compact:
             if self.data.get("error") or self.data.get("_forecast_expired"):
@@ -655,6 +668,7 @@ class WeatherSceneSurface(QWidget):
     def _sync_movie(self) -> None:
         condition = weather_condition_id(self._wmo(), self.data.get("_day_period", "day"))
         key = (
+            self.scene_id,
             self.animation_dir,
             condition,
             round(self._art_rect.width()),
@@ -667,40 +681,41 @@ class WeatherSceneSurface(QWidget):
             self._movie.stop()
             self._movie.deleteLater()
             self._movie = None
+        candidates = []
         if self.animation_dir:
-            for suffix in ("webp", "gif"):
-                filename = Path(self.animation_dir) / f"{condition}.{suffix}"
-                try:
-                    if not filename.is_file() or filename.stat().st_size > 16 * 1024 * 1024:
-                        continue
-                    reader = QImageReader(str(filename))
-                    dimensions = reader.size()
-                    if (
-                        not dimensions.isValid()
-                        or dimensions.width() * dimensions.height() > 16_777_216
-                    ):
-                        continue
-                    movie = QMovie(str(filename), parent=self)
-                    movie.setCacheMode(QMovie.CacheMode.CacheNone)
-                    size = max(
-                        16, min(640, round(self._art_rect.width() * self.devicePixelRatioF()))
-                    )
-                    movie.setScaledSize(QSize(size, size))
-                    if not movie.isValid():
-                        movie.deleteLater()
-                        continue
-                    self._movie = movie
-                    movie.frameChanged.connect(
-                        lambda _frame: self.update(
-                            self._art_rect.adjusted(-4, -4, 4, 4).toAlignedRect()
-                        )
-                    )
-                    movie.error.connect(self._movie_failed)
-                    movie.jumpToFrame(0)
-                    movie.setSpeed(min(100, max(10, movie.nextFrameDelay() * 2)))
-                    break
-                except (OSError, ValueError):
+            candidates.extend(
+                Path(self.animation_dir) / f"{condition}.{suffix}" for suffix in ("webp", "gif")
+            )
+        if self.scene_id == GIF_WEATHER_SCENE_ID and condition != "unknown":
+            candidates.append(Path(get_resource_path("weather", "animations", f"{condition}.gif")))
+        for filename in candidates:
+            try:
+                if not filename.is_file() or filename.stat().st_size > 16 * 1024 * 1024:
                     continue
+                dimensions = QImageReader(str(filename)).size()
+                if (
+                    not dimensions.isValid()
+                    or dimensions.width() * dimensions.height() > 16_777_216
+                ):
+                    continue
+                movie = QMovie(str(filename), parent=self)
+                movie.setCacheMode(QMovie.CacheMode.CacheNone)
+                size = max(16, min(640, round(self._art_rect.width() * self.devicePixelRatioF())))
+                movie.setScaledSize(QSize(size, size))
+                if not movie.isValid() or not movie.jumpToFrame(0):
+                    movie.deleteLater()
+                    continue
+                self._movie = movie
+                movie.frameChanged.connect(
+                    lambda _frame: self.update(
+                        self._art_rect.adjusted(-4, -4, 4, 4).toAlignedRect()
+                    )
+                )
+                movie.error.connect(self._movie_failed)
+                movie.setSpeed(min(100, max(10, movie.nextFrameDelay() * 2)))
+                break
+            except (OSError, ValueError):
+                continue
         self._sync_motion()
 
     def _movie_failed(self, _error) -> None:
@@ -719,6 +734,11 @@ class WeatherSceneSurface(QWidget):
         offset = math.sin(phase * math.tau) * amplitude if live else 0
         painter.save()
         painter.translate(0, offset)
+        if self.scene_id == GIF_WEATHER_SCENE_ID and self._movie is not None:
+            clip = QPainterPath()
+            radius = min(16, rect.width() * 0.09)
+            clip.addRoundedRect(rect, radius, radius)
+            painter.setClipPath(clip)
         pixmap = (
             self._movie.currentPixmap()
             if self._movie is not None

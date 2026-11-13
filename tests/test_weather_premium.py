@@ -8,6 +8,7 @@ import json
 from unittest.mock import Mock, patch
 
 from PyQt6.QtCore import QByteArray, QObject, QSettings, QSize, pyqtSignal
+from PyQt6.QtGui import QImageReader, QMovie
 from PyQt6.QtNetwork import QNetworkReply, QNetworkRequest
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QWidget
@@ -17,6 +18,7 @@ from calendar_app.infrastructure.weather.geonames import find_city
 from calendar_app.infrastructure.weather.met_norway import parse_locationforecast
 from calendar_app.infrastructure.weather.request_pool import pooled_weather_reply
 from calendar_app.presentation.widgets.overlay_weather import OverlayWeatherWidget
+from calendar_app.presentation.widgets.weather_designs import GIF_WEATHER_SCENE_ID
 from calendar_app.presentation.widgets.weather_scene import WeatherSceneSurface
 
 NOW = datetime(2026, 10, 31, 14, 30, tzinfo=UTC)
@@ -321,6 +323,77 @@ def test_invalid_custom_animation_falls_back_to_builtin(surface, tmp_path):
     assert surface._movie is None
 
 
+@pytest.mark.parametrize(
+    "wmo,period,condition",
+    [
+        (0, "day", "clear_day"),
+        (0, "night", "clear_night"),
+        (2, "day", "partly_cloudy_day"),
+        (2, "night", "partly_cloudy_night"),
+        (3, "day", "cloudy"),
+        (45, "day", "fog"),
+        (51, "day", "drizzle"),
+        (61, "day", "rain"),
+        (65, "day", "heavy_rain"),
+        (71, "day", "snow"),
+        (75, "day", "heavy_snow"),
+        (95, "day", "thunderstorm"),
+        (96, "day", "hail"),
+    ],
+)
+def test_gif_weather_scene_decodes_the_correct_bundled_loop(surface, wmo, period, condition):
+    surface.configure(
+        scene_id=GIF_WEATHER_SCENE_ID,
+        data={**surface.data, "_wmo": wmo, "_day_period": period},
+        motion="off",
+    )
+    assert not surface.grab().isNull()
+    movie = surface._movie
+    assert movie is not None
+    assert movie.fileName().endswith(f"{condition}.gif")
+    assert movie.loopCount() == -1
+    assert movie.state() == QMovie.MovieState.NotRunning
+    reader = QImageReader(movie.fileName())
+    first = reader.read()
+    assert first.size() == QSize(256, 256)
+    assert reader.imageCount() >= 8
+    frames = [reader.read() for _ in range(reader.imageCount() - 1)]
+    assert all(not frame.isNull() for frame in frames)
+    assert any(frame != first for frame in frames)
+
+
+def test_gif_weather_switches_day_period_and_pauses_with_visibility(surface, app, tmp_path):
+    (tmp_path / "clear_night.gif").write_bytes(b"invalid animation")
+    data = {**surface.data, "_wmo": 0, "_day_period": "day"}
+    surface.configure(scene_id=GIF_WEATHER_SCENE_ID, data=data, animation_dir=str(tmp_path))
+    surface.show()
+    surface.set_runtime_active(True)
+    app.processEvents()
+    surface.grab()
+    day_movie = surface._movie
+    assert day_movie.fileName().endswith("clear_day.gif")
+    QTest.qWait(270)
+    assert day_movie.currentFrameNumber() > 0
+    surface.configure(
+        scene_id=GIF_WEATHER_SCENE_ID,
+        data={**data, "_day_period": "night"},
+        animation_dir=str(tmp_path),
+    )
+    surface.grab()
+    night_movie = surface._movie
+    assert night_movie is not day_movie
+    assert night_movie.fileName().endswith("clear_night.gif")
+    surface.set_motion_policy("static")
+    assert night_movie.state() == QMovie.MovieState.Paused
+    surface.set_motion_policy("balanced")
+    assert night_movie.state() == QMovie.MovieState.Running
+    surface.hide()
+    assert night_movie.state() == QMovie.MovieState.Paused
+    surface.configure(scene_id="air_atmosphere", data=data)
+    surface.grab()
+    assert surface._movie is None
+
+
 def test_recipe_switch_and_custom_template_preserve_user_configuration(app, tmp_path):
     owner = QWidget()
     owner.settings = QSettings(str(tmp_path / "overlay.ini"), QSettings.Format.IniFormat)
@@ -335,6 +408,12 @@ def test_recipe_switch_and_custom_template_preserve_user_configuration(app, tmp_
         weather._apply_weather_design("air_atmosphere")
         assert weather._active_scene_id() == "air_atmosphere"
         assert weather.size() == QSize(360, 350)
+        assert weather._get("location") == "Busan" and weather._get("unit") == "fahrenheit"
+        weather._weather_data.update(_wmo=61, _day_period="day")
+        weather._apply_weather_design(GIF_WEATHER_SCENE_ID)
+        assert weather._active_scene_id() == GIF_WEATHER_SCENE_ID
+        assert not weather._scene_surface.grab().isNull()
+        assert weather._scene_surface._movie.fileName().endswith("rain.gif")
         assert weather._get("location") == "Busan" and weather._get("unit") == "fahrenheit"
         weather._apply_weather_design("editorial_mono")
         assert weather._get("weather_motion") == "off"

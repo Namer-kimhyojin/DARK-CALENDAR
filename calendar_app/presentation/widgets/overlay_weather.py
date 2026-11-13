@@ -63,6 +63,7 @@ from calendar_app.presentation.widgets.weather_template import (
     render_weather_template,
     scale_weather_preview_images,
 )
+from calendar_app.shared.typography import get_typography_scale
 
 logger = logging.getLogger(__name__)
 
@@ -670,7 +671,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         )
         status_color = _rgba_css(*_parse_rgba(self.text_color_rgba()))
         self._status_label.setStyleSheet(
-            f"font-size: 9px; color: {status_color}; background: transparent;"
+            f"font-size: {get_typography_scale(self._s()).caption_px}px; color: {status_color}; background: transparent;"
         )
         self.face.setToolTip(self._status_text)
 

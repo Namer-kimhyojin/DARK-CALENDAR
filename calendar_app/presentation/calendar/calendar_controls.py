@@ -80,9 +80,7 @@ class CalendarVisibilityDialog(QDialog):
             self,
             minimum_width=380,
             size=(480, 470),
-            theme_color=settings.value("theme_color", "#4da6ff"),
-            text_theme=settings.value("text_theme", "dark"),
-            panel_base_color=settings.value("panel_base_color", "#0d1b2e"),
+            settings=settings,
         )
         root = QVBoxLayout(self)
         root.setContentsMargins(20, 18, 20, 18)

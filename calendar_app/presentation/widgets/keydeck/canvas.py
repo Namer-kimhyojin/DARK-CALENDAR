@@ -7,13 +7,14 @@ single timer that stops as soon as nothing moves (idle CPU ≈ 0).
 
 from __future__ import annotations
 
+import itertools
 import math
 from pathlib import Path
 import random
 import time
 
 from PyQt6.QtCore import QEvent, QPointF, QRectF, QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QMovie, QPainter, QPen, QPixmap
+from PyQt6.QtGui import QColor, QEventPoint, QMovie, QPainter, QPen, QPixmap, QPointingDevice
 from PyQt6.QtWidgets import QSizePolicy, QToolTip, QWidget
 
 from calendar_app.infrastructure.i18n import t
@@ -27,6 +28,7 @@ from calendar_app.presentation.widgets.keydeck.model import (
 )
 from calendar_app.presentation.widgets.keydeck.physics import (
     EVENT_BOTTOM,
+    EVENT_CLICK,
     EVENT_TOP,
     LATCH_DEPTH,
     KeySpring,
@@ -52,6 +54,8 @@ from calendar_app.presentation.widgets.keydeck.resources import (
 )
 
 _FRAME_MS = 16
+# A fading LED needs no 60 fps; repainting it that long competes with audio for the GIL.
+_GLOW_MS = 33
 _AMBIENT_MS = 50
 _LED_DECAY_S = 0.38
 _FLASH_S = 0.75
@@ -60,11 +64,14 @@ _FADE_S = 0.18
 _MAX_MOVIE_CACHE_BYTES = 4 * 1024 * 1024
 # 덱이 나타난 직후의 클릭(덱을 띄운 클릭이 그대로 키에 닿는 경우)은 실행하지 않는다.
 _ARM_DELAY_S = 0.35
+# 손가락은 넓다: 키 사이 틈과 가장자리 바깥 이만큼까지는 그 키를 누른 것으로 본다.
+_TOUCH_SLOP_PX = 8.0
 # 빠르게 클릭해도 키는 끝까지 눌렸다가 올라온다 (실제 타건처럼 바닥을 친 뒤 복귀).
 _COMMIT_DEPTH = 0.85
 # 오프센터 누름의 기울기. 스태빌라이저가 달린 긴 키는 수평을 유지한다.
 _TILT_GAIN = 0.85
 _STABILIZED_TILT = 0.3
+_AUDIO_HOLDERS = itertools.count(1)
 
 
 def action_summary(action: dict, deck: dict | None = None) -> str:
@@ -136,10 +143,15 @@ class KeyDeckCanvas(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.audio_source_id = ""
+        self._audio_token = next(_AUDIO_HOLDERS)
+        self._audio_held = False
+        self.setProperty("dcWheelValueControl", True)
         self.setMouseTracking(True)
         self.setAcceptDrops(True)
         self.setAutoFillBackground(False)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         self.setAccessibleName(str(t("widget.launcher.title", "KEYDECK")))
@@ -159,6 +171,9 @@ class KeyDeckCanvas(QWidget):
         self._pressed_id = ""
         self._keyboard_performance = False
         self._keyboard_held: dict[int, str] = {}
+        self._touch_points: dict[int, str] = {}
+        self._touch_pointer_id: int | None = None
+        self._touch_mouse_suppressed_until = 0.0
         self._press_inside = False
         self._hold_fired = False
         self._hover_id = ""
@@ -188,6 +203,7 @@ class KeyDeckCanvas(QWidget):
         return self._deck
 
     def set_deck(self, deck: dict, *, animate: bool = False) -> None:
+        self._cancel_touch_points()
         self._cancel_pointer_press()
         self._release_keyboard_keys()
         if animate and self._deck is not None and self.isVisible() and not self._reduce_motion():
@@ -203,6 +219,7 @@ class KeyDeckCanvas(QWidget):
         self._rebuild_runtime()
         self._sync_movies()
         self._preload_sounds()
+        self._sync_audio_hold()
         self.updateGeometry()
         self.update()
         self._kick_if_moving()
@@ -222,6 +239,7 @@ class KeyDeckCanvas(QWidget):
         self._rebuild_runtime(force_ids=key_ids)
         self._sync_movies()
         self._preload_sounds()
+        self._sync_audio_hold()
         self.updateGeometry()
         self.update()
         self._kick_if_moving()
@@ -389,6 +407,32 @@ class KeyDeckCanvas(QWidget):
             return None
         return geometry.hit_key(self.to_canvas(point))
 
+    def _touch_slop(self) -> float:
+        geometry = self.renderer.geometry
+        return (geometry.gap / 2.0 if geometry is not None else 0.0) + _TOUCH_SLOP_PX
+
+    def _touch_key_at(self, point) -> dict | None:
+        """Key under a finger; the gap and a thin margin count for the nearest key."""
+        key = self.key_at(point)
+        geometry = self.renderer.geometry
+        if key is not None or geometry is None:
+            return key
+        target = self.to_canvas(point)
+        best, best_distance = None, self._touch_slop()
+        for candidate in geometry.keys:
+            rect = geometry.key_rect(candidate)
+            dx = max(rect.left() - target.x(), 0.0, target.x() - rect.right())
+            dy = max(rect.top() - target.y(), 0.0, target.y() - rect.bottom())
+            distance = (dx * dx + dy * dy) ** 0.5
+            if distance <= best_distance:
+                best, best_distance = candidate, distance
+        return best
+
+    def _touch_inside(self, key: dict, point) -> bool:
+        slop = self._touch_slop()
+        rect = self.renderer.geometry.key_rect(key).adjusted(-slop, -slop, slop, slop)
+        return rect.contains(self.to_canvas(point))
+
     def _close_visible(self) -> bool:
         geometry = self.renderer.geometry
         if geometry is None or not self.close_control_enabled:
@@ -517,7 +561,7 @@ class KeyDeckCanvas(QWidget):
     def _release_visual(self, key_id: str) -> None:
         key = self._key_by_id(key_id)
         runtime = self._runtime.get(key_id)
-        if key is not None and runtime is not None and key_id not in self._keyboard_held.values():
+        if key is not None and runtime is not None and not self._key_is_held(key_id):
             self._release_runtime(key, runtime)
             self._ensure_timer()
 
@@ -526,20 +570,42 @@ class KeyDeckCanvas(QWidget):
     def set_runtime_active(self, active: bool) -> None:
         self._active = bool(active)
         if not self._active:
+            self._cancel_touch_points()
             self._cancel_pointer_press()
             self._release_keyboard_keys()
             self._timer.stop()
             self._hold_timer.stop()
         self._sync_movies()
         if self._active:
+            self._preload_sounds()
             self._ensure_timer()
+        self._sync_audio_hold()
+
+    def _sync_audio_hold(self, visible: bool | None = None) -> None:
+        """Hold the output device while this deck can play, so a first tap sounds at once."""
+        deck = self._deck
+        held = bool(
+            self._active
+            and (self.isVisible() if visible is None else visible)
+            and deck is not None
+            and deck.get("sound_enabled", True)
+        )
+        if held == self._audio_held:
+            return
+        self._audio_held = held
+        hold = getattr(sound_bank(), "hold_output", None)  # minimal test banks omit it
+        if callable(hold):
+            hold(self._audio_token, held)
 
     def showEvent(self, event) -> None:  # noqa: N802
         super().showEvent(event)
         self._armed_at = time.monotonic() + _ARM_DELAY_S
         self._sync_movies()
+        self._sync_audio_hold()
 
     def hideEvent(self, event) -> None:  # noqa: N802
+        self._sync_audio_hold(visible=False)
+        self._cancel_touch_points()
         self._cancel_pointer_press()
         self._release_keyboard_keys()
         self._timer.stop()
@@ -567,7 +633,13 @@ class KeyDeckCanvas(QWidget):
     def stop_sounds(self) -> None:
         self._sound_preview_timer.stop()
         self._sound_preview_queue.clear()
+        self._cancel_touch_points()
         self._release_keyboard_keys()
+        if self.audio_source_id:
+            from calendar_app.infrastructure.runtime.loop_mixer_audio import stop_keydeck_source
+
+            if stop_keydeck_source(self.audio_source_id):
+                return
         sound_bank().stop_all()
 
     def _release_keyboard_keys(self) -> None:
@@ -576,11 +648,7 @@ class KeyDeckCanvas(QWidget):
         for key_id in held:
             key = self._key_by_id(key_id)
             runtime = self._runtime.get(key_id)
-            if (
-                key is not None
-                and runtime is not None
-                and not (key_id == self._pressed_id and self._press_inside)
-            ):
+            if key is not None and runtime is not None and not self._key_is_held(key_id):
                 self._release_runtime(key, runtime)
         if held:
             self._ensure_timer()
@@ -590,13 +658,136 @@ class KeyDeckCanvas(QWidget):
         self._press_inside = False
         self._hold_fired = False
         self._hold_timer.stop()
-        if key_id not in self._keyboard_held.values():
+        if not self._key_is_held(key_id):
             key = self._key_by_id(key_id)
             runtime = self._runtime.get(key_id)
             if key is not None and runtime is not None:
                 runtime.pending_release = False
                 runtime.tilt.set_target(0.0, 0.0)
                 self._move_to(runtime, self._rest_position(key))
+
+    def _key_is_held(self, key_id: str) -> bool:
+        return bool(key_id) and (
+            key_id in self._keyboard_held.values()
+            or key_id in self._touch_points.values()
+            or (key_id == self._pressed_id and self._press_inside)
+        )
+
+    def _cancel_touch_points(self) -> None:
+        held = set(self._touch_points.values()) - {""}
+        self._touch_points.clear()
+        if self._touch_pointer_id is not None:
+            self._touch_pointer_id = None
+            self._cancel_pointer_press()
+        for key_id in held:
+            key = self._key_by_id(key_id)
+            runtime = self._runtime.get(key_id)
+            if key is not None and runtime is not None and not self._key_is_held(key_id):
+                runtime.pending_release = False
+                runtime.tilt.set_target(0.0, 0.0)
+                self._move_to(runtime, self._rest_position(key))
+        if held:
+            self._ensure_timer()
+
+    def _touch_press(self, point) -> None:
+        point_id = point.id()
+        self._touch_points[point_id] = ""
+        # No arm delay here: it guards the mouse click that opened the deck, but a new
+        # touch is always deliberate and was silently eaten right after the deck showed.
+        if not self._active or not self.isVisible():
+            return
+        position = point.position()
+        control = self.header_control_at(position)
+        if control == "close":
+            self.closeRequested.emit()
+            return
+        if control == "gear":
+            self.editRequested.emit("")
+            return
+        if control.startswith("dot:"):
+            self.pageRequested.emit(int(control[4:]))
+            return
+        key = self._touch_key_at(position)
+        if key is None or not key["enabled"]:
+            return
+        if key["hold_action"]["type"] == "none":
+            # Every finger plays its own key, so a second finger is never dropped.
+            runtime = self._runtime.get(key["id"])
+            if runtime is not None:
+                self._touch_points[point_id] = key["id"]
+                self._press_runtime(key, runtime, self.to_canvas(position))
+                if key["action"]["type"] == "sound" or key["led"]["mode"] == "reactive":
+                    runtime.visual.led = 1.0
+                self._ensure_timer()
+        elif self._touch_pointer_id is None and not self._pressed_id:
+            # Macro keys retain the one-pointer release/hold contract.
+            self._touch_pointer_id = point_id
+            self._begin_press(key, self.to_canvas(position))
+
+    def _touch_release(self, point) -> None:
+        point_id = point.id()
+        key_id = self._touch_points.pop(point_id, "")
+        if point_id == self._touch_pointer_id:
+            self._touch_pointer_id = None
+            key = self._key_by_id(self._pressed_id)
+            inside = key is not None and self._touch_inside(key, point.position())
+            if inside:
+                self._finish_pointer_press(point.position())
+            else:
+                self._cancel_pointer_press()
+        elif key_id:
+            key = self._key_by_id(key_id)
+            runtime = self._runtime.get(key_id)
+            if key is not None and runtime is not None:
+                if not self._key_is_held(key_id):
+                    self._release_runtime(key, runtime)
+                self._ensure_timer()
+                # A macro runs only if the finger lifts on (or just beside) its key.
+                if key["action"]["type"] == "sound" or self._touch_inside(key, point.position()):
+                    self.keyActivated.emit(key_id, "tap")
+
+    def _handle_touch_event(self, event) -> bool:
+        if event.type() == QEvent.Type.TouchBegin and not any(
+            self.header_control_at(point.position())
+            or self._touch_key_at(point.position()) is not None
+            for point in event.points()
+        ):
+            # Keep the existing synthesized-mouse dragging on empty overlay space.
+            event.ignore()
+            return False
+        self._touch_mouse_suppressed_until = time.monotonic() + 0.5
+        if event.type() in {QEvent.Type.TouchBegin, QEvent.Type.TouchCancel}:
+            self._cancel_touch_points()
+        if event.type() != QEvent.Type.TouchCancel:
+            for point in event.points():
+                state, point_id = point.state(), point.id()
+                if state == QEventPoint.State.Pressed and point_id not in self._touch_points:
+                    self._touch_press(point)
+                elif state == QEventPoint.State.Released:
+                    self._touch_release(point)
+                elif point_id == self._touch_pointer_id and self._pressed_id:
+                    key = self._key_by_id(self._pressed_id)
+                    if key is not None:
+                        inside = self._touch_inside(key, point.position())
+                        if self._press_inside and not inside:
+                            self._hold_timer.stop()
+                            runtime = self._runtime.get(key["id"])
+                            if runtime is not None:
+                                runtime.pending_release = False
+                                runtime.tilt.set_target(0.0, 0.0)
+                                self._move_to(runtime, self._rest_position(key))
+                        self._press_inside = inside
+            if event.type() == QEvent.Type.TouchEnd:
+                self._cancel_touch_points()
+        # Accept TouchBegin so Qt delivers all points and does not synthesize a mouse hit.
+        event.accept()
+        return True
+
+    def _is_synthesized_touch_mouse(self, event) -> bool:
+        return (
+            time.monotonic() < self._touch_mouse_suppressed_until
+            and event.pointingDevice().pointerType() == QPointingDevice.PointerType.Finger
+        )
 
     def _keyboard_key(self, code: int) -> dict | None:
         if not self._keyboard_performance or self._deck is None:
@@ -660,11 +851,7 @@ class KeyDeckCanvas(QWidget):
             self._keyboard_held.pop(event.key(), None)
             key = self._key_by_id(key_id)
             runtime = self._runtime.get(key_id)
-            if (
-                key is not None
-                and runtime is not None
-                and not (key_id == self._pressed_id and self._press_inside)
-            ):
+            if key is not None and runtime is not None and not self._key_is_held(key_id):
                 self._release_runtime(key, runtime)
                 self._ensure_timer()
         event.accept()
@@ -674,6 +861,9 @@ class KeyDeckCanvas(QWidget):
         super().focusOutEvent(event)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
+        if self._is_synthesized_touch_mouse(event):
+            event.accept()
+            return
         if event.button() != Qt.MouseButton.LeftButton:
             event.ignore()
             return
@@ -702,6 +892,9 @@ class KeyDeckCanvas(QWidget):
         self.mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:  # noqa: N802
+        if self._is_synthesized_touch_mouse(event):
+            event.accept()
+            return
         if self._pressed_id:
             key = self._key_by_id(self._pressed_id)
             runtime = self._runtime.get(self._pressed_id)
@@ -712,7 +905,7 @@ class KeyDeckCanvas(QWidget):
                     self._press_inside = inside
                     if inside:
                         self._press_runtime(key, runtime, self.to_canvas(event.position()))
-                    elif key["id"] not in self._keyboard_held.values():
+                    elif not self._key_is_held(key["id"]):
                         runtime.pending_release = False
                         runtime.tilt.set_target(0.0, 0.0)
                         self._move_to(runtime, self._rest_position(key))
@@ -724,9 +917,16 @@ class KeyDeckCanvas(QWidget):
         event.accept()
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: N802
+        if self._is_synthesized_touch_mouse(event):
+            event.accept()
+            return
         if event.button() != Qt.MouseButton.LeftButton or not self._pressed_id:
             event.ignore()
             return
+        self._finish_pointer_press(event.position())
+        event.accept()
+
+    def _finish_pointer_press(self, position) -> None:
         key_id = self._pressed_id
         key = self._key_by_id(key_id)
         runtime = self._runtime.get(key_id)
@@ -734,13 +934,12 @@ class KeyDeckCanvas(QWidget):
         self._hold_timer.stop()
         fire = self._press_inside and not self._hold_fired
         if key is not None and runtime is not None:
-            if self._press_inside and key_id not in self._keyboard_held.values():
+            if self._press_inside and not self._key_is_held(key_id):
                 self._release_runtime(key, runtime)
             self._ensure_timer()
-        self.update_hover(event.position())
+        self.update_hover(position)
         if fire and key is not None:
             self.keyActivated.emit(key_id, "tap")
-        event.accept()
 
     def enterEvent(self, event) -> None:  # noqa: N802
         self._set_mouse_inside(True)
@@ -782,6 +981,13 @@ class KeyDeckCanvas(QWidget):
         event.accept()
 
     def event(self, event) -> bool:
+        if event.type() in {
+            QEvent.Type.TouchBegin,
+            QEvent.Type.TouchUpdate,
+            QEvent.Type.TouchEnd,
+            QEvent.Type.TouchCancel,
+        }:
+            return self._handle_touch_event(event)
         if event.type() == QEvent.Type.ToolTip:
             key = self.key_at(event.position() if hasattr(event, "position") else event.pos())
             point = event.position() if hasattr(event, "position") else event.pos()
@@ -869,6 +1075,12 @@ class KeyDeckCanvas(QWidget):
         else:
             runtime.spring.press(1.0)
             runtime.tilt.set_target(*self._tilt_for(key, point))
+            if runtime.plan is not None:
+                # Play the main down-stroke cue at contact. Waiting for the animated
+                # cap to bottom out (~40 ms of frame ticks) made touch taps sound late.
+                lead = EVENT_CLICK if EVENT_CLICK in runtime.plan else EVENT_BOTTOM
+                self._emit_switch_sound(runtime, lead)
+                runtime.spring.mark_down_cues_played()
         if runtime.plan is None:
             self._play(runtime.press_path, runtime.sound_volume)
         if key.get("enabled", True) and key["action"]["type"] == "sound":
@@ -965,22 +1177,44 @@ class KeyDeckCanvas(QWidget):
         if not deck.get("sound_enabled", True):
             return
         volume = deck.get("sound_volume", 60) / 100.0
+        if self.audio_source_id:
+            from calendar_app.infrastructure.runtime.loop_mixer_audio import route_keydeck_sound
+
+            if route_keydeck_sound(self.audio_source_id, path, volume * gain):
+                return
         sound_bank().play(path, volume * gain, voices=voices)
 
     def _preload_sounds(self) -> None:
         deck = self._deck
         if deck is None or not deck.get("sound_enabled", True):
             return
-        paths = set()
+        deck_volume = deck.get("sound_volume", 60) / 100.0
+        volumes: dict[float, set[str]] = {}
         kinds = set()
         for runtime in self._runtime.values():
             if runtime.plan is None:
-                paths.update((runtime.press_path, runtime.release_path))
+                # Press/release sounds always play at this volume (see _play): the
+                # native bank scales them now instead of on the first tap.
+                volume = round(deck_volume * runtime.sound_volume, 2)
+                volumes.setdefault(volume, set()).update(
+                    path for path in (runtime.press_path, runtime.release_path) if path
+                )
             else:
                 kinds.update(kind for kind, _gain in runtime.plan.values())
-        sound_bank().preload(sorted(path for path in paths if path))
+        for volume, paths in sorted(volumes.items()):
+            if paths and volume > 0.0:
+                sound_bank().preload(sorted(paths), volume=volume)
         for kind in sorted(kinds):
             sound_bank().preload(switch_sound_variants(kind), voices=1)
+        if self.audio_source_id:
+            from calendar_app.infrastructure.runtime.loop_mixer_audio import set_keydeck_sounds
+
+            # A loop mixer playing this deck decodes the same WAVs before the first hit.
+            set_keydeck_sounds(
+                self.audio_source_id,
+                sorted({path for paths in volumes.values() for path in paths})
+                + [path for kind in sorted(kinds) for path in switch_sound_variants(kind)],
+            )
 
     # -- animation --------------------------------------------------------------------
 
@@ -1037,6 +1271,7 @@ class KeyDeckCanvas(QWidget):
             return
         reduce_motion = self._reduce_motion()
         busy = False
+        glowing = False
         ambient = False
         dirty = QRectF()
         for key in geometry.keys:
@@ -1086,13 +1321,13 @@ class KeyDeckCanvas(QWidget):
                 if visual.led < 0.01:
                     visual.led = 0.0
                 else:
-                    busy = True
+                    glowing = True
             if runtime.flash > 0.0:
                 runtime.flash = max(0.0, runtime.flash - dt / _FLASH_S)
                 if runtime.flash > 0.0:
                     visual.led_color = runtime.flash_color
                     visual.led = max(visual.led, math.sin(runtime.flash * math.pi / 2))
-                    busy = True
+                    glowing = True
                 else:
                     visual.led_color = ""
             if runtime.shake_t > 0.0:
@@ -1124,6 +1359,9 @@ class KeyDeckCanvas(QWidget):
         if busy:
             if self._timer.interval() != _FRAME_MS:
                 self._timer.setInterval(_FRAME_MS)
+        elif glowing:
+            if self._timer.interval() != _GLOW_MS:
+                self._timer.setInterval(_GLOW_MS)
         elif ambient:
             if self._timer.interval() != _AMBIENT_MS:
                 self._timer.setInterval(_AMBIENT_MS)

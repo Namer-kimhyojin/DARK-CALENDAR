@@ -326,11 +326,14 @@ class GCalActionsMixin:
 
             return False
 
-        from calendar_app.infrastructure.google_sync.common import get_default_gcal_calendar_id
+        from calendar_app.infrastructure.google_sync.common import (
+            get_default_gcal_calendar_id,
+            sync_time_zone,
+        )
 
         cal_id = get_default_gcal_calendar_id(self.settings)
 
-        tz = self.settings.value("gcal_timezone", "Asia/Seoul")
+        tz = sync_time_zone(self.settings)
 
         try:
             import os

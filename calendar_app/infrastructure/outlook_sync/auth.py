@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import uuid
 
+from requests.exceptions import RequestException
+
 from calendar_app.app_paths import get_app_data_dir
 from calendar_app.application.calendar_sync_contract import CalendarSyncError
 from calendar_app.infrastructure.calendar_sync.secret_store import crypt as _dpapi_crypt
@@ -35,11 +37,14 @@ class MicrosoftAuth:
                 )
             except (OSError, ValueError, UnicodeError) as exc:
                 raise OutlookError("cache_unavailable") from exc
-        self.app = msal.PublicClientApplication(
-            self.client_id,
-            authority="https://login.microsoftonline.com/common",
-            token_cache=self.cache,
-        )
+        try:
+            self.app = msal.PublicClientApplication(
+                self.client_id,
+                authority="https://login.microsoftonline.com/common",
+                token_cache=self.cache,
+            )
+        except RequestException as exc:
+            raise OutlookError("network_unavailable") from exc
 
     def _save(self):
         if self.cache.has_state_changed:
@@ -54,17 +59,28 @@ class MicrosoftAuth:
     def token(self, interactive: bool = False, account_home_id: str = "") -> str:
         accounts = self.app.get_accounts()
         self.account_home_id = account_home_id
-        if interactive:
-            result = self.app.acquire_token_interactive(
-                scopes=SCOPES, timeout=120, prompt="select_account"
-            )
-        else:
-            selected = next((a for a in accounts if a["home_account_id"] == account_home_id), None)
-            if selected is None and len(accounts) == 1 and not account_home_id:
-                selected = accounts[0]
-            result = self.app.acquire_token_silent(SCOPES, account=selected) if selected else None
+        try:
+            if interactive:
+                result = self.app.acquire_token_interactive(
+                    scopes=SCOPES, timeout=120, prompt="select_account"
+                )
+            else:
+                selected = next(
+                    (a for a in accounts if a["home_account_id"] == account_home_id), None
+                )
+                if selected is None and len(accounts) == 1 and not account_home_id:
+                    selected = accounts[0]
+                result = (
+                    self.app.acquire_token_silent_with_error(SCOPES, account=selected)
+                    if selected
+                    else None
+                )
+        except RequestException as exc:
+            raise OutlookError("network_unavailable") from exc
         self._save()
         if not result or "access_token" not in result:
+            if result and result.get("error") in ("temporarily_unavailable", "server_error"):
+                raise OutlookError("operation_failed")
             raise OutlookError("login_required")
         if interactive:
             claims = result.get("id_token_claims") or {}

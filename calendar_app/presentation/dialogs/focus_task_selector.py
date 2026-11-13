@@ -36,6 +36,10 @@ from calendar_app.shared.icon_map import icon as _ic
 
 logger = logging.getLogger(__name__)
 
+_ROLE_TASK_ID = Qt.ItemDataRole.UserRole
+_ROLE_TASK_NAME = Qt.ItemDataRole.UserRole + 1
+_ROLE_TASK_KIND = Qt.ItemDataRole.UserRole + 2
+
 
 class FocusTaskSelectorDialog(QDialog):
     """Focus-mode task selector dialog."""
@@ -48,6 +52,8 @@ class FocusTaskSelectorDialog(QDialog):
         self.selected_task_id = None
 
         self.selected_task_name = None
+        # Worklog kind of the selection: tasks and directives share numeric ids.
+        self.selected_task_type = None
         self._logs_loaded = False
 
         self.settings = getattr(parent, "settings", None) or QSettings("kimhyojin", "Dark Calendar")
@@ -141,7 +147,11 @@ class FocusTaskSelectorDialog(QDialog):
         self.filter_group = QButtonGroup(self)
 
         for label, filter_val, checked in [
-            (t("focus_selector.filter_today_directives"), "today_and_directives", True),
+            (
+                t("focus_selector.filter_today_directives", "오늘 마감 + 업무지시"),
+                "today_and_directives",
+                True,
+            ),
             (t("focus_selector.filter_today"), "today", False),
             (t("focus_selector.filter_urgent"), "urgent", False),
             (t("focus_selector.filter_incomplete"), "incomplete", False),
@@ -309,9 +319,11 @@ class FocusTaskSelectorDialog(QDialog):
             item = QListWidgetItem(f"{task_name}{deadline_text}")
             item.setIcon(_ic(type_icon_key))
 
-            item.setData(Qt.ItemDataRole.UserRole, task_id)
+            item.setData(_ROLE_TASK_ID, task_id)
 
-            item.setData(Qt.ItemDataRole.UserRole + 1, task_name)
+            item.setData(_ROLE_TASK_NAME, task_name)
+
+            item.setData(_ROLE_TASK_KIND, focus_usecases.focus_target_kind(task_type))
 
             self.task_list.addItem(item)
 
@@ -333,9 +345,11 @@ class FocusTaskSelectorDialog(QDialog):
         item = self.task_list.currentItem()
 
         if item and item.flags() & Qt.ItemFlag.ItemIsEnabled:
-            self.selected_task_id = item.data(Qt.ItemDataRole.UserRole)
+            self.selected_task_id = item.data(_ROLE_TASK_ID)
 
-            self.selected_task_name = item.data(Qt.ItemDataRole.UserRole + 1)
+            self.selected_task_name = item.data(_ROLE_TASK_NAME)
+
+            self.selected_task_type = focus_usecases.focus_target_kind(item.data(_ROLE_TASK_KIND))
 
             self.accept()
             return
@@ -375,6 +389,8 @@ class FocusTaskSelectorDialog(QDialog):
             self.selected_task_id = task_id
 
             self.selected_task_name = task_name
+
+            self.selected_task_type = focus_usecases.FOCUS_TARGET_TASK
 
             self.accept()
             return
@@ -423,3 +439,6 @@ class FocusTaskSelectorDialog(QDialog):
 
     def get_selected_task(self):
         return self.selected_task_id, self.selected_task_name
+
+    def get_selected_task_type(self):
+        return focus_usecases.focus_target_kind(self.selected_task_type)

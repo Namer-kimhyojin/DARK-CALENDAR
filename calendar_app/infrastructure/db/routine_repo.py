@@ -11,8 +11,6 @@ __all__ = bind_proxy_exports(
     [
         "get_routines_by_period",
         "get_all_routines_grouped_by_cycle",
-        "mark_routine_completed",
-        "mark_routine_incomplete",
         "get_routine_templates",
         "get_routine_template",
         "get_routine_completion_stats",

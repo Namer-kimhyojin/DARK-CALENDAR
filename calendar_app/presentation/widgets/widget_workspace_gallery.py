@@ -140,9 +140,10 @@ class WidgetGallery(QWidget):
         row.addWidget(hub_button(t("common.cancel", "취소"), self.reset_draft))
         sidebar.addWidget(inspector, 1)
         sidebar.addLayout(row)
-        detail.addWidget(
-            hub_button(t("widget_hub.decorate", "꾸미기"), lambda: self._route("graphics"))
+        self.decorate_button = hub_button(
+            t("widget_hub.decorate", "꾸미기"), lambda: self._route("graphics")
         )
+        detail.addWidget(self.decorate_button)
         detail.addWidget(
             hub_button(t("widget_manager.btn_settings", "설정"), lambda: self._route("settings"))
         )
@@ -247,6 +248,11 @@ class WidgetGallery(QWidget):
             self.status.clear()
             return
         row = next(row for row in self.manager.all_instances() if row[0] == self.current_id)
+        self.decorate_button.setText(
+            t("loopdeck.open", "루프 믹서 열기")
+            if row[2] == "loop_deck"
+            else t("widget_hub.decorate", "꾸미기")
+        )
         self.title.setText(row[1])
         self._loading = True
         self.width_spin.setValue(widget.width())

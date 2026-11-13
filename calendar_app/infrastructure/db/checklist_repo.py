@@ -11,6 +11,8 @@ __all__ = bind_proxy_exports(
     [
         "add_checklist_item",
         "toggle_checklist_item",
+        "get_checklist_item",
+        "set_checklist_items_completed",
         "get_task_checklist_items",
         "get_task_checklist_items_for_owners",
         "set_task_checklist_display_type",

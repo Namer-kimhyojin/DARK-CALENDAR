@@ -6,6 +6,7 @@ import http.client
 import io
 import ipaddress
 import socket
+import threading
 import time
 import urllib.error
 from urllib.parse import urljoin, urlsplit
@@ -16,6 +17,7 @@ from calendar_app.infrastructure.ics.subscriptions import normalize_subscription
 
 MAX_REDIRECTS = 5
 _REDIRECT_CODES = {301, 302, 303, 307, 308}
+_RESOLVE_POLL_SECONDS = 0.05
 
 
 def _public_address(value):
@@ -51,13 +53,40 @@ def _remaining_timeout(timeout, cancelled, deadline):
     return min(timeout, remaining)
 
 
+def _resolve(host, port, timeout, cancelled, deadline):
+    """getaddrinfo cannot be interrupted: wait for it only within the request budget.
+
+    A stalled OS resolver keeps the daemon lookup thread, never the ICS worker.
+    """
+    outcome = {}
+    done = threading.Event()
+
+    def lookup():
+        try:
+            outcome["addresses"] = socket.getaddrinfo(
+                host, port, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP
+            )
+        except BaseException as exc:
+            outcome["error"] = exc
+        finally:
+            done.set()
+
+    limit = time.monotonic() + _remaining_timeout(timeout, cancelled, deadline)
+    threading.Thread(target=lookup, name="ics-resolve", daemon=True).start()
+    while not done.wait(_RESOLVE_POLL_SECONDS):
+        # Raises "cancelled" or TimeoutError (reported as network_unavailable).
+        _remaining_timeout(timeout, cancelled, min(deadline, limit))
+    if "error" in outcome:
+        raise outcome["error"]
+    return outcome["addresses"]
+
+
 def _connect_public(address, timeout, source_address=None, *, cancelled, deadline):
     """Resolve once and connect to a checked sockaddr before sending any HTTP data."""
     host, port = address
     if "%" in host:
         raise CalendarSyncError("invalid_subscription_url")
-    _remaining_timeout(timeout, cancelled, deadline)
-    addresses = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP)
+    addresses = _resolve(host, port, timeout, cancelled, deadline)
     # Reject mixed public/private answers before trying any of them. Numeric and
     # legacy numeric host spellings are classified through the same OS resolver.
     for family, _kind, _proto, _name, sockaddr in addresses:

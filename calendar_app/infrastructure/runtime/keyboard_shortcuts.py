@@ -8,10 +8,13 @@ import contextlib
 import html
 import logging
 import re
+import weakref
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QGuiApplication, QKeySequence, QShortcut, QWindow
 from PyQt6.QtWidgets import QApplication, QDockWidget, QWidget
+
+from calendar_app.infrastructure.runtime import win32_input
 
 logger = logging.getLogger(__name__)
 
@@ -112,8 +115,15 @@ SHORTCUTS: list[dict] = [
         "id": "topbar",
         "key": "Ctrl+Shift+B",
         "group": "view",
-        "label_ko": "상단 바 토글",
+        "label_ko": "상단 바 자동 숨기기",
         "action": "toggle_top_bar",
+    },
+    {
+        "id": "navigation_rail",
+        "key": "Ctrl+Shift+R",
+        "group": "view",
+        "label_ko": "빠른 이동 표시",
+        "action": "toggle_navigation_rail",
     },
     {
         "id": "cal_toolbar",
@@ -239,7 +249,7 @@ SHORTCUTS: list[dict] = [
         "key": "Ctrl+Alt+Shift+Left",
         "group": "window",
         "label_ko": "이전 모니터로 이동",
-        "action": "move_to_next_monitor",
+        "action": "move_to_previous_monitor",
     },
     {
         "id": "monitor_right",
@@ -267,7 +277,9 @@ SHORTCUTS: list[dict] = [
         "key": "Escape",
         "group": "edit",
         "label_ko": "선택 해제",
-        "action": "clear_task_selection",
+        # Guide entry only: the main window's keyPressEvent handles Esc so open
+        # popups such as the command palette still receive it first.
+        "action": None,
     },
     {
         "id": "force_unlock",
@@ -325,7 +337,7 @@ _GUIDE_PRIORITY_SHORTCUT_IDS: list[str] = [
     "force_unlock",
 ]
 _GUIDE_PRIORITY_META_KO: dict[str, tuple[str, str]] = {
-    "topbar": ("메뉴바 복구", "상단 바가 사라졌을 때 가장 먼저 확인하세요."),
+    "topbar": ("상단 바 고정", "자동 숨기기를 켜고 끄며, 숨은 상단 바를 바로 고정합니다."),
     "magnet_mode": ("자석 전환", "패널 이동과 부착 가능 상태를 빠르게 바꿉니다."),
     "lock_mode": ("고정 해제", "잠금 상태에서도 메인 화면에서 바로 토글합니다."),
     "force_unlock": ("긴급 복구", "예상치 못한 잠금 상태를 강제로 해제합니다."),
@@ -409,9 +421,14 @@ _SHORTCUT_HELP_META_KO: dict[str, dict] = {
         "tags": ["자리비움", "away", "lock"],
     },
     "topbar": {
-        "description": "상단 메뉴 바 표시 상태를 전환합니다.",
-        "menu_path": "화면 > 상단 바",
-        "tags": ["메뉴바", "상단 바", "topbar", "복구"],
+        "description": "상단 바 자동 숨기기를 켜거나 끕니다. 끄면 상단 바가 고정됩니다.",
+        "menu_path": "화면 > 화면 및 창 > 상단 바 자동 숨기기",
+        "tags": ["메뉴바", "상단 바", "topbar", "자동 숨기기", "고정", "복구"],
+    },
+    "navigation_rail": {
+        "description": "왼쪽 빠른 이동 막대를 표시하거나 숨깁니다.",
+        "menu_path": "화면 > 화면 및 창 > 빠른 이동",
+        "tags": ["빠른 이동", "레일", "navigation", "rail"],
     },
     "cal_toolbar": {
         "description": "캘린더 툴바를 숨기거나 다시 표시합니다.",
@@ -672,11 +689,18 @@ def search_shortcut_guide_entries(query: str) -> list[dict]:
     return [entry for _, _, entry in ranked]
 
 
-def _render_keycaps_html(key_sequence: str, *, accent: bool = False) -> str:
+def _render_keycaps_html(
+    key_sequence: str, *, accent: bool = False, tokens: dict | None = None
+) -> str:
     key_bg = "rgba(77,166,255,0.18)" if accent else "rgba(255,255,255,0.05)"
     key_border = "rgba(77,166,255,0.40)" if accent else "rgba(255,255,255,0.10)"
     key_text = "#eef6ff" if accent else "#d7e5f7"
     separator = "rgba(155, 177, 203, 0.68)"
+    if tokens:
+        key_bg = tokens.get("accent_soft_bg" if accent else "surface_item", key_bg)
+        key_border = tokens.get("accent_soft_border" if accent else "border_soft", key_border)
+        key_text = tokens.get("text_primary", key_text)
+        separator = tokens.get("text_muted", separator)
     parts: list[str] = []
     for idx, raw_part in enumerate(str(key_sequence or "").split("+")):
         part = html.escape(raw_part.strip() or "+")
@@ -693,8 +717,10 @@ def _render_keycaps_html(key_sequence: str, *, accent: bool = False) -> str:
     return "".join(parts)
 
 
-def render_keycaps_html(key_sequence: str, *, accent: bool = False) -> str:
-    return _render_keycaps_html(key_sequence, accent=accent)
+def render_keycaps_html(
+    key_sequence: str, *, accent: bool = False, tokens: dict | None = None
+) -> str:
+    return _render_keycaps_html(key_sequence, accent=accent, tokens=tokens)
 
 
 def _render_info_pill_html(text: str, *, accent: bool = False) -> str:
@@ -901,7 +927,7 @@ def build_shortcut_guide_html(
     spotlight_html = _render_card_grid_html(spotlight_cards, columns=2, gap_px=12)
     reference_html = _render_card_grid_html(reference_columns, columns=2, gap_px=14)
     html_content = (
-        '<div style=\'font-family:"Malgun Gothic", "Segoe UI", sans-serif; padding:4px 6px 14px 6px;\'>'
+        "<div style='padding:4px 6px 14px 6px;'>"
         "<div style='padding:22px 24px; background:rgba(10,15,25,0.98); "
         "border:1px solid rgba(77,166,255,0.14); border-radius:22px;'>"
         "<table cellspacing='0' cellpadding='0' style='width:100%; border:none;'>"
@@ -1015,6 +1041,196 @@ def _make_shortcut(host: QWidget, owner, key: str, handler: Callable) -> QShortc
     return shortcut
 
 
+# OS-wide hotkeys (RegisterHotKey). Only show/hide is global: after the window is
+# hidden to the tray no window is active, so an in-app shortcut cannot reach it.
+GLOBAL_HOTKEY_IDS: dict[str, int] = {"show_hide": 0x0A1C}
+
+
+def _native_hotkeys_supported() -> bool:
+    """RegisterHotKey needs Win32 and real native windows (not offscreen/minimal)."""
+    if not win32_input.HOTKEYS_AVAILABLE or QGuiApplication.instance() is None:
+        return False
+    return QGuiApplication.platformName() == "windows"
+
+
+class _HotkeyWindow(QWindow):
+    """Never-shown native window whose HWND receives WM_HOTKEY.
+
+    Owning a window keeps the handler's lifetime tied to this object (no filter on
+    the application), and its HWND is not recreated when the main window changes
+    flags for always-on-top or desktop mode.
+    """
+
+    def __init__(self, on_hotkey: Callable[[int], None]):
+        super().__init__()
+        self._on_hotkey = on_hotkey
+        self.create()
+
+    def nativeEvent(self, event_type, message):
+        # A Python exception escaping a Qt virtual aborts the process.
+        try:
+            address = int(message) if message is not None else 0
+            hotkey_id = win32_input.hotkey_id_from_message(address)
+            if hotkey_id is not None:
+                self._on_hotkey(hotkey_id)
+                return True, 0
+        except Exception:
+            logger.exception("Global hotkey message handling failed")
+        return False, 0
+
+
+class GlobalHotkeys:
+    """The app's RegisterHotKey registrations, keyed by shortcut id."""
+
+    def __init__(self, on_activated: Callable[[str], None]):
+        self._on_activated = on_activated
+        self._keys: dict[str, str] = {}
+        self.notified_failures: set[str] = set()
+        self.window = _HotkeyWindow(self._dispatch)
+
+    def _hwnd(self) -> int:
+        return int(self.window.winId()) if self.window is not None else 0
+
+    def _dispatch(self, hotkey_id: int) -> None:
+        for shortcut_id, known_id in GLOBAL_HOTKEY_IDS.items():
+            if known_id == hotkey_id and shortcut_id in self._keys:
+                # Run the action after the native message handler has returned.
+                QTimer.singleShot(0, lambda sid=shortcut_id: self._on_activated(sid))
+                return
+
+    def owns(self, shortcut_id: str, key: str) -> bool:
+        return bool(key) and self._keys.get(shortcut_id) == key
+
+    def register(self, shortcut_id: str, key: str) -> tuple[bool, int]:
+        """Register ``key`` for ``shortcut_id``, replacing an older key; (ok, error)."""
+        if self.owns(shortcut_id, key):
+            return True, 0
+        self.unregister(shortcut_id)
+        codes = win32_input.parse_hotkey(key)
+        if codes is None or self.window is None:
+            return False, 0
+        ok, error = win32_input.register_hotkey(
+            self._hwnd(), GLOBAL_HOTKEY_IDS[shortcut_id], codes[0], codes[1]
+        )
+        if ok:
+            self._keys[shortcut_id] = key
+        return ok, error
+
+    def unregister(self, shortcut_id: str) -> None:
+        if self._keys.pop(shortcut_id, None) is not None:
+            win32_input.unregister_hotkey(self._hwnd(), GLOBAL_HOTKEY_IDS[shortcut_id])
+
+    def release(self) -> None:
+        for shortcut_id in list(self._keys):
+            self.unregister(shortcut_id)
+        window, self.window = self.window, None
+        if window is not None:
+            window.destroy()
+
+
+def _shortcut_action(app, shortcut_id: str):
+    item = _shortcut_by_id(shortcut_id) or {}
+    handler = getattr(app, str(item.get("action") or ""), None)
+    return handler if callable(handler) else None
+
+
+def _run_global_hotkey(app_ref, shortcut_id: str) -> None:
+    app = app_ref()
+    handler = _shortcut_action(app, shortcut_id) if app is not None else None
+    if handler is None:
+        return
+    try:
+        handler()
+    except Exception:
+        logger.exception("Global hotkey action '%s' failed", shortcut_id)
+
+
+def _notify_global_hotkey_unavailable(app, controller, shortcut_id: str, key: str) -> None:
+    if shortcut_id in controller.notified_failures:
+        return
+    controller.notified_failures.add(shortcut_id)
+    # Tell the user once per key, not on every start while another program keeps it.
+    settings = getattr(app, "settings", None)
+    seen_setting = f"global_hotkey_notice_{shortcut_id}"
+    if settings is not None and str(settings.value(seen_setting, "") or "") == key:
+        return
+    show_toast = getattr(app, "show_toast", None)
+    if not callable(show_toast):
+        return
+    from calendar_app.infrastructure.i18n import t
+
+    item = _shortcut_by_id(shortcut_id) or {}
+    title = t(f"shortcut.entries.{shortcut_id}.label", str(item.get("label_ko") or ""))
+    message = t(
+        "shortcut.global_hotkey.unavailable",
+        "다른 프로그램이 {shortcut} 키를 사용 중이라 이 단축키는 앱 창이 활성일 때만 "
+        "동작합니다. 숨긴 창은 트레이 아이콘으로 다시 열 수 있습니다.",
+        shortcut=key,
+    )
+    try:
+        show_toast(title, message)
+    except Exception:
+        logger.exception("Failed to show the global hotkey notice")
+        return
+    if settings is not None:
+        settings.setValue(seen_setting, key)
+
+
+def sync_global_hotkeys(app) -> None:
+    """Register OS-wide hotkeys with their current keys; re-run after a key change.
+
+    A key another program owns stays an in-app shortcut: it is logged on every run
+    and the user is told once per key.
+    """
+    if not _native_hotkeys_supported():
+        return
+    controller = getattr(app, "_global_hotkeys", None)
+    if controller is None:
+        app_ref = weakref.ref(app)
+        controller = GlobalHotkeys(lambda sid: _run_global_hotkey(app_ref, sid))
+        app._global_hotkeys = controller
+    for shortcut_id in GLOBAL_HOTKEY_IDS:
+        key = get_key(shortcut_id)
+        if not key or _shortcut_action(app, shortcut_id) is None:
+            controller.unregister(shortcut_id)
+            continue
+        ok, error = controller.register(shortcut_id, key)
+        if ok:
+            logger.info("Global hotkey %s registered for '%s'", key, shortcut_id)
+            continue
+        logger.warning(
+            "Global hotkey %s for '%s' is unavailable (Win32 error %s); "
+            "keeping the in-app shortcut",
+            key,
+            shortcut_id,
+            error,
+        )
+        _notify_global_hotkey_unavailable(app, controller, shortcut_id, key)
+
+
+def release_global_hotkeys(app) -> None:
+    """Unregister every OS-wide hotkey and drop the message window (idempotent)."""
+    controller = getattr(app, "_global_hotkeys", None)
+    if controller is None:
+        return
+    app._global_hotkeys = None
+    try:
+        controller.release()
+    except Exception:
+        logger.exception("Failed to release global hotkeys")
+
+
+def _owned_by_global_hotkey(app, shortcut_id: str, key: str) -> bool:
+    owns = getattr(getattr(app, "_global_hotkeys", None), "owns", None)
+    return bool(callable(owns) and owns(shortcut_id, key))
+
+
+def register_app_shortcuts(app) -> None:
+    """Register OS-wide hotkeys, then the in-app shortcuts they do not cover."""
+    sync_global_hotkeys(app)
+    register_all(app)
+
+
 def register_all(app) -> None:
     """Register shortcuts on the main window only.
 
@@ -1031,9 +1247,13 @@ def register_all(app) -> None:
         _make_shortcut(app, app, key, handler)
 
     for shortcut in SHORTCUTS:
-        key = shortcut["key"]
-        action_name = shortcut["action"]
         shortcut_id = shortcut["id"]
+        key = get_key(shortcut_id, shortcut["key"])
+        action_name = shortcut["action"]
+
+        if _owned_by_global_hotkey(app, shortcut_id, key):
+            # The OS-wide hotkey consumes the key; a QShortcut would only double-fire.
+            continue
 
         if action_name and hasattr(app, action_name):
             _register_on_hosts(key, getattr(app, action_name))
@@ -1126,10 +1346,6 @@ def register_all(app) -> None:
                     a.delete_selected_tasks()
 
             _register_on_hosts(key, _delete)
-
-        elif shortcut_id in ("monitor_left", "monitor_right"):
-            if hasattr(app, "move_to_next_monitor"):
-                _register_on_hosts(key, app.move_to_next_monitor)
 
         elif shortcut_id == "force_unlock":
             pass

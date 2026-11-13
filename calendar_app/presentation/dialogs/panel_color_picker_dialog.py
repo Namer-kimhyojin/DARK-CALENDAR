@@ -4,13 +4,15 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import contextlib
 
-from PyQt6.QtCore import QEvent, QObject, QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PyQt6 import sip
+from PyQt6.QtCore import QDate, QEvent, QLocale, QObject, QSettings, QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
+    QBoxLayout,
     QButtonGroup,
-    QCheckBox,
     QDialog,
     QFontComboBox,
     QFrame,
@@ -36,16 +38,22 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_token_overrides,
 )
 from calendar_app.shared.color_utils import (
+    MIN_TEXT_OPACITY,
     _shift_rgb,
+    contrasting_text_color,
     derive_panel_palette,
     derive_text_palette,
+    faded_text_color,
     parse_hex_color,
+    recommend_border_color,
 )
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
+from calendar_app.shared.system_theme import resolve_mode_base_color, resolve_system_text_theme
 from calendar_app.shared.theme_settings import opacity_percent_label
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
-from calendar_app.shared.ui_tokens import get_ui_tokens
+from calendar_app.shared.typography import DEFAULT_FONT_PT, get_typography_scale
+from calendar_app.shared.ui_tokens import get_modal_ui_tokens as get_ui_tokens
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +150,20 @@ _DARK_PRESETS = [
         "#ffb86c",
         _preset_text("#fff4e8", "#e8d0b0", "#c4a880", "#8f7858", input_bg="#120c08"),
     ),
+    (
+        "dialog.theme.preset.lime_night",
+        "Lime Night",
+        "#141a0d",
+        "#a9e34b",
+        _preset_text("#f2f8e8", "#c9d8b0", "#9cae84", "#748660", input_bg="#0e1309"),
+    ),
+    (
+        "dialog.theme.preset.navy_lilac",
+        "Navy Lilac",
+        "#121827",
+        "#c5a3f5",
+        _preset_text("#f4f3fa", "#c0c3d1", "#959bae", "#737e94", input_bg="#1d2435"),
+    ),
 ]
 
 _LIGHT_PRESETS = [
@@ -149,7 +171,7 @@ _LIGHT_PRESETS = [
         "dialog.theme.preset.pastel_mint",
         "Pastel Mint",
         "#e6fcf5",
-        "#099268",
+        "#2f9e44",
         _preset_text("#1d2b26", "#415a51", "#759489", "#a8c0b6"),
     ),
     (
@@ -229,6 +251,13 @@ _LIGHT_PRESETS = [
         "#d16d87",
         _preset_text("#322128", "#65414b", "#987480", "#c8a9b2"),
     ),
+    (
+        "dialog.theme.preset.lilac_day",
+        "Lilac Day",
+        "#f6f7fb",
+        "#7653c4",
+        _preset_text("#20283a", "#5e687c", "#6b7487", "#778094"),
+    ),
 ]
 
 _PRESETS = _DARK_PRESETS + _LIGHT_PRESETS
@@ -237,14 +266,21 @@ _PRESETS = _DARK_PRESETS + _LIGHT_PRESETS
 # legacy preset list remains available behind "show all styles".
 _STYLE_FAMILIES = [
     (
+        "navy_lilac",
+        "dialog.theme.preset.navy_lilac",
+        "dialog.theme.preset.lilac_day",
+    ),
+    (
         "ocean",
         "dialog.theme.preset.navy",
         "dialog.theme.preset.pastel_sky",
     ),
+    # Lime replaces the old violet pair, which was all but identical to Navy
+    # Lilac in both modes (#bd93f9 vs #c5a3f5, #7950f2 vs #7653c4).
     (
-        "violet",
-        "dialog.theme.preset.deep_purple",
-        "dialog.theme.preset.pastel_lavender",
+        "lime",
+        "dialog.theme.preset.lime_night",
+        "dialog.theme.preset.pastel_sage",
     ),
     (
         "neutral",
@@ -287,8 +323,9 @@ _FAMILY_BY_PRESET_KEY = {
 }
 
 _STYLE_FAMILY_LABELS = {
+    "navy_lilac": ("dialog.theme.family.navy_lilac", "Navy · Lilac"),
     "ocean": ("dialog.theme.point.blue", "Blue"),
-    "violet": ("dialog.theme.point.violet", "Violet"),
+    "lime": ("dialog.theme.point.lime", "Lime"),
     "neutral": ("dialog.theme.point.gray", "Gray"),
     "forest": ("dialog.theme.point.emerald", "Emerald"),
     "warm": ("dialog.theme.point.orange", "Orange"),
@@ -297,24 +334,7 @@ _STYLE_FAMILY_LABELS = {
     "gold": ("dialog.theme.point.gold", "Gold"),
 }
 
-_SWATCH_SIZE = 44
-_PREVIEW_H = 140
-
-# ---------------------------------------------------------------------------
-# Point-color presets (name_key, name_fallback, hex)
-# ---------------------------------------------------------------------------
-_POINT_COLORS = [
-    ("dialog.theme.point.blue", "Blue", "#4da6ff"),
-    ("dialog.theme.point.sky", "Sky", "#29b6f6"),
-    ("dialog.theme.point.emerald", "Emerald", "#2ecc71"),
-    ("dialog.theme.point.mint", "Mint", "#1abc9c"),
-    ("dialog.theme.point.violet", "Violet", "#9b59b6"),
-    ("dialog.theme.point.pink", "Pink", "#e91e8c"),
-    ("dialog.theme.point.orange", "Orange", "#e67e22"),
-    ("dialog.theme.point.red", "Red", "#e74c3c"),
-    ("dialog.theme.point.gold", "Gold", "#f1c40f"),
-    ("dialog.theme.point.gray", "Gray", "#9e9e9e"),
-]
+_PREVIEW_H = 320
 
 _DARK_PRESET_KEYS = {name_key for name_key, *_ in _DARK_PRESETS}
 _LIGHT_PRESET_KEYS = {name_key for name_key, *_ in _LIGHT_PRESETS}
@@ -399,7 +419,8 @@ def _semantic_preset_text_values(base_hex: str, accent_hex: str, mode: str) -> d
     """Use mode-neutral text roles; style families provide hue, not text tint."""
 
     resolved_mode = "light" if mode == "light" else "dark"
-    palette = derive_text_palette(resolved_mode, accent_hex)
+    # Recommendations are saved as colors; fading is applied when drawn.
+    palette = derive_text_palette(resolved_mode, accent_hex, faded=False)
 
     def _hex(role: str, fallback: str) -> str:
         return parse_hex_color(str(palette.get(role, fallback)), fallback).name(
@@ -442,15 +463,8 @@ def _picker_shape_metrics(tokens: dict | None = None) -> dict[str, int]:
 
 
 _DLG_SS = """
-    QPushButton#btn_custom {
-        background-color: rgba(77,166,255,0.12);
-        border-color: rgba(77,166,255,0.30);
-    }
-    QPushButton#btn_custom:hover {
-        background-color: rgba(77,166,255,0.22);
-    }
     QPushButton#btn_preset_filter {
-        font-size: 12px;
+        font-size: __BODY_FONT__;
         padding: 4px 10px;
         border-radius: 8px;
     }
@@ -459,7 +473,7 @@ _DLG_SS = """
         border-color: rgba(77,166,255,0.45);
     }
     QCheckBox#chk_auto_preset_text {
-        font-size: 12px;
+        font-size: __BODY_FONT__;
         color: rgba(230,240,255,0.92);
         spacing: 6px;
     }
@@ -468,23 +482,12 @@ _DLG_SS = """
         height: 14px;
     }
     QPushButton#btn_apply_preset_text {
-        background-color: rgba(102,187,106,0.12);
-        border-color: rgba(102,187,106,0.35);
-        color: #a8dca8;
-        font-size: 12px;
+        font-size: __BODY_FONT__;
         padding: 6px 12px;
     }
-    QPushButton#btn_apply_preset_text:hover {
-        background-color: rgba(102,187,106,0.22);
-    }
     QPushButton#btn_point_custom {
-        background-color: rgba(255,255,255,0.06);
-        border-color: rgba(255,255,255,0.20);
-        font-size: 12px;
+        font-size: __BODY_FONT__;
         padding: 6px 14px;
-    }
-    QPushButton#btn_point_custom:hover {
-        background-color: rgba(255,255,255,0.13);
     }
     QPushButton#btn_point_color {
         border-radius: 20px;
@@ -508,7 +511,6 @@ _DLG_SS = """
     }
     QSlider::groove:horizontal {
         height: 4px;
-        background: rgba(255,255,255,0.18);
         border-radius: 2px;
     }
     QSlider::handle:horizontal {
@@ -538,7 +540,7 @@ def _build_picker_extra_stylesheet(tokens: dict | None = None) -> str:
     def _acc(alpha: str) -> str:
         return f"rgba({c.red()},{c.green()},{c.blue()},{alpha})"
 
-    css = _DLG_SS
+    css = _DLG_SS.replace("__BODY_FONT__", tokens.get("font_body", "15px"))
     replacements = {
         "#4da6ff": accent,
         "rgba(77,166,255,0.12)": _acc("0.12"),
@@ -562,6 +564,37 @@ def _build_picker_extra_stylesheet(tokens: dict | None = None) -> str:
     text_primary = tokens.get("text_primary", "#e1e1e6")
 
     css += f"""
+    QPushButton#btn_custom,
+    QPushButton#btn_point_custom,
+    QPushButton#btn_apply_preset_text {{
+        color: {text_primary};
+        background-color: {surface_item};
+        border: 1px solid {border_soft};
+    }}
+    QPushButton#btn_custom:hover:enabled,
+    QPushButton#btn_point_custom:hover:enabled,
+    QPushButton#btn_apply_preset_text:hover:enabled {{
+        background-color: {surface_hover};
+        border-color: {accent};
+    }}
+    QPushButton#btn_custom:focus,
+    QPushButton#btn_point_custom:focus,
+    QPushButton#btn_apply_preset_text:focus {{
+        border-color: {accent};
+    }}
+    QPushButton#btn_point_custom:checked {{
+        border: 2px solid {accent};
+        background-color: {_acc("0.16")};
+        font-weight: 700;
+    }}
+    QPushButton#btn_custom:disabled,
+    QPushButton#btn_point_custom:disabled,
+    QPushButton#btn_apply_preset_text:disabled {{
+        color: {tokens.get("text_faint", text_primary)};
+    }}
+    QSlider::groove:horizontal {{
+        background: {border_soft};
+    }}
     QFontComboBox {{
         background: {surface_item};
         color: {text_primary};
@@ -610,76 +643,6 @@ def _build_picker_extra_stylesheet(tokens: dict | None = None) -> str:
     return css
 
 
-def _make_swatch_pixmap(base_hex: str, theme_hex: str, size: int) -> QPixmap:
-    base = parse_hex_color(base_hex, "#1c1c1c")
-    theme = parse_hex_color(theme_hex, "#4da6ff")
-
-    px = QPixmap(size, size)
-    px.fill(Qt.GlobalColor.transparent)
-    p = QPainter(px)
-    p.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-    bg = QColor(base)
-    bg.setAlpha(160)
-    p.setBrush(bg)
-    p.setPen(Qt.PenStyle.NoPen)
-    p.drawRoundedRect(2, 2, size - 4, size - 4, 5, 5)
-
-    th = QColor(theme)
-    th.setAlpha(200)
-    p.setBrush(th)
-    p.drawRoundedRect(2, 2, size - 4, 7, 3, 3)
-
-    item = QColor(255, 255, 255, 35)
-    p.setBrush(item)
-    p.drawRoundedRect(6, 14, size - 12, 6, 2, 2)
-    p.drawRoundedRect(6, 24, size - 18, 6, 2, 2)
-
-    p.end()
-    return px
-
-
-def _make_family_preview_pixmap(preset: tuple, width: int = 88, height: int = 48) -> QPixmap:
-    """Render a tiny calendar surface instead of an abstract split-color swatch."""
-    px = QPixmap(width, height)
-    px.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(px)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-    _, _, base_hex, accent_hex, text_colors = preset
-    base = parse_hex_color(base_hex, "#1c1c1c")
-    accent = parse_hex_color(accent_hex, "#4da6ff")
-    text = parse_hex_color(text_colors.get("secondary"), "#c5cfda")
-    border = QColor(0, 0, 0, 62) if _is_light_base_color(base_hex) else QColor(255, 255, 255, 48)
-
-    painter.setPen(border)
-    painter.setBrush(base)
-    painter.drawRoundedRect(1, 1, width - 2, height - 2, 7, 7)
-
-    painter.setPen(Qt.PenStyle.NoPen)
-    header = QColor(accent)
-    header.setAlpha(72)
-    painter.setBrush(header)
-    painter.drawRoundedRect(2, 2, width - 4, 12, 6, 6)
-    painter.drawRect(2, 8, width - 4, 6)
-
-    painter.setPen(text)
-    painter.drawLine(9, 20, width - 9, 20)
-    painter.drawLine(9, 30, width - 9, 30)
-    for column_x in (width // 3, (width * 2) // 3):
-        painter.drawLine(column_x, 17, column_x, height - 7)
-
-    event = QColor(accent)
-    event.setAlpha(190)
-    painter.setPen(Qt.PenStyle.NoPen)
-    painter.setBrush(event)
-    painter.drawRoundedRect(width // 3 + 3, 23, width // 3 - 6, 5, 2, 2)
-    painter.drawEllipse(9, 35, 5, 5)
-
-    painter.end()
-    return px
-
-
 def _color_swatch_pixmap(hex_color: str, w: int = 22, h: int = 22) -> QPixmap:
     px = QPixmap(w, h)
     px.fill(Qt.GlobalColor.transparent)
@@ -710,14 +673,18 @@ def _update_preview_style(
     input_bg: str = "rgba(0,0,0,0.2)",
     text_opacity: float = 1.0,
     tokens: dict | None = None,
+    border_color: str | None = None,
 ):
     """Efficiently updates an existing preview widget's stylesheet and components."""
     pal = derive_panel_palette(base_hex, opacity_factor)
     theme = parse_hex_color(theme_hex, "#4da6ff")
     th_name = theme.name()
     is_light = _is_light_base_color(base_hex)
-    bd_base = "0,0,0" if is_light else "255,255,255"
-    bd_color = f"rgba({bd_base},{border_opacity})"
+    if border_color and QColor(border_color).isValid():
+        bd_color = _opacity_rgba(border_color, border_opacity, "#808080")
+    else:
+        bd_base = "0,0,0" if is_light else "255,255,255"
+        bd_color = f"rgba({bd_base},{border_opacity})"
     preview_tokens = tokens or get_ui_tokens(
         theme_color=theme_hex,
         text_theme="light" if is_light else "dark",
@@ -733,22 +700,29 @@ def _update_preview_style(
     text_primary_rgba = _opacity_rgba(text_primary, text_opacity, "#f4f7fb")
     text_secondary_rgba = _opacity_rgba(text_secondary, text_opacity, "#c5cfda")
     text_muted_rgba = _opacity_rgba(text_muted, text_opacity, "#95a1ae")
+    # get_ui_tokens has no accent_text; the white fallback was unreadable on light
+    # accents (1.1:1 on a pale yellow). Pick whichever text reads on the accent.
+    accent_text = contrasting_text_color(th_name)
 
     # Update internal widgets using property selectors or direct access if they were tagged
     # For simplicity, we can just update the whole frame's stylesheet with child selectors
     full_ss = f"""
         QFrame#previewContainer {{ background-color: {pal["surface_bg"]}; border-radius: {panel_radius}px; border: 1px solid {bd_color}; }}
         QFrame#previewTop {{ background-color: {pal["topbar_bg"]}; border-top-left-radius: {panel_radius}px; border-top-right-radius: {panel_radius}px; border-bottom: 1px solid {bd_color}; }}
-        QLabel#previewTitle {{ color: {th_name}; font-size: 13px; font-weight: bold; background: transparent; border: none; }}
-        QLabel#previewSub {{ color: {text_secondary_rgba}; font-size: 11px; background: transparent; border: none; }}
+        QLabel#previewTitle {{ color: {th_name}; font-size: {preview_tokens["font_body"]}; font-weight: bold; background: transparent; border: none; }}
+        QLabel#previewSub {{ color: {text_secondary_rgba}; font-size: {preview_tokens["font_caption"]}; background: transparent; border: none; }}
         QFrame#previewItem1 {{ background: rgba({theme.red()},{theme.green()},{theme.blue()},0.15); border: 1px solid {bd_color}; border-radius: {item_radius}px; }}
         QFrame#previewItem2 {{ background: {item_bg}; border: 1px solid {bd_color}; border-radius: {item_radius}px; }}
         QFrame#previewInput {{ background: {input_bg}; border: 1px solid {bd_color}; border-radius: {field_radius}px; }}
-        QLabel#previewItemText1 {{ color: {text_primary_rgba}; font-size: 11px; font-weight: bold; background: transparent; border: none; }}
-        QLabel#previewItemText2 {{ color: {text_secondary_rgba}; font-size: 11px; background: transparent; border: none; }}
-        QLabel#previewInputHint {{ color: {text_muted_rgba}; font-size: 10px; background: transparent; border: none; }}
+        QLabel#previewItemText1 {{ color: {text_primary_rgba}; font-size: {preview_tokens["font_caption"]}; font-weight: bold; background: transparent; border: none; }}
+        QLabel#previewItemText2 {{ color: {text_secondary_rgba}; font-size: {preview_tokens["font_caption"]}; background: transparent; border: none; }}
+        QLabel#previewInputHint {{ color: {text_muted_rgba}; font-size: {preview_tokens["font_caption"]}; background: transparent; border: none; }}
+        QLabel#previewDay, QLabel#previewWeekday {{ color: {text_secondary_rgba}; font-size: {preview_tokens["font_caption"]}; background: transparent; border: none; padding: 1px; }}
+        QLabel#previewDay[selected="true"] {{ background: {th_name}; color: {accent_text}; border-radius: 5px; }}
     """
-    frame.setStyleSheet(full_ss)
+    if frame.property("_preview_css") != full_ss:
+        frame.setProperty("_preview_css", full_ss)
+        frame.setStyleSheet(full_ss)
 
 
 def _build_preview_widget(
@@ -759,6 +733,7 @@ def _build_preview_widget(
     text_secondary: str = "#c5cfda",
     text_muted: str = "#95a1ae",
     border_opacity: float = 0.3,
+    border_color: str | None = None,
     input_bg: str = "rgba(0,0,0,0.2)",
     text_opacity: float = 1.0,
     tokens: dict | None = None,
@@ -782,7 +757,8 @@ def _build_preview_widget(
     lbl_title.setObjectName("previewTitle")
     top_lay.addWidget(lbl_title)
 
-    lbl_sub = QLabel("2026.03")
+    today = QDate.currentDate()
+    lbl_sub = QLabel(today.toString("yyyy.MM"))
     lbl_sub.setObjectName("previewSub")
     top_lay.addStretch()
     top_lay.addWidget(lbl_sub)
@@ -792,6 +768,30 @@ def _build_preview_widget(
     body_lay = QVBoxLayout(body)
     body_lay.setContentsMargins(12, 8, 12, 8)
     body_lay.setSpacing(6)
+
+    calendar = QWidget(body)
+    calendar.setObjectName("appearancePreviewCalendar")
+    dates = QGridLayout(calendar)
+    dates.setContentsMargins(0, 0, 0, 4)
+    dates.setHorizontalSpacing(4)
+    dates.setVerticalSpacing(2)
+    locale = QLocale()
+    for column in range(7):
+        weekday = QLabel(locale.standaloneDayName(column + 1, QLocale.FormatType.ShortFormat))
+        weekday.setObjectName("previewWeekday")
+        weekday.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        dates.addWidget(weekday, 0, column)
+        dates.setColumnStretch(column, 1)
+    first = QDate(today.year(), today.month(), 1)
+    start = first.addDays(1 - first.dayOfWeek())
+    for index in range(42):
+        date = start.addDays(index)
+        label = QLabel(str(date.day()) if date.month() == today.month() else "")
+        label.setObjectName("previewDay")
+        label.setProperty("selected", "true" if date == today else "false")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        dates.addWidget(label, index // 7 + 1, index % 7)
+    body_lay.addWidget(calendar)
 
     # Item 1
     row1 = QFrame(body)
@@ -839,6 +839,7 @@ def _build_preview_widget(
         input_bg,
         text_opacity,
         tokens=tokens,
+        border_color=border_color,
     )
     return frame
 
@@ -902,9 +903,10 @@ class _ColorRow(QWidget):
         lay.setSpacing(8)
 
         lbl = QLabel(label)
-        lbl.setFixedWidth(80)
+        self._name_lbl = lbl
+        lbl.setMinimumWidth(80)
         lbl.setStyleSheet(
-            f"font-size: 12px; color: {tokens.get('text_secondary', 'rgba(255,255,255,0.75)')};"
+            f"font-size: {tokens.get('font_body', '15px')}; color: {tokens.get('text_secondary', 'rgba(255,255,255,0.75)')};"
         )
         lay.addWidget(lbl)
 
@@ -917,7 +919,7 @@ class _ColorRow(QWidget):
 
         self._hex_lbl = QLabel()
         self._hex_lbl.setStyleSheet(
-            f"font-size: 12px; color: {tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
+            f"font-size: {tokens.get('font_caption', '14px')}; color: {tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
         )
         lay.addWidget(self._hex_lbl)
 
@@ -926,7 +928,7 @@ class _ColorRow(QWidget):
         # 기본값 표시 레이블
         self._default_lbl = QLabel()
         self._default_lbl.setStyleSheet(
-            f"font-size: 11px; color: {tokens.get('text_faint', 'rgba(255,255,255,0.30)')};"
+            f"font-size: {tokens.get('font_caption', '14px')}; color: {tokens.get('text_faint', 'rgba(255,255,255,0.30)')};"
         )
         lay.addWidget(self._default_lbl)
 
@@ -938,6 +940,14 @@ class _ColorRow(QWidget):
         lay.addWidget(reset_btn)
 
         self._update_swatch()
+
+    def apply_theme_tokens(self, tokens: dict):
+        for label, font_role, color_role in (
+            (self._name_lbl, "font_body", "text_secondary"),
+            (self._hex_lbl, "font_caption", "text_muted"),
+            (self._default_lbl, "font_caption", "text_faint"),
+        ):
+            label.setStyleSheet(f"font-size: {tokens[font_role]}; color: {tokens[color_role]};")
 
     def _update_swatch(self):
         from PyQt6.QtCore import QSize
@@ -956,7 +966,10 @@ class _ColorRow(QWidget):
         from PyQt6.QtWidgets import QColorDialog
 
         picked = QColorDialog.getColor(
-            QColor(self._hex), self, t("dialog.theme.color_picker_title", "색상 선택")
+            QColor(self._hex),
+            self,
+            t("dialog.theme.color_picker_title", "색상 선택"),
+            QColorDialog.ColorDialogOption.DontUseNativeDialog,
         )
         if picked.isValid():
             self._hex = picked.name(QColor.NameFormat.HexRgb)
@@ -995,6 +1008,83 @@ class _ColorRow(QWidget):
 # ---------------------------------------------------------------------------
 
 
+class _ReadOnlyAppearanceSettings:
+    """Let normalizing readers return clean values without changing stored input."""
+
+    def __init__(self, source):
+        self.source = source
+
+    def value(self, key, default=None, type=None):  # noqa: A002
+        if self.source is None:
+            return default
+        if type is not None:
+            return self.source.value(key, default, type=type)
+        return self.source.value(key, default)
+
+    def contains(self, key):
+        return self.value(key, None) is not None
+
+    def allKeys(self):  # noqa: N802
+        method = getattr(self.source, "allKeys", None)
+        return method() if callable(method) else []
+
+    def setValue(self, _key, _value):  # noqa: N802
+        pass  # Normalization is local to the returned draft, persisted on Apply.
+
+    def remove(self, _key):
+        pass
+
+
+class _AppearanceDraftSettings:
+    """Read-only profile for modal chrome; never writes the appearance draft."""
+
+    def __init__(self, dialog, source):
+        self.dialog = dialog
+        self.source = source
+
+    def value(self, key, default=None, type=None):  # noqa: A002
+        dialog = self.dialog
+        values = {
+            "text_theme": dialog._effective_appearance_mode(),
+            "panel_base_color": dialog._base_hex,
+            "theme_color": dialog._point_hex,
+            "appearance_style_family": "",
+            "appearance_base_source": "custom",
+            "appearance_accent_source": "custom",
+            "last_opacity": 255,
+            "last_opacity_unit": "byte",
+            "appearance_border_source": dialog.selected_border_source(),
+            "panel_border_color": dialog._current_border_hex(),
+            "last_border_opacity": dialog._border_opacity,
+            "text_opacity": dialog._text_opacity,
+            "font_size": dialog._font_size_orig or DEFAULT_FONT_PT,
+        }
+        if key.startswith("dialog_token.metric."):
+            value = dialog._dialog_metric_overrides.get(
+                key.removeprefix("dialog_token.metric."), default
+            )
+        elif key.startswith("dialog_token."):
+            value = dialog._dialog_color_overrides.get(key.removeprefix("dialog_token."), default)
+        elif key in values:
+            value = values[key]
+        else:
+            if self.source is None:
+                return default
+            return (
+                self.source.value(key, default, type=type)
+                if type is not None
+                else self.source.value(key, default)
+            )
+        return type(value) if type is not None and value is not None else value
+
+    def contains(self, key):
+        return self.value(key, None) is not None
+
+    def allKeys(self):  # noqa: N802
+        getter = getattr(self.source, "allKeys", None)
+        return getter() if callable(getter) else []
+
+
 class PanelColorPickerDialog(QDialog):
     color_applied = pyqtSignal(str)
 
@@ -1016,15 +1106,25 @@ class PanelColorPickerDialog(QDialog):
         current_font_size: int = 10,
         current_style_family: str = "",
         current_accent_source: str = "custom",
+        current_base_source: str = "family",
+        current_original_base: str | None = None,
+        current_style_family_variants: dict[str, str] | None = None,
+        current_border_source: str = "",
+        current_border_color: str = "",
     ):
         super().__init__(parent)
         self._building = True  # suppress redundant _refresh_preview during init
+        self._theme_style_bindings = []
+        self._surface_theme_signature = None
         apply_dialog_title(self, t("dialog.theme.title", "모양 설정"))
         self.setMinimumWidth(620)
         self._wheel_blocker = WheelBlocker(self)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
 
         self._base_hex = current_base
+        self._base_source = "custom" if current_base_source == "custom" else "family"
+        self._custom_base_hex = str(current_original_base or current_base)
+        self._saved_family_variants = dict(current_style_family_variants or {})
         self._theme_hex = current_theme
         self._point_hex = current_theme
         self._point_hex_original = current_theme
@@ -1033,18 +1133,27 @@ class PanelColorPickerDialog(QDialog):
         )
         self._text_source = "custom" if current_text_theme == "custom" else "family"
         self._preferred_style_family = str(current_style_family or "").strip()
+        self._draft_style_family = self._preferred_style_family
         self._opacity = max(0, min(255, current_opacity))
         self._border_opacity = max(0, min(255, current_border_opacity))
-        self._text_opacity = max(0, min(255, current_text_opacity))
+        # "" means the user never chose a border: the app keeps its neutral lines
+        # until a border color or border opacity is changed here.
+        self._border_source_saved = str(current_border_source or "").lower()
+        self._border_source = "custom" if self._border_source_saved == "custom" else "auto"
+        custom_border = QColor(str(current_border_color or ""))
+        self._custom_border_hex = (
+            custom_border.name(QColor.NameFormat.HexRgb) if custom_border.isValid() else ""
+        )
+        self._border_initial = (
+            self._border_source,
+            self._custom_border_hex if self._border_source == "custom" else "",
+            self._border_opacity,
+        )
+        # Readability owns text opacity; very faint text stops being readable.
+        self._text_opacity = max(MIN_TEXT_OPACITY, min(255, int(current_text_opacity)))
         self._input_bg = current_input_bg
         self._selected_preset: int | None = None
-        self._preset_filter_mode: str = "light" if _is_light_base_color(current_base) else "dark"
-        self._preset_modes: list[str] = []
-        self._preset_btns: list[QPushButton] = []
-        self._preset_buttons_built = False
         self._family_btns: dict[str, QPushButton] = {}
-        self._preset_grid: QGridLayout | None = None
-        self._preset_filter_btns: dict[str, QPushButton] = {}
         self._text_theme = current_text_theme
         self._appearance_mode = (
             current_text_theme
@@ -1054,8 +1163,16 @@ class PanelColorPickerDialog(QDialog):
         self._appearance_mode_btns: dict[str, QPushButton] = {}
         self._font_family_orig = current_font_family
         self._font_size_orig = current_font_size
-        self._dialog_color_overrides = get_dialog_token_overrides()
-        self._dialog_metric_overrides = get_dialog_metric_overrides()
+        self._appearance_settings = _ReadOnlyAppearanceSettings(
+            getattr(parent, "settings", None) or QSettings("kimhyojin", "Dark Calendar")
+        )
+        app_font = QApplication.instance().font()
+        self._typography = get_typography_scale(
+            base_pt=current_font_size or app_font.pointSizeF() or DEFAULT_FONT_PT
+        )
+        self._dialog_color_overrides = get_dialog_token_overrides(self._appearance_settings)
+        self._dialog_metric_overrides = get_dialog_metric_overrides(self._appearance_settings)
+        self._draft_settings = _AppearanceDraftSettings(self, self._appearance_settings)
         self._preview_refresh_timer = QTimer(self)
         self._preview_refresh_timer.setSingleShot(True)
         self._preview_refresh_timer.setInterval(32)
@@ -1087,6 +1204,7 @@ class PanelColorPickerDialog(QDialog):
             panel_base_color=self._theme_snapshot.panel_base_color,
             extra_stylesheet=_build_picker_extra_stylesheet(self._ui_tokens),
             keep_existing_stylesheet=False,
+            settings=self._draft_settings,
         )
 
         self._build_ui()
@@ -1104,7 +1222,6 @@ class PanelColorPickerDialog(QDialog):
         self._initial_appearance_state = self._appearance_state()
         self._initial_text_theme = self._text_theme
         self._initial_selected_preset = self._selected_preset
-        self._initial_preset_filter_mode = self._preset_filter_mode
         self._initial_accent_source = self._accent_source
         self._initial_text_source = self._text_source
         self._initial_preview_state = self._current_preview_state()
@@ -1129,18 +1246,98 @@ class PanelColorPickerDialog(QDialog):
 
     def _rebuild_theme_context(self):
         self._theme_snapshot = build_theme_snapshot(
+            self._appearance_settings,
             theme_color=self._point_hex,
-            text_theme=self._resolved_dialog_text_theme(),
+            text_theme=self._effective_appearance_mode(),
             panel_base_color=self._base_hex,
             opacity_factor=self._opacity / 255.0,
             input_bg=self._input_bg,
         )
         self._ui_tokens = get_ui_tokens(snapshot=self._theme_snapshot)
+        for role in ("body", "caption", "section", "title", "display"):
+            self._ui_tokens[f"font_{role}"] = f"{getattr(self._typography, role + '_px')}px"
         if not hasattr(self, "_dialog_metrics"):
-            self._dialog_metrics = get_dialog_metric_tokens(apply_overrides=True)
+            self._dialog_metrics = get_dialog_metric_tokens(
+                settings=self._appearance_settings, apply_overrides=True
+            )
+
+    @staticmethod
+    def _set_style(widget: QWidget, stylesheet: str) -> None:
+        """Qt re-polishes a widget even for an identical sheet; skip those."""
+        if not sip.isdeleted(widget) and widget.styleSheet() != stylesheet:
+            widget.setStyleSheet(stylesheet)
+
+    @contextlib.contextmanager
+    def _batched_updates(self):
+        """Repaint once after a multi-step change instead of after every step.
+
+        Without this a single mode switch painted several half-restyled frames,
+        which showed up as flicker and broken layout while the colors changed.
+        """
+        depth = getattr(self, "_batch_depth", 0)
+        self._batch_depth = depth + 1
+        if depth == 0:
+            self.setUpdatesEnabled(False)
+        try:
+            yield
+        finally:
+            self._batch_depth -= 1
+            if self._batch_depth == 0:
+                self.setUpdatesEnabled(True)
+                self.update()
+
+    def _bind_theme_style(self, widget: QWidget, factory: Callable[[], str]):
+        """Keep local picker styles tied to the draft, rather than opening colors."""
+        widget.setStyleSheet(factory())
+        self._theme_style_bindings.append((widget, factory))
+
+    def _refresh_dialog_surfaces(self):
+        signature = (
+            self._base_hex,
+            self._point_hex,
+            self._effective_appearance_mode(),
+            tuple(sorted(self._dialog_color_overrides.items())),
+        )
+        if signature == self._surface_theme_signature:
+            return
+        self._surface_theme_signature = signature
+        # The shared deferred text-fit pass must retain the user's current size.
+        self.setProperty("_dc_preferred_size", QSize(self.size()))
+        apply_common_dialog_style(
+            self,
+            minimum_width=620,
+            theme_color=self._point_hex,
+            text_theme=self._effective_appearance_mode(),
+            panel_base_color=self._base_hex,
+            extra_stylesheet=_build_picker_extra_stylesheet(self._ui_tokens),
+            keep_existing_stylesheet=False,
+            settings=self._draft_settings,
+        )
+        shadow = getattr(self, "_dc_dialog_shadow_controller", None)
+        if shadow is not None:
+            shadow.refresh_style(settings=self._draft_settings)
+        for widget, factory in self._theme_style_bindings:
+            if not sip.isdeleted(widget):
+                stylesheet = factory()
+                if widget.styleSheet() != stylesheet:
+                    widget.setStyleSheet(stylesheet)
+        for row in self.findChildren(_ColorRow):
+            row.apply_theme_tokens(self._ui_tokens)
+        self._refresh_family_buttons()
+        self._refresh_appearance_mode_buttons()
+        color = parse_hex_color(self._ui_tokens.get("text_secondary"), "#c8ccd4").name()
+        self._details_btn.setIcon(_ic(ICON.ADVANCED, color=color))
+        self._revert_all_btn.setIcon(_ic(ICON.REFRESH, color=color))
+        primary = parse_hex_color(self._ui_tokens.get("text_primary"), "#e1e1e6").name()
+        self._point_custom_btn.setIcon(_ic(ICON.COLOR_PICKER, color=primary))
+        self._btn_apply_preset_text.setIcon(_ic(ICON.APPEARANCE, color=primary))
+        if hasattr(self, "_font_preview"):
+            self._apply_font_preview_font(self._font_preview.font())
 
     def _auto_select_matching_preset(self):
         """Auto-select matching preset based on current base color."""
+        if self._base_source == "custom":
+            return
         initial_mode = self._appearance_mode
         matched = False
         for i, (name_key, _, base, _, _) in enumerate(_PRESETS):
@@ -1150,29 +1347,15 @@ class PanelColorPickerDialog(QDialog):
                 if initial_mode != "auto" and self._text_theme != "custom":
                     self._text_theme = mode
                     self._appearance_mode = mode
-                if mode in {"dark", "light"} and initial_mode != "auto":
-                    self._preset_filter_mode = mode
                 matched = True
                 break
-        if not matched:
-            self._preset_filter_mode = "light" if _is_light_base_color(self._base_hex) else "dark"
+        if not matched and not self._draft_style_family:
+            self._base_source = "custom"
 
-        if self._preset_grid is not None:
-            self._refresh_preset_filter_buttons()
-            self._rebuild_preset_grid()
-
-        if self._selected_preset is not None and self._selected_preset < len(self._preset_btns):
-            self._preset_btns[self._selected_preset].setStyleSheet(self._preset_btn_ss(True))
         self._refresh_family_buttons()
         self._refresh_appearance_mode_buttons()
 
-        if hasattr(self, "_point_btns"):
-            for i, (_, _, code) in enumerate(_POINT_COLORS):
-                if code.lower() == self._point_hex.lower():
-                    self._point_btns[i].setStyleSheet(self._point_btn_ss(True))
-                    break
-
-    def _preset_filter_btn_ss(self, active: bool) -> str:
+    def _segmented_btn_ss(self, active: bool) -> str:
         tokens = self._ui_tokens
         shape = _picker_shape_metrics(tokens)
         accent = parse_hex_color(tokens.get("accent", "#4da6ff"), "#4da6ff")
@@ -1203,42 +1386,6 @@ class PanelColorPickerDialog(QDialog):
             "}"
         )
 
-    def _refresh_preset_filter_buttons(self):
-        for mode, btn in self._preset_filter_btns.items():
-            active = mode == self._preset_filter_mode
-            btn.setChecked(active)
-            btn.setProperty("active", "true" if active else "false")
-            btn.setStyleSheet(self._preset_filter_btn_ss(active))
-
-    def _set_preset_filter_mode(self, mode: str):
-        mode = str(mode or "all").lower()
-        if mode not in {"all", "dark", "light"}:
-            mode = "all"
-        self._preset_filter_mode = mode
-        self._refresh_preset_filter_buttons()
-        self._rebuild_preset_grid()
-
-    def _set_all_styles_visible(self, visible: bool):
-        if visible:
-            self._ensure_preset_buttons()
-        for widget in getattr(self, "_preset_filter_widgets", []):
-            widget.setVisible(bool(visible))
-        grid_widget = getattr(self, "_preset_grid_widget", None)
-        if grid_widget is not None:
-            grid_widget.setVisible(bool(visible))
-
-    def _ensure_preset_buttons(self):
-        if self._preset_buttons_built:
-            return
-        for index, (name_key, name_fallback, base, theme, _) in enumerate(_PRESETS):
-            preset_name = t(name_key, name_fallback)
-            self._preset_btns.append(self._make_preset_button(index, preset_name, base, theme))
-            self._preset_modes.append(_preset_mode_for_key(name_key))
-        self._preset_buttons_built = True
-        self._rebuild_preset_grid()
-        if self._selected_preset is not None and self._selected_preset < len(self._preset_btns):
-            self._preset_btns[self._selected_preset].setStyleSheet(self._preset_btn_ss(True))
-
     def _select_style_family(self, family_id: str):
         family = next((item for item in _STYLE_FAMILIES if item[0] == family_id), None)
         if family is None:
@@ -1251,13 +1398,11 @@ class PanelColorPickerDialog(QDialog):
             self._select_preset(preset_index, appearance_mode=self._appearance_mode)
 
     def _system_mode_variant(self) -> str:
-        snapshot = build_theme_snapshot(
-            theme_color=self._point_hex,
-            text_theme="auto",
-            panel_base_color="#1c1c1c",
-            opacity_factor=self._opacity / 255.0,
-        )
-        return snapshot.text_theme if snapshot.text_theme in {"dark", "light"} else "dark"
+        # "auto" resolves to the operating system's color scheme and nothing else.
+        # Building a full theme snapshot here reads every dialog metric from the
+        # settings store, and this is called hundreds of times per style change.
+        resolved = resolve_system_text_theme()
+        return resolved if resolved in {"dark", "light"} else "dark"
 
     def _effective_appearance_mode(self) -> str:
         mode = self._appearance_mode
@@ -1267,24 +1412,61 @@ class PanelColorPickerDialog(QDialog):
             mode = "light" if _is_light_base_color(self._base_hex) else "dark"
         return mode
 
+    def _refresh_custom_base_for_mode(self, mode: str):
+        saved_base = self._saved_family_variants.get(f"{mode}_base", "")
+        self._base_hex = (
+            saved_base
+            if self._base_source == "family" and QColor(saved_base).isValid()
+            else resolve_mode_base_color(self._custom_base_hex, mode)
+        )
+        self._selected_preset = None
+        family_accent = QColor(self._saved_family_variants.get(f"{mode}_accent", ""))
+        if self._accent_source == "family" and family_accent.isValid():
+            self._point_hex = family_accent.name(QColor.NameFormat.HexRgb)
+            self._theme_hex = self._point_hex
+        self._rebuild_theme_context()
+        if self._text_source == "family":
+            semantic_text = _semantic_preset_text_values(self._base_hex, self._point_hex, mode)
+            self._set_text_row_values(semantic_text)
+            for row in (
+                self._row_primary,
+                self._row_secondary,
+                self._row_muted,
+                self._row_faint,
+                self._row_input_bg,
+            ):
+                row.mark_current_as_original()
+
     def _set_appearance_mode(self, mode: str):
         mode = str(mode or "dark").lower()
         if mode not in {"auto", "dark", "light"}:
             return
+        with self._batched_updates():
+            self._apply_appearance_mode(mode)
+
+    def _apply_appearance_mode(self, mode: str):
         self._appearance_mode = mode
         self._text_theme = mode
+        if self._base_source == "custom" or (
+            self._draft_style_family and self._saved_family_variants
+        ):
+            self._refresh_custom_base_for_mode(self._effective_appearance_mode())
+            self._refresh_family_buttons()
+            self._refresh_appearance_mode_buttons()
+            self._refresh_preview()
+            self._update_change_summary()
+            return
         family_id = None
         if self._selected_preset is not None and self._selected_preset < len(_PRESETS):
             family_id = _FAMILY_BY_PRESET_KEY.get(_PRESETS[self._selected_preset][0])
+        # _select_preset already refreshed the buttons, preview and change summary.
         self._select_style_family(family_id or "neutral")
-        self._refresh_appearance_mode_buttons()
-        self._update_change_summary()
 
     def _refresh_appearance_mode_buttons(self):
         for mode, button in self._appearance_mode_btns.items():
             active = mode == self._appearance_mode
             button.setChecked(active)
-            button.setStyleSheet(self._preset_filter_btn_ss(active))
+            self._set_style(button, self._segmented_btn_ss(active))
 
     def _focus_family_neighbor(self, current: QPushButton, step: int):
         buttons = list(self._family_btns.values())
@@ -1294,75 +1476,126 @@ class PanelColorPickerDialog(QDialog):
         target.setFocus(Qt.FocusReason.TabFocusReason)
 
     def _refresh_family_buttons(self):
-        selected_family = None
-        if self._selected_preset is not None and self._selected_preset < len(_PRESETS):
-            selected_family = _FAMILY_BY_PRESET_KEY.get(_PRESETS[self._selected_preset][0])
+        selected_family = self._selected_swatch_family()
         mode = self._effective_appearance_mode()
         for family_id, button in self._family_btns.items():
             selected = family_id == selected_family
-            family = next(item for item in _STYLE_FAMILIES if item[0] == family_id)
-            _, dark_key, light_key = family
-            preset_key = light_key if mode == "light" else dark_key
-            preset = _PRESET_BY_KEY[preset_key]
+            preset_key, accent = self._family_accent(family_id, mode)
             family_label = str(button.property("family_label") or "")
-            variant_label = t(preset_key, preset[1])
-            prefix = "✓ " if selected else ""
-            button.setText(f"{prefix}{family_label}\n{variant_label}")
-            button.setIcon(QIcon(_make_family_preview_pixmap(preset)))
+            variant_label = t(preset_key, _PRESET_BY_KEY[preset_key][1])
+            button.setIcon(self._swatch_icon(accent))
             button.setProperty("variant_label", variant_label)
             button.setChecked(selected)
-            button.setAccessibleName(button.text().replace("\n", ", "))
-            button.setStyleSheet(self._family_btn_ss(selected))
+            button.setToolTip(f"{family_label} · {variant_label}\n{accent}")
+            prefix = "✓ " if selected else ""
+            button.setAccessibleName(f"{prefix}{family_label}, {variant_label}")
+            self._set_style(button, self._family_btn_ss(selected))
+        custom = getattr(self, "_point_custom_btn", None)
+        if custom is not None:
+            custom.setChecked(self._accent_source != "family")
+        # A mode switch changes a preset's accent; keep the shown value in step.
+        self._refresh_point_display()
+        self._refresh_base_source_buttons()
+
+    def _refresh_base_source_buttons(self):
+        auto = getattr(self, "_btn_auto_base", None)
+        custom = getattr(self, "_btn_custom", None)
+        if auto is None or custom is None:
+            return
+        is_custom = self._base_source == "custom"
+        auto.setChecked(not is_custom)
+        custom.setChecked(is_custom)
+        self._set_style(auto, self._segmented_btn_ss(not is_custom))
+        self._set_style(custom, self._segmented_btn_ss(is_custom))
+        self._refresh_border_controls()
+
+    def _current_border_hex(self) -> str:
+        """The chosen border, or the recommendation for the draft background and accent."""
+        if self._border_source == "custom" and self._custom_border_hex:
+            return self._custom_border_hex
+        return recommend_border_color(self._base_hex, self._point_hex)
+
+    def _refresh_border_controls(self):
+        auto = getattr(self, "_btn_auto_border", None)
+        custom = getattr(self, "_btn_custom_border", None)
+        if auto is None or custom is None:
+            return
+        is_custom = self._border_source == "custom"
+        auto.setChecked(not is_custom)
+        custom.setChecked(is_custom)
+        self._set_style(auto, self._segmented_btn_ss(not is_custom))
+        self._set_style(custom, self._segmented_btn_ss(is_custom))
+        border_hex = self._current_border_hex()
+        self._border_swatch_lbl.setPixmap(_color_swatch_pixmap(border_hex))
+        self._border_hex_lbl.setText(border_hex)
+
+    def _use_auto_border(self, _checked=False):
+        self._border_source = "auto"
+        self._border_changed()
+
+    def _open_custom_border_color(self, _checked=False):
+        from PyQt6.QtWidgets import QColorDialog
+
+        picked = QColorDialog.getColor(
+            QColor(self._current_border_hex()),
+            self,
+            t("dialog.theme.border.custom_picker_title", "테두리색 선택"),
+            QColorDialog.ColorDialogOption.DontUseNativeDialog,
+        )
+        if not picked.isValid():
+            self._refresh_border_controls()  # keep the toggle truthful after cancel
+            return
+        self._custom_border_hex = picked.name(QColor.NameFormat.HexRgb)
+        self._border_source = "custom"
+        self._border_changed()
+
+    def _border_changed(self):
+        self._refresh_border_controls()
+        self._rebuild_theme_context()
+        self._refresh_preview()
+        self._update_change_summary()
+
+    def _use_family_base(self, _checked=False):
+        """Return the background to the tone that belongs with the chosen preset."""
+        with self._batched_updates():
+            family_id = self._selected_style_family_id() or self._draft_style_family
+            if family_id not in {item[0] for item in _STYLE_FAMILIES}:
+                family_id = "neutral"
+            preset_key, _accent = self._family_accent(family_id)
+            self._selected_preset = _PRESET_INDEX_BY_KEY.get(preset_key)
+            self._draft_style_family = family_id
+            self._saved_family_variants = self._catalog_style_family_variants()
+            self._base_source = "family"
+            self._text_source = "family"
+            self._refresh_custom_base_for_mode(self._effective_appearance_mode())
+            self._selected_preset = _PRESET_INDEX_BY_KEY.get(preset_key)
+            self._btn_apply_preset_text.setEnabled(True)
+            self._refresh_family_buttons()
+            self._update_contrast_status()
+            self._refresh_preview()
+            self._update_change_summary()
 
     def _family_btn_ss(self, selected: bool) -> str:
         tokens = self._ui_tokens
         shape = _picker_shape_metrics(tokens)
-        accent = parse_hex_color(tokens.get("accent", "#4da6ff"), "#4da6ff")
+        radius = shape["toolbar_button_radius"]
         if selected:
-            background = f"rgba({accent.red()},{accent.green()},{accent.blue()},0.16)"
-            border = f"rgba({accent.red()},{accent.green()},{accent.blue()},0.82)"
+            border = f"3px solid {tokens.get('text_primary', '#ffffff')}"
         else:
-            background = tokens.get("bg_item", "rgba(255,255,255,0.05)")
-            border = tokens.get("border", "rgba(255,255,255,0.12)")
+            border = f"2px solid {tokens.get('border', 'rgba(255,255,255,0.12)')}"
         return (
-            "QPushButton#appearanceFamilyCard {"
-            f"background: {background}; border: {'2px' if selected else '1px'} solid {border};"
-            f"border-radius: {shape['button_radius']}px;"
-            f"color: {tokens.get('text_primary', '#ffffff')};"
-            "font-size: 12px; font-weight: 700; text-align: left; padding: 7px 10px;"
+            "QPushButton#appearanceFamilySwatch {"
+            f"border-radius: {radius}px; border: {border}; padding: 0px;"
+            "background: transparent;"
+            "min-width: 44px; max-width: 44px; min-height: 44px; max-height: 44px;"
             "}"
-            "QPushButton#appearanceFamilyCard:hover {"
-            f"background: {tokens.get('bg_item_hover', 'rgba(255,255,255,0.10)')};"
-            f"border-color: {tokens.get('border_strong', border)};"
+            "QPushButton#appearanceFamilySwatch:hover {"
+            f"border-color: {tokens.get('border_strong', 'rgba(255,255,255,0.50)')};"
             "}"
-            "QPushButton#appearanceFamilyCard:focus {"
-            f"border: 2px solid {tokens.get('accent', '#4da6ff')};"
+            "QPushButton#appearanceFamilySwatch:focus {"
+            f"border-color: {tokens.get('accent', '#4da6ff')};"
             "}"
         )
-
-    def _rebuild_preset_grid(self):
-        if self._preset_grid is None or not self._preset_buttons_built:
-            return
-
-        while self._preset_grid.count():
-            item = self._preset_grid.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.setVisible(False)
-
-        visible_indices = []
-        for idx, (name_key, _, _, _, _) in enumerate(_PRESETS):
-            mode = _preset_mode_for_key(name_key)
-            is_visible = self._preset_filter_mode == "all" or mode == self._preset_filter_mode
-            if is_visible:
-                visible_indices.append(idx)
-
-        cols = 4
-        for order, idx in enumerate(visible_indices):
-            row, col = divmod(order, cols)
-            btn = self._preset_btns[idx]
-            btn.setVisible(True)
-            self._preset_grid.addWidget(btn, row, col)
 
     @staticmethod
     def _wrap_tab_content(widget: QWidget) -> QScrollArea:
@@ -1374,6 +1607,8 @@ class PanelColorPickerDialog(QDialog):
             "QScrollArea { background: transparent; border: none; }"
             "QScrollArea > QWidget > QWidget { background: transparent; }"
         )
+        scroll.viewport().setAutoFillBackground(False)
+        widget.setAutoFillBackground(False)
         scroll.setWidget(widget)
         return scroll
 
@@ -1382,13 +1617,81 @@ class PanelColorPickerDialog(QDialog):
         if screen is None:
             return
         available = screen.availableGeometry()
-        preferred_width = 980 if getattr(self, "_wide_appearance_layout", False) else 700
+        preferred_width = 960 if getattr(self, "_wide_appearance_layout", False) else 700
         width = min(
             max(self.minimumWidth(), preferred_width),
             max(420, available.width() - 32),
         )
-        height = min(960, max(420, available.height() - 48))
+        height = min(740, max(280, available.height() - 64))
+        self.setProperty("_dc_preferred_size", QSize(width, height))
         self.resize(width, height)
+        self._sync_appearance_workspace(width)
+
+    def _sync_appearance_workspace(self, width: int):
+        workspace = getattr(self, "_appearance_workspace", None)
+        if workspace is None or getattr(self, "_appearance_reflowing", False):
+            return
+        self._appearance_reflowing = True
+        try:
+            wide = width >= 900 and self._typography.body_px <= 20
+            self._wide_appearance_layout = wide
+            direction = (
+                QBoxLayout.Direction.LeftToRight if wide else QBoxLayout.Direction.TopToBottom
+            )
+            workspace.setDirection(direction)
+            calendar = self._preview_frame.findChild(QWidget, "appearancePreviewCalendar")
+            if calendar is not None:
+                calendar.setVisible(wide)
+            self._preview_frame.setFixedHeight(_PREVIEW_H if wide else 140)
+            if wide:
+                self._settings_scroll.setMinimumWidth(0)
+                self._preview_panel.setMinimumWidth(280)
+                self._preview_panel.setMaximumWidth(340)
+                workspace.removeWidget(self._settings_scroll)
+                workspace.removeWidget(self._preview_panel)
+                workspace.insertWidget(0, self._settings_scroll, 64)
+                workspace.insertWidget(1, self._preview_panel, 36, Qt.AlignmentFlag.AlignTop)
+            else:
+                self._settings_scroll.setMinimumWidth(0)
+                self._preview_panel.setMinimumWidth(0)
+                self._preview_panel.setMaximumWidth(16777215)
+                workspace.removeWidget(self._settings_scroll)
+                workspace.removeWidget(self._preview_panel)
+                workspace.insertWidget(0, self._preview_panel, 0)
+                workspace.insertWidget(1, self._settings_scroll, 1)
+            self._reflow_family_grid(self._settings_scroll.viewport().width())
+            self._reflow_appearance_footer(width)
+        finally:
+            self._appearance_reflowing = False
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._sync_appearance_workspace(event.size().width())
+
+    def eventFilter(self, obj, event):
+        scroll = getattr(self, "_settings_scroll", None)
+        if scroll is not None and obj is scroll.viewport() and event.type() == QEvent.Type.Resize:
+            self._reflow_family_grid(event.size().width())
+        return super().eventFilter(obj, event)
+
+    def _reflow_family_grid(self, viewport_width: int):
+        self._reflow_accent_grid(viewport_width)
+
+    def _reflow_accent_grid(self, viewport_width: int):
+        grid = getattr(self, "_point_grid", None)
+        if grid is None:
+            return
+        buttons = list(self._family_btns.values())
+        available = max(0, viewport_width - 54)
+        columns = max(1, min(len(buttons), (available + 8) // 52))
+        if columns == getattr(self, "_point_columns", None):
+            return
+        while grid.count():
+            grid.takeAt(0)
+        for index, button in enumerate(buttons):
+            button.setProperty("navigation_columns", columns)
+            grid.addWidget(button, *divmod(index, columns))
+        self._point_columns = columns
 
     def _focus_initial_appearance_control(self):
         settings_scroll = getattr(self, "_settings_scroll", None)
@@ -1422,11 +1725,14 @@ class PanelColorPickerDialog(QDialog):
         section = QFrame()
         section.setObjectName(f"appearanceSection_{section_id}")
         section.setAccessibleName(title)
-        section.setStyleSheet(
-            "QFrame#appearanceSection_"
-            f"{section_id} {{ background: {self._ui_tokens.get('bg_item', 'rgba(255,255,255,0.04)')}; "
-            f"border: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')}; "
-            f"border-radius: {self._dialog_metrics.get('section_radius', 10)}px; }}"
+        self._bind_theme_style(
+            section,
+            lambda: (
+                "QFrame#appearanceSection_"
+                f"{section_id} {{ background: {self._ui_tokens.get('bg_item', 'rgba(255,255,255,0.04)')}; "
+                f"border: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')}; "
+                f"border-radius: {self._dialog_metrics.get('section_radius', 10)}px; }}"
+            ),
         )
         section_layout = QVBoxLayout(section)
         section_layout.setContentsMargins(8, 10, 8, 8)
@@ -1437,18 +1743,21 @@ class PanelColorPickerDialog(QDialog):
         toggle.setCheckable(True)
         toggle.setCursor(Qt.CursorShape.PointingHandCursor)
         toggle.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        toggle.setStyleSheet(
-            "QPushButton#appearanceSectionToggle {"
-            f"color: {self._ui_tokens.get('text_primary', '#ffffff')};"
-            "background: transparent; border: 1px solid transparent;"
-            "font-size: 13px; font-weight: 700; text-align: left; padding: 5px 6px;"
-            "}"
-            "QPushButton#appearanceSectionToggle:hover {"
-            f"background: {self._ui_tokens.get('bg_item_hover', 'rgba(255,255,255,0.08)')};"
-            "}"
-            "QPushButton#appearanceSectionToggle:focus {"
-            f"border-color: {self._ui_tokens.get('accent', '#4da6ff')};"
-            "}"
+        self._bind_theme_style(
+            toggle,
+            lambda: (
+                "QPushButton#appearanceSectionToggle {"
+                f"color: {self._ui_tokens.get('text_primary', '#ffffff')};"
+                "background: transparent; border: 1px solid transparent;"
+                f"font-size: {self._ui_tokens['font_section']}; font-weight: 600; text-align: left; padding: 5px 6px;"
+                "}"
+                "QPushButton#appearanceSectionToggle:hover {"
+                f"background: {self._ui_tokens.get('bg_item_hover', 'rgba(255,255,255,0.08)')};"
+                "}"
+                "QPushButton#appearanceSectionToggle:focus {"
+                f"border-color: {self._ui_tokens.get('accent', '#4da6ff')};"
+                "}"
+            ),
         )
         header_row = QHBoxLayout()
         header_row.setContentsMargins(0, 0, 0, 0)
@@ -1476,19 +1785,22 @@ class PanelColorPickerDialog(QDialog):
         reset_button.setToolTip(reset_label)
         reset_button.setAccessibleName(reset_label)
         reset_button.setEnabled(False)
-        reset_button.setStyleSheet(
-            "QPushButton#appearanceSectionReset {"
-            f"color: {self._ui_tokens.get('text_secondary', '#c8ccd4')};"
-            "background: transparent; border: 1px solid transparent; font-size: 15px;"
-            f"border-radius: {self._dialog_metrics.get('button_radius', 8)}px;"
-            "}"
-            "QPushButton#appearanceSectionReset:hover {"
-            f"background: {self._ui_tokens.get('bg_item_hover', 'rgba(255,255,255,0.08)')};"
-            f"border-color: {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')};"
-            "}"
-            "QPushButton#appearanceSectionReset:focus {"
-            f"border-color: {self._ui_tokens.get('accent', '#4da6ff')};"
-            "}"
+        self._bind_theme_style(
+            reset_button,
+            lambda: (
+                "QPushButton#appearanceSectionReset {"
+                f"color: {self._ui_tokens.get('text_secondary', '#c8ccd4')};"
+                f"background: transparent; border: 1px solid transparent; font-size: {self._ui_tokens['font_body']};"
+                f"border-radius: {self._dialog_metrics.get('button_radius', 8)}px;"
+                "}"
+                "QPushButton#appearanceSectionReset:hover {"
+                f"background: {self._ui_tokens.get('bg_item_hover', 'rgba(255,255,255,0.08)')};"
+                f"border-color: {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')};"
+                "}"
+                "QPushButton#appearanceSectionReset:focus {"
+                f"border-color: {self._ui_tokens.get('accent', '#4da6ff')};"
+                "}"
+            ),
         )
         reset_button.clicked.connect(
             lambda _checked=False, target_section=section_id: self._restore_appearance_section(
@@ -1546,10 +1858,18 @@ class PanelColorPickerDialog(QDialog):
         root.setSpacing(10)
 
         lbl_title = QLabel(t("dialog.theme.title", "모양 설정"))
-        lbl_title.setStyleSheet(
-            f"font-size: 15px; font-weight: bold; color: {self._ui_tokens.get('text_primary', '#ffffff')};"
+        lbl_title.setProperty("role", "dialogTitle")
+        self._bind_theme_style(
+            lbl_title,
+            lambda: f"font-weight: 700; color: {self._ui_tokens.get('text_primary', '#ffffff')};",
         )
         root.addWidget(lbl_title)
+        intro = QLabel(
+            t("dialog.theme.intro", "화면 모드와 포인트 색상을 고르고, 미리보기에서 확인하세요")
+        )
+        intro.setWordWrap(True)
+        intro.setProperty("role", "dialogSubtitle")
+        root.addWidget(intro)
 
         screen = self.screen() or QApplication.primaryScreen()
         available_width = screen.availableGeometry().width() if screen is not None else 1280
@@ -1569,14 +1889,20 @@ class PanelColorPickerDialog(QDialog):
         for section_id, title, content_factory, expanded in (
             (
                 "style",
-                t("dialog.theme.tab.background", "스타일"),
-                self._build_bg_tab,
+                t("dialog.theme.tab.mode", "화면 모드"),
+                self._build_mode_tab,
                 True,
             ),
             (
                 "accent",
                 t("dialog.theme.tab.accent", "포인트 색상"),
                 self._build_point_tab,
+                True,
+            ),
+            (
+                "background",
+                t("dialog.theme.tab.background_opacity", "배경 및 투명도"),
+                self._build_background_tab,
                 True,
             ),
             (
@@ -1609,22 +1935,48 @@ class PanelColorPickerDialog(QDialog):
         self._settings_scroll = self._wrap_tab_content(settings_widget)
         self._settings_scroll.setObjectName("appearanceSettingsScroll")
         self._settings_scroll.setAccessibleName(t("dialog.theme.title", "모양 설정"))
+        self._settings_scroll.viewport().installEventFilter(self)
 
-        self._preview_panel = QWidget()
+        self._preview_panel = QFrame()
+        self._preview_panel.setObjectName("appearancePreviewPanel")
+        self._bind_theme_style(
+            self._preview_panel,
+            lambda: (
+                "QFrame#appearancePreviewPanel {"
+                f"background: {self._ui_tokens.get('content_bg', self._ui_tokens['bg_main'])};"
+                f"border: 1px solid {self._ui_tokens.get('border_soft', self._ui_tokens['border'])};"
+                f"border-radius: {self._dialog_metrics.get('group_radius', 12)}px;"
+                "}"
+            ),
+        )
         preview_layout = QVBoxLayout(self._preview_panel)
-        preview_layout.setContentsMargins(0, 0, 0, 0)
+        preview_layout.setContentsMargins(12, 12, 12, 12)
         preview_layout.setSpacing(8)
-        lbl_pre = QLabel(t("dialog.theme.preview.title", "미리보기"))
-        lbl_pre.setStyleSheet(
-            f"font-size: 12px; font-weight: bold; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.55)')};"
+        self._compact_preview_toggle = None
+        if self._typography.body_px > 20:
+            lbl_pre = QPushButton("▸ " + t("dialog.theme.preview.title", "미리보기"))
+            lbl_pre.setCheckable(True)
+            lbl_pre.setObjectName("appearanceCompactPreview")
+            lbl_pre.setAccessibleName(t("dialog.theme.preview.title", "미리보기"))
+            self._compact_preview_toggle = lbl_pre
+        else:
+            lbl_pre = QLabel(t("dialog.theme.preview.title", "미리보기"))
+        self._bind_theme_style(
+            lbl_pre,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; font-weight: 600; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.55)')};"
+            ),
         )
         preview_layout.addWidget(lbl_pre)
 
         self._preview_selection_label = QLabel()
         self._preview_selection_label.setObjectName("appearanceSelectionSummary")
         self._preview_selection_label.setWordWrap(True)
-        self._preview_selection_label.setStyleSheet(
-            f"font-size: 11px; color: {self._ui_tokens.get('text_secondary', '#c8ccd4')};"
+        self._bind_theme_style(
+            self._preview_selection_label,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens.get('text_secondary', '#c8ccd4')};"
+            ),
         )
         preview_layout.addWidget(self._preview_selection_label)
 
@@ -1661,111 +2013,153 @@ class PanelColorPickerDialog(QDialog):
         )
         self._preview_container.addWidget(self._preview_frame)
         preview_layout.addLayout(self._preview_container)
-        preview_layout.addStretch(1)
-
-        if self._wide_appearance_layout:
-            workspace = QHBoxLayout()
-            workspace.setSpacing(14)
-            self._settings_scroll.setMinimumWidth(560)
-            self._preview_panel.setMinimumWidth(300)
-            workspace.addWidget(self._settings_scroll, 3)
-            workspace.addWidget(self._preview_panel, 2)
-        else:
-            workspace = QVBoxLayout()
-            workspace.setSpacing(10)
-            workspace.addWidget(self._preview_panel)
-            workspace.addWidget(self._settings_scroll, 1)
+        preview_hint = QLabel(t("dialog.theme.preview.unsaved", "적용 전까지 저장되지 않아요"))
+        self._preview_hint = preview_hint
+        preview_hint.setWordWrap(True)
+        preview_hint.setProperty("role", "dialogSubtitle")
+        preview_layout.addWidget(preview_hint)
+        if self._compact_preview_toggle is not None:
+            self._compact_preview_toggle.toggled.connect(self._set_compact_preview_expanded)
+            self._set_compact_preview_expanded(False)
+        workspace = QBoxLayout(
+            QBoxLayout.Direction.LeftToRight
+            if self._wide_appearance_layout
+            else QBoxLayout.Direction.TopToBottom
+        )
+        workspace.setSpacing(14)
+        self._appearance_workspace = workspace
+        workspace.addWidget(self._settings_scroll, 3)
+        workspace.addWidget(self._preview_panel, 2, Qt.AlignmentFlag.AlignTop)
         root.addLayout(workspace, 1)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet(
-            f"border: none; border-top: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')};"
+        self._bind_theme_style(
+            sep,
+            lambda: (
+                f"border: none; border-top: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')};"
+            ),
         )
         root.addWidget(sep)
 
-        # 하단 행: 고급 토큰 편집 버튼(좌) + Ok/Cancel(우)
-        bottom_row = QHBoxLayout()
-        bottom_row.setSpacing(8)
-
-        adv_btn = QPushButton(t("dialog.theme.advanced", "고급 사용자 설정"))
-        adv_btn.setIcon(_ic(ICON.ADVANCED, color=self._ui_tokens["text_primary"]))
-        adv_btn.setToolTip(t("dialog.theme.advanced_tip", "색상, 크기와 간격을 세부 조정"))
-        adv_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        _tf = self._ui_tokens.get("text_faint", "rgba(255,255,255,0.45)")
-        _tm = self._ui_tokens.get("text_muted", "rgba(255,255,255,0.70)")
-        _bs = self._ui_tokens.get("border_soft", "rgba(255,255,255,0.12)")
-        _b = self._ui_tokens.get("border", "rgba(255,255,255,0.30)")
-        adv_btn.setStyleSheet(
-            f"QPushButton {{ background: transparent; border: 1px solid {_bs}; "
-            f"border-radius: {self._dialog_metrics.get('button_radius', 8)}px; padding: 6px 14px; font-size: 12px; color: {_tf}; }}"
-            f"QPushButton:hover {{ border-color: {_b}; color: {_tm}; }}"
+        footer = QFrame()
+        footer.setObjectName("appearanceFooter")
+        # No role="dialogFooter": that role draws its own top border, which doubled
+        # the separator line added just above this footer.
+        self._footer_grid = QGridLayout(footer)
+        self._footer_grid.setContentsMargins(0, 0, 0, 0)
+        self._footer_grid.setHorizontalSpacing(8)
+        self._footer_grid.setVerticalSpacing(6)
+        self._footer_layout_mode = None
+        self._details_btn = QPushButton(t("dialog.theme.details_action", "세부 모양 조정…"))
+        self._details_btn.setObjectName("ghost_btn")
+        self._details_btn.setProperty("dialogFooter", True)
+        self._details_btn.setIcon(_ic(ICON.ADVANCED, color=self._ui_tokens["text_primary"]))
+        self._details_btn.setToolTip(
+            t("dialog.theme.advanced_tip", "색상, 크기와 간격을 세부 조정")
         )
-        adv_btn.clicked.connect(self._open_token_editor)
-        bottom_row.addWidget(adv_btn)
-
+        self._details_btn.clicked.connect(self._open_token_editor)
         self._revert_all_btn = QPushButton(t("dialog.theme.revert_all", "전체 되돌리기"))
         self._revert_all_btn.setObjectName("ghost_btn")
-        self._revert_all_btn.setIcon(
-            _ic(
-                ICON.REFRESH,
-                color=parse_hex_color(_tm, "#c8ccd4").name(QColor.NameFormat.HexRgb),
-            )
-        )
-        self._revert_all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._revert_all_btn.setToolTip(t("dialog.theme.revert_all", "전체 되돌리기"))
-        self._revert_all_btn.setAccessibleName(t("dialog.theme.revert_all", "전체 되돌리기"))
+        self._revert_all_btn.setProperty("dialogFooter", True)
+        self._revert_all_btn.setIcon(_ic(ICON.REFRESH, color=self._ui_tokens["text_primary"]))
         self._revert_all_btn.setEnabled(False)
         self._revert_all_btn.clicked.connect(self._restore_all_appearance_changes)
-        bottom_row.addWidget(self._revert_all_btn)
-
         self._change_summary_label = QLabel()
         self._change_summary_label.setObjectName("appearanceChangeSummary")
-        self._change_summary_label.setStyleSheet(
-            f"font-size: 11px; color: {self._ui_tokens.get('text_muted', '#9aa0ad')};"
+        self._bind_theme_style(
+            self._change_summary_label,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens['text_muted']};"
+            ),
         )
-        bottom_row.addWidget(self._change_summary_label)
-        bottom_row.addStretch(1)
-
         from calendar_app.presentation.dialogs.dialog_styles import build_dialog_footer
 
-        _, ok_btn, cancel_btn = build_dialog_footer(
-            ok_label=t("common.apply", "적용"),
-            cancel_label=t("common.cancel", "취소"),
+        _, self._apply_btn, self._cancel_btn = build_dialog_footer(
+            ok_label=t("common.apply", "적용"), cancel_label=t("common.cancel", "취소")
         )
-        ok_btn.clicked.connect(self.accept)
-        cancel_btn.clicked.connect(self.reject)
-        self._apply_btn = ok_btn
+        self._apply_btn.clicked.connect(self.accept)
+        self._cancel_btn.clicked.connect(self.reject)
         self._apply_btn.setAccessibleName(t("common.apply", "Apply"))
-        cancel_btn.setAccessibleName(t("common.cancel", "Cancel"))
-        bottom_row.addWidget(ok_btn)
-        bottom_row.addWidget(cancel_btn)
-        root.addLayout(bottom_row)
+        self._cancel_btn.setAccessibleName(t("common.cancel", "Cancel"))
+        root.addWidget(footer)
+        self._reflow_appearance_footer(self.width())
+
+    def _reflow_appearance_footer(self, width: int):
+        grid = getattr(self, "_footer_grid", None)
+        if grid is None:
+            return
+        widgets = (
+            self._details_btn,
+            self._revert_all_btn,
+            self._change_summary_label,
+            self._cancel_btn,
+            self._apply_btn,
+        )
+        available = max(0, width - 36)
+        sizes = [widget.sizeHint().width() for widget in widgets]
+        mode = (
+            "single"
+            if sum(sizes) + 32 <= available
+            else "stacked"
+            if sizes[0] + sizes[1] + 8 <= available
+            else "vertical"
+        )
+        if mode == self._footer_layout_mode:
+            return
+        while grid.count():
+            grid.takeAt(0)
+        for column in range(6):
+            grid.setColumnStretch(column, 0)
+        if mode == "single":
+            for column, widget in zip((0, 1, 2, 4, 5), widgets, strict=True):
+                grid.addWidget(widget, 0, column)
+            grid.setColumnStretch(2, 1)
+        else:
+            grid.addWidget(self._details_btn, 0, 0, 1, 3 if mode == "stacked" else 6)
+            grid.addWidget(
+                self._revert_all_btn,
+                0 if mode == "stacked" else 1,
+                3 if mode == "stacked" else 0,
+                1,
+                3 if mode == "stacked" else 6,
+            )
+            row = 1 if mode == "stacked" else 2
+            grid.addWidget(self._change_summary_label, row, 0, 1, 4)
+            grid.addWidget(self._cancel_btn, row, 4)
+            grid.addWidget(self._apply_btn, row, 5)
+            grid.setColumnStretch(0, 1)
+        self._footer_layout_mode = mode
+
+    def _set_compact_preview_expanded(self, expanded: bool):
+        """Leave room for editing when the user chooses a large UI font."""
+        for widget in (
+            self._preview_selection_label,
+            self._preview_compare_btn,
+            self._preview_frame,
+            self._preview_hint,
+        ):
+            widget.setVisible(expanded)
+        self._compact_preview_toggle.setText(
+            ("▾ " if expanded else "▸ ") + t("dialog.theme.preview.title", "미리보기")
+        )
+        if expanded:
+            self._preview_panel.setMaximumHeight(16777215)
+        else:
+            margins = self._preview_panel.layout().contentsMargins()
+            self._preview_panel.setMaximumHeight(
+                self._compact_preview_toggle.sizeHint().height() + margins.top() + margins.bottom()
+            )
+        self._preview_panel.updateGeometry()
+        self.layout().invalidate()
+        self.layout().activate()
 
     # ------------------------------------------------------------------
-    def _build_bg_tab(self) -> QWidget:
+    def _build_mode_tab(self) -> QWidget:
         w = QWidget()
         lay = QVBoxLayout(w)
-        lay.setContentsMargins(12, 12, 12, 12)
-        lay.setSpacing(10)
-
-        style_hint = QLabel(
-            t(
-                "dialog.theme.bg.subtitle",
-                "배경 프리셋을 선택하거나 직접 색상을 지정합니다.",
-            )
-        )
-        style_hint.setWordWrap(True)
-        style_hint.setStyleSheet(
-            f"font-size: 11px; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.55)')};"
-        )
-        lay.addWidget(style_hint)
-
-        mode_header = QLabel(t("dialog.token_editor.preset_color_mode", "Theme Mode:"))
-        mode_header.setStyleSheet(
-            f"font-size: 12px; font-weight: 700; color: {self._ui_tokens.get('text_secondary')};"
-        )
-        lay.addWidget(mode_header)
+        lay.setContentsMargins(8, 4, 8, 8)
+        lay.setSpacing(8)
 
         mode_row = QHBoxLayout()
         mode_row.setSpacing(6)
@@ -1788,198 +2182,148 @@ class PanelColorPickerDialog(QDialog):
             )
             self._appearance_mode_group.addButton(button)
             self._appearance_mode_btns[mode] = button
-            mode_row.addWidget(button)
-        mode_row.addStretch()
+            mode_row.addWidget(button, 1)
         lay.addLayout(mode_row)
         self._refresh_appearance_mode_buttons()
+        return w
 
-        family_header = QLabel(t("dialog.theme.preset.family_title", "추천 스타일"))
-        family_header.setStyleSheet(
-            f"font-size: 12px; font-weight: 700; color: {self._ui_tokens.get('text_secondary')};"
+    def _build_background_tab(self) -> QWidget:
+        """Background tone (automatic or chosen) and the three opacity sliders."""
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(8, 4, 8, 8)
+        lay.setSpacing(8)
+
+        base_row = QHBoxLayout()
+        base_row.setSpacing(6)
+        base_label = QLabel(t("dialog.theme.bg.color", "배경색"))
+        self._bind_theme_style(
+            base_label,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_body']}; color: {self._ui_tokens['text_secondary']};"
+            ),
         )
-        lay.addWidget(family_header)
-
-        family_grid = QGridLayout()
-        family_grid.setHorizontalSpacing(8)
-        family_grid.setVerticalSpacing(8)
-        self._family_btns = {}
-        family_columns = 1 if self._appearance_available_width < 680 else 2
-        for index, (family_id, dark_key, light_key) in enumerate(_STYLE_FAMILIES):
-            dark_preset = _PRESET_BY_KEY[dark_key]
-            light_preset = _PRESET_BY_KEY[light_key]
-            label_key, label_fallback = _STYLE_FAMILY_LABELS[family_id]
-            family_label = t(label_key, label_fallback)
-            active_preset = (
-                light_preset if self._effective_appearance_mode() == "light" else dark_preset
-            )
-            button = _FamilyStyleButton()
-            button.setObjectName("appearanceFamilyCard")
+        base_row.addWidget(base_label)
+        self._base_source_group = QButtonGroup(self)
+        self._base_source_group.setExclusive(True)
+        self._btn_auto_base = QPushButton(t("dialog.theme.bg.auto", "자동"))
+        self._btn_auto_base.setToolTip(
+            t("dialog.theme.bg.auto_tip", "포인트 색상에 어울리는 배경을 사용합니다.")
+        )
+        self._btn_custom = QPushButton(t("dialog.theme.custom_pick", "직접 지정"))
+        self._btn_custom.setToolTip(
+            t("dialog.theme.bg.custom_picker_title", "Choose Background Color")
+        )
+        for button in (self._btn_auto_base, self._btn_custom):
+            button.setObjectName("btn_preset_filter")
             button.setCheckable(True)
-            button.setProperty("family_label", family_label)
-            button.setProperty("navigation_columns", family_columns)
-            button.setText(f"{family_label}\n{t(active_preset[0], active_preset[1])}")
-            button.setIcon(QIcon(_make_family_preview_pixmap(active_preset)))
-            button.setIconSize(QSize(88, 48))
-            button.setMinimumHeight(72)
-            button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-            button.setToolTip(f"{t(dark_key, dark_preset[1])} / {t(light_key, light_preset[1])}")
-            button.setAccessibleName(family_label)
-            button.setAccessibleDescription(button.toolTip())
-            button.setStyleSheet(self._family_btn_ss(False))
-            button.clicked.connect(
-                lambda _checked=False, selected_family=family_id: self._select_style_family(
-                    selected_family
-                )
-            )
-            button.navigate_requested.connect(
-                lambda step, current=button: self._focus_family_neighbor(current, step)
-            )
-            self._family_btns[family_id] = button
-            row, column = divmod(index, family_columns)
-            family_grid.addWidget(button, row, column)
-        for column in range(family_columns):
-            family_grid.setColumnStretch(column, 1)
-        lay.addLayout(family_grid)
-
-        details_title = t("dialog.theme.bg.details", "배경 세부 설정")
-        self._style_details_toggle = QPushButton()
-        self._style_details_toggle.setObjectName("appearanceDetailsToggle")
-        self._style_details_toggle.setCheckable(True)
-        self._style_details_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._style_details_toggle.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self._style_details_toggle.setStyleSheet(
-            "QPushButton#appearanceDetailsToggle {"
-            f"color: {self._ui_tokens.get('text_secondary', '#c8ccd4')};"
-            f"background: {self._ui_tokens.get('bg_item', 'rgba(255,255,255,0.04)')};"
-            f"border: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')};"
-            "font-size: 12px; font-weight: 600; text-align: left; padding: 7px 9px;"
-            f"border-radius: {self._dialog_metrics.get('button_radius', 8)}px;"
-            "}"
-            "QPushButton#appearanceDetailsToggle:hover {"
-            f"background: {self._ui_tokens.get('bg_item_hover', 'rgba(255,255,255,0.08)')};"
-            "}"
-            "QPushButton#appearanceDetailsToggle:focus {"
-            f"border-color: {self._ui_tokens.get('accent', '#4da6ff')};"
-            "}"
-        )
-        lay.addWidget(self._style_details_toggle)
-
-        self._style_details_content = QWidget()
-        details_lay = QVBoxLayout(self._style_details_content)
-        details_lay.setContentsMargins(0, 4, 0, 0)
-        details_lay.setSpacing(8)
-        lay.addWidget(self._style_details_content)
-
-        self._show_all_styles = QCheckBox(t("dialog.theme.preset.show_all", "모든 스타일 보기"))
-        self._show_all_styles.setCursor(Qt.CursorShape.PointingHandCursor)
-        details_lay.addWidget(self._show_all_styles)
-
-        filter_row = QHBoxLayout()
-        filter_row.setSpacing(6)
-
-        filter_lbl = QLabel(t("dialog.theme.preset.filter_label", "Preset Type"))
-        filter_lbl.setStyleSheet(
-            f"font-size: 11px; color: {self._ui_tokens.get('text_faint', 'rgba(255,255,255,0.45)')};"
-        )
-        filter_row.addWidget(filter_lbl)
-        self._preset_filter_widgets = [filter_lbl]
-
-        self._preset_filter_btns = {}
-        for mode, key, fallback in (
-            ("all", "dialog.theme.preset.filter_all", "All"),
-            ("dark", "dialog.theme.preset.filter_dark", "Dark"),
-            ("light", "dialog.theme.preset.filter_light", "Light"),
-        ):
-            btn = QPushButton(t(key, fallback))
-            btn.setObjectName("btn_preset_filter")
-            btn.setCheckable(True)
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.clicked.connect(lambda _checked=False, m=mode: self._set_preset_filter_mode(m))
-            self._preset_filter_btns[mode] = btn
-            self._preset_filter_widgets.append(btn)
-            filter_row.addWidget(btn)
-
-        filter_row.addStretch()
-        details_lay.addLayout(filter_row)
-
-        self._chk_auto_apply_preset_text = QCheckBox(
-            t(
-                "dialog.theme.bg.auto_apply_text",
-                "Auto-apply recommended text colors when selecting a preset",
-            )
-        )
-        self._chk_auto_apply_preset_text.setObjectName("chk_auto_preset_text")
-        self._chk_auto_apply_preset_text.setChecked(True)
-        self._chk_auto_apply_preset_text.setToolTip(
-            t(
-                "dialog.theme.bg.auto_apply_text_tip",
-                "When enabled, text colors are immediately adjusted for readability.",
-            )
-        )
-        details_lay.addWidget(self._chk_auto_apply_preset_text)
-
-        self._preset_btns = []
-        self._preset_modes = []
-        grid_widget = QWidget()
-        self._preset_grid = QGridLayout(grid_widget)
-        self._preset_grid_widget = grid_widget
-        self._preset_grid.setContentsMargins(0, 0, 0, 0)
-        self._preset_grid.setHorizontalSpacing(8)
-        self._preset_grid.setVerticalSpacing(8)
-
-        self._refresh_preset_filter_buttons()
-
-        details_lay.addWidget(grid_widget)
-        self._show_all_styles.toggled.connect(self._set_all_styles_visible)
-        self._set_all_styles_visible(False)
-
-        btn_row = QHBoxLayout()
-        self._btn_custom = QPushButton(t("dialog.theme.custom_color", "Custom Color"))
-        self._btn_custom.setObjectName("btn_custom")
-        self._btn_custom.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setAccessibleName(f"{t('dialog.theme.bg.color', '배경색')}: {button.text()}")
+            self._base_source_group.addButton(button)
+            base_row.addWidget(button)
+        self._btn_auto_base.clicked.connect(self._use_family_base)
         self._btn_custom.clicked.connect(self._open_custom_color)
-        btn_row.addWidget(self._btn_custom)
-        btn_row.addStretch()
+        base_row.addStretch()
 
         self._swatch_lbl = QLabel()
         self._swatch_lbl.setFixedSize(24, 24)
         self._swatch_lbl.setToolTip(t("dialog.theme.tooltip.current_color", "현재 배경색"))
-        btn_row.addWidget(self._swatch_lbl)
+        base_row.addWidget(self._swatch_lbl)
         self._hex_lbl = QLabel()
-        self._hex_lbl.setStyleSheet(
-            f"font-size: 12px; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
+        self._bind_theme_style(
+            self._hex_lbl,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
+            ),
         )
-        btn_row.addWidget(self._hex_lbl)
-        details_lay.addLayout(btn_row)
+        base_row.addWidget(self._hex_lbl)
+        lay.addLayout(base_row)
 
-        _lbl_ss = f"font-size: 12px; color: {self._ui_tokens.get('text_secondary', 'rgba(255,255,255,0.70)')};"
-        _val_ss = f"font-size: 12px; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
-
-        sep2 = QFrame()
-        sep2.setFrameShape(QFrame.Shape.HLine)
-        sep2.setStyleSheet(
-            f"border: none; border-top: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')}; margin: 2px 0;"
+        border_row = QHBoxLayout()
+        border_row.setSpacing(6)
+        border_label = QLabel(t("dialog.theme.border.color", "테두리색"))
+        self._bind_theme_style(
+            border_label,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_body']}; color: {self._ui_tokens['text_secondary']};"
+            ),
         )
-        details_lay.addWidget(sep2)
+        border_row.addWidget(border_label)
+        self._border_source_group = QButtonGroup(self)
+        self._border_source_group.setExclusive(True)
+        self._btn_auto_border = QPushButton(t("dialog.theme.bg.auto", "자동"))
+        self._btn_auto_border.setToolTip(
+            t("dialog.theme.border.auto_tip", "배경과 포인트 색상에 어울리는 테두리를 사용합니다.")
+        )
+        self._btn_custom_border = QPushButton(t("dialog.theme.custom_pick", "직접 지정"))
+        self._btn_custom_border.setToolTip(
+            t("dialog.theme.border.custom_picker_title", "테두리색 선택")
+        )
+        for button in (self._btn_auto_border, self._btn_custom_border):
+            button.setObjectName("btn_preset_filter")
+            button.setCheckable(True)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            button.setAccessibleName(
+                f"{t('dialog.theme.border.color', '테두리색')}: {button.text()}"
+            )
+            self._border_source_group.addButton(button)
+            border_row.addWidget(button)
+        self._btn_auto_border.clicked.connect(self._use_auto_border)
+        self._btn_custom_border.clicked.connect(self._open_custom_border_color)
+        border_row.addStretch()
+        self._border_swatch_lbl = QLabel()
+        self._border_swatch_lbl.setFixedSize(24, 24)
+        self._border_swatch_lbl.setToolTip(t("dialog.theme.border.current", "현재 테두리색"))
+        border_row.addWidget(self._border_swatch_lbl)
+        self._border_hex_lbl = QLabel()
+        self._bind_theme_style(
+            self._border_hex_lbl,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
+            ),
+        )
+        border_row.addWidget(self._border_hex_lbl)
+        lay.addLayout(border_row)
+
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        self._bind_theme_style(
+            sep,
+            lambda: (
+                f"border: none; border-top: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')}; margin: 2px 0;"
+            ),
+        )
+        lay.addWidget(sep)
 
         op_header = QLabel(t("dialog.theme.opacity", "불투명도"))
-        op_header.setStyleSheet(
-            f"font-size: 11px; font-weight: bold; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
+        self._bind_theme_style(
+            op_header,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; font-weight: 600; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
+            ),
         )
-        details_lay.addWidget(op_header)
+        lay.addWidget(op_header)
         op_hint = QLabel(t("dialog.theme.opacity_hint", "0% = 완전 투명, 100% = 완전 불투명"))
-        op_hint.setStyleSheet(
-            f"font-size: 11px; color: {self._ui_tokens.get('text_faint', 'rgba(255,255,255,0.42)')};"
+        self._bind_theme_style(
+            op_hint,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens.get('text_faint', 'rgba(255,255,255,0.42)')};"
+            ),
         )
-        details_lay.addWidget(op_hint)
+        lay.addWidget(op_hint)
 
         def _make_opacity_row(label: str, value: int):
             row = QHBoxLayout()
             lbl = QLabel(label)
-            lbl.setFixedWidth(50)
-            lbl.setStyleSheet(_lbl_ss)
+            lbl.setMinimumWidth(50)
+            self._bind_theme_style(
+                lbl,
+                lambda: (
+                    f"font-size: {self._ui_tokens['font_body']}; color: {self._ui_tokens['text_secondary']};"
+                ),
+            )
             row.addWidget(lbl)
             slider = QSlider(Qt.Orientation.Horizontal)
             slider.setRange(0, 255)
@@ -1987,9 +2331,14 @@ class PanelColorPickerDialog(QDialog):
             slider.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             row.addWidget(slider)
             val_lbl = QLabel(opacity_percent_label(value))
-            val_lbl.setFixedWidth(44)
+            val_lbl.setMinimumWidth(44)
             val_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            val_lbl.setStyleSheet(_val_ss)
+            self._bind_theme_style(
+                val_lbl,
+                lambda: (
+                    f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens['text_muted']};"
+                ),
+            )
             row.addWidget(val_lbl)
             return row, slider, val_lbl
 
@@ -1999,33 +2348,13 @@ class PanelColorPickerDialog(QDialog):
         bd_row, self._border_slider, self._bd_op_lbl = _make_opacity_row(
             t("dialog.theme.opacity_border", "테두리:"), self._border_opacity
         )
-        txt_row, self._text_slider, self._txt_op_lbl = _make_opacity_row(
-            t("dialog.theme.opacity_text", "글씨:"), self._text_opacity
-        )
 
         self._slider.valueChanged.connect(self._on_opacity_changed)
         self._border_slider.valueChanged.connect(self._on_border_opacity_changed)
-        self._text_slider.valueChanged.connect(self._on_text_opacity_changed)
 
-        details_lay.addLayout(bg_row)
-        details_lay.addLayout(bd_row)
-        details_lay.addLayout(txt_row)
-
-        self._style_details_toggle.toggled.connect(
-            lambda checked: self._sync_disclosure(
-                self._style_details_toggle,
-                self._style_details_content,
-                details_title,
-                checked,
-            )
-        )
-        self._sync_disclosure(
-            self._style_details_toggle,
-            self._style_details_content,
-            details_title,
-            False,
-        )
-
+        lay.addLayout(bg_row)
+        lay.addLayout(bd_row)
+        self._refresh_base_source_buttons()
         return w
 
     # ------------------------------------------------------------------
@@ -2036,8 +2365,11 @@ class PanelColorPickerDialog(QDialog):
         lay.setSpacing(6)
 
         lbl_sub = QLabel(t("dialog.theme.text.subtitle", "역할별 글자 색상을 지정합니다."))
-        lbl_sub.setStyleSheet(
-            f"font-size: 12px; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
+        self._bind_theme_style(
+            lbl_sub,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
+            ),
         )
         lay.addWidget(lbl_sub)
 
@@ -2079,10 +2411,47 @@ class PanelColorPickerDialog(QDialog):
         preset_row.addStretch()
         lay.addLayout(preset_row)
 
+        text_opacity_row = QHBoxLayout()
+        text_opacity_label = QLabel(t("dialog.theme.text.opacity", "글씨 투명도"))
+        self._bind_theme_style(
+            text_opacity_label,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_body']}; color: {self._ui_tokens['text_secondary']};"
+            ),
+        )
+        text_opacity_row.addWidget(text_opacity_label)
+        self._text_slider = QSlider(Qt.Orientation.Horizontal)
+        self._text_slider.setRange(MIN_TEXT_OPACITY, 255)
+        self._text_slider.setValue(self._text_opacity)
+        self._text_slider.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self._text_slider.setAccessibleName(t("dialog.theme.text.opacity", "글씨 투명도"))
+        self._text_slider.setToolTip(
+            t(
+                "dialog.theme.text.opacity_tip",
+                "낮출수록 글자가 배경에 스며듭니다. 최소 30%까지 낮출 수 있습니다.",
+            )
+        )
+        text_opacity_row.addWidget(self._text_slider, 1)
+        self._txt_op_lbl = QLabel(opacity_percent_label(self._text_opacity))
+        self._txt_op_lbl.setMinimumWidth(44)
+        self._txt_op_lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self._bind_theme_style(
+            self._txt_op_lbl,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens['text_muted']};"
+            ),
+        )
+        text_opacity_row.addWidget(self._txt_op_lbl)
+        self._text_slider.valueChanged.connect(self._on_text_opacity_changed)
+        lay.addLayout(text_opacity_row)
+
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet(
-            f"border: none; border-top: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')}; margin: 4px 0;"
+        self._bind_theme_style(
+            sep,
+            lambda: (
+                f"border: none; border-top: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')}; margin: 4px 0;"
+            ),
         )
         lay.addWidget(sep)
 
@@ -2134,8 +2503,11 @@ class PanelColorPickerDialog(QDialog):
 
         sep2 = QFrame()
         sep2.setFrameShape(QFrame.Shape.HLine)
-        sep2.setStyleSheet(
-            f"border: none; border-top: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.06)')}; margin: 4px 0;"
+        self._bind_theme_style(
+            sep2,
+            lambda: (
+                f"border: none; border-top: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.06)')}; margin: 4px 0;"
+            ),
         )
         lay.addWidget(sep2)
         lay.addWidget(self._row_input_bg)
@@ -2156,8 +2528,11 @@ class PanelColorPickerDialog(QDialog):
                 "기본: 주요 텍스트 / 보조: 부가 텍스트 / 흐림: 메타 / 희미: 힌트",
             )
         )
-        hint.setStyleSheet(
-            f"font-size: 10px; color: {self._ui_tokens.get('text_faint', 'rgba(255,255,255,0.35)')};"
+        self._bind_theme_style(
+            hint,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens.get('text_faint', 'rgba(255,255,255,0.35)')};"
+            ),
         )
         lay.addWidget(hint)
 
@@ -2187,11 +2562,26 @@ class PanelColorPickerDialog(QDialog):
             row.set_value(value)
             row.blockSignals(blocked)
 
+    def _on_text_opacity_changed(self, value: int):
+        self._text_opacity = value
+        self._txt_op_lbl.setText(opacity_percent_label(value))
+        self._update_contrast_status()
+        self._schedule_preview_refresh()
+        self._update_change_summary()
+
+    def _seen_text(self, color: str) -> str:
+        """The text color as it shows on the background at the chosen opacity."""
+        return faded_text_color(color, self._base_hex, self._text_opacity / 255.0)
+
     def _update_contrast_status(self):
         if not hasattr(self, "_row_primary") or not hasattr(self, "_contrast_status"):
             return
-        primary_ratio = _contrast_ratio(self._row_primary.hex_value(), self._base_hex)
-        secondary_ratio = _contrast_ratio(self._row_secondary.hex_value(), self._base_hex)
+        primary_ratio = _contrast_ratio(
+            self._seen_text(self._row_primary.hex_value()), self._base_hex
+        )
+        secondary_ratio = _contrast_ratio(
+            self._seen_text(self._row_secondary.hex_value()), self._base_hex
+        )
         is_readable = primary_ratio >= 4.5 and secondary_ratio >= 4.5
         if is_readable:
             message = t(
@@ -2210,7 +2600,9 @@ class PanelColorPickerDialog(QDialog):
             )
             color = self._ui_tokens.get("warning_hex", self._ui_tokens.get("accent"))
         self._contrast_status.setText(message)
-        self._contrast_status.setStyleSheet(f"font-size: 12px; font-weight: 700; color: {color};")
+        self._contrast_status.setStyleSheet(
+            f"font-size: {self._ui_tokens['font_caption']}; font-weight: 600; color: {color};"
+        )
         self._contrast_status.setAccessibleName(message)
         self._contrast_fix_btn.setEnabled(not is_readable)
 
@@ -2245,43 +2637,41 @@ class PanelColorPickerDialog(QDialog):
     def _build_point_tab(self) -> QWidget:
         w = QWidget()
         lay = QVBoxLayout(w)
-        lay.setContentsMargins(12, 14, 12, 12)
-        lay.setSpacing(12)
+        lay.setContentsMargins(8, 4, 8, 8)
+        lay.setSpacing(8)
 
-        lbl_sub = QLabel(t("dialog.theme.accent.subtitle", "UI 포인트 색상을 지정합니다."))
-        lbl_sub.setStyleSheet(
-            f"font-size: 12px; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
-        )
-        lay.addWidget(lbl_sub)
-
-        # 프리셋 색상 버튼들 (2행 × 5열)
-        self._point_btns: list[QPushButton] = []
+        # One row of presets: each swatch is a style family, so it also brings the
+        # matching background tone and text colors for the current mode.
         grid_w = QWidget()
         grid = QGridLayout(grid_w)
+        self._point_grid = grid
         grid.setContentsMargins(0, 0, 0, 0)
-        grid.setHorizontalSpacing(10)
-        grid.setVerticalSpacing(10)
-        cols = 5
-        for i, (name_key, name_fallback, code) in enumerate(_POINT_COLORS):
-            row_i, col_i = divmod(i, cols)
-            point_name = t(name_key, name_fallback)
-            btn = self._make_point_button(i, point_name, code)
-            self._point_btns.append(btn)
-            grid.addWidget(btn, row_i, col_i)
+        grid.setHorizontalSpacing(8)
+        grid.setVerticalSpacing(8)
+        for index, (family_id, _dark_key, _light_key) in enumerate(_STYLE_FAMILIES):
+            button = self._make_family_swatch(family_id)
+            self._family_btns[family_id] = button
+            grid.addWidget(button, 0, index)
         lay.addWidget(grid_w)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet(
-            f"border: none; border-top: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')};"
+        self._bind_theme_style(
+            sep,
+            lambda: (
+                f"border: none; border-top: 1px solid {self._ui_tokens.get('border_soft', 'rgba(255,255,255,0.10)')};"
+            ),
         )
         lay.addWidget(sep)
 
         # 직접 지정 행
         custom_row = QHBoxLayout()
-        btn_custom = QPushButton(t("dialog.theme.custom_color", "직접 색상"))
+        btn_custom = QPushButton(t("dialog.theme.custom_pick", "직접 지정"))
         btn_custom.setIcon(_ic(ICON.COLOR_PICKER, color=self._ui_tokens["text_primary"]))
         btn_custom.setObjectName("btn_point_custom")
+        btn_custom.setCheckable(True)
+        btn_custom.setToolTip(t("dialog.theme.accent.custom_picker_title", "포인트 색상 선택"))
+        self._point_custom_btn = btn_custom
         btn_custom.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_custom.clicked.connect(self._open_custom_point_color)
         custom_row.addWidget(btn_custom)
@@ -2295,98 +2685,71 @@ class PanelColorPickerDialog(QDialog):
         custom_row.addWidget(self._point_swatch_lbl)
 
         self._point_hex_lbl = QLabel()
-        self._point_hex_lbl.setStyleSheet(
-            f"font-size: 12px; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
+        self._bind_theme_style(
+            self._point_hex_lbl,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens.get('text_muted', 'rgba(255,255,255,0.50)')};"
+            ),
         )
         custom_row.addWidget(self._point_hex_lbl)
         lay.addLayout(custom_row)
 
-        lay.addStretch()
-
-        hint = QLabel(
-            t(
-                "dialog.theme.accent.hint_short",
-                "포인트 색은 버튼/링크 강조에 사용됩니다. 배경 프리셋 선택 시 함께 맞춰집니다.",
-            )
-        )
-        hint.setStyleSheet(
-            f"font-size: 10px; color: {self._ui_tokens.get('text_faint', 'rgba(255,255,255,0.35)')};"
-        )
-        lay.addWidget(hint)
-
         self._refresh_point_display()
         return w
 
-    def _make_point_button(self, idx: int, name: str, code: str) -> QPushButton:
-        from PyQt6.QtCore import QSize
-        from PyQt6.QtGui import QIcon
+    def _family_accent(self, family_id: str, mode: str | None = None) -> tuple[str, str]:
+        family = next(item for item in _STYLE_FAMILIES if item[0] == family_id)
+        _, dark_key, light_key = family
+        preset_key = (
+            light_key if (mode or self._effective_appearance_mode()) == "light" else dark_key
+        )
+        return preset_key, _PRESET_BY_KEY[preset_key][3]
 
-        btn = QPushButton()
-        btn.setObjectName("btn_point_color")
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setToolTip(f"{name}\n{code}")
+    def _make_family_swatch(self, family_id: str) -> QPushButton:
+        label_key, label_fallback = _STYLE_FAMILY_LABELS[family_id]
+        button = _FamilyStyleButton()
+        button.setObjectName("appearanceFamilySwatch")
+        button.setCheckable(True)
+        button.setProperty("family_label", t(label_key, label_fallback).replace(" · ", " "))
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        button.setIconSize(QSize(32, 32))
+        button.clicked.connect(
+            lambda _checked=False, selected_family=family_id: self._select_style_family(
+                selected_family
+            )
+        )
+        button.navigate_requested.connect(
+            lambda step, current=button: self._focus_family_neighbor(current, step)
+        )
+        return button
 
-        # 원형 색상 아이콘 (40×40)
-        px = QPixmap(40, 40)
-        px.fill(Qt.GlobalColor.transparent)
-        p = QPainter(px)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        p.setBrush(QColor(code))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.drawEllipse(2, 2, 36, 36)
-        p.end()
-        btn.setIcon(QIcon(px))
-        btn.setIconSize(QSize(36, 36))
+    @staticmethod
+    def _swatch_icon(code: str) -> QIcon:
+        pixmap = QPixmap(36, 36)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setBrush(QColor(code))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(2, 2, 32, 32)
+        painter.end()
+        return QIcon(pixmap)
 
-        # 이름 레이블은 버튼 위에 오버레이
-        container = QWidget(btn)
-        container.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        container.setGeometry(0, 0, 40, 40)
-        inner = QVBoxLayout(container)
-        inner.setContentsMargins(0, 0, 0, 0)
+    def _selected_swatch_family(self) -> str:
+        """The preset swatch that matches the draft, or "" for a custom accent."""
+        if self._accent_source != "family":
+            return ""
+        return self._selected_style_family_id() or self._draft_style_family
 
-        btn.setStyleSheet(self._point_btn_ss(False))
-        btn.clicked.connect(lambda *_, i=idx: self._select_point_color(i))
-
-        # 이름을 툴팁에만, 버튼 아래에 별도 레이블 없이 심플하게
-        return btn
-
-    def _point_btn_ss(self, selected: bool) -> str:
-        shape = _picker_shape_metrics(self._ui_tokens)
-        radius = shape["toolbar_button_radius"]
-        border_soft = self._ui_tokens.get("border", "rgba(255,255,255,0.12)")
-        border_strong = self._ui_tokens.get("border_strong", "rgba(255,255,255,0.50)")
-        text_primary = self._ui_tokens.get("text_primary", "#ffffff")
-        if selected:
-            return f"""
-                QPushButton#btn_point_color {{
-                    border-radius: {radius}px;
-                    border: 3px solid {text_primary};
-                    padding: 0px;
-                    min-width: 40px; max-width: 40px;
-                    min-height: 40px; max-height: 40px;
-                }}
-            """
-        return f"""
-            QPushButton#btn_point_color {{
-                border-radius: {radius}px;
-                border: 2px solid {border_soft};
-                padding: 0px;
-                min-width: 40px; max-width: 40px;
-                min-height: 40px; max-height: 40px;
-            }}
-            QPushButton#btn_point_color:hover {{
-                border: 2px solid {border_strong};
-            }}
-        """
-
-    def _select_point_color(self, idx: int):
-        _, _, code = _POINT_COLORS[idx]
-        self._point_hex = code
+    def _apply_custom_point_color(self, code: str):
+        color = QColor(code)
+        if not color.isValid():
+            return
+        self._point_hex = color.name(QColor.NameFormat.HexRgb)
         self._accent_source = "custom"
         self._rebuild_theme_context()
-        for i, btn in enumerate(self._point_btns):
-            btn.setStyleSheet(self._point_btn_ss(i == idx))
+        self._refresh_family_buttons()
         self._refresh_point_display()
         self._refresh_preview()
         self._update_change_summary()
@@ -2398,18 +2761,12 @@ class PanelColorPickerDialog(QDialog):
             QColor(self._point_hex),
             self,
             t("dialog.theme.accent.custom_picker_title", "포인트 색상 선택"),
+            QColorDialog.ColorDialogOption.DontUseNativeDialog,
         )
         if not picked.isValid():
+            self._refresh_family_buttons()  # keep the toggle state truthful after cancel
             return
-        self._point_hex = picked.name(QColor.NameFormat.HexRgb)
-        self._accent_source = "custom"
-        self._rebuild_theme_context()
-        # 프리셋 선택 해제
-        for btn in self._point_btns:
-            btn.setStyleSheet(self._point_btn_ss(False))
-        self._refresh_point_display()
-        self._refresh_preview()
-        self._update_change_summary()
+        self._apply_custom_point_color(picked.name(QColor.NameFormat.HexRgb))
 
     def _refresh_point_display(self):
         if not hasattr(self, "_point_swatch_lbl"):
@@ -2425,73 +2782,17 @@ class PanelColorPickerDialog(QDialog):
         self._point_swatch_lbl.setPixmap(px)
         self._point_hex_lbl.setText(self._point_hex)
 
-    def _make_preset_button(self, _idx: int, name: str, base: str, theme: str) -> QPushButton:
-        from PyQt6.QtCore import QSize
-        from PyQt6.QtGui import QIcon
-
-        btn = QPushButton()
-        btn.setFixedSize(_SWATCH_SIZE + 30, _SWATCH_SIZE + 18)
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setToolTip(f"{name}\n{base}")
-        btn.setIcon(QIcon(_make_swatch_pixmap(base, theme, _SWATCH_SIZE)))
-        btn.setIconSize(QSize(_SWATCH_SIZE, _SWATCH_SIZE))
-        btn.setText("")
-
-        container = QWidget(btn)
-        container.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        container.setGeometry(0, _SWATCH_SIZE - 2, _SWATCH_SIZE + 30, 20)
-        inner = QHBoxLayout(container)
-        inner.setContentsMargins(2, 0, 2, 0)
-        name_lbl = QLabel(name)
-        name_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        name_lbl.setStyleSheet(
-            f"font-size: 11px; color: {self._ui_tokens.get('text_secondary', 'rgba(255,255,255,0.65)')}; background: transparent;"
-        )
-        inner.addWidget(name_lbl)
-
-        btn.setStyleSheet(self._preset_btn_ss(False))
-        btn.clicked.connect(lambda *_, i=_idx: self._select_preset(i))
-        return btn
-
-    def _preset_btn_ss(self, selected: bool) -> str:
-        shape = _picker_shape_metrics(self._ui_tokens)
-        if selected:
-            c = QColor(self._point_hex)
-            if not c.isValid():
-                c = QColor("#4da6ff")
-            r, g, b = c.red(), c.green(), c.blue()
-            br = shape["button_radius"]
-            return f"""
-                QPushButton {{
-                    background-color: rgba({r},{g},{b},0.12);
-                    border: 2px solid rgba({r},{g},{b},0.70);
-                    border-radius: {br}px;
-                    padding: 1px;
-                }}
-                QPushButton:hover {{ background-color: rgba({r},{g},{b},0.20); }}
-            """
-        bg_item = self._ui_tokens.get("bg_item", "rgba(255,255,255,0.05)")
-        border = self._ui_tokens.get("border", "rgba(255,255,255,0.10)")
-        br = shape["button_radius"]
-        bg_hover = self._ui_tokens.get("bg_item_hover", "rgba(255,255,255,0.12)")
-        border_strong = self._ui_tokens.get("border_strong", "rgba(255,255,255,0.25)")
-        return f"""
-            QPushButton {{
-                background-color: {bg_item};
-                border: 1px solid {border};
-                border-radius: {br}px;
-                padding: 2px;
-            }}
-            QPushButton:hover {{
-                background-color: {bg_hover};
-                border-color: {border_strong};
-            }}
-        """
-
     # ------------------------------------------------------------------
     def _select_preset(self, idx: int, *, appearance_mode: str | None = None):
+        with self._batched_updates():
+            self._apply_preset(idx, appearance_mode=appearance_mode)
+
+    def _apply_preset(self, idx: int, *, appearance_mode: str | None = None):
+        self._base_source = "family"
         self._selected_preset = idx
         name_key, _, base, theme, _text_dict = _PRESETS[idx]
+        self._draft_style_family = _FAMILY_BY_PRESET_KEY.get(name_key, "")
+        self._saved_family_variants = self._catalog_style_family_variants()
         self._base_hex = base
         self._theme_hex = theme
         mode = _preset_mode_for_key(name_key)
@@ -2502,19 +2803,11 @@ class PanelColorPickerDialog(QDialog):
         self._rebuild_theme_context()
         semantic_text = _semantic_preset_text_values(base, theme, mode)
 
-        if mode in {"dark", "light"} and self._preset_filter_mode != mode:
-            self._preset_filter_mode = mode
-            self._refresh_preset_filter_buttons()
-            self._rebuild_preset_grid()
-        for i, btn in enumerate(self._preset_btns):
-            btn.setStyleSheet(self._preset_btn_ss(i == idx))
         self._refresh_family_buttons()
         self._refresh_appearance_mode_buttons()
 
         self._point_hex = theme
-        if hasattr(self, "_point_btns"):
-            for i, (_, _, code) in enumerate(_POINT_COLORS):
-                self._point_btns[i].setStyleSheet(self._point_btn_ss(code.lower() == theme.lower()))
+        self._refresh_family_buttons()
         self._refresh_point_display()
 
         if hasattr(self, "_row_primary"):
@@ -2532,19 +2825,16 @@ class PanelColorPickerDialog(QDialog):
                 )
             )
 
-        if (
-            getattr(self, "_chk_auto_apply_preset_text", None) is not None
-            and self._chk_auto_apply_preset_text.isChecked()
+        # Choosing a style also applies its recommended text colors.
+        self._apply_preset_text_colors(refresh=False)
+        for row in (
+            self._row_primary,
+            self._row_secondary,
+            self._row_muted,
+            self._row_faint,
+            self._row_input_bg,
         ):
-            self._apply_preset_text_colors(refresh=False)
-            for row in (
-                self._row_primary,
-                self._row_secondary,
-                self._row_muted,
-                self._row_faint,
-                self._row_input_bg,
-            ):
-                row.mark_current_as_original()
+            row.mark_current_as_original()
 
         self._update_contrast_status()
         self._refresh_preview()
@@ -2557,16 +2847,15 @@ class PanelColorPickerDialog(QDialog):
             QColor(self._base_hex),
             self,
             t("dialog.theme.bg.custom_picker_title", "Choose Background Color"),
+            QColorDialog.ColorDialogOption.DontUseNativeDialog,
         )
         if not picked.isValid():
             return
         self._base_hex = picked.name(QColor.NameFormat.HexRgb)
+        self._custom_base_hex = self._base_hex
+        self._base_source = "custom"
         self._selected_preset = None
-        self._accent_source = "custom"
         self._text_source = "custom"
-        self._preset_filter_mode = "light" if _is_light_base_color(self._base_hex) else "dark"
-        for btn in self._preset_btns:
-            btn.setStyleSheet(self._preset_btn_ss(False))
         self._refresh_family_buttons()
         if hasattr(self, "_btn_apply_preset_text"):
             self._btn_apply_preset_text.setEnabled(False)
@@ -2576,8 +2865,6 @@ class PanelColorPickerDialog(QDialog):
                     "Recommended text colors are available when a preset is selected",
                 )
             )
-        self._refresh_preset_filter_buttons()
-        self._rebuild_preset_grid()
         self._update_contrast_status()
         self._refresh_preview()
         self._update_change_summary()
@@ -2594,9 +2881,6 @@ class PanelColorPickerDialog(QDialog):
         self._schedule_preview_refresh()
         self._update_change_summary()
 
-    def _on_text_opacity_changed(self, value: int):
-        self._text_opacity = value
-        self._txt_op_lbl.setText(opacity_percent_label(value))
         self._schedule_preview_refresh()
         self._update_change_summary()
 
@@ -2621,6 +2905,7 @@ class PanelColorPickerDialog(QDialog):
             self._row_muted.hex_value() if hasattr(self, "_row_muted") else "#95a1ae",
             self._row_input_bg.hex_value() if hasattr(self, "_row_input_bg") else self._input_bg,
             self._system_mode_variant() if self._appearance_mode == "auto" else "",
+            self._current_border_hex(),
         )
 
     def _update_preview_selection_summary(self):
@@ -2686,6 +2971,7 @@ class PanelColorPickerDialog(QDialog):
             return
         self._preview_refresh_timer.stop()
         self._rebuild_theme_context()
+        self._refresh_dialog_surfaces()
 
         # Update swatch displays in the tab
         if self._preview_swatch_base != self._base_hex:
@@ -2695,16 +2981,23 @@ class PanelColorPickerDialog(QDialog):
             self._preview_swatch_base = self._base_hex
         if hasattr(self, "_hex_lbl"):
             self._hex_lbl.setText(self._base_hex)
+        # An automatic border follows the background and accent.
+        self._refresh_border_controls()
 
         # Update existing preview frame components efficiently
         if self._preview_frame is not None:
             preview_tokens = get_ui_tokens(
                 theme_color=preview_state[1],
-                text_theme=preview_state[5],
+                text_theme=preview_state[10] or preview_state[5],
                 panel_base_color=preview_state[0],
                 opacity_factor=preview_state[2] / 255.0,
                 input_bg=preview_state[9],
             )
+            # get_ui_tokens reads the saved font from the global settings. The
+            # preview must follow this dialog's own (draft) type scale, as the
+            # rest of the dialog does, or it overflows when the two differ.
+            for role in ("body", "caption", "section", "title", "display"):
+                preview_tokens[f"font_{role}"] = f"{getattr(self._typography, role + '_px')}px"
             _update_preview_style(
                 self._preview_frame,
                 preview_state[0],
@@ -2717,67 +3010,113 @@ class PanelColorPickerDialog(QDialog):
                 input_bg=preview_state[9],
                 text_opacity=preview_state[4] / 255.0,
                 tokens=preview_tokens,
+                border_color=preview_state[11],
             )
             self._last_preview_state = preview_state
             self._preview_apply_count += 1
 
     def _sync_controls_after_restore(self):
+        with self._batched_updates():
+            self._sync_controls_after_restore_unbatched()
+
+    def _sync_controls_after_restore_unbatched(self):
         self._rebuild_theme_context()
-        for index, button in enumerate(self._preset_btns):
-            button.setStyleSheet(self._preset_btn_ss(index == self._selected_preset))
         self._refresh_family_buttons()
         self._refresh_appearance_mode_buttons()
-        self._refresh_preset_filter_buttons()
-        self._rebuild_preset_grid()
-
-        for index, (_, _, code) in enumerate(_POINT_COLORS):
-            self._point_btns[index].setStyleSheet(
-                self._point_btn_ss(code.lower() == self._point_hex.lower())
-            )
         self._refresh_point_display()
         self._btn_apply_preset_text.setEnabled(self._selected_preset is not None)
         self._update_contrast_status()
         self._refresh_preview()
         self._update_change_summary()
 
+    def _restore_full_style(self, initial):
+        (
+            base_hex,
+            appearance_mode,
+            opacity,
+            border_opacity,
+            text_opacity,
+            base_source,
+            custom_base_hex,
+            style_family,
+            family_variants,
+        ) = initial["_style_full"]
+        self._base_hex = str(base_hex)
+        self._base_source = str(base_source)
+        self._custom_base_hex = str(custom_base_hex)
+        self._draft_style_family = str(style_family)
+        self._saved_family_variants = dict(family_variants)
+        self._appearance_mode = str(appearance_mode)
+        self._text_theme = self._initial_text_theme
+        self._selected_preset = self._initial_selected_preset
+        self._set_opacity_values(int(opacity), int(border_opacity), int(text_opacity))
+
+    def _set_opacity_values(self, opacity: int, border_opacity: int, text_opacity: int):
+        del text_opacity  # kept in the snapshot shape; text is always opaque now
+        self._opacity = opacity
+        self._border_opacity = border_opacity
+        for slider, value, label in (
+            (self._slider, self._opacity, self._op_lbl),
+            (self._border_slider, self._border_opacity, self._bd_op_lbl),
+        ):
+            blocked = slider.blockSignals(True)
+            slider.setValue(value)
+            slider.blockSignals(blocked)
+            label.setText(opacity_percent_label(value))
+
     def _restore_appearance_section(self, section_id: str, *, finalize: bool = True):
         initial = getattr(self, "_initial_appearance_state", None)
-        if not initial or section_id not in {"style", "accent", "readability", "font"}:
+        sections = {"style", "accent", "background", "readability", "font"}
+        if not initial or section_id not in sections:
             return
 
+        full_style = initial["_style_full"]
+        # Re-deriving a background also re-derives recommended text colors, so it
+        # runs only when the restored section really changes the background.
         if section_id == "style":
-            (
-                base_hex,
-                appearance_mode,
-                opacity,
-                border_opacity,
-                text_opacity,
-            ) = initial["style"]
-            self._base_hex = str(base_hex)
-            self._appearance_mode = str(appearance_mode)
+            # Only the mode returns; the chosen preset and background re-derive for it.
+            mode_changed = self._appearance_mode != str(full_style[1])
+            self._appearance_mode = str(full_style[1])
             self._text_theme = self._initial_text_theme
-            self._selected_preset = self._initial_selected_preset
-            self._preset_filter_mode = self._initial_preset_filter_mode
-            self._opacity = int(opacity)
-            self._border_opacity = int(border_opacity)
-            self._text_opacity = int(text_opacity)
-            for slider, value, label in (
-                (self._slider, self._opacity, self._op_lbl),
-                (self._border_slider, self._border_opacity, self._bd_op_lbl),
-                (self._text_slider, self._text_opacity, self._txt_op_lbl),
-            ):
-                blocked = slider.blockSignals(True)
-                slider.setValue(value)
-                slider.blockSignals(blocked)
-                label.setText(opacity_percent_label(value))
+            if mode_changed:
+                selected = self._selected_preset
+                self._refresh_custom_base_for_mode(self._effective_appearance_mode())
+                self._selected_preset = self._preset_for_mode(selected)
         elif section_id == "accent":
-            accent_source, point_hex = initial["accent"]
+            family_before = self._selected_style_family_id() or self._draft_style_family
+            accent_source, point_hex = initial["_accent_full"]
             self._accent_source = str(accent_source)
             self._point_hex = str(point_hex)
             self._theme_hex = self._point_hex
+            self._draft_style_family = str(full_style[7])
+            self._saved_family_variants = dict(full_style[8])
+            self._selected_preset = self._preset_for_mode(self._initial_selected_preset)
+            family_after = self._selected_style_family_id() or self._draft_style_family
+            if self._base_source == "family" and family_after != family_before:
+                selected = self._selected_preset
+                self._refresh_custom_base_for_mode(self._effective_appearance_mode())
+                self._selected_preset = selected
+        elif section_id == "background":
+            base_changed = (self._base_source, self._custom_base_hex.lower()) != (
+                str(full_style[5]),
+                str(full_style[6]).lower(),
+            )
+            self._base_source = str(full_style[5])
+            self._custom_base_hex = str(full_style[6])
+            self._set_opacity_values(int(full_style[2]), int(full_style[3]), int(full_style[4]))
+            self._border_source, self._custom_border_hex = initial["_border_full"]
+            if base_changed:
+                selected = self._selected_preset
+                self._refresh_custom_base_for_mode(self._effective_appearance_mode())
+                self._selected_preset = selected
         elif section_id == "readability":
-            text_source, text_values = initial["readability"]
+            text_source, text_values, text_opacity = initial["readability"]
             self._text_source = str(text_source)
+            self._text_opacity = int(text_opacity)
+            blocked = self._text_slider.blockSignals(True)
+            self._text_slider.setValue(self._text_opacity)
+            self._text_slider.blockSignals(blocked)
+            self._txt_op_lbl.setText(opacity_percent_label(self._text_opacity))
             if text_values:
                 self._set_text_row_values(
                     dict(
@@ -2801,16 +3140,32 @@ class PanelColorPickerDialog(QDialog):
             self._font_size_spin.blockSignals(size_blocked)
             from calendar_app.presentation.main_window.window_ui_actions import build_ui_font
 
-            self._font_preview.setFont(build_ui_font(str(font_family), int(font_size)))
+            self._apply_font_preview_font(build_ui_font(str(font_family), int(font_size)))
 
         if finalize:
             self._sync_controls_after_restore()
+
+    def _preset_for_mode(self, preset_index: int | None) -> int | None:
+        """The same family's preset for the current mode (dark and light differ)."""
+        if preset_index is None or preset_index >= len(_PRESETS):
+            return preset_index
+        family_id = _FAMILY_BY_PRESET_KEY.get(_PRESETS[preset_index][0])
+        if not family_id:
+            return preset_index
+        preset_key, _accent = self._family_accent(family_id)
+        return _PRESET_INDEX_BY_KEY.get(preset_key, preset_index)
 
     def _restore_all_appearance_changes(self):
         initial = getattr(self, "_initial_appearance_state", None)
         if not initial:
             return
-        for section_id in ("style", "accent", "readability", "font"):
+        self._restore_full_style(initial)
+        self._border_source, self._custom_border_hex = initial["_border_full"]
+        accent_source, point_hex = initial["_accent_full"]
+        self._accent_source = str(accent_source)
+        self._point_hex = str(point_hex)
+        self._theme_hex = self._point_hex
+        for section_id in ("readability", "font"):
             self._restore_appearance_section(section_id, finalize=False)
         self._dialog_color_overrides = dict(initial["expert"][0])
         self._dialog_metric_overrides = dict(initial["expert"][1])
@@ -2836,6 +3191,19 @@ class PanelColorPickerDialog(QDialog):
         resolved = str(resolved_theme or "").lower()
         if self._appearance_mode != "auto" or resolved not in {"dark", "light"}:
             return
+        if self._base_source == "custom" or (
+            self._draft_style_family and self._saved_family_variants
+        ):
+            changed_before = set(self._appearance_change_categories())
+            self._refresh_custom_base_for_mode(resolved)
+            self._adopt_unchanged_initial_state(changed_before)
+            if "accent" not in changed_before:
+                self._point_hex_original = self._point_hex
+                self._initial_accent_source = self._accent_source
+            self._last_preview_state = None
+            self._refresh_preview()
+            self._update_change_summary()
+            return
         family_id = self._selected_style_family_id()
         family = next((item for item in _STYLE_FAMILIES if item[0] == family_id), None)
         if family is None:
@@ -2850,7 +3218,6 @@ class PanelColorPickerDialog(QDialog):
         _, _, base, accent, _text_dict = _PRESETS[preset_index]
         semantic_text = _semantic_preset_text_values(base, accent, resolved)
         self._selected_preset = preset_index
-        self._preset_filter_mode = resolved
         self._base_hex = base
         self._text_theme = "auto"
         if self._accent_source == "family":
@@ -2872,13 +3239,9 @@ class PanelColorPickerDialog(QDialog):
             ):
                 row.mark_current_as_original()
 
-        current = self._appearance_state()
-        for category in ("style", "accent", "readability"):
-            if category not in changed_before:
-                self._initial_appearance_state[category] = current[category]
+        self._adopt_unchanged_initial_state(changed_before)
         if "style" not in changed_before:
             self._initial_selected_preset = preset_index
-            self._initial_preset_filter_mode = resolved
         if "accent" not in changed_before:
             self._point_hex_original = self._point_hex
             self._initial_accent_source = self._accent_source
@@ -2886,6 +3249,17 @@ class PanelColorPickerDialog(QDialog):
             self._initial_text_source = self._text_source
         self._last_preview_state = None
         self._sync_controls_after_restore()
+
+    def _adopt_unchanged_initial_state(self, changed_before: set[str]):
+        """A system light/dark switch re-derives values the user never touched."""
+        current = self._appearance_state()
+        for category in ("style", "accent", "background", "readability"):
+            if category not in changed_before:
+                self._initial_appearance_state[category] = current[category]
+        if not changed_before & {"style", "accent", "background"}:
+            self._initial_appearance_state["_style_full"] = current["_style_full"]
+        if "accent" not in changed_before:
+            self._initial_appearance_state["_accent_full"] = current["_accent_full"]
 
     def _appearance_state(self) -> dict[str, object]:
         text_values = ()
@@ -2898,16 +3272,36 @@ class PanelColorPickerDialog(QDialog):
                 self._row_input_bg.hex_value(),
             )
         font_values = (self.selected_font_family(), self.selected_font_size())
+        family_id = self._selected_style_family_id() or self._draft_style_family
+        custom_accent = self._point_hex.lower() if self._accent_source != "family" else ""
+        custom_base = self._custom_base_hex.lower() if self._base_source == "custom" else ""
         return {
-            "style": (
+            # Public categories mirror the sections; a value derived from another
+            # section (the mode's family tone, say) is not a change of its own.
+            "style": (self._appearance_mode,),
+            "accent": (self._accent_source, custom_accent, family_id if not custom_accent else ""),
+            "background": (
+                self._base_source,
+                custom_base,
+                self._opacity,
+                self._border_opacity,
+                self._border_source,
+                self._custom_border_hex if self._border_source == "custom" else "",
+            ),
+            "_border_full": (self._border_source, self._custom_border_hex),
+            "_style_full": (
                 self._base_hex.lower(),
                 self._appearance_mode,
                 self._opacity,
                 self._border_opacity,
                 self._text_opacity,
+                self._base_source,
+                self._custom_base_hex.lower(),
+                self._draft_style_family,
+                tuple(sorted(self._saved_family_variants.items())),
             ),
-            "accent": (self._accent_source, self._point_hex.lower()),
-            "readability": (self._text_source, text_values),
+            "_accent_full": (self._accent_source, self._point_hex.lower()),
+            "readability": (self._text_source, text_values, self._text_opacity),
             "font": font_values,
             "expert": (
                 tuple(sorted(self._dialog_color_overrides.items())),
@@ -2922,7 +3316,7 @@ class PanelColorPickerDialog(QDialog):
         current = self._appearance_state()
         return [
             key
-            for key in ("style", "accent", "readability", "font", "expert")
+            for key in ("style", "accent", "background", "readability", "font", "expert")
             if current[key] != initial[key]
         ]
 
@@ -2935,8 +3329,9 @@ class PanelColorPickerDialog(QDialog):
         count = len(categories)
         if count:
             category_labels = {
-                "style": t("dialog.theme.tab.background", "스타일"),
+                "style": t("dialog.theme.tab.mode", "화면 모드"),
                 "accent": t("dialog.theme.tab.accent", "포인트 색상"),
+                "background": t("dialog.theme.tab.background_opacity", "배경 및 투명도"),
                 "readability": t("dialog.theme.tab.text", "가독성"),
                 "font": t("dialog.theme.tab.font", "글꼴"),
                 "expert": t("dialog.theme.advanced", "고급 사용자 설정"),
@@ -2949,7 +3344,10 @@ class PanelColorPickerDialog(QDialog):
             )
         else:
             message = t("dialog.theme.changes_none", "No changes")
-        label.setText(message)
+        label.setText(
+            t("dialog.theme.changes_count", "변경 {count}개", count=count) if count else message
+        )
+        label.setToolTip(message)
         label.setAccessibleName(message)
         apply_btn.setEnabled(count > 0)
         apply_btn.setAccessibleDescription(message)
@@ -2969,6 +3367,7 @@ class PanelColorPickerDialog(QDialog):
         changed = set(categories)
         for section_id, button in getattr(self, "_section_reset_buttons", {}).items():
             button.setEnabled(section_id in changed)
+        self._reflow_appearance_footer(self.width())
 
     def _apply_preset_text_colors(self, _checked=False, *, refresh: bool = True):
         """Calculates and applies recommended text colors for the current background."""
@@ -3016,15 +3415,25 @@ class PanelColorPickerDialog(QDialog):
     # ------------------------------------------------------------------
 
     def selected_base_hex(self) -> str:
+        if self._base_source == "custom":
+            return self._custom_base_hex
         return self._base_hex
 
+    def selected_base_source(self) -> str:
+        return self._base_source
+
     def selected_style_family(self) -> str:
-        return self._selected_style_family_id()
+        return self._draft_style_family or self._selected_style_family_id()
 
     def selected_accent_source(self) -> str:
         return self._accent_source
 
     def selected_style_family_variants(self) -> dict[str, str]:
+        if self._saved_family_variants:
+            return dict(self._saved_family_variants)
+        return self._catalog_style_family_variants()
+
+    def _catalog_style_family_variants(self) -> dict[str, str]:
         family_id = self._selected_style_family_id()
         family = next((item for item in _STYLE_FAMILIES if item[0] == family_id), None)
         if family is None:
@@ -3038,6 +3447,21 @@ class PanelColorPickerDialog(QDialog):
             "light_base": light[2],
             "light_accent": light[3],
         }
+
+    def selected_text_opacity(self) -> int:
+        """Readability's text opacity as a byte (77~255)."""
+        return self._text_opacity
+
+    def selected_border_source(self) -> str:
+        """ "auto"/"custom" once a border was chosen here or before; "" keeps neutral lines."""
+        chosen = (self._border_source, self.selected_border_hex(), self._border_opacity)
+        if self._border_source_saved in {"auto", "custom"} or chosen != self._border_initial:
+            return self._border_source
+        return ""
+
+    def selected_border_hex(self) -> str:
+        """The directly chosen border color, or "" while the border is automatic."""
+        return self._custom_border_hex if self._border_source == "custom" else ""
 
     def selected_point_hex(self) -> str:
         """포인트 컬러 탭에서 지정한 색상을 반환."""
@@ -3065,10 +3489,6 @@ class PanelColorPickerDialog(QDialog):
     def selected_border_opacity(self) -> int:
         """테두리 불투명도 0~255."""
         return self._border_opacity
-
-    def selected_text_opacity(self) -> int:
-        """글씨 불투명도 0~255."""
-        return self._text_opacity
 
     def text_primary_hex(self) -> str:
         return self._row_primary.hex_value()
@@ -3108,6 +3528,33 @@ class PanelColorPickerDialog(QDialog):
             or self.selected_font_size() != self._font_size_orig
         )
 
+    def _apply_font_preview_font(self, font: QFont) -> None:
+        """Keep the selected preview font above inherited dialog typography."""
+        self._font_preview.setFont(font)
+        tokens = self._ui_tokens
+        self._font_preview_base_style = (
+            f"color: {tokens['text_secondary']}; border: 1px solid {tokens['border']};"
+            f"border-radius: {tokens.get('field_radius', '4px')}; padding: 10px;"
+            f"background: {tokens['bg_item']};"
+        )
+        family = font.family().replace("\\", "\\\\").replace('"', '\\"')
+        family = family.replace("\n", " ").replace("\r", " ")
+        size = font.pointSizeF()
+        size_rule = f"{size:g}pt" if size > 0 else f"{max(1, font.pixelSize())}px"
+        self._font_preview.setStyleSheet(
+            self._font_preview_base_style
+            + f'font-family: "{family}"; font-size: {size_rule}; '
+            + f"font-weight: {int(font.weight())}; "
+            + f"font-style: {'italic' if font.italic() else 'normal'};"
+        )
+        self._font_preview.ensurePolished()
+        self._font_preview.setMinimumHeight(0)
+        wrapped_height = self._font_preview.heightForWidth(max(1, self._font_preview.width()))
+        self._font_preview.setMinimumHeight(
+            max(self._font_preview.fontMetrics().height() + 22, wrapped_height)
+        )
+        self._font_preview.updateGeometry()
+
     def _build_font_tab(self) -> QWidget:
         from calendar_app.presentation.main_window.window_ui_actions import build_ui_font
 
@@ -3117,18 +3564,27 @@ class PanelColorPickerDialog(QDialog):
         lay.setSpacing(14)
 
         tok = self._ui_tokens
-        text_muted = tok.get("text_muted", "rgba(255,255,255,0.50)")
         text_secondary = tok.get("text_secondary", "rgba(255,255,255,0.75)")
 
         hint = QLabel(t("dialog.theme.font.subtitle", "앱 전체 UI 글꼴을 설정합니다."))
-        hint.setStyleSheet(f"font-size: 12px; color: {text_muted};")
+        self._bind_theme_style(
+            hint,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens['text_muted']};"
+            ),
+        )
         lay.addWidget(hint)
 
         # 폰트 패밀리
         family_row = QHBoxLayout()
         family_lbl = QLabel(t("dialog.theme.font.family", "글꼴:"))
-        family_lbl.setStyleSheet(f"font-size: 13px; color: {text_secondary};")
-        family_lbl.setFixedWidth(60)
+        self._bind_theme_style(
+            family_lbl,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_body']}; color: {self._ui_tokens['text_secondary']};"
+            ),
+        )
+        family_lbl.setMinimumWidth(60)
         self._font_combo = QFontComboBox()
         self._font_combo.setFontFilters(QFontComboBox.FontFilter.ScalableFonts)
         app_font = QApplication.instance().font()
@@ -3141,7 +3597,8 @@ class PanelColorPickerDialog(QDialog):
         self._font_popup_btn.setObjectName("fontComboPopupButton")
         icon_color = parse_hex_color(text_secondary, "#c8ccd4").name(QColor.NameFormat.HexRgb)
         self._font_popup_btn.setIcon(_ic(ICON.NAV_DOWN, color=icon_color))
-        self._font_popup_btn.setFixedSize(34, 34)
+        popup_size = max(34, self._typography.body_px + 18)
+        self._font_popup_btn.setFixedSize(popup_size, popup_size)
         self._font_popup_btn.setToolTip(font_popup_label)
         self._font_popup_btn.setAccessibleName(font_popup_label)
         self._font_popup_btn.setAccessibleDescription(font_popup_label)
@@ -3154,15 +3611,20 @@ class PanelColorPickerDialog(QDialog):
         # 폰트 크기
         size_row = QHBoxLayout()
         size_lbl = QLabel(t("dialog.theme.font.size", "크기:"))
-        size_lbl.setStyleSheet(f"font-size: 13px; color: {text_secondary};")
-        size_lbl.setFixedWidth(60)
+        self._bind_theme_style(
+            size_lbl,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_body']}; color: {self._ui_tokens['text_secondary']};"
+            ),
+        )
+        size_lbl.setMinimumWidth(60)
         self._font_size_spin = QSpinBox()
         self._font_size_spin.installEventFilter(self._wheel_blocker)
         self._font_size_spin.setRange(7, 24)
         init_size = (
             self._font_size_orig
             if self._font_size_orig > 0
-            else (app_font.pointSize() if app_font.pointSize() > 0 else 10)
+            else (app_font.pointSize() if app_font.pointSize() > 0 else DEFAULT_FONT_PT)
         )
         self._font_size_spin.setValue(init_size)
         self._font_size_spin.setSuffix(" pt")
@@ -3173,14 +3635,20 @@ class PanelColorPickerDialog(QDialog):
 
         # 미리보기
         pre_lbl = QLabel(t("dialog.theme.preview.title", "미리보기:"))
-        pre_lbl.setStyleSheet(f"font-size: 12px; color: {text_muted};")
+        self._bind_theme_style(
+            pre_lbl,
+            lambda: (
+                f"font-size: {self._ui_tokens['font_caption']}; color: {self._ui_tokens['text_muted']};"
+            ),
+        )
         lay.addWidget(pre_lbl)
 
         self._font_preview = QLabel(
             t("dialog.theme.font.preview_sample", "가나다 ABC abc 123  오늘 할 일을 정리하세요.")
         )
         self._font_preview.setWordWrap(True)
-        self._font_preview.setStyleSheet(
+        self._font_preview.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self._font_preview_base_style = (
             f"color: {text_secondary}; border: 1px solid {tok.get('border', tok.get('border_soft', 'rgba(255,255,255,0.10)'))};"
             f"border-radius: {tok.get('field_radius', '4px')}; padding: 10px; background: {tok.get('bg_item', tok.get('surface_item', 'rgba(255,255,255,0.04)'))};"
         )
@@ -3189,7 +3657,7 @@ class PanelColorPickerDialog(QDialog):
         def _update_font_preview():
             sz = self._font_size_spin.value()
             f = build_ui_font(self._font_combo.currentFont().family(), sz)
-            self._font_preview.setFont(f)
+            self._apply_font_preview_font(f)
             self._update_change_summary()
 
         self._font_combo.currentFontChanged.connect(lambda _: _update_font_preview())
@@ -3207,9 +3675,10 @@ class PanelColorPickerDialog(QDialog):
 
         draft_tokens = get_dialog_theme_tokens(
             theme_color=self._point_hex,
-            text_theme=self._resolved_dialog_text_theme(),
+            text_theme=self._effective_appearance_mode(),
             panel_base_color=self._base_hex,
             apply_overrides=False,
+            settings=self._draft_settings,
         )
         if hasattr(self, "_row_primary"):
             draft_tokens.update(
@@ -3228,12 +3697,13 @@ class PanelColorPickerDialog(QDialog):
         dlg = DialogTokenEditorDialog(
             self,
             theme_color=self._point_hex,
-            text_theme=self._resolved_dialog_text_theme(),
+            text_theme=self._effective_appearance_mode(),
             panel_base_color=self._base_hex,
             base_tokens=draft_tokens,
             initial_color_overrides=self._dialog_color_overrides,
             initial_metric_overrides=self._dialog_metric_overrides,
             persist_on_apply=False,
+            settings=self._draft_settings,
         )
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self._dialog_color_overrides = dlg.selected_color_overrides()

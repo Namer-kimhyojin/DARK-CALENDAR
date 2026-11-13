@@ -65,16 +65,17 @@ def _choose(dialog, design_id):
     return item
 
 
-def test_catalog_preserves_classic_recipes_and_adds_three_premium_scenes():
+def test_catalog_preserves_classic_recipes_and_adds_four_premium_scenes():
     designs = weather_designs()
-    assert len(designs) == len({design.design_id for design in designs}) == 27
+    assert len(designs) == len({design.design_id for design in designs}) == 28
     assert Counter(design.category for design in designs) == {
-        item[0]: 3 if item[0] == "premium" else 4 for item in WEATHER_DESIGN_CATEGORIES
+        item[0]: 4 for item in WEATHER_DESIGN_CATEGORIES
     }
     assert {design.scene_id for design in designs if design.scene_id} == {
         "air_atmosphere",
         "soft_object",
         "editorial_mono",
+        "gif_weather",
     }
     assert {design.appearance_preset_id for design in designs} >= {
         "midnight_glass",
@@ -149,7 +150,7 @@ def test_search_matches_ids_korean_names_and_recovers_from_no_results(gallery):
     gallery.apply_button.click()
     assert gallery.selected_design is None
     gallery.search_edit.clear()
-    assert gallery.grid.count() == 27
+    assert gallery.grid.count() == len(weather_designs())
     assert gallery.apply_button.isEnabled()
 
 
@@ -158,6 +159,22 @@ def test_double_click_previews_without_applying(gallery):
     gallery.grid.itemDoubleClicked.emit(item)
     assert gallery.selected_design is None
     assert gallery.result() != QDialog.DialogCode.Accepted
+
+
+def test_gif_design_previews_before_apply_and_stops_on_cancel(gallery):
+    with patch(
+        "calendar_app.presentation.widgets.weather_scene.system_allows_weather_motion",
+        return_value=True,
+    ):
+        _choose(gallery, "gif_weather")
+        gallery.show()
+        gallery.detail_animation.grab()
+        movie = gallery.detail_animation._movie
+        assert movie is not None
+        assert movie.state() == movie.MovieState.Running
+        assert gallery.selected_design is None
+        gallery.reject()
+        assert movie.state() == movie.MovieState.Paused
 
 
 def test_gallery_renders_selected_recipe_through_the_shared_weather_renderer(app, data):
@@ -198,7 +215,7 @@ def test_lazy_cards_keep_thumbnail_and_label_height_and_stop_on_close(gallery, a
     assert gallery.grid.visualItemRect(item).height() >= required
     QTest.qWait(100)
     assert not item.icon().isNull()
-    assert 0 < len(gallery._icons) < 27
+    assert 0 < len(gallery._icons) < len(weather_designs())
     assert gallery.grid.visualItemRect(item).height() >= required
     gallery.reject()
     assert not gallery._thumb_timer.isActive()

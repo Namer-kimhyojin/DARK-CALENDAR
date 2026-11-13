@@ -65,7 +65,7 @@ migrate_from_gcal_subscription()
 ## 기본 캘린더 자동 생성
 
 `calendar` 테이블이 비어있을 때 기본 로컬 캘린더를 자동 생성합니다 (5ea7d0a).
-`calendar_repo.py`의 `ensure_default_calendar()` 참조.
+`calendar_repo.migrate_from_gcal_subscription()`이 기본 캘린더가 없을 때 `local::기본`을 만듭니다.
 
 ## calendar_id 필수 전파
 
@@ -89,6 +89,25 @@ DB_PATH          # 개인 DB (기본 경로)
 SHARED_DB_PATH   # C:\Users\Public\DarkCalendar\shared.db (PC공유 캘린더)
 ```
 
+## 자동 백업과 손상 복구
+
+`infrastructure/db/db_backup.py`가 개인 DB를 보호합니다.
+
+- 시작 시 DB 초기화가 성공하면, 그리고 실행 중 6시간마다(백그라운드 스레드) 최근 스냅샷이
+  20시간보다 오래됐을 때만 `backups/desk_calendar-YYYYMMDD-HHMMSS.db`를 만듭니다.
+  SQLite backup API로 복사하므로 WAL 사용 중에도 일관되며, 사본이 `PRAGMA quick_check`를
+  통과해야만 저장하고 최신 7개만 보관합니다. 손상된 원본은 정상 스냅샷을 밀어내지 못합니다.
+- 시작 시 `SQLITE_CORRUPT`/`SQLITE_NOTADB`이고 검증되는 스냅샷이 있으면 오류 창에
+  "최근 백업으로 복구"를 제공합니다. 손상 파일과 `-wal`/`-shm`은 삭제하지 않고
+  `desk_calendar.db.corrupt-<시각>`으로 옮긴 뒤 복원하고, 단일 실행 잠금을 푼 다음 재시작합니다.
+- 스냅샷 실패는 경고 로그만 남기고 시작을 막지 않습니다.
+
+## 테스트 격리
+
+`tests/conftest.py`가 모든 pytest 실행의 `LOCALAPPDATA`를 임시 폴더로 바꿉니다. `DB_PATH`,
+로그, OAuth 토큰이 실제 앱 데이터를 가리키면 세션 시작 단계에서 실패합니다. 테스트나 진단
+스크립트가 개발자 실제 DB(`%LOCALAPPDATA%\kimhyojin\Dark Calendar`)를 열지 않게 하세요.
+
 ## 레포지토리 진입점
 
 Outlook 연결은 기존 Google 필드를 재사용하지 않습니다. `infrastructure/calendar_sync/repository.py`가
@@ -106,8 +125,9 @@ CalDAV도 같은 계약을 사용합니다. iCloud·네이버 어댑터는 `infr
 상실 시 자동 삭제하지 않습니다. 원격 서버가 transaction ID를 제거하면 보류 기록을 유지합니다.
 `created_at`은 `ALTER TABLE`로 추가합니다. 새 보류는 삭제 트리거에서 UTC 시각을 기록하고,
 과거 기록의 알 수 없는 시각은 NULL로 보존합니다. 문제 화면에서 계정·캘린더·발생 시각을 확인할 수 있습니다.
+삭제 충돌(`delete_conflict`) 때 받은 원격 일정은 `calendar_sync_delete_queue.remote_json`에 저장하고, "그래도 삭제"는 그 revision이 그대로일 때만 지웁니다. 연결 일정 삭제 트리거는 저장된 SQL이 다를 때만 `BEGIN IMMEDIATE` 한 트랜잭션에서 교체합니다(저장소를 열 때마다 DROP/CREATE하지 않음). 읽기 전용 캘린더의 일정은 앱에서 삭제하지 않습니다(`task_delete_usecases.read_only_task_ids`).
 
-- `infrastructure/db/db_repository.py` — 통합 레포지토리 진입점 (대부분의 코드는 여기서 임포트)
+- `infrastructure/db/db_repository.py` — 업무 기록·지시사항·집중 대상 조회 등 옛 조회 일부만 남은 모듈입니다. 새 코드에서 쓰지 않습니다.
 - 레포지토리를 직접 임포트할 때는 `infrastructure/db/` 하위 모듈에서 직접 가져옵니다:
   ```python
   from calendar_app.infrastructure.db import task_repo, directive_repo

@@ -24,8 +24,8 @@ The application uses PyQt6, which is distributed by Riverbank Computing under GP
 ## Corresponding source
 
 - Source repository: <https://github.com/Namer-kimhyojin/DARK-CALENDAR>
-- Release page for `4.9.2`: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.9.2>
-- Complete corresponding-source archive: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v4.9.2/DarkCalendar-4.9.2-corresponding-source.zip>
+- Release page for `5.2.0`: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.2.0>
+- Complete corresponding-source archive: <https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v5.2.0/DarkCalendar-5.2.0-corresponding-source.zip>
 - Source availability notice: [SOURCE_OFFER.md](SOURCE_OFFER.md)
 
 Each distributed binary must point to the matching release. The release must contain the application tag, exact dependency lock, license bundle, and complete corresponding-source archive used for that binary.
@@ -38,13 +38,17 @@ Coding guidance: [AGENTS.md](AGENTS.md) · [Current tasks](TASKS.md) · [Documen
 Requirements:
 
 - Windows 10 or 11
-- Python 3.12 or later
+- Python 3.14.10 for `run.bat` and Windows release builds
 
 ```powershell
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-dev.txt
-.venv\Scripts\python.exe main.py
+py -V:3.14 -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\run.bat
 ```
+
+Verify that the selected interpreter reports `3.14.10` before creating `.venv`.
+For a Python minor upgrade, create a fresh environment so native wheels are
+installed for the new interpreter.
 
 Run the test suite:
 
@@ -56,8 +60,8 @@ python scripts/run_encoding_guard.py
 Build the Windows package:
 
 ```powershell
-python -m pip install -r requirements-build.lock
-build-release.bat -Arch x64
+.venv\Scripts\python.exe -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r requirements-build.lock
+.\build-release.bat -Arch x64
 ```
 
 Release builds must use `requirements-build.lock`; `requirements-runtime.lock` is the authoritative runtime dependency inventory. The build pipeline and PyInstaller specifications in this repository are part of the Corresponding Source.

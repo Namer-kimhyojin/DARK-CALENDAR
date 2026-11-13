@@ -14,19 +14,20 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from calendar_app.application import focus_usecases
+from calendar_app.application import focus_usecases, task_usecases
 from calendar_app.application.pomodoro_engine import (
     PHASE_FOCUS,
     PHASE_LONG_BREAK,
     PomodoroEngine,
 )
-from calendar_app.infrastructure.db import checklist_repo, legacy_focus_repo
+from calendar_app.infrastructure.db import checklist_repo, legacy_focus_repo, task_repo
 from calendar_app.infrastructure.i18n import t
 from calendar_app.shared.color_utils import hex_to_rgba, parse_hex_color, shift_rgb
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.theme_snapshot import build_shared_ui_tokens, build_theme_snapshot
+from calendar_app.shared.typography import get_typography_scale
 
 try:
     from PyQt6 import sip
@@ -37,6 +38,7 @@ from calendar_app.presentation.dialogs.focus_completion_dialog import FocusCompl
 
 FOCUS_MODE_POMODORO = "pomodoro"
 FOCUS_MODE_STOPWATCH = "stopwatch"
+_active_phase_toasts: set[QFrame] = set()
 
 
 def _focus_ui_tokens(app) -> dict[str, str]:
@@ -372,7 +374,12 @@ def _persist_stopwatch_log(app) -> None:
     task_id = getattr(app, "_focus_task_id", None)
     if elapsed_secs <= 0 or not task_id:
         return
-    if focus_usecases.persist_focus_log(legacy_focus_repo, task_id, elapsed_secs):
+    if focus_usecases.persist_focus_log(
+        legacy_focus_repo,
+        task_id,
+        elapsed_secs,
+        task_type=getattr(app, "_focus_task_type", None),
+    ):
         app.show_toast(
             t("focus.toast_title"),
             t(
@@ -398,7 +405,12 @@ def _persist_completed_pomodoro_focus(app, duration_secs: int) -> None:
     print(f"[Focus] Persisting session: task_id={task_id}, duration={duration_secs}s")
 
     try:
-        if focus_usecases.persist_focus_log(legacy_focus_repo, task_id, duration_secs):
+        if focus_usecases.persist_focus_log(
+            legacy_focus_repo,
+            task_id,
+            duration_secs,
+            task_type=getattr(app, "_focus_task_type", None),
+        ):
             # Update local counters
             app._focus_sessions_saved = int(getattr(app, "_focus_sessions_saved", 0) or 0) + 1
             app._focus_saved_secs = int(getattr(app, "_focus_saved_secs", 0) or 0) + duration_secs
@@ -511,9 +523,16 @@ def _announce_phase_change(app, title: str, msg: str, icon: str) -> None:
     from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
     from PyQt6.QtWidgets import QApplication, QGraphicsOpacityEffect
 
-    theme_color = "#4da6ff"
-    if hasattr(app, "settings"):
-        theme_color = app.settings.value("theme_color", "#4da6ff")
+    from calendar_app.presentation.dialogs.dialog_styles import (
+        get_dialog_metric_tokens,
+        get_dialog_theme_tokens,
+    )
+
+    settings = getattr(app, "settings", None)
+    tokens = get_dialog_theme_tokens(settings=settings)
+    metrics = get_dialog_metric_tokens(settings=settings)
+    theme_color = tokens["accent"]
+    screen = QApplication.primaryScreen()
 
     # Independent top-level window — no parent, so it never overlaps the focus UI
     popup = QFrame(None)
@@ -525,13 +544,17 @@ def _announce_phase_change(app, title: str, msg: str, icon: str) -> None:
     )
     popup.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
     popup.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
-    popup.setFixedSize(360, 90)
+    popup.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+    popup.setObjectName("FocusPhaseToast")
+    width = min(400, max(240, screen.availableGeometry().width() - 48)) if screen else 400
+    popup.setFixedWidth(width)
 
     popup.setStyleSheet(f"""
-        QFrame {{
-            background-color: rgba(18, 20, 30, 220);
-            border: 1px solid {theme_color};
-            border-radius: 12px;
+        QFrame#FocusPhaseToast {{ background: transparent; border: none; }}
+        QFrame#FocusPhaseToastCard {{
+            background: {tokens.get("floating_bg", tokens["surface_bg"])};
+            border: 1px solid {tokens["border"]};
+            border-radius: {metrics["group_radius"]}px;
         }}
         QLabel {{
             background: transparent;
@@ -539,27 +562,38 @@ def _announce_phase_change(app, title: str, msg: str, icon: str) -> None:
         }}
     """)
 
-    layout = QHBoxLayout(popup)
-    layout.setContentsMargins(16, 12, 16, 12)
+    shell_layout = QVBoxLayout(popup)
+    shell_layout.setContentsMargins(0, 0, 0, 0)
+    card = QFrame()
+    card.setObjectName("FocusPhaseToastCard")
+    shell_layout.addWidget(card)
+    layout = QHBoxLayout(card)
+    layout.setContentsMargins(20, 18, 20, 18)
     layout.setSpacing(14)
 
     icon_lbl = QLabel()
-    icon_lbl.setPixmap(_ic(icon).pixmap(36, 36))
-    icon_lbl.setFixedWidth(46)
+    icon_lbl.setPixmap(_ic(icon, color=theme_color).pixmap(28, 28))
+    icon_lbl.setFixedWidth(32)
     layout.addWidget(icon_lbl)
 
     text_col = QVBoxLayout()
     text_col.setSpacing(2)
     title_lbl = QLabel(title)
-    title_lbl.setStyleSheet(f"font-size: 15px; font-weight: bold; color: {theme_color};")
+    title_lbl.setWordWrap(True)
+    title_lbl.setStyleSheet(
+        f"font-size: {get_typography_scale(settings).section_px}px; font-weight: 700; color: {tokens['text_primary']};"
+    )
     msg_lbl = QLabel(msg)
-    msg_lbl.setStyleSheet("font-size: 12px; color: #b0b8cc;")
+    msg_lbl.setWordWrap(True)
+    msg_lbl.setStyleSheet(
+        f"font-size: {metrics['base_font_pt']}px; color: {tokens['text_secondary']};"
+    )
     text_col.addWidget(title_lbl)
     text_col.addWidget(msg_lbl)
-    layout.addLayout(text_col)
+    layout.addLayout(text_col, 1)
+    popup.adjustSize()
 
     # Position: bottom-right of the screen, above the taskbar
-    screen = QApplication.primaryScreen()
     if screen is not None:
         sg = screen.availableGeometry()
         x = sg.right() - popup.width() - 24
@@ -567,10 +601,13 @@ def _announce_phase_change(app, title: str, msg: str, icon: str) -> None:
     else:
         x, y = 1060, 960
     popup.move(x, y)
+    _active_phase_toasts.add(popup)
+    popup.destroyed.connect(lambda: _active_phase_toasts.discard(popup))
     popup.show()
 
     # Fade-out after 3 s display
     opacity_effect = QGraphicsOpacityEffect(popup)
+    opacity_effect.setOpacity(1.0)
     popup.setGraphicsEffect(opacity_effect)
 
     anim = QPropertyAnimation(opacity_effect, b"opacity")
@@ -646,6 +683,7 @@ def _reset_focus_runtime_refs(app) -> None:
     app._focus_pomodoro = None
     app._focus_mode_type = FOCUS_MODE_POMODORO
     app._focus_task_id = None
+    app._focus_task_type = None
     app._focus_elapsed_secs = 0
     app._focus_saved_secs = 0
     app._focus_sessions_saved = 0
@@ -660,6 +698,11 @@ def _build_focus_checklist_panel(app, layout):
     """Build a compact checklist surface for the selected task."""
     task_id = getattr(app, "_focus_task_id", None)
     if not task_id:
+        return
+    # Directives have no checklist; checklist owner ids are unified_task ids, so a
+    # directive must never show (or toggle) the task that shares its number.
+    kind = focus_usecases.focus_target_kind(getattr(app, "_focus_task_type", None))
+    if kind == focus_usecases.FOCUS_TARGET_DIRECTIVE:
         return
 
     tokens = _focus_ui_tokens(app)
@@ -727,31 +770,52 @@ def _build_focus_checklist_panel(app, layout):
         scroll_layout.setSpacing(7)
         scroll_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
+        boxes = {}
+
+        def _sync_boxes():
+            # A process step can be refused or can uncheck the steps after it.
+            done = {
+                row["id"]: bool(row["is_completed"])
+                for row in checklist_repo.get_task_checklist_items(task_id)
+            }
+            for box_id, box in boxes.items():
+                box.blockSignals(True)
+                box.setChecked(done.get(box_id, False))
+                box.blockSignals(False)
+                _set_focus_checklist_style(box, checked=box.isChecked(), tokens=tokens)
+
         for item in items:
             cb = QCheckBox(item.get("item_text", ""))
             cb.setChecked(bool(item.get("is_completed", False)))
             cb.setCursor(Qt.CursorShape.PointingHandCursor)
             _set_focus_checklist_style(cb, checked=cb.isChecked(), tokens=tokens)
             link_id = item.get("id")
+            boxes[link_id] = cb
 
-            def _make_toggle_handler(l_id, checkbox):
-                def _handle(checked):
-                    checklist_repo.toggle_checklist_item(l_id)
-                    _set_focus_checklist_style(
-                        checkbox,
-                        checked=checked,
-                        tokens=tokens,
-                    )
+            def _make_toggle_handler(l_id):
+                def _handle(_checked):
+                    task_usecases.toggle_checklist_item(checklist_repo, task_repo, l_id)
+                    _sync_boxes()
 
                 return _handle
 
-            cb.toggled.connect(_make_toggle_handler(link_id, cb))
+            cb.toggled.connect(_make_toggle_handler(link_id))
             scroll_layout.addWidget(cb)
 
         scroll.setWidget(scroll_content)
         section_layout.addWidget(scroll)
 
     layout.addWidget(section)
+
+
+def _apply_focus_selection(app, selector_dlg):
+    """Store the selected focus target (id and kind) on the app; return its name."""
+    app._focus_task_id, task_name = selector_dlg.get_selected_task()
+    get_kind = getattr(selector_dlg, "get_selected_task_type", None)
+    app._focus_task_type = focus_usecases.focus_target_kind(
+        get_kind() if callable(get_kind) else None
+    )
+    return task_name
 
 
 def _enter_focus_mode(app) -> None:
@@ -763,7 +827,7 @@ def _enter_focus_mode(app) -> None:
 
     selector_dlg = FocusTaskSelectorDialog(app.current_date, app)
     if selector_dlg.exec():
-        app._focus_task_id, task_name = selector_dlg.get_selected_task()
+        task_name = _apply_focus_selection(app, selector_dlg)
         if not app._focus_task_id:
             if hasattr(app, "show_toast"):
                 app.show_toast(
@@ -923,7 +987,6 @@ def _enter_focus_mode(app) -> None:
             f"color: {tokens['accent']};"
             "font-size: 68px;"
             "font-weight: 700;"
-            "font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;"
             "letter-spacing: 1px;"
             "background: transparent;"
             "border: none;"
@@ -1027,7 +1090,6 @@ def _enter_focus_mode(app) -> None:
             f"color: {tokens['accent']};"
             "font-size: 68px;"
             "font-weight: 700;"
-            "font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;"
             "letter-spacing: 1px;"
             "background: transparent;"
             "border: none;"

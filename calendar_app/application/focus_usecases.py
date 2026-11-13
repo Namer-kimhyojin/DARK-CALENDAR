@@ -8,6 +8,16 @@ from datetime import datetime, timedelta
 
 _FOCUS_FUTURE_WINDOW_DAYS = 365
 
+# Worklog ``task_type`` values. Tasks and directives live in different tables whose
+# ids overlap, so a focus target is always identified by (kind, id).
+FOCUS_TARGET_TASK = "schedule"
+FOCUS_TARGET_DIRECTIVE = "directive"
+
+
+def focus_target_kind(task_type) -> str:
+    """Map a candidate's ``type`` to the worklog kind: directive or task."""
+    return FOCUS_TARGET_DIRECTIVE if task_type == FOCUS_TARGET_DIRECTIVE else FOCUS_TARGET_TASK
+
 
 @dataclass(frozen=True)
 class FocusLogEntry:
@@ -121,11 +131,13 @@ def get_focus_stats_snapshot(
     return get_focus_history_snapshot(repo, limit=0, stats_limit=limit, now=now).stats
 
 
-def persist_focus_log(repo, task_id: int, elapsed_secs: int) -> bool:
-    """Persist focus worklog entry when data is valid."""
+def persist_focus_log(repo, task_id: int, elapsed_secs: int, task_type=None) -> bool:
+    """Persist focus worklog entry against the task or directive it was spent on."""
     if not task_id or elapsed_secs <= 0:
         return False
-    return bool(repo.insert_worklog_entry(task_id, elapsed_secs))
+    return bool(
+        repo.insert_worklog_entry(task_id, elapsed_secs, task_type=focus_target_kind(task_type))
+    )
 
 
 def get_focus_logs(repo, limit: int = 50):
@@ -141,25 +153,22 @@ def delete_focus_log(repo, log_id: int) -> bool:
 
 
 def _directives_as_tasks(repo) -> list[dict]:
-    """Return incomplete directives formatted as task dicts."""
+    """Return incomplete directives as focus candidates of kind ``directive``."""
     tasks = []
     try:
         rows = repo.get_recent_directives(limit=200)
         for row in rows:
             # row: (id, content, status, receiver, deadline, memo, bg_color)
-            did = row[0]
-            content = str(row[1] or "")
             status = str(row[2] or "pending")
             if status in ("done", "completed"):
                 continue
-            deadline = row[4] if len(row) > 4 else None
             tasks.append(
                 {
-                    "id": did,
-                    "name": content,
+                    "id": row[0],
+                    "name": str(row[1] or ""),
                     "priority": "normal",
-                    "deadline": deadline,
-                    "type": "directive",
+                    "deadline": row[4] if len(row) > 4 else None,
+                    "type": FOCUS_TARGET_DIRECTIVE,
                     "is_completed": False,
                 }
             )
@@ -227,21 +236,12 @@ def _filter_focus_candidates(
 
 
 def get_filtered_focus_tasks(repo, selected_filter: str, today_str: str):
-    """Return focus candidate tasks by selected filter key."""
+    """Return focus candidates by filter key; directive items carry ``type=directive``."""
     if selected_filter == "today_and_directives":
         today_tasks = [
             t for t in repo.get_tasks_by_date(today_str) if not t.get("is_completed", False)
         ]
-        directives = _directives_as_tasks(repo)
-        # Deduplicate by id+type
-        seen = set()
-        result = []
-        for item in today_tasks + directives:
-            key = (item.get("type"), item.get("id"))
-            if key not in seen:
-                seen.add(key)
-                result.append(item)
-        return _filter_focus_candidates(result, today_str)
+        return _filter_focus_candidates(today_tasks + _directives_as_tasks(repo), today_str)
 
     if selected_filter == "all":
         return _filter_focus_candidates(
@@ -268,12 +268,22 @@ def get_filtered_focus_tasks(repo, selected_filter: str, today_str: str):
 
 
 def select_auto_focus_task(repo, today_str: str, fallback_tasks=None):
-    """Select most urgent pending task, with fallback to first available list item."""
+    """Select the most urgent pending task, falling back to the first listed task.
+
+    Only tasks are picked: callers record the result as a task.
+    """
     task_id, task_name = repo.get_most_urgent_pending_task(today_str)
     if task_id:
         return task_id, task_name
 
-    fallback_tasks = _filter_focus_candidates(fallback_tasks or [], today_str)
+    fallback_tasks = _filter_focus_candidates(
+        [
+            task
+            for task in (fallback_tasks or [])
+            if focus_target_kind((task or {}).get("type")) == FOCUS_TARGET_TASK
+        ],
+        today_str,
+    )
     if fallback_tasks:
         first = fallback_tasks[0]
         return first.get("id"), first.get("name")

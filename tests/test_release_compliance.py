@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 from pathlib import Path
+import re
 import tempfile
 import tomllib
 
@@ -17,7 +18,7 @@ def test_runtime_lock_uses_only_exact_unique_pins():
     assert len(pins) >= 30
     assert len(normalized) == len(set(normalized))
     assert ("QtAwesome", "1.4.2") in pins
-    assert ("PyQt6", "6.10.2") in pins
+    assert ("PyQt6", "6.12.0") in pins
 
 
 def test_runtime_lock_rejects_version_ranges():
@@ -27,6 +28,19 @@ def test_runtime_lock_rejects_version_ranges():
 
         with pytest.raises(ValueError, match="exact == pins"):
             release_compliance.read_lock(lock)
+
+
+@pytest.mark.parametrize("filename", ["requirements-runtime.lock", "requirements-build.lock"])
+def test_release_lock_pins_sha256_for_every_package(filename: str):
+    lock = ROOT / filename
+    pins = release_compliance.read_lock(lock)
+    lines = lock.read_text(encoding="utf-8", errors="strict").splitlines()
+    for name, version in pins:
+        prefix = re.escape(f"{name}=={version}")
+        line = next(line for line in lines if re.match(rf"^{prefix}(?=[;\s]|$)", line))
+        hashes = line.split(" --hash=")[1:]
+        assert hashes, name
+        assert all(re.fullmatch(r"sha256:[0-9a-f]{64}", value) for value in hashes), name
 
 
 @pytest.mark.parametrize("forbidden_name", ["avcodec-61.dll", "icuuc.dll", "icudt78.dll"])
@@ -121,6 +135,9 @@ def test_github_release_workflow_uses_unified_release_entrypoint():
 
     assert "build-release.bat" in workflow
     assert "requirements-build.lock" in workflow
+    assert workflow.count("--require-hashes --only-binary=:all:") == 2
+    assert workflow.count("--no-binary=cryptography") == 1
+    assert "pip install --upgrade pip" not in workflow
     assert "corresponding-source.zip" in workflow
     assert "gh release" in workflow
     assert "build.ps1" not in workflow

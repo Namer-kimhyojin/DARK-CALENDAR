@@ -2,6 +2,7 @@
 """Synthetic Google API failures; no Google requests or personal credentials."""
 
 import json
+import socket
 from types import MethodType, SimpleNamespace
 
 from googleapiclient.errors import HttpError
@@ -26,6 +27,77 @@ def google_error(status, reason):
         Response({"status": str(status)}),
         json.dumps(payload).encode("utf-8", errors="strict"),
     )
+
+
+@pytest.mark.parametrize("token", [None, "expired"])
+def test_google_410_only_resets_an_incremental_request(monkeypatch, token):
+    sync = service.CalendarSyncService()
+    sync.is_authenticated = True
+    sync.service = object()
+    previous_timeout = socket.getdefaulttimeout()
+
+    def fail(_):
+        assert socket.getdefaulttimeout() == previous_timeout
+        raise google_error(410, "fullSyncRequired")
+
+    monkeypatch.setattr(sync, "_execute_request", fail)
+    assert sync.fetch_sync_events(token) == (None, None, bool(token))
+    assert sync.last_error_status == 410
+
+
+def test_google_mid_page_transport_failure_keeps_only_safe_error(monkeypatch, caplog):
+    sync = service.CalendarSyncService()
+    sync.is_authenticated = True
+    sync.service = object()
+    pages = iter(
+        [
+            {
+                "items": [
+                    {"id": "one", "start": {"date": "2026-11-05"}, "end": {"date": "2026-11-06"}}
+                ],
+                "nextPageToken": "private-page-token",
+            },
+            TimeoutError("private-request"),
+        ]
+    )
+
+    def execute(_):
+        page = next(pages)
+        if isinstance(page, Exception):
+            raise page
+        return page
+
+    monkeypatch.setattr(sync, "_execute_request", execute)
+    assert sync.fetch_sync_events("token") == (None, None, False)
+    assert sync.last_error_kind == "network_unavailable"
+    assert "private-page-token" not in caplog.text
+    assert "private-request" not in caplog.text
+
+
+def test_offline_httplib2_failures_are_network_errors(monkeypatch):
+    """httplib2 reports a missing network as ServerNotFoundError, not ConnectionError."""
+    import httplib2
+
+    for error in (
+        httplib2.ServerNotFoundError("Unable to find the server at private.example"),
+        OSError(10051, "A socket operation was attempted to an unreachable network"),
+    ):
+        assert service._google_refresh_failure_kind(error) == "network_unavailable"
+
+    sync = service.CalendarSyncService()
+    sync.is_authenticated = True
+    sync.service = SimpleNamespace(
+        calendarList=lambda: SimpleNamespace(list=lambda **_kwargs: object())
+    )
+
+    def offline(*_args, **_kwargs):
+        raise httplib2.ServerNotFoundError("Unable to find the server")
+
+    monkeypatch.setattr(sync, "_execute_request", offline)
+    assert sync.list_accessible_calendars() == []
+    # Discovery must treat an outage as unavailable, not as an empty account.
+    assert sync.last_error_kind == "network_unavailable"
+    assert service._google_refresh_failure_kind(OSError(2, "missing")) == "operation_failed"
 
 
 @pytest.mark.parametrize("reason", ["rateLimitExceeded", "userRateLimitExceeded"])
@@ -250,6 +322,67 @@ def test_google_pull_rate_limit_preserves_sync_token_failure_state(
 
 
 @pytest.mark.parametrize(
+    "kind,status,expected",
+    [
+        ("network_unavailable", None, "network_unavailable"),
+        ("fetch", 503, "remote_http_503"),
+        ("auth_required", 401, "login_required"),
+    ],
+)
+def test_service_wide_google_pull_failures_defer_other_calendars(
+    monkeypatch, kind, status, expected
+):
+    values = {
+        "gcal_enabled": "true",
+        "gcal_calendar_id": "team",
+        "gcal_bound_calendar_id": "team",
+        "gcal_sync_token::team": "existing-token",
+        "gcal_sync_token_fails::team": 2,
+        "gcal_sync_token::other": "other-token",
+    }
+    settings = SimpleNamespace(
+        value=lambda key, default=None, **kwargs: values.get(key, default),
+        setValue=lambda key, value: values.__setitem__(key, value),
+    )
+    requests = []
+
+    def fetch(sync_token, *, calendar_id):
+        requests.append((sync_token, calendar_id))
+        return None, None, False
+
+    sync = SimpleNamespace(
+        is_authenticated=True,
+        authenticate=lambda *a, **k: True,
+        fetch_sync_events=fetch,
+        last_error_kind=kind,
+        last_error_status=status,
+    )
+    app = SimpleNamespace(settings=settings, gcal_sync=sync)
+    monkeypatch.setattr(engine, "_calendar_source_summary_map", lambda: {})
+    monkeypatch.setattr(engine, "_refresh_resolved_primary_alias_id", lambda _: "team")
+    monkeypatch.setattr(engine, "_process_google_delete_queue", lambda _: (0, 0))
+    monkeypatch.setattr(engine, "_should_refresh_calendar_list", lambda _: False)
+    monkeypatch.setattr(engine, "_active_sync_calendar_ids", lambda *a: ["team", "other"])
+    monkeypatch.setattr(engine.gcal_db_adapter, "get_all_gcal_tasks_map", lambda: {})
+    monkeypatch.setattr(engine.gcal_db_adapter, "cleanup_duplicate_gcal_rows", lambda: 0)
+    monkeypatch.setattr(engine.gcal_db_adapter, "get_connection", lambda: None)
+    monkeypatch.setattr(engine.task_repo, "get_google_sync_tasks", lambda: [])
+    monkeypatch.setattr(
+        engine,
+        "_push_local_changes_to_google",
+        lambda *a: pytest.fail("Do not push after failed pull"),
+    )
+
+    assert not engine.sync_google_calendar(app, silent=True)
+    assert app._last_gcal_sync_error == expected
+    assert requests == [("existing-token", "team")]
+    assert values["gcal_sync_token::team"] == "existing-token"
+    assert values["gcal_sync_token_fails::team"] == 2
+    assert values["gcal_sync_token::other"] == "other-token"
+    assert sync.is_authenticated is (status != 401)
+
+
+@pytest.mark.parametrize(
     "status,reason",
     [(403, "rateLimitExceeded"), (403, "userRateLimitExceeded"), (429, "rateLimitExceeded")],
 )
@@ -375,10 +508,6 @@ def test_google_partial_failures_do_not_report_full_success(monkeypatch, failure
     monkeypatch.setattr(
         engine, "_push_local_changes_to_google", lambda *a: (2, int(failure == "push"), 0)
     )
-    heal_calls = []
-    monkeypatch.setattr(engine, "_should_run_auto_heal_orphans", lambda *a, **k: True)
-    monkeypatch.setattr(engine, "auto_heal_google_orphans", lambda *a, **k: heal_calls.append(1))
-    monkeypatch.setattr(engine, "_mark_auto_heal_orphans_run", lambda *a: None)
     result = engine.sync_google_calendar(app, silent=True)
     assert result is (failure is None)
     assert app._last_gcal_sync_outcome == (
@@ -389,4 +518,3 @@ def test_google_partial_failures_do_not_report_full_success(monkeypatch, failure
     assert values.get("gcal_sync_token::team") == (
         None if failure == "pull_apply" else "next-token"
     )
-    assert heal_calls == ([] if failure else [1])

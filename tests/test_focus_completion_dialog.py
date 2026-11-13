@@ -5,7 +5,7 @@ import unittest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QBoxLayout, QDialog
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.focus_completion_dialog import FocusCompletionDialog
@@ -83,6 +83,29 @@ class FocusCompletionDialogLocaleTests(unittest.TestCase):
         self.assertTrue(dialog.ok_btn.isDefault())
         self.assertFalse(dialog.break_btn.autoDefault())
         self.assertFalse(dialog.log_btn.autoDefault())
+
+    def test_narrow_completion_keeps_all_actions_and_results(self):
+        for button_name, result in (
+            ("break_btn", FocusCompletionDialog.RESULT_START_LONG_BREAK),
+            ("log_btn", FocusCompletionDialog.RESULT_VIEW_LOGS),
+            ("ok_btn", QDialog.DialogCode.Accepted),
+        ):
+            with self.subTest(action=button_name):
+                dialog = FocusCompletionDialog(sessions=3, total_secs=5400)
+                self.addCleanup(dialog.close)
+                dialog.setMaximumWidth(360)
+                dialog.resize(360, 400)
+                dialog.show()
+                for _ in range(4):
+                    self._app.processEvents()
+                self.assertEqual(
+                    dialog._secondary_buttons_layout.direction(), QBoxLayout.Direction.TopToBottom
+                )
+                self.assertTrue(dialog.ok_btn.isVisible())
+                self.assertTrue(dialog.break_btn.isVisible())
+                self.assertTrue(dialog.log_btn.isVisible())
+                getattr(dialog, button_name).click()
+                self.assertEqual(dialog.result(), result)
 
 
 if __name__ == "__main__":

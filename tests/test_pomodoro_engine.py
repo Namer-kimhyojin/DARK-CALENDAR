@@ -88,3 +88,42 @@ class PomodoroEngineTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PomodoroClockJumpTests(unittest.TestCase):
+    def test_system_sleep_does_not_count_as_focus_time(self):
+        from unittest.mock import patch
+
+        from calendar_app.application import pomodoro_engine
+
+        clock = [1_000.0]
+        with patch.object(pomodoro_engine.time, "time", side_effect=lambda: clock[0]):
+            engine = PomodoroEngine(focus_minutes=25, short_break_minutes=5)
+            for _ in range(600):
+                clock[0] += 1.0
+                engine.tick()
+            clock[0] += 7_200.0  # two hours asleep
+            engine.tick()
+            events = []
+            while engine.phase == PHASE_FOCUS:
+                clock[0] += 1.0
+                events = engine.tick()
+
+        done = [e for e in events if e.get("type") == "focus_session_completed"]
+        self.assertEqual(done[0]["duration_secs"], 25 * 60)
+
+    def test_tick_fractions_are_kept(self):
+        from unittest.mock import patch
+
+        from calendar_app.application import pomodoro_engine
+
+        clock = [1_000.0]
+        with patch.object(pomodoro_engine.time, "time", side_effect=lambda: clock[0]):
+            engine = PomodoroEngine(focus_minutes=25, short_break_minutes=5)
+            ticks = 0
+            while engine.phase == PHASE_FOCUS:
+                clock[0] += 1.016
+                ticks += 1
+                engine.tick()
+
+        self.assertLessEqual(ticks * 1.016, 25 * 60 + 2)

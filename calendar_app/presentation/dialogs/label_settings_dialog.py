@@ -407,6 +407,7 @@ def _emoji_picker_stylesheet(tokens=None, metrics=None) -> str:
     surface_hover = tokens.get("surface_hover", "#18181f")
     accent = tokens.get("accent", "#4da6ff")
     text_primary = tokens.get("text_primary", "#ffffff")
+    accent_text = tokens.get("accent_text", tokens.get("text_inverse", text_primary))
     text_muted = tokens.get("text_muted", "#aaa")
     return f"""
 QDialog {{
@@ -421,14 +422,15 @@ QTabWidget::pane {{
 QTabBar::tab {{
     background: {surface_alt};
     color: {text_muted};
-    padding: 5px 12px;
-    font-size: 12px;
-    border-radius: 4px 4px 0 0;
+    padding: 8px 12px;
+    font-size: {max(12, int(metrics.get("base_font_pt", 14)))}px;
+    border-radius: {field_radius}px;
+    margin: 2px;
     border: 1px solid {border_soft};
 }}
 QTabBar::tab:selected {{
     background: {accent};
-    color: {text_primary};
+    color: {accent_text};
     font-weight: bold;
 }}
 QPushButton {{
@@ -461,7 +463,13 @@ class EmojiPickerPopup(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        self.setStyleSheet(_emoji_picker_stylesheet())
+        apply_common_dialog_style(
+            self,
+            extra_stylesheet=_emoji_picker_stylesheet(
+                tokens=getattr(parent, "_ui_tokens", None),
+                metrics=getattr(parent, "_dialog_metrics", None),
+            ),
+        )
         self.selected_emoji = None
         self._build_ui()
 
@@ -547,8 +555,9 @@ class LabelSettingsDialog(QDialog):
         apply_dialog_title(self, t("dialog.label_settings.title"))
         # Keep width slightly wider and reduce default height for denser layout.
         apply_common_dialog_style(self, minimum_width=680, size=(760, 610))
-        self._ui_tokens = get_dialog_theme_tokens()
-        self._dialog_metrics = get_dialog_metric_tokens(apply_overrides=True)
+        settings = getattr(parent, "settings", None)
+        self._ui_tokens = get_dialog_theme_tokens(settings=settings)
+        self._dialog_metrics = get_dialog_metric_tokens(apply_overrides=True, settings=settings)
         self._style_bundle = _label_settings_style_bundle(self._ui_tokens, self._dialog_metrics)
         self._init_ui()
         # Defer value binding to let the dialog paint faster first.
@@ -563,7 +572,12 @@ class LabelSettingsDialog(QDialog):
     # UI 援ъ꽦
     # ??????????????????????????????????????????????
     def _init_ui(self):
-        self.setStyleSheet(build_settings_dialog_stylesheet(self._ui_tokens))
+        apply_common_dialog_style(
+            self,
+            extra_stylesheet=build_settings_dialog_stylesheet(
+                self._ui_tokens, include_common=False
+            ),
+        )
         root = QVBoxLayout(self)
         root.setSpacing(10)
         root.setContentsMargins(16, 14, 16, 14)
@@ -718,6 +732,7 @@ class LabelSettingsDialog(QDialog):
         two_col_row.addWidget(prio_group, 1)
         two_col_row.addWidget(status_group, 1)
         inner_layout.addLayout(two_col_row)
+        inner_layout.addStretch(1)
 
         scroll.setWidget(inner)
         root.addWidget(scroll, 1)
@@ -738,9 +753,7 @@ class LabelSettingsDialog(QDialog):
             cancel_label=t("dialog.common.cancel"),
             extra_left_widget=self.reset_btn,
         )
-        self.save_btn.setStyleSheet(self._style_bundle["button_accent"])
         self.save_btn.clicked.connect(self._save)
-        self.cancel_btn.setStyleSheet(self._style_bundle["button_secondary"])
         self.cancel_btn.clicked.connect(self.reject)
         root.addLayout(btn_row)
 

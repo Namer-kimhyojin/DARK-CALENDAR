@@ -1,5 +1,8 @@
 # Panel Widget Mode Split Plan
 
+> 문서 역할: 설계·감사 기록입니다. 당시 진단과 검증 결과는 현재 상태를 보장하지 않습니다. 현재 진행 상태는 TASKS.md, 구현 규칙은 rules/를 우선 확인합니다.
+
+
 ## Goal
 - Reduce the maintenance and regression risk of `calendar_app/presentation/widgets/panel_widget_mode.py`.
 - Keep external behavior and internal symbol names stable during the first split.

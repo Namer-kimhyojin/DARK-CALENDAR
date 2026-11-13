@@ -490,57 +490,6 @@ def update_unified_task(task_id, updates, mark_gcal_dirty=None, commit=True):
         return False
 
 
-def mark_routine_completed(task_id):
-    """일반업무 완료 처리"""
-    conn = get_connection()
-    if not conn:
-        return False
-
-    cur = conn.cursor()
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    try:
-        cur.execute(
-            """
-            UPDATE unified_task
-            SET is_completed=1, completed_at=?, status='done'
-            WHERE id=? AND type='routine'
-        """,
-            (now, task_id),
-        )
-        conn.commit()
-        return True
-    except Exception as e:
-        logger.error(f"Error marking routine completed: {e}")
-        conn.rollback()
-        return False
-
-
-def mark_routine_incomplete(task_id):
-    """일반업무 미완료 처리"""
-    conn = get_connection()
-    if not conn:
-        return False
-
-    cur = conn.cursor()
-
-    try:
-        cur.execute(
-            """
-            UPDATE unified_task
-            SET is_completed=0, completed_at=NULL, status='in_progress'
-            WHERE id=? AND type='routine'
-        """,
-            (task_id,),
-        )
-        conn.commit()
-        return True
-    except Exception as e:
-        logger.error(f"Error marking routine incomplete: {e}")
-        conn.rollback()
-        return False
-
-
 # ==================== CRUD: Delete ====================
 
 
@@ -794,6 +743,8 @@ def restore_task_from_trash(archive_id):
             "gcal_last_synced_at": task.get("gcal_last_synced_at"),
             "gcal_remote_updated_at": task.get("gcal_remote_updated_at"),
             "gcal_sync_error": task.get("gcal_sync_error"),
+            "calendar_id": task.get("calendar_id"),
+            "tags": task.get("tags"),
         }
 
         new_task_id = create_unified_task(task_data, commit=False)
@@ -1107,88 +1058,6 @@ def list_gcal_subscriptions(include_inactive=True):
     except Exception as e:
         logger.error(f"Error listing Google subscriptions: {e}")
         return []
-
-
-def upsert_gcal_subscription(
-    calendar_id,
-    summary="",
-    time_zone="",
-    access_role="",
-    is_primary=0,
-    is_external=1,
-    is_active=1,
-    last_error=None,
-    preserve_existing_active=False,
-):
-    conn = get_connection()
-    if not conn or not calendar_id:
-        return False
-    try:
-        cur = conn.cursor()
-        now = _now_local_str()
-        cur.execute(
-            """
-            INSERT INTO gcal_subscription (
-                calendar_id, summary, time_zone, access_role, is_active, is_primary, is_external,
-                last_error, last_seen_at, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(calendar_id) DO UPDATE SET
-                summary=excluded.summary,
-                time_zone=excluded.time_zone,
-                access_role=excluded.access_role,
-                is_primary=excluded.is_primary,
-                is_external=excluded.is_external,
-                is_active=CASE
-                    WHEN ? THEN COALESCE(gcal_subscription.is_active, excluded.is_active)
-                    ELSE excluded.is_active
-                END,
-                last_error=excluded.last_error,
-                last_seen_at=excluded.last_seen_at,
-                updated_at=excluded.updated_at
-            """,
-            (
-                calendar_id,
-                summary,
-                time_zone,
-                access_role,
-                int(bool(is_active)),
-                int(bool(is_primary)),
-                int(bool(is_external)),
-                last_error,
-                now,
-                now,
-                now,
-                int(bool(preserve_existing_active)),
-            ),
-        )
-        conn.commit()
-        return True
-    except Exception as e:
-        logger.error(f"Error upserting Google subscription: {e}")
-        conn.rollback()
-        return False
-
-
-def set_gcal_subscription_active(calendar_id, is_active):
-    conn = get_connection()
-    if not conn or not calendar_id:
-        return False
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            UPDATE gcal_subscription
-            SET is_active=?, updated_at=?
-            WHERE calendar_id=?
-            """,
-            (int(bool(is_active)), _now_local_str(), calendar_id),
-        )
-        conn.commit()
-        return cur.rowcount > 0
-    except Exception as e:
-        logger.error(f"Error updating Google subscription active flag: {e}")
-        conn.rollback()
-        return False
 
 
 def delete_gcal_subscription(calendar_id):
@@ -1654,10 +1523,6 @@ def clear_gcal_delete_queue_error(queue_id):
     return True
 
 
-def force_remove_gcal_delete_queue(queue_id):
-    return mark_gcal_delete_done(queue_id)
-
-
 def clear_gcal_delete_queue():
     conn = get_connection()
     if not conn:
@@ -1740,6 +1605,48 @@ def toggle_checklist_item(link_id, commit=True):
         logger.error(f"Error toggling checklist item: {e}")
         if commit:
             conn.rollback()
+        return False
+
+
+def get_checklist_item(link_id):
+    conn = get_connection()
+    if not conn:
+        return None
+    row = conn.execute(
+        """
+        SELECT id, owner_id, item_order, is_completed, display_type
+        FROM task_checklist_link
+        WHERE id=?
+    """,
+        (link_id,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def set_checklist_items_completed(link_ids, completed):
+    """Set several checklist items done or not done in one transaction."""
+    ids = [int(link_id) for link_id in link_ids]
+    if not ids:
+        return False
+    conn = get_connection()
+    if not conn:
+        return False
+    placeholders = ",".join("?" * len(ids))
+    try:
+        cur = conn.execute(
+            f"""
+            UPDATE task_checklist_link
+            SET is_completed = ?,
+                completed_at = CASE WHEN ? THEN datetime('now', 'localtime') ELSE NULL END
+            WHERE id IN ({placeholders})
+        """,
+            (int(bool(completed)), int(bool(completed)), *ids),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    except Exception as e:
+        logger.error(f"Error updating checklist items: {e}")
+        conn.rollback()
         return False
 
 
@@ -1972,13 +1879,6 @@ def get_all_tasks_by_date(date_str, hide_gcal_items=False):
     cur.execute(query, tuple(params))
     rows = cur.fetchall()
     return _filter_hidden_calendar_rows([dict(row) for row in rows], hide_gcal_items)
-
-
-def _apply_checklist_progress(task_dict):
-    prog = get_task_checklist_progress(task_dict["id"])
-    task_dict["progress"] = prog
-    task_dict["checklist_total"] = prog["total"]
-    task_dict["checklist_completed"] = prog["completed"]
 
 
 def get_checklist_progress_for_owners(owner_ids):

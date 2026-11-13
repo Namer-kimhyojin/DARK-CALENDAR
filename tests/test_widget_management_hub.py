@@ -248,7 +248,7 @@ def test_gallery_cancel_never_creates_a_widget_and_add_reveals_the_new_row(hub):
 def test_gallery_native_keyboard_selection_and_optional_name(hub):
     dialog, _, _, _ = hub
     gallery = WidgetAddDialog(dialog)
-    assert len(gallery.kind_buttons) == 8
+    assert len(gallery.kind_buttons) == 9
     button = gallery.kind_buttons["weather"]
     gallery.show()
     button.setFocus()
@@ -339,6 +339,23 @@ def test_primary_buttons_fit_at_minimum_width(hub):
     for button in (card.find_button, card.graphics_button, card.more_button, card.toggle):
         point = button.mapTo(dialog, QPoint())
         assert point.x() >= 0 and point.x() + button.width() <= dialog.width()
+
+
+def test_common_style_survives_profile_theme_refresh(hub):
+    dialog, _, host, _ = hub
+    host.settings.setValue("theme_color", "#c3a1f6")
+    host.settings.setValue("text_theme", "dark")
+    host.settings.setValue("panel_base_color", "#131b2a")
+    host.settings.setValue("dialog_token.metric.button_height", 41)
+    dialog.hide()
+    dialog.show()
+    _APP.processEvents()
+
+    assert dialog.styleSheet().count("/* DC_DIALOG_BASE */") == 1
+    assert dialog._tok["accent"] == "#c3a1f6"
+    assert dialog._tok["btn_h"] == 41
+    assert dialog._header_frame.property("role") == "dialogHeader"
+    assert all(card.property("role") == "dialogCard" for card in dialog._cards.values())
 
 
 def test_widget_workspace_more_menu_offers_direct_manager_entry(hub):

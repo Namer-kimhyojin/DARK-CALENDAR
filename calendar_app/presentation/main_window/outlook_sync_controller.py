@@ -8,6 +8,7 @@ import sqlite3
 from time import monotonic
 
 from PyQt6.QtCore import QObject, Qt, QThread, QTimer, pyqtSignal
+from requests import RequestException
 
 from calendar_app.app_paths import DB_PATH, get_app_data_dir
 from calendar_app.application.calendar_sync_contract import CalendarSyncError
@@ -18,6 +19,7 @@ from calendar_app.infrastructure.calendar_sync.status import (
     save_calendar_discovery_errors,
     save_calendar_errors,
 )
+from calendar_app.infrastructure.google_sync.common import sync_time_zone
 from calendar_app.infrastructure.outlook_sync.auth import MicrosoftAuth
 from calendar_app.infrastructure.outlook_sync.graph import GraphClient
 
@@ -26,11 +28,11 @@ class OutlookWorker(QThread):
     result = pyqtSignal(str, object)
     failed = pyqtSignal(str)
 
-    def __init__(self, operation, client_id, account, parent, home_id="", local_zone="Asia/Seoul"):
+    def __init__(self, operation, client_id, account, parent, home_id="", local_zone=None):
         super().__init__(parent)
         self.operation, self.client_id, self.account = operation, client_id, account
         self.home_id = home_id
-        self.local_zone = local_zone
+        self.local_zone = local_zone or sync_time_zone(None)
         self.retry_after = None
 
     def run(self):
@@ -102,6 +104,9 @@ class OutlookWorker(QThread):
         except CalendarSyncError as exc:
             self.retry_after = getattr(exc, "retry_after", None)
             self.failed.emit(str(exc))
+        except RequestException:
+            # Offline or timed out anywhere in MSAL/Graph: show the network hint.
+            self.failed.emit("network_unavailable")
         except ImportError:
             self.failed.emit("dependency_unavailable")
         except Exception:
@@ -173,7 +178,7 @@ class OutlookSyncController(QObject):
                 account,
                 self,
                 self.settings.value("outlook_home_account_id", "", type=str),
-                self.settings.value("gcal_timezone", "Asia/Seoul", type=str),
+                sync_time_zone(self.settings),
             )
             self.worker = worker
             self.app._bg_workers.append(worker)

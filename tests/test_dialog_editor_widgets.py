@@ -57,6 +57,7 @@ from calendar_app.presentation.widgets.command_palette import CommandPalette
 from calendar_app.presentation.widgets.overlay_base import _apply_span
 from calendar_app.presentation.widgets.overlay_manager_dialog import OverlayManagerDialog
 from calendar_app.presentation.widgets.overlay_text import OverlayTextWidget
+from calendar_app.shared.color_utils import contrasting_text_color as _accent_text
 
 
 def _safe_close(widget):
@@ -155,10 +156,11 @@ class DialogEditorWidgetTests(unittest.TestCase):
             panel_base_color="#fefefe",
         )
 
-        self.assertEqual(tokens["accent_text"], "#101318")
+        self.assertEqual(tokens["accent_text"], _accent_text("#50fa7b"))
+        self.assertNotIn(tokens["accent_text"], {"#101318", "#000000"})
         self.assertTrue(tokens["border"].startswith("rgba(0,0,0,"))
         self.assertTrue(tokens["border_soft"].startswith("rgba(0,0,0,"))
-        self.assertIn("color: #101318;", stylesheet)
+        self.assertIn(f"color: {_accent_text('#50fa7b')};", stylesheet)
         self.assertIn("background-color: #fefefe;", common_stylesheet)
 
     def test_color_swatch_and_popup_follow_dialog_tokens(self):
@@ -672,8 +674,10 @@ class DialogEditorWidgetTests(unittest.TestCase):
         button_row = dialog.layout().itemAt(2).layout()
         refresh_btn = button_row.itemAt(1).widget()
         close_btn = button_row.itemAt(2).widget()
-        self.assertIn("color:", refresh_btn.styleSheet())
-        self.assertIn("color:", close_btn.styleSheet())
+        self.assertTrue(refresh_btn.property("dialogFooter"))
+        self.assertTrue(close_btn.property("dialogFooter"))
+        self.assertFalse(refresh_btn.styleSheet())
+        self.assertFalse(close_btn.styleSheet())
 
     def test_focus_log_dialog_hides_internal_id_and_accepts_extended_rows(self):
         logs = [
@@ -730,8 +734,10 @@ class DialogEditorWidgetTests(unittest.TestCase):
         urgent_icon, urgent_text = dialog.prio_fields["urgent"]
         self.assertIn("font-size:", urgent_icon.styleSheet())
         self.assertIn("padding:", urgent_text.styleSheet())
-        self.assertIn("color:", dialog.save_btn.styleSheet())
-        self.assertIn("color:", dialog.cancel_btn.styleSheet())
+        self.assertTrue(dialog.save_btn.property("dialogFooter"))
+        self.assertFalse(dialog.save_btn.styleSheet())
+        self.assertTrue(dialog.cancel_btn.property("dialogFooter"))
+        self.assertFalse(dialog.cancel_btn.styleSheet())
 
     def test_dialog_token_editor_uses_token_style_bundle(self):
         dialog = DialogTokenEditorDialog()
@@ -748,21 +754,22 @@ class DialogEditorWidgetTests(unittest.TestCase):
         self.assertIn("border: 1px solid", dialog._color_edits[first_key].styleSheet())
         self.assertIn("background: transparent", dialog._color_swatches[first_key].styleSheet())
 
-    def test_dialog_token_editor_hides_raw_values_until_expert_mode(self):
+    def test_dialog_token_editor_recommends_controls_until_expert_mode(self):
         dialog = DialogTokenEditorDialog()
         self.addCleanup(_safe_close, dialog)
 
-        self.assertTrue(dialog.color_token_area.isHidden())
-        self.assertTrue(dialog.metric_token_area.isHidden())
-        self.assertTrue(dialog.export_btn.isHidden())
-        self.assertTrue(dialog.import_btn.isHidden())
+        self.assertFalse(dialog.color_token_area.isHidden())
+        self.assertFalse(dialog._color_rows["surface_bg"].isHidden())
+        self.assertTrue(dialog._color_rows["surface_hover"].isHidden())
+        self.assertEqual(len(dialog.file_menu.actions()), 2)
+        self.assertTrue(dialog.export_btn.isVisible())
+        self.assertTrue(dialog.import_btn.isVisible())
 
         dialog.expert_mode_check.setChecked(True)
 
-        self.assertFalse(dialog.color_token_area.isHidden())
-        self.assertFalse(dialog.metric_token_area.isHidden())
-        self.assertFalse(dialog.export_btn.isHidden())
-        self.assertFalse(dialog.import_btn.isHidden())
+        self.assertFalse(dialog._color_rows["surface_hover"].isHidden())
+        self.assertEqual(len(dialog._color_edits), len(dialog._color_rows))
+        self.assertEqual(len(dialog._metric_spins), len(dialog._metric_rows))
 
     def test_dialog_token_editor_can_stage_changes_without_persisting(self):
         dialog = DialogTokenEditorDialog(
@@ -799,7 +806,9 @@ class DialogEditorWidgetTests(unittest.TestCase):
         height_spin = dialog._metric_spins["button_height"]
 
         self.assertEqual(width_spin.value(), 45)
-        self.assertEqual(height_spin.value(), 24)
+        from calendar_app.shared.theme_snapshot import get_dialog_metric_defaults
+
+        self.assertEqual(height_spin.value(), get_dialog_metric_defaults()["button_height"])
         self.assertEqual(width_spin.minimum(), 15)
         self.assertEqual(height_spin.minimum(), 15)
 
@@ -811,7 +820,7 @@ class DialogEditorWidgetTests(unittest.TestCase):
         dialog._reset_metric_key("button_min_width")
         dialog._reset_metric_key("button_height")
         self.assertEqual(width_spin.value(), 45)
-        self.assertEqual(height_spin.value(), 24)
+        self.assertEqual(height_spin.value(), get_dialog_metric_defaults()["button_height"])
 
     def test_dialog_token_editor_feedback_tracks_preview_and_apply(self):
         dialog = DialogTokenEditorDialog()

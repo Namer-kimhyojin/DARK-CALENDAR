@@ -164,6 +164,8 @@ def _snapshot_rows(raw, icalendar, zone, cancelled):
     if method is not None and str(method).upper() != "PUBLISH":
         raise CalendarSyncError("invalid_calendar_data")
     components = calendar.walk("VEVENT")
+    if not components:
+        return None  # The caller decides whether an event-less feed is plausible.
     if len(components) > MAX_EVENTS:
         raise CalendarSyncError("too_many_events")
     groups = {}
@@ -322,10 +324,34 @@ def _event_dates(event, zone, *, expanded=False):
     return _parse_dt(start, end, zone)
 
 
+_MIRRORS = (
+    "SELECT id,gcal_event_id FROM unified_task WHERE calendar_id=? AND gcal_source_calendar_id=? "
+    "AND gcal_sync_mode='remote_mirror' AND gcal_event_id IS NOT NULL"
+)
+
+
+def mirror_count(calendar_id: str) -> int:
+    """Number of read-only copies a subscription holds, as shown before emptying it."""
+    from calendar_app.infrastructure.db.database_unified import db_manager
+
+    conn = db_manager.get_connection()
+    if not conn:
+        raise CalendarSyncError("operation_failed")
+    return len(conn.execute(_MIRRORS, (calendar_id, calendar_id)).fetchall())
+
+
 def fetch_and_sync(
-    calendar_id: str, ics_url: str, local_zone: str | None = None, cancelled=lambda: False
+    calendar_id: str,
+    ics_url: str,
+    local_zone: str | None = None,
+    cancelled=lambda: False,
+    accept_empty: int | None = None,
 ) -> tuple[int, int, str | None]:
-    """Return counts only after committing an entire validated subscription snapshot."""
+    """Return counts only after committing an entire validated subscription snapshot.
+
+    accept_empty: the mirror count the user confirmed for an emptied source.
+    It lets this one run apply an event-less feed that removes exactly that many.
+    """
     try:
         fetch_url = normalize_subscription_url(ics_url)
     except ValueError:
@@ -377,6 +403,8 @@ def fetch_and_sync(
     except Exception:
         logger.warning("ICS parse failed for calendar %s", calendar_id)
         return 0, 0, "invalid_calendar_data"
+    empty_feed = rows is None
+    rows = rows or {}
 
     from calendar_app.infrastructure.db.database_unified import db_manager
 
@@ -428,13 +456,12 @@ def fetch_and_sync(
                 # not updated. Do not delete other cached events or mark success.
                 raise CalendarSyncError("duplicate_remote_event")
             upserted += cursor.rowcount
-        existing = conn.execute(
-            """
-            SELECT id,gcal_event_id FROM unified_task WHERE calendar_id=? AND gcal_source_calendar_id=?
-              AND gcal_sync_mode='remote_mirror' AND gcal_event_id IS NOT NULL
-        """,
-            (calendar_id, calendar_id),
-        ).fetchall()
+        existing = conn.execute(_MIRRORS, (calendar_id, calendar_id)).fetchall()
+        if empty_feed and existing and accept_empty != len(existing):
+            # A feed that suddenly lists no event at all is far more often a
+            # server glitch than a cleared calendar: keep every mirrored event
+            # unless the user confirmed removing exactly these.
+            raise CalendarSyncError("calendar_report_incomplete")
         for task_id, uid in existing:
             _check(cancelled)
             if uid not in rows:
@@ -480,13 +507,3 @@ def _parse_dt(dtstart, dtend, zone=None) -> tuple[str | None, str | None, bool]:
             end_str = ev.strftime("%Y-%m-%d %H:%M")
         return val.strftime("%Y-%m-%d %H:%M"), end_str, False
     return None, None, False
-
-
-def sync_all_ics_calendars() -> dict[str, tuple[int, int, str | None]]:
-    from calendar_app.infrastructure.db.calendar_repo import list_calendars
-
-    return {
-        cal["id"]: fetch_and_sync(cal["id"], cal["ics_url"])
-        for cal in list_calendars(include_inactive=False)
-        if cal["type"] == "ics" and cal.get("ics_url")
-    }

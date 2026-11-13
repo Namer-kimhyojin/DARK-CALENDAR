@@ -25,3 +25,9 @@ Each transparent sheet uses a 4 x 4 grid in this row-major order:
 Source prompts required a transparent background, no text, no logos, no watermark, consistent
 scale, and readable silhouettes. The authored visual styles are soft 3D clay, layered paper cut,
 and crisp minimal duotone.
+
+The `animations/` directory contains 13 original looping coastal lighthouse GIFs for the
+Animated Weather design. Generated with OpenAI image generation on 2026-11-11, they cover
+all of the authored conditions above except `unknown`, which uses the regular fallback art.
+The 4 x 4 source sheets are retained in `artifacts/weather-animations/sources/` and can be
+encoded with `scripts/encode_weather_animations.ps1` (FFmpeg).

@@ -11,12 +11,14 @@ from typing import Any
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QColor
 
+from calendar_app.application import routine_advanced_service
 from calendar_app.application.common_task_ops_usecases import (
     collect_gcal_ids_for_delete as _collect_gcal_ids_for_delete,
 )
 from calendar_app.application.common_task_ops_usecases import (
     delete_tasks as _delete_tasks,
 )
+from calendar_app.domain.task_status_view import normalize_status
 from calendar_app.shared.google_color_palette import ordered_palette_from_theme
 
 
@@ -182,28 +184,51 @@ def update_directive_priority(repo, directive_id: int, priority: str) -> bool:
     return bool(repo.update_directive_priority(directive_id, priority))
 
 
-def toggle_checklist_item(repo, link_id: int) -> bool:
-    """Toggle checklist item completion."""
-    try:
-        repo.toggle_checklist_item(link_id)
-        return True
-    except Exception:
+def toggle_checklist_item(checklist_repo, task_repo, link_id: int) -> bool:
+    """Toggle a checklist item. Returns False when nothing changed.
+
+    A process checklist is done in order: only the first open step can be checked,
+    and unchecking a step also unchecks the steps after it. Checking the last step
+    completes the task (a routine also gets its next occurrence); unchecking a step
+    of a finished process reopens the task.
+    """
+    item = checklist_repo.get_checklist_item(link_id)
+    if not item:
+        return False
+    if item.get("display_type") != "process":
+        return bool(checklist_repo.toggle_checklist_item(link_id))
+
+    owner_id = item["owner_id"]
+    steps = checklist_repo.get_task_checklist_items(owner_id)
+    was_done = all(step["is_completed"] for step in steps)
+    if item["is_completed"]:
+        targets = [
+            step["id"]
+            for step in steps
+            if step["is_completed"] and step["item_order"] >= item["item_order"]
+        ]
+    else:
+        first_open = next(step for step in steps if not step["is_completed"])
+        if first_open["id"] != item["id"]:
+            return False
+        targets = [item["id"]]
+    if not checklist_repo.set_checklist_items_completed(targets, not item["is_completed"]):
         return False
 
-
-def apply_task_basic_modification(repo, modified_data) -> bool:
-    """Apply basic task edits in legacy task table and reset status to pending."""
-    try:
-        repo.update_task_basic(
-            modified_data["id"],
-            modified_data["name"],
-            modified_data["deadline"],
-            modified_data["end_date"],
-        )
-        repo.update_task_status(modified_data["id"], "pending")
+    now_done = not item["is_completed"] and len(steps) == 1 + sum(
+        1 for step in steps if step["is_completed"]
+    )
+    task = task_repo.get_unified_task(owner_id)
+    if not task:
         return True
-    except Exception:
-        return False
+    completed = normalize_status(task.get("status")) == "completed"
+    if now_done and not completed:
+        task_repo.update_unified_task(owner_id, {"status": "completed"})
+        if task.get("type") == "routine":
+            routine_advanced_service.auto_create_next_routine(owner_id)
+    elif was_done and not now_done and completed:
+        task_repo.update_unified_task(owner_id, {"status": "in_progress"})
+    return True
 
 
 def resize_task_and_get_sync_payload(repo, task_id: int, minutes: int):

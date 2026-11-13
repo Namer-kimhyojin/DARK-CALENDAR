@@ -66,6 +66,8 @@ def test_explicit_week_is_relative_to_the_current_calendar_week(phrase, date):
         ("15시", "15:00"),
         ("3시 30분", "03:30"),
         ("오후 4:30", "16:30"),
+        ("오후 4시30분", "16:30"),
+        ("오후 4시 30", "16:30"),
         ("오전 12시", "00:00"),
         ("오후 12시", "12:00"),
         ("밤 12시", "00:00"),
@@ -83,6 +85,15 @@ def test_supported_clock_formats_are_valid_and_removed_from_the_title(expression
         "title": "회의",
         "date": "2026-10-15",
         "time": time,
+    }
+
+
+@pytest.mark.parametrize("title", ["2차 회의", "2027년 사업계획", "2분기 보고"])
+def test_hour_marker_preserves_a_number_at_the_start_of_the_title(title):
+    assert nlp_engine.parse_nlp_task(f"내일 오후 3시 {title}") == {
+        "title": title,
+        "date": "2026-10-15",
+        "time": "15:00",
     }
 
 
@@ -171,3 +182,22 @@ def test_empty_input_preserves_existing_fallback_contract():
         "date": "2026-10-14",
         "time": None,
     }
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("내일은 3시 회의", {"title": "회의", "date": "2026-10-15", "time": "03:00"}),
+        ("내일까지 보고서 제출", {"title": "보고서 제출", "date": "2026-10-15", "time": None}),
+        ("모레에는 이사", {"title": "이사", "date": "2026-10-16", "time": None}),
+        ("수요조사 회의", {"title": "수요조사 회의", "date": "2026-10-14", "time": None}),
+        ("금요일에 회식", {"title": "회식", "date": "2026-10-16", "time": None}),
+        ("3시간 운동", {"title": "3시간 운동", "date": "2026-10-14", "time": None}),
+        ("3.5km 달리기", {"title": "3.5km 달리기", "date": "2026-10-14", "time": None}),
+        ("11/20에 회의", {"title": "회의", "date": "2026-11-20", "time": None}),
+        ("11월 20일에 회의", {"title": "회의", "date": "2026-11-20", "time": None}),
+        ("오늘날의 역사 읽기", {"title": "오늘날의 역사 읽기", "date": "2026-10-14", "time": None}),
+    ],
+)
+def test_korean_particles_units_and_words_are_not_misread(text, expected):
+    assert nlp_engine.parse_nlp_task(text) == expected

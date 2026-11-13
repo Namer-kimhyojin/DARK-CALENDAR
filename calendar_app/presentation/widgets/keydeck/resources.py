@@ -348,11 +348,12 @@ class SoundBank:
             self._pools[path] = pool
         return pool
 
-    def preload(self, paths, voices: int | None = None) -> None:
+    def preload(self, paths, voices: int | None = None, volume: float | None = None) -> None:
         if QApplication.instance() is None:
             return
         if QSoundEffect is None:
-            self._native_bank().preload(paths, voices=voices)
+            options = {"voices": voices} if volume is None else {"voices": voices, "volume": volume}
+            self._native_bank().preload(paths, **options)
             return
         for path in paths:
             if path:
@@ -370,6 +371,13 @@ class SoundBank:
         self._cursor[path] = index + 1
         effect.setVolume(max(0.0, min(1.0, volume)))
         effect.play()
+
+    def hold_output(self, token, held: bool) -> None:
+        """Packaged builds: keep the native device open while a deck that can play is shown."""
+        if QSoundEffect is not None or QApplication.instance() is None:
+            return
+        if held or self._native is not None:
+            self._native_bank().hold_output(token, held)
 
     def stop_all(self) -> None:
         """Silence active voices while retaining the preloaded sound cache."""

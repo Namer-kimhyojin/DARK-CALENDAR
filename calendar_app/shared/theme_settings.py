@@ -6,6 +6,7 @@ from PyQt6.QtCore import QSettings
 from calendar_app.shared.color_utils import derive_panel_palette
 from calendar_app.shared.qt_helpers import scaled_pt
 from calendar_app.shared.system_theme import resolve_effective_appearance
+from calendar_app.shared.typography import DEFAULT_FONT_PT
 
 OPACITY_STORAGE_UNIT_KEY = "last_opacity_unit"
 OPACITY_UNIT_BYTE = "byte"
@@ -145,7 +146,7 @@ def get_theme_palette_inputs(settings=None, persist_opacity=False):
 
 def fpt(delta=0):
     """Return a scaled CSS pt string for UI font sizes (shared across renderers)."""
-    return scaled_pt(delta=delta, minimum=6, default=10)
+    return scaled_pt(delta=delta, minimum=6, default=DEFAULT_FONT_PT)
 
 
 def panel_palette():

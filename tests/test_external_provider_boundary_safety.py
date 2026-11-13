@@ -219,7 +219,7 @@ def test_caldav_equal_explicit_end_is_rejected_instead_of_importing_an_invalid_r
         "END:VEVENT\r\nEND:VCALENDAR\r\n"
     ).encode("utf-8", errors="strict")
     with pytest.raises(CalendarSyncError, match="invalid_event_time"):
-        records("https://caldav.icloud.com/cal/fixture.ics", '"1"', data)
+        records("https://caldav.icloud.com/cal/fixture.ics", '"1"', data, zone="Asia/Seoul")
 
 
 def test_deselected_calendar_still_blocks_writes_after_conversion(repo):
@@ -254,7 +254,7 @@ def test_deselected_calendar_still_blocks_writes_after_conversion(repo):
 )
 def test_outlook_invalid_nested_times_are_safe_errors(event):
     with pytest.raises(CalendarSyncError, match="invalid_event_time|invalid_event_range"):
-        from_graph(event)
+        from_graph(event, "Asia/Seoul")
 
 
 def test_caldav_successful_create_receipt_cannot_link_a_different_uid():
@@ -262,7 +262,7 @@ def test_caldav_successful_create_receipt_cannot_link_a_different_uid():
     session = Session(Response(status=201), Response(ICS, 200, {"ETag": '"1"'}))
     client = CalDAVClient("icloud", "fixture", "synthetic", session)
     with pytest.raises(CalendarSyncError, match="create_conflict"):
-        client.create(BASE + "calendar/", client.from_task(task()), transaction)
+        client.create(BASE + "calendar/", client.from_task(task(), "Asia/Seoul"), transaction)
     assert [call[0] for call in session.calls] == ["PUT", "GET"]
 
 
@@ -273,7 +273,7 @@ def test_caldav_successful_update_receipt_cannot_reassign_an_existing_uid():
     )
     client = CalDAVClient("icloud", "fixture", "synthetic", session)
     client.cache[HREF] = ('"1"', ICS)
-    payload = client.edit_payload(task("Changed"), client.event(HREF))
+    payload = client.edit_payload(task("Changed"), client.event(HREF), "Asia/Seoul")
     with pytest.raises(CalendarSyncError, match="remote_identity_changed"):
         client.update(HREF, payload, '"1"')
     assert [call[0] for call in session.calls] == ["PUT", "GET"]
@@ -297,7 +297,7 @@ def test_outlook_non_text_fields_cannot_reach_sqlite(field, value):
         field: value,
     }
     with pytest.raises(CalendarSyncError, match="invalid_graph_response"):
-        from_graph(event)
+        from_graph(event, "Asia/Seoul")
 
 
 @pytest.mark.parametrize("identifier", [None, "", 123, "different"])
@@ -319,13 +319,13 @@ def test_graph_canonical_permission_comes_only_from_boolean_can_edit():
 
 def test_caldav_create_retry_requires_uid_and_transaction_identity():
     transaction = "de79dcf3-4503-43aa-bde9-04331b4c96a0"
-    data = new_calendar(task(), transaction).replace(
+    data = new_calendar(task(), transaction, "Asia/Seoul").replace(
         ("UID:" + transaction).encode("utf-8", errors="strict"), b"UID:replacement"
     )
     session = Session(Response(status=412), Response(data, 200, {"ETag": '"1"'}))
     client = CalDAVClient("icloud", "fixture", "synthetic", session)
     with pytest.raises(CalendarSyncError, match="create_conflict"):
-        client.create(BASE + "calendar/", client.from_task(task()), transaction)
+        client.create(BASE + "calendar/", client.from_task(task(), "Asia/Seoul"), transaction)
     assert [call[0] for call in session.calls] == ["PUT", "GET"]
 
 

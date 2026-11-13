@@ -19,7 +19,7 @@ def main():
     parser.add_argument(
         "--all-designs",
         action="store_true",
-        help="Capture ten additional designs for each of eight widget types",
+        help="Capture the additional designs for each of eight widget types",
     )
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
@@ -171,14 +171,18 @@ def main():
             if args.all_designs:
                 for label, widget in widgets:
                     kind = widget._graphic_kind()
-                    board = QPixmap(1660, 620)
+                    designs = DESIGNS_BY_KIND[kind]
+                    rows = (len(designs) + 4) // 5
+                    board = QPixmap(1660, 64 + 278 * rows)
                     board.fill(QColor("#101a28"))
                     painter = QPainter(board)
                     painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
                     painter.setPen(QColor("#eef5ff"))
                     painter.setFont(QFont("Malgun Gothic", 15, QFont.Weight.Bold))
-                    painter.drawText(24, 34, label + " · 추가 디자인 10종 / 고정 예시 데이터")
-                    for index, design in enumerate(DESIGNS_BY_KIND[kind]):
+                    painter.drawText(
+                        24, 34, f"{label} · 추가 디자인 {len(designs)}종 / 고정 예시 데이터"
+                    )
+                    for index, design in enumerate(designs):
                         widget.apply_graphic_collection(design.collection_id, motion=False)
                         widget._set_runtime_active(False)
                         capture = widget.grab()
