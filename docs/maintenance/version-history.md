@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.5.1 | 2026-11-14T08:29:20.511268+09:00 | change | Refresh the homepage script URL so cached release notices display the current 5.5.1 publication and pending Store submission. | `github-5.5.1-publication-cache-20261114` |
 | 5.5.1 | 2026-11-14T08:26:13.646458+09:00 | change | Reflect the verified 5.5.1 GitHub publication and keep the Store status explicitly awaiting submission. | `github-5.5.1-publication-20261114` |
 | 5.5.1 | 2026-11-14T08:22:58.700121+09:00 | change | Pin the GET-only hosted public asset verifier to the exact 5.5.1 release, source commit, native run and six asset hashes. | `release-5.5.1-public-readback-20261114` |
 | 5.5.1 | 2026-11-14T08:08:57.978385+09:00 | change | Provide libEGL for Linux encoding checks and isolate the Windows sound import in the Qt popup lifetime regression. | `release-5.5.1-ci-environment-20261114` |

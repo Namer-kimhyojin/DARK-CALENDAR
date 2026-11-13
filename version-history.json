@@ -29119,6 +29119,20 @@
         "docs/release-5.5.1-checklist.md": "5dc52c2be4a1fc1376cf60cda491e56a0e3ab3993e802bec2ac0a4b728e4381b",
         "docs/site-config.json": "655ce05f3369ec01fa106203c84d12b4183d74cf6c1d1e6edd46c1635aca12d1"
       }
+    },
+    {
+      "id": "github-5.5.1-publication-cache-20261114",
+      "created_at": "2026-11-14T08:29:20.511268+09:00",
+      "kind": "change",
+      "previous_version": "5.5.1",
+      "version": "5.5.1",
+      "summary": "Refresh the homepage script URL so cached release notices display the current 5.5.1 publication and pending Store submission.",
+      "files": [
+        "docs/index.html"
+      ],
+      "scoped_hashes": {
+        "docs/index.html": "54b96675b847b8591169f164efab9e09547976c9ca2910e869d149dadf345bc7"
+      }
     }
   ],
   "observed_inputs": {
