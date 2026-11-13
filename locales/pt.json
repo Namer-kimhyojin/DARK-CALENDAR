@@ -201,11 +201,11 @@
     "username": "Conta"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "Adicionar evento",
     "date_cell_accessible": "Célula da data {date}",
+    "keyboard_hint": "Setas: mudar a data · Enter: selecionar a data · Ctrl+Enter: adicionar evento",
     "month_title": "{month_name} de {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} mais",
     "next_period": "Próximo período",
     "opt_month": "Incluir rótulo do mês",
@@ -523,12 +523,6 @@
     "sakura": "Passeio entre cerejeiras"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "Alarme apagado.",
       "title": "Alarme"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 Você pode usar <b>#tags</b> para facilitar a pesquisa e a filtragem.<br><span style='color:#666;'>ex.: #contrato #jurídico #urgente</span>",
       "title_add": "📋 Adicionar diretiva",
       "title_edit": "Detalhes da diretiva"
+    },
+    "draft": {
+      "discard": "Descartar alterações",
+      "discard_message": "Há alterações não guardadas.",
+      "discard_title": "Descartar as alterações?",
+      "keep_editing": "Continuar a editar"
     },
     "focus_log": {
       "close": "Fechar",

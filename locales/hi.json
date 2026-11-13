@@ -201,11 +201,11 @@
     "username": "खाता"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "शेड्यूल जोड़ें",
     "date_cell_accessible": "{date} दिनांक सेल",
+    "keyboard_hint": "तीर कुंजियाँ: तारीख बदलें · Enter: तारीख चुनें · Ctrl+Enter: इवेंट जोड़ें",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} और",
     "next_period": "अगली अवधि",
     "opt_month": "महीना लेबल दिखाएं",
@@ -523,12 +523,6 @@
     "sakura": "चेरी ब्लॉसम की सैर"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "अलार्म हटा दिया गया।",
       "title": "अलार्म"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 बेहतर खोज और फ़िल्टरिंग के लिए आप <b>#टैग</b> का उपयोग कर सकते हैं।<br><span style='color:#666;'>उदा.: #अनुबंध #कानूनी #अत्यावश्यक</span>",
       "title_add": "📋 निर्देश जोड़ें",
       "title_edit": "निर्देश विवरण"
+    },
+    "draft": {
+      "discard": "बदलाव छोड़ें",
+      "discard_message": "आपके कुछ बदलाव सहेजे नहीं गए हैं।",
+      "discard_title": "बदलाव छोड़ दें?",
+      "keep_editing": "संपादन जारी रखें"
     },
     "focus_log": {
       "close": "बंद करें",

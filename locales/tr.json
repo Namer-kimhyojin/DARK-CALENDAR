@@ -201,11 +201,11 @@
     "username": "Hesap"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "Etkinlik Ekle",
     "date_cell_accessible": "{date} gün hücresi",
+    "keyboard_hint": "Ok tuşları: tarihi değiştir · Enter: tarih seç · Ctrl+Enter: etkinlik ekle",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} daha",
     "next_period": "Sonraki dönem",
     "opt_month": "Ay etiketini göster",
@@ -523,12 +523,6 @@
     "sakura": "Kiraz Çiçeği Yürüyüşü"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "Hatırlatıcı kaldırıldı.",
       "title": "Hatırlatıcı"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 Daha iyi arama ve filtreleme için <b>#etiketler</b> kullanabilirsiniz.<br><span style='color:#666;'>ör. #sözleşme #hukuk #acil</span>",
       "title_add": "📋 Direktif Ekle",
       "title_edit": "Direktif Detayları"
+    },
+    "draft": {
+      "discard": "Değişiklikleri sil",
+      "discard_message": "Kaydedilmemiş değişiklikler var.",
+      "discard_title": "Değişiklikler silinsin mi?",
+      "keep_editing": "Düzenlemeye devam et"
     },
     "focus_log": {
       "close": "Kapat",

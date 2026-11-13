@@ -201,11 +201,11 @@
     "username": "Cuenta"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "Añadir evento",
     "date_cell_accessible": "{date} celda de fecha",
+    "keyboard_hint": "Flechas: cambiar de fecha · Enter: seleccionar fecha · Ctrl+Enter: añadir evento",
     "month_title": "{month_name} de {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} más",
     "next_period": "Periodo siguiente",
     "opt_month": "Incluir etiqueta del mes",
@@ -523,12 +523,6 @@
     "sakura": "Paseo entre cerezos en flor"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "Recordatorio eliminado.",
       "title": "Recordatorio"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 Puedes usar <b>#etiquetas</b> para buscar y filtrar mejor.<br><span style='color:#666;'>p. ej., #contrato #legal #urgente</span>",
       "title_add": "📋 Añadir directiva",
       "title_edit": "Detalles de la directiva"
+    },
+    "draft": {
+      "discard": "Descartar cambios",
+      "discard_message": "Hay cambios sin guardar.",
+      "discard_title": "¿Descartar los cambios?",
+      "keep_editing": "Seguir editando"
     },
     "focus_log": {
       "close": "Cerrar",

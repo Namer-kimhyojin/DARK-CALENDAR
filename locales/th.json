@@ -201,11 +201,11 @@
     "username": "บัญชี"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "เพิ่มกำหนดการ",
     "date_cell_accessible": "ช่องวันที่ {date}",
+    "keyboard_hint": "ปุ่มลูกศร: เลื่อนวันที่ · Enter: เลือกวันที่ · Ctrl+Enter: เพิ่มกำหนดการ",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ อีก {count} รายการ",
     "next_period": "ช่วงถัดไป",
     "opt_month": "แสดงชื่อเดือน",
@@ -523,12 +523,6 @@
     "sakura": "เดินชมซากุระ"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "ล้างการแจ้งเตือนแล้ว",
       "title": "การแจ้งเตือน"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 คุณสามารถใช้ <b>#tags</b> เพื่อการค้นหาและการกรองที่ดียิ่งขึ้น<br><span style='color:#666;'>เช่น #contract #legal #urgent</span>",
       "title_add": "📋 เพิ่มข้อสั่งการ",
       "title_edit": "รายละเอียดข้อสั่งการ"
+    },
+    "draft": {
+      "discard": "ละทิ้งการเปลี่ยนแปลง",
+      "discard_message": "มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก",
+      "discard_title": "ละทิ้งการเปลี่ยนแปลงหรือไม่?",
+      "keep_editing": "แก้ไขต่อ"
     },
     "focus_log": {
       "close": "ปิด",

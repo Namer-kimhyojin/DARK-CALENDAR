@@ -201,11 +201,11 @@
     "username": "帳戶"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "新增行程",
     "date_cell_accessible": "{date} 日期格",
+    "keyboard_hint": "方向鍵：切換日期 · Enter：選取日期 · Ctrl+Enter：新增行程",
     "month_title": "{year}年{month_name}",
+    "more_count_short": "+{count}",
     "more_items": "+ 另外 {count} 項",
     "next_period": "下一時段",
     "opt_month": "包含月份標籤",
@@ -523,12 +523,6 @@
     "sakura": "櫻花漫步"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "提醒已清除。",
       "title": "提醒"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 在內容或備註中輸入 <b>#標籤</b>，即可用於搜尋與篩選。<br><span style='color:#666;'>例如：#合約 #法務 #緊急</span>",
       "title_add": "📋 新增指令",
       "title_edit": "指令詳情"
+    },
+    "draft": {
+      "discard": "捨棄變更",
+      "discard_message": "有尚未儲存的變更。",
+      "discard_title": "捨棄變更？",
+      "keep_editing": "繼續編輯"
     },
     "focus_log": {
       "close": "關閉",

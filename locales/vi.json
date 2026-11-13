@@ -201,11 +201,11 @@
     "username": "Tài khoản"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "Thêm lịch trình",
     "date_cell_accessible": "Ô ngày {date}",
+    "keyboard_hint": "Phím mũi tên: chuyển ngày · Enter: chọn ngày · Ctrl+Enter: thêm sự kiện",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} mục khác",
     "next_period": "Kỳ tiếp theo",
     "opt_month": "Hiện nhãn tháng",
@@ -523,12 +523,6 @@
     "sakura": "Dạo bước dưới hoa anh đào"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "Đã xóa nhắc nhở.",
       "title": "Nhắc nhở"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 Bạn có thể sử dụng <b>#tags</b> để tìm kiếm và lọc tốt hơn.<br><span style='color:#666;'>ví dụ: #contract #legal #surgical</span>",
       "title_add": "📋 Thêm chỉ thị",
       "title_edit": "Chi tiết chỉ thị"
+    },
+    "draft": {
+      "discard": "Bỏ thay đổi",
+      "discard_message": "Có thay đổi chưa được lưu.",
+      "discard_title": "Bỏ thay đổi?",
+      "keep_editing": "Tiếp tục chỉnh sửa"
     },
     "focus_log": {
       "close": "Đóng",

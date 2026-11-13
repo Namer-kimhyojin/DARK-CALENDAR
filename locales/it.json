@@ -201,11 +201,11 @@
     "username": "Account"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "Aggiungi evento",
     "date_cell_accessible": "{date} cella della data",
+    "keyboard_hint": "Frecce: cambia data · Enter: seleziona data · Ctrl+Enter: aggiungi evento",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} altri",
     "next_period": "Periodo successivo",
     "opt_month": "Includi etichetta del mese",
@@ -523,12 +523,6 @@
     "sakura": "Passeggiata tra i ciliegi in fiore"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "Promemoria rimosso.",
       "title": "Promemoria"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 Puoi usare i <b>#tag</b> per cercare e filtrare meglio.<br><span style='color:#666;'>es. #contratto #legale #urgente</span>",
       "title_add": "📋 Aggiungi direttiva",
       "title_edit": "Dettagli della direttiva"
+    },
+    "draft": {
+      "discard": "Scarta modifiche",
+      "discard_message": "Ci sono modifiche non salvate.",
+      "discard_title": "Scartare le modifiche?",
+      "keep_editing": "Continua a modificare"
     },
     "focus_log": {
       "close": "Chiudi",

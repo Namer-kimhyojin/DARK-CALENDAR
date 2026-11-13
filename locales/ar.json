@@ -201,11 +201,11 @@
     "username": "الحساب"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "إضافة موعد",
     "date_cell_accessible": "{date} خلية التاريخ",
+    "keyboard_hint": "مفاتيح الأسهم: التنقل بين التواريخ · Enter: اختيار تاريخ · Ctrl+Enter: إضافة حدث",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} أخرى",
     "next_period": "الفترة التالية",
     "opt_month": "تضمين تسمية الشهر",
@@ -523,12 +523,6 @@
     "sakura": "نزهة بين أزهار الكرز"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "تم مسح التنبيه.",
       "title": "تنبيه"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 يمكنك استخدام <b>#الوسوم</b> لتحسين البحث والتصفية.<br><span style='color:#666;'>مثال: #عقد #قانوني #عاجل</span>",
       "title_add": "📋 إضافة توجيه",
       "title_edit": "تفاصيل التوجيه"
+    },
+    "draft": {
+      "discard": "تجاهل التغييرات",
+      "discard_message": "لديك تغييرات غير محفوظة.",
+      "discard_title": "هل تريد تجاهل التغييرات؟",
+      "keep_editing": "متابعة التعديل"
     },
     "focus_log": {
       "close": "إغلاق",

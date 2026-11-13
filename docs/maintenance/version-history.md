@@ -2,10 +2,12 @@
 
 제품 버전은 배포 단위로 결정한다. 변경 기록·Git/CI 빌드·공개·Store·설치 상태는 별도이며 변경 기록만으로 버전을 올리지 않는다.
 
-기준 버전: `3.8.1` · 현재 제품 버전: **`5.5.0`**
+기준 버전: `3.8.1` · 현재 제품 버전: **`5.5.1`**
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.5.1 | 2026-11-14T08:00:22.606048+09:00 | release | Release the completed UI and keyboard accessibility improvements with canonical localized guidance and accumulated reliability fixes. | `release-5.5.1-20261114` |
+| 5.5.0 | 2026-11-14T07:53:38.048041+09:00 | change | Canonicalize UI accessibility and draft confirmation translations; localize 17 languages and track review status. | `uiux-release-localization-20261114` |
 | 5.5.0 | 2026-11-14T07:42:48.984285+09:00 | release | Ship the complete current Air Calendar source with UI/UX, localization, synchronization and KeyDeck improvements | `release-5.5.0-20261114` |
 | 5.3.0 | 2026-11-14T07:41:17.685311+09:00 | change | Apply AST-identical calendar renderer formatting before the 5.5.0 release | `release-5.5.0-formatting-20261114` |
 | 5.3.0 | 2026-11-14T07:33:48.763306+09:00 | change | Record canonical locale paths for the six new UI/UX draft and keyboard messages | `uiux-improvements-20261114-locales` |

@@ -201,11 +201,11 @@
     "username": "アカウント"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "予定を追加",
     "date_cell_accessible": "{date}の日付セル",
+    "keyboard_hint": "矢印キー：日付を移動 · Enter：日付を選択 · Ctrl+Enter：予定を追加",
     "month_title": "{year}年{month_name}",
+    "more_count_short": "+{count}",
     "more_items": "他 {count} 件",
     "next_period": "次の期間",
     "opt_month": "月ラベルを含める",
@@ -523,12 +523,6 @@
     "sakura": "桜の散歩道"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "アラームが解除されました。",
       "title": "アラーム"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 <b>#tags</b> を使用すると、検索やフィルタリングを効率的に行うことができます。<br><span style='color:#666;'>例: #contract #legal #urgent</span>",
       "title_add": "📋 指示事項を登録",
       "title_edit": "指示・協力事項の詳細"
+    },
+    "draft": {
+      "discard": "変更を破棄",
+      "discard_message": "保存されていない変更があります。",
+      "discard_title": "変更を破棄しますか？",
+      "keep_editing": "編集を続ける"
     },
     "focus_log": {
       "close": "閉じる",

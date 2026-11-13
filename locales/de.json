@@ -201,11 +201,11 @@
     "username": "Konto"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "Termin hinzufügen",
     "date_cell_accessible": "{date} Datumszelle",
+    "keyboard_hint": "Pfeiltasten: Datum wechseln · Enter: Datum auswählen · Ctrl+Enter: Termin hinzufügen",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} weitere",
     "next_period": "Nächster Zeitraum",
     "opt_month": "Monatsnamen anzeigen",
@@ -523,12 +523,6 @@
     "sakura": "Spaziergang unter Kirschblüten"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "Alarm wurde gelöscht.",
       "title": "Alarm"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 Mit <b>#Tags</b> können Sie besser suchen und filtern.<br><span style='color:#666;'>z. B. #Vertrag #Recht #dringend</span>",
       "title_add": "📋 Anweisung hinzufügen",
       "title_edit": "Anweisungsdetails"
+    },
+    "draft": {
+      "discard": "Änderungen verwerfen",
+      "discard_message": "Es gibt ungespeicherte Änderungen.",
+      "discard_title": "Änderungen verwerfen?",
+      "keep_editing": "Weiter bearbeiten"
     },
     "focus_log": {
       "close": "Schließen",

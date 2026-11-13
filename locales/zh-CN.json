@@ -201,11 +201,11 @@
     "username": "账户"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "添加日程",
     "date_cell_accessible": "{date} 日期单元格",
+    "keyboard_hint": "方向键：切换日期 · Enter：选择日期 · Ctrl+Enter：添加日程",
     "month_title": "{year}年{month_name}",
+    "more_count_short": "+{count}",
     "more_items": "+ 另外 {count} 项",
     "next_period": "下一时段",
     "opt_month": "包括月份标签",
@@ -523,12 +523,6 @@
     "sakura": "樱花漫步"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "提醒已清除。",
       "title": "提醒"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 在内容或备注中输入 <b>#标签</b>，即可用于搜索和筛选。<br><span style='color:#666;'>例如：#合同 #法务 #紧急</span>",
       "title_add": "📋 添加指令",
       "title_edit": "指令详情"
+    },
+    "draft": {
+      "discard": "放弃更改",
+      "discard_message": "有尚未保存的更改。",
+      "discard_title": "放弃更改？",
+      "keep_editing": "继续编辑"
     },
     "focus_log": {
       "close": "关闭",

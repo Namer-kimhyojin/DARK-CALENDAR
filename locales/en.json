@@ -201,11 +201,11 @@
     "username": "Account"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "Add Schedule",
     "date_cell_accessible": "{date} date cell",
+    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} more",
     "next_period": "Next period",
     "opt_month": "Include Month label",
@@ -523,12 +523,6 @@
     "sakura": "Cherry Blossom Walk"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "Alarm has been cleared.",
       "title": "Alarm"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 You can use <b>#tags</b> for better searching and filtering.<br><span style='color:#666;'>e.g., #contract #legal #urgent</span>",
       "title_add": "📋 Add Directive",
       "title_edit": "Directive Details"
+    },
+    "draft": {
+      "discard": "Discard changes",
+      "discard_message": "You have unsaved changes.",
+      "discard_title": "Discard your changes?",
+      "keep_editing": "Keep editing"
     },
     "focus_log": {
       "close": "Close",

@@ -201,11 +201,11 @@
     "username": "Учётная запись"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "Добавить событие",
     "date_cell_accessible": "{date}, ячейка даты",
+    "keyboard_hint": "Стрелки: переход по датам · Enter: выбрать дату · Ctrl+Enter: добавить событие",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ ещё {count}",
     "next_period": "Следующий период",
     "opt_month": "Показывать название месяца",
@@ -523,12 +523,6 @@
     "sakura": "Прогулка под сакурой"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "Напоминание удалено.",
       "title": "Напоминание"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 Используйте <b>#теги</b> для удобного поиска и фильтрации.<br><span style='color:#666;'>например, #договор #юристы #срочно</span>",
       "title_add": "📋 Новое поручение",
       "title_edit": "Подробности поручения"
+    },
+    "draft": {
+      "discard": "Отменить изменения",
+      "discard_message": "Есть несохранённые изменения.",
+      "discard_title": "Отменить изменения?",
+      "keep_editing": "Продолжить редактирование"
     },
     "focus_log": {
       "close": "Закрыть",

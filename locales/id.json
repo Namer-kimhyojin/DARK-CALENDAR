@@ -201,11 +201,11 @@
     "username": "Akun"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "Tambah Jadwal",
     "date_cell_accessible": "{date} sel tanggal",
+    "keyboard_hint": "Tombol panah: pindah tanggal · Enter: pilih tanggal · Ctrl+Enter: tambah acara",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} lainnya",
     "next_period": "Periode berikutnya",
     "opt_month": "Tampilkan Label Bulan",
@@ -523,12 +523,6 @@
     "sakura": "Jalan-jalan di Bawah Sakura"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "Alarm telah dihapus.",
       "title": "Alarm"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 Anda dapat menggunakan <b>#tags</b> untuk penelusuran dan pemfilteran yang lebih baik.<br><span style='color:#666;'>misalnya, #contract #legal #urgent</span>",
       "title_add": "📋 Tambah Arahan",
       "title_edit": "Detail Arahan"
+    },
+    "draft": {
+      "discard": "Buang perubahan",
+      "discard_message": "Ada perubahan yang belum disimpan.",
+      "discard_title": "Buang perubahan?",
+      "keep_editing": "Lanjutkan mengedit"
     },
     "focus_log": {
       "close": "Tutup",

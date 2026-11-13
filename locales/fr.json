@@ -201,11 +201,11 @@
     "username": "Compte"
   },
   "calendar": {
-    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
-    "more_count_short": "+{count}",
     "add_hint": "Ajouter un événement",
     "date_cell_accessible": "{date} cellule de date",
+    "keyboard_hint": "Flèches : changer de date · Enter : sélectionner la date · Ctrl+Enter : ajouter un événement",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} de plus",
     "next_period": "Période suivante",
     "opt_month": "Afficher le libellé du mois",
@@ -523,12 +523,6 @@
     "sakura": "Promenade sous les cerisiers"
   },
   "dialog": {
-    "draft": {
-      "discard_title": "Discard your changes?",
-      "discard_message": "You have unsaved changes.",
-      "keep_editing": "Keep editing",
-      "discard": "Discard changes"
-    },
     "alarm": {
       "removed": "L'alarme a été supprimée.",
       "title": "Alarme"
@@ -645,6 +639,12 @@
       "tag_hint": "💡 Vous pouvez utiliser des <b>#tags</b> pour faciliter la recherche et le filtrage.<br><span style='color:#666;'>ex. : #contrat #juridique #urgent</span>",
       "title_add": "📋 Ajouter une directive",
       "title_edit": "Détails de la directive"
+    },
+    "draft": {
+      "discard": "Abandonner les modifications",
+      "discard_message": "Des modifications ne sont pas enregistrées.",
+      "discard_title": "Abandonner les modifications ?",
+      "keep_editing": "Continuer à modifier"
     },
     "focus_log": {
       "close": "Fermer",
