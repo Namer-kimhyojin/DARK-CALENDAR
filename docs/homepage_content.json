@@ -33,7 +33,7 @@
       "선명한",
       "구체적인",
       "커스터마이즈",
-      "밝은 배경과 코발트"
+      "밝은 배경과 라일락"
     ]
   },
   "positioning": {
@@ -613,7 +613,7 @@
     "style": "Flat Design",
     "adaptations": [
       "Existing Korean system typography",
-      "Cobalt product accents",
+      "Violet accents drawn from the Air Calendar feather mark",
       "Actual application captures and native widget layers",
       "Keyboard-operable widget preview and reduced-motion playback"
     ]

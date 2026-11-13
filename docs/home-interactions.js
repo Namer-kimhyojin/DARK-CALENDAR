@@ -22,7 +22,7 @@
       root.dataset.siteTheme = dark ? "dark" : "light";
       toggle.setAttribute("aria-pressed", String(dark));
       toggle.title = toggle.getAttribute("aria-label");
-      themeColor.content = dark ? "#0c1324" : "#ffffff";
+      themeColor.content = getComputedStyle(root).getPropertyValue("--bg").trim();
     }
 
     toggle.addEventListener("click", () => {
