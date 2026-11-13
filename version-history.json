@@ -29059,6 +29059,22 @@
         "Standalone.spec": "9f47035061604025c59b9ecbe1a53e3963c9543b257e0165ff1f93aa3106b5b2",
         "version_info.txt": "18b1c102e92f0e0f4bdad72853120cf425ff5eaa0b2876b314cc378a15b8a615"
       }
+    },
+    {
+      "id": "release-5.5.1-ci-environment-20261114",
+      "created_at": "2026-11-14T08:08:57.978385+09:00",
+      "kind": "change",
+      "previous_version": "5.5.1",
+      "version": "5.5.1",
+      "summary": "Provide libEGL for Linux encoding checks and isolate the Windows sound import in the Qt popup lifetime regression.",
+      "files": [
+        ".github/workflows/encoding-policy.yml",
+        "tests/test_qt_destroyed_hooks.py"
+      ],
+      "scoped_hashes": {
+        ".github/workflows/encoding-policy.yml": "65079a69889bc5e0d22179eecbe3bddcdf1e360b424b5051c0a9ff194ab5bdb1",
+        "tests/test_qt_destroyed_hooks.py": "809be1f19bd52974ac49cf57d46c634f8d9908e6f1e2118342fd9ec65d58c2cf"
+      }
     }
   ],
   "observed_inputs": {

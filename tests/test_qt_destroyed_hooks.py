@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from types import ModuleType
 from unittest.mock import patch
 import weakref
 
@@ -166,7 +167,11 @@ def _delete_later_now():
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
-def test_sync_issue_popup_survives_gc_and_reopens_after_close(app):
+def test_sync_issue_popup_survives_gc_and_reopens_after_close(app, monkeypatch):
+    if sys.platform != "win32":
+        # This checks Qt ownership and GC, with notification playback patched
+        # below. Permit the Windows-only import without simulating sound APIs.
+        monkeypatch.setitem(sys.modules, "winsound", ModuleType("winsound"))
     from calendar_app.presentation.main_window.action_handlers_gcal import GCalActionsMixin
     from calendar_app.presentation.widgets.alarm_popup import AlarmPopupWindow
 
