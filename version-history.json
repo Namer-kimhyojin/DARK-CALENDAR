@@ -25877,6 +25877,70 @@
         "calendar_app/shared/calendar_display_settings.py": "b9c068f2342277910e11a3ee0399ff65792dc4ec78c180134cf31f7a9e44f8bf",
         "calendar_app/shared/theme_snapshot.py": "24ba41a91ee11277211566d950bb595ab3803332d32a9544732b59c9764b5b6c"
       }
+    },
+    {
+      "id": "homepage-theme-surfaces-20261113",
+      "created_at": "2026-11-13T10:19:31.522625+09:00",
+      "kind": "change",
+      "previous_version": "5.2.0",
+      "version": "5.2.0",
+      "summary": "홈페이지 배치 시연 카드와 화면 미리보기의 테마 색상 연결",
+      "files": [
+        "docs/home.css",
+        "docs/index.html",
+        "docs/promo.html"
+      ],
+      "scoped_hashes": {
+        "docs/home.css": "c8182ca673664f69c9965d633d797bd0247496632bb0dcca869938bffc0d9597",
+        "docs/index.html": "b4181709c42e88e2626b1d643867ee172920a5da09cc3ecf9f815e174615932c",
+        "docs/promo.html": "5db63eb23aa2ead10a95d1c4dfd2534820d05ba83605225114e38c9d0903a2b3"
+      }
+    },
+    {
+      "id": "show-hide-hotkey-20261113",
+      "created_at": "2026-11-13T10:21:30.868350+09:00",
+      "kind": "change",
+      "previous_version": "5.2.0",
+      "version": "5.2.0",
+      "summary": "창 표시/숨김 전역 단축키를 Office 리본 접기(Ctrl+F1)와 겹치지 않는 Ctrl+Alt+Shift+F1로 변경",
+      "files": [
+        "calendar_app/infrastructure/runtime/keyboard_shortcuts.py",
+        "calendar_app/presentation/widgets/unified_widget_mode.py"
+      ],
+      "scoped_hashes": {
+        "calendar_app/infrastructure/runtime/keyboard_shortcuts.py": "9081310a28a1381c6cb9d2db1f8bfcec8945bf2bb6e65f2e1878e2ff5a2ac1bf",
+        "calendar_app/presentation/widgets/unified_widget_mode.py": "00dcb32f80a52e6b7ab6ab30eecbaadac1e010b1a28fc7ca743da220e68c78b4"
+      }
+    },
+    {
+      "id": "audit-20261113-remaining",
+      "created_at": "2026-11-13T11:04:45.093293+09:00",
+      "kind": "change",
+      "previous_version": "5.2.0",
+      "version": "5.2.0",
+      "summary": "남은 실패·한계 정리: 24pt 레이아웃·버튼 글자색·날짜 카드 글꼴 회귀 수정, 중국어 번역 보충, ICS 조회 스레드 상한, 덱 삭제 시 오디오 장치 해제, 복원 세션 사전 디코딩",
+      "files": [
+        "calendar_app/infrastructure/ics/subscription_http.py",
+        "calendar_app/infrastructure/runtime/loop_mixer_audio.py",
+        "calendar_app/presentation/dialogs/daily_summary_dialog.py",
+        "calendar_app/presentation/dialogs/dialog_editor_styles.py",
+        "calendar_app/presentation/widgets/datecard_animations.py",
+        "calendar_app/presentation/widgets/keydeck/canvas.py",
+        "calendar_app/presentation/widgets/keydeck/resources.py",
+        "calendar_app/presentation/widgets/overlay_manager_dialog.py",
+        "locales/zh.json"
+      ],
+      "scoped_hashes": {
+        "calendar_app/infrastructure/ics/subscription_http.py": "5740dfa089fe1e16611deb2f34eda3656e0786692cebb536d4518a4d36903c21",
+        "calendar_app/infrastructure/runtime/loop_mixer_audio.py": "47e1bb53e85bf1239275c3e6668a1a4bec8abbc29fbf33c583cce3efd1086554",
+        "calendar_app/presentation/dialogs/daily_summary_dialog.py": "8faf2f85f793d0a85f949fac91208cbd37f437ccb6552fa77c9b056e6eb5048c",
+        "calendar_app/presentation/dialogs/dialog_editor_styles.py": "c57b9c4e9d076a24321fcab9bfabbdc6691b5c790518deed3622a907c134c7ab",
+        "calendar_app/presentation/widgets/datecard_animations.py": "164be41b43737c256337f44066b5000091f872b0ffd73bdeb6e84814d6823ddc",
+        "calendar_app/presentation/widgets/keydeck/canvas.py": "746e67d99da6edb0741a24185e04bcd7922c85bdaa12d117b2f7fe8e2706b2ea",
+        "calendar_app/presentation/widgets/keydeck/resources.py": "6281a32daf37c0069bdaa8dace24df874e0406521cafb8b1199aa4097513c6c5",
+        "calendar_app/presentation/widgets/overlay_manager_dialog.py": "95a295917380f915c3639d30c48992155741b1bf87fb4e4ecd8d7b1a9f664cc7",
+        "locales/zh.json": "b5e761d8c53f799727f721ae371079f7eb39ccfb00a8609d2d93debc177fed58"
+      }
     }
   ],
   "observed_inputs": {
@@ -26261,7 +26325,7 @@
     "calendar_app/infrastructure/ics/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "calendar_app/infrastructure/ics/ics_fetcher.py": "ffdcfad0cf675e89666422ea2cd33a5e8924d199d01504e9ceb15aeb6114a2f6",
     "calendar_app/infrastructure/ics/processing_budget.py": "1cd3317e50e23a486d83b125ef44e53a0fc1156a154745e1b88ace435d6b8ce5",
-    "calendar_app/infrastructure/ics/subscription_http.py": "b0db438d4d8674d3199b641511a19fec07b108ec5fc1e4deb4e85daaa8fd7d35",
+    "calendar_app/infrastructure/ics/subscription_http.py": "5740dfa089fe1e16611deb2f34eda3656e0786692cebb536d4518a4d36903c21",
     "calendar_app/infrastructure/ics/subscriptions.py": "8e3473d6e52dd288eafb1b0e00d7978cf45d50699031d665c512a5ecff2a2bf1",
     "calendar_app/infrastructure/nlp/nlp_engine.py": "c3bec7b2e5b103547173a071258dae3f4ea257d2abaff36e322845f32cd1633b",
     "calendar_app/infrastructure/outlook_sync/__init__.py": "1ba9780575d8ee72adf6f24d991279731a6c0dcad7e379c59a01817f0e42dff4",
@@ -26274,10 +26338,10 @@
     "calendar_app/infrastructure/runtime/idle_detector.py": "4d971cfa1f614d6c1ce4eb998717f813caa5cb1b724a089f145a1c869b285eeb",
     "calendar_app/infrastructure/runtime/infra_manager.py": "0d6c7dcc4d9cd7ba38ba9bf2263fa3fefb3e6455e7a76372f93e9ceff32debd6",
     "calendar_app/infrastructure/runtime/infra_wiring.py": "d74739e660e366eaccd757f1c1885e23f212852aba5550b6895c8d0d485a7d7e",
-    "calendar_app/infrastructure/runtime/keyboard_shortcuts.py": "8d032a2989088cd0ded19c906601e6cb5a0eaa2a5c74e2b9a25906db9dabef06",
+    "calendar_app/infrastructure/runtime/keyboard_shortcuts.py": "9081310a28a1381c6cb9d2db1f8bfcec8945bf2bb6e65f2e1878e2ff5a2ac1bf",
     "calendar_app/infrastructure/runtime/keydeck_audio.py": "fb06a19447fa28adbb6328e32dfda60c3c3bfb31388a1634136b1bc349510f84",
     "calendar_app/infrastructure/runtime/launcher_asset_store.py": "f5069cd54f4a0e8457d479ed612e5d5ec438de5d2f9add7059c6e293197dbd68",
-    "calendar_app/infrastructure/runtime/loop_mixer_audio.py": "fa74129652c6149a427f641f79a15218f9d21a80d0736fbee5334159840992df",
+    "calendar_app/infrastructure/runtime/loop_mixer_audio.py": "47e1bb53e85bf1239275c3e6668a1a4bec8abbc29fbf33c583cce3efd1086554",
     "calendar_app/infrastructure/runtime/network.py": "0e1db5741dc78d7e6213688bf6747c446f6349f65c872015057bb237e9263913",
     "calendar_app/infrastructure/runtime/qt_startup_options.py": "8ff050eebf90c7c9a9237c03efce7fd6df59a550a349ef666aa5e34d6a5904d0",
     "calendar_app/infrastructure/runtime/system_manager.py": "1e755a7b00fde06f0a4b30f41935cb980b2be1eabee491882f3d5368d4364e71",
@@ -26302,9 +26366,9 @@
     "calendar_app/presentation/dialogs/calendar_sync_style.py": "6bceb7f01c44f84f94510317f7e30255a829a8e2f514835de6f16b10326a8c03",
     "calendar_app/presentation/dialogs/checklist_manager_dialog_advanced.py": "500d5f4cee023d27e07b15427b1cfbfeaf134d70d43fc18452fd0b63b0cd18c3",
     "calendar_app/presentation/dialogs/color_swatch_widget.py": "2b7b7d419c5e63f82f0d0e3cddfd6194f1092dd7b5ee39c98d63073ecd1fd30c",
-    "calendar_app/presentation/dialogs/daily_summary_dialog.py": "161953540b090e84c8754397fb377b4eb691e79c66ee4be47768fedcccf9dcf9",
+    "calendar_app/presentation/dialogs/daily_summary_dialog.py": "8faf2f85f793d0a85f949fac91208cbd37f437ccb6552fa77c9b056e6eb5048c",
     "calendar_app/presentation/dialogs/dialog_chrome.py": "9e259aae4231997e170348a19eb484b93eab916b38cbade444d62d0efd710888",
-    "calendar_app/presentation/dialogs/dialog_editor_styles.py": "8192aa41658b115aa2792cd8fc0c5fcdeb173bfe86607ed5726e9f7e8a5a3b97",
+    "calendar_app/presentation/dialogs/dialog_editor_styles.py": "c57b9c4e9d076a24321fcab9bfabbdc6691b5c790518deed3622a907c134c7ab",
     "calendar_app/presentation/dialogs/dialog_emoji.py": "b91fec67aeb0e2aa5a34b5a598f372979affe269be27b3ca98bd09f0df1920c1",
     "calendar_app/presentation/dialogs/dialog_lifetime.py": "d46b5bb4729a56cf2cadb4b3ea80740d634e8aa051efa5fe181347a63cbd7665",
     "calendar_app/presentation/dialogs/dialog_router.py": "8f746f772e5d8ab0d64a73345ccb244df061529f496359f683414b34b12430b6",
@@ -26399,13 +26463,13 @@
     "calendar_app/presentation/widgets/feedback_toast.py": "25a166eb2cb5af5c76bc13963cb3d3c913ab4e48475b356d6cee3798b104c18f",
     "calendar_app/presentation/widgets/keydeck/__init__.py": "14f4707b1af424f8c740b4cd36aa0ad6ada0df589b7bdba20f3d0d6847ba1018",
     "calendar_app/presentation/widgets/keydeck/beatmaker.py": "b6461b4dcd1116551903ca2dcb90288833c6cfb298dcedc5f24f9adf46da1810",
-    "calendar_app/presentation/widgets/keydeck/canvas.py": "d9b237875a888ce43072362e885afbe468375d16df2df6472d6421100f5e6333",
+    "calendar_app/presentation/widgets/keydeck/canvas.py": "746e67d99da6edb0741a24185e04bcd7922c85bdaa12d117b2f7fe8e2706b2ea",
     "calendar_app/presentation/widgets/keydeck/layout_dialog.py": "e4785764b247c5ee11f5aad4ac5be27276208347066f1f7f31ee6ca8e5da3a10",
     "calendar_app/presentation/widgets/keydeck/layout_library.py": "161cf13931ed902fdb3be170e96867e19f93d197c91564b71e1cdc361878056b",
     "calendar_app/presentation/widgets/keydeck/model.py": "f73aab0e19d3082df02940addcbea2cd34b5fe281c1c83f07afe9226a1bf83e7",
     "calendar_app/presentation/widgets/keydeck/physics.py": "74396df0a87293ee6fbc9b67f89d56e8d361fda60b228f45a01e246fbf11d4e4",
     "calendar_app/presentation/widgets/keydeck/renderer.py": "155e7b687d16aa562d8dbf54bd5587ca0a124324ed82f6271ea52d1d0ea41259",
-    "calendar_app/presentation/widgets/keydeck/resources.py": "2c613a86cc90f2e9c650f1ec9ca02206dc4f9a57a0895291203dca4cc31eac5b",
+    "calendar_app/presentation/widgets/keydeck/resources.py": "6281a32daf37c0069bdaa8dace24df874e0406521cafb8b1199aa4097513c6c5",
     "calendar_app/presentation/widgets/keydeck/studio.py": "4502245098900fd518b6e597f236097ddaaeb3dc04827b912f86b6f73ca3b437",
     "calendar_app/presentation/widgets/keydeck/studio_canvas.py": "4de3525414de3e1e3b22bbae7569ae64ef7430e889d79f5c30cf728dc4a59e2a",
     "calendar_app/presentation/widgets/keydeck/studio_inspector.py": "9999c2244b65638b393345feaf97fdab86af1304c6a9cce6455ce236c4453ff3",
@@ -26425,7 +26489,7 @@
     "calendar_app/presentation/widgets/overlay_launcher_deck.py": "ae6546a7a84618939d7d9d1ee966a1146f51e63318c29c9dd3f14c04f7524b73",
     "calendar_app/presentation/widgets/overlay_loop_deck.py": "a7462257a193f321991849118e50fe860a79dfd29592a5fcdd140b8f17e4a985",
     "calendar_app/presentation/widgets/overlay_manager.py": "7aab28cdebf5899a052750889bb1a159cead4cd2099c8035acb1826360054c77",
-    "calendar_app/presentation/widgets/overlay_manager_dialog.py": "cdd81bbaa0d8225f8fda36b2402f8811adcd258c11ee360ee85099207cbf2f4b",
+    "calendar_app/presentation/widgets/overlay_manager_dialog.py": "95a295917380f915c3639d30c48992155741b1bf87fb4e4ecd8d7b1a9f664cc7",
     "calendar_app/presentation/widgets/overlay_measure_utils.py": "ad5d5a8405176584369812ff21f0f5a354d3b0cf2ce79469ecf2760cad43bd15",
     "calendar_app/presentation/widgets/overlay_preset_logic.py": "9ecfe76d3af29d2a7381880be64f4595b43213b285fd8cee91c4873e0d747dd3",
     "calendar_app/presentation/widgets/overlay_preset_service.py": "6a6cac7f711a6405b27adcc7157be1ab1ed187f5e1c41b769c3606a1fc29e144",
@@ -26443,7 +26507,7 @@
     "calendar_app/presentation/widgets/panel_widget_theme.py": "3cf11f36d9f030f91f15ae4368589c5dd02d1ca394b666de742d0a2d7eb80a99",
     "calendar_app/presentation/widgets/schedule_info.py": "8aa318c2aaf7025aac2f469ff2478d984276eb04d48576259bddce3dee850b42",
     "calendar_app/presentation/widgets/ui_components.py": "d6cbc8fdd94a3cce774d884a176ab0e7a3aa00f8558811d753dd344c5587dd27",
-    "calendar_app/presentation/widgets/unified_widget_mode.py": "27a95c0932c75abf4e343e42645229e885df536d962c483b78615081531b46bc",
+    "calendar_app/presentation/widgets/unified_widget_mode.py": "00dcb32f80a52e6b7ab6ab30eecbaadac1e010b1a28fc7ca743da220e68c78b4",
     "calendar_app/presentation/widgets/weather_asset_packs.py": "11334b1ad2d446310a94c25e76ceb52dd003263e243bc2f87a3596983a775363",
     "calendar_app/presentation/widgets/weather_design_dialog.py": "d471499fee1033a6f50483641b539486f7e9abd2612346c5bd430a9d1f502627",
     "calendar_app/presentation/widgets/weather_designs.py": "d4ec3fb2d3acc3d68469116c2da0457eab1c8cef4b8449f0ca754cf5ba590307",
@@ -26528,7 +26592,7 @@
     "locales/vi.json": "5c870451c840683250a22bb438980f92770dfbacc6a3ff983141db0f511eb690",
     "locales/zh-CN.json": "3d1eb81c160d86f77d52dd97def75ec0ce59885f136d00146421d32dd76df5f2",
     "locales/zh-TW.json": "87d560dabe86393baca6abf7bbb57a07f1835270930daf9c08a185da9d9bcfbf",
-    "locales/zh.json": "622ce2120372388d984937ff0b11a1d7f4413d2bba9dc8adcd50e8dcae7d9900",
+    "locales/zh.json": "b5e761d8c53f799727f721ae371079f7eb39ccfb00a8609d2d93debc177fed58",
     "main.py": "1476f0d3d7cb5f12ff09a9f9b43ef564aa6368356912a0d28fda45ac8dcc21a9",
     "main.spec": "b7c85e143638bca0b636060f41da630176b979ba1d125b0f0aa5a35f3cfa9b35",
     "pyproject.toml": "4c8cf1df263861ab432b4b4ab3705e7424d514b114ffe57e184ad261b7d11f07",
@@ -26590,7 +26654,7 @@
     "Assets/date_animations/ocean.gif": "5f5b54cdf08032f1422186c49eea304d0ca13581aacac958782fba7f28811f57",
     "Assets/date_animations/sakura.gif": "8b9ac0aa9f0eb365cff69668c36cd8ed739ef8c41d0829e0d0e25a243ab01640",
     "calendar_app/presentation/widgets/datecard_animation_dialog.py": "7c970254909e164ed97e6d54a9bebf954b13fdc8d99c834b28fd870012cb04b7",
-    "calendar_app/presentation/widgets/datecard_animations.py": "2a2b4137691bbc688f93b382cf82454d7a34de3ab8be47d0706c7ba9d90a3b6a",
+    "calendar_app/presentation/widgets/datecard_animations.py": "164be41b43737c256337f44066b5000091f872b0ffd73bdeb6e84814d6823ddc",
     "scripts/encode_date_animations.ps1": "7b0f46b10d269d4631c00d5c948267a7dedc235675df76431dd1233baef6dde4",
     "scripts/validate_datecard_animations.py": "e4906e8ee3987b9e922fcf6cc819bf2e5a3c420602acd12b04bb8b52584f5304",
     "Assets/weather/animations/clear_day.gif": "0c01fca8385bc9f7f94faf6b48df4bd7d88542b1f48731f71c2005157a2ec3b4",

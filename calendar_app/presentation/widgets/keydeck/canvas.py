@@ -595,7 +595,8 @@ class KeyDeckCanvas(QWidget):
         self._audio_held = held
         hold = getattr(sound_bank(), "hold_output", None)  # minimal test banks omit it
         if callable(hold):
-            hold(self._audio_token, held)
+            # The bank also releases it if this widget is deleted without a hide event.
+            hold(self._audio_token, held, owner=self)
 
     def showEvent(self, event) -> None:  # noqa: N802
         super().showEvent(event)

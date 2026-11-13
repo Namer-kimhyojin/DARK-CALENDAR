@@ -63,7 +63,13 @@ _MIC_OPEN_JOIN_S = 2.0
 # they keep the GIL, so a busy UI thread cannot hold the audio thread back for a
 # whole switch interval after each one. Open, reset and close may block in the driver.
 _GIL_KEPT = frozenset(
-    {"waveOutPrepareHeader", "waveOutUnprepareHeader", "waveOutWrite", "waveOutGetPosition"}
+    {
+        "waveOutPrepareHeader",
+        "waveOutUnprepareHeader",
+        "waveOutWrite",
+        "waveOutGetPosition",
+        "waveInAddBuffer",  # re-queues a capture buffer on every block while recording
+    }
 )
 # Source id -> WAVs that KeyDeck can play (reported by the deck when its sounds change).
 _KEYDECK_SOUNDS = {}
@@ -1281,6 +1287,10 @@ class LoopMixer(QObject):
                 self._check_cancel()
             with self._lock:
                 self._state = state
+            # Decks that reported their sounds before this session connected them are
+            # decoded now, not by the first hits after Play.
+            for source in state.sources():
+                self._warm(_keydeck_sounds(source))
 
         return self._file_job("load_project", load, require_idle=True)
 

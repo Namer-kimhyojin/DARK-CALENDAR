@@ -463,6 +463,22 @@ def test_stalled_dns_lookup_stops_when_cancelled(stalled_resolver):
     assert time.monotonic() - started < 1.5
 
 
+def test_stalled_dns_lookups_do_not_pile_up_threads(stalled_resolver):
+    def lookup_threads():
+        return [t for t in threading.enumerate() if t.name == "ics-resolve" and t.is_alive()]
+
+    before = len(lookup_threads())
+    for _ in range(subscription_http._MAX_STALLED_LOOKUPS + 3):
+        with pytest.raises(TimeoutError):
+            subscription_http._connect_public(
+                ("feed.example.invalid", 443),
+                15,
+                cancelled=lambda: False,
+                deadline=time.monotonic() + 0.1,
+            )
+    assert len(lookup_threads()) - before <= subscription_http._MAX_STALLED_LOOKUPS
+
+
 def test_bounded_lookup_still_rejects_private_addresses(monkeypatch):
     monkeypatch.setattr(
         subscription_http.socket,

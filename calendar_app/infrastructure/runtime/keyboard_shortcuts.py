@@ -211,7 +211,8 @@ SHORTCUTS: list[dict] = [
     },
     {
         "id": "show_hide",
-        "key": "Ctrl+F1",
+        # System-wide hotkey; Ctrl+F1 would take Office's ribbon toggle away.
+        "key": "Ctrl+Alt+Shift+F1",
         "group": "window",
         "label_ko": "창 표시/숨기기",
         "action": "toggle_overlay",

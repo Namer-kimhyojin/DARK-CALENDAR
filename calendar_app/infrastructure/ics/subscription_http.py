@@ -18,6 +18,10 @@ from calendar_app.infrastructure.ics.subscriptions import normalize_subscription
 MAX_REDIRECTS = 5
 _REDIRECT_CODES = {301, 302, 303, 307, 308}
 _RESOLVE_POLL_SECONDS = 0.05
+# Lookups stuck in the OS resolver keep their thread until it returns; cap how many
+# can pile up, and fail new ones fast (network_unavailable) while the cap is full.
+_MAX_STALLED_LOOKUPS = 4
+_LOOKUP_SLOTS = threading.BoundedSemaphore(_MAX_STALLED_LOOKUPS)
 
 
 def _public_address(value):
@@ -69,10 +73,17 @@ def _resolve(host, port, timeout, cancelled, deadline):
         except BaseException as exc:
             outcome["error"] = exc
         finally:
+            _LOOKUP_SLOTS.release()
             done.set()
 
     limit = time.monotonic() + _remaining_timeout(timeout, cancelled, deadline)
-    threading.Thread(target=lookup, name="ics-resolve", daemon=True).start()
+    if not _LOOKUP_SLOTS.acquire(blocking=False):
+        raise TimeoutError  # the resolver is already stuck on earlier lookups
+    try:
+        threading.Thread(target=lookup, name="ics-resolve", daemon=True).start()
+    except BaseException:
+        _LOOKUP_SLOTS.release()
+        raise
     while not done.wait(_RESOLVE_POLL_SECONDS):
         # Raises "cancelled" or TimeoutError (reported as network_unavailable).
         _remaining_timeout(timeout, cancelled, min(deadline, limit))

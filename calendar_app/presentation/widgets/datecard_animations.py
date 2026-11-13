@@ -54,7 +54,7 @@ class AnimatedDateSurface(QWidget):
         self.setSizePolicy(self.sizePolicy().Policy.Expanding, self.sizePolicy().Policy.Expanding)
         self.animation = DATE_ANIMATIONS[0]
         self.day = QDate.currentDate()
-        self.family = "Segoe UI"
+        self.family = self.font().family()
         self.base_size = 30
         self.motion = True
         self._movie = None
@@ -67,7 +67,7 @@ class AnimatedDateSurface(QWidget):
     def sizeHint(self) -> QSize:  # noqa: N802
         return QSize(round(self.base_size * 8), round(self.base_size * 10.5))
 
-    def configure(self, animation_id, *, family="Segoe UI", base_size=30, motion=True, day=None):
+    def configure(self, animation_id, *, family=None, base_size=30, motion=True, day=None):
         selected = date_animation(animation_id)
         if self._movie is None or selected != self.animation:
             self._dispose_movie()
@@ -85,7 +85,7 @@ class AnimatedDateSurface(QWidget):
         self.day = day if day is not None else QDate.currentDate()
         self.setAccessibleName(QLocale().toString(self.day, QLocale.FormatType.LongFormat))
         self.setAccessibleDescription(selected.title())
-        self.family = family
+        self.family = family or self.font().family()
         size = max(6, int(base_size))
         if self.base_size != size:
             self.base_size = size

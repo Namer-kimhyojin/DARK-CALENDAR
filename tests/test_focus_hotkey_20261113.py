@@ -380,11 +380,27 @@ class GlobalShowHideHotkeyTests(unittest.TestCase):
         hotkey_id = keyboard_shortcuts.GLOBAL_HOTKEY_IDS["show_hide"]
         self.assertEqual(
             self.win32.registered,
-            {hotkey_id: (win32_input.MOD_CONTROL | win32_input.MOD_NOREPEAT, 0x70)},
+            {hotkey_id: win32_input.parse_hotkey(keyboard_shortcuts.get_key("show_hide"))},
         )
-        self.assertNotIn("Ctrl+F1", self._keys(host))
+        self.assertNotIn(keyboard_shortcuts.get_key("show_hide"), self._keys(host))
         self.assertIn("Ctrl+K", self._keys(host))
         self.assertEqual(host.toasts, [])
+
+    def test_show_hide_key_avoids_office_ribbon_ctrl_f1(self):
+        key = keyboard_shortcuts.get_key("show_hide")
+        self.assertEqual(key, "Ctrl+Alt+Shift+F1")
+        all_keys = [entry["key"] for entry in keyboard_shortcuts.SHORTCUTS]
+        self.assertEqual(all_keys.count(key), 1)
+        self.assertEqual(
+            win32_input.parse_hotkey(key),
+            (
+                win32_input.MOD_CONTROL
+                | win32_input.MOD_ALT
+                | win32_input.MOD_SHIFT
+                | win32_input.MOD_NOREPEAT,
+                0x70,
+            ),
+        )
 
     def test_wm_hotkey_message_toggles_the_window_once(self):
         host = self._host()
@@ -410,11 +426,16 @@ class GlobalShowHideHotkeyTests(unittest.TestCase):
             keyboard_shortcuts.register_app_shortcuts(host)
             keyboard_shortcuts.register_app_shortcuts(host)
 
-        self.assertIn("Ctrl+F1", self._keys(host))
-        self.assertEqual(self._keys(host).count("Ctrl+F1"), 1)
+        self.assertIn(keyboard_shortcuts.get_key("show_hide"), self._keys(host))
+        self.assertEqual(self._keys(host).count(keyboard_shortcuts.get_key("show_hide")), 1)
         self.assertEqual(len(host.toasts), 1)
-        self.assertIn("Ctrl+F1", host.toasts[0][1])
-        self.assertTrue(any("Ctrl+F1" in line and "1409" in line for line in logs.output))
+        self.assertIn(keyboard_shortcuts.get_key("show_hide"), host.toasts[0][1])
+        self.assertTrue(
+            any(
+                keyboard_shortcuts.get_key("show_hide") in line and "1409" in line
+                for line in logs.output
+            )
+        )
 
     def test_taken_key_notice_is_not_repeated_on_later_runs(self):
         self.win32.fail_with = 1409
@@ -472,7 +493,7 @@ class GlobalShowHideHotkeyTests(unittest.TestCase):
             keyboard_shortcuts.register_app_shortcuts(host)
 
         self.assertEqual(self.win32.calls, [])
-        self.assertIn("Ctrl+F1", self._keys(host))
+        self.assertIn(keyboard_shortcuts.get_key("show_hide"), self._keys(host))
         self.assertEqual(host.toasts, [])
 
     def test_app_shutdown_releases_global_hotkeys(self):

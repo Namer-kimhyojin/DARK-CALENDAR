@@ -1041,7 +1041,7 @@ class UnifiedWidgetWindow(QWidget):
         self._setup_refresh_timer()
 
     def _main_window_key_handler(self, event):
-        """F12 and Ctrl+F1 reach this window only while the hidden main window cannot."""
+        """F12 and show/hide reach this window only while the hidden main window cannot."""
         pressed = QKeySequence(event.keyCombination())
         for entry in SHORTCUTS:
             if entry["id"] in ("widget_mode", "show_hide") and pressed == QKeySequence(
