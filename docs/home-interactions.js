@@ -2,43 +2,8 @@
   "use strict";
 
   const root = document.documentElement;
-  const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const imageDirectory = "assets/screenshots/interactive/";
-  const themeStorageKey = "aircalendar-site-theme";
-
-  function setupSiteTheme() {
-    const toggle = document.querySelector("[data-site-theme-toggle]");
-    const themeColor = document.querySelector('meta[name="theme-color"]');
-    let preference;
-    try {
-      preference = localStorage.getItem(themeStorageKey);
-    } catch {
-      // The theme still works when the browser blocks storage.
-    }
-
-    function renderTheme() {
-      const dark = preference === "dark" || (preference !== "light" && systemDark.matches);
-      root.dataset.siteTheme = dark ? "dark" : "light";
-      toggle.setAttribute("aria-pressed", String(dark));
-      toggle.title = toggle.getAttribute("aria-label");
-      themeColor.content = getComputedStyle(root).getPropertyValue("--bg").trim();
-    }
-
-    toggle.addEventListener("click", () => {
-      preference = root.dataset.siteTheme === "dark" ? "light" : "dark";
-      try {
-        localStorage.setItem(themeStorageKey, preference);
-      } catch {
-        // The selection remains active for this page visit.
-      }
-      renderTheme();
-    });
-    systemDark.addEventListener("change", renderTheme);
-    document.addEventListener("aircalendar:language", renderTheme);
-    renderTheme();
-    toggle.hidden = false;
-  }
 
   function setupWidgetDemo() {
     const demo = document.querySelector("[data-widget-demo]");
@@ -145,7 +110,6 @@
     document.querySelectorAll(".hero-copy, .hero-product, .section-heading, .appearance-lab, .workspace-screens, .widget-showcase-grid, .sync-overview").forEach(node => observer.observe(node));
   }
 
-  setupSiteTheme();
   setupWidgetDemo();
   document.querySelectorAll("[data-gif-demo]").forEach(setupGif);
   setupEntranceMotion();

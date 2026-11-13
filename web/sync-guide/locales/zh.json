@@ -1,4 +1,5 @@
 {
+  "attr.themeToggle": "网站深色模式",
   "attr.meta.000": "对照 Air Calendar 当前的设置界面，连接 Google、Outlook、iCloud、Naver、Yahoo、Zoho、Fastmail 和 ICS 日历。从准备认证资料、选择日历到首次同步、自动刷新和故障排查，本指南逐步带您完成设置。",
   "attr.meta.001": "日历连接与同步设置指南 | Air Calendar",
   "attr.meta.002": "对照设置界面，逐步完成账户连接和首次同步。",
@@ -34,7 +35,7 @@
   "attr.032": "相关页面",
   "html.033": "日历连接与同步设置指南 | Air Calendar",
   "html.034": "跳转到正文",
-  "html.035": "<img src=\"assets/app_icon.png\" width=\"32\" height=\"32\" alt=\"\">Air Calendar",
+  "html.035": "<img src=\"assets/air-calendar-feather.webp\" width=\"34\" height=\"34\" alt=\"\">Air Calendar",
   "html.036": "首页",
   "html.037": "日历连接指南 · <time datetime=\"2026-10-19\">2026.10.19</time>",
   "html.038": "从连接日历<br><em>到完成首次同步。</em>",

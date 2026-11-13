@@ -954,9 +954,15 @@
       button.querySelector("img")?.setAttribute("alt", title);
     });
 
-    document.querySelectorAll("[data-language-select]").forEach((select) => {
-      select.value = currentLanguage;
-      select.setAttribute("aria-label", copy.languageLabel);
+    document.querySelectorAll("[data-language-option]").forEach((link) => {
+      if (link.dataset.languageOption === currentLanguage) {
+        link.setAttribute("aria-current", "true");
+        const label = document.querySelector("[data-current-language]");
+        label.textContent = link.textContent;
+        label.lang = link.lang;
+      } else {
+        link.removeAttribute("aria-current");
+      }
     });
 
     document.querySelectorAll("[data-sync-guide-link]").forEach((link) => {
@@ -1071,8 +1077,29 @@
   }
 
   function setupLanguagePicker() {
-    document.querySelectorAll("[data-language-select]").forEach((select) => {
-      select.addEventListener("change", (event) => setLanguage(event.target.value, true));
+    const picker = document.querySelector("[data-language-picker]");
+    if (!picker) return;
+    const trigger = picker.querySelector("summary");
+
+    picker.addEventListener("click", (event) => {
+      const link = event.target.closest("[data-language-option]");
+      if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      picker.open = false;
+      trigger.focus();
+      setLanguage(link.dataset.languageOption, true);
+    });
+    picker.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !picker.open) return;
+      event.preventDefault();
+      picker.open = false;
+      trigger.focus();
+    });
+    picker.addEventListener("focusout", (event) => {
+      if (event.relatedTarget && !picker.contains(event.relatedTarget)) picker.open = false;
+    });
+    document.addEventListener("pointerdown", (event) => {
+      if (!picker.contains(event.target)) picker.open = false;
     });
   }
 

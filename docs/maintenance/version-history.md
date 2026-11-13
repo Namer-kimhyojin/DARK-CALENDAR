@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.2.0 | 2026-11-13T11:44:03.221585+09:00 | change | 하위 페이지 보라색 테마와 고해상도 아이콘 통일 및 언어 선택 목록 개선 | `site-violet-subpages-20261113` |
 | 5.2.0 | 2026-11-13T11:32:24.675378+09:00 | change | Match the website and promo palette to the violet feather and publish the high-resolution web mark | `homepage-violet-feather-20261113` |
 | 5.2.0 | 2026-11-13T10:20:21.844765+09:00 | change | Use the selected theme for the desktop demo, previews, and install section | `homepage-theme-surfaces-20261113` |
 | 5.2.0 | 2026-11-11T18:10:40.349943+09:00 | change | Feature calendar movement, magnet docking and opacity in the homepage and media kit GIF | `homepage-desktop-arrangement-20261111` |

@@ -9,6 +9,7 @@
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="theme-color" content="#ffffff">
   <meta name="color-scheme" content="light dark">
+  <script src="site-theme.js?v=20261113-subpages"></script>
   <meta property="og:title" content="Air Calendar — 원하는 자리에 놓는 Windows 바탕화면 달력">
   <meta property="og:description" content="Windows 바탕화면에 달력을 띄우고 일정과 업무 패널을 따로 옮기세요. 자석 모드로 한 창에 붙이고 배경 투명도를 조절할 수 있습니다.">
   <meta property="og:image" content="https://namer-kimhyojin.github.io/DARK-CALENDAR/assets/og-air-calendar.png?v=20261113-violet">
@@ -30,11 +31,11 @@
   <link rel="alternate" hreflang="x-default" href="https://namer-kimhyojin.github.io/DARK-CALENDAR/">
   <link rel="icon" type="image/png" sizes="64x64" href="assets/air-calendar-favicon.png">
   <script src="home-content.js?v=20261111-desktop" defer></script>
-  <script src="app.js?v=20261111-media" defer></script>
-  <script src="home-interactions.js?v=20261113-violet" defer></script>
+  <script src="app.js?v=20261113-subpages" defer></script>
+  <script src="home-interactions.js?v=20261113-subpages" defer></script>
   <link rel="stylesheet" href="request-board.css?v=3">
   <script src="request-board.js?v=3" defer></script>
-  <link rel="stylesheet" href="home.css?v=20261113-violet">
+  <link rel="stylesheet" href="home.css?v=20261113-subpages">
   <script type="application/ld+json" id="software-schema">
     {
       "@context": "https://schema.org",
@@ -86,15 +87,18 @@
 
       <div class="header-actions">
         <button class="theme-toggle" type="button" data-site-theme-toggle data-i18n-aria="siteDarkMode" aria-label="사이트 다크 모드" aria-pressed="false" hidden><span aria-hidden="true"></span></button>
-        <label class="language-picker">
-          <span class="sr-only" data-i18n="languageLabel">언어 선택</span>
-          <select data-language-select aria-label="언어 선택">
-            <option value="ko">한국어</option>
-            <option value="en">English</option>
-            <option value="ja">日本語</option>
-            <option value="zh">简体中文</option>
-          </select>
-        </label>
+        <details class="language-picker" data-language-picker>
+          <summary>
+            <span class="sr-only" data-i18n="languageLabel">언어 선택</span>
+            <span data-current-language lang="ko">한국어</span>
+          </summary>
+          <ul class="language-options">
+            <li><a href="?lang=ko" data-language-option="ko" lang="ko" aria-current="true">한국어</a></li>
+            <li><a href="?lang=en" data-language-option="en" lang="en">English</a></li>
+            <li><a href="?lang=ja" data-language-option="ja" lang="ja">日本語</a></li>
+            <li><a href="?lang=zh" data-language-option="zh" lang="zh-CN">简体中文</a></li>
+          </ul>
+        </details>
         <a class="header-cta" data-config-link="microsoftStoreUrl" href="https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&amp;gl=KR&amp;ocid=pdpshare&amp;cid=aircal-20261005-owned-home" target="_blank" rel="noopener">
           <span data-i18n="navStore">설치하기</span>
           <span aria-hidden="true">↗</span>

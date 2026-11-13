@@ -1,4 +1,5 @@
 {
+  "attr.themeToggle": "사이트 다크 모드",
   "attr.meta.000": "Air Calendar의 현재 설정 화면을 보며 Google, Outlook, iCloud, 네이버, Yahoo, Zoho, Fastmail과 ICS를 연결하세요. 인증 준비부터 캘린더 선택, 첫 동기화, 자동 갱신과 문제 해결까지 단계별로 안내합니다.",
   "attr.meta.001": "캘린더 연결·동기화 따라하기 | Air Calendar",
   "attr.meta.002": "설정 화면과 함께, 계정 연결부터 첫 동기화까지 차근차근 따라하세요.",
@@ -34,7 +35,7 @@
   "attr.032": "관련 페이지",
   "html.033": "캘린더 연결·동기화 따라하기 | Air Calendar",
   "html.034": "본문으로 건너뛰기",
-  "html.035": "<img src=\"assets/app_icon.png\" width=\"32\" height=\"32\" alt=\"\">Air Calendar",
+  "html.035": "<img src=\"assets/air-calendar-feather.webp\" width=\"34\" height=\"34\" alt=\"\">Air Calendar",
   "html.036": "홈페이지",
   "html.037": "CALENDAR CONNECTION GUIDE · <time datetime=\"2026-10-19\">2026.10.19</time>",
   "html.038": "캘린더 연결부터<br><em>첫 동기화까지.</em>",

@@ -1,4 +1,5 @@
 {
+  "attr.themeToggle": "サイトのダークモード",
   "attr.meta.000": "Air Calendarの現在の設定画面を見ながら、Google、Outlook、iCloud、Naver、Yahoo、Zoho、Fastmail、ICSを接続できます。認証の準備からカレンダーの選択、初回同期、自動更新、トラブル解決まで、順を追って説明します。",
   "attr.meta.001": "カレンダー接続・同期ガイド | Air Calendar",
   "attr.meta.002": "設定画面を見ながら、アカウント接続から初回同期まで、一つずつ進めましょう。",
@@ -34,7 +35,7 @@
   "attr.032": "関連ページ",
   "html.033": "カレンダー接続・同期ガイド | Air Calendar",
   "html.034": "本文へスキップ",
-  "html.035": "<img src=\"assets/app_icon.png\" width=\"32\" height=\"32\" alt=\"\">Air Calendar",
+  "html.035": "<img src=\"assets/air-calendar-feather.webp\" width=\"34\" height=\"34\" alt=\"\">Air Calendar",
   "html.036": "ホームページ",
   "html.037": "カレンダー接続ガイド · <time datetime=\"2026-10-19\">2026.10.19</time>",
   "html.038": "カレンダー接続から<br><em>初回同期まで。</em>",
