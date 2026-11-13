@@ -2,15 +2,15 @@
   "use strict";
 
   const fallbackConfig = {
-    appVersion: "5.2.0",
+    appVersion: "5.5.1",
     storeReleaseStatus: "submission_pending",
     requestBoardApi: "https://air-calendar-requests.kimhj.chatgpt.site",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
     promotionKitUrl: "promo.html",
-    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.2.0",
-    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.2.0/LICENSE",
-    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.2.0/THIRD_PARTY_NOTICES.md",
+    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.5.1",
+    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.5.1/LICENSE",
+    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.5.1/THIRD_PARTY_NOTICES.md",
     eventUrl: "https://account.microsoft.com/billing/redeem?mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ",
     event: { enabled: true }
   };
@@ -830,10 +830,10 @@
   });
 
   const releaseAvailabilityCopy = {
-    ko: { storePending: "GitHub 5.2.0 공개 완료 · Store 인증 심사 중", githubLatest: "최신 GitHub 배포 보기 ↗" },
-    en: { storePending: "5.2.0 released on GitHub · Store certification in progress", githubLatest: "View the latest GitHub release ↗" },
-    ja: { storePending: "5.2.0はGitHubで公開済み · Store認証審査中", githubLatest: "最新のGitHubリリースを見る ↗" },
-    zh: { storePending: "5.2.0已在GitHub发布 · Store认证审核中", githubLatest: "查看最新GitHub版本 ↗" }
+    ko: { storePending: "GitHub 5.5.1 공개 완료 · Store 업데이트 준비 중", githubLatest: "최신 GitHub 배포 보기 ↗" },
+    en: { storePending: "5.5.1 released on GitHub · Store update being prepared", githubLatest: "View the latest GitHub release ↗" },
+    ja: { storePending: "5.5.1はGitHubで公開済み · Store更新準備中", githubLatest: "最新のGitHubリリースを見る ↗" },
+    zh: { storePending: "5.5.1已在GitHub发布 · Store更新准备中", githubLatest: "查看最新GitHub版本 ↗" }
   };
   Object.entries(releaseAvailabilityCopy).forEach(([locale, copy]) => Object.assign(translations[locale], copy));
 

@@ -29093,6 +29093,32 @@
         "tests/release_qa/test_release_asset_readback.py": "dc6d2e94798454b5940babe3038cc11b5e8d3f4e49dc37aff4a70888e69dbf42",
         "tests/release_qa/verify_release_asset_readback.py": "4c47bb785e7087f9d32b13abcc6277529292cbfcf8b067e204104951be07c7df"
       }
+    },
+    {
+      "id": "github-5.5.1-publication-20261114",
+      "created_at": "2026-11-14T08:26:13.646458+09:00",
+      "kind": "change",
+      "previous_version": "5.5.1",
+      "version": "5.5.1",
+      "summary": "Reflect the verified 5.5.1 GitHub publication and keep the Store status explicitly awaiting submission.",
+      "files": [
+        "README.md",
+        "SOURCE_OFFER.md",
+        "calendar_app/app_metadata.py",
+        "docs/app.js",
+        "docs/index.html",
+        "docs/release-5.5.1-checklist.md",
+        "docs/site-config.json"
+      ],
+      "scoped_hashes": {
+        "README.md": "bed5e19998680c659a7009acfc893d31a12903317ffc362cfac16895e3d566e9",
+        "SOURCE_OFFER.md": "2f037a72a5527a5df4c5ee8b6fcdebcc763d0601761374df30c76b684a325655",
+        "calendar_app/app_metadata.py": "b767600e870c0d8a1abef213011deeedcf36de4655ca462dcfb3f2df53c2d4de",
+        "docs/app.js": "5eaf1c447cf86484cdd5e9d2e9da9194bc932ce780ff388f2976072fb65903fa",
+        "docs/index.html": "918d55a7c2b33fa6730090f1da089711697236a828370f00c9eaba64bfe8c182",
+        "docs/release-5.5.1-checklist.md": "5dc52c2be4a1fc1376cf60cda491e56a0e3ab3993e802bec2ac0a4b728e4381b",
+        "docs/site-config.json": "655ce05f3369ec01fa106203c84d12b4183d74cf6c1d1e6edd46c1635aca12d1"
+      }
     }
   ],
   "observed_inputs": {
