@@ -29133,6 +29133,20 @@
       "scoped_hashes": {
         "docs/index.html": "54b96675b847b8591169f164efab9e09547976c9ca2910e869d149dadf345bc7"
       }
+    },
+    {
+      "id": "github-5.5.1-published-date-20261114",
+      "created_at": "2026-11-14T08:33:26.562629+09:00",
+      "kind": "change",
+      "previous_version": "5.5.1",
+      "version": "5.5.1",
+      "summary": "Include the verified publication date in the 5.5.1 release checklist metadata contract.",
+      "files": [
+        "docs/release-5.5.1-checklist.md"
+      ],
+      "scoped_hashes": {
+        "docs/release-5.5.1-checklist.md": "161137d52c6a8d786d2bfb4b45dc10f32f7ce848c662aaaf8ee94c96e5f46556"
+      }
     }
   ],
   "observed_inputs": {
