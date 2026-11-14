@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.5.1 | 2026-11-14T09:53:46.774482+09:00 | store | Submit verified Air Calendar 5.5.1 x64 as Store Submission 35; preserve 453 listing rows and report pre-processing separately from publication. | `store-5.5.1-submission-35-20261114` |
 | 5.5.1 | 2026-11-14T08:33:26.562629+09:00 | change | Include the verified publication date in the 5.5.1 release checklist metadata contract. | `github-5.5.1-published-date-20261114` |
 | 5.5.1 | 2026-11-14T08:29:20.511268+09:00 | change | Refresh the homepage script URL so cached release notices display the current 5.5.1 publication and pending Store submission. | `github-5.5.1-publication-cache-20261114` |
 | 5.5.1 | 2026-11-14T08:26:13.646458+09:00 | change | Reflect the verified 5.5.1 GitHub publication and keep the Store status explicitly awaiting submission. | `github-5.5.1-publication-20261114` |
