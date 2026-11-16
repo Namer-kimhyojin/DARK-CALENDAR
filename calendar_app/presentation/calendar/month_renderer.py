@@ -43,7 +43,7 @@ from calendar_app.shared.calendar_display_settings import (
     weekday_display_flags,
     weekday_display_mode_for,
 )
-from calendar_app.shared.color_utils import derive_ui_palette, hue_shifted_rgba
+from calendar_app.shared.color_utils import derive_ui_palette, hue_shifted_rgba, weekend_text_color
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
@@ -303,7 +303,7 @@ def _calendar_surface_style(tokens=None, shape=None):
             padding: 5px 8px;
         }}
         ClickableCell[day_of_week="7"] QLabel#dayNumLabel {{
-            color: {tokens["danger"]};
+            color: {weekend_text_color(tokens)};
         }}
         ClickableCell[is_other_month="true"] QLabel#dayNumLabel {{
             color: {tokens["text_faint"]};
@@ -419,7 +419,7 @@ def _build_month_weekday_header(dates, tokens):
     for date in dates:
         label = QLabel(QLocale().dayName(date.dayOfWeek(), QLocale.FormatType.ShortFormat))
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        color = tokens["danger"] if date.dayOfWeek() == 7 else tokens["text_secondary"]
+        color = weekend_text_color(tokens) if date.dayOfWeek() == 7 else tokens["text_secondary"]
         label.setStyleSheet(
             f"color: {color}; background: transparent; border: none; "
             f"font-size: {_font_role('caption')}; font-weight: 600; padding: 0px 4px;"

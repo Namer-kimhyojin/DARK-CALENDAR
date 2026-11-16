@@ -21,9 +21,9 @@ from PyQt6.QtGui import QColor, QIcon, QPixmap
 from calendar_app.domain import task_constants
 from calendar_app.shared.color_utils import (
     composite_color,
-    contrast_ratio,
     contrast_safe_color,
     parse_css_color,
+    vivid_on_surface,
 )
 from calendar_app.shared.ui_tokens import get_ui_tokens
 
@@ -123,22 +123,8 @@ def _readable(value: str, bg_main: str, text_primary: str, accent: str, minimum:
         # Light themes ship deep state colours (maroon, forest green). Lift
         # them toward a vivid tone of the same hue as far as the minimum for
         # this use still holds (icons 3.6:1, text 4.6:1); greys stay as is.
-        safe = _lift_toward_vivid(QColor(safe), surface, minimum)
+        safe = vivid_on_surface(safe, surface, minimum)
     return safe
-
-
-def _lift_toward_vivid(color: QColor, surface: QColor, minimum: float) -> str:
-    hue, sat, light, _ = color.getHslF()
-    if hue < 0 or sat < 0.25:
-        return color.name(QColor.NameFormat.HexRgb)
-    best = color
-    target_sat = max(sat, 0.72)
-    for step in range(1, 26):
-        candidate = QColor.fromHslF(hue, target_sat, min(0.62, light + step * 0.02))
-        if contrast_ratio(candidate, surface) < minimum:
-            break
-        best = candidate
-    return best.name(QColor.NameFormat.HexRgb)
 
 
 def _role_color(role: str, tk: dict, minimum: float) -> str:

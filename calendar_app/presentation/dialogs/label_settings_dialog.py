@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Dialog for customizing priority/status icon glyphs and text labels."""
 
-from PyQt6.QtCore import QPoint, QSize, Qt, QTimer
+from PyQt6.QtCore import QEvent, QPoint, QSize, Qt, QTimer
+from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -416,6 +417,9 @@ class LabelSettingsDialog(QDialog):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
+        # The two cards stack when they do not fit side by side; never scroll
+        # sideways (the status card used to be cut off at the minimum width).
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setStyleSheet(self._style_bundle["scroll_shell"])
 
         inner = QWidget()
@@ -438,14 +442,33 @@ class LabelSettingsDialog(QDialog):
                 status_grid, idx + 1, display, task_glyphs.status_color(key)
             )
 
-        two_col_row = QHBoxLayout()
-        two_col_row.setSpacing(10)
-        two_col_row.addWidget(prio_group, 1)
-        two_col_row.addWidget(status_group, 1)
-        inner_layout.addLayout(two_col_row)
+        # Same label column in both cards so the icon columns line up.
+        label_width = 0
+        for grid in (prio_grid, status_grid):
+            for row in range(grid.rowCount()):
+                item = grid.itemAtPosition(row, 0)
+                widget = item.widget() if item is not None else None
+                if isinstance(widget, QLabel):
+                    widget.ensurePolished()
+                    bold = QFont(widget.font())
+                    bold.setBold(True)
+                    text_width = QFontMetrics(bold).horizontalAdvance(widget.text()) + 8
+                    label_width = max(label_width, text_width, widget.sizeHint().width())
+        for grid in (prio_grid, status_grid):
+            grid.setColumnMinimumWidth(0, label_width)
+
+        self._cards_grid = QGridLayout()
+        self._cards_grid.setHorizontalSpacing(10)
+        self._cards_grid.setVerticalSpacing(10)
+        self._cards = (prio_group, status_group)
+        self._cards_stacked = None
+        inner_layout.addLayout(self._cards_grid)
         inner_layout.addStretch(1)
 
         scroll.setWidget(inner)
+        self._cards_viewport = scroll.viewport()
+        self._cards_viewport.installEventFilter(self)
+        self._reflow_cards(self._cards_viewport.width())
         root.addWidget(scroll, 1)
 
         # Footer
@@ -467,6 +490,31 @@ class LabelSettingsDialog(QDialog):
         self.save_btn.clicked.connect(self._save)
         self.cancel_btn.clicked.connect(self.reject)
         root.addLayout(btn_row)
+
+    def _reflow_cards(self, available_width: int):
+        """Side by side when both cards fit at their minimum, else stacked."""
+        needed = sum(card.minimumWidth() for card in self._cards) + 10
+        stacked = available_width < needed
+        if stacked == self._cards_stacked:
+            return
+        self._cards_stacked = stacked
+        for card in self._cards:
+            self._cards_grid.removeWidget(card)
+        first, second = self._cards
+        if stacked:
+            self._cards_grid.addWidget(first, 0, 0)
+            self._cards_grid.addWidget(second, 1, 0)
+            self._cards_grid.setColumnStretch(1, 0)
+        else:
+            self._cards_grid.addWidget(first, 0, 0)
+            self._cards_grid.addWidget(second, 0, 1)
+            self._cards_grid.setColumnStretch(1, 1)
+        self._cards_grid.setColumnStretch(0, 1)
+
+    def eventFilter(self, obj, event):
+        if obj is getattr(self, "_cards_viewport", None) and event.type() == QEvent.Type.Resize:
+            self._reflow_cards(obj.width())
+        return super().eventFilter(obj, event)
 
     def _build_group_card(self, title: str):
         group = QFrame()

@@ -109,6 +109,41 @@ def contrast_ratio(foreground: str | QColor, background: str | QColor) -> float:
     return (max(light, dark) + 0.05) / (min(light, dark) + 0.05)
 
 
+def vivid_on_surface(color: str | QColor, surface: str | QColor, minimum: float) -> str:
+    """Lift a deep colour toward a vivid tone of its hue while ``minimum`` holds.
+
+    Light themes keep text-grade state colours (deep maroon, forest green) for
+    text on tinted badges. Icons and plain text on a light card can be brighter;
+    this walks lightness up and stops at the last tone that still passes.
+    Greys (low saturation) are returned unchanged.
+    """
+    base = parse_css_color(color, "#9aa0aa")
+    base.setAlpha(255)
+    back = parse_css_color(surface, "#ffffff")
+    back.setAlpha(255)
+    hue, sat, light, _ = base.getHslF()
+    if hue < 0 or sat < 0.25:
+        return base.name(QColor.NameFormat.HexRgb)
+    best = base if contrast_ratio(base, back) >= minimum else None
+    target_sat = max(sat, 0.72)
+    for step in range(1, 26):
+        candidate = QColor.fromHslF(hue, target_sat, min(0.62, light + step * 0.02))
+        if contrast_ratio(candidate, back) < minimum:
+            break
+        best = candidate
+    return (best or base).name(QColor.NameFormat.HexRgb)
+
+
+def weekend_text_color(tokens: dict, surface: str | QColor | None = None) -> str:
+    """Sunday/holiday text: the danger hue, vivid on light themes, 4.5:1."""
+    danger = tokens.get("danger_hex") or tokens.get("danger") or "#d25a66"
+    text = parse_css_color(tokens.get("text_primary"), "#f4f7fb")
+    if text.lightnessF() >= 0.5:
+        return parse_css_color(danger, "#d25a66").name(QColor.NameFormat.HexRgb)
+    back = surface or tokens.get("content_bg") or "#f2f3f7"
+    return vivid_on_surface(danger, composite_color(back, "#ffffff"), 4.6)
+
+
 def readable_accent_fill(accent: str | QColor) -> tuple[str, str]:
     """Return ``(fill, text)`` for a solid accent button or badge.
 
