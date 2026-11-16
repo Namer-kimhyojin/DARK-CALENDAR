@@ -30274,6 +30274,46 @@
         "scripts/audit_i18n.py": "28110a69e2260b355c6389cd7e96d23ff4f440977dc49407111dfa007772f454",
         "tests/test_i18n_audit.py": "4f2cf9f8c212223060463d57683474491ac6d573265b6a56556b872520ef5e87"
       }
+    },
+    {
+      "id": "event-list-quiet-accent-20261117",
+      "created_at": "2026-11-17T06:59:56.424626+09:00",
+      "kind": "change",
+      "previous_version": "5.5.1",
+      "version": "5.5.1",
+      "summary": "목록 화면의 추가·완료 처리·복구 버튼을 꽉 찬 포인트색 대신 옅은 포인트색 틴트와 아이콘으로(글자 대비 4.5:1 보장)",
+      "files": [
+        "calendar_app/presentation/dialogs/management_dialogs.py"
+      ],
+      "scoped_hashes": {
+        "calendar_app/presentation/dialogs/management_dialogs.py": "08960f608d6e8745cd1b8a979002d6303fc68e3ea782a9c700c25c80071f9e6c"
+      }
+    },
+    {
+      "id": "event-accent-fill-light-chips-20261117",
+      "created_at": "2026-11-17T07:13:12.841013+09:00",
+      "kind": "change",
+      "previous_version": "5.5.1",
+      "version": "5.5.1",
+      "summary": "포인트색 버튼 글자 대비: 중간 밝기 포인트색은 바탕을 살짝 진하게 해 흰 글자 4.5:1, 라이트 테마 칩을 밝은 파스텔 카드로·아이콘과 경고 글자를 선명한 색조로(대비 유지), 패널 카드 모서리 통일",
+      "files": [
+        "calendar_app/presentation/calendar/month_renderer.py",
+        "calendar_app/presentation/dialogs/dialog_editor_styles.py",
+        "calendar_app/presentation/dialogs/dialog_styles.py",
+        "calendar_app/presentation/panels/side_panel_renderer.py",
+        "calendar_app/presentation/theme/task_glyphs.py",
+        "calendar_app/shared/color_utils.py",
+        "calendar_app/shared/theme_snapshot.py"
+      ],
+      "scoped_hashes": {
+        "calendar_app/presentation/calendar/month_renderer.py": "98d9073570fdc6cdd16904533ec4b33ec4688ee81ae44a09122ce86f0cbbc62c",
+        "calendar_app/presentation/dialogs/dialog_editor_styles.py": "5b2c040729c2cdee70a67a01d14516f37c6faae4ec7515ae0cfa2db7e3519841",
+        "calendar_app/presentation/dialogs/dialog_styles.py": "a8d053453ec2f5607e2943c38f633ae1cdcb3aeb6f27b7d31ed8156fb7d455cc",
+        "calendar_app/presentation/panels/side_panel_renderer.py": "c8b9eb33f92f67eeabf2e2facf9eff8b83c3298685e93e17b6960c8d59298be1",
+        "calendar_app/presentation/theme/task_glyphs.py": "2b5a407b06ec6f61cb118048fa4e7bb30a55bd3d2f0274a2b6d3179732d2e191",
+        "calendar_app/shared/color_utils.py": "fbc6dfeeacba917a6e1fe8a999f44f941ff55b38d16262928184d5c5975a7a2b",
+        "calendar_app/shared/theme_snapshot.py": "ea0b5e2b902dece8e238d48206e90fcea1aeec8d1a7f4bffd207bed5a72bc339"
+      }
     }
   ],
   "observed_inputs": {
@@ -30714,7 +30754,7 @@
     "calendar_app/presentation/calendar/__init__.py": "f9cbc8953d37a0bd3b111e7ec14dee464b1134c58b2cf260d9feff66be9a749a",
     "calendar_app/presentation/calendar/calendar_controls.py": "3bc390f18031be0332f7d0092cb0adebe66ae081a9b6ffb27418ebcdf992b42c",
     "calendar_app/presentation/calendar/month_navigation.py": "5d813a7e75ef4091085f199d171e1ec7429444c96aa33d9592d397a80a15d3e5",
-    "calendar_app/presentation/calendar/month_renderer.py": "aefe69923592f2a890e6b84c509a4420d6c8b80ffacafd973c07e3c9ba04b45d",
+    "calendar_app/presentation/calendar/month_renderer.py": "98d9073570fdc6cdd16904533ec4b33ec4688ee81ae44a09122ce86f0cbbc62c",
     "calendar_app/presentation/calendar/selection_bar.py": "8ecfc8f22a66684705eeaa681245c64ffe04af63fbdc1deafa60758dccb43c27",
     "calendar_app/presentation/calendar/week_planner_controller.py": "e24e802ae9a0a94ec92701febb494d1b649970558efb46b4032dd313915b0988",
     "calendar_app/presentation/calendar/week_time_grid.py": "a9ca9571c4df00700eb06381541a43e2fcec4f4b3a2d4280a9a01b97486e91dd",
@@ -30730,12 +30770,12 @@
     "calendar_app/presentation/dialogs/color_swatch_widget.py": "69f08c3574019a6f6ff7ed5c6360961c6090047948fffa910a7627567d802f9a",
     "calendar_app/presentation/dialogs/daily_summary_dialog.py": "8faf2f85f793d0a85f949fac91208cbd37f437ccb6552fa77c9b056e6eb5048c",
     "calendar_app/presentation/dialogs/dialog_chrome.py": "9e259aae4231997e170348a19eb484b93eab916b38cbade444d62d0efd710888",
-    "calendar_app/presentation/dialogs/dialog_editor_styles.py": "7e20b1053ec015790c7a5b6bf7d6d29f2db94f9ef1fbbb16744a81b8f3faf6b5",
+    "calendar_app/presentation/dialogs/dialog_editor_styles.py": "5b2c040729c2cdee70a67a01d14516f37c6faae4ec7515ae0cfa2db7e3519841",
     "calendar_app/presentation/dialogs/dialog_emoji.py": "b91fec67aeb0e2aa5a34b5a598f372979affe269be27b3ca98bd09f0df1920c1",
     "calendar_app/presentation/dialogs/dialog_lifetime.py": "cf9c0c062bf58476a12edacb3c817dd126e16d3719d8929213b47e3414ec40e4",
     "calendar_app/presentation/dialogs/dialog_router.py": "5d7022bc5fc4b1d9dcee832f7e4bcf37acf3d5729ae9d1af1fa9146a581e87de",
     "calendar_app/presentation/dialogs/dialog_shadow.py": "4b90503c5d9983ecc5aeb2d29a4227b34c7bd9884070c38fd3d63e9d78fd808e",
-    "calendar_app/presentation/dialogs/dialog_styles.py": "c60ae62d5c6140868be9245cac902e63168fc169d2bfd633b04009d51199a9f9",
+    "calendar_app/presentation/dialogs/dialog_styles.py": "a8d053453ec2f5607e2943c38f633ae1cdcb3aeb6f27b7d31ed8156fb7d455cc",
     "calendar_app/presentation/dialogs/dialog_token_editor_dialog.py": "c1a819416dc44fdd733571bf687794288f66f7eea548b932170d3df421ec1977",
     "calendar_app/presentation/dialogs/directive_dialog.py": "5c29dcffda06ab0ce1055b3b46041f9f80abaf4758598990d1c8fe878570dc73",
     "calendar_app/presentation/dialogs/eod_report_dialog.py": "e92b2a2d7fb8c00431e7b8368e7d441540a48770b47f949a62321cb85c5b2d5c",
@@ -30749,7 +30789,7 @@
     "calendar_app/presentation/dialogs/help_center_dialog.py": "b448bc14f07bcbc1b5a7a590d2e7dd381bb11829235ddba3695f9862d3e3d1ea",
     "calendar_app/presentation/dialogs/ics_subscription_dialog.py": "8be8e2e2e6fe85b3b38e164bd0c0ae9cc946e84790e14e1b8d29b11b8200453f",
     "calendar_app/presentation/dialogs/label_settings_dialog.py": "ef213d1988a5d57746984a219a44ee2f53060801a777a9e3c73d61423ab94fd4",
-    "calendar_app/presentation/dialogs/management_dialogs.py": "68f50f36df455f75e84e5432833e7b4fc4d89c2ccb8cde4739948bc13e5e372c",
+    "calendar_app/presentation/dialogs/management_dialogs.py": "08960f608d6e8745cd1b8a979002d6303fc68e3ea782a9c700c25c80071f9e6c",
     "calendar_app/presentation/dialogs/modify_task_dialog_unified.py": "315d8cef5e9ce46471d2920ae15f2121eabfa50a6f6cfb92ba317928cd1f9fc8",
     "calendar_app/presentation/dialogs/outlook_settings_dialog.py": "90b4f6d9b0dbcbb1db463171e15058c81b8189c46cd1b91de3bd7cad1d5a040b",
     "calendar_app/presentation/dialogs/panel_color_picker_dialog.py": "cde1ac7b9b1d45eb58d14234e7c036a3ba640055e8ba220d549ba875e43aeb1c",
@@ -30813,7 +30853,7 @@
     "calendar_app/presentation/main_window/window_shell_actions.py": "fe93c9c2cd77fda1951667ebd9c4ebbf654823087e47fe1f50bafc193a6028b1",
     "calendar_app/presentation/main_window/window_ui_actions.py": "f56574a277b884b813e92e5c5ee685c76be6cef68b3cfcb88e7ee7489211de5a",
     "calendar_app/presentation/panels/__init__.py": "8728ae0813f764d061aae22856b3b347625d698f91ec487bca25463616af3cd9",
-    "calendar_app/presentation/panels/side_panel_renderer.py": "40ffcebc851f71781c0b16e573a787b4c5e95e32135e0a7bbefa997e097cfe93",
+    "calendar_app/presentation/panels/side_panel_renderer.py": "c8b9eb33f92f67eeabf2e2facf9eff8b83c3298685e93e17b6960c8d59298be1",
     "calendar_app/presentation/printing/__init__.py": "37b17cd9a45eae1bb58057fe80104d44f3bc72fadfa258a28853b406c0c7fb80",
     "calendar_app/presentation/printing/calendar_print_renderer.py": "77bddef7e7a91b819fe7f9e92e09a2f1c3305fe7ae1581844c0f3a8e293d5127",
     "calendar_app/presentation/splash_screen.py": "e387e2c1db3b72f3f24b5d14ef9c01162dda2c479b4a7a0c3166480c94df4411",
@@ -30927,7 +30967,7 @@
     "calendar_app/shared/brand_assets.py": "43728735486f4d81152cf36c454f12e90075776a1289871ca425e6dc1925a73d",
     "calendar_app/shared/calendar_defaults.py": "7a68b8ab06f573f46c5161df091da99d6d7ae6ae1da4c601ed8096bbae518418",
     "calendar_app/shared/calendar_display_settings.py": "b9c068f2342277910e11a3ee0399ff65792dc4ec78c180134cf31f7a9e44f8bf",
-    "calendar_app/shared/color_utils.py": "136503a451c6d6c9168d66076c5788efd574f2f3dd4a1280b5ed85a278706998",
+    "calendar_app/shared/color_utils.py": "fbc6dfeeacba917a6e1fe8a999f44f941ff55b38d16262928184d5c5975a7a2b",
     "calendar_app/shared/datetime_utils.py": "1d50a30fc12b06be7a0e1bd871cd3e9178932d70c992a29b66e2ff1ed9e89cdd",
     "calendar_app/shared/encoding_utils.py": "5b3ab2d4d7ba1116c3193c956ea959865c8b9e6e81840b79f4872eee0aef1abe",
     "calendar_app/shared/google_color_palette.py": "b5bbe3802484662276b37cf4509eb225c58e32448acb3d505e62020b407bf4ee",
@@ -30940,7 +30980,7 @@
     "calendar_app/shared/system_theme.py": "dd4eee7e5ccbe60796420a91bbc400579031ac7605b97dc4449d393790f9f2a8",
     "calendar_app/shared/tag_highlighter.py": "6f64485ad8fa30300a94297ac0cf542b91c650257262708e8edd3259bc9868f2",
     "calendar_app/shared/theme_settings.py": "b38067e93683c8f5eb5ba42d30b9702f3e18738e7c5e6ff90970954223dbd5ba",
-    "calendar_app/shared/theme_snapshot.py": "7129a6602ca8cd9870d9972cb772fa8682a6ce7dd2ab33c41105dd0d9db88396",
+    "calendar_app/shared/theme_snapshot.py": "ea0b5e2b902dece8e238d48206e90fcea1aeec8d1a7f4bffd207bed5a72bc339",
     "calendar_app/shared/typography.py": "63adcdfa802cda91e71ea216cf58a59bc4ac55a0ce442358824252bea9557fa4",
     "calendar_app/shared/ui_tokens.py": "3c01914028faf21a4957de4d3bbd2eb4cdff8bacf3567ffcb57bb0ab9e036c13",
     "calendar_app/shared/value_parsers.py": "2a66cd73e0496e9c5c279184123750288aaae612c4c80b7bbf9565b407b74947",
@@ -31024,7 +31064,7 @@
     "scripts/verify_sqlite_runtime.py": "35f149eafda0dee38dd9dd2d69133d46e8c0fe2af721ab113f1f10c08619c1d7",
     "Standalone.spec": "9f47035061604025c59b9ecbe1a53e3963c9543b257e0165ff1f93aa3106b5b2",
     "version_info.txt": "18b1c102e92f0e0f4bdad72853120cf425ff5eaa0b2876b314cc378a15b8a615",
-    "calendar_app/presentation/theme/task_glyphs.py": "1c6c7512256c3dd95a9293301aadce1471b0a8fd8d32c0ccc1f5e2b23b29fded"
+    "calendar_app/presentation/theme/task_glyphs.py": "2b5a407b06ec6f61cb118048fa4e7bb30a55bd3d2f0274a2b6d3179732d2e191"
   },
   "legacy_event_count": 47,
   "release": {

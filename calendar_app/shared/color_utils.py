@@ -109,6 +109,29 @@ def contrast_ratio(foreground: str | QColor, background: str | QColor) -> float:
     return (max(light, dark) + 0.05) / (min(light, dark) + 0.05)
 
 
+def readable_accent_fill(accent: str | QColor) -> tuple[str, str]:
+    """Return ``(fill, text)`` for a solid accent button or badge.
+
+    Light and dark accents keep their colour and get a deep/pale same-hue text
+    at 7:1. Mid-tone accents (violet, magenta) reach neither cleanly: dark text
+    passes 4.5:1 but looks muddy and white falls just short. For those the fill
+    is deepened a few steps until white text reaches 4.5:1.
+    """
+    base = parse_css_color(accent, "#4da6ff")
+    base.setAlpha(255)
+    text = contrasting_text_color(base)
+    if contrast_ratio(text, base) >= 7.0 or contrast_ratio("#ffffff", base) < 3.0:
+        return base.name(QColor.NameFormat.HexRgb), text
+    for step in range(0, 42, 2):
+        factor = 1.0 - step / 100
+        fill = QColor(
+            round(base.red() * factor), round(base.green() * factor), round(base.blue() * factor)
+        )
+        if contrast_ratio("#ffffff", fill) >= 4.5:
+            return fill.name(QColor.NameFormat.HexRgb), "#ffffff"
+    return base.name(QColor.NameFormat.HexRgb), text
+
+
 def contrasting_text_color(
     background: str | QColor,
     *,

@@ -203,12 +203,10 @@ def _apply_panel_item_style(container, selected, bg_color):
     if not container.objectName():
         container.setObjectName("panelEventChip")
     name = container.objectName()
-    if agenda:
-        radius = tokens["radius_md"]
-        margin = "3px 0"
-    else:
-        radius = f"{int(_shape_tokens().get('panel_item_radius', 0))}px"
-        margin = "1px 4px"
+    # One corner radius for every panel card (the user's shape preset), so the
+    # selected-day agenda card no longer stands apart with its own rounding.
+    radius = f"{int(_shape_tokens().get('panel_item_radius', 0))}px"
+    margin = "3px 4px" if agenda else "1px 4px"
     _tc = get_theme_color()
 
     if selected:

@@ -23,6 +23,7 @@ from calendar_app.shared.color_utils import (
     parse_css_alpha_to_unit,
     parse_css_color,
     parse_hex_color,
+    readable_accent_fill,
     resolve_border_tokens,
     resolve_text_opacity,
     shift_rgb,
@@ -592,7 +593,15 @@ def build_dialog_base_tokens(
 
     text_primary = str(text_palette.get("text_primary", "#e1e1e6"))
     accent_role_text = accent_hex if contrast_ratio(accent_hex, base) >= 3.0 else text_primary
-    accent_text = contrasting_text_color(accent_hex)
+    # Solid accent controls: mid-tone accents get a slightly deeper fill so the
+    # text can stay white at 4.5:1 instead of a muddy dark label.
+    accent_fill, accent_text = readable_accent_fill(accent_hex)
+    if accent_text == "#ffffff":
+        accent_fill_hover = shift_rgb(QColor(accent_fill), -14).name(QColor.NameFormat.HexRgb)
+        accent_fill_hover_text = "#ffffff"
+    else:
+        accent_fill_hover = shift_rgb(accent, 22).name(QColor.NameFormat.HexRgb)
+        accent_fill_hover_text = contrasting_text_color(shift_rgb(accent, 22))
 
     tokens = {
         "accent": accent_hex,
@@ -653,13 +662,14 @@ def build_dialog_base_tokens(
         "button_disabled_bg": panel_palette.get("toolbar_bg", "#1c1c23"),
         "button_disabled_text": str(text_palette.get("text_faint", "#7a7a8a")),
         "button_disabled_border": _neutral(0.08),
-        "button_primary_bg": accent_hex,
+        "button_primary_bg": accent_fill,
         "button_primary_text": accent_text,
         "accent_text": accent_text,
-        "button_primary_border": accent_hex,
-        "button_primary_hover_bg": shift_rgb(accent, 22).name(QColor.NameFormat.HexRgb),
-        "button_primary_hover_text": contrasting_text_color(shift_rgb(accent, 22)),
-        "button_primary_hover_border": accent_hex,
+        "accent_fill": accent_fill,
+        "button_primary_border": accent_fill,
+        "button_primary_hover_bg": accent_fill_hover,
+        "button_primary_hover_text": accent_fill_hover_text,
+        "button_primary_hover_border": accent_fill_hover,
         "button_secondary_bg": panel_palette.get("surface_hover_bg", "#18181f"),
         "button_secondary_text": str(text_palette.get("text_muted", "#9aa0ad")),
         "button_secondary_border": _neutral(0.12),

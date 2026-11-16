@@ -9,6 +9,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
+from calendar_app.shared.color_utils import readable_accent_fill, shift_rgb
 from calendar_app.shared.typography import get_typography_scale
 
 
@@ -101,7 +102,7 @@ def build_task_editor_stylesheet(tokens: dict | None = None, metrics: dict | Non
     list_selected_bg = t.get("list_selected_bg", _rgba(accent, 0.12, "#4da6ff"))
     list_selected_border = t.get("list_selected_border", _rgba(accent, 0.25, "#4da6ff"))
     list_selected_text = t.get("list_selected_text", text_primary)
-    accent_text = t.get("accent_text", "#101318")
+    accent_fill, accent_fill_text = readable_accent_fill(accent)
 
     tab_radius = int(m.get("tab_radius", 12))
     pane_radius = max(int(m.get("group_radius", 14)), tab_radius + 2)
@@ -282,8 +283,8 @@ QDialog#TaskEditorDialog QCheckBox#TaskDialogOptionCheck::indicator:checked {{
 /* -- Buttons: Gradient & Glass -- */
 QDialog#TaskEditorDialog QPushButton#primary_btn,
 QDialog#TaskEditorDialog QPushButton#CreateBtn {{
-    background: {accent};
-    color: {accent_text};
+    background: {accent_fill};
+    color: {accent_fill_text};
     border: none;
     border-radius: {int(m.get("button_radius", 12))}px;
     font-weight: 700;
@@ -292,9 +293,9 @@ QDialog#TaskEditorDialog QPushButton#CreateBtn {{
 }}
 QDialog#TaskEditorDialog QPushButton#primary_btn:hover,
 QDialog#TaskEditorDialog QPushButton#CreateBtn:hover {{
-    background: {_rgba(accent, 0.88, accent)};
+    background: {shift_rgb(QColor(accent_fill), -14).name() if accent_fill_text == "#ffffff" else _rgba(accent, 0.88, accent)};
     border: none;
-    color: {accent_text};
+    color: {accent_fill_text};
 }}
 
 QDialog#TaskEditorDialog QPushButton#ghost_btn[accentVariant="true"] {{

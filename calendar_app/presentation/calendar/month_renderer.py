@@ -222,14 +222,11 @@ def _accent_rgba(alpha: float, tokens=None):
     return f"rgba({color.red()},{color.green()},{color.blue()},{alpha})"
 
 
-def _today_pill_text(tokens) -> str:
-    """Dark or light number on the accent pill, whichever reads better."""
-    from calendar_app.shared.color_utils import contrast_ratio, parse_css_color
+def _today_pill_colors(tokens) -> tuple[str, str]:
+    """Fill and number colour for the today pill (shared accent-fill rule)."""
+    from calendar_app.shared.color_utils import readable_accent_fill
 
-    accent = parse_css_color(tokens.get("accent"), "#4da6ff").name()
-    light = "#ffffff"
-    dark = "#111318"
-    return light if contrast_ratio(light, accent) >= contrast_ratio(dark, accent) else dark
+    return readable_accent_fill(tokens.get("accent") or "#4da6ff")
 
 
 def _calendar_surface_style(tokens=None, shape=None):
@@ -250,7 +247,7 @@ def _calendar_surface_style(tokens=None, shape=None):
     accent_selected = _accent_rgba(0.10, tokens)
     accent_selected_border = _accent_rgba(0.55, tokens)
     today_tint = _accent_rgba(0.05, tokens)
-    today_text = _today_pill_text(tokens)
+    today_fill, today_text = _today_pill_colors(tokens)
     today_pill_radius = max(4, min(10, selection_radius))
     # A light accent wash with a thin translucent outline: enough to see the
     # span over translucent panels without shouting. The ends are a touch
@@ -317,7 +314,7 @@ def _calendar_surface_style(tokens=None, shape=None):
         }}
         ClickableCell[is_today="true"] QLabel#dayNumLabel {{
             color: {today_text};
-            background-color: {tokens["accent"]};
+            background-color: {today_fill};
             font-weight: 700;
             border-radius: {today_pill_radius}px;
             padding: 1px 8px;

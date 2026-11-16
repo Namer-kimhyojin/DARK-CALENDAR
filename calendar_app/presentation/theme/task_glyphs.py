@@ -21,6 +21,7 @@ from PyQt6.QtGui import QColor, QIcon, QPixmap
 from calendar_app.domain import task_constants
 from calendar_app.shared.color_utils import (
     composite_color,
+    contrast_ratio,
     contrast_safe_color,
     parse_css_color,
 )
@@ -77,12 +78,38 @@ _REFERENCE_WALLPAPER = {"dark": "#3a4250", "light": "#c9ced6"}
 _REFERENCE_EVENT = {"dark": "#facc15", "light": "#7c3aed"}
 
 
+# Light mode paints chips as bright pastel cards (event colour mixed into
+# white, nearly opaque) instead of a thin tint over the gray panel, which read
+# as a muddy, dark-mode-looking interior.
+LIGHT_CHIP_MIX = 0.14
+LIGHT_CHIP_HOVER_MIX = 0.22
+LIGHT_CHIP_ALPHA = 236
+LIGHT_CHIP_BORDER_ALPHA = 110
+
+
+def _is_light(tokens) -> bool:
+    text = parse_css_color((tokens or {}).get("text_primary"), "#f4f7fb")
+    return text.lightnessF() < 0.5
+
+
+def _pastel(color: QColor, mix: float) -> QColor:
+    return QColor(
+        round(255 + (color.red() - 255) * mix),
+        round(255 + (color.green() - 255) * mix),
+        round(255 + (color.blue() - 255) * mix),
+    )
+
+
 @lru_cache(maxsize=64)
 def _reference_surface(bg_main: str, text_primary: str, accent: str) -> QColor:
     text = parse_css_color(text_primary, "#f4f7fb")
     mode = "dark" if text.lightnessF() >= 0.5 else "light"
     panel = composite_color(bg_main, _REFERENCE_WALLPAPER[mode])
     tint = parse_css_color(_REFERENCE_EVENT[mode])
+    if mode == "light":
+        card = _pastel(tint, LIGHT_CHIP_MIX)
+        card.setAlpha(LIGHT_CHIP_ALPHA)
+        return composite_color(card, panel)
     tint.setAlpha(CHIP_FILL_ALPHA)
     return composite_color(tint, panel)
 
@@ -91,7 +118,27 @@ def _reference_surface(bg_main: str, text_primary: str, accent: str) -> QColor:
 def _readable(value: str, bg_main: str, text_primary: str, accent: str, minimum: float) -> str:
     surface = _reference_surface(bg_main, text_primary, accent)
     opaque = composite_color(parse_css_color(value, "#9aa0aa"), surface)
-    return contrast_safe_color(opaque, surface, minimum=minimum)
+    safe = contrast_safe_color(opaque, surface, minimum=minimum)
+    if surface.lightnessF() > 0.6:
+        # Light themes ship deep state colours (maroon, forest green). Lift
+        # them toward a vivid tone of the same hue as far as the minimum for
+        # this use still holds (icons 3.6:1, text 4.6:1); greys stay as is.
+        safe = _lift_toward_vivid(QColor(safe), surface, minimum)
+    return safe
+
+
+def _lift_toward_vivid(color: QColor, surface: QColor, minimum: float) -> str:
+    hue, sat, light, _ = color.getHslF()
+    if hue < 0 or sat < 0.25:
+        return color.name(QColor.NameFormat.HexRgb)
+    best = color
+    target_sat = max(sat, 0.72)
+    for step in range(1, 26):
+        candidate = QColor.fromHslF(hue, target_sat, min(0.62, light + step * 0.02))
+        if contrast_ratio(candidate, surface) < minimum:
+            break
+        best = candidate
+    return best.name(QColor.NameFormat.HexRgb)
 
 
 def _role_color(role: str, tk: dict, minimum: float) -> str:
@@ -216,6 +263,20 @@ def chip_palette(color, tokens=None) -> dict:
 
     def rgba(alpha):
         return f"rgba({r}, {g}, {b}, {alpha})"
+
+    if _is_light(tk):
+
+        def card(mix):
+            c = _pastel(base, mix)
+            return f"rgba({c.red()}, {c.green()}, {c.blue()}, {LIGHT_CHIP_ALPHA})"
+
+        return {
+            "bar": rgba(255),
+            "fill": card(LIGHT_CHIP_MIX),
+            "hover": card(LIGHT_CHIP_HOVER_MIX),
+            "border": rgba(LIGHT_CHIP_BORDER_ALPHA),
+            "range_hover": card(LIGHT_CHIP_HOVER_MIX + 0.06),
+        }
 
     return {
         "bar": rgba(255),

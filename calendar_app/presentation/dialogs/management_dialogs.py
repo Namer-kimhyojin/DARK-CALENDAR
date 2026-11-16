@@ -78,6 +78,32 @@ def _priority_value_or_none(label):
     return None
 
 
+def _quiet_accent_button(button, glyph, tokens):
+    """List-toolbar action: accent tint and accent text, not a solid block.
+
+    The table is the subject of these screens; a saturated primary fill made
+    "add" the loudest thing on screen (and dark text on mid-tone accents read
+    poorly). The accent text is kept at 4.5:1 on the dialog surface.
+    """
+    from calendar_app.shared.color_utils import contrast_safe_color, parse_css_color
+
+    button.setObjectName("ghost_btn")
+    button.setProperty("quietAccent", True)
+    surface = parse_css_color((tokens or {}).get("floating_bg", "#1c1c1c"), "#1c1c1c")
+    accent = parse_css_color((tokens or {}).get("accent", "#4da6ff"), "#4da6ff")
+    text = contrast_safe_color(accent, surface.name(), minimum=4.5)
+    button.setIcon(glyph_icon(glyph, text))
+    button.setStyleSheet(
+        'QPushButton#ghost_btn[quietAccent="true"] {'
+        f" color: {text}; background-color: rgba({accent.red()}, {accent.green()}, {accent.blue()}, 30);"
+        f" border: 1px solid rgba({accent.red()}, {accent.green()}, {accent.blue()}, 90);"
+        " font-weight: 600; }"
+        'QPushButton#ghost_btn[quietAccent="true"]:hover {'
+        f" background-color: rgba({accent.red()}, {accent.green()}, {accent.blue()}, 52);"
+        f" border-color: {accent.name()}; }}"
+    )
+
+
 def _search_glyph_color(tokens) -> str:
     from calendar_app.shared.color_utils import parse_css_color
 
@@ -759,7 +785,7 @@ class DirectiveManagementDialog(BaseManagementDialog):
 
     def extra_buttons(self):
         self.add_btn = QPushButton(t("dialog.management.btn_add_directive"))
-        self.add_btn.setObjectName("primary_btn")
+        _quiet_accent_button(self.add_btn, "fa6s.plus", self._ui_tokens)
         self.add_btn.clicked.connect(self.add_new)
         return [self.add_btn]
 
@@ -769,11 +795,11 @@ class DirectiveManagementDialog(BaseManagementDialog):
         self.trash_toggle_btn.clicked.connect(self.toggle_trash_mode)
 
         self.restore_btn = QPushButton(t("dialog.management.btn_restore_from_trash", "Restore"))
-        self.restore_btn.setObjectName("primary_btn")
+        _quiet_accent_button(self.restore_btn, "fa6s.rotate-left", self._ui_tokens)
         self.restore_btn.clicked.connect(self.restore_selected)
 
         self.complete_btn = QPushButton(t("dialog.management.btn_mark_done"))
-        self.complete_btn.setObjectName("primary_btn")
+        _quiet_accent_button(self.complete_btn, "fa6s.check", self._ui_tokens)
         self.complete_btn.clicked.connect(self.mark_as_done)
         self.delete_btn = QPushButton(t("dialog.common.delete"))
         self.delete_btn.setObjectName("danger_btn")
@@ -990,7 +1016,7 @@ class TaskManagementDialog(BaseManagementDialog):
 
     def extra_buttons(self):
         self.add_btn = QPushButton(t("dialog.management.btn_add_schedule"))
-        self.add_btn.setObjectName("primary_btn")
+        _quiet_accent_button(self.add_btn, "fa6s.plus", self._ui_tokens)
         self.add_btn.clicked.connect(self.add_new)
         return [self.add_btn]
 
@@ -1000,7 +1026,7 @@ class TaskManagementDialog(BaseManagementDialog):
         self.trash_toggle_btn.clicked.connect(self.toggle_trash_mode)
 
         self.restore_btn = QPushButton(t("dialog.management.btn_restore_from_trash", "Restore"))
-        self.restore_btn.setObjectName("primary_btn")
+        _quiet_accent_button(self.restore_btn, "fa6s.rotate-left", self._ui_tokens)
         self.restore_btn.clicked.connect(self.restore_selected)
 
         self.delete_btn = QPushButton(t("dialog.common.delete"))
@@ -1146,7 +1172,7 @@ class RoutineManagementDialog(BaseManagementDialog):
 
     def extra_buttons(self):
         self.add_btn = QPushButton(t("dialog.management.btn_add_routine"))
-        self.add_btn.setObjectName("primary_btn")
+        _quiet_accent_button(self.add_btn, "fa6s.plus", self._ui_tokens)
         self.add_btn.clicked.connect(self.add_new)
         return [self.add_btn]
 
@@ -1156,7 +1182,7 @@ class RoutineManagementDialog(BaseManagementDialog):
         self.trash_toggle_btn.clicked.connect(self.toggle_trash_mode)
 
         self.restore_btn = QPushButton(t("dialog.management.btn_restore_from_trash", "Restore"))
-        self.restore_btn.setObjectName("primary_btn")
+        _quiet_accent_button(self.restore_btn, "fa6s.rotate-left", self._ui_tokens)
         self.restore_btn.clicked.connect(self.restore_selected)
 
         self.delete_btn = QPushButton(t("dialog.common.delete"))

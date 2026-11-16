@@ -34,6 +34,7 @@ from calendar_app.shared.color_utils import (
     parse_css_alpha_to_unit,
     parse_css_color,
     parse_hex_color,
+    readable_accent_fill,
     shift_rgb,
 )
 from calendar_app.shared.icon_map import ICON, icon
@@ -805,6 +806,12 @@ def _merge_dialog_color_tokens(tokens: dict, overrides: dict) -> dict:
     accent = parse_hex_color(merged.get("accent", "#4da6ff"), "#4da6ff")
     accent_hex = accent.name(QColor.NameFormat.HexRgb)
     if "accent" in overrides:
+        accent_fill, accent_fill_text = readable_accent_fill(accent_hex)
+        accent_fill_hover = (
+            _shift_rgb(QColor(accent_fill), -14).name(QColor.NameFormat.HexRgb)
+            if accent_fill_text == "#ffffff"
+            else None
+        )
         derived = {
             "accent_hover": _shift_rgb(accent, 22).name(QColor.NameFormat.HexRgb),
             "accent_soft_bg": _rgba(accent, 0.16),
@@ -815,16 +822,17 @@ def _merge_dialog_color_tokens(tokens: dict, overrides: dict) -> dict:
             "list_selected_bg": _rgba(accent, 0.12),
             "list_selected_border": _rgba(accent, 0.25),
             "list_hover_bg": _rgba(accent, 0.06),
-            "button_primary_bg": accent_hex,
-            "button_primary_border": accent_hex,
-            "button_primary_hover_bg": merged.get("accent_hover", accent_hex),
-            "button_primary_hover_border": accent_hex,
+            "accent_fill": accent_fill,
+            "button_primary_bg": accent_fill,
+            "button_primary_border": accent_fill,
+            "button_primary_hover_bg": accent_fill_hover or merged.get("accent_hover", accent_hex),
+            "button_primary_hover_border": accent_fill_hover or accent_hex,
         }
         for key, value in derived.items():
             if key not in overrides:
                 merged[key] = value
         if "button_primary_hover_bg" not in overrides:
-            merged["button_primary_hover_bg"] = merged["accent_hover"]
+            merged["button_primary_hover_bg"] = accent_fill_hover or merged["accent_hover"]
 
     surface = composite_color(merged["floating_bg"], merged["base_hex"])
     if {"accent", "floating_bg", "base_hex"}.intersection(overrides):
