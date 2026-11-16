@@ -4,26 +4,26 @@
 
 ## 최신 공통 UI 검증 — 2026-11-06
 
-[공통 UI 후속 개선·검증 기록](docs/ux-audit/unified-ui-followup-20261106.md)에 글자 계층·24pt 모양 설정, palette·외곽 그림자, 제목 입력 경고, 중첩 모달 owner, 시간 입력 간격, 요일 4모드, 위젯 테마·종일 문구의 최신 근거를 모았다. [글자·크기 가이드](docs/design/typography-and-sizing.md)를 공통 기준으로 사용한다.
+[공통 UI 후속 개선·검증 기록](unified-ui-followup-20261106.md)에 글자 계층·24pt 모양 설정, palette·외곽 그림자, 제목 입력 경고, 중첩 모달 owner, 시간 입력 간격, 요일 4모드, 위젯 테마·종일 문구의 최신 근거를 모았다. [글자·크기 가이드](../design/typography-and-sizing.md)를 공통 기준으로 사용한다.
 
 채택한 native 모달 증거는 light100 32상태와 navy125 31상태다. 큰 글자 24pt·125% 7상태, 중첩 모달 100%·125% 각 10개 check, 최신 light/navy 위젯의 실제 진입·복귀를 별도 확인했다. `.show()` fixture 실패, mixed-DPI 위젯 배치 실패, 외부 창에 가린 피드백 캡처는 완료 결과에 합치지 않는다. 후속 표에서 확인 완료와 재촬영 예정 경로를 구분한다.
 
-[루프덱 · 4트랙 안내](docs/ux-audit/keydeck-loopdeck-20261106.md)는 별도 기능 기록이다. 최신 루프 UI 재배치의 native 검토와 오디오 청취 결과는 해당 기능의 근거로 추가하며, 아래의 과거 `passed` 기록으로 대체하지 않는다.
+[루프덱 · 4트랙 안내](keydeck-loopdeck-20261106.md)는 별도 기능 기록이다. 최신 루프 UI 재배치의 native 검토와 오디오 청취 결과는 해당 기능의 근거로 추가하며, 아래의 과거 `passed` 기록으로 대체하지 않는다.
 
 ## Daily Summary Modal Design QA — 이전 기록
 
 
 ## Evidence
 
-- Source visual truth: `C:\Users\aplus\.codex\generated_images\01a0b20e-a96f-7ed0-8705-9849af24e6fe\exec-e8c46a02-d5f7-408c-a583-737baba5ee15.png`
+- Source visual truth: `(로컬 캡처, 저장소 미보관)`
 - Source pixels: 1456 x 1080.
-- Implemented expanded state: `C:\Users\aplus\.codex\visualizations\2026\09\18\01a0b20e-a96f-7ed0-8705-9849af24e6fe\daily-summary-settings-expanded-final2.png`
+- Implemented expanded state: `(로컬 캡처, 저장소 미보관)`
 - Implementation pixels / CSS window size: 960 x 501 at device pixel ratio 1.0.
-- Implemented compact state: `C:\Users\aplus\.codex\visualizations\2026\09\18\01a0b20e-a96f-7ed0-8705-9849af24e6fe\daily-summary-compact-final2.png` (560 x 500).
-- Implemented narrow-screen layer state: `C:\Users\aplus\.codex\visualizations\2026\09\18\01a0b20e-a96f-7ed0-8705-9849af24e6fe\daily-summary-settings-layer-final2.png` (560 x 501).
-- Dark-theme state: `C:\Users\aplus\.codex\visualizations\2026\09\18\01a0b20e-a96f-7ed0-8705-9849af24e6fe\daily-summary-settings-dark-final.png` (960 x 501).
-- Full-view comparison: `C:\Users\aplus\.codex\visualizations\2026\09\18\01a0b20e-a96f-7ed0-8705-9849af24e6fe\daily-summary-comparison-final.png`.
-- Focused settings comparison: `C:\Users\aplus\.codex\visualizations\2026\09\18\01a0b20e-a96f-7ed0-8705-9849af24e6fe\daily-summary-settings-focus-comparison.png`.
+- Implemented compact state: `(로컬 캡처, 저장소 미보관)` (560 x 500).
+- Implemented narrow-screen layer state: `(로컬 캡처, 저장소 미보관)` (560 x 501).
+- Dark-theme state: `(로컬 캡처, 저장소 미보관)` (960 x 501).
+- Full-view comparison: `(로컬 캡처, 저장소 미보관)`.
+- Focused settings comparison: `(로컬 캡처, 저장소 미보관)`.
 - State: light theme, one all-day schedule, zero due tasks, settings open, both visibility modes set to content-aware, startup and daily display enabled, reminder time 09:00.
 - Density normalization: the source was resized to 960 x 712 while preserving aspect ratio; the implementation remained at native 960 x 501. The height difference is intentional because the selected direction also incorporates the user's compact first reference and must remain a quick desktop briefing rather than a tall settings page.
 

@@ -88,11 +88,11 @@
 - [x] Store 서명 4.9.2.0 설치 확인 및 공개 EXE·SQLite DLL 해시 대조
 - [ ] 실제 설치 앱 UI·재시작 및 사용자 데이터 인수
 
-[최종 배포 확인표](docs/release-4.9.2-checklist.md), [실패·성공 모두 보존한 종료 오류 진단](docs/maintenance/native-shutdown-20261102.md). 기존 4.9.1 후보는 공개하지 않았다. 이하 날짜별 기록은 당시 상태다.
+[최종 배포 확인표](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.9.2), [실패·성공 모두 보존한 종료 오류 진단](docs/maintenance/native-shutdown-20261102.md). 기존 4.9.1 후보는 공개하지 않았다. 이하 날짜별 기록은 당시 상태다.
 
 ## 4.9.1 누적 개선 통합 배포 (2026-11-02, 사용자 요청)
 
-> 4.9.1은 실제 정상 종료 검증에서 실패해 공개하지 않음. [4.9.2 확인표](docs/release-4.9.2-checklist.md)에서 SIP 13.12.0·Qt 문구 수정을 포함한 통합 배포를 계속한다. [종료 오류 진단](docs/maintenance/native-shutdown-20261102.md).
+> 4.9.1은 실제 정상 종료 검증에서 실패해 공개하지 않음. [4.9.2 확인표](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.9.2)에서 SIP 13.12.0·Qt 문구 수정을 포함한 통합 배포를 계속한다. [종료 오류 진단](docs/maintenance/native-shutdown-20261102.md).
 
 - [x] 4.8.0 이후 위젯 그래픽·디자인·통합 관리·작업 공간, 다국어, 동기화·구독 개선의 전체 실행 입력 704개 확정
 - [x] 전용 SQLite 3.54.1과 공식 빌드 사전 검사 확인, 72개 변경 Python 파일 서식 정리 전후 AST 동일
@@ -102,7 +102,7 @@
 - [ ] GitHub 공개·재다운로드·홈페이지 반영, Store 언어별 변경 안내와 패키지 심사 제출
 - [ ] Store 게시·공식 설치 업데이트·실제 설치 앱 인수
 
-[배포 확인표](docs/release-4.9.1-checklist.md), 증거 `artifacts/deployment/4.9.1/20261102-0908/`. Store 브라우저 연결은 사용자 활성화 대기이며 빌드·검증은 계속 진행한다.
+[배포 확인표](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.9.1), 증거 `artifacts/deployment/4.9.1/20261102-0908/`. Store 브라우저 연결은 사용자 활성화 대기이며 빌드·검증은 계속 진행한다.
 
 ## 외국어 지원 점검·보완 (2026-11-01, 소스 개선)
 
@@ -176,7 +176,7 @@
 - [ ] Partner Center 로그인·인증 완료 후 동일 MSIXUPLOAD로 Store 제출, 별도 Submission 31 보존
 - [ ] 실제 Store 심사/게시 확인 후 공식 설치 업데이트·설치 인수. 현재 설치는 4.7.1.0이며 사이드로드로 대체하지 않음
 
-같은 후보를 다시 빌드하거나 버전을 올리지 않는다. [배포 확인표](docs/release-4.8.0-checklist.md), 로컬 증거 `artifacts/deployment/4.8.0/20261101-0920/`, 공용 `deployment-active.json`에서 이어간다.
+같은 후보를 다시 빌드하거나 버전을 올리지 않는다. [배포 확인표](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.8.0), 로컬 증거 `artifacts/deployment/4.8.0/20261101-0920/`, 공용 `deployment-active.json`에서 이어간다.
 
 ## 정기 점검 — 홈페이지·게시판·이미지·릴리스 경로 (2026-11-01)
 
@@ -277,7 +277,7 @@
 - [x] 최종 4.3.0 로컬 페이로드 286개 모듈·203개 리소스 일치, frozen 핵심 회귀 179개·클린 DB·라이선스·인코딩 통과 ([근거](docs/maintenance/review-20261019.md))
 - [x] Chrome Partner Center 로그인, 기존 Submission 26 게시·제품 identity 확인
 - [x] 전체 실행 입력 `73c9c3c` 커밋·태그 v4.3.0·GitHub Windows 공개 완료, 공개본 286모듈·203리소스·해시 및 frozen 37개 추가 확인
-- [x] 정상 사용자 선택으로 Store 4.3.0.0 x64 업로드·Validated·저장, 18개 언어 변경 안내 갱신·Submission 27 심사 제출 완료 ([체크리스트](docs/release-4.3.0-checklist.md))
+- [x] 정상 사용자 선택으로 Store 4.3.0.0 x64 업로드·Validated·저장, 18개 언어 변경 안내 갱신·Submission 27 심사 제출 완료 ([체크리스트](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.3.0))
 - [ ] Store 심사·게시와 이 PC 설치 업데이트 별도 확인 (현재 설치 3.8.1.0)
 - [x] 첫 주기 증거 보존 및 10/19~11/01 새 주기 시작. 1일차 시작·종료·트레이·창 복원 검토, 같은 날 통과한 65개 사례 재사용·추가 수정 없음
 - [ ] 10/20 2일차 월간·날짜 이동·필터 점검, 다음 통합 배포 목표 11/02 03:00 KST

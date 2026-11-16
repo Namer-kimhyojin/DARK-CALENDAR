@@ -66,7 +66,8 @@ CalDAV 변경분 다운로드·UID 주소 복구, 번역 누락 및 테스트 �
 |---|---|
 | [AGENTS.md](../AGENTS.md) | 작업 진입점 |
 | [CLAUDE.md](../CLAUDE.md) | Claude 진입 안내 |
-| [design-qa.md](../design-qa.md) | 설계·감사 기록 |
+| [design-qa.md](ux-audit/design-qa.md) | 설계·감사 기록 |
+| [GitHub Releases](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases) | 5.2.0 이하 버전별 배포 노트(옛 release-*-notes/checklist 문서 대체) |
 | [공통 UI 후속 개선·검증](ux-audit/unified-ui-followup-20261106.md) | 2026-11-06 native·회귀 확인과 예정·제외 근거 |
 | [모양 설정·세부 모양 조정 점검](ux-audit/appearance-settings-20261109.md) | 2026-11-09 전환 지연 측정, 둥근 창·그림자, 헤더 테마 불일치 수정 |
 | [글자·컨트롤·모달 크기 가이드](design/typography-and-sizing.md) | 공통 글자 역할·크기·배율 기준 |
@@ -80,32 +81,6 @@ CalDAV 변경분 다운로드·UID 주소 복구, 번역 누락 및 테스트 �
 | [docs\panel_widget_mode_split_plan.md](../docs/panel_widget_mode_split_plan.md) | 설계·감사 기록 |
 | [docs\privacy-policy.en.md](../docs/privacy-policy.en.md) | 개인정보·라이선스·배포 고지 |
 | [docs\privacy-policy.ko.md](../docs/privacy-policy.ko.md) | 개인정보·라이선스·배포 고지 |
-| [docs\release-3.6.1-checklist.md](../docs/release-3.6.1-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.6.5-checklist.md](../docs/release-3.6.5-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.6.5-notes.md](../docs/release-3.6.5-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.6.6-checklist.md](../docs/release-3.6.6-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.6.6-notes.md](../docs/release-3.6.6-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.6.7-checklist.md](../docs/release-3.6.7-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.6.7-notes.md](../docs/release-3.6.7-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.6.8-checklist.md](../docs/release-3.6.8-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.6.8-notes.md](../docs/release-3.6.8-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.6.9-checklist.md](../docs/release-3.6.9-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.6.9-notes.md](../docs/release-3.6.9-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.7.0-checklist.md](../docs/release-3.7.0-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.7.0-notes.md](../docs/release-3.7.0-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.7.1-checklist.md](../docs/release-3.7.1-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.7.1-notes.md](../docs/release-3.7.1-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.7.2-checklist.md](../docs/release-3.7.2-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.7.2-notes.md](../docs/release-3.7.2-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.7.3-checklist.md](../docs/release-3.7.3-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.7.3-notes.md](../docs/release-3.7.3-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.7.4-checklist.md](../docs/release-3.7.4-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.7.4-notes.md](../docs/release-3.7.4-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.7.5-checklist.md](../docs/release-3.7.5-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.7.5-notes.md](../docs/release-3.7.5-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.7.6-notes.md](../docs/release-3.7.6-notes.md) | 버전별 배포 기록 |
-| [docs\release-3.7.7-checklist.md](../docs/release-3.7.7-checklist.md) | 버전별 배포 기록 |
-| [docs\release-3.7.7-notes.md](../docs/release-3.7.7-notes.md) | 버전별 배포 기록 |
 | [docs\ux-audit\figma-handoff\night-signal-philosophy.md](../docs/ux-audit/figma-handoff/night-signal-philosophy.md) | 설계·감사 기록 |
 | [docs\ux-audit\homepage-ui-ux-improvement-plan.md](../docs/ux-audit/homepage-ui-ux-improvement-plan.md) | 설계·감사 기록 |
 | [marketing\DARK_CALENDAR_PROMOTION_KIT.md](../marketing/DARK_CALENDAR_PROMOTION_KIT.md) | 홍보 자료·기록 |
