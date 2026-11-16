@@ -184,3 +184,30 @@ def test_main_window_keeps_its_panel_separator_rules_after_a_font_change(setting
         host, "Malgun Gothic", 11, refresh=False
     )
     assert "QMainWindow::separator" in applied["css"]
+
+
+def test_buttons_and_fields_rest_on_a_lighter_outline_than_panels():
+    # A full-strength border on every button framed them hard over a bright
+    # wallpaper; controls rest on border_control and regain the border on hover.
+    from calendar_app.presentation.theme.style_builder import build_global_stylesheet
+    from calendar_app.shared.color_utils import border_tokens_for
+
+    tokens = border_tokens_for("#3a4a5c", 1.0)
+    alpha = lambda value: int(value.rsplit(",", 1)[1].strip(" )"))  # noqa: E731
+    assert alpha(tokens["border_control"]) < alpha(tokens["border_soft"]) < alpha(tokens["border"])
+
+    palette = {
+        "border": "rgba(1, 2, 3, 255)",
+        "border_soft": "rgba(1, 2, 3, 150)",
+        "border_strong": "rgba(1, 2, 3, 255)",
+        "border_control": "rgba(1, 2, 3, 100)",
+    }
+    from calendar_app.shared.color_utils import derive_ui_palette
+
+    full = derive_ui_palette("dark", "#1c1c1c")
+    full.update(palette)
+    css = build_global_stylesheet(palette=full)
+    button = css.split("QPushButton {", 1)[1].split("}", 1)[0]
+    field = css.split("QLineEdit, QComboBox, QSpinBox, QDateTimeEdit {", 1)[1].split("}", 1)[0]
+    assert "rgba(1, 2, 3, 100)" in button
+    assert "rgba(1, 2, 3, 100)" in field

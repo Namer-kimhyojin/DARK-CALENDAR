@@ -23,7 +23,6 @@
     "exit_message": "Air Calendar를 종료합니다.\n트레이로 전환되지 않고 프로그램이 완전히 종료됩니다.\n계속하시겠습니까?",
     "exit_title": "종료 안내"
   },
-  "app_name": "Air Calendar",
   "autostart": {
     "disabled": "비활성",
     "enabled": "활성",
@@ -38,7 +37,6 @@
     "settings_open_failed": "Windows 시작 앱 설정을 열지 못했습니다. 설정 > 앱 > 시작 프로그램을 열어 주세요."
   },
   "away_lock": {
-    "date_format": "yyyy.MM.dd (ddd)",
     "default_msg": "🔒 자리를 비운 상태입니다.\n(마우스를 움직이면 해제됩니다.)",
     "placeholder_pw": "비밀번호를 입력하세요",
     "secondary_screen_hint": "보조 잠금 화면",
@@ -205,7 +203,9 @@
   "calendar": {
     "add_hint": "일정 추가",
     "date_cell_accessible": "{date} 날짜 셀",
+    "keyboard_hint": "방향키: 날짜 이동 · Enter: 날짜 선택 · Ctrl+Enter: 일정 추가",
     "month_title": "{year}년 {month_name}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count}개 더 보기",
     "next_period": "다음 기간",
     "opt_month": "월 표기 포함",
@@ -217,10 +217,18 @@
     "options": "⚙️ 옵션",
     "options_with_hidden": "{label} ({count})",
     "previous_period": "이전 기간",
+    "range_badge": "{start} → {end} · {count}일",
+    "range_badge_date": "M월 d일 (ddd)",
+    "range_badge_single": "{date} · 하루 종일",
     "range_create_help_title": "여러 날 일정 빠르게 만들기",
     "range_create_hint": "빈 영역을 드래그하면 여러 날의 종일 일정을 만들 수 있습니다.",
     "range_create_shift_hint": "시작 날짜를 클릭한 뒤 Shift+종료 날짜를 클릭해도 같은 범위를 등록할 수 있습니다.",
     "range_create_status": "{start} → {end} · 총 {count}일 · 종일",
+    "selected_state": "선택됨",
+    "selection_actions_hint": "선택한 항목에 적용할 작업을 고릅니다. Esc를 누르면 선택이 해제됩니다.",
+    "selection_clear": "선택 해제 (Esc)",
+    "selection_clear_short": "선택 해제",
+    "selection_delete": "선택 항목 삭제",
     "selection_hint": "Ctrl+클릭 다중 선택",
     "today": "오늘",
     "today_hint": "오늘 날짜로 이동",
@@ -232,8 +240,7 @@
       "date": "날짜 옆만",
       "header": "상단만",
       "hidden": "숨김"
-    },
-    "weekdays": ["월", "화", "수", "목", "금", "토", "일"]
+    }
   },
   "calendar_controls": {
     "default_accessible": "새 일정의 기본 캘린더",
@@ -305,6 +312,7 @@
     "header_item_edit": "항목 수정",
     "header_order": "순서",
     "header_required": "필수",
+    "import_default_name": "가져온 체크리스트",
     "import_done_msg": "'{name}'을(를) 가져왔습니다.",
     "import_done_title": "가져오기 완료",
     "import_err_fail": "가져오기에 실패했습니다.",
@@ -330,6 +338,68 @@
     "prompt_empty": "체크리스트를 선택하거나 좌측의 새 버튼으로 시작하세요.",
     "save_failed": "체크리스트 정보를 저장하지 못했습니다.",
     "search_templates": "이름·설명 검색",
+    "seed": {
+      "meeting_prep": {
+        "desc": "성공적인 회의를 위한 사전 준비 체크리스트",
+        "item1": "회의 목적 및 안건 확정",
+        "item1_desc": "Agenda 명확화 및 참석자 공유",
+        "item2": "참석자 일정 확인 및 초대 전송",
+        "item2_desc": "캘린더 초대장 발송 확인",
+        "item3": "회의실 예약 및 환경 점검",
+        "item3_desc": "빔프로젝터, 마이크, 다과 등 준비",
+        "item4": "회의 자료 인쇄 및 사전 배포",
+        "item4_desc": "참석자 숙지용 자료 전달",
+        "name": "회의 준비 및 세팅"
+      },
+      "monthly_closing": {
+        "desc": "매월 말 진행되는 마감 및 분석 작업",
+        "item1": "법인카드 사용 내역 검토",
+        "item1_desc": "불일치 내역 확인 및 사유 작성",
+        "item2": "지출 결의서 최종 상신",
+        "item2_desc": "전자결재 승인 완료",
+        "item3": "예산 대비 집행 현황 분석",
+        "item3_desc": "과지출 또는 미집행 항목 파악",
+        "item4": "차월 예산 계획 수립",
+        "item4_desc": "다음 달 주요 활동 예산 배분",
+        "name": "월간 결산 업무"
+      },
+      "onboarding": {
+        "desc": "팀에 합류한 신규 멤버를 위한 초기 셋팅",
+        "item1": "IT 장비 지급 및 계정 생성",
+        "item1_desc": "PC, 이메일, 사내망 권한 확인",
+        "item2": "부서원 인사 및 자리 안내",
+        "item2_desc": "팀 내 문화 및 주변 환경 소개",
+        "item3": "협업 툴(메신저, 위키) 초대",
+        "item3_desc": "Slack, Notion, Jira 등 접근 권한 부여",
+        "item4": "필수 보안/윤리 교육 이수 안내",
+        "item4_desc": "사내 규정 및 법정 필수 교육 가이드",
+        "name": "신규 입사자 온보딩 가이드"
+      },
+      "travel_expense": {
+        "desc": "출장 복귀 후 진행하는 행정 처리 절차",
+        "item1": "영수증 수집 및 정리",
+        "item1_desc": "교통비, 숙박비, 식비 등 증빙 확보",
+        "item2": "출장 결과 보고서 작성",
+        "item2_desc": "방문 목적 달성 여부 및 핵심 정보 요약",
+        "item3": "ERP/경비 시스템 입력",
+        "item3_desc": "비용 지급 신청 완료",
+        "item4": "증빙 서류 제출",
+        "item4_desc": "회계팀 실물 영수증 전달(해당 시)",
+        "name": "출장 정산 및 보고"
+      },
+      "weekly_report": {
+        "desc": "매주 금요일 정기적으로 실행하는 주간 보고 절차",
+        "item1": "전주 업무 실적 요약",
+        "item1_desc": "완료된 과업 및 성과 정리",
+        "item2": "금주 업무 계획 작성",
+        "item2_desc": "차주 주요 마일스톤 및 일정 수립",
+        "item3": "주요 이슈 및 건의사항 정리",
+        "item3_desc": "병목 현상이나 지원 필요 사항 기술",
+        "item4": "팀원 공유 및 피드백 반영",
+        "item4_desc": "최종 제출 전 팀 내 리뷰",
+        "name": "주간 업무 보고"
+      }
+    },
     "template_actions": "관리 옵션",
     "template_library": "체크리스트",
     "title": "체크리스트 관리",
@@ -348,6 +418,7 @@
     "graphite": "그라파이트",
     "green": "초록",
     "lavender": "라벤더",
+    "none": "색상 없음",
     "peacock": "공작새",
     "red": "빨강",
     "sage": "세이지",
@@ -366,6 +437,9 @@
     "delete": "삭제",
     "edit": "수정",
     "error": "오류",
+    "file_filter_all": "모든 파일 (*)",
+    "file_filter_json": "JSON 파일 (*.json)",
+    "file_filter_text": "텍스트 파일 (*.txt)",
     "location": "[장소]",
     "memo": "📝",
     "month": "월",
@@ -378,7 +452,10 @@
     "selection_required": "선택 필요",
     "success": "완료",
     "today": "오늘",
+    "toggle_off": "OFF",
+    "toggle_on": "ON",
     "tomorrow": "내일",
+    "unknown": "(알 수 없음)",
     "warning": "경고",
     "yesterday": "어제"
   },
@@ -405,7 +482,7 @@
     "goto_today": "📍 오늘로 이동",
     "group_cycle": "💠 주기별 그룹화",
     "group_deadline": "💠 마감 기한별 그룹화",
-    "group_receiver": "💠 요청처별 그룹화",
+    "group_receiver": "💠 수신자별 그룹화",
     "next_monitor": "➡️ 다음 모니터로 이동",
     "opacity_ctrl": "🪟 배경 투명도 조절",
     "opacity_down": "➖ 10% 내리기",
@@ -471,8 +548,7 @@
       "done": "완료",
       "guide": "안내",
       "item_content": "항목 내용:",
-      "item_unit": "개",
-      "items_added": "개의 체크리스트 항목을 추가했습니다.",
+      "items_added_count": "{count}개의 체크리스트 항목을 추가했습니다.",
       "items_label": "체크리스트 항목:",
       "manage": "⚙️ 관리",
       "progress": "📊 진행률",
@@ -560,6 +636,7 @@
       "label_status": "현재 상태",
       "msg_content_required": "지시 내용을 입력해주세요.",
       "msg_db_error": "저장 중 오류: {e}",
+      "msg_init_error": "지시사항 다이얼로그 초기화 중 오류가 발생했습니다.",
       "placeholder_content": "예: 법무팀 김팀장 - 계약서 수정 요청",
       "placeholder_memo": "기타 상세한 요청 사항이나 진행 메모를 입력하세요.",
       "placeholder_receiver": "수신자 또는 부서명",
@@ -570,6 +647,12 @@
       "tag_hint": "💡 내용이나 메모에 <b>#태그</b>를 입력하면 검색·필터에 활용할 수 있습니다.<br><span style='color:#666;'>예) #계약서 #법무팀 #긴급 #검토요청</span>",
       "title_add": "📋 지시사항 등록",
       "title_edit": "지시/협조사항 상세 정보"
+    },
+    "draft": {
+      "discard": "변경사항 버리기",
+      "discard_message": "저장하지 않은 변경사항이 있습니다.",
+      "discard_title": "작성을 취소할까요?",
+      "keep_editing": "계속 작성"
     },
     "focus_log": {
       "close": "닫기",
@@ -640,6 +723,8 @@
       "btn_restore_from_trash": "복구",
       "btn_toggle_trash": "휴지통 보기",
       "btn_toggle_trash_back": "일정 보기",
+      "btn_toggle_trash_back_directive": "지시/협조사항 보기",
+      "btn_toggle_trash_back_routine": "일반업무 보기",
       "calendar_all": "전체 캘린더",
       "calendar_local": "로컬",
       "directive_header": "지시/협조사항 목록",
@@ -670,7 +755,9 @@
     },
     "pomodoro_settings": {
       "auto_start_break": "집중 완료 후 자동으로 휴식 시작",
+      "auto_start_break_help": "집중 시간이 끝나면 휴식 타이머가 즉시 시작됩니다.",
       "auto_start_focus": "휴식 완료 후 자동으로 다음 집중 시작",
+      "auto_start_focus_help": "휴식 시간이 끝나면 다음 집중 사이클이 즉시 시작됩니다.",
       "cycle_suffix": " 세션마다",
       "focus_minutes": "집중 시간",
       "goal_suffix": " 세션",
@@ -682,13 +769,15 @@
       "mode_label": "타이머 모드",
       "mode_pomodoro": "뽀모도로",
       "mode_stopwatch": "스톱워치",
+      "run_mode": "실행 모드",
+      "run_mode_help": "선택한 모드에 따라 타이머 동작 방식이 결정됩니다.",
       "set_goal": "목표 세션 수",
       "short_break_minutes": "짧은 휴식",
       "title": "Pomodoro 설정"
     },
     "recurrence": {
       "day_label": "지정 일자",
-      "day_unit": "일",
+      "day_of_month": "{day}일",
       "header": "수행 방식 설정",
       "last_day": "말일",
       "next_occurrence_hint": "다음 차수 일정 예시가 여기 표시됩니다.",
@@ -702,7 +791,9 @@
       "nth_third": "셋째",
       "nth_weekday": "n번째 요일",
       "preview": "생성 예정 미리보기",
+      "preview_dates": "📋 생성될 일정 {count}개: {dates}",
       "preview_none": "⚠ 생성될 일정이 없습니다. 날짜 범위 또는 주기를 확인하세요.",
+      "preview_range": "📋 생성될 일정 {count}개: {first} → {last}",
       "repeat": "반복 업무",
       "rule_specific_day": "지정 일자",
       "rule_weekday": "요일",
@@ -939,6 +1030,8 @@
         "text": "가독성"
       },
       "text": {
+        "adaptive_wallpaper": "밝은 바탕화면에서 글자 잘 보이게",
+        "adaptive_wallpaper_tip": "창 뒤 바탕화면이 밝아 글자가 흐려질 때만 패널을 자동으로 더 불투명하게 합니다. 저장된 투명도는 바뀌지 않습니다.",
         "apply_recommended": "권장 글자색 적용",
         "apply_recommended_disabled": "프리셋 선택 시 권장 글자색을 사용할 수 있습니다.",
         "apply_recommended_for_preset": "이 프리셋에 맞는 권장 글자색 적용",
@@ -999,6 +1092,45 @@
       "invalid_msg": "잘못된 색상 형식이 있습니다. 16진 색상 또는 rgba(r,g,b,a) 또는 transparent를 사용하세요.",
       "invalid_short": "하나 이상의 색상값이 올바르지 않습니다.",
       "invalid_title": "입력 오류",
+      "metric": {
+        "base_font_pt": "기본 글자 크기",
+        "button_height": "버튼 높이",
+        "button_min_width": "버튼 최소 너비",
+        "button_padding_x": "버튼 가로 패딩",
+        "button_padding_y": "버튼 세로 패딩",
+        "button_radius": "버튼 라운드",
+        "checkbox_indicator_size": "체크 인디케이터 크기",
+        "checkbox_spacing": "체크박스 텍스트 간격",
+        "field_height": "입력 높이",
+        "field_padding_x": "입력 가로 패딩",
+        "field_padding_y": "입력 세로 패딩",
+        "field_radius": "입력 라운드",
+        "group_margin_top": "그룹박스 상단 간격",
+        "group_radius": "그룹박스 라운드",
+        "list_item_margin_bottom": "리스트 아이템 간격",
+        "list_item_padding_x": "리스트 아이템 가로 패딩",
+        "list_item_padding_y": "리스트 아이템 세로 패딩",
+        "list_item_radius": "리스트 아이템 라운드",
+        "list_padding": "리스트 내부 여백",
+        "list_radius": "리스트 라운드",
+        "radio_indicator_size": "라디오 인디케이터 크기",
+        "radio_spacing": "라디오 텍스트 간격",
+        "subtitle_font_pt": "서브타이틀 글자 크기",
+        "tab_gap": "탭 간격",
+        "tab_min_width": "탭 최소 너비",
+        "tab_padding_x": "탭 가로 패딩",
+        "tab_padding_y": "탭 세로 패딩",
+        "tab_radius": "탭 라운드",
+        "textedit_padding_x": "텍스트영역 가로 패딩",
+        "textedit_padding_y": "텍스트영역 세로 패딩",
+        "textedit_radius": "텍스트영역 라운드",
+        "title_font_pt": "타이틀 글자 크기",
+        "toolbutton_height": "툴버튼 높이",
+        "toolbutton_min_width": "툴버튼 최소 너비",
+        "toolbutton_padding_x": "툴버튼 가로 패딩",
+        "toolbutton_padding_y": "툴버튼 세로 패딩",
+        "toolbutton_radius": "툴버튼 라운드"
+      },
       "metric_preset_applied": "크기 프리셋 적용됨: {name}",
       "mode_all": "모두",
       "mode_dark": "다크",
@@ -1043,7 +1175,7 @@
         "btn_default": "기본",
         "btn_disabled": "비활성",
         "btn_ghost": "고스트",
-        "btn_primary": "기본",
+        "btn_primary": "주요",
         "btn_secondary": "보조",
         "btn_success": "성공",
         "header_desc": "설명",
@@ -1087,11 +1219,101 @@
       "search_placeholder": "이름 또는 내부 키로 검색",
       "tab_color": "색상",
       "tab_metric": "크기·간격",
-      "title": "세부 모양 조정"
+      "title": "세부 모양 조정",
+      "token": {
+        "accent": "강조 색상",
+        "border": "기본 테두리",
+        "border_soft": "약한 테두리",
+        "button_base_bg": "버튼 기본 배경",
+        "button_base_border": "버튼 기본 테두리",
+        "button_base_hover_bg": "버튼 호버 배경",
+        "button_base_hover_border": "버튼 호버 테두리",
+        "button_base_hover_text": "버튼 호버 텍스트",
+        "button_base_text": "버튼 기본 텍스트",
+        "button_danger_bg": "Danger 버튼 배경",
+        "button_danger_border": "Danger 버튼 테두리",
+        "button_danger_hover_bg": "Danger 호버 배경",
+        "button_danger_hover_border": "Danger 호버 테두리",
+        "button_danger_hover_text": "Danger 호버 텍스트",
+        "button_danger_text": "Danger 버튼 텍스트",
+        "button_disabled_bg": "버튼 비활성 배경",
+        "button_disabled_border": "버튼 비활성 테두리",
+        "button_disabled_text": "버튼 비활성 텍스트",
+        "button_ghost_bg": "Ghost 버튼 배경",
+        "button_ghost_border": "Ghost 버튼 테두리",
+        "button_ghost_hover_bg": "Ghost 호버 배경",
+        "button_ghost_hover_border": "Ghost 호버 테두리",
+        "button_ghost_hover_text": "Ghost 호버 텍스트",
+        "button_ghost_text": "Ghost 버튼 텍스트",
+        "button_pressed_bg": "버튼 눌림 배경",
+        "button_pressed_border": "버튼 눌림 테두리",
+        "button_pressed_text": "버튼 눌림 텍스트",
+        "button_primary_bg": "Primary 버튼 배경",
+        "button_primary_border": "Primary 버튼 테두리",
+        "button_primary_hover_bg": "Primary 호버 배경",
+        "button_primary_hover_border": "Primary 호버 테두리",
+        "button_primary_hover_text": "Primary 호버 텍스트",
+        "button_primary_text": "Primary 버튼 텍스트",
+        "button_secondary_bg": "Secondary 버튼 배경",
+        "button_secondary_border": "Secondary 버튼 테두리",
+        "button_secondary_hover_bg": "Secondary 호버 배경",
+        "button_secondary_hover_border": "Secondary 호버 테두리",
+        "button_secondary_hover_text": "Secondary 호버 텍스트",
+        "button_secondary_text": "Secondary 버튼 텍스트",
+        "button_success_bg": "Success 버튼 배경",
+        "button_success_border": "Success 버튼 테두리",
+        "button_success_hover_bg": "Success 호버 배경",
+        "button_success_hover_border": "Success 호버 테두리",
+        "button_success_hover_text": "Success 호버 텍스트",
+        "button_success_text": "Success 버튼 텍스트",
+        "check_checked_bg": "체크됨 배경",
+        "check_checked_border": "체크됨 테두리",
+        "check_indicator_bg": "체크/라디오 배경",
+        "check_indicator_border": "체크/라디오 테두리",
+        "list_hover_bg": "리스트 호버 배경",
+        "list_selected_bg": "선택 배경",
+        "list_selected_border": "선택 테두리",
+        "list_selected_text": "선택 텍스트",
+        "placeholder_text": "플레이스홀더 텍스트",
+        "surface_alt": "보조 배경",
+        "surface_bg": "다이얼로그 배경",
+        "surface_hover": "호버 배경",
+        "surface_item": "입력/아이템 배경",
+        "surface_top": "상단 영역 배경",
+        "tab_active_bg": "활성 탭 배경",
+        "tab_idle_bg": "비활성 탭 배경",
+        "tab_strip_bg": "탭 스트립 배경",
+        "tab_text": "탭 텍스트(기본)",
+        "tab_text_active": "탭 텍스트(활성)",
+        "tab_text_hover": "탭 텍스트(호버)",
+        "table_header_bg": "테이블 헤더 배경",
+        "table_header_text": "테이블 헤더 텍스트",
+        "text_faint": "희미한 텍스트",
+        "text_muted": "약한 텍스트",
+        "text_primary": "기본 텍스트",
+        "text_secondary": "보조 텍스트",
+        "title_bg": "타이틀 영역 배경",
+        "title_subtext": "서브타이틀 텍스트",
+        "title_text": "타이틀 텍스트",
+        "toolbutton_bg": "툴버튼 기본 배경",
+        "toolbutton_border": "툴버튼 기본 테두리",
+        "toolbutton_disabled_bg": "툴버튼 비활성 배경",
+        "toolbutton_disabled_border": "툴버튼 비활성 테두리",
+        "toolbutton_disabled_text": "툴버튼 비활성 텍스트",
+        "toolbutton_hover_bg": "툴버튼 호버 배경",
+        "toolbutton_hover_border": "툴버튼 호버 테두리",
+        "toolbutton_hover_text": "툴버튼 호버 텍스트",
+        "toolbutton_pressed_bg": "툴버튼 눌림 배경",
+        "toolbutton_pressed_border": "툴버튼 눌림 테두리",
+        "toolbutton_pressed_text": "툴버튼 눌림 텍스트",
+        "toolbutton_text": "툴버튼 기본 텍스트"
+      }
     }
   },
   "drag": {
-    "hint_copy": "Ctrl: 복사  /  기본: 이동"
+    "count_title": "{count}개 일정",
+    "hint_copy": "Ctrl: 복사  /  기본: 이동",
+    "single_untitled": "1개 일정"
   },
   "eod": {
     "directives": "지시/협조사항 현황",
@@ -1101,6 +1323,7 @@
     "title": "오늘 업무 요약 리포트(EOD)"
   },
   "focus": {
+    "checklist_empty": "체크리스트 항목이 없습니다.",
     "congrats_msg": "훌륭한 집중입니다. 생산성이 높아지고 있어요.",
     "congrats_title": "작업 완료!",
     "current_task": "현재 집중 중인 작업:\n\n{task_name}",
@@ -1128,7 +1351,7 @@
     "phase_short_break_msg": "잠시 쉬세요.",
     "phase_short_break_title": "짧은 휴식",
     "phase_with_cycle": "{phase} {current}/{total}",
-    "pomodoro_summary": "완료: {sessions}세션 | 집중: {minutes}분",
+    "pomodoro_summary": "완료: {sessions}세션 | 집중: {minutes}분 {seconds}초",
     "resume": "재개",
     "return_to_main": "캘린더로 돌아가기",
     "session_saved_msg": "현재 작업에 {minutes}분 {seconds}초 저장되었습니다.",
@@ -1194,25 +1417,27 @@
       "remote_title": "구글 버전"
     },
     "errors": {
-      "auth_required": "구글 계정 인증이 필요합니다.",
-      "delete_failed": "구글 서버에서 일정을 삭제하지 못했습니다.",
+      "auth_required": "인증 필요",
+      "delete_failed": "삭제 실패",
       "forbidden": "해당 캘린더에 대한 수정 권한이 없습니다.",
-      "not_found": "구글 캘린더에서 해당 일정을 찾을 수 없습니다. (삭제되었거나 ID 불일치)",
-      "push_failed": "로컬 변경사항을 구글 서버로 보내지 못했습니다.",
-      "rate_limit": "구글 API 요청 횟수가 초과되었습니다. 잠시 후 시도하세요.",
-      "remote_newer_than_local": "구글 서버의 데이터가 로컬보다 최신입니다. (충돌 방지를 위해 서버 데이터 유지)",
+      "forbidden_label": "권한 없음",
+      "not_found": "일정 찾지 못함",
+      "push_failed": "전송 실패",
+      "rate_limit": "요청 한도 초과",
+      "remote_newer_than_local": "서버 버전 우선",
       "remote_orphan": "구글에만 존재 (로컬 매칭 없음)",
+      "sync_error_label": "동기화 오류",
       "unknown": "알 수 없는 오류가 발생했습니다."
     },
     "guidance": {
-      "auth": "📍 [상황] 구글 계정 인증 정보가 만료되었거나 올바르지 않습니다.\n🔒 [시스템 처리] 보안을 위해 모든 동기화 절차가 일시 정지되었습니다.\n✅ [조치 안내] '설정 > 캘린더 및 동기화 > 인증 실행' 버튼을 눌러 다시 로그인을 진행해 주세요.",
+      "auth": "📍 [상황] 구글 계정 인증 정보가 만료되었거나 올바르지 않습니다.\n🔒 [시스템 처리] 보안을 위해 모든 동기화 절차가 일시 정지되었습니다.\n✅ [조치 안내] '{path}'의 Google Calendar 항목에서 계정을 다시 연결해 주세요.",
       "delete_retry_exhausted": "삭제 요청이 자동 재시도 한도에 도달해 일시 중지되었습니다.\n마지막 오류와 Google 캘린더 권한을 확인한 뒤 '재시도'를 누르세요.\n항목은 자동 삭제되지 않으며 진단 목록에 계속 보존됩니다.",
       "forbidden": "📍 [상황] 해당 캘린더에 일정을 쓸 권한이 없습니다 (읽기 전용 공유 캘린더 등).\n🚫 [시스템 처리] 앱에서 해당 일정을 수정할 수 없도록 동기화 시도가 자동 중단되었습니다.\n✅ [조치 안내] 구글 캘린더 웹에서 권한 설정을 확인하시거나, 이 일정의 동기화를 포기하려면 '강제 무시'를 선택하세요.",
       "generic": "📍 [상세 오류 정보]\n{error}\n\n❓ [해결 방법] 네트워크 연결을 확인하고 '재시도'를 눌러주세요.\n문제가 지속된다면 '강제 무시'를 통해 동기화 시도를 중단하고 목록에서 지울 수 있습니다.",
       "not_found": "📍 [상황] 구글 캘린더 서버에서 해당 일정을 찾을 수 없습니다 (외부 삭제 등).\n🛠 [시스템 처리] 앱이 자동으로 해당 일정을 구글 캘린더에 다시 복원하거나, 삭제된 일정을 로컬에서도 제거하여 동기화를 맞췄습니다.\n✅ [결과/해결] 연결이 복구되었으니 '오류 지우기'를 통해 목록에서 제거하거나, 확인을 위해 '재시도'를 눌러주세요.",
       "rate_limit": "📍 [상황] 짧은 시간 내에 너무 많은 요청이 구글 서버로 발송되어 제한에 걸렸습니다.\n⏳ [시스템 처리] 일정 시간 대기 후 앱이 자동으로 다시 동기화를 시도합니다.\n✅ [결과] 잠시 기다리시면 자연스럽게 해결됩니다.",
       "remote_newer": "📍 [상황] 로컬 앱에서의 수정 사항보다 구글 서버의 변경 사항이 더 최신입니다.\n🛡 [시스템 처리] 충돌을 방지하기 위해 앱이 자동으로 구글 서버의 내용을 우선적으로 로컬에 덮어썼습니다.\n✅ [결과/해결] 현재 로컬 데이터는 서버와 완벽히 동기화된 상태입니다. 수정을 원하시면 해당 일정을 다시 편집해 주세요.",
-      "remote_orphan": "이 이벤트는 구글 캘린더에는 있지만 로컬 DB에는 매칭되는 일정이 없습니다.<br><br><b>원인</b>: 로컬에서 삭제되었거나 구글에서 직접 생성된 경우입니다."
+      "remote_orphan": "이 이벤트는 구글 캘린더에는 있지만 로컬 DB에는 매칭되는 일정이 없습니다.<br><br><b>원인</b>: 로컬에서 삭제되었거나 구글에서 직접 생성된 경우입니다.<br><br><b>조치</b>: 앱에서 삭제했거나 중복된 일정이라면 <b>{button}</b> 버튼으로 구글 캘린더에서 제거할 수 있습니다. 다른 기기나 웹에서 직접 만든 일정이라면 그대로 두세요."
     },
     "issues_action_taken": "처리 방식",
     "issues_auto_healed": "시스템 자동 복구",
@@ -1275,12 +1500,12 @@
       "scope_dialog_title_delete": "반복 일정 삭제",
       "scope_info": "이 일정은 반복 일정입니다. 수정/삭제 범위를 선택하세요."
     },
-    "setup_disabled_guide": "Google Calendar 동기화가 아직 켜져 있지 않습니다.\n시스템 > 캘린더 통합 설정에서 활성화하세요.",
+    "setup_disabled_guide": "Google Calendar 동기화가 아직 켜져 있지 않습니다.\n{path}에서 활성화하세요.",
     "setup_done": "설정 완료",
     "setup_guide_msg": "구글 동기화 기능이 활성화되었습니다.\n인증을 거쳐 동기화를 시작해 주세요.",
     "setup_guide_title": "설정 안내",
-    "setup_needed_auth_hint": "캘린더 통합 설정에서 Google 인증을 완료해 주세요.",
-    "setup_needed_msg": "Google Calendar 동기화가 아직 설정되지 않았습니다.\n시스템 > 캘린더 통합 설정에서 구성하세요.",
+    "setup_needed_auth_hint": "Google Calendar 항목에서 Google 인증을 완료해 주세요.",
+    "setup_needed_msg": "Google Calendar 동기화가 아직 설정되지 않았습니다.\n{path}에서 구성하세요.",
     "setup_success": "구글 동기화가 성공적으로 활성화되었습니다.",
     "status": {
       "active": "동기화 활성",
@@ -1305,12 +1530,12 @@
       "warning": "해결되지 않은 동기화 충돌 또는 실패가 남아 있습니다."
     },
     "treatments": {
-      "auto_healing": "자동 복구 완료 (일정 재생성 또는 위치 재조정)",
-      "manual": "사용자가 수동으로 재시도를 요청했거나 조치가 필요합니다.",
+      "auto_healing": "자동 복구",
+      "manual": "수동 확인",
       "manual_retry": "오류 확인 후 수동 재시도",
-      "mirrored": "서버 데이터를 기준으로 로컬 데이터를 강제 업데이트했습니다.",
-      "pending_retry": "일시적인 오류로 인한 자동 재시도 대기 중",
-      "stopped": "반복적인 실패로 인해 동기화 시도가 중단되었습니다. 수동 조치가 필요합니다."
+      "mirrored": "서버 데이터로 갱신",
+      "pending_retry": "재시도 대기",
+      "stopped": "재시도 중단"
     },
     "worker": {
       "auth_error": "인증 중 오류 발생: {error}",
@@ -1319,7 +1544,7 @@
       "sync_complete": "동기화 완료",
       "sync_error": "동기화 중 오류 발생: {error}\n{details}",
       "sync_failed": "동기화 실패",
-      "sync_partial": "동기화 완료 (일부 실패: push={push}, delete={delete})",
+      "sync_partial": "동기화 완료 (일부 실패: push={push}, delete={delete}, pull={pull})",
       "sync_skipped": "동기화 건너뜀",
       "sync_skipped_or_failed": "동기화 실패 또는 건너뜀"
     }
@@ -1429,8 +1654,8 @@
     "open_oauth_docs": "OAuth 안내 열기",
     "quick_interval_hint": "5 ~ 300초 사이로 설정하세요.",
     "quick_interval_label": "수정 직후 빠른 동기화",
-    "reset_confirm": "Google 동기화용 인증 정보와 토큰을 삭제할까요?",
-    "reset_done_body": "Google 동기화 인증 정보가 제거되었습니다.",
+    "reset_confirm": "Google 계정 연결을 해제할까요?\n\n저장된 인증 정보와 토큰을 삭제하고, 앱에 추가된 Google 캘린더와 구독을 모두 제거합니다. 이미 가져온 일정은 앱에 남지만 더 이상 Google과 동기화되지 않으며, 대기 중인 Google 삭제 요청도 취소됩니다.\n\nGoogle 캘린더의 일정은 변경되지 않습니다.",
+    "reset_done_body": "Google 동기화 인증 정보가 제거되었습니다.\n제거된 캘린더: {cal_count}개\n제거된 구독: {sub_count}개",
     "reset_done_title": "초기화 완료",
     "reset_sync_state": "동기화 캐시 초기화",
     "reset_sync_state_done_body": "{count}개의 캘린더 바인딩 동기화 캐시가 초기화되었습니다.\n다음 동기화 시 전체 재검색이 실행됩니다.",
@@ -1450,7 +1675,7 @@
     "test_access": "캘린더 접근 테스트",
     "test_access_auth_needed": "접근 테스트를 하려면 먼저 인증이 필요합니다.",
     "test_access_idle": "아직 접근 테스트를 실행하지 않았습니다.",
-    "test_access_ok": "접근 확인됨: {name}",
+    "test_access_ok": "접근 확인됨: {name} (계정 캘린더 {count}개)",
     "timezone_invalid": "선택한 시간대를 해석할 수 없습니다.",
     "timezone_label": "시간대",
     "timezone_preview": "현재 오프셋: {offset}  |  선택된 시간대: {tz}",
@@ -1544,7 +1769,8 @@
     "overlay_lock": "오버레이 잠금",
     "overlay_lock_hint": "오버레이 화면을 잠급니다",
     "overlay_unlock": "오버레이 잠금 해제",
-    "overlay_unlock_hint": "오버레이 화면 잠금을 해제합니다"
+    "overlay_unlock_hint": "오버레이 화면 잠금을 해제합니다",
+    "overlay_unlock_ready": "클릭하면 잠금 해제"
   },
   "loop_mixer": {
     "add_drums": "드럼 키덱 추가",
@@ -1682,6 +1908,12 @@
     "locale_reset_no_file": "삭제할 사용자 오버라이드 파일이 없습니다.",
     "locale_tools": "🌐 로케일 파일 관리",
     "locale_validate_current": "✔ 현재 언어 파일 검증",
+    "locale_validate_empty_code": "언어 코드가 비어 있습니다.",
+    "locale_validate_missing_keys": "오버라이드하지 않은 최상위 키 {count}개는 기본 번역을 사용합니다: {keys}",
+    "locale_validate_no_file": "사용자 오버라이드 파일이 없습니다: {path}",
+    "locale_validate_not_object": "로케일 파일의 최상위 JSON은 객체여야 합니다.",
+    "locale_validate_parse_failed": "JSON을 읽지 못했습니다: {error}",
+    "locale_validate_passed": "검증을 통과했습니다: {path}",
     "no_calendars": "캘린더 없음",
     "opacity": "🪟 투명도",
     "open_source_info": "오픈소스 정보",
@@ -1785,6 +2017,12 @@
     "accessible_results_hint": "위아래 화살표로 이동하고 Enter로 실행합니다.",
     "accessible_search": "명령과 일정을 검색하거나 만듭니다.",
     "accessible_search_hint": "명령은 >, 새 항목은 +, 기존 항목 검색은 /로 시작할 수 있습니다.",
+    "create_schedule": "일정 만들기: {title}",
+    "default_time": "{time} (기본값)",
+    "desc": {
+      "directive_status": "지시/협조사항 탭을 바로 엽니다.",
+      "work_management": "전체 업무 관리 창을 엽니다."
+    },
     "exit_app": "앱: 종료",
     "hint_command": "명령어를 검색하세요",
     "hint_create": "Enter로 일정을 만듭니다",
@@ -1799,13 +2037,26 @@
     "nlp_preview": "새 일정: [{title}] - {date} {time}",
     "no_selection": "Enter로 선택 결과 열기",
     "placeholder": "명령, 일정 검색 또는 +로 새로 만들기...",
+    "recent": "최근",
+    "recent_subtitle": "최근 - {subtitle}",
+    "record_type": {
+      "directive": "지시사항",
+      "routine": "일반업무",
+      "schedule": "일정"
+    },
     "sync_google": "동기화: 구글 캘린더 지금 업데이트",
     "task_registered": "등록됨: {title}",
     "theme_dark": "테마: 다크 모드로 변경",
     "theme_light": "테마: 라이트 모드로 변경",
+    "theme_system": "테마: 시스템 기본값 사용",
     "title": "커맨드 팔레트"
   },
   "panel": {
+    "checklist": {
+      "locked_next": "이후 단계를 먼저 취소하세요",
+      "locked_previous": "이전 단계를 먼저 완료하세요",
+      "progress_tooltip": "완료 {done}개 / 전체 {total}개"
+    },
     "checklist_tooltip": "체크리스트 보기/숨기기",
     "clock": "시계",
     "common": {
@@ -1829,6 +2080,7 @@
     "deadline_label": "(~{deadline})",
     "deadline_suffix": " 마감",
     "directive": "지시/협조",
+    "directive_receiver_badge": "수신",
     "empty": {
       "add_directive": "지시사항 만들기",
       "add_routine": "루틴 만들기",
@@ -1974,6 +2226,7 @@
   },
   "recurrence": {
     "btn_finish": "설정 완료",
+    "daily": "일간",
     "finish": "설정 완료",
     "half_yearly": "반기",
     "last_day": "말일",
@@ -2034,31 +2287,26 @@
       "away_lock": {
         "description": "자리비움 잠금을 즉시 시작합니다.",
         "label": "자리비움 잠금",
-        "menu_path": "화면 > 자리비움 잠금",
         "tags": ["자리비움", "away", "lock"]
       },
       "cal_toolbar": {
         "description": "캘린더 툴바를 숨기거나 다시 표시합니다.",
         "label": "캘린더 툴바 토글",
-        "menu_path": "화면 > 캘린더 툴바",
         "tags": ["캘린더", "툴바", "toolbar"]
       },
       "calendar_print": {
         "description": "현재 보기 또는 지정 기간의 캘린더를 미리보고 인쇄합니다.",
         "label": "캘린더 인쇄",
-        "menu_path": "캘린더 > 옵션 > 인쇄",
         "tags": ["인쇄", "프린터", "PDF", "print"]
       },
       "checklist": {
         "description": "체크리스트 템플릿과 항목 구성을 관리합니다.",
         "label": "체크리스트 관리",
-        "menu_path": "작업 > 체크리스트 관리",
         "tags": ["체크리스트", "템플릿", "checklist"]
       },
       "color_assign": {
         "description": "선택 항목에 색상을 자동으로 배정합니다.",
         "label": "색상 자동 지정",
-        "menu_path": "작업 > 색상 자동 지정",
         "tags": ["색상", "태그", "자동", "color"]
       },
       "command_palette": {
@@ -2082,7 +2330,6 @@
       "focus_mode": {
         "description": "집중 모드를 켜거나 끕니다.",
         "label": "집중 모드 토글",
-        "menu_path": "화면 > 집중 모드",
         "tags": ["집중", "focus", "pomodoro"]
       },
       "focus_pause": {
@@ -2100,55 +2347,48 @@
       "fullscreen": {
         "description": "전체화면 표시를 전환합니다.",
         "label": "전체화면 토글",
-        "menu_path": "화면 > 전체화면",
         "tags": ["전체화면", "fullscreen"]
       },
       "help": {
         "description": "도움말 센터를 엽니다.",
         "label": "단축키 안내",
-        "menu_path": "시스템 > 단축키 안내",
         "tags": ["도움말", "help", "F1"]
       },
       "layout_1": {
         "description": "기본 4패널 도킹 배치를 적용합니다.",
         "label": "레이아웃 프리셋 1",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "프리셋", "도킹", "1"]
       },
       "layout_2": {
         "description": "캘린더 중심 배치를 적용합니다.",
         "label": "레이아웃 프리셋 2",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "캘린더", "2"]
       },
       "layout_3": {
         "description": "업무 중심 배치를 적용합니다.",
         "label": "레이아웃 프리셋 3",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "업무", "3"]
       },
       "layout_4": {
         "description": "탭 분할 배치를 적용합니다.",
         "label": "레이아웃 프리셋 4",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "탭", "분할", "4"]
       },
       "layout_5": {
         "description": "분리형 배치를 적용합니다.",
         "label": "레이아웃 프리셋 5",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "분리", "부동", "5"]
       },
       "lock_mode": {
         "description": "데스크톱 잠금 모드를 전환합니다.",
         "label": "잠금 모드",
-        "menu_path": "화면 > 잠금 모드",
+        "menu_path": "상단 바 버튼",
         "tags": ["잠금", "lock"]
       },
       "magnet_mode": {
         "description": "패널 정렬과 부착을 돕는 자석 모드를 전환합니다.",
         "label": "자석 모드",
-        "menu_path": "화면 > 자석 모드",
+        "menu_path": "상단 바 버튼",
         "tags": ["자석", "패널", "magnet"]
       },
       "monitor_left": {
@@ -2166,25 +2406,21 @@
       "navigation_rail": {
         "description": "왼쪽 빠른 이동 막대를 표시하거나 숨깁니다.",
         "label": "빠른 이동 표시",
-        "menu_path": "화면 > 화면 및 창 > 빠른 이동",
         "tags": ["빠른 이동", "레일", "navigation", "rail"]
       },
       "new_directive": {
         "description": "지시나 협조 항목 입력 창을 엽니다.",
         "label": "지시사항 등록",
-        "menu_path": "등록 > 지시사항",
         "tags": ["지시", "협조", "directive"]
       },
       "new_routine": {
         "description": "반복 업무 루틴을 빠르게 추가합니다.",
         "label": "루틴 등록",
-        "menu_path": "등록 > 루틴",
         "tags": ["루틴", "업무", "반복", "routine"]
       },
       "new_schedule": {
         "description": "일정 입력 창을 바로 엽니다.",
         "label": "새 일정 등록",
-        "menu_path": "등록 > 새 일정",
         "tags": ["일정", "추가", "등록", "schedule"]
       },
       "next_day": {
@@ -2220,13 +2456,11 @@
       "routine_mgr": {
         "description": "루틴 관리자 탭을 바로 엽니다.",
         "label": "루틴 관리자",
-        "menu_path": "작업 > 루틴 현황",
         "tags": ["루틴", "관리", "routine"]
       },
       "save_layout": {
         "description": "현재 패널 배치를 프리셋으로 저장합니다.",
         "label": "현재 레이아웃 저장",
-        "menu_path": "화면 > 레이아웃 프리셋 > 저장",
         "tags": ["레이아웃", "프리셋", "저장", "layout"]
       },
       "show_hide": {
@@ -2238,7 +2472,6 @@
       "sync_gcal": {
         "description": "연결된 모든 캘린더의 동기화를 바로 시작합니다.",
         "label": "연결된 모든 캘린더 동기화",
-        "menu_path": "시스템 > 캘린더 및 동기화",
         "tags": ["Google", "Outlook", "iCloud", "Naver", "ICS", "F5", "sync"]
       },
       "today": {
@@ -2250,13 +2483,11 @@
       "topbar": {
         "description": "상단 바 자동 숨기기를 켜거나 끕니다. 끄면 상단 바가 고정됩니다.",
         "label": "상단 바 자동 숨기기",
-        "menu_path": "화면 > 화면 및 창 > 상단 바 자동 숨기기",
         "tags": ["메뉴바", "상단 바", "topbar", "자동 숨기기", "고정", "복구"]
       },
       "widget_mode": {
         "description": "위젯 전용 패널 모드를 엽니다.",
         "label": "위젯 모드 전환",
-        "menu_path": "화면 > 위젯 전용 모드",
         "tags": ["위젯", "widget", "panel"]
       }
     },
@@ -2304,24 +2535,32 @@
     "hero": {
       "quickstart": {
         "desc": "처음 앱을 열었을 때 바로 쓰는 기능과, F1을 눌렀을 때 당장 찾게 되는 기능을 먼저 배치했습니다.",
+        "eyebrow": "QUICK START",
         "title": "가장 자주 찾는 작업부터 바로 보이게"
       },
       "recovery": {
         "desc": "메뉴가 사라졌거나 잠금 상태가 꼬였을 때 가장 먼저 봐야 하는 키만 따로 모았습니다.",
+        "eyebrow": "RECOVERY",
         "title": "막혔을 때 먼저 눌러볼 키"
       },
       "reference": {
         "desc": "모든 단축키를 기능 그룹별로 정리했습니다. 검색 없이 훑어볼 때 적합합니다.",
+        "eyebrow": "REFERENCE",
         "title": "전체 단축키를 분류별로 보기"
       },
       "search": {
         "desc": "키 이름이나 기능 이름을 입력하면 관련 단축키를 바로 보여줍니다.",
+        "eyebrow": "SEARCH",
         "title": "검색 결과"
       },
       "workflows": {
         "desc": "등록, 이동, 화면 전환처럼 실제 사용 흐름 중심으로 묶었습니다. 이름을 몰라도 상황만 떠올리면 찾을 수 있게 구성했습니다.",
+        "eyebrow": "CORE FLOW",
         "title": "상황별로 묶어서 더 빨리 찾기"
       }
+    },
+    "menu_roots": {
+      "selected_item": "선택 항목 우클릭"
     },
     "pages": {
       "quickstart": {
@@ -2714,7 +2953,8 @@
     "already_running": "Air Calendar가 이미 실행 중입니다.\n\n화면 하단 작업표시줄의 트레이 아이콘을 확인해 주세요.",
     "lang_saved_msg": "언어 설정이 저장되었습니다.\n변경사항을 적용하기 위해 앱을 재시작합니다.",
     "lang_saved_title": "언어 설정",
-    "restart_failed": "앱 상태를 저장하지 못해 자동 재시작을 취소했습니다. 다시 시도해 주세요."
+    "restart_failed": "앱 상태를 저장하지 못해 자동 재시작을 취소했습니다. 다시 시도해 주세요.",
+    "restart_launch_failed": "앱을 자동으로 다시 시작하지 못했습니다. 앱을 직접 다시 실행해 주세요."
   },
   "theme": {
     "custom_mode": "사용자 지정",
@@ -2771,6 +3011,10 @@
     "focus_timer_settings": "Pomodoro 설정...",
     "focus_tools": "집중 및 잠금",
     "fullscreen": "🖥 전체 화면 전환",
+    "lock_behind_icons": "잠금 중 바탕화면 아이콘 뒤로 보내기",
+    "lock_behind_icons_hint": "잠금 중에는 달력을 배경화면처럼 바탕화면 아이콘 아래에 둡니다. '잠금 해제' 버튼 위에 마우스를 잠시 올려 두면 다시 꺼내 누를 수 있습니다.",
+    "lock_click_through": "잠금 중 클릭 통과 (바탕화면 사용)",
+    "lock_click_through_hint": "잠금 중에는 클릭이 달력 아래 바탕화면으로 전달됩니다. '잠금 해제' 버튼 위에 마우스를 잠시 올려 두면 다시 누를 수 있습니다.",
     "lock_mode": "🔒 바탕화면 고정 모드",
     "magnet_mode": "🧲 자석 모드 토글",
     "next_day": "▶ 다음 날짜",
@@ -2787,6 +3031,7 @@
     "prev_day": "◀ 이전 날짜",
     "restore": "📐 창 위치/크기 복원",
     "routine_manager": "⚙️ 일반업무 관리자",
+    "routine_settings": "⚙️ 일반업무 설정",
     "show_hide": "🌐 오버레이 표시/숨기기",
     "sync_google": "🔄 구글 캘린더 동기화",
     "today": "📅 오늘 날짜로 이동",
@@ -2855,15 +3100,6 @@
     "untitled": "제목 없음",
     "work_start_hint": "오전 9시로 이동합니다."
   },
-  "weekday": {
-    "fri": "금",
-    "mon": "월",
-    "sat": "토",
-    "sun": "일",
-    "thu": "목",
-    "tue": "화",
-    "wed": "수"
-  },
   "welcome": {
     "accessible_name": "처음 시작 안내",
     "body": "로컬 일정은 바로 사용할 수 있고, 필요할 때 Google 캘린더를 연결할 수 있습니다.",
@@ -2917,7 +3153,7 @@
         "utc_5_30": "UTC+5:30  뭄바이/뉴델리",
         "utc_6": "UTC+6  다카/알마티",
         "utc_7": "UTC+7  방콕/하노이/자카르타",
-        "utc_8": "UTC+8  베이징/싱가포르/서울",
+        "utc_8": "UTC+8  베이징/싱가포르",
         "utc_9": "UTC+9  도쿄/서울",
         "utc_9_30": "UTC+9:30  애들레이드",
         "utc_minus_10": "UTC-10  하와이",
@@ -3054,14 +3290,11 @@
       "template_hint": "변수:  {weekday}  {weekday:short}  {day}  {date:%Y.%m.%d}  {doy}\n스타일:  {day|size=42|bold|color=#ff4da6}   |italic   |size=N\n비워두면 기본 모드로 표시됩니다."
     },
     "dday": {
-      "advanced_tab": "✏️ 고급 템플릿",
       "asset_pack": "일러스트 팩:",
-      "basic_tab": "📅 기본 설정",
       "clear_all": "✖ 초기화 (날짜·템플릿 모두)",
       "clear_template": "비우기",
       "date_name_settings": "📅 날짜·이름 설정...",
       "default_name": "D-Day",
-      "edit_template": "✏️ 고급: 템플릿 편집...",
       "mode_basic": "기본 모드",
       "mode_template": "✅ 템플릿 모드",
       "moment": "장면:",
@@ -3095,7 +3328,7 @@
       "target_date": "목표 날짜:",
       "template_hint": "[ 변수 ]  {dday}  {days}  {sign}  {label}  {date:%Y.%m.%d}  {date_short}\n[ 스타일 ]  {dday|size=60|bold|color=#ff4da6}  {label|size=13|italic}\n[ 줄바꿈 ]  \\n 으로 여러 줄 구성\n[ 비우면 ]  기본 모드 (이름 + 날짜 두 줄 표시)",
       "template_placeholder": "예: {template}\n\n비워두면 기본 모드로 표시됩니다.",
-      "toast_created": "D-Day 위젯이 생성되었습니다: ",
+      "toast_created": "D-Day 위젯이 생성되었습니다: {name}",
       "toast_no_date": "이 일정에 유효한 날짜가 없습니다.",
       "toast_task_missing": "선택된 일정을 찾을 수 없습니다.",
       "toast_title": "D-Day 위젯"
@@ -3784,7 +4017,7 @@
         "cobalt_arcade": "코발트 아케이드",
         "copper_dusk": "코퍼 더스크",
         "cream_typewriter": "크림 타이프라이터",
-        "crystal_night": "크리스탈 나이트",
+        "crystal_night": "미드나이트 크리스탈",
         "cyber_pulse": "사이버 펄스",
         "desert_sand": "데저트 샌드",
         "floating_glass": "플로팅 글래스",
@@ -4459,6 +4692,7 @@
     "editor_height": "기본 높이",
     "editor_layout": "레이아웃",
     "editor_light": "밝은 기반",
+    "editor_name_required": "이름을 입력하세요.",
     "editor_show_eyebrow": "상단 보조 제목 표시",
     "editor_show_hint": "안내 문구 표시",
     "editor_skin": "색상 스킨",
@@ -4720,13 +4954,6 @@
     "countdown_setup": "설정에서 목표 시간을 지정하세요",
     "create_stack": "선택 위젯 스택 만들기",
     "current_preview": "현재 위젯 미리보기",
-    "day_fri": "금",
-    "day_mon": "월",
-    "day_sat": "토",
-    "day_sun": "일",
-    "day_thu": "목",
-    "day_tue": "화",
-    "day_wed": "수",
     "dday_setup": "설정에서 목표 날짜를 지정하세요",
     "delete_confirm": "이 작업 공간과 연결된 자동 전환 규칙을 삭제할까요? 실제 위젯은 유지합니다.",
     "delete_profile": "삭제",
@@ -4819,7 +5046,12 @@
     "group_conditions": "조건",
     "group_time_date": "시간 / 날짜",
     "group_widget_data": "위젯 데이터",
-    "hint_text": "[ 시간/날짜 ]  {time:%H:%M}  {time:tz=JST:%H:%M}  {time:tz=UTC+9:%H:%M}\n              {date:%Y.%m.%d}  {weekday}  {weekday:short}\n[ 위젯 데이터 ]  {stopwatch:stopwatch_0}  {countdown:countdown_0}  {dday:dday_0}\n[ D-Day ]  {dday}  (이 위젯의 로컬 D-Day 값)\n[ 앱 데이터 ]  {task_count}  {directive_count}  {next_event}  {custom_var}\n[ 조건 ]  {if task_count > 0}할 일 {task_count}{else}없음{/if}\n              {if countdown:countdown_0 < 1h}곳 마감{else}여유{/if}",
+    "hint_text": "[ 시간/날짜 ]  {time:%H:%M}  {time:tz=JST:%H:%M}  {time:tz=UTC+9:%H:%M}\n              {date:%Y.%m.%d}  {weekday}  {weekday:short}\n[ 위젯 데이터 ]  {stopwatch:stopwatch_0}  {countdown:countdown_0}  {dday:dday_0}\n[ D-Day ]  {dday}  (이 위젯의 로컬 D-Day 값)\n[ 앱 데이터 ]  {task_count}  {directive_count}  {next_event}  {custom_var}\n[ 조건 ]  {if task_count > 0}할 일 {task_count}{else}없음{/if}\n              {if countdown:countdown_0 < 1h}곧 마감{else}여유{/if}",
+    "preset_body": {
+      "ending_soon": "곧 종료!",
+      "no_tasks_today": "오늘 할 일 없음",
+      "tasks": "할 일"
+    },
     "preset_clock_date": "시계 + 날짜",
     "preset_clock_stopwatch": "시계 + 스톱워치",
     "preset_conditional_task": "조건부 할 일",

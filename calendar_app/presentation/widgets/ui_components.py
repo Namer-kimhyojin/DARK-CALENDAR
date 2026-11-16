@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from functools import partial
 import logging
 import sys
 
@@ -44,6 +43,7 @@ from calendar_app.infrastructure.db import calendar_repo, checklist_repo, task_r
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation import drag_drop_manager as ddm
 from calendar_app.presentation.dialogs.dialog_styles import build_dialog_stylesheet
+from calendar_app.presentation.locale_names import calendar_display_name
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.presentation.widgets.schedule_info import build_schedule_info
 from calendar_app.shared.color_utils import derive_ui_palette
@@ -51,15 +51,48 @@ from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.qt_helpers import apply_hover_state
+from calendar_app.shared.qt_lifetime import call_when_destroyed
 from calendar_app.shared.theme_settings import (
     get_opacity_factor,
     get_theme_color,
     get_theme_palette_inputs,
 )
+from calendar_app.shared.typography import fitted_text_width
 from calendar_app.shared.ui_tokens import get_ui_tokens
 from calendar_app.shared.value_parsers import as_int
 
 logger = logging.getLogger(__name__)
+
+# The detail card's label column fits Korean at 70px; translations widen it up to
+# the cap so the value column keeps most of the 320px card.
+_INFO_LABEL_MIN_WIDTH = 70
+_INFO_LABEL_MAX_WIDTH = 128
+
+
+def _fit_info_label_column(rows):
+    """Give the detail labels one width that shows the longest translation.
+
+    A fixed 70px without wrap clipped "📝 Description" (79px) and id
+    "👤 Penanggung jawab" (121px). Past the cap a label is elided with the
+    full text as its tooltip.
+    """
+    if not rows:
+        return
+    for label, _text in rows:
+        label.ensurePolished()
+    metrics = rows[0][0].fontMetrics()
+    width = fitted_text_width(
+        metrics,
+        [text for _label, text in rows],
+        minimum=_INFO_LABEL_MIN_WIDTH,
+        maximum=_INFO_LABEL_MAX_WIDTH,
+        padding=2,
+    )
+    for label, text in rows:
+        label.setFixedWidth(width)
+        if metrics.horizontalAdvance(text) + 2 > width:
+            label.setText(metrics.elidedText(text, Qt.TextElideMode.ElideRight, width - 2))
+            label.setToolTip(text)
 
 
 def _clear_layout(layout):
@@ -103,6 +136,16 @@ def _merged_ui_tokens(tokens=None, settings=None):
     if tokens:
         merged.update(tokens)
     return merged
+
+
+TASK_SELECTED_FILL_ALPHA = 76  # about 30 %; the old 40 (16 %) barely showed
+TASK_SELECTED_HOVER_FILL_ALPHA = 96
+
+
+def _task_selected_fill(accent, hover=False):
+    """Return the accent fill behind a selected task's title bar."""
+    alpha = TASK_SELECTED_HOVER_FILL_ALPHA if hover else TASK_SELECTED_FILL_ALPHA
+    return f"rgba({accent.red()}, {accent.green()}, {accent.blue()}, {alpha})"
 
 
 def _qcolor(value, fallback="#000000"):
@@ -868,7 +911,7 @@ class _DetailExpandOverlay(QFrame):
         if token is None:
             token = object()
             owner._detail_overlay_token = token
-            owner.destroyed.connect(partial(self._on_owner_destroyed, token))
+            call_when_destroyed(owner, _on_detail_owner_destroyed, token)
         self._owner_token = token
 
     def hide_for(self, owner):
@@ -881,6 +924,13 @@ class _DetailExpandOverlay(QFrame):
 
 
 _detail_overlay = None
+
+
+def _on_detail_owner_destroyed(token) -> None:
+    # The singleton can be recreated after the owner was first tracked.
+    overlay = _detail_overlay
+    if overlay is not None and not sip.isdeleted(overlay):
+        overlay._on_owner_destroyed(token)
 
 
 def get_detail_overlay():
@@ -1090,6 +1140,8 @@ class DraggableTaskButton(QFrame):
             color = palette["text_primary"]
             size_rule = ""
             weight = "bold" if self._selected else "600"
+        # set_selected reuses this colour instead of resolving the theme again.
+        self._title_style_color = None if self._watermark_title else color
         self.title_label.setStyleSheet(
             f"background: transparent; border: none; color: {color}; font-weight: {weight}; {size_rule}"
         )
@@ -1237,9 +1289,11 @@ class DraggableTaskButton(QFrame):
             theme_obj = QColor("#4da6ff")
 
         # ?좏깮 ???ㅽ???怨듯넻
-        selected_bg = f"rgba({theme_obj.red()}, {theme_obj.green()}, {theme_obj.blue()}, 40)"
-        selected_hover_bg = f"rgba({theme_obj.red()}, {theme_obj.green()}, {theme_obj.blue()}, 55)"
-        selected_border = f"rgba({theme_obj.red()}, {theme_obj.green()}, {theme_obj.blue()}, 180)"
+        # Selected items carry a clearly stronger accent fill and a full accent
+        # outline so they stand out over translucent panels in both themes.
+        selected_bg = _task_selected_fill(theme_obj)
+        selected_hover_bg = _task_selected_fill(theme_obj, hover=True)
+        selected_border = theme_color
 
         if not self._tag_color:
             tag_line = palette["border_strong"]
@@ -1253,7 +1307,6 @@ class DraggableTaskButton(QFrame):
                 base_bg = f"rgba({tag_color_obj.red()}, {tag_color_obj.green()}, {tag_color_obj.blue()}, 0.12)"
                 hover_bg = f"rgba({tag_color_obj.red()}, {tag_color_obj.green()}, {tag_color_obj.blue()}, 0.17)"
                 range_hover_bg = f"rgba({tag_color_obj.red()}, {tag_color_obj.green()}, {tag_color_obj.blue()}, 0.22)"
-                selected_bg = f"rgba({(theme_obj.red() + tag_color_obj.red()) // 2}, {(theme_obj.green() + tag_color_obj.green()) // 2}, {(theme_obj.blue() + tag_color_obj.blue()) // 2}, 45)"
             else:
                 tag_line = self._tag_color
                 base_bg = palette["bg_item"]
@@ -1284,11 +1337,12 @@ class DraggableTaskButton(QFrame):
             DraggableTaskButton[selected="true"] QFrame#taskTitleBar {{
                 background: {selected_bg};
                 border: 1px solid {selected_border};
-                border-left: {left_border_width} solid {theme_color};
+                border-left: {"0px" if l_open else "4px"} solid {theme_color};
             }}
             DraggableTaskButton[selected="true"][hovered="true"] QFrame#taskTitleBar {{
                 background: {selected_hover_bg};
                 border: 1px solid {theme_color};
+                border-left: {"0px" if l_open else "4px"} solid {theme_color};
             }}
             DraggableTaskButton[range_hovered="true"] QFrame#taskTitleBar {{
                 background: {range_hover_bg};
@@ -1334,6 +1388,7 @@ class DraggableTaskButton(QFrame):
         text_pal = derive_ui_palette(text_theme, panel_base, opacity_factor)
 
         _clear_layout(self.info_layout)
+        row_labels = []
 
         def _add_info(label, text):
             if not text:
@@ -1341,11 +1396,11 @@ class DraggableTaskButton(QFrame):
             row = QHBoxLayout()
             row.setSpacing(5)
             llbl = QLabel(label)
-            llbl.setFixedWidth(70)
             llbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
             llbl.setStyleSheet(
                 f"background:transparent; color: {text_pal['text_secondary']}; font-size: 9pt;"
             )
+            row_labels.append((llbl, label))
             tlbl = QLabel()
             tlbl.setTextFormat(Qt.TextFormat.PlainText)
             tlbl.setText(text)
@@ -1367,10 +1422,13 @@ class DraggableTaskButton(QFrame):
             calendar_data = calendar_repo.get_calendar(calendar_id) if calendar_id else None
         except Exception:
             calendar_data = None
-        source_text = str((calendar_data or {}).get("name") or "").strip()
+        source_text = str(
+            calendar_display_name(calendar_id, calendar_data.get("name")) if calendar_data else ""
+        ).strip()
         info = build_schedule_info(task, source_text=source_text, detail=True)
         for row in info.rows:
             _add_info(row.label, row.value)
+        _fit_info_label_column(row_labels)
 
         return self.info_layout.count() > 0
 
@@ -1785,14 +1843,47 @@ class DraggableTaskButton(QFrame):
         event.accept()
 
     def set_selected(self, selected):
-        if self._selected != selected:
-            self._selected = selected
-            self.setProperty("selected", selected)
+        selected = bool(selected)
+        if self._selected == selected:
+            return
+        self._selected = selected
+        self.setProperty("selected", selected)
+        # The selected look lives in this button's stylesheet behind
+        # [selected="true"] selectors, so repolishing the button and its title
+        # bar is enough. Re-setting the whole stylesheet re-resolved the theme
+        # and repolished every child on each Ctrl+click.
+        color = getattr(self, "_title_style_color", None)
+        if color:
+            weight = "bold" if selected else "600"
+            self.title_label.setStyleSheet(
+                f"background: transparent; border: none; color: {color}; font-weight: {weight}; "
+            )
+        else:
             self._apply_title_label_style()
-            self.style().unpolish(self)
-            self.style().polish(self)
-            self._apply_tag_frame_style()
-            self.selectedChanged.emit(self.task_id, selected)
+        for widget in (self, self.title_bar):
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+        self._sync_selected_mark(selected)
+        self.setAccessibleDescription(t("calendar.selected_state", "선택됨") if selected else "")
+        self.update()
+        self.selectedChanged.emit(self.task_id, selected)
+
+    def _sync_selected_mark(self, selected):
+        """Show a check mark in front of the title while the item is selected."""
+        mark = getattr(self, "_selected_mark", None)
+        if mark is None:
+            if not selected:
+                return
+            mark = QLabel(self.title_bar)
+            mark.setObjectName("taskSelectedMark")
+            mark.setStyleSheet("background: transparent; border: none;")
+            size = max(10, self.title_label.fontMetrics().height() - 4)
+            color = str(_merged_ui_tokens().get("accent") or "")
+            mark.setPixmap(_ic(ICON.CHECK, color=color or None).pixmap(size, size))
+            mark.setFixedSize(size, size)
+            self.title_layout.insertWidget(0, mark)
+            self._selected_mark = mark
+        mark.setVisible(selected)
 
     def mouseMoveEvent(self, event):
         try:
@@ -1890,6 +1981,91 @@ class DraggableTaskButton(QFrame):
         super().leaveEvent(event)
 
 
+def _repolish_range_cell(cell):
+    """Re-apply range selectors to the cell and its day number label."""
+    cell.style().unpolish(cell)
+    cell.style().polish(cell)
+    day_label = cell.findChild(QLabel, "dayNumLabel")
+    if day_label is not None:
+        day_label.style().unpolish(day_label)
+        day_label.style().polish(day_label)
+    cell.update()
+
+
+def create_range_badge_text(start_date, end_date):
+    """Readable range text with weekdays, e.g. "11월 3일 (월) → 11월 7일 (금) · 5일"."""
+    from PyQt6.QtCore import QLocale
+
+    pattern = t("calendar.range_badge_date", "M월 d일 (ddd)")
+    locale = QLocale()
+    count = start_date.daysTo(end_date) + 1
+    if count <= 1:
+        return t(
+            "calendar.range_badge_single",
+            "{date} · 하루 종일",
+            date=locale.toString(start_date, pattern),
+        )
+    return t(
+        "calendar.range_badge",
+        "{start} → {end} · {count}일",
+        start=locale.toString(start_date, pattern),
+        end=locale.toString(end_date, pattern),
+        count=count,
+    )
+
+
+def _show_create_range_badge(app, start_date, end_date, anchor_cell):
+    """Float the range text just above the cell under the pointer."""
+    if app is None or not isinstance(app, QWidget):
+        return None
+    badge = getattr(app, "_create_range_badge", None)
+    try:
+        if badge is not None:
+            badge.objectName()
+    except RuntimeError:
+        badge = None
+    if badge is None:
+        badge = QLabel(app)
+        badge.setObjectName("calendarCreateRangeBadge")
+        badge.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        app._create_range_badge = badge
+    tokens = _merged_ui_tokens()
+    accent = QColor(str(tokens.get("accent") or "#4da6ff"))
+    if not accent.isValid():
+        accent = QColor("#4da6ff")
+    # A quiet chip: the panel surface colour, a thin accent outline and normal
+    # text, so the range reads without a solid accent block over the calendar.
+    surface = str(tokens.get("bg_alt") or tokens.get("bg_main") or "rgba(20, 24, 34, 230)")
+    text_color = str(tokens.get("text_primary") or "#ffffff")
+    outline = f"rgba({accent.red()}, {accent.green()}, {accent.blue()}, 150)"
+    badge.setStyleSheet(
+        f"QLabel#calendarCreateRangeBadge {{ background: {surface}; color: {text_color}; "
+        f"border: 1px solid {outline}; border-radius: 9px; padding: 2px 9px; "
+        "font-weight: 600; }"
+    )
+    text = create_range_badge_text(start_date, end_date)
+    badge.setText(text)
+    badge.setAccessibleName(text)
+    badge.adjustSize()
+    if anchor_cell is not None:
+        try:
+            top_center = anchor_cell.mapTo(app, QPoint(anchor_cell.width() // 2, 0))
+        except (RuntimeError, TypeError):
+            top_center = None
+        if top_center is not None:
+            x = top_center.x() - badge.width() // 2
+            y = top_center.y() - badge.height() - 4
+            if y < 0:
+                # No room above the first row: sit just inside the cell instead.
+                y = top_center.y() + 4
+            x = max(4, min(x, app.width() - badge.width() - 4))
+            badge.move(x, max(0, y))
+    badge.show()
+    badge.raise_()
+    return badge
+
+
 class ClickableCell(QFrame):
     doubleClicked = pyqtSignal(object)
     shiftClicked = pyqtSignal(object)
@@ -1951,11 +2127,16 @@ class ClickableCell(QFrame):
                 cell.setProperty("create_range_preview", False)
                 cell.setProperty("create_range_start", False)
                 cell.setProperty("create_range_end", False)
-                cell.style().unpolish(cell)
-                cell.style().polish(cell)
+                _repolish_range_cell(cell)
             except RuntimeError:
                 continue
         app._create_range_preview_cells = []
+        badge = getattr(app, "_create_range_badge", None)
+        if badge is not None:
+            try:
+                badge.hide()
+            except RuntimeError:
+                app._create_range_badge = None
         if restore_status:
             if hasattr(app, "update_task_selection_status"):
                 app.update_task_selection_status()
@@ -1965,10 +2146,18 @@ class ClickableCell(QFrame):
                 )
 
     def _update_create_range_preview(self, anchor_date, current_date):
-        app = self.window()
+        self.show_create_range_preview(self.window(), anchor_date, current_date)
+
+    @staticmethod
+    def show_create_range_preview(app, anchor_date, current_date, *, focus_date=None):
+        """Highlight an all-day range on the calendar and label it with a badge.
+
+        Used while dragging over empty days and while the create dialog for
+        that range is open, so the user always sees which days are covered.
+        """
         date_map = getattr(app, "_calendar_cells_by_date", None)
-        if not isinstance(date_map, dict):
-            return
+        if not isinstance(date_map, dict) or anchor_date is None or current_date is None:
+            return None
         start_date, end_date = anchor_date, current_date
         if start_date > end_date:
             start_date, end_date = end_date, start_date
@@ -1978,13 +2167,15 @@ class ClickableCell(QFrame):
             cell = date_map.get(key)
             if cell is not None:
                 preview_cells.append(cell)
-        self._clear_create_range_preview_for_app(app, restore_status=False)
+        ClickableCell._clear_create_range_preview_for_app(app, restore_status=False)
         for cell in preview_cells:
-            cell.setProperty("create_range_preview", True)
-            cell.setProperty("create_range_start", cell.target_date == start_date)
-            cell.setProperty("create_range_end", cell.target_date == end_date)
-            cell.style().unpolish(cell)
-            cell.style().polish(cell)
+            try:
+                cell.setProperty("create_range_preview", True)
+                cell.setProperty("create_range_start", cell.target_date == start_date)
+                cell.setProperty("create_range_end", cell.target_date == end_date)
+                _repolish_range_cell(cell)
+            except RuntimeError:
+                continue
         app._create_range_preview_cells = preview_cells
         count = start_date.daysTo(end_date) + 1
         status = t(
@@ -1994,9 +2185,18 @@ class ClickableCell(QFrame):
             end=end_date.toString("M/d"),
             count=count,
         )
-        if hasattr(app, "selection_status_lbl"):
-            app.selection_status_lbl.setText(status)
-            app.selection_status_lbl.setAccessibleDescription(status)
+        label = getattr(app, "selection_status_lbl", None)
+        if label is not None:
+            try:
+                label.setText(status)
+                label.setAccessibleDescription(status)
+            except RuntimeError:
+                pass
+        anchor_cell = date_map.get((focus_date or current_date).toString("yyyy-MM-dd")) or (
+            preview_cells[-1] if preview_cells else None
+        )
+        _show_create_range_badge(app, start_date, end_date, anchor_cell)
+        return status
 
     def _finish_create_range_drag(self):
         if not self._range_dragging:
@@ -2189,8 +2389,7 @@ class ClickableCell(QFrame):
 
         if self.property("drag_mode") != mode:
             self.setProperty("drag_mode", mode)
-            self.style().unpolish(self)
-            self.style().polish(self)
+            _repolish_range_cell(self)
 
         if mode == "none":
             self._reset_drag_style()
@@ -2198,8 +2397,7 @@ class ClickableCell(QFrame):
 
         if not self._drag_pulse_timer.isActive():
             self.setProperty("drag_pulse", "on")
-            self.style().unpolish(self)
-            self.style().polish(self)
+            _repolish_range_cell(self)
             self._drag_pulse_timer.start()
 
     def _update_drag_batch(self, mime_data):
@@ -2211,8 +2409,7 @@ class ClickableCell(QFrame):
         is_batch = count > 1
         if self.property("drag_batch") != is_batch:
             self.setProperty("drag_batch", is_batch)
-            self.style().unpolish(self)
-            self.style().polish(self)
+            _repolish_range_cell(self)
 
     @staticmethod
     def _extract_drag_span_days(mime_data):
@@ -2234,8 +2431,7 @@ class ClickableCell(QFrame):
                 cell.setProperty("drag_range_preview", False)
                 cell.setProperty("drag_range_start", False)
                 cell.setProperty("drag_range_end", False)
-                cell.style().unpolish(cell)
-                cell.style().polish(cell)
+                _repolish_range_cell(cell)
             except RuntimeError:
                 continue
         app._drag_range_preview_cells = []
@@ -2273,8 +2469,7 @@ class ClickableCell(QFrame):
                 cell.setProperty("drag_range_preview", True)
                 cell.setProperty("drag_range_start", idx == 0)
                 cell.setProperty("drag_range_end", idx == (len(preview_cells) - 1))
-                cell.style().unpolish(cell)
-                cell.style().polish(cell)
+                _repolish_range_cell(cell)
             except RuntimeError:
                 continue
         app._drag_range_preview_cells = preview_cells
@@ -2291,8 +2486,7 @@ class ClickableCell(QFrame):
     def _toggle_drag_pulse(self):
         next_state = "off" if self.property("drag_pulse") == "on" else "on"
         self.setProperty("drag_pulse", next_state)
-        self.style().unpolish(self)
-        self.style().polish(self)
+        _repolish_range_cell(self)
 
     def _reset_drag_style(self):
         self._cached_drag_count = None
@@ -2309,8 +2503,7 @@ class ClickableCell(QFrame):
             self.setProperty("drag_pulse", "off")
             changed = True
         if changed:
-            self.style().unpolish(self)
-            self.style().polish(self)
+            _repolish_range_cell(self)
         self._clear_drag_range_preview_for_app(self.window())
 
     def dragLeaveEvent(self, event):

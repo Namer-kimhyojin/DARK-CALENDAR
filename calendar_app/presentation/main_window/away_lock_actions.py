@@ -5,7 +5,7 @@ import logging
 import os
 import time
 
-from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QDate, QLocale, QObject
 from PyQt6.QtWidgets import QApplication, QDialog
 
 from calendar_app.infrastructure.i18n import t
@@ -25,6 +25,19 @@ def _warn_win32_unavailable_once():
             "Win32 input APIs are unavailable. Away-lock input tracking uses reduced fallback mode."
         )
         _WIN32_WARNING_LOGGED = True
+
+
+def _lock_screen_date_text(date: QDate, locale: QLocale | None = None) -> str:
+    """Date line above the lock-screen clock, in the UI locale.
+
+    Korean keeps the compact "2026.11.13 (금)"; other languages get Qt's own long
+    date, which already includes the weekday in the right order and words.
+    """
+    # QLocale default is set by I18nManager._apply_qt_locale() at startup
+    loc = locale if locale is not None else QLocale()
+    if loc.language() == QLocale.Language.Korean:
+        return loc.toString(date, "yyyy.MM.dd (ddd)")
+    return loc.toString(date, QLocale.FormatType.LongFormat)
 
 
 def _safe_get_last_input_tick():
@@ -1016,7 +1029,7 @@ class AwayLockMixin:
         _overlay_manager = getattr(self, "overlay_manager", None)
         _widgets_to_restore = []
         if _overlay_manager is not None:
-            for _iid, _name, _wtype, _w in _overlay_manager.all_instances():
+            for _iid, _name, _wtype, _w in _overlay_manager.live_instances():
                 if _w.isVisible():
                     _w.hide()
                     _widgets_to_restore.append(_w)
@@ -1094,13 +1107,11 @@ class AwayLockMixin:
             return
         if not getattr(self, "is_away_locked", False):
             return
-        from PyQt6.QtCore import QDateTime, QLocale
+        from PyQt6.QtCore import QDateTime
 
         now = QDateTime.currentDateTime()
         time_str = now.toString("HH:mm:ss")
-        # QLocale default is set by I18nManager._apply_qt_locale() at startup
-        locale = QLocale()
-        date_str = locale.toString(now.date(), t("away_lock.date_format"))
+        date_str = _lock_screen_date_text(now.date())
         clock_html = f'<div align="center"><span style="font-size: 14pt; color: #bbb;">{date_str}</span><br>{time_str}</div>'
         self.lock_clock_lbl.setText(clock_html)
         for overlay in getattr(self, "_away_aux_overlays", []):

@@ -20,6 +20,8 @@ from PyQt6.QtWidgets import (
 )
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.locale_names import month_name as locale_month_name
+from calendar_app.presentation.locale_names import weekday_names
 from calendar_app.presentation.widgets.datecard_animations import (
     AnimatedDateSurface,
     date_animation,
@@ -42,11 +44,11 @@ from calendar_app.presentation.widgets.overlay_base import (
     _apply_span,
     _BaseOverlayWidget,
     _GripFrame,
+    _overlay_theme_snapshot,
     _strftime_to_qt,
 )
 from calendar_app.presentation.widgets.overlay_color_utils import _to_rgba_str
 from calendar_app.shared.color_utils import parse_css_alpha_to_unit
-from calendar_app.shared.theme_snapshot import build_theme_snapshot
 from calendar_app.shared.ui_tokens import get_ui_tokens
 
 _RGBA_COLOR_RE = re.compile(
@@ -85,8 +87,9 @@ def _datecard_contrast_text(
     return QColor(dark_q if bg.lightnessF() >= 0.62 else light_q)
 
 
-def _datecard_theme_bundle(settings=None) -> dict:
-    snapshot = build_theme_snapshot(settings=settings)
+def _datecard_theme_bundle(settings=None, text_rgba: str | None = None) -> dict:
+    # A stored widget text colour picks the palette of the weekend and reading roles.
+    snapshot = _overlay_theme_snapshot(settings, text_rgba)
     tokens = get_ui_tokens(settings=settings, snapshot=snapshot)
 
     accent = _datecard_qcolor(tokens.get("accent"), snapshot.theme_color)
@@ -127,15 +130,8 @@ def _week_strip_label_style(color: QColor | str, *, bold: bool = False) -> str:
 
 
 def _weekday_labels_mon_first() -> list[str]:
-    return [
-        t("weekday.mon", "월"),
-        t("weekday.tue", "화"),
-        t("weekday.wed", "수"),
-        t("weekday.thu", "목"),
-        t("weekday.fri", "금"),
-        t("weekday.sat", "토"),
-        t("weekday.sun", "일"),
-    ]
+    # Narrow names: the mini calendar and week strip cells are one glyph wide.
+    return weekday_names(narrow=True)
 
 
 # ---------------------------------------------------------------------------
@@ -206,7 +202,7 @@ class _CalendarGridWidget(QWidget):
         hdr_font.setBold(True)
         p.setFont(hdr_font)
 
-        month_name = QLocale().toString(QDate(now_y, now_m, 1), "MMMM")
+        month_name = locale_month_name(now_m)
         hdr_text = f"{now_y}. {now_m:02d}  {month_name}"
         header_color = QColor(self._fg_color)
         header_color.setAlpha(230)
@@ -335,8 +331,9 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
         return 30
 
     def _theme_bundle(self) -> dict:
-        settings = getattr(getattr(self, "owner", None), "settings", None)
-        return _datecard_theme_bundle(settings=settings)
+        stored = self._get("text_color_rgba", None)
+        text_rgba = None if stored in (None, "", "None") else str(stored)
+        return _datecard_theme_bundle(settings=self._real_settings(), text_rgba=text_rgba)
 
     def text_color_rgba(self) -> str:
         stored = self._get("text_color_rgba", None)
@@ -398,10 +395,13 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
         ws_layout.setContentsMargins(0, 0, 0, 0)
         ws_layout.setSpacing(4)
         # 7 day cells for the improved week-strip
-        _dow_names = ["월", "화", "수", "목", "금", "토", "일"]
         self._ws_cells: list[QLabel] = []
-        for name in _dow_names:
+        for name, long_name in zip(
+            _weekday_labels_mon_first(), weekday_names(long=True), strict=True
+        ):
             lbl = QLabel(name, self._ws_row)
+            # Narrow letters are ambiguous ("T" is Tue and Thu); screen readers get the full name.
+            lbl.setAccessibleName(long_name)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             ws_layout.addWidget(lbl)
@@ -717,6 +717,10 @@ class OverlayDateCardWidget(_BaseOverlayWidget):
                 val = locale.toString(now_dt, "ddd")
             elif key == "weekday:en":
                 val = _en[(q.dayOfWeek() - 1) % 7]
+            elif key == "month:standalone":
+                # Month shown alone as a heading: nominative ("ноябрь"); {month} stays the
+                # format form ("ноября") for "{day} {month}" templates.
+                val = locale_month_name(q.month())
             else:
                 val = str(vals.get(key, ""))
             return _apply_span(escape(val), hints)

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Routine-related UI action mixin."""
 
 
@@ -45,6 +46,10 @@ class RoutineActionsMixin:
             return count
 
         worker = DbTaskWorker(_task)
+        # Only newly created instances change what the routine panel shows.
         self._run_worker(
-            worker, lambda success, _: self.schedule_panel_refresh(right=True) if success else None
+            worker,
+            lambda success, created: (
+                self.schedule_panel_refresh(right=True) if success and created else None
+            ),
         )

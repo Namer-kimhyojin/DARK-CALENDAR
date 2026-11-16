@@ -27,11 +27,10 @@ def _add_task_priority_status_menus(menu, app, priority_items, status_items):
 
         def _set_priority(*, v=value):
             ids = getattr(app, "selected_task_ids", set())
-            if ids:
-                for tid in list(ids):
-                    app.handle_task_priority_changed(tid, v)
-            else:
-                app.handle_task_priority_changed(None, v)
+            # Without a selection there is nothing to change; the old fallback
+            # passed task_id=None to the update.
+            for tid in list(ids):
+                app.handle_task_priority_changed(tid, v)
 
         priority_menu.addAction(label, _set_priority)
 
@@ -41,13 +40,16 @@ def _add_task_priority_status_menus(menu, app, priority_items, status_items):
 
         def _set_status(*, v=value):
             ids = getattr(app, "selected_task_ids", set())
-            if ids:
-                for tid in list(ids):
-                    app.handle_task_status_changed(tid, v)
-            else:
-                app.handle_task_status_changed(None, v)
+            # Without a selection there is nothing to change; the old fallback
+            # passed task_id=None to the update.
+            for tid in list(ids):
+                app.handle_task_status_changed(tid, v)
 
         status_menu_change.addAction(label, _set_status)
+
+    has_selection = bool(getattr(app, "selected_task_ids", None))
+    priority_menu.setEnabled(has_selection)
+    status_menu_change.setEnabled(has_selection)
 
 
 def show_left_context_menu(app, pos):
@@ -280,7 +282,7 @@ def show_right_context_menu(app, pos):
     act_sort_deadline.setCheckable(True)
     act_sort_deadline.setChecked(cur_sort == "deadline")
 
-    act_sort_reg = sort_menu.addAction(t("context_menu.sort_reg", default="Sort by Registration"))
+    act_sort_reg = sort_menu.addAction(t("context_menu.sort_reg", default="Sort by Date Added"))
     act_sort_reg.setIcon(icon(ICON.GROUP_BY_DATE))
     act_sort_reg.setCheckable(True)
     act_sort_reg.setChecked(cur_sort == "registration")
@@ -377,7 +379,7 @@ def show_directive_context_menu(app, pos):
     act_add.setIcon(icon(ICON.ADD))
 
     act_group_receiver = menu.addAction(
-        t("context_menu.group_receiver", default="Group by Receiver")
+        t("context_menu.group_receiver", default="Group by Recipient")
     )
     act_group_receiver.setIcon(icon(ICON.GROUP_BY_RECEIVER))
     act_group_receiver.setCheckable(True)

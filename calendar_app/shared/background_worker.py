@@ -86,7 +86,7 @@ class SyncWorker(QThread):
                         True,
                         _translate(
                             "gcal.worker.sync_partial",
-                            "Sync complete (partial failures: push={push}, delete={delete}, pull={pull})",
+                            "동기화 완료 (일부 실패: push={push}, delete={delete}, pull={pull})",
                             push=stats.get("push_failures", 0),
                             delete=stats.get("delete_failures", 0),
                             pull=stats.get("pull_apply_failures", 0),

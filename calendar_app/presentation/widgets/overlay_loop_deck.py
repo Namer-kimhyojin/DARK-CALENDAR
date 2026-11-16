@@ -35,6 +35,7 @@ from PyQt6.QtWidgets import (
     QSlider,
     QSpinBox,
     QStyle,
+    QStyleOptionButton,
     QStyleOptionComboBox,
     QStylePainter,
     QVBoxLayout,
@@ -62,10 +63,21 @@ class TouchMixerComboBox(NoWheelComboBox):
 
     _ARROW_WIDTH = 28
     before_popup = None
+    _popup_prepared = False
 
     def showPopup(self):  # noqa: N802
         if self.before_popup is not None:
             self.before_popup()
+        if not self._popup_prepared:
+            # Styled on first open, not at launch: a view stylesheet set before the
+            # mixer's deferred first polish left 50 px rows laid out 30-34 px apart
+            # (overlapping) until the next restyle. Mouse, F4, Alt+Down, Space and
+            # accessibility all open the popup through this override.
+            self._popup_prepared = True
+            self.view().setStyleSheet("QAbstractItemView::item {min-height:44px; padding:3px 8px;}")
+            QScroller.grabGesture(
+                self.view().viewport(), QScroller.ScrollerGestureType.TouchGesture
+            )
         super().showPopup()
 
     def paintEvent(self, event):  # noqa: N802
@@ -261,8 +273,22 @@ class _Waveform(QWidget):
             painter.drawLine(QPointF(x, 4), QPointF(x, self.height() - 4))
 
 
-def _button(text, parent, callback=None, *, toggle=False):
-    button = QPushButton(text, parent)
+class _MenuButton(QPushButton):
+    """A push button with a QMenu that paints without the menu-indicator feature.
+
+    The mixer stylesheet already hides the indicator, yet with HasMenu set the
+    Windows 11 style derives the indicator font from the stylesheet's pixel-sized
+    font (point size -1) and logs "QFont::setPointSize: Point size <= 0". Opening
+    on press, keyboard access and accessibility read menu(), so they are unchanged.
+    """
+
+    def initStyleOption(self, option):  # noqa: N802 - Qt override
+        super().initStyleOption(option)
+        option.features &= ~QStyleOptionButton.ButtonFeature.HasMenu
+
+
+def _button(text, parent, callback=None, *, toggle=False, menu_button=False):
+    button = (_MenuButton if menu_button else QPushButton)(text, parent)
     button.setObjectName("ghost_btn")
     button.setMinimumHeight(48)
     button.setCheckable(toggle)
@@ -272,8 +298,10 @@ def _button(text, parent, callback=None, *, toggle=False):
     return button
 
 
-def _compact_button(symbol, label, parent, callback=None, *, toggle=False, icon_key=None):
-    button = _button(symbol, parent, callback, toggle=toggle)
+def _compact_button(
+    symbol, label, parent, callback=None, *, toggle=False, icon_key=None, menu_button=False
+):
+    button = _button(symbol, parent, callback, toggle=toggle, menu_button=menu_button)
     button.setProperty("mixerCompact", True)
     button.setAccessibleName(strip_leading_emoji(label).lstrip("▶■● "))
     button.setToolTip(button.accessibleName())
@@ -289,8 +317,6 @@ def _touch_combo(combo):
     combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     combo.setMinimumWidth(80)
     combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-    combo.view().setStyleSheet("QAbstractItemView::item {min-height:44px; padding:3px 8px;}")
-    QScroller.grabGesture(combo.view().viewport(), QScroller.ScrollerGestureType.TouchGesture)
 
 
 class _TrackCard(QFrame):
@@ -321,7 +347,10 @@ class _TrackCard(QFrame):
         self.name.editingFinished.connect(lambda: self._edit(name=self.name.text()))
         title.addWidget(self.name, 1)
         self.tools_button = _compact_button(
-            "···", t("loop_mixer.track_actions", "트랙 {number} 작업", number=index + 1), self
+            "···",
+            t("loop_mixer.track_actions", "트랙 {number} 작업", number=index + 1),
+            self,
+            menu_button=True,
         )
         self.tools_button.setFixedWidth(44)
         self.tools_menu = QMenu(self.tools_button)
@@ -519,7 +548,11 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         )
         close.setFixedWidth(44)
         self.project_button = _compact_button(
-            "▣", t("loop_mixer.project", "프로젝트"), self.header, icon_key=ICON.FOLDER
+            "▣",
+            t("loop_mixer.project", "프로젝트"),
+            self.header,
+            icon_key=ICON.FOLDER,
+            menu_button=True,
         )
         self.project_button.setFixedWidth(44)
         self.project_menu = QMenu(self.project_button)
@@ -635,9 +668,6 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         root.addWidget(self.status)
         return face
 
-    def _real_settings(self):
-        return getattr(self.owner, "_real", self.owner).settings
-
     def _apply_appearance(self):
         tokens = get_dialog_theme_tokens(settings=self._real_settings())
         typography = get_typography_scale(self._real_settings())
@@ -658,7 +688,9 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         solo = tint("warning_hex", 0.20)
         control_height = max(46, typography.body_px + 12)
         self.face.setStyleSheet(
-            build_dialog_stylesheet(settings=self._real_settings(), tokens=tokens)
+            build_dialog_stylesheet(
+                settings=self._real_settings(), tokens=tokens, tokens_are_complete=True
+            )
             + f"""
         QFrame#loopMixerFace {{ background:{tokens["floating_bg"]}; color:{tokens["text_primary"]};
             border:1px solid {tokens["border_soft"]}; border-radius:14px; }}
@@ -716,7 +748,7 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
         )
         self.bars.setMinimumWidth(max(80, bar_text_width + TouchMixerComboBox._ARROW_WIDTH + 8))
         menu_style = (
-            build_dialog_menu_stylesheet(settings=self._real_settings())
+            build_dialog_menu_stylesheet(settings=self._real_settings(), tokens=tokens)
             + "QMenu::item {min-height:38px;}"
         )
         self.project_menu.setStyleSheet(menu_style)
@@ -918,13 +950,14 @@ class OverlayLoopDeckWidget(_BaseOverlayWidget):
 
     def _sources(self):
         manager = self._manager()
-        decks = manager.instances_of("launcher_deck") if manager is not None else []
+        records = manager.instance_records() if manager is not None else []
+        decks = [(identity, name) for identity, name, kind, _ in records if kind == "launcher_deck"]
         self.sources_label.setText(t("loop_mixer.connected", "키덱 {number}개", number=len(decks)))
         return [
             (t("loop_mixer.source_none", "입력 선택"), "none"),
             (t("loop_mixer.microphone", "마이크"), "mic"),
             (t("loop_mixer.source_file", "WAV 파일"), "file"),
-            *[(name, identity) for identity, name, _ in decks],
+            *[(name, identity) for identity, name in decks],
         ]
 
     def _refresh_sources(self):

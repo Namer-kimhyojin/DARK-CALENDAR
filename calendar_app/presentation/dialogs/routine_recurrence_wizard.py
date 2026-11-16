@@ -3,6 +3,7 @@
 from calendar_app.domain.policies.routine_policy import parse_recurrence_rule
 from calendar_app.domain.routine_cycle import cycle_display_name
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.locale_names import weekday_names
 
 
 def get_cycle_labels():
@@ -13,15 +14,8 @@ def get_cycle_labels():
 
 
 def get_weekday_names():
-    return [
-        t("weekday.mon"),
-        t("weekday.tue"),
-        t("weekday.wed"),
-        t("weekday.thu"),
-        t("weekday.fri"),
-        t("weekday.sat"),
-        t("weekday.sun"),
-    ]
+    """Monday-first short weekday names from Qt's locale data."""
+    return weekday_names()
 
 
 def _ordinal_name(number):
@@ -90,6 +84,15 @@ def cycle_slot_options(cycle_type):
     return []
 
 
+def month_day_options():
+    """(label, value) pairs for the day-of-month combo: days 1-31, then the last day."""
+    options = [
+        (t("dialog.recurrence.day_of_month", "{day}일", day=day), day) for day in range(1, 32)
+    ]
+    options.append((t("dialog.recurrence.last_day"), "last"))
+    return options
+
+
 def recurrence_summary(target_date, cycle_type, recurrence):
     if cycle_type == "single":
         return t("recurrence.summary_single", date=target_date.toString("yyyy-MM-dd"))
@@ -116,6 +119,6 @@ def recurrence_summary(target_date, cycle_type, recurrence):
     day_text = (
         t("recurrence.last_day")
         if config["day"] == "last"
-        else t("recurrence.suffix_day", n=config["day"])
+        else t("dialog.recurrence.day_of_month", "{day}일", day=config["day"])
     )
     return t("recurrence.summary_day", cycle=cycle_name, slot=slot_prefix, day=day_text)

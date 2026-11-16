@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 
 from calendar_app.infrastructure.db import task_repo
 from calendar_app.infrastructure.i18n import t
+from calendar_app.infrastructure.runtime.menu_paths import GOOGLE_SYNC_SETUP_PATH, format_menu_path
 from calendar_app.presentation.dialogs.dialog_editor_styles import (
     build_editor_quick_button_style,
     build_editor_text_style,
@@ -479,19 +480,20 @@ class GCalSyncIssuesDialog(QDialog):
             )
         if "remote_newer_than_local" in raw_msg:
             return t("gcal.errors.remote_newer_than_local", "서버 버전 우선"), t(
-                "gcal.treatments.mirrored", "데이터 동기화"
+                "gcal.treatments.mirrored", "서버 데이터로 갱신"
             )
         if "not_found" in raw_msg:
             return t("gcal.errors.not_found", "일정 찾지 못함"), t(
-                "gcal.treatments.auto_healing", "자동 복원"
+                "gcal.treatments.auto_healing", "자동 복구"
             )
         if "forbidden" in raw_msg or "403" in raw_msg:
-            return t("gcal.errors.forbidden", "권한 없음"), t(
-                "gcal.treatments.stopped", "시도 중단"
+            # gcal.errors.forbidden is a full sentence used by toasts; cells take the label.
+            return t("gcal.errors.forbidden_label", "권한 없음"), t(
+                "gcal.treatments.stopped", "재시도 중단"
             )
         if "auth_required" in raw_msg or "auth" in raw_msg or "401" in raw_msg:
             return t("gcal.errors.auth_required", "인증 필요"), t(
-                "gcal.treatments.stopped", "시도 중단"
+                "gcal.treatments.stopped", "재시도 중단"
             )
         if "delete_failed" in raw_msg:
             return t("gcal.errors.delete_failed", "삭제 실패"), t(
@@ -501,8 +503,13 @@ class GCalSyncIssuesDialog(QDialog):
             return t("gcal.errors.push_failed", "전송 실패"), t(
                 "gcal.treatments.pending_retry", "재시도 대기"
             )
+        if "rate_limit" in raw_msg or "429" in raw_msg:
+            return t("gcal.errors.rate_limit", "요청 한도 초과"), t(
+                "gcal.treatments.pending_retry", "재시도 대기"
+            )
 
-        return sync_error_message(google_sync_error_code(error_raw)), t(
+        # The full sync_error_message sentence is shown in the guidance panel.
+        return t("gcal.errors.sync_error_label", "동기화 오류"), t(
             "gcal.treatments.manual", "수동 확인"
         )
 
@@ -637,7 +644,7 @@ class GCalSyncIssuesDialog(QDialog):
             event_id = orphan.get("gcal_event_id", "")
             cal_summary = orphan.get("calendar_summary", "")
             start_text = orphan.get("start", "") or "-"
-            name = orphan.get("summary") or "(제목 없음)"
+            name = orphan.get("summary") or t("common.no_title", "(제목 없음)")
             display_name = f"[{cal_summary}] {name}" if cal_summary else name
             rows.append(
                 {
@@ -809,8 +816,8 @@ class GCalSyncIssuesDialog(QDialog):
                 "이벤트: {name}\n캘린더: {cal}\n\n"
                 "삭제 큐에 추가되며 다음 동기화 시 처리됩니다. 계속하시겠습니까?",
             ).format(
-                name=meta.get("name") or "(제목 없음)",
-                cal=meta.get("calendar_summary") or cal_id or "(알 수 없음)",
+                name=meta.get("name") or t("common.no_title", "(제목 없음)"),
+                cal=meta.get("calendar_summary") or cal_id or t("common.unknown", "(알 수 없음)"),
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -922,14 +929,12 @@ class GCalSyncIssuesDialog(QDialog):
         elif raw == "remote_orphan":
             html_content = t(
                 "gcal.guidance.remote_orphan",
-                "이 이벤트는 구글 캘린더에는 있지만 로컬 DB에는 매칭되는 일정이 "
-                "없습니다.<br><br>"
-                "<b>원인</b>: 과거 중복 push 버그로 구글에 사본이 두 개 생성된 뒤 "
-                "하나만 로컬에서 추적되었거나, 다른 기기/웹에서 직접 만든 이벤트일 수 "
-                "있습니다.<br><br>"
-                "<b>조치</b>: 본인이 만든 게 맞다면 <b>구글에서 삭제</b> 버튼으로 "
-                "구글 캘린더에서 제거할 수 있습니다. 다른 도구로 만든 이벤트라면 "
-                "그대로 두세요.",
+                "이 이벤트는 구글 캘린더에는 있지만 로컬 DB에는 매칭되는 일정이 없습니다."
+                "<br><br><b>원인</b>: 로컬에서 삭제되었거나 구글에서 직접 생성된 경우입니다."
+                "<br><br><b>조치</b>: 앱에서 삭제했거나 중복된 일정이라면 <b>{button}</b> "
+                "버튼으로 구글 캘린더에서 제거할 수 있습니다. 다른 기기나 웹에서 직접 만든 "
+                "일정이라면 그대로 두세요.",
+                button=escape(t("gcal.issues_delete_remote", "구글에서 삭제")),
             )
         elif "remote_newer_than_local" in raw:
             html_content = t("gcal.guidance.remote_newer")
@@ -938,7 +943,10 @@ class GCalSyncIssuesDialog(QDialog):
         elif "forbidden" in raw or "403" in raw:
             html_content = t("gcal.guidance.forbidden")
         elif "auth" in raw or "401" in raw:
-            html_content = t("gcal.guidance.auth")
+            html_content = t(
+                "gcal.guidance.auth",
+                path=escape(format_menu_path(GOOGLE_SYNC_SETUP_PATH)),
+            )
         elif "rate_limit" in raw or "429" in raw:
             html_content = t("gcal.guidance.rate_limit")
         else:

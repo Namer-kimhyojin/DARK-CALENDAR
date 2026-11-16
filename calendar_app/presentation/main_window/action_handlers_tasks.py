@@ -62,10 +62,18 @@ class TaskActionsMixin:
 
         settings = getattr(self, "settings", None)
         tokens = get_ui_tokens(settings=settings)
-        style = _calendar_toolbar_style_bundle(
-            tokens=tokens, shape=get_ui_shape_tokens(settings=settings)
-        )["selection_label"]
-        style += f" color: {tokens['text_primary']};"
+        shape = get_ui_shape_tokens(settings=settings)
+        # Building the whole toolbar style bundle took ~10 ms per Ctrl+click.
+        # The label style only changes with the theme, so it is reused while
+        # the resolved tokens stay the same (a system theme switch still repaints).
+        style_key = (tuple(sorted(tokens.items())), tuple(sorted(shape.items())))
+        cached = getattr(self, "_selection_label_style_cache", None)
+        if cached and cached[0] == style_key:
+            style = cached[1]
+        else:
+            style = _calendar_toolbar_style_bundle(tokens=tokens, shape=shape)["selection_label"]
+            style += f" color: {tokens['text_primary']};"
+            self._selection_label_style_cache = (style_key, style)
         lbl_font = _QFont(_QApp.instance().font())
         lbl_font.setPointSizeF(get_typography_scale(settings).caption_pt)
         lbl_font.setBold(count > 0)
@@ -77,7 +85,12 @@ class TaskActionsMixin:
             text = t("panel.n_selected", n=count)
 
         self.selection_status_lbl.setText(text)
-        self.selection_status_lbl.setStyleSheet(style)
+        if self.selection_status_lbl.styleSheet() != style:
+            self.selection_status_lbl.setStyleSheet(style)
+
+        from calendar_app.presentation.calendar.selection_bar import sync_selection_bar
+
+        sync_selection_bar(self, count)
 
     def handle_task_added(self, task_data):
         # routine(일반업무)는 GCal 동기화 대상 아님 — schedule만 push
@@ -91,9 +104,34 @@ class TaskActionsMixin:
     def handle_task_status_changed(self, task_id, status):
         """일정 상태 변경(완료/미완료)."""
         if task_usecases.update_task_status(db_task, task_id, status):
-            self._refresh_all_panels()
+            self._refresh_panels_listing_task(task_id)
             return True
         return False
+
+    def _refresh_panels_listing_task(self, task_id):
+        """Refresh only the panels whose queries can list this task.
+
+        Left and center list schedules and Google remote-mirror rows
+        (get_schedule_tasks_overlapping_range_with_progress); the right panel lists
+        routines (get_tasks_by_type_with_progress("routine")) and directives.
+        """
+        try:
+            task = db_task.get_unified_task(task_id) or {}
+        except Exception:
+            logger.exception("Failed to read task %s for a panel refresh", task_id)
+            task = {}
+        task_type = str(task.get("type") or "")
+        remote_mirror = str(task.get("gcal_sync_mode") or "") == "remote_mirror" and bool(
+            str(task.get("gcal_event_id") or "").strip()
+        )
+        schedule_panels = task_type == "schedule" or remote_mirror
+        routine_panel = task_type == "routine"
+        if not (schedule_panels or routine_panel):
+            self._refresh_all_panels()
+            return
+        self.schedule_panel_refresh(
+            left=schedule_panels, center=schedule_panels, right=routine_panel
+        )
 
     def handle_task_priority_changed(self, task_id, priority):
         """일정/일반업무 중요도 변경."""
@@ -120,8 +158,14 @@ class TaskActionsMixin:
 
     def _update_selection_visuals(self):
         """현재 화면의 일정 버튼 선택 상태를 갱신."""
-        for btn in self.findChildren(DraggableTaskButton):
-            btn.set_selected(btn.task_id in self.selected_task_ids)
+        find_children = getattr(self, "findChildren", None)
+        if callable(find_children):
+            for btn in find_children(DraggableTaskButton):
+                btn.set_selected(btn.task_id in self.selected_task_ids)
+            from calendar_app.presentation.calendar.week_time_grid import WeekTimeGrid
+
+            for grid in find_children(WeekTimeGrid):
+                grid.set_multi_selection(self.selected_task_ids)
         try:
             from calendar_app.presentation.panels.side_panel_renderer import (
                 _refresh_panel_selection_visuals,
@@ -143,10 +187,10 @@ class TaskActionsMixin:
         if hasattr(self, "selected_directive_ids"):
             self.selected_directive_ids.clear()
         center = not self._update_month_day_highlight(previous_date, date)
-        if center:
-            self.update_task_selection_status()
-        else:
-            self._update_selection_visuals()
+        # Clear the selection in place on every view; the render signature no
+        # longer carries the selection, so a skipped re-render must not leave
+        # buttons or panel cards looking selected.
+        self._update_selection_visuals()
         left = left_panel_mode(self) == "selected"
         if left or center:
             self.schedule_panel_refresh(left=left, center=center)
@@ -201,12 +245,56 @@ class TaskActionsMixin:
         if start_d > end_d:
             start_d, end_d = end_d, start_d
 
+        previous_date = getattr(self, "_last_clicked_date", None)
         self._last_clicked_date = end_d
-        if left_panel_mode(self) == "selected":
-            self.schedule_panel_refresh(left=True, center=True)
-        else:
-            self.schedule_panel_refresh(center=True)
-        self.open_task_dialog(start_d, None, end_d)
+        # Move the selected-day outline in place when the month grid allows it,
+        # so the range highlight below is not wiped by a calendar rebuild.
+        center = not self._update_month_day_highlight(previous_date, end_d)
+        left = left_panel_mode(self) == "selected"
+        refresh = {key: True for key, wanted in (("left", left), ("center", center)) if wanted}
+        if refresh:
+            self.schedule_panel_refresh(**refresh)
+
+        from calendar_app.presentation.widgets.ui_components import ClickableCell
+
+        # Keep the chosen days highlighted, with their badge, while the create
+        # dialog is open; _bind_create_range_preview follows date edits there.
+        self._create_range_pinned = (start_d, end_d)
+        ClickableCell.show_create_range_preview(self, start_d, end_d)
+        try:
+            self.open_task_dialog(start_d, None, end_d)
+        finally:
+            self._create_range_pinned = None
+            ClickableCell._clear_create_range_preview_for_app(self)
+
+    def _bind_create_range_preview(self, dialog):
+        """Mirror the create dialog's dates on the pinned calendar range."""
+        if not getattr(self, "_create_range_pinned", None):
+            return
+        start_edit = getattr(dialog, "start_date", None)
+        end_edit = getattr(dialog, "end_date", None)
+        if start_edit is None or end_edit is None or not hasattr(start_edit, "dateChanged"):
+            return
+        from calendar_app.presentation.widgets.ui_components import ClickableCell
+
+        def _follow(*_args):
+            if not getattr(self, "_create_range_pinned", None):
+                return
+            try:
+                start = start_edit.date()
+                end = end_edit.date() if end_edit.isVisibleTo(dialog) else start
+            except RuntimeError:
+                return
+            if end < start:
+                end = start
+            self._create_range_pinned = (start, end)
+            ClickableCell.show_create_range_preview(self, start, end)
+
+        start_edit.dateChanged.connect(_follow)
+        end_edit.dateChanged.connect(_follow)
+        multiple = getattr(dialog, "multiple_days_check", None)
+        if multiple is not None and hasattr(multiple, "toggled"):
+            multiple.toggled.connect(_follow)
 
     def handle_task_dropped(self, task_id_list, target_date, target_time, action):
         from calendar_app.presentation import drag_drop_manager as ddm
@@ -462,7 +550,7 @@ class TaskActionsMixin:
         def on_delete_finished(success, result):
             if success and result and result > 0:
                 self.selected_task_ids.clear()
-                self.update_task_selection_status()
+                self._update_selection_visuals()
                 self._refresh_all_panels()
                 self.wake_gcal_sync()
                 self.show_toast(
@@ -480,9 +568,11 @@ class TaskActionsMixin:
         self._run_worker(worker, on_delete_finished)
 
     def delete_selected_directives(self):
-        """선택된 지시/협조사항 삭제 (Del 키 및 우클릭 메뉴에서 호출)."""
-        if hasattr(self, "_is_text_input_focused") and self._is_text_input_focused():
-            return
+        """선택된 지시/협조사항 삭제 (패널 우클릭 메뉴·위젯 항목 메뉴에서 호출).
+
+        Del 키는 delete_selected_items가 처리하며 텍스트 입력 포커스도 그쪽에서 거른다.
+        메뉴에서 고른 삭제는 검색창에 포커스가 남아 있어도 확인을 묻고 진행한다.
+        """
         selected = getattr(self, "selected_directive_ids", set())
         if not selected:
             return
@@ -517,7 +607,8 @@ class TaskActionsMixin:
             except Exception:
                 logger.exception("지시사항 삭제 후 패널 선택 시각 갱신 실패")
             self.update_task_selection_status()
-            self._refresh_all_panels()
+            # 지시·협조는 오른쪽 패널만 나열한다(좌측·중앙은 일정만 표시).
+            self.schedule_panel_refresh(right=True)
             if hasattr(self, "show_toast"):
                 toast_title = t("dialog.common.delete_done", "삭제 완료")
                 toast_msg = t("dialog.common.delete_toast_n", "{n}개가 삭제되었습니다.").replace(
@@ -607,7 +698,7 @@ class TaskActionsMixin:
         def on_delete_finished(success, result):
             if success and result is not None:
                 self.selected_task_ids.clear()
-                self.update_task_selection_status()
+                self._update_selection_visuals()
                 self._refresh_all_panels()
                 self.wake_gcal_sync()
                 deleted_total = int(result or 0) + deleted_directives
@@ -628,7 +719,7 @@ class TaskActionsMixin:
                 self.wake_calendar_sync()
             gcal_push_queue.enqueue(self, task, create_if_missing=True)
             self.selected_task_ids.clear()
-            self.update_task_selection_status()
+            self._update_selection_visuals()
             self.schedule_panel_refresh(left=True, center=True)
 
     def delete_selected_tasks(self):
@@ -700,7 +791,7 @@ class TaskActionsMixin:
         def on_finished(success, result):
             if success and result and result > 0:
                 self.selected_task_ids.clear()
-                self.update_task_selection_status()
+                self._update_selection_visuals()
                 self._refresh_all_panels()
                 self.wake_gcal_sync()
                 self.show_toast(

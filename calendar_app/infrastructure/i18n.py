@@ -4,7 +4,9 @@ import logging
 from pathlib import Path
 import re
 import shutil
+import unicodedata
 
+from PyQt6 import sip
 from PyQt6.QtCore import QSettings, QTranslator
 
 from calendar_app.app_paths import get_app_data_dir
@@ -13,24 +15,64 @@ from calendar_app.shared.encoding_utils import read_text_with_legacy_fallback
 logger = logging.getLogger(__name__)
 
 _BUNDLED_LOCALES_DIR = Path(__file__).resolve().parents[2] / "locales"
+# Bundled values a user override was seeded from. A subfolder keeps the copies
+# out of the "*.json" language scan of the user locale folder.
+_USER_LOCALE_SNAPSHOT_DIR = ".base"
+_QT_CATALOG_CODES = {"zh": "zh_CN", "zh-CN": "zh_CN", "zh-TW": "zh_TW", "pt": "pt_BR"}
+# The app is written in Korean: those button words are authored, not machine
+# translated, so they keep beating Qt's catalog exactly as written ("예"/"아니오").
+_SOURCE_LANGUAGE = "ko"
+
+
+def _is_latin_letter(ch: str) -> bool:
+    try:
+        return unicodedata.name(ch).startswith("LATIN ")
+    except ValueError:
+        return False
+
+
+def _with_mnemonic(text: str, source: str) -> str:
+    """Keep the Alt mnemonic of a Qt source label such as "&Yes" on its translation."""
+    marker = source.find("&")
+    if marker < 0 or marker + 1 >= len(source) or "&" in text:
+        return text
+    key = source[marker + 1]
+    letters = [index for index, ch in enumerate(text) if ch.isalpha()]
+    if not letters:
+        return text
+    if not _is_latin_letter(text[letters[0]]):
+        # Same form as Qt's CJK catalogs ("是(&Y)"): the Latin key follows the word.
+        return f"{text} (&{key.upper()})"
+    index = next((i for i in letters if text[i].casefold() == key.casefold()), letters[0])
+    return f"{text[:index]}&{text[index:]}"
 
 
 class _StandardButtonTranslator(QTranslator):
     """Cover common buttons even when Qt ships no catalog for a bundled language."""
 
-    def __init__(self, values, parent):
+    def __init__(self, values, parent, mnemonics=True):
         super().__init__(parent)
         self._values = values
+        self._mnemonics = mnemonics
 
     def isEmpty(self):  # noqa: N802 - Qt API
         return False
 
     def translate(self, context, sourceText, disambiguation=None, n=-1):  # noqa: N803
         if context in {"QPlatformTheme", "QDialogButtonBox", "QMessageBox"}:
-            return self._values.get(sourceText.replace("&", ""))
+            value = self._values.get(sourceText.replace("&", ""))
+            if value and self._mnemonics:
+                return _with_mnemonic(value, sourceText)
+            return value or None
         # None maps to a null QString: Qt can try the next translator/source.
         # An empty Python string is a successful, blank translation instead.
         return None
+
+
+def _system_locale():
+    from PyQt6.QtCore import QLocale
+
+    return QLocale.system()
 
 
 def get_user_locales_dir(create: bool = False) -> Path:
@@ -39,6 +81,27 @@ def get_user_locales_dir(create: bool = False) -> Path:
     if create:
         user_dir.mkdir(parents=True, exist_ok=True)
     return user_dir
+
+
+def _user_locale_snapshot_path(lang_code: str) -> Path:
+    return get_user_locales_dir(create=False) / _USER_LOCALE_SNAPSHOT_DIR / f"{lang_code}.json"
+
+
+def _drop_unedited_values(user: dict, snapshot: dict) -> dict:
+    """Return *user* without the values still equal to the bundle it was seeded from."""
+    kept = {}
+    for key, value in user.items():
+        if key in snapshot:
+            seeded = snapshot[key]
+            if isinstance(value, dict) and isinstance(seeded, dict):
+                nested = _drop_unedited_values(value, seeded)
+                if nested:
+                    kept[key] = nested
+                continue
+            if value == seeded:
+                continue
+        kept[key] = value
+    return kept
 
 
 def _iter_locale_codes(locale_dir: Path) -> set[str]:
@@ -116,6 +179,11 @@ def ensure_user_locale_file(lang_code: str) -> Path:
 
     source = resolve_locale_file_path(lang, prefer_user=False)
     if source and source.exists():
+        # The snapshot tells untouched seeded values apart from edits, so later
+        # bundled fixes still reach every string the user did not change.
+        snapshot = _user_locale_snapshot_path(lang)
+        snapshot.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, snapshot)
         shutil.copy2(source, target)
         return target
 
@@ -136,32 +204,55 @@ def remove_user_locale_override(lang_code: str) -> bool:
     if not path.exists():
         return False
     path.unlink(missing_ok=True)
+    _user_locale_snapshot_path(lang).unlink(missing_ok=True)
     return True
 
 
 def validate_user_locale_file(lang_code: str) -> tuple[bool, str]:
-    """Validate user locale JSON format and root type for *lang_code*."""
+    """Validate user locale JSON format and root type for *lang_code*.
+
+    A partial override is valid: keys it leaves out fall back to the bundled file,
+    so they are reported as information and never fail the check.
+    """
     lang = str(lang_code or "").strip()
     if not lang:
-        return False, "Language code is empty."
+        return False, t("menu.locale_validate_empty_code", "언어 코드가 비어 있습니다.")
     path = get_user_locales_dir(create=False) / f"{lang}.json"
     if not path.exists():
-        return True, f"No user override file exists: {path}"
+        return True, t(
+            "menu.locale_validate_no_file",
+            "사용자 오버라이드 파일이 없습니다: {path}",
+            path=path,
+        )
     try:
         decoded = read_text_with_legacy_fallback(path)
         data = json.loads(decoded.text)
     except Exception as exc:
-        return False, f"JSON parse failed: {exc}"
+        return False, t(
+            "menu.locale_validate_parse_failed",
+            "JSON을 읽지 못했습니다: {error}",
+            error=exc,
+        )
     if not isinstance(data, dict):
-        return False, "Locale root JSON must be an object (dict)."
+        return False, t(
+            "menu.locale_validate_not_object",
+            "로케일 파일의 최상위 JSON은 객체여야 합니다.",
+        )
 
+    message = t("menu.locale_validate_passed", "검증을 통과했습니다: {path}", path=path)
     bundled_path = resolve_locale_file_path(lang, prefer_user=False)
     if bundled_path and bundled_path.exists():
         bundled_data = _read_locale_dict(bundled_path, lang_hint=lang)
         missing_top = sorted(set(bundled_data.keys()) - set(data.keys()))
         if missing_top:
-            return False, f"Missing top-level keys vs bundled locale: {', '.join(missing_top[:10])}"
-    return True, f"Validation passed: {path}"
+            shown = ", ".join(missing_top[:10]) + (", …" if len(missing_top) > 10 else "")
+            message += "\n" + t(
+                "menu.locale_validate_missing_keys",
+                "오버라이드하지 않은 최상위 키 {count}개는 기본 번역을 사용합니다: {keys}",
+                count=len(missing_top),
+                keys=shown,
+            )
+    return True, message
 
 
 class I18nManager:
@@ -202,6 +293,20 @@ class I18nManager:
                 return candidate
         return None
 
+    @classmethod
+    def detect_system_language(cls, available, system_locale=None):
+        """Pick the UI language from the display languages, then the regional format.
+
+        QLocale.system().name() follows the Windows regional format, so a Korean
+        display with US formats would otherwise start in English.
+        """
+        locale = _system_locale() if system_locale is None else system_locale
+        for tag in [*locale.uiLanguages(), locale.name()]:
+            detected = cls.canonical_locale_code(tag, available)
+            if detected:
+                return detected
+        return None
+
     def _load_translations(self):
         settings = QSettings("kimhyojin", "Dark Calendar")
         available = list_available_locale_codes()
@@ -216,11 +321,8 @@ class I18nManager:
                 settings.setValue("language", saved_lang)
                 settings.sync()
         else:
-            # 2. First run: detect from system locale
-            from PyQt6.QtCore import QLocale
-
-            system_locale = QLocale.system().name()  # e.g. "ko_KR", "en_US"
-            detected = self.canonical_locale_code(system_locale, available)
+            # 2. First run: detect from the system display language
+            detected = self.detect_system_language(available)
             self.lang = detected or "en"  # Fallback to English
 
             # Save the detected language so it's consistent on next run
@@ -238,6 +340,9 @@ class I18nManager:
         # outdated (e.g. missing emoji or new keys added since it was seeded).
         if bundled_same_path and bundled_same_path != path:
             self.bundled_translations = self._load_locale_json(str(bundled_same_path), self.lang)
+            snapshot = _read_locale_dict(_user_locale_snapshot_path(self.lang), self.lang)
+            if snapshot:
+                self.translations = _drop_unedited_values(self.translations, snapshot)
         else:
             self.bundled_translations = {}
         self.fallback_translations = self._load_locale_json(
@@ -261,41 +366,53 @@ class I18nManager:
         app = QApplication.instance()
         if app is None:
             return
-        previous = getattr(self, "_qt_translator", None)
-        if previous is not None:
-            app.removeTranslator(previous)
-            previous.deleteLater()
-        self._qt_translator = None
-        code = {"zh": "zh_CN", "zh-CN": "zh_CN", "zh-TW": "zh_TW", "pt": "pt_BR"}.get(
-            self.lang, self.lang
-        )
+        # Re-applying a language replaces the earlier translators instead of stacking them.
+        # A translator whose QApplication was destroyed is already gone.
+        for name in ("_qt_translator", "_button_translator"):
+            previous = getattr(self, name, None)
+            if previous is not None and not sip.isdeleted(previous):
+                app.removeTranslator(previous)
+                previous.deleteLater()
+            setattr(self, name, None)
+        buttons = None
+        if self.lang != "en":
+            buttons = _StandardButtonTranslator(
+                {
+                    source: self.get(key, source)
+                    for source, key in (
+                        ("OK", "dialog.common.ok"),
+                        ("Cancel", "common.cancel"),
+                        ("Save", "common.save"),
+                        ("Apply", "common.apply"),
+                        ("Close", "common.close"),
+                        ("Yes", "dialog.common.yes"),
+                        ("No", "dialog.common.no"),
+                    )
+                },
+                app,
+                mnemonics=self.lang != _SOURCE_LANGUAGE,
+            )
+        # Qt asks the most recently installed translator first. Translated button
+        # words go in before Qt's catalog, so Qt's reviewed words (with their
+        # mnemonics) win and ours only cover languages Qt ships no catalog for.
+        # The Korean source words go in after it and keep today's text.
+        if buttons is not None and self.lang != _SOURCE_LANGUAGE:
+            self._install_translator(app, "_button_translator", buttons)
+        code = _QT_CATALOG_CODES.get(self.lang, self.lang)
         translator = QTranslator(app)
         directory = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
-        if translator.load(f"qtbase_{code}", directory) and app.installTranslator(translator):
-            self._qt_translator = translator
+        if translator.load(f"qtbase_{code}", directory):
+            self._install_translator(app, "_qt_translator", translator)
         else:
             translator.deleteLater()
-        previous_buttons = getattr(self, "_button_translator", None)
-        if previous_buttons is not None:
-            app.removeTranslator(previous_buttons)
-            previous_buttons.deleteLater()
-        buttons = _StandardButtonTranslator(
-            {
-                source: self.get(key, source)
-                for source, key in (
-                    ("OK", "dialog.common.ok"),
-                    ("Cancel", "common.cancel"),
-                    ("Save", "common.save"),
-                    ("Apply", "common.apply"),
-                    ("Close", "common.close"),
-                    ("Yes", "dialog.common.yes"),
-                    ("No", "dialog.common.no"),
-                )
-            },
-            app,
-        )
-        app.installTranslator(buttons)
-        self._button_translator = buttons
+        if buttons is not None and self.lang == _SOURCE_LANGUAGE:
+            self._install_translator(app, "_button_translator", buttons)
+
+    def _install_translator(self, app, name, translator):
+        if app.installTranslator(translator):
+            setattr(self, name, translator)
+        else:
+            translator.deleteLater()
 
     @staticmethod
     def _load_locale_json(path: str, lang: str) -> dict:
@@ -304,7 +421,7 @@ class I18nManager:
         return _read_locale_dict(Path(path), lang_hint=lang)
 
     @staticmethod
-    def _apply_qt_locale(lang: str):
+    def _apply_qt_locale(lang: str, system_locale=None):
         """Set Qt's default locale to match the UI language."""
         from PyQt6.QtCore import QLocale
 
@@ -331,6 +448,11 @@ class I18nManager:
         locale = _LANG_TO_LOCALE.get(
             lang, QLocale(QLocale.Language.English, QLocale.Country.UnitedStates)
         )
+        # Keep the user's own region (en_GB dates, pt_PT words, ar_MA digits) when
+        # it is the UI language in the same script; zh-TW never becomes Simplified.
+        system = _system_locale() if system_locale is None else system_locale
+        if system.language() == locale.language() and system.script() == locale.script():
+            locale = QLocale(system.language(), system.script(), system.territory())
         QLocale.setDefault(locale)
 
         # Set layout direction for RTL languages (Arabic, Hebrew, etc.)
@@ -362,25 +484,6 @@ class I18nManager:
             return None
         return current
 
-    def _weekday_from_calendar(self, key, data=None):
-        weekday_index = {
-            "weekday.mon": 0,
-            "weekday.tue": 1,
-            "weekday.wed": 2,
-            "weekday.thu": 3,
-            "weekday.fri": 4,
-            "weekday.sat": 5,
-            "weekday.sun": 6,
-        }.get(key)
-        if weekday_index is None:
-            return None
-        weekdays = self._resolve_from(
-            self.translations if data is None else data, "calendar.weekdays"
-        )
-        if isinstance(weekdays, list) and len(weekdays) > weekday_index:
-            return weekdays[weekday_index]
-        return None
-
     def _resolve_alias(self, key, data=None):
         source = self.translations if data is None else data
         # Legacy keys used in some dialogs
@@ -396,8 +499,6 @@ class I18nManager:
                 value = self._resolve_from(source, prefix + suffix)
                 if value is not None:
                     return value
-        if key.startswith("weekday."):
-            return self._weekday_from_calendar(key, source)
         return None
 
     @staticmethod

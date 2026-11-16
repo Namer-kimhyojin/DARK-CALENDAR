@@ -18,6 +18,10 @@ from calendar_app.app_metadata import APP_NAME
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key
 from calendar_app.presentation.main_window.top_bar_menu_factory import build_top_left_menus
+from calendar_app.presentation.main_window.top_bar_shelf import (
+    TOP_BAR_BUTTON_SIZE,
+    TOP_BAR_BUTTON_SIZE_CSS,
+)
 from calendar_app.presentation.main_window.top_menus.common import set_themed_icon
 from calendar_app.presentation.theme.style_builder import apply_top_menu_theme
 from calendar_app.shared.brand_assets import brand_mark_pixmap
@@ -149,11 +153,13 @@ def build_top_bar_runtime_styles(settings, size: int, theme_color: str) -> dict[
                 color: {palette["text_secondary"]}; background: transparent;
                 border: 1px solid transparent; border-radius: {button_radius}px;
                 font-size: {button_pt}pt; font-weight: 600; padding: 0;
+                {TOP_BAR_BUTTON_SIZE_CSS}
             }}
             QPushButton:hover {{
                 color: {palette["text_primary"]}; background: {palette["control_bg_hover"]};
                 border-color: {palette["border_soft"]};
             }}
+            QPushButton:focus {{ border-color: {theme_color}; }}
             QPushButton:checked {{
                 color: {palette["text_primary"]}; background: {accent_soft};
                 border-color: {hex_to_rgba(theme_color, 0.55)};
@@ -162,12 +168,13 @@ def build_top_bar_runtime_styles(settings, size: int, theme_color: str) -> dict[
         """,
         "search": f"""
             QLineEdit {{
-                background: {palette["control_bg"]}; border: 1px solid {palette["border"]};
+                background: {palette["control_bg"]};
+                border: 1px solid {palette.get("border_control", palette["border_soft"])};
                 border-radius: {search_radius}px; padding: 6px 12px; color: {palette["text_primary"]};
                 font-size: {field_pt}pt;
             }}
             QLineEdit:hover {{
-                border-color: {palette["border_strong"]}; background: {palette["control_bg_hover"]};
+                border-color: {palette["border"]}; background: {palette["control_bg_hover"]};
             }}
             QLineEdit:focus {{
                 border-color: {theme_color}; background: {palette["control_bg_pressed"]};
@@ -177,10 +184,12 @@ def build_top_bar_runtime_styles(settings, size: int, theme_color: str) -> dict[
             QToolButton {{
                 color: {palette["text_secondary"]}; background: transparent;
                 border: 1px solid transparent; border-radius: {button_radius}px;
-                font-size: {button_pt}pt; font-weight: 600;
+                font-size: {button_pt}pt; font-weight: 600; padding: 0;
+                {TOP_BAR_BUTTON_SIZE_CSS}
             }}
             QToolButton:hover {{
                 color: {palette["text_primary"]}; background: {palette["control_bg_hover"]};
+                border-color: {palette["border_soft"]};
             }}
             QToolButton:focus {{ border-color: {theme_color}; }}
             QToolButton:pressed {{ background: {palette["control_bg_pressed"]}; }}
@@ -245,7 +254,8 @@ def _setup_navigation_rail(owner, styles, icon_color, accent_color):
         _se(t("menu.ui_theme_open", "모양 설정...")), owner.open_panel_background_color_dialog
     )
     set_themed_icon(appearance_action, ICON.DISPLAY_STYLE, icon_color)
-    rail.setEnabled(not bool(getattr(owner, "is_locked", False)))
+    # Not disabled while locked: the lock overlay covers it, and a disabled rail
+    # only greyed its icons out.
     owner.addToolBar(Qt.ToolBarArea.LeftToolBarArea, rail)
     owner.navigation_rail = rail
     window_menu = getattr(owner, "display_window_menu", None)
@@ -398,7 +408,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.lock_btn.setAccessibleDescription(
         t("topbar.lock_on_hint") if is_locked else t("topbar.lock_off_hint")
     )
-    self.lock_btn.setFixedSize(36, 36)
+    self.lock_btn.setFixedSize(TOP_BAR_BUTTON_SIZE, TOP_BAR_BUTTON_SIZE)
     self.lock_btn.setStyleSheet(_btn_style)
     self.lock_btn.clicked.connect(self.toggle_lock_mode)
     top_bar.addWidget(self.lock_btn, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -422,7 +432,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.magnet_btn.setAccessibleDescription(
         t("topbar.magnet_on_hint") if is_magnet else t("topbar.magnet_off_hint")
     )
-    self.magnet_btn.setFixedSize(36, 36)
+    self.magnet_btn.setFixedSize(TOP_BAR_BUTTON_SIZE, TOP_BAR_BUTTON_SIZE)
     self.magnet_btn.setStyleSheet(_btn_style)
     self.magnet_btn.clicked.connect(self.toggle_magnet_mode)
     top_bar.addWidget(self.magnet_btn, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -455,10 +465,17 @@ def setup_top_bar(self, _size, _theme, _ta):
         t("topbar.widget_mode_hint", "위젯 전용 모드 열기")
     )
     self.widget_mode_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    self.widget_mode_btn.setFixedSize(36, 36)
+    self.widget_mode_btn.setFixedSize(TOP_BAR_BUTTON_SIZE, TOP_BAR_BUTTON_SIZE)
     self.widget_mode_btn.setStyleSheet(runtime_styles["tool_button"])
     self.widget_mode_btn.clicked.connect(self.toggle_widget_mode_panel)
-    top_bar.addWidget(self.widget_mode_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+    # Order: [widget mode] | [lock] [magnet] [pin]. The widget button opens a
+    # mode, so it sits before the divider; the on/off toggles stay together
+    # after it (the shelf appends the pin button last).
+    top_bar.insertWidget(
+        top_bar.indexOf(self.top_bar_divider),
+        self.widget_mode_btn,
+        alignment=Qt.AlignmentFlag.AlignCenter,
+    )
 
     self.top_bar_frame = _TopBarFrame(
         brand_group, self.search_edit, self.sync_status_text_lbl, self.settings

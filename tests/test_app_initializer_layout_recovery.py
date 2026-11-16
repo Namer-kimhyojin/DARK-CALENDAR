@@ -69,7 +69,7 @@ def test_post_startup_recovery_does_not_mutate_a_successfully_restored_layout():
     )
     assert app.sync_calls == 1
     assert app.float_calls == 1
-    assert app.refresh_calls == [{"left": True, "center": True, "right": True}]
+    assert app.refresh_calls == [{"left": True, "center": True, "right": True, "mark_dirty": False}]
 
 
 def test_post_startup_recovery_rebuilds_only_when_restore_failed():

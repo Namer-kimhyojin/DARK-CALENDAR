@@ -43,8 +43,8 @@ Ctrl+클릭으로 다중 선택 가능.
 # window_shell_actions.py (떠 있는 패널은 floating_dock_behavior가 같은 handle_escape_key로 넘김)
 ESC → 집중 모드 전체 화면이면 해제, 아니면 clear_task_selection()
       전역 단축키로 등록하지 않는다(명령 팔레트·대화상자의 Esc를 가로채지 않도록)
-Del → 디렉티브 삭제 우선
-      → 선택된 디렉티브 없으면 태스크 삭제
+Del → delete_selected_items(): 선택된 태스크와 디렉티브를 한 번의 확인으로 함께 삭제
+      텍스트 입력에 포커스가 있으면 무시(_is_text_input_focused)
 ```
 
 ## 주요 함수
@@ -58,7 +58,7 @@ _refresh_panel_selection_visuals(app)   # 프레임 스타일 일괄 갱신
 clear_panel_selections(app)             # ESC 핸들러, 변경 여부 반환
 
 # TaskActionsMixin
-delete_selected_directives()            # Del 키 / 컨텍스트 메뉴
+delete_selected_directives()            # 패널 우클릭 메뉴·위젯 항목 메뉴(포커스 검사 없음, 오른쪽 패널만 갱신)
 ```
 
 ## 비주얼 갱신 패턴

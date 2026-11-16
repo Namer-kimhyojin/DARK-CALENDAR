@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from collections import Counter
 import contextlib
+import logging
 import sys
 
 from PyQt6 import sip
@@ -44,8 +45,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from calendar_app.domain.task_status_view import can_transition_status
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.runtime.keyboard_shortcuts import SHORTCUTS
+from calendar_app.presentation.locale_names import weekday_names
 from calendar_app.presentation.widgets.panel_widget_common import (
     _format_compact_date_with_weekday,
     _format_widget_datetime_label,
@@ -53,12 +56,15 @@ from calendar_app.presentation.widgets.panel_widget_common import (
     _parse_qdate,
     _parse_quick_add_text,
 )
-from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor, int_token
+from calendar_app.presentation.widgets.panel_widget_style import (
+    css_to_qcolor,
+    int_token,
+    menu_stylesheet,
+)
 from calendar_app.presentation.widgets.panel_widget_theme import (
     _apply_configured_widget_color,
     _apply_registered_widget_mode_skin,
     _resolve_widget_mode_tokens,
-    _widget_mode_menu_stylesheet,
 )
 from calendar_app.presentation.widgets.schedule_info import _is_all_day as _schedule_is_all_day
 from calendar_app.presentation.widgets.week_day_button import ModernWeekDayButton
@@ -110,6 +116,12 @@ from calendar_app.shared.icon_map import icon as _ic
 
 # Windows posts this when its modal move/size loop ends (startSystemMove).
 _WM_EXITSIZEMOVE = 0x0232
+# A completed task cannot go straight back to pending; it reopens as in progress.
+_REOPEN_STATUS = "in_progress"
+# Undo record key: the completion time an untick cleared, put back by undo.
+_COMPLETED_AT_BEFORE = "completed_at_before"
+
+logger = logging.getLogger(__name__)
 
 
 def _safe_text(value) -> str:
@@ -428,7 +440,11 @@ class _CompletionCheckBox(QCheckBox):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def paintEvent(self, event):
-        tokens = _widget_theme_tokens(self._controller.main_window)
+        # apply_theme caches the resolved tokens on the controller; resolving them
+        # again here cost ~4 ms and ~140 settings reads per hover or focus repaint.
+        tokens = getattr(self._controller, "_theme_tokens", None)
+        if not isinstance(tokens, dict) or not tokens:
+            tokens = _widget_theme_tokens(self._controller.main_window)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(
@@ -631,8 +647,13 @@ class _CompactMonthCalendar(QWidget):
 
     dateClicked = pyqtSignal(QDate)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, defer_render: bool = False):
         super().__init__(parent)
+        # While deferred (the grid is hidden in week mode) styling and the 42-cell
+        # render are only recorded; set_render_deferred(False) replays them.
+        self._render_deferred = bool(defer_render)
+        self._render_pending = False
+        self._style_pending = False
         self.setObjectName("unified_month_calendar")
         self.setAccessibleName(t("widget_mode.month_calendar", "월간 날짜 선택"))
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -669,18 +690,18 @@ class _CompactMonthCalendar(QWidget):
         self.next_btn.clicked.connect(lambda: self._navigate_month(1))
         navigation.addWidget(self.next_btn)
         root.addLayout(navigation)
+        self._sync_nav_arrows()
 
         self.weekday_row = QHBoxLayout()
         self.weekday_row.setContentsMargins(0, 0, 0, 0)
         self.weekday_row.setSpacing(2)
         self.weekday_labels: list[QLabel] = []
-        weekday_keys = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-        for key in weekday_keys:
+        for name in weekday_names(narrow=True):
             label = QLabel(self)
             label.setObjectName("unified_month_weekday")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setFixedHeight(24)
-            label.setText(t(f"weekday.{key}", key.title()))
+            label.setText(name)
             self.weekday_row.addWidget(label, 1)
             self.weekday_labels.append(label)
         root.addLayout(self.weekday_row)
@@ -736,7 +757,24 @@ class _CompactMonthCalendar(QWidget):
         self.day_grid.setVerticalSpacing(gap)
         self.setMinimumHeight(62 + (height * 6) + (gap * 5))
 
+    def set_render_deferred(self, deferred: bool) -> None:
+        deferred = bool(deferred)
+        if deferred == self._render_deferred:
+            return
+        self._render_deferred = deferred
+        if deferred:
+            return
+        if self._style_pending:
+            self._style_pending = False
+            self._apply_style()
+        if self._render_pending:
+            self._render_pending = False
+            self.update_month(self._selected_date, force=True)
+
     def _apply_style(self) -> None:
+        if self._render_deferred:
+            self._style_pending = True
+            return
         tk = self._tokens
         if not tk:
             return
@@ -803,6 +841,18 @@ class _CompactMonthCalendar(QWidget):
             tk.get("_background_opacity", 100),
         )
 
+    def _sync_nav_arrows(self) -> None:
+        # The navigation row mirrors under right-to-left, so "previous" sits on the
+        # right edge; Qt does not mirror arrow types, so point each arrow outward.
+        rtl = self.isRightToLeft()
+        self.previous_btn.setArrowType(Qt.ArrowType.RightArrow if rtl else Qt.ArrowType.LeftArrow)
+        self.next_btn.setArrowType(Qt.ArrowType.LeftArrow if rtl else Qt.ArrowType.RightArrow)
+
+    def changeEvent(self, event) -> None:
+        if event.type() == QEvent.Type.LayoutDirectionChange and hasattr(self, "next_btn"):
+            self._sync_nav_arrows()
+        super().changeEvent(event)
+
     def _navigate_month(self, delta: int) -> None:
         self.dateClicked.emit(self._selected_date.addMonths(int(delta)))
 
@@ -814,12 +864,21 @@ class _CompactMonthCalendar(QWidget):
         if not isinstance(selected, QDate) or not selected.isValid():
             return
         self._selected_date = QDate(selected)
+        if self._render_deferred:
+            self._render_pending = True
+            return
         first = QDate(selected.year(), selected.month(), 1)
         grid_start = first.addDays(1 - first.dayOfWeek())
         self.month_label.setText(f"{selected.year()}. {selected.month():02d}")
         weekday_keys = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-        for key, label in zip(weekday_keys, self.weekday_labels, strict=True):
-            label.setText(t(f"weekday.{key}", key.title()))
+        names = weekday_names(narrow=True)
+        long_names = weekday_names(long=True)
+        for key, name, long_name, label in zip(
+            weekday_keys, names, long_names, self.weekday_labels, strict=True
+        ):
+            label.setText(name)
+            # Narrow letters are ambiguous ("T" is Tue and Thu); screen readers get the full name.
+            label.setAccessibleName(long_name)
             color = self._tokens.get(
                 f"calendar_weekday_{key}", self._tokens.get("text_secondary", "")
             )
@@ -869,13 +928,33 @@ class CompactCalendarGrid(QWidget):
             self._row_layout.addWidget(button, 1)
             self._buttons.append(button)
 
-        self.month_calendar = _CompactMonthCalendar(self)
-        self.month_calendar.dateClicked.connect(self.dateClicked)
-        self.month_calendar.hide()
-        self._root_layout.addWidget(self.month_calendar, 1)
+        # The 42-cell month grid is built on first use (see month_calendar); until
+        # then the calls it would receive are kept and replayed on creation.
+        self._month_calendar: _CompactMonthCalendar | None = None
+        self._month_metrics: tuple[int, int] | None = None
+        self._month_theme: tuple[dict[str, str], tuple, float] | None = None
 
         self._dates = []
         self.update_grid()
+
+    @property
+    def month_calendar(self) -> _CompactMonthCalendar:
+        if self._month_calendar is None:
+            month = _CompactMonthCalendar(self, defer_render=True)
+            month.dateClicked.connect(self.dateClicked)
+            month.hide()
+            # Appended after the week strip, as when it was built eagerly.
+            self._root_layout.addWidget(month, 1)
+            self._month_calendar = month
+            if self._month_metrics is not None:
+                height, spacing = self._month_metrics
+                month.apply_layout_metrics(cell_height=height, spacing=spacing)
+            if self._month_theme is not None:
+                tokens, opacities, font_size = self._month_theme
+                month.set_theme_tokens(tokens, opacities=opacities, font_size=font_size)
+            month.setSelectedDate(self._selected_date)
+            month.set_render_deferred(self._display_mode != "month")
+        return self._month_calendar
 
     @property
     def display_mode(self) -> str:
@@ -886,8 +965,13 @@ class CompactCalendarGrid(QWidget):
         if normalized == self._display_mode:
             return
         self._display_mode = normalized
+        if normalized == "month":
+            # Render before it becomes visible, so it never shows unstyled.
+            self.month_calendar.set_render_deferred(False)
         self._week_strip.setVisible(normalized == "week")
         self.month_calendar.setVisible(normalized == "month")
+        if normalized == "week":
+            self.month_calendar.set_render_deferred(True)
         self._last_render_state = None
         self.update_grid(self._selected_date)
 
@@ -902,7 +986,9 @@ class CompactCalendarGrid(QWidget):
         for button in self._buttons:
             button.setMinimumSize(28, max(38, height))
             button.setMaximumSize(16777215, max(38, height))
-        self.month_calendar.apply_layout_metrics(cell_height=height, spacing=spacing)
+        self._month_metrics = (height, spacing)
+        if self._month_calendar is not None:
+            self._month_calendar.apply_layout_metrics(cell_height=height, spacing=spacing)
         self._row_layout.setSpacing(max(0, spacing))
         self._root_layout.setContentsMargins(*margins)
 
@@ -920,11 +1006,13 @@ class CompactCalendarGrid(QWidget):
             return
         self._tokens = normalized
         self._last_render_state = None
-        self.month_calendar.set_theme_tokens(
-            tokens,
-            opacities=opacities,
-            font_size=font_size,
-        )
+        self._month_theme = (dict(tokens or {}), opacities, font_size)
+        if self._month_calendar is not None:
+            self._month_calendar.set_theme_tokens(
+                tokens,
+                opacities=opacities,
+                font_size=font_size,
+            )
 
     def _button_stylesheet(self, day: QDate, today: QDate, selected: QDate) -> str:
         # Native font and inherited semantic text color; the tile's separate
@@ -973,7 +1061,8 @@ class CompactCalendarGrid(QWidget):
         if state == self._last_render_state:
             return
         self._last_render_state = state
-        self.month_calendar.setSelectedDate(selected)
+        if self._month_calendar is not None:
+            self._month_calendar.setSelectedDate(selected)
 
         self._dates = []
         for offset, button in enumerate(self._buttons):
@@ -1900,6 +1989,9 @@ class UnifiedWidgetWindow(QWidget):
         from calendar_app.presentation.widgets.widget_workspace_styles import workspace_styles
 
         tokens = _widget_theme_tokens(self.controller.main_window)
+        # Completion checkboxes paint from these; stored before the early return so
+        # every apply_theme (show, refresh_data, refresh_theme) keeps them current.
+        self.controller._theme_tokens = tokens
         settings = self.controller.main_window.settings
         workspace_skin = get_widget_mode_skin(read_widget_mode_skin_id(settings))
         opacities = (
@@ -1998,9 +2090,12 @@ class UnifiedWidgetWindow(QWidget):
             )
         )
         color = tokens.get("text_primary", "#ffffff")
+        # tokens already holds every key menu_stylesheet reads; re-resolving the
+        # theme (as _widget_mode_menu_stylesheet does) gives the same stylesheet.
+        menu_qss = menu_stylesheet(tokens)
         self.customize_btn.setIcon(_ic(ICON.DISPLAY_STYLE, color=color))
         self.view_btn.setIcon(_ic(ICON.VIEW_MONTHLY, color=color))
-        self.view_menu.setStyleSheet(_widget_mode_menu_stylesheet(tokens))
+        self.view_menu.setStyleSheet(menu_qss)
         self.restore_btn.setIcon(_ic(ICON.CALENDAR, color=color))
         self.pin_btn.setIcon(_ic(ICON.ALWAYS_ON_TOP, color=color))
         for button in (self.restore_btn, self.customize_btn, self.pin_btn):
@@ -2008,7 +2103,7 @@ class UnifiedWidgetWindow(QWidget):
         self.customize_btn.setIconSize(QSize(18, 18))
         self.more_btn.setFixedWidth(32)
         self._update_toolbar_labels()
-        self.compact_filter_menu.setStyleSheet(_widget_mode_menu_stylesheet(tokens))
+        self.compact_filter_menu.setStyleSheet(menu_qss)
         self.setWindowOpacity(1.0)
         self.cal_grid.set_theme_tokens(
             tokens,
@@ -2640,7 +2735,11 @@ class UnifiedWidgetWindow(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.apply_theme()
+        # isVisible() is already true here, so refresh_data() starts with
+        # apply_theme() for the controller's own window; theming twice per show
+        # only repeated the token resolution.
+        if self.controller.widget is not self:
+            self.apply_theme()
         self.update_time()
         self.controller.refresh_data()
 
@@ -2669,8 +2768,9 @@ class UnifiedWidgetWindow(QWidget):
 
     def _open_menu(self, global_pos) -> None:
         tokens = _widget_theme_tokens(self.controller.main_window)
+        menu_qss = menu_stylesheet(tokens)
         menu = QMenu(self)
-        menu.setStyleSheet(_widget_mode_menu_stylesheet(tokens))
+        menu.setStyleSheet(menu_qss)
         open_manager = getattr(self.controller.main_window, "open_widget_manager", None)
         if callable(open_manager):
             menu.addAction(t("widget_manager.title", "위젯 관리자"), open_manager)
@@ -2794,7 +2894,7 @@ class UnifiedWidgetWindow(QWidget):
         manager = getattr(self.controller.main_window, "overlay_manager", None)
         if manager is not None:
             widget_menu = menu.addMenu(t("widget_mode.desktop_widgets", "바탕화면 위젯 관리"))
-            manager.build_widgets_menu(widget_menu, _widget_mode_menu_stylesheet(tokens))
+            manager.build_widgets_menu(widget_menu, menu_qss)
         selected = menu.exec(global_pos)
         if selected == editor_action:
             from calendar_app.presentation.dialogs.widget_style_editor_dialog import (
@@ -2875,6 +2975,8 @@ class UnifiedWidgetController:
     def __init__(self, main_window, *, on_hidden=None):
         self.main_window = main_window
         self.widget = None
+        # Last tokens resolved by the window's apply_theme (read by checkbox paints).
+        self._theme_tokens = None
         self._on_hidden = on_hidden
         self._restoring_geometry = False
         self._changing_window_flags = False
@@ -3036,7 +3138,7 @@ class UnifiedWidgetController:
         read_only = bool(item.get("read_only"))
         tokens = _widget_theme_tokens(self.main_window)
         menu = QMenu(self.widget)
-        menu.setStyleSheet(_widget_mode_menu_stylesheet(tokens))
+        menu.setStyleSheet(menu_stylesheet(tokens))
         open_action = menu.addAction(
             t(
                 "widget_mode.menu_edit_directive"
@@ -3120,13 +3222,20 @@ class UnifiedWidgetController:
                 self.main_window.selected_directive_ids = {item_id}
                 self._run_main_dialog(callback)
             finally:
+                # The callback clears the selection only after it deleted the row.
+                deleted = not self.main_window.selected_directive_ids
+                if deleted:
+                    previous.discard(item_id)
                 self.main_window.selected_directive_ids = previous
+                update_status = getattr(self.main_window, "update_task_selection_status", None)
+                if deleted and callable(update_status):
+                    update_status()
         else:
             callback = getattr(self.main_window, "handle_task_deleted", None)
             if callable(callback):
                 self._run_main_dialog(callback, item_id)
 
-    def _write_status(self, item, status):
+    def _write_status(self, item, status, *, refresh=True):
         callback = getattr(
             self.main_window,
             "handle_directive_status_changed"
@@ -3139,9 +3248,19 @@ class UnifiedWidgetController:
         except Exception:
             success = False
         if not success:
-            if self.widget._free_runtime is not None:
-                self.widget._free_runtime.restore_item_check(item)
-            recovering_undo = self._undo_completion is not None
+            # The list re-renders below; the free layout and board lanes skip unchanged
+            # data, so their checkboxes are put back here.
+            for surface in (self.widget._free_runtime, self.widget._workspace_board):
+                if surface is not None:
+                    surface.restore_item_check(item)
+            pending = self._undo_completion
+            recovering_undo = pending is not None and (
+                pending[0].get("source"),
+                pending[0].get("item_id"),
+            ) == (item.get("source"), item.get("item_id"))
+            if not recovering_undo:
+                # This message replaces the earlier one; its undo would revert another item.
+                self._undo_completion = None
             self.widget.show_feedback(
                 t(
                     "widget_mode.save_failed_named",
@@ -3154,33 +3273,125 @@ class UnifiedWidgetController:
             self.widget.update_agenda(self.widget._last_items)
             return False
         self._status_overrides[(item["source"], item["item_id"])] = status
-        self.force_refresh()
+        if refresh:
+            self.force_refresh()
         return True
+
+    @staticmethod
+    def _blocks_direct_status(item, current, target) -> bool:
+        """True when the task status policy forbids going from current straight to target.
+
+        Unified tasks may not go from completed to pending (domain/task_status_view.py);
+        reopening goes through in progress. Directives have no such policy.
+        """
+        if item.get("source") == "directive" or not current:
+            return False
+        return not can_transition_status(current, target)
+
+    def _reopened_status(self, item) -> str:
+        """Status an unticked item gets: a completed task reopens as in progress."""
+        current = str(item.get("status") or "pending")
+        if self._blocks_direct_status(item, current, "pending"):
+            return _REOPEN_STATUS
+        return "pending"
+
+    @staticmethod
+    def _stored_completed_at(item) -> dict:
+        """{_COMPLETED_AT_BEFORE: value} as stored now, or {} when it cannot be read."""
+        try:
+            item_id = int(item["item_id"])
+            if item.get("source") == "directive":
+                from calendar_app.infrastructure.db import directive_repo
+
+                return {_COMPLETED_AT_BEFORE: directive_repo.get_directive_completed_at(item_id)}
+            from calendar_app.infrastructure.db import task_repo
+
+            task = task_repo.get_unified_task(item_id)
+        except Exception:
+            logger.exception("Failed to read completed_at for %s", item.get("item_id"))
+            return {}
+        return {_COMPLETED_AT_BEFORE: task.get("completed_at")} if task else {}
+
+    @staticmethod
+    def _restore_completed_at(item) -> None:
+        """Put back the completion time an untick cleared, so undo keeps the original day."""
+        try:
+            item_id = int(item["item_id"])
+            value = item[_COMPLETED_AT_BEFORE]
+            if item.get("source") == "directive":
+                from calendar_app.infrastructure.db import directive_repo
+
+                restored = directive_repo.restore_directive_completed_at(item_id, value)
+            else:
+                from calendar_app.infrastructure.db import task_repo
+
+                restored = task_repo.restore_task_completed_at(item_id, value)
+        except Exception:
+            logger.exception("Failed to restore completed_at for %s", item.get("item_id"))
+            return
+        if not restored:
+            # The status is back; only the completion time keeps the undo time.
+            logger.warning("completed_at was not restored for %s", item.get("item_id"))
 
     def set_item_completed(self, item, completed):
         if not item.get("item_id"):
             return
         previous = str(item.get("status") or "pending")
-        status = "completed" if completed else "pending"
+        status = "completed" if completed else self._reopened_status(item)
+        # The untick clears completed_at; without it undo would stamp the undo time and an
+        # item completed on another day would count as completed today.
+        stamp = {}
+        if not completed and previous == "completed":
+            stamp = self._stored_completed_at(item)
         if self._write_status(item, status):
-            self._undo_completion = (dict(item), previous)
+            # Keep the item as written, so undo knows the current status and a failed
+            # undo puts the check back to what the database still holds.
+            self._undo_completion = (
+                dict(item, status=status, completed=completed, **stamp),
+                previous,
+            )
+            status_labels = {
+                "completed": t("status.completed", "완료"),
+                _REOPEN_STATUS: t("status.in_progress", "진행 중"),
+            }
             self.widget.show_feedback(
                 t(
                     "widget_mode.saved_status_named",
                     "{status} 상태로 저장했습니다. · “{name}”",
                     name=_safe_text(item.get("title")) or t("widget_mode.untitled", "제목 없음"),
-                    status=t("status.completed", "완료")
-                    if completed
-                    else t("status.pending", "대기"),
+                    status=status_labels.get(status, t("status.pending", "대기")),
                 ),
                 undo=True,
             )
+
+    def _restore_status(self, item, previous) -> bool:
+        """Undo: write the previous status, through in progress when the policy forbids the jump."""
+        current = str(item.get("status") or "")
+        via_reopen = self._blocks_direct_status(item, current, previous) and not (
+            self._blocks_direct_status(item, current, _REOPEN_STATUS)
+            or self._blocks_direct_status(item, _REOPEN_STATUS, previous)
+        )
+        if via_reopen:
+            if not self._write_status(item, _REOPEN_STATUS, refresh=False):
+                return False
+            # The database now holds in progress: a failed second step or a retried
+            # undo must start from there.
+            item = dict(item, status=_REOPEN_STATUS, completed=False)
+            self._undo_completion = (item, previous)
+        if self._write_status(item, previous, refresh=False):
+            if previous == "completed" and _COMPLETED_AT_BEFORE in item:
+                self._restore_completed_at(item)
+            self.force_refresh()
+            return True
+        if via_reopen:
+            self.force_refresh()
+        return False
 
     def undo_completion(self):
         if self._undo_completion is None:
             return
         item, previous = self._undo_completion
-        if self._write_status(item, previous):
+        if self._restore_status(item, previous):
             self._undo_completion = None
             self.widget.show_feedback(
                 t(
@@ -3636,10 +3847,13 @@ class UnifiedWidgetController:
         overdue_directive_items = []
         undated_directive_items = []
         done_statuses = {"done", "completed", "deferred", "canceled", "cancelled"}
+        # Directives completed on this day stay in the overdue and no-deadline sections.
+        completed_today = cache.get("completed_directive_ids") or ()
         for row in cache.get("directive_rows", []) or []:
             if not isinstance(row, (tuple, list)) or len(row) < 5:
                 continue
-            status = self._effective_status("directive", row[0], _normalize_status(row[2]))
+            raw_status = _normalize_status(row[2])
+            status = self._effective_status("directive", row[0], raw_status)
             completed = status in {"done", "completed"}
             if status in done_statuses and not (completed and show_completed):
                 continue
@@ -3656,7 +3870,12 @@ class UnifiedWidgetController:
             }
             if deadline_qd.isValid() and deadline_qd == target:
                 directive_items.append(directive_item)
-            elif target == QDate.currentDate() and not completed:
+            elif target == QDate.currentDate() and (
+                not completed
+                or row[0] in completed_today
+                # Just completed here: the cache holds the old row until it is republished.
+                or raw_status not in {"done", "completed"}
+            ):
                 if deadline_qd.isValid() and deadline_qd < target:
                     directive_item["time"] = _format_compact_date_with_weekday(deadline_qd)
                     overdue_directive_items.append(directive_item)

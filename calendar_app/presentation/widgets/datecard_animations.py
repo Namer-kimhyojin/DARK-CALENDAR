@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QWidget
 from calendar_app.app_paths import get_resource_path
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.widgets.weather_scene import system_allows_weather_motion
+from calendar_app.shared.typography import ui_font_families
 
 
 @dataclass(frozen=True)
@@ -147,7 +148,7 @@ class AnimatedDateSurface(QWidget):
 
     def _font(self, pixels, *, bold=False):
         font = QFont(self.family)
-        font.setFamilies([self.family, "Malgun Gothic", "Segoe UI"])
+        font.setFamilies(ui_font_families(self.family))
         font.setPixelSize(max(6, round(pixels)))
         font.setWeight(QFont.Weight.DemiBold if bold else QFont.Weight.Normal)
         return font

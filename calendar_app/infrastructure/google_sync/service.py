@@ -16,7 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 from calendar_app.app_paths import CREDENTIALS_PATH, TOKEN_PATH  # noqa: E402
-from calendar_app.infrastructure.google_sync.common import sync_time_zone  # noqa: E402
+from calendar_app.infrastructure.google_sync.common import (  # noqa: E402
+    google_summary_for_task_name,
+    sync_time_zone,
+    untitled_event_name,
+)
 from calendar_app.infrastructure.google_sync.oauth import (  # noqa: E402
     GoogleAuthError,
     check_auth_cancelled,
@@ -1038,7 +1042,7 @@ class CalendarSyncService:
 
         return GoogleEvent(
             id=event_id,
-            summary=self._event_text(event, "summary", "Untitled") or "Untitled",
+            summary=self._event_text(event, "summary") or untitled_event_name(),
             description=self._event_text(event, "description"),
             start_time=start,
             end_time=end,
@@ -1292,7 +1296,8 @@ class CalendarSyncService:
                         .get(calendarId=calendar_id, eventId=event_id)
                         .execute()
                     )
-                ev["summary"] = summary
+                # An untitled placeholder stays empty unless Google already has that title.
+                ev["summary"] = google_summary_for_task_name(summary, ev.get("summary"))
                 ev["description"] = description
                 if location:
                     ev["location"] = location
@@ -1643,7 +1648,8 @@ class CalendarSyncService:
 
     def _build_event_body_from_op(self, op: dict) -> "dict | None":
         return self._build_event_body(
-            summary=op.get("summary") or "Untitled",
+            # The engine maps an untitled placeholder to "": Google keeps no title.
+            summary=op.get("summary") or "",
             start_iso=op.get("start_iso") or "",
             end_iso=op.get("end_iso") or "",
             description=op.get("description") or "",

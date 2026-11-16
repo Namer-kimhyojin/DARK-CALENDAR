@@ -35,6 +35,7 @@ from calendar_app.infrastructure.db import (
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
+from calendar_app.presentation.locale_names import calendar_display_name, weekday_name
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.presentation.widgets.schedule_info import build_schedule_hover_html
 from calendar_app.presentation.widgets.ui_components import install_hover_info
@@ -172,6 +173,10 @@ def _handle_panel_item_click(app, tid, is_directive, ctrl):
         app.selected_directive_ids.clear()
         selected.add(tid)
 
+    if hasattr(app, "_update_selection_visuals"):
+        # Keeps calendar buttons, panel cards and the selection bar in step.
+        app._update_selection_visuals()
+        return
     _refresh_panel_selection_visuals(app)
     if hasattr(app, "update_task_selection_status"):
         app.update_task_selection_status()
@@ -179,6 +184,8 @@ def _handle_panel_item_click(app, tid, is_directive, ctrl):
 
 def _apply_panel_item_style(container, selected, bg_color):
     """Apply consistent card style for panel items across normal/selected states."""
+    container.setProperty("panelItemSelected", bool(selected))
+    container.setAccessibleDescription(t("calendar.selected_state", "선택됨") if selected else "")
     if container.property("agendaCard"):
         tokens = _semantic_tokens()
         color = _color_rgba(bg_color or tokens["accent"], 220, tokens["accent"])
@@ -204,8 +211,10 @@ def _apply_panel_item_style(container, selected, bg_color):
     card_radius = int(shape.get("panel_item_radius", 0))
     tag_bg = "rgba(255, 255, 255, 13)"
     tag_hover_bg = "rgba(255, 255, 255, 23)"
-    tag_selected_bg = _tc_rgba(40)
-    selected_hover_bg = _tc_rgba(55)
+    # Selected cards use the accent fill whatever their colour tag is; the tag
+    # stays on the left strip. A tag-tinted fill was almost the resting colour.
+    tag_selected_bg = _tc_rgba(PANEL_SELECTED_FILL_ALPHA)
+    selected_hover_bg = _tc_rgba(PANEL_SELECTED_HOVER_FILL_ALPHA)
     left_color = "transparent"
     selected_left_color = _tc
 
@@ -220,8 +229,6 @@ def _apply_panel_item_style(container, selected, bg_color):
             if _tag.isValid():
                 tag_bg = f"rgba({_tag.red()}, {_tag.green()}, {_tag.blue()}, 30)"
                 tag_hover_bg = f"rgba({_tag.red()}, {_tag.green()}, {_tag.blue()}, 44)"
-                tag_selected_bg = f"rgba({_tag.red()}, {_tag.green()}, {_tag.blue()}, 52)"
-                selected_hover_bg = f"rgba({_tag.red()}, {_tag.green()}, {_tag.blue()}, 64)"
         except Exception:
             pass
 
@@ -230,17 +237,17 @@ def _apply_panel_item_style(container, selected, bg_color):
             QFrame {{
                 background-color: {tag_selected_bg};
                 border-radius: {card_radius}px;
-                border: 1px solid {_tc_rgba(180)};
+                border: 1px solid {_tc};
                 border-left-color: {selected_left_color};
-                border-left-width: 3px;
+                border-left-width: 4px;
                 border-left-style: solid;
                 margin: 1px 4px;
             }}
             QFrame:hover {{
                 background-color: {selected_hover_bg};
-                border: 1px solid {_tc_rgba(200)};
+                border: 1px solid {_tc};
                 border-left-color: {selected_left_color};
-                border-left-width: 3px;
+                border-left-width: 4px;
                 border-left-style: solid;
             }}
         """)
@@ -271,12 +278,17 @@ def _refresh_panel_selection_visuals(app):
     dir_sel = getattr(app, "selected_directive_ids", set())
     import contextlib
 
-    for tid, (container, bg_color) in list(getattr(app, "_panel_task_frames", {}).items()):
-        with contextlib.suppress(RuntimeError):
-            _apply_panel_item_style(container, tid in task_sel, bg_color)
-    for did, (container, bg_color) in list(getattr(app, "_panel_directive_frames", {}).items()):
-        with contextlib.suppress(RuntimeError):
-            _apply_panel_item_style(container, did in dir_sel, bg_color)
+    # Only cards whose state changed are restyled: setStyleSheet on every card
+    # was most of the cost of a Ctrl+click toggle.
+    for frames, selection in (
+        (getattr(app, "_panel_task_frames", {}), task_sel),
+        (getattr(app, "_panel_directive_frames", {}), dir_sel),
+    ):
+        for item_id, (container, bg_color) in list(frames.items()):
+            with contextlib.suppress(RuntimeError):
+                selected = item_id in selection
+                if container.property("panelItemSelected") != selected:
+                    _apply_panel_item_style(container, selected, bg_color)
 
 
 def clear_panel_selections(app):
@@ -288,11 +300,17 @@ def clear_panel_selections(app):
         app.selected_task_ids.clear()
     if hasattr(app, "selected_directive_ids"):
         app.selected_directive_ids.clear()
-    if changed:
+    if changed and hasattr(app, "_update_selection_visuals"):
+        app._update_selection_visuals()
+    elif changed:
         _refresh_panel_selection_visuals(app)
         if hasattr(app, "update_task_selection_status"):
             app.update_task_selection_status()
     return changed
+
+
+PANEL_SELECTED_FILL_ALPHA = 72
+PANEL_SELECTED_HOVER_FILL_ALPHA = 92
 
 
 def _tc_rgba(alpha_0_to_255: int) -> str:
@@ -351,22 +369,7 @@ def _app_locale() -> QLocale:
 
 
 def _localized_weekday_short(qd: QDate) -> str:
-    try:
-        short_name = _app_locale().standaloneDayName(qd.dayOfWeek(), QLocale.FormatType.ShortFormat)
-        if short_name:
-            return short_name
-    except Exception:
-        pass
-    day_names = [
-        t("weekday.mon", "Mon"),
-        t("weekday.tue", "Tue"),
-        t("weekday.wed", "Wed"),
-        t("weekday.thu", "Thu"),
-        t("weekday.fri", "Fri"),
-        t("weekday.sat", "Sat"),
-        t("weekday.sun", "Sun"),
-    ]
-    return day_names[qd.dayOfWeek() - 1]
+    return weekday_name(qd.dayOfWeek() - 1, locale=_app_locale())
 
 
 def _panel_surface_style(tokens=None, shape=None):
@@ -396,6 +399,33 @@ def _panel_toolbar_style():
             border: none;
         }}
     """
+
+
+def refresh_panel_surfaces(app):
+    """Repaint every side panel's surface and title bar for the current opacity.
+
+    Called in the same pass as the top bar and calendar surface, so an opacity
+    or wallpaper-floor change never leaves one panel lighter than the others
+    while it waits for its scheduled re-render.
+    """
+    from PyQt6.QtWidgets import QWidget
+
+    if not hasattr(app, "findChildren"):
+        return 0
+    changed = 0
+    surface_style = _panel_surface_style()
+    toolbar_style = _panel_toolbar_style()
+    for widget, style in [
+        *((w, surface_style) for w in app.findChildren(QFrame, "panel_surface")),
+        *((w, toolbar_style) for w in app.findChildren(QWidget, "panel_toolbar")),
+    ]:
+        try:
+            if widget.styleSheet() != style:
+                widget.setStyleSheet(style)
+                changed += 1
+        except RuntimeError:
+            continue
+    return changed
 
 
 def _panel_scroll_style():
@@ -501,7 +531,8 @@ def _directive_group_header(receiver_name):
     row.setContentsMargins(2, 8, 2, 4)
     row.setSpacing(8)
 
-    badge = QLabel("BY")
+    # The group key is the recipient (dialog field "수신자/담당부서"), so the badge says TO.
+    badge = QLabel(t("panel.directive_receiver_badge", "TO"))
     shape = _shape_tokens()
     badge_radius = int(shape.get("panel_group_badge_radius", 0))
     badge.setFixedSize(20, 20)
@@ -512,6 +543,10 @@ def _directive_group_header(receiver_name):
         f"border-radius: {badge_radius}px; "
         f"color: {get_theme_color()}; font-size: {_font_role('caption')};"
     )
+    # The square fits "TO"; text wider than its inside (1px border each side) widens
+    # it instead of being clipped.
+    badge.ensurePolished()
+    badge.setFixedWidth(max(20, badge.fontMetrics().horizontalAdvance(badge.text()) + 2))
     row.addWidget(badge)
 
     name = QLabel(receiver_name)
@@ -1101,10 +1136,11 @@ def show_side_panel_context_menu(app, widget, pos, tid, task_name, is_routine=Fa
         action_map[status_menu.addAction(_se(label))] = value
     menu.addSeparator()
 
-    color_menu = menu.addMenu(_se(t("menu.color_tag_settings")))
+    # Same labels as the calendar's item menu: the shortcut guide quotes this path.
+    color_menu = menu.addMenu(_se(t("context_menu.color_tag")))
     color_menu.setIcon(_ic(ICON.COLOR_PICKER))
     color_menu.setStyleSheet(menu_style)
-    act_color_auto = color_menu.addAction(_se(t("menu.color_auto")))
+    act_color_auto = color_menu.addAction(_se(t("context_menu.color_auto")))
     act_color_change = color_menu.addAction(_se(t("dialog.common.modify")))
     act_color_clear = color_menu.addAction(_se(t("menu.color_clear")))
 
@@ -1171,10 +1207,11 @@ def show_directive_context_menu(app, widget, pos, did, task_name):
         action_map[status_menu.addAction(_se(label))] = value
     menu.addSeparator()
 
-    color_menu = menu.addMenu(_se(t("menu.color_tag_settings")))
+    # Same labels as the calendar's item menu: the shortcut guide quotes this path.
+    color_menu = menu.addMenu(_se(t("context_menu.color_tag")))
     color_menu.setIcon(_ic(ICON.COLOR_PICKER))
     color_menu.setStyleSheet(menu_style)
-    act_color_auto = color_menu.addAction(_se(t("menu.color_auto")))
+    act_color_auto = color_menu.addAction(_se(t("context_menu.color_auto")))
     act_color_change = color_menu.addAction(_se(t("dialog.common.modify")))
     act_color_clear = color_menu.addAction(_se(t("menu.color_clear")))
 
@@ -1375,7 +1412,14 @@ def create_task_box(
         prog_bar.setValue(done_cnt)
         prog_bar.setFixedHeight(2)
         prog_bar.setTextVisible(False)
-        prog_bar.setToolTip(f"완료 {done_cnt}개 / 전체 {total_cnt}개")
+        prog_bar.setToolTip(
+            t(
+                "panel.checklist.progress_tooltip",
+                "완료 {done}개 / 전체 {total}개",
+                done=done_cnt,
+                total=total_cnt,
+            )
+        )
         prog_bar.setStyleSheet(f"""
             QProgressBar {{
                 background: rgba(255,255,255,0.08);
@@ -1404,14 +1448,18 @@ def create_task_box(
                     # 완료 청루: 이전 항목이 모두 완료되어야 함
                     _locked = not all(checklist_items[i][1] for i in range(idx))
                     if _locked:
-                        _lock_reason = "이전 단계를 먼저 완료하세요"
+                        _lock_reason = t(
+                            "panel.checklist.locked_previous", "이전 단계를 먼저 완료하세요"
+                        )
                 else:
                     # 취소: 이후 항목이 모두 미완료여야 함
                     _locked = not all(
                         not checklist_items[i][1] for i in range(idx + 1, len(checklist_items))
                     )
                     if _locked:
-                        _lock_reason = "이후 단계를 먼저 취소하세요"
+                        _lock_reason = t(
+                            "panel.checklist.locked_next", "이후 단계를 먼저 취소하세요"
+                        )
                 if _locked:
                     clickable = False
 
@@ -1515,7 +1563,6 @@ def create_task_box(
                 margin-left: 0px;
             }
         """)
-        checklist_container.setVisible(is_initially_visible)
 
         if is_process and tid is not None:
             checklist_container.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -1555,6 +1602,9 @@ def create_task_box(
     box_layout.addLayout(top_layout)
     if checklist_items:
         box_layout.addWidget(checklist_container)
+        # Set visibility only after addWidget parents the frame. Showing it while it is
+        # still parentless creates a native top-level window that the reparent destroys.
+        checklist_container.setVisible(is_initially_visible)
 
     if tid is not None:
         filter_obj = _PanelItemFilter(app, tid, is_directive, main_handler)
@@ -1666,8 +1716,8 @@ def load_left_panel(app):
             or task.get("_subscription_summary")
             or task.get("calendar_name")
             or (
-                (calendar_data or {}).get("name")
-                if selected_mode or calendar_type in {"gcal", "shared", "ics"}
+                calendar_display_name(calendar_id, calendar_data.get("name"))
+                if calendar_data and (selected_mode or calendar_type in {"gcal", "shared", "ics"})
                 else ""
             )
             or task.get("_subscription_calendar_id")
@@ -1762,6 +1812,75 @@ def load_left_panel(app):
     app.left_frame.setLayout(new_layout)
 
 
+def _is_completed_routine(row):
+    status = str(row.get("status") or "").lower()
+    if status in ("done", "completed"):
+        return True
+    return row.get("is_completed") in (1, True)
+
+
+def _routine_due_date(row):
+    """The due date the widget also lists a routine on: period end, deadline or target date."""
+    return str(row.get("period_end") or row.get("deadline") or row.get("target_date") or "")[:10]
+
+
+def _merged_routine_rows(today_str):
+    """Return (panel_rows, widget_rows): the routines of the selected day.
+
+    The panel lists that day's routines and every open routine. The widget also lists a
+    routine on its due date, so widget_rows keep the routines due that day and completed
+    that day or today (ticked while viewing that day): completing one must not drop it
+    while widget_mode_show_completed is on. Older completions stay out.
+    """
+    completed_days = {today_str, QDate.currentDate().toString("yyyy-MM-dd")}
+    rt_today_rows = search_repo.get_tasks_by_type_with_progress("routine", today_str)
+    rt_all_rows = search_repo.get_tasks_by_type_with_progress("routine")
+    merged_rows = []
+    seen_ids = set()
+    for row in rt_today_rows:
+        rid = row.get("id")
+        if rid in seen_ids:
+            continue
+        seen_ids.add(rid)
+        merged_rows.append(row)
+    widget_rows = list(merged_rows)
+    for row in rt_all_rows:
+        rid = row.get("id")
+        if rid in seen_ids:
+            continue
+        if not _is_completed_routine(row):
+            seen_ids.add(rid)
+            merged_rows.append(row)
+            widget_rows.append(row)
+        elif (
+            _routine_due_date(row) == today_str
+            and str(row.get("completed_at") or "")[:10] in completed_days
+        ):
+            widget_rows.append(row)
+    return merged_rows, widget_rows
+
+
+def _publish_directive_data(app, today_str, routine_rows, di_rows):
+    # Publish unfiltered source data for the widget workspace. Main-panel search
+    # and status filters must not hide rows from the widget's independent view.
+    # The database returns sqlite3.Row; the widget reads directive rows as tuples.
+    app._latest_directive_data = {
+        "context_date": today_str,
+        "routine_rows": [dict(row) for row in routine_rows],
+        "directive_rows": [tuple(row) for row in di_rows or []],
+        # Completed on context_date: the widget keeps them in its overdue and
+        # no-deadline sections for the rest of that day.
+        "completed_directive_ids": directive_repo.directive_ids_completed_on(today_str),
+    }
+
+
+def publish_right_panel_data(app):
+    """Publish the widget's work data exactly as load_right_panel() does, without the panel."""
+    today_str = app.current_date.toString("yyyy-MM-dd")
+    _, widget_rows = _merged_routine_rows(today_str)
+    _publish_directive_data(app, today_str, widget_rows, directive_repo.get_recent_directives())
+
+
 def load_right_panel(app):
     app.reset_frame(app.routine_frame)
 
@@ -1774,30 +1893,7 @@ def load_right_panel(app):
     search_query = (
         getattr(app, "search_edit", None).text() if getattr(app, "search_edit", None) else ""
     )
-    rt_today_rows = search_repo.get_tasks_by_type_with_progress("routine", today_str)
-    rt_all_rows = search_repo.get_tasks_by_type_with_progress("routine")
-
-    def _is_completed_routine(row):
-        status = str(row.get("status") or "").lower()
-        if status in ("done", "completed"):
-            return True
-        return row.get("is_completed") in (1, True)
-
-    merged_rows = []
-    seen_ids = set()
-    for row in rt_today_rows:
-        rid = row.get("id")
-        if rid in seen_ids:
-            continue
-        seen_ids.add(rid)
-        merged_rows.append(row)
-    for row in rt_all_rows:
-        rid = row.get("id")
-        if rid in seen_ids:
-            continue
-        if not _is_completed_routine(row):
-            seen_ids.add(rid)
-            merged_rows.append(row)
+    merged_rows, widget_routine_rows = _merged_routine_rows(today_str)
 
     routine_status_filter = (
         str(
@@ -2007,13 +2103,7 @@ def load_right_panel(app):
         routine_items.append(task_box)
 
     di_rows = directive_repo.get_recent_directives()
-    # Publish unfiltered source data for the widget workspace. Main-panel search
-    # and status filters must not hide rows from the widget's independent view.
-    app._latest_directive_data = {
-        "context_date": today_str,
-        "routine_rows": [dict(row) for row in merged_rows],
-        "directive_rows": list(di_rows or []),
-    }
+    _publish_directive_data(app, today_str, widget_routine_rows, di_rows)
     status_filter = (
         str(
             getattr(

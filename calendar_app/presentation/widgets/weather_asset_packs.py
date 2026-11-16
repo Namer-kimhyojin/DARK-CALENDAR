@@ -137,6 +137,8 @@ _CLASSIC_ICON_MAP: dict[int, str] = {
     99: "mdi6.weather-lightning-rainy",
 }
 _CLASSIC_ICON_FALLBACK = "mdi6.weather-partly-cloudy"
+# Alpha byte -> 1 for visible art (opacity above 4), else 0; lets bytes.find scan a row.
+_VISIBLE_ALPHA = bytes(0 if alpha <= 4 else 1 for alpha in range(256))
 
 
 def weather_asset_packs() -> tuple[WeatherAssetPack, ...]:
@@ -228,16 +230,16 @@ def _trim_transparent(cell: QPixmap) -> QPixmap:
     pointer = image.constBits()
     if pointer is None:
         return cell
-    alpha = pointer.asstring(image.sizeInBytes())
+    visible = pointer.asstring(image.sizeInBytes()).translate(_VISIBLE_ALPHA)
     stride, width, height = image.bytesPerLine(), image.width(), image.height()
     left, top, right, bottom = width, height, -1, -1
     for y in range(height):
-        row = alpha[y * stride : y * stride + width]
-        first = next((x for x, opacity in enumerate(row) if opacity > 4), None)
-        if first is None:
+        start = y * stride
+        first = visible.find(1, start, start + width)
+        if first < 0:
             continue
-        last = width - 1 - next(x for x, opacity in enumerate(reversed(row)) if opacity > 4)
-        left, right = min(left, first), max(right, last)
+        last = visible.rfind(1, start, start + width)
+        left, right = min(left, first - start), max(right, last - start)
         top, bottom = min(top, y), max(bottom, y)
     if right < left:
         return cell

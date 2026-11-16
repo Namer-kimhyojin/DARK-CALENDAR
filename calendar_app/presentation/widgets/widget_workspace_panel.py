@@ -24,6 +24,7 @@ from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_styles import (
     build_dialog_footer,
 )
+from calendar_app.presentation.locale_names import calendar_display_name
 from calendar_app.presentation.widgets.widget_management_ui import (
     apply_hub_dialog_style,
     hub_button,
@@ -79,7 +80,7 @@ class SaveWorkspaceDialog(QDialog):
         rows = cache.get("rows", []) if isinstance(cache, dict) else []
         calendars = {
             str(row.get("calendar_id") or "local"): str(
-                row.get("calendar_name")
+                calendar_display_name(row.get("calendar_id"), row.get("calendar_name"))
                 or (
                     t("widget_studio.local_calendar", "기본 캘린더")
                     if not row.get("calendar_id")
@@ -93,7 +94,9 @@ class SaveWorkspaceDialog(QDialog):
         }
         for cid in scope or []:
             calendars.setdefault(
-                cid, t("widget_studio.calendar_value", "캘린더 {id}").format(id=cid)
+                cid,
+                calendar_display_name(cid, "")
+                or t("widget_studio.calendar_value", "캘린더 {id}").format(id=cid),
             )
         for cid, name in calendars.items():
             check = QCheckBox(name)

@@ -1,0 +1,1166 @@
+{
+ "locales": {
+  "ar": {
+   "add_register": "إضافة",
+   "apply": "تطبيق",
+   "assignee": "المسؤول",
+   "calendar": "تقويم",
+   "cancel": "إلغاء",
+   "checklist": [
+    "قائمة التحقق",
+    "قوائم التحقق"
+   ],
+   "close": "إغلاق",
+   "confirm_ok": [
+    "موافق",
+    "تأكيد"
+   ],
+   "d_day": "D-Day",
+   "default": "افتراضي",
+   "delete": "حذف",
+   "directive": [
+    "توجيه",
+    "توجيهات"
+   ],
+   "edit": "تعديل",
+   "focus_mode": "وضع التركيز",
+   "key": [
+    "مفتاح",
+    "مفاتيح"
+   ],
+   "layout": "تخطيط",
+   "pomodoro": "بومودورو",
+   "preset": [
+    "إعداد مسبق",
+    "إعدادات مسبقة"
+   ],
+   "priority_high": "عالية",
+   "priority_low": "منخفضة",
+   "priority_normal": "عادية",
+   "priority_urgent": "عاجلة",
+   "reminder": "تنبيه",
+   "restore": "استعادة",
+   "routine": [
+    "روتين",
+    "المهام الروتينية"
+   ],
+   "save": "حفظ",
+   "schedule": [
+    "موعد",
+    "مواعيد",
+    "حدث",
+    "أحداث"
+   ],
+   "settings": [
+    "الإعدادات",
+    "إعدادات"
+   ],
+   "status_canceled": "ملغى",
+   "status_completed": "مكتمل",
+   "status_deferred": "مؤجل",
+   "status_in_progress": "قيد التنفيذ",
+   "status_overdue": "متأخر",
+   "status_pending": "قيد الانتظار",
+   "sync": "مزامنة",
+   "task": [
+    "مهمة",
+    "مهام"
+   ],
+   "template": [
+    "قالب",
+    "قوالب"
+   ],
+   "theme": [
+    "سمة",
+    "سمات"
+   ],
+   "trash": "سلة المهملات",
+   "widget": [
+    "أداة",
+    "أدوات"
+   ]
+  },
+  "de": {
+   "add_register": "Hinzufügen",
+   "apply": "Anwenden",
+   "assignee": "Zuständig",
+   "calendar": "Kalender",
+   "cancel": "Abbrechen",
+   "checklist": "Checkliste",
+   "close": "Schließen",
+   "confirm_ok": [
+    "OK",
+    "Bestätigen"
+   ],
+   "d_day": "D-Day",
+   "default": "Standard",
+   "delete": "Löschen",
+   "directive": [
+    "Anweisung",
+    "Anweisungen"
+   ],
+   "edit": "Bearbeiten",
+   "focus_mode": "Fokusmodus",
+   "key": "Taste",
+   "layout": "Layout",
+   "pomodoro": "Pomodoro",
+   "preset": "Voreinstellung",
+   "priority_high": "Hoch",
+   "priority_low": "Niedrig",
+   "priority_normal": "Normal",
+   "priority_urgent": "Dringend",
+   "reminder": "Erinnerung",
+   "restore": "Wiederherstellen",
+   "routine": [
+    "Routineaufgabe",
+    "Routine"
+   ],
+   "save": "Speichern",
+   "schedule": [
+    "Termin",
+    "Termine"
+   ],
+   "settings": "Einstellungen",
+   "status_canceled": [
+    "Abgebrochen",
+    "Abgesagt"
+   ],
+   "status_completed": "Erledigt",
+   "status_deferred": "Aufgeschoben",
+   "status_in_progress": "In Arbeit",
+   "status_overdue": "Überfällig",
+   "status_pending": "Ausstehend",
+   "sync": [
+    "Synchronisierung",
+    "synchronisieren",
+    "Sync"
+   ],
+   "task": "Aufgabe",
+   "template": "Vorlage",
+   "theme": "Thema",
+   "trash": "Papierkorb",
+   "widget": "Widget"
+  },
+  "es": {
+   "add_register": "Añadir",
+   "apply": "Aplicar",
+   "assignee": "Responsable",
+   "calendar": [
+    "Calendario",
+    "Google Calendar"
+   ],
+   "cancel": "Cancelar",
+   "checklist": "Lista de verificación",
+   "close": "Cerrar",
+   "confirm_ok": [
+    "Aceptar",
+    "Confirmar"
+   ],
+   "d_day": "D-Day",
+   "default": "Predeterminado",
+   "delete": "Eliminar",
+   "directive": [
+    "Directiva",
+    "directivas"
+   ],
+   "edit": "Editar",
+   "focus_mode": "Modo de enfoque",
+   "key": [
+    "Tecla",
+    "teclas"
+   ],
+   "layout": [
+    "Diseño",
+    "diseños"
+   ],
+   "pomodoro": "Pomodoro",
+   "preset": "Preajuste",
+   "priority_high": "Alta",
+   "priority_low": "Baja",
+   "priority_normal": "Normal",
+   "priority_urgent": "Urgente",
+   "reminder": "Recordatorio",
+   "restore": "Restaurar",
+   "routine": [
+    "Rutina",
+    "rutinas"
+   ],
+   "save": "Guardar",
+   "schedule": [
+    "Evento",
+    "eventos",
+    "Agenda"
+   ],
+   "settings": "Ajustes",
+   "status_canceled": "Cancelado",
+   "status_completed": "Completado",
+   "status_deferred": "Aplazado",
+   "status_in_progress": "En curso",
+   "status_overdue": "Atrasado",
+   "status_pending": "Pendiente",
+   "sync": [
+    "Sincronización",
+    "Sincronizar"
+   ],
+   "task": [
+    "Tarea",
+    "tareas"
+   ],
+   "template": "Plantilla",
+   "theme": "Tema",
+   "trash": "Papelera",
+   "widget": [
+    "Widget",
+    "widgets"
+   ]
+  },
+  "fr": {
+   "add_register": "Ajouter",
+   "apply": "Appliquer",
+   "assignee": "Responsable",
+   "calendar": [
+    "Calendrier",
+    "Google Agenda"
+   ],
+   "cancel": "Annuler",
+   "checklist": "Liste de contrôle",
+   "close": "Fermer",
+   "confirm_ok": [
+    "OK",
+    "Confirmer"
+   ],
+   "d_day": "Jour J",
+   "default": "Par défaut",
+   "delete": "Supprimer",
+   "directive": "Directive",
+   "edit": "Modifier",
+   "focus_mode": "Mode concentration",
+   "key": "Touche",
+   "layout": "Disposition",
+   "pomodoro": "Pomodoro",
+   "preset": "Préréglage",
+   "priority_high": "Haute",
+   "priority_low": "Basse",
+   "priority_normal": "Normale",
+   "priority_urgent": "Urgente",
+   "reminder": "Rappel",
+   "restore": "Restaurer",
+   "routine": "Routine",
+   "save": "Enregistrer",
+   "schedule": [
+    "Événement",
+    "Agenda"
+   ],
+   "settings": "Paramètres",
+   "status_canceled": "Annulé",
+   "status_completed": "Terminé",
+   "status_deferred": "Reporté",
+   "status_in_progress": "En cours",
+   "status_overdue": "En retard",
+   "status_pending": "En attente",
+   "sync": [
+    "Synchronisation",
+    "synchroniser",
+    "Synchro"
+   ],
+   "task": "Tâche",
+   "template": "Modèle",
+   "theme": "Thème",
+   "trash": "Corbeille",
+   "widget": "Widget"
+  },
+  "hi": {
+   "add_register": "जोड़ें",
+   "apply": "लागू करें",
+   "assignee": "उत्तरदायी",
+   "calendar": "कैलेंडर",
+   "cancel": "रद्द करें",
+   "checklist": "चेकलिस्ट",
+   "close": "बंद करें",
+   "confirm_ok": [
+    "ठीक है",
+    "पुष्टि करें"
+   ],
+   "d_day": "डी-डे",
+   "default": "डिफ़ॉल्ट",
+   "delete": "हटाएं",
+   "directive": "निर्देश",
+   "edit": "संपादित करें",
+   "focus_mode": "फ़ोकस मोड",
+   "key": "कुंजी",
+   "layout": "लेआउट",
+   "pomodoro": "पोमोडोरो",
+   "preset": "प्रीसेट",
+   "priority_high": "उच्च",
+   "priority_low": "निम्न",
+   "priority_normal": "सामान्य",
+   "priority_urgent": "अत्यावश्यक",
+   "reminder": [
+    "अलार्म",
+    "अनुस्मारक"
+   ],
+   "restore": "बहाल करें",
+   "routine": "रूटीन",
+   "save": "सहेजें",
+   "schedule": [
+    "शेड्यूल",
+    "इवेंट"
+   ],
+   "settings": "सेटिंग्स",
+   "status_canceled": "रद्द",
+   "status_completed": "पूर्ण",
+   "status_deferred": "स्थगित",
+   "status_in_progress": "प्रगति पर",
+   "status_overdue": "विलंबित",
+   "status_pending": "लंबित",
+   "sync": "सिंक",
+   "task": "कार्य",
+   "template": "टेम्पलेट",
+   "theme": "थीम",
+   "trash": "कूड़ेदान",
+   "widget": "विजेट"
+  },
+  "id": {
+   "add_register": [
+    "Tambah",
+    "tambahkan"
+   ],
+   "apply": "Terapkan",
+   "assignee": "penanggung jawab",
+   "calendar": [
+    "kalender",
+    "Google Calendar"
+   ],
+   "cancel": "Batal",
+   "checklist": "daftar periksa",
+   "close": "Tutup",
+   "confirm_ok": [
+    "OK",
+    "Konfirmasi"
+   ],
+   "d_day": "D-Day",
+   "default": "default",
+   "delete": "Hapus",
+   "directive": "arahan",
+   "edit": "Edit",
+   "focus_mode": "Mode Fokus",
+   "key": "tombol",
+   "layout": "tata letak",
+   "pomodoro": "Pomodoro",
+   "preset": "preset",
+   "priority_high": "Tinggi",
+   "priority_low": "Rendah",
+   "priority_normal": "Biasa",
+   "priority_urgent": "Mendesak",
+   "reminder": "pengingat",
+   "restore": "Pulihkan",
+   "routine": "rutinitas",
+   "save": "Simpan",
+   "schedule": [
+    "jadwal",
+    "acara"
+   ],
+   "settings": "Pengaturan",
+   "status_canceled": "Dibatalkan",
+   "status_completed": "Selesai",
+   "status_deferred": "Ditunda",
+   "status_in_progress": "Berlangsung",
+   "status_overdue": "Terlambat",
+   "status_pending": "Terjadwal",
+   "sync": "sinkronisasi",
+   "task": "tugas",
+   "template": "template",
+   "theme": "tema",
+   "trash": "Tempat Sampah",
+   "widget": "widget"
+  },
+  "it": {
+   "add_register": "Aggiungi",
+   "apply": "Applica",
+   "assignee": "Responsabile",
+   "calendar": [
+    "Calendario",
+    "Google Calendar"
+   ],
+   "cancel": "Annulla",
+   "checklist": "Checklist",
+   "close": "Chiudi",
+   "confirm_ok": [
+    "OK",
+    "Conferma"
+   ],
+   "d_day": "D-Day",
+   "default": [
+    "Predefinito",
+    "predefiniti"
+   ],
+   "delete": "Elimina",
+   "directive": [
+    "Direttiva",
+    "direttive"
+   ],
+   "edit": "Modifica",
+   "focus_mode": "Modalità Focus",
+   "key": [
+    "Tasto",
+    "tasti"
+   ],
+   "layout": "Layout",
+   "pomodoro": "Pomodoro",
+   "preset": "Preset",
+   "priority_high": "Alta",
+   "priority_low": "Bassa",
+   "priority_normal": "Normale",
+   "priority_urgent": "Urgente",
+   "reminder": "Promemoria",
+   "restore": "Ripristina",
+   "routine": "Routine",
+   "save": "Salva",
+   "schedule": [
+    "Evento",
+    "eventi",
+    "Agenda"
+   ],
+   "settings": "Impostazioni",
+   "status_canceled": "Annullato",
+   "status_completed": "Completato",
+   "status_deferred": "Rinviato",
+   "status_in_progress": "In corso",
+   "status_overdue": "In ritardo",
+   "status_pending": "In attesa",
+   "sync": [
+    "Sincronizzazione",
+    "Sincronizza"
+   ],
+   "task": "Attività",
+   "template": "Modello",
+   "theme": "Tema",
+   "trash": "Cestino",
+   "widget": "Widget"
+  },
+  "ja": {
+   "add_register": [
+    "登録",
+    "追加"
+   ],
+   "apply": "適用",
+   "assignee": "担当者",
+   "calendar": [
+    "カレンダー",
+    "Google Calendar"
+   ],
+   "cancel": "キャンセル",
+   "checklist": "チェックリスト",
+   "close": "閉じる",
+   "confirm_ok": [
+    "OK",
+    "確認"
+   ],
+   "d_day": "D-Day",
+   "default": "デフォルト",
+   "delete": "削除",
+   "directive": [
+    "指示事項",
+    "指示・協力事項"
+   ],
+   "edit": "編集",
+   "focus_mode": "集中モード",
+   "key": "キー",
+   "layout": "レイアウト",
+   "pomodoro": "ポモドーロ",
+   "preset": "プリセット",
+   "priority_high": "高",
+   "priority_low": "低",
+   "priority_normal": "普通",
+   "priority_urgent": "緊急",
+   "reminder": [
+    "アラーム",
+    "通知"
+   ],
+   "restore": "復元",
+   "routine": "ルーティン",
+   "save": "保存",
+   "schedule": "予定",
+   "settings": "設定",
+   "status_canceled": "キャンセル",
+   "status_completed": "完了",
+   "status_deferred": "保留",
+   "status_in_progress": "進行中",
+   "status_overdue": [
+    "遅延",
+    "期限超過"
+   ],
+   "status_pending": "未着手",
+   "sync": "同期",
+   "task": "タスク",
+   "template": "テンプレート",
+   "theme": "テーマ",
+   "trash": "ごみ箱",
+   "widget": "ウィジェット"
+  },
+  "nl": {
+   "add_register": "Toevoegen",
+   "apply": "Toepassen",
+   "assignee": "Toegewezen aan",
+   "calendar": [
+    "Kalender",
+    "Google Agenda"
+   ],
+   "cancel": "Annuleren",
+   "checklist": "Checklist",
+   "close": "Sluiten",
+   "confirm_ok": [
+    "OK",
+    "Bevestigen"
+   ],
+   "d_day": "D-Day",
+   "default": "Standaard",
+   "delete": "Verwijderen",
+   "directive": [
+    "Instructie",
+    "Instructies"
+   ],
+   "edit": "Bewerken",
+   "focus_mode": "Focusmodus",
+   "key": "Toets",
+   "layout": "Indeling",
+   "pomodoro": "Pomodoro",
+   "preset": "Voorinstelling",
+   "priority_high": "Hoog",
+   "priority_low": "Laag",
+   "priority_normal": "Normaal",
+   "priority_urgent": "Dringend",
+   "reminder": "Herinnering",
+   "restore": "Herstellen",
+   "routine": [
+    "Routinetaak",
+    "Routinetaken",
+    "Routine"
+   ],
+   "save": "Opslaan",
+   "schedule": [
+    "Afspraak",
+    "Afspraken"
+   ],
+   "settings": "Instellingen",
+   "status_canceled": "Geannuleerd",
+   "status_completed": "Voltooid",
+   "status_deferred": "Uitgesteld",
+   "status_in_progress": "Bezig",
+   "status_overdue": "Te laat",
+   "status_pending": "Gepland",
+   "sync": [
+    "Synchronisatie",
+    "synchroniseren",
+    "Sync"
+   ],
+   "task": [
+    "Taak",
+    "Taken"
+   ],
+   "template": "Sjabloon",
+   "theme": "Thema",
+   "trash": "Prullenbak",
+   "widget": "Widget"
+  },
+  "pt": {
+   "add_register": [
+    "Registrar",
+    "Adicionar"
+   ],
+   "apply": "Aplicar",
+   "assignee": "Responsável",
+   "calendar": [
+    "Calendário",
+    "Google Agenda"
+   ],
+   "cancel": "Cancelar",
+   "checklist": "Checklist",
+   "close": "Fechar",
+   "confirm_ok": [
+    "OK",
+    "Confirmar"
+   ],
+   "d_day": "Dia D",
+   "default": "Padrão",
+   "delete": "Excluir",
+   "directive": "Diretiva",
+   "edit": "Editar",
+   "focus_mode": "Modo Foco",
+   "key": "Tecla",
+   "layout": "Layout",
+   "pomodoro": "Pomodoro",
+   "preset": "Predefinição",
+   "priority_high": "Alta",
+   "priority_low": "Baixa",
+   "priority_normal": "Normal",
+   "priority_urgent": "Urgente",
+   "reminder": "Lembrete",
+   "restore": "Restaurar",
+   "routine": "Rotina",
+   "save": "Salvar",
+   "schedule": [
+    "Evento",
+    "Agenda"
+   ],
+   "settings": "Configurações",
+   "status_canceled": "Cancelado",
+   "status_completed": "Concluído",
+   "status_deferred": "Adiado",
+   "status_in_progress": "Em andamento",
+   "status_overdue": "Atrasado",
+   "status_pending": "Pendente",
+   "sync": [
+    "Sincronização",
+    "sincronizar"
+   ],
+   "task": "Tarefa",
+   "template": "Modelo",
+   "theme": "Tema",
+   "trash": "Lixeira",
+   "widget": "Widget"
+  },
+  "ru": {
+   "add_register": "Добавить",
+   "apply": "Применить",
+   "assignee": "Исполнитель",
+   "calendar": "Календарь",
+   "cancel": "Отмена",
+   "checklist": "Чек-лист",
+   "close": "Закрыть",
+   "confirm_ok": "ОК",
+   "d_day": "D-Day",
+   "default": "По умолчанию",
+   "delete": "Удалить",
+   "directive": "Поручение",
+   "edit": "Изменить",
+   "focus_mode": "Режим фокусировки",
+   "key": "Клавиша",
+   "layout": [
+    "Макет",
+    "компоновка"
+   ],
+   "pomodoro": "Помодоро",
+   "preset": "Пресет",
+   "priority_high": "Высокий",
+   "priority_low": "Низкий",
+   "priority_normal": "Обычный",
+   "priority_urgent": "Срочный",
+   "reminder": "Напоминание",
+   "restore": "Восстановить",
+   "routine": "Регулярная задача",
+   "save": "Сохранить",
+   "schedule": "Событие",
+   "settings": "Настройки",
+   "status_canceled": "Отменено",
+   "status_completed": "Завершено",
+   "status_deferred": "Отложено",
+   "status_in_progress": "В процессе",
+   "status_overdue": "Просрочено",
+   "status_pending": "Запланировано",
+   "sync": "Синхронизация",
+   "task": "Задача",
+   "template": "Шаблон",
+   "theme": "Тема",
+   "trash": "Корзина",
+   "widget": "Виджет"
+  },
+  "th": {
+   "add_register": "เพิ่ม",
+   "apply": "นำไปใช้",
+   "assignee": "ผู้รับผิดชอบ",
+   "calendar": [
+    "ปฏิทิน",
+    "Google Calendar"
+   ],
+   "cancel": "ยกเลิก",
+   "checklist": "รายการตรวจสอบ",
+   "close": "ปิด",
+   "confirm_ok": [
+    "ตกลง",
+    "ยืนยัน"
+   ],
+   "d_day": "D-Day",
+   "default": "ค่าเริ่มต้น",
+   "delete": "ลบ",
+   "directive": "ข้อสั่งการ",
+   "edit": "แก้ไข",
+   "focus_mode": "โหมดโฟกัส",
+   "key": "ปุ่ม",
+   "layout": "เลย์เอาต์",
+   "pomodoro": "โพโมโดโร",
+   "preset": "พรีเซ็ต",
+   "priority_high": "สูง",
+   "priority_low": "ต่ำ",
+   "priority_normal": "ปกติ",
+   "priority_urgent": "เร่งด่วน",
+   "reminder": [
+    "การแจ้งเตือน",
+    "แจ้งเตือน"
+   ],
+   "restore": "กู้คืน",
+   "routine": "กิจวัตร",
+   "save": "บันทึก",
+   "schedule": "กำหนดการ",
+   "settings": [
+    "การตั้งค่า",
+    "ตั้งค่า"
+   ],
+   "status_canceled": "ยกเลิกแล้ว",
+   "status_completed": "เสร็จสิ้น",
+   "status_deferred": "พักไว้",
+   "status_in_progress": "กำลังดำเนินการ",
+   "status_overdue": "เกินกำหนด",
+   "status_pending": "รอดำเนินการ",
+   "sync": "ซิงค์",
+   "task": "งาน",
+   "template": "เทมเพลต",
+   "theme": "ธีม",
+   "trash": "ถังขยะ",
+   "widget": "วิดเจ็ต"
+  },
+  "tr": {
+   "add_register": "Ekle",
+   "apply": "Uygula",
+   "assignee": "Sorumlu",
+   "calendar": "Takvim",
+   "cancel": "İptal",
+   "checklist": "Kontrol listesi",
+   "close": "Kapat",
+   "confirm_ok": "Tamam",
+   "d_day": "D-Day",
+   "default": "Varsayılan",
+   "delete": "Sil",
+   "directive": "Direktif",
+   "edit": "Düzenle",
+   "focus_mode": "Odak Modu",
+   "key": "Tuş",
+   "layout": "Düzen",
+   "pomodoro": "Pomodoro",
+   "preset": "Ön ayar",
+   "priority_high": "Yüksek",
+   "priority_low": "Düşük",
+   "priority_normal": "Normal",
+   "priority_urgent": "Acil",
+   "reminder": "Hatırlatıcı",
+   "restore": "Geri yükle",
+   "routine": "Rutin",
+   "save": "Kaydet",
+   "schedule": "Etkinlik",
+   "settings": "Ayarlar",
+   "status_canceled": "İptal edildi",
+   "status_completed": "Tamamlandı",
+   "status_deferred": "Ertelendi",
+   "status_in_progress": "Devam ediyor",
+   "status_overdue": "Gecikmiş",
+   "status_pending": "Beklemede",
+   "sync": [
+    "Senkronizasyon",
+    "Senkron"
+   ],
+   "task": "Görev",
+   "template": "Şablon",
+   "theme": "Tema",
+   "trash": "Çöp kutusu",
+   "widget": "Widget"
+  },
+  "vi": {
+   "add_register": "Thêm",
+   "apply": "Áp dụng",
+   "assignee": "người phụ trách",
+   "calendar": [
+    "lịch",
+    "Google Calendar"
+   ],
+   "cancel": "Hủy",
+   "checklist": "danh sách kiểm tra",
+   "close": "Đóng",
+   "confirm_ok": [
+    "OK",
+    "Xác nhận"
+   ],
+   "d_day": "D-Day",
+   "default": "mặc định",
+   "delete": "Xóa",
+   "directive": "chỉ thị",
+   "edit": [
+    "Sửa",
+    "chỉnh sửa"
+   ],
+   "focus_mode": "Chế độ tập trung",
+   "key": "phím",
+   "layout": "bố cục",
+   "pomodoro": "Pomodoro",
+   "preset": "cài đặt sẵn",
+   "priority_high": "Cao",
+   "priority_low": "Thấp",
+   "priority_normal": "Bình thường",
+   "priority_urgent": "Khẩn cấp",
+   "reminder": "nhắc nhở",
+   "restore": "Khôi phục",
+   "routine": "việc thường lệ",
+   "save": "Lưu",
+   "schedule": [
+    "lịch trình",
+    "sự kiện"
+   ],
+   "settings": "Cài đặt",
+   "status_canceled": "Đã hủy",
+   "status_completed": "Hoàn thành",
+   "status_deferred": "Tạm hoãn",
+   "status_in_progress": "Đang tiến hành",
+   "status_overdue": "Quá hạn",
+   "status_pending": "Đang chờ",
+   "sync": "đồng bộ",
+   "task": "công việc",
+   "template": "mẫu",
+   "theme": "chủ đề",
+   "trash": "Thùng rác",
+   "widget": "tiện ích"
+  },
+  "zh": {
+   "add_register": "添加",
+   "apply": "应用",
+   "assignee": "负责人",
+   "calendar": "日历",
+   "cancel": "取消",
+   "checklist": "清单",
+   "close": "关闭",
+   "confirm_ok": [
+    "确定",
+    "确认"
+   ],
+   "d_day": "倒数日",
+   "default": "默认",
+   "delete": "删除",
+   "directive": "指令",
+   "edit": "编辑",
+   "focus_mode": "专注模式",
+   "key": "按键",
+   "layout": "布局",
+   "pomodoro": "番茄钟",
+   "preset": "预设",
+   "priority_high": "高",
+   "priority_low": "低",
+   "priority_normal": "普通",
+   "priority_urgent": "紧急",
+   "reminder": "提醒",
+   "restore": "恢复",
+   "routine": "例行任务",
+   "save": "保存",
+   "schedule": "日程",
+   "settings": "设置",
+   "status_canceled": "已取消",
+   "status_completed": "已完成",
+   "status_deferred": "延期",
+   "status_in_progress": "进行中",
+   "status_overdue": "逾期",
+   "status_pending": "待处理",
+   "sync": "同步",
+   "task": "任务",
+   "template": "模板",
+   "theme": "主题",
+   "trash": "回收站",
+   "widget": "小组件"
+  },
+  "zh-CN": {
+   "add_register": "添加",
+   "apply": "应用",
+   "assignee": "负责人",
+   "calendar": "日历",
+   "cancel": "取消",
+   "checklist": "清单",
+   "close": "关闭",
+   "confirm_ok": [
+    "确定",
+    "确认"
+   ],
+   "d_day": "倒数日",
+   "default": "默认",
+   "delete": "删除",
+   "directive": "指令",
+   "edit": "编辑",
+   "focus_mode": "专注模式",
+   "key": "按键",
+   "layout": "布局",
+   "pomodoro": "番茄钟",
+   "preset": "预设",
+   "priority_high": "高",
+   "priority_low": "低",
+   "priority_normal": "普通",
+   "priority_urgent": "紧急",
+   "reminder": "提醒",
+   "restore": "恢复",
+   "routine": "例行任务",
+   "save": "保存",
+   "schedule": "日程",
+   "settings": "设置",
+   "status_canceled": "已取消",
+   "status_completed": "已完成",
+   "status_deferred": "延期",
+   "status_in_progress": "进行中",
+   "status_overdue": "逾期",
+   "status_pending": "待处理",
+   "sync": "同步",
+   "task": "任务",
+   "template": "模板",
+   "theme": "主题",
+   "trash": "回收站",
+   "widget": "小组件"
+  },
+  "zh-TW": {
+   "add_register": "新增",
+   "apply": "套用",
+   "assignee": "負責人",
+   "calendar": [
+    "行事曆",
+    "Google 日曆"
+   ],
+   "cancel": "取消",
+   "checklist": "清單",
+   "close": "關閉",
+   "confirm_ok": [
+    "確定",
+    "確認"
+   ],
+   "d_day": "倒數日",
+   "default": "預設",
+   "delete": "刪除",
+   "directive": "指令",
+   "edit": "編輯",
+   "focus_mode": "專注模式",
+   "key": "按鍵",
+   "layout": [
+    "版面配置",
+    "版面"
+   ],
+   "pomodoro": "番茄鐘",
+   "preset": "預設集",
+   "priority_high": "高",
+   "priority_low": "低",
+   "priority_normal": "普通",
+   "priority_urgent": "緊急",
+   "reminder": "提醒",
+   "restore": "還原",
+   "routine": "例行工作",
+   "save": "儲存",
+   "schedule": "行程",
+   "settings": "設定",
+   "status_canceled": "已取消",
+   "status_completed": "已完成",
+   "status_deferred": "延期",
+   "status_in_progress": "進行中",
+   "status_overdue": "逾期",
+   "status_pending": "待處理",
+   "sync": "同步",
+   "task": "任務",
+   "template": "範本",
+   "theme": "主題",
+   "trash": "垃圾桶",
+   "widget": "小工具"
+  }
+ },
+ "terms": {
+  "add_register": {
+   "en": "Add",
+   "ko": "등록",
+   "note": "Add or register an item; never the sign-up sense."
+  },
+  "apply": {
+   "en": "Apply",
+   "ko": "적용",
+   "note": ""
+  },
+  "assignee": {
+   "en": "Assignee",
+   "ko": "담당",
+   "note": ""
+  },
+  "calendar": {
+   "en": "Calendar",
+   "ko": "캘린더",
+   "note": "The product Google Calendar may keep the locale's official product name."
+  },
+  "cancel": {
+   "en": "Cancel",
+   "ko": "취소",
+   "note": ""
+  },
+  "checklist": {
+   "en": "Checklist",
+   "ko": "체크리스트",
+   "note": ""
+  },
+  "close": {
+   "en": "Close",
+   "ko": "닫기",
+   "note": ""
+  },
+  "confirm_ok": {
+   "en": "OK",
+   "ko": "확인",
+   "note": "OK button and the Confirm action (확인). When a locale lists two forms, the first is OK and the second Confirm."
+  },
+  "d_day": {
+   "en": "D-Day",
+   "ko": "D-Day",
+   "note": "Countdown to a date, never the 1944 landing."
+  },
+  "default": {
+   "en": "Default",
+   "ko": "기본 / 기본값",
+   "note": ""
+  },
+  "delete": {
+   "en": "Delete",
+   "ko": "삭제",
+   "note": ""
+  },
+  "directive": {
+   "en": "Directive",
+   "ko": "지시사항",
+   "note": "An instruction from a superior; 협조사항 is a request for cooperation."
+  },
+  "edit": {
+   "en": "Edit",
+   "ko": "수정",
+   "note": ""
+  },
+  "focus_mode": {
+   "en": "Focus mode",
+   "ko": "초집중 모드",
+   "note": ""
+  },
+  "key": {
+   "en": "Key",
+   "ko": "키",
+   "note": "A keyboard key in KeyDeck."
+  },
+  "layout": {
+   "en": "Layout",
+   "ko": "레이아웃",
+   "note": ""
+  },
+  "pomodoro": {
+   "en": "Pomodoro",
+   "ko": "뽀모도로",
+   "note": ""
+  },
+  "preset": {
+   "en": "Preset",
+   "ko": "프리셋",
+   "note": ""
+  },
+  "priority_high": {
+   "en": "High",
+   "ko": "높음",
+   "note": "Priority level."
+  },
+  "priority_low": {
+   "en": "Low",
+   "ko": "낮음",
+   "note": "Priority level."
+  },
+  "priority_normal": {
+   "en": "Normal",
+   "ko": "보통",
+   "note": "Priority level."
+  },
+  "priority_urgent": {
+   "en": "Urgent",
+   "ko": "긴급",
+   "note": "Priority level."
+  },
+  "reminder": {
+   "en": "Reminder",
+   "ko": "알림",
+   "note": "Reminder or alarm."
+  },
+  "restore": {
+   "en": "Restore",
+   "ko": "복원",
+   "note": ""
+  },
+  "routine": {
+   "en": "Routine",
+   "ko": "일반업무",
+   "note": "Recurring work items."
+  },
+  "save": {
+   "en": "Save",
+   "ko": "저장",
+   "note": ""
+  },
+  "schedule": {
+   "en": "Schedule",
+   "ko": "일정",
+   "note": "A calendar entry; English UI text often says event."
+  },
+  "settings": {
+   "en": "Settings",
+   "ko": "설정",
+   "note": ""
+  },
+  "status_canceled": {
+   "en": "Canceled",
+   "ko": "취소",
+   "note": "Task status."
+  },
+  "status_completed": {
+   "en": "Completed",
+   "ko": "완료",
+   "note": "Task status."
+  },
+  "status_deferred": {
+   "en": "Deferred",
+   "ko": "보류",
+   "note": "Task status."
+  },
+  "status_in_progress": {
+   "en": "In Progress",
+   "ko": "진행중",
+   "note": "Task status."
+  },
+  "status_overdue": {
+   "en": "Overdue",
+   "ko": "지연",
+   "note": "Task status."
+  },
+  "status_pending": {
+   "en": "Pending",
+   "ko": "예정",
+   "note": "Task status."
+  },
+  "sync": {
+   "en": "Sync",
+   "ko": "동기화",
+   "note": ""
+  },
+  "task": {
+   "en": "Task",
+   "ko": "할 일 / 업무",
+   "note": ""
+  },
+  "template": {
+   "en": "Template",
+   "ko": "템플릿",
+   "note": ""
+  },
+  "theme": {
+   "en": "Theme",
+   "ko": "테마",
+   "note": ""
+  },
+  "trash": {
+   "en": "Trash",
+   "ko": "휴지통",
+   "note": ""
+  },
+  "widget": {
+   "en": "Widget",
+   "ko": "위젯",
+   "note": ""
+  }
+ },
+ "version": 1
+}

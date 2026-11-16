@@ -190,6 +190,13 @@
       "language": "en",
       "kind": "research_only",
       "ai_text": "unknown"
+    },
+    "download3k": {
+      "name": "Download3K",
+      "destination_url": "https://www.download3k.com/",
+      "language": "en",
+      "kind": "research_only",
+      "ai_text": "unknown"
     }
   },
   "events": [
@@ -3409,6 +3416,91 @@
         "summary": "공식 안내에 이메일 가입 및 계정 대시보드 제출이 필요하다고 표시. 데스크톱 소프트웨어 분류 존재. 공개 검색에 제품명 결과 없음. 내부 중복·최종 양식 미확인. 등록·제출 없음."
       },
       "recorded_at": "2026-11-12T18:29:11.102298+00:00"
+    },
+    {
+      "id": "heartbeat-20261114:alternativeto",
+      "channel_id": "alternativeto",
+      "kind": "support_check",
+      "observed_on": "2026-11-14",
+      "data": {
+        "target_url": "https://alternativeto.net/software/air-calendar/about/",
+        "outcome": "checked",
+        "summary": "공개 항목에 Windows 유료 앱 및 지원 언어 17개, 댓글 0개가 표시됨. 비공개 심사·보완 알림 미조회."
+      },
+      "evidence": {
+        "url": "https://alternativeto.net/software/air-calendar/about/",
+        "checked_on": "2026-11-14",
+        "summary": "공개 항목에 Windows 유료 앱 및 지원 언어 17개, 댓글 0개가 표시됨. 비공개 심사·보완 알림 미조회."
+      },
+      "recorded_at": "2026-11-13T18:30:34.722581+00:00"
+    },
+    {
+      "id": "heartbeat-20261114:note-japan",
+      "channel_id": "note-japan",
+      "kind": "support_check",
+      "observed_on": "2026-11-14",
+      "data": {
+        "target_url": "https://note.com/cool_seal8525/n/n8faed9db7653",
+        "outcome": "unavailable",
+        "summary": "공개 웹 조회에서 일본어 연결 안내 주소 접근 불가. 댓글 및 질문 여부 미확인."
+      },
+      "evidence": {
+        "url": "https://note.com/cool_seal8525/n/n8faed9db7653",
+        "checked_on": "2026-11-14",
+        "summary": "공개 웹 조회에서 일본어 연결 안내 주소 접근 불가. 댓글 및 질문 여부 미확인."
+      },
+      "recorded_at": "2026-11-13T18:30:34.722711+00:00"
+    },
+    {
+      "id": "heartbeat-20261114:appinn",
+      "channel_id": "appinn",
+      "kind": "support_check",
+      "observed_on": "2026-11-14",
+      "data": {
+        "target_url": "https://meta.appinn.net/u/aircalendar/activity/drafts",
+        "outcome": "unavailable",
+        "summary": "초안 주소의 공개 조회에서 계정 프로필만 표시. 인증된 초안 및 Qingwa 비공개 메시지 권한 미확인. 기존 재개 경로와 승인 유지."
+      },
+      "evidence": {
+        "url": "https://meta.appinn.net/u/aircalendar/activity/drafts",
+        "checked_on": "2026-11-14",
+        "summary": "초안 주소의 공개 조회에서 계정 프로필만 표시. 인증된 초안 및 Qingwa 비공개 메시지 권한 미확인. 기존 재개 경로와 승인 유지."
+      },
+      "recorded_at": "2026-11-13T18:30:34.722833+00:00"
+    },
+    {
+      "id": "heartbeat-20261114:geeknews",
+      "channel_id": "geeknews",
+      "kind": "support_check",
+      "observed_on": "2026-11-14",
+      "data": {
+        "target_url": "https://news.hada.io/write",
+        "outcome": "unavailable",
+        "summary": "공개 글쓰기 주소가 로그인 화면으로 이동. 소유자 글쓰기 권한 미확인."
+      },
+      "evidence": {
+        "url": "https://news.hada.io/write",
+        "checked_on": "2026-11-14",
+        "summary": "공개 글쓰기 주소가 로그인 화면으로 이동. 소유자 글쓰기 권한 미확인."
+      },
+      "recorded_at": "2026-11-13T18:30:34.722927+00:00"
+    },
+    {
+      "id": "heartbeat-20261114:download3k",
+      "channel_id": "download3k",
+      "kind": "support_check",
+      "observed_on": "2026-11-14",
+      "data": {
+        "target_url": "https://www.download3k.com/submit.php",
+        "outcome": "checked",
+        "summary": "공식 신규 등록 양식은 공개 PAD XML URL만 받음. 공개 검색에 기존 제품 결과 없음. docs 파일 검색에서 PAD XML을 찾지 못함. 설치 배포 경로 및 내부 중복 미확인. 접수 없음."
+      },
+      "evidence": {
+        "url": "https://www.download3k.com/submit.php",
+        "checked_on": "2026-11-14",
+        "summary": "공식 신규 등록 양식은 공개 PAD XML URL만 받음. 공개 검색에 기존 제품 결과 없음. docs 파일 검색에서 PAD XML을 찾지 못함. 설치 배포 경로 및 내부 중복 미확인. 접수 없음."
+      },
+      "recorded_at": "2026-11-13T18:30:34.723070+00:00"
     }
   ]
 }

@@ -17,9 +17,13 @@ Public API (called from MainWindowUiActionsMixin / menus):
     manager.toggle_instance(inst_id)
     manager.instances_of(widget_type)  → list of (id, name, widget)
     manager.all_instances()            → list of (id, name, widget_type, widget)
+    manager.instance_records()         → list of (id, name, widget_type, enabled), builds nothing
+    manager.live_instances()           → all_instances() rows of widgets already built
     manager.build_widgets_menu(parent_menu, menu_style) — rebuilds the Widgets submenu
-    manager.restore_all()              — called at startup
+    manager.restore_all()              — called at startup; a disabled instance is
+                                         built when first shown or looked up
     manager.save_all()                 — called at shutdown (also auto-called on changes)
+    manager.refresh_theme()            — called after a theme change; redraws built widgets
 """
 
 from __future__ import annotations
@@ -27,6 +31,7 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import sys
 import threading
 from typing import TYPE_CHECKING
 import weakref
@@ -129,6 +134,8 @@ _SETTINGS_KEY = "overlay_instances"
 _AUDIO_COUNTERS_KEY = "overlay_audio_instance_counters"
 _AUDIO_WIDGET_TYPES = frozenset({"launcher_deck", "loop_deck"})
 _MAX_AUDIO_COUNTER = 2**31 - 1
+# Types whose value a Text template can reference ({stopwatch:id}, {countdown:id}, {dday:id}).
+_TEMPLATE_SOURCE_TYPES = frozenset({"stopwatch", "countdown", "dday"})
 
 
 def widget_type_label(widget_type: str) -> str:
@@ -176,6 +183,10 @@ class OverlayWidgetManager:
         self._meta: dict[str, dict] = {}
         # counters per type for id generation
         self._counters: dict[str, int] = {}
+        # id → default-offset index of a saved disabled instance not built yet
+        self._pending: dict[str, int] = {}
+        self._interaction_locked = False
+        self._closed = False
         self._id_lock = threading.Lock()
         self._listeners: list = []
         self._workspace_service = None
@@ -269,35 +280,46 @@ class OverlayWidgetManager:
 
     def _create_widget(self, widget_type: str, inst_id: str):
         """Instantiate and return the widget for the given type/id."""
-        from calendar_app.presentation.widgets.overlay_widgets import (
-            OverlayClockWidget,
-            OverlayCountdownWidget,
-            OverlayDateCardWidget,
-            OverlayDDayWidget,
-            OverlayLauncherDeckWidget,
-            OverlayLoopDeckWidget,
-            OverlayStopwatchWidget,
-            OverlayTextWidget,
-            OverlayWeatherWidget,
-        )
-
-        cls_map = {
-            "clock": OverlayClockWidget,
-            "stopwatch": OverlayStopwatchWidget,
-            "date_card": OverlayDateCardWidget,
-            "countdown": OverlayCountdownWidget,
-            "dday": OverlayDDayWidget,
-            "text": OverlayTextWidget,
-            "weather": OverlayWeatherWidget,
-            "launcher_deck": OverlayLauncherDeckWidget,
-            "loop_deck": OverlayLoopDeckWidget,
-        }
-        cls = cls_map.get(widget_type)
-        if cls is None:
+        info = _WIDGET_TYPES.get(widget_type)
+        if info is None:
             raise ValueError(f"Unknown widget type: {widget_type!r}")
+
+        # overlay_widgets imports a class's module on first access, so only this
+        # type's module is loaded. The class is read from sys.modules because a
+        # `from ... import overlay_widgets` would return the package attribute and
+        # bypass a module substituted in sys.modules (tests do that).
+        import calendar_app.presentation.widgets.overlay_widgets  # noqa: F401
+
+        module = sys.modules["calendar_app.presentation.widgets.overlay_widgets"]
+        cls = getattr(module, info["class"])
 
         # Create a lightweight settings proxy so each instance has its own prefix
         widget = cls(_SettingsProxy(self._owner, self._settings_prefix(inst_id)))
+        return widget
+
+    def _build_pending(self, inst_id: str):
+        """Build a saved disabled instance the first time something needs its widget."""
+        if inst_id not in self._pending or self._closed:
+            return self._widgets.get(inst_id)
+        index = self._pending.pop(inst_id)
+        meta = self._meta[inst_id]
+        try:
+            widget = self._create_widget(meta["type"], inst_id)
+            self._attach_widget_callbacks(widget, inst_id)
+            widget.apply_initial_settings()
+            widget.restore_position(self._default_offset_for_type(meta["type"], index))
+            widget.set_enabled(meta["enabled"])
+            if self._interaction_locked and hasattr(widget, "set_interaction_locked"):
+                widget.set_interaction_locked(True)
+        except Exception:
+            # Same outcome as a failed restore: the entry is dropped from the saved list.
+            # Listeners merge notifications on timers, so this is safe mid-iteration.
+            logger.exception("Failed to restore overlay instance %r", inst_id)
+            self._meta.pop(inst_id, None)
+            self._save()
+            self._notify_listeners()
+            return None
+        self._widgets[inst_id] = widget
         return widget
 
     def _default_offset_for_type(self, widget_type: str, index: int) -> QPoint:
@@ -405,7 +427,7 @@ class OverlayWidgetManager:
     def duplicate_instance(self, inst_id: str) -> str | None:
         """Duplicate one widget's persisted appearance/content and offset its position."""
         source_meta = self._meta.get(inst_id)
-        source_widget = self._widgets.get(inst_id)
+        source_widget = self.get_widget(inst_id)
         if source_meta is None or source_widget is None:
             return None
         copy_name = t(
@@ -495,6 +517,7 @@ class OverlayWidgetManager:
         """Hide and destroy the instance."""
         if self._meta.get(inst_id, {}).get("type") in _AUDIO_WIDGET_TYPES:
             self._persist_audio_counters()
+        self._pending.pop(inst_id, None)
         widget = self._widgets.pop(inst_id, None)
         if widget is not None:
             widget.set_enabled(False)
@@ -521,7 +544,7 @@ class OverlayWidgetManager:
             self._notify_listeners()
 
     def show_instance(self, inst_id: str):
-        widget = self._widgets.get(inst_id)
+        widget = self.get_widget(inst_id)
         if widget:
             widget.set_enabled(True)
         if inst_id in self._meta:
@@ -576,7 +599,6 @@ class OverlayWidgetManager:
         box.setDefaultButton(QMessageBox.StandardButton.No)
         if box.exec() == QMessageBox.StandardButton.Yes:
             self.remove_instance(inst_id)
-            self._rebuild_widgets_menu()
 
     def _ui_remove_all_with_confirm(self, parent_widget=None):
         """Show confirmation then destroy all instances."""
@@ -597,10 +619,9 @@ class OverlayWidgetManager:
         box.setDefaultButton(QMessageBox.StandardButton.No)
         if box.exec() == QMessageBox.StandardButton.Yes:
             self.remove_all()
-            self._rebuild_widgets_menu()
 
     def toggle_instance(self, inst_id: str):
-        widget = self._widgets.get(inst_id)
+        widget = self.get_widget(inst_id)
         if widget is None:
             return
         enabled = not widget.is_enabled()
@@ -612,6 +633,8 @@ class OverlayWidgetManager:
 
     def instances_of(self, widget_type: str) -> list[tuple[str, str, object]]:
         """Return [(id, name, widget), ...] for the given type."""
+        for iid in [i for i in self._pending if self._meta[i]["type"] == widget_type]:
+            self._build_pending(iid)
         return [
             (iid, m["name"], self._widgets[iid])
             for iid, m in self._meta.items()
@@ -619,17 +642,34 @@ class OverlayWidgetManager:
         ]
 
     def all_instances(self) -> list[tuple[str, str, str, object]]:
-        """Return [(id, name, widget_type, widget), ...] in insertion order."""
+        """Return [(id, name, widget_type, widget), ...] in insertion order.
+
+        Builds every disabled instance not built yet; for names, types or enabled
+        state use instance_records(), for widgets already on screen live_instances().
+        """
+        for iid in list(self._pending):
+            self._build_pending(iid)
+        return self.live_instances()
+
+    def live_instances(self) -> list[tuple[str, str, str, object]]:
+        """all_instances() rows for widgets already built; builds nothing."""
         return [
             (iid, m["name"], m["type"], self._widgets[iid])
             for iid, m in self._meta.items()
             if iid in self._widgets
         ]
 
+    def instance_records(self) -> list[tuple[str, str, str, bool]]:
+        """Return [(id, name, widget_type, enabled), ...] without building any widget."""
+        return [
+            (iid, m["name"], m["type"], bool(m.get("enabled"))) for iid, m in self._meta.items()
+        ]
+
     def get_widget(self, inst_id: str):
-        return self._widgets.get(inst_id)
+        return self._build_pending(inst_id)
 
     def get_widgets_of_type(self, widget_type: str) -> list:
+        """Built widgets of one type (a disabled instance is built when first used)."""
         return [
             self._widgets[iid]
             for iid, m in self._meta.items()
@@ -641,8 +681,14 @@ class OverlayWidgetManager:
     # ------------------------------------------------------------------
 
     def widget_registry(self) -> dict:
-        """Return a snapshot dict of {inst_id: widget} for all live instances."""
-        return dict(self._widgets)
+        """Return {inst_id: widget} in instance order for Text template references.
+
+        A disabled stopwatch, countdown or D-Day keeps a value ({stopwatch:id}
+        etc.), so it is built here; other disabled types are not referenced.
+        """
+        for iid in [i for i in self._pending if self._meta[i]["type"] in _TEMPLATE_SOURCE_TYPES]:
+            self._build_pending(iid)
+        return {iid: self._widgets[iid] for iid in self._meta if iid in self._widgets}
 
     # ------------------------------------------------------------------
     # App data provider (optional callback for {task_count} etc.)
@@ -690,22 +736,44 @@ class OverlayWidgetManager:
         caller_rank = _tier_rank.get(tier, 1)
 
         _ad = app_data if app_data is not None else (self._get_app_data() if tier == "slow" else {})
-        # Build registry once per refresh call — all live instances by id
-        registry = self.widget_registry()
+        # Built once per refresh call, and only when a Text widget refreshes.
+        registry = None
 
         for w in self.get_widgets_of_type("text"):
             if not (hasattr(w, "refresh_template") and w.is_enabled()):
                 continue
-            if not hasattr(w, "refresh_tier"):
-                # Fallback: always refresh
-                w.refresh_template(countdown_remaining, stopwatch_text, _ad, registry)
-                continue
-            widget_tier = w.refresh_tier()
-            widget_rank = _tier_rank.get(widget_tier, 0)
-            # Each tier has its own timer. Refreshing slower tiers from the
-            # 100 ms timer both wastes work and replaces app data with defaults.
-            if widget_rank > 0 and caller_rank == widget_rank:
-                w.refresh_template(countdown_remaining, stopwatch_text, _ad, registry)
+            if hasattr(w, "refresh_tier"):
+                widget_rank = _tier_rank.get(w.refresh_tier(), 0)
+                # Each tier has its own timer. Refreshing slower tiers from the
+                # 100 ms timer both wastes work and replaces app data with defaults.
+                if widget_rank <= 0 or caller_rank != widget_rank:
+                    continue
+            if registry is None:
+                registry = self.widget_registry()
+            w.refresh_template(countdown_remaining, stopwatch_text, _ad, registry)
+
+    def refresh_theme(self) -> None:
+        """Redraw built widgets in the current app theme (colours only; geometry kept).
+
+        A disabled widget not built yet takes the current theme when it is first built.
+        """
+        if self._closed:
+            return
+        for widget in list(self._widgets.values()):
+            try:
+                widget._apply_appearance()
+            except Exception:
+                # One broken or deleted widget must not stop the rest of a theme apply.
+                logger.exception("Overlay theme refresh failed")
+        if not self.get_widgets_of_type("text"):
+            return
+        # A Text widget's _apply_appearance resolves its template without live data;
+        # push it back now, or {task_count} would read 0 until the 60 s slow timer.
+        for tier in ("fast", "med", "slow"):
+            try:
+                self.refresh_all_texts(tier=tier)
+            except Exception:
+                logger.exception("Overlay theme refresh failed")
 
     # ------------------------------------------------------------------
     # Dynamic menu builder
@@ -732,10 +800,10 @@ class OverlayWidgetManager:
         # ── 기존 인스턴스 목록 ────────────────────────────────────────
         # 체크 가능 항목에 별도 type 아이콘을 같이 붙이면 체크 인디케이터와
         # 위젯 아이콘이 함께 보여 중복처럼 보인다. 아이콘 생략 — 체크 인디케이터로 충분.
-        instances = self.all_instances()
+        instances = self.instance_records()
         if instances:
             parent_menu.addSeparator()
-            for iid, name, wtype, widget in instances:
+            for iid, name, wtype, enabled in instances:
                 display = _se(name) if name else _se(widget_type_label(wtype))
                 act_inst = parent_menu.addAction(display)
 
@@ -745,7 +813,8 @@ class OverlayWidgetManager:
                     set_themed_icon(act_inst, info["icon"], icon_color)
 
                 act_inst.setCheckable(True)
-                act_inst.setChecked(widget.is_enabled())
+                widget = self._widgets.get(iid)
+                act_inst.setChecked(widget.is_enabled() if widget is not None else enabled)
                 act_inst.setEnabled(not locked)
                 act_inst.triggered.connect(lambda checked, iid=iid: self.toggle_instance(iid))
 
@@ -801,7 +870,6 @@ class OverlayWidgetManager:
         inst_id = self.add_instance(widget_type, name.strip() or default_name)
         # Show immediately after adding
         self.show_instance(inst_id)
-        self._rebuild_widgets_menu()
 
     def _ui_rename(self, inst_id: str):
         meta = self._meta.get(inst_id)
@@ -815,11 +883,9 @@ class OverlayWidgetManager:
         )
         if ok and name.strip():
             self.rename_instance(inst_id, name.strip())
-            self._rebuild_widgets_menu()
 
     def _ui_remove(self, inst_id: str):
         self.remove_instance(inst_id)
-        self._rebuild_widgets_menu()
 
     def _open_manager_dialog(self):
         """위젯 관리자 다이얼로그 열기 — owner의 open_widget_manager() 위임."""
@@ -827,7 +893,13 @@ class OverlayWidgetManager:
             self._owner.open_widget_manager()
 
     def _rebuild_widgets_menu(self):
-        """Re-populate the widgets submenu if accessible from owner."""
+        """Re-populate the widgets submenu if accessible from owner.
+
+        The add, rename and remove slots above do not call this: the owner's
+        widgets_menu rebuilds itself from current state on every aboutToShow
+        (top_menus/widgets_menu.py), so an eager rebuild of the hidden menu was
+        duplicate work.
+        """
         widgets_menu = getattr(self._owner, "widgets_menu", None)
         if widgets_menu is not None:
             style = (
@@ -919,6 +991,13 @@ class OverlayWidgetManager:
                 needs_repair = True
                 continue
 
+            if not enabled:
+                # Built when first shown or looked up (get_widget/all_instances): a
+                # hidden loop mixer alone cost 0.15-0.22 s of every start.
+                self._pending[iid] = self._instance_count_of(wtype)
+                self._meta[iid] = {"_id": iid, "type": wtype, "name": name, "enabled": False}
+                restored_ids.add(iid)
+                continue
             try:
                 widget = self._create_widget(wtype, iid)
                 self._attach_widget_callbacks(widget, iid)
@@ -953,6 +1032,7 @@ class OverlayWidgetManager:
     def shutdown(self):
         """Persist widgets, then stop their timers/network work without disabling them."""
 
+        self._closed = True
         if self._workspace_service is not None:
             self._workspace_service.shutdown()
         self.save_all()
@@ -967,6 +1047,7 @@ class OverlayWidgetManager:
 
     def set_all_interaction_locked(self, locked: bool):
         """고정 모드 시 모든 위젯의 드래그/리사이즈를 잠금/해제."""
+        self._interaction_locked = bool(locked)
         for widget in self._widgets.values():
             if hasattr(widget, "set_interaction_locked"):
                 widget.set_interaction_locked(locked)

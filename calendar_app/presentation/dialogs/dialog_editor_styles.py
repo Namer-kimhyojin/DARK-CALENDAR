@@ -438,18 +438,13 @@ QDialog#TaskEditorDialog QFrame#TaskEditorFooter {{
     border: none;
     border-top: 1px solid {border_soft};
 }}
-QDialog#TaskEditorDialog[sheetLayout="false"] QFrame#TaskEditorFooter QPushButton#primary_btn,
-QDialog#TaskEditorDialog[sheetLayout="false"] QFrame#TaskEditorFooter QPushButton#ghost_btn,
-QDialog#TaskEditorDialog[sheetLayout="false"] QFrame#TaskEditorFooter QPushButton#danger_btn {{
+QDialog#TaskEditorDialog QFrame#TaskEditorFooter QPushButton#primary_btn,
+QDialog#TaskEditorDialog QFrame#TaskEditorFooter QPushButton#ghost_btn,
+QDialog#TaskEditorDialog QFrame#TaskEditorFooter QPushButton#danger_btn {{
     min-height: {max(34, int(m.get("button_height", 24)))}px;
     max-height: {max(34, int(m.get("button_height", 24)))}px;
     padding: {int(m.get("button_padding_y", 4))}px {int(m.get("button_padding_x", 16))}px;
     border: 1px solid {border_soft};
-}}
-QDialog#TaskEditorDialog[sheetLayout="true"] QFrame#TaskEditorFooter QPushButton#primary_btn,
-QDialog#TaskEditorDialog[sheetLayout="true"] QFrame#TaskEditorFooter QPushButton#ghost_btn,
-QDialog#TaskEditorDialog[sheetLayout="true"] QFrame#TaskEditorFooter QPushButton#danger_btn {{
-    min-height: 36px;
 }}
 QDialog#TaskEditorDialog QListWidget {{
     background: transparent;

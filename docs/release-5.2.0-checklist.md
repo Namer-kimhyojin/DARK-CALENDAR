@@ -12,6 +12,7 @@
 - Draft readback run 42941748804 and public readback run 42941926022 verified actual bytes of all six assets and their sidecars.
 - Store Submission 34 (1152921505702328889): 5.2.0.0 package validated and saved; certification submitted 2026-11-11. Publish as soon as certification passes.
 - All 18 listing languages verified after save. Only release notes changed; descriptions, keywords, image order, captions and other fields preserved.
-- Store publication and installation pending. This PC remains on 5.0.2.0; installed 5.2.0 UI/data/restart acceptance has not occurred.
+- Store delivery and installation on this PC confirmed on November 14. Windows recorded registration of the Store-signed 5.2.0.0 x64 package on November 13 at 09:39 KST. The installed EXE and SQLite DLL match the validated release hashes.
+- The installed process reached the away screen and logged database, tray and worker initialization. It also logged Windows exception `0x8001010d` during startup and remained responsive. Main-window, normal restart and personal-data acceptance are pending. Partner Center required sign-in, so the current submission timeline and rollout scope remain unverified.
 - Original 5.1.1 release/tag and previous submission evidence preserved. Developer source, preferences and personal databases preserved.
 - Evidence: artifacts/deployment/5.2.0/20261111-1027.

@@ -15,9 +15,11 @@ from calendar_app.infrastructure.google_sync.common import (
 from calendar_app.infrastructure.google_sync.common import (
     get_default_gcal_calendar_id,
     google_create_idempotency_key,
+    google_summary_for_task_name,
     is_gcal_enabled,
     is_gcal_import_selection_configured,
     sync_time_zone,
+    untitled_event_name,
 )
 from calendar_app.infrastructure.google_sync.common import (
     normalize_calendar_id as _normalize_calendar_id,
@@ -26,6 +28,7 @@ from calendar_app.infrastructure.google_sync.common import (
     resolve_task_target_calendar_id as _resolve_task_target_calendar_id,
 )
 from calendar_app.infrastructure.google_sync.service import is_google_rate_limit_error
+from calendar_app.infrastructure.i18n import t
 
 
 def _get_default_gcal_id(app) -> str:
@@ -394,7 +397,7 @@ def scan_orphan_remote_events(app, lookback_days: int = 180, max_per_calendar: i
                     "gcal_event_id": event_id,
                     "gcal_calendar_id": cal_id,
                     "calendar_summary": cal_summary,
-                    "summary": getattr(ev, "summary", "") or "(제목 없음)",
+                    "summary": getattr(ev, "summary", "") or t("common.no_title", "(제목 없음)"),
                     "start": getattr(ev, "start_time", "") or "",
                     "end": getattr(ev, "end_time", "") or "",
                 }
@@ -661,7 +664,8 @@ def _validate_google_pull_snapshot(
             if value is not None and not isinstance(value, str):
                 raise ValueError("invalid_google_pull_text")
         # API optional text may be omitted or null; keep local persistence well typed.
-        event.summary = getattr(event, "summary", None) or "Untitled"
+        # An untitled event is named in the UI language; the push path sends it back empty.
+        event.summary = getattr(event, "summary", None) or untitled_event_name()
         event.description = getattr(event, "description", None) or ""
         event.location = getattr(event, "location", None) or ""
         for field in ("attendees", "attachments", "recurrence"):
@@ -1000,7 +1004,9 @@ def _push_local_changes_to_google(app, remote_versions=None):
                     {
                         "local_task_id": _local_id,
                         "calendar_id": _cal,
-                        "summary": _bt.get("name") or _bt.get("summary") or "Untitled",
+                        "summary": google_summary_for_task_name(
+                            _bt.get("name") or _bt.get("summary")
+                        ),
                         "start_iso": _bt.get("deadline") or "",
                         "end_iso": _bt.get("end_date") or "",
                         "description": _bt.get("description") or "",

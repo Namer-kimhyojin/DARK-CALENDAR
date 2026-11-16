@@ -47,8 +47,14 @@ from calendar_app.presentation.dialogs.sync_feedback import (
     subscription_error_message,
     sync_error_message,
 )
+from calendar_app.presentation.locale_names import calendar_display_name
 from calendar_app.shared.color_utils import contrast_safe_color
 from calendar_app.shared.icon_map import ICON, icon
+
+
+def _shown_name(calendar):
+    """Calendar name as shown in the UI; the built-in local calendar follows the language."""
+    return str(calendar_display_name(calendar["id"], calendar.get("name")) or calendar["id"])
 
 
 class _CalendarRowLabel(QLabel):
@@ -399,10 +405,10 @@ class CalendarManagerPage(QWidget):
                 continue
             if provider and source != provider:
                 continue
-            if query and query not in str(calendar.get("name") or calendar["id"]).casefold():
+            if query and query not in _shown_name(calendar).casefold():
                 continue
             readonly = calendar_repo.is_calendar_row_read_only(calendar)
-            name = calendar.get("name") or calendar["id"]
+            name = _shown_name(calendar)
             traits = [self._source_label(calendar)]
             if readonly:
                 traits.append(t("outlook.read_only", "읽기 전용"))
@@ -590,7 +596,7 @@ class CalendarManagerPage(QWidget):
         if self.add_ics is not None:
             self.add_ics.setEnabled(bool(self.coordinator) and not self._ics_busy())
         self.detail_title.setText(
-            str(calendar.get("name") or calendar["id"])
+            _shown_name(calendar)
             if calendar
             else t("sync_redesign.select_calendar", "캘린더를 선택하세요")
         )
@@ -947,13 +953,16 @@ class CalendarManagerPage(QWidget):
         calendar = self.current()
         if not calendar or calendar.get("type") == "gcal":
             return
+        shown = calendar_display_name(calendar["id"], calendar.get("name"))
         name, ok = QInputDialog.getText(
             self,
             t("sync_unified.rename", "이름 변경"),
             t("sync_unified.calendar_name", "캘린더 이름"),
-            text=calendar.get("name") or "",
+            text=shown,
         )
-        if ok and name.strip():
+        # Saving the prefilled name unchanged keeps the stored name, so the
+        # built-in "기본" row is not renamed to the current UI language.
+        if ok and name.strip() and name.strip() != shown.strip():
             self._changed(calendar_repo.rename_calendar(calendar["id"], name.strip()))
 
     @guard_calendar_action
@@ -995,7 +1004,7 @@ class CalendarManagerPage(QWidget):
                     t(
                         "calendar_list_default.saved",
                         "새 일정은 ‘{name}’ 캘린더에 기본 저장됩니다.",
-                        name=str(calendar.get("name") or calendar["id"]),
+                        name=_shown_name(calendar),
                     )
                 )
             return success
@@ -1102,7 +1111,7 @@ class CalendarManagerPage(QWidget):
                 else t(
                     "sync_redesign.remove_local_confirm",
                     "'{name}' 캘린더를 제거할까요? 기존 일정은 로컬 사본으로 남습니다.",
-                ).format(name=calendar.get("name") or calendar["id"]),
+                ).format(name=_shown_name(calendar)),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Directive-focused adapter for legacy directive table access."""
 
 import contextlib
@@ -7,6 +8,15 @@ import logging
 from calendar_app.infrastructure.db import db_repository as _legacy
 
 logger = logging.getLogger(__name__)
+
+# SET clause for a status write; bind the new status once more. completed_at is stamped when
+# a directive becomes completed, kept while it stays completed and cleared otherwise. SET
+# expressions read the old row, so "status" here is the status before this write.
+COMPLETED_AT_ASSIGNMENT = (
+    "completed_at = CASE WHEN COALESCE(?, '') != 'completed' THEN NULL "
+    "WHEN status = 'completed' THEN completed_at "
+    "ELSE datetime('now', 'localtime') END"
+)
 
 
 def _directive_columns(cur):
@@ -20,6 +30,7 @@ def _ensure_directive_schema(cur):
         ("receiver_name", "TEXT"),
         ("memo", "TEXT"),
         ("priority", "TEXT DEFAULT 'normal'"),
+        ("completed_at", "TEXT"),
     ]
     for col_name, col_type in required:
         if col_name not in columns:
@@ -87,11 +98,48 @@ def update_directive_status(directive_id, new_status):
         return False
     try:
         cur = conn.cursor()
-        cur.execute("UPDATE task_directive SET status=? WHERE id=?", (new_status, directive_id))
+        _ensure_directive_schema(cur)
+        cur.execute(
+            f"UPDATE task_directive SET status=?, {COMPLETED_AT_ASSIGNMENT} WHERE id=?",
+            (new_status, new_status, directive_id),
+        )
         conn.commit()
-        return True
+        # A directive deleted elsewhere matches no row; report it so callers keep no stale state.
+        return cur.rowcount > 0
     except Exception:
         logger.exception("update_directive_status failed id=%s", directive_id)
+        return False
+
+
+def get_directive_completed_at(directive_id):
+    """Stored completion time of a directive (None when unset). Raises if it cannot be read."""
+    conn = _legacy.get_connection()
+    if not conn:
+        raise RuntimeError("no database connection")
+    row = conn.execute(
+        "SELECT completed_at FROM task_directive WHERE id=?", (directive_id,)
+    ).fetchone()
+    return row[0] if row else None
+
+
+def restore_directive_completed_at(directive_id, completed_at):
+    """Undo of an untick: put back the completion time the untick cleared."""
+    conn = _legacy.get_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.execute(
+            "UPDATE task_directive SET completed_at=? WHERE id=? AND status='completed'",
+            (completed_at, directive_id),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    except Exception:
+        logger.exception("restore_directive_completed_at failed id=%s", directive_id)
+        # A failed write (database locked) must not leave a transaction open on this shared
+        # connection.
+        with contextlib.suppress(Exception):
+            conn.rollback()
         return False
 
 
@@ -104,7 +152,7 @@ def update_directive_priority(directive_id, priority):
         _ensure_directive_schema(cur)
         cur.execute("UPDATE task_directive SET priority=? WHERE id=?", (priority, directive_id))
         conn.commit()
-        return True
+        return cur.rowcount > 0
     except Exception:
         logger.exception("update_directive_priority failed id=%s", directive_id)
         return False
@@ -112,6 +160,25 @@ def update_directive_priority(directive_id, priority):
 
 def get_recent_directives(limit=200):
     return _legacy.get_recent_directives(limit=limit)
+
+
+def directive_ids_completed_on(date_str):
+    """Ids of the directives completed on date_str ('yyyy-MM-dd'), read from completed_at."""
+    conn = _legacy.get_connection()
+    if not conn:
+        return set()
+    try:
+        cur = conn.cursor()
+        # A range on completed_at (not date(completed_at)) uses the (status, completed_at) index.
+        cur.execute(
+            "SELECT id FROM task_directive WHERE status = 'completed' "
+            "AND completed_at >= date(?) AND completed_at < date(?, '+1 day')",
+            (date_str, date_str),
+        )
+        return {row[0] for row in cur.fetchall()}
+    except Exception:
+        logger.exception("directive_ids_completed_on failed date=%s", date_str)
+        return set()
 
 
 def get_directives_by_date(date_str: str, limit: int | None = None):
@@ -194,10 +261,12 @@ def bulk_update_directive_status(ids, new_status: str):
         return 0
     try:
         cur = conn.cursor()
+        _ensure_directive_schema(cur)
         placeholders = ",".join("?" for _ in ids)
         cur.execute(
-            f"UPDATE task_directive SET status=? WHERE id IN ({placeholders})",
-            [new_status] + list(ids),
+            f"UPDATE task_directive SET status=?, {COMPLETED_AT_ASSIGNMENT} "
+            f"WHERE id IN ({placeholders})",
+            [new_status, new_status] + list(ids),
         )
         conn.commit()
         return cur.rowcount

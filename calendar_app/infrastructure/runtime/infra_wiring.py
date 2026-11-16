@@ -218,7 +218,7 @@ def init_tray_icon(app):
     # Routine Settings (Dialog)
     _create_action(
         app,
-        t("tray.routine_manager").replace("관리자", "설정"),
+        t("tray.routine_settings", "⚙️ 일반업무 설정"),
         app.open_routine_management_dialog,
         "routine_mgr",
         mgr_menu,
@@ -291,6 +291,40 @@ def init_tray_icon(app):
         app, t("tray.lock_mode"), lambda: _toggle_lock_via_shortcut(app), "lock_mode", focus_menu
     )
     act_lock.setIcon(_ic(ICON.LOCK))
+    from calendar_app.presentation.main_window.lock_click_through import click_through_enabled
+
+    act_click_through = focus_menu.addAction(
+        t("tray.lock_click_through", "잠금 중 클릭 통과 (바탕화면 사용)")
+    )
+    act_click_through.setCheckable(True)
+    act_click_through.setChecked(click_through_enabled(getattr(app, "settings", None)))
+    act_click_through.setToolTip(
+        t(
+            "tray.lock_click_through_hint",
+            "잠금 중에는 클릭이 달력 아래 바탕화면으로 전달됩니다. "
+            "'잠금 해제' 버튼 위에 마우스를 잠시 올려 두면 다시 누를 수 있습니다.",
+        )
+    )
+    if hasattr(app, "set_lock_click_through"):
+        act_click_through.toggled.connect(app.set_lock_click_through)
+    app.tray_lock_click_through_action = act_click_through
+    from calendar_app.presentation.main_window.lock_click_through import behind_icons_enabled
+
+    act_behind_icons = focus_menu.addAction(
+        t("tray.lock_behind_icons", "잠금 중 바탕화면 아이콘 뒤로 보내기")
+    )
+    act_behind_icons.setCheckable(True)
+    act_behind_icons.setChecked(behind_icons_enabled(getattr(app, "settings", None)))
+    act_behind_icons.setToolTip(
+        t(
+            "tray.lock_behind_icons_hint",
+            "잠금 중에는 달력을 배경화면처럼 바탕화면 아이콘 아래에 둡니다. "
+            "'잠금 해제' 버튼 위에 마우스를 잠시 올려 두면 다시 꺼내 누를 수 있습니다.",
+        )
+    )
+    if hasattr(app, "set_lock_behind_icons"):
+        act_behind_icons.toggled.connect(app.set_lock_behind_icons)
+    app.tray_lock_behind_icons_action = act_behind_icons
     act_magnet = _create_action(
         app, t("tray.magnet_mode"), app.toggle_magnet_mode, "magnet_mode", focus_menu
     )

@@ -15,6 +15,7 @@ from PyQt6.QtGui import QGuiApplication, QKeySequence, QShortcut, QWindow
 from PyQt6.QtWidgets import QApplication, QDockWidget, QWidget
 
 from calendar_app.infrastructure.runtime import win32_input
+from calendar_app.infrastructure.runtime.menu_paths import SELECTED_ITEM_MENU_KEY, format_menu_path
 
 logger = logging.getLogger(__name__)
 
@@ -354,25 +355,51 @@ _GUIDE_REFERENCE_COLUMNS: list[list[str]] = [
     ["register", "navigate", "view", "edit"],
     ["mode", "window", "admin", "system", "emergency"],
 ]
+# Shortcuts that also live in a menu: the path is the i18n keys the menu builder
+# passes to t(), rendered live so a renamed item cannot leave a stale help path.
+# Other shortcuts keep a translatable category in shortcut.entries.<id>.menu_path.
+_LAYOUT_PRESETS_PATH = ("menu.display_btn", "menu.layout_presets")
+SHORTCUT_MENU_PATHS: dict[str, tuple[str, ...]] = {
+    "new_schedule": ("menu.register_btn", "menu.add_schedule"),
+    "new_routine": ("menu.register_btn", "menu.add_routine"),
+    "new_directive": ("menu.register_btn", "menu.add_directive"),
+    "checklist": ("menu.work_btn", "menu.checklist_mgmt"),
+    "routine_mgr": ("menu.work_btn", "menu.routine_status"),
+    "focus_mode": ("menu.display_btn", "menu.focus_view_options", "menu.focus_mode"),
+    "widget_mode": ("menu.display_btn", "menu.focus_view_options", "menu.widget_mode_toggle"),
+    "away_lock": ("menu.display_btn", "menu.focus_view_options", "menu.instant_away"),
+    "topbar": ("menu.display_btn", "menu.window_view_options", "menu.auto_hide_topbar"),
+    "navigation_rail": ("menu.display_btn", "menu.window_view_options", "topbar.navigation_rail"),
+    "cal_toolbar": ("menu.display_btn", "menu.window_view_options", "menu.hide_calendar_toolbar"),
+    "fullscreen": ("menu.display_btn", "menu.window_view_options", "menu.fullscreen"),
+    "save_layout": (*_LAYOUT_PRESETS_PATH, "menu.save_layout"),
+    "layout_1": _LAYOUT_PRESETS_PATH,
+    "layout_2": _LAYOUT_PRESETS_PATH,
+    "layout_3": _LAYOUT_PRESETS_PATH,
+    "layout_4": _LAYOUT_PRESETS_PATH,
+    "layout_5": _LAYOUT_PRESETS_PATH,
+    "sync_gcal": ("menu.system", "sync_unified.menu", "sync_unified.sync_all"),
+    "help": ("menu.system", "menu.shortcuts"),
+    # The calendar panel's own toolbar, not the top bar.
+    "calendar_print": ("panel.main_calendar", "calendar.options", "print.menu"),
+    # The calendar and the side panels label this submenu with the same keys.
+    "color_assign": (SELECTED_ITEM_MENU_KEY, "context_menu.color_tag", "context_menu.color_auto"),
+}
 _SHORTCUT_HELP_META_KO: dict[str, dict] = {
     "new_schedule": {
         "description": "일정 입력 창을 바로 엽니다.",
-        "menu_path": "등록 > 새 일정",
         "tags": ["일정", "추가", "등록", "schedule"],
     },
     "new_routine": {
         "description": "반복 업무 루틴을 빠르게 추가합니다.",
-        "menu_path": "등록 > 루틴",
         "tags": ["루틴", "업무", "반복", "routine"],
     },
     "new_directive": {
         "description": "지시나 협조 항목 입력 창을 엽니다.",
-        "menu_path": "등록 > 지시사항",
         "tags": ["지시", "협조", "directive"],
     },
     "checklist": {
         "description": "체크리스트 템플릿과 항목 구성을 관리합니다.",
-        "menu_path": "작업 > 체크리스트 관리",
         "tags": ["체크리스트", "템플릿", "checklist"],
     },
     "today": {
@@ -397,7 +424,6 @@ _SHORTCUT_HELP_META_KO: dict[str, dict] = {
     },
     "focus_mode": {
         "description": "집중 모드를 켜거나 끕니다.",
-        "menu_path": "화면 > 집중 모드",
         "tags": ["집중", "focus", "pomodoro"],
         "aliases": ["Ctrl+Space"],
     },
@@ -408,92 +434,76 @@ _SHORTCUT_HELP_META_KO: dict[str, dict] = {
     },
     "lock_mode": {
         "description": "데스크톱 잠금 모드를 전환합니다.",
-        "menu_path": "화면 > 잠금 모드",
+        "menu_path": "상단 바 버튼",
         "tags": ["잠금", "lock"],
     },
     "magnet_mode": {
         "description": "패널 정렬과 부착을 돕는 자석 모드를 전환합니다.",
-        "menu_path": "화면 > 자석 모드",
+        "menu_path": "상단 바 버튼",
         "tags": ["자석", "패널", "magnet"],
     },
     "away_lock": {
         "description": "자리비움 잠금을 즉시 시작합니다.",
-        "menu_path": "화면 > 자리비움 잠금",
         "tags": ["자리비움", "away", "lock"],
     },
     "topbar": {
         "description": "상단 바 자동 숨기기를 켜거나 끕니다. 끄면 상단 바가 고정됩니다.",
-        "menu_path": "화면 > 화면 및 창 > 상단 바 자동 숨기기",
         "tags": ["메뉴바", "상단 바", "topbar", "자동 숨기기", "고정", "복구"],
     },
     "navigation_rail": {
         "description": "왼쪽 빠른 이동 막대를 표시하거나 숨깁니다.",
-        "menu_path": "화면 > 화면 및 창 > 빠른 이동",
         "tags": ["빠른 이동", "레일", "navigation", "rail"],
     },
     "cal_toolbar": {
         "description": "캘린더 툴바를 숨기거나 다시 표시합니다.",
-        "menu_path": "화면 > 캘린더 툴바",
         "tags": ["캘린더", "툴바", "toolbar"],
     },
     "fullscreen": {
         "description": "전체화면 표시를 전환합니다.",
-        "menu_path": "화면 > 전체화면",
         "tags": ["전체화면", "fullscreen"],
     },
     "widget_mode": {
         "description": "위젯 전용 패널 모드를 엽니다.",
-        "menu_path": "화면 > 위젯 전용 모드",
         "tags": ["위젯", "widget", "panel"],
     },
     "save_layout": {
         "description": "현재 패널 배치를 프리셋으로 저장합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋 > 저장",
         "tags": ["레이아웃", "프리셋", "저장", "layout"],
     },
     "layout_1": {
         "description": "기본 4패널 도킹 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "프리셋", "도킹", "1"],
     },
     "layout_2": {
         "description": "캘린더 중심 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "캘린더", "2"],
     },
     "layout_3": {
         "description": "업무 중심 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "업무", "3"],
     },
     "layout_4": {
         "description": "탭 분할 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "탭", "분할", "4"],
     },
     "layout_5": {
         "description": "분리형 배치를 적용합니다.",
-        "menu_path": "화면 > 레이아웃 프리셋",
         "tags": ["레이아웃", "분리", "부동", "5"],
     },
     "calendar_print": {
         "description": "현재 보기 또는 지정 기간의 캘린더를 미리보고 인쇄합니다.",
-        "menu_path": "캘린더 > 옵션 > 인쇄",
         "tags": ["인쇄", "프린터", "PDF", "print"],
     },
     "sync_gcal": {
         "description": "연결된 모든 캘린더의 동기화를 바로 시작합니다.",
-        "menu_path": "시스템 > 캘린더 및 동기화",
         "tags": ["Google", "Outlook", "iCloud", "네이버", "ICS", "동기화", "캘린더", "F5", "sync"],
     },
     "routine_mgr": {
         "description": "루틴 관리자 탭을 바로 엽니다.",
-        "menu_path": "작업 > 루틴 현황",
         "tags": ["루틴", "관리", "routine"],
     },
     "color_assign": {
         "description": "선택 항목에 색상을 자동으로 배정합니다.",
-        "menu_path": "작업 > 색상 자동 지정",
         "tags": ["색상", "태그", "자동", "color"],
     },
     "show_hide": {
@@ -528,7 +538,6 @@ _SHORTCUT_HELP_META_KO: dict[str, dict] = {
     },
     "help": {
         "description": "도움말 센터를 엽니다.",
-        "menu_path": "시스템 > 단축키 안내",
         "tags": ["도움말", "help", "F1"],
     },
     "delete": {
@@ -600,7 +609,12 @@ def get_shortcut_guide_entries() -> list[dict]:
         entry["description_ko"] = t(
             f"{ns}.description", str(help_meta.get("description", "") or "")
         )
-        entry["menu_path_ko"] = t(f"{ns}.menu_path", str(help_meta.get("menu_path", "") or ""))
+        menu_keys = SHORTCUT_MENU_PATHS.get(shortcut_id)
+        entry["menu_path_ko"] = (
+            format_menu_path(menu_keys)
+            if menu_keys
+            else t(f"{ns}.menu_path", str(help_meta.get("menu_path", "") or ""))
+        )
         entry["aliases"] = aliases
         translated_tags = t(f"{ns}.tags", None)
         entry["tags_ko"] = (

@@ -35,6 +35,7 @@ from calendar_app.domain.loop_mixer import (
     pcm_bytes,
 )
 from calendar_app.infrastructure.runtime.keydeck_audio import _WaveFormat, _WaveHeader
+from calendar_app.shared.qt_lifetime import call_when_destroyed
 
 # A live pad hit older than this is dropped (e.g. after suspend) instead of replayed.
 # 100 ms also dropped real taps whenever the UI briefly held the GIL.
@@ -546,6 +547,12 @@ def _keydeck_sounds(source_id):
         return _KEYDECK_SOUNDS.get(source_id, ())
 
 
+def _shutdown_if_alive(ref):
+    mixer = ref()
+    if mixer is not None:
+        mixer.shutdown()
+
+
 class LoopMixer(QObject):
     """UI facade; transport, device I/O and file work never run on the UI thread."""
 
@@ -578,8 +585,7 @@ class LoopMixer(QObject):
         app = QCoreApplication.instance()
         if app is not None:
             app.aboutToQuit.connect(self.shutdown)
-        ref = weakref.ref(self)
-        self.destroyed.connect(lambda _=None: (value := ref()) is not None and value.shutdown())
+        call_when_destroyed(self, _shutdown_if_alive, weakref.ref(self))
 
     def _fail(self, error, code=None):
         self._error = str(error)

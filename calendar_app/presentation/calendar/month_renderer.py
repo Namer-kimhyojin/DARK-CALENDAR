@@ -3,7 +3,7 @@ import datetime
 import html as _html_mod
 import logging
 
-from PyQt6.QtCore import QDate, QEvent, QLocale, QPoint, QSize, Qt, QTime
+from PyQt6.QtCore import QDate, QEvent, QLocale, QPoint, QSize, Qt, QTime, QTimer
 from PyQt6.QtGui import QAction, QBrush, QColor, QFont, QFontMetrics, QIcon, QPainter, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -29,6 +29,13 @@ from calendar_app.domain.date_range import (
 from calendar_app.domain.task_constants import priority_icon
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.locale_names import (
+    calendar_display_name,
+    weekday_name,
+)
+from calendar_app.presentation.locale_names import (
+    month_name as locale_month_name,
+)
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.presentation.widgets.schedule_info import build_schedule_hover_html
 from calendar_app.shared.calendar_display_settings import (
@@ -36,7 +43,7 @@ from calendar_app.shared.calendar_display_settings import (
     weekday_display_flags,
     weekday_display_mode_for,
 )
-from calendar_app.shared.color_utils import derive_ui_palette
+from calendar_app.shared.color_utils import derive_ui_palette, hue_shifted_rgba
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
@@ -163,20 +170,29 @@ def _calendar_scroll_style() -> str:
 
 
 def refresh_week_planner_theme(app):
-    """Preview opacity without rebuilding an active schedule gesture."""
+    """Repaint the calendar surface for the current opacity without a rebuild.
+
+    Covers the month grid as well as the weekly time grid: before, only the
+    week grid followed live opacity changes, so the month calendar kept its old
+    transparency next to already repainted panels until the next re-render.
+    """
     from calendar_app.presentation.calendar.week_time_grid import WeekTimeGrid
 
     center = getattr(app, "center_frame", None)
-    grid = center.findChild(WeekTimeGrid) if center is not None else None
-    if grid is None:
+    if center is None:
         return
     tokens = _ui_tokens(app.settings)
     shape = _shape_tokens(app.settings)
-    surface = grid.parentWidget()
     surface_style = _calendar_surface_style(tokens=tokens, shape=shape)
-    if surface.styleSheet() != surface_style:
-        surface.setStyleSheet(surface_style)
-    grid.apply_theme({**tokens, "calendar_bg": "transparent"})
+    grid = center.findChild(WeekTimeGrid)
+    surfaces = list(center.findChildren(QFrame, "calendar_surface"))
+    if grid is not None and grid.parentWidget() not in surfaces:
+        surfaces.append(grid.parentWidget())
+    for surface in surfaces:
+        if surface.styleSheet() != surface_style:
+            surface.setStyleSheet(surface_style)
+    if grid is not None:
+        grid.apply_theme({**tokens, "calendar_bg": "transparent"})
     toolbar = getattr(app, "calendar_toolbar_widget", None)
     if toolbar is not None:
         toolbar_style = _calendar_toolbar_shell_style(toolbar.is_toolbar_expanded(), tokens, shape)
@@ -217,6 +233,16 @@ def _calendar_surface_style(tokens=None, shape=None):
     accent_hover = _accent_rgba(0.08, tokens)
     accent_selected = _accent_rgba(0.12, tokens)
     accent_selected_border = _accent_rgba(0.86, tokens)
+    # A light accent wash with a thin translucent outline: enough to see the
+    # span over translucent panels without shouting. The ends are a touch
+    # stronger and carry accent day numbers.
+    range_fill = _accent_rgba(0.10, tokens)
+    range_end_fill = _accent_rgba(0.16, tokens)
+    range_line = _accent_rgba(0.50, tokens)
+    range_edge = _calendar_default_accent(tokens=tokens)
+    range_pill_text = tokens.get("text_inverse", "#ffffff")
+    # Ctrl+copy drops use the accent turned 120 degrees round the colour wheel.
+    copy_base = QColor(range_edge).name() if QColor(range_edge).isValid() else "#4da6ff"
     return f"""
         QFrame#calendar_surface {{
             background-color: {tokens["bg_main"]};
@@ -249,6 +275,10 @@ def _calendar_surface_style(tokens=None, shape=None):
             border: 2px solid {accent_selected_border};
             border-radius: {selection_radius}px;
         }}
+        ClickableCell[keyboardFocused="true"] {{
+            border: 2px dashed {tokens["accent"]};
+            border-radius: {min(4, selection_radius)}px;
+        }}
         QLabel#dayNumLabel {{
             color: {tokens["text_primary"]};
             background: transparent;
@@ -270,6 +300,83 @@ def _calendar_surface_style(tokens=None, shape=None):
         ClickableCell[selected_date="true"] QLabel#dayNumLabel {{
             color: {tokens["text_primary"]};
             font-weight: 700;
+        }}
+        /* Multi-day create range (empty-cell drag and its open dialog). It must
+           live in this surface stylesheet: an ancestor stylesheet always beats
+           the application one, so the global range rules never reached cells.
+           Placed after selected/keyboard rules so the range wins on its days. */
+        ClickableCell[create_range_preview="true"] {{
+            background-color: {range_fill};
+            border: none;
+            border-top: 1px solid {range_line};
+            border-bottom: 1px solid {range_line};
+            border-radius: 0px;
+        }}
+        ClickableCell[create_range_preview="true"][create_range_start="true"] {{
+            background-color: {range_end_fill};
+            border-left: 2px solid {range_line};
+            border-top-left-radius: {selection_radius}px;
+            border-bottom-left-radius: {selection_radius}px;
+        }}
+        ClickableCell[create_range_preview="true"][create_range_end="true"] {{
+            background-color: {range_end_fill};
+            border-right: 2px solid {range_line};
+            border-top-right-radius: {selection_radius}px;
+            border-bottom-right-radius: {selection_radius}px;
+        }}
+        ClickableCell[create_range_preview="true"][create_range_start="true"] QLabel#dayNumLabel,
+        ClickableCell[create_range_preview="true"][create_range_end="true"] QLabel#dayNumLabel {{
+            color: {range_edge};
+            font-weight: 700;
+        }}
+        /* Dropping an existing task: the days it will cover after the drop... */
+        ClickableCell[drag_range_preview="true"] {{
+            background-color: {_accent_rgba(0.16, tokens)};
+            border: none;
+            border-top: 2px solid {_accent_rgba(0.6, tokens)};
+            border-bottom: 2px solid {_accent_rgba(0.6, tokens)};
+            border-radius: 0px;
+        }}
+        ClickableCell[drag_range_preview="true"][drag_range_start="true"] {{
+            border-left: 2px solid {_accent_rgba(0.6, tokens)};
+            border-top-left-radius: {selection_radius}px;
+            border-bottom-left-radius: {selection_radius}px;
+        }}
+        ClickableCell[drag_range_preview="true"][drag_range_end="true"] {{
+            border-right: 2px solid {_accent_rgba(0.6, tokens)};
+            border-top-right-radius: {selection_radius}px;
+            border-bottom-right-radius: {selection_radius}px;
+        }}
+        /* ...and the day under the pointer: accent for move, a hue-shifted
+           colour for Ctrl+copy, pulsing while the pointer rests there. */
+        ClickableCell[drag_mode="move"] {{
+            background-color: {_accent_rgba(0.30, tokens)};
+            border: 2px solid {range_edge};
+            border-radius: {selection_radius}px;
+        }}
+        ClickableCell[drag_mode="move"][drag_pulse="on"] {{
+            background-color: {_accent_rgba(0.42, tokens)};
+        }}
+        ClickableCell[drag_mode="move"] QLabel#dayNumLabel {{
+            color: {range_pill_text};
+            font-weight: 800;
+            background-color: {range_edge};
+            border-radius: 6px;
+        }}
+        ClickableCell[drag_mode="copy"] {{
+            background-color: {hue_shifted_rgba(copy_base, 120, 0.25)};
+            border: 2px solid {hue_shifted_rgba(copy_base, 120, 1.0)};
+            border-radius: {selection_radius}px;
+        }}
+        ClickableCell[drag_mode="copy"][drag_pulse="on"],
+        ClickableCell[drag_mode="copy"][drag_batch="true"] {{
+            background-color: {hue_shifted_rgba(copy_base, 120, 0.36)};
+        }}
+        ClickableCell[drag_mode="copy"] QLabel#dayNumLabel {{
+            color: {range_pill_text};
+            font-weight: 800;
+            background-color: {hue_shifted_rgba(copy_base, 120, 1.0)};
+            border-radius: 6px;
         }}
     """
 
@@ -351,10 +458,10 @@ def _calendar_toolbar_style_bundle(tokens=None, shape=None):
     # layers, which visibly changes their colour over a desktop wallpaper.
     btn_bg = "transparent"
     btn_hover = tokens.get("bg_item_hover", tokens.get("bg_hover", btn_bg))
-    btn_border = tokens["border"]
-    btn_border_strong = tokens.get(
-        "border_strong", tokens.get("accent_border", _accent_rgba(0.25, tokens))
-    )
+    # Resting buttons use the light control outline; hover returns to the
+    # full border so the control still answers the pointer.
+    btn_border = tokens.get("border_control", tokens.get("border_soft", tokens["border"]))
+    btn_border_strong = tokens["border"]
     accent_soft = tokens.get("accent_soft", _accent_rgba(0.16, tokens))
     accent_border = tokens.get("accent_border", _accent_rgba(0.40, tokens))
     accent_soft_strong = _accent_rgba(0.24, tokens)
@@ -385,7 +492,7 @@ def _calendar_toolbar_style_bundle(tokens=None, shape=None):
                 border: 1px solid {accent_border};
             }}
             QPushButton:disabled {{
-                color: {btn_subtxt};
+                color: {btn_txt};
                 background: {accent_soft};
                 border: 1px solid {btn_border};
             }}
@@ -516,6 +623,32 @@ def _calendar_toolbar_style_bundle(tokens=None, shape=None):
             f"background: {accent_soft}; border: 1px solid {accent_border}; "
             f"border-radius: {selection_radius}px;"
         ),
+        # Shown only while items are selected, so it uses the stronger accent
+        # fill: the count must read as a live state, not a hint.
+        "selection_chip": f"""
+            QPushButton {{
+                color: {btn_txt};
+                background: {accent_soft_strong};
+                font-weight: bold;
+                font-size: {_font_role("caption")};
+                border-radius: {selection_radius}px;
+                padding: 3px 10px;
+                border: 1px solid {accent_border};
+                min-width: 0;
+            }}
+            QPushButton:hover, QPushButton:focus {{
+                background: {accent_soft_hover};
+                border: 1px solid {tokens["accent"]};
+            }}
+            QPushButton:open, QPushButton:pressed {{
+                background: {accent_soft_pressed};
+                border: 1px solid {tokens["accent"]};
+            }}
+            QPushButton::menu-indicator {{
+                image: none;
+                width: 0px;
+            }}
+        """,
         "more_btn": (
             f"QPushButton {{ color: {btn_subtxt}; font-size: {_font_role('caption')}; font-weight: bold; "
             f"background: transparent; border: none; text-align: left; padding: 2px 5px; "
@@ -530,7 +663,8 @@ def _format_toolbar_date(date: QDate, is_month_mode: bool, *, compact=False) -> 
     if compact:
         return QLocale().toString(date, "yyyy.MM" if is_month_mode else "MM.dd")
     if is_month_mode:
-        month_name = QLocale().monthName(date.month(), QLocale.FormatType.LongFormat)
+        # Standalone (nominative) name: Russian "ноябрь 2026", not "ноября 2026".
+        month_name = locale_month_name(date.month())
         template = t("calendar.month_title", "{month_name} {year}")
         try:
             return str(template).format(
@@ -541,8 +675,7 @@ def _format_toolbar_date(date: QDate, is_month_mode: bool, *, compact=False) -> 
         except (KeyError, ValueError):
             return f"{month_name} {date.year()}"
 
-    day_names = t("calendar.weekdays")
-    target_day_name = day_names[date.dayOfWeek() - 1]
+    target_day_name = weekday_name(date.dayOfWeek() - 1)
     return date.toString("yyyy.MM.dd") + f" ({target_day_name})"
 
 
@@ -1068,7 +1201,9 @@ def _prepare_calendar_display_rows(tasks, calendar_rows, primary_gcal_id="primar
         row = dict(task)
         calendar = policy.calendar_for_task(row)
         if calendar:
-            row["_calendar_name"] = str(calendar.get("name") or "").strip()
+            row["_calendar_name"] = calendar_display_name(
+                calendar.get("id"), str(calendar.get("name") or "").strip()
+            )
         elif not row.get("_subscription_summary"):
             google = not policy.is_visible(row, hide_gcal_items=True)
             row["_calendar_name"] = "Google Calendar" if google else t("sync_unified.local", "로컬")
@@ -1609,6 +1744,8 @@ def _assign_lane(start_col: int, end_col: int, lane_occupancy: list) -> int:
 
 
 def render_calendar(app):
+    focused = QApplication.focusWidget()
+    restore_month_focus = bool(focused and focused.property("monthKeyboardCell"))
     raw_mode = str(getattr(app, "view_mode_state", "") or "")
 
     # Normalization & Backward compatibility mapping
@@ -1699,7 +1836,14 @@ def render_calendar(app):
 
     prev_btn = QPushButton()
     prev_btn.setObjectName("calendar_previous")
-    prev_btn.setIcon(_ic(ICON.NAV_PREV, color=_icon_color))
+    # The nav row is mirrored right-to-left, so "previous" sits on the right and its
+    # chevron has to point right (and "next" left) to point away from the date.
+    prev_icon, next_icon = (
+        (ICON.NAV_NEXT, ICON.NAV_PREV)
+        if prev_btn.isRightToLeft()
+        else (ICON.NAV_PREV, ICON.NAV_NEXT)
+    )
+    prev_btn.setIcon(_ic(prev_icon, color=_icon_color))
     prev_btn.setIconSize(QSize(14, 14))
     prev_btn.setStyleSheet(nav_btn_style)
     prev_btn.setAccessibleName(t("calendar.previous_period", "이전 기간"))
@@ -1709,7 +1853,7 @@ def render_calendar(app):
 
     next_btn = QPushButton()
     next_btn.setObjectName("calendar_next")
-    next_btn.setIcon(_ic(ICON.NAV_NEXT, color=_icon_color))
+    next_btn.setIcon(_ic(next_icon, color=_icon_color))
     next_btn.setIconSize(QSize(14, 14))
     next_btn.setStyleSheet(nav_btn_style)
     next_btn.setAccessibleName(t("calendar.next_period", "다음 기간"))
@@ -1743,7 +1887,7 @@ def render_calendar(app):
     for year in range(current_year - 1, current_year + 2):
         year_menu = date_menu.addMenu(str(year))
         for month in range(1, 13):
-            month_name = locale.monthName(month, QLocale.FormatType.LongFormat)
+            month_name = locale_month_name(month, locale=locale)
             action = year_menu.addAction(month_name)
             action.setCheckable(year == current_year)
             action.setChecked(year == current_year and month == current_month)
@@ -1935,7 +2079,7 @@ def render_calendar(app):
             # If read-only, we could potentially stack icons, but for now we prioritize visibility
             final_icon = _ic(type_icon, color=cal_color)
 
-            act = QAction(cal["name"], opt_menu, checkable=True)
+            act = QAction(calendar_display_name(cal["id"], cal["name"]), opt_menu, checkable=True)
             act.setIcon(final_icon)
             act.setChecked(bool(cal.get("is_visible", 1)))
             if is_read_only:
@@ -2027,6 +2171,7 @@ def render_calendar(app):
     more_menu.addMenu(opt_menu)
     if is_time_week:
         cal_toolbar.addWidget(app.selection_status_lbl)
+        app.selection_status_lbl.setProperty("toolbarSuppressed", True)
         app.selection_status_lbl.hide()
         for object_name, label, hint, minute in (
             (
@@ -2086,6 +2231,16 @@ def render_calendar(app):
         time_view_action.triggered.connect(time_view_btn.click)
     for control in optional_controls:
         cal_toolbar.addWidget(control)
+    from calendar_app.presentation.calendar.selection_bar import (
+        build_selection_bar,
+        sync_selection_bar,
+        sync_selection_label_visibility,
+    )
+
+    # Outside optional_controls: the count and its actions stay reachable in
+    # the compact toolbar too.
+    cal_toolbar.addWidget(build_selection_bar(app, toolbar_styles, icon_color=_icon_color))
+    sync_selection_bar(app)
     cal_toolbar.addWidget(more_btn)
     more_btn.hide()
 
@@ -2106,7 +2261,11 @@ def render_calendar(app):
             return
         compact = use_compact
         for control in optional_controls:
+            if control is app.selection_status_lbl:
+                control.setProperty("toolbarCompact", compact)
+                continue
             control.setVisible(not compact)
+        sync_selection_label_visibility(app)
         more_btn.setVisible(compact)
         cal_toolbar.setSpacing(4 if compact else 8)
         today_btn.setMinimumWidth(0 if compact else 64)
@@ -2388,6 +2547,7 @@ def render_calendar(app):
             opt_btn.setToolTip("")
 
         if view_mode == "weekly_1" and getattr(app, "cal_week_layout", "time") != "date":
+            app.selection_status_lbl.setProperty("toolbarSuppressed", True)
             app.selection_status_lbl.hide()
             from calendar_app.presentation.calendar.week_planner_controller import (
                 create_week_schedule,
@@ -2407,6 +2567,17 @@ def render_calendar(app):
                 weekday_display_mode=weekday_mode,
             )
             time_grid.set_selected_date(app.current_date)
+            time_grid.set_multi_selection(getattr(app, "selected_task_ids", ()))
+            # Resolved when the signal fires, so hosts without selection
+            # handlers (previews, tests) can still render the grid.
+            time_grid.selection_toggled.connect(
+                lambda task_id: getattr(app, "handle_task_clicked", lambda *_a: None)(
+                    task_id, Qt.KeyboardModifier.ControlModifier
+                )
+            )
+            time_grid.selection_clear_requested.connect(
+                lambda: getattr(app, "clear_task_selection", lambda: None)()
+            )
             time_grid.create_requested.connect(
                 lambda date, start, duration: create_week_schedule(app, date, start, duration),
                 type=Qt.ConnectionType.QueuedConnection,
@@ -2475,7 +2646,11 @@ def render_calendar(app):
             week_height_hint = max(80, available_days_height // week_count)
         else:
             week_height_hint = 140 if is_month_mode else 220
-        event_slot_height = 26 if is_month_mode else 24
+        event_slot_height = max(26, QFontMetrics(date_font).height() + 6) if is_month_mode else 24
+        if is_month_mode:
+            # Preserve user dock arrangements; expose every column through scrolling
+            # when the selected font no longer fits in the available calendar width.
+            frame.setMinimumWidth(cols * max(84, round(QFontMetrics(date_font).height() * 3.2)))
         total_event_slots = max(
             1, (max(0, week_height_hint - chrome_height - 8)) // event_slot_height
         )
@@ -2487,7 +2662,9 @@ def render_calendar(app):
             # 주 단위 컨테이너 (그리드 레이아웃)
             week_widget = QWidget()
             week_widget.setObjectName("week_grid_container")
-            week_widget.setMinimumHeight(0)
+            week_widget.setMinimumHeight(
+                chrome_height + event_slot_height + 8 if is_month_mode else 0
+            )
             week_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
             week_grid = QGridLayout(week_widget)
             week_grid.setSpacing(0)
@@ -2848,8 +3025,11 @@ def render_calendar(app):
                 total_hidden = hidden_counts_by_col[c] + remaining_single
                 if total_hidden > 0:
                     more_btn = QPushButton(
-                        t("calendar.more_items", "+ {count} more", count=total_hidden)
+                        t("calendar.more_count_short", "+{count}", count=total_hidden)
                     )
+                    more_label = t("calendar.more_items", "+ {count} more", count=total_hidden)
+                    more_btn.setToolTip(more_label)
+                    more_btn.setAccessibleName(more_label)
                     more_btn.setCursor(Qt.CursorShape.PointingHandCursor)
                     more_btn.setStyleSheet(toolbar_styles["more_btn"])
                     more_btn.clicked.connect(
@@ -2878,14 +3058,50 @@ def render_calendar(app):
     app._multiday_bridge_overlay = None
 
     scroll = QScrollArea()
+    scroll.setObjectName("calendar_grid_scroll")
     scroll.setWidgetResizable(True)
     scroll.setFrameShape(QScrollArea.Shape.NoFrame)
-    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    scroll.setHorizontalScrollBarPolicy(
+        Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        if is_month_mode
+        else Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    )
     scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
     scroll.setStyleSheet(_calendar_scroll_style())
+    if is_month_mode:
+        scroll.setStyleSheet(
+            _calendar_scroll_style()
+            + f"""
+            QScrollBar:horizontal {{
+                background: {tokens["bg_main"]}; height: 12px; border: none;
+            }}
+            QScrollBar::handle:horizontal {{
+                background: {tokens["text_muted"]}; min-width: 40px; border-radius: 5px;
+            }}
+            QScrollBar::handle:horizontal:hover {{ background: {tokens["accent"]}; }}
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{ width: 0px; }}
+            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{ background: none; }}
+            QScrollBar:vertical {{
+                background: {tokens["bg_main"]}; width: 12px; border: none;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {tokens["text_muted"]}; min-height: 40px; border-radius: 5px;
+            }}
+            QScrollBar::handle:vertical:hover {{ background: {tokens["accent"]}; }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0px; }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
+            QScrollArea::corner {{ background: {tokens["bg_main"]}; }}
+        """
+        )
     scroll.setWidget(frame)
 
     new_layout.addWidget(scroll)
+    if is_month_mode and app._calendar_cells_by_date:
+        from calendar_app.presentation.calendar.month_navigation import MonthGridNavigation
+
+        navigation = MonthGridNavigation(app, scroll)
+        if restore_month_focus:
+            QTimer.singleShot(0, navigation.restore_focus)
 
 
 def _jump_to_daily_view(app, target_qdate):

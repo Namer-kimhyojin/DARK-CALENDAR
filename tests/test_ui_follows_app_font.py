@@ -12,24 +12,27 @@ Anything else is a hard-coded font that ignores the user's setting.
 from pathlib import Path
 import re
 
+from PyQt6.QtCore import QLocale
 from PyQt6.QtGui import QFont, QFontInfo
 from PyQt6.QtWidgets import QApplication
+import pytest
 
 from calendar_app.presentation import drag_drop_manager
+from calendar_app.shared.typography import (
+    DEFAULT_UI_FONT,
+    ui_font_families,
+    ui_text_families,
+)
 
 ROOT = Path(__file__).resolve().parents[1] / "calendar_app"
 
 # (path relative to calendar_app, line text fragment) -> reason.
 ALLOWED = {
-    ("bootstrap.py", 'family = "Segoe UI"'): "default when the saved font is missing",
-    ("bootstrap.py", 'settings.value("font_family", "Segoe UI")'): "default when missing",
     ("infrastructure/runtime/keyboard_shortcuts.py", 'font-family:"Consolas"'): "keycap monospace",
     (
         "presentation/dialogs/away_settings_dialog.py",
         "font-family: 'Consolas'",
     ): "monospace source editor",
-    ("presentation/splash_screen.py", "FONT_FAMILY ="): "splash, drawn before the saved font",
-    ("presentation/splash_screen.py", 'QFont("Segoe UI"'): "splash, drawn before the saved font",
     (
         "presentation/theme/style_builder.py",
         'family="Outfit',
@@ -42,10 +45,6 @@ ALLOWED = {
         "presentation/widgets/weather_scene.py",
         'family="Segoe UI"',
     ): "default; callers pass the saved font",
-    (
-        "presentation/widgets/widget_graphics.py",
-        'self.family = "Segoe UI"',
-    ): "default; callers pass font_family()",
 }
 
 LITERAL_FAMILY = re.compile(
@@ -104,3 +103,87 @@ def test_drag_card_text_follows_the_application_font():
             assert QFontInfo(font).family()
     finally:
         app.setFont(original)
+
+
+def test_saved_font_defaults_use_the_shared_default_ui_font():
+    """A missing font_family once fell back to Malgun Gothic after any theme change,
+    while startup used Segoe UI, so Vietnamese, Chinese, Japanese and Arabic text
+    switched to mixed fallback glyphs."""
+    literal_default = re.compile(r"""value\(\s*['"]font_family['"]\s*,\s*['"][A-Za-z]""")
+    offenders = []
+    for path in sorted(ROOT.rglob("*.py")):
+        text = path.read_text(encoding="utf-8", errors="strict")
+        for number, line in enumerate(text.splitlines(), 1):
+            if literal_default.search(line):
+                offenders.append(f"{path.relative_to(ROOT).as_posix()}:{number}: {line.strip()}")
+    assert not offenders, "Use DEFAULT_UI_FONT for the font_family default:\n" + "\n".join(
+        offenders
+    )
+    assert DEFAULT_UI_FONT == "Segoe UI"
+
+
+_KO = QLocale(QLocale.Language.Korean, QLocale.Country.SouthKorea)
+_JA = QLocale(QLocale.Language.Japanese, QLocale.Country.Japan)
+_ZH_CN = QLocale(QLocale.Language.Chinese, QLocale.Country.China)
+_ZH_TW = QLocale(QLocale.Language.Chinese, QLocale.Country.Taiwan)
+_EN = QLocale(QLocale.Language.English, QLocale.Country.UnitedStates)
+
+
+@pytest.mark.parametrize(
+    "locale,expected",
+    [
+        (_KO, ["Segoe UI", "Malgun Gothic"]),
+        (_EN, ["Segoe UI", "Malgun Gothic"]),
+        (_JA, ["Segoe UI", "Yu Gothic UI", "Meiryo", "Malgun Gothic"]),
+        (_ZH_CN, ["Segoe UI", "Microsoft YaHei UI", "Malgun Gothic"]),
+        (_ZH_TW, ["Segoe UI", "Microsoft JhengHei UI", "Malgun Gothic"]),
+    ],
+)
+def test_cjk_fallbacks_follow_the_ui_language(locale, expected):
+    """Han characters take the shapes of the first CJK font, so Japanese and
+    Chinese dates must not be drawn with the Korean font first."""
+    assert ui_font_families(DEFAULT_UI_FONT, locale) == expected
+    assert ui_font_families("Arial", locale) == ["Arial", *expected[1:], "Segoe UI"]
+
+
+@pytest.mark.parametrize(
+    "locale,first",
+    [
+        (_KO, "Malgun Gothic"),
+        (_JA, "Yu Gothic UI"),
+        (_ZH_TW, "Microsoft JhengHei UI"),
+        (_EN, "Segoe UI"),
+    ],
+)
+def test_splash_text_font_follows_the_ui_language(locale, first):
+    from calendar_app.presentation.splash_screen import SplashScreen
+
+    QApplication.instance() or QApplication([])
+    original = QLocale()
+    QLocale.setDefault(locale)
+    try:
+        assert ui_text_families()[0] == first
+        assert SplashScreen._text_font(14).families()[0] == first
+    finally:
+        QLocale.setDefault(original)
+
+
+def test_keydeck_legend_fallbacks_follow_the_ui_language():
+    from calendar_app.presentation.widgets.keydeck.renderer import legend_font
+
+    QApplication.instance() or QApplication([])
+    original = QLocale()
+    try:
+        QLocale.setDefault(_KO)
+        assert legend_font(12).families() == [
+            "Segoe UI Variable Text",
+            "Segoe UI",
+            "Malgun Gothic",
+            "Apple SD Gothic Neo",
+            "Noto Sans CJK KR",
+        ]
+        QLocale.setDefault(_JA)
+        families = legend_font(12).families()
+        assert families.index("Yu Gothic UI") < families.index("Malgun Gothic")
+    finally:
+        QLocale.setDefault(original)

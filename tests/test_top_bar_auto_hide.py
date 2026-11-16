@@ -88,13 +88,14 @@ def test_revealed_bar_pushes_panels_down_instead_of_overlapping(top_bar_window):
     app, create_window, _ = top_bar_window
     owner, shelf, frame, dock, welcome = create_window(banner=True)
     assert frame.isVisible() and shelf.pin_button.isVisible() and shelf.pin_button.isChecked()
-    assert not shelf.floating_pin.isVisible() and not shelf.handle.isVisible()
+    assert not shelf.handle.isVisible()
+    assert not hasattr(shelf, "floating_pin")  # the pull tab was removed
     pinned_dock_top = dock.geometry().top()
 
     OverlayApp.handle_palette_command(owner, "toggle_top_bar", {})
     QTest.qWait(120)
     assert shelf.auto_hide and frame.isHidden() and welcome.isVisible()
-    assert shelf.handle.isVisible() and shelf.floating_pin.isVisible()
+    assert shelf.handle.isVisible()
     assert not shelf.pin_button.isChecked()
     collapsed_dock_top = dock.geometry().top()
     assert collapsed_dock_top < pinned_dock_top
@@ -102,50 +103,46 @@ def test_revealed_bar_pushes_panels_down_instead_of_overlapping(top_bar_window):
     shelf.reveal()
     app.processEvents()
     assert frame.isVisible() and shelf.pin_button.isVisible()
-    assert not shelf.handle.isVisible() and not shelf.floating_pin.isVisible()
+    assert not shelf.handle.isVisible()
     assert dock.geometry().top() >= collapsed_dock_top + frame.height()
     assert _owner_rect(frame, owner).bottom() < dock.geometry().top()
     assert _owner_rect(frame, owner).bottom() < _owner_rect(welcome, owner).top()
 
     shelf.hide()  # Focus mode hides the main window's menu widget.
     app.processEvents()
-    assert not frame.isVisible() and not shelf.floating_pin.isVisible()
+    assert not frame.isVisible() and not shelf.handle.isVisible()
     shelf.show()
     app.processEvents()
-    assert frame.isHidden() and shelf.handle.isVisible() and shelf.floating_pin.isVisible()
+    assert frame.isHidden() and shelf.handle.isVisible()
 
-    shelf.floating_pin.click()
+    # Pinning again goes through the revealed bar's own pin button.
+    shelf.reveal()
+    app.processEvents()
+    shelf.pin_button.click()
     app.processEvents()
     assert not shelf.auto_hide and frame.isVisible() and shelf.pin_button.isChecked()
-    assert not shelf.floating_pin.isVisible() and not shelf.handle.isVisible()
+    assert not shelf.handle.isVisible()
     assert dock.geometry().top() == pinned_dock_top
 
     shelf.pin_button.click()
     app.processEvents()
-    assert shelf.auto_hide and frame.isHidden() and shelf.floating_pin.isVisible()
+    assert shelf.auto_hide and frame.isHidden() and shelf.handle.isVisible()
 
 
-def test_floating_pin_hangs_centered_under_the_handle(top_bar_window):
-    app, create_window, cursor = top_bar_window
+def test_hidden_bar_leaves_only_the_edge_handle(top_bar_window):
+    app, create_window, _cursor = top_bar_window
     owner, shelf, frame, _, _ = create_window()
     shelf.set_auto_hide(True)
     app.processEvents()
 
-    def assert_centered():
-        pin = shelf.floating_pin.geometry()
-        assert abs(pin.center().x() - owner.contentsRect().center().x()) <= 1
-        assert pin.top() >= _owner_rect(shelf.handle, owner).bottom()
-
-    assert_centered()
-    assert shelf.floating_pin.toolTip().endswith("(Ctrl+Shift+B)")
+    # No pull tab hangs over the calendar; only the thin full-width handle.
+    owned = [w for w in owner.findChildren(QWidget) if w.objectName() == "top_bar_floating_pin"]
+    assert owned == []
+    assert shelf.handle.width() == owner.contentsRect().width()
+    assert shelf.handle.toolTip().endswith("(Ctrl+Shift+B)")
     owner.resize(900, 460)
     app.processEvents()
-    assert_centered()
-
-    # Aiming at the tab must not open the bar first.
-    cursor.position = owner.mapToGlobal(shelf.floating_pin.geometry().center())
-    QTest.qWait(150)
-    assert frame.isHidden()
+    assert shelf.handle.width() == owner.contentsRect().width()
 
     QTest.mouseClick(shelf.handle, Qt.MouseButton.LeftButton)
     app.processEvents()
@@ -167,20 +164,20 @@ def test_auto_hide_preference_survives_restart_and_temporary_suppression(top_bar
     handle = restored.handle.geometry()
     assert handle.top() == 0 and handle.height() == top_bar_shelf._HANDLE_HEIGHT
     assert handle.width() == restarted.contentsRect().width()
-    assert restored.floating_pin.isVisible()
+    assert restored.handle.isVisible()
 
     dock.setFloating(True)
     restored.reveal()
     app.processEvents()
     assert frame.isHidden() and not restored.handle.isVisible()
-    assert not restored.floating_pin.isVisible() and restored.height() == 0
+    assert restored.height() == 0
 
     restarted.toggle_top_bar()  # Unavailable while a panel floats.
     assert restored.auto_hide
 
     dock.setFloating(False)
     app.processEvents()
-    assert frame.isHidden() and restored.floating_pin.isVisible()
+    assert frame.isHidden() and restored.handle.isVisible()
 
     restarted.set_top_bar_visible(True)  # Compatibility path pins the bar.
     app.processEvents()

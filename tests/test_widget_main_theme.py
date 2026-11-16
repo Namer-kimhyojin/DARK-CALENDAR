@@ -3,7 +3,7 @@
 
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QColor, QFont, QPalette
@@ -207,6 +207,31 @@ def test_actual_main_apply_refreshes_existing_workspace_without_data_query():
     finally:
         coordinator.close_for_shutdown()
         coordinator.controller.widget.deleteLater()
+        host.close()
+        host.deleteLater()
+        app.processEvents()
+        app.setStyleSheet(previous_style)
+        app.setFont(previous_font)
+        app.setPalette(previous_palette)
+
+
+def test_actual_main_apply_redraws_desktop_overlay_widgets_once():
+    # It used to call four overlay methods that do not exist, so desktop widgets kept
+    # the old theme until their next tick, data refresh or a restart.
+    class ThemeHost(ThemeActionsMixin, Host):
+        pass
+
+    app = QApplication.instance() or QApplication([])
+    previous_style = app.styleSheet()
+    previous_font = QFont(app.font())
+    previous_palette = QPalette(app.palette())
+    host = ThemeHost()
+    host.overlay_manager = Mock()
+    try:
+        host.settings.setValue("theme_color", "#7653c4")
+        host.apply_theme_settings(persist_opacity=False)
+        host.overlay_manager.refresh_theme.assert_called_once_with()
+    finally:
         host.close()
         host.deleteLater()
         app.processEvents()

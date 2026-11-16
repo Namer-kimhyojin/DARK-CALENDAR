@@ -27,6 +27,7 @@ from calendar_app.application.calendar_provider_catalog import CALDAV_SERVICES
 from calendar_app.infrastructure.google_sync.common import sync_time_zone
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.ics.subscriptions import subscription_errors
+from calendar_app.presentation.locale_names import calendar_display_name
 from calendar_app.presentation.main_window.calendar_sync_coordinator import (
     provider_name,
     provider_status,
@@ -485,7 +486,10 @@ class CalendarSyncHub(QDialog):
             self.resolve_selected.style().polish(self.resolve_selected)
         details = provider_status(state) if state else ""
         if state.get("calendar_errors") and self.coordinator:
-            names = {c["id"]: c.get("name") or c["id"] for c in self.coordinator.calendar_rows}
+            names = {
+                c["id"]: calendar_display_name(c["id"], c.get("name")) or c["id"]
+                for c in self.coordinator.calendar_rows
+            }
             details += "\n\n" + "\n\n".join(
                 names.get(cid, cid) + "\n" + sync_error_message(code)
                 for cid, code in state["calendar_errors"].items()

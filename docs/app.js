@@ -2,15 +2,15 @@
   "use strict";
 
   const fallbackConfig = {
-    appVersion: "5.2.0",
+    appVersion: "5.5.1",
     storeReleaseStatus: "submission_pending",
     requestBoardApi: "https://air-calendar-requests.kimhj.chatgpt.site",
     microsoftStoreUrl: "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
     sourceCodeUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR",
     promotionKitUrl: "promo.html",
-    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.2.0",
-    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.2.0/LICENSE",
-    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.2.0/THIRD_PARTY_NOTICES.md",
+    releaseSourceUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.5.1",
+    licenseUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.5.1/LICENSE",
+    thirdPartyNoticesUrl: "https://github.com/Namer-kimhyojin/DARK-CALENDAR/blob/v5.5.1/THIRD_PARTY_NOTICES.md",
     eventUrl: "https://account.microsoft.com/billing/redeem?mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ",
     event: { enabled: true }
   };
@@ -830,10 +830,10 @@
   });
 
   const releaseAvailabilityCopy = {
-    ko: { storePending: "GitHub 5.2.0 공개 완료 · Store 인증 심사 중", githubLatest: "최신 GitHub 배포 보기 ↗" },
-    en: { storePending: "5.2.0 released on GitHub · Store certification in progress", githubLatest: "View the latest GitHub release ↗" },
-    ja: { storePending: "5.2.0はGitHubで公開済み · Store認証審査中", githubLatest: "最新のGitHubリリースを見る ↗" },
-    zh: { storePending: "5.2.0已在GitHub发布 · Store认证审核中", githubLatest: "查看最新GitHub版本 ↗" }
+    ko: { storePending: "GitHub 5.5.1 공개 완료 · Store 심사 접수 완료", githubLatest: "최신 GitHub 배포 보기 ↗" },
+    en: { storePending: "5.5.1 released on GitHub · Submitted for Store certification", githubLatest: "View the latest GitHub release ↗" },
+    ja: { storePending: "5.5.1はGitHubで公開済み · Store審査に提出済み", githubLatest: "最新のGitHubリリースを見る ↗" },
+    zh: { storePending: "5.5.1已在GitHub发布 · 已提交Store审核", githubLatest: "查看最新GitHub版本 ↗" }
   };
   Object.entries(releaseAvailabilityCopy).forEach(([locale, copy]) => Object.assign(translations[locale], copy));
 
@@ -954,9 +954,15 @@
       button.querySelector("img")?.setAttribute("alt", title);
     });
 
-    document.querySelectorAll("[data-language-select]").forEach((select) => {
-      select.value = currentLanguage;
-      select.setAttribute("aria-label", copy.languageLabel);
+    document.querySelectorAll("[data-language-option]").forEach((link) => {
+      if (link.dataset.languageOption === currentLanguage) {
+        link.setAttribute("aria-current", "true");
+        const label = document.querySelector("[data-current-language]");
+        label.textContent = link.textContent;
+        label.lang = link.lang;
+      } else {
+        link.removeAttribute("aria-current");
+      }
     });
 
     document.querySelectorAll("[data-sync-guide-link]").forEach((link) => {
@@ -1071,8 +1077,29 @@
   }
 
   function setupLanguagePicker() {
-    document.querySelectorAll("[data-language-select]").forEach((select) => {
-      select.addEventListener("change", (event) => setLanguage(event.target.value, true));
+    const picker = document.querySelector("[data-language-picker]");
+    if (!picker) return;
+    const trigger = picker.querySelector("summary");
+
+    picker.addEventListener("click", (event) => {
+      const link = event.target.closest("[data-language-option]");
+      if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      picker.open = false;
+      trigger.focus();
+      setLanguage(link.dataset.languageOption, true);
+    });
+    picker.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || !picker.open) return;
+      event.preventDefault();
+      picker.open = false;
+      trigger.focus();
+    });
+    picker.addEventListener("focusout", (event) => {
+      if (event.relatedTarget && !picker.contains(event.relatedTarget)) picker.open = false;
+    });
+    document.addEventListener("pointerdown", (event) => {
+      if (!picker.contains(event.target)) picker.open = false;
     });
   }
 

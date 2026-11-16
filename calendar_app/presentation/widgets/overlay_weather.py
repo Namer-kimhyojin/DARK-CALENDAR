@@ -11,7 +11,7 @@ import logging
 import math
 import time
 
-from PyQt6.QtCore import QPoint, QSize, Qt, QTimer, QUrl, QUrlQuery
+from PyQt6.QtCore import QEvent, QObject, QPoint, QSize, Qt, QTimer, QUrl, QUrlQuery
 from PyQt6.QtNetwork import QNetworkReply, QNetworkRequest
 from PyQt6.QtWidgets import (
     QDialog,
@@ -63,7 +63,7 @@ from calendar_app.presentation.widgets.weather_template import (
     render_weather_template,
     scale_weather_preview_images,
 )
-from calendar_app.shared.typography import get_typography_scale
+from calendar_app.shared.typography import DEFAULT_FONT_PT, get_typography_scale
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,8 @@ def _weather_icon_b64(wmo_code: int, color: str, size: int) -> str:
 
 
 _NETWORK_TIMEOUT_MS = 10_000  # abort reply after 10 s
+# A city lookup waiting for the first paint still runs if no paint arrives in time.
+_FIRST_PAINT_FALLBACK_MS = 2_000
 _APP_HOMEPAGE = "https://namer-kimhyojin.github.io/DARK-CALENDAR/"
 _MET_USER_AGENT = f"AirCalendar/{APP_VERSION} {_APP_HOMEPAGE}".encode("utf-8", errors="strict")
 
@@ -133,6 +135,21 @@ _WEATHER_DESC = {
 }
 
 
+class _FirstPaintWaiter(QObject):
+    """One-shot event filter that reports the weather widget's first paint after a show."""
+
+    def __init__(self, widget: OverlayWeatherWidget) -> None:
+        super().__init__(widget)
+        widget.installEventFilter(self)
+
+    def eventFilter(self, watched, event):  # noqa: N802
+        if event.type() == QEvent.Type.Paint:
+            watched.removeEventFilter(self)
+            watched._on_painted_after_show()
+            self.deleteLater()
+        return False
+
+
 class OverlayWeatherWidget(_BaseOverlayWidget):
     _PREFIX = "overlay_weather"
     _DEFAULT_TEXT_RGBA = "#4db8ffff"
@@ -159,6 +176,13 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
     )
 
     _DLG_SS = _DLG_SS
+
+    # City lookup that waits for the first paint (see request_update). Class defaults
+    # keep the show/paint hooks safe before __init__ has created the timer.
+    _deferred_lookup: tuple[str, tuple[str, str]] | None = None
+    _painted_since_show = False
+    _paint_waiter: _FirstPaintWaiter | None = None
+    _deferred_lookup_timer: QTimer | None = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -192,6 +216,11 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             "_day_period": "day",
             "error": "",
         }
+        # Child timer: the 2 s fallback while waiting for the first paint, restarted
+        # at 0 ms once that paint happened. It is deleted together with the widget.
+        self._deferred_lookup_timer = QTimer(self)
+        self._deferred_lookup_timer.setSingleShot(True)
+        self._deferred_lookup_timer.timeout.connect(self._run_deferred_lookup)
 
         if self.is_enabled():
             self._set_runtime_active(True)
@@ -202,6 +231,19 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
     def _default_font_size(self) -> int:
         # Template text and illustrations share the same 24-point reference.
         return 11
+
+    def showEvent(self, event) -> None:  # noqa: N802
+        self._painted_since_show = False
+        if self._paint_waiter is None:
+            self._paint_waiter = _FirstPaintWaiter(self)
+        super().showEvent(event)
+
+    def _on_painted_after_show(self) -> None:
+        self._paint_waiter = None
+        self._painted_since_show = True
+        if self._deferred_lookup is not None and self._deferred_lookup_timer is not None:
+            # 0 ms: the lookup starts once this paint pass has reached the screen.
+            self._deferred_lookup_timer.start(0)
 
     # ------------------------------------------------------------------
     # Face construction
@@ -297,7 +339,14 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             lat = lon = math.nan
 
         if location != cached_loc or not (-90 <= lat <= 90 and -180 <= lon <= 180):
-            self._geocode_location(location)
+            if self.isVisible() and not self._painted_since_show:
+                # The bundled GeoNames lookup blocks the GUI thread for about 0.2 s, so a
+                # newly shown widget paints this loading frame first and looks up right after.
+                self._deferred_lookup = (location, request_key)
+                self._deferred_lookup_timer.start(_FIRST_PAINT_FALLBACK_MS)
+            else:
+                self._cancel_deferred_lookup()
+                self._geocode_location(location)
             return
 
         # Fetch weather using cached coords (display_name은 지오코딩 결과 사용)
@@ -306,6 +355,26 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             city = find_city(location)
             self._set("location_timezone", getattr(city, "timezone", "UTC") or "UTC")
         self._fetch_weather(lat, lon, display_name)
+
+    def _cancel_deferred_lookup(self) -> None:
+        self._deferred_lookup = None
+        if self._deferred_lookup_timer is not None:
+            self._deferred_lookup_timer.stop()
+
+    def _run_deferred_lookup(self) -> None:
+        pending = self._deferred_lookup
+        self._cancel_deferred_lookup()
+        if pending is None:
+            return
+        location, request_key = pending
+        # Skip a lookup that a deactivation, a newer request or a location change made stale.
+        if (
+            self._runtime_active
+            and self._request_key == request_key
+            and str(self._get("location", "Seoul") or "").strip() == location
+            and not self._pending_replies
+        ):
+            self._geocode_location(location)
 
     def _scheduled_update(self) -> None:
         if not self._retry_timer.isActive():
@@ -398,6 +467,10 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         )
         self._pending_replies.append(reply)
         self._watch_reply(reply)
+        if cache_matches and not self._weather_data.get("_forecast_expired"):
+            # The saved forecast stays visible with the loading status until the reply.
+            # One whose last step has passed no longer describes now, so it waits.
+            self._refresh_face()
 
     def _on_weather_reply(
         self,
@@ -566,7 +639,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             weather["error"] = ""
             self._weather_data.update(weather)
             return True
-        except (json.JSONDecodeError, TypeError, ValueError, OverflowError):
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError, OverflowError):
             return False
 
     def _refresh_minutes(self) -> int:
@@ -603,6 +676,7 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
         self._refresh_timer.stop()
         self._retry_timer.stop()
         self._cancel_pending_replies()
+        self._cancel_deferred_lookup()
 
     def _weather_code_to_text(self, code: int) -> str:
         # Simplified WMO codes
@@ -670,8 +744,10 @@ class OverlayWeatherWidget(_BaseOverlayWidget):
             or self._status_text == t("widget.weather.loading", "날씨를 불러오는 중…")
         )
         status_color = _rgba_css(*_parse_rgba(self.text_color_rgba()))
+        # Fixed caption size: the app font size can be far larger than a small widget.
+        caption_px = get_typography_scale(base_pt=DEFAULT_FONT_PT).caption_px
         self._status_label.setStyleSheet(
-            f"font-size: {get_typography_scale(self._s()).caption_px}px; color: {status_color}; background: transparent;"
+            f"font-size: {caption_px}px; color: {status_color}; background: transparent;"
         )
         self.face.setToolTip(self._status_text)
 

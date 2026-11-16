@@ -24,6 +24,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtNetwork import QNetworkReply, QNetworkRequest
 from PyQt6.QtWidgets import QApplication, QMenu, QWidget
 
+from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.weather.met_norway import parse_locationforecast
 from calendar_app.presentation.widgets.overlay_weather import OverlayWeatherWidget
 
@@ -134,14 +135,25 @@ class WeatherWidgetLoadingTests(unittest.TestCase):
         )
         self.widget._set("met_cache_last_modified", "Mon, 05 Oct 2026 01:00:00 GMT")
 
-    def test_loading_status_uses_app_caption_without_changing_weather_template_size(self):
-        from calendar_app.shared.typography import get_typography_scale
+    def use_cached_coordinates(self, lat=37.566, lon=126.9784):
+        """Saved coordinates send request_update straight to the fetch, without GeoNames."""
+        self.widget._set("weather_template", "{temp}{unit}")
+        self.widget._set("resolved_name", "Seoul")
+        self.widget._set("display_name", "Seoul")
+        self.widget._set("lat", lat)
+        self.widget._set("lon", lon)
+        self.widget._set("location_timezone", "Asia/Seoul")
+
+    def test_loading_status_keeps_its_fixed_caption_and_the_template_size(self):
+        # Desktop widgets never followed the app font size here (their settings proxy
+        # hid it), and a 24 pt UI font would give a 31 px line on a small widget.
+        from calendar_app.shared.typography import DEFAULT_FONT_PT, get_typography_scale
 
         self.owner.settings.setValue("font_size", 24)
         template_size = self.widget._get("font_size")
         self.widget._apply_appearance()
-        caption_px = get_typography_scale(self.owner.settings).caption_px
-        self.assertIn(f"font-size: {caption_px}px", self.widget._status_label.styleSheet())
+        caption_px = get_typography_scale(base_pt=DEFAULT_FONT_PT).caption_px
+        self.assertIn(f"font-size: {caption_px}px;", self.widget._status_label.styleSheet())
         self.assertEqual(self.widget._get("font_size"), template_size)
 
     def test_legacy_combo_tuple_is_repaired_and_timer_starts(self):
@@ -245,6 +257,21 @@ class WeatherWidgetLoadingTests(unittest.TestCase):
             [],
             {"weather": []},
             {"lat": 37.566, "lon": 126.9784, "unit": "celsius", "weather": {"temp": "NaN"}},
+            # A hand-edited forecast without time steps made the parser raise KeyError.
+            {
+                "lat": 37.566,
+                "lon": 126.9784,
+                "unit": "celsius",
+                "weather": {"temp": 12, "_wmo": 0},
+                "forecast": {},
+            },
+            {
+                "lat": 37.566,
+                "lon": 126.9784,
+                "unit": "celsius",
+                "weather": {"temp": 12, "_wmo": 0},
+                "forecast": {"properties": {"timeseries": []}},
+            },
         ):
             self.widget._set("met_cache_json", json.dumps(value))
             self.widget._set("met_cache_last_modified", "old-validator")
@@ -256,6 +283,95 @@ class WeatherWidgetLoadingTests(unittest.TestCase):
         self.widget.request_update()
         request = self.network.get.call_args.args[0]
         self.assertFalse(request.hasRawHeader(b"If-Modified-Since"))
+
+    def test_restored_stale_cache_is_shown_with_loading_status_until_the_reply(self):
+        self.seed_cache()
+        self.use_cached_coordinates()
+        loading = t("widget.weather.loading", "날씨를 불러오는 중…")
+        with patch.object(self.widget, "_refresh_face", wraps=self.widget._refresh_face) as refresh:
+            self.widget.request_update()
+        # One loading frame and one frame of the saved forecast, before any reply.
+        self.assertEqual(refresh.call_count, 2)
+        # The template HTML also holds style numbers, so match the rendered value.
+        self.assertIn(">12<", self.widget._template_label.text())
+        self.assertNotIn(">--<", self.widget._template_label.text())
+        self.assertEqual(self.widget._status_label.text(), loading)
+        self.assertFalse(self.widget._status_label.isHidden())
+        self.assertEqual(self.widget.face.toolTip(), loading)
+        self.assertEqual(self.network.get.call_count, 1)
+        request = self.network.get.call_args.args[0]
+        self.assertTrue(request.hasRawHeader(b"If-Modified-Since"))
+        self.replies[-1].finish()
+        self.assertIn(">20<", self.widget._template_label.text())
+        self.assertNotIn(">12<", self.widget._template_label.text())
+        self.assertTrue(self.widget._status_label.isHidden())
+
+    def test_stale_cache_of_another_place_or_unit_keeps_the_loading_frame(self):
+        self.seed_cache()
+        for lat, lon, unit in ((35.1796, 129.0756, "celsius"), (37.566, 126.9784, "fahrenheit")):
+            with self.subTest(lat=lat, unit=unit):
+                self.use_cached_coordinates(lat, lon)
+                self.widget._set("unit", unit)
+                self.widget._request_key = None
+                self.widget.request_update()
+                self.assertIn(">--<", self.widget._template_label.text())
+                self.assertNotIn(">12<", self.widget._template_label.text())
+                request = self.network.get.call_args.args[0]
+                self.assertFalse(request.hasRawHeader(b"If-Modified-Since"))
+                self.widget._cancel_pending_replies()
+
+    def test_offline_failure_after_the_stale_frame_keeps_the_existing_stale_status(self):
+        self.seed_cache()
+        self.use_cached_coordinates()
+        self.widget.request_update()
+        self.assertIn(">12<", self.widget._template_label.text())
+        self.replies[-1].abort()  # the 10 s watchdog path
+        self.assertIn(">12<", self.widget._template_label.text())
+        self.assertTrue(self.widget._weather_data["error"])
+        stale = t(
+            "widget.weather.stale",
+            "이전 날씨 표시 · {error}",
+            error=t("weather.error.timeout", "요청 시간 초과"),
+        )
+        self.assertTrue(self.widget._status_label.text().startswith(stale))
+        self.assertFalse(self.widget._status_label.isHidden())
+        self.assertTrue(self.widget._retry_timer.isActive())
+
+    def test_cache_past_its_forecast_horizon_keeps_the_loading_frame(self):
+        # Every forecast step lies in the past, so the cache no longer describes now.
+        start = datetime.now(UTC).replace(minute=0, second=0, microsecond=0) - timedelta(days=20)
+        old = {
+            "properties": {
+                "timeseries": [
+                    {
+                        "time": (start + timedelta(hours=hour)).isoformat(),
+                        "data": {"instant": {"details": {"air_temperature": 12}}},
+                    }
+                    for hour in range(3)
+                ]
+            }
+        }
+        self.widget._update_weather_data(old, "Seoul", "celsius")
+        self.widget._store_weather_cache(37.566, 126.9784, "Seoul", "celsius")
+        self.widget._set("met_cache_expires", format_datetime(start))
+        self.widget._set("met_cache_last_modified", format_datetime(start))
+        self.use_cached_coordinates()
+        with patch.object(self.widget, "_refresh_face", wraps=self.widget._refresh_face) as refresh:
+            self.widget.request_update()
+        self.assertEqual(refresh.call_count, 1)
+        self.assertIn(">--<", self.widget._template_label.text())
+        self.assertNotIn(">12<", self.widget._template_label.text())
+        request = self.network.get.call_args.args[0]
+        self.assertTrue(request.hasRawHeader(b"If-Modified-Since"))
+        # A failed request still shows it, marked as the previous weather.
+        self.replies[-1].abort()
+        self.assertIn(">12<", self.widget._template_label.text())
+        stale = t(
+            "widget.weather.stale",
+            "이전 날씨 표시 · {error}",
+            error=t("weather.error.timeout", "요청 시간 초과"),
+        )
+        self.assertTrue(self.widget._status_label.text().startswith(stale))
 
     def test_conditional_header_is_not_reused_for_different_city_or_unit(self):
         self.seed_cache()

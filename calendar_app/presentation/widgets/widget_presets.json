@@ -187,7 +187,7 @@
     {
       "label_key": "widget.datecard.preset_month_day",
       "label_default": "Month.Day",
-      "template": "{month|size=18|color=muted}\n{day|size=48|bold}"
+      "template": "{month:standalone|size=18|color=muted}\n{day|size=48|bold}"
     },
     {
       "label_key": "widget.datecard.preset_en_week",
@@ -259,7 +259,11 @@
     {
       "label_key": "widget_text.preset_conditional_task",
       "label_default": "Conditional Tasks",
-      "template": "{if task_count > 0}Tasks {task_count|size=28|bold}\n{next_event|size=11|color=muted}{else}No tasks today{/if}"
+      "template": "{if task_count > 0}[[tasks]] {task_count|size=28|bold}\n{next_event|size=11|color=muted}{else}[[no_tasks_today]]{/if}",
+      "text_keys": {
+        "tasks": ["widget_text.preset_body.tasks", "할 일"],
+        "no_tasks_today": ["widget_text.preset_body.no_tasks_today", "오늘 할 일 없음"]
+      }
     },
     {
       "label_key": "widget_text.preset_clock_stopwatch",
@@ -269,7 +273,10 @@
     {
       "label_key": "widget_text.preset_dashboard",
       "label_default": "Dashboard",
-      "template": "{time:%H:%M|size=26|bold}  {date:%m.%d|size=11|color=muted}\nTasks {task_count|size=13|bold}  {next_event|size=10|color=muted}"
+      "template": "{time:%H:%M|size=26|bold}  {date:%m.%d|size=11|color=muted}\n[[tasks]] {task_count|size=13|bold}  {next_event|size=10|color=muted}",
+      "text_keys": {
+        "tasks": ["widget_text.preset_body.tasks", "할 일"]
+      }
     },
     {
       "label_key": "widget_text.preset_time_only",
@@ -279,7 +286,7 @@
     {
       "label_key": "widget_text.preset_world_time",
       "label_default": "World Time",
-      "template": "{time:%H:%M|size=28|bold}  KST\n{time:tz=UTC:%H:%M|size=20|color=muted}  UTC"
+      "template": "{time:%H:%M|size=28|bold}  [[local_tz]]\n{time:tz=UTC:%H:%M|size=20|color=muted}  UTC"
     },
     {
       "label_key": "widget_text.preset_custom_var",
@@ -289,7 +296,10 @@
     {
       "label_key": "widget_text.preset_countdown_alert",
       "label_default": "Countdown Alert",
-      "template": "{if countdown:countdown_0 < 1h}곧 종료!{else}{countdown:countdown_0|size=24|bold}{/if}"
+      "template": "{if countdown:countdown_0 < 1h}[[ending_soon]]{else}{countdown:countdown_0|size=24|bold}{/if}",
+      "text_keys": {
+        "ending_soon": ["widget_text.preset_body.ending_soon", "곧 종료!"]
+      }
     }
   ],
   "weather": [

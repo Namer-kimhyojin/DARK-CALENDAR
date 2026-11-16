@@ -76,6 +76,9 @@ def parse_nlp_task(text: str):
     - "내일 3시 회의", "Tomorrow meeting at 3pm"
     - "오후 4:30 운동", "4:30 PM working out"
     - "목요일 점심 약속", "Lunch on Thursday"
+
+    The title is empty when only a date or time was given; callers show their
+    translated "Untitled" text instead of a language-specific default from here.
     """
     now = datetime.now()
     target_date = now.date()
@@ -181,7 +184,7 @@ def parse_nlp_task(text: str):
         ).strip()
 
     return {
-        "title": title or "제목 없음",
+        "title": title,
         "date": target_date.isoformat(),
         "time": target_time,
     }

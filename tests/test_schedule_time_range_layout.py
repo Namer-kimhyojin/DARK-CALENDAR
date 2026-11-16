@@ -60,7 +60,7 @@ class ScheduleTimeRangeLayoutTests(TemporaryDatabaseTestCase):
                         self.assertEqual(arrow.text(), "↓")
                         self.assertEqual(arrow.contentsMargins().top(), 0)
                     finally:
-                        dialog.close()
+                        dialog.done(0)  # Teardown bypasses user discard confirmation.
                         dialog.deleteLater()
                         self.app.processEvents()
         finally:

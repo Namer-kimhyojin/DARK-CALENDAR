@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QMenu, QToolButton
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.infrastructure.runtime.keyboard_shortcuts import get_key
+from calendar_app.presentation.locale_names import calendar_display_name
 from calendar_app.presentation.main_window.top_bar_shelf import TOP_BAR_AUTO_HIDE_KEY
 from calendar_app.presentation.main_window.top_menus.common import (
     format_top_menu_button_text,
@@ -131,7 +132,9 @@ def _update_calendar_visibility_menu(app, menu: "QMenu", menu_style: str) -> Non
         )
         final_icon = _ic(type_icon, color=cal_color)
 
-        act = menu.addAction(final_icon, cal.get("name") or cal.get("id") or "")
+        act = menu.addAction(
+            final_icon, calendar_display_name(cal.get("id"), cal.get("name")) or cal.get("id") or ""
+        )
         act.setCheckable(True)
         act.setChecked(bool(cal.get("is_visible", 1)))
         if is_read_only:

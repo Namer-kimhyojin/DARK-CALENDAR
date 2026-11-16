@@ -237,6 +237,39 @@ def recommend_border_color(base_color: str, accent_color: str) -> str:
     return toward.name(QColor.NameFormat.HexRgb)
 
 
+WALLPAPER_TEXT_MIN_CONTRAST = 4.5
+# Panel surfaces are drawn this many alpha steps below the opacity slider
+# (derive_panel_palette's surface_bg), so the floor has to cover it.
+PANEL_SURFACE_ALPHA_OFFSET = 30
+
+
+def panel_opacity_floor_for_backdrop(
+    panel_base: str,
+    text_color: str,
+    backdrop: QColor,
+    min_contrast: float = WALLPAPER_TEXT_MIN_CONTRAST,
+) -> float:
+    """The least panel opacity at which ``text_color`` stays readable.
+
+    The panel is mixed with the wallpaper color ``backdrop``; the result is an
+    opacity factor for the slider scale, 0.0 when the wallpaper needs no help.
+    """
+    base = parse_hex_color(panel_base, "#1c1c1c")
+    text = parse_css_color(text_color, "#ffffff")
+    if text.alpha() < 255:
+        text = composite_color(text, base)
+    back = QColor(backdrop.red(), backdrop.green(), backdrop.blue())
+    needed = 1.0
+    for step in range(101):
+        alpha = step / 100.0
+        if contrast_ratio(text, _mix_colors(back, base, alpha)) >= min_contrast:
+            needed = alpha
+            break
+    if needed <= 0.0:
+        return 0.0
+    return min(1.0, (needed * 255 + PANEL_SURFACE_ALPHA_OFFSET) / 255.0)
+
+
 TEXT_OPACITY_KEYS = ("text_primary", "text_secondary", "text_muted", "text_faint")
 MIN_TEXT_OPACITY = 77  # 30%: lighter text would stop being readable at all
 
@@ -265,6 +298,10 @@ def border_tokens_for(color: str, opacity_factor: float) -> dict[str, str]:
         "border": rgba_from_qcolor(border, round(255 * opacity)),
         "border_soft": soft,
         "border_strong": rgba_from_qcolor(border, round(255 * min(1.0, opacity * 1.6))),
+        # Buttons and fields sit inside panels that may show the wallpaper. An
+        # outline as strong as the panel's own reads as a hard frame over a
+        # bright wallpaper, so controls rest on a lighter outline.
+        "border_control": rgba_from_qcolor(border, round(255 * opacity * 0.4)),
         # Grid lines and rules are borders too. The gaps between panels are not:
         # painting them in the border color doubled every panel's own outline.
         "divider": soft,
@@ -524,6 +561,7 @@ def derive_ui_palette(
         "border": "#cbd3e1" if is_light else f"rgba({neutral_rgb},0.16)",
         "border_soft": "#dde2ed" if is_light else f"rgba({neutral_rgb},0.10)",
         "border_strong": "#a4b0c4" if is_light else f"rgba({neutral_rgb},0.28)",
+        "border_control": "#dde2ed" if is_light else f"rgba({neutral_rgb},0.10)",
         "divider": "#dde2ed" if is_light else "rgba(255,255,255,0.08)",
         # The gap between panels shares the panels' surface. A near-transparent gap
         # on the translucent window let the desktop show through as a bright line.

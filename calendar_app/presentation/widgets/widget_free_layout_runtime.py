@@ -66,6 +66,16 @@ class FreeAgendaPanel(QFrame):
         self.scroll.setWidget(self.content)
         root.addWidget(self.scroll, 1)
 
+    def restore_item_check(self, item):
+        """Put a row's checkbox back after a failed save; update_items skips unchanged data."""
+        for row in self.rows:
+            if row.item_key == (item.get("source"), item.get("item_id")):
+                check = row.findChild(QCheckBox, "agenda_complete")
+                if check is not None:
+                    blocked = check.blockSignals(True)
+                    check.setChecked(bool(item.get("completed")))
+                    check.blockSignals(blocked)
+
     def update_items(self, items, *, data_state="ready"):
         from calendar_app.presentation.widgets.unified_widget_mode import AgendaItemWidget
         from calendar_app.presentation.widgets.widget_mode_density import read_widget_density
@@ -299,13 +309,7 @@ class FreeLayoutCanvas(QWidget):
 
     def restore_item_check(self, item):
         for panel in self.panels.values():
-            for row in panel.rows:
-                if row.item_key == (item.get("source"), item.get("item_id")):
-                    check = row.findChild(QCheckBox, "agenda_complete")
-                    if check is not None:
-                        blocked = check.blockSignals(True)
-                        check.setChecked(bool(item.get("completed")))
-                        check.blockSignals(blocked)
+            panel.restore_item_check(item)
 
     def layout_blocks(self):
         if not self.data or self.width() < 1 or self.height() < 1:

@@ -61,6 +61,13 @@ def initialize_overlay_app(app):
 
 **누락 시**: 앱 재시작 시 `AttributeError`로 크래시 발생.
 
+## 패널 갱신 예약
+
+- 패널 재렌더는 `schedule_panel_refresh(left, center, right)`로 예약해 한 번의 flush로 묶습니다. 데이터를 바꾼 요청은 기본값(`mark_dirty=True`)으로 패널을 dirty로 표시합니다.
+- 데이터를 바꾸지 않는 요청(초기 투명도·잠금 표시·시작 후 dock 복구 등)은 `mark_dirty=False` 또는 `with app.presentation_refresh_only():` 안에서 보냅니다. flush는 dirty 표시가 있거나 렌더 시그니처(`_build_*_render_signature`)가 바뀐 패널만 다시 그리므로, 렌더 결과를 바꾸는 입력(테마·날짜·필터·글꼴·중앙 프레임 높이)은 시그니처에 넣습니다.
+- 상태 변경은 그 항목을 나열하는 패널만 갱신합니다(`_refresh_panels_listing_task`). 위젯 전용 모드에서 오른쪽 패널 프레임이 모두 보이지 않으면 데이터만 게시하고 생성을 미룹니다([오버레이 위젯 규칙](overlay_widgets.md)).
+- 회귀 검증: `tests/test_startup_panel_refresh.py`, `tests/test_widget_completion_refresh.py`.
+
 ## 다이얼로그 라우팅
 
 새 다이얼로그를 추가할 때는 `dialog_router.py`의 `_DIALOG_ROUTE_MAP`에 등록합니다:

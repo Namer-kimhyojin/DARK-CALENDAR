@@ -1510,7 +1510,7 @@ THEMES = (
     DeckTheme(
         "crystal_night",
         "widget.launcher.theme.crystal_night",
-        "크리스탈 나이트",
+        "미드나이트 크리스탈",
         "anodized",
         "#171b23",
         "#5ab8ff",

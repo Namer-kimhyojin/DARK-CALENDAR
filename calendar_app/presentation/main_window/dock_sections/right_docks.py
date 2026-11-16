@@ -2,6 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDockWidget, QFrame, QWidget
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.theme.style_builder import build_dock_frame_stylesheet
 
 from .floating_dock_behavior import attach_floating_dock_behavior
 
@@ -9,7 +10,11 @@ from .floating_dock_behavior import attach_floating_dock_behavior
 def create_routine_dock(self):
     self.routine_frame = QFrame()
     self.routine_frame.setFrameShape(QFrame.Shape.NoFrame)
-    self.routine_frame.setStyleSheet("background: transparent; border: none;")
+    self.routine_frame.setObjectName("routine_frame")
+    # See-through panel content with themed tooltips (see build_dock_frame_stylesheet).
+    self.routine_frame.setStyleSheet(
+        build_dock_frame_stylesheet(settings=getattr(self, "settings", None))
+    )
     self.routine_frame.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
     self.routine_frame.customContextMenuRequested.connect(self.show_right_context_menu)
 
@@ -38,7 +43,11 @@ def create_routine_dock(self):
 def create_directive_dock(self):
     self.directive_frame = QFrame()
     self.directive_frame.setFrameShape(QFrame.Shape.NoFrame)
-    self.directive_frame.setStyleSheet("background: transparent; border: none;")
+    self.directive_frame.setObjectName("directive_frame")
+    # See-through panel content with themed tooltips (see build_dock_frame_stylesheet).
+    self.directive_frame.setStyleSheet(
+        build_dock_frame_stylesheet(settings=getattr(self, "settings", None))
+    )
     self.directive_frame.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
     self.directive_frame.customContextMenuRequested.connect(self.show_directive_context_menu)
 

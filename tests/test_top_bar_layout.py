@@ -142,7 +142,9 @@ def test_navigation_uses_existing_panel_actions_and_restores_layout(navigation_h
     assert host.toolBarArea(rail) == Qt.ToolBarArea.RightToolBarArea
     assert rail.isHidden()
     WindowShellActionsMixin._apply_lock_mode_ui(host, True)
-    assert not rail.isEnabled() and host.lock_btn.isEnabled()
+    # The rail keeps its normal look while locked; the lock overlay blocks it.
+    assert rail.isEnabled() and rail.graphicsEffect() is None and host.lock_btn.isEnabled()
+    assert not host.search_edit.isEnabled()
     WindowShellActionsMixin._apply_lock_mode_ui(host, False)
     assert rail.isEnabled()
 
@@ -181,3 +183,26 @@ def test_shell_surfaces_share_one_see_through_level_at_any_opacity():
             for role in ("surface_bg", "topbar_bg")
         }
         assert alphas["surface_bg"] == alphas["topbar_bg"], (opacity, alphas)
+
+
+def test_mode_buttons_order_and_share_one_square_size(navigation_host):
+    """[widget mode] | [lock] [magnet]: the toggles sit together after the divider."""
+    from calendar_app.presentation.main_window.top_bar_shelf import TOP_BAR_BUTTON_SIZE
+
+    host, app = navigation_host
+    host.resize(1800, 500)
+    app.processEvents()
+    lefts = [
+        widget.geometry().left()
+        for widget in (
+            host.widget_mode_btn,
+            host.top_bar_divider,
+            host.lock_btn,
+            host.magnet_btn,
+        )
+    ]
+    assert lefts == sorted(lefts)
+    # The lock and magnet buttons are QPushButtons; the global min-width (60px)
+    # used to make them wider than the widget button.
+    for button in (host.widget_mode_btn, host.lock_btn, host.magnet_btn):
+        assert (button.width(), button.height()) == (TOP_BAR_BUTTON_SIZE, TOP_BAR_BUTTON_SIZE)

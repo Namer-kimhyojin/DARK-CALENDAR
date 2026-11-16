@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 """Shared routine cycle constants and label helpers."""
 
 from __future__ import annotations
 
-from calendar_app.infrastructure.i18n import t
+from calendar_app.infrastructure.i18n import i18n, t
 
 # Sort order used by routine list/group views.
 CYCLE_ORDER = {
@@ -57,4 +58,9 @@ def cycle_display_name(cycle_type: str | None, *, scope: str = "recurrence") -> 
 
     if not key:
         return cycle
+    if cycle == "daily" and scope != "panel" and getattr(i18n, "lang", "") != "ko":
+        # Bundles without recurrence.daily reuse the translated panel label
+        # without its brackets ("[Daily]" -> "Daily"). Korean keeps 일간 so it
+        # stays in the 일간/주간/월간 series.
+        fallback = t("panel.cycle.daily", "[Daily]").strip("[]【】 ")
     return t(key, fallback)

@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QBoxLayout,
     QButtonGroup,
+    QCheckBox,
     QDialog,
     QFontComboBox,
     QFrame,
@@ -1111,8 +1112,10 @@ class PanelColorPickerDialog(QDialog):
         current_style_family_variants: dict[str, str] | None = None,
         current_border_source: str = "",
         current_border_color: str = "",
+        current_adaptive_wallpaper: bool = False,
     ):
         super().__init__(parent)
+        self._adaptive_wallpaper = bool(current_adaptive_wallpaper)
         self._building = True  # suppress redundant _refresh_preview during init
         self._theme_style_bindings = []
         self._surface_theme_signature = None
@@ -2445,6 +2448,28 @@ class PanelColorPickerDialog(QDialog):
         self._text_slider.valueChanged.connect(self._on_text_opacity_changed)
         lay.addLayout(text_opacity_row)
 
+        self._chk_adaptive_wallpaper = QCheckBox(
+            t("dialog.theme.text.adaptive_wallpaper", "밝은 바탕화면에서 글자 잘 보이게")
+        )
+        self._chk_adaptive_wallpaper.setObjectName("chk_adaptive_wallpaper")
+        self._chk_adaptive_wallpaper.setChecked(self._adaptive_wallpaper)
+        self._chk_adaptive_wallpaper.setToolTip(
+            t(
+                "dialog.theme.text.adaptive_wallpaper_tip",
+                "창 뒤 바탕화면이 밝아 글자가 흐려질 때만 패널을 자동으로 더 불투명하게 합니다. "
+                "저장된 투명도는 바뀌지 않습니다.",
+            )
+        )
+        self._bind_theme_style(
+            self._chk_adaptive_wallpaper,
+            lambda: (
+                f"QCheckBox#chk_adaptive_wallpaper {{ font-size: {self._ui_tokens['font_body']}; "
+                f"color: {self._ui_tokens['text_secondary']}; spacing: 6px; }}"
+            ),
+        )
+        self._chk_adaptive_wallpaper.toggled.connect(self._on_adaptive_wallpaper_toggled)
+        lay.addWidget(self._chk_adaptive_wallpaper)
+
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
         self._bind_theme_style(
@@ -3451,6 +3476,13 @@ class PanelColorPickerDialog(QDialog):
     def selected_text_opacity(self) -> int:
         """Readability's text opacity as a byte (77~255)."""
         return self._text_opacity
+
+    def _on_adaptive_wallpaper_toggled(self, checked: bool):
+        self._adaptive_wallpaper = bool(checked)
+
+    def selected_adaptive_wallpaper(self) -> bool:
+        """Whether panels turn more solid over a bright wallpaper."""
+        return self._adaptive_wallpaper
 
     def selected_border_source(self) -> str:
         """ "auto"/"custom" once a border was chosen here or before; "" keeps neutral lines."""

@@ -21,6 +21,7 @@ from calendar_app.presentation.theme.style_builder import (
 )
 from calendar_app.shared.theme_settings import get_opacity_byte
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
+from calendar_app.shared.typography import DEFAULT_UI_FONT
 
 
 def setup_main_ui(self):
@@ -34,7 +35,7 @@ def setup_main_ui(self):
     self.setWindowOpacity(1.0)
 
     # 저장된 폰트 설정 로드
-    _family = self.settings.value("font_family", "Segoe UI")
+    _family = self.settings.value("font_family", DEFAULT_UI_FONT)
     _size = self.settings.value("font_size", 10, type=int)
     if _size <= 0:
         _size = 10
@@ -125,5 +126,13 @@ def setup_main_ui(self):
 
     # UI 빌드 완료 — 이후 set_opacity가 apply_theme_settings를 호출해도 안전
     self._ui_fully_initialized = True
-    # 초기 투명도 설정은 하위 메뉴 포함 전체 적용
-    self.set_opacity(self.slider.value())
+    # 초기 투명도 설정은 하위 메뉴 포함 전체 적용. 패널은 위에서 같은 테마로 방금
+    # 렌더링했으므로 렌더 시그니처가 바뀐 패널만 다시 그린다.
+    with self.presentation_refresh_only():
+        self.set_opacity(self.slider.value())
+
+    from calendar_app.presentation.main_window.wallpaper_contrast import (
+        install_wallpaper_contrast,
+    )
+
+    install_wallpaper_contrast(self)

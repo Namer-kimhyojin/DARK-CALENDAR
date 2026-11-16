@@ -326,7 +326,7 @@ class _ToggleBtn(QPushButton):
             col = tok["text_muted"]
             brd = tok["border"]
 
-        self.setText("ON" if on else "OFF")
+        self.setText(t("common.toggle_on", "ON") if on else t("common.toggle_off", "OFF"))
         self.setStyleSheet(
             f"QPushButton {{ background: {bg}; color: {col}; border: 1px solid {brd};"
             f" border-radius: {r}px; font-weight: 800; font-size: {tok['caption_px']}px; letter-spacing: 0.5px; }}"

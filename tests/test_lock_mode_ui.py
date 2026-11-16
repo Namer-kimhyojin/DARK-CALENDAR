@@ -165,3 +165,53 @@ class LockModeUiTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LockModeRailOpacityTests(unittest.TestCase):
+    """Locking leaves the quick navigation rail looking as it does unlocked."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls._app = QApplication.instance() or QApplication([])
+
+    def test_rail_surface_keeps_its_opacity_and_effects_are_removed_on_unlock(self):
+        from PyQt6.QtWidgets import QGraphicsOpacityEffect, QToolBar
+
+        host = LockModeHost()
+        self.addCleanup(host.close)
+        rail = QToolBar("rail", host)
+        rail.setObjectName("navigation_rail")
+        for name in ("add", "calendar", "settings"):
+            rail.addAction(name)
+        host.addToolBar(Qt.ToolBarArea.RightToolBarArea, rail)
+        host.navigation_rail = rail
+        host.show()
+        QApplication.processEvents()
+        buttons = [rail.widgetForAction(action) for action in rail.actions()]
+
+        stale = QGraphicsOpacityEffect(buttons[0])  # left by an older build
+        stale.setOpacity(0.35)
+        buttons[0].setGraphicsEffect(stale)
+
+        host.lock_btn.setChecked(True)
+        host.toggle_lock_mode()
+        QApplication.processEvents()
+        # The rail keeps its normal look: neither disabled (grey icons) nor faded.
+        self.assertTrue(rail.isEnabled())
+        self.assertIsNone(rail.graphicsEffect())
+        for button in buttons:
+            self.assertTrue(button.isEnabled())
+            self.assertIsNone(button.graphicsEffect())
+        # The lock overlay sits on top of the rail, so clicks there never reach it.
+        centre = rail.mapTo(host, rail.rect().center())
+        top = host.childAt(centre)
+        self.assertTrue(top is host.lock_overlay or host.lock_overlay.isAncestorOf(top))
+
+        host.lock_btn.setChecked(False)
+        host.toggle_lock_mode()
+        QApplication.processEvents()
+        self.assertTrue(rail.isEnabled())
+        # No leftover effect: it would keep rendering through an offscreen pixmap.
+        for widget in (rail, *buttons, host.search_edit, host.magnet_btn, host.lock_btn):
+            self.assertIsNone(widget.graphicsEffect())

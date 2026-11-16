@@ -89,7 +89,12 @@ class DirectiveDialog(QDialog):
         except Exception:
             logger.exception("DirectiveDialog.__init__ failed")
             QMessageBox.critical(
-                self, t("dialog.common.error"), "지시사항 다이얼로그 초기화 중 오류가 발생했습니다."
+                self,
+                t("dialog.common.error"),
+                t(
+                    "dialog.directive.msg_init_error",
+                    "지시사항 다이얼로그 초기화 중 오류가 발생했습니다.",
+                ),
             )
 
     def _make_deadline_quick_button(self, label):
@@ -424,6 +429,9 @@ class DirectiveDialog(QDialog):
                         "ALTER TABLE task_directive ADD COLUMN priority TEXT DEFAULT 'normal'"
                     )
                     columns.add("priority")
+                if "completed_at" not in columns:
+                    cur.execute("ALTER TABLE task_directive ADD COLUMN completed_at TEXT")
+                    columns.add("completed_at")
                 if "requester" in columns:
                     cur.execute(
                         "UPDATE task_directive "
@@ -440,16 +448,18 @@ class DirectiveDialog(QDialog):
                 if self.task_id:
                     cur.execute(
                         "UPDATE task_directive "
-                        "SET content=?, receiver_name=?, deadline=?, status=?, memo=?, priority=? "
+                        "SET content=?, receiver_name=?, deadline=?, status=?, memo=?, priority=?, "
+                        f"{directive_repo.COMPLETED_AT_ASSIGNMENT} "
                         "WHERE id=?",
-                        (content, receiver, deadline, status, memo, priority, self.task_id),
+                        (content, receiver, deadline, status, memo, priority, status, self.task_id),
                     )
                 else:
                     cur.execute(
                         "INSERT INTO task_directive "
-                        "(content, receiver_name, deadline, status, memo, priority) "
-                        "VALUES (?, ?, ?, ?, ?, ?)",
-                        (content, receiver, deadline, status, memo, priority),
+                        "(content, receiver_name, deadline, status, memo, priority, completed_at) "
+                        "VALUES (?, ?, ?, ?, ?, ?, "
+                        "CASE WHEN ? = 'completed' THEN datetime('now', 'localtime') END)",
+                        (content, receiver, deadline, status, memo, priority, status),
                     )
                 conn.commit()
             self.accept()

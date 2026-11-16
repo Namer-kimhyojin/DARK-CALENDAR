@@ -11,7 +11,6 @@ from PyQt6.QtCore import QObject, Qt, QThread, QTimer, pyqtSignal
 
 from calendar_app.app_paths import DB_PATH
 from calendar_app.application.calendar_sync_contract import CalendarSyncError, RemoteCalendarError
-from calendar_app.infrastructure.caldav_sync.client import CalDAVClient
 from calendar_app.infrastructure.caldav_sync.credentials import CalDAVCredentials
 from calendar_app.infrastructure.caldav_sync.profiles import PROFILES, account_key
 from calendar_app.infrastructure.caldav_sync.resource_cache import CalDAVResourceCache
@@ -23,6 +22,19 @@ from calendar_app.infrastructure.calendar_sync.status import (
     save_calendar_errors,
 )
 from calendar_app.infrastructure.google_sync.common import sync_time_zone
+
+# The CalDAV client pulls in requests, icalendar and dateutil (~0.15 s) and only a sync
+# needs it, so it loads on first use instead of during app start. Tests may monkeypatch
+# this name; _caldav_client_type() keeps a non-None value.
+CalDAVClient = None
+
+
+def _caldav_client_type():
+    global CalDAVClient
+    if CalDAVClient is None:
+        # Static from-import so PyInstaller still bundles the client.
+        from calendar_app.infrastructure.caldav_sync.client import CalDAVClient
+    return CalDAVClient
 
 
 class CalDAVWorker(QThread):
@@ -78,6 +90,7 @@ class CalDAVWorker(QThread):
                 credentials = store.load(account)
                 if credentials["service"] != self.service:
                     raise CalendarSyncError("account_mismatch")
+            _caldav_client_type()
             client = CalDAVClient(
                 **credentials, cancelled=self.isInterruptionRequested, local_zone=self.local_zone
             )
@@ -203,6 +216,17 @@ class CalDAVSyncController(QObject):
                 self._failed("operation_failed")
                 return False
             self.settings.setValue(self.prefix + "enabled", False)
+        else:
+            # Warm-up only: import on the GUI thread rather than in the worker.
+            # CalDAVWorker.run() loads the client itself.
+            try:
+                _caldav_client_type()
+            except ImportError:
+                self._failed("dependency_unavailable")
+                return False
+            except Exception:
+                self._failed("operation_failed")
+                return False
         self.status = operation
         worker = None
         try:

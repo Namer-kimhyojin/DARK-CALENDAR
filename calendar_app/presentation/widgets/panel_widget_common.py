@@ -148,7 +148,8 @@ def _parse_quick_add_text(text: str) -> tuple[str | None, str]:
         from calendar_app.infrastructure.nlp.nlp_engine import parse_nlp_task
 
         parsed = parse_nlp_task(text)
-        return parsed.get("time"), parsed.get("title")
+        # The parser leaves the title empty for time-only input such as "3pm".
+        return parsed.get("time"), parsed.get("title") or t("dialog.task.untitled", "제목 없음")
     except Exception:
         # Fallback to basic search
         time_str, name = None, text

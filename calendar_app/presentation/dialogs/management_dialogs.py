@@ -46,6 +46,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
+from calendar_app.presentation.locale_names import calendar_display_name
 
 logger = logging.getLogger(__name__)
 
@@ -669,7 +670,7 @@ class DirectiveManagementDialog(BaseManagementDialog):
         return [self.add_btn]
 
     def tail_buttons(self):
-        self.trash_toggle_btn = QPushButton(t("dialog.management.btn_toggle_trash", "Trash"))
+        self.trash_toggle_btn = QPushButton(t("dialog.management.btn_toggle_trash", "휴지통 보기"))
         self.trash_toggle_btn.setObjectName("ghost_btn")
         self.trash_toggle_btn.clicked.connect(self.toggle_trash_mode)
 
@@ -687,8 +688,10 @@ class DirectiveManagementDialog(BaseManagementDialog):
 
     def _sync_trash_mode_ui(self):
         self._sync_common_trash_mode_ui(
-            toggle_text_normal=t("dialog.management.btn_toggle_trash", "Trash"),
-            toggle_text_trash=t("dialog.management.btn_toggle_trash_back", "Directives"),
+            toggle_text_normal=t("dialog.management.btn_toggle_trash", "휴지통 보기"),
+            toggle_text_trash=t(
+                "dialog.management.btn_toggle_trash_back_directive", "지시/협조사항 보기"
+            ),
             disable_widgets=[
                 self.add_btn,
                 self.complete_btn,
@@ -874,13 +877,15 @@ class TaskManagementDialog(BaseManagementDialog):
         except Exception:
             calendars = []
 
-        self._calendar_map = {str(c["id"]): c["name"] for c in calendars}
+        self._calendar_map = {
+            str(c["id"]): calendar_display_name(c["id"], c["name"]) for c in calendars
+        }
         all_label = t("dialog.management.calendar_all", "All Calendars")
         self.calendar_filter.blockSignals(True)
         self.calendar_filter.clear()
         self.calendar_filter.addItem(all_label)
         for cal in calendars:
-            self.calendar_filter.addItem(cal["name"])
+            self.calendar_filter.addItem(self._calendar_map[str(cal["id"])])
         self.calendar_filter.blockSignals(False)
 
     def _calendar_name_for(self, row):
@@ -895,7 +900,7 @@ class TaskManagementDialog(BaseManagementDialog):
         return [self.add_btn]
 
     def tail_buttons(self):
-        self.trash_toggle_btn = QPushButton(t("dialog.management.btn_toggle_trash", "Trash"))
+        self.trash_toggle_btn = QPushButton(t("dialog.management.btn_toggle_trash", "휴지통 보기"))
         self.trash_toggle_btn.setObjectName("ghost_btn")
         self.trash_toggle_btn.clicked.connect(self.toggle_trash_mode)
 
@@ -910,8 +915,8 @@ class TaskManagementDialog(BaseManagementDialog):
 
     def _sync_trash_mode_ui(self):
         self._sync_common_trash_mode_ui(
-            toggle_text_normal=t("dialog.management.btn_toggle_trash", "Trash"),
-            toggle_text_trash=t("dialog.management.btn_toggle_trash_back", "Schedules"),
+            toggle_text_normal=t("dialog.management.btn_toggle_trash", "휴지통 보기"),
+            toggle_text_trash=t("dialog.management.btn_toggle_trash_back", "일정 보기"),
             disable_widgets=[
                 self.add_btn,
                 self.bulk_priority_combo,
@@ -1050,7 +1055,7 @@ class RoutineManagementDialog(BaseManagementDialog):
         return [self.add_btn]
 
     def tail_buttons(self):
-        self.trash_toggle_btn = QPushButton(t("dialog.management.btn_toggle_trash", "Trash"))
+        self.trash_toggle_btn = QPushButton(t("dialog.management.btn_toggle_trash", "휴지통 보기"))
         self.trash_toggle_btn.setObjectName("ghost_btn")
         self.trash_toggle_btn.clicked.connect(self.toggle_trash_mode)
 
@@ -1065,8 +1070,8 @@ class RoutineManagementDialog(BaseManagementDialog):
 
     def _sync_trash_mode_ui(self):
         self._sync_common_trash_mode_ui(
-            toggle_text_normal=t("dialog.management.btn_toggle_trash", "Trash"),
-            toggle_text_trash=t("dialog.management.btn_toggle_trash_back", "Routines"),
+            toggle_text_normal=t("dialog.management.btn_toggle_trash", "휴지통 보기"),
+            toggle_text_trash=t("dialog.management.btn_toggle_trash_back_routine", "일반업무 보기"),
             disable_widgets=[
                 self.add_btn,
                 self.bulk_priority_combo,

@@ -100,7 +100,7 @@ class WidgetStackController(QObject):
     def restore(self, groups):
         self._save_timer.stop()
         self.clear(restore=False)
-        existing = {row[0] for row in self.manager.all_instances()}
+        existing = {row[0] for row in self.manager.instance_records()}
         for raw in validate_stacks(groups):
             group = deepcopy(raw)
             group["members"] = [iid for iid in group["members"] if iid in existing]
@@ -173,7 +173,7 @@ class WidgetStackController(QObject):
                 if enabled and active not in enabled:
                     active = enabled[0]
                     group["index"] = group["members"].index(active)
-                names = {row[0]: row[1] for row in self.manager.all_instances()}
+                names = {row[0]: row[1] for row in self.manager.instance_records()}
                 bar.combo.blockSignals(True)
                 bar.combo.clear()
                 for index, iid in enumerate(group["members"]):

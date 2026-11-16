@@ -158,7 +158,36 @@ class WindowShellActionsMixin:
         if hasattr(self, "overlay_manager"):
             self.overlay_manager.set_all_interaction_locked(is_checked)
 
+        # Locked: clicks pass through to the desktop (unless turned off in the tray).
+        from calendar_app.presentation.main_window.lock_click_through import (
+            sync_lock_click_through,
+        )
+
+        sync_lock_click_through(self)
+
         self.schedule_panel_refresh(center=True)
+
+    def set_lock_click_through(self, enabled):
+        """Tray option: let clicks reach the desktop while the calendar is locked."""
+        from calendar_app.presentation.main_window.lock_click_through import (
+            LOCK_CLICK_THROUGH_KEY,
+            sync_lock_click_through,
+        )
+
+        if hasattr(self, "settings"):
+            self.settings.setValue(LOCK_CLICK_THROUGH_KEY, bool(enabled))
+        sync_lock_click_through(self)
+
+    def set_lock_behind_icons(self, enabled):
+        """Tray option: while locked, draw the calendar under the desktop icons."""
+        from calendar_app.presentation.main_window.lock_click_through import (
+            LOCK_BEHIND_ICONS_KEY,
+            sync_lock_click_through,
+        )
+
+        if hasattr(self, "settings"):
+            self.settings.setValue(LOCK_BEHIND_ICONS_KEY, bool(enabled))
+        sync_lock_click_through(self)
 
     def _apply_lock_mode_ui(self, locked: bool):
         """고정 모드 활성 여부에 따라 lock_btn을 제외한 상단바 버튼들을 비활성화/활성화한다."""
@@ -175,28 +204,43 @@ class WindowShellActionsMixin:
             "slider",
             "search_edit",
             "widget_mode_btn",
-            "navigation_rail",
         ]
+        from PyQt6.QtWidgets import QToolButton
+
+        def _dim(widget, dimmed):
+            # Locked controls fade to 35 %. The effect is removed again on unlock:
+            # a lingering QGraphicsOpacityEffect keeps rendering the widget through
+            # an offscreen pixmap, which changes how its translucent background
+            # blends with the window.
+            effect = widget.graphicsEffect()
+            if dimmed:
+                if not isinstance(effect, QGraphicsOpacityEffect):
+                    effect = QGraphicsOpacityEffect(widget)
+                    widget.setGraphicsEffect(effect)
+                effect.setOpacity(0.35)
+            elif isinstance(effect, QGraphicsOpacityEffect):
+                widget.setGraphicsEffect(None)
+
         for attr in _LOCKABLE:
             widget = getattr(self, attr, None)
             if widget is None:
                 continue
             widget.setEnabled(not locked)
-            effect = widget.graphicsEffect()
-            if locked:
-                if not isinstance(effect, QGraphicsOpacityEffect):
-                    effect = QGraphicsOpacityEffect(widget)
-                    widget.setGraphicsEffect(effect)
-                effect.setOpacity(0.35)
-            else:
-                if isinstance(effect, QGraphicsOpacityEffect):
-                    effect.setOpacity(1.0)
+            _dim(widget, locked)
+        # The quick navigation rail stays as it looks: the lock overlay already
+        # covers it (and click-through sends clicks to the desktop), so disabling
+        # or fading it only greyed its icons out. Clear any fade an older build
+        # or an earlier lock left on it.
+        rail = getattr(self, "navigation_rail", None)
+        if rail is not None:
+            rail.setEnabled(True)
+            _dim(rail, False)
+            for button in rail.findChildren(QToolButton):
+                _dim(button, False)
         lock_btn = getattr(self, "lock_btn", None)
         if lock_btn is not None:
             lock_btn.setEnabled(True)
-            effect = lock_btn.graphicsEffect()
-            if isinstance(effect, QGraphicsOpacityEffect):
-                effect.setOpacity(1.0)
+            _dim(lock_btn, False)
 
     def _raise_lock_mode_controls(self):
         for attr in ("_top_bar_menu_wrapper", "top_bar_frame"):

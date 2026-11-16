@@ -71,6 +71,10 @@ class WorkspaceBoard(QFrame):
             panel.heading.setText(f"{self.window._filter_labels()[kind]}  {len(panel.rows)}")
             panel.setVisible(self.window._active_filter in {"all", kind})
 
+    def restore_item_check(self, item):
+        for panel in self.panels.values():
+            panel.restore_item_check(item)
+
     def resizeEvent(self, event):  # noqa: N802
         super().resizeEvent(event)
         self.row.setDirection(

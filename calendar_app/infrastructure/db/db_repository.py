@@ -112,47 +112,60 @@ def is_task_on_date(task_recurrence, start_date_str, target_date):
     return False
 
 
+# Finished = completed, as task_status_view.normalize_status reads it (legacy "done" too).
+# Deferred (on hold), legacy canceled/overdue values and NULL stay unfinished and always load.
+_FINISHED_DIRECTIVE_STATUSES_SQL = "('completed', 'done')"
+
+
+def _recent_directives_sql(columns):
+    receiver_expr = (
+        "receiver_name"
+        if "receiver_name" in columns
+        else ("requester" if "requester" in columns else "NULL")
+    )
+    memo_expr = "memo" if "memo" in columns else ("details" if "details" in columns else "NULL")
+    bg_expr = "bg_color" if "bg_color" in columns else "NULL"
+    # Completed today: the widget keeps these checked in its overdue and no-deadline sections.
+    completed_today = (
+        "OR (status = 'completed' AND completed_at >= date('now', 'localtime')) "
+        if "completed_at" in columns
+        else ""
+    )
+    return (
+        f"SELECT id, content, status, {receiver_expr}, deadline, {memo_expr}, {bg_expr} "
+        "FROM task_directive "
+        f"WHERE status IS NULL OR status NOT IN {_FINISHED_DIRECTIVE_STATUSES_SQL} "
+        f"{completed_today}"
+        "OR id IN ("
+        "SELECT id FROM task_directive "
+        f"WHERE status IN {_FINISHED_DIRECTIVE_STATUSES_SQL} "
+        "ORDER BY deadline DESC, id DESC LIMIT ?"
+        ") "
+        "ORDER BY COALESCE(deadline, '9999-12-31') ASC, id DESC"
+    )
+
+
 def get_recent_directives(limit=200):
+    """Return every unfinished directive plus the ``limit`` most recently due finished ones.
+
+    Completed directives are never purged, so a plain LIMIT on the deadline order cut
+    today's, overdue and undated directives once 200 older rows existed. Directives
+    completed today (completed_at) always load as well. Other finished rows count as
+    recent by deadline, undated ones last: rows completed before completed_at existed
+    have no completion time. Order (deadline ASC, id DESC) and row shape are unchanged.
+    """
     conn = get_connection()
     if not conn:
         return []
     rows = []
     try:
         cur = conn.cursor()
-        columns = _task_directive_columns(cur)
-        receiver_expr = (
-            "receiver_name"
-            if "receiver_name" in columns
-            else ("requester" if "requester" in columns else "NULL")
-        )
-        memo_expr = "memo" if "memo" in columns else ("details" if "details" in columns else "NULL")
-        bg_expr = "bg_color" if "bg_color" in columns else "NULL"
-        sql = (
-            f"SELECT id, content, status, {receiver_expr}, deadline, {memo_expr}, {bg_expr} "
-            "FROM task_directive "
-            "ORDER BY COALESCE(deadline, '9999-12-31') ASC, id DESC "
-            "LIMIT ?"
-        )
+        params = (int(limit or 200),)
         try:
-            cur.execute(sql, (int(limit or 200),))
+            cur.execute(_recent_directives_sql(_task_directive_columns(cur)), params)
         except sqlite3.OperationalError:
             columns = _task_directive_columns(cur, refresh=True)
-            receiver_expr = (
-                "receiver_name"
-                if "receiver_name" in columns
-                else ("requester" if "requester" in columns else "NULL")
-            )
-            memo_expr = (
-                "memo" if "memo" in columns else ("details" if "details" in columns else "NULL")
-            )
-            bg_expr = "bg_color" if "bg_color" in columns else "NULL"
-            sql = (
-                f"SELECT id, content, status, {receiver_expr}, deadline, {memo_expr}, {bg_expr} "
-                "FROM task_directive "
-                "ORDER BY COALESCE(deadline, '9999-12-31') ASC, id DESC "
-                "LIMIT ?"
-            )
-            cur.execute(sql, (int(limit or 200),))
+            cur.execute(_recent_directives_sql(columns), params)
         rows = cur.fetchall()
     except Exception as e:
         logger.exception("Error fetching directives: %s", e)

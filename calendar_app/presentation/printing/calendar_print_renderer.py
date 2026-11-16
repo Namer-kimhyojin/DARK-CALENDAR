@@ -27,6 +27,7 @@ from calendar_app.application.calendar_print_service import (
     CalendarPrintPage,
 )
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.locale_names import calendar_display_name, weekday_names
 
 
 @dataclass(frozen=True)
@@ -148,10 +149,7 @@ def _font(size_pt: float, *, bold: bool = False, family: str | None = None) -> Q
 
 
 def _weekday_names() -> list[str]:
-    raw = t("calendar.weekdays", ["월", "화", "수", "목", "금", "토", "일"])
-    if isinstance(raw, list) and len(raw) >= 7:
-        return [str(item) for item in raw[:7]]
-    return ["월", "화", "수", "목", "금", "토", "일"]
+    return weekday_names()
 
 
 def _period_title(page: CalendarPrintPage) -> str:
@@ -502,7 +500,13 @@ def _draw_header(
         if event.calendar_id in seen:
             continue
         seen.add(event.calendar_id)
-        used_calendars.append((event.calendar_id, event.calendar_name, event.calendar_color))
+        used_calendars.append(
+            (
+                event.calendar_id,
+                calendar_display_name(event.calendar_id, event.calendar_name),
+                event.calendar_color,
+            )
+        )
 
     legend_x = ctx.width_pt * 0.62
     legend_width = ctx.width_pt - legend_x
@@ -820,7 +824,8 @@ def _draw_details_sheet(
         title = f"{_priority_marker(event)}{event.name}"
         if document.request.include_location and event.location:
             title = f"{title} · {event.location}"
-        values = (_detail_period_text(event), time_text, event.calendar_name, title)
+        calendar_name = calendar_display_name(event.calendar_id, event.calendar_name)
+        values = (_detail_period_text(event), time_text, calendar_name, title)
         x = 0.0
         for value, width in zip(values, widths, strict=True):
             ctx.draw_text(

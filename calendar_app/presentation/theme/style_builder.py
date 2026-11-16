@@ -65,6 +65,7 @@ def build_global_stylesheet(
     global_task_radius = int(shape.get("global_task_button_radius", 0))
     drag_range_radius = int(shape.get("drag_range_cap_radius", 0))
     _cell_border = p["border"]
+    _control_border = p.get("border_control", p["border_soft"])
 
     return f"""
         /* Global Reset & Selection */
@@ -100,18 +101,26 @@ def build_global_stylesheet(
             border-right: none;
         }}
         ClickableCell[create_range_preview="true"][create_range_start="true"] {{
-            border-left: 2px solid {tc(0.72)};
+            background-color: {tc(0.26)};
+            border-left: 3px solid {theme_color};
             border-top-left-radius: {drag_range_radius}px;
             border-bottom-left-radius: {drag_range_radius}px;
         }}
         ClickableCell[create_range_preview="true"][create_range_end="true"] {{
-            border-right: 2px solid {tc(0.72)};
+            background-color: {tc(0.26)};
+            border-right: 3px solid {theme_color};
             border-top-right-radius: {drag_range_radius}px;
             border-bottom-right-radius: {drag_range_radius}px;
         }}
+        /* Days inside the range: bold numbers. The first and last day get the
+           filled accent pill so the two ends of the range stand out. */
         ClickableCell[create_range_preview="true"] QLabel#dayNumLabel {{
-            color: {p["text_inverse"]};
+            color: {p["text_primary"]};
             font-weight: 800;
+        }}
+        ClickableCell[create_range_preview="true"][create_range_start="true"] QLabel#dayNumLabel,
+        ClickableCell[create_range_preview="true"][create_range_end="true"] QLabel#dayNumLabel {{
+            color: {p["text_inverse"]};
             background-color: {theme_color};
             border-radius: 4px;
             padding: 1px 6px;
@@ -205,7 +214,7 @@ def build_global_stylesheet(
         /* Form Inputs */
         QLineEdit, QComboBox, QSpinBox, QDateTimeEdit {{
             background-color: {p["control_bg"]};
-            border: 1px solid {p["border_soft"]};
+            border: 1px solid {_control_border};
             border-radius: 6px;
             padding: 4px 8px;
             color: {p["text_primary"]};
@@ -231,17 +240,17 @@ def build_global_stylesheet(
         /* Global Buttons & Dialogs */
         QPushButton {{
             background-color: {p["control_bg"]};
-            border: 1px solid {p["border"]};
+            border: 1px solid {_control_border};
             border-radius: 6px;
             padding: 5px 12px;
-            color: {p["text_secondary"]};
+            color: {p["text_primary"]};
             font-family: {family};
             font-size: {base_pt}pt;
             min-width: 60px;
         }}
         QPushButton:hover {{
             background-color: {p["control_bg_hover"]};
-            border-color: {p["border_strong"]};
+            border-color: {p["border"]};
             color: {p["text_primary"]};
         }}
         QPushButton:pressed {{
@@ -299,6 +308,37 @@ def build_tooltip_stylesheet(
             font-size: {base_pt}pt;
         }}
     """
+
+
+DOCK_FRAME_NAMES = ("left_frame", "center_frame", "routine_frame", "directive_frame")
+
+
+def build_dock_frame_stylesheet(tooltip_qss: str = "", settings=None) -> str:
+    """Stylesheet for a panel's content frame: see-through, but themed tooltips.
+
+    The frames used to carry a selector-less "background: transparent" rule. Such
+    a rule reaches every descendant, including the tooltip a calendar cell opens,
+    and an ancestor's stylesheet beats the application one. Tooltips inside the
+    panels therefore showed a transparent (black) box with grey text. The same
+    see-through rule is kept for the panel content, with the theme's QToolTip
+    rule added after it; the type selector outranks "*".
+    """
+    if not tooltip_qss:
+        from calendar_app.shared.theme_snapshot import build_theme_snapshot
+        from calendar_app.shared.value_parsers import as_int
+
+        snapshot = build_theme_snapshot(settings)
+        size = 10
+        if settings is not None:
+            size = as_int(settings.value("font_size", 10), 10, minimum=1, maximum=256)
+        tooltip_qss = build_tooltip_stylesheet(
+            size,
+            snapshot.theme_color,
+            snapshot.text_theme,
+            snapshot.panel_base_color,
+            snapshot.ui_palette,
+        )
+    return "* { background: transparent; border: none; }\n" + tooltip_qss
 
 
 def _build_top_menu_button_style(menu_btn_pt, theme_color, text_theme="dark"):

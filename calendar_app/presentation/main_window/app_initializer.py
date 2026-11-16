@@ -52,6 +52,7 @@ def initialize_overlay_app(app) -> None:
     app._resize_dir = None
     app._screen_fill_active = False
     app._last_clicked_date = None
+    app._calendar_keyboard_date = None
     app.left_panel_mode = app.settings.value("left_panel_mode", "today", type=str)
     app.cal_show_weekends = app.settings.value("cal_show_weekends", True, type=bool)
     app.cal_start_monday = app.settings.value("cal_start_monday", True, type=bool)
@@ -78,6 +79,8 @@ def initialize_overlay_app(app) -> None:
     app._latest_agenda_data = None
     app._latest_calendar_range_data = None
     app._latest_directive_data = None
+    app._right_panel_render_deferred = False
+    app._right_panel_show_watch = None
     app._last_clicked_task_id = None
     app._widget_mode_coordinator = None
     app._unified_widget_controller = None
@@ -112,6 +115,7 @@ def initialize_overlay_app(app) -> None:
     app._is_dragging = False
     app._drag_pending_refresh = False
     app._task_dialog_refresh_depth = 0
+    app._presentation_refresh_depth = 0
     app._task_dialog_pending_refresh = {"left": False, "center": False, "right": False}
     app._task_dialog_pending_data_refresh = False
     app._is_calendar_range_dragging = False
@@ -147,7 +151,9 @@ def initialize_overlay_app(app) -> None:
 
     if hasattr(app, "lock_btn"):
         app.lock_btn.setChecked(app.is_locked)
-        app.toggle_lock_mode()
+        # 고정 상태는 패널 렌더 결과에 들어가지 않는다.
+        with app.presentation_refresh_only():
+            app.toggle_lock_mode()
 
     app.generate_today_routines()
     app.init_gcal_sync_timer()
@@ -254,7 +260,9 @@ def _force_restore_docks_and_panels(app) -> None:
         if hasattr(app, "_on_any_dock_float_changed"):
             app._on_any_dock_float_changed()
         if hasattr(app, "schedule_panel_refresh"):
-            app.schedule_panel_refresh(left=True, center=True, right=True)
+            # Construction rendered every panel from current data.  Re-render only the
+            # panels whose render signature (theme, date, filters, calendar height) changed.
+            app.schedule_panel_refresh(left=True, center=True, right=True, mark_dirty=False)
     except Exception:
         logger.exception("Failed post-startup dock/panel recovery")
 

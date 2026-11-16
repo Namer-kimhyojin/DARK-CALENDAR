@@ -23,7 +23,6 @@
     "exit_message": "Air Calendar is closing.\nThe program will fully exit without minimizing to tray.\nContinue?",
     "exit_title": "Exit"
   },
-  "app_name": "Air Calendar",
   "autostart": {
     "disabled": "Disabled",
     "enabled": "Enabled",
@@ -38,7 +37,6 @@
     "settings_open_failed": "Windows Startup Apps settings could not be opened. Open Settings > Apps > Startup."
   },
   "away_lock": {
-    "date_format": "yyyy.MM.dd (ddd)",
     "default_msg": "🔒 You are away.\n(Move mouse to unlock.)",
     "placeholder_pw": "Enter password",
     "secondary_screen_hint": "Secondary Lock Screen",
@@ -81,7 +79,7 @@
     "section_message": "Message",
     "section_message_tip": "Edit the message and formatting shown on the away screen.",
     "show_clock": "Show clock on lock screen",
-    "suffix_minute": "min",
+    "suffix_minute": " min",
     "tab_html": "HTML Code",
     "tab_rich": "Rich Edit",
     "tip_apply": "Apply size/color to selection",
@@ -205,7 +203,9 @@
   "calendar": {
     "add_hint": "Add Schedule",
     "date_cell_accessible": "{date} date cell",
+    "keyboard_hint": "Arrow keys: move by date · Enter: select date · Ctrl+Enter: add event",
     "month_title": "{month_name} {year}",
+    "more_count_short": "+{count}",
     "more_items": "+ {count} more",
     "next_period": "Next period",
     "opt_month": "Include Month label",
@@ -217,10 +217,18 @@
     "options": "⚙️Options",
     "options_with_hidden": "{label} ({count})",
     "previous_period": "Previous period",
+    "range_badge": "{start} → {end} · {count} days",
+    "range_badge_date": "MMM d (ddd)",
+    "range_badge_single": "{date} · all day",
     "range_create_help_title": "Create a multi-day event quickly",
     "range_create_hint": "Drag across empty date cells to create a multi-day all-day event.",
     "range_create_shift_hint": "You can also click the start date, then Shift+click the end date to register the same range.",
     "range_create_status": "{start} → {end} · {count} days · All day",
+    "selected_state": "Selected",
+    "selection_actions_hint": "Choose an action for the selected items. Press Esc to clear the selection.",
+    "selection_clear": "Clear selection (Esc)",
+    "selection_clear_short": "Clear selection",
+    "selection_delete": "Delete selected items",
     "selection_hint": "Ctrl+Click for multi-selection",
     "today": "Today",
     "today_hint": "Go to today",
@@ -232,8 +240,7 @@
       "date": "Beside dates only",
       "header": "Top only",
       "hidden": "Hidden"
-    },
-    "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    }
   },
   "calendar_controls": {
     "default_accessible": "Default calendar for new events",
@@ -305,6 +312,7 @@
     "header_item_edit": "Edit Item",
     "header_order": "Order",
     "header_required": "Required",
+    "import_default_name": "Imported checklist",
     "import_done_msg": "Imported '{name}'.",
     "import_done_title": "Import Complete",
     "import_err_fail": "Import failed.",
@@ -317,7 +325,7 @@
     "label_name": "Name",
     "label_required_set": "Set as required item",
     "label_type": "Type",
-    "n_items": "{n} items",
+    "n_items": "Items: {n}",
     "new_list_prompt": "Enter the name for the new checklist.",
     "new_list_title": "New Checklist",
     "no_search_results": "No checklists found.",
@@ -330,6 +338,68 @@
     "prompt_empty": "Select a checklist or start with the New button.",
     "save_failed": "Could not save the checklist details.",
     "search_templates": "Search names and descriptions",
+    "seed": {
+      "meeting_prep": {
+        "desc": "Checklist to prepare for a productive meeting",
+        "item1": "Confirm the purpose and agenda",
+        "item1_desc": "Clarify the agenda and share it with attendees",
+        "item2": "Check attendees' availability and send invites",
+        "item2_desc": "Confirm the calendar invites were sent",
+        "item3": "Book the room and check the setup",
+        "item3_desc": "Prepare the projector, microphone, refreshments, etc.",
+        "item4": "Print and share materials in advance",
+        "item4_desc": "Send attendees the materials to review",
+        "name": "Meeting Preparation"
+      },
+      "monthly_closing": {
+        "desc": "Closing and analysis work at the end of each month",
+        "item1": "Review corporate card transactions",
+        "item1_desc": "Check mismatches and note the reasons",
+        "item2": "Submit final expense reports for approval",
+        "item2_desc": "Complete the e-approval",
+        "item3": "Analyze spending against the budget",
+        "item3_desc": "Find overspent or unspent items",
+        "item4": "Plan next month's budget",
+        "item4_desc": "Allocate the budget for next month's key activities",
+        "name": "Monthly Closing"
+      },
+      "onboarding": {
+        "desc": "Initial setup for a new team member",
+        "item1": "Provide IT equipment and create accounts",
+        "item1_desc": "Check PC, email and intranet access",
+        "item2": "Introduce the team and show the desk",
+        "item2_desc": "Introduce the team culture and surroundings",
+        "item3": "Invite to collaboration tools (chat, wiki)",
+        "item3_desc": "Grant access to Slack, Notion, Jira, etc.",
+        "item4": "Explain required security/ethics training",
+        "item4_desc": "Guide to company policies and mandatory training",
+        "name": "New Hire Onboarding Guide"
+      },
+      "travel_expense": {
+        "desc": "Paperwork to finish after returning from a trip",
+        "item1": "Collect and organize receipts",
+        "item1_desc": "Keep proof of transport, lodging, meals, etc.",
+        "item2": "Write the trip report",
+        "item2_desc": "Summarize whether the goals were met and the key information",
+        "item3": "Enter expenses in the ERP/expense system",
+        "item3_desc": "Submit the reimbursement request",
+        "item4": "Submit supporting documents",
+        "item4_desc": "Give paper receipts to accounting (if required)",
+        "name": "Business Trip Expenses and Report"
+      },
+      "weekly_report": {
+        "desc": "Weekly report routine, done every Friday",
+        "item1": "Summarize last week's results",
+        "item1_desc": "List completed tasks and outcomes",
+        "item2": "Write this week's plan",
+        "item2_desc": "Set next week's key milestones and schedule",
+        "item3": "Note key issues and requests",
+        "item3_desc": "Describe bottlenecks or support needed",
+        "item4": "Share with the team and apply feedback",
+        "item4_desc": "Team review before final submission",
+        "name": "Weekly Work Report"
+      }
+    },
     "template_actions": "Manage checklists",
     "template_library": "Checklists",
     "title": "Checklist Management",
@@ -348,6 +418,7 @@
     "graphite": "Graphite",
     "green": "Green",
     "lavender": "Lavender",
+    "none": "No color",
     "peacock": "Peacock",
     "red": "Red",
     "sage": "Sage",
@@ -366,6 +437,9 @@
     "delete": "Delete",
     "edit": "Edit",
     "error": "Error",
+    "file_filter_all": "All files (*)",
+    "file_filter_json": "JSON files (*.json)",
+    "file_filter_text": "Text files (*.txt)",
     "location": "[L]",
     "memo": "📝",
     "month": "Month",
@@ -378,7 +452,10 @@
     "selection_required": "Selection Required",
     "success": "Done",
     "today": "Today",
+    "toggle_off": "OFF",
+    "toggle_on": "ON",
     "tomorrow": "Tomorrow",
+    "unknown": "(Unknown)",
     "warning": "Warning",
     "yesterday": "Yesterday"
   },
@@ -405,7 +482,7 @@
     "goto_today": "📍Go to Today",
     "group_cycle": "💠Group by Cycle",
     "group_deadline": "💠Group by Deadline",
-    "group_receiver": "💠Group by Requester",
+    "group_receiver": "💠 Group by Recipient",
     "next_monitor": "➡️Move to Next Monitor",
     "opacity_ctrl": "🪟Adjust Opacity",
     "opacity_down": "➖ Decrease 10%",
@@ -430,7 +507,7 @@
     "sort_deadline_near": "🕒 Sort by Imminent Deadline",
     "sort_mode": "🔃 Sort By",
     "sort_priority": "⭐ Sort by Priority",
-    "sort_reg": "🔢 Sort by Registration",
+    "sort_reg": "🔢 Sort by Date Added",
     "sort_time": "🕒 Sort by Time",
     "status_change": "📊 Change Status",
     "status_filter": "🏷️Status Filter",
@@ -471,8 +548,7 @@
       "done": "Done",
       "guide": "Guide",
       "item_content": "Item content:",
-      "item_unit": "items",
-      "items_added": "checklist items added.",
+      "items_added_count": "Checklist items added: {count}.",
       "items_label": "Checklist Items:",
       "manage": "⚙️Manage",
       "progress": "📊 Progress",
@@ -560,6 +636,7 @@
       "label_status": "Status",
       "msg_content_required": "Please enter the directive content.",
       "msg_db_error": "Save error: {e}",
+      "msg_init_error": "An error occurred while opening the directive dialog.",
       "placeholder_content": "e.g., Team Leader Kim - Request contract review",
       "placeholder_memo": "Enter detailed request or progress notes.",
       "placeholder_receiver": "Recipient or Dept name",
@@ -570,6 +647,12 @@
       "tag_hint": "💡 You can use <b>#tags</b> for better searching and filtering.<br><span style='color:#666;'>e.g., #contract #legal #urgent</span>",
       "title_add": "📋 Add Directive",
       "title_edit": "Directive Details"
+    },
+    "draft": {
+      "discard": "Discard changes",
+      "discard_message": "You have unsaved changes.",
+      "discard_title": "Discard your changes?",
+      "keep_editing": "Keep editing"
     },
     "focus_log": {
       "close": "Close",
@@ -585,7 +668,7 @@
       "title": "Font Settings"
     },
     "label_settings": {
-      "builtin": "Builtin:",
+      "builtin": "Built-in:",
       "builtin_presets": {
         "business": "Business",
         "default": "Default",
@@ -606,7 +689,7 @@
       },
       "emoji_placeholder": "Emoji",
       "enter_preset_name": "Enter preset name:",
-      "error_builtin_name": "'{name}' is a builtin preset name. Please use a different name.",
+      "error_builtin_name": "'{name}' is a built-in preset name. Please use a different name.",
       "header_icon": "Icon",
       "header_name": "Name",
       "header_type": "Type",
@@ -636,10 +719,12 @@
       "btn_add_routine": "Add Task",
       "btn_add_schedule": "Add Schedule",
       "btn_mark_done": "Mark Done",
-      "btn_purge": "permanent deletion",
-      "btn_restore_from_trash": "restoration",
-      "btn_toggle_trash": "View trash can",
-      "btn_toggle_trash_back": "View schedule",
+      "btn_purge": "Delete Permanently",
+      "btn_restore_from_trash": "Restore",
+      "btn_toggle_trash": "View Trash",
+      "btn_toggle_trash_back": "View Schedule",
+      "btn_toggle_trash_back_directive": "View Directives",
+      "btn_toggle_trash_back_routine": "View Routines",
       "calendar_all": "All Calendars",
       "calendar_local": "Local",
       "directive_header": "Directive List",
@@ -663,32 +748,36 @@
       "tab_directive": "📋Directives",
       "tab_routine": "⭐ Routines",
       "tab_schedule": "📅 Schedule",
-      "trash_move_confirm": "Do you want to move the selected items to the Recycle Bin?",
-      "trash_purge_confirm": "Are you sure you want to permanently delete the selected Recycle Bin items?\nThis action is irreversible.",
-      "trash_restore_confirm": "Would you like to recover the selected items?",
+      "trash_move_confirm": "Do you want to move the selected items to the Trash?",
+      "trash_purge_confirm": "Are you sure you want to permanently delete the selected items in the Trash?\nThis action is irreversible.",
+      "trash_restore_confirm": "Restore the selected items?",
       "work_hub_title": "All Work Management"
     },
     "pomodoro_settings": {
       "auto_start_break": "Automatically start break after focus",
+      "auto_start_break_help": "When focus time ends, the break timer starts right away.",
       "auto_start_focus": "Automatically start focus after break",
-      "cycle_suffix": "sessions",
+      "auto_start_focus_help": "When a break ends, the next focus cycle starts right away.",
+      "cycle_suffix": " sessions",
       "focus_minutes": "Focus Time",
-      "goal_suffix": "sessions",
+      "goal_suffix": " sessions",
       "group_behavior": "Auto Advance",
       "group_timers": "Timer Settings",
       "long_break_every": "Long Break Every",
       "long_break_minutes": "Long Break",
-      "minutes_suffix": "min",
+      "minutes_suffix": " min",
       "mode_label": "Timer Mode",
       "mode_pomodoro": "Pomodoro",
       "mode_stopwatch": "Stopwatch",
+      "run_mode": "Run Mode",
+      "run_mode_help": "The selected mode decides how the timer runs.",
       "set_goal": "Goal Sessions",
       "short_break_minutes": "Short Break",
       "title": "Pomodoro Settings"
     },
     "recurrence": {
       "day_label": "Target Day",
-      "day_unit": "th",
+      "day_of_month": "Day {day}",
       "header": "Execution Mode",
       "last_day": "Last Day",
       "next_occurrence_hint": "Next occurrence example will be shown here.",
@@ -702,7 +791,9 @@
       "nth_third": "Third",
       "nth_weekday": "N-th Weekday",
       "preview": "Generation Preview",
+      "preview_dates": "📋 Tasks to create ({count}): {dates}",
       "preview_none": "⚠ No tasks will be created. Check date range or cycle.",
+      "preview_range": "📋 Tasks to create ({count}): {first} → {last}",
       "repeat": "Recurring Task",
       "rule_specific_day": "Specific Day",
       "rule_weekday": "Weekday",
@@ -743,10 +834,10 @@
     },
     "task": {
       "additional_info": "Additional Info",
-      "alarm_10m": "10 minutes ago",
-      "alarm_1d": "1 day ago",
-      "alarm_1h": "1 hour ago",
-      "alarm_1w": "1 week ago",
+      "alarm_10m": "10 minutes before",
+      "alarm_1d": "1 day before",
+      "alarm_1h": "1 hour before",
+      "alarm_1w": "1 week before",
       "alarm_default_saved": "Default alarm saved.",
       "alarm_settings": "Alarm Settings",
       "all_day": "All Day Event",
@@ -816,7 +907,7 @@
       "save_btn": "💾 Save",
       "save_done": "Save Complete",
       "save_error_db": "Failed to update database.",
-      "save_failed": "SaveFailed",
+      "save_failed": "Save failed",
       "schedule_reg_success": "Schedule registered successfully.",
       "schedule_reg_success_continue": "Schedule registered. You can continue entering.",
       "section_time_routine": "Execution Period",
@@ -939,6 +1030,8 @@
         "text": "Readability"
       },
       "text": {
+        "adaptive_wallpaper": "Keep text readable on bright wallpapers",
+        "adaptive_wallpaper_tip": "Makes panels more solid only when a bright wallpaper behind the window washes out the text. Your saved opacity does not change.",
         "apply_recommended": "Apply recommended text colors",
         "apply_recommended_disabled": "Recommended text colors are available when a preset is selected.",
         "apply_recommended_for_preset": "Apply recommended text colors for this preset",
@@ -975,7 +1068,7 @@
       "clear_search": "Clear search",
       "desc": "Find a control to adjust colors and spacing.",
       "expert_help": "Expert view includes every internal value.",
-      "expert_mode": "Edit individual values ​​(Expert)",
+      "expert_mode": "Edit individual values (Expert)",
       "expert_mode_tip": "Directly edit internal color, size, and spacing values.",
       "export": "Export JSON",
       "export_failed": "Failed to export UI tokens: {error}",
@@ -997,8 +1090,47 @@
       "import_success": "UI tokens imported successfully. Preview updated.",
       "import_title": "Import UI Tokens",
       "invalid_msg": "Invalid color format. Use hex or rgba(r,g,b,a) or transparent.",
-      "invalid_short": "One or more color values ​​are invalid.",
+      "invalid_short": "One or more color values are invalid.",
       "invalid_title": "Input Error",
+      "metric": {
+        "base_font_pt": "Base font size",
+        "button_height": "Button height",
+        "button_min_width": "Button minimum width",
+        "button_padding_x": "Button horizontal padding",
+        "button_padding_y": "Button vertical padding",
+        "button_radius": "Button corner radius",
+        "checkbox_indicator_size": "Checkbox indicator size",
+        "checkbox_spacing": "Checkbox label spacing",
+        "field_height": "Field height",
+        "field_padding_x": "Field horizontal padding",
+        "field_padding_y": "Field vertical padding",
+        "field_radius": "Field corner radius",
+        "group_margin_top": "Group box top margin",
+        "group_radius": "Group box corner radius",
+        "list_item_margin_bottom": "List item spacing",
+        "list_item_padding_x": "List item horizontal padding",
+        "list_item_padding_y": "List item vertical padding",
+        "list_item_radius": "List item corner radius",
+        "list_padding": "List inner padding",
+        "list_radius": "List corner radius",
+        "radio_indicator_size": "Radio indicator size",
+        "radio_spacing": "Radio label spacing",
+        "subtitle_font_pt": "Subtitle font size",
+        "tab_gap": "Tab gap",
+        "tab_min_width": "Tab minimum width",
+        "tab_padding_x": "Tab horizontal padding",
+        "tab_padding_y": "Tab vertical padding",
+        "tab_radius": "Tab corner radius",
+        "textedit_padding_x": "Text area horizontal padding",
+        "textedit_padding_y": "Text area vertical padding",
+        "textedit_radius": "Text area corner radius",
+        "title_font_pt": "Title font size",
+        "toolbutton_height": "Tool button height",
+        "toolbutton_min_width": "Tool button minimum width",
+        "toolbutton_padding_x": "Tool button horizontal padding",
+        "toolbutton_padding_y": "Tool button vertical padding",
+        "toolbutton_radius": "Tool button corner radius"
+      },
       "metric_preset_applied": "Applied metric preset: {name}",
       "mode_all": "All",
       "mode_dark": "Dark",
@@ -1087,11 +1219,101 @@
       "search_placeholder": "Search names or internal keys",
       "tab_color": "Colors",
       "tab_metric": "Size and spacing",
-      "title": "Fine-tune Appearance"
+      "title": "Fine-tune Appearance",
+      "token": {
+        "accent": "Accent color",
+        "border": "Default border",
+        "border_soft": "Soft border",
+        "button_base_bg": "Button background",
+        "button_base_border": "Button border",
+        "button_base_hover_bg": "Button hover background",
+        "button_base_hover_border": "Button hover border",
+        "button_base_hover_text": "Button hover text",
+        "button_base_text": "Button text",
+        "button_danger_bg": "Danger button background",
+        "button_danger_border": "Danger button border",
+        "button_danger_hover_bg": "Danger hover background",
+        "button_danger_hover_border": "Danger hover border",
+        "button_danger_hover_text": "Danger hover text",
+        "button_danger_text": "Danger button text",
+        "button_disabled_bg": "Button disabled background",
+        "button_disabled_border": "Button disabled border",
+        "button_disabled_text": "Button disabled text",
+        "button_ghost_bg": "Ghost button background",
+        "button_ghost_border": "Ghost button border",
+        "button_ghost_hover_bg": "Ghost hover background",
+        "button_ghost_hover_border": "Ghost hover border",
+        "button_ghost_hover_text": "Ghost hover text",
+        "button_ghost_text": "Ghost button text",
+        "button_pressed_bg": "Button pressed background",
+        "button_pressed_border": "Button pressed border",
+        "button_pressed_text": "Button pressed text",
+        "button_primary_bg": "Primary button background",
+        "button_primary_border": "Primary button border",
+        "button_primary_hover_bg": "Primary hover background",
+        "button_primary_hover_border": "Primary hover border",
+        "button_primary_hover_text": "Primary hover text",
+        "button_primary_text": "Primary button text",
+        "button_secondary_bg": "Secondary button background",
+        "button_secondary_border": "Secondary button border",
+        "button_secondary_hover_bg": "Secondary hover background",
+        "button_secondary_hover_border": "Secondary hover border",
+        "button_secondary_hover_text": "Secondary hover text",
+        "button_secondary_text": "Secondary button text",
+        "button_success_bg": "Success button background",
+        "button_success_border": "Success button border",
+        "button_success_hover_bg": "Success hover background",
+        "button_success_hover_border": "Success hover border",
+        "button_success_hover_text": "Success hover text",
+        "button_success_text": "Success button text",
+        "check_checked_bg": "Checked background",
+        "check_checked_border": "Checked border",
+        "check_indicator_bg": "Checkbox/radio background",
+        "check_indicator_border": "Checkbox/radio border",
+        "list_hover_bg": "List hover background",
+        "list_selected_bg": "Selection background",
+        "list_selected_border": "Selection border",
+        "list_selected_text": "Selection text",
+        "placeholder_text": "Placeholder text",
+        "surface_alt": "Secondary background",
+        "surface_bg": "Dialog background",
+        "surface_hover": "Hover background",
+        "surface_item": "Input/item background",
+        "surface_top": "Top area background",
+        "tab_active_bg": "Active tab background",
+        "tab_idle_bg": "Inactive tab background",
+        "tab_strip_bg": "Tab bar background",
+        "tab_text": "Tab text (default)",
+        "tab_text_active": "Tab text (active)",
+        "tab_text_hover": "Tab text (hover)",
+        "table_header_bg": "Table header background",
+        "table_header_text": "Table header text",
+        "text_faint": "Faint text",
+        "text_muted": "Muted text",
+        "text_primary": "Primary text",
+        "text_secondary": "Secondary text",
+        "title_bg": "Title area background",
+        "title_subtext": "Subtitle text",
+        "title_text": "Title text",
+        "toolbutton_bg": "Tool button background",
+        "toolbutton_border": "Tool button border",
+        "toolbutton_disabled_bg": "Tool button disabled background",
+        "toolbutton_disabled_border": "Tool button disabled border",
+        "toolbutton_disabled_text": "Tool button disabled text",
+        "toolbutton_hover_bg": "Tool button hover background",
+        "toolbutton_hover_border": "Tool button hover border",
+        "toolbutton_hover_text": "Tool button hover text",
+        "toolbutton_pressed_bg": "Tool button pressed background",
+        "toolbutton_pressed_border": "Tool button pressed border",
+        "toolbutton_pressed_text": "Tool button pressed text",
+        "toolbutton_text": "Tool button text"
+      }
     }
   },
   "drag": {
-    "hint_copy": "Ctrl: Copy / Default: Move"
+    "count_title": "{count} events",
+    "hint_copy": "Ctrl: Copy / Default: Move",
+    "single_untitled": "1 event"
   },
   "eod": {
     "directives": "Directive/Collaboration Status",
@@ -1101,6 +1323,7 @@
     "title": "End-of-Day Summary Report (EOD)"
   },
   "focus": {
+    "checklist_empty": "No checklist items.",
     "congrats_msg": "Great focus. Your productivity is rising.",
     "congrats_title": "Task Completed!",
     "current_task": "Currently focusing on:\n\n{task_name}",
@@ -1128,7 +1351,7 @@
     "phase_short_break_msg": "Take a breather.",
     "phase_short_break_title": "Short Break",
     "phase_with_cycle": "{phase} {current}/{total}",
-    "pomodoro_summary": "Completed: {sessions} sessions | Focus: {minutes}m",
+    "pomodoro_summary": "Completed: {sessions} sessions | Focus: {minutes}m {seconds}s",
     "resume": "Resume",
     "return_to_main": "Return to Calendar",
     "session_saved_msg": "Saved {minutes}m {seconds}s for current task.",
@@ -1172,7 +1395,7 @@
     "select_done": "Select",
     "select_no_selection": "Select a task from the list first.",
     "settings_hint": "You can change Focus mode type and Pomodoro behavior here.",
-    "settings_saved": "Saved. New values ​​will be used next time Focus Mode starts.",
+    "settings_saved": "Saved. New values will be used next time Focus Mode starts.",
     "tab_logs": "Focus Logs",
     "tab_settings": "Settings",
     "tab_tasks": "Task Selection",
@@ -1194,25 +1417,27 @@
       "remote_title": "Google Version"
     },
     "errors": {
-      "auth_required": "Google account authentication is required.",
-      "delete_failed": "Failed to delete the event on Google server.",
+      "auth_required": "Authentication required",
+      "delete_failed": "Delete failed",
       "forbidden": "No permission to modify this calendar.",
-      "not_found": "Event not found on Google Calendar (deleted or ID mismatch).",
-      "push_failed": "Failed to push local changes to Google server.",
-      "rate_limit": "Google API rate limit exceeded. Please try again later.",
-      "remote_newer_than_local": "Remote data is newer than local (server version kept to prevent conflict).",
+      "forbidden_label": "No permission",
+      "not_found": "Event not found",
+      "push_failed": "Upload failed",
+      "rate_limit": "Rate limit reached",
+      "remote_newer_than_local": "Server version kept",
       "remote_orphan": "Only in Google (no local match)",
+      "sync_error_label": "Sync error",
       "unknown": "An unknown error occurred."
     },
     "guidance": {
-      "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Please go to 'Settings > Calendar & Sync > Authenticate' and log in again.",
+      "auth": "📍 [STATUS] Google authentication has expired or is invalid.\n🔒 [ACTION] All sync processes are safely paused for security.\n✅ [GUIDANCE] Go to '{path}' and reconnect your account in the Google Calendar section.",
       "delete_retry_exhausted": "Automatic deletion retries have reached the limit and are paused.\nCheck the last error and Google Calendar permissions, then select Retry.\nThe item remains in diagnostics and is not discarded automatically.",
       "forbidden": "📍 [STATUS] No permission to write to this specific calendar (e.g. read-only shared calendar).\n🚫 [ACTION] Sync was automatically suspended to prevent unauthorized modification attempts.\n✅ [GUIDANCE] Check your permissions on Google Calendar web or use 'Force Ignore' to stop syncing this item.",
       "generic": "📍 [DETAILS]\n{error}\n\n❓ [HOW TO FIX] Please check your internet connection and click 'Retry'.\nIf the issue persists, use 'Force Ignore' to remove it from the sync queue.",
       "not_found": "📍 [STATUS] This event was not found on Google Calendar (might have been deleted elsewhere).\n🛠 [ACTION] The app automatically restored it to Google or removed it locally to match current state.\n✅ [OUTCOME] Sync state restored. You can 'Clear Error' or 'Retry' to finalize.",
       "rate_limit": "📍 [STATUS] Too many sync requests sent to Google servers in a short time.\n⏳ [ACTION] The app will automatically retry after a short wait period.\n✅ [OUTCOME] This usually resolves itself after a few minutes.",
       "remote_newer": "📍 [STATUS] Google server changes are newer than your local changes.\n🛡 [ACTION] To prevent data loss, the app automatically prioritized server data and updated your local app.\n✅ [OUTCOME] Local data is now fully synced. If you want to modify it, please edit the task again.",
-      "remote_orphan": "This event exists in Google Calendar but has no matching local event.<br><br><b>Cause</b>: may have been deleted locally or created directly in Google."
+      "remote_orphan": "This event exists in Google Calendar but has no matching local event.<br><br><b>Cause</b>: may have been deleted locally or created directly in Google.<br><br><b>Action</b>: If you deleted it in the app or it is a duplicate, use <b>{button}</b> to remove it from Google Calendar. If it was created on another device or on the web, leave it as is."
     },
     "issues_action_taken": "System Action",
     "issues_auto_healed": "Auto-Healed",
@@ -1275,12 +1500,12 @@
       "scope_dialog_title_delete": "Delete Recurring Event",
       "scope_info": "This is a recurring event. Choose the scope of changes."
     },
-    "setup_disabled_guide": "Google Calendar sync is not enabled yet.\nGo to System > Calendar Integration Settings to enable.",
+    "setup_disabled_guide": "Google Calendar sync is not enabled yet.\nGo to {path} to enable it.",
     "setup_done": "Setup Complete",
     "setup_guide_msg": "Google Calendar sync is now on.\nPlease authenticate to begin syncing.",
     "setup_guide_title": "Setup Guide",
-    "setup_needed_auth_hint": "Please complete Google authentication in Calendar Integration Settings.",
-    "setup_needed_msg": "Google Calendar sync is not set up yet.\nGo to System > Calendar Integration Settings to configure.",
+    "setup_needed_auth_hint": "Complete Google authentication in the Google Calendar section.",
+    "setup_needed_msg": "Google Calendar sync is not set up yet.\nGo to {path} to set it up.",
     "setup_success": "Google Calendar synchronization enabled successfully.",
     "status": {
       "active": "Sync Active",
@@ -1305,12 +1530,12 @@
       "warning": "There are unresolved sync conflicts or failures."
     },
     "treatments": {
-      "auto_healing": "Auto-healing completed (recreated or synchronized).",
-      "manual": "Manual retry requested or action required.",
+      "auto_healing": "Auto-repaired",
+      "manual": "Check manually",
       "manual_retry": "Review the error and retry manually.",
-      "mirrored": "Forced local update to match server data.",
-      "pending_retry": "Waiting for automatic retry after a transient error.",
-      "stopped": "Sync stopped due to repeated failures. Manual fix required."
+      "mirrored": "Updated from Google",
+      "pending_retry": "Waiting to retry",
+      "stopped": "Retries stopped"
     },
     "worker": {
       "auth_error": "Authentication error: {error}",
@@ -1319,7 +1544,7 @@
       "sync_complete": "Sync complete",
       "sync_error": "Sync error: {error}\n{details}",
       "sync_failed": "Sync failed",
-      "sync_partial": "Sync complete (partial failures: push={push}, delete={delete})",
+      "sync_partial": "Sync complete (partial failures: push={push}, delete={delete}, pull={pull})",
       "sync_skipped": "Sync skipped",
       "sync_skipped_or_failed": "Sync failed or skipped"
     }
@@ -1422,15 +1647,15 @@
     "meta_no_error": "None",
     "meta_not_bound": "Not bound yet",
     "meta_not_connected": "Not connected",
-    "minutes_suffix": "min",
+    "minutes_suffix": " min",
     "open_console": "Open Google Cloud Console",
     "open_docs": "Open Setup Docs",
     "open_issues": "Open Issues",
     "open_oauth_docs": "Open OAuth Desktop Guide",
     "quick_interval_hint": "5 to 300 seconds.",
     "quick_interval_label": "Quick sync after edits",
-    "reset_confirm": "Delete saved credentials and token information for Google sync?",
-    "reset_done_body": "Google sync credentials were removed.",
+    "reset_confirm": "Disconnect your Google account?\n\nThis deletes the saved credentials and token and removes all Google calendars and subscriptions from the app. Events already imported stay in the app but no longer sync with Google, and pending deletions on Google are canceled.\n\nEvents in Google Calendar are not changed.",
+    "reset_done_body": "Google sync credentials were removed.\nCalendars removed: {cal_count}\nSubscriptions removed: {sub_count}",
     "reset_done_title": "Reset Complete",
     "reset_sync_state": "Reset Sync Cache",
     "reset_sync_state_done_body": "Cleared sync cache for {count} calendar binding(s). The next sync will run as a full rescan.",
@@ -1439,7 +1664,7 @@
     "reset_title": "Reset Connection",
     "save": "Save Settings",
     "saved_body": "Your Google sync settings have been saved.",
-    "seconds_suffix": "sec",
+    "seconds_suffix": " sec",
     "setup_eyebrow": "QUICK START",
     "setup_summary": "Use your own Google Cloud OAuth desktop credentials. Official documentation is safer and easier to keep current than a single language-specific video.",
     "setup_title": "Setup and Guidance",
@@ -1450,10 +1675,10 @@
     "test_access": "Test Calendar Access",
     "test_access_auth_needed": "Authenticate first to test calendar access.",
     "test_access_idle": "No test has been run yet.",
-    "test_access_ok": "Access confirmed: {name}",
+    "test_access_ok": "Access confirmed: {name} ({count} calendars in account)",
     "timezone_invalid": "The selected timezone could not be resolved.",
     "timezone_label": "Time zone",
-    "timezone_preview": "Current offset: {offset} |  Example timezone: {tz}",
+    "timezone_preview": "Current offset: {offset}  |  Selected time zone: {tz}",
     "timezone_search_placeholder": "City name search (e.g. Seoul)...",
     "tip_api_body": "Enable Google Calendar API before creating credentials.",
     "tip_api_title": "API",
@@ -1544,7 +1769,8 @@
     "overlay_lock": "Lock overlay",
     "overlay_lock_hint": "Lock the overlay screen",
     "overlay_unlock": "Unlock",
-    "overlay_unlock_hint": "Unlock fixed mode. (Ctrl+Shift+L)"
+    "overlay_unlock_hint": "Unlock fixed mode. (Ctrl+Shift+L)",
+    "overlay_unlock_ready": "Click to unlock"
   },
   "loop_mixer": {
     "add_drums": "Add drum KeyDeck",
@@ -1680,8 +1906,14 @@
     "locale_reset_current": "↩ Reset Current Language Override",
     "locale_reset_done": "Override file deleted. Restarting app.",
     "locale_reset_no_file": "No user override file to delete.",
-    "locale_tools": "🌐Local File Tools",
+    "locale_tools": "🌐Language File Tools",
     "locale_validate_current": "✔ Validate Current Language File",
+    "locale_validate_empty_code": "The language code is empty.",
+    "locale_validate_missing_keys": "{count} top-level keys are not overridden and use the bundled translation: {keys}",
+    "locale_validate_no_file": "No user override file exists: {path}",
+    "locale_validate_not_object": "The top-level JSON of a locale file must be an object.",
+    "locale_validate_parse_failed": "Could not read the JSON: {error}",
+    "locale_validate_passed": "Validation passed: {path}",
     "no_calendars": "No calendars",
     "opacity": "🪟Opacity",
     "open_source_info": "Open-source information",
@@ -1785,6 +2017,12 @@
     "accessible_results_hint": "Use the arrow keys to move and Enter to run.",
     "accessible_search": "Search or create commands and schedules.",
     "accessible_search_hint": "Start with > for commands, + to create, or / to search existing items.",
+    "create_schedule": "Create Schedule: {title}",
+    "default_time": "{time} (default)",
+    "desc": {
+      "directive_status": "Opens the directive tab directly.",
+      "work_management": "Opens the combined work management window."
+    },
     "exit_app": "App: Exit",
     "hint_command": "Type to search commands",
     "hint_create": "Enter creates a schedule from your text",
@@ -1799,13 +2037,26 @@
     "nlp_preview": "New: [{title}] - {date} {time}",
     "no_selection": "Press Enter to open the selected result",
     "placeholder": "Search commands, schedules, or type + to create...",
+    "recent": "Recent",
+    "recent_subtitle": "Recent - {subtitle}",
+    "record_type": {
+      "directive": "Directive",
+      "routine": "Routine",
+      "schedule": "Schedule"
+    },
     "sync_google": "Sync: Update Google Calendar now",
     "task_registered": "Registered: {title}",
     "theme_dark": "Theme: Change to Dark Mode",
     "theme_light": "Theme: Change to Light Mode",
+    "theme_system": "Theme: Use System Default",
     "title": "Command Palette"
   },
   "panel": {
+    "checklist": {
+      "locked_next": "Uncheck the later steps first",
+      "locked_previous": "Complete the previous steps first",
+      "progress_tooltip": "{done} of {total} done"
+    },
     "checklist_tooltip": "Show/Hide Checklist",
     "clock": "Clock",
     "common": {
@@ -1827,8 +2078,9 @@
     },
     "date_card": "Date Card",
     "deadline_label": "(~{deadline})",
-    "deadline_suffix": "Deadlines",
+    "deadline_suffix": " Deadlines",
     "directive": "Directives",
+    "directive_receiver_badge": "TO",
     "empty": {
       "add_directive": "Create Directive",
       "add_routine": "Create Routine",
@@ -1847,7 +2099,7 @@
       "magnet": "{key}: toggle magnet mode",
       "quick_title": "Quick help",
       "recovery_intro": "Use these controls when a panel is hidden or difficult to reach.",
-      "title": "{panel}shortcuts",
+      "title": "{panel} shortcuts",
       "topbar": "{key}: show or hide the top bar"
     },
     "magnet": {
@@ -1974,6 +2226,7 @@
   },
   "recurrence": {
     "btn_finish": "Finish",
+    "daily": "Daily",
     "finish": "Finish",
     "half_yearly": "Half-yearly",
     "last_day": "Last Day",
@@ -2034,31 +2287,26 @@
       "away_lock": {
         "description": "Immediately starts away-lock mode.",
         "label": "Away lock",
-        "menu_path": "View > Away lock",
         "tags": ["away", "lock"]
       },
       "cal_toolbar": {
         "description": "Hides or shows the calendar toolbar again.",
         "label": "Toggle calendar toolbar",
-        "menu_path": "View > Calendar toolbar",
         "tags": ["calendar", "toolbar"]
       },
       "calendar_print": {
         "description": "Previews and prints the calendar for the current or a chosen period.",
         "label": "Print calendar",
-        "menu_path": "Calendar > Options > Print",
         "tags": ["print", "printer", "PDF"]
       },
       "checklist": {
         "description": "Manages checklist templates and item structure.",
         "label": "Manage checklist",
-        "menu_path": "Tasks > Manage checklist",
         "tags": ["checklist", "template"]
       },
       "color_assign": {
         "description": "Automatically assigns colors to the selected items.",
         "label": "Auto color assignment",
-        "menu_path": "Tasks > Auto color assignment",
         "tags": ["color", "tag", "auto"]
       },
       "command_palette": {
@@ -2082,7 +2330,6 @@
       "focus_mode": {
         "description": "Turns focus mode on or off.",
         "label": "Toggle focus mode",
-        "menu_path": "View > Focus mode",
         "tags": ["focus", "pomodoro"]
       },
       "focus_pause": {
@@ -2100,55 +2347,48 @@
       "fullscreen": {
         "description": "Switches fullscreen display on or off.",
         "label": "Toggle fullscreen",
-        "menu_path": "View > Fullscreen",
         "tags": ["fullscreen"]
       },
       "help": {
         "description": "Opens the help center.",
         "label": "Shortcut guide",
-        "menu_path": "System > Shortcut guide",
         "tags": ["help", "F1"]
       },
       "layout_1": {
         "description": "Applies the default 4-panel docked layout.",
         "label": "Layout preset 1",
-        "menu_path": "View > Layout presets",
         "tags": ["layout", "preset", "docked", "1"]
       },
       "layout_2": {
         "description": "Applies a calendar-first layout.",
         "label": "Layout preset 2",
-        "menu_path": "View > Layout presets",
         "tags": ["layout", "calendar", "2"]
       },
       "layout_3": {
         "description": "Applies a task-first layout.",
         "label": "Layout preset 3",
-        "menu_path": "View > Layout presets",
         "tags": ["layout", "task", "3"]
       },
       "layout_4": {
         "description": "Applies a split-tab layout.",
         "label": "Layout preset 4",
-        "menu_path": "View > Layout presets",
         "tags": ["layout", "tab", "split", "4"]
       },
       "layout_5": {
         "description": "Applies a fully separated floating layout.",
         "label": "Layout preset 5",
-        "menu_path": "View > Layout presets",
         "tags": ["layout", "separated", "floating", "5"]
       },
       "lock_mode": {
         "description": "Switches desktop lock mode on or off.",
         "label": "Lock mode",
-        "menu_path": "View > Lock mode",
+        "menu_path": "Top bar button",
         "tags": ["lock"]
       },
       "magnet_mode": {
         "description": "Switches magnet mode, which helps align and snap panels.",
         "label": "Magnet mode",
-        "menu_path": "View > Magnet mode",
+        "menu_path": "Top bar button",
         "tags": ["magnet", "panel"]
       },
       "monitor_left": {
@@ -2166,25 +2406,21 @@
       "navigation_rail": {
         "description": "Shows or hides the quick navigation rail on the left.",
         "label": "Show quick navigation",
-        "menu_path": "View > Screen and window > Quick navigation",
         "tags": ["quick navigation", "rail", "sidebar"]
       },
       "new_directive": {
         "description": "Opens the window for entering a directive or cooperation item.",
         "label": "Register directive",
-        "menu_path": "Register > Directive",
         "tags": ["directive", "cooperation"]
       },
       "new_routine": {
         "description": "Quickly adds a recurring work routine.",
         "label": "Register routine",
-        "menu_path": "Register > Routine",
         "tags": ["routine", "task", "recurring"]
       },
       "new_schedule": {
         "description": "Opens the schedule entry window directly.",
         "label": "Add new schedule",
-        "menu_path": "Register > New schedule",
         "tags": ["schedule", "add", "register"]
       },
       "next_day": {
@@ -2220,13 +2456,11 @@
       "routine_mgr": {
         "description": "Opens the routine manager tab directly.",
         "label": "Routine manager",
-        "menu_path": "Tasks > Routine overview",
         "tags": ["routine", "manage"]
       },
       "save_layout": {
         "description": "Saves the current panel arrangement as a preset.",
         "label": "Save current layout",
-        "menu_path": "View > Layout presets > Save",
         "tags": ["layout", "preset", "save"]
       },
       "show_hide": {
@@ -2238,7 +2472,6 @@
       "sync_gcal": {
         "description": "Start synchronization for all connected calendars.",
         "label": "Sync all connected calendars",
-        "menu_path": "System > Calendars and sync",
         "tags": ["Google", "Outlook", "iCloud", "Naver", "ICS", "F5", "sync"]
       },
       "today": {
@@ -2250,13 +2483,11 @@
       "topbar": {
         "description": "Turns top bar auto-hide on or off. Turning it off pins the top bar.",
         "label": "Auto-hide top bar",
-        "menu_path": "View > Screen and window > Auto-hide top bar",
         "tags": ["menu bar", "top bar", "auto-hide", "pin", "recovery"]
       },
       "widget_mode": {
         "description": "Opens widget-only panel mode.",
         "label": "Toggle widget mode",
-        "menu_path": "View > Widget-only mode",
         "tags": ["widget", "panel"]
       }
     },
@@ -2304,24 +2535,32 @@
     "hero": {
       "quickstart": {
         "desc": "We put what you'll use right after opening the app, and what you'll reach for when pressing F1, at the very top.",
+        "eyebrow": "QUICK START",
         "title": "The most-used features come first"
       },
       "recovery": {
         "desc": "Only the keys you need most when the menu disappears or the lock state gets tangled.",
+        "eyebrow": "RECOVERY",
         "title": "Keys to try first when you're stuck"
       },
       "reference": {
         "desc": "Every shortcut organized by function group — good for scanning without searching.",
+        "eyebrow": "REFERENCE",
         "title": "Browse all shortcuts by category"
       },
       "search": {
         "desc": "Type a key name or feature name to see matching shortcuts right away.",
+        "eyebrow": "SEARCH",
         "title": "Search results"
       },
       "workflows": {
         "desc": "Shortcuts are grouped around real workflows like registering, navigating, and switching views, so you can find them by situation even if you don't know the name.",
+        "eyebrow": "CORE FLOW",
         "title": "Grouped by situation for faster finding"
       }
+    },
+    "menu_roots": {
+      "selected_item": "Right-click a selected item"
     },
     "pages": {
       "quickstart": {
@@ -2714,7 +2953,8 @@
     "already_running": "Air Calendar is already running.\n\nPlease check the tray icon in the taskbar.",
     "lang_saved_msg": "Language settings saved.\nThe app will restart to apply changes.",
     "lang_saved_title": "Language Settings",
-    "restart_failed": "Automatic restart was canceled because the app state could not be saved. Please try again."
+    "restart_failed": "Automatic restart was canceled because the app state could not be saved. Please try again.",
+    "restart_launch_failed": "The app could not restart automatically. Please start it again yourself."
   },
   "theme": {
     "custom_mode": "Custom",
@@ -2771,6 +3011,10 @@
     "focus_timer_settings": "Pomodoro Settings...",
     "focus_tools": "Focus and Lock",
     "fullscreen": "🖥Toggle Fullscreen",
+    "lock_behind_icons": "Put behind desktop icons while locked",
+    "lock_behind_icons_hint": "While locked, the calendar sits under the desktop icons like a wallpaper. Rest the pointer on the Unlock button for a moment to bring it forward and click it.",
+    "lock_click_through": "Click through while locked (use desktop)",
+    "lock_click_through_hint": "While locked, clicks reach the desktop under the calendar. Rest the pointer on the Unlock button for a moment to make it clickable.",
     "lock_mode": "🔒 Desktop Lock Mode",
     "magnet_mode": "🧲 Toggle Magnet Mode",
     "next_day": "▶ Next Day",
@@ -2787,6 +3031,7 @@
     "prev_day": "◀ Previous Day",
     "restore": "📐 Restore Window Position/Size",
     "routine_manager": "⚙️ Routine Manager",
+    "routine_settings": "⚙️ Routine Settings",
     "show_hide": "🌐 Show/Hide Overlay",
     "sync_google": "🔄Sync Google Calendar",
     "today": "📅Go to Today",
@@ -2855,15 +3100,6 @@
     "untitled": "Untitled",
     "work_start_hint": "Scroll to 9:00 AM."
   },
-  "weekday": {
-    "fri": "Fri",
-    "mon": "Mon",
-    "sat": "Sat",
-    "sun": "Sun",
-    "thu": "Thu",
-    "tue": "Tue",
-    "wed": "Wed"
-  },
   "welcome": {
     "accessible_name": "Getting started",
     "body": "Local schedules are ready immediately, and you can connect Google Calendar whenever needed.",
@@ -2879,7 +3115,7 @@
       "preset_ampm": "AM/PM 12h",
       "preset_focus": "Focus",
       "preset_full": "Full Date + Time",
-      "preset_minimal_hm": "Minimum HH:mm",
+      "preset_minimal_hm": "Minimal HH:mm",
       "preset_seconds": "With Seconds",
       "preset_timezone": "Time zone",
       "preset_weekday": "Weekday + Time",
@@ -3054,14 +3290,11 @@
       "template_hint": "Variables: {weekday} {weekday:short} {day} {date:%Y.%m.%d} {doy}\nStyle: {day|size=42|bold|color=#ff4da6} |italic |size=N\nLeave empty to use the basic mode."
     },
     "dday": {
-      "advanced_tab": "Advanced Template",
       "asset_pack": "Illustration pack:",
-      "basic_tab": "Basic",
       "clear_all": "Reset (date and template)",
       "clear_template": "Clear",
       "date_name_settings": "Set date/name...",
       "default_name": "D-Day",
-      "edit_template": "Advanced: Edit template...",
       "mode_basic": "Basic mode",
       "mode_template": "Template mode",
       "moment": "Moment:",
@@ -3084,7 +3317,7 @@
         "banner": "Banner - Left Accent Bar",
         "big": "Big - Larger Numbers",
         "compact": "Compact - Smaller Padding",
-        "default": "Default-Card",
+        "default": "Default - Card",
         "glass": "Glass - Transparent Look",
         "minimal": "Minimal - No Border",
         "neon": "Neon - Thick Border",
@@ -3095,7 +3328,7 @@
       "target_date": "Target Date:",
       "template_hint": "[ Variables ] {dday} {days} {sign} {label} {date:%Y.%m.%d} {date_short}\n[ Style ] {dday|size=60|bold|color=#ff4da6} {label|size=13|italic}\n[ Line break ] Use \\n for multiple lines\n[Empty] Basic mode (name + date on two lines)",
       "template_placeholder": "Example: {template}\n\nLeave empty to use basic mode.",
-      "toast_created": "Created a D-Day widget for",
+      "toast_created": "Created a D-Day widget for '{name}'.",
       "toast_no_date": "This schedule does not have a valid date.",
       "toast_task_missing": "Could not find the selected schedule.",
       "toast_title": "D-Day Widget"
@@ -3784,7 +4017,7 @@
         "cobalt_arcade": "Cobalt Arcade",
         "copper_dusk": "Copper Dusk",
         "cream_typewriter": "Cream Typewriter",
-        "crystal_night": "Crystal Night",
+        "crystal_night": "Midnight Crystal",
         "cyber_pulse": "Cyber Pulse",
         "desert_sand": "Desert Sand",
         "floating_glass": "Floating Glass",
@@ -4031,14 +4264,14 @@
     "text": {
       "style": {
         "banner": "Banner - Left Highlight Bar",
-        "compact": "Compact - small margins",
-        "default": "Basic - Card",
-        "glass": "Glass - transparent feeling",
-        "minimal": "Minimal - no borders",
+        "compact": "Compact - Smaller Padding",
+        "default": "Default - Card",
+        "glass": "Glass - Transparent Look",
+        "minimal": "Minimal - No Border",
         "neon": "Neon - Bold Border",
-        "pill": "Peel - rounded corners",
-        "sticky": "Sticky-Note Style",
-        "tag": "Tags - Inline Labels"
+        "pill": "Pill - Rounded Corners",
+        "sticky": "Sticky - Memo Style",
+        "tag": "Tag - Inline Labels"
       }
     },
     "usage": {
@@ -4459,6 +4692,7 @@
     "editor_height": "Default height",
     "editor_layout": "Layout",
     "editor_light": "Light base",
+    "editor_name_required": "Enter a name.",
     "editor_show_eyebrow": "Show top caption",
     "editor_show_hint": "Show guidance text",
     "editor_skin": "Color skin",
@@ -4720,13 +4954,6 @@
     "countdown_setup": "Choose a target time in Settings",
     "create_stack": "Stack selected widgets",
     "current_preview": "Current widget preview",
-    "day_fri": "Fri",
-    "day_mon": "Mon",
-    "day_sat": "Sat",
-    "day_sun": "Sun",
-    "day_thu": "Thu",
-    "day_tue": "Tue",
-    "day_wed": "Wed",
     "dday_setup": "Choose a target date in Settings",
     "delete_confirm": "Delete this workspace and its automation rules? Your actual widgets will be kept.",
     "delete_profile": "Delete",
@@ -4820,6 +5047,11 @@
     "group_time_date": "Time/Date",
     "group_widget_data": "Widget Data",
     "hint_text": "[ Time/Date ] {time:%H:%M} {time:tz=JST:%H:%M} {time:tz=UTC+9:%H:%M}\n              {date:%Y.%m.%d} {weekday} {weekday:short}\n[ Widget Data ] {stopwatch:stopwatch_0} {countdown:countdown_0} {dday:dday_0}\n[ D-Day ] {dday} (local D-Day value from this widget)\n[ App Data ] {task_count} {directive_count} {next_event} {custom_var}\n[ Conditions ] {if task_count > 0}Tasks {task_count}{else}None{/if}\n              {if countdown:countdown_0 < 1h}Due soon{else}Plenty of time{/if}",
+    "preset_body": {
+      "ending_soon": "Ending soon!",
+      "no_tasks_today": "No tasks today",
+      "tasks": "Tasks"
+    },
     "preset_clock_date": "Clock + Date",
     "preset_clock_stopwatch": "Clock + Stopwatch",
     "preset_conditional_task": "Conditional Tasks",
@@ -4839,14 +5071,14 @@
     "style": {
       "banner": "Banner - Left Accent Bar",
       "code": "Code - Code Block Style",
-      "default": "Default-Card",
+      "default": "Default - Card",
       "glass": "Glass - Transparent Look",
       "minimal": "Minimal - No Border",
       "neon": "Neon - Bright Border",
       "outlined": "Outlined - No Background",
       "pill": "Pill - Rounded Corners",
       "sticky": "Sticky - Yellow Memo",
-      "tag": "Tag-Top-right Ribbon"
+      "tag": "Tag - Top-right Ribbon"
     },
     "template_help": "Inline style: {value|size=36|bold|italic|color=#ff4da6}\nLine break: \\n e.g. {time:%H:%M|size=36|bold}\\n{date|size=12|color=#8090b0}\nCondition block: {if task_count > 0}content{else}fallback{/if} (no nesting)\nTimezone: {time:tz=JST:%H:%M} / {time:tz=UTC+9:%H:%M}",
     "var_align_center": "Center",

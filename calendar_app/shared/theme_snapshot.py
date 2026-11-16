@@ -490,6 +490,10 @@ def build_shared_ui_tokens(
             "border_soft",
             "rgba(255,255,255,0.08)" if snapshot.text_theme == "dark" else "rgba(0,0,0,0.08)",
         ),
+        "border_control": snapshot.border_tokens.get(
+            "border_control",
+            "rgba(255,255,255,0.10)" if snapshot.text_theme == "dark" else "rgba(0,0,0,0.10)",
+        ),
         "divider": snapshot.border_tokens.get(
             "divider",
             "rgba(255,255,255,0.08)" if snapshot.text_theme == "dark" else "rgba(0,0,0,0.08)",
@@ -617,6 +621,7 @@ def build_dialog_base_tokens(
         "floating_bg": panel_palette.get("floating_bg", panel_palette.get("toolbar_bg", "#1c1c23")),
         "base_hex": base.name(QColor.NameFormat.HexRgb),
         "border_soft": snapshot.border_tokens.get("border_soft", _neutral(0.10)),
+        "border_control": snapshot.border_tokens.get("border_control", _neutral(0.10)),
         "border": snapshot.border_tokens.get("border", _neutral(0.16)),
         "success_hex": success.name(QColor.NameFormat.HexRgb),
         "success_soft_bg": _rgba(success, 0.16),

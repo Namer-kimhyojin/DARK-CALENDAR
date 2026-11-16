@@ -9,6 +9,7 @@ from datetime import datetime
 import logging
 
 from calendar_app.infrastructure.db.database_unified import db_manager
+from calendar_app.infrastructure.i18n import t
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,11 @@ def _validate_import_text(value, limit, *, nullable=False, nonempty=False):
         raise ValueError("Checklist import contains invalid or oversized text")
 
 
+def default_import_name():
+    """Name stored for an imported template whose file has no name."""
+    return t("checklist_mgr.import_default_name", "가져온 체크리스트")
+
+
 def import_checklist_template(payload):
     """Validate an exported template and import all rows in one savepoint.
 
@@ -49,7 +55,7 @@ def import_checklist_template(payload):
             _validate_import_text(payload[key], MAX_CHECKLIST_METADATA_LENGTH)
     if "category" in template:
         _validate_import_text(template["category"], MAX_CHECKLIST_NAME_LENGTH, nullable=True)
-    name = template.get("name", "가져온 체크리스트")
+    name = template.get("name", default_import_name())
     description = template.get("description", "")
     checklist_type = template.get("checklist_type", "list")
     _validate_import_text(name, MAX_CHECKLIST_NAME_LENGTH, nonempty=True)
@@ -986,6 +992,226 @@ def get_all_categories():
     return [row["category"] for row in rows]
 
 
+def _default_template_samples():
+    """Return the first-run sample templates in the current UI language.
+
+    The rows are stored once, so the UI language at the first open decides their
+    text. Categories are internal identifiers, not display text.
+    """
+
+    return [
+        {
+            "name": t("checklist_mgr.seed.weekly_report.name", "주간 업무 보고"),
+            "desc": t(
+                "checklist_mgr.seed.weekly_report.desc",
+                "매주 금요일 정기적으로 실행하는 주간 보고 절차",
+            ),
+            "cat": "일반업무",
+            "items": [
+                {
+                    "text": t("checklist_mgr.seed.weekly_report.item1", "전주 업무 실적 요약"),
+                    "desc": t(
+                        "checklist_mgr.seed.weekly_report.item1_desc", "완료된 과업 및 성과 정리"
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t("checklist_mgr.seed.weekly_report.item2", "금주 업무 계획 작성"),
+                    "desc": t(
+                        "checklist_mgr.seed.weekly_report.item2_desc",
+                        "차주 주요 마일스톤 및 일정 수립",
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t(
+                        "checklist_mgr.seed.weekly_report.item3", "주요 이슈 및 건의사항 정리"
+                    ),
+                    "desc": t(
+                        "checklist_mgr.seed.weekly_report.item3_desc",
+                        "병목 현상이나 지원 필요 사항 기술",
+                    ),
+                    "req": 0,
+                },
+                {
+                    "text": t("checklist_mgr.seed.weekly_report.item4", "팀원 공유 및 피드백 반영"),
+                    "desc": t(
+                        "checklist_mgr.seed.weekly_report.item4_desc", "최종 제출 전 팀 내 리뷰"
+                    ),
+                    "req": 1,
+                },
+            ],
+        },
+        {
+            "name": t("checklist_mgr.seed.meeting_prep.name", "회의 준비 및 세팅"),
+            "desc": t(
+                "checklist_mgr.seed.meeting_prep.desc", "성공적인 회의를 위한 사전 준비 체크리스트"
+            ),
+            "cat": "일정",
+            "items": [
+                {
+                    "text": t("checklist_mgr.seed.meeting_prep.item1", "회의 목적 및 안건 확정"),
+                    "desc": t(
+                        "checklist_mgr.seed.meeting_prep.item1_desc", "Agenda 명확화 및 참석자 공유"
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t(
+                        "checklist_mgr.seed.meeting_prep.item2", "참석자 일정 확인 및 초대 전송"
+                    ),
+                    "desc": t(
+                        "checklist_mgr.seed.meeting_prep.item2_desc", "캘린더 초대장 발송 확인"
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t("checklist_mgr.seed.meeting_prep.item3", "회의실 예약 및 환경 점검"),
+                    "desc": t(
+                        "checklist_mgr.seed.meeting_prep.item3_desc",
+                        "빔프로젝터, 마이크, 다과 등 준비",
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t(
+                        "checklist_mgr.seed.meeting_prep.item4", "회의 자료 인쇄 및 사전 배포"
+                    ),
+                    "desc": t(
+                        "checklist_mgr.seed.meeting_prep.item4_desc", "참석자 숙지용 자료 전달"
+                    ),
+                    "req": 0,
+                },
+            ],
+        },
+        {
+            "name": t("checklist_mgr.seed.travel_expense.name", "출장 정산 및 보고"),
+            "desc": t(
+                "checklist_mgr.seed.travel_expense.desc", "출장 복귀 후 진행하는 행정 처리 절차"
+            ),
+            "cat": "일정",
+            "items": [
+                {
+                    "text": t("checklist_mgr.seed.travel_expense.item1", "영수증 수집 및 정리"),
+                    "desc": t(
+                        "checklist_mgr.seed.travel_expense.item1_desc",
+                        "교통비, 숙박비, 식비 등 증빙 확보",
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t("checklist_mgr.seed.travel_expense.item2", "출장 결과 보고서 작성"),
+                    "desc": t(
+                        "checklist_mgr.seed.travel_expense.item2_desc",
+                        "방문 목적 달성 여부 및 핵심 정보 요약",
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t("checklist_mgr.seed.travel_expense.item3", "ERP/경비 시스템 입력"),
+                    "desc": t(
+                        "checklist_mgr.seed.travel_expense.item3_desc", "비용 지급 신청 완료"
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t("checklist_mgr.seed.travel_expense.item4", "증빙 서류 제출"),
+                    "desc": t(
+                        "checklist_mgr.seed.travel_expense.item4_desc",
+                        "회계팀 실물 영수증 전달(해당 시)",
+                    ),
+                    "req": 0,
+                },
+            ],
+        },
+        {
+            "name": t("checklist_mgr.seed.onboarding.name", "신규 입사자 온보딩 가이드"),
+            "desc": t(
+                "checklist_mgr.seed.onboarding.desc", "팀에 합류한 신규 멤버를 위한 초기 셋팅"
+            ),
+            "cat": "일반업무",
+            "items": [
+                {
+                    "text": t("checklist_mgr.seed.onboarding.item1", "IT 장비 지급 및 계정 생성"),
+                    "desc": t(
+                        "checklist_mgr.seed.onboarding.item1_desc", "PC, 이메일, 사내망 권한 확인"
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t("checklist_mgr.seed.onboarding.item2", "부서원 인사 및 자리 안내"),
+                    "desc": t(
+                        "checklist_mgr.seed.onboarding.item2_desc", "팀 내 문화 및 주변 환경 소개"
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t("checklist_mgr.seed.onboarding.item3", "협업 툴(메신저, 위키) 초대"),
+                    "desc": t(
+                        "checklist_mgr.seed.onboarding.item3_desc",
+                        "Slack, Notion, Jira 등 접근 권한 부여",
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t(
+                        "checklist_mgr.seed.onboarding.item4", "필수 보안/윤리 교육 이수 안내"
+                    ),
+                    "desc": t(
+                        "checklist_mgr.seed.onboarding.item4_desc",
+                        "사내 규정 및 법정 필수 교육 가이드",
+                    ),
+                    "req": 1,
+                },
+            ],
+        },
+        {
+            "name": t("checklist_mgr.seed.monthly_closing.name", "월간 결산 업무"),
+            "desc": t(
+                "checklist_mgr.seed.monthly_closing.desc", "매월 말 진행되는 마감 및 분석 작업"
+            ),
+            "cat": "일반업무",
+            "items": [
+                {
+                    "text": t(
+                        "checklist_mgr.seed.monthly_closing.item1", "법인카드 사용 내역 검토"
+                    ),
+                    "desc": t(
+                        "checklist_mgr.seed.monthly_closing.item1_desc",
+                        "불일치 내역 확인 및 사유 작성",
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t("checklist_mgr.seed.monthly_closing.item2", "지출 결의서 최종 상신"),
+                    "desc": t(
+                        "checklist_mgr.seed.monthly_closing.item2_desc", "전자결재 승인 완료"
+                    ),
+                    "req": 1,
+                },
+                {
+                    "text": t(
+                        "checklist_mgr.seed.monthly_closing.item3", "예산 대비 집행 현황 분석"
+                    ),
+                    "desc": t(
+                        "checklist_mgr.seed.monthly_closing.item3_desc",
+                        "과지출 또는 미집행 항목 파악",
+                    ),
+                    "req": 0,
+                },
+                {
+                    "text": t("checklist_mgr.seed.monthly_closing.item4", "차월 예산 계획 수립"),
+                    "desc": t(
+                        "checklist_mgr.seed.monthly_closing.item4_desc",
+                        "다음 달 주요 활동 예산 배분",
+                    ),
+                    "req": 1,
+                },
+            ],
+        },
+    ]
+
+
 def seed_default_templates():
     """기본 사무 업무 템플릿 샘플 데이터 추가"""
 
@@ -1003,121 +1229,7 @@ def seed_default_templates():
     if cur.fetchone()["cnt"] > 0:
         return
 
-    # 샘플 데이터 정의
-
-    samples = [
-        {
-            "name": "주간 업무 보고",
-            "desc": "매주 금요일 정기적으로 실행하는 주간 보고 절차",
-            "cat": "일반업무",
-            "items": [
-                {"text": "전주 업무 실적 요약", "desc": "완료된 과업 및 성과 정리", "req": 1},
-                {
-                    "text": "금주 업무 계획 작성",
-                    "desc": "차주 주요 마일스톤 및 일정 수립",
-                    "req": 1,
-                },
-                {
-                    "text": "주요 이슈 및 건의사항 정리",
-                    "desc": "병목 현상이나 지원 필요 사항 기술",
-                    "req": 0,
-                },
-                {"text": "팀원 공유 및 피드백 반영", "desc": "최종 제출 전 팀 내 리뷰", "req": 1},
-            ],
-        },
-        {
-            "name": "회의 준비 및 세팅",
-            "desc": "성공적인 회의를 위한 사전 준비 체크리스트",
-            "cat": "일정",
-            "items": [
-                {
-                    "text": "회의 목적 및 안건 확정",
-                    "desc": "Agenda 명확화 및 참석자 공유",
-                    "req": 1,
-                },
-                {
-                    "text": "참석자 일정 확인 및 초대 전송",
-                    "desc": "캘린더 초대장 발송 확인",
-                    "req": 1,
-                },
-                {
-                    "text": "회의실 예약 및 환경 점검",
-                    "desc": "빔프로젝터, 마이크, 다과 등 준비",
-                    "req": 1,
-                },
-                {
-                    "text": "회의 자료 인쇄 및 사전 배포",
-                    "desc": "참석자 숙지용 자료 전달",
-                    "req": 0,
-                },
-            ],
-        },
-        {
-            "name": "출장 정산 및 보고",
-            "desc": "출장 복귀 후 진행하는 행정 처리 절차",
-            "cat": "일정",
-            "items": [
-                {
-                    "text": "영수증 수집 및 정리",
-                    "desc": "교통비, 숙박비, 식비 등 증빙 확보",
-                    "req": 1,
-                },
-                {
-                    "text": "출장 결과 보고서 작성",
-                    "desc": "방문 목적 달성 여부 및 핵심 정보 요약",
-                    "req": 1,
-                },
-                {"text": "ERP/경비 시스템 입력", "desc": "비용 지급 신청 완료", "req": 1},
-                {"text": "증빙 서류 제출", "desc": "회계팀 실물 영수증 전달(해당 시)", "req": 0},
-            ],
-        },
-        {
-            "name": "신규 입사자 온보딩 가이드",
-            "desc": "팀에 합류한 신규 멤버를 위한 초기 셋팅",
-            "cat": "일반업무",
-            "items": [
-                {
-                    "text": "IT 장비 지급 및 계정 생성",
-                    "desc": "PC, 이메일, 사내망 권한 확인",
-                    "req": 1,
-                },
-                {
-                    "text": "부서원 인사 및 자리 안내",
-                    "desc": "팀 내 문화 및 주변 환경 소개",
-                    "req": 1,
-                },
-                {
-                    "text": "협업 툴(메신저, 위키) 초대",
-                    "desc": "Slack, Notion, Jira 등 접근 권한 부여",
-                    "req": 1,
-                },
-                {
-                    "text": "필수 보안/윤리 교육 이수 안내",
-                    "desc": "사내 규정 및 법정 필수 교육 가이드",
-                    "req": 1,
-                },
-            ],
-        },
-        {
-            "name": "월간 결산 업무",
-            "desc": "매월 말 진행되는 마감 및 분석 작업",
-            "cat": "일반업무",
-            "items": [
-                {
-                    "text": "법인카드 사용 내역 검토",
-                    "desc": "불일치 내역 확인 및 사유 작성",
-                    "req": 1,
-                },
-                {"text": "지출 결의서 최종 상신", "desc": "전자결재 승인 완료", "req": 1},
-                {
-                    "text": "예산 대비 집행 현황 분석",
-                    "desc": "과지출 또는 미집행 항목 파악",
-                    "req": 0,
-                },
-                {"text": "차월 예산 계획 수립", "desc": "다음 달 주요 활동 예산 배분", "req": 1},
-            ],
-        },
-    ]
+    samples = _default_template_samples()
 
     try:
         for s in samples:

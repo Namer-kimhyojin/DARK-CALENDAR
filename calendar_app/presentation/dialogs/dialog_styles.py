@@ -1252,6 +1252,7 @@ def build_dialog_menu_stylesheet(
     theme_color: str | None = None,
     text_theme: str | None = None,
     panel_base_color: str | None = None,
+    tokens: dict | None = None,
 ) -> str:
     """A popup menu that follows the dialog it opens from, in light and dark.
 
@@ -1259,15 +1260,20 @@ def build_dialog_menu_stylesheet(
     Windows is in dark mode) but its text color from the dialog stylesheet, so a
     light dialog showed dark text on a dark menu. The family is set explicitly
     because Windows gives menus their own font instead of the application's.
+
+    ``tokens``, when given, must be the result of ``get_dialog_theme_tokens`` for
+    the same settings and theme arguments; a caller that already holds them skips
+    a second resolution.
     """
     from calendar_app.shared.typography import get_typography_scale
 
-    tokens = get_dialog_theme_tokens(
-        theme_color=theme_color,
-        text_theme=text_theme,
-        panel_base_color=panel_base_color,
-        settings=settings,
-    )
+    if tokens is None:
+        tokens = get_dialog_theme_tokens(
+            theme_color=theme_color,
+            text_theme=text_theme,
+            panel_base_color=panel_base_color,
+            settings=settings,
+        )
     metrics = get_dialog_metric_tokens(settings=settings)
     typography = get_typography_scale(settings)
     family = QGuiApplication.font().family().replace('"', "").replace("\\", "")
@@ -1388,19 +1394,30 @@ def build_dialog_stylesheet(
     settings: QSettings | None = None,
     tokens: dict | None = None,
     metrics: dict | None = None,
+    *,
+    tokens_are_complete: bool = False,
 ) -> str:
-    """Return dialog stylesheet aligned with current UI theme settings."""
+    """Return dialog stylesheet aligned with current UI theme settings.
+
+    ``tokens_are_complete=True`` promises that ``tokens`` is the complete result of
+    ``get_dialog_theme_tokens(settings=settings)``. Every role is then already in
+    ``tokens``, so a second resolution could not change the merged result and is
+    skipped. Partial token bundles must keep the default.
+    """
     # Resolve derived roles from an explicitly supplied accent before merging
     # partial bundles, so fields, tabs and primary actions remain one palette.
     if tokens and tokens.get("accent"):
         theme_color = str(tokens["accent"])
-    resolved_tokens = get_dialog_theme_tokens(
-        theme_color=theme_color,
-        text_theme=text_theme,
-        panel_base_color=panel_base_color,
-        apply_overrides=True,
-        settings=settings,
-    )
+    if tokens_are_complete and tokens:
+        resolved_tokens = {}
+    else:
+        resolved_tokens = get_dialog_theme_tokens(
+            theme_color=theme_color,
+            text_theme=text_theme,
+            panel_base_color=panel_base_color,
+            apply_overrides=True,
+            settings=settings,
+        )
     tokens = _merge_dialog_color_tokens(resolved_tokens, tokens or {})
     accent = parse_hex_color(tokens.get("accent", theme_color), "#4da6ff")
     accent_hex = accent.name(QColor.NameFormat.HexRgb)

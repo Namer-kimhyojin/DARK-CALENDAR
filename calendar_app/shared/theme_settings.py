@@ -106,10 +106,33 @@ def set_opacity_byte(settings=None, value=200):
     return normalized
 
 
+_WALLPAPER_OPACITY_FLOOR = 0.0
+
+
+def wallpaper_opacity_floor() -> float:
+    """The least panel opacity that keeps text readable on the current wallpaper."""
+    return _WALLPAPER_OPACITY_FLOOR
+
+
+def set_wallpaper_opacity_floor(value: float) -> bool:
+    """Set the wallpaper floor for this process; True when it changed.
+
+    It is never saved: the slider keeps the user's own value, and the panels
+    only become more solid while a wallpaper that needs it is showing.
+    """
+    global _WALLPAPER_OPACITY_FLOOR
+    floor = max(0.0, min(1.0, float(value)))
+    if abs(floor - _WALLPAPER_OPACITY_FLOOR) < 1e-6:
+        return False
+    _WALLPAPER_OPACITY_FLOOR = floor
+    return True
+
+
 def get_opacity_factor(settings=None, default=200, persist_normalized=False):
-    """Return normalized opacity factor in 0.0~1.0 from app settings."""
+    """Return the panel opacity factor in 0.0~1.0: the saved value, raised to the
+    wallpaper floor when the wallpaper behind the window needs it."""
     normalized = get_opacity_byte(settings, default=default, persist_normalized=persist_normalized)
-    return max(0.0, min(1.0, normalized / 255.0))
+    return max(_WALLPAPER_OPACITY_FLOOR, min(1.0, normalized / 255.0))
 
 
 def get_text_theme_and_panel_base(settings=None):

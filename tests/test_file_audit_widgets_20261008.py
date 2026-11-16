@@ -73,7 +73,7 @@ def test_restore_skips_invalid_type_and_retains_valid_instance(owner, raw_type):
     manager._create_widget = Mock(return_value=child)
     manager._attach_widget_callbacks = Mock()
     manager.restore_all()
-    assert set(manager._widgets) == {"text_0"}
+    assert [row[0] for row in manager.instance_records()] == ["text_0"]
     assert json.loads(settings.value("overlay_instances"))[0]["name"] == "memo"
 
 

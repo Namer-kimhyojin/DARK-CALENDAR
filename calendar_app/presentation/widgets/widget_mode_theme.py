@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Widget-workspace aliases for the main window's effective theme roles."""
 
+from collections import OrderedDict
+
 from PyQt6.QtGui import QColor
 
 from calendar_app.shared.color_utils import (
@@ -39,6 +41,10 @@ _SHELL_KEYS = (
     "shell_gradient_mid",
     "shell_gradient_end",
 )
+# harden_widget_readability is pure (QColor math over its two arguments and the
+# constants above), so results are memoised on the full input; ~2.4 ms per hit.
+_HARDEN_CACHE: OrderedDict = OrderedDict()
+_HARDEN_CACHE_SIZE = 16
 
 
 def main_widget_mode_tokens(settings=None) -> dict[str, str]:
@@ -170,6 +176,29 @@ def _readable(
 
 
 def harden_widget_readability(tokens: dict[str, str], base_color: str) -> dict[str, str]:
+    """Memoised :func:`_harden_widget_readability_uncached`.
+
+    Callers mutate the result (``resolve_tokens`` updates it), so both the stored
+    entry and every returned value are independent copies. Inputs holding
+    anything but strings (e.g. a mutable QColor) bypass the cache.
+    """
+    if not isinstance(base_color, str) or not all(
+        isinstance(key, str) and isinstance(value, str) for key, value in tokens.items()
+    ):
+        return _harden_widget_readability_uncached(tokens, base_color)
+    key = (tuple(sorted(tokens.items())), base_color)
+    cached = _HARDEN_CACHE.get(key)
+    if cached is not None:
+        _HARDEN_CACHE.move_to_end(key)
+        return dict(cached)
+    result = _harden_widget_readability_uncached(tokens, base_color)
+    _HARDEN_CACHE[key] = dict(result)
+    while len(_HARDEN_CACHE) > _HARDEN_CACHE_SIZE:
+        _HARDEN_CACHE.popitem(last=False)
+    return result
+
+
+def _harden_widget_readability_uncached(tokens: dict[str, str], base_color: str) -> dict[str, str]:
     """Make widget-only mode legible on any wallpaper and at any main-window opacity.
 
     The main window may be deliberately translucent and may fade its text. A

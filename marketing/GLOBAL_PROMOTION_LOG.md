@@ -335,3 +335,20 @@ Air Calendar puts a monthly calendar, local tasks and customizable widgets on yo
 Microsoft Store https://apps.microsoft.com/detail/9mxq08rf22k8?hl=en-US&gl=US
 
 계정 등록과 외부 제출은 이루어지지 않았습니다. 가입·대시보드 접근이 확보되면 중복과 제출 조건부터 확인합니다.
+
+
+## 2026-11-14 — Existing support checks and Download3K eligibility
+
+AlternativeTo 공개 등록의 언어 17개와 댓글 0개를 확인했습니다. 비공개 심사 알림은 미확인입니다. note 연결 안내는 공개 웹 조회가 막혀 질문 여부를 판단하지 않았습니다. Appinn 초안 주소는 공개 프로필만 노출했고 GeekNews 글쓰기 주소는 로그인으로 이동했습니다. 승인된 Appinn 초안과 비공개 전달의 재개 위치를 유지합니다. 신규 게시·메시지·심사 제출은 0건입니다.
+
+GitHub 공개 릴리스 v5.2.0를 확인했습니다. 연결 가이드 응답은 200, 200, 200, 200입니다. 제품 자료 유효기간 검사 오류 수는 0건입니다. 지역별 Store 가격과 설치 버전은 이번 실행에서 미확인입니다.
+
+Download3K는 개발자나 위임받은 대리인의 제출을 받으며 신규 등록에는 고정된 공개 PAD XML 주소가 필요합니다. 프랑스어·독일어·스페인어 등 지역 사이트도 안내합니다. 공개 검색에서 기존 Air Calendar 또는 Dark Calendar 항목을 찾지 못했고 로컬 docs에서도 PAD XML을 찾지 못했습니다. 사이트 내 중복 검사, Store 배포 형태 수용 여부, 정식 설치 경로 확인이 남아 있습니다. https://www.download3k.com/submit.php
+
+스페인어 검토용 제품 설명
+
+Air Calendar es una aplicación de pago para Windows que muestra un calendario mensual, tareas locales y widgets personalizables en el escritorio. Puedes organizar tus citas y tareas locales sin conectar una cuenta externa. Las conexiones a otros calendarios son opcionales y requieren la configuración de cada servicio.
+
+Página del producto en inglés — https://namer-kimhyojin.github.io/DARK-CALENDAR/index.html?lang=en
+
+위 설명은 로컬 검토 자료입니다. 향후 PAD 준비 시 공개 릴리스와 실제 설치 배포 경로를 대조하고 제품 설명과 설치 URL을 별도 필드로 입력합니다.

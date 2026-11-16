@@ -8,7 +8,6 @@ import sqlite3
 from time import monotonic
 
 from PyQt6.QtCore import QObject, Qt, QThread, QTimer, pyqtSignal
-from requests import RequestException
 
 from calendar_app.app_paths import DB_PATH, get_app_data_dir
 from calendar_app.application.calendar_sync_contract import CalendarSyncError
@@ -20,8 +19,30 @@ from calendar_app.infrastructure.calendar_sync.status import (
     save_calendar_errors,
 )
 from calendar_app.infrastructure.google_sync.common import sync_time_zone
-from calendar_app.infrastructure.outlook_sync.auth import MicrosoftAuth
-from calendar_app.infrastructure.outlook_sync.graph import GraphClient
+
+
+class _RequestsUnavailable(Exception):
+    """Stands in for RequestException until requests loads; never raised."""
+
+
+# requests and the auth/Graph client modules take ~0.15 s to import and only a sync needs them,
+# so they load on first use instead of during app start. The placeholder above keeps
+# `except RequestException` valid before that. Tests may monkeypatch these names.
+RequestException = _RequestsUnavailable
+MicrosoftAuth = None
+GraphClient = None
+
+
+def _sync_client_types():
+    """Load the Outlook client stack, filling only names that still hold a placeholder."""
+    global RequestException, MicrosoftAuth, GraphClient
+    # Static from-imports so PyInstaller still bundles these modules.
+    if RequestException is _RequestsUnavailable:
+        from requests import RequestException
+    if MicrosoftAuth is None:
+        from calendar_app.infrastructure.outlook_sync.auth import MicrosoftAuth
+    if GraphClient is None:
+        from calendar_app.infrastructure.outlook_sync.graph import GraphClient
 
 
 class OutlookWorker(QThread):
@@ -53,6 +74,7 @@ class OutlookWorker(QThread):
                     conn.close()
                 self.result.emit(self.operation, {})
                 return
+            _sync_client_types()
             auth = MicrosoftAuth(self.client_id)
             client = GraphClient(
                 auth.token(interactive=self.operation == "login", account_home_id=self.home_id),
@@ -169,6 +191,17 @@ class OutlookSyncController(QObject):
             self.changed.emit()
             return False
         account = self.settings.value("outlook_account_id", "", type=str)
+        if operation != "disconnect":
+            # Warm-up only: import on the GUI thread rather than in the worker.
+            # OutlookWorker.run() loads the same modules itself.
+            try:
+                _sync_client_types()
+            except ImportError:
+                self._failed("dependency_unavailable")
+                return False
+            except Exception:
+                self._failed("operation_failed")
+                return False
         self.status = operation
         worker = None
         try:

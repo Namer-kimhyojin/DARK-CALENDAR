@@ -2,10 +2,39 @@
 
 제품 버전은 배포 단위로 결정한다. 변경 기록·Git/CI 빌드·공개·Store·설치 상태는 별도이며 변경 기록만으로 버전을 올리지 않는다.
 
-기준 버전: `3.8.1` · 현재 제품 버전: **`5.2.0`**
+기준 버전: `3.8.1` · 현재 제품 버전: **`5.5.1`**
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.5.1 | 2026-11-16T16:02:08.515986+09:00 | change | 다중 선택·범위 선택 표시, 패널 투명도 일관성, 상단 버튼 정리, 패널 툴팁 테마, 바탕화면 고정 클릭 통과·아이콘 뒤로 옵션과 잠금 해제 개선 | `ui-feedback-lock-20261116` |
+| 5.5.1 | 2026-11-16T07:17:51.113395+09:00 | change | 결정 반영: 진주빛·종이 아이보리 등 어두운 글자 위젯의 흐린 글자 가독성 보정, 다른 날을 보며 완료한 그날 마감 루틴 유지, KeyDeck 테마 이름 Crystal Night → Midnight Crystal, 지시 그룹 배지·메뉴를 수신자 기준으로 통일 | `widget-owner-decisions-20261116` |
+| 5.5.1 | 2026-11-15T22:28:29.642688+09:00 | change | 위젯 체크 해제 뒤 실행 취소가 원래 완료 시각을 되돌리도록 수정: 다른 날 완료한 지시·루틴이 실행 취소 뒤 오늘 완료한 항목으로 위젯에 나타나던 결함 | `widget-undo-completed-at-20261115` |
+| 5.5.1 | 2026-11-15T21:29:06.510532+09:00 | change | 위젯 결정 반영: 위젯 완료 체크 해제는 진행 중으로 저장하고 실행 취소는 진행 중을 거쳐 복원, 지시 목록이 오래된 완료 지시 200개에 밀려 오늘·기한 지남·마감 없는 지시를 빠뜨리던 결함 수정, 완료 포함일 때 그날 완료한 지시(완료 시각 컬럼 추가)·그날 마감 루틴 유지, 루프 믹서 콤보 첫 열기 행 겹침 수정, 바탕화면 위젯이 앱 테마 색을 따르고 테마 변경 시 바로 다시 그림, 꺼 둔 위젯은 처음 쓸 때 생성 | `widget-decisions-20261115` |
+| 5.5.1 | 2026-11-15T17:29:59.597734+09:00 | change | 위젯 실행 속도 개선: 위젯 전용 모드 열기·첫 위젯·날씨 첫 화면·복원·앱 시작 단축, 위젯 모드 완료 체크 멈춤·시작 중 패널 중복 렌더·복원 날씨 '--' 표시 수정, 위젯 전용 모드에 지시 업무가 표시되지 않던 결함과 위젯 지시 삭제·선택·상태 보고 오류 수정 | `widget-launch-speed-20261115` |
+| 5.5.1 | 2026-11-14T09:53:46.774482+09:00 | store | Submit verified Air Calendar 5.5.1 x64 as Store Submission 35; preserve 453 listing rows and report pre-processing separately from publication. | `store-5.5.1-submission-35-20261114` |
+| 5.5.1 | 2026-11-14T08:33:26.562629+09:00 | change | Include the verified publication date in the 5.5.1 release checklist metadata contract. | `github-5.5.1-published-date-20261114` |
+| 5.5.1 | 2026-11-14T08:29:20.511268+09:00 | change | Refresh the homepage script URL so cached release notices display the current 5.5.1 publication and pending Store submission. | `github-5.5.1-publication-cache-20261114` |
+| 5.5.1 | 2026-11-14T08:26:13.646458+09:00 | change | Reflect the verified 5.5.1 GitHub publication and keep the Store status explicitly awaiting submission. | `github-5.5.1-publication-20261114` |
+| 5.5.1 | 2026-11-14T08:22:58.700121+09:00 | change | Pin the GET-only hosted public asset verifier to the exact 5.5.1 release, source commit, native run and six asset hashes. | `release-5.5.1-public-readback-20261114` |
+| 5.5.1 | 2026-11-14T08:08:57.978385+09:00 | change | Provide libEGL for Linux encoding checks and isolate the Windows sound import in the Qt popup lifetime regression. | `release-5.5.1-ci-environment-20261114` |
+| 5.5.1 | 2026-11-14T08:00:22.606048+09:00 | release | Release the completed UI and keyboard accessibility improvements with canonical localized guidance and accumulated reliability fixes. | `release-5.5.1-20261114` |
+| 5.5.0 | 2026-11-14T07:53:38.048041+09:00 | change | Canonicalize UI accessibility and draft confirmation translations; localize 17 languages and track review status. | `uiux-release-localization-20261114` |
+| 5.5.0 | 2026-11-14T07:42:48.984285+09:00 | release | Ship the complete current Air Calendar source with UI/UX, localization, synchronization and KeyDeck improvements | `release-5.5.0-20261114` |
+| 5.3.0 | 2026-11-14T07:41:17.685311+09:00 | change | Apply AST-identical calendar renderer formatting before the 5.5.0 release | `release-5.5.0-formatting-20261114` |
+| 5.3.0 | 2026-11-14T07:33:48.763306+09:00 | change | Record canonical locale paths for the six new UI/UX draft and keyboard messages | `uiux-improvements-20261114-locales` |
+| 5.3.0 | 2026-11-14T07:33:04.158056+09:00 | change | Improve monthly calendar accessibility and small-window scrolling; protect unsaved task drafts, compact schedule editor and align footer buttons | `uiux-improvements-20261114` |
+| 5.3.0 | 2026-11-14T04:03:13.298955+09:00 | change | 텍스트 위젯 도움말 예시의 한국어 오타 수정(곳 마감 → 곧 마감) | `i18n-ko-typo-20261114` |
+| 5.3.0 | 2026-11-14T04:01:50.602545+09:00 | change | 다국어 E: 16개 언어 문맥 번역 초안(검토 대기), 용어집, 번역 도구 문맥·줄바꿈 보존. 원문 수정: 도움말 메뉴 경로를 실제 메뉴 키에서 생성, Google 설정 안내 경로, 개수·날짜 문장 키, 영어 원문 오타, 패널 도움말 제목 | `i18n-e-20261114` |
+| 5.3.0 | 2026-11-14T03:15:36.150362+09:00 | change | 도움말 콘텐츠의 높이가 초기 창 크기를 늘리지 않도록 스크롤 영역 배치 조정 | `maintenance-20261114-help-center-scroll-page-height` |
+| 5.3.0 | 2026-11-14T03:15:34.378398+09:00 | change | 러시아어 끌기 안내를 짧게 정리해 복사와 이동 설명을 한 줄에 표시 | `maintenance-20261114-russian-drag-hint-width` |
+| 5.3.0 | 2026-11-14T03:15:32.563671+09:00 | change | Windows 테마에서 일정 선택 상자의 긴 문구가 표시 폭을 넘지 않도록 줄임 처리 | `maintenance-20261114-task-selector-native-label-fit` |
+| 5.3.0 | 2026-11-13T23:33:04.107608+09:00 | change | 다국어 C: 영어·한국어 원문 정리, 새 번역 키 222개, 하드코딩 문자열 t() 전환, 남은 destroyed lambda 4곳 정리, 번역 도구의 파일 필터 보호 | `i18n-c-20261113` |
+| 5.3.0 | 2026-11-13T21:19:02.922053+09:00 | change | destroyed 신호에 연결한 정리 함수를 공용 도우미(qt_lifetime)로 옮김: GC로 수거된 동기화 문제 알림 창이 사라지고 이후 알림이 다시 뜨지 않던 문제, 날씨 요청·루프 믹서·대화상자 정리 중 강제 종료 위험 | `destroyed-hooks-20261113` |
+| 5.3.0 | 2026-11-13T20:24:58.642554+09:00 | change | i18n-abd-20261113 기록의 파일 목록 정정: 이름 끝에 줄바꿈 문자()가 붙어 68개 파일이 등록되지 않았던 것을 같은 변경 내용으로 다시 등록 | `i18n-abd-20261113-files` |
+| 5.3.0 | 2026-11-13T20:24:08.687624+09:00 | change | 다국어 점검 후속(A·B·D): Qt 기본 버튼 번역 우선, 요일·월 이름을 Qt 로케일에서, 기본 캘린더 이름 번역, 글꼴 기본값·라벨 폭, 19개 언어 파일 기계적 수정, 번역 감사 기준선, 대화상자 수명 정리 슬롯이 GC에 지워져 테스트가 강제 종료되던 문제 | `i18n-abd-20261113` |
+| 5.3.0 | 2026-11-13T11:44:35.448539+09:00 | change | 하위 페이지 보라색 테마와 고해상도 아이콘 통일 및 언어 선택 목록 개선 | `site-violet-subpages-20261113` |
+| 5.3.0 | 2026-11-13T11:31:48.390528+09:00 | change | 앱 깃털 아이콘에 맞춘 보라색 홈페이지 테마 및 고해상도 아이콘 적용 | `homepage-violet-feather-20261113` |
+| 5.3.0 | 2026-11-13T11:14:23.306234+09:00 | release | 5.3.0: KeyDeck 터치·오디오 반응, 루프 믹서 녹음 개선, process형 체크리스트, 전역 창 단축키, 동기화 안전장치, 감사 후속 수정 | `release-5.3.0-20261113` |
 | 5.2.0 | 2026-11-13T11:04:45.093293+09:00 | change | 남은 실패·한계 정리: 24pt 레이아웃·버튼 글자색·날짜 카드 글꼴 회귀 수정, 중국어 번역 보충, ICS 조회 스레드 상한, 덱 삭제 시 오디오 장치 해제, 복원 세션 사전 디코딩 | `audit-20261113-remaining` |
 | 5.2.0 | 2026-11-13T10:21:30.868350+09:00 | change | 창 표시/숨김 전역 단축키를 Office 리본 접기(Ctrl+F1)와 겹치지 않는 Ctrl+Alt+Shift+F1로 변경 | `show-hide-hotkey-20261113` |
 | 5.2.0 | 2026-11-13T10:19:31.522625+09:00 | change | 홈페이지 배치 시연 카드와 화면 미리보기의 테마 색상 연결 | `homepage-theme-surfaces-20261113` |

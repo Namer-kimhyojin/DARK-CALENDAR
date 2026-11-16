@@ -11,13 +11,20 @@ from PyQt6.QtWidgets import QApplication
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
+from calendar_app.presentation.main_window.wallpaper_contrast import (
+    ADAPTIVE_WALLPAPER_KEY,
+    adaptive_wallpaper_enabled,
+    refresh_wallpaper_contrast,
+)
 from calendar_app.presentation.theme.style_builder import (
     build_global_stylesheet,
     build_tooltip_stylesheet,
 )
 from calendar_app.shared.color_utils import derive_text_palette, parse_hex_color
+from calendar_app.shared.qt_lifetime import call_when_destroyed
 from calendar_app.shared.theme_settings import get_opacity_byte, set_opacity_byte
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
+from calendar_app.shared.typography import DEFAULT_UI_FONT
 from calendar_app.shared.value_parsers import as_int
 
 logger = logging.getLogger(__name__)
@@ -28,7 +35,7 @@ def build_ui_font(family, size):
 
     available_families = set(QFontDatabase.families())
     fallback_family = (
-        QApplication.instance().font().family() if QApplication.instance() else "Segoe UI"
+        QApplication.instance().font().family() if QApplication.instance() else DEFAULT_UI_FONT
     )
     safe_family = (
         family if family in available_families or not available_families else fallback_family
@@ -75,8 +82,9 @@ class MainWindowUiActionsMixin:
         self.overlay_manager.set_app_data_provider(self._get_overlay_app_data)
 
         # 진짜 첫 실행(저장된 키 없음)에만 기본 위젯 생성 — 사용자가 모두 삭제한 경우 제외
-        if not self.overlay_manager.all_instances() and not getattr(
-            self.overlay_manager, "_had_saved_instances", False
+        if (
+            not getattr(self.overlay_manager, "_had_saved_instances", False)
+            and not self.overlay_manager.instance_records()
         ):
             self.overlay_manager.add_instance("clock")
             self.overlay_manager.add_instance("stopwatch")
@@ -109,7 +117,7 @@ class MainWindowUiActionsMixin:
 
         dlg = OverlayManagerDialog(self.overlay_manager, parent=self)
         self._widget_manager_dlg = dlg
-        dlg.destroyed.connect(lambda: setattr(self, "_widget_manager_dlg", None))
+        call_when_destroyed(dlg, setattr, self, "_widget_manager_dlg", None)
         dlg.show()  # non-modal — 메인 창 조작하면서 동시에 사용 가능
 
     def create_dday_widget_for_task(self, task_id: int):
@@ -123,8 +131,8 @@ class MainWindowUiActionsMixin:
         if not task:
             if hasattr(self, "show_toast"):
                 self.show_toast(
-                    t("widget.dday.toast_title", "D-Day Widget"),
-                    t("widget.dday.toast_task_missing", "Could not find the selected schedule."),
+                    t("widget.dday.toast_title", "D-Day 위젯"),
+                    t("widget.dday.toast_task_missing", "선택된 일정을 찾을 수 없습니다."),
                 )
             return
 
@@ -133,8 +141,8 @@ class MainWindowUiActionsMixin:
         if not target_date.isValid():
             if hasattr(self, "show_toast"):
                 self.show_toast(
-                    t("widget.dday.toast_title", "D-Day Widget"),
-                    t("widget.dday.toast_no_date", "This schedule does not have a valid date."),
+                    t("widget.dday.toast_title", "D-Day 위젯"),
+                    t("widget.dday.toast_no_date", "이 일정에 유효한 날짜가 없습니다."),
                 )
             return
 
@@ -153,10 +161,10 @@ class MainWindowUiActionsMixin:
 
         if hasattr(self, "show_toast"):
             self.show_toast(
-                t("widget.dday.toast_title", "D-Day Widget"),
+                t("widget.dday.toast_title", "D-Day 위젯"),
                 t(
                     "widget.dday.toast_created",
-                    "Created a D-Day widget for '{name}'.",
+                    "D-Day 위젯이 생성되었습니다: {name}",
                     name=task_name,
                 ),
             )
@@ -580,6 +588,7 @@ class MainWindowUiActionsMixin:
             current_text_opacity=as_int(
                 self.settings.value("text_opacity", 255), 255, minimum=0, maximum=255
             ),
+            current_adaptive_wallpaper=adaptive_wallpaper_enabled(self.settings),
             current_text_primary=current_text_primary,
             current_text_secondary=current_text_secondary,
             current_text_muted=current_text_muted,
@@ -646,6 +655,9 @@ class MainWindowUiActionsMixin:
         text_opacity_getter = getattr(dlg, "selected_text_opacity", None)
         if callable(text_opacity_getter):
             self.settings.setValue("text_opacity", text_opacity_getter())
+        adaptive_getter = getattr(dlg, "selected_adaptive_wallpaper", None)
+        if callable(adaptive_getter):
+            self.settings.setValue(ADAPTIVE_WALLPAPER_KEY, bool(adaptive_getter()))
         # Until a border is chosen the app keeps its neutral lines; once chosen,
         # border color and border opacity both apply app-wide.
         border_source = getattr(dlg, "selected_border_source", lambda: "")()
@@ -685,6 +697,9 @@ class MainWindowUiActionsMixin:
         set_dialog_token_overrides(dlg.selected_dialog_color_overrides(), self.settings)
         set_dialog_metric_overrides(dlg.selected_dialog_metric_overrides(), self.settings)
 
+        # The wallpaper check follows the new theme and the option just saved.
+        self._wallpaper_contrast_key = None
+        refresh_wallpaper_contrast(self)
         # 모든 값이 저장된 후 한 번만 UI 갱신
         if hasattr(self, "apply_theme_settings"):
             self.apply_theme_settings()

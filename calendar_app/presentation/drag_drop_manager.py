@@ -18,6 +18,12 @@ from PyQt6.QtGui import (
 
 from calendar_app.infrastructure import task_drop_service
 from calendar_app.infrastructure.db import task_repo
+from calendar_app.shared.typography import fitted_text_width
+
+# The hint line fits Korean in 137px. Longer translations (vi 169px at 8pt) widen
+# the card by up to the growth cap; past it the hint is elided.
+_HINT_WIDTH = 137
+_HINT_MAX_GROWTH = 48
 
 
 def _safe_task_ids(widget, task_id):
@@ -81,7 +87,18 @@ def build_task_drag_pixmap(task_ids, task_map=None):
     tokens = get_ui_tokens()
     count = max(1, len(ids))
 
-    width, height = 252, 86
+    hint_text = t("drag.hint_copy", "Ctrl: 복사  /  기본: 이동")
+    hint_font = _drag_font(8)
+    hint_metrics = QFontMetrics(hint_font)
+    hint_width = fitted_text_width(
+        hint_metrics,
+        [hint_text],
+        minimum=_HINT_WIDTH,
+        maximum=_HINT_WIDTH + _HINT_MAX_GROWTH,
+    )
+    hint_text = hint_metrics.elidedText(hint_text, Qt.TextElideMode.ElideRight, hint_width)
+
+    width, height = 252 + hint_width - _HINT_WIDTH, 86
     pixmap = QPixmap(width, height)
     pixmap.fill(Qt.GlobalColor.transparent)
 
@@ -132,9 +149,9 @@ def build_task_drag_pixmap(task_ids, task_map=None):
 
     first_task = tasks.get(ids[0], {}) if ids else {}
     if count == 1:
-        title = str(first_task.get("name") or "").strip() or "1개 일정"
+        title = str(first_task.get("name") or "").strip() or t("drag.single_untitled", "1개 일정")
     else:
-        title = f"{count}개 일정"
+        title = t("drag.count_title", "{count}개 일정", count=count)
 
     title_font = _drag_font(11, QFont.Weight.DemiBold)
     title_metrics = QFontMetrics(title_font)
@@ -147,13 +164,11 @@ def build_task_drag_pixmap(task_ids, task_map=None):
         title,
     )
 
-    hint_text = t("drag.hint_copy", "Ctrl: 복사  /  기본: 이동")
-    hint_font = _drag_font(8)
     painter.setFont(hint_font)
     painter.setPen(text_secondary)
     _ic(ICON.NAV_NEXT, color=text_secondary.name()).paint(painter, QRect(72, 49, 12, 12))
     painter.drawText(
-        QRect(89, 44, 137, 22),
+        QRect(89, 44, hint_width, 22),
         Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
         hint_text,
     )

@@ -95,11 +95,16 @@ manager.hide_instance(inst_id)
 manager.toggle_instance(inst_id)
 manager.instances_of(widget_type)      # → [(id, name, widget), ...]
 manager.all_instances()                # → [(id, name, type, widget), ...]
-manager.restore_all()                  # 앱 시작 시 호출
+manager.instance_records()             # → [(id, name, type, enabled), ...] 위젯을 만들지 않음
+manager.live_instances()               # → 이미 만든 위젯만 [(id, name, type, widget), ...]
+manager.restore_all()                  # 앱 시작 시 호출, 꺼 둔 인스턴스는 처음 쓸 때 만든다
 manager.save_all()                     # 앱 종료 시 호출 (변경 시 자동 저장)
+manager.refresh_theme()                # 테마 적용 후 호출 — 이미 만든 위젯만 다시 그림
 ```
 
 **영속화**: QSettings `"overlay_instances"` 키에 JSON으로 저장.
+
+- 꺼 둔(`enabled=false`) 저장 인스턴스는 시작할 때 만들지 않고 `_pending`에 둡니다. 저장 목록과 `instance_records()`에는 그대로 남습니다. `show_instance`·`toggle_instance`·`get_widget`·`all_instances`·`instances_of`(그 종류만)·`duplicate_instance`(원본)·`show_all`에서 처음 만들고, `hide_instance`·`hide_all`·`remove_instance`·`rename_instance`는 만들지 않습니다. `widget_registry()`는 Text 템플릿이 값을 읽는 스톱워치·카운트다운·D-Day만 만들고, `refresh_all_texts()`는 그 단계에서 갱신할 Text 위젯이 있을 때만 registry를 만듭니다. 켜진 Text 위젯이 있으면 시작 직후 첫 갱신에서 이 세 종류가 만들어집니다. 시작·배경 경로(위젯 메뉴, 첫 실행 판단, 스택 복원·이름, 작업 공간 런타임, 자리비움 해제, 루프 믹서 입력 목록)는 `instance_records()`/`live_instances()`를 써서 숨긴 위젯을 만들지 않습니다. 단, 스택 멤버는 `stacks.refresh()`가 `get_widget()`으로 가져오므로 꺼 둔 멤버도 시작할 때 만들어집니다(스택을 만들 때 멤버를 켜므로 드묾). 새 코드에서 이름·종류·켜짐만 필요하면 `instance_records()`, 이미 만든 위젯만 필요하면 `live_instances()`를 쓰고, `all_instances()`는 모든 위젯이 실제로 필요할 때만 씁니다. 나중에 만든 위젯은 현재 고정 상태를 받고, `shutdown()` 뒤에는 만들지 않습니다. 만들기에 실패하면 시작 시 복원 실패처럼 저장 목록에서 빼고 리스너에 알려, 관리 허브(갤러리 포함)가 그 행을 바로 지웁니다. 관리 허브·갤러리·바탕화면 배치 대화상자·작업 공간 저장/적용·스택 만들기는 모든 위젯을 만들므로, 세션에서 허브를 처음 열 때 숨긴 위젯 수만큼 느려집니다. 회귀 검증: `tests/test_overlay_lazy_disabled_restore.py`.
 
 ## 설정 prefix 규칙
 
@@ -111,6 +116,8 @@ manager.save_all()                     # 앱 종료 시 호출 (변경 시 자�
 ```
 
 `_SettingsProxy`를 통해 접근 — 직접 `QSettings`에 접근하지 말 것.
+
+- 앱 전체 설정(테마 색·글자 테마·패널 기본색·글자 불투명도·dialog token·타이포그래피)은 `_real_settings()`로 읽습니다. proxy(`_s()`)로 읽으면 `oi_clock_0_theme_color`처럼 접두사가 붙어 항상 기본값이 됩니다. 인스턴스 키만 `_get`·`_set`·proxy로 접근합니다. 회귀 검증: `tests/test_overlay_app_theme.py`.
 
 ## 새 위젯 타입 추가 절차
 
@@ -127,6 +134,7 @@ manager.save_all()                     # 앱 종료 시 호출 (변경 시 자�
    }
    ```
 3. `app_initializer.py`에서 `init_overlay_manager()` 확인
+4. `overlay_widgets.py`의 `__getattr__`에 새 클래스 이름의 정적 import 분기를 추가합니다. 위젯 모듈은 그 종류를 처음 만들 때(`_create_widget`) 불러오고, 위젯 메뉴는 열릴 때(`aboutToShow`) 다시 만듭니다. 회귀 검증: `tests/test_overlay_lazy_widget_import.py`.
 
 ## 위젯 베이스 패턴
 
@@ -157,6 +165,8 @@ class OverlayXxxWidget(OverlayBaseWidget):
 - 기존 사용자의 글꼴·색상·투명도 또는 `display_style` 값이 있으면 외관을 덮어쓰지 않고 `custom`으로 이관합니다. 외관 설정이 없는 새 위젯만 `pure_type`을 기본 적용합니다.
 - 새 프리셋은 모든 위젯에서 의미가 같은 완결된 외관 토큰 세트로 추가하고, 특정 위젯의 시간/날짜/상태 표시 로직을 포함하지 않습니다.
 - `pure_type`은 글자만 남기는 프리셋입니다. 배경과 테두리 알파를 0으로 저장하고 `background_type=transparent`로 그라데이션 합성도 차단하며, 조작 가능한 투명 영역은 기존 입력 표면 처리로 유지합니다.
+- 템플릿 색 별칭(`accent`·`muted` 등), 날짜 카드의 강조·토·일 색, 저장 색이 없는 날짜 카드의 글자·바탕·테두리는 앱 테마를 따릅니다(`_overlay_theme_snapshot`). 기본은 앱 테마 그대로입니다. 위젯 글자 톤(lightness ≥ 0.5면 밝음)과 앱 테마의 기본 글자(글자 불투명도 적용 후 `text_primary`) 톤이 반대일 때만 위젯 글자 톤에 맞는 글자 테마의 읽기·상태 역할을 씁니다. 밝은 글자 위젯은 라이트 모드(`text_theme=light`, 시스템이 라이트일 때의 `auto`, 어두운 custom 글자 테마)에서 다크 모드(`text_theme=dark`) 역할을, 어두운 글자 프리셋(Pearl Mist·Paper Ivory)은 다크 모드·밝은 custom 글자 테마에서 라이트 모드(`text_theme=light`) 역할을 씁니다(흐린 글자 대비 약 1.0 → 4.3). 이때 사용자 강조색은 유지하고, 계열 강조색(`appearance_accent_source=family`)은 그 톤 쪽 값을 씁니다. 프리셋이 저장한 글자·배경·테두리 색은 덮어쓰지 않으며, 주간 띠의 평일 칸은 이 스냅샷의 `text_primary`를 씁니다.
+- 테마를 적용하면(`apply_theme_settings`) `overlay_manager.refresh_theme()`가 이미 만든 위젯(`_widgets`)의 `_apply_appearance()`만 다시 실행하고, 만든 텍스트 위젯이 있으면 `refresh_all_texts()`를 fast·med·slow 단계로 한 번씩 불러 `{task_count}` 같은 실시간 값을 다시 넣습니다. 위치·크기는 유지하고, 한 위젯에서 예외가 나면 로그만 남기고 나머지를 계속하며, 종료(`shutdown`) 뒤에는 실행하지 않습니다. 아직 만들지 않은 숨은 위젯은 처음 만들 때 현재 테마를 받습니다. 런처 덱(KeyDeck)은 앱 테마를 읽지 않습니다. 회귀 검증: `tests/test_overlay_app_theme.py`.
 
 ### 공통 글자 그림자
 
@@ -220,6 +230,8 @@ class OverlayXxxWidget(OverlayBaseWidget):
 - `weather_designs.py`의 28개 디자인(기존 24개와 프리미엄 4개)은 표시 템플릿·공통 외관·일러스트·모양을 함께 적용합니다. 기존 13개 공통 외관 프리셋의 의미와 독립 일러스트 선택 동작은 유지합니다.
 - 우클릭 및 기본 설정의 디자인 버튼은 `weather_design_dialog.py`의 검색·분류·실제 미리보기 갤러리를 엽니다. 설정창 안에서 선택하면 초안만 바뀌고 부모 설정 저장 시 반영합니다. 갤러리 자체는 설정이나 네트워크에 쓰지 않습니다.
 - 날씨 기본 표시 템플릿은 20개입니다. 디자인 적용은 도시·온도 단위·갱신 주기·날씨 캐시·위치·그림자 설정을 유지하고, 모양 전환은 공통 `_set_widget_shape` 정책을 따릅니다. 현재 선택 표시에는 저장된 디자인 ID보다 실제 템플릿·외관·일러스트·모양의 일치를 사용합니다.
+- 복원·재표시 때 좌표·단위가 같은 인스턴스 날씨 캐시가 만료되었으면 요청을 보내면서 그 예보를 `불러오는 중` 상태로 먼저 표시하고, 응답·오류 후 기존 규칙대로 갱신합니다. 다른 좌표·단위의 캐시와 마지막 예보 시점이 이미 지난 캐시(`_forecast_expired`)는 먼저 표시하지 않습니다.
+- 좌표 캐시가 없어 GeoNames 도시 조회(GUI 스레드에서 약 0.2초)가 필요한 새로 표시된 날씨 위젯은 `불러오는 중` 화면을 먼저 그리고 첫 페인트 직후(0ms 타이머) 조회합니다. 페인트가 오지 않으면 `_FIRST_PAINT_FALLBACK_MS`(2초) 뒤 조회하며, 비활성화되면 `_cancel_deferred_lookup()`으로 취소하고 조회 직전에 요청 키·도시가 바뀌었으면 건너뜁니다. 회귀 검증: `tests/test_weather_first_paint_order.py`.
 
 ### 프리미엄 날씨 카드와 움직임
 
@@ -231,6 +243,7 @@ class OverlayXxxWidget(OverlayBaseWidget):
 - `움직이는 날씨 · GIF`는 `Assets/weather/animations`의 날씨별 13개 GIF를 재생합니다. 현재 날씨를 읽고 같은 장면의 정지 프레임을 미리 그린 뒤, 위젯 또는 선택한 디자인 미리보기가 보일 때 재생합니다. 사용자 그림을 먼저 확인하고, 날씨를 아직 모르면 기본 일러스트로 표시합니다.
 - 배경·글자·시간별 예보를 한 번 그린 뒤 프레임마다 그림 영역만 갱신합니다. 아트 캐시는 DPR을 포함해 최대 24MiB로 제한하고 프리미엄 크기 조절은 기존 HTML 글꼴 이진 탐색을 실행하지 않습니다.
 - `infrastructure/weather/request_pool.py`는 같은 좌표의 요청과 원본 응답을 공유합니다. 단위는 위젯별로 변환하고 한 위젯의 취소는 다른 위젯의 요청을 중단하지 않습니다. `Expires`·조건부 요청과 기존 인스턴스별 디스크 캐시를 유지합니다.
+- 날씨 로딩·오류 문구 크기는 앱 글꼴 크기와 관계없이 기본 단계(`DEFAULT_FONT_PT`, 14px)로 고정합니다.
 - 검증: `tests/test_weather_premium.py`와 기존 날씨 회귀. 격리 렌더링: `.venv/Scripts/python.exe scripts/validate_weather_premium.py`. 사용자 설정 보존·외부 요청 0회·샘플 데이터 여부를 결과 JSON에 남깁니다.
 
 ### 날짜·D-Day 장식 팩
@@ -296,15 +309,17 @@ class OverlayXxxWidget(OverlayBaseWidget):
 - 루프 믹서 출력은 20ms 블록·버퍼 3개를 유지하고 `CALLBACK_EVENT` 이벤트로 깨어난다(`stop()`도 이벤트를 깨운다). 헤더 준비·해제·쓰기·위치 호출과 녹음 중 블록마다 하는 마이크 버퍼 재등록(`waveInAddBuffer`)은 GIL을 놓지 않고(x64·ARM64, 32비트는 기존처럼 놓음), 열기·초기화·닫기는 놓는다. 이벤트 핸들은 `waveOutClose`가 성공한 뒤에만 닫고, 정리에 실패하면 백엔드와 함께 보존한다(`_DRIVER_UNSAFE`). 출력 정지 판정 1초는 실제로 기다린 시간만 세며, 절전 복귀처럼 시계가 크게 뛰면 다시 센다.
 - 마이크는 녹음할 때만 보조 스레드에서 열고(`waveInOpen`·버퍼 준비), 준비되면 오디오 루프가 넘겨받는다. 녹음 중 장치 오류는 정지와 같이 그때까지의 녹음을 남기고 `audio_device_error_take_saved`로 알린다. 녹음 위치는 출력 장치에 쌓인 프레임만큼(마이크는 입력 지연을 더해) 앞당겨 들린 자리에 기록하며, 한 테이크 안에서는 첫 소리 때 정한 값을 유지한다.
 - 키덱은 미리 불러올 때 소리 목록을 `set_keydeck_sounds()`로 알리고, 그 키덱이 연결된 믹서는 오디오 스레드 밖에서 미리 디코딩한다. 세션·프로젝트를 불러올 때와 재생을 시작할 때도 연결된 키덱이 알린 소리를 디코딩한다. 오디오 스레드는 디코딩하지 않으며, 아직 준비되지 않은 타격은 0.25초 안에 준비되면 재생하고 아니면 버린다.
+- 루프 믹서 콤보 8개(루프 길이·마이크·트랙 입력 소스 6개, `TouchMixerComboBox`)의 팝업 목록 스타일시트(행 최소 44px)와 터치 스크롤 제스처는 위젯을 만들 때가 아니라 처음 열 때 `showPopup()`에서 한 번만 적용한다(`_popup_prepared`). 만들 때 적용하면 믹서의 지연된 첫 polish 중에 44px 규칙 없이 행이 배치되어, 다음 외형 재적용 전까지 50px 행이 겹쳐 보인다(Windows 11 스타일에서 30–34px 간격). 팝업은 가상 함수 `showPopup()`으로만 열리므로(마우스·F4·Alt+↓·Space는 테스트로 확인, 접근성 열기 동작은 Qt 소스 기준) `QComboBox.showPopup(combo)` 직접 호출이나 `setView()`로 이 재정의를 우회하지 않는다. `before_popup`(입력 소스 목록 갱신)은 준비보다 먼저 실행한다. 회귀: `tests/test_loop_deck_launch_perf.py`.
 - Studio의 초안·실행 취소·적용과 위젯의 닫을 때 저장 계약을 유지한다. 전체 덱 공유는 네 트랙의 사용자 WAV 스냅샷을 함께 내장/복원하고 페이지 가져오기는 수신 덱의 단일 녹음과 루프를 모두 보존한다.
 - 회귀는 `tests/test_beatmaker_looper.py`, `tests/test_keydeck_looper_ui.py`, `tests/test_keydeck_looper_layouts.py` 및 기존 녹음/KeyDeck 공유 테스트를 포함한다. 사용 순서와 검증 경계는 [루프덱 안내](../docs/ux-audit/keydeck-loopdeck-20261106.md)를 참고한다.
 
 ## 크로스 위젯 참조
 
 ```python
-# widget_registry()로 다른 위젯 값 참조 가능
+# widget_registry()로 다른 위젯 값 참조 가능 — 이미 만든 위젯을 인스턴스 순서로 돌려준다.
+# 꺼 둔 스톱워치·카운트다운·D-Day는 템플릿 값 때문에 여기서 만들고, 다른 종류는 만들지 않는다.
 registry = manager.widget_registry()  # {inst_id: widget}
-manager.refresh_all_texts(tier="fast")  # fast 변수를 쓰는 text 위젯만 갱신
+manager.refresh_all_texts(tier="fast")  # fast 변수를 쓰는 text 위젯만 갱신, 갱신할 위젯이 있을 때만 registry를 만든다
 
 # Text 위젯 템플릿에서 참조
 {stopwatch:stopwatch_0}   # stopwatch_0 인스턴스 값
@@ -342,6 +357,7 @@ manager.set_app_data_provider(lambda: {
 - 글꼴과 제목 굵기는 `widget_mode_font_family`, `widget_mode_font_weight`로 저장합니다. 미리보기에도 동일한 글꼴을 적용하며 취소 시 저장하지 않습니다.
 - 툴바 끌기는 `windowHandle().startSystemMove()`로 OS가 창을 옮깁니다. 배율이 다른 모니터 사이에서 Qt 논리 좌표가 연속되지 않아, `move(커서 - 오프셋)` 방식은 경계에서 창이 튀며 마우스 이벤트마다 DPI가 번갈아 바뀌어 멈춤과 크기 증가를 일으켰습니다. 이동 종료(`WM_EXITSIZEMOVE`, 시작 실패 시 마우스 놓기)에서 시작 크기를 복원하고 도착 화면 안으로 맞춘 뒤 가장자리 맞춤과 저장을 한 번만 합니다. 이동은 크기를 바꾸지 않습니다. PyQt6 6.12에서 `nativeEvent` 재정의 안의 `super().nativeEvent()` 호출은 접근 위반으로 종료되므로 `(False, 0)`을 직접 반환합니다.
 - 메인 테마 연동 색은 `harden_widget_readability()`가 위젯용으로 보정합니다. 바탕 불투명도 최소 95%, 불투명 표면 단계, 배경화면과 무관한 글자 대비 하한을 지킵니다([테마 계약](theme_token_completion_process.md#widget-only-mode-readability-contract)).
+- 42칸 월 캘린더는 처음 쓸 때(`month_calendar` 속성) 만들고, 그 전에 받은 크기·테마·선택 날짜는 저장했다가 생성 시 적용합니다. 주간 표시 중에는 월 그리드 렌더를 미룹니다. 테마 토큰은 `apply_theme` 한 번마다 `controller._theme_tokens`에 저장해 완료 체크박스 그리기에 재사용합니다. 회귀 검증: `tests/test_widget_mode_launch_perf.py`.
 - 조작부, 본문, 하단 상태/크기 조절은 하나의 `unified_surface` 안에 배치합니다. 대시보드/매거진 배치는 폭 640px 미만에서 세로로 전환하되 저장된 배치 선택은 유지합니다.
 - 날짜 선택/오늘/고정/꾸미기는 한 줄 헤더로 통합하고 시계는 하단에 표시합니다. 세로·일정 우선형은 주간 날짜를, 좌우 대시보드·매거진형은 기본으로 펼쳐진 월간 캘린더를 표시합니다. 대시보드형은 달력을 왼쪽, 필터와 목록을 오른쪽에 두며 매거진형은 이를 반대로 배치합니다. 날짜 영역의 접기 상태는 레이아웃마다 독립 저장하고 더 보기 메뉴의 이전/다음 기간도 주간·월간에 맞춰 전환합니다.
 - 날짜 영역을 접으면 달력 위젯만 숨기지 않고 남은 섹션을 한 열로 재배치하고 창 자체를 축소합니다. 펼침/접힘 크기와 화면 좌표는 레이아웃별로 구분해 저장하며 다시 펼칠 때 기존 펼침 크기를 복원합니다.
@@ -351,14 +367,17 @@ manager.set_app_data_provider(lambda: {
 - 일정 강조 마커는 카드 위쪽이 아니라 제목 왼쪽 중앙에 맞춥니다. 주요 추가 버튼의 기본/호버/누름 상태는 모두 배경과 대비되는 글자색을 보장합니다.
 - 목록 밀도는 `widget_mode_density=compact|standard|comfortable`로 저장합니다. 글꼴/글자 크기/불투명도/배치 설정은 변경하지 않고 행 여백과 시간 배치만 조절합니다. 빠른 메뉴에서는 즉시 저장, 꾸미기에서는 초안 미리보기 후 적용/취소합니다.
 - 행마다 반복되는 일정/업무 유형 설명은 표시하지 않습니다. 전체 보기에서는 그룹 제목으로 구분하고 일정 필터에서는 중복 그룹 제목도 생략합니다. 원본 데이터와 ID, 완료/편집 동작은 유지합니다.
-- `side_panel_renderer.load_right_panel()`은 패널 검색/상태 필터를 적용하기 전의 원본 업무 데이터를 `_latest_directive_data`로 게시해야 합니다. 메인 창이 숨겨진 상태에서도 위젯이 이 데이터를 받아야 합니다.
+- `side_panel_renderer.load_right_panel()`은 패널 검색/상태 필터를 적용하기 전의 원본 업무 데이터를 `_latest_directive_data`로 게시해야 합니다. 메인 창이 숨겨진 상태에서도 위젯이 이 데이터를 받아야 합니다. 지시 행은 DB가 돌려주는 `sqlite3.Row`를 `tuple`로 바꿔 게시합니다. 위젯은 tuple·list 행만 읽으므로, 그대로 넘기면 지시가 위젯에 하나도 표시되지 않습니다(3.6.0부터 있던 결함, 회귀 검증: `test_directives_from_the_database_are_listed_in_widget_mode`). 게시 데이터의 `routine_rows`에는 미완료 루틴과 그날(`context_date`) 루틴 외에, 그날이 마감일(`period_end`, 없으면 `deadline`, 없으면 `target_date`)이면서 그날 또는 실제 오늘 완료한(`unified_task.completed_at`) 루틴도 들어갑니다(`_merged_routine_rows()`의 두 번째 반환값. 메인 패널은 첫 번째 값만 사용하므로 바뀌지 않음). `completed_directive_ids`에는 그날 완료한 지시 ID(`task_directive.completed_at`, `directive_repo.directive_ids_completed_on`)가 들어갑니다.
+- 지시 행은 `get_recent_directives(limit)`(오른쪽 패널·위젯은 기본 200)로 읽습니다. 완료(`completed`/`done`)가 아닌 지시는 보류·상태 없음까지 모두 불러오고, 완료된 지시는 마감이 늦은 순으로 limit개만 불러오며(마감 없는 완료 지시는 가장 오래된 것으로 칩니다), 오늘 완료한 지시(`status='completed'`이고 `completed_at`이 오늘)는 limit과 상관없이 항상 함께 불러옵니다. 반환 순서(마감 오름차순, 같은 마감은 id 내림차순)와 7열 행 모양은 그대로입니다. 마감 순 LIMIT만 쓰면 지우지 않고 쌓인 오래된 완료 지시가 오늘·기한 지남·기한 없음 지시를 밀어내 위젯, 오른쪽 패널, 명령 팔레트, `{directive_count}`, 초집중 후보에서 사라졌습니다. 그보다 오래된 완료 지시는 패널의 전체·완료 필터와 검색, 지난 날짜 위젯의 완료 포함 목록에 나오지 않으며 지시·협조 관리에서 모두 볼 수 있습니다. 회귀 검증: `tests/test_recent_directives.py`.
+- 위젯 전용 모드에서 루틴·지시 프레임이 모두 보이지 않으면 `load_right_panel()`은 `publish_right_panel_data()`로 같은 데이터만 게시하고 패널 생성을 미룹니다. 미룬 생성은 두 프레임 중 하나의 Show 이벤트에서 첫 페인트 전에 실행하고, 새 패널을 즉시 표시하며 교체된 패널은 숨깁니다. 클릭 처리 중 창이 표시되면 대기 중인 표시 호출보다 페인트가 먼저 오기 때문입니다(떠 있는 오른쪽 dock이 보이면 미루지 않음). 앱 종료가 시작된 뒤의 Show에서는 만들지 않고, 생성이 실패하면 대기 상태를 유지해 다음 `load_right_panel()`이 시그니처와 상관없이 다시 만듭니다. 상태 변경(`handle_task_status_changed`)은 그 유형을 나열하는 패널만 갱신합니다: 일정·Google 원격 미러는 좌측·중앙, 루틴은 오른쪽, 알 수 없는 유형은 전체. 회귀 검증: `tests/test_widget_completion_refresh.py`.
 - 일부 데이터가 지연되어도 이미 불러온 일정/업무는 지우지 않습니다. 지연 안내와 재시도 동작을 목록 안에 함께 표시합니다.
 - 목록에는 원본 `item_id`와 `source=task|directive`를 함께 전달합니다. 완료는 기존 상태 변경 처리기의 성공 응답 후 반영하며, 최근 상태 변경을 실행 취소할 수 있습니다.
+- 일정·루틴은 완료→대기 직접 전환이 막혀 있으므로(`domain/task_status_view.py`) 완료 체크를 해제하면 `진행 중`으로 저장하고, 실행 취소가 막힌 전환이면 `진행 중`을 거쳐 이전 상태로 두 번 저장합니다. 두 번째 저장이 실패하면 위젯은 `진행 중`을 표시하고 다시 실행 취소할 수 있습니다. 지시·협조는 이 정책이 없어 체크 해제 시 `대기`로 저장합니다. 체크 해제 후 실행 취소로 다시 완료하면 상태와 함께 체크 해제가 지운 원래 완료 시각(`completed_at`, 일정·루틴은 `unified_task`, 지시·협조는 `task_directive`, NULL 포함)도 되돌립니다(`_COMPLETED_AT_BEFORE`, `restore_task_completed_at`·`restore_directive_completed_at`). 이 값은 휴지통 목록과, `완료 포함`일 때 그날 완료한 루틴·지시를 위젯에 남길지 판단할 때 읽으므로, 실행 취소 시각으로 기록하면 다른 날 완료한 항목이 오늘 완료한 것으로 나타났습니다(회귀 검증: `tests/test_widget_keeps_completed_today.py`). 체크 해제 뒤 다시 체크하면 그때 시각으로 기록합니다. 저장 실패 시 자유 배치·보드의 체크박스도 되돌리며, 실패한 항목이 대기 중인 실행 취소 대상이 아니면 그 실행 취소는 버립니다. 회귀 검증: `tests/test_widget_completion_refresh.py`.
 - 지시·협조 생성은 일반 태스크 다이얼로그의 `task_type`으로 우회하지 않고 전용 `open_directive_dialog()` 경로를 사용합니다. 추가 메뉴와 더 보기 메뉴에서는 지시·협조 관리 및 전체 업무 관리로 이동할 수 있어야 합니다.
 - 통합 목록은 일정/업무/지시·협조 필터를 독립 제공하고, 항목의 빠른 메뉴에서 열기·완료·우선순위·삭제를 기존 메인 창 처리기에 위임합니다. 읽기 전용 구독 일정에는 변경·삭제 동작을 제공하지 않습니다.
 - 필터와 실행 버튼은 의미상 분리합니다. 넓은 폭에서는 한 줄, 중간 폭에서는 두 줄, 초소형 폭에서는 현재 선택값이 보이는 메뉴형 필터로 전환하며 필터 이름을 `…`로 대체하지 않습니다.
 - 목록 상단에는 현재 필터의 제목을 표시합니다. 완료 항목 노출은 주요 실행 버튼이 아닌 `완료 포함` 보조 필터로 제공하고, 완료된 행에는 취소선뿐 아니라 명시적인 완료 상태 배지를 함께 표시합니다.
-- 오늘의 지시·협조 목록에는 오늘 마감뿐 아니라 미완료 상태의 기한 경과 및 기한 없음 항목을 별도 구역으로 표시합니다.
+- 오늘의 지시·협조 목록에는 오늘 마감뿐 아니라 미완료 상태의 기한 경과 및 기한 없음 항목을 별도 구역으로 표시합니다. `완료 포함`(`widget_mode_show_completed`)이 켜져 있으면 그날 완료한 기한 경과·기한 없음 지시도 같은 구역에 체크된 상태로 남깁니다(`task_directive.completed_at` 기준이라 위젯·메인 패널 메뉴·지시 다이얼로그·관리 화면 어디서 완료했든, 같은 날 재시작해도 유지). 위젯에서 방금 체크한 행은 데이터가 다시 게시되기 전에도 사라지지 않습니다. 다른 날 완료했거나 완료 시각이 없는(NULL, 컬럼 추가 전 완료) 지시는 표시하지 않습니다. 그날 마감인 루틴도 그날 완료하면 체크된 상태로 남고, 전에 완료한 루틴은 마감일이 되어도 다시 나타나지 않습니다. 다른 날을 보면서 그날 마감 루틴을 완료해도 완료 시각이 오늘이므로 그 날 목록에 남습니다. `get_recent_directives()`는 오늘 완료한 지시를 완료 200건 제한과 상관없이 포함하므로 오래된 기한·기한 없는 지시도 남습니다. 회귀 검증: `tests/test_widget_keeps_completed_today.py`.
 - 불러오는 중과 불러오기 지연은 빈 목록과 구분합니다. 목록 개수 제한으로 항목을 생략하지 않습니다.
 - 목록 교체 시 기존 행을 즉시 숨긴 후 지연 삭제합니다. 스크롤 내부 레이아웃의 최소 높이를 유지하여 작은 창에서 행이 겹치지 않게 합니다.
 - 회귀 검증: `tests/test_widget_mode_ux.py`, `tests/test_unified_widget_mode.py`, `tests/test_widget_mode_coordinator.py`, `tests/test_widget_mode_geometry.py`.

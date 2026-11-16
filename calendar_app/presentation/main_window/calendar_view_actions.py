@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Calendar/panel/context-menu view action mixin."""
 
-from PyQt6.QtCore import QDate
-from PyQt6.QtWidgets import QApplication
+import logging
+
+from PyQt6.QtCore import QDate, QEvent, QObject, Qt
+from PyQt6.QtWidgets import QApplication, QWidget
 
 from calendar_app.shared.calendar_display_settings import (
     WEEKDAY_DISPLAY_KEY,
@@ -11,6 +13,48 @@ from calendar_app.shared.calendar_display_settings import (
     weekday_display_flags,
     weekday_display_mode_for,
 )
+from calendar_app.shared.theme_settings import wallpaper_opacity_floor
+
+logger = logging.getLogger(__name__)
+
+
+def _show_only_layout_children(frame):
+    """Show the frame's newly laid-out panel now and hide the replaced ones."""
+    layout = frame.layout()
+    for child in frame.findChildren(QWidget, options=Qt.FindChildOption.FindDirectChildrenOnly):
+        if not child.isWindow():
+            child.setVisible(layout is not None and layout.indexOf(child) >= 0)
+
+
+class _RightPanelShowWatch(QObject):
+    """Builds a deferred right panel when one of its frames is shown."""
+
+    def __init__(self, host, parent):
+        super().__init__(parent)
+        self._host = host
+
+    def eventFilter(self, obj, event):  # noqa: N802
+        host = self._host
+        if (
+            event.type() == QEvent.Type.Show
+            and getattr(host, "_right_panel_render_deferred", False)
+            # The app is exiting: nobody will look at the panel, and the workers
+            # and database it reads may already be stopped.
+            and not getattr(host, "_is_shutting_down", False)
+        ):
+            # Show arrives before the window is painted. Qt would show the new panel
+            # with a queued call and drop the old one on deleteLater, but a window
+            # shown while a click is handled is painted before either, so swap now.
+            try:
+                host.load_right_panel(force=True)
+                for frame in (host.routine_frame, host.directive_frame):
+                    _show_only_layout_children(frame)
+            except Exception:
+                # Keep the build pending so the next load_right_panel() retries it
+                # instead of skipping on an unchanged signature.
+                host._right_panel_render_deferred = True
+                logger.exception("Deferred right panel render failed")
+        return False
 
 
 class CalendarViewActionsMixin:
@@ -20,7 +64,7 @@ class CalendarViewActionsMixin:
     def _theme_signature_bits(self):
         settings = getattr(self, "settings", None)
         if settings is None:
-            return ("", "", "", 0, 0, 0, "", "", "", "", "", "")
+            return ("", "", "", 0, 0, 0, 0, "", "", "", "", "", "")
 
         def _setting_value(key, default=""):
             try:
@@ -42,6 +86,8 @@ class CalendarViewActionsMixin:
             str(_setting_value("text_theme", "dark") or "dark"),
             str(_setting_value("panel_base_color", "#1c1c1c") or "#1c1c1c"),
             _setting_int("last_opacity", 200),
+            # The wallpaper can raise the visible opacity without a settings change.
+            round(wallpaper_opacity_floor() * 255),
             _setting_int("last_border_opacity", 80),
             str(_setting_value("appearance_border_source", "") or ""),
             str(_setting_value("panel_border_color", "") or ""),
@@ -64,12 +110,12 @@ class CalendarViewActionsMixin:
             except Exception:
                 search_text = ""
 
-        selected_ids = tuple(
-            sorted(int(v) for v in getattr(self, "selected_task_ids", set()) if str(v).isdigit())
-        )
+        # The selection is not part of the signature: Ctrl+click and clearing
+        # restyle the visible items in place (_update_selection_visuals) and
+        # every render applies the current selection, so a selection change
+        # must not force a full calendar or panel rebuild.
         return (
             search_text,
-            selected_ids,
             *self._theme_signature_bits(),
             app_font.family() if app_font else "",
             app_font.pointSize() if app_font else 0,
@@ -127,13 +173,42 @@ class CalendarViewActionsMixin:
         self._load_panel_cached("left", self._build_left_render_signature(), load_left_panel, force)
 
     def load_right_panel(self, force=True):
-        from calendar_app.presentation.panels.side_panel_renderer import load_right_panel
-
-        self._load_panel_cached(
-            "right", self._build_right_render_signature(), load_right_panel, force
+        from calendar_app.presentation.panels.side_panel_renderer import (
+            load_right_panel,
+            publish_right_panel_data,
         )
+
+        if self._right_panel_render_can_wait():
+            # Nobody can see the panel: give the widget its data now and build the
+            # panel when a frame is shown again (_RightPanelShowWatch).
+            publish_right_panel_data(self)
+            self._right_panel_render_deferred = True
+        else:
+            # A deferred build must not be skipped by an unchanged signature.
+            deferred = bool(getattr(self, "_right_panel_render_deferred", False))
+            self._right_panel_render_deferred = False
+            self._load_panel_cached(
+                "right", self._build_right_render_signature(), load_right_panel, force or deferred
+            )
         if hasattr(self, "refresh_widget_mode_panels"):
             self.refresh_widget_mode_panels(schedule=False, work=True)
+
+    def _right_panel_render_can_wait(self):
+        """True while widget-only mode is active and neither right-panel frame is visible."""
+        if getattr(self, "_is_shutting_down", False):
+            return False
+        is_widget_mode_active = getattr(self, "is_widget_mode_active", None)
+        if not callable(is_widget_mode_active) or not is_widget_mode_active():
+            return False
+        frames = (getattr(self, "routine_frame", None), getattr(self, "directive_frame", None))
+        if any(frame is None or frame.isVisible() for frame in frames):
+            return False
+        if getattr(self, "_right_panel_show_watch", None) is None:
+            watch = _RightPanelShowWatch(self, frames[0])
+            for frame in frames:
+                frame.installEventFilter(watch)
+            self._right_panel_show_watch = watch
+        return True
 
     def _directive_panel_option(self, key, default=None):
         if hasattr(self, key):
@@ -216,10 +291,10 @@ class CalendarViewActionsMixin:
     def _build_center_render_signature(self):
         common_bits = self._common_ui_signature_bits()
         search_text = common_bits[0]
-        selected_ids = common_bits[1]
-        theme_bits = common_bits[2:-2]
+        theme_bits = common_bits[1:-2]
         font_family = common_bits[-2]
         font_size = common_bits[-1]
+        center_frame = getattr(self, "center_frame", None)
         return (
             str(getattr(self, "view_mode_state", "")),
             str(getattr(self, "cal_week_layout", "time")),
@@ -231,10 +306,11 @@ class CalendarViewActionsMixin:
             bool(getattr(self, "cal_show_month", False)),
             weekday_display_mode_for(self),
             search_text,
-            selected_ids,
             *theme_bits,
             font_family,
             font_size,
+            # render_calendar sizes month and date-week rows from this height.
+            center_frame.height() if center_frame is not None else 0,
         )
 
     def load_center_panel(self, force=True):

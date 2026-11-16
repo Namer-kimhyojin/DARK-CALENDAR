@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Panel refresh scheduling mixin for UI update coalescing."""
 
+import contextlib
+
 
 class RefreshSchedulerMixin:
     # ------------------------------------------------------------------ #
@@ -13,7 +15,12 @@ class RefreshSchedulerMixin:
             return
         self._pending_refresh = {"left": False, "center": False, "right": False}
         self._pending_data_consumer_refresh = False
-        self._panel_dirty = {"left": True, "center": True, "right": True}
+        # A panel is dirty until its first render.  Construction renders all three
+        # panels before the first refresh request creates this scheduler.
+        self._panel_dirty = {
+            name: getattr(self, f"_last_{name}_render_signature", None) is None
+            for name in ("left", "center", "right")
+        }
         self._ui_refresh_timer = QTimer(self)
         self._ui_refresh_timer.setSingleShot(True)
         self._ui_refresh_timer.timeout.connect(self._flush_scheduled_refresh)
@@ -64,6 +71,15 @@ class RefreshSchedulerMixin:
         self._panel_dirty["center"] = self._panel_dirty["center"] or bool(center)
         self._panel_dirty["right"] = self._panel_dirty["right"] or bool(right)
 
+    @contextlib.contextmanager
+    def presentation_refresh_only(self):
+        """Refresh requests made inside behave as ``mark_dirty=False``."""
+        self._presentation_refresh_depth = int(getattr(self, "_presentation_refresh_depth", 0)) + 1
+        try:
+            yield
+        finally:
+            self._presentation_refresh_depth -= 1
+
     def schedule_panel_refresh(
         self,
         left=False,
@@ -71,14 +87,22 @@ class RefreshSchedulerMixin:
         right=False,
         delay_ms=0,
         notify_data_consumers=True,
+        mark_dirty=True,
     ):
+        """Coalesce panel re-renders into one queued flush.
+
+        ``mark_dirty=False`` is for requests that change no panel data: the flush then
+        re-renders a panel only if a data request marked it dirty or its render
+        signature changed since its last render.
+        """
         if getattr(self, "_is_shutting_down", False):
             return
         if int(getattr(self, "_task_dialog_refresh_depth", 0)) > 0:
             self._defer_task_dialog_refresh(left, center, right, notify_data_consumers)
             return
         self._ensure_refresh_scheduler()
-        self.mark_panel_dirty(left=left, center=center, right=right)
+        if mark_dirty and not int(getattr(self, "_presentation_refresh_depth", 0)):
+            self.mark_panel_dirty(left=left, center=center, right=right)
         self._pending_refresh["left"] = self._pending_refresh["left"] or left
         self._pending_refresh["center"] = self._pending_refresh["center"] or center
         self._pending_refresh["right"] = self._pending_refresh["right"] or right

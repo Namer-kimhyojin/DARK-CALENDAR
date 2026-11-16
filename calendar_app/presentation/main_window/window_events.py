@@ -32,6 +32,12 @@ def _can_hide_to_tray(window) -> bool:
 
 
 def _set_window_bottom(hwnd):
+    from calendar_app.infrastructure.runtime import desktop_embed
+
+    if desktop_embed.is_embedded(hwnd):
+        # Behind the desktop icons it is a child of the desktop: HWND_BOTTOM
+        # would sink it under the wallpaper.
+        return
     try:
         if not win32_input.set_window_bottom(hwnd):
             logger.debug("SetWindowPos failed; keeping current z-order.")
@@ -375,6 +381,7 @@ class WindowEventsMixin:
         ):
             self.schedule_panel_refresh(center=True, delay_ms=16)
         self._schedule_geometry_persist()
+        self._schedule_wallpaper_contrast()
 
         # Keep lock overlay/background aligned with resized window.
         if hasattr(self, "lock_frame") and self.lock_frame.isVisible():
@@ -385,10 +392,23 @@ class WindowEventsMixin:
     def moveEvent(self, event):
         super().moveEvent(event)
         self._schedule_geometry_persist()
+        self._schedule_wallpaper_contrast()
+
+    def _schedule_wallpaper_contrast(self):
+        # A different part of the wallpaper may now be behind the window.
+        from calendar_app.presentation.main_window.wallpaper_contrast import (
+            schedule_wallpaper_contrast_refresh,
+        )
+
+        schedule_wallpaper_contrast_refresh(self)
 
     def _schedule_geometry_persist(self):
         """Debounced reactive save of window geometry on resize/move."""
         if getattr(self, "_is_shutting_down", False):
+            return
+        if getattr(self, "_desktop_embedded", False):
+            # Inside the desktop, Qt sees parent-relative positions; keep the
+            # position saved before the window went behind the icons.
             return
         timer = getattr(self, "_geom_persist_timer", None)
         if timer is None:

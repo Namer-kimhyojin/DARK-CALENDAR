@@ -490,6 +490,27 @@ def update_unified_task(task_id, updates, mark_gcal_dirty=None, commit=True):
         return False
 
 
+def restore_task_completed_at(task_id, completed_at):
+    """Undo of an untick: put back the completion time the untick cleared.
+
+    update_unified_task stamps the current time when a task becomes completed again.
+    """
+    conn = get_connection()
+    if not conn:
+        return False
+    try:
+        cur = conn.execute(
+            "UPDATE unified_task SET completed_at=? WHERE id=? AND status='completed'",
+            (completed_at, task_id),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    except Exception:
+        logger.exception("restore_task_completed_at failed id=%s", task_id)
+        conn.rollback()
+        return False
+
+
 # ==================== CRUD: Delete ====================
 
 

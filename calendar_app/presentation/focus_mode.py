@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import weakref
+
 from PyQt6.QtCore import QSize, Qt, QTimer
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -26,6 +28,7 @@ from calendar_app.shared.color_utils import hex_to_rgba, parse_hex_color, shift_
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
+from calendar_app.shared.qt_lifetime import call_when_destroyed
 from calendar_app.shared.theme_snapshot import build_shared_ui_tokens, build_theme_snapshot
 from calendar_app.shared.typography import get_typography_scale
 
@@ -39,6 +42,12 @@ from calendar_app.presentation.dialogs.focus_completion_dialog import FocusCompl
 FOCUS_MODE_POMODORO = "pomodoro"
 FOCUS_MODE_STOPWATCH = "stopwatch"
 _active_phase_toasts: set[QFrame] = set()
+
+
+def _forget_phase_toast(ref) -> None:
+    popup = ref()
+    if popup is not None:
+        _active_phase_toasts.discard(popup)
 
 
 def _focus_ui_tokens(app) -> dict[str, str]:
@@ -467,7 +476,7 @@ def _render_pomodoro_state(app) -> None:
         summary_lbl.setText(
             t(
                 "focus.pomodoro_summary",
-                "Completed: {sessions} sessions | Focus: {minutes}m {seconds}s",
+                "완료: {sessions}세션 | 집중: {minutes}분 {seconds}초",
                 sessions=snapshot.focus_sessions_completed,
                 minutes=mins,
                 seconds=secs,
@@ -602,7 +611,7 @@ def _announce_phase_change(app, title: str, msg: str, icon: str) -> None:
         x, y = 1060, 960
     popup.move(x, y)
     _active_phase_toasts.add(popup)
-    popup.destroyed.connect(lambda: _active_phase_toasts.discard(popup))
+    call_when_destroyed(popup, _forget_phase_toast, weakref.ref(popup))
     popup.show()
 
     # Fade-out after 3 s display
@@ -744,7 +753,7 @@ def _build_focus_checklist_panel(app, layout):
     section_layout.addLayout(title_row)
 
     if not items:
-        empty_lbl = QLabel(t("dialog.label_settings.none_to_load", "체크리스트 항목이 없습니다."))
+        empty_lbl = QLabel(t("focus.checklist_empty", "체크리스트 항목이 없습니다."))
         empty_lbl.setStyleSheet(
             f"color: {tokens['text_faint']}; font-size: 12px; padding: 2px 0 4px 0;"
         )

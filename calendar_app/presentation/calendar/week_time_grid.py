@@ -127,7 +127,7 @@ class _Canvas(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.grid._press(self, event.position(), event.globalPosition())
+            self.grid._press(self, event.position(), event.globalPosition(), event.modifiers())
             event.accept()
         else:
             super().mousePressEvent(event)
@@ -181,6 +181,10 @@ class WeekTimeGrid(QWidget):
     day_selected = pyqtSignal(QDate)
     scroll_position_changed = pyqtSignal(int)
     interaction_changed = pyqtSignal(bool)
+    # Ctrl+click / Ctrl+Space toggles a task in the main window's multi-selection;
+    # Esc without an active gesture asks the window to clear it.
+    selection_toggled = pyqtSignal(int)
+    selection_clear_requested = pyqtSignal()
 
     GUTTER = 62
     HOUR_HEIGHT = 72
@@ -208,6 +212,8 @@ class WeekTimeGrid(QWidget):
         self._timed_rects: list[tuple[_Segment, QRectF]] = []
         self._all_day_rects: list[tuple[_Segment, QRectF]] = []
         self._selected: dict | None = None
+        self._multi_selected: set[int] = set()
+        self._ctrl_click = False
         self._selected_date = QDate()
         self._gesture: dict | None = None
         self._preview: tuple[dt.datetime, int] | None = None
@@ -497,6 +503,36 @@ class WeekTimeGrid(QWidget):
                 self._all_day_rects.append((item, rect))
         self._repaint()
 
+    @staticmethod
+    def _selectable_id(task: dict) -> int | None:
+        """Return the local task id that multi-selection can act on."""
+        if task.get("is_subscription"):
+            return None
+        try:
+            task_id = int(task.get("id") or 0)
+        except (TypeError, ValueError):
+            return None
+        return task_id if task_id > 0 else None
+
+    def set_multi_selection(self, task_ids) -> None:
+        """Mirror the main window's selection; repaints only when it changed."""
+        selected = set()
+        for value in task_ids or ():
+            try:
+                selected.add(int(value))
+            except (TypeError, ValueError):
+                continue
+        if selected != self._multi_selected:
+            self._multi_selected = selected
+            self._repaint()
+
+    def multi_selection(self) -> set[int]:
+        return set(self._multi_selected)
+
+    def _is_multi_selected(self, task: dict) -> bool:
+        task_id = self._selectable_id(task)
+        return task_id is not None and task_id in self._multi_selected
+
     def _repaint(self):
         self._header.update()
         self._all_day_canvas.update()
@@ -737,10 +773,19 @@ class WeekTimeGrid(QWidget):
         )
         identity = _css_color(item.task.get("bg_color"), accent)
         selected = self._selected is item.task
-        fill = _mix(identity, surface, 0.23 if selected else 0.14)
+        marked = self._is_multi_selected(item.task)
+        if marked:
+            # Multi-selected events take the accent fill and a full outline so
+            # the selection reads at a glance, like the month view.
+            fill = _mix(accent, surface, 0.32)
+        else:
+            fill = _mix(identity, surface, 0.23 if selected else 0.14)
         fill.setAlpha(max(fill.alpha(), surface.alpha()))
         painter.setPen(
-            QPen(accent if selected else _mix(identity, surface, 0.44), 1.5 if selected else 0.8)
+            QPen(
+                accent if selected or marked else _mix(identity, surface, 0.44),
+                2.0 if marked else 1.5 if selected else 0.8,
+            )
         )
         painter.setBrush(fill)
         painter.drawRoundedRect(rect, 8, 8)
@@ -785,6 +830,20 @@ class WeekTimeGrid(QWidget):
                 _fitted_time_text(item.start, item.end, painter.fontMetrics(), rect.width() - 12),
             )
         painter.restore()
+        if marked and rect.width() >= 18 and rect.height() >= 12:
+            # Check mark in the top-right corner of a multi-selected event.
+            size = min(8.0, rect.height() / 2 - 1)
+            right, top = rect.right() - 5, rect.top() + 4
+            painter.save()
+            painter.setPen(QPen(accent, 1.6, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+            painter.drawPolyline(
+                [
+                    QPointF(right - size, top + size * 0.55),
+                    QPointF(right - size * 0.6, top + size),
+                    QPointF(right, top),
+                ]
+            )
+            painter.restore()
         if selected and item.final and not item.all_day and not self._read_only(item.task):
             painter.setPen(QPen(accent, 1.5))
             painter.drawLine(
@@ -872,12 +931,28 @@ class WeekTimeGrid(QWidget):
         minute = round(y * 60 / self.HOUR_HEIGHT / self.SNAP) * self.SNAP
         return max(0, min(1440 if end else 1440 - self.SNAP, minute))
 
-    def _press(self, canvas: _Canvas, position: QPointF, global_position: QPointF):
+    def _press(self, canvas: _Canvas, position: QPointF, global_position: QPointF, modifiers=None):
         self._cancel()
+        self._ctrl_click = False
         self.setFocus(Qt.FocusReason.MouseFocusReason)
         day = self._day_at(position.x())
         if day is None:
             return
+        if (
+            canvas.role != "header"
+            and modifiers is not None
+            and modifiers & Qt.KeyboardModifier.ControlModifier
+        ):
+            hit = self._hit(canvas.role, position)
+            task_id = self._selectable_id(hit.task) if hit else None
+            if task_id is not None:
+                # Ctrl+click only toggles the selection: no day change, no
+                # move gesture and no editor on release.
+                self._ctrl_click = True
+                self._selected = hit.task
+                self.selection_toggled.emit(task_id)
+                self._repaint()
+                return
         self.set_selected_date(self._dates[day])
         self.day_selected.emit(self._dates[day])
         if canvas.role == "header":
@@ -1058,6 +1133,9 @@ class WeekTimeGrid(QWidget):
 
     def _release(self, canvas: _Canvas, position: QPointF, global_position: QPointF):
         gesture = self._gesture
+        if self._ctrl_click:
+            self._ctrl_click = False
+            return
         if gesture is None:
             hit = self._hit(canvas.role, position)
             if hit and self._read_only(hit.task):
@@ -1100,9 +1178,24 @@ class WeekTimeGrid(QWidget):
     def keyPressEvent(self, event):
         key = event.key()
         if key == Qt.Key.Key_Escape:
+            gesture_active = self._gesture is not None
             self._cancel()
             self._selected = None
             self._repaint()
+            if not gesture_active and self._multi_selected:
+                # Esc first cancels a drag; otherwise it clears the selection
+                # the same way Esc does elsewhere in the main window.
+                self.selection_clear_requested.emit()
+            event.accept()
+            return
+        if (
+            key == Qt.Key.Key_Space
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
+            and self._selected
+        ):
+            task_id = self._selectable_id(self._selected)
+            if task_id is not None:
+                self.selection_toggled.emit(task_id)
             event.accept()
             return
         tasks = []

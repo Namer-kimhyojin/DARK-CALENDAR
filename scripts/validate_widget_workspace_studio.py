@@ -23,7 +23,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="air-studio-qa-", ignore_cleanup_errors=True) as tmp:
         os.environ["LOCALAPPDATA"] = tmp
         os.environ["APPDATA"] = tmp
-        from artifacts.isolated_settings import install_settings_sandbox
+        from scripts.isolated_settings import install_settings_sandbox
 
         Settings, verify = install_settings_sandbox(tmp)
         Settings("kimhyojin", "Dark Calendar").setValue("language", args.lang)

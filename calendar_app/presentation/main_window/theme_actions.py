@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Window opacity and theme-related action mixin."""
 
+import logging
+
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QApplication, QMenu
 
@@ -14,6 +16,9 @@ from calendar_app.shared.theme_settings import (
     set_opacity_byte,
 )
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
+from calendar_app.shared.typography import DEFAULT_UI_FONT
+
+logger = logging.getLogger(__name__)
 
 
 def _set_stylesheet_if_changed(widget, stylesheet: str) -> bool:
@@ -127,9 +132,21 @@ class ThemeActionsMixin:
 
         self._apply_slider_opacity_style()
 
-        from calendar_app.presentation.calendar.month_renderer import refresh_week_planner_theme
+        self._refresh_surface_opacity()
 
-        refresh_week_planner_theme(self)
+    def _refresh_surface_opacity(self):
+        """Repaint calendar and side-panel surfaces now, in step with the top bar."""
+        from calendar_app.presentation.calendar.month_renderer import refresh_week_planner_theme
+        from calendar_app.presentation.panels.side_panel_renderer import refresh_panel_surfaces
+
+        try:
+            refresh_week_planner_theme(self)
+        except Exception:
+            logger.exception("Calendar surface opacity refresh failed")
+        try:
+            refresh_panel_surfaces(self)
+        except Exception:
+            logger.exception("Side panel surface opacity refresh failed")
 
     def finalize_opacity_change(self):
         for widget in QApplication.allWidgets():
@@ -263,7 +280,7 @@ class ThemeActionsMixin:
             build_tooltip_stylesheet,
         )
 
-        family = self.settings.value("font_family", "Malgun Gothic")
+        family = self.settings.value("font_family", DEFAULT_UI_FONT)
         size = self.settings.value("font_size", 11, type=int)
         if size <= 0:
             size = 10
@@ -288,6 +305,18 @@ class ThemeActionsMixin:
 
         # Application-wide styling (QMessageBox, dialogs, etc.)
         _set_stylesheet_if_changed(QApplication.instance(), combined_qss)
+
+        # Panel content frames carry their own see-through rule, which beats the
+        # application stylesheet for tooltips inside them; give them the same
+        # themed tooltip rule so cell and card tooltips follow the theme.
+        from calendar_app.presentation.theme.style_builder import (
+            DOCK_FRAME_NAMES,
+            build_dock_frame_stylesheet,
+        )
+
+        dock_frame_qss = build_dock_frame_stylesheet(tooltip_qss)
+        for frame_name in DOCK_FRAME_NAMES:
+            _set_stylesheet_if_changed(getattr(self, frame_name, None), dock_frame_qss)
 
         # Explicit window styling. The dock manager is this window, so its separator
         # rules belong in the same stylesheet; writing them separately replaced one
@@ -381,24 +410,14 @@ class ThemeActionsMixin:
         except Exception:
             pass
 
-        if hasattr(self, "_apply_overlay_clock_settings"):
-            self._apply_overlay_clock_settings()
-        if hasattr(self, "_apply_stopwatch_settings"):
-            self._apply_stopwatch_settings()
-        if hasattr(self, "_apply_date_card_settings"):
-            self._apply_date_card_settings()
-        if hasattr(self, "_apply_countdown_settings"):
-            self._apply_countdown_settings()
+        overlay_manager = getattr(self, "overlay_manager", None)
+        if overlay_manager is not None:
+            overlay_manager.refresh_theme()
 
-        try:
-            from calendar_app.presentation.panels.side_panel_renderer import (
-                refresh_dock_panel_theme,
-            )
-
-            for dock_name in ("left_dock", "routine_dock", "directive_dock"):
-                refresh_dock_panel_theme(getattr(self, dock_name, None))
-        except Exception:
-            pass
+        # The old call here imported a refresh_dock_panel_theme that never
+        # existed, and its ImportError was swallowed, so panel surfaces waited
+        # for their re-render while the top bar had already changed.
+        self._refresh_surface_opacity()
 
         if hasattr(self, "refresh_sync_status_theme"):
             self.refresh_sync_status_theme()

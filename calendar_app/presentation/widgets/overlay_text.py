@@ -18,6 +18,7 @@ from calendar_app.presentation.widgets.overlay_base import (
     _BaseOverlayWidget,
     _GripFrame,
     _inject_global_lh,
+    _local_timezone_label,
     _protect_align_tags,
     _scale_template_html,
     _strftime_to_qt,
@@ -76,6 +77,7 @@ class OverlayTextWidget(_BaseOverlayWidget):
             "directive_count",
             "next_event",
             "custom_var",
+            "tz_label",
         ]
     )
     _ALL_DYNAMIC = _FAST_VARS | _MED_VARS | _SLOW_VARS
@@ -267,6 +269,8 @@ class OverlayTextWidget(_BaseOverlayWidget):
                 val = str(_ad.get("next_event", "-"))
             elif name == "custom_var":
                 val = str(_ad.get(f"custom_var_{arg}" if arg else "custom_var", arg or ""))
+            elif name == "tz_label":
+                val = _local_timezone_label()
 
             return _apply_span(
                 _escape_html(val if val is not None else var_expr, quote=False), hints

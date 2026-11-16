@@ -29,6 +29,7 @@ from calendar_app.presentation.widgets.widget_graphic_catalog import (
     COLLECTIONS,
     graphic_collection,
 )
+from calendar_app.shared.typography import DEFAULT_UI_FONT, ui_font_families
 
 
 def contrast_ratio(first: str, second: str) -> float:
@@ -118,7 +119,7 @@ class WidgetGraphicSurface(QWidget):
         self.collection_id = "pure_air"
         self.kind = "clock"
         self.data: dict = {}
-        self.family = "Segoe UI"
+        self.family = DEFAULT_UI_FONT
         self.foreground = "#f5f7fb"
         self.background = "#101a28"
         self.background_alpha = 0.0
@@ -285,7 +286,7 @@ class WidgetGraphicSurface(QWidget):
 
     def _font(self, size: float, bold=False) -> QFont:
         font = QFont(self.family)
-        font.setFamilies([self.family, "Malgun Gothic", "Segoe UI"])
+        font.setFamilies(ui_font_families(self.family))
         font.setPixelSize(max(6, round(size * self.text_scale)))
         font.setWeight(QFont.Weight.DemiBold if bold else QFont.Weight.Normal)
         return font

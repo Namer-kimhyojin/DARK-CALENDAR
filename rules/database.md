@@ -81,6 +81,33 @@ task_data = {
 }
 ```
 
+## 지시 완료 시각 (`task_directive.completed_at`)
+
+`unified_task.completed_at`과 같은 계약입니다. 컬럼은 `ALTER TABLE`로만 추가합니다
+(`initialize_unified_database`의 누락 컬럼 목록, `directive_repo._ensure_directive_schema`,
+`DirectiveDialog.save_data`의 즉석 ALTER). 기존 테이블 DDL은 바꾸지 않습니다.
+
+- 완료로 바뀌는 저장에서 `datetime('now', 'localtime')`(`YYYY-MM-DD HH:MM:SS`)을 기록하고,
+  완료→완료 저장은 기존 값을 유지하며, 완료가 아닌 상태로 바뀌면 NULL로 지웁니다.
+- 상태를 쓰는 경로는 모두 `directive_repo.COMPLETED_AT_ASSIGNMENT` SET 절을 붙이고 새 상태를
+  한 번 더 바인딩합니다: `update_directive_status`, `bulk_update_directive_status`,
+  `DirectiveDialog.save_data`의 UPDATE. 완료 상태로 새로 만들면 INSERT에서 바로 기록합니다.
+  상태 쓰기 경로를 새로 만들 때도 같은 절을 사용하세요.
+- 위젯에서 체크 해제 뒤 실행 취소하면 상태를 완료로 되돌린 다음, 체크 해제가 지운 원래 값(NULL 포함)을
+  `directive_repo.restore_directive_completed_at`(일정·루틴은 `db_repository_unified.restore_task_completed_at`)으로
+  되돌립니다. 둘 다 `status='completed'`인 행만 바꿉니다. 다시 체크해 완료하면 그때 시각을 기록합니다.
+- 이 컬럼이 생기기 전에 완료된 지시와 시작 시 `done`→`completed`로 바뀐 행은 완료 시각을
+  모르므로 NULL로 둡니다(완료 상태로 다시 저장해도 NULL 유지). NULL은 "오늘 완료 아님"으로 읽습니다.
+  휴지통 이동·복원은 `SELECT *` 스냅샷으로 이 값을 함께 보존합니다.
+- 인덱스 `idx_task_directive_status_completed_at (status, completed_at)`. 날짜로 찾을 때는
+  `date(completed_at)` 대신 범위(`completed_at >= date(?) AND completed_at < date(?, '+1 day')`)를
+  써야 인덱스를 탑니다(`directive_repo.directive_ids_completed_on`).
+- `db_repository.get_recent_directives()`는 컬럼이 있으면 오늘 완료한 지시
+  (`status = 'completed' AND completed_at >= date('now', 'localtime')`)를 완료 200건 제한과 상관없이
+  항상 포함합니다. 반환 행은 7열 그대로이며 completed_at을 열로 추가하지 않습니다
+  (`side_panel_renderer.load_right_panel`과 `review_usecases`가 열 개수·위치로 읽음).
+- 회귀 검증: `tests/test_widget_keeps_completed_today.py`.
+
 ## DB 경로
 
 ```python

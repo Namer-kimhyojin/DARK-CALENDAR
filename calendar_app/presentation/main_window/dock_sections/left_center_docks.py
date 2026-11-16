@@ -2,6 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDockWidget, QFrame, QWidget
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.theme.style_builder import build_dock_frame_stylesheet
 
 from .floating_dock_behavior import attach_floating_dock_behavior
 
@@ -9,7 +10,11 @@ from .floating_dock_behavior import attach_floating_dock_behavior
 def create_left_dock(self):
     self.left_frame = QFrame()
     self.left_frame.setFrameShape(QFrame.Shape.NoFrame)
-    self.left_frame.setStyleSheet("background: transparent; border: none;")
+    self.left_frame.setObjectName("left_frame")
+    # See-through panel content with themed tooltips (see build_dock_frame_stylesheet).
+    self.left_frame.setStyleSheet(
+        build_dock_frame_stylesheet(settings=getattr(self, "settings", None))
+    )
     self.left_frame.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
     self.left_frame.customContextMenuRequested.connect(self.show_left_context_menu)
 
@@ -38,7 +43,11 @@ def create_left_dock(self):
 def create_center_dock(self):
     self.center_frame = QFrame()
     self.center_frame.setFrameShape(QFrame.Shape.NoFrame)
-    self.center_frame.setStyleSheet("background: transparent; border: none;")
+    self.center_frame.setObjectName("center_frame")
+    # See-through panel content with themed tooltips (see build_dock_frame_stylesheet).
+    self.center_frame.setStyleSheet(
+        build_dock_frame_stylesheet(settings=getattr(self, "settings", None))
+    )
     self.center_frame.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
     self.center_frame.customContextMenuRequested.connect(self.show_center_context_menu)
 

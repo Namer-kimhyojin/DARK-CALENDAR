@@ -42,6 +42,7 @@ from calendar_app.infrastructure.runtime.crash_bootstrap import (
     show_database_startup_error as _show_database_startup_error,
 )
 from calendar_app.infrastructure.runtime.qt_startup_options import resolve_qt_startup_options
+from calendar_app.shared.typography import DEFAULT_UI_FONT
 from calendar_app.shared.value_parsers import as_int
 
 set_domain_translator(t)
@@ -108,9 +109,9 @@ def _acquire_single_instance_lock() -> tuple[bool, QSharedMemory]:
 
 def _apply_saved_font(app: QApplication, build_ui_font) -> None:
     settings = QSettings("kimhyojin", "Dark Calendar")
-    family = settings.value("font_family", "Segoe UI")
+    family = settings.value("font_family", DEFAULT_UI_FONT)
     if not isinstance(family, str) or not family.strip():
-        family = "Segoe UI"
+        family = DEFAULT_UI_FONT
         settings.setValue("font_family", family)
     raw_size = settings.value("font_size", 11)
     size = as_int(raw_size, 11, maximum=256)

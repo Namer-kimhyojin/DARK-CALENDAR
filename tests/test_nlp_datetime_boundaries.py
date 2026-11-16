@@ -176,9 +176,9 @@ def test_complete_month_day_tokens_keep_supported_formats(expression):
     }
 
 
-def test_empty_input_preserves_existing_fallback_contract():
+def test_empty_input_returns_empty_title_for_caller_fallback():
     assert nlp_engine.parse_nlp_task("  ") == {
-        "title": "제목 없음",
+        "title": "",
         "date": "2026-10-14",
         "time": None,
     }

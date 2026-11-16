@@ -1178,7 +1178,7 @@ class ChecklistManagerDialog(QDialog):
             self,
             t("checklist_mgr.export_title"),
             f"{template['name']}.json",
-            "JSON Files (*.json)",
+            t("common.file_filter_json", "JSON 파일 (*.json)"),
         )
 
         if not filename:
@@ -1208,7 +1208,7 @@ class ChecklistManagerDialog(QDialog):
             self,
             t("checklist_mgr.import_title"),
             "",
-            "JSON Files (*.json)",
+            t("common.file_filter_json", "JSON 파일 (*.json)"),
         )
 
         if not filename:
@@ -1243,7 +1243,10 @@ class ChecklistManagerDialog(QDialog):
             QMessageBox.information(
                 self,
                 t("checklist_mgr.import_done_title"),
-                t("checklist_mgr.import_done_msg", name=data["template"].get("name", "체크리스트")),
+                t(
+                    "checklist_mgr.import_done_msg",
+                    name=data["template"].get("name", checklist_repo.default_import_name()),
+                ),
             )
 
         except Exception as exc:

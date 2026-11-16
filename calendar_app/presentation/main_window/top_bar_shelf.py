@@ -17,6 +17,17 @@ from calendar_app.shared.color_utils import hex_to_rgba, parse_css_color
 from calendar_app.shared.icon_map import ICON, icon
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
 
+# Every square top-bar button (lock, magnet, widget mode, pin) shares this size.
+TOP_BAR_BUTTON_SIZE = 36
+# Spelled out in each button's stylesheet: the global QPushButton rule sets
+# min-width: 60px, which overrode setFixedSize and widened the lock and magnet
+# buttons to 62px next to the 36px tool buttons.
+# QSS sizes are the content box; the buttons draw a 1px border on each side.
+_TOP_BAR_BUTTON_CONTENT = TOP_BAR_BUTTON_SIZE - 2
+TOP_BAR_BUTTON_SIZE_CSS = (
+    f"min-width: {_TOP_BAR_BUTTON_CONTENT}px; max-width: {_TOP_BAR_BUTTON_CONTENT}px; "
+    f"min-height: {_TOP_BAR_BUTTON_CONTENT}px; max-height: {_TOP_BAR_BUTTON_CONTENT}px;"
+)
 TOP_BAR_AUTO_HIDE_KEY = "topbar_auto_hide"
 _REVEAL_DELAY_MS = 120
 _HIDE_DELAY_MS = 480
@@ -25,9 +36,6 @@ _EDGE_HEIGHT = 8
 _HANDLE_HEIGHT = 4
 # The gap between a pinned bar and the panels matches the gaps between panels.
 _GAP_HEIGHT = 3
-# A pull tab hanging from the handle; the top centre rarely holds panel buttons.
-_FLOATING_PIN_WIDTH = 44
-_FLOATING_PIN_HEIGHT = 18
 
 
 class _ShelfButton(QToolButton):
@@ -67,7 +75,10 @@ class TopBarShelf(QWidget):
 
     The bar always keeps its layout slot, so revealing it moves the panels below it
     instead of drawing a translucent layer over them. A hidden bar takes no space: a
-    thin handle drawn over the top edge marks it and a pull tab under it pins it again.
+    thin handle drawn over the top edge marks it. Hovering or clicking the handle
+    reveals the bar, whose pin button (or the shortcut) pins it again. The separate
+    pull tab that used to hang under the handle was removed: it covered calendar
+    content such as the "today" button.
     """
 
     def __init__(self, owner, frame, banner=None):
@@ -88,17 +99,10 @@ class TopBarShelf(QWidget):
         self.pin_button = _ShelfButton(frame)
         self.pin_button.setObjectName("top_bar_pin")
         self.pin_button.setCheckable(True)
-        self.pin_button.setFixedSize(36, 36)
+        self.pin_button.setFixedSize(TOP_BAR_BUTTON_SIZE, TOP_BAR_BUTTON_SIZE)
         self.pin_button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.pin_button.setCursor(Qt.CursorShape.PointingHandCursor)
         frame.layout().addWidget(self.pin_button, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        self.floating_pin = _ShelfButton(owner)
-        self.floating_pin.setObjectName("top_bar_floating_pin")
-        self.floating_pin.setFixedSize(_FLOATING_PIN_WIDTH, _FLOATING_PIN_HEIGHT)
-        self.floating_pin.setFocusPolicy(Qt.FocusPolicy.TabFocus)
-        self.floating_pin.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.floating_pin.hide()
 
         self._mouse_focus_buttons = [
             button
@@ -116,7 +120,6 @@ class TopBarShelf(QWidget):
         self._close_timer = QTimer(self, singleShot=True, interval=_HIDE_DELAY_MS)
         self._close_timer.timeout.connect(self._close_on_leave)
         self.pin_button.clicked.connect(self._on_pin_clicked)
-        self.floating_pin.clicked.connect(lambda: self.set_auto_hide(False))
         for widget in (frame, owner):
             widget.installEventFilter(self)
         QApplication.instance().focusChanged.connect(self._on_focus_changed)
@@ -144,39 +147,26 @@ class TopBarShelf(QWidget):
         icon_color = parse_css_color(palette["text_primary"]).name()
         theme_color = snapshot.theme_color
         radius = snapshot.shape_tokens["panel_toolbar_button_radius"]
-        for button, size in ((self.pin_button, 17), (self.floating_pin, 12)):
-            button.setIcon(icon(ICON.ALWAYS_ON_TOP, color=icon_color))
-            button.setIconSize(QSize(size, size))
-            if button.icon().isNull():
-                button.setText("▴")
+        self.pin_button.setIcon(icon(ICON.ALWAYS_ON_TOP, color=icon_color))
+        self.pin_button.setIconSize(QSize(17, 17))
+        if self.pin_button.icon().isNull():
+            self.pin_button.setText("▴")
         self.pin_button.setStyleSheet(
             f"""
             QToolButton#top_bar_pin {{
                 padding: 0; border: 1px solid transparent; border-radius: {radius}px;
                 background: transparent; color: {palette["text_primary"]};
+                {TOP_BAR_BUTTON_SIZE_CSS}
             }}
             QToolButton#top_bar_pin:checked {{
                 border-color: {hex_to_rgba(theme_color, 0.55)};
                 background: {hex_to_rgba(theme_color, 0.16)};
             }}
-            QToolButton#top_bar_pin:hover, QToolButton#top_bar_pin:focus {{
-                border-color: {theme_color};
+            QToolButton#top_bar_pin:hover {{
+                border-color: {palette["border_soft"]};
                 background: {palette["control_bg_hover"]};
             }}
-            """
-        )
-        # Opaque, so the corner pin stays legible over any calendar content.
-        self.floating_pin.setStyleSheet(
-            f"""
-            QToolButton#top_bar_floating_pin {{
-                padding: 0; border: 1px solid {hex_to_rgba(theme_color, 0.55)};
-                border-top: none; border-bottom-left-radius: 8px;
-                border-bottom-right-radius: 8px; color: {palette["text_primary"]};
-                background: {snapshot.panel_palette["topbar_bg"]};
-            }}
-            QToolButton#top_bar_floating_pin:hover, QToolButton#top_bar_floating_pin:focus {{
-                border-color: {theme_color};
-            }}
+            QToolButton#top_bar_pin:focus {{ border-color: {theme_color}; }}
             """
         )
         self.handle.setStyleSheet(
@@ -199,9 +189,6 @@ class TopBarShelf(QWidget):
             pin_label = t("topbar.unpin", "상단 바 자동 숨기기")
         self.pin_button.setAccessibleName(pin_label)
         self.pin_button.setToolTip(pin_label + suffix)
-        floating_label = t("topbar.pin", "상단 바 고정")
-        self.floating_pin.setAccessibleName(floating_label)
-        self.floating_pin.setToolTip(floating_label + suffix)
         self.handle.setToolTip(
             t("topbar.reveal_hint", "마우스를 올리거나 클릭하면 상단 바가 나타납니다.") + suffix
         )
@@ -251,30 +238,22 @@ class TopBarShelf(QWidget):
         hidden_chrome = allowed and self.auto_hide and not self._revealed
         self._frame.setVisible(frame_visible)
         self._layout.setContentsMargins(0, 0, 0, _GAP_HEIGHT if frame_visible else 0)
-        self._update_floating_pin(hidden_chrome)
+        self._update_handle(hidden_chrome)
         self._sync_hover_timer()
 
-    def _update_floating_pin(self, wanted=None):
+    def _update_handle(self, wanted=None):
         if wanted is None:
             wanted = self.available and self.auto_hide and not self._revealed
         if wanted and self.isVisible() and not self._owner.isMinimized():
-            self._position_floating_pin()
-            for widget in (self.handle, self.floating_pin):
-                widget.show()
-                widget.raise_()
+            self._position_handle()
+            self.handle.show()
+            self.handle.raise_()
         else:
             self.handle.hide()
-            self.floating_pin.hide()
 
-    def _position_floating_pin(self):
+    def _position_handle(self):
         area = self._owner.contentsRect()
         self.handle.setGeometry(area.x(), area.y(), area.width(), _HANDLE_HEIGHT)
-        # Hangs right under the handle; _hover_target ignores it, so aiming at
-        # the tab pins the bar instead of revealing it first.
-        self.floating_pin.move(
-            area.x() + (area.width() - _FLOATING_PIN_WIDTH) // 2,
-            area.y() + _HANDLE_HEIGHT,
-        )
 
     def reveal(self, *, focus=False):
         if not self._can_reveal():
@@ -323,11 +302,7 @@ class TopBarShelf(QWidget):
         ):
             return False
         widget = QApplication.widgetAt(global_pos)
-        return (
-            widget is not None
-            and widget is not self.floating_pin
-            and widget.window() is self._owner
-        )
+        return widget is not None and widget.window() is self._owner
 
     def _check_hover(self):
         # The calendar retains all pointer events, including at its top edge.
@@ -380,7 +355,7 @@ class TopBarShelf(QWidget):
                 self._close_timer.start()
         elif watched is self._owner:
             if kind == QEvent.Type.Resize and self.handle.isVisible():
-                self._position_floating_pin()
+                self._position_handle()
             elif kind == QEvent.Type.WindowStateChange and self.auto_hide:
                 if self._owner.isMinimized():
                     self._collapse()
@@ -389,14 +364,13 @@ class TopBarShelf(QWidget):
         return super().eventFilter(watched, event)
 
     def hideEvent(self, event):
-        # Focus mode hides the menu widget; the corner pin goes with it.
+        # Focus mode hides the menu widget; the edge handle goes with it.
         self._wait_for_edge_exit = False
         if self.auto_hide:
             self._stop_timers()
             self._revealed = False
             self._frame.hide()
         self.handle.hide()
-        self.floating_pin.hide()
         super().hideEvent(event)
 
     def paintEvent(self, event):

@@ -13,6 +13,7 @@ from calendar_app.app_paths import APP_NAME, APP_VENDOR
 from calendar_app.infrastructure.db import calendar_repo, database_unified, task_repo
 from calendar_app.infrastructure.google_sync import engine, helpers, repository
 from calendar_app.infrastructure.google_sync import service as gcal_service
+from calendar_app.infrastructure.i18n import t
 from tests.support import TemporaryDatabaseTestCase
 from tests.test_gcal_sync_helpers import FakeSyncService
 from tests.test_gcal_sync_integration import FakeDate, FakeGoogleEvent, FakeSettings
@@ -356,7 +357,8 @@ class GoogleSyncBoundarySafetyTests(TemporaryDatabaseTestCase):
         self.assertFalse(reset)
         self.assertEqual("cancelled", events[0].status)
         self.assertEqual(
-            ("Untitled", "", ""), (events[1].summary, events[1].description, events[1].location)
+            (t("dialog.task.untitled", "제목 없음"), "", ""),
+            (events[1].summary, events[1].description, events[1].location),
         )
 
     def test_invalid_full_sync_is_validated_before_any_row_is_applied_or_archived(self):

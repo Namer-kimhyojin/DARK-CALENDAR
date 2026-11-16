@@ -687,6 +687,7 @@ def initialize_unified_database(*, raise_on_error=False):
             ("bg_color", "TEXT"),
             ("memo", "TEXT"),
             ("priority", "TEXT DEFAULT 'normal'"),
+            ("completed_at", "TEXT"),
         ]
 
         for col_name, col_type in missing_directive_cols:
@@ -937,6 +938,10 @@ def initialize_unified_database(*, raise_on_error=False):
 
         cur.execute(
             "CREATE INDEX IF NOT EXISTS idx_task_directive_status_deadline ON task_directive (status, deadline)"
+        )
+
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_task_directive_status_completed_at ON task_directive (status, completed_at)"
         )
 
         cur.execute(

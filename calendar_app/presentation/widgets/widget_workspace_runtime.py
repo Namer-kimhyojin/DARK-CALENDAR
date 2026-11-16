@@ -467,7 +467,7 @@ class WidgetWorkspaceService(QObject):
         from calendar_app.presentation.widgets.weather_scene import system_allows_weather_motion
 
         motion = options["motion"] if system_allows_weather_motion() else "static"
-        for _, _, _, widget in self.manager.all_instances():
+        for _, _, _, widget in self.manager.live_instances():
             for surface in widget.findChildren(QObject):
                 setter = getattr(surface, "set_motion_policy", None)
                 if callable(setter):
@@ -482,7 +482,7 @@ class WidgetWorkspaceService(QObject):
             else 60_000
             if any(
                 kind == "launcher_deck" and widget.isVisible()
-                for _, _, kind, widget in self.manager.all_instances()
+                for _, _, kind, widget in self.manager.live_instances()
             )
             else 0
         )
