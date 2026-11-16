@@ -46,7 +46,7 @@
 - KeyDeck 컬렉션은 시각 속성만 복사·적용합니다. 키 동작·그림·레이아웃·크기·비트메이커의 사운드 키 의미 색상을 보존합니다.
 - 회귀: `tests/test_widget_graphic_collections.py`, `tests/test_widget_graphic_designs.py`. 실제 소스 화면: `scripts/validate_widget_graphic_collections.py` (`--all-designs`로 종류별 추가 10종). [기본 컬렉션](../docs/ux-audit/widget-graphic-collections-20261101.md), [추가 디자인](../docs/ux-audit/widget-graphic-designs-20261101.md).
 
-## 위젯 종류 (8종)
+## 위젯 종류 (9종)
 
 | 타입 | 클래스 | 파일 |
 |---|---|---|
@@ -58,6 +58,7 @@
 | `text` | `OverlayTextWidget` | `overlay_text.py` |
 | `weather` | `OverlayWeatherWidget` | `overlay_weather.py` |
 | `launcher_deck` | `OverlayLauncherDeckWidget` | `overlay_launcher_deck.py` |
+| `loop_deck` | `OverlayLoopDeckWidget` | `overlay_loop_deck.py` |
 
 ## 내용 프리셋과 미리보기
 
@@ -301,9 +302,10 @@ class OverlayXxxWidget(OverlayBaseWidget):
 ### 비트메이커 녹음·루프
 
 - 스튜디오와 위젯 메뉴의 `연주·녹음`은 별도 루프 믹서 위젯(`overlay_launcher_deck.open_loop_mixer_widget`)을 연다. 설정창 텍스트 입력은 연주하지 않는다.
+- 현재 UI는 6트랙 루프 믹서(`domain/loop_mixer.py` `TRACK_COUNT = 6`)다. 스튜디오의 연주·루프 진입점(`studio.py` `open_beatmaker_performance`·`open_beatmaker_looper`)은 모두 `open_loop_mixer()`로 이어진다. 현재 사용 순서는 [루프 믹서 안내](../docs/ux-audit/loop-mixer-touch-20261106.md)를 참고한다. 아래 단일 녹음·4트랙 루프덱 항목은 보존되는 데이터 계약이다.
 - `domain/beatmaker_recording.py`가 최대 5분·4,096타의 선택 필드 `deck.beatmaker_recording`을 검증한다. 음원 스냅샷만 재생하고 키 동작을 실행하지 않는다. 저장된 녹음을 자동 재생하지 않는다.
 - 스튜디오는 초안·실행 취소·적용 흐름을 유지하며 위젯은 연주창을 닫을 때 저장한다. 빈 녹음은 기존 녹음을 유지하고, 교체·삭제는 확인한다. 닫기·숨김·종료·확인창 중 종료에서 재생과 타이머를 정리한다.
-- 전체 덱 공유는 녹음의 사용자 WAV도 내장/복원한다. 페이지 공유 시 수신 덱의 기존 녹음을 보존한다. 세부 계약·검증은 `docs/ux-audit/keydeck-recording-loop-20261022.md`를 참고한다.
+- 전체 덱 공유는 녹음의 사용자 WAV도 내장/복원한다. 페이지 공유 시 수신 덱의 기존 녹음을 보존한다. 단일 녹음의 데이터 계약·검증 이력은 `docs/ux-audit/keydeck-recording-loop-20261022.md`에 있다.
 - `루프덱 · 4트랙`은 기존 단일 녹음과 분리된 `deck.beatmaker_looper`를 사용한다. `domain/beatmaker_looper.py`가 BPM 40~240, 1·2·4·8마디, 16분음표/끄기, 4트랙·트랙당 2,048타·총 8,192타를 검증한다. 기존 `beatmaker_recording` version 1은 변경하거나 자동 변환하지 않는다.
 - 루프덱은 첫 패드부터 한 바퀴를 녹음한 뒤 반복한다. 다음 트랙과 오버더빙은 같은 monotonic epoch를 공유하고 다른 트랙의 반복을 유지한다. 라이브 입력을 녹음 중 중복 재생하지 않으며, 절전 후 지난 타격을 한꺼번에 재생하지 않는다. 닫기·숨김·종료에서는 타이머와 악기 입력을 정리한다.
 - 루프 믹서 출력은 20ms 블록·버퍼 3개를 유지하고 `CALLBACK_EVENT` 이벤트로 깨어난다(`stop()`도 이벤트를 깨운다). 헤더 준비·해제·쓰기·위치 호출과 녹음 중 블록마다 하는 마이크 버퍼 재등록(`waveInAddBuffer`)은 GIL을 놓지 않고(x64·ARM64, 32비트는 기존처럼 놓음), 열기·초기화·닫기는 놓는다. 이벤트 핸들은 `waveOutClose`가 성공한 뒤에만 닫고, 정리에 실패하면 백엔드와 함께 보존한다(`_DRIVER_UNSAFE`). 출력 정지 판정 1초는 실제로 기다린 시간만 세며, 절전 복귀처럼 시계가 크게 뛰면 다시 센다.
@@ -311,7 +313,7 @@ class OverlayXxxWidget(OverlayBaseWidget):
 - 키덱은 미리 불러올 때 소리 목록을 `set_keydeck_sounds()`로 알리고, 그 키덱이 연결된 믹서는 오디오 스레드 밖에서 미리 디코딩한다. 세션·프로젝트를 불러올 때와 재생을 시작할 때도 연결된 키덱이 알린 소리를 디코딩한다. 오디오 스레드는 디코딩하지 않으며, 아직 준비되지 않은 타격은 0.25초 안에 준비되면 재생하고 아니면 버린다.
 - 루프 믹서 콤보 8개(루프 길이·마이크·트랙 입력 소스 6개, `TouchMixerComboBox`)의 팝업 목록 스타일시트(행 최소 44px)와 터치 스크롤 제스처는 위젯을 만들 때가 아니라 처음 열 때 `showPopup()`에서 한 번만 적용한다(`_popup_prepared`). 만들 때 적용하면 믹서의 지연된 첫 polish 중에 44px 규칙 없이 행이 배치되어, 다음 외형 재적용 전까지 50px 행이 겹쳐 보인다(Windows 11 스타일에서 30–34px 간격). 팝업은 가상 함수 `showPopup()`으로만 열리므로(마우스·F4·Alt+↓·Space는 테스트로 확인, 접근성 열기 동작은 Qt 소스 기준) `QComboBox.showPopup(combo)` 직접 호출이나 `setView()`로 이 재정의를 우회하지 않는다. `before_popup`(입력 소스 목록 갱신)은 준비보다 먼저 실행한다. 회귀: `tests/test_loop_deck_launch_perf.py`.
 - Studio의 초안·실행 취소·적용과 위젯의 닫을 때 저장 계약을 유지한다. 전체 덱 공유는 네 트랙의 사용자 WAV 스냅샷을 함께 내장/복원하고 페이지 가져오기는 수신 덱의 단일 녹음과 루프를 모두 보존한다.
-- 회귀는 `tests/test_beatmaker_looper.py`, `tests/test_keydeck_looper_ui.py`, `tests/test_keydeck_looper_layouts.py` 및 기존 녹음/KeyDeck 공유 테스트를 포함한다. 사용 순서와 검증 경계는 [루프덱 안내](../docs/ux-audit/keydeck-loopdeck-20261106.md)를 참고한다.
+- 회귀는 `tests/test_beatmaker_looper.py`, `tests/test_keydeck_looper_ui.py`, `tests/test_keydeck_looper_layouts.py` 및 기존 녹음/KeyDeck 공유 테스트를 포함한다. 현재 사용 순서는 [루프 믹서 안내](../docs/ux-audit/loop-mixer-touch-20261106.md)를 참고한다. [루프덱 안내](../docs/ux-audit/keydeck-loopdeck-20261106.md)는 4트랙 루프덱(`deck.beatmaker_looper`)의 데이터 계약·검증 이력으로만 참고한다.
 
 ## 크로스 위젯 참조
 

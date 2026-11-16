@@ -23,7 +23,7 @@ Air Calendar가 사용하는 `https://www.googleapis.com/auth/calendar`는 **민
 ## 사전 준비 체크리스트
 
 - [x] 개인정보처리방침 작성 (`docs/privacy-policy.ko.md`, `docs/privacy-policy.en.md`)
-- [ ] 처리방침을 홈페이지에 게시: `https://namer-kimhyojin.github.io/dark_calendar/privacy` (예시)
+- [x] 처리방침을 홈페이지에 게시: `https://namer-kimhyojin.github.io/DARK-CALENDAR/privacy.html` (`docs/privacy.html`, 홈페이지 `docs/index.html`에서 링크)
 - [ ] 홈페이지에 앱 소개 + 기능 설명 존재 확인 (검증 심사관이 확인함)
 - [ ] Google Cloud Console의 OAuth 동의 화면에 다음 등록:
   - 앱 이름: Air Calendar
@@ -48,22 +48,31 @@ Air Calendar가 사용하는 `https://www.googleapis.com/auth/calendar`는 **민
 > `https://www.googleapis.com/auth/calendar` scope because it provides two-way
 > synchronization between the user's local calendar and Google Calendar:
 >
-> 1. Reading and writing calendar events (create/update/delete) for two-way sync.
-> 2. Managing the user's calendar list: the app lets users subscribe to and
->    unsubscribe from calendars by calendar ID (`calendarList.insert` /
->    `calendarList.delete`), which requires the full calendar scope — the
->    narrower `calendar.events` scope does not permit calendar list modification.
+> 1. Reading the user's calendar list (`calendarList.list`) so the user can
+>    choose which calendars to sync.
+> 2. Reading and writing events in the selected calendars for two-way sync
+>    (`events.list`, `events.get`, `events.insert`, `events.update`,
+>    `events.delete`, and `events.move` when an event is moved between the
+>    user's calendars).
+>
+> The app does not create, delete or modify calendars or calendar list entries.
 >
 > All data received from Google APIs is stored only on the user's local device,
 > is never transmitted to the developer or any third party, and is used solely
 > to provide the user-facing calendar sync feature. The app complies with the
 > Google API Services User Data Policy, including the Limited Use requirements.
 
-## 참고: 왜 scope를 줄일 수 없는가
+## 참고: 현재 요청 범위와 축소 검토
 
-- `calendar.events`: 이벤트 CRUD만 가능 — 캘린더 목록 추가/삭제(`calendarList.insert/delete`) 불가
-- 본 앱은 GCal 설정에서 "캘린더 ID로 구독 추가/제거" 기능을 제공하므로 전체 `auth/calendar` 필요
-- 근거 코드: `calendar_app/infrastructure/google_sync/service.py` (calendarList().insert / .delete)
+- 코드가 요청하는 범위: `SCOPES = ["https://www.googleapis.com/auth/calendar"]` 하나뿐
+  (`calendar_app/infrastructure/google_sync/service.py`). 저장된 토큰도 이 범위를 포함해야 유효로 판단.
+- 실제 호출하는 API: `calendarList().list`(캘린더 목록 조회)와 `events()`의
+  `list` / `get` / `insert` / `update` / `delete` / `move`. `calendarList.insert/delete`,
+  `calendars.*`는 호출하지 않음.
+- 따라서 현재 호출은 `https://www.googleapis.com/auth/calendar.events`(일정 읽기·쓰기)와
+  `https://www.googleapis.com/auth/calendar.calendarlist.readonly`(캘린더 목록 조회)로 충족될 수 있음.
+  검증 제출 전에 범위를 이 둘로 줄이는 방안을 먼저 검토할 것. 줄이면 `SCOPES`와 토큰 범위 확인 로직을
+  함께 바꾸고, 기존 사용자 토큰의 재동의 흐름을 확인해야 함. 범위를 바꾸면 위 정당화 문안의 첫 문단도 수정.
 
 ## Limited Use 요구사항 준수 현황 (심사 대비)
 

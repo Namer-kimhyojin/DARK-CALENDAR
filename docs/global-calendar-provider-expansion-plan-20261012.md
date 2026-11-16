@@ -2,6 +2,8 @@
 
 작성일: 2026-10-12. 범위: 서비스 후보 조사와 구현 계획. 앱 코드 변경·실계정 검증·배포는 수행하지 않았다.
 
+> 구현 현황(2026-11-16 확인): P1 Yahoo Calendar·Zoho Calendar·Fastmail은 CalDAV 프로필로 구현돼 v5.2.0부터 배포 중이다(`calendar_app/infrastructure/caldav_sync/profiles.py`). P2 LINE WORKS·Feishu와 P3 Cybozu Garoon·DingTalk는 앱 코드에 구현이 없다. 아래 2절 이하는 작성 당시 기준이다.
+
 ## 1. 권고 방향
 
 1. 공통 서비스 등록 구조와 계정별 상태를 먼저 마련한다.
@@ -16,7 +18,7 @@
 
 - `calendar_sync_hub.py`: Google·Outlook·iCloud·네이버 카드와 추가 계정 요약이 고정되어 있다.
 - `calendar_sync_coordinator.py`: PROVIDERS와 표시 이름이 고정되어 있다. 새 서비스 등록 시 동기화·오류·설정 진입도 함께 확장해야 한다.
-- `caldav_sync/profiles.py`: iCloud와 네이버만 등록되어 있고 HTTPS 호스트 검증도 두 서비스 전용이다.
+- `caldav_sync/profiles.py`(작성 당시): iCloud와 네이버만 등록되어 있고 HTTPS 호스트 검증도 두 서비스 전용이다.
 - `caldav_settings_dialog.py`: 서비스 선택과 안내가 iCloud/네이버 두 갈래다. 프로필만 추가해도 완성되는 구조는 아니다.
 - `caldav_sync_controller.py`: 서비스별 QSettings prefix 아래 하나의 현재 account_id를 보유한다. 동일 서비스의 복수 계정은 별도 설계가 필요하다.
 - `application/calendar_sync_contract.py`, `infrastructure/calendar_sync/engine.py`: 정규화한 이벤트와 CRUD 어댑터를 재사용할 기반이 있다. 모든 API가 이 계약의 revision/재시도 의미를 충족하는지는 검증해야 한다.

@@ -9,12 +9,16 @@
 ### 올바른 변경 방법
 컬럼 추가/변경은 반드시 **`ALTER TABLE` 마이그레이션**으로 처리합니다:
 
+`initialize_unified_database()`가 `get_table_columns()`로 현재 컬럼을 읽고, 없는 컬럼만 추가합니다.
+`unified_task`·`task_directive` 등은 `(컬럼명, 타입)` 목록(예: `full_unified_cols`)을 돌며 같은 방식으로 추가합니다.
+
 ```python
-# database_unified.py 내 마이그레이션 예시
-def _migrate_v3(conn):
+# database_unified.py initialize_unified_database() 안의 실제 패턴
+calendar_cols = get_table_columns(cur, "calendar")
+if "access_role" not in calendar_cols:
     try:
-        conn.execute("ALTER TABLE tasks ADD COLUMN calendar_id TEXT")
-    except Exception:
+        cur.execute("ALTER TABLE calendar ADD COLUMN access_role TEXT")
+    except sqlite3.OperationalError:
         pass  # 이미 컬럼이 있으면 무시
 ```
 
@@ -24,28 +28,30 @@ def _migrate_v3(conn):
 
 | 테이블 | 파일 | 비고 |
 |---|---|---|
-| `tasks` | `task_repo.py` | 태스크 메인 테이블 |
-| `directives` | `directive_repo.py` | 디렉티브 (지시사항) |
-| `routines` | `routine_repo.py` | 루틴 정의 |
+| `unified_task` | `db_repository_unified.py` (`task_repo.py`는 호환 어댑터) | 태스크 메인 테이블 |
+| `task_directive` | `directive_repo.py` (→ `db_repository.py`) | 디렉티브 (지시사항) |
+| `routine_template`, `template_step` | `routine_repo.py` (→ `db_repository_unified.py`) | 루틴 정의 |
 | `calendar` | `calendar_repo.py` | 멀티 캘린더 (personal DB) |
 | `gcal_subscription` | `db_repository_unified.py` | **삭제 금지** — `calendar`로 마이그레이션 중 |
-| `checklists` | `checklist_repo.py` | 체크리스트 항목 |
+| `checklist_template`, `checklist_item`, `task_checklist_link` | `checklist_template_repo.py`, `checklist_repo.py` (→ `db_repository_unified.py`) | 체크리스트 템플릿·항목·태스크 연결 |
 
 ## calendar 테이블 스키마
 
 ```sql
-CREATE TABLE calendar (
+CREATE TABLE IF NOT EXISTS calendar (
     id              TEXT PRIMARY KEY,   -- "gcal::primary", "local::메모", "ics::hash"
-    type            TEXT NOT NULL,      -- 'gcal' | 'local' | 'shared' | 'ics' | 'outlook' | 'caldav'
-    name            TEXT,
-    color           TEXT,
+    type            TEXT NOT NULL DEFAULT 'local',  -- 'gcal' | 'local' | 'shared' | 'ics' | 'outlook' | 'caldav'
+    name            TEXT NOT NULL,
+    color           TEXT NOT NULL DEFAULT '{DEFAULT_CALENDAR_COLOR}',  -- f-string이 아니라 이 문자열 그대로가 기본값
     is_default      INTEGER DEFAULT 0,
     is_active       INTEGER DEFAULT 1,
     is_visible      INTEGER DEFAULT 1,
     gcal_calendar_id TEXT,              -- type='gcal'인 경우만
     ics_url         TEXT,               -- type='ics'인 경우만
     ics_last_fetched TEXT,
-    sort_order      INTEGER DEFAULT 0
+    sort_order      INTEGER DEFAULT 0,
+    access_role     TEXT,               -- 예: 'reader'. 기존 DB에는 ALTER TABLE로 추가
+    created_at      TEXT DEFAULT (datetime('now', 'localtime'))
 )
 ```
 
@@ -57,9 +63,10 @@ CREATE TABLE calendar (
 - 이미 마이그레이션된 경우 재실행 방지 플래그 확인
 
 ```python
-# bootstrap.py에서 호출됨
+# bootstrap.py에서 호출됨 (QSettings 값 일부를 _StartupSettingsView로 감싸 전달, False면 시작 실패)
 from calendar_app.infrastructure.db.calendar_repo import migrate_from_gcal_subscription
-migrate_from_gcal_subscription()
+if not migrate_from_gcal_subscription(settings=_StartupSettingsView(settings_values)):
+    raise RuntimeError("Calendar migration failed")
 ```
 
 ## 기본 캘린더 자동 생성
@@ -113,8 +120,9 @@ task_data = {
 ```python
 # calendar_app/app_paths.py
 DB_PATH          # 개인 DB (기본 경로)
-SHARED_DB_PATH   # C:\Users\Public\DarkCalendar\shared.db (PC공유 캘린더)
 ```
+
+PC 공유 DB 경로(`SHARED_DB_PATH`)는 현재 코드에 없습니다(미구현).
 
 ## 자동 백업과 손상 복구
 

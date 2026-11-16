@@ -1,8 +1,8 @@
-# Dark Calendar — 진행 중 작업 트래킹
+# Air Calendar — 진행 중 작업 트래킹
 
 > 이 파일은 여러 세션에 걸쳐 진행되는 작업의 현재 상태를 기록합니다.
 > 완료된 항목은 `[x]`, 진행 중은 `[~]`, 미착수는 `[ ]`로 표시합니다.
-> 마지막 업데이트: 2026-11-04 (4.9.2 GitHub·Store 게시 및 이 PC의 4.9.2.0 설치 확인)
+> 마지막 업데이트: 2026-11-16 (5.5.1 GitHub 게시·이 PC의 Store 서명 5.5.1.0 설치 확인, 로컬 main과 origin/main 통합·푸시)
 > 현재 배포 현황은 아래 확인표를 우선하며, 날짜별 과거 기록의 설치 번호·대기 상태는 당시 관찰입니다.
 
 ---
@@ -33,8 +33,8 @@
 - [x] 다국어 결정 반영(2026-11-16): KeyDeck 테마 표시 이름 "Crystal Night"('수정의 밤' 영어 명칭과 같음) → "Midnight Crystal"/"미드나이트 크리스탈"(테마 ID `crystal_night` 유지), 지시 그룹을 입력란·표 머리글과 같은 수신자 기준으로 통일(배지 BY → TO/수신, 메뉴 '요청처별' → '수신자별 그룹화'). 19개 언어 반영, 영어·한국어 외는 AI 초안으로 검토 대기
 - [ ] 다국어 남은 후속: 반기·연간 반복의 '월' 슬롯이 '일'로 표시, 분기·반기·연간 요약에 슬롯이 안 나옴(`routine_recurrence_wizard.py` slot_map), n번째 요일의 성 일치(pt·ru·it), `task_dialog_base.py`의 시간·일 단위 붙여 쓰기, 미리보기 날짜 형식·구분자, 동기화 허브가 미연결 Google 카드를 접어 둠
 - [x] `destroyed` 정리 함수를 공용 도우미(`calendar_app/shared/qt_lifetime.py`)로 옮김: 동기화 문제 알림 창이 GC로 사라지고 그 세션 동안 다시 안 뜨던 버그, 날씨 요청·루프 믹서 정리 중 강제 종료 위험(7,082개 통과 후 보강)
-- [x] 5.3.0은 빌드하지 않고 5.5.0 예약을 거쳐 5.5.1로 게시([5.5.1 배포 확인표](docs/release-5.5.1-checklist.md), Store 제출 35 심사 중)
-- [ ] 로컬 main(커밋 4개·작업 트리 미커밋)과 origin/main(5.0.0~5.5.1 배포 기록 37커밋, 파일 228개 차이) 통합 후 푸시. 공유 작업 트리의 다른 세션이 끝난 뒤 별도 작업으로 진행하고, 공개될 파일 목록을 확인받은 뒤 푸시. 2026-11-15~16 위젯 변경은 다음 배포 5.6.0(새 DB 칸·동작 변경이라 부 버전)
+- [x] 5.3.0은 빌드하지 않고 5.5.0 예약을 거쳐 5.5.1로 게시([5.5.1 배포 확인표](docs/release-5.5.1-checklist.md), Store 제출 35. 이 PC에 Store 서명 5.5.1.0이 2026-11-15부터 설치됨, Store 서버 게시 상태는 다시 확인하지 않음)
+- [x] 로컬 main(커밋 4개·작업 트리 미커밋)과 origin/main(5.0.0~5.5.1 배포 기록 37커밋, 파일 228개 차이) 통합 후 푸시: 병합 커밋 `a056fc0`, 2026-11-16 푸시 완료(이후 로컬 커밋 `5d25e60` 문서 정리는 미푸시). 2026-11-15~16 위젯 변경은 다음 배포 5.6.0(새 DB 칸·동작 변경이라 부 버전)
 - [ ] 실기기 확인: KeyDeck 터치·오디오, 절전·장치 분리, 녹음 정렬, Outlook 종일 일정
 
 ## 홍보 홈페이지 전면 개편 (2026-11-11, 로컬 소스)
@@ -176,7 +176,7 @@
 - [ ] Partner Center 로그인·인증 완료 후 동일 MSIXUPLOAD로 Store 제출, 별도 Submission 31 보존
 - [ ] 실제 Store 심사/게시 확인 후 공식 설치 업데이트·설치 인수. 현재 설치는 4.7.1.0이며 사이드로드로 대체하지 않음
 
-같은 후보를 다시 빌드하거나 버전을 올리지 않는다. [배포 확인표](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.8.0), 로컬 증거 `artifacts/deployment/4.8.0/20261101-0920/`, 공용 `deployment-active.json`에서 이어간다.
+같은 후보를 다시 빌드하거나 버전을 올리지 않는다. [배포 확인표](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v4.8.0), 로컬 증거 `artifacts/deployment/4.8.0/20261101-0920/`, 공용 `deployment-active.json`에서 이어간다(2026-11-16 확인: `%LOCALAPPDATA%\DarkCalendarMaintenance`에 이 파일이 없음).
 
 ## 정기 점검 — 홈페이지·게시판·이미지·릴리스 경로 (2026-11-01)
 
@@ -470,11 +470,11 @@
   - `invalidate_panel_calendar_cache()`: 캘린더 변경 시 캐시 무효화 (gcal_settings_dialog, month_renderer 연동)
 
 ### 1-7. ICS 구독 캘린더
-- [ ] ICS fetcher (`ics_fetcher.py`) → `calendar` 테이블 `ics::*` 항목 연동
-- [ ] 1시간 주기 자동 갱신 (`ics_last_fetched` 기반)
-- [ ] 설정 다이얼로그 "캘린더" 탭에서 ICS URL 추가/삭제 UI
+- [x] ICS fetcher (`infrastructure/ics/ics_fetcher.py` `fetch_and_sync`) → `calendar` 테이블 `type=ics` 항목 연동(`calendar_sync_coordinator.sync_ics`, `ics_last_fetched` 기록)
+- [x] 1시간 주기 자동 갱신(`action_handlers_gcal.py`의 `ics_sync_timer` 60분 → `sync_ics`, `sync_ics_auto` 설정으로 끔)
+- [x] ICS URL 추가·수정·삭제 UI: 설정 대화상자 탭 대신 캘린더 관리 화면 `CalendarManagerPage`(추가 `_add_ics`, 수정 `calendar_repo.update_ics_subscription`, 삭제는 `archive_ics_subscription`으로 보관)
 
-### 1-8. PC 공유 캘린더
+### 1-8. PC 공유 캘린더 (미구현, 2026-11-16 확인: 코드에 공유 DB 경로·`SHARED_DB_PATH` 없음, `shared`는 캘린더 유형 이름·아이콘만 정의됨)
 - [ ] 공유 DB 경로: `C:\Users\Public\DarkCalendar\shared.db`
 - [ ] 읽기/쓰기 권한 처리 (모든 PC 사용자 r/w)
 - [ ] `shared` 타입 캘린더 CRUD 연동

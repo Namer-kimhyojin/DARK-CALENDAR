@@ -16,7 +16,7 @@ This summary does not replace the bundled license texts.
 | QtAwesome | 1.4.2 | MIT; bundled icon fonts use the licenses below | <https://github.com/spyder-ide/qtawesome> |
 | Google API Client for Python | 2.191.0 | Apache-2.0 | <https://github.com/googleapis/google-api-python-client> |
 | google-auth | 2.48.0 | Apache-2.0 | <https://github.com/googleapis/google-auth-library-python> |
-| httplib2 | 0.31.2 | MIT | <https://github.com/httplib2/httplib2> |
+| httplib2 | 0.32.0 | MIT | <https://github.com/httplib2/httplib2> |
 | requests-oauthlib | 2.0.0 | ISC | <https://github.com/requests/requests-oauthlib> |
 | Microsoft Authentication Library for Python | 1.39.0 | MIT | <https://github.com/AzureAD/microsoft-authentication-library-for-python> |
 | PyJWT | 2.15.1 | MIT | <https://github.com/jpadilla/pyjwt> |
@@ -37,7 +37,7 @@ All transitive Python packages and their exact versions are recorded in the payl
 
 The free edition of PyQt6 is GPLv3. Air Calendar is therefore distributed as a GPLv3-covered work. The complete corresponding-source release asset mirrors the exact PyQt6 source and the applicable QtBase source, along with the application source and the remaining locked Python source distributions.
 
-Air Calendar 5.0.2 uses the native Windows notification sound API. Qt Multimedia and its FFmpeg runtime, along with unused Qt PDF and SVG image plugins, are intentionally excluded from the release payload.
+Air Calendar uses the native Windows notification sound API. Qt Multimedia and its FFmpeg runtime, along with unused Qt PDF and SVG image plugins, are intentionally excluded from the release payload.
 
 ## QtAwesome bundled fonts
 

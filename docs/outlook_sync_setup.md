@@ -1,6 +1,8 @@
 # Outlook · Microsoft 365 연결
 
-Air Calendar의 **시스템 → 캘린더 및 동기화 → Outlook · Microsoft 365 연결**에서 설정합니다.
+Air Calendar 상단 **설정** 메뉴의 **캘린더 및 동기화 → 캘린더 · 계정 및 동기화**를 열고,
+**캘린더 관리** 창의 **연결 및 구독** 탭에서 **다른 서비스 연결 → 서비스 목록 펼치기**를 누른 뒤
+**Outlook · Microsoft 365** 카드의 **계정 연결**(연결 후에는 **연결 설정**)에서 설정합니다.
 Google 동기화와 별도 연결이며 기존 Google 계정이나 일정은 변경하지 않습니다.
 
 ## 최초 Microsoft Entra 앱 등록
@@ -46,17 +48,17 @@ Google 동기화와 별도 연결이며 기존 Google 계정이나 일정은 변
 
 실계정 로그인, 실제 Graph 통신 및 Store 배포판 동작은 앱 등록 후 별도 검증해야 합니다.
 
-## iCloud · 네이버 확장 구조
+## CalDAV 서비스 확장 구조
 
 `application/calendar_sync_contract.py`는 서비스별 어댑터의 공통 계약입니다.
 `infrastructure/calendar_sync/`의 엔진·연결 기록·충돌·삭제 대기열은 서비스 공통입니다.
 `infrastructure/outlook_sync/`는 Microsoft 인증·Graph 요청·일정 변환만 담당합니다.
 
-CalDAV 어댑터가 같은 계약을 구현해 iCloud와 네이버를 연결합니다.
+CalDAV 어댑터가 같은 계약을 구현해 iCloud·네이버·Yahoo·Zoho·Fastmail을 연결합니다.
 원격 이벤트는 서비스별로 유일한 `id`, 조건부 수정용 `etag`, 재시도 중복 방지용
 `transaction_id`를 제공하고, 서비스별 시간·종일 종료일·반복 회차를 변환합니다.
 CalDAV에서는 href/ETag, 서버 검색, 인증 방식과 sync-token 지원 여부를 확인해야 합니다.
 공통 엔진을 쓸 수 있다고 해서 서비스별 인증·반복 일정 호환성이 자동 보장되지는 않습니다.
 
-iCloud와 네이버 어댑터와 연결 UI가 구현되었습니다. [CalDAV 설정 안내](caldav_sync_setup.md)를 참고하세요.
+iCloud·네이버·Yahoo·Zoho·Fastmail 어댑터와 연결 UI가 구현되었습니다. [CalDAV 설정 안내](caldav_sync_setup.md)를 참고하세요.
 실제 계정 검증은 별도이며 Google 기존 엔진은 그대로 유지합니다.

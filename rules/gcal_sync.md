@@ -24,8 +24,10 @@
   → 원격/로컬 변경 충돌 판정
   → pull 결과 DB 반영 및 sync token 저장
   → 로컬 dirty 일정 Google push
-  → 필요 시 고아 일정 검사
 ```
+
+고아 일정 검사(`engine.scan_orphan_remote_events`)는 자동 흐름에 포함되지 않습니다.
+동기화 문제 창(`gcal_sync_issues_dialog.py`)의 "구글 고아 스캔" 버튼으로만 수동 실행합니다.
 
 로컬 변경을 전송하기 전에 원격 변경을 먼저 확인합니다. 원격이 마지막 동기화 이후
 변경됐다면 충돌 큐에 스냅샷을 저장하고 원격 버전을 우선 적용합니다. 원격이 변경되지
@@ -123,7 +125,6 @@ def _get_default_gcal_id(app) -> str:
 | `gcal_bound_calendar_id` | 바인딩된 캘린더 ID |
 | `gcal_apply_fail_streak::{calendar_id}` | pull DB 적용 연속 실패 횟수 |
 | `gcal_incremental_backfill_probe::{calendar_id}` | 마지막 증분 백필 성공 날짜 |
-| `gcal_auto_heal_orphans_last_run` | 마지막 고아 일정 자동 검사 시각 |
 
 ## 실패 상태와 사용자 조치
 

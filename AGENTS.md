@@ -5,7 +5,7 @@
 
 - **앱 이름**: Air Calendar
 - **플랫폼**: Windows 데스크톱 앱
-- **언어/프레임워크**: Python 3.x, PyQt6 6.12.0
+- **언어/프레임워크**: Python 3.14.10, PyQt6 6.12.0
 - **UI 언어**: 한국어 기본, i18n 지원 (`calendar_app/infrastructure/i18n.py`)
 - **진입점**: `main.py` → `calendar_app/bootstrap.py` → `OverlayApp`
 - **설정 저장**: `QSettings("kimhyojin", "Dark Calendar")`
@@ -226,7 +226,7 @@ act.setIcon(_ic(ICON.SETTINGS, color=text_primary_hex))
 - 관리 객체: `app.overlay_manager` (`OverlayWidgetManager`)
 - 인스턴스 저장: `QSettings["overlay_instances"]`
 - 설정 prefix: `oi_<inst_id>_`
-- 종류: `clock`, `stopwatch`, `date_card`, `countdown`, `dday`, `text`, `weather`, `launcher_deck`
+- 종류: `clock`, `stopwatch`, `date_card`, `countdown`, `dday`, `text`, `weather`, `launcher_deck`, `loop_deck` (`overlay_manager._WIDGET_TYPES`)
 - 텍스트 템플릿 갱신: fast 100ms, med 1s, slow 60s
 
 i18n:

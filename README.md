@@ -8,7 +8,7 @@ Air Calendar turns the Windows desktop into a personal time workspace. Place cal
 
 ## Why Air Calendar
 
-- Put calendars and seven kinds of widgets directly on the Windows desktop.
+- Put calendars and nine kinds of widgets directly on the Windows desktop.
 - Move and resize each element freely, including multiple instances of the same widget.
 - Build calendar-first, task-first, or widget-first layouts with custom colors and themes.
 - Connect Google Calendar when needed, or keep schedules local to the PC.

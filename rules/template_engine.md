@@ -160,19 +160,22 @@
 
 앱 기본 프리셋은 같은 검사기를 통과해야 하며, JSON 카탈로그와 코드 fallback은 동일한 항목을 유지합니다.
 
-## resolve_template 함수 시그니처
+## resolve_template 메서드 시그니처
 
 ```python
+# OverlayTextWidget (calendar_app/presentation/widgets/overlay_text.py)
 def resolve_template(
-    template: str,
-    countdown_remaining,   # 현재 countdown 값
-    stopwatch_text,        # 현재 stopwatch 값
-    app_data: dict,        # task_count, next_event 등
-    widget_registry: dict, # inst_id → widget
+    self,
+    countdown_remaining: str = "",        # 현재 countdown 값
+    stopwatch_text: str = "",             # 현재 stopwatch 값
+    app_data: dict | None = None,         # task_count, next_event 등
+    widget_registry: dict | None = None,  # inst_id → widget
+    override_text: str | None = None,     # 지정하면 위젯 텍스트 대신 이 템플릿을 해석
 ) -> str:
 ```
 
-`overlay_template_utils.py`에 구현되어 있습니다.
+별도 모듈 함수가 아니라 `overlay_text.py`의 `OverlayTextWidget.resolve_template` 메서드입니다.
+템플릿 원문은 `override_text`가 없으면 위젯 자신의 텍스트(`_label_text()`)를 씁니다.
 
 ## 라이브 프리뷰 에디터
 

@@ -8,7 +8,7 @@ GitHub: <https://github.com/Namer-kimhyojin/DARK-CALENDAR>
 
 Public media kit: <https://namer-kimhyojin.github.io/DARK-CALENDAR/promo.html>
 
-Product facts checked on 2026-11-11 against the [Air Calendar 5.2.0 release](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.2.0), the [official homepage](https://namer-kimhyojin.github.io/DARK-CALENDAR/), and the [Microsoft Store product page](https://apps.microsoft.com/detail/9mxq08rf22k8). Air Calendar is a paid Windows app. Store availability and purchase terms are shown on the Store product page.
+Product facts checked on 2026-11-16 against the [Air Calendar 5.5.1 release](https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/tag/v5.5.1), the [official homepage](https://namer-kimhyojin.github.io/DARK-CALENDAR/), and the [Microsoft Store product page](https://apps.microsoft.com/detail/9mxq08rf22k8). Air Calendar is a paid Windows app. Store availability and purchase terms are shown on the Store product page.
 
 The [August 31 launch plan](LAUNCH_CAMPAIGN_2026-08-31.md) and [original generated asset notes](GENERATED_PROMO_ASSETS.md) document the earlier campaign.
 
@@ -29,7 +29,7 @@ Supporting messages:
 1. Desktop-first: place the calendar on the desktop and move the agenda or task panels independently. In magnet mode, bring a detached panel to the calendar window’s edge to dock it again.
 2. Personal layout: move and resize widgets, save a workspace, and open more than one instance of a widget.
 3. Appearance: choose light, dark, or system mode. The app supports custom colors and separate background and border opacity settings. The [interactive clock demo](https://namer-kimhyojin.github.io/DARK-CALENDAR/?lang=en#desktop-demo) shows background opacity with the text still visible.
-4. Connected calendars: use local calendars without an account or connect Google Calendar, Outlook, and iCloud. Naver and ICS connections are read-only. The [connection guide](https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide.html?lang=en) explains account setup, permissions, and service limits.
+4. Connected calendars: use local calendars without an account or connect Google Calendar, Outlook, iCloud, Yahoo, Zoho, and Fastmail. Naver and ICS connections are read-only. The [connection guide](https://namer-kimhyojin.github.io/DARK-CALENDAR/sync-guide.html?lang=en) explains account setup, permissions, and service limits.
 
 ## Channel strategy
 
@@ -66,7 +66,7 @@ Keep roughly 20% of slots open for release news, user questions, or an unexpecte
 
 Air Calendar는 Windows 바탕화면에 달력을 띄워 원하는 곳에 놓을 수 있는 유료 앱입니다. 오늘 일정이나 업무 패널을 따로 옮기고, 자석 모드로 달력 창에 다시 붙일 수 있습니다. 배경이 비치는 정도도 조절할 수 있습니다.
 
-라이트·다크 모드를 고르고, 원하는 배경색과 투명도로 꾸며 보세요. 로컬 일정은 계정 없이 사용할 수 있고, Google·Outlook·iCloud 일정 연결은 선택 기능입니다. 네이버와 ICS는 읽기 전용으로 연결할 수 있습니다.
+라이트·다크 모드를 고르고, 원하는 배경색과 투명도로 꾸며 보세요. 로컬 일정은 계정 없이 사용할 수 있고, Google·Outlook·iCloud·Yahoo·Zoho·Fastmail 일정 연결은 선택 기능입니다. 네이버와 ICS는 읽기 전용으로 연결할 수 있습니다.
 
 전체 업무 관리에서 일정·일반업무·지시·협조사항을 검색하고, 중요도와 상태를 한 번에 변경할 수 있습니다.
 
@@ -85,7 +85,7 @@ Air Calendar로 달력과 위젯을 Windows 바탕화면에 배치하세요. 라
 
 Air Calendar is a paid Windows app that puts a calendar where you want it on the desktop. Move agenda and task panels independently, snap them back to the calendar window with magnet mode and adjust background opacity.
 
-Choose light or dark mode, then adjust background color and opacity. Use local calendars without an account, or connect Google Calendar, Outlook or iCloud. Naver and ICS subscriptions are read-only.
+Choose light or dark mode, then adjust background color and opacity. Use local calendars without an account, or connect Google Calendar, Outlook, iCloud, Yahoo, Zoho or Fastmail. Naver and ICS subscriptions are read-only.
 
 In Work Management, find schedules, recurring tasks and requests, then update their status or priority in bulk.
 
@@ -98,7 +98,7 @@ Watch the desktop arrangement demo.
 
 Air Calendarは、Windowsのデスクトップにカレンダーを自由に配置できる有料アプリです。予定や業務のパネルを個別に移動し、マグネットモードでカレンダーに結合できます。背景の透明度も調整できます。
 
-ライトモードとダークモードを選び、背景色や透明度も調整できます。ローカルの予定はアカウントなしで管理でき、Google カレンダー、Outlook、iCloudとの連携も選べます。NAVERとICSは読み取り専用です。
+ライトモードとダークモードを選び、背景色や透明度も調整できます。ローカルの予定はアカウントなしで管理でき、Google カレンダー、Outlook、iCloud、Yahoo、Zoho、Fastmailとの連携も選べます。NAVERとICSは読み取り専用です。
 
 業務管理では予定、定期業務、指示・依頼事項を検索し、状態や優先度を一括変更できます。
 
@@ -111,7 +111,7 @@ Air Calendarは、Windowsのデスクトップにカレンダーを自由に配�
 
 Air Calendar 是一款付费 Windows 应用，可将日历放在桌面的任意位置。单独移动日程与任务面板，用磁吸模式重新停靠到日历窗口，并按需调整背景透明度。
 
-选择浅色或深色模式，并调整背景颜色和透明度。本地日历无需账号，也可以按需连接 Google 日历、Outlook 或 iCloud。NAVER 和 ICS 订阅为只读。
+选择浅色或深色模式，并调整背景颜色和透明度。本地日历无需账号，也可以按需连接 Google 日历、Outlook、iCloud、Yahoo、Zoho 或 Fastmail。NAVER 和 ICS 订阅为只读。
 
 在任务管理中搜索日程、周期性任务和协作事项，批量修改状态与优先级。
 

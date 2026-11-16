@@ -6,11 +6,11 @@
 
 글자·24pt 모양 설정, 모달 palette·그림자·중첩 owner, 시간 입력, 요일 4모드와 위젯 메인 테마 상속의 최신 native·회귀 근거는 [2026-11-06 공통 UI 후속 개선](ux-audit/unified-ui-followup-20261106.md)에 모았습니다. 확인 완료와 재촬영 예정, 제외한 실패 fixture를 구분합니다.
 
-기존 단일 녹음을 보존하는 새 4트랙 음악 기능은 [KeyDeck 루프덱 사용 순서·검증 계약](ux-audit/keydeck-loopdeck-20261106.md)을 참고합니다.
+현재 6트랙 루프 믹서 위젯의 사용 순서와 검증은 [터치 중심 루프 믹서](ux-audit/loop-mixer-touch-20261106.md)를 참고합니다. 이전 4트랙 루프덱 기록은 [KeyDeck 루프덱](ux-audit/keydeck-loopdeck-20261106.md)에 남아 있습니다.
 
 버전 증가 기준과 자동 등록은 [버전 규칙](../rules/versioning.md), 변경별 버전·일시·이벤트는 [버전 변경 이력](maintenance/version-history.md)을 참고합니다.
 
-Store 4.3.3의 DB 초기화 오류 재발, 로컬 복구와 배포 검증 절차 수정은 [2026-10-20 장애 조사](maintenance/store-db-recurrence-20261020.md)에 기록했습니다. 안전한 SQLite 런타임을 포함한 새 배포는 별도 미완료 상태입니다.
+Store 4.3.3의 DB 초기화 오류 재발, 로컬 복구와 배포 검증 절차 수정은 [2026-10-20 장애 조사](maintenance/store-db-recurrence-20261020.md)에 기록했습니다. 안전한 SQLite 런타임은 이후 배포에 포함됐습니다(Store 5.2.0.0 설치판에서 SQLite 3.54.1 확인, [11/14 점검 기록](maintenance/review-20261114.md)).
 
 329개 Python 파일의 점검 범위, 오류 수정과 217개 테스트 파일의 격리 검증은 [2026-10-08 파일별 코드 점검](maintenance/code-audit-20261008.md)에 기록했습니다.
 
@@ -71,7 +71,11 @@ CalDAV 변경분 다운로드·UID 주소 복구, 번역 누락 및 테스트 �
 | [공통 UI 후속 개선·검증](ux-audit/unified-ui-followup-20261106.md) | 2026-11-06 native·회귀 확인과 예정·제외 근거 |
 | [모양 설정·세부 모양 조정 점검](ux-audit/appearance-settings-20261109.md) | 2026-11-09 전환 지연 측정, 둥근 창·그림자, 헤더 테마 불일치 수정 |
 | [글자·컨트롤·모달 크기 가이드](design/typography-and-sizing.md) | 공통 글자 역할·크기·배율 기준 |
-| [KeyDeck 루프덱 안내](ux-audit/keydeck-loopdeck-20261106.md) | 4트랙 사용 순서·저장/재생·검증 계약 |
+| [터치 중심 루프 믹서](ux-audit/loop-mixer-touch-20261106.md) | 현재 6트랙 루프 믹서 위젯 사용 순서·검증 |
+| [KeyDeck 루프덱 안내](ux-audit/keydeck-loopdeck-20261106.md) | 이전 4트랙 루프덱 기록(현재는 루프 믹서) |
+| [5.5.1 배포 확인표](release-5.5.1-checklist.md) | 2026-11-14 5.5.1 GitHub·Store 배포 확인 기록 |
+| [5.5.1 배포 노트](release-5.5.1-notes.md) | 5.5.1 사용자 변경 안내 |
+| [해외 계정 연결 확대 계획](global-calendar-provider-expansion-plan-20261012.md) | 2026-10-12 해외 캘린더 서비스 후보·단계 계획과 구현 현황 |
 | [docs\assets\screenshots\README.md](../docs/assets/screenshots/README.md) | 참고 문서 |
 | [docs\dialog_datetime_ux_improvement_plan.md](../docs/dialog_datetime_ux_improvement_plan.md) | 설계·감사 기록 |
 | [docs\dialog_usability_accessibility_audit.md](../docs/dialog_usability_accessibility_audit.md) | 설계·감사 기록 |
@@ -81,8 +85,8 @@ CalDAV 변경분 다운로드·UID 주소 복구, 번역 누락 및 테스트 �
 | [docs\panel_widget_mode_split_plan.md](../docs/panel_widget_mode_split_plan.md) | 설계·감사 기록 |
 | [docs\privacy-policy.en.md](../docs/privacy-policy.en.md) | 개인정보·라이선스·배포 고지 |
 | [docs\privacy-policy.ko.md](../docs/privacy-policy.ko.md) | 개인정보·라이선스·배포 고지 |
-| [docs\ux-audit\figma-handoff\night-signal-philosophy.md](../docs/ux-audit/figma-handoff/night-signal-philosophy.md) | 설계·감사 기록 |
-| [docs\ux-audit\homepage-ui-ux-improvement-plan.md](../docs/ux-audit/homepage-ui-ux-improvement-plan.md) | 설계·감사 기록 |
+| [Night Signal 디자인 철학](ux-audit/figma-handoff/night-signal-philosophy.md) | 설계·감사 기록 |
+| [홈페이지 UI/UX 개선안](ux-audit/homepage-ui-ux-improvement-plan.md) | 설계·감사 기록 |
 | [marketing\DARK_CALENDAR_PROMOTION_KIT.md](../marketing/DARK_CALENDAR_PROMOTION_KIT.md) | 홍보 자료·기록 |
 | [marketing\GENERATED_PROMO_ASSETS.md](../marketing/GENERATED_PROMO_ASSETS.md) | 홍보 자료·기록 |
 | [marketing\GLOBAL_PROMOTION_LOG.md](../marketing/GLOBAL_PROMOTION_LOG.md) | 홍보 자료·기록 |
