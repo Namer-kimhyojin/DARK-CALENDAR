@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS calendar (
     id              TEXT PRIMARY KEY,   -- "gcal::primary", "local::메모", "ics::hash"
     type            TEXT NOT NULL DEFAULT 'local',  -- 'gcal' | 'local' | 'shared' | 'ics' | 'outlook' | 'caldav'
     name            TEXT NOT NULL,
-    color           TEXT NOT NULL DEFAULT '{DEFAULT_CALENDAR_COLOR}',  -- f-string이 아니라 이 문자열 그대로가 기본값
+    color           TEXT NOT NULL DEFAULT '#3c8cff',  -- f-string으로 DEFAULT_CALENDAR_COLOR 값을 넣는다. 예전 DB에 남은 '{DEFAULT_CALENDAR_COLOR}' 값은 시작할 때 고친다
     is_default      INTEGER DEFAULT 0,
     is_active       INTEGER DEFAULT 1,
     is_visible      INTEGER DEFAULT 1,

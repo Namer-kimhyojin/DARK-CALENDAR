@@ -8,6 +8,7 @@ import sqlite3
 import threading
 
 from calendar_app.app_paths import DB_PATH
+from calendar_app.shared.calendar_defaults import DEFAULT_CALENDAR_COLOR
 
 logger = logging.getLogger("Database")
 
@@ -403,7 +404,7 @@ def initialize_unified_database(*, raise_on_error=False):
 
         # calendar: 멀티 캘린더 통합 관리 테이블 (gcal / local / ics)
 
-        cur.execute("""
+        cur.execute(f"""
 
             CREATE TABLE IF NOT EXISTS calendar (
 
@@ -436,6 +437,14 @@ def initialize_unified_database(*, raise_on_error=False):
             )
 
         """)
+
+        # Tables created by earlier versions declared the literal text '{DEFAULT_CALENDAR_COLOR}' as
+        # the colour default (the DDL was not an f-string). CREATE TABLE IF NOT EXISTS keeps that
+        # old default, so repair any row that stored the placeholder instead of a colour.
+        cur.execute(
+            "UPDATE calendar SET color = ? WHERE color = ?",
+            (DEFAULT_CALENDAR_COLOR, "{DEFAULT_CALENDAR_COLOR}"),
+        )
 
         # 3. task_directive (지시사항 - 기존 유지)
 
