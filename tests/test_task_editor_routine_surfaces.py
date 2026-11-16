@@ -66,7 +66,9 @@ class RoutineEditorSurfaceTests(TemporaryDatabaseTestCase):
             .split("QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar::tab:selected", 1)[1]
             .split("}", 1)[0]
         )
-        self.assertIn(f"background: {expected['tab_active_bg']};", selected_tab)
+        # Underline tabs: the selected tab is marked by the accent, not a fill.
+        self.assertIn(f"border-bottom: 2px solid {expected['accent']};", selected_tab)
+        self.assertNotIn("rgba(20,110,190,200)", selected_tab)
 
     def test_each_tab_explicitly_keeps_viewport_and_content_transparent(self):
         dialog = self._dialog()
@@ -85,7 +87,10 @@ class RoutineEditorSurfaceTests(TemporaryDatabaseTestCase):
         buttons = [
             button for button in dialog.findChildren(QPushButton) if button.property("dialogFooter")
         ]
-        self.assertEqual(len(buttons), 4)
+        # Manage, cancel and register; "keep adding" is a checkbox as in the
+        # schedule editor.
+        self.assertEqual(len(buttons), 3)
+        self.assertTrue(dialog.continue_schedule_check.isVisible())
         self.assertEqual(len({button.height() for button in buttons}), 1)
         for button in buttons:
             with self.subTest(label=button.text()):

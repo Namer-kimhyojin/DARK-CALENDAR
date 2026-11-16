@@ -18,6 +18,13 @@ from calendar_app.application.week_planner_usecases import (
     scheduling_block_reason,
 )
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.theme.task_glyphs import (
+    CHIP_BORDER_ALPHA,
+    CHIP_FILL_ALPHA,
+    CHIP_RANGE_HOVER_ALPHA,
+    chip_meta_color,
+    is_completed_row,
+)
 from calendar_app.shared.calendar_display_settings import (
     normalize_weekday_display_mode,
     weekday_display_flags,
@@ -70,6 +77,27 @@ def _mix(foreground: QColor, background: QColor, amount: float) -> QColor:
     )
 
 
+def _event_color(task: dict):
+    """Event colour, then its calendar colour; None falls back to the accent."""
+    color = task.get("bg_color")
+    if color:
+        return color
+    try:
+        from calendar_app.presentation.panels.side_panel_renderer import (
+            _calendar_color_for_task,
+        )
+
+        return _calendar_color_for_task(task)
+    except Exception:
+        return None
+
+
+def _event_glyph(task: dict, tokens=None):
+    from calendar_app.presentation.theme.task_glyphs import event_qicon
+
+    return event_qicon(task, tokens)
+
+
 def _date_from_value(value) -> dt.date | None:
     if isinstance(value, dt.datetime):
         return value.date()
@@ -108,6 +136,8 @@ class _Segment:
     all_day: bool = False
     lane: int = 0
     lanes: int = 1
+    span: int = 1
+    open_left: bool = False
 
 
 class _Canvas(QWidget):
@@ -365,14 +395,27 @@ class WeekTimeGrid(QWidget):
                     if end is not None and task.get("_end_raw"):
                         end -= dt.timedelta(days=1)
                 end = max(start, end or start)
-                for index, date in enumerate(self._dates):
-                    if start <= date.toPyDate() <= end:
-                        self._all_day.append(_Segment(task, index, 0, 0, all_day=True))
+                visible = [
+                    index
+                    for index, date in enumerate(self._dates)
+                    if start <= date.toPyDate() <= end
+                ]
+                if visible:
+                    # One bar across the visible days, like the month view.
+                    self._all_day.append(
+                        _Segment(
+                            task,
+                            visible[0],
+                            0,
+                            0,
+                            all_day=True,
+                            span=visible[-1] - visible[0] + 1,
+                            open_left=start < self._dates[visible[0]].toPyDate(),
+                        )
+                    )
         self._assign_lanes()
-        max_rows = max(
-            (sum(item.day == day for item in self._all_day) for day in range(len(self._dates))),
-            default=0,
-        )
+        self._assign_all_day_lanes()
+        max_rows = self._all_day_rows()
         self._all_day_canvas.setMinimumHeight(max(1, max_rows) * self.ALL_DAY_ROW + 8)
         self._all_day_scroll.setFixedHeight(min(max(1, max_rows), 3) * self.ALL_DAY_ROW + 8)
         self._relayout()
@@ -491,17 +534,33 @@ class WeekTimeGrid(QWidget):
             )
             self._timed_rects.append((item, rect))
         self._all_day_rects = []
-        for day in range(len(self._dates)):
-            items = [item for item in self._all_day if item.day == day]
-            for row, item in enumerate(items):
-                rect = QRectF(
-                    self.GUTTER + day * column + 3,
-                    4 + row * self.ALL_DAY_ROW,
-                    max(1, column - 6),
-                    self.ALL_DAY_ROW - 4,
-                )
-                self._all_day_rects.append((item, rect))
+        for item in self._all_day:
+            rect = QRectF(
+                self.GUTTER + item.day * column + 3,
+                4 + item.lane * self.ALL_DAY_ROW,
+                max(1, item.span * column - 6),
+                self.ALL_DAY_ROW - 4,
+            )
+            self._all_day_rects.append((item, rect))
         self._repaint()
+
+    def _assign_all_day_lanes(self):
+        lanes: list[int] = []  # last occupied day per lane
+        ordered = sorted(self._all_day, key=lambda item: (item.day, -item.span))
+        for item in ordered:
+            last_day = item.day + item.span - 1
+            for lane, occupied_until in enumerate(lanes):
+                if occupied_until < item.day:
+                    item.lane = lane
+                    lanes[lane] = last_day
+                    break
+            else:
+                item.lane = len(lanes)
+                lanes.append(last_day)
+        self._all_day = ordered
+
+    def _all_day_rows(self) -> int:
+        return max((item.lane + 1 for item in self._all_day), default=0)
 
     @staticmethod
     def _selectable_id(task: dict) -> int | None:
@@ -560,6 +619,16 @@ class WeekTimeGrid(QWidget):
             QTimer.singleShot(0, self._relayout)
         return super().event(event)
 
+    @staticmethod
+    def _chip_radius() -> float:
+        """Corner radius of the user's shape preset, shared with month chips."""
+        try:
+            from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
+
+            return float(get_ui_shape_tokens().get("task_title_radius", 8))
+        except Exception:
+            return 8.0
+
     def _color(self, key: str, role=QPalette.ColorRole.WindowText) -> QColor:
         return _css_color(self._tokens.get(key), self.palette().color(role))
 
@@ -592,10 +661,7 @@ class WeekTimeGrid(QWidget):
         self.ALL_DAY_ROW = max(30, body.height() + 8)
         self.GUTTER = max(62, caption.horizontalAdvance("00:00") + 18)
         self._header.setFixedHeight(self.HEADER_HEIGHT)
-        rows = max(
-            (sum(item.day == day for item in self._all_day) for day in range(len(self._dates))),
-            default=0,
-        )
+        rows = self._all_day_rows()
         self._all_day_canvas.setMinimumHeight(max(1, rows) * self.ALL_DAY_ROW + 8)
         self._all_day_scroll.setFixedHeight(min(max(1, rows), 3) * self.ALL_DAY_ROW + 8)
 
@@ -771,48 +837,76 @@ class WeekTimeGrid(QWidget):
             self._reading_surface(),
             self._color("accent", QPalette.ColorRole.Highlight),
         )
-        identity = _css_color(item.task.get("bg_color"), accent)
+        identity = _css_color(_event_color(item.task), accent)
         selected = self._selected is item.task
         marked = self._is_multi_selected(item.task)
+        # Same chip as the month view and side panels: a tint of the event
+        # colour, a tinted hairline and a solid left bar. The tint is mixed into
+        # the reading surface and never drops below its opacity, so titles stay
+        # legible even when the window itself is almost fully transparent.
         if marked:
             # Multi-selected events take the accent fill and a full outline so
             # the selection reads at a glance, like the month view.
             fill = _mix(accent, surface, 0.32)
         else:
-            fill = _mix(identity, surface, 0.23 if selected else 0.14)
+            amount = (CHIP_RANGE_HOVER_ALPHA if selected else CHIP_FILL_ALPHA) / 255
+            fill = _mix(identity, surface, amount)
         fill.setAlpha(max(fill.alpha(), surface.alpha()))
+        outline = QColor(identity)
+        outline.setAlpha(CHIP_BORDER_ALPHA)
         painter.setPen(
             QPen(
-                accent if selected or marked else _mix(identity, surface, 0.44),
-                2.0 if marked else 1.5 if selected else 0.8,
+                accent if selected or marked else outline,
+                2.0 if marked else 1.5 if selected else 1.0,
             )
         )
         painter.setBrush(fill)
-        painter.drawRoundedRect(rect, 8, 8)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(identity)
-        painter.drawRoundedRect(QRectF(rect.left(), rect.top(), 3, rect.height()), 1, 1)
+        radius = self._chip_radius()
+        painter.drawRoundedRect(rect, radius, radius)
+        if not item.open_left:
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(identity)
+            painter.drawRoundedRect(
+                QRectF(rect.left() + 1, rect.top() + 3, 3, max(1.0, rect.height() - 6)), 1.5, 1.5
+            )
         painter.save()
         painter.setClipRect(rect.adjusted(5, 0, -3, 0))
-        painter.setPen(self._color("text_primary"))
+        completed = is_completed_row(item.task)
+        painter.setPen(
+            _css_color(chip_meta_color(self._tokens), self._color("text_secondary"))
+            if completed
+            else self._color("text_primary")
+        )
         font = self._role_font(weight=QFont.Weight.DemiBold)
+        font.setStrikeOut(completed)
         painter.setFont(font)
         title = str(
             item.task.get("name")
             or item.task.get("title")
             or t("week_planner.untitled", "제목 없음")
         )
-        title = painter.fontMetrics().elidedText(
-            title, Qt.TextElideMode.ElideRight, max(1, round(rect.width() - 12))
-        )
         title_height = painter.fontMetrics().height()
         time_font = self._role_font("caption")
         time_height = QFontMetrics(time_font).height()
         show_time = not item.all_day and rect.height() >= title_height + time_height + 9
+        text_left = rect.left() + 8
+        glyph = _event_glyph(item.task, self._tokens)
+        if glyph is not None and rect.width() >= 44:
+            size = max(8, min(14, painter.fontMetrics().ascent()))
+            top = (
+                rect.top() + 3 + (title_height - size) / 2
+                if show_time
+                else rect.center().y() - size / 2
+            )
+            glyph.paint(painter, QRectF(text_left, top, size, size).toRect())
+            text_left += size + 5
+        title = painter.fontMetrics().elidedText(
+            title, Qt.TextElideMode.ElideRight, max(1, round(rect.right() - text_left - 4))
+        )
         painter.drawText(
-            rect.adjusted(7, 0, -4, 0)
+            QRectF(text_left, rect.top(), rect.right() - text_left - 3, rect.height())
             if not show_time
-            else QRectF(rect.left() + 7, rect.top() + 3, rect.width() - 11, title_height),
+            else QRectF(text_left, rect.top() + 3, rect.right() - text_left - 3, title_height),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             title,
         )
@@ -821,9 +915,9 @@ class WeekTimeGrid(QWidget):
             painter.setPen(self._color("text_secondary"))
             painter.drawText(
                 QRectF(
-                    rect.left() + 7,
+                    rect.left() + 8,
                     rect.top() + title_height + 5,
-                    rect.width() - 11,
+                    rect.width() - 12,
                     time_height,
                 ),
                 Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,

@@ -22,8 +22,6 @@ from calendar_app.domain.routine_cycle import cycle_display_name, cycle_order_va
 from calendar_app.domain.task_constants import (
     PRIORITY_MENU_ITEMS,
     STATUS_MENU_ITEMS,
-    priority_icon,
-    status_icon,
 )
 from calendar_app.domain.task_status_view import normalize_status as _normalize_task_status
 from calendar_app.infrastructure.db import (
@@ -36,6 +34,15 @@ from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.dialog_emoji import apply_dialog_title
 from calendar_app.presentation.locale_names import calendar_display_name, weekday_name
+from calendar_app.presentation.theme.task_glyphs import (
+    chip_alert_color,
+    chip_meta_color,
+    chip_palette,
+    event_qicon,
+    is_completed_row,
+    priority_qicon,
+    status_qicon,
+)
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.presentation.widgets.schedule_info import build_schedule_hover_html
 from calendar_app.presentation.widgets.ui_components import install_hover_info
@@ -183,93 +190,54 @@ def _handle_panel_item_click(app, tid, is_directive, ctrl):
 
 
 def _apply_panel_item_style(container, selected, bg_color):
-    """Apply consistent card style for panel items across normal/selected states."""
+    """Style a panel row as the same translucent event chip used in the calendar.
+
+    The fill, border and left bar are tints of the event/calendar colour
+    (task_glyphs.chip_palette); a selected row switches to the accent fill.
+    """
     container.setProperty("panelItemSelected", bool(selected))
     container.setAccessibleDescription(t("calendar.selected_state", "선택됨") if selected else "")
-    if container.property("agendaCard"):
-        tokens = _semantic_tokens()
-        color = _color_rgba(bg_color or tokens["accent"], 220, tokens["accent"])
-        background = tokens["accent_soft"] if selected else tokens["bg_item"]
-        border = tokens["accent_border"] if selected else tokens["border_soft"]
-        container.setStyleSheet(f"""
-            QFrame#selectedDayAgendaCard {{
-                background-color: {background};
-                border: 1px solid {border};
-                border-left: 3px solid {color};
-                border-radius: {tokens["radius_md"]};
-                margin: 3px 0;
-            }}
-            QFrame#selectedDayAgendaCard:hover {{
-                background-color: {tokens["bg_item_hover"]};
-                border-color: {tokens["accent_border"]};
-                border-left-color: {color};
-            }}
-        """)
-        return
+    tokens = _semantic_tokens()
+    chip = chip_palette(bg_color, tokens)
+    agenda = bool(container.property("agendaCard"))
+    if not container.objectName():
+        container.setObjectName("panelEventChip")
+    name = container.objectName()
+    if agenda:
+        radius = tokens["radius_md"]
+        margin = "3px 0"
+    else:
+        radius = f"{int(_shape_tokens().get('panel_item_radius', 0))}px"
+        margin = "1px 4px"
     _tc = get_theme_color()
-    shape = _shape_tokens()
-    card_radius = int(shape.get("panel_item_radius", 0))
-    tag_bg = "rgba(255, 255, 255, 13)"
-    tag_hover_bg = "rgba(255, 255, 255, 23)"
-    # Selected cards use the accent fill whatever their colour tag is; the tag
-    # stays on the left strip. A tag-tinted fill was almost the resting colour.
-    tag_selected_bg = _tc_rgba(PANEL_SELECTED_FILL_ALPHA)
-    selected_hover_bg = _tc_rgba(PANEL_SELECTED_HOVER_FILL_ALPHA)
-    left_color = "transparent"
-    selected_left_color = _tc
-
-    if bg_color:
-        _tc_left = _color_rgba(bg_color, 255, _tc)
-        left_color = _tc_left
-        selected_left_color = _tc_left
-        try:
-            from PyQt6.QtGui import QColor
-
-            _tag = QColor(str(bg_color))
-            if _tag.isValid():
-                tag_bg = f"rgba({_tag.red()}, {_tag.green()}, {_tag.blue()}, 30)"
-                tag_hover_bg = f"rgba({_tag.red()}, {_tag.green()}, {_tag.blue()}, 44)"
-        except Exception:
-            pass
 
     if selected:
-        container.setStyleSheet(f"""
-            QFrame {{
-                background-color: {tag_selected_bg};
-                border-radius: {card_radius}px;
-                border: 1px solid {_tc};
-                border-left-color: {selected_left_color};
-                border-left-width: 4px;
-                border-left-style: solid;
-                margin: 1px 4px;
-            }}
-            QFrame:hover {{
-                background-color: {selected_hover_bg};
-                border: 1px solid {_tc};
-                border-left-color: {selected_left_color};
-                border-left-width: 4px;
-                border-left-style: solid;
-            }}
-        """)
+        background = _tc_rgba(PANEL_SELECTED_FILL_ALPHA)
+        hover_background = _tc_rgba(PANEL_SELECTED_HOVER_FILL_ALPHA)
+        border = _tc
+        hover_border = _tc
+        bar_width = "4px"
     else:
-        container.setStyleSheet(f"""
-            QFrame {{
-                background-color: {tag_bg};
-                border-radius: {card_radius}px;
-                border: 1px solid rgba(255, 255, 255, 30);
-                border-left-color: {left_color};
-                border-left-width: 3px;
-                border-left-style: solid;
-                margin: 1px 4px;
-            }}
-            QFrame:hover {{
-                background-color: {tag_hover_bg};
-                border: 1px solid rgba(255, 255, 255, 56);
-                border-left-color: {left_color};
-                border-left-width: 3px;
-                border-left-style: solid;
-            }}
-        """)
+        background = chip["fill"]
+        hover_background = chip["hover"]
+        border = chip["border"]
+        hover_border = chip["bar"]
+        bar_width = "3px"
+
+    container.setStyleSheet(f"""
+        QFrame#{name} {{
+            background-color: {background};
+            border: 1px solid {border};
+            border-left: {bar_width} solid {chip["bar"]};
+            border-radius: {radius};
+            margin: {margin};
+        }}
+        QFrame#{name}:hover {{
+            background-color: {hover_background};
+            border: 1px solid {hover_border};
+            border-left: {bar_width} solid {chip["bar"]};
+        }}
+    """)
 
 
 def _refresh_panel_selection_visuals(app):
@@ -566,13 +534,32 @@ def _directive_group_header(receiver_name):
     return wrap
 
 
+def _tip_glyph(glyph: str) -> str:
+    """Muted vector glyph for the icon column of a panel tooltip."""
+    from calendar_app.presentation.theme.task_glyphs import chip_meta_color, glyph_html
+
+    return glyph_html(glyph, chip_meta_color(_semantic_tokens()), 12)
+
+
+def _set_glyph(label: QLabel, glyph: str, size: int = 12, color=None):
+    """Paint a Font Awesome glyph id on a label (accent colour by default)."""
+    from calendar_app.presentation.theme.task_glyphs import glyph_pixmap
+
+    label.setText("")
+    pixmap = glyph_pixmap(glyph, color or get_theme_color(), size)
+    if pixmap.isNull():
+        return
+    label.setPixmap(pixmap)
+
+
 def _deadline_group_header(deadline_text):
     wrap = QWidget()
     row = QHBoxLayout(wrap)
     row.setContentsMargins(2, 8, 2, 4)
     row.setSpacing(8)
 
-    badge = QLabel("📅")
+    badge = QLabel()
+    _set_glyph(badge, "fa6s.calendar-day")
     shape = _shape_tokens()
     badge_radius = int(shape.get("panel_group_badge_radius", 0))
     badge.setFixedSize(20, 20)
@@ -602,13 +589,14 @@ def _deadline_group_header(deadline_text):
     return wrap
 
 
-def _schedule_group_header(label_text, icon="📅"):
+def _schedule_group_header(label_text, icon="fa6s.calendar-day"):
     wrap = QWidget()
     row = QHBoxLayout(wrap)
     row.setContentsMargins(2, 8, 2, 4)
     row.setSpacing(8)
 
-    badge = QLabel(icon)
+    badge = QLabel()
+    _set_glyph(badge, icon)
     shape = _shape_tokens()
     badge_radius = int(shape.get("panel_group_badge_radius", 0))
     badge.setFixedSize(20, 20)
@@ -638,13 +626,14 @@ def _schedule_group_header(label_text, icon="📅"):
     return wrap
 
 
-def _routine_group_header(label_text, icon="🔄"):
+def _routine_group_header(label_text, icon="fa6s.arrows-rotate"):
     wrap = QWidget()
     row = QHBoxLayout(wrap)
     row.setContentsMargins(2, 8, 2, 4)
     row.setSpacing(8)
 
-    badge = QLabel(icon)
+    badge = QLabel()
+    _set_glyph(badge, icon)
     shape = _shape_tokens()
     badge_radius = int(shape.get("panel_group_badge_radius", 0))
     badge.setFixedSize(20, 20)
@@ -699,6 +688,14 @@ def _build_checklist_items(app, steps):
     return (display_type, items)
 
 
+def _toolbar_glyph(glyph: str):
+    from calendar_app.presentation.theme.task_glyphs import glyph_icon
+    from calendar_app.shared.color_utils import parse_css_color
+
+    color = parse_css_color(_panel_text_color(), "#d8dce4").name(QColor.NameFormat.HexArgb)
+    return glyph_icon(glyph, color)
+
+
 class DockTitleBar(QWidget):
     """Panel title bar with draggable dock behavior."""
 
@@ -709,7 +706,7 @@ class DockTitleBar(QWidget):
         add_handler=None,
         manage_handler=None,
         help_handler=None,
-        icon_text="*",
+        icon_text="fa6s.table-list",
         trailing_widget=None,
     ):
         super().__init__()
@@ -729,9 +726,14 @@ class DockTitleBar(QWidget):
             trailing_widget = None
         else:
             icon = QLabel(icon_text)
+            icon.setObjectName("panelTitleGlyph")
             icon.setStyleSheet(
-                f"color: {get_theme_color()}; font-size: {_font_role('caption')}; background: transparent; border: none;"
+                f"QLabel#panelTitleGlyph {{ color: {get_theme_color()}; font-size: {_font_role('caption')}; "
+                "background: transparent; border: none; }"
             )
+            if str(icon_text).startswith("fa6s."):
+                icon.ensurePolished()
+                _set_glyph(icon, icon_text, max(12, min(16, icon.fontMetrics().ascent() + 2)))
             layout.addWidget(icon)
 
             title = QLabel(title_text)
@@ -758,7 +760,10 @@ class DockTitleBar(QWidget):
         )
 
         if add_handler:
-            add_btn = QPushButton("+")
+            add_btn = QPushButton()
+            add_btn.setObjectName("panelAddButton")
+            add_btn.setIcon(_toolbar_glyph("fa6s.plus"))
+            add_btn.setIconSize(QSize(13, 13))
             add_btn.setFixedSize(28, 28)
             add_label = t("panel.toolbar.add")
             add_btn.setToolTip(add_label)
@@ -769,7 +774,10 @@ class DockTitleBar(QWidget):
             layout.addWidget(add_btn)
 
         if manage_handler:
-            manage_btn = QPushButton("⋯")
+            manage_btn = QPushButton()
+            manage_btn.setObjectName("panelManageButton")
+            manage_btn.setIcon(_toolbar_glyph("fa6s.ellipsis"))
+            manage_btn.setIconSize(QSize(14, 14))
             manage_btn.setFixedSize(28, 28)
             manage_label = t("panel.toolbar.manage")
             manage_btn.setToolTip(manage_label)
@@ -818,18 +826,18 @@ def create_panel(
     trailing_widget=None,
 ):
     icon_map = {
-        t("panel.today_schedule", "Today's Schedule"): "📅",
-        t("panel.this_week_schedule", "이번 주 일정"): "📅",
-        t("panel.selected_day_schedule", "선택일 일정"): "📅",
-        t("panel.routine", "Routine Tasks"): "🔁",
-        t("panel.directive", "Directions"): "📣",
+        t("panel.today_schedule", "Today's Schedule"): "fa6s.calendar-day",
+        t("panel.this_week_schedule", "이번 주 일정"): "fa6s.calendar-week",
+        t("panel.selected_day_schedule", "선택일 일정"): "fa6s.calendar-check",
+        t("panel.routine", "Routine Tasks"): "fa6s.arrows-rotate",
+        t("panel.directive", "Directions"): "fa6s.bullhorn",
     }
     title_bar = DockTitleBar(
         title_text,
         title_style=title_style,
         add_handler=add_handler,
         manage_handler=manage_handler,
-        icon_text=icon_map.get(title_text, "*"),
+        icon_text=icon_map.get(title_text, "fa6s.table-list"),
         trailing_widget=trailing_widget,
     )
 
@@ -1126,14 +1134,14 @@ def show_side_panel_context_menu(app, widget, pos, tid, task_name, is_routine=Fa
     priority_menu.setStyleSheet(menu_style)
     priority_map = {}
     for label, value in PRIORITY_MENU_ITEMS:
-        priority_map[priority_menu.addAction(_se(label))] = value
+        priority_map[priority_menu.addAction(priority_qicon(value), _se(label))] = value
 
     status_menu = menu.addMenu(_se(t("menu.status_change")))
     status_menu.setIcon(_ic(ICON.STATUS_IN_PROGRESS))
     status_menu.setStyleSheet(menu_style)
     action_map = {}
     for label, value in STATUS_MENU_ITEMS:
-        action_map[status_menu.addAction(_se(label))] = value
+        action_map[status_menu.addAction(status_qicon(value), _se(label))] = value
     menu.addSeparator()
 
     # Same labels as the calendar's item menu: the shortcut guide quotes this path.
@@ -1197,14 +1205,14 @@ def show_directive_context_menu(app, widget, pos, did, task_name):
     priority_menu.setStyleSheet(menu_style)
     priority_map = {}
     for label, value in PRIORITY_MENU_ITEMS:
-        priority_map[priority_menu.addAction(_se(label))] = value
+        priority_map[priority_menu.addAction(priority_qicon(value), _se(label))] = value
 
     status_menu = menu.addMenu(_se(t("menu.status_change")))
     status_menu.setIcon(_ic(ICON.STATUS_IN_PROGRESS))
     status_menu.setStyleSheet(menu_style)
     action_map = {}
     for label, value in STATUS_MENU_ITEMS:
-        action_map[status_menu.addAction(_se(label))] = value
+        action_map[status_menu.addAction(status_qicon(value), _se(label))] = value
     menu.addSeparator()
 
     # Same labels as the calendar's item menu: the shortcut guide quotes this path.
@@ -1249,8 +1257,16 @@ def create_task_box(
     checklist_display_type="list",
     agenda_time=None,
     agenda_source=None,
+    title_icon=None,
+    title_meta=None,
+    completed=False,
+    meta_alert=False,
 ):
-    """Create a task item box used in side panels."""
+    """Create a task item box used in side panels.
+
+    title_icon is the priority/status glyph painted before the title and
+    title_meta a short muted suffix (deadline) on the right of the row.
+    """
     _tc = get_theme_color()
     container = QFrame()
     agenda = agenda_time is not None
@@ -1285,7 +1301,7 @@ def create_task_box(
         metadata.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         metadata.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         metadata.setStyleSheet(
-            f"color: {tokens['text_secondary']}; font-size: {_font_role('caption')}; "
+            f"color: {chip_meta_color(tokens)}; font-size: {_font_role('caption')}; "
             "font-weight: 500; border: none; background: transparent;"
         )
         box_layout.addWidget(metadata)
@@ -1300,10 +1316,14 @@ def create_task_box(
     _title_hover_bg = _semantic_tokens()["bg_item_hover"] if agenda else "rgba(255,255,255,0.04)"
     shape = _shape_tokens()
     inline_hover_radius = int(shape.get("panel_inline_hover_radius", 0))
+    if completed:
+        _title_txt = _title_hover_txt = chip_meta_color(_semantic_tokens())
+    _title_decoration = "text-decoration: line-through;" if completed else ""
     title_btn.setStyleSheet(f"""
         QPushButton {{
             color: {_title_txt}; text-align: left; padding: 3px 5px 3px 4px; border: none;
             background: transparent; font-weight: normal; font-size: {_font_role()};
+            {_title_decoration}
         }}
         QPushButton:hover {{ color: {_title_hover_txt}; background: {_title_hover_bg}; border-radius: {inline_hover_radius}px; }}
     """)
@@ -1333,6 +1353,11 @@ def create_task_box(
     if agenda:
         title_btn.setMinimumWidth(0)
     title_btn.setMinimumHeight(28 if agenda else 24)
+    if title_icon is not None and not title_icon.isNull():
+        title_btn.setIcon(title_icon)
+        title_btn.ensurePolished()
+        glyph = max(10, min(16, title_btn.fontMetrics().ascent()))
+        title_btn.setIconSize(QSize(glyph, glyph))
 
     if hover_html:
         install_hover_info(title_btn, hover_html)
@@ -1363,6 +1388,22 @@ def create_task_box(
         install_hover_info(title_btn, tooltip_html)
 
     top_layout.addWidget(title_btn)
+    if title_meta:
+        _meta_color = (
+            chip_alert_color(_semantic_tokens())
+            if meta_alert
+            else chip_meta_color(_semantic_tokens())
+        )
+        meta_label = QLabel(title_meta)
+        meta_label.setObjectName("panelEventChipMeta")
+        meta_label.setTextFormat(Qt.TextFormat.PlainText)
+        meta_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        meta_label.setStyleSheet(
+            f"QLabel#panelEventChipMeta {{ color: {_meta_color}; "
+            f"font-size: {_font_role('caption')}; background: transparent; border: none; "
+            "padding: 0 4px; }"
+        )
+        top_layout.addWidget(meta_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
     checklist_container = QFrame()
     checklist_container.setObjectName("ChecklistContainer")
@@ -1670,7 +1711,6 @@ def load_left_panel(app):
         t_id = task["id"]
         name = task["name"]
         deadline = task.get("deadline") or task.get("target_date") or ""
-        priority = task["priority"]
         location = task.get("location")
         assignee = task.get("assignee")
         memo = task.get("memo") or task.get("description")
@@ -1687,7 +1727,19 @@ def load_left_panel(app):
         except Exception:
             date_label = date_part
 
-        icon = priority_icon(priority)
+        title_icon = event_qicon(task)
+        task_completed = is_completed_row(task)
+        # Same muted meta as the month chip: start time, plus the day in the
+        # week list unless rows are already grouped under date headers.
+        row_meta = None
+        if not selected_mode:
+            start_time = ""
+            if len(deadline_parts) > 1 and not _truthy_all_day(task):
+                start_time = deadline_parts[1][:5]
+            if panel_mode == "week" and not left_group_by_date:
+                row_meta = " ".join(part for part in (date_label, start_time) if part)
+            else:
+                row_meta = start_time or None
 
         total = task.get("checklist_total", 0) or 0
         comp = task.get("checklist_completed", 0) or 0
@@ -1695,7 +1747,7 @@ def load_left_panel(app):
         if total > 0:
             progress_suffix = f" ({comp}/{total})"
 
-        main_title = f"{icon} {name}{progress_suffix}"
+        main_title = f"{name}{progress_suffix}"
 
         def main_handler(checked=False, _tid=t_id):
             app.open_modify_task_dialog(_tid)
@@ -1748,7 +1800,7 @@ def load_left_panel(app):
 
         if left_group_by_date and not selected_mode and date_label != current_group_label:
             current_group_label = date_label
-            today_items.append(_schedule_group_header(date_label, "📅"))
+            today_items.append(_schedule_group_header(date_label, "fa6s.calendar-day"))
 
         task_box = create_task_box(
             app,
@@ -1762,6 +1814,9 @@ def load_left_panel(app):
             checklist_display_type=checklist_display_type,
             agenda_time=agenda_time,
             agenda_source=source_text if selected_mode else None,
+            title_icon=title_icon,
+            title_meta=row_meta,
+            completed=task_completed,
         )
         today_items.append(task_box)
 
@@ -1810,6 +1865,10 @@ def load_left_panel(app):
     new_layout.setContentsMargins(0, 0, 0, 0)
     new_layout.addWidget(new_panel)
     app.left_frame.setLayout(new_layout)
+
+
+def _truthy_all_day(row) -> bool:
+    return str(row.get("all_day") or "").strip().lower() in ("1", "true", "yes")
 
 
 def _is_completed_routine(row):
@@ -1980,13 +2039,13 @@ def load_right_panel(app):
         for key in ("daily", "weekly", "monthly", "quarterly", "half_yearly", "yearly", "single")
     }
     _cycle_icon_map = {
-        "single": "📋",
-        "daily": "☀️",
-        "weekly": "🗓️",
-        "monthly": "📅",
-        "quarterly": "📊",
-        "half_yearly": "◐",
-        "yearly": "🎯",
+        "single": "fa6s.clipboard-list",
+        "daily": "fa6s.sun",
+        "weekly": "fa6s.calendar-week",
+        "monthly": "fa6s.calendar-days",
+        "quarterly": "fa6s.chart-column",
+        "half_yearly": "fa6s.circle-half-stroke",
+        "yearly": "fa6s.bullseye",
     }
 
     for r in rt_rows:
@@ -2020,7 +2079,6 @@ def load_right_panel(app):
             continue
 
         priority = r.get("priority", "normal")
-        icon = priority_icon(priority)
 
         cycle_lab = _cycle_label_map.get(str(r.get("cycle_type") or "").lower(), "")
 
@@ -2032,13 +2090,13 @@ def load_right_panel(app):
                 date_part = period_end.split()[0]
                 y, m, d = date_part.split("-")
                 mm_dd = f"{int(m)}.{int(d)}"
-                deadline_suffix = f" (~{mm_dd})"
+                deadline_suffix = f"~{mm_dd}"
             except Exception:
                 pass
 
         _cycle_type_str = str(r.get("cycle_type") or "").lower()
         _cycle_prefix = "" if _cycle_type_str == "single" else f"{cycle_lab} "
-        main_title = f"{icon} {_cycle_prefix}{rname}{deadline_suffix}"
+        main_title = f"{_cycle_prefix}{rname}"
 
         def main_handler(checked=False, _rid=rid):
             app.open_modify_task_dialog(_rid)
@@ -2048,20 +2106,20 @@ def load_right_panel(app):
         if tags_val:
             tag_list = [tg.strip() for tg in tags_val.split(",") if tg.strip()]
             if tag_list:
-                info_items.append(("🏷", " · ".join(tag_list)))
+                info_items.append((_tip_glyph("fa6s.tag"), " · ".join(tag_list)))
         clean_location = _tooltip_text_without_tags(location)
         if clean_location:
-            info_items.append((t("common.location", "[L]"), clean_location))
+            info_items.append((_tip_glyph("fa6s.location-dot"), clean_location))
         clean_assignee = _tooltip_text_without_tags(assignee)
         if clean_assignee:
-            info_items.append((t("common.assignee", "[A]"), clean_assignee))
+            info_items.append((_tip_glyph("fa6s.user"), clean_assignee))
 
         clean_memo = _tooltip_text_without_tags(memo)
         if clean_memo and clean_memo not in ["none", "None", "-"]:
             import html as _html_mod
 
             _memo_html = _html_mod.escape(clean_memo).replace("\n", "<br>")
-            info_items.append((t("common.memo", "📝"), _memo_html))
+            info_items.append((_tip_glyph("fa6s.note-sticky"), _memo_html))
 
         steps = routine_checklist_map.get(rid, [])
         checklist_display_type, checklist_items = _build_checklist_items(app, steps)
@@ -2072,7 +2130,7 @@ def load_right_panel(app):
         if routine_group_by_cycle:
             cycle_key = str(r.get("cycle_type") or "other").lower()
             cycle_lbl = _cycle_label_map.get(cycle_key, cycle_key.capitalize())
-            cycle_ico = _cycle_icon_map.get(cycle_key, "🔄")
+            cycle_ico = _cycle_icon_map.get(cycle_key, "fa6s.arrows-rotate")
             if cycle_lbl != _cur_routine_group:
                 _cur_routine_group = cycle_lbl
                 routine_items.append(_routine_group_header(cycle_lbl, cycle_ico))
@@ -2086,7 +2144,7 @@ def load_right_panel(app):
                 _dl_label = _dl_date or t("common.no_deadline", "마감 없음")
             if _dl_label != _cur_routine_group:
                 _cur_routine_group = _dl_label
-                routine_items.append(_routine_group_header(_dl_label, "📅"))
+                routine_items.append(_routine_group_header(_dl_label, "fa6s.calendar-day"))
 
         task_box = create_task_box(
             app,
@@ -2099,6 +2157,10 @@ def load_right_panel(app):
             tooltip_title=routine_tooltip_title,
             bg_color=r.get("bg_color") or _calendar_color_for_task(r),
             checklist_display_type=checklist_display_type,
+            title_icon=status_qicon("completed") if is_completed_r else priority_qicon(priority),
+            title_meta=deadline_suffix or None,
+            completed=is_completed_r,
+            meta_alert=is_overdue_r and not is_completed_r,
         )
         routine_items.append(task_box)
 
@@ -2196,18 +2258,19 @@ def load_right_panel(app):
                 directive_items.append(_directive_group_header(receiver_label))
                 current_receiver = receiver_label
 
-        status_ic = status_icon("deferred" if is_overdue and status == "pending" else status)
+        # An overdue directive is flagged in red; it was shown as a muted pause.
+        status_glyph = status_qicon("overdue" if is_overdue else status)
 
         di_info = []
         clean_receiver = _tooltip_text_without_tags(receiver)
         if clean_receiver:
-            di_info.append((t("common.assignee", "[A]"), clean_receiver))
+            di_info.append((_tip_glyph("fa6s.user"), clean_receiver))
         clean_memo = _tooltip_text_without_tags(memo)
         if clean_memo and clean_memo not in ["none", "None", "-"]:
             import html as _html_mod
 
             _memo_html = _html_mod.escape(clean_memo).replace("\n", "<br>")
-            di_info.append((t("common.memo", "📝"), _memo_html))
+            di_info.append((_tip_glyph("fa6s.note-sticky"), _memo_html))
 
         deadline_part = ""
         if deadline:
@@ -2234,7 +2297,7 @@ def load_right_panel(app):
             except Exception:
                 deadline_part = f" (~{str(deadline).split()[0]})"
 
-        display_text = f"{status_ic} {content}{deadline_part}"
+        display_text = content
 
         def handler(checked=False, _did=did):
             app.open_directive_dialog(_did)
@@ -2250,6 +2313,10 @@ def load_right_panel(app):
                 is_directive=True,
                 tooltip_title=directive_tooltip_title,
                 bg_color=bg_color,
+                title_icon=status_glyph,
+                title_meta=deadline_part.strip().strip("()") or None,
+                completed=_normalized_directive_status(status) == "completed",
+                meta_alert=is_overdue,
             )
         )
 

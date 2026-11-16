@@ -1,47 +1,105 @@
-# Python cache
-__pycache__/
-*.py[cod]
-.pytest_cache/
+# ============================================================
+#  Air Calendar — .gitignore
+# ============================================================
 
-# Virtual environment
-.venv/
 
-# Credentials and local secrets
+# ------------------------------------------------------------
+#  1. Secrets & credentials — never commit
+# ------------------------------------------------------------
+
+# Environment files (keep the example template)
 .env
 .env.*
 !.env.example
+
+# OAuth client and tokens (Google, Outlook, CalDAV)
 credentials.json
 client_secret*.json
-token.json
 [Oo][Aa][Uu][Tt][Hh].json
+token*.json
+*_token.json
+*.token
 *.credential
 outlook-*.cache
 outlook-*.tmp
 caldav-*.tmp
+
+# Signing keys and certificates
 *.key
-*.p12
 *.pem
+*.p8
+*.p12
 *.pfx
+*.jks
+*.keystore
 
-# Runtime-only user data
-desk_calendar.db
-desk_calendar.db-shm
-desk_calendar.db-wal
+# Package registry / network auth
+.npmrc
+.pypirc
+.netrc
+
+
+# ------------------------------------------------------------
+#  2. User data — runtime only
+# ------------------------------------------------------------
+
+# SQLite (desk_calendar_default.db is the empty seed and stays tracked)
+*.db
+!desk_calendar_default.db
+*.db-shm
+*.db-wal
+*.db-journal
+*.db.bak
+*.sqlite
+*.sqlite3
+
+# Logs, crash dumps, network captures (may hold cookies or tokens)
 *.log
+*.dmp
+*.har
 
-# Build artifacts
+
+# ------------------------------------------------------------
+#  3. Agent & browser tool captures
+#     Screenshots, page dumps and attachments may hold personal data
+# ------------------------------------------------------------
+
+.agents/
+.claude/
+.codex-attachments/
+.codex-remote-attachments/
+.playwright-cli/
+.playwright-mcp/
+artifacts/
+
+
+# ------------------------------------------------------------
+#  4. Python
+# ------------------------------------------------------------
+
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.pytest-cache-*/
+.pytest-temp-*/
+
+
+# ------------------------------------------------------------
+#  5. Build output & temporary folders
+# ------------------------------------------------------------
+
 build/
 dist/
 release/
-
-# Temporary folders
 tmp/
 _restore_tmp/
 
-# Local tool metadata
-.agents/
-.claude/
 
-# Version transaction journal and exclusive lock (history remains tracked)
+# ------------------------------------------------------------
+#  6. Versioning
+#     Transaction journal and lock only — history stays tracked
+# ------------------------------------------------------------
+
 .versioning/
 *.version-tmp

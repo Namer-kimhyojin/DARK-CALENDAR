@@ -353,7 +353,8 @@ class TimePickerWidget(_CompactNumericEntryMixin, QTimeEdit):
             return
         self._dropdown_enabled = enabled
         self.setMinimumWidth(self.minimumWidth() + (28 if enabled else -28))
-        self.lineEdit().setTextMargins(0, 0, 28 if enabled else 0, 0)
+        # Left inset matches the date field's text start beside it.
+        self.lineEdit().setTextMargins(6 if enabled else 0, 0, 28 if enabled else 0, 0)
         if enabled and self._dropdown_button is None:
             self._dropdown_button = QToolButton(self)
             self._dropdown_button.setObjectName("ScheduleTimeDropdownButton")
@@ -369,6 +370,13 @@ class TimePickerWidget(_CompactNumericEntryMixin, QTimeEdit):
                 " background: transparent; border: none; padding: 0; min-width: 0; }"
             )
             self._dropdown_button.clicked.connect(self.show_time_dropdown)
+        # With the time list on, the tiny up/down steppers were a second, hard to
+        # hit control for the same job; Up/Down keys and typing still step. The
+        # editor stylesheets collapse the stepper subcontrols for this property
+        # (NoButtons would fight their ::up-button geometry and squash the text).
+        self.setProperty("controlAffordance", "dropdown" if enabled else "stepper")
+        self.style().unpolish(self)
+        self.style().polish(self)
         if self._dropdown_button is not None:
             self._dropdown_button.setVisible(enabled)
             self._position_dropdown_button()
@@ -590,6 +598,9 @@ class TimePickerWidget(_CompactNumericEntryMixin, QTimeEdit):
 
     def paintEvent(self, event):
         super().paintEvent(event)
+        if self._dropdown_enabled:
+            # The time list button is the visible affordance; no +/- marks.
+            return
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         pen = QPen(self._affordance_color(), 1.7)

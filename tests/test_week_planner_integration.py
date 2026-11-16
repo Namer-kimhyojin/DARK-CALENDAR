@@ -407,7 +407,10 @@ class WeekPlannerIntegrationTests(TemporaryDatabaseTestCase):
         grid = self.host.center_frame.findChildren(WeekTimeGrid)[0]
         names = [item.task["name"] for item in grid._all_day]
         self.assertIn("보고서 제출", names)
-        self.assertEqual(names.count("현장 출장"), 2)
+        # The two-day trip is a single bar spanning both days.
+        self.assertEqual(names.count("현장 출장"), 1)
+        trip = next(item for item in grid._all_day if item.task["name"] == "현장 출장")
+        self.assertEqual(trip.span, 2)
         self.assertTrue(grid._all_day_rects)
 
     def test_modal_editor_requests_are_queued_until_the_pointer_handler_returns(self):

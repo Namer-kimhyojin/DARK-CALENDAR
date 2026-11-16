@@ -54,6 +54,15 @@ def _auto_sync_enabled(app):
     return settings is None or settings.value("sync_google_auto", True, type=bool)
 
 
+def _waiting_for_sign_in():
+    """True when no saved Google token exists (the user has not signed in yet)."""
+    import os
+
+    from calendar_app.app_paths import TOKEN_PATH
+
+    return not os.path.exists(TOKEN_PATH)
+
+
 class GcalPushQueue:
     """Serialised, deduplicated push queue for Google Calendar sync."""
 
@@ -214,7 +223,15 @@ class GcalPushQueue:
 
                 result = sync_task_to_google(app, task_data, **kwargs)
                 if not result.success:
-                    logger.warning(
+                    # Never signed in: the task stays gcal_dirty and the first full
+                    # sync after sign-in pushes it, so a warning per save is noise.
+                    level = (
+                        logging.DEBUG
+                        if result.error_kind == "auth_required" and _waiting_for_sign_in()
+                        else logging.WARNING
+                    )
+                    logger.log(
+                        level,
                         "push_queue: sync_task_to_google failed for task %s: %s",
                         task_id,
                         result.error_kind,

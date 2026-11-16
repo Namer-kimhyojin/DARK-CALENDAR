@@ -62,8 +62,8 @@ EXPECTED = {
         "item_count": "5개",
         "item_count_one": "1개",
         "day": "15일",
-        "preview_range": "📋 생성될 일정 14개: 1/5 → 2/6",
-        "preview_dates": "📋 생성될 일정 2개: 1/5, 2/5",
+        "preview_range": "생성될 일정 14개: 1/5 → 2/6",
+        "preview_dates": "생성될 일정 2개: 1/5, 2/5",
     },
     "en": {
         "items_added": "Checklist items added: 3.",
@@ -71,8 +71,8 @@ EXPECTED = {
         "item_count": "Items: 5",
         "item_count_one": "Items: 1",
         "day": "Day 15",
-        "preview_range": "📋 Tasks to create (14): 1/5 → 2/6",
-        "preview_dates": "📋 Tasks to create (2): 1/5, 2/5",
+        "preview_range": "Tasks to create (14): 1/5 → 2/6",
+        "preview_dates": "Tasks to create (2): 1/5, 2/5",
     },
     "de": {
         "items_added": "Hinzugefügte Checklisteneinträge: 3.",
@@ -80,8 +80,8 @@ EXPECTED = {
         "item_count": "Einträge: 5",
         "item_count_one": "Einträge: 1",
         "day": "15. Tag",
-        "preview_range": "📋 Zu erstellende Aufgaben (14): 1/5 → 2/6",
-        "preview_dates": "📋 Zu erstellende Aufgaben (2): 1/5, 2/5",
+        "preview_range": "Zu erstellende Aufgaben (14): 1/5 → 2/6",
+        "preview_dates": "Zu erstellende Aufgaben (2): 1/5, 2/5",
     },
 }
 

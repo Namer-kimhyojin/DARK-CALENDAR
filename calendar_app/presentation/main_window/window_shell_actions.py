@@ -103,53 +103,75 @@ class WindowShellActionsMixin:
             msg = t("magnet.toast_msg_on") if is_checked else t("magnet.toast_msg_off")
             self.show_toast(title, msg)
 
-    def toggle_lock_mode(self):
-        """바탕화면 고정 모드를 토글한다."""
+    def toggle_lock_mode(self, *, show_intro=True):
+        """바탕화면 고정을 켜거나 끈다 (배치 고정 / 완전 고정)."""
         from PyQt6.QtCore import Qt
 
+        from calendar_app.presentation.main_window import desktop_lock
+        from calendar_app.presentation.main_window.lock_click_through import (
+            click_through_enabled,
+            sync_lock_click_through,
+        )
+
+        settings = getattr(self, "settings", None)
         is_checked = self.lock_btn.isChecked()
+        kind = desktop_lock.lock_kind(settings)
+        full = is_checked and kind == desktop_lock.KIND_FULL
+        was_locked = bool(getattr(self, "is_locked", False))
         self.is_locked = is_checked
 
-        if hasattr(self, "settings"):
+        if settings is not None:
             self.settings.setValue("is_locked", is_checked)
             self.settings.setValue("lock_enabled", is_checked)
 
         _ic_color = getattr(self, "_tb_icon_color", "#aab0ba")
         _ic_active = getattr(self, "_tb_icon_active_color", "#4a9eff")
+        overlay_btn = getattr(self, "_lock_overlay_toggle_btn", None)
         if is_checked:
             self.lock_btn.setText("")
             self.lock_btn.setIcon(_ic(ICON.LOCK, color=_ic_active))
-            self.lock_btn.setToolTip(t("lock.on_hint"))
-            self.lock_overlay.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+            self.lock_btn.setToolTip(t("lock.on_hint", "바탕화면 고정 중 · 클릭하면 해제"))
+            # Full lock blocks input with the overlay; layout lock keeps the
+            # calendar usable and only freezes positions and sizes.
+            self.lock_overlay.setAttribute(
+                Qt.WidgetAttribute.WA_TransparentForMouseEvents, not full
+            )
             overlay_btn = self._ensure_lock_overlay_toggle_button()
             overlay_btn.blockSignals(True)
             overlay_btn.setChecked(True)
-            overlay_btn.setText(t("lock.overlay_unlock", "고정 해제"))
+            overlay_btn.setStyleSheet("")
+            overlay_btn.setText(desktop_lock.badge_text(kind))
             overlay_btn.setToolTip(
-                t("lock.overlay_unlock_hint", "고정 모드를 해제합니다. (Ctrl+Shift+L)")
+                desktop_lock.badge_tooltip(kind, full and click_through_enabled(settings))
             )
+            overlay_btn.setAccessibleName(overlay_btn.text())
+            overlay_btn.setAccessibleDescription(overlay_btn.toolTip())
             overlay_btn.blockSignals(False)
             self._update_lock_overlay_geometry()
-            self.lock_overlay.show()
-            self.lock_overlay.raise_()
+            self.lock_overlay.setVisible(full)
+            if full:
+                self.lock_overlay.raise_()
             overlay_btn.show()
             overlay_btn.raise_()
             self._raise_lock_mode_controls()
         else:
             self.lock_btn.setText("")
             self.lock_btn.setIcon(_ic(ICON.UNLOCK, color=_ic_color))
-            self.lock_btn.setToolTip(t("lock.off_hint"))
+            self.lock_btn.setToolTip(t("lock.off_hint", "바탕화면 고정 (Ctrl+Shift+L)"))
             self.lock_overlay.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
             self.lock_overlay.hide()
-            overlay_btn = getattr(self, "_lock_overlay_toggle_btn", None)
             if overlay_btn is not None:
                 overlay_btn.blockSignals(True)
                 overlay_btn.setChecked(False)
                 overlay_btn.blockSignals(False)
                 overlay_btn.hide()
 
-        self._apply_lock_mode_ui(is_checked)
-        self._apply_lock_mode_to_docks(is_checked)
+        # Top-bar controls are disabled only while input is blocked anyway.
+        self._apply_lock_mode_ui(full)
+        self._apply_lock_mode_to_docks(is_checked, block_content=full)
+        size_grip = getattr(self, "size_grip", None)
+        if size_grip is not None:
+            size_grip.setEnabled(not is_checked)
         self._update_lock_overlay_geometry()
 
         self._sync_top_bar_visibility()
@@ -158,14 +180,90 @@ class WindowShellActionsMixin:
         if hasattr(self, "overlay_manager"):
             self.overlay_manager.set_all_interaction_locked(is_checked)
 
-        # Locked: clicks pass through to the desktop (unless turned off in the tray).
-        from calendar_app.presentation.main_window.lock_click_through import (
-            sync_lock_click_through,
-        )
-
+        # Full lock: clicks pass through to the desktop (unless turned off in the tray).
         sync_lock_click_through(self)
 
+        if is_checked and not was_locked and show_intro:
+            desktop_lock.show_intro_once(self, kind, full and click_through_enabled(settings))
+
         self.schedule_panel_refresh(center=True)
+
+    def set_lock_kind(self, kind):
+        """Tray / lock-button menu: choose layout lock or full lock."""
+        from calendar_app.presentation.main_window import desktop_lock
+
+        kind = (
+            desktop_lock.KIND_LAYOUT
+            if kind == desktop_lock.KIND_LAYOUT
+            else (desktop_lock.KIND_FULL)
+        )
+        if hasattr(self, "settings"):
+            self.settings.setValue(desktop_lock.LOCK_KIND_KEY, kind)
+        if getattr(self, "is_locked", False):
+            # Switch the running lock in place; the intro is per type.
+            self.is_locked = False
+            self.toggle_lock_mode()
+        self._sync_lock_kind_actions()
+
+    def _sync_lock_kind_actions(self):
+        from calendar_app.presentation.main_window import desktop_lock
+
+        kind = desktop_lock.lock_kind(getattr(self, "settings", None))
+        for action, value in getattr(self, "_lock_kind_actions", []):
+            try:
+                action.setChecked(value == kind)
+            except RuntimeError:
+                continue
+
+    def show_lock_menu(self, global_pos=None):
+        """Right-click menu of the lock button: lock type and full-lock options."""
+        from PyQt6.QtGui import QAction, QActionGroup, QCursor
+        from PyQt6.QtWidgets import QMenu
+
+        from calendar_app.presentation.main_window import desktop_lock
+        from calendar_app.presentation.main_window.lock_click_through import (
+            behind_icons_enabled,
+            click_through_enabled,
+        )
+
+        settings = getattr(self, "settings", None)
+        menu = QMenu(self)
+        menu.setObjectName("lock_kind_menu")
+        if hasattr(self, "apply_menu_opacity"):
+            self.apply_menu_opacity(menu)
+        header = menu.addAction(t("lock.kind_menu", "고정 방식"))
+        header.setEnabled(False)
+        group = QActionGroup(menu)
+        group.setExclusive(True)
+        kind = desktop_lock.lock_kind(settings)
+        for value, label in (
+            (desktop_lock.KIND_LAYOUT, t("lock.kind_layout", "배치만 고정 (일정은 그대로 사용)")),
+            (desktop_lock.KIND_FULL, t("lock.kind_full", "완전 고정 (바탕화면처럼 보기만)")),
+        ):
+            action = QAction(label, menu)
+            action.setCheckable(True)
+            action.setChecked(value == kind)
+            action.triggered.connect(lambda _c=False, v=value: self.set_lock_kind(v))
+            group.addAction(action)
+            menu.addAction(action)
+        menu.addSeparator()
+        through = menu.addAction(t("tray.lock_click_through", "고정 중 클릭 통과 (바탕화면 사용)"))
+        through.setCheckable(True)
+        through.setChecked(click_through_enabled(settings))
+        through.toggled.connect(self.set_lock_click_through)
+        behind = menu.addAction(t("tray.lock_behind_icons", "고정 중 바탕화면 아이콘 뒤로 보내기"))
+        behind.setCheckable(True)
+        behind.setChecked(behind_icons_enabled(settings))
+        behind.toggled.connect(self.set_lock_behind_icons)
+        for option in (through, behind):
+            # These only apply to full lock.
+            option.setEnabled(kind == desktop_lock.KIND_FULL)
+        self._last_lock_menu = menu
+        if global_pos is not None:
+            menu.popup(global_pos)
+        else:
+            menu.popup(QCursor.pos())
+        return menu
 
     def set_lock_click_through(self, enabled):
         """Tray option: let clicks reach the desktop while the calendar is locked."""
@@ -258,19 +356,25 @@ class WindowShellActionsMixin:
         from PyQt6.QtCore import Qt
         from PyQt6.QtWidgets import QPushButton
 
-        overlay = getattr(self, "lock_overlay", None)
-        if overlay is None:
+        if getattr(self, "lock_overlay", None) is None:
             return None
 
+        # The status badge lives on the window, not on the input-blocking overlay:
+        # layout lock keeps the overlay hidden but still shows the badge.
         btn = getattr(self, "_lock_overlay_toggle_btn", None)
-        if btn is None or btn.parent() is not overlay:
-            btn = QPushButton(t("lock.overlay_unlock", "고정 해제"), overlay)
+        if btn is None or btn.parent() is not self:
+            if btn is not None:
+                btn.deleteLater()
+            btn = QPushButton(t("lock.badge_full", "바탕화면 고정 중"), self)
             btn.setObjectName("ghost_btn")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setCheckable(True)
+            icon_color = getattr(self, "_tb_icon_active_color", None)
+            btn.setIcon(_ic(ICON.LOCK, color=icon_color))
             btn.clicked.connect(
                 lambda checked=False, _self=self: _self._on_lock_overlay_toggle_clicked(checked)
             )
+            btn.hide()
             self._lock_overlay_toggle_btn = btn
         return btn
 
@@ -307,7 +411,8 @@ class WindowShellActionsMixin:
             dock._lock_mode_blocker = blocker
         return blocker
 
-    def _apply_lock_mode_to_docks(self, locked: bool):
+    def _apply_lock_mode_to_docks(self, locked: bool, *, block_content: bool | None = None):
+        """Freeze panel docking; block panel content only in full lock."""
         from PyQt6.QtCore import Qt
         from PyQt6.QtWidgets import QDockWidget
 
@@ -327,6 +432,11 @@ class WindowShellActionsMixin:
                     self._lock_mode_saved_dock_areas[dock_key] = dock.allowedAreas()
                 dock.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
                 dock.setAllowedAreas(Qt.DockWidgetArea.NoDockWidgetArea)
+                if block_content is False:
+                    # Layout lock: panels stay usable, only docking is frozen.
+                    blocker.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+                    blocker.hide()
+                    continue
                 blocker.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
                 blocker.setGeometry(dock.rect())
                 blocker.show()
@@ -471,7 +581,10 @@ class WindowShellActionsMixin:
             for attr in ("left_dock", "center_dock", "routine_dock", "directive_dock")
             if (dock := getattr(self, attr, None)) is not None
         )
-        suppressed = bool(getattr(self, "is_locked", False)) or any_floating
+        from calendar_app.presentation.main_window.desktop_lock import full_lock_active
+
+        # Layout lock keeps the top bar; only full lock (view only) hides it.
+        suppressed = full_lock_active(self) or any_floating
         shelf = getattr(self, "_top_bar_menu_wrapper", None)
         if isinstance(shelf, TopBarShelf):
             shelf.set_suppressed(suppressed)

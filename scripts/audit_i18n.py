@@ -739,6 +739,12 @@ def check_dynamic_t_calls(trees, english_keys):
     return findings, dict(stats)
 
 
+# Per-translation hash width. Two hex characters collided once in 256 edits and
+# hid real changes as "source_drift"; four make that about 1 in 65,536. Older
+# baselines with two-character hashes are still read (width per record).
+VALUE_HASH_LENGTH = 4
+
+
 def _digest(value, length):
     return hashlib.sha1(value.encode("utf-8", errors="strict")).hexdigest()[:length]
 
@@ -757,7 +763,7 @@ def build_source_hashes(locales, previous=None, accept_drift=False):
         "keys": {
             key: _digest(value, 8)
             + " "
-            + "".join(_digest(locales[code].get(key, ""), 2) for code in codes)
+            + "".join(_digest(locales[code].get(key, ""), VALUE_HASH_LENGTH) for code in codes)
             for key, value in sorted(english.items())
         },
         "drift": {code: dict(sorted(keys.items())) for code, keys in sorted(drift.items()) if keys},
@@ -777,12 +783,14 @@ def _drift_sources(locales, previous):
             continue
         english_hash, _, value_hashes = record.partition(" ")
         current_english = _digest(english[key], 8)
+        width = len(value_hashes) // len(codes) if codes else VALUE_HASH_LENGTH
         for index, code in enumerate(codes):
             if code not in locales or key not in locales[code]:
                 continue
             value = locales[code][key]
             source_hash = stored_drift.get(code, {}).get(key, english_hash)
-            unchanged = _digest(value, 2) == value_hashes[index * 2 : index * 2 + 2]
+            stored = value_hashes[index * width : (index + 1) * width]
+            unchanged = _digest(value, width) == stored
             if source_hash != current_english and unchanged and value != english[key]:
                 result[code][key] = source_hash
     return result

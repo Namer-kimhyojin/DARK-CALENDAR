@@ -26,7 +26,6 @@ from calendar_app.domain.date_range import (
     inclusive_end_from_exclusive,
     timed_span_last_day,
 )
-from calendar_app.domain.task_constants import priority_icon
 from calendar_app.infrastructure.google_sync.common import is_gcal_enabled
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.locale_names import (
@@ -36,6 +35,7 @@ from calendar_app.presentation.locale_names import (
 from calendar_app.presentation.locale_names import (
     month_name as locale_month_name,
 )
+from calendar_app.presentation.theme.task_glyphs import event_qicon, is_completed_row
 from calendar_app.presentation.theme.ui_tokens import get_ui_shape_tokens
 from calendar_app.presentation.widgets.schedule_info import build_schedule_hover_html
 from calendar_app.shared.calendar_display_settings import (
@@ -222,17 +222,36 @@ def _accent_rgba(alpha: float, tokens=None):
     return f"rgba({color.red()},{color.green()},{color.blue()},{alpha})"
 
 
+def _today_pill_text(tokens) -> str:
+    """Dark or light number on the accent pill, whichever reads better."""
+    from calendar_app.shared.color_utils import contrast_ratio, parse_css_color
+
+    accent = parse_css_color(tokens.get("accent"), "#4da6ff").name()
+    light = "#ffffff"
+    dark = "#111318"
+    return light if contrast_ratio(light, accent) >= contrast_ratio(dark, accent) else dark
+
+
 def _calendar_surface_style(tokens=None, shape=None):
     tokens = _resolve_calendar_tokens(tokens=tokens)
     shape = _resolve_calendar_shape(shape=shape)
     surface_radius = int(shape.get("calendar_surface_radius", 8))
     selection_radius = int(shape.get("calendar_selection_badge_radius", 14))
-    cell_border = tokens["divider"]
-    accent = _accent_rgba(0.5, tokens)
-    accent_soft = _accent_rgba(0.1, tokens)
+    # Grid lines at 60 % of the divider: the cells still read as a grid, but
+    # the event chips and the today mark carry the eye instead of the lines.
+    from calendar_app.shared.color_utils import parse_css_color
+
+    divider_color = parse_css_color(tokens["divider"], "#2c3246")
+    cell_border = (
+        f"rgba({divider_color.red()},{divider_color.green()},"
+        f"{divider_color.blue()},{divider_color.alphaF() * 0.6:.3f})"
+    )
     accent_hover = _accent_rgba(0.08, tokens)
-    accent_selected = _accent_rgba(0.12, tokens)
-    accent_selected_border = _accent_rgba(0.86, tokens)
+    accent_selected = _accent_rgba(0.10, tokens)
+    accent_selected_border = _accent_rgba(0.55, tokens)
+    today_tint = _accent_rgba(0.05, tokens)
+    today_text = _today_pill_text(tokens)
+    today_pill_radius = max(4, min(10, selection_radius))
     # A light accent wash with a thin translucent outline: enough to see the
     # span over translucent panels without shouting. The ends are a touch
     # stronger and carry accent day numbers.
@@ -266,13 +285,12 @@ def _calendar_surface_style(tokens=None, shape=None):
             border: 1px solid {_accent_rgba(0.3, tokens)};
         }}
         ClickableCell[is_today="true"] {{
-            background-color: {accent_soft};
-            border: 2px solid {accent};
-            border-radius: {selection_radius}px;
+            background-color: {today_tint};
+            border-top: 2px solid {tokens["accent"]};
         }}
         ClickableCell[selected_date="true"] {{
             background-color: {accent_selected};
-            border: 2px solid {accent_selected_border};
+            border: 1px solid {accent_selected_border};
             border-radius: {selection_radius}px;
         }}
         ClickableCell[keyboardFocused="true"] {{
@@ -293,13 +311,17 @@ def _calendar_surface_style(tokens=None, shape=None):
         ClickableCell[is_other_month="true"] QLabel#dayNumLabel {{
             color: {tokens["text_faint"]};
         }}
-        ClickableCell[is_today="true"] QLabel#dayNumLabel {{
+        ClickableCell[selected_date="true"] QLabel#dayNumLabel {{
             color: {tokens["accent"]};
             font-weight: 700;
         }}
-        ClickableCell[selected_date="true"] QLabel#dayNumLabel {{
-            color: {tokens["text_primary"]};
+        ClickableCell[is_today="true"] QLabel#dayNumLabel {{
+            color: {today_text};
+            background-color: {tokens["accent"]};
             font-weight: 700;
+            border-radius: {today_pill_radius}px;
+            padding: 1px 8px;
+            margin: 4px 0 4px 4px;
         }}
         /* Multi-day create range (empty-cell drag and its open dialog). It must
            live in this surface stylesheet: an ancestor stylesheet always beats
@@ -650,10 +672,10 @@ def _calendar_toolbar_style_bundle(tokens=None, shape=None):
             }}
         """,
         "more_btn": (
-            f"QPushButton {{ color: {btn_subtxt}; font-size: {_font_role('caption')}; font-weight: bold; "
-            f"background: transparent; border: none; text-align: left; padding: 2px 5px; "
-            f"border-radius: {more_radius}px; }} "
-            f"QPushButton:hover {{ background-color: {btn_hover}; color: {btn_txt}; }}"
+            f"QPushButton {{ color: {btn_subtxt}; font-size: {_font_role('caption')}; font-weight: 600; "
+            f"background: {tokens.get('bg_item_hover', btn_hover)}; border: none; text-align: center; "
+            f"padding: 1px 8px; margin: 1px 3px; border-radius: {max(4, more_radius)}px; }} "
+            f"QPushButton:hover {{ background-color: {_accent_rgba(0.18, tokens)}; color: {btn_txt}; }}"
         ),
     }
 
@@ -1506,12 +1528,6 @@ def _build_tooltip_rows(rows):
     )
 
 
-_ICON_TIME = "🕒"
-_ICON_LOCATION = "📍"
-_ICON_ASSIGNEE = "👤"
-_ICON_DESC = "📝"
-
-
 def _theme_harmonized_color(theme_hex, seed_value, tokens=None):
     """Generate a deterministic, theme-harmonized accent color for multiday bars."""
     from PyQt6.QtGui import QColor
@@ -1642,20 +1658,20 @@ def _show_subscription_detail(task_row, parent=None):
 
     time_str = _subscription_period_text(task_row)
 
-    _lbl = _ICON_TIME + chr(32) + t("tooltip.label_period", "기간")
+    _lbl = t("tooltip.label_period", "기간")
     _add_row(_lbl, time_str)
 
     source = _subscription_source_text(task_row)
-    _lbl = "\U0001f4e1" + chr(32) + t("tooltip.label_calendar", "캘린더")
+    _lbl = t("tooltip.label_calendar", "캘린더")
     _add_row(_lbl, source)
 
     location = str(task_row.get("location") or "").strip()
-    _lbl = _ICON_LOCATION + chr(32) + t("tooltip.label_location", "장소")
+    _lbl = t("tooltip.label_location", "장소")
     _add_row(_lbl, location)
 
     assignee = str(task_row.get("assignee") or "").strip()
     if assignee:
-        _lbl = _ICON_ASSIGNEE + chr(32) + t("tooltip.label_assignee", "담당")
+        _lbl = t("tooltip.label_assignee", "담당")
         _add_row(_lbl, assignee)
 
     desc = clean_calendar_description(
@@ -1664,7 +1680,7 @@ def _show_subscription_detail(task_row, parent=None):
         or task_row.get("gcal_source_calendar_id"),
         sync_mode=task_row.get("gcal_sync_mode"),
     )
-    _lbl = _ICON_DESC + chr(32) + t("tooltip.label_description", "설명")
+    _lbl = t("tooltip.label_description", "설명")
     _add_row(_lbl, desc)
 
     status_raw = str(task_row.get("_gcal_status") or "").strip()
@@ -1674,18 +1690,18 @@ def _show_subscription_detail(task_row, parent=None):
         "cancelled": t("subscription.status_cancelled", "취소됨"),
     }
     if status_raw and status_raw != "confirmed":
-        _lbl = chr(0x1F516) + chr(32) + t("subscription.label_status", "상태")
+        _lbl = t("subscription.label_status", "상태")
         _add_row(_lbl, _STATUS_LABEL.get(status_raw, status_raw))
 
     updated_raw = str(task_row.get("_gcal_updated") or "").strip()
     if updated_raw:
         _add_divider()
-        _lbl = chr(0x1F504) + chr(32) + t("subscription.label_updated", "수정일")
+        _lbl = t("subscription.label_updated", "수정일")
         _add_row(_lbl, _format_subscription_datetime(updated_raw), muted=True)
 
     event_id = str(task_row.get("_gcal_event_id") or "").strip()
     if event_id:
-        _lbl = chr(0x1F511) + chr(32) + t("subscription.label_event_id", "이벤트 ID")
+        _lbl = t("subscription.label_event_id", "이벤트 ID")
         _add_row(_lbl, event_id, copyable=True, muted=True)
 
     form.addStretch(1)
@@ -2728,7 +2744,7 @@ def render_calendar(app):
                 day_lbl.setObjectName("dayNumLabel")
                 day_lbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
                 day_lbl.setFixedHeight(chrome_height)
-                bg_v.addWidget(day_lbl)
+                bg_v.addWidget(day_lbl, 0, Qt.AlignmentFlag.AlignLeft)
 
                 # 배경 셀을 크게 배치 (Row Span 최대)
                 # 실제 일정이 추가될 때마다 Grid의 Row가 늘어나지만
@@ -2847,6 +2863,9 @@ def render_calendar(app):
             week_grid.setRowMinimumHeight(0, chrome_height)
             event_base_row = 1
 
+            def _task_glyph(task_row):
+                return event_qicon(task_row, tokens)
+
             def _build_task_button(task_row, label_text, is_multiday, is_origin):
                 tid = task_row["id"]
                 _tprio = task_row["priority"]
@@ -2863,6 +2882,7 @@ def render_calendar(app):
                         tcol = _calendar_meta_cache.get(cal_id)
 
                 btn = DraggableTaskButton(tid, label_text)
+                btn.set_completed(is_completed_row(task_row))
                 is_subscription = bool(task_row.get("is_subscription"))
 
                 btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -2935,12 +2955,9 @@ def render_calendar(app):
                         label = f"{label} ..."
 
                     is_origin = p["is_start"]
-                    if task.get("is_subscription") and is_origin:
-                        label = f"\U0001f4e1 {label}"
-                    elif is_origin and task.get("priority"):
-                        label = f"{priority_icon(task['priority'])} {label}"
-
                     btn = _build_task_button(task, label, True, is_origin)
+                    if is_origin:
+                        btn.set_leading_icon(_task_glyph(task))
                     btn.set_multiday_segment_shape(not p["is_start"], not p["is_end"])
                     if not is_origin:
                         btn.set_title_watermark(True)
@@ -2989,24 +3006,12 @@ def render_calendar(app):
                     logger.debug(
                         "rendering task %s (%s) at r=%d c=%d", task.get("id"), title, row, c
                     )
-                    if task.get("is_subscription"):
-                        label = f"\U0001f4e1 {title}"
-                    else:
-                        label = (
-                            f"{priority_icon(task.get('priority'))} {title}"
-                            if task.get("priority")
-                            else title
-                        )
-                    btn = _build_task_button(task, title if is_month_mode else label, False, True)
+                    btn = _build_task_button(task, title, False, True)
+                    btn.set_leading_icon(_task_glyph(task))
                     if is_month_mode:
-                        prefix = [_month_start_time(task)]
-                        if task.get("is_subscription"):
-                            prefix.append("\U0001f4e1")
-                        elif task.get("priority"):
-                            prefix.append(priority_icon(task["priority"]))
-                        # The title has priority over metadata in narrow cells.
+                        # The title has priority over the time in narrow cells.
                         # Hover details retain time, priority and source information.
-                        btn.set_title_time_hint(" ".join(part for part in prefix if part))
+                        btn.set_title_time_hint(_month_start_time(task))
                     install_hover_info(
                         btn, _build_single_task_tooltip_html(task, _tc), mode="inline_center"
                     )
@@ -3039,7 +3044,7 @@ def render_calendar(app):
                     container = QWidget()
                     vbox = QVBoxLayout(container)
                     vbox.setContentsMargins(0, 0, 0, 0)  # 좌우 패딩 제거하여 정렬
-                    vbox.addWidget(more_btn)
+                    vbox.addWidget(more_btn, 0, Qt.AlignmentFlag.AlignLeft)
 
                     more_row = event_base_row + multiday_rows + len(visible_single_tasks)
                     week_grid.addWidget(container, more_row, c, 1, 1)

@@ -7,7 +7,7 @@ import logging
 import os
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QIcon, QPixmap
+from PyQt6.QtGui import QAction, QIcon, QImage, QPainter, QPixmap
 from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
 
 from calendar_app.app_paths import APP_ICON_PATH
@@ -125,6 +125,56 @@ def _create_tray_autostart_action(app, parent_menu):
     return action
 
 
+def tray_tooltip_text() -> str:
+    """Tray hover text: program name and version side by side."""
+    from calendar_app.app_metadata import APP_NAME, APP_VERSION_LABEL
+
+    return f"{APP_NAME} {APP_VERSION_LABEL}"
+
+
+def _build_tray_icon(icon_path: str) -> QIcon:
+    """Build tray pixmaps from the largest frame with the transparent margin trimmed.
+
+    The .ico art leaves ~20% empty space around the glyph, which makes it look
+    small next to other tray icons. Trimming keeps the shape and fills the slot.
+    """
+    source = QIcon(icon_path)
+    sizes = source.availableSizes()
+    largest = max(sizes, key=lambda s: s.width()) if sizes else None
+    image = source.pixmap(largest).toImage() if largest else QImage(icon_path)
+    image = image.convertToFormat(QImage.Format.Format_ARGB32)
+
+    left, top, right, bottom = image.width(), image.height(), -1, -1
+    for y in range(image.height()):
+        for x in range(image.width()):
+            if image.pixelColor(x, y).alpha() > 16:
+                left, right = min(left, x), max(right, x)
+                top, bottom = min(top, y), max(bottom, y)
+    if right >= left and bottom >= top:
+        image = image.copy(left, top, right - left + 1, bottom - top + 1)
+
+    side = max(image.width(), image.height())
+    square = QImage(side, side, QImage.Format.Format_ARGB32_Premultiplied)
+    square.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(square)
+    painter.drawImage((side - image.width()) // 2, (side - image.height()) // 2, image)
+    painter.end()
+
+    icon = QIcon()
+    for size in (16, 20, 24, 32, 40, 48, 64):
+        icon.addPixmap(
+            QPixmap.fromImage(
+                square.scaled(
+                    size,
+                    size,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+        )
+    return icon
+
+
 def init_tray_icon(app):
     """Initialize system tray icon with optimized and icon-rich menu."""
     app._tray_available = False
@@ -143,18 +193,10 @@ def init_tray_icon(app):
     icon_path = next((p for p in possible_paths if p and os.path.exists(p)), None)
 
     if icon_path:
-        icon = QIcon()
-        for size in (16, 24, 32, 48):
-            px = QPixmap(icon_path).scaled(
-                size,
-                size,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            icon.addPixmap(px)
-        app.tray_icon.setIcon(icon)
+        app.tray_icon.setIcon(_build_tray_icon(icon_path))
     else:
         app.tray_icon.setIcon(app.style().standardIcon(app.style().StandardPixmap.SP_ComputerIcon))
+    app.tray_icon.setToolTip(tray_tooltip_text())
 
     style = _tray_menu_style()
     tray_menu = QMenu()
@@ -218,7 +260,7 @@ def init_tray_icon(app):
     # Routine Settings (Dialog)
     _create_action(
         app,
-        t("tray.routine_settings", "⚙️ 일반업무 설정"),
+        t("tray.routine_settings", "일반업무 설정"),
         app.open_routine_management_dialog,
         "routine_mgr",
         mgr_menu,
@@ -291,18 +333,42 @@ def init_tray_icon(app):
         app, t("tray.lock_mode"), lambda: _toggle_lock_via_shortcut(app), "lock_mode", focus_menu
     )
     act_lock.setIcon(_ic(ICON.LOCK))
+    from PyQt6.QtGui import QActionGroup
+
+    from calendar_app.presentation.main_window import desktop_lock
     from calendar_app.presentation.main_window.lock_click_through import click_through_enabled
 
-    act_click_through = focus_menu.addAction(
-        t("tray.lock_click_through", "잠금 중 클릭 통과 (바탕화면 사용)")
+    # Lock type: layout only, or full (view only). One menu for every lock option.
+    lock_options = QMenu(t("lock.kind_menu", "고정 방식"), focus_menu)
+    lock_options.setStyleSheet(style)
+    kind_group = QActionGroup(lock_options)
+    kind_group.setExclusive(True)
+    current_kind = desktop_lock.lock_kind(getattr(app, "settings", None))
+    app._lock_kind_actions = []
+    for value, label in (
+        (desktop_lock.KIND_LAYOUT, t("lock.kind_layout", "배치만 고정 (일정은 그대로 사용)")),
+        (desktop_lock.KIND_FULL, t("lock.kind_full", "완전 고정 (바탕화면처럼 보기만)")),
+    ):
+        kind_action = lock_options.addAction(label)
+        kind_action.setCheckable(True)
+        kind_action.setChecked(value == current_kind)
+        kind_group.addAction(kind_action)
+        if hasattr(app, "set_lock_kind"):
+            kind_action.triggered.connect(lambda _c=False, v=value: app.set_lock_kind(v))
+        app._lock_kind_actions.append((kind_action, value))
+    lock_options.addSeparator()
+    focus_menu.addMenu(lock_options)
+
+    act_click_through = lock_options.addAction(
+        t("tray.lock_click_through", "고정 중 클릭 통과 (바탕화면 사용)")
     )
     act_click_through.setCheckable(True)
     act_click_through.setChecked(click_through_enabled(getattr(app, "settings", None)))
     act_click_through.setToolTip(
         t(
             "tray.lock_click_through_hint",
-            "잠금 중에는 클릭이 달력 아래 바탕화면으로 전달됩니다. "
-            "'잠금 해제' 버튼 위에 마우스를 잠시 올려 두면 다시 누를 수 있습니다.",
+            "완전 고정 중에는 클릭이 달력 아래 바탕화면으로 전달됩니다. "
+            "오른쪽 아래 배지에 마우스를 잠시 올려 두면 다시 누를 수 있습니다.",
         )
     )
     if hasattr(app, "set_lock_click_through"):
@@ -310,16 +376,16 @@ def init_tray_icon(app):
     app.tray_lock_click_through_action = act_click_through
     from calendar_app.presentation.main_window.lock_click_through import behind_icons_enabled
 
-    act_behind_icons = focus_menu.addAction(
-        t("tray.lock_behind_icons", "잠금 중 바탕화면 아이콘 뒤로 보내기")
+    act_behind_icons = lock_options.addAction(
+        t("tray.lock_behind_icons", "고정 중 바탕화면 아이콘 뒤로 보내기")
     )
     act_behind_icons.setCheckable(True)
     act_behind_icons.setChecked(behind_icons_enabled(getattr(app, "settings", None)))
     act_behind_icons.setToolTip(
         t(
             "tray.lock_behind_icons_hint",
-            "잠금 중에는 달력을 배경화면처럼 바탕화면 아이콘 아래에 둡니다. "
-            "'잠금 해제' 버튼 위에 마우스를 잠시 올려 두면 다시 꺼내 누를 수 있습니다.",
+            "완전 고정 중에는 달력을 배경화면처럼 바탕화면 아이콘 아래에 둡니다. "
+            "오른쪽 아래 배지에 마우스를 잠시 올려 두면 다시 꺼내 누를 수 있습니다.",
         )
     )
     if hasattr(app, "set_lock_behind_icons"):

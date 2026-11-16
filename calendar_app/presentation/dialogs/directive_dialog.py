@@ -40,6 +40,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     polish_calendar_popup,
 )
 from calendar_app.presentation.dialogs.time_picker_widget import DatePickerWidget, TimePickerWidget
+from calendar_app.presentation.theme.task_glyphs import priority_qicon, status_qicon
 
 logger = logging.getLogger(__name__)
 
@@ -117,8 +118,9 @@ class DirectiveDialog(QDialog):
         top_row = QHBoxLayout()
         content_lbl = QLabel(t("dialog.directive.label_content"))
         content_lbl.setObjectName("TaskDialogFieldLabel")
-        top_row.addWidget(content_lbl)
-        top_row.addStretch()
+        # The label takes the free width so the dialog's wrap guard only breaks
+        # it when it truly does not fit beside the counter.
+        top_row.addWidget(content_lbl, 1)
         self.char_counter = QLabel("0 / 120")
         self.char_counter.setStyleSheet(build_editor_counter_style(self._ui_tokens, level="normal"))
         top_row.addWidget(self.char_counter)
@@ -217,7 +219,7 @@ class DirectiveDialog(QDialog):
             (t("priority.high", "높음"), "high"),
             (t("priority.urgent", "긴급"), "urgent"),
         ]:
-            self.priority_combo.addItem(label, code)
+            self.priority_combo.addItem(priority_qicon(code), label, code)
         priority_col.addWidget(self.priority_combo)
         ops_inner.addLayout(priority_col)
 
@@ -226,7 +228,7 @@ class DirectiveDialog(QDialog):
         status_col.addWidget(QLabel(t("dialog.directive.label_status")))
         self.status_combo = QComboBox()
         for label, code in STATUS_COMBO_ITEMS:
-            self.status_combo.addItem(label, code)
+            self.status_combo.addItem(status_qicon(code), label, code)
         idx_ip = self.status_combo.findData("in_progress")
         if idx_ip >= 0:
             self.status_combo.setCurrentIndex(idx_ip)
@@ -471,13 +473,21 @@ class DirectiveDialog(QDialog):
     def delete_data(self):
         if not self.task_id:
             return
-        reply = QMessageBox.question(
-            self,
-            t("dialog.common.delete"),
-            t("dialog.common.delete_confirm"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        # Name the directive and the action; Cancel stays the default button.
+        name = self.content_edit.text().strip() or t("widget_mode.untitled", "제목 없음")
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle(t("dialog.common.delete"))
+        box.setText(t("dialog.directive.delete_confirm", name=name))
+        move_btn = box.addButton(
+            t("dialog.directive.btn_move_to_trash", "휴지통으로 이동"),
+            QMessageBox.ButtonRole.DestructiveRole,
         )
-        if reply != QMessageBox.StandardButton.Yes:
+        cancel_btn = box.addButton(t("dialog.common.cancel"), QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(cancel_btn)
+        box.setEscapeButton(cancel_btn)
+        box.exec()
+        if box.clickedButton() is not move_btn:
             return
         try:
             moved = directive_repo.move_directive_to_trash(

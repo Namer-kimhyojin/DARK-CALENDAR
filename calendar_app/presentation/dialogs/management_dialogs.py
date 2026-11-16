@@ -2,7 +2,7 @@
 
 import logging
 
-from PyQt6.QtCore import QModelIndex, QSortFilterProxyModel, Qt, QTimer
+from PyQt6.QtCore import QEvent, QModelIndex, QSortFilterProxyModel, Qt, QTimer
 from PyQt6.QtGui import QAction, QBrush, QColor, QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -47,6 +47,7 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_theme_tokens,
 )
 from calendar_app.presentation.locale_names import calendar_display_name
+from calendar_app.presentation.theme.task_glyphs import glyph_icon, priority_qicon, status_qicon
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,21 @@ def _status_value_from_label(label):
         if text == label:
             return value
     return "pending"
+
+
+def _priority_value_or_none(label):
+    for text, value in _bulk_priority_items():
+        if text == label:
+            return value
+    return None
+
+
+def _search_glyph_color(tokens) -> str:
+    from calendar_app.shared.color_utils import parse_css_color
+
+    return parse_css_color((tokens or {}).get("text_secondary", "#a8afbb"), "#a8afbb").name(
+        QColor.NameFormat.HexArgb
+    )
 
 
 def _management_header_style(tokens=None, metrics=None):
@@ -173,6 +189,7 @@ class BaseManagementDialog(QDialog):
     header_text = ""
     headers = []
     status_column = -1
+    priority_column = -1
     search_columns = []
     status_filter_items = STATUS_FILTER_ITEMS
 
@@ -210,7 +227,10 @@ class BaseManagementDialog(QDialog):
 
         header_layout = QHBoxLayout()
         header = QLabel(self.header_text)
+        header.setObjectName("managementHeaderTitle")
+        header.setWordWrap(False)
         header.setStyleSheet(_management_header_style(self._ui_tokens) + "margin-bottom: 10px;")
+        header.setMinimumWidth(header.sizeHint().width())
         header_layout.addWidget(header)
         header_layout.addStretch()
 
@@ -218,12 +238,26 @@ class BaseManagementDialog(QDialog):
         search_label = t("common.search", "검색")
         self.search_input.setPlaceholderText(search_label)
         self.search_input.setAccessibleName(search_label)
+        search_glyph = QLabel()
+        search_glyph.setObjectName("managementSearchGlyph")
+        search_glyph.setPixmap(
+            glyph_icon("fa6s.magnifying-glass", _search_glyph_color(self._ui_tokens)).pixmap(14, 14)
+        )
+        search_glyph.setAccessibleName(search_label)
+        search_glyph.setBuddy(self.search_input)
+        header_layout.addWidget(search_glyph)
         self.search_input.setFixedWidth(200)
         self.search_input.textChanged.connect(lambda: self._filter_timer.start())
         header_layout.addWidget(self.search_input)
 
         self.status_filter = QComboBox()
-        self.status_filter.addItems(self.status_filter_items)
+        status_values = {label: value for label, value in STATUS_MENU_ITEMS}
+        for label in self.status_filter_items:
+            value = status_values.get(label)
+            if value:
+                self.status_filter.addItem(status_qicon(value), label)
+            else:
+                self.status_filter.addItem(label)
         self.status_filter.currentTextChanged.connect(lambda: self._filter_timer.start())
         header_layout.addWidget(self.status_filter)
 
@@ -259,11 +293,53 @@ class BaseManagementDialog(QDialog):
         self.table.customContextMenuRequested.connect(self.open_context_menu)
         self.table.horizontalHeader().setStretchLastSection(True)
         layout.addWidget(self.table)
+        self._empty_label = QLabel(self.table.viewport())
+        self._empty_label.setObjectName("managementEmptyState")
+        self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._empty_label.setWordWrap(True)
+        self._empty_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self._empty_label.setStyleSheet(
+            f"QLabel#managementEmptyState {{ color: {self._ui_tokens.get('text_secondary', '#a8afbb')}; "
+            "background: transparent; border: none; padding: 24px; }"
+        )
+        for signal in (
+            self.proxy.rowsInserted,
+            self.proxy.rowsRemoved,
+            self.proxy.modelReset,
+            self.proxy.layoutChanged,
+        ):
+            signal.connect(lambda *_args: self._sync_empty_state())
+        self.table.viewport().installEventFilter(self)
 
         self._build_buttons(layout)
         self.load_data()
         if self.headers and self.headers[0] == "ID":
             self.table.hideColumn(0)
+        self._sync_empty_state()
+
+    def _sync_empty_state(self):
+        label = getattr(self, "_empty_label", None)
+        if label is None:
+            return
+        empty = self.proxy.rowCount() == 0
+        if empty:
+            filtered = self.model.rowCount() > 0
+            label.setText(
+                t("dialog.management.empty_filtered", "조건에 맞는 항목이 없습니다.")
+                if filtered
+                else t("dialog.management.empty", "아직 등록된 항목이 없습니다.")
+            )
+            label.setGeometry(self.table.viewport().rect())
+        label.setVisible(empty)
+
+    def eventFilter(self, obj, event):
+        if (
+            getattr(self, "_empty_label", None) is not None
+            and obj is self.table.viewport()
+            and event.type() == QEvent.Type.Resize
+        ):
+            self._empty_label.setGeometry(obj.rect())
+        return super().eventFilter(obj, event)
 
     def _build_buttons(self, layout):
         sep = QFrame()
@@ -289,6 +365,14 @@ class BaseManagementDialog(QDialog):
         layout.addLayout(btn_layout)
         bulk_layout = QHBoxLayout()
         for widget in self.bulk_action_widgets():
+            if isinstance(widget, QComboBox):
+                widget.setSizeAdjustPolicy(
+                    QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+                )
+                widget.setMinimumContentsLength(4)
+            elif isinstance(widget, QPushButton):
+                widget.ensurePolished()
+                widget.setMinimumWidth(widget.sizeHint().width())
             bulk_layout.addWidget(widget)
         bulk_layout.addStretch()
         layout.addLayout(bulk_layout)
@@ -298,7 +382,8 @@ class BaseManagementDialog(QDialog):
 
     def bulk_action_widgets(self):
         self.bulk_priority_combo = QComboBox()
-        self.bulk_priority_combo.addItems([label for label, _ in _bulk_priority_items()])
+        for label, value in _bulk_priority_items():
+            self.bulk_priority_combo.addItem(priority_qicon(value), label)
         self.bulk_priority_combo.setMinimumWidth(110)
 
         self.bulk_priority_btn = QPushButton(t("dialog.common.bulk_priority"))
@@ -310,7 +395,8 @@ class BaseManagementDialog(QDialog):
         )
 
         self.bulk_status_combo = QComboBox()
-        self.bulk_status_combo.addItems([label for label, _ in STATUS_MENU_ITEMS])
+        for label, value in STATUS_MENU_ITEMS:
+            self.bulk_status_combo.addItem(status_qicon(value), label)
         self.bulk_status_combo.setMinimumWidth(110)
 
         self.bulk_status_btn = QPushButton(t("dialog.common.bulk_status"))
@@ -363,8 +449,15 @@ class BaseManagementDialog(QDialog):
             item.setEditable(col in editable_columns)
             item.setData(row_meta.get("id"), Qt.ItemDataRole.UserRole)
             item.setData(row_meta, Qt.ItemDataRole.UserRole + 1)
+            if col == self.priority_column:
+                priority_value = _priority_value_or_none(str(value or ""))
+                if priority_value:
+                    item.setIcon(priority_qicon(priority_value))
             if col == self.status_column:
-                item.setBackground(_status_background(status_value, tokens=self._ui_tokens))
+                # The status glyph carries the meaning; a tinted cell on every
+                # row only added weight to the table.
+                if status_value:
+                    item.setIcon(status_qicon(status_value))
                 item.setForeground(
                     QBrush(_token_color(self._ui_tokens.get("text_primary"), "#101318"))
                 )
@@ -602,13 +695,13 @@ class BaseManagementDialog(QDialog):
         menu = QMenu(self)
         priority_menu = menu.addMenu(t("dialog.common.bulk_priority"))
         for label, value in PRIORITY_MENU_ITEMS:
-            act = QAction(label, self)
+            act = QAction(priority_qicon(value), label, self)
             act.triggered.connect(lambda _=False, v=value: self.bulk_priority_update(v))
             priority_menu.addAction(act)
 
         status_menu = menu.addMenu(t("dialog.common.bulk_status"))
         for label, value in STATUS_MENU_ITEMS:
-            act = QAction(label, self)
+            act = QAction(status_qicon(value), label, self)
             act.triggered.connect(lambda _=False, v=value: self.bulk_status_update(v))
             status_menu.addAction(act)
         menu.addSeparator()
@@ -652,6 +745,7 @@ class DirectiveManagementDialog(BaseManagementDialog):
         ]
 
     status_column = 4
+    priority_column = 2
     search_columns = [0, 1]
 
     def __init__(self, parent=None, *, embedded=False):
@@ -850,6 +944,7 @@ class TaskManagementDialog(BaseManagementDialog):
         ]
 
     status_column = 7
+    priority_column = 6
     search_columns = [2, 4, 5]  # name, location, assignee
     _calendar_col = 1
 
@@ -1037,6 +1132,7 @@ class RoutineManagementDialog(BaseManagementDialog):
         ]
 
     status_column = 6
+    priority_column = 4
     search_columns = [0, 2, 3]
 
     def __init__(self, parent=None, *, embedded=False):
@@ -1179,10 +1275,10 @@ class WorkManagementTabbedDialog(QDialog):
 
         self._tab_defs = [
             ("schedule", t("dialog.management.tab_schedule", "일정 관리"), TaskManagementDialog),
-            ("routine", t("dialog.management.tab_routine", "⭐ 일반업무"), RoutineManagementDialog),
+            ("routine", t("dialog.management.tab_routine", "일반업무"), RoutineManagementDialog),
             (
                 "directive",
-                t("dialog.management.tab_directive", "📋 지시/협조사항"),
+                t("dialog.management.tab_directive", "지시/협조사항"),
                 DirectiveManagementDialog,
             ),
         ]

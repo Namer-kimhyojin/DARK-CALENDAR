@@ -7,7 +7,10 @@ from pathlib import Path
 import pytest
 from scripts.audit_i18n import (
     BASELINE_RELATIVE,
+    VALUE_HASH_LENGTH,
+    _digest,
     audit,
+    build_source_hashes,
     check_calendar_names,
     check_dynamic_t_calls,
     check_english_words,
@@ -454,3 +457,22 @@ def test_pending_review_count_is_reported(tmp_path):
     bundles, _ = load_locales(tmp_path)
     _, summary = quality_findings(bundles, tmp_path)
     assert summary["pending_review"] == 1
+
+
+def test_drift_hashes_are_wide_and_old_two_character_baselines_still_work():
+    """Two-character value hashes once hid a real translation edit (1 in 256)."""
+    locales = {"en": {"a": "Deadline:"}, "de": {"a": "Frist:"}, "fr": {"a": "Échéance :"}}
+    record = build_source_hashes(locales)["keys"]["a"]
+    assert len(record.split(" ")[1]) == 2 * VALUE_HASH_LENGTH
+    assert VALUE_HASH_LENGTH >= 4
+
+    legacy = {
+        "locales": ["de", "fr"],
+        "keys": {
+            "a": _digest("Deadline:", 8) + " " + _digest("Frist:", 2) + _digest("Échéance :", 2)
+        },
+    }
+    changed_english = {"en": {"a": "Deadline"}, "de": {"a": "Frist:"}, "fr": {"a": "Échéance"}}
+    found = {(item["locale"], item["key"]) for item in check_source_drift(changed_english, legacy)}
+    # German kept its old text after the English edit; French was updated.
+    assert found == {("de", "a")}

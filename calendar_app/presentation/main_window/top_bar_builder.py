@@ -410,7 +410,13 @@ def setup_top_bar(self, _size, _theme, _ta):
     )
     self.lock_btn.setFixedSize(TOP_BAR_BUTTON_SIZE, TOP_BAR_BUTTON_SIZE)
     self.lock_btn.setStyleSheet(_btn_style)
-    self.lock_btn.clicked.connect(self.toggle_lock_mode)
+    self.lock_btn.clicked.connect(lambda _checked=False: self.toggle_lock_mode())
+    # Right-click: lock type (layout / full) and the full-lock options.
+    if hasattr(self, "show_lock_menu"):
+        self.lock_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.lock_btn.customContextMenuRequested.connect(
+            lambda pos: self.show_lock_menu(self.lock_btn.mapToGlobal(pos))
+        )
     top_bar.addWidget(self.lock_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
     # -- Magnet Mode Group --

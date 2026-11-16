@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Dialog for customizing priority/status icon and text labels."""
+"""Dialog for customizing priority/status icon glyphs and text labels."""
 
-from PyQt6.QtCore import QPoint, Qt, QTimer
+from PyQt6.QtCore import QPoint, QSize, Qt, QTimer
 from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -14,7 +14,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
-    QTabWidget,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -36,298 +35,52 @@ from calendar_app.presentation.dialogs.dialog_styles import (
     get_dialog_metric_tokens,
     get_dialog_theme_tokens,
 )
+from calendar_app.presentation.theme import task_glyphs
 
-# ?? ?대え吏 ?붾젅???곗씠?????????????????????????????????????
-_EMOJI_PALETTE = {
-    t("dialog.label_settings.emoji_categories.priority"): [
-        "\U0001f525",
-        "\U0001f6a8",
-        "\u2b50",
-        "\u26a1",
-        "\U0001f4cc",
-        "\U0001f3af",
-        "\u2705",
-        "\u23f0",
-        "\U0001f4cd",
-        "\U0001f9ed",
-        "\U0001f6d1",
-        "\U0001f534",
-        "\U0001f7e0",
-        "\U0001f7e1",
-        "\U0001f7e2",
-        "\U0001f535",
-        "\U0001f7e3",
-        "\u26a0\ufe0f",
-        "\u2757",
-        "\u2755",
-        "1\ufe0f\u20e3",
-        "2\ufe0f\u20e3",
-        "3\ufe0f\u20e3",
-        "4\ufe0f\u20e3",
-        "5\ufe0f\u20e3",
-        "\u2b06\ufe0f",
-        "\u2b07\ufe0f",
-        "\u2705",
-        "\u274c",
-        "\u23f3",
-    ],
-    t("dialog.label_settings.emoji_categories.status"): [
-        "\U0001f195",
-        "\U0001f4e5",
-        "\U0001f4dd",
-        "\U0001f504",
-        "\u23f3",
-        "\u231b",
-        "\U0001f6a7",
-        "\U0001f3c3",
-        "\u2705",
-        "\u2714\ufe0f",
-        "\u2611\ufe0f",
-        "\U0001f4cc",
-        "\U0001f4c5",
-        "\U0001f4cd",
-        "\U0001f6e0\ufe0f",
-        "\U0001f9ea",
-        "\U0001f4e4",
-        "\U0001f4e6",
-        "\U0001f512",
-        "\U0001f513",
-        "\U0001f7e2",
-        "\U0001f7e1",
-        "\U0001f534",
-        "\u26aa",
-        "\u26ab",
-        "\U0001f552",
-        "\U0001f558",
-        "\U0001f55b",
-        "\U0001f680",
-        "\U0001f3c1",
-    ],
-    t("dialog.label_settings.emoji_categories.face"): [
-        "\U0001f600",
-        "\U0001f603",
-        "\U0001f604",
-        "\U0001f601",
-        "\U0001f606",
-        "\U0001f605",
-        "\U0001f602",
-        "\U0001f923",
-        "\U0001f60a",
-        "\U0001f642",
-        "\U0001f609",
-        "\U0001f60d",
-        "\U0001f618",
-        "\U0001f617",
-        "\U0001f619",
-        "\U0001f61a",
-        "\U0001f60b",
-        "\U0001f61b",
-        "\U0001f61c",
-        "\U0001f92a",
-        "\U0001f928",
-        "\U0001f9d0",
-        "\U0001f913",
-        "\U0001f60e",
-        "\U0001f973",
-        "\U0001f634",
-        "\U0001f92f",
-        "\U0001f607",
-        "\U0001f917",
-        "\U0001f914",
-    ],
-    t("dialog.label_settings.emoji_categories.nature"): [
-        "\U0001f33f",
-        "\U0001f331",
-        "\U0001f335",
-        "\U0001f334",
-        "\U0001f333",
-        "\U0001f332",
-        "\U0001f338",
-        "\U0001f33c",
-        "\U0001f33b",
-        "\U0001f33a",
-        "\U0001f337",
-        "\U0001f339",
-        "\U0001f340",
-        "\U0001f341",
-        "\U0001f342",
-        "\U0001f343",
-        "\U0001f436",
-        "\U0001f431",
-        "\U0001f42d",
-        "\U0001f439",
-        "\U0001f430",
-        "\U0001f98a",
-        "\U0001f43b",
-        "\U0001f43c",
-        "\U0001f428",
-        "\U0001f42f",
-        "\U0001f981",
-        "\U0001f42e",
-        "\U0001f437",
-        "\U0001f438",
-    ],
-    t("dialog.label_settings.emoji_categories.food"): [
-        "\U0001f34e",
-        "\U0001f34a",
-        "\U0001f34c",
-        "\U0001f349",
-        "\U0001f347",
-        "\U0001f353",
-        "\U0001f352",
-        "\U0001f34d",
-        "\U0001f95d",
-        "\U0001f951",
-        "\U0001f966",
-        "\U0001f955",
-        "\U0001f33d",
-        "\U0001f345",
-        "\U0001f346",
-        "\U0001f954",
-        "\U0001f35e",
-        "\U0001f950",
-        "\U0001f956",
-        "\U0001f9c0",
-        "\U0001f373",
-        "\U0001f953",
-        "\U0001f354",
-        "\U0001f355",
-        "\U0001f363",
-        "\U0001f35c",
-        "\U0001f957",
-        "\U0001f369",
-        "\U0001f36a",
-        "\U0001f36b",
-    ],
-    t("dialog.label_settings.emoji_categories.activity"): [
-        "\u26bd",
-        "\U0001f3c0",
-        "\U0001f3c8",
-        "\u26be",
-        "\U0001f3be",
-        "\U0001f3d0",
-        "\U0001f3c9",
-        "\U0001f3b1",
-        "\U0001f3d3",
-        "\U0001f3f8",
-        "\U0001f94a",
-        "\U0001f94b",
-        "\U0001f3ae",
-        "\U0001f3af",
-        "\U0001f3b2",
-        "\U0001f9e9",
-        "\U0001f3b5",
-        "\U0001f3a7",
-        "\U0001f3a4",
-        "\U0001f3b9",
-        "\U0001f3b8",
-        "\U0001f3bb",
-        "\U0001f941",
-        "\U0001f4f7",
-        "\U0001f3ac",
-        "\U0001f3a8",
-        "\U0001f9ea",
-        "\U0001f4da",
-        "\u2708\ufe0f",
-        "\U0001f9d7",
-    ],
-    t("dialog.label_settings.emoji_categories.travel"): [
-        "\U0001f697",
-        "\U0001f695",
-        "\U0001f699",
-        "\U0001f68c",
-        "\U0001f68e",
-        "\U0001f3ce\ufe0f",
-        "\U0001f693",
-        "\U0001f691",
-        "\U0001f692",
-        "\U0001f69a",
-        "\U0001f69b",
-        "\U0001f69c",
-        "\U0001f6f5",
-        "\U0001f3cd\ufe0f",
-        "\U0001f6b2",
-        "\U0001f6f4",
-        "\U0001f681",
-        "\u2708\ufe0f",
-        "\U0001f680",
-        "\U0001f6f8",
-        "\U0001f6a2",
-        "\u26f5",
-        "\U0001f6a4",
-        "\U0001f6f6",
-        "\U0001f686",
-        "\U0001f684",
-        "\U0001f687",
-        "\U0001f689",
-        "\U0001f5fa\ufe0f",
-        "\U0001f9ed",
-    ],
-    t("dialog.label_settings.emoji_categories.object"): [
-        "\U0001f4a1",
-        "\U0001f526",
-        "\U0001f9ef",
-        "\U0001f50b",
-        "\U0001f50c",
-        "\U0001f4bb",
-        "\u2328\ufe0f",
-        "\U0001f5b1\ufe0f",
-        "\U0001f5a8\ufe0f",
-        "\U0001f4f1",
-        "\u260e\ufe0f",
-        "\U0001f4f7",
-        "\U0001f4f9",
-        "\U0001f50d",
-        "\U0001f512",
-        "\U0001f511",
-        "\U0001f9f0",
-        "\U0001f6e0\ufe0f",
-        "\U0001f527",
-        "\U0001f528",
-        "\U0001fa9b",
-        "\u2699\ufe0f",
-        "\U0001f4cc",
-        "\U0001f4ce",
-        "\u2702\ufe0f",
-        "\U0001f4d0",
-        "\U0001f4cf",
-        "\U0001f5c2\ufe0f",
-        "\U0001f4e6",
-        "\U0001f5d1\ufe0f",
-    ],
-    t("dialog.label_settings.emoji_categories.symbol"): [
-        "\u2764\ufe0f",
-        "\U0001f9e1",
-        "\U0001f49b",
-        "\U0001f49a",
-        "\U0001f499",
-        "\U0001f49c",
-        "\U0001f90d",
-        "\U0001f5a4",
-        "\U0001f90e",
-        "\U0001f494",
-        "\u2763\ufe0f",
-        "\U0001f495",
-        "\U0001f4af",
-        "\u2728",
-        "\u26a0\ufe0f",
-        "\u2757",
-        "\u2753",
-        "\U0001f514",
-        "\U0001f515",
-        "\u2705",
-        "\u2611\ufe0f",
-        "\u274c",
-        "\u2b55",
-        "\u2795",
-        "\u2796",
-        "\u2797",
-        "\u267b\ufe0f",
-        "\U0001f501",
-        "\U0001f502",
-        "\u3030\ufe0f",
-    ],
-}
+_GLYPH_PICKER_COLUMNS = 7
+_GLYPH_ICON_PX = 18
+
+
+def _glyph_names() -> dict:
+    """Translated names of the selectable glyphs (tooltips, accessible names)."""
+    return {
+        "circle-exclamation": t("dialog.label_settings.glyphs.circle_exclamation", "느낌표 원"),
+        "triangle-exclamation": t(
+            "dialog.label_settings.glyphs.triangle_exclamation", "경고 삼각형"
+        ),
+        "fire-flame-curved": t("dialog.label_settings.glyphs.fire_flame_curved", "불꽃"),
+        "bolt": t("dialog.label_settings.glyphs.bolt", "번개"),
+        "flag": t("dialog.label_settings.glyphs.flag", "깃발"),
+        "star": t("dialog.label_settings.glyphs.star", "별"),
+        "bookmark": t("dialog.label_settings.glyphs.bookmark", "책갈피"),
+        "thumbtack": t("dialog.label_settings.glyphs.thumbtack", "압정"),
+        "angles-up": t("dialog.label_settings.glyphs.angles_up", "이중 위쪽 화살표"),
+        "angle-up": t("dialog.label_settings.glyphs.angle_up", "위쪽 화살표"),
+        "equals": t("dialog.label_settings.glyphs.equals", "등호"),
+        "minus": t("dialog.label_settings.glyphs.minus", "빼기"),
+        "angle-down": t("dialog.label_settings.glyphs.angle_down", "아래쪽 화살표"),
+        "angles-down": t("dialog.label_settings.glyphs.angles_down", "이중 아래쪽 화살표"),
+        "circle": t("dialog.label_settings.glyphs.circle", "원"),
+        "circle-dot": t("dialog.label_settings.glyphs.circle_dot", "점 원"),
+        "clock": t("dialog.label_settings.glyphs.clock", "시계"),
+        "calendar": t("dialog.label_settings.glyphs.calendar", "달력"),
+        "hourglass-half": t("dialog.label_settings.glyphs.hourglass_half", "모래시계"),
+        "circle-half-stroke": t("dialog.label_settings.glyphs.circle_half_stroke", "반원"),
+        "circle-play": t("dialog.label_settings.glyphs.circle_play", "재생 원"),
+        "circle-check": t("dialog.label_settings.glyphs.circle_check", "체크 원"),
+        "check": t("dialog.label_settings.glyphs.check", "체크"),
+        "circle-pause": t("dialog.label_settings.glyphs.circle_pause", "일시정지 원"),
+        "pause": t("dialog.label_settings.glyphs.pause", "일시정지"),
+        "circle-xmark": t("dialog.label_settings.glyphs.circle_xmark", "엑스 원"),
+        "ban": t("dialog.label_settings.glyphs.ban", "금지"),
+        "bell": t("dialog.label_settings.glyphs.bell", "종"),
+    }
+
+
+def glyph_display_name(name: str) -> str:
+    """Translated name of a glyph id such as ``fa6s.circle-check``."""
+    short = str(name or "").split(".", 1)[-1]
+    return _glyph_names().get(short, short)
 
 
 # priority/status display labels
@@ -359,7 +112,7 @@ def _label_settings_style_bundle(tokens=None, metrics=None):
     border_soft = tokens.get("border_soft", "rgba(255,255,255,0.10)")
     surface_alt = tokens.get("surface_alt", "#1c1c23")
     surface_hover = tokens.get("surface_hover", "#18181f")
-    text_primary = tokens.get("text_primary", "#ffffff")
+    accent = tokens.get("accent", "#4da6ff")
 
     custom_bundle = {
         "hint": build_editor_text_style(
@@ -374,17 +127,16 @@ def _label_settings_style_bundle(tokens=None, metrics=None):
         "row_label": build_editor_text_style(
             tokens, tone="secondary", font_px=max(12, base_font_px - 1), weight=700
         ),
-        "icon_edit": (
-            f"font-size: {max(16, base_font_px + 2)}px; padding: 1px 2px; "
-            f"border-radius: {field_radius}px;"
-        ),
         "picker_button": (
-            "QToolButton { "
-            f"background: {surface_alt}; color: {text_primary}; border: 1px solid {border_soft}; "
-            f"border-radius: {field_radius}px; font-size: {max(15, base_font_px + 1)}px; "
+            "QToolButton#glyphButton { "
+            f"background: {surface_alt}; border: 1px solid {border_soft}; "
+            f"border-radius: {field_radius}px; padding: 2px; "
             "}"
-            "QToolButton:hover { "
-            f"background: {surface_hover}; border-color: {tokens.get('accent', '#4da6ff')}; "
+            "QToolButton#glyphButton:hover { "
+            f"background: {surface_hover}; border-color: {accent}; "
+            "}"
+            "QToolButton#glyphButton:focus { "
+            f"border: 1px solid {accent}; "
             "}"
         ),
         "text_edit": f"padding: 2px 8px; border-radius: {field_radius}px;",
@@ -395,125 +147,134 @@ def _label_settings_style_bundle(tokens=None, metrics=None):
     return {**base_bundle, **custom_bundle}
 
 
-def _emoji_picker_stylesheet(tokens=None, metrics=None) -> str:
+def _glyph_picker_stylesheet(tokens=None, metrics=None) -> str:
     tokens = dict(tokens or get_dialog_theme_tokens())
     metrics = dict(metrics or get_dialog_metric_tokens(apply_overrides=True))
     field_radius = max(6, int(metrics.get("field_radius", 7)))
     border = tokens.get("border", "rgba(255,255,255,0.16)")
     border_soft = tokens.get("border_soft", "rgba(255,255,255,0.10)")
     surface_bg = tokens.get("surface_bg", "#16161b")
-    surface_alt = tokens.get("surface_alt", "#1c1c23")
     surface_item = tokens.get("surface_item", "#111116")
     surface_hover = tokens.get("surface_hover", "#18181f")
     accent = tokens.get("accent", "#4da6ff")
-    text_primary = tokens.get("text_primary", "#ffffff")
-    accent_text = tokens.get("accent_text", tokens.get("text_inverse", text_primary))
-    text_muted = tokens.get("text_muted", "#aaa")
     return f"""
-QDialog {{
+QDialog#glyphPicker {{
     background-color: {surface_bg};
     border: 1px solid {border};
     border-radius: {field_radius + 1}px;
 }}
-QTabWidget::pane {{
-    border: none;
-    background: {surface_bg};
-}}
-QTabBar::tab {{
-    background: {surface_alt};
-    color: {text_muted};
-    padding: 8px 12px;
-    font-size: {max(12, int(metrics.get("base_font_pt", 14)))}px;
-    border-radius: {field_radius}px;
-    margin: 2px;
-    border: 1px solid {border_soft};
-}}
-QTabBar::tab:selected {{
-    background: {accent};
-    color: {accent_text};
-    font-weight: bold;
-}}
-QPushButton {{
+QToolButton#glyphChoice {{
     background: {surface_item};
-    color: {text_primary};
     border: 1px solid {border_soft};
     border-radius: {field_radius}px;
-    font-size: 18px;
     padding: 2px;
     min-width: 36px;
     min-height: 36px;
     max-width: 36px;
     max-height: 36px;
 }}
-QPushButton:hover {{
+QToolButton#glyphChoice:hover {{
     background: {surface_hover};
-    color: {accent};
     border-color: {accent};
+}}
+QToolButton#glyphChoice:focus {{
+    border: 1px solid {accent};
+}}
+QToolButton#glyphChoice:checked {{
+    border: 2px solid {accent};
 }}
 """.strip()
 
 
-# ?? ?대え吏 ?쎌빱 ?앹뾽 ??????????????????????????????????????
+class GlyphPickerPopup(QDialog):
+    """Grid of the selectable priority/status glyphs, painted in one colour."""
 
-
-# ?€?€ ?대え吏€ ?쎌빱 ?앹뾽 ?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€
-class EmojiPickerPopup(QDialog):
-    """Category-tabbed emoji picker popup."""
-
-    def __init__(self, parent=None):
+    def __init__(self, color: str, current: str = "", parent=None):
         super().__init__(parent, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        self.setObjectName("glyphPicker")
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+        self.setAccessibleName(t("dialog.label_settings.glyph_picker", "아이콘 선택"))
         apply_common_dialog_style(
             self,
-            extra_stylesheet=_emoji_picker_stylesheet(
+            extra_stylesheet=_glyph_picker_stylesheet(
                 tokens=getattr(parent, "_ui_tokens", None),
                 metrics=getattr(parent, "_dialog_metrics", None),
             ),
         )
-        self.selected_emoji = None
-        self._build_ui()
+        self.selected_glyph = None
+        self.choice_buttons = {}
+        self._build_ui(color, current)
 
-    def _build_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(4)
+    def _build_ui(self, color: str, current: str):
+        grid = QGridLayout(self)
+        grid.setContentsMargins(8, 8, 8, 8)
+        grid.setSpacing(4)
+        current_btn = None
+        for idx, name in enumerate(task_constants.GLYPH_CHOICES):
+            btn = QToolButton()
+            btn.setObjectName("glyphChoice")
+            btn.setIcon(task_glyphs.glyph_icon(name, color))
+            btn.setIconSize(QSize(_GLYPH_ICON_PX, _GLYPH_ICON_PX))
+            label = glyph_display_name(name)
+            btn.setToolTip(label)
+            btn.setAccessibleName(label)
+            btn.setCheckable(True)
+            btn.setChecked(name == current)
+            btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            btn.clicked.connect(lambda _=False, n=name: self._select(n))
+            grid.addWidget(btn, idx // _GLYPH_PICKER_COLUMNS, idx % _GLYPH_PICKER_COLUMNS)
+            self.choice_buttons[name] = btn
+            if name == current:
+                current_btn = btn
+        if current_btn is not None:
+            QTimer.singleShot(0, current_btn.setFocus)
 
-        tabs = QTabWidget()
-        tabs.setDocumentMode(True)
-
-        for category, emojis in _EMOJI_PALETTE.items():
-            tab_widget = QWidget()
-            grid = QGridLayout(tab_widget)
-            grid.setSpacing(3)
-            grid.setContentsMargins(4, 4, 4, 4)
-            cols = 12
-
-            for idx, emoji in enumerate(emojis):
-                btn = QPushButton(emoji)
-                btn.setToolTip(emoji)
-                btn.clicked.connect(lambda _, e=emoji: self._select(e))
-                grid.addWidget(btn, idx // cols, idx % cols)
-            tabs.addTab(tab_widget, category)
-
-        layout.addWidget(tabs)
-
-    def _select(self, emoji: str):
-        self.selected_emoji = emoji
+    def _select(self, name: str):
+        self.selected_glyph = name
         self.accept()
 
     def show_near(self, widget):
-        """Show popup right below the given widget."""
-        pos = widget.mapToGlobal(QPoint(0, widget.height() + 2))
-        self.move(pos)
+        """Show the popup right below the given widget."""
         self.adjustSize()
+        self.move(widget.mapToGlobal(QPoint(0, widget.height() + 2)))
         self.exec()
+
+
+class GlyphButton(QToolButton):
+    """Shows one row's glyph; the chosen glyph id is kept on the button."""
+
+    def __init__(self, row_name: str, color: str, parent=None):
+        super().__init__(parent)
+        self.setObjectName("glyphButton")
+        self._color = color
+        self._glyph = ""
+        self.setIconSize(QSize(_GLYPH_ICON_PX, _GLYPH_ICON_PX))
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setAccessibleName(
+            t("dialog.label_settings.change_icon", "{name} 아이콘 바꾸기", name=row_name)
+        )
+
+    @property
+    def color(self) -> str:
+        return self._color
+
+    def glyph(self) -> str:
+        return self._glyph
+
+    def set_glyph(self, name: str):
+        self._glyph = name if task_constants.is_glyph(name) else ""
+        self.setIcon(task_glyphs.glyph_icon(self._glyph, self._color))
+        label = glyph_display_name(self._glyph) if self._glyph else ""
+        self.setToolTip(label)
+        self.setAccessibleDescription(label)
 
 
 class EmojiLineEdit(QLineEdit):
     """Windows emoji panel (Win + .) input-friendly line edit.
 
-    This version avoids problematic top-level window flags and modality
-    that can cause crashes when embedded in layouts.
+    Used by the task dialog name field. This version avoids problematic
+    top-level window flags and modality that can cause crashes when embedded
+    in layouts.
     """
 
     def __init__(self, parent=None):
@@ -548,7 +309,6 @@ class EmojiLineEdit(QLineEdit):
             pass
 
 
-# ?€?€ 硫붿씤 ?ㅼ씠?쇰줈洹??€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€?€
 class LabelSettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -568,9 +328,7 @@ class LabelSettingsDialog(QDialog):
         self.raise_()
         self.activateWindow()
 
-    # ??????????????????????????????????????????????
-    # UI 援ъ꽦
-    # ??????????????????????????????????????????????
+    # ── UI ──────────────────────────────────────────────────────
     def _init_ui(self):
         apply_common_dialog_style(
             self,
@@ -582,7 +340,7 @@ class LabelSettingsDialog(QDialog):
         root.setSpacing(10)
         root.setContentsMargins(16, 14, 16, 14)
 
-        # ?? ?꾨━???곸뿭 ??????????????????????????
+        # Presets
         preset_group = QFrame()
         preset_group.setObjectName("card")
         preset_group.setStyleSheet(self._style_bundle.get("card", ""))
@@ -599,7 +357,6 @@ class LabelSettingsDialog(QDialog):
         div_preset.setStyleSheet(self._style_bundle.get("divider", ""))
         preset_layout.addWidget(div_preset)
 
-        # ?댁옣 ?꾨━??踰꾪듉 ??
         builtin_row = QHBoxLayout()
         builtin_row.addWidget(QLabel(t("dialog.label_settings.builtin")))
         for name in task_constants.BUILTIN_PRESETS:
@@ -612,7 +369,6 @@ class LabelSettingsDialog(QDialog):
         builtin_row.addStretch()
         preset_layout.addLayout(builtin_row)
 
-        # ?ъ슜???꾨━????
         user_row = QHBoxLayout()
         user_row.addWidget(QLabel(t("dialog.label_settings.user")))
         self.user_preset_combo = QComboBox()
@@ -650,12 +406,13 @@ class LabelSettingsDialog(QDialog):
         )
         root.addLayout(preset_section_layout)
 
-        # ?? ?낅젰 ?덈궡 ????????????????????????????
-        hint = QLabel(t("dialog.label_settings.hint"))
+        hint = QLabel(
+            t("dialog.label_settings.glyph_hint", "아이콘을 눌러 다른 모양으로 바꿀 수 있습니다.")
+        )
         hint.setStyleSheet(self._style_bundle["hint"])
         root.addWidget(hint)
 
-        # ?? ?ㅽ겕濡??곸뿭 (以묒슂??+ ?곹깭) ??????????
+        # Scroll area (priority + status)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -667,65 +424,19 @@ class LabelSettingsDialog(QDialog):
         inner_layout.setSpacing(10)
         inner_layout.setContentsMargins(0, 0, 0, 0)
 
-        # 以묒슂??洹몃９
-        prio_group = QFrame()
-        prio_group.setObjectName("card")
-        prio_group.setStyleSheet(self._style_bundle.get("card", ""))
-        prio_v = QVBoxLayout(prio_group)
-        prio_v.setContentsMargins(20, 20, 20, 20)
-
-        lbl_prio = QLabel(t("dialog.label_settings.priority_group"))
-        lbl_prio.setStyleSheet(self._style_bundle.get("card_title", ""))
-        prio_v.addWidget(lbl_prio)
-
-        div_prio = QFrame()
-        div_prio.setFrameShape(QFrame.Shape.HLine)
-        div_prio.setStyleSheet(self._style_bundle.get("divider", ""))
-        prio_v.addWidget(div_prio)
-
-        prio_grid_w = QWidget()
-        prio_grid = QGridLayout(prio_grid_w)
-        prio_grid.setHorizontalSpacing(10)
-        prio_grid.setVerticalSpacing(8)
-        prio_grid.setContentsMargins(0, 0, 0, 0)
-        prio_v.addWidget(prio_grid_w)
-        self._add_header_row(prio_grid, 0)
+        prio_group, prio_grid = self._build_group_card(t("dialog.label_settings.priority_group"))
         self.prio_fields = {}
         for idx, (key, display) in enumerate(_get_priority_display().items()):
-            row_idx = idx + 1
-            self.prio_fields[key] = self._add_row(prio_grid, row_idx, display, 0)
-        prio_grid.setColumnStretch(3, 1)
-        prio_group.setMinimumWidth(340)
+            self.prio_fields[key] = self._add_row(
+                prio_grid, idx + 1, display, task_glyphs.priority_color(key)
+            )
 
-        # ?곹깭 洹몃９
-        status_group = QFrame()
-        status_group.setObjectName("card")
-        status_group.setStyleSheet(self._style_bundle.get("card", ""))
-        status_v = QVBoxLayout(status_group)
-        status_v.setContentsMargins(20, 20, 20, 20)
-
-        lbl_status = QLabel(t("dialog.label_settings.status_group"))
-        lbl_status.setStyleSheet(self._style_bundle.get("card_title", ""))
-        status_v.addWidget(lbl_status)
-
-        div_status = QFrame()
-        div_status.setFrameShape(QFrame.Shape.HLine)
-        div_status.setStyleSheet(self._style_bundle.get("divider", ""))
-        status_v.addWidget(div_status)
-
-        status_grid_w = QWidget()
-        status_grid = QGridLayout(status_grid_w)
-        status_grid.setHorizontalSpacing(10)
-        status_grid.setVerticalSpacing(8)
-        status_grid.setContentsMargins(0, 0, 0, 0)
-        status_v.addWidget(status_grid_w)
-        self._add_header_row(status_grid, 0)
+        status_group, status_grid = self._build_group_card(t("dialog.label_settings.status_group"))
         self.status_fields = {}
         for idx, (key, display) in enumerate(_get_status_display().items()):
-            row_idx = idx + 1
-            self.status_fields[key] = self._add_row(status_grid, row_idx, display, 0)
-        status_grid.setColumnStretch(3, 1)
-        status_group.setMinimumWidth(340)
+            self.status_fields[key] = self._add_row(
+                status_grid, idx + 1, display, task_glyphs.status_color(key)
+            )
 
         two_col_row = QHBoxLayout()
         two_col_row.setSpacing(10)
@@ -737,7 +448,7 @@ class LabelSettingsDialog(QDialog):
         scroll.setWidget(inner)
         root.addWidget(scroll, 1)
 
-        # ?? ?섎떒 踰꾪듉 ??????????????????????????
+        # Footer
         divider = QFrame()
         divider.setFrameShape(QFrame.Shape.HLine)
         divider.setStyleSheet(self._style_bundle["divider"])
@@ -757,125 +468,105 @@ class LabelSettingsDialog(QDialog):
         self.cancel_btn.clicked.connect(self.reject)
         root.addLayout(btn_row)
 
-    def _add_header_row(self, grid, col_offset=0):
+    def _build_group_card(self, title: str):
+        group = QFrame()
+        group.setObjectName("card")
+        group.setStyleSheet(self._style_bundle.get("card", ""))
+        group_v = QVBoxLayout(group)
+        group_v.setContentsMargins(20, 20, 20, 20)
+
+        lbl = QLabel(title)
+        lbl.setStyleSheet(self._style_bundle.get("card_title", ""))
+        group_v.addWidget(lbl)
+
+        div = QFrame()
+        div.setFrameShape(QFrame.Shape.HLine)
+        div.setStyleSheet(self._style_bundle.get("divider", ""))
+        group_v.addWidget(div)
+
+        grid_w = QWidget()
+        grid = QGridLayout(grid_w)
+        grid.setHorizontalSpacing(10)
+        grid.setVerticalSpacing(8)
+        grid.setContentsMargins(0, 0, 0, 0)
+        group_v.addWidget(grid_w)
+        self._add_header_row(grid)
+        grid.setColumnStretch(2, 1)
+        group.setMinimumWidth(340)
+        return group, grid
+
+    def _add_header_row(self, grid):
         headers = [
             t("dialog.label_settings.header_type"),
             t("dialog.label_settings.header_icon"),
-            "",
             t("dialog.label_settings.header_name"),
         ]
-
         for col, text in enumerate(headers):
             lbl = QLabel(text)
             lbl.setStyleSheet(self._style_bundle["header"])
-            grid.addWidget(lbl, 0, col + col_offset)
+            grid.addWidget(lbl, 0, col)
 
-    def _add_row(self, grid, row, display_name, col_offset=0):
-        """Add one editable row and return icon/text editors."""
-        # col 0: 구분 이름 (긴급, 높음, … / 예정, 진행중, …)
+    def _add_row(self, grid, row, display_name, color):
+        """Add one editable row and return its (glyph button, name editor)."""
         lbl = QLabel(display_name)
         lbl.setStyleSheet(self._style_bundle["row_label"])
-        grid.addWidget(lbl, row, col_offset + 0)
+        grid.addWidget(lbl, row, 0)
 
-        # col 1: ?꾩씠肄?吏곸젒 ?낅젰
-        # setMaxLength 誘몄궗????UTF-16 surrogate pair 怨꾩궛 ?ㅻ쪟濡??대え吏 ?낅젰 李⑤떒??
-        # ???textChanged ?쒓렇?먯뿉??肄붾뱶?ъ씤??湲곗? 4??珥덇낵遺??섎씪??
-        icon_edit = EmojiLineEdit()
-        icon_edit.setFixedWidth(68)
-        icon_edit.setMinimumHeight(31)
-        icon_edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_edit.setStyleSheet(self._style_bundle["icon_edit"])
-        icon_edit.setPlaceholderText(t("dialog.label_settings.emoji_placeholder"))
-        # Win + . ?대え吏 패널? 議고빀 ?낅젰??嫄곗튂誘濡??낅젰 以묒뿉???먮Ⅴ吏 ?딅뒗??
-        # ????몄쭛???앸궗???뚮쭔 ??μ슜 湲몄씠濡??뺣━?쒕떎.
-        icon_edit.editingFinished.connect(lambda ie=icon_edit: self._normalize_icon_edit(ie))
-        grid.addWidget(icon_edit, row, col_offset + 1)
+        glyph_btn = GlyphButton(display_name, color)
+        glyph_btn.setFixedSize(44, 31)
+        glyph_btn.setStyleSheet(self._style_bundle["picker_button"])
+        glyph_btn.clicked.connect(lambda _=False, gb=glyph_btn: self._open_picker(gb))
+        grid.addWidget(glyph_btn, row, 1)
 
-        # col 2: ?붾젅???닿린 踰꾪듉
-        picker_btn = QToolButton()
-        picker_btn.setText(chr(0x1F600))
-        picker_btn.setFixedSize(31, 31)
-        picker_btn.setToolTip(t("dialog.label_settings.open_palette"))
-        picker_btn.setStyleSheet(self._style_bundle["picker_button"])
-        picker_btn.clicked.connect(lambda _, ie=icon_edit, pb=picker_btn: self._open_picker(ie, pb))
-        grid.addWidget(picker_btn, row, col_offset + 2)
-
-        # col 3: 텍스트?낅젰
         text_edit = QLineEdit()
         text_edit.setMaxLength(10)
         text_edit.setMinimumWidth(100)
         text_edit.setMinimumHeight(31)
         text_edit.setStyleSheet(self._style_bundle["text_edit"])
-        grid.addWidget(text_edit, row, col_offset + 3)
+        grid.addWidget(text_edit, row, 2)
+        lbl.setBuddy(text_edit)
 
-        # ?ㅼ떆媛??곕룞 (?꾩슂 ??濡쒖쭅 泥섎━)
+        return (glyph_btn, text_edit)
 
-        icon_edit.textChanged.connect(lambda _: self._update_previews())
+    def _open_picker(self, glyph_btn: GlyphButton):
+        """Open the glyph grid below the button and apply the chosen glyph."""
+        popup = GlyphPickerPopup(glyph_btn.color, glyph_btn.glyph(), self)
+        popup.show_near(glyph_btn)
+        if popup.selected_glyph:
+            glyph_btn.set_glyph(popup.selected_glyph)
+        glyph_btn.setFocus()
 
-        text_edit.textChanged.connect(lambda _: self._update_previews())
-
-        return (icon_edit, text_edit)
-
-    def _open_picker(self, icon_edit: QLineEdit, anchor_widget):
-        """Open emoji picker and apply selected emoji to icon_edit."""
-
-        popup = EmojiPickerPopup(self)
-
-        popup.show_near(anchor_widget)
-
-        if popup.selected_emoji:
-            icon_edit.setText(popup.selected_emoji)
-
-            self._normalize_icon_edit(icon_edit)
-
-            icon_edit.setFocus()
-
-    # ??????????????????????????????????????????????
-
-    # ?곗씠??濡쒕뱶/???
-    # ??????????????????????????????????????????????
-
+    # ── Data load/save ─────────────────────────────────────────
     def _load_current_values(self):
         current = task_constants.get_current_labels()
-
-        for key, (icon_edit, text_edit) in self.prio_fields.items():
-            icon_edit.setText(current["priority"][key]["icon"])
-
+        for key, (glyph_btn, text_edit) in self.prio_fields.items():
+            glyph_btn.set_glyph(current["priority"][key]["icon"])
             text_edit.setText(current["priority"][key]["text"])
-
-        for key, (icon_edit, text_edit) in self.status_fields.items():
-            icon_edit.setText(current["status"][key]["icon"])
-
+        for key, (glyph_btn, text_edit) in self.status_fields.items():
+            glyph_btn.set_glyph(current["status"][key]["icon"])
             text_edit.setText(current["status"][key]["text"])
-
-        self._update_previews()
 
     def _collect_data(self):
         priority_data = {
             key: {
-                "icon": self._normalized_icon_text(icon_edit.text())
-                or task_constants._DEFAULT_PRIORITY_ICON[key],
+                "icon": glyph_btn.glyph() or task_constants._DEFAULT_PRIORITY_ICON[key],
                 "text": text_edit.text().strip() or task_constants._DEFAULT_PRIORITY_TEXT[key],
             }
-            for key, (icon_edit, text_edit) in self.prio_fields.items()
+            for key, (glyph_btn, text_edit) in self.prio_fields.items()
         }
-
         status_data = {
             key: {
-                "icon": self._normalized_icon_text(icon_edit.text())
-                or task_constants._DEFAULT_STATUS_ICON[key],
+                "icon": glyph_btn.glyph() or task_constants._DEFAULT_STATUS_ICON[key],
                 "text": text_edit.text().strip() or task_constants._DEFAULT_STATUS_TEXT[key],
             }
-            for key, (icon_edit, text_edit) in self.status_fields.items()
+            for key, (glyph_btn, text_edit) in self.status_fields.items()
         }
-
         return priority_data, status_data
 
     def _save(self):
         priority_data, status_data = self._collect_data()
-
         task_constants.save_custom_labels(priority_data, status_data)
-
+        task_glyphs.clear_glyph_cache()
         self.accept()
 
     def _reset_to_default(self):
@@ -885,66 +576,49 @@ class LabelSettingsDialog(QDialog):
             t("dialog.label_settings.reset_confirm"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
-
         if reply == QMessageBox.StandardButton.Yes:
             task_constants.reset_custom_labels()
-
+            task_glyphs.clear_glyph_cache()
             self._load_current_values()
 
-    # ??????????????????????????????????????????????
-
-    # ?꾨━??
-    # ??????????????????????????????????????????????
-
+    # ── Presets ─────────────────────────────────────────────────
     def _apply_preset_data(self, preset: dict):
-        for key, vals in preset.get("priority", {}).items():
-            if key in self.prio_fields:
-                icon_edit, text_edit = self.prio_fields[key]
-
-                icon_edit.setText(vals.get("icon", ""))
-
+        """Apply a preset; icons that are not glyph ids (older emoji) use the default."""
+        sections = (
+            ("priority", self.prio_fields, task_constants._DEFAULT_PRIORITY_ICON),
+            ("status", self.status_fields, task_constants._DEFAULT_STATUS_ICON),
+        )
+        for section, fields, defaults in sections:
+            for key, vals in preset.get(section, {}).items():
+                if key not in fields:
+                    continue
+                glyph_btn, text_edit = fields[key]
+                icon = vals.get("icon", "")
+                glyph_btn.set_glyph(icon if task_constants.is_glyph(icon) else defaults[key])
                 text_edit.setText(vals.get("text", ""))
-
-        for key, vals in preset.get("status", {}).items():
-            if key in self.status_fields:
-                icon_edit, text_edit = self.status_fields[key]
-
-                icon_edit.setText(vals.get("icon", ""))
-
-                text_edit.setText(vals.get("text", ""))
-
-        self._update_previews()
 
     def _apply_builtin_preset(self, name: str):
         preset = task_constants.get_builtin_presets().get(name)
-
         if preset:
             self._apply_preset_data(preset)
 
     def _refresh_user_preset_combo(self):
         self.user_preset_combo.clear()
-
         presets = task_constants.get_user_presets()
-
         if not presets:
             self.user_preset_combo.addItem(t("dialog.label_settings.no_user_presets"))
-
         else:
             for p in presets:
                 self.user_preset_combo.addItem(p["name"])
 
     def _load_user_preset(self):
         presets = task_constants.get_user_presets()
-
         if not presets:
             QMessageBox.information(
                 self, t("dialog.common.notification"), t("dialog.label_settings.none_to_load")
             )
-
             return
-
         idx = self.user_preset_combo.currentIndex()
-
         if 0 <= idx < len(presets):
             self._apply_preset_data(presets[idx])
 
@@ -955,32 +629,23 @@ class LabelSettingsDialog(QDialog):
             t("dialog.label_settings.enter_preset_name"),
             text="",
         )
-
         if not ok or not name.strip():
             return
-
         name = name.strip()
-
         if name in task_constants.BUILTIN_PRESETS:
             QMessageBox.warning(
                 self,
                 t("dialog.task.error"),
                 t("dialog.label_settings.error_builtin_name", name=name),
             )
-
             return
 
         priority_data, status_data = self._collect_data()
-
         task_constants.save_user_preset(name, priority_data, status_data)
-
         self._refresh_user_preset_combo()
-
         idx = self.user_preset_combo.findText(name)
-
         if idx >= 0:
             self.user_preset_combo.setCurrentIndex(idx)
-
         QMessageBox.information(
             self,
             t("dialog.label_settings.save_done"),
@@ -989,76 +654,21 @@ class LabelSettingsDialog(QDialog):
 
     def _delete_user_preset(self):
         presets = task_constants.get_user_presets()
-
         if not presets:
             QMessageBox.information(
                 self, t("dialog.common.notification"), t("dialog.label_settings.none_to_delete")
             )
-
             return
-
         idx = self.user_preset_combo.currentIndex()
-
         if idx < 0 or idx >= len(presets):
             return
-
         name = presets[idx]["name"]
-
         reply = QMessageBox.question(
             self,
             t("dialog.label_settings.delete"),
             t("dialog.label_settings.delete_confirm", name=name),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
-
         if reply == QMessageBox.StandardButton.Yes:
             task_constants.delete_user_preset(name)
-
             self._refresh_user_preset_combo()
-
-    # ??????????????????????????????????????????????
-
-    # 誘몃━蹂닿린 媛깆떊
-
-    # ??????????????????????????????????????????????
-
-    def _update_previews(self):
-        """Update preview widgets."""
-
-        pass
-
-    def _normalized_icon_text(self, text: str) -> str:
-        text = (text or "").strip()
-
-        if not text:
-            return ""
-
-        # ??μ? 吏㏐쾶 ?좎??섎릺, 議고빀 ?낅젰 以묒뿉??嫄대뱶由ъ? ?딄린 ?꾪빐 ?몄텧 ?쒖젏?먮쭔 ?뺣━?쒕떎.
-
-        codepoints = list(text)
-
-        return "".join(codepoints[:8]).strip()
-
-    def _normalize_icon_edit(self, icon_edit: QLineEdit):
-        normalized = self._normalized_icon_text(icon_edit.text())
-
-        if normalized != icon_edit.text():
-            icon_edit.blockSignals(True)
-
-            icon_edit.setText(normalized)
-
-            icon_edit.blockSignals(False)
-
-        self._update_previews()
-
-    # ??????????????????????????????????????????????
-
-    # ?ㅽ????ы띁
-
-    # ??????????????????????????????????????????????
-
-    def _group_style(self):
-        return ""
-
-    def _secondary_btn_style(self):
-        return ""

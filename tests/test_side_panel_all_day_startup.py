@@ -188,7 +188,7 @@ class SidePanelAllDayStartupTests(TemporaryDatabaseTestCase):
         add_button = next(
             button
             for button in self.host.left_dock.titleBarWidget().findChildren(QPushButton)
-            if button.text() == "+"
+            if button.objectName() == "panelAddButton"
         )
         add_button.click()
         self.assertEqual(self.host.added_dates, [target])
@@ -249,8 +249,8 @@ class SidePanelAllDayStartupTests(TemporaryDatabaseTestCase):
             self.assertEqual(self.settings.value("left_panel_mode"), mode)
 
         buttons = toolbar.findChildren(QPushButton)
-        next(button for button in buttons if button.text() == "+").click()
+        next(button for button in buttons if button.objectName() == "panelAddButton").click()
         self.assertEqual(self.host.added_dates, [self.host.current_date])
         self.host.open_work_management_dialog = Mock()
-        next(button for button in buttons if button.text() == "⋯").click()
+        next(button for button in buttons if button.objectName() == "panelManageButton").click()
         self.host.open_work_management_dialog.assert_called_once_with(start_tab="schedule")

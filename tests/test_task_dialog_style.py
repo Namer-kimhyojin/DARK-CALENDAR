@@ -345,7 +345,6 @@ class TaskDialogStyleTests(TemporaryDatabaseTestCase):
         buttons = [
             dialog.manage_checklist_btn,
             dialog.cancel_btn,
-            dialog.save_continue_btn,
             dialog.save_btn,
             dialog.set_default_alarm_btn,
         ]

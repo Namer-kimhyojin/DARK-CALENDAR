@@ -283,32 +283,88 @@ class _ChecklistTextLabel(QLabel):
 
 
 class _ElidingLabel(QLabel):
-    """?띿뒪?멸? 湲몃㈃ ?ㅻⅨ履쎌쓣 '...'?쇰줈 ?섎씪???쒖떆?섎뒗 QLabel."""
+    """Single-line label: optional time prefix, optional glyph, elided title."""
+
+    _GLYPH_GAP = 5
 
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
         self._optional_prefix = ""
+        self._prefix_color = None
+        self._leading_icon = None
 
-    def set_optional_prefix(self, prefix: str):
+    def set_optional_prefix(self, prefix: str, color=None):
         self._optional_prefix = prefix
+        self._prefix_color = color
         self.update()
+
+    def set_leading_icon(self, icon):
+        self._leading_icon = icon if icon is not None and not icon.isNull() else None
+        self.update()
+
+    def leading_icon(self):
+        return self._leading_icon
+
+    def _glyph_size(self) -> int:
+        return max(8, min(16, self.fontMetrics().ascent()))
+
+    def _reserved_glyph_width(self) -> int:
+        if self._leading_icon is None:
+            return 0
+        return self._glyph_size() + self._GLYPH_GAP
+
+    def _prefix_fits(self) -> bool:
+        if not self._optional_prefix:
+            return False
+        fm = self.fontMetrics()
+        prefixed = f"{self._optional_prefix} {self.text()}"
+        return fm.horizontalAdvance(prefixed) + self._reserved_glyph_width() <= self.width()
 
     def _display_text(self):
         fm = self.fontMetrics()
         text = self.text()
-        if self._optional_prefix:
-            prefixed = f"{self._optional_prefix} {text}"
-            if fm.horizontalAdvance(prefixed) <= self.width():
-                return prefixed
-        return fm.elidedText(text, Qt.TextElideMode.ElideRight, self.width())
+        if self._prefix_fits():
+            return f"{self._optional_prefix} {text}"
+        width = max(0, self.width() - self._reserved_glyph_width())
+        return fm.elidedText(text, Qt.TextElideMode.ElideRight, width)
 
     def paintEvent(self, _event):
+        from PyQt6.QtCore import QRect
         from PyQt6.QtGui import QPainter
 
+        from calendar_app.shared.color_utils import parse_css_color
+
         p = QPainter(self)
-        p.setPen(self.palette().color(self.foregroundRole()))
+        p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
         p.setFont(self.font())
-        p.drawText(self.rect(), int(self.alignment()), self._display_text())
+        fm = self.fontMetrics()
+        rect = self.rect()
+        text_color = self.palette().color(self.foregroundRole())
+        align = int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        x = rect.left()
+
+        if self._prefix_fits():
+            prefix_w = fm.horizontalAdvance(f"{self._optional_prefix} ")
+            p.setPen(parse_css_color(self._prefix_color) if self._prefix_color else text_color)
+            # A done item strikes its title only, never the time in front of it.
+            prefix_font = self.font()
+            prefix_font.setStrikeOut(False)
+            p.setFont(prefix_font)
+            p.drawText(QRect(x, rect.top(), prefix_w, rect.height()), align, self._optional_prefix)
+            p.setFont(self.font())
+            x += prefix_w
+        if self._leading_icon is not None:
+            glyph = self._glyph_size()
+            y = rect.top() + (rect.height() - glyph) // 2
+            self._leading_icon.paint(p, QRect(x, y, glyph, glyph))
+            x += glyph + self._GLYPH_GAP
+        p.setPen(text_color)
+        remaining = max(0, rect.right() - x + 1)
+        p.drawText(
+            QRect(x, rect.top(), remaining, rect.height()),
+            align,
+            fm.elidedText(self.text(), Qt.TextElideMode.ElideRight, remaining),
+        )
         p.end()
 
 
@@ -975,6 +1031,7 @@ class DraggableTaskButton(QFrame):
         self._selected = False
         self._expanded = False
         self._watermark_title = False
+        self._completed = False
         self._tag_color = None
         self._is_double_click = False
         self._pending_expand_toggle = False
@@ -1123,6 +1180,9 @@ class DraggableTaskButton(QFrame):
     def _apply_title_label_style(self):
         from PyQt6.QtCore import QSettings
 
+        completed = bool(getattr(self, "_completed", False))
+        decoration = "text-decoration: line-through; " if completed else ""
+
         if self._watermark_title:
             # Post-start multiday segments should never show text.
             color = "transparent"
@@ -1137,14 +1197,36 @@ class DraggableTaskButton(QFrame):
             weight = "600"
         else:
             palette = _merged_ui_tokens()
-            color = palette["text_primary"]
+            if completed:
+                from calendar_app.presentation.theme.task_glyphs import chip_meta_color
+
+                color = chip_meta_color(palette)
+            else:
+                color = palette["text_primary"]
             size_rule = ""
             weight = "bold" if self._selected else "600"
         # set_selected reuses this colour instead of resolving the theme again.
         self._title_style_color = None if self._watermark_title else color
         self.title_label.setStyleSheet(
-            f"background: transparent; border: none; color: {color}; font-weight: {weight}; {size_rule}"
+            f"background: transparent; border: none; color: {color}; font-weight: {weight}; "
+            f"{decoration}{size_rule}"
         )
+        font = self.title_label.font()
+        if font.strikeOut() != completed:
+            font.setStrikeOut(completed)
+            self.title_label.setFont(font)
+
+    def _title_decoration(self) -> str:
+        return "text-decoration: line-through; " if self._completed else ""
+
+    def set_completed(self, completed):
+        """Done items keep their chip but read as finished: muted, struck through."""
+        completed = bool(completed)
+        if self._completed == completed:
+            return
+        self._completed = completed
+        self.setProperty("completed", completed)
+        self._apply_title_label_style()
 
     def set_title_watermark(self, enabled):
         enabled = bool(enabled)
@@ -1154,8 +1236,14 @@ class DraggableTaskButton(QFrame):
             self._apply_tag_frame_style()
 
     def set_title_time_hint(self, start_time: str):
-        """Paint a time before the title only when both fit."""
-        self.title_label.set_optional_prefix(start_time)
+        """Paint a muted time before the title only when both fit."""
+        from calendar_app.presentation.theme.task_glyphs import chip_meta_color
+
+        self.title_label.set_optional_prefix(start_time, chip_meta_color(_merged_ui_tokens()))
+
+    def set_leading_icon(self, icon):
+        """Show a priority/status/source glyph before the title."""
+        self.title_label.set_leading_icon(icon)
 
     def set_multiday_segment_shape(self, left_open=False, right_open=False):
         left_open = bool(left_open)
@@ -1282,57 +1370,49 @@ class DraggableTaskButton(QFrame):
         r_rad = "0px" if r_open else f"{task_title_radius}px"
         l_width = "0px" if l_open else "3px"
 
-        # 湲곕낯 ?뚮쭏 ?뺣낫 媛?몄삤湲?
         theme_color = str(palette["accent"])
         theme_obj = QColor(str(theme_color))
         if not theme_obj.isValid():
             theme_obj = QColor("#4da6ff")
 
-        # ?좏깮 ???ㅽ???怨듯넻
         # Selected items carry a clearly stronger accent fill and a full accent
         # outline so they stand out over translucent panels in both themes.
         selected_bg = _task_selected_fill(theme_obj)
         selected_hover_bg = _task_selected_fill(theme_obj, hover=True)
         selected_border = theme_color
 
-        if not self._tag_color:
-            tag_line = palette["border_strong"]
-            base_bg = palette["bg_item"]
-            hover_bg = palette["bg_item_hover"]
-            range_hover_bg = palette["accent_soft"]
-        else:
-            tag_color_obj = QColor(self._tag_color)
-            if tag_color_obj.isValid():
-                tag_line = f"rgba({tag_color_obj.red()}, {tag_color_obj.green()}, {tag_color_obj.blue()}, 0.95)"
-                base_bg = f"rgba({tag_color_obj.red()}, {tag_color_obj.green()}, {tag_color_obj.blue()}, 0.12)"
-                hover_bg = f"rgba({tag_color_obj.red()}, {tag_color_obj.green()}, {tag_color_obj.blue()}, 0.17)"
-                range_hover_bg = f"rgba({tag_color_obj.red()}, {tag_color_obj.green()}, {tag_color_obj.blue()}, 0.22)"
-            else:
-                tag_line = self._tag_color
-                base_bg = palette["bg_item"]
-                hover_bg = palette["bg_item_hover"]
-                range_hover_bg = palette["accent_soft"]
+        # Every schedule chip is a translucent tint of its event colour with a
+        # solid bar on the left (task_glyphs.chip_palette is shared with panels).
+        from calendar_app.presentation.theme.task_glyphs import chip_palette
+
+        chip = chip_palette(self._tag_color, palette)
+        tag_line = chip["bar"]
+        chip_border = chip["border"]
 
         hide_tag_strip = bool(self.property("hide_tag_strip"))
-        left_border_color = tag_line if not hide_tag_strip else "transparent"
-        left_border_width = l_width if not hide_tag_strip else "1px"
+        left_border_color = tag_line if not hide_tag_strip else chip_border
+        if hide_tag_strip:
+            left_border_width = "0px" if l_open else "1px"
+        else:
+            left_border_width = l_width
+        right_border_width = "0px" if r_open else "1px"
 
         self.setStyleSheet(f"""
             DraggableTaskButton {{
                 background: transparent; border: none; border-radius: {task_outer_radius}px; padding: 0;
             }}
             QFrame#taskTitleBar {{
-                background: {base_bg};
-                border: 0.5px solid {palette["border_soft"]};
+                background: {chip["fill"]};
+                border: 1px solid {chip_border};
                 border-left: {left_border_width} solid {left_border_color};
+                border-right: {right_border_width} solid {chip_border};
                 border-top-left-radius: {l_rad};
                 border-bottom-left-radius: {l_rad};
                 border-top-right-radius: {r_rad};
                 border-bottom-right-radius: {r_rad};
             }}
             DraggableTaskButton[hovered="true"] QFrame#taskTitleBar {{
-                background: {hover_bg};
-                border: 0.5px solid {palette["border_strong"]};
+                background: {chip["hover"]};
             }}
             DraggableTaskButton[selected="true"] QFrame#taskTitleBar {{
                 background: {selected_bg};
@@ -1345,8 +1425,8 @@ class DraggableTaskButton(QFrame):
                 border-left: {"0px" if l_open else "4px"} solid {theme_color};
             }}
             DraggableTaskButton[range_hovered="true"] QFrame#taskTitleBar {{
-                background: {range_hover_bg};
-                border: 0.5px solid {theme_color};
+                background: {chip["range_hover"]};
+                border: 1px solid {tag_line};
             }}
         """)
 
@@ -1662,15 +1742,17 @@ class DraggableTaskButton(QFrame):
         priority_menu.setIcon(_ic(ICON.SORT_BY_PRIORITY))
         priority_menu.setStyleSheet(menu_style)
         prio_action_map = {}
+        from calendar_app.presentation.theme.task_glyphs import priority_qicon, status_qicon
+
         for label, value in PRIORITY_MENU_ITEMS:
-            prio_action_map[priority_menu.addAction(_se(label))] = value
+            prio_action_map[priority_menu.addAction(priority_qicon(value), _se(label))] = value
 
         status_menu = menu.addMenu(_se(t("context_menu.status_change")))
         status_menu.setIcon(_ic(ICON.STATUS_IN_PROGRESS))
         status_menu.setStyleSheet(menu_style)
         stat_action_map = {}
         for label, value in STATUS_MENU_ITEMS:
-            stat_action_map[status_menu.addAction(_se(label))] = value
+            stat_action_map[status_menu.addAction(status_qicon(value), _se(label))] = value
 
         color_menu = menu.addMenu(_se(t("context_menu.color_tag")))
         color_menu.setIcon(_ic(ICON.COLOR_PICKER))
@@ -1787,14 +1869,11 @@ class DraggableTaskButton(QFrame):
             self.taskStatusChanged.emit(self.task_id, new_status)
         elif action in prio_action_map:
             new_prio = prio_action_map[action]
-            from calendar_app.domain.task_constants import priority_icon
-
-            new_ic = priority_icon(new_prio)
             # Apply UI update immediately for responsiveness
-            parts = self.raw_text.split(" ", 1)
-            if len(parts) > 1:
-                self.raw_text = f"{new_ic} {parts[1]}"
-                self.title_label.setText(self.raw_text)
+            if self.title_label.leading_icon() is not None:
+                from calendar_app.presentation.theme.task_glyphs import priority_qicon
+
+                self.set_leading_icon(priority_qicon(new_prio))
             self.taskPriorityChanged.emit(self.task_id, new_prio)
 
     def _flush_single_click_toggle(self):
@@ -1857,6 +1936,7 @@ class DraggableTaskButton(QFrame):
             weight = "bold" if selected else "600"
             self.title_label.setStyleSheet(
                 f"background: transparent; border: none; color: {color}; font-weight: {weight}; "
+                f"{self._title_decoration()}"
             )
         else:
             self._apply_title_label_style()

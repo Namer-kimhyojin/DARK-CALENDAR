@@ -92,8 +92,6 @@ def build_task_editor_stylesheet(tokens: dict | None = None, metrics: dict | Non
     floating_bg = t.get("floating_bg", surface_bg)
     surface_item = t.get("surface_item", "#111116")
     surface_hover = t.get("surface_hover", "#18181f")
-    tab_idle_bg = t.get("tab_idle_bg", "rgba(255,255,255,0.02)")
-    tab_active_bg = t.get("tab_active_bg", accent_soft)
     tab_text = t.get("tab_text", t.get("text_muted", "#9aa0ad"))
     tab_text_hover = t.get("tab_text_hover", t.get("text_secondary", "#c8ccd4"))
     tab_text_active = t.get("tab_text_active", accent)
@@ -140,36 +138,33 @@ QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar {{
     background: transparent;
 }}
 QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar::tab {{
-    background: {tab_idle_bg};
+    background: transparent;
     color: {tab_text};
-    border: 1px solid {border_soft};
-    border-radius: {tab_radius}px;
-    border-top-left-radius: {tab_radius}px;
-    border-top-right-radius: {tab_radius}px;
-    min-width: {int(m.get("tab_min_width", 86))}px;
-    padding: {int(m.get("tab_padding_y", 10))}px {int(m.get("tab_padding_x", 24))}px;
-    margin-right: 6px;
-    margin-bottom: 8px;
-    font-weight: 700;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0px;
+    min-width: {int(m.get("tab_min_width", 86)) - 20}px;
+    padding: {max(6, int(m.get("tab_padding_y", 10)) - 2)}px 4px;
+    margin-right: 18px;
+    margin-bottom: 6px;
+    font-weight: 600;
     font-size: {label_font_px}px;
 }}
 QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar::tab:hover {{
-    background: {surface_hover};
     color: {tab_text_hover};
-    border-color: {border};
+    border-bottom: 2px solid {border};
 }}
 QDialog#TaskEditorDialog QTabWidget#TaskEditorTabs QTabBar::tab:selected {{
-    background: {tab_active_bg};
-    color: {tab_text_active};
-    border: 2px solid {accent};
-    margin-bottom: 8px;
+    color: {text_primary};
+    border-bottom: 2px solid {accent};
+    margin-bottom: 6px;
 }}
 
 /* -- Group Titles & Labels -- */
 QDialog#TaskEditorDialog QLabel#TaskDialogFieldLabel,
 QDialog#TaskEditorDialog QLabel#TaskDialogSectionLabel {{
     color: {text_secondary};
-    font-weight: 700;
+    font-weight: 600;
     font-size: {label_font_px}px;
     margin-bottom: 2px;
 }}
@@ -245,6 +240,14 @@ QDialog#TaskEditorDialog QTimeEdit#TaskTimeEdit::down-button {{
     subcontrol-position: bottom right;
     border-bottom-right-radius: {int(m.get("field_radius", 10))}px;
 }}
+QDialog#TaskEditorDialog QTimeEdit#TaskTimeEdit[controlAffordance="dropdown"]::up-button,
+QDialog#TaskEditorDialog QTimeEdit#TaskTimeEdit[controlAffordance="dropdown"]::down-button,
+QTimeEdit#TaskTimeEdit[controlAffordance="dropdown"]::up-button,
+QTimeEdit#TaskTimeEdit[controlAffordance="dropdown"]::down-button {{
+    width: 0px;
+    border: none;
+    background: transparent;
+}}
 QDialog#TaskEditorDialog QTimeEdit#TaskTimeEdit::up-arrow {{
     image: none;
     width: 8px;
@@ -279,18 +282,18 @@ QDialog#TaskEditorDialog QCheckBox#TaskDialogOptionCheck::indicator:checked {{
 /* -- Buttons: Gradient & Glass -- */
 QDialog#TaskEditorDialog QPushButton#primary_btn,
 QDialog#TaskEditorDialog QPushButton#CreateBtn {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {accent}, stop:1 {_rgba(accent, 0.8, accent)});
+    background: {accent};
     color: {accent_text};
     border: none;
     border-radius: {int(m.get("button_radius", 12))}px;
-    font-weight: 800;
+    font-weight: 700;
     padding: 10px 24px;
     font-size: {label_font_px}px;
 }}
 QDialog#TaskEditorDialog QPushButton#primary_btn:hover,
 QDialog#TaskEditorDialog QPushButton#CreateBtn:hover {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {_rgba(accent, 0.9, accent)}, stop:1 {accent});
-    border: 1px solid {_rgba(accent, 0.6, accent)};
+    background: {_rgba(accent, 0.88, accent)};
+    border: none;
     color: {accent_text};
 }}
 
@@ -314,9 +317,9 @@ QDialog#TaskEditorDialog QLabel#TaskQuickActionLabel {{
 QDialog#TaskEditorDialog QPushButton[quickActionButton="true"] {{
     background: {surface_item};
     color: {text_secondary};
-    border: 1px solid {border};
+    border: 1px solid {border_soft};
     border-radius: {max(6, int(m.get("button_radius", 8)) - 1)}px;
-    font-weight: 700;
+    font-weight: 600;
 }}
 QDialog#TaskEditorDialog QPushButton[quickActionButton="true"]:hover {{
     background: {accent_soft};
@@ -353,10 +356,10 @@ QDialog#TaskEditorDialog QStackedWidget {{
     border: none;
 }}
 
-/* Schedule sheet keeps the active theme's surfaces and accent. */
+/* Editor sheet keeps the active theme's surface and accent (flat, no
+   decorative gradient). */
 QDialog#TaskEditorDialog[sheetLayout="true"] {{
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 {surface_bg}, stop:1 {surface_item});
+    background: {surface_bg};
 }}
 QDialog#TaskEditorDialog[sheetLayout="true"] QTabWidget#TaskEditorTabs::pane {{
     border: none;

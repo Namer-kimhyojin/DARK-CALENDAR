@@ -732,12 +732,72 @@ class DialogEditorWidgetTests(unittest.TestCase):
         self.assertIsNotNone(scroll)
         self.assertIn("QScrollArea", scroll.styleSheet())
         urgent_icon, urgent_text = dialog.prio_fields["urgent"]
-        self.assertIn("font-size:", urgent_icon.styleSheet())
+        self.assertIn("QToolButton#glyphButton", urgent_icon.styleSheet())
+        self.assertTrue(urgent_icon.accessibleName())
         self.assertIn("padding:", urgent_text.styleSheet())
         self.assertTrue(dialog.save_btn.property("dialogFooter"))
         self.assertFalse(dialog.save_btn.styleSheet())
         self.assertTrue(dialog.cancel_btn.property("dialogFooter"))
         self.assertFalse(dialog.cancel_btn.styleSheet())
+
+    def test_label_settings_glyph_picker_sets_row_glyph_and_falls_back_from_emoji(self):
+        from calendar_app.domain import task_constants
+        from calendar_app.presentation.dialogs.label_settings_dialog import GlyphPickerPopup
+
+        dialog = LabelSettingsDialog()
+        self.addCleanup(_safe_close, dialog)
+        dialog._load_current_values()
+        urgent_btn, _urgent_text = dialog.prio_fields["urgent"]
+
+        popup = GlyphPickerPopup(urgent_btn.color, urgent_btn.glyph(), dialog)
+        self.addCleanup(_safe_close, popup)
+        self.assertEqual(list(popup.choice_buttons), list(task_constants.GLYPH_CHOICES))
+        for button in popup.choice_buttons.values():
+            self.assertTrue(button.accessibleName())
+            self.assertEqual(button.toolTip(), button.accessibleName())
+            self.assertFalse(button.text())
+        self.assertTrue(popup.choice_buttons[urgent_btn.glyph()].isChecked())
+        popup.choice_buttons["fa6s.bolt"].click()
+        self.assertEqual(popup.selected_glyph, "fa6s.bolt")
+
+        urgent_btn.set_glyph(popup.selected_glyph)
+        priority_data, _status_data = dialog._collect_data()
+        self.assertEqual(priority_data["urgent"]["icon"], "fa6s.bolt")
+
+        # User presets saved before glyphs may still hold emoji icons.
+        dialog._apply_preset_data(
+            {
+                "priority": {"urgent": {"icon": "\U0001f525", "text": "A"}},
+                "status": {"completed": {"icon": "fa6s.check", "text": "B"}},
+            }
+        )
+        priority_data, status_data = dialog._collect_data()
+        self.assertEqual(
+            priority_data["urgent"],
+            {"icon": task_constants._DEFAULT_PRIORITY_ICON["urgent"], "text": "A"},
+        )
+        self.assertEqual(status_data["completed"], {"icon": "fa6s.check", "text": "B"})
+        for name, preset in task_constants.get_builtin_presets().items():
+            with self.subTest(preset=name):
+                dialog._apply_preset_data(preset)
+                priority_data, status_data = dialog._collect_data()
+                self.assertTrue(
+                    all(task_constants.is_glyph(v["icon"]) for v in priority_data.values())
+                )
+                self.assertTrue(
+                    all(task_constants.is_glyph(v["icon"]) for v in status_data.values())
+                )
+
+        with (
+            patch.object(task_constants, "save_custom_labels") as save_labels,
+            patch(
+                "calendar_app.presentation.dialogs.label_settings_dialog."
+                "task_glyphs.clear_glyph_cache"
+            ) as clear_cache,
+        ):
+            dialog._save()
+        save_labels.assert_called_once()
+        clear_cache.assert_called_once()
 
     def test_dialog_token_editor_uses_token_style_bundle(self):
         dialog = DialogTokenEditorDialog()

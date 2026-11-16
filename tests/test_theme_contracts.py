@@ -54,7 +54,7 @@ from calendar_app.presentation.dialogs.gcal_settings_dialog import (
 )
 from calendar_app.presentation.dialogs.gcal_sync_issues_dialog import _gcal_issue_style_bundle
 from calendar_app.presentation.dialogs.label_settings_dialog import (
-    _emoji_picker_stylesheet,
+    _glyph_picker_stylesheet,
     _label_settings_style_bundle,
 )
 from calendar_app.presentation.dialogs.management_dialogs import (
@@ -732,7 +732,7 @@ class ThemeContractTests(unittest.TestCase):
 
         self.assertIn("QPushButton#CreateBtn", editor_qss)
         self.assertIn("QRadioButton#TaskDialogOptionCheck", editor_qss)
-        self.assertIn("border-top-left-radius: 9px;", editor_qss)
+        self.assertIn("border-top-right-radius: 8px;", editor_qss)
         self.assertIn("border-radius: 11px;", editor_qss)
         self.assertIn("min-height: 24px;", quick_qss)
         self.assertIn("border-radius: 9px;", quick_qss)
@@ -1004,7 +1004,7 @@ class ThemeContractTests(unittest.TestCase):
                 "button_height": 34,
             },
         )
-        emoji_picker_qss = _emoji_picker_stylesheet(tokens=tokens, metrics={"field_radius": 9})
+        glyph_picker_qss = _glyph_picker_stylesheet(tokens=tokens, metrics={"field_radius": 9})
         token_editor_styles = _dialog_token_editor_style_bundle(
             tokens=tokens,
             metrics={
@@ -1016,10 +1016,11 @@ class ThemeContractTests(unittest.TestCase):
             },
         )
         self.assertIn("color: #93a1b4;", label_styles["hint"])
-        self.assertIn("QToolButton {", label_styles["picker_button"])
+        self.assertIn("QToolButton#glyphButton {", label_styles["picker_button"])
         self.assertIn("color: #22c3ca;", label_styles["button_accent"])
-        self.assertIn("QDialog {", emoji_picker_qss)
-        self.assertIn("background-color: rgba(8,18,28,220);", emoji_picker_qss)
+        self.assertIn("QDialog#glyphPicker {", glyph_picker_qss)
+        self.assertIn("QToolButton#glyphChoice:checked {", glyph_picker_qss)
+        self.assertIn("background-color: rgba(8,18,28,220);", glyph_picker_qss)
         self.assertIn("QFrame#presetBar", token_editor_styles["preset_bar"])
         self.assertIn("QFrame#tokenPreviewWrap", token_editor_styles["preview_wrap"])
         self.assertIn("border: 1px solid #d25a66;", token_editor_styles["invalid_edit"])

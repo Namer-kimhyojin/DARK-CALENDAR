@@ -554,7 +554,7 @@ class CommandPalette(QWidget):
         command_specs = [
             dict(
                 command_id="open_task_dialog",
-                title=t("menu.add_schedule", "📅 일정 등록"),
+                title=t("menu.add_schedule", "일정 등록"),
                 group="Create",
                 icon_key=ICON.VIEW_CALENDAR,
                 shortcut_id="new_schedule",
@@ -562,7 +562,7 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="open_routine_add_dialog",
-                title=t("menu.add_routine", "⭐ 일반업무 등록"),
+                title=t("menu.add_routine", "일반업무 등록"),
                 group="Create",
                 icon_key=ICON.ROUTINE,
                 shortcut_id="new_routine",
@@ -570,7 +570,7 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="open_directive_dialog",
-                title=t("menu.add_directive", "📋 지시사항 등록"),
+                title=t("menu.add_directive", "지시사항 등록"),
                 group="Create",
                 icon_key=ICON.DIRECTIVE,
                 shortcut_id="new_directive",
@@ -578,7 +578,7 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="open_checklist_manager",
-                title=t("menu.checklist_mgmt", "✅ 체크리스트 관리"),
+                title=t("menu.checklist_mgmt", "체크리스트 관리"),
                 group="Work",
                 icon_key=ICON.CHECKLIST,
                 shortcut_id="checklist",
@@ -595,7 +595,7 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="open_work_management_dialog",
-                title=t("menu.routine_status", "📊 일반업무 현황"),
+                title=t("menu.routine_status", "일반업무 현황"),
                 group="Work",
                 icon_key=ICON.ROUTINE,
                 shortcut_id="routine_mgr",
@@ -604,7 +604,7 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="open_work_management_dialog",
-                title=t("menu.directive_status", "📋 지시/협조사항 현황"),
+                title=t("menu.directive_status", "지시/협조사항 현황"),
                 subtitle=t("palette.desc.directive_status", "지시/협조사항 탭을 바로 엽니다."),
                 group="Work",
                 icon_key=ICON.DIRECTIVE,
@@ -637,7 +637,7 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="toggle_focus_mode",
-                title=t("menu.focus_mode", "🎯 초집중 모드"),
+                title=t("menu.focus_mode", "초집중 모드"),
                 group="Focus",
                 icon_key=ICON.POMODORO,
                 shortcut_id="focus_mode",
@@ -683,7 +683,7 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="toggle_calendar_toolbar",
-                title=t("menu.hide_calendar_toolbar", "🗓️ 캘린더 기능바 표시/숨기기"),
+                title=t("menu.hide_calendar_toolbar", "캘린더 기능바 표시/숨기기"),
                 group="View",
                 icon_key=ICON.TOOLBAR,
                 shortcut_id="cal_toolbar",
@@ -691,7 +691,7 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="toggle_fullscreen",
-                title=t("menu.fullscreen", "🖥️ 전체화면"),
+                title=t("menu.fullscreen", "전체화면"),
                 group="View",
                 icon_key=ICON.FULLSCREEN,
                 shortcut_id="fullscreen",
@@ -699,7 +699,7 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="toggle_widget_mode_panel",
-                title=t("menu.widget_mode_toggle", "🪟 위젯 전용 모드"),
+                title=t("menu.widget_mode_toggle", "위젯 전용 모드"),
                 group="Widgets",
                 icon_key=ICON.WIDGET_MGR,
                 shortcut_id="widget_mode",
@@ -763,21 +763,21 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="open_panel_background_color_dialog",
-                title=t("menu.ui_theme_open", "🎨 모양 설정..."),
+                title=t("menu.ui_theme_open", "모양 설정..."),
                 group="Settings",
                 icon_key=ICON.COLOR_PICKER,
                 keywords=("theme", "ui", "color", "background"),
             ),
             dict(
                 command_id="open_label_settings_dialog",
-                title=t("menu.label_settings", "🏷️ 상태/중요도 레이블 설정"),
+                title=t("menu.label_settings", "상태/중요도 레이블 설정"),
                 group="Settings",
                 icon_key=ICON.COLOR_PICKER,
                 keywords=("label", "tag", "settings"),
             ),
             dict(
                 command_id="open_away_settings_dialog",
-                title=t("menu.away_settings", "🔒 자리비움 설정"),
+                title=t("menu.away_settings", "자리비움 설정"),
                 group="Settings",
                 icon_key=ICON.BREAK_LONG,
                 keywords=("away", "idle", "lock"),
@@ -826,7 +826,7 @@ class CommandPalette(QWidget):
         _add(
             self._command_entry(
                 "save_layout_preset",
-                t("menu.save_layout", "💾 현재 레이아웃 저장"),
+                t("menu.save_layout", "현재 레이아웃 저장"),
                 group="View",
                 icon_key=ICON.SAVE,
                 shortcut_id="save_layout",
@@ -851,7 +851,7 @@ class CommandPalette(QWidget):
         trailing_specs = [
             dict(
                 command_id="toggle_lock_mode",
-                title=t("shortcut.entries.lock_mode.label", "잠금 모드"),
+                title=t("shortcut.entries.lock_mode.label", "바탕화면 고정"),
                 group="Window",
                 icon_key=ICON.LOCK,
                 shortcut_id="lock_mode",
@@ -868,7 +868,7 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="toggle_idle_lock_manual",
-                title=t("menu.instant_away", "💤 즉시 자리비움 설정"),
+                title=t("menu.instant_away", "즉시 자리비움 설정"),
                 group="Window",
                 icon_key=ICON.LOCK,
                 shortcut_id="away_lock",
@@ -893,14 +893,14 @@ class CommandPalette(QWidget):
             ),
             dict(
                 command_id="toggle_autostart",
-                title=t("menu.autostart", "🚀 윈도우 시작 시 자동 실행"),
+                title=t("menu.autostart", "윈도우 시작 시 자동 실행"),
                 group="System",
                 icon_key=ICON.SETTINGS,
                 keywords=("autostart", "startup"),
             ),
             dict(
                 command_id="open_language_settings_dialog",
-                title=t("menu.language", "🌐 언어 설정 (Language)"),
+                title=t("menu.language", "언어 설정 (Language)"),
                 group="System",
                 icon_key=ICON.LOCALE_MGMT,
                 keywords=("language", "locale"),

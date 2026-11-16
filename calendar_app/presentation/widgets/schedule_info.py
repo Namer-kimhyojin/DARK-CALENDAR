@@ -6,18 +6,12 @@ import datetime as _datetime
 import html as _html
 import re as _re
 
-from calendar_app.domain.task_constants import priority_icon
 from calendar_app.infrastructure.i18n import t
 from calendar_app.shared.color_utils import derive_ui_palette
 from calendar_app.shared.search_utils import clean_calendar_description, clean_display_text
 from calendar_app.shared.theme_settings import fpt, get_theme_palette_inputs
 
 _PLACEHOLDER_VALUES = {"", "-", "none", "null"}
-_ICON_TIME = "🕒"
-_ICON_LOCATION = "📍"
-_ICON_SOURCE = "📡"
-_ICON_ASSIGNEE = "👤"
-_ICON_DESCRIPTION = "📝"
 
 
 @dataclass(frozen=True)
@@ -96,7 +90,7 @@ def _when_row(task_row: dict, context: str) -> ScheduleInfoRow | None:
             value += f" · {t('tooltip.all_day', '종일')}"
         return ScheduleInfoRow(
             "period",
-            f"{_ICON_TIME} {t('tooltip.label_period', '기간')}",
+            t("tooltip.label_period", "기간"),
             value,
         )
 
@@ -117,7 +111,7 @@ def _when_row(task_row: dict, context: str) -> ScheduleInfoRow | None:
         value = f"{date_value} · {value}" if value else date_value
     if not value:
         return None
-    return ScheduleInfoRow(key, f"{_ICON_TIME} {t('tooltip.label_time', '시간')}", value)
+    return ScheduleInfoRow(key, t("tooltip.label_time", "시간"), value)
 
 
 def _description_text(task_row: dict, *, limit: int | None) -> str:
@@ -146,8 +140,7 @@ def build_schedule_info(
 ) -> ScheduleInfo:
     """Build a semantic schedule summary shared by every information surface."""
     title = _clean(task_row.get("name")) or t("common.no_title", "제목 없음")
-    icon = priority_icon(task_row.get("priority")) if task_row.get("priority") else ""
-    display_title = f"{icon} {title}".strip()
+    display_title = title
 
     rows: list[ScheduleInfoRow] = []
     when_row = _when_row(task_row, "detail" if detail else context)
@@ -159,7 +152,7 @@ def build_schedule_info(
         rows.append(
             ScheduleInfoRow(
                 "location",
-                f"{_ICON_LOCATION} {t('tooltip.label_location', '장소')}",
+                t("tooltip.label_location", "장소"),
                 location,
             )
         )
@@ -169,7 +162,7 @@ def build_schedule_info(
         rows.append(
             ScheduleInfoRow(
                 "source",
-                f"{_ICON_SOURCE} {t('tooltip.label_calendar', '캘린더')}",
+                t("tooltip.label_calendar", "캘린더"),
                 source,
             )
         )
@@ -180,7 +173,7 @@ def build_schedule_info(
             rows.append(
                 ScheduleInfoRow(
                     "assignee",
-                    f"{_ICON_ASSIGNEE} {t('tooltip.label_assignee', '담당')}",
+                    t("tooltip.label_assignee", "담당"),
                     assignee,
                 )
             )
@@ -191,7 +184,7 @@ def build_schedule_info(
         rows.append(
             ScheduleInfoRow(
                 "description",
-                f"{_ICON_DESCRIPTION} {t('tooltip.label_description', '설명')}",
+                t("tooltip.label_description", "설명"),
                 description,
             )
         )
@@ -216,6 +209,12 @@ def build_schedule_hover_html(
     palette = derive_ui_palette(text_theme, panel_base, opacity_factor)
 
     title_html = _html.escape(info.title)
+    if task_row.get("priority") and not task_row.get("is_subscription"):
+        from calendar_app.presentation.theme.task_glyphs import priority_glyph_html
+
+        glyph = priority_glyph_html(task_row.get("priority"))
+        if glyph:
+            title_html = f"{glyph}&nbsp;{title_html}"
     html_rows = []
     for row in info.rows:
         html_rows.append(

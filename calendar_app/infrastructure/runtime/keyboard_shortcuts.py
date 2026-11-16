@@ -95,7 +95,7 @@ SHORTCUTS: list[dict] = [
         "id": "lock_mode",
         "key": "Ctrl+Shift+L",
         "group": "mode",
-        "label_ko": "잠금 모드",
+        "label_ko": "바탕화면 고정",
         "action": None,
     },
     {
@@ -433,9 +433,9 @@ _SHORTCUT_HELP_META_KO: dict[str, dict] = {
         "tags": ["집중", "일시정지", "pause"],
     },
     "lock_mode": {
-        "description": "데스크톱 잠금 모드를 전환합니다.",
+        "description": "바탕화면 고정을 켜거나 끕니다.",
         "menu_path": "상단 바 버튼",
-        "tags": ["잠금", "lock"],
+        "tags": ["바탕화면 고정", "고정", "잠금", "lock"],
     },
     "magnet_mode": {
         "description": "패널 정렬과 부착을 돕는 자석 모드를 전환합니다.",

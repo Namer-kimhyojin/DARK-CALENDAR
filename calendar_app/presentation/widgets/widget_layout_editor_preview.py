@@ -59,6 +59,8 @@ class PreviewRenderer:
                 "is_task": False,
                 "title": t("widget_mode.preview_schedule", "프로젝트 회의"),
                 "time": "14:00",
+                "color": "#60a5fa",
+                "priority": "high",
             },
             {
                 "source": "task",
@@ -69,6 +71,8 @@ class PreviewRenderer:
                 "time": "",
                 "status": "in_progress",
                 "completed": False,
+                "color": "#a78bfa",
+                "priority": "normal",
             },
             {
                 "source": "directive",

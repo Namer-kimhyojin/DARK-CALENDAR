@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import QApplication
 import pytest
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.main_window import desktop_lock
 from calendar_app.presentation.main_window import lock_click_through as ct
 from tests.test_lock_mode_ui import LockModeHost
 
@@ -108,7 +109,7 @@ def test_leaving_the_window_returns_to_click_through(host):
         controller._tick()
     assert not controller.peeking
     assert _transparent(window)
-    assert button.text() == t("lock.overlay_unlock", "고정 해제")
+    assert button.text() == desktop_lock.badge_text(desktop_lock.KIND_FULL)
 
 
 def test_click_through_is_reapplied_after_window_flags_reset(host):

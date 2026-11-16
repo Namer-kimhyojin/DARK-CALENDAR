@@ -63,9 +63,11 @@ class WeekTimeGridTests(unittest.TestCase):
         self.load(tasks)
         self.assertEqual([segment.task["id"] for segment in self.grid._segments], [2])
         self.assertEqual(
-            [(segment.task["id"], segment.day) for segment in self.grid._all_day],
-            [(1, 0), (1, 1), (3, 0)],
+            [(segment.task["id"], segment.day, segment.span) for segment in self.grid._all_day],
+            [(1, 0, 2), (3, 0, 1)],
         )
+        # A two-day event is one bar across both columns, below it the next lane.
+        self.assertEqual([segment.lane for segment in self.grid._all_day], [0, 1])
         self.assertEqual(tasks[0]["deadline"], "2026-10-05")
 
     def test_target_date_only_task_can_be_scheduled_from_all_day_lane(self):

@@ -216,7 +216,11 @@ class LockClickThrough(QObject):
     def sync(self) -> None:
         window = self._window
         settings = getattr(window, "settings", None)
-        locked = bool(getattr(window, "is_locked", False))
+        from calendar_app.presentation.main_window.desktop_lock import full_lock_active
+
+        # Only full lock (view only) passes clicks through; layout lock keeps the
+        # calendar usable.
+        locked = full_lock_active(window)
         behind = locked and behind_icons_enabled(settings) and embedder.supported()
         # Behind the icons the window cannot take clicks anyway, so it implies
         # click-through even when that option is off.
@@ -328,10 +332,12 @@ def _mark_unlock_button(window, state) -> None:
     button = getattr(window, "_lock_overlay_toggle_btn", None)
     if button is None:
         return
-    from calendar_app.infrastructure.i18n import t
+    from calendar_app.presentation.main_window import desktop_lock
+
+    kind = desktop_lock.lock_kind(getattr(window, "settings", None))
 
     if state == "idle":
-        style, text = "", t("lock.overlay_unlock", "고정 해제")
+        style, text = "", desktop_lock.badge_text(kind)
     else:
         from calendar_app.shared.ui_tokens import get_ui_tokens
 
@@ -342,7 +348,7 @@ def _mark_unlock_button(window, state) -> None:
             text = button.text()
         else:
             style = f"QPushButton {{ border: 2px solid {accent}; font-weight: 700; }}"
-            text = t("lock.overlay_unlock_ready", "클릭하면 잠금 해제")
+            text = desktop_lock.badge_text(kind, "ready")
     if button.styleSheet() == style and button.text() == text:
         return
     button.setStyleSheet(style)

@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import QApplication
 import pytest
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.main_window import desktop_lock
 from calendar_app.presentation.main_window import lock_click_through as ct
 from tests.test_lock_click_through import _cursor_at, _lock, _transparent, host  # noqa: F401
 
@@ -58,7 +59,7 @@ def test_reported_bug_icons_under_the_window_work_again_after_one_rollover(host)
     # ...hands the clicks back to the desktop at once.
     assert not controller.peeking
     assert _transparent(window)
-    assert _button(window).text() == t("lock.overlay_unlock", "고정 해제")
+    assert _button(window).text() == desktop_lock.badge_text(desktop_lock.KIND_FULL)
 
 
 def test_small_wobble_around_the_button_keeps_it_clickable(host):
@@ -144,7 +145,7 @@ def test_unlocking_from_the_tray_while_arming_leaves_no_outline(host):
     assert _button(window).styleSheet() == ""
     _lock(window)
     assert _button(window).styleSheet() == ""
-    assert _button(window).text() == t("lock.overlay_unlock", "고정 해제")
+    assert _button(window).text() == desktop_lock.badge_text(desktop_lock.KIND_FULL)
 
 
 def test_unlocking_while_peeking_restores_normal_input(host):

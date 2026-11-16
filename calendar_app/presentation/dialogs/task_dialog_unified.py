@@ -158,7 +158,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
             size = (700, 660 if task_type == "routine" else 620)
         apply_dialog_title(self, title)
         self.setObjectName("TaskEditorDialog")
-        self.setProperty("sheetLayout", task_type == "schedule")
+        self.setProperty("sheetLayout", True)
         self._sheet_positioned = False
         apply_common_dialog_style(
             self,
@@ -187,6 +187,9 @@ class UnifiedTaskDialog(BaseTaskDialog):
         if self.task_type == "schedule":
             self._update_editor_heading(self.start_date.date())
             self.memo_toggle.setChecked(bool(self.memo_edit.toPlainText().strip()))
+        # Start in the title: typing works at once and the close button no
+        # longer opens with its focus ring lit.
+        self.name_edit.setFocus(Qt.FocusReason.OtherFocusReason)
         self._draft_baseline = self._draft_state()
 
     @staticmethod
@@ -325,7 +328,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
         title_row = QHBoxLayout()
         title_row.setSpacing(10)
         mark = QLabel()
-        mark.setPixmap(_ic(ICON.VIEW_CALENDAR, color=self._ui_tokens()["accent"]).pixmap(26, 26))
+        mark_icon = ICON.ROUTINE if self.task_type == "routine" else ICON.VIEW_CALENDAR
+        mark.setPixmap(_ic(mark_icon, color=self._ui_tokens()["accent"]).pixmap(26, 26))
         title_row.addWidget(mark)
         heading = QLabel(self.windowTitle())
         heading.setObjectName("TaskEditorHeading")
@@ -464,11 +468,11 @@ class UnifiedTaskDialog(BaseTaskDialog):
     def init_ui(self):
         outer = QVBoxLayout()
         is_schedule = self.task_type == "schedule"
-        margins = (0, 0, 0, 0) if is_schedule else (14, 10, 14, 10)
-        outer.setContentsMargins(*margins)
-        outer.setSpacing(0 if is_schedule else 8)
-        if is_schedule:
-            outer.addWidget(self._build_editor_header())
+        # Schedule and routine editors share one frame: header with title and
+        # close, the form, and a footer with the same spacing and options.
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+        outer.addWidget(self._build_editor_header())
 
         # 연속 등록 완료 등의 상태 피드백을 안내할 라벨
         self.status_feedback_label = QLabel("")
@@ -497,7 +501,17 @@ class UnifiedTaskDialog(BaseTaskDialog):
                 self._wrap_tab_content(self._build_checklist_tab()),
                 t("dialog.tabs.checklist"),
             )
-        outer.addWidget(self.tabs)
+        if is_schedule:
+            outer.addWidget(self.tabs)
+        else:
+            # Tabs line up with the header title and footer buttons (22px).
+            tabs_frame = QWidget()
+            tabs_frame.setObjectName("TaskEditorTabsFrame")
+            tabs_layout = QVBoxLayout(tabs_frame)
+            tabs_layout.setContentsMargins(22, 0, 22, 0)
+            tabs_layout.setSpacing(0)
+            tabs_layout.addWidget(self.tabs)
+            outer.addWidget(tabs_frame, 1)
 
         # ── 구분선 ─────────────────────────────────────────────────────────
         footer = QFrame()
@@ -505,8 +519,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
 
         # ── 하단 액션 바 ───────────────────────────────────────────────────
         btn_row = QHBoxLayout(footer)
-        footer_margins = (22, 14, 22, 16) if is_schedule else (0, 2, 0, 0)
-        btn_row.setContentsMargins(*footer_margins)
+        btn_row.setContentsMargins(22, 14, 22, 16)
         btn_row.setSpacing(8)
 
         if self._is_modify:
@@ -529,7 +542,8 @@ class UnifiedTaskDialog(BaseTaskDialog):
             self.manage_checklist_btn = manage_btn
             btn_row.addWidget(manage_btn)
 
-        if is_schedule and not self._is_modify:
+        if not self._is_modify:
+            # One "keep adding" option for both editors, beside the actions.
             self.continue_schedule_check = QCheckBox(
                 mnemonic_safe(t("dialog.common.save_continue", "연속 등록"))
             )
@@ -554,18 +568,6 @@ class UnifiedTaskDialog(BaseTaskDialog):
         self.cancel_btn = cancel_btn
 
         btn_row.addWidget(cancel_btn)
-
-        # 신규 등록 모드일 때만 연속 등록 버튼 배치
-        if not self._is_modify and not is_schedule:
-            save_continue_btn = QPushButton(
-                mnemonic_safe(t("dialog.common.save_continue", "연속 등록"))
-            )
-            save_continue_btn.setObjectName("ghost_btn")
-            self._fit_action_button_width(save_continue_btn, 90)
-            save_continue_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            save_continue_btn.clicked.connect(self.save_data_continue)
-            self.save_continue_btn = save_continue_btn
-            btn_row.addWidget(save_continue_btn)
 
         btn_row.addWidget(save_btn)
         for button in footer.findChildren(QPushButton):
@@ -623,7 +625,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setSpacing(16 if self.task_type == "schedule" else 8)
-        margins = (22, 0, 22, 16) if self.task_type == "schedule" else (14, 10, 14, 8)
+        margins = (22, 0, 22, 16) if self.task_type == "schedule" else (0, 12, 0, 8)
         layout.setContentsMargins(*margins)
 
         name_label = (
@@ -656,6 +658,9 @@ class UnifiedTaskDialog(BaseTaskDialog):
         self.name_edit = EmojiLineEdit()
         self.name_edit.setObjectName("TaskTitleEdit")
         self.name_edit.setPlaceholderText(name_hint)
+        # The schedule editor hides the visible label; the field keeps its name.
+        self.name_edit.setAccessibleName(_se(name_label))
+        lbl_name.setBuddy(self.name_edit)
         title_height = 52 if self.task_type == "schedule" else 34
         self.name_edit.setMinimumHeight(title_height)
         if self.task_type != "schedule":
@@ -1503,7 +1508,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
             self.routine_preview_label.setText(
                 t(
                     "dialog.recurrence.preview_range",
-                    "📋 생성될 일정 {count}개: {first} → {last}",
+                    "생성될 일정 {count}개: {first} → {last}",
                     count=count,
                     first=first,
                     last=last,
@@ -1517,7 +1522,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
             self.routine_preview_label.setText(
                 t(
                     "dialog.recurrence.preview_dates",
-                    "📋 생성될 일정 {count}개: {dates}",
+                    "생성될 일정 {count}개: {dates}",
                     count=count,
                     dates=", ".join(date_strs),
                 )

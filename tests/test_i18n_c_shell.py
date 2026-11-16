@@ -430,8 +430,8 @@ def _tray_actions():
 def test_korean_tray_routine_items_are_unchanged():
     assert i18n.lang == "ko"
     manager, settings = _tray_actions()
-    assert manager == "⚙️ 일반업무 관리자"
-    assert settings == "⚙️ 일반업무 설정"
+    assert manager == "일반업무 관리자"
+    assert settings == "일반업무 설정"
 
 
 def test_english_tray_routine_items_differ(english):

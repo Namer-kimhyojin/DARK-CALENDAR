@@ -1327,7 +1327,6 @@ def _build_dialog_visual_system(tokens: dict, metrics: dict) -> str:
     """Shared native surface hierarchy used by editors, settings and feedback."""
     tokens = _opaque_dialog_surfaces(tokens)
     radius = int(metrics["group_radius"])
-    tab_radius = int(metrics["tab_radius"])
     return f"""
 /* DC_DIALOG_VISUAL_SYSTEM */
 QDialog {{
@@ -1357,14 +1356,21 @@ QFrame[frameShape="4"], QFrame[role="dialogDivider"] {{
     border: none; min-height: 1px; max-height: 1px;
 }}
 QTabWidget, QTabBar {{ background: transparent; }}
+QTabBar {{ qproperty-drawBase: 0; }}
 QTabWidget::pane {{ background: transparent; border: none; top: 0px; }}
+/* Underline tabs everywhere: quiet labels, the accent marks the open tab. */
 QTabBar::tab {{
-    border: 1px solid transparent; border-radius: {tab_radius}px;
-    margin-bottom: 6px; font-weight: 600;
+    background: transparent; color: {tokens.get("tab_text", tokens["text_muted"])};
+    border: none; border-bottom: 2px solid transparent; border-radius: 0px;
+    padding: 6px 4px; margin: 0 18px 6px 0; font-weight: 600;
+}}
+QTabBar::tab:hover {{
+    color: {tokens["text_primary"]}; border-bottom: 2px solid {tokens["border_soft"]};
 }}
 QTabBar::tab:selected {{
-    border: 1px solid {tokens["accent_soft_border"]};
-    border-radius: {tab_radius}px; margin-bottom: 6px;
+    background: transparent; color: {tokens["text_primary"]};
+    border: none; border-bottom: 2px solid {tokens["accent"]};
+    border-radius: 0px; margin: 0 18px 6px 0;
 }}
 QGroupBox {{
     background-color: {tokens["content_bg"]};

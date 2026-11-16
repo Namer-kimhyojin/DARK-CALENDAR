@@ -76,6 +76,37 @@ class GcalPushQueueTests(unittest.TestCase):
 
         self.assertEqual(sync_task.call_count, 2)
 
+    def _run_failed_push(self, error_kind, token_exists):
+        queue = GcalPushQueue()
+        self.addCleanup(queue.stop)
+        module = "calendar_app.infrastructure.google_sync.push_queue"
+        with (
+            patch(
+                "calendar_app.infrastructure.google_sync.helpers.sync_task_to_google",
+                return_value=SyncTaskResult(success=False, error_kind=error_kind),
+            ),
+            patch(f"{module}._waiting_for_sign_in", return_value=not token_exists),
+            patch(f"{module}.logger") as logger,
+        ):
+            queue.enqueue(object(), {"name": "x"})
+            queue._queue.join()
+        return logger.log.call_args.args[0]
+
+    def test_auth_required_without_token_logs_debug_only(self):
+        import logging
+
+        self.assertEqual(self._run_failed_push("auth_required", token_exists=False), logging.DEBUG)
+
+    def test_auth_required_with_token_still_warns(self):
+        import logging
+
+        self.assertEqual(self._run_failed_push("auth_required", token_exists=True), logging.WARNING)
+
+    def test_other_failures_still_warn_without_token(self):
+        import logging
+
+        self.assertEqual(self._run_failed_push("network", token_exists=False), logging.WARNING)
+
     def test_enqueue_is_ignored_after_application_shutdown_starts(self):
         class _App:
             _is_shutting_down = True

@@ -51,6 +51,7 @@ from calendar_app.presentation.dialogs.routine_recurrence_wizard import (
     parse_recurrence_rule,
     recurrence_summary,
 )
+from calendar_app.presentation.theme.task_glyphs import priority_qicon, status_qicon
 from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
@@ -262,12 +263,13 @@ class BaseTaskDialog(QDialog):
             (t("dialog.task.priority"), "priority_combo", PRIORITY_COMBO_ITEMS, None),
             (t("dialog.task.status"), "status_combo", STATUS_COMBO_ITEMS, "in_progress"),
         ]:
+            item_icon = priority_qicon if attr == "priority_combo" else status_qicon
             col = QVBoxLayout()
             col.setSpacing(5)
             col.addWidget(QLabel(lbl_key))
             combo = _ElidingComboBox()
             for label, value in items:
-                combo.addItem(label, value)
+                combo.addItem(item_icon(value), label, value)
             if default_data:
                 idx = combo.findData(default_data)
                 combo.setCurrentIndex(idx if idx >= 0 else 0)
@@ -423,7 +425,7 @@ class BaseTaskDialog(QDialog):
             self.duration_summary_label.setText(
                 t(
                     "dialog.task.all_day_duration_summary",
-                    "📅 {start} → {end} · 총 {count}일 · 종일",
+                    "{start} → {end} · 총 {count}일 · 종일",
                     start=_summary_date(start_date),
                     end=_summary_date(end_date),
                     count=day_count,
@@ -974,6 +976,9 @@ class BaseTaskDialog(QDialog):
                 combo,
             )
             chrome = max(0, combo.width() - field.width())
+            # Items carry priority/status glyphs drawn inside the edit field.
+            if any(not combo.itemIcon(i).isNull() for i in range(combo.count())):
+                chrome += combo.iconSize().width() + 4
             widths.append(
                 fitted_text_width(
                     combo.fontMetrics(),
@@ -1147,7 +1152,8 @@ class BaseTaskDialog(QDialog):
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setSpacing(8)
-        layout.setContentsMargins(14, 10, 14, 8)
+        # The tab pane supplies the side margins shared with the header/footer.
+        layout.setContentsMargins(0, 12, 0, 8)
 
         # ── 운영 설정 (우선순위/상태/색상) ────────────────────
         layout.addWidget(self._create_ops_section())
@@ -1189,7 +1195,7 @@ class BaseTaskDialog(QDialog):
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setSpacing(15)
-        layout.setContentsMargins(15, 20, 15, 15)
+        layout.setContentsMargins(0, 12, 0, 8)
 
         template_row = QHBoxLayout()
         template_row.addWidget(QLabel(t("dialog.checklist.template")))

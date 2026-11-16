@@ -565,6 +565,11 @@ class AgendaItemWidget(QFrame):
             check.clicked.connect(lambda checked: controller.set_item_completed(item, checked))
             layout.insertWidget(0, check, 0, Qt.AlignmentFlag.AlignTop)
 
+        glyph_label = QLabel(self)
+        glyph_label.setObjectName("agenda_item_glyph")
+        glyph_label.setVisible(False)
+        layout.addWidget(glyph_label, 0, Qt.AlignmentFlag.AlignTop)
+
         body = QVBoxLayout()
         body.setContentsMargins(0, 0, 0, 0)
         body.setSpacing(3)
@@ -640,6 +645,62 @@ class AgendaItemWidget(QFrame):
                         )
                     )
         self.setMinimumHeight(body.minimumSize().height() + density.vertical_margin * 2)
+        self._apply_event_identity(item, title_label, glyph_label, marker)
+
+    def _apply_event_identity(self, item, title_label, glyph_label, marker):
+        """Same event grammar as the main window: colour bar plus meaning glyph.
+
+        The widget keeps its own card surface (widget theme presets); only the
+        left bar, the schedule dot and the glyph take the event identity.
+        """
+        from calendar_app.presentation.theme.task_glyphs import chip_palette, event_qicon
+
+        color = item.get("color")
+        rules = []
+        if color:
+            bar = chip_palette(color)["bar"]
+            rules.append(f"QFrame#{self.objectName()} {{ border-left: 3px solid {bar}; }}")
+            rules.append(f"QFrame#agenda_item_marker_schedule {{ background: {bar}; }}")
+        if rules:
+            self.setStyleSheet(" ".join(rules))
+
+        title_label.ensurePolished()
+        text = title_label.palette().color(title_label.foregroundRole())
+        dark_text = text.lightnessF() < 0.5
+        card_tokens = {
+            "text_primary": text.name(),
+            "text_secondary": text.name(),
+            "bg_main": "#f4f5f7" if dark_text else "#1b2030",
+        }
+        status_row = dict(item)
+        status_row["status"] = "completed" if item.get("completed") else item.get("status")
+        glyph = event_qicon(status_row, card_tokens)
+        if glyph is None and item.get("source") == "directive":
+            from calendar_app.presentation.theme.task_glyphs import status_qicon
+
+            glyph = status_qicon(item.get("status") or "pending", card_tokens)
+        if glyph is None or glyph.isNull():
+            return
+        size = max(12, min(16, title_label.fontMetrics().ascent()))
+        glyph_label.setPixmap(glyph.pixmap(size, size))
+        glyph_label.setFixedWidth(size + 2)
+        glyph_label.setContentsMargins(0, max(0, (title_label.minimumHeight() - size) // 2), 0, 0)
+        glyph_label.setVisible(True)
+
+
+def _row_event_color(row) -> str | None:
+    """Event colour, then its calendar colour (as the main window chips)."""
+    color = row.get("bg_color") if isinstance(row, dict) else None
+    if color:
+        return color
+    try:
+        from calendar_app.presentation.panels.side_panel_renderer import (
+            _calendar_color_for_task,
+        )
+
+        return _calendar_color_for_task(row)
+    except Exception:
+        return None
 
 
 class _CompactMonthCalendar(QWidget):
@@ -3840,6 +3901,8 @@ class UnifiedWidgetController:
                         "source": "task",
                         "status": status,
                         "completed": completed,
+                        "color": _row_event_color(row),
+                        "priority": row.get("priority"),
                     }
                 )
 
@@ -3867,6 +3930,7 @@ class UnifiedWidgetController:
                 "source": "directive",
                 "status": status,
                 "completed": completed,
+                "color": row[6] if len(row) > 6 else None,
             }
             if deadline_qd.isValid() and deadline_qd == target:
                 directive_items.append(directive_item)
@@ -3948,6 +4012,9 @@ class UnifiedWidgetController:
                     "item_id": row.get("id"),
                     "source": "task",
                     "read_only": bool(row.get("read_only") or row.get("is_subscription")),
+                    "color": _row_event_color(row),
+                    "priority": row.get("priority"),
+                    "is_subscription": bool(row.get("is_subscription")),
                 }
             )
         return items

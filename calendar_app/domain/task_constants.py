@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
 # task_constants.py
-# 중요도(priority)와 상태(status)에 대한 이모티콘·텍스트 정의를 한 곳에서 관리합니다.
+# 중요도(priority)와 상태(status)의 아이콘 글리프·텍스트 정의를 한 곳에서 관리합니다.
 # 이 파일만 수정하면 캘린더, 오늘 일정, 일반업무, 지시/협조사항 전체에 일괄 적용됩니다.
 # QSettings에 커스텀 값이 저장된 경우 해당 값이 우선 적용됩니다.
 
 # ── 기본값 (DEFAULT) ─────────────────────────────────────────────
 from calendar_app.domain.i18n import t
 
+# Icons are Font Awesome 6 Solid glyph names (qtawesome ids). The domain only
+# stores the name; presentation/theme/task_glyphs.py paints it in a theme color
+# chosen by meaning (urgent = danger, completed = success, ...).
 _DEFAULT_PRIORITY_ICON = {
-    "urgent": "🚨",
-    "high": "⭐",
-    "normal": "⚡",
-    "low": "📌",
+    "urgent": "fa6s.circle-exclamation",
+    "high": "fa6s.angles-up",
+    "normal": "fa6s.equals",
+    "low": "fa6s.angle-down",
 }
 _DEFAULT_PRIORITY_TEXT = {
     "urgent": t("priority.urgent", "긴급"),
@@ -20,10 +23,10 @@ _DEFAULT_PRIORITY_TEXT = {
     "low": t("priority.low", "낮음"),
 }
 _DEFAULT_STATUS_ICON = {
-    "pending": "📅",
-    "in_progress": "⏳",
-    "completed": "✅",
-    "deferred": "⏸️",
+    "pending": "fa6s.clock",
+    "in_progress": "fa6s.circle-half-stroke",
+    "completed": "fa6s.circle-check",
+    "deferred": "fa6s.circle-pause",
 }
 _DEFAULT_STATUS_TEXT = {
     "pending": t("status.pending", "예정"),
@@ -32,51 +35,80 @@ _DEFAULT_STATUS_TEXT = {
     "deferred": t("status.deferred", "보류"),
 }
 
+# Glyphs the label settings dialog offers. Stored values outside this list
+# (older emoji settings) fall back to the defaults above.
+GLYPH_CHOICES = (
+    "fa6s.circle-exclamation",
+    "fa6s.triangle-exclamation",
+    "fa6s.fire-flame-curved",
+    "fa6s.bolt",
+    "fa6s.flag",
+    "fa6s.star",
+    "fa6s.bookmark",
+    "fa6s.thumbtack",
+    "fa6s.angles-up",
+    "fa6s.angle-up",
+    "fa6s.equals",
+    "fa6s.minus",
+    "fa6s.angle-down",
+    "fa6s.angles-down",
+    "fa6s.circle",
+    "fa6s.circle-dot",
+    "fa6s.clock",
+    "fa6s.calendar",
+    "fa6s.hourglass-half",
+    "fa6s.circle-half-stroke",
+    "fa6s.circle-play",
+    "fa6s.circle-check",
+    "fa6s.check",
+    "fa6s.circle-pause",
+    "fa6s.pause",
+    "fa6s.circle-xmark",
+    "fa6s.ban",
+    "fa6s.bell",
+)
+
+
+def is_glyph(value) -> bool:
+    """Return whether value is one of the selectable icon glyphs."""
+    return isinstance(value, str) and value in GLYPH_CHOICES
+
+
 # ── 내장 프리셋 ────────────────────────────────────────────────────
 # 키는 고정 영문 ID("default", "business", "minimal").
 # 버튼 표시 이름은 다이얼로그에서 t("dialog.label_settings.builtin_presets.<key>") 로 번역.
 # 아이콘/텍스트 값은 앱 시작 후 get_builtin_presets() 를 통해 그 시점 번역을 사용.
 BUILTIN_PRESETS = {
     "default": {
-        "priority": {
-            "urgent": {"icon": "🚨"},
-            "high": {"icon": "⭐"},
-            "normal": {"icon": "⚡"},
-            "low": {"icon": "📌"},
-        },
-        "status": {
-            "pending": {"icon": "📅"},
-            "in_progress": {"icon": "⏳"},
-            "completed": {"icon": "✅"},
-            "deferred": {"icon": "⏸️"},
-        },
+        "priority": {key: {"icon": value} for key, value in _DEFAULT_PRIORITY_ICON.items()},
+        "status": {key: {"icon": value} for key, value in _DEFAULT_STATUS_ICON.items()},
     },
     "business": {
         "priority": {
-            "urgent": {"icon": "🔥"},
-            "high": {"icon": "⭐"},
-            "normal": {"icon": "⚡"},
-            "low": {"icon": "📌"},
+            "urgent": {"icon": "fa6s.fire-flame-curved"},
+            "high": {"icon": "fa6s.flag"},
+            "normal": {"icon": "fa6s.bookmark"},
+            "low": {"icon": "fa6s.minus"},
         },
         "status": {
-            "pending": {"icon": "📌"},
-            "in_progress": {"icon": "⏳"},
-            "completed": {"icon": "✅"},
-            "deferred": {"icon": "⏸️"},
+            "pending": {"icon": "fa6s.calendar"},
+            "in_progress": {"icon": "fa6s.hourglass-half"},
+            "completed": {"icon": "fa6s.check"},
+            "deferred": {"icon": "fa6s.pause"},
         },
     },
     "minimal": {
         "priority": {
-            "urgent": {"icon": "🔴"},
-            "high": {"icon": "🟡"},
-            "normal": {"icon": "🟢"},
-            "low": {"icon": "⚪"},
+            "urgent": {"icon": "fa6s.circle"},
+            "high": {"icon": "fa6s.circle"},
+            "normal": {"icon": "fa6s.circle-dot"},
+            "low": {"icon": "fa6s.circle-dot"},
         },
         "status": {
-            "pending": {"icon": "◻️"},
-            "in_progress": {"icon": "⏳"},
-            "completed": {"icon": "✅"},
-            "deferred": {"icon": "⏸️"},
+            "pending": {"icon": "fa6s.circle-dot"},
+            "in_progress": {"icon": "fa6s.circle-half-stroke"},
+            "completed": {"icon": "fa6s.circle-check"},
+            "deferred": {"icon": "fa6s.circle-pause"},
         },
     },
 }
@@ -107,14 +139,11 @@ PRIORITY_ICON = dict(_DEFAULT_PRIORITY_ICON)
 PRIORITY_TEXT = dict(_DEFAULT_PRIORITY_TEXT)
 
 STATUS_ICON = {
-    "pending": "📅",
-    "in_progress": "⏳",
-    "completed": "✅",
-    "deferred": "⏸️",
+    **_DEFAULT_STATUS_ICON,
     # 레거시 값 (오버라이드 대상 아님)
-    "done": "✅",
-    "overdue": "⏰",
-    "canceled": "❌",
+    "done": "fa6s.circle-check",
+    "overdue": "fa6s.triangle-exclamation",
+    "canceled": "fa6s.ban",
 }
 STATUS_TEXT = dict(_DEFAULT_STATUS_TEXT)
 
@@ -134,8 +163,9 @@ def _rebuild_derived_constants():
     global PRIORITY_COMBO_ITEMS, PRIORITY_MENU_ITEMS
     global STATUS_COMBO_ITEMS, STATUS_MENU_ITEMS, STATUS_FILTER_ITEMS
 
-    def _lbl(icon, text):
-        return f"{icon} {text}".strip() if icon else text
+    def _lbl(_icon, text):
+        # Labels are text only; menus and combos attach the glyph as a QIcon.
+        return text
 
     PRIORITY_LABEL.clear()
     PRIORITY_LABEL.update(
@@ -201,13 +231,13 @@ def load_custom_labels():
         for key in list(_DEFAULT_PRIORITY_ICON):
             icon = s.value(f"custom_priority_icon_{key}")
             text = s.value(f"custom_priority_text_{key}")
-            PRIORITY_ICON[key] = icon if icon else _DEFAULT_PRIORITY_ICON[key]
+            PRIORITY_ICON[key] = icon if is_glyph(icon) else _DEFAULT_PRIORITY_ICON[key]
             PRIORITY_TEXT[key] = text if text else _DEFAULT_PRIORITY_TEXT[key]
 
         for key in list(_DEFAULT_STATUS_ICON):
             icon = s.value(f"custom_status_icon_{key}")
             text = s.value(f"custom_status_text_{key}")
-            STATUS_ICON[key] = icon if icon else _DEFAULT_STATUS_ICON[key]
+            STATUS_ICON[key] = icon if is_glyph(icon) else _DEFAULT_STATUS_ICON[key]
             STATUS_TEXT[key] = text if text else _DEFAULT_STATUS_TEXT[key]
 
         _rebuild_derived_constants()
@@ -217,8 +247,8 @@ def load_custom_labels():
 
 def save_custom_labels(priority_data: dict, status_data: dict):
     """
-    priority_data = {"urgent": {"icon": "🔥", "text": "긴급"}, ...}
-    status_data   = {"pending": {"icon": "📌", "text": "예정"}, ...}
+    priority_data = {"urgent": {"icon": "fa6s.fire-flame-curved", "text": "긴급"}, ...}
+    status_data   = {"pending": {"icon": "fa6s.calendar", "text": "예정"}, ...}
     저장 후 모듈 dict를 즉시 갱신합니다.
     """
     try:
@@ -340,20 +370,20 @@ def _is_valid_user_preset(preset) -> bool:
 
 # ── 편의 함수 ──────────────────────────────────────────────────────
 def priority_icon(priority: str) -> str:
-    """priority 값 → 아이콘 반환. 알 수 없는 값은 빈 문자열로 처리."""
+    """priority 값 → 아이콘 글리프 이름. 알 수 없는 값은 빈 문자열로 처리."""
     return PRIORITY_ICON.get(priority, "")
 
 
 def priority_label(priority: str) -> str:
-    """priority 값 → '아이콘 텍스트' 반환."""
+    """priority 값 → 표시 이름 반환."""
     return PRIORITY_LABEL.get(priority, t("priority.normal", "보통"))
 
 
 def status_icon(status: str) -> str:
-    """status 값 → 아이콘 반환."""
+    """status 값 → 아이콘 글리프 이름 반환."""
     return STATUS_ICON.get(status, "")
 
 
 def status_label(status: str) -> str:
-    """status 값 → '아이콘 텍스트' 반환."""
+    """status 값 → 표시 이름 반환."""
     return STATUS_LABEL.get(status, f"[{status}]")

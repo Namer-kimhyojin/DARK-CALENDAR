@@ -1,6 +1,8 @@
+# -*- coding: utf-8 -*-
 from PyQt6.QtWidgets import QMenu
 
 from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.theme.task_glyphs import priority_qicon, status_qicon
 from calendar_app.shared.icon_map import ICON, icon
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.theme_settings import opacity_byte_to_percent, opacity_percent_to_byte
@@ -32,7 +34,7 @@ def _add_task_priority_status_menus(menu, app, priority_items, status_items):
             for tid in list(ids):
                 app.handle_task_priority_changed(tid, v)
 
-        priority_menu.addAction(label, _set_priority)
+        priority_menu.addAction(priority_qicon(value), label, _set_priority)
 
     status_menu_change = menu.addMenu(t("context_menu.status_change", default="Status Change"))
     status_menu_change.setIcon(icon(ICON.FILTER))
@@ -45,7 +47,7 @@ def _add_task_priority_status_menus(menu, app, priority_items, status_items):
             for tid in list(ids):
                 app.handle_task_status_changed(tid, v)
 
-        status_menu_change.addAction(label, _set_status)
+        status_menu_change.addAction(status_qicon(value), label, _set_status)
 
     has_selection = bool(getattr(app, "selected_task_ids", None))
     priority_menu.setEnabled(has_selection)
