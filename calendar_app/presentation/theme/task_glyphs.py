@@ -34,6 +34,7 @@ _PRIORITY_ROLE = {
     "high": "warning_hex",
     "normal": "text_secondary",
     "low": "text_muted",
+    "none": "text_muted",
 }
 _STATUS_ROLE = {
     "pending": "text_secondary",
@@ -43,6 +44,7 @@ _STATUS_ROLE = {
     "deferred": "text_muted",
     "overdue": "danger_hex",
     "canceled": "text_muted",
+    "none": "text_muted",
 }
 
 # Translucent chip tint, as alpha of the event colour (0-255).
@@ -137,14 +139,52 @@ def _role_color(role: str, tk: dict, minimum: float) -> str:
     )
 
 
+def _custom_color(value: str, tk: dict) -> str:
+    """A user-picked glyph colour, nudged only as far as 3:1 on a chip needs."""
+    return _readable(
+        value,
+        str(tk.get("bg_main") or "#151a26"),
+        str(tk.get("text_primary") or "#f4f7fb"),
+        str(tk.get("accent") or "#4da6ff"),
+        GLYPH_MIN_CONTRAST,
+    )
+
+
+def custom_glyph_color(color: str, tokens=None) -> str:
+    """A user-picked glyph colour as painted (contrast-safe on a chip)."""
+    return _custom_color(color, _tokens(tokens))
+
+
 def priority_color(priority, tokens=None) -> str:
-    """Meaning colour of a priority glyph, kept at 3:1+ on a chip."""
+    """Priority glyph colour (user colour or meaning colour), 3:1+ on a chip."""
+    key = str(priority or "")
+    tk = _tokens(tokens)
+    custom = task_constants.priority_custom_color(key)
+    if custom:
+        return _custom_color(custom, tk)
+    role = _PRIORITY_ROLE.get(key, "text_secondary")
+    return _role_color(role, tk, GLYPH_MIN_CONTRAST)
+
+
+def status_color(status, tokens=None) -> str:
+    """Status glyph colour (user colour or meaning colour), 3:1+ on a chip."""
+    key = str(status or "")
+    tk = _tokens(tokens)
+    custom = task_constants.status_custom_color("completed" if key == "done" else key)
+    if custom:
+        return _custom_color(custom, tk)
+    role = _STATUS_ROLE.get(key, "text_secondary")
+    return _role_color(role, tk, GLYPH_MIN_CONTRAST)
+
+
+def default_priority_color(priority, tokens=None) -> str:
+    """The theme meaning colour of a priority, ignoring any user colour."""
     role = _PRIORITY_ROLE.get(str(priority or ""), "text_secondary")
     return _role_color(role, _tokens(tokens), GLYPH_MIN_CONTRAST)
 
 
-def status_color(status, tokens=None) -> str:
-    """Meaning colour of a status glyph, kept at 3:1+ on a chip."""
+def default_status_color(status, tokens=None) -> str:
+    """The theme meaning colour of a status, ignoring any user colour."""
     role = _STATUS_ROLE.get(str(status or ""), "text_secondary")
     return _role_color(role, _tokens(tokens), GLYPH_MIN_CONTRAST)
 
@@ -187,6 +227,20 @@ def status_qicon(status, tokens=None) -> QIcon:
     return glyph_icon(task_constants.status_icon(status), status_color(status, tokens))
 
 
+def chip_priority_qicon(priority, tokens=None) -> QIcon:
+    """Priority glyph for chips and lists: none for an unassigned priority."""
+    if str(priority or "").strip().lower() == task_constants.UNSET:
+        return QIcon()
+    return priority_qicon(priority, tokens)
+
+
+def chip_status_qicon(status, tokens=None) -> QIcon:
+    """Status glyph for chips and lists: none for an unassigned status."""
+    if str(status or "").strip().lower() == task_constants.UNSET:
+        return QIcon()
+    return status_qicon(status, tokens)
+
+
 def is_completed_row(row) -> bool:
     """Whether a task/routine row is done (status or legacy is_completed flag)."""
     if not row:
@@ -203,8 +257,10 @@ def event_qicon(row, tokens=None):
         return status_qicon("completed", tokens)
     if row.get("is_subscription"):
         return subscription_qicon(tokens)
-    if row.get("priority"):
-        return priority_qicon(row["priority"], tokens)
+    priority = str(row.get("priority") or "").strip().lower()
+    # Unassigned items show no glyph on chips and in lists (menus still do).
+    if priority and priority != task_constants.UNSET:
+        return priority_qicon(priority, tokens)
     return None
 
 
@@ -236,6 +292,8 @@ def glyph_html(name: str, color: str, size: int = 13) -> str:
 
 
 def priority_glyph_html(priority, tokens=None, size: int = 13) -> str:
+    if str(priority or "").strip().lower() == task_constants.UNSET:
+        return ""
     return glyph_html(
         task_constants.priority_icon(priority), priority_color(priority, tokens), size
     )

@@ -26,6 +26,8 @@ def _add_task_priority_status_menus(menu, app, priority_items, status_items):
     priority_menu = menu.addMenu(t("context_menu.priority_change", default="Priority Change"))
     priority_menu.setIcon(icon(ICON.SORT_BY_PRIORITY))
     for label, value in priority_items:
+        if value == "none":
+            priority_menu.addSeparator()
 
         def _set_priority(*, v=value):
             ids = getattr(app, "selected_task_ids", set())
@@ -39,6 +41,8 @@ def _add_task_priority_status_menus(menu, app, priority_items, status_items):
     status_menu_change = menu.addMenu(t("context_menu.status_change", default="Status Change"))
     status_menu_change.setIcon(icon(ICON.FILTER))
     for label, value in status_items:
+        if value == "none":
+            status_menu_change.addSeparator()
 
         def _set_status(*, v=value):
             ids = getattr(app, "selected_task_ids", set())

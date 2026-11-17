@@ -260,8 +260,8 @@ class BaseTaskDialog(QDialog):
         combo_row.setSpacing(20)
 
         for lbl_key, attr, items, default_data in [
-            (t("dialog.task.priority"), "priority_combo", PRIORITY_COMBO_ITEMS, None),
-            (t("dialog.task.status"), "status_combo", STATUS_COMBO_ITEMS, "in_progress"),
+            (t("dialog.task.priority"), "priority_combo", PRIORITY_COMBO_ITEMS, "none"),
+            (t("dialog.task.status"), "status_combo", STATUS_COMBO_ITEMS, "none"),
         ]:
             item_icon = priority_qicon if attr == "priority_combo" else status_qicon
             col = QVBoxLayout()

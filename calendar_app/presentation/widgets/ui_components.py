@@ -33,6 +33,7 @@ from PyQt6.QtWidgets import (
     QMenu,
     QPushButton,
     QSizePolicy,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -1508,9 +1509,102 @@ class DraggableTaskButton(QFrame):
         info = build_schedule_info(task, source_text=source_text, detail=True)
         for row in info.rows:
             _add_info(row.label, row.value)
+        if not task.get("is_subscription"):
+            self._add_detail_choice_row(task, "priority", row_labels, text_pal)
+            self._add_detail_choice_row(task, "status", row_labels, text_pal)
         _fit_info_label_column(row_labels)
 
         return self.info_layout.count() > 0
+
+    def _add_detail_choice_row(self, task, kind, row_labels, text_pal):
+        """A "priority"/"status" row whose value opens a menu to change it."""
+        from calendar_app.domain import task_constants
+        from calendar_app.presentation.theme.task_glyphs import priority_qicon, status_qicon
+
+        if kind == "priority":
+            value = str(task.get("priority") or "normal").strip().lower()
+            label_text = t("tooltip.label_priority", "중요도")
+            value_text = task_constants.priority_label(value)
+            value_icon = priority_qicon(value)
+            change_text = t("tooltip.change_priority", "중요도 바꾸기")
+        else:
+            value = str(task.get("status") or "pending").strip().lower()
+            if value == "done":
+                value = "completed"
+            label_text = t("tooltip.label_status", "상태")
+            value_text = task_constants.status_label(value)
+            value_icon = status_qicon(value)
+            change_text = t("tooltip.change_status", "상태 바꾸기")
+
+        row = QHBoxLayout()
+        row.setSpacing(5)
+        llbl = QLabel(label_text)
+        llbl.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        llbl.setStyleSheet(
+            f"background:transparent; color: {text_pal['text_secondary']}; font-size: 9pt;"
+        )
+        row_labels.append((llbl, label_text))
+        btn = QToolButton()
+        btn.setObjectName("detailChoice")
+        btn.setText(value_text)
+        btn.setIcon(value_icon)
+        btn.setIconSize(QSize(13, 13))
+        btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        btn.setToolTip(change_text)
+        btn.setAccessibleName(f"{label_text}: {value_text}")
+        btn.setAccessibleDescription(change_text)
+        accent = text_pal.get("accent") or text_pal["text_primary"]
+        btn.setStyleSheet(
+            "QToolButton#detailChoice { background: transparent; "
+            f"color: {text_pal['text_primary']}; font-size: 9pt; "
+            "border: 1px solid transparent; border-radius: 5px; padding: 1px 6px 1px 2px; }"
+            "QToolButton#detailChoice:hover { "
+            f"border-color: {text_pal['text_secondary']}; }}"
+            "QToolButton#detailChoice:focus { "
+            f"border-color: {accent}; }}"
+        )
+        btn.clicked.connect(
+            lambda _=False, k=kind, v=value, b=btn: self._open_detail_choice(k, v, b)
+        )
+        row.addWidget(llbl, 0, Qt.AlignmentFlag.AlignVCenter)
+        row.addWidget(btn, 0, Qt.AlignmentFlag.AlignLeft)
+        row.addStretch(1)
+        self.info_layout.addLayout(row)
+
+    def _open_detail_choice(self, kind, current, button):
+        """Menu of priorities/statuses ("unassigned" last) under a detail row."""
+        from calendar_app.domain.task_constants import PRIORITY_MENU_ITEMS, STATUS_MENU_ITEMS
+        from calendar_app.presentation.theme.task_glyphs import priority_qicon, status_qicon
+
+        items, make_icon = (
+            (PRIORITY_MENU_ITEMS, priority_qicon)
+            if kind == "priority"
+            else (STATUS_MENU_ITEMS, status_qicon)
+        )
+        menu = QMenu(button)
+        menu.setStyleSheet(self._task_menu_style())
+        actions = {}
+        for label, value in items:
+            if value == "none":
+                menu.addSeparator()
+            act = menu.addAction(make_icon(value), _se(label))
+            act.setCheckable(True)
+            act.setChecked(value == current)
+            actions[act] = value
+        chosen = menu.exec(button.mapToGlobal(QPoint(0, button.height())))
+        value = actions.get(chosen)
+        if value is None or value == current:
+            return
+        if sip.isdeleted(self):
+            get_detail_overlay()._do_collapse()
+            return
+        get_detail_overlay()._do_collapse(self)
+        if kind == "priority":
+            self.taskPriorityChanged.emit(self.task_id, value)
+        else:
+            self.taskStatusChanged.emit(self.task_id, value)
 
     def _render_detail_actions(self, task):
         # Keep one action row for the lifetime of this card. Rebuilding visible
@@ -1690,7 +1784,8 @@ class DraggableTaskButton(QFrame):
             self.info_widget.setMaximumHeight(target_h)
             self.updateGeometry()
 
-    def contextMenuEvent(self, event):
+    def _task_menu_style(self):
+        """Stylesheet shared by the chip context menu and detail-card menus."""
         from PyQt6.QtCore import QSettings
         from PyQt6.QtGui import QColor
 
@@ -1729,6 +1824,10 @@ class DraggableTaskButton(QFrame):
             }}
             QMenu::separator {{ height: 1px; background: rgba(255,255,255,20); margin: 4px 10px; }}
         """
+        return menu_style
+
+    def contextMenuEvent(self, event):
+        menu_style = self._task_menu_style()
         menu = QMenu(self)
         menu.setStyleSheet(menu_style)
 
@@ -1745,6 +1844,8 @@ class DraggableTaskButton(QFrame):
         from calendar_app.presentation.theme.task_glyphs import priority_qicon, status_qicon
 
         for label, value in PRIORITY_MENU_ITEMS:
+            if value == "none":
+                priority_menu.addSeparator()
             prio_action_map[priority_menu.addAction(priority_qicon(value), _se(label))] = value
 
         status_menu = menu.addMenu(_se(t("context_menu.status_change")))
@@ -1752,6 +1853,8 @@ class DraggableTaskButton(QFrame):
         status_menu.setStyleSheet(menu_style)
         stat_action_map = {}
         for label, value in STATUS_MENU_ITEMS:
+            if value == "none":
+                status_menu.addSeparator()
             stat_action_map[status_menu.addAction(status_qicon(value), _se(label))] = value
 
         color_menu = menu.addMenu(_se(t("context_menu.color_tag")))
@@ -1871,9 +1974,9 @@ class DraggableTaskButton(QFrame):
             new_prio = prio_action_map[action]
             # Apply UI update immediately for responsiveness
             if self.title_label.leading_icon() is not None:
-                from calendar_app.presentation.theme.task_glyphs import priority_qicon
+                from calendar_app.presentation.theme.task_glyphs import chip_priority_qicon
 
-                self.set_leading_icon(priority_qicon(new_prio))
+                self.set_leading_icon(chip_priority_qicon(new_prio))
             self.taskPriorityChanged.emit(self.task_id, new_prio)
 
     def _flush_single_click_toggle(self):

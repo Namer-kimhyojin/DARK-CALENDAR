@@ -153,7 +153,8 @@ class DirectiveDatetimeUxTests(unittest.TestCase):
         self.assertEqual(dialog.result(), QDialog.DialogCode.Accepted)
         self.assertEqual(
             self.rows()[0][1:],
-            ("Submit report", "Team", "2026-10-22 18:30", "in_progress", "Attachment", "high"),
+            # New directives start with an unassigned status.
+            ("Submit report", "Team", "2026-10-22 18:30", "none", "Attachment", "high"),
         )
         self.error.assert_not_called()
 

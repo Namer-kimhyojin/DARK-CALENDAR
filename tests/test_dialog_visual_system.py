@@ -227,3 +227,62 @@ class TaskDetailActionLifecycleTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TaskDetailPriorityStatusTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = QApplication.instance() or QApplication([])
+
+    def _choice_buttons(self, button):
+        from PyQt6.QtWidgets import QToolButton
+
+        return [
+            child
+            for child in button.info_widget.findChildren(QToolButton)
+            if child.objectName() == "detailChoice"
+        ]
+
+    def test_detail_card_shows_priority_and_status_rows_including_unassigned(self):
+        from calendar_app.presentation.widgets import ui_components
+
+        button = DraggableTaskButton(321, "교육")
+        self.addCleanup(button.close)
+        task = {"name": "교육", "deadline": "2026-11-05 10:00:00", "priority": "high"}
+        task["status"] = "none"
+        with patch.object(ui_components.calendar_repo, "get_calendar", return_value=None):
+            self.assertTrue(button._render_info_items(task))
+        priority_btn, status_btn = self._choice_buttons(button)
+        self.assertEqual(priority_btn.text(), "높음")
+        self.assertFalse(priority_btn.icon().isNull())
+        self.assertEqual(status_btn.text(), "미지정")
+        self.assertTrue(priority_btn.accessibleName())
+        self.assertTrue(status_btn.toolTip())
+
+    def test_detail_choice_menu_sets_unassigned_priority(self):
+        from PyQt6.QtWidgets import QMenu
+
+        from calendar_app.presentation.widgets import ui_components
+
+        button = DraggableTaskButton(322, "교육")
+        self.addCleanup(button.close)
+        task = {"name": "교육", "deadline": "2026-11-05 10:00:00", "priority": "urgent"}
+        task["status"] = "in_progress"
+        with patch.object(ui_components.calendar_repo, "get_calendar", return_value=None):
+            button._render_info_items(task)
+        priority_btn, _status_btn = self._choice_buttons(button)
+        changes = []
+        button.taskPriorityChanged.connect(lambda task_id, value: changes.append((task_id, value)))
+        seen = {}
+
+        def pick_unassigned(menu, *_args):
+            actions = [a for a in menu.actions() if not a.isSeparator()]
+            seen["labels"] = [a.text() for a in actions]
+            seen["checked"] = [a.text() for a in actions if a.isChecked()]
+            return actions[-1]
+
+        with patch.object(QMenu, "exec", pick_unassigned):
+            priority_btn.click()
+        self.assertEqual(seen["labels"][-1], "미지정")
+        self.assertEqual(seen["checked"], ["긴급"])
+        self.assertEqual(changes, [(322, "none")])

@@ -4,14 +4,16 @@ from __future__ import annotations
 
 from calendar_app.domain.task_constants import PRIORITY_LABEL, STATUS_LABEL
 
-CANONICAL_STATUSES = ("pending", "in_progress", "completed", "deferred")
+# "none" is the explicit unassigned status (미지정).
+CANONICAL_STATUSES = ("pending", "in_progress", "completed", "deferred", "none")
 
 _ALLOWED_STATUS_TRANSITIONS = {
-    "pending": {"pending", "in_progress", "completed", "deferred"},
-    "in_progress": {"in_progress", "pending", "completed", "deferred"},
+    "pending": {"pending", "in_progress", "completed", "deferred", "none"},
+    "in_progress": {"in_progress", "pending", "completed", "deferred", "none"},
     # completed -> pending is blocked; reopen should go through in_progress/deferred first.
-    "completed": {"completed", "in_progress", "deferred"},
-    "deferred": {"deferred", "pending", "in_progress", "completed"},
+    "completed": {"completed", "in_progress", "deferred", "none"},
+    "deferred": {"deferred", "pending", "in_progress", "completed", "none"},
+    "none": {"none", "pending", "in_progress", "completed", "deferred"},
 }
 
 

@@ -228,7 +228,7 @@ def get_tasks_by_date(date_str):
 
                )
 
-            ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'low' THEN 3 ELSE 2 END, deadline ASC
+            ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'low' THEN 3 WHEN 'none' THEN 4 ELSE 2 END, deadline ASC
 
         """,
             (date_str, date_str, date_str),
@@ -384,7 +384,7 @@ def get_incomplete_tasks():
 
             WHERE is_completed=0
 
-            ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'low' THEN 3 ELSE 2 END, deadline ASC
+            ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'low' THEN 3 WHEN 'none' THEN 4 ELSE 2 END, deadline ASC
 
         """)
 
@@ -418,7 +418,7 @@ def get_most_urgent_pending_task(today_str):
         cur = conn.cursor()
 
         cur.execute(
-            "SELECT id, name FROM unified_task WHERE status IN ('pending', 'in_progress') AND date(substr(deadline, 1, 10)) <= date(?) AND date(substr(ifnull(end_date, deadline), 1, 10)) >= date(?) ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'low' THEN 3 ELSE 2 END, deadline ASC LIMIT 1",
+            "SELECT id, name FROM unified_task WHERE status IN ('pending', 'in_progress', 'none') AND date(substr(deadline, 1, 10)) <= date(?) AND date(substr(ifnull(end_date, deadline), 1, 10)) >= date(?) ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'low' THEN 3 WHEN 'none' THEN 4 ELSE 2 END, deadline ASC LIMIT 1",
             (today_str, today_str),
         )
 
@@ -488,13 +488,13 @@ def get_calendar_events(target_date_str):
             cur.execute(
                 """SELECT id, name, priority, deadline, end_date, bg_color, icon FROM unified_task
 
-                WHERE status IN ('pending', 'in_progress') AND (recurrence IS NULL OR recurrence='none')
+                WHERE status IN ('pending', 'in_progress', 'none') AND (recurrence IS NULL OR recurrence='none')
 
                   AND date(substr(deadline, 1, 10)) <= date(?)
 
                   AND date(substr(ifnull(end_date, deadline), 1, 10)) >= date(?)
 
-                ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'low' THEN 3 ELSE 2 END, deadline ASC
+                ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'low' THEN 3 WHEN 'none' THEN 4 ELSE 2 END, deadline ASC
 
             """,
                 (target_date_str, target_date_str),
@@ -510,7 +510,7 @@ def get_calendar_events(target_date_str):
 
                   AND date(substr(ifnull(end_date, deadline), 1, 10)) >= date(?)
 
-                ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'low' THEN 3 ELSE 2 END, deadline ASC
+                ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'low' THEN 3 WHEN 'none' THEN 4 ELSE 2 END, deadline ASC
 
             """,
                 (target_date_str, target_date_str),
@@ -527,7 +527,7 @@ def get_calendar_events(target_date_str):
 
                        FROM unified_task
 
-                       WHERE status IN ('pending', 'in_progress') AND recurrence IS NOT NULL AND recurrence != 'none'
+                       WHERE status IN ('pending', 'in_progress', 'none') AND recurrence IS NOT NULL AND recurrence != 'none'
 
                          AND date(substr(deadline, 1, 10)) <= date(?)
 

@@ -731,9 +731,11 @@ class DialogEditorWidgetTests(unittest.TestCase):
         scroll = dialog.findChild(QScrollArea)
         self.assertIsNotNone(scroll)
         self.assertIn("QScrollArea", scroll.styleSheet())
-        urgent_icon, urgent_text = dialog.prio_fields["urgent"]
+        urgent_icon, urgent_color, urgent_text = dialog.prio_fields["urgent"]
         self.assertIn("QToolButton#glyphButton", urgent_icon.styleSheet())
         self.assertTrue(urgent_icon.accessibleName())
+        self.assertIn("QToolButton#colorButton", urgent_color.styleSheet())
+        self.assertTrue(urgent_color.accessibleName())
         self.assertIn("padding:", urgent_text.styleSheet())
         self.assertTrue(dialog.save_btn.property("dialogFooter"))
         self.assertFalse(dialog.save_btn.styleSheet())
@@ -747,7 +749,7 @@ class DialogEditorWidgetTests(unittest.TestCase):
         dialog = LabelSettingsDialog()
         self.addCleanup(_safe_close, dialog)
         dialog._load_current_values()
-        urgent_btn, _urgent_text = dialog.prio_fields["urgent"]
+        urgent_btn, _urgent_color, _urgent_text = dialog.prio_fields["urgent"]
 
         popup = GlyphPickerPopup(urgent_btn.color, urgent_btn.glyph(), dialog)
         self.addCleanup(_safe_close, popup)
@@ -774,9 +776,9 @@ class DialogEditorWidgetTests(unittest.TestCase):
         priority_data, status_data = dialog._collect_data()
         self.assertEqual(
             priority_data["urgent"],
-            {"icon": task_constants._DEFAULT_PRIORITY_ICON["urgent"], "text": "A"},
+            {"icon": task_constants._DEFAULT_PRIORITY_ICON["urgent"], "text": "A", "color": ""},
         )
-        self.assertEqual(status_data["completed"], {"icon": "fa6s.check", "text": "B"})
+        self.assertEqual(status_data["completed"], {"icon": "fa6s.check", "text": "B", "color": ""})
         for name, preset in task_constants.get_builtin_presets().items():
             with self.subTest(preset=name):
                 dialog._apply_preset_data(preset)

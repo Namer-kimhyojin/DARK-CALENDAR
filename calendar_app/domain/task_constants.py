@@ -10,63 +10,210 @@ from calendar_app.domain.i18n import t
 # Icons are Font Awesome 6 Solid glyph names (qtawesome ids). The domain only
 # stores the name; presentation/theme/task_glyphs.py paints it in a theme color
 # chosen by meaning (urgent = danger, completed = success, ...).
+# "none" is the unassigned value (미지정). It is stored as the literal string
+# "none" rather than empty/NULL, because legacy NULL rows and many
+# ``value or "normal"`` fallbacks keep meaning "normal"/"pending".
+UNSET = "none"
+PRIORITY_KEYS = ("urgent", "high", "normal", "low", UNSET)
+STATUS_KEYS = ("pending", "in_progress", "completed", "deferred", UNSET)
+# New schedules and directives start unassigned.
+DEFAULT_NEW_PRIORITY = UNSET
+DEFAULT_NEW_STATUS = UNSET
+
 _DEFAULT_PRIORITY_ICON = {
     "urgent": "fa6s.circle-exclamation",
     "high": "fa6s.angles-up",
     "normal": "fa6s.equals",
     "low": "fa6s.angle-down",
+    UNSET: "fa6s.circle-minus",
 }
 _DEFAULT_PRIORITY_TEXT = {
     "urgent": t("priority.urgent", "긴급"),
     "high": t("priority.high", "높음"),
     "normal": t("priority.normal", "보통"),
     "low": t("priority.low", "낮음"),
+    UNSET: t("priority.none", "미지정"),
 }
 _DEFAULT_STATUS_ICON = {
     "pending": "fa6s.clock",
     "in_progress": "fa6s.circle-half-stroke",
     "completed": "fa6s.circle-check",
     "deferred": "fa6s.circle-pause",
+    UNSET: "fa6s.circle-minus",
 }
 _DEFAULT_STATUS_TEXT = {
     "pending": t("status.pending", "예정"),
     "in_progress": t("status.in_progress", "진행중"),
     "completed": t("status.completed", "완료"),
     "deferred": t("status.deferred", "보류"),
+    UNSET: t("status.none", "미지정"),
 }
 
 # Glyphs the label settings dialog offers. Stored values outside this list
 # (older emoji settings) fall back to the defaults above.
 GLYPH_CHOICES = (
+    # urgency
     "fa6s.circle-exclamation",
     "fa6s.triangle-exclamation",
+    "fa6s.exclamation",
     "fa6s.fire-flame-curved",
+    "fa6s.fire",
     "fa6s.bolt",
-    "fa6s.flag",
-    "fa6s.star",
-    "fa6s.bookmark",
-    "fa6s.thumbtack",
+    "fa6s.radiation",
+    "fa6s.skull-crossbones",
+    # rank up
     "fa6s.angles-up",
     "fa6s.angle-up",
+    "fa6s.arrow-up",
+    "fa6s.circle-arrow-up",
+    "fa6s.arrow-trend-up",
+    "fa6s.caret-up",
+    "fa6s.chevron-up",
+    "fa6s.signal",
+    # level / down
     "fa6s.equals",
     "fa6s.minus",
     "fa6s.angle-down",
     "fa6s.angles-down",
+    "fa6s.arrow-down",
+    "fa6s.circle-arrow-down",
+    "fa6s.arrow-trend-down",
+    "fa6s.caret-down",
+    # marks
+    "fa6s.flag",
+    "fa6s.flag-checkered",
+    "fa6s.star",
+    "fa6s.bookmark",
+    "fa6s.thumbtack",
+    "fa6s.heart",
+    "fa6s.gem",
+    "fa6s.crown",
+    "fa6s.trophy",
+    "fa6s.medal",
+    "fa6s.rocket",
+    "fa6s.bullseye",
+    "fa6s.crosshairs",
+    "fa6s.lightbulb",
+    "fa6s.gauge-high",
+    "fa6s.temperature-high",
+    # waiting / planned
     "fa6s.circle",
     "fa6s.circle-dot",
+    "fa6s.circle-notch",
     "fa6s.clock",
     "fa6s.calendar",
+    "fa6s.calendar-day",
+    "fa6s.hourglass-start",
     "fa6s.hourglass-half",
+    # working
     "fa6s.circle-half-stroke",
     "fa6s.circle-play",
+    "fa6s.spinner",
+    "fa6s.arrows-rotate",
+    "fa6s.person-running",
     "fa6s.circle-check",
     "fa6s.check",
+    "fa6s.square-check",
+    # done / paused
+    "fa6s.calendar-check",
+    "fa6s.clipboard-check",
+    "fa6s.list-check",
+    "fa6s.thumbs-up",
     "fa6s.circle-pause",
     "fa6s.pause",
+    "fa6s.circle-stop",
+    "fa6s.hourglass-end",
+    # stopped / unknown
     "fa6s.circle-xmark",
+    "fa6s.square-xmark",
     "fa6s.ban",
+    "fa6s.calendar-xmark",
+    "fa6s.circle-question",
+    "fa6s.circle-info",
+    "fa6s.circle-minus",
+    "fa6s.eye-slash",
+    # work items
     "fa6s.bell",
+    "fa6s.box-archive",
+    "fa6s.inbox",
+    "fa6s.paper-plane",
+    "fa6s.comments",
+    "fa6s.user-clock",
+    "fa6s.handshake",
+    "fa6s.briefcase",
 )
+
+# Colour swatches the label dialog offers next to "custom colour".
+COLOR_SWATCHES = (
+    "#ef4444",
+    "#f97316",
+    "#f59e0b",
+    "#eab308",
+    "#84cc16",
+    "#22c55e",
+    "#14b8a6",
+    "#06b6d4",
+    "#3b82f6",
+    "#6366f1",
+    "#8b5cf6",
+    "#d946ef",
+    "#ec4899",
+    "#a3a3a3",
+    "#64748b",
+    "#78716c",
+)
+
+# Whole colour sets for every row. An empty value means "meaning colour from
+# the theme" (urgent = danger, completed = success, ...), which is the default.
+COLOR_SCHEMES = {
+    "meaning": {
+        "priority": {key: "" for key in PRIORITY_KEYS},
+        "status": {key: "" for key in STATUS_KEYS},
+    },
+    "vivid": {
+        "priority": {
+            "urgent": "#ef4444",
+            "high": "#f97316",
+            "normal": "#3b82f6",
+            "low": "#22c55e",
+            UNSET: "#a3a3a3",
+        },
+        "status": {
+            "pending": "#3b82f6",
+            "in_progress": "#f59e0b",
+            "completed": "#22c55e",
+            "deferred": "#8b5cf6",
+            UNSET: "#a3a3a3",
+        },
+    },
+    "soft": {
+        "priority": {
+            "urgent": "#f87171",
+            "high": "#fdba74",
+            "normal": "#93c5fd",
+            "low": "#86efac",
+            UNSET: "#94a3b8",
+        },
+        "status": {
+            "pending": "#93c5fd",
+            "in_progress": "#fcd34d",
+            "completed": "#86efac",
+            "deferred": "#c4b5fd",
+            UNSET: "#94a3b8",
+        },
+    },
+    "mono": {
+        "priority": {key: "#94a3b8" for key in PRIORITY_KEYS},
+        "status": {key: "#94a3b8" for key in STATUS_KEYS},
+    },
+}
+
+
+def is_color(value) -> bool:
+    """Whether value is a #RRGGBB colour (custom row colours are stored so)."""
+    if not isinstance(value, str) or len(value) != 7 or not value.startswith("#"):
+        return False
+    return all(ch in "0123456789abcdefABCDEF" for ch in value[1:])
 
 
 def is_glyph(value) -> bool:
@@ -89,12 +236,14 @@ BUILTIN_PRESETS = {
             "high": {"icon": "fa6s.flag"},
             "normal": {"icon": "fa6s.bookmark"},
             "low": {"icon": "fa6s.minus"},
+            UNSET: {"icon": "fa6s.circle-question"},
         },
         "status": {
             "pending": {"icon": "fa6s.calendar"},
             "in_progress": {"icon": "fa6s.hourglass-half"},
             "completed": {"icon": "fa6s.check"},
             "deferred": {"icon": "fa6s.pause"},
+            UNSET: {"icon": "fa6s.circle-question"},
         },
     },
     "minimal": {
@@ -103,12 +252,14 @@ BUILTIN_PRESETS = {
             "high": {"icon": "fa6s.circle"},
             "normal": {"icon": "fa6s.circle-dot"},
             "low": {"icon": "fa6s.circle-dot"},
+            UNSET: {"icon": "fa6s.circle-notch"},
         },
         "status": {
             "pending": {"icon": "fa6s.circle-dot"},
             "in_progress": {"icon": "fa6s.circle-half-stroke"},
             "completed": {"icon": "fa6s.circle-check"},
             "deferred": {"icon": "fa6s.circle-pause"},
+            UNSET: {"icon": "fa6s.circle-notch"},
         },
     },
 }
@@ -116,20 +267,17 @@ BUILTIN_PRESETS = {
 
 def get_builtin_presets() -> dict:
     """BUILTIN_PRESETS에 현재 번역된 text 값을 합쳐 반환 (런타임 호출용)."""
-    _prio_keys = ("urgent", "high", "normal", "low")
-    _prio_i18n = ("priority.urgent", "priority.high", "priority.normal", "priority.low")
-    _stat_keys = ("pending", "in_progress", "completed", "deferred")
-    _stat_i18n = ("status.pending", "status.in_progress", "status.completed", "status.deferred")
-
     result = {}
     for preset_key, preset_data in BUILTIN_PRESETS.items():
         entry = {"priority": {}, "status": {}}
-        for key, i18n_key in zip(_prio_keys, _prio_i18n, strict=False):
+        for key in PRIORITY_KEYS:
             icon = preset_data["priority"][key]["icon"]
-            entry["priority"][key] = {"icon": icon, "text": t(i18n_key, key)}
-        for key, i18n_key in zip(_stat_keys, _stat_i18n, strict=False):
+            text = t(f"priority.{key}", _DEFAULT_PRIORITY_TEXT[key])
+            entry["priority"][key] = {"icon": icon, "text": text}
+        for key in STATUS_KEYS:
             icon = preset_data["status"][key]["icon"]
-            entry["status"][key] = {"icon": icon, "text": t(i18n_key, key)}
+            text = t(f"status.{key}", _DEFAULT_STATUS_TEXT[key])
+            entry["status"][key] = {"icon": icon, "text": text}
         result[preset_key] = entry
     return result
 
@@ -146,6 +294,9 @@ STATUS_ICON = {
     "canceled": "fa6s.ban",
 }
 STATUS_TEXT = dict(_DEFAULT_STATUS_TEXT)
+# Custom glyph colours ("" = meaning colour from the theme).
+PRIORITY_COLOR = {key: "" for key in PRIORITY_KEYS}
+STATUS_COLOR = {key: "" for key in STATUS_KEYS}
 
 # ── 파생 상수 (아래 _rebuild_derived_constants 로 자동 갱신됨) ────
 PRIORITY_LABEL: dict = {}
@@ -174,6 +325,7 @@ def _rebuild_derived_constants():
             "high": _lbl(PRIORITY_ICON["high"], PRIORITY_TEXT["high"]),
             "normal": _lbl(PRIORITY_ICON["normal"], PRIORITY_TEXT["normal"]),
             "low": _lbl(PRIORITY_ICON["low"], PRIORITY_TEXT["low"]),
+            UNSET: _lbl(PRIORITY_ICON[UNSET], PRIORITY_TEXT[UNSET]),
         }
     )
 
@@ -184,6 +336,7 @@ def _rebuild_derived_constants():
             "in_progress": _lbl(STATUS_ICON["in_progress"], STATUS_TEXT["in_progress"]),
             "completed": _lbl(STATUS_ICON["completed"], STATUS_TEXT["completed"]),
             "deferred": _lbl(STATUS_ICON["deferred"], STATUS_TEXT["deferred"]),
+            UNSET: _lbl(STATUS_ICON[UNSET], STATUS_TEXT[UNSET]),
             # 레거시
             "done": _lbl(STATUS_ICON["completed"], STATUS_TEXT["completed"]),
             "overdue": _lbl(STATUS_ICON["overdue"], t("status.overdue", "지연")),
@@ -192,6 +345,7 @@ def _rebuild_derived_constants():
     )
 
     PRIORITY_COMBO_ITEMS[:] = [
+        (PRIORITY_LABEL[UNSET], UNSET),
         (PRIORITY_LABEL["low"], "low"),
         (PRIORITY_LABEL["normal"], "normal"),
         (PRIORITY_LABEL["high"], "high"),
@@ -202,14 +356,18 @@ def _rebuild_derived_constants():
         (PRIORITY_LABEL["high"], "high"),
         (PRIORITY_LABEL["normal"], "normal"),
         (PRIORITY_LABEL["low"], "low"),
+        (PRIORITY_LABEL[UNSET], UNSET),
     ]
     STATUS_COMBO_ITEMS[:] = [
+        (STATUS_LABEL[UNSET], UNSET),
         (STATUS_LABEL["pending"], "pending"),
         (STATUS_LABEL["in_progress"], "in_progress"),
         (STATUS_LABEL["completed"], "completed"),
         (STATUS_LABEL["deferred"], "deferred"),
     ]
-    STATUS_MENU_ITEMS[:] = list(STATUS_COMBO_ITEMS)
+    # Menus list the four states first and "unassigned" last.
+    STATUS_MENU_ITEMS[:] = [item for item in STATUS_COMBO_ITEMS if item[1] != UNSET]
+    STATUS_MENU_ITEMS.append((STATUS_LABEL[UNSET], UNSET))
 
     status_all = t("status.all_states", "모든 상태")
 
@@ -228,17 +386,21 @@ def load_custom_labels():
 
         s = QSettings("kimhyojin", "Dark Calendar")
 
-        for key in list(_DEFAULT_PRIORITY_ICON):
+        for key in PRIORITY_KEYS:
             icon = s.value(f"custom_priority_icon_{key}")
             text = s.value(f"custom_priority_text_{key}")
+            color = s.value(f"custom_priority_color_{key}")
             PRIORITY_ICON[key] = icon if is_glyph(icon) else _DEFAULT_PRIORITY_ICON[key]
             PRIORITY_TEXT[key] = text if text else _DEFAULT_PRIORITY_TEXT[key]
+            PRIORITY_COLOR[key] = color.lower() if is_color(color) else ""
 
-        for key in list(_DEFAULT_STATUS_ICON):
+        for key in STATUS_KEYS:
             icon = s.value(f"custom_status_icon_{key}")
             text = s.value(f"custom_status_text_{key}")
+            color = s.value(f"custom_status_color_{key}")
             STATUS_ICON[key] = icon if is_glyph(icon) else _DEFAULT_STATUS_ICON[key]
             STATUS_TEXT[key] = text if text else _DEFAULT_STATUS_TEXT[key]
+            STATUS_COLOR[key] = color.lower() if is_color(color) else ""
 
         _rebuild_derived_constants()
     except Exception:
@@ -256,13 +418,15 @@ def save_custom_labels(priority_data: dict, status_data: dict):
 
         s = QSettings("kimhyojin", "Dark Calendar")
 
-        for key, vals in priority_data.items():
-            s.setValue(f"custom_priority_icon_{key}", vals["icon"])
-            s.setValue(f"custom_priority_text_{key}", vals["text"])
-
-        for key, vals in status_data.items():
-            s.setValue(f"custom_status_icon_{key}", vals["icon"])
-            s.setValue(f"custom_status_text_{key}", vals["text"])
+        for section, data in (("priority", priority_data), ("status", status_data)):
+            for key, vals in data.items():
+                s.setValue(f"custom_{section}_icon_{key}", vals["icon"])
+                s.setValue(f"custom_{section}_text_{key}", vals["text"])
+                color = vals.get("color", "")
+                if is_color(color):
+                    s.setValue(f"custom_{section}_color_{key}", color.lower())
+                else:
+                    s.remove(f"custom_{section}_color_{key}")
 
         load_custom_labels()
     except Exception:
@@ -275,12 +439,10 @@ def reset_custom_labels():
         from PyQt6.QtCore import QSettings
 
         s = QSettings("kimhyojin", "Dark Calendar")
-        for key in _DEFAULT_PRIORITY_ICON:
-            s.remove(f"custom_priority_icon_{key}")
-            s.remove(f"custom_priority_text_{key}")
-        for key in _DEFAULT_STATUS_ICON:
-            s.remove(f"custom_status_icon_{key}")
-            s.remove(f"custom_status_text_{key}")
+        for section, keys in (("priority", PRIORITY_KEYS), ("status", STATUS_KEYS)):
+            for key in keys:
+                for field in ("icon", "text", "color"):
+                    s.remove(f"custom_{section}_{field}_{key}")
         load_custom_labels()
     except Exception:
         pass
@@ -290,12 +452,16 @@ def get_current_labels() -> dict:
     """현재 적용 중인 icon/text 값을 반환 (설정 다이얼로그 초기화용)."""
     return {
         "priority": {
-            key: {"icon": PRIORITY_ICON[key], "text": PRIORITY_TEXT[key]}
-            for key in ("urgent", "high", "normal", "low")
+            key: {
+                "icon": PRIORITY_ICON[key],
+                "text": PRIORITY_TEXT[key],
+                "color": PRIORITY_COLOR[key],
+            }
+            for key in PRIORITY_KEYS
         },
         "status": {
-            key: {"icon": STATUS_ICON[key], "text": STATUS_TEXT[key]}
-            for key in ("pending", "in_progress", "completed", "deferred")
+            key: {"icon": STATUS_ICON[key], "text": STATUS_TEXT[key], "color": STATUS_COLOR[key]}
+            for key in STATUS_KEYS
         },
     }
 
@@ -363,7 +529,7 @@ def _is_valid_user_preset(preset) -> bool:
         for fields in entries.values():
             if not isinstance(fields, dict):
                 return False
-            if any(not isinstance(fields.get(key, ""), str) for key in ("icon", "text")):
+            if any(not isinstance(fields.get(key, ""), str) for key in ("icon", "text", "color")):
                 return False
     return True
 
@@ -382,6 +548,21 @@ def priority_label(priority: str) -> str:
 def status_icon(status: str) -> str:
     """status 값 → 아이콘 글리프 이름 반환."""
     return STATUS_ICON.get(status, "")
+
+
+def priority_custom_color(priority: str) -> str:
+    """User colour for a priority glyph, or "" for the theme meaning colour."""
+    return PRIORITY_COLOR.get(priority, "")
+
+
+def status_custom_color(status: str) -> str:
+    """User colour for a status glyph, or "" for the theme meaning colour."""
+    return STATUS_COLOR.get(status, "")
+
+
+def is_unset(value) -> bool:
+    """Whether a priority/status value is the explicit unassigned value."""
+    return str(value or "").strip().lower() == UNSET
 
 
 def status_label(status: str) -> str:

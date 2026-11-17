@@ -38,6 +38,8 @@ from calendar_app.presentation.theme.task_glyphs import (
     chip_alert_color,
     chip_meta_color,
     chip_palette,
+    chip_priority_qicon,
+    chip_status_qicon,
     event_qicon,
     is_completed_row,
     priority_qicon,
@@ -1132,6 +1134,8 @@ def show_side_panel_context_menu(app, widget, pos, tid, task_name, is_routine=Fa
     priority_menu.setStyleSheet(menu_style)
     priority_map = {}
     for label, value in PRIORITY_MENU_ITEMS:
+        if value == "none":
+            priority_menu.addSeparator()
         priority_map[priority_menu.addAction(priority_qicon(value), _se(label))] = value
 
     status_menu = menu.addMenu(_se(t("menu.status_change")))
@@ -1139,6 +1143,8 @@ def show_side_panel_context_menu(app, widget, pos, tid, task_name, is_routine=Fa
     status_menu.setStyleSheet(menu_style)
     action_map = {}
     for label, value in STATUS_MENU_ITEMS:
+        if value == "none":
+            status_menu.addSeparator()
         action_map[status_menu.addAction(status_qicon(value), _se(label))] = value
     menu.addSeparator()
 
@@ -1203,6 +1209,8 @@ def show_directive_context_menu(app, widget, pos, did, task_name):
     priority_menu.setStyleSheet(menu_style)
     priority_map = {}
     for label, value in PRIORITY_MENU_ITEMS:
+        if value == "none":
+            priority_menu.addSeparator()
         priority_map[priority_menu.addAction(priority_qicon(value), _se(label))] = value
 
     status_menu = menu.addMenu(_se(t("menu.status_change")))
@@ -1210,6 +1218,8 @@ def show_directive_context_menu(app, widget, pos, did, task_name):
     status_menu.setStyleSheet(menu_style)
     action_map = {}
     for label, value in STATUS_MENU_ITEMS:
+        if value == "none":
+            status_menu.addSeparator()
         action_map[status_menu.addAction(status_qicon(value), _se(label))] = value
     menu.addSeparator()
 
@@ -1985,7 +1995,7 @@ def load_right_panel(app):
         == "true"
     )
 
-    _priority_order = {"urgent": 0, "high": 1, "normal": 2, "low": 3}
+    _priority_order = {"urgent": 0, "high": 1, "normal": 2, "low": 3, "none": 4}
 
     def _routine_sort_key(r):
         cycle_k = cycle_order_value(r.get("cycle_type"), default=9)
@@ -2155,7 +2165,9 @@ def load_right_panel(app):
             tooltip_title=routine_tooltip_title,
             bg_color=r.get("bg_color") or _calendar_color_for_task(r),
             checklist_display_type=checklist_display_type,
-            title_icon=status_qicon("completed") if is_completed_r else priority_qicon(priority),
+            title_icon=(
+                status_qicon("completed") if is_completed_r else chip_priority_qicon(priority)
+            ),
             title_meta=deadline_suffix or None,
             completed=is_completed_r,
             meta_alert=is_overdue_r and not is_completed_r,
@@ -2257,7 +2269,7 @@ def load_right_panel(app):
                 current_receiver = receiver_label
 
         # An overdue directive is flagged in red; it was shown as a muted pause.
-        status_glyph = status_qicon("overdue" if is_overdue else status)
+        status_glyph = status_qicon("overdue") if is_overdue else chip_status_qicon(status)
 
         di_info = []
         clean_receiver = _tooltip_text_without_tags(receiver)

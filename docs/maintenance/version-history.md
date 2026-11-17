@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.6.0 | 2026-11-17T17:46:24.244675+09:00 | change | 중요도·상태 미지정·색상·아이콘 확장, 라벨 설정 열기 속도 개선, 상세정보 창 중요도·상태 변경 | `label-unset-colors-20261117` |
 | 5.6.0 | 2026-11-17T10:35:14.051724+09:00 | change | Submit the locally built msixupload to the Store | `store-local-build-20261117` |
 | 5.6.0 | 2026-11-17T10:24:16.465196+09:00 | change | Drop duplicate release verification: old candidate workflows, 4.3.3 upgrade baseline (now 5.5.1), public readback | `trim-release-checks-20261117` |
 | 5.6.0 | 2026-11-17T08:59:25.625287+09:00 | release | 5.6.0: 일정 칩·벡터 아이콘 통일, 다이얼로그·라이트/다크 테마 미감 정리, 바탕화면 고정 종류, 트레이 아이콘, 17개 언어 번역 초안 | `release-5.6.0-20261117` |

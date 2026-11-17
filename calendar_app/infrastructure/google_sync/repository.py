@@ -455,8 +455,9 @@ def insert_gcal_event_to_unified(
     task_data = {
         "name": summary,
         "type": "schedule",
-        "priority": "normal",
-        "status": "pending",
+        # Imported events start unassigned like any new schedule.
+        "priority": "none",
+        "status": "none",
         "deadline": start_str,
         "end_date": end_str,
         "target_date": start_str[:10],

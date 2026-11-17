@@ -229,9 +229,10 @@ class DirectiveDialog(QDialog):
         self.status_combo = QComboBox()
         for label, code in STATUS_COMBO_ITEMS:
             self.status_combo.addItem(status_qicon(code), label, code)
-        idx_ip = self.status_combo.findData("in_progress")
-        if idx_ip >= 0:
-            self.status_combo.setCurrentIndex(idx_ip)
+        # New directives start unassigned (미지정).
+        idx_unset = self.status_combo.findData("none")
+        if idx_unset >= 0:
+            self.status_combo.setCurrentIndex(idx_unset)
         status_col.addWidget(self.status_combo)
         ops_inner.addLayout(status_col)
 

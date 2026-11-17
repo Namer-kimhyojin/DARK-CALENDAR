@@ -145,8 +145,8 @@ def create_unified_task(task_data, commit=True):
             (
                 task_data["name"],
                 task_data.get("type", "schedule"),
-                task_data.get("priority", "normal"),
-                task_data.get("status", "in_progress"),
+                task_data.get("priority") or "none",
+                task_data.get("status") or "none",
                 task_data.get("deadline"),
                 task_data.get("end_date"),
                 task_data.get("alarm_time"),

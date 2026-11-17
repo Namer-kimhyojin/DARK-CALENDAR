@@ -138,6 +138,11 @@ def _status_background(status, tokens=None):
         color = _token_color(tokens.get("accent"), "#4da6ff")
     elif status == "pending":
         color = _token_color(tokens.get("warning_hex"), tokens.get("accent", "#4da6ff"))
+    elif status == "none":
+        # Unassigned: no state tint.
+        color = _token_color(tokens.get("text_muted"), "#9aa0aa")
+        color.setAlpha(0)
+        return color
     else:
         color = _token_color(tokens.get("danger_hex"), tokens.get("accent", "#4da6ff"))
     color.setAlpha(48)
@@ -721,12 +726,16 @@ class BaseManagementDialog(QDialog):
         menu = QMenu(self)
         priority_menu = menu.addMenu(t("dialog.common.bulk_priority"))
         for label, value in PRIORITY_MENU_ITEMS:
+            if value == "none":
+                priority_menu.addSeparator()
             act = QAction(priority_qicon(value), label, self)
             act.triggered.connect(lambda _=False, v=value: self.bulk_priority_update(v))
             priority_menu.addAction(act)
 
         status_menu = menu.addMenu(t("dialog.common.bulk_status"))
         for label, value in STATUS_MENU_ITEMS:
+            if value == "none":
+                status_menu.addSeparator()
             act = QAction(status_qicon(value), label, self)
             act.triggered.connect(lambda _=False, v=value: self.bulk_status_update(v))
             status_menu.addAction(act)

@@ -676,9 +676,9 @@ class AgendaItemWidget(QFrame):
         status_row["status"] = "completed" if item.get("completed") else item.get("status")
         glyph = event_qicon(status_row, card_tokens)
         if glyph is None and item.get("source") == "directive":
-            from calendar_app.presentation.theme.task_glyphs import status_qicon
+            from calendar_app.presentation.theme.task_glyphs import chip_status_qicon
 
-            glyph = status_qicon(item.get("status") or "pending", card_tokens)
+            glyph = chip_status_qicon(item.get("status") or "pending", card_tokens)
         if glyph is None or glyph.isNull():
             return
         size = max(12, min(16, title_label.fontMetrics().ascent()))

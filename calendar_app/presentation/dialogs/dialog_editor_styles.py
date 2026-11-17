@@ -12,10 +12,20 @@ from calendar_app.presentation.dialogs.dialog_styles import (
 from calendar_app.shared.color_utils import readable_accent_fill, shift_rgb
 from calendar_app.shared.typography import get_typography_scale
 
+# Key names of a full dialog token set, learned from the first resolve. A
+# caller that already passes a full set (every settings dialog does) skips the
+# rebuild, which costs about 12 ms each and ran dozens of times per dialog.
+_FULL_TOKEN_KEYS: frozenset[str] | None = None
+
 
 def _resolve_tokens(tokens: dict | None = None) -> dict:
+    global _FULL_TOKEN_KEYS
     supplied = dict(tokens or {})
+    if _FULL_TOKEN_KEYS is not None and supplied.keys() >= _FULL_TOKEN_KEYS:
+        return supplied
     resolved = get_dialog_theme_tokens(theme_color=supplied.get("accent"))
+    if _FULL_TOKEN_KEYS is None:
+        _FULL_TOKEN_KEYS = frozenset(resolved)
     resolved.update(supplied)
     return resolved
 

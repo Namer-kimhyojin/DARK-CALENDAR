@@ -11,7 +11,7 @@ from typing import Any
 from calendar_app.domain.task_status_view import CANONICAL_STATUSES, normalize_status
 
 ALLOWED_TASK_TYPES = {"schedule", "routine"}
-ALLOWED_PRIORITIES = {"low", "normal", "high", "urgent"}
+ALLOWED_PRIORITIES = {"low", "normal", "high", "urgent", "none"}
 ALLOWED_CYCLE_TYPES = {
     "single",
     "daily",
@@ -158,7 +158,13 @@ def normalize_task_payload(
 
     # priority
     if (not is_update) or ("priority" in raw):
-        priority = str(raw.get("priority") or existing.get("priority") or "normal").strip().lower()
+        # A new item without a priority starts unassigned ("none").
+        fallback_priority = "normal" if is_update else "none"
+        priority = (
+            str(raw.get("priority") or existing.get("priority") or fallback_priority)
+            .strip()
+            .lower()
+        )
         if priority not in ALLOWED_PRIORITIES:
             issues.append(
                 TaskValidationIssue("priority", "invalid", f"Invalid priority: {priority}")
@@ -170,7 +176,8 @@ def normalize_task_payload(
     if (not is_update) or ("status" in raw):
         status_raw = raw.get("status")
         status_text = str(status_raw or "").strip().lower()
-        status = normalize_status(status_raw)
+        # A new item without a status starts unassigned ("none").
+        status = normalize_status(status_raw) if (status_text or is_update) else "none"
         if (
             status_text
             and status_text not in CANONICAL_STATUSES
