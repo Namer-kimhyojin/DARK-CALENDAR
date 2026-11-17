@@ -31370,6 +31370,22 @@
         "calendar_app/shared/theme_snapshot.py": "9756ff7f730388f223822295ec789b10f896ae90a37306e07e3c5114540ea752",
         "tests/test_responsiveness_caches.py": "293115ae3104124ab253abaf544e999766e774bc0005f712286dae74e0281424"
       }
+    },
+    {
+      "id": "release-5.6.0-docs-20261117",
+      "created_at": "2026-11-17T23:13:41.156623+09:00",
+      "kind": "change",
+      "previous_version": "5.6.0",
+      "version": "5.6.0",
+      "summary": "Add the 5.6.0 release checklist and notes",
+      "files": [
+        "docs/release-5.6.0-checklist.md",
+        "docs/release-5.6.0-notes.md"
+      ],
+      "scoped_hashes": {
+        "docs/release-5.6.0-checklist.md": "fc4544a89b29468e80dac3c212216c24f16d49eabcf64d0dc0e74415bc49dc7a",
+        "docs/release-5.6.0-notes.md": "66ee555ddda6985243601e268d2ffebe160ace7b1d98c2693bc9040d60d22643"
+      }
     }
   ],
   "observed_inputs": {

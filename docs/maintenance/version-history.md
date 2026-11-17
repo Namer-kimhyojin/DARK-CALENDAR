@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.6.0 | 2026-11-17T23:13:41.156623+09:00 | change | Add the 5.6.0 release checklist and notes | `release-5.6.0-docs-20261117` |
 | 5.6.0 | 2026-11-17T20:17:31.750137+09:00 | change | Share theme work within one render or dialog build; skip the full redraw when an edit dialog closes without any database change | `responsiveness-theme-cache-20261117` |
 | 5.6.0 | 2026-11-17T17:46:24.244675+09:00 | change | 중요도·상태 미지정·색상·아이콘 확장, 라벨 설정 열기 속도 개선, 상세정보 창 중요도·상태 변경 | `label-unset-colors-20261117` |
 | 5.6.0 | 2026-11-17T10:35:14.051724+09:00 | change | Submit the locally built msixupload to the Store | `store-local-build-20261117` |
