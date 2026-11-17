@@ -169,14 +169,13 @@ def test_snapshot_records_foreign_root_zorder_and_actual_desktop_crop(tmp_path, 
     assert pixels.save.call_args.args[0].name == "diagnostic-prepared-desktop.png"
 
 
-def test_diagnostic_entrypoint_delegates_original_six_cycles():
-    source = _PATH.with_name("native_diagnostic_smoke.py").read_text(
-        encoding="utf-8", errors="strict"
-    )
+def test_release_entrypoint_delegates_original_six_cycles():
+    source = _PATH.with_name("native_final_smoke.py").read_text(encoding="utf-8", errors="strict")
     assert "return native_release_smoke.main(argv)" in source
     compact = "".join(source.split())
     assert (
-        "install_adapter(native_release_smoke),install_owner_adapter(native_release_smoke),install_diagnostics(native_release_smoke)"
+        "install_adapter(native_release_smoke),install_owner_adapter(native_release_smoke),"
+        "install_runner_surface_adapter(native_release_smoke),install_diagnostics(native_release_smoke)"
         in compact
     )
     for forbidden in (

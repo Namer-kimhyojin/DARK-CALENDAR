@@ -210,63 +210,56 @@ Tag-based GitHub Actions creates a **draft** release candidate. Existing public
 release assets must never be replaced; retries download same-name draft assets
 and require SHA-256 equality with this build before uploading missing files.
 Download failures or mismatches stop without replacing or mixing assets.
-Download that exact candidate using existing authenticated
-access, record its hashes, then run the native EXE with its bundled Python, Qt
-and SQLite before GitHub publication or Store upload.
 
 GitHub-hosted `windows-latest` provides a disposable VM for the native GUI gate;
 `scripts/native_release_smoke.py` refuses local execution. CI records actual EXE
-startup, normal UI exit/restarts, synthetic data preservation and screenshots.
-A release reviewer must inspect those screenshots before promoting the draft.
-The previous public baseline is pinned and checked by
-`scripts/prepare_native_smoke_baseline.py`. These checks do not establish current
-Store package-identity behavior or a real user's DB health.
+startup, normal UI exit/restarts, synthetic data preservation and screenshots for
+a fresh profile and an upgrade profile (three launches each, six in total).
+A release reviewer must inspect those six screenshots before promoting the draft.
+The upgrade profile is first opened by the pinned public 5.5.1 MSIX, checked by
+`scripts/prepare_native_smoke_baseline.py` (archive SHA-256) and
+`native_release_smoke.py` (EXE SHA-256). Its launch must pass the same zero-exit,
+shutdown and DB checks as the candidate. When a newer public release becomes the
+baseline, update both pins and the adapter's baseline Python/Qt versions together.
+These checks do not establish current Store package-identity behavior or a real
+user's DB health.
 
-The immutable 4.3.3 fixture generator has a separately identified historical
-SIP 13.11.1 interpreter-teardown fault. It must remain recorded as a FAILED old
-launch, never as a normal exit or a successful candidate cycle. An upgrade from
-that closed synthetic profile may continue only when the exact pinned old EXE
-and SIP hashes, complete same-PID first/second-chance read-fault pair, minidump
-SIP image/timestamp and offset 0x10496, normal Exit confirmation, main-thread DB
-close, process exit without force-kill, and independent integrity/foreign-key
-and fixture-preservation checks all match. Any other old failure still blocks.
-All SIX actual candidate launches and exits must still pass the unchanged
-zero-exit, log, data, exception-observer, visibility and screenshot checks.
-The failed old launch and its dump remain in the evidence and summary.
+### What is checked once, and where
 
-### Revalidating an unchanged candidate with a newer QA commit
+The CI run is the single place that builds and verifies the final package:
+SQLite DLL gate, frozen source/resource match (`verify_release_runtime.py`),
+payload and license compliance, the bundled default DB and the six native launches.
+Do not repeat these locally on the downloaded artifact.
 
-Keep the candidate build commit/version separate from the QA commit/version.
-If only the native QA harness or its workflow changes, the manual
-`verify-native-candidate.yml` workflow may validate the existing candidate on a
-new disposable Windows VM. Its pinned policy identifies the original run,
-commit, artifact IDs and archive SHA-256 values. The verifier permits only an
-explicit QA file list, managed development version fields and version records;
-application behavior, dependencies and packaging inputs must remain identical.
-Any unexplained change requires a new build. Never substitute the QA development
-version for the version actually embedded in the candidate payload.
+- With a CI build, skip the local `-ValidateOnly` and SQLite runtime preparation.
+  Run them only before a local build.
+- Before tagging, run `scripts/run_quality_gate.py` and the encoding guard locally,
+  so a CI failure does not force a follow-up commit after the tag.
+- Locally, record the CI run ID, the draft asset names and their SHA-256 values
+  (the release API `digest` field or the published `.sha256` files) and compare them
+  with the six-launch evidence of the same run. Do not unpack the payload or source
+  bundle again.
+- Publishing only clears the draft flag of the same release. Afterwards confirm the
+  release ID, asset IDs and sizes through the API instead of downloading the assets again.
+- Keep post-release bookkeeping (publication date, homepage cache, Store submission)
+  in one commit.
+- The Store package is the locally built
+  `release/store/DarkCalendar-<version>.0-x64.msixupload`, not a file downloaded from
+  GitHub or CI. Build it with `build-release.bat` from the tagged commit in a clean
+  working tree, and record its SHA-256 and commit. Its bytes differ from the CI
+  binary that passed the six launches, so the installed Store app's startup check
+  (`installed-runtime-check.ps1`) is required after publication.
+- If only the native QA harness changes, there is no separate candidate
+  revalidation workflow. Fix the harness and let the next build run it.
 
-The job verifies helper/policy hashes and the raw payload archive before
-extracting or running it. Its disposable VM sets `core.autocrlf=false` before
-checkout; pinned policy/QA files use exact committed Git bytes, without CRLF
-conversion. This changes no developer-machine Git setting. It does not rebuild,
-replace release assets or publish.
-Always retain provenance and failure evidence. Require all six candidate cycles,
-normal UI exit/restarts, DB/fixture checks and human review of all six main-window
-screenshots. Reuse the exact verified release assets only after that review;
-changing the payload or a protected build input invalidates this reuse path.
-Retry the failed stage when its cause is corrected instead of repeatedly
-tagging and rebuilding unchanged product inputs.
-
-Otherwise use an isolated VM, Sandbox or existing test account that protects QSettings,
-the shared DB and real calendar accounts. Test both a fresh profile and a
-consistent previous-version profile copy. For each, verify the main window,
-fresh DB/tray/worker logs and two normal exit/restart cycles. Host-Python PYZ
+If the CI gate is unavailable, use an isolated VM, Sandbox or existing test account
+that protects QSettings, the shared DB and real calendar accounts. Test both a fresh
+profile and a consistent previous-version profile copy. For each, verify the main
+window, fresh DB/tray/worker logs and two normal exit/restart cycles. Host-Python PYZ
 tests and a responsive exception dialog are insufficient. If the required
 environment or UI observation is unavailable, retain the draft and report the
-gate pending. Publish the same verified candidate without rebuilding, then
-download the public assets again and compare hashes. Store installation and
-installed startup/restart remain separate checks.
+gate pending. Publish the same verified candidate without rebuilding. Store
+installation and installed startup/restart remain separate checks.
 
 Resolve the actual physical profile used by the packaged process. SQLite main,
 WAL and SHM must belong to the same physical DB set. Do not independently merge

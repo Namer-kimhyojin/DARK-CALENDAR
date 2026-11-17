@@ -133,7 +133,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Native validation environment creation failed." }
           .\build\native-smoke-venv\Scripts\python.exe -m pip install pywinauto==0.6.9 Pillow==13.0.0 psutil==7.2.2
           if ($LASTEXITCODE -ne 0) { throw "Native validation dependency installation failed." }
-          .\build\native-smoke-venv\Scripts\python.exe scripts\prepare_native_smoke_baseline.py --directory "$env:RUNNER_TEMP\native-baseline-4.3.3"
+          .\build\native-smoke-venv\Scripts\python.exe scripts\prepare_native_smoke_baseline.py --directory "$env:RUNNER_TEMP\native-baseline-5.5.1"
           if ($LASTEXITCODE -ne 0) { throw "Previous public release verification failed." }
 
       - name: Verify native startup and normal restart for fresh and upgrade profiles
@@ -144,7 +144,7 @@ jobs:
           if (-not $match.Success) { throw "APP_VERSION was not found." }
           .\build\native-smoke-venv\Scripts\python.exe tests\release_qa\native_final_smoke.py `
             --payload native-payload `
-            --baseline-payload "$env:RUNNER_TEMP\native-baseline-4.3.3" `
+            --baseline-payload "$env:RUNNER_TEMP\native-baseline-5.5.1" `
             --expected-version $match.Groups[1].Value `
             --evidence "$env:RUNNER_TEMP\native-release-evidence"
           if ($LASTEXITCODE -ne 0) { throw "Native startup/restart release gate failed." }

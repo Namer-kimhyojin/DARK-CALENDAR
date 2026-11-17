@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Payload-aware QA adapter; preserve the reserved product smoke implementation.
 
-The immutable 4.3.3 baseline uses Python 3.13 / Qt 6.10.2, while this candidate
-uses Python 3.14.10 / Qt 6.12.0. Only the smoke module's expected DLL name and
+The pinned 5.5.1 upgrade baseline and this candidate both use Python 3.14 /
+Qt 6.12.0. Only the smoke module's expected DLL name and
 exact briefing window class are adapted. Hosted-runner, ownership, exception,
 normal-exit, DB, content and immutable-payload gates remain the original ones.
 """
@@ -22,8 +22,8 @@ _PYTHON_DLL = re.compile(r"python[0-9]{2,}\.dll", re.IGNORECASE)
 _VersionInfo = namedtuple("_VersionInfo", "major minor micro releaselevel serial")
 CANDIDATE_PYTHON = (3, 14, 10)
 CANDIDATE_QT = (6, 12, 0)
-BASELINE_PYTHON = (3, 13)
-BASELINE_QT = (6, 10, 2)
+BASELINE_PYTHON = (3, 14)
+BASELINE_QT = (6, 12, 0)
 
 
 def read_pe_product_version(path: Path) -> tuple[int, int, int]:

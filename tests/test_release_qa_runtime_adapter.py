@@ -20,14 +20,14 @@ def payload(tmp_path, *, baseline=False):
     root = tmp_path / ("baseline" if baseline else "candidate")
     internal = root / "_internal"
     internal.mkdir(parents=True)
-    python = internal / ("python313.dll" if baseline else "python314.dll")
+    python = internal / "python314.dll"
     qt = internal / "PyQt6/Qt6/bin/Qt6Core.dll"
     qt.parent.mkdir(parents=True)
     python.write_bytes(b"python-fixture")
     qt.write_bytes(b"qt-fixture")
     versions = {
-        python: (3, 13, 7) if baseline else (3, 14, 10),
-        qt: (6, 10, 2) if baseline else (6, 12, 0),
+        python: (3, 14, 10),
+        qt: (6, 12, 0),
     }
     return root, python, qt, versions
 
@@ -51,7 +51,7 @@ def test_payload_runtime_uses_verified_pe_versions(tmp_path, baseline):
         root, baseline=baseline, version_reader=versions.__getitem__
     )
     assert info["python_dll"] == python.name
-    assert info["qt_window_class"] == ("Qt6102QWindow" if baseline else "Qt6120QWindow")
+    assert info["qt_window_class"] == "Qt6120QWindow"
     assert info["modules"]["qt"]["path"] == str(qt)
 
 
@@ -65,13 +65,13 @@ def test_candidate_rejects_wrong_or_legacy_runtime(tmp_path, kind, version):
         adapter.inspect_payload_runtime(root, baseline=False, version_reader=versions.__getitem__)
 
 
-def test_baseline_rejects_new_qt_and_ambiguous_dlls(tmp_path):
+def test_baseline_rejects_old_qt_and_ambiguous_dlls(tmp_path):
     root, python, qt, versions = payload(tmp_path, baseline=True)
-    versions[qt] = (6, 12, 0)
+    versions[qt] = (6, 10, 2)
     with pytest.raises(RuntimeError, match="Unexpected qt"):
         adapter.inspect_payload_runtime(root, baseline=True, version_reader=versions.__getitem__)
-    versions[qt] = (6, 10, 2)
-    (python.parent / "python314.dll").write_bytes(b"extra")
+    versions[qt] = (6, 12, 0)
+    (python.parent / "python313.dll").write_bytes(b"extra")
     with pytest.raises(RuntimeError, match="exactly one"):
         adapter.inspect_payload_runtime(root, baseline=True, version_reader=versions.__getitem__)
 
@@ -81,7 +81,7 @@ def test_adapter_keeps_host_and_strict_briefing_identity(tmp_path, baseline):
     root, python, qt, versions = payload(tmp_path, baseline=baseline)
     observed = []
     host_version = sys.version_info
-    expected_class = "Qt6102QWindow" if baseline else "Qt6120QWindow"
+    expected_class = "Qt6120QWindow"
     smoke = SimpleNamespace(sys=sys, select_startup_summary=lambda *_args: None)
 
     def original(_payload, _profile, _evidence, **options):
@@ -96,7 +96,7 @@ def test_adapter_keeps_host_and_strict_briefing_identity(tmp_path, baseline):
             {"visible": False},
             {"title": "Other"},
             {"class_name": "Qt999QWindow"},
-            {"class_name": "Qt6120QWindow" if baseline else "Qt6102QWindow"},
+            {"class_name": "Qt6102QWindow"},
         ):
             assert (
                 smoke.select_startup_summary([row(cls=expected_class, **changes)], 123, 50) is None
@@ -120,7 +120,7 @@ def test_adapter_keeps_host_and_strict_briefing_identity(tmp_path, baseline):
             smoke.select_startup_summary([], 123, 50)
         result = smoke._launch_cycle(root, tmp_path, tmp_path, baseline=baseline)
         assert result["qa_payload_runtime"]["qt_window_class"] == expected_class
-    assert observed == [(3, 13) if baseline else (3, 14)]
+    assert observed == [(3, 14)]
     assert smoke.sys is sys
     assert smoke._launch_cycle is original
     assert smoke.select_startup_summary is selector
