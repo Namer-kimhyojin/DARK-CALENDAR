@@ -31250,6 +31250,20 @@
         "tests/test_release_qa_runtime_adapter.py": "92503acec0e2fe12130b2433218175446b2d6aa6eecfa4117a88f8a7d3a2b9e0",
         "tests/test_verify_native_candidate_inputs.py": null
       }
+    },
+    {
+      "id": "store-local-build-20261117",
+      "created_at": "2026-11-17T10:35:14.051724+09:00",
+      "kind": "change",
+      "previous_version": "5.6.0",
+      "version": "5.6.0",
+      "summary": "Submit the locally built msixupload to the Store",
+      "files": [
+        "rules/store_release_process.md"
+      ],
+      "scoped_hashes": {
+        "rules/store_release_process.md": "754482bbafc170b4d6cf71e1c4205727ccfdec649d72731a931e02a64443db47"
+      }
     }
   ],
   "observed_inputs": {

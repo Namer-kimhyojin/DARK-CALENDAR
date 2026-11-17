@@ -243,6 +243,12 @@ Do not repeat these locally on the downloaded artifact.
   release ID, asset IDs and sizes through the API instead of downloading the assets again.
 - Keep post-release bookkeeping (publication date, homepage cache, Store submission)
   in one commit.
+- The Store package is the locally built
+  `release/store/DarkCalendar-<version>.0-x64.msixupload`, not a file downloaded from
+  GitHub or CI. Build it with `build-release.bat` from the tagged commit in a clean
+  working tree, and record its SHA-256 and commit. Its bytes differ from the CI
+  binary that passed the six launches, so the installed Store app's startup check
+  (`installed-runtime-check.ps1`) is required after publication.
 - If only the native QA harness changes, there is no separate candidate
   revalidation workflow. Fix the harness and let the next build run it.
 
