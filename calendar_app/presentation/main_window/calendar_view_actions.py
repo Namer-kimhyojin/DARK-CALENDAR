@@ -14,6 +14,7 @@ from calendar_app.shared.calendar_display_settings import (
     weekday_display_mode_for,
 )
 from calendar_app.shared.theme_settings import wallpaper_opacity_floor
+from calendar_app.shared.theme_snapshot import theme_cache_scope
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +165,8 @@ class CalendarViewActionsMixin:
         sig_attr = f"_last_{panel_name}_render_signature"
         if not force and not panel_dirty and getattr(self, sig_attr, None) == signature:
             return
-        loader_func(self)
+        with theme_cache_scope():
+            loader_func(self)
         setattr(self, sig_attr, signature)
 
     def load_left_panel(self, force=True):

@@ -1486,6 +1486,25 @@ class ThreadLocalDatabaseManager:
 
                 return None
 
+    def change_marker(self):
+        """Opaque value that changes whenever the database changes.
+
+        Covers writes through this thread's connection (total_changes) and
+        commits from any other connection (data_version). None when unknown.
+        """
+        wrapper = self.get_connection()
+        if wrapper is None:
+            return None
+        try:
+            conn = getattr(wrapper, "_conn", None) or getattr(wrapper, "conn", None)
+            changes = conn.total_changes if conn is not None else None
+            version = wrapper.execute("PRAGMA data_version").fetchone()[0]
+        except (sqlite3.Error, AttributeError, TypeError):
+            return None
+        if changes is None:
+            return None
+        return (changes, version)
+
     def close_connection(self):
         thread_id = threading.get_ident()
 

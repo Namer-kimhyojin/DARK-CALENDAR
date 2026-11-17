@@ -17,6 +17,15 @@ from calendar_app.infrastructure.i18n import (
 logger = logging.getLogger(__name__)
 
 
+def _database_change_marker():
+    from calendar_app.infrastructure.db.database_unified import db_manager
+
+    try:
+        return db_manager.change_marker()
+    except Exception:
+        return None
+
+
 def _bind_task_dialog_modal_owner(dialog, app_context):
     """Keep business callbacks on the app while stacking above the invoking modal."""
     if not isinstance(dialog, QDialog) or not isinstance(app_context, QWidget):
@@ -302,8 +311,16 @@ class DialogActionsMixin:
                 dlg.tabs.setCurrentIndex(tab_index)
 
             _bind_task_dialog_modal_owner(dlg, self)
+            before = _database_change_marker()
             result = dlg.exec()
-            self._refresh_all_panels()
+            # Closing without saving used to redraw every panel (about 0.4 s).
+            # Skip it only when nothing at all was written while the dialog was open.
+            if (
+                result == QDialog.DialogCode.Accepted
+                or before is None
+                or _database_change_marker() != before
+            ):
+                self._refresh_all_panels()
             if result == QDialog.DialogCode.Accepted and task_type != "routine":
                 if hasattr(self, "wake_calendar_sync"):
                     self.wake_calendar_sync()

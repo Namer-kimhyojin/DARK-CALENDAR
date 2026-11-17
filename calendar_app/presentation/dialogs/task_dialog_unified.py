@@ -59,6 +59,7 @@ from calendar_app.shared.icon_map import ICON
 from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.qt_helpers import mnemonic_safe
+from calendar_app.shared.theme_snapshot import within_theme_cache_scope
 
 
 class UnifiedTaskDialog(BaseTaskDialog):
@@ -68,6 +69,7 @@ class UnifiedTaskDialog(BaseTaskDialog):
     task_modified = pyqtSignal(dict)
     task_deleted = pyqtSignal(int)
 
+    @within_theme_cache_scope
     def __init__(
         self,
         parent=None,

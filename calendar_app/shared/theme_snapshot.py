@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from functools import lru_cache
+from contextlib import contextmanager
+from dataclasses import dataclass, field, replace
+from functools import lru_cache, wraps
 import re
+import threading
 
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QColor
@@ -44,6 +46,73 @@ _RGBA_COLOR_RE = re.compile(
 
 def _resolve_settings(settings=None):
     return settings if settings is not None else QSettings("kimhyojin", "Dark Calendar")
+
+
+# One panel render or dialog build asks for the same theme tens of times, and each
+# request reads hundreds of settings. Inside theme_cache_scope() identical requests
+# against the same settings store reuse the first result. The cache is cleared when
+# the outermost scope ends, so a settings change is always seen by the next render.
+_scope_depth = 0
+_scope_cache: dict = {}
+
+
+@contextmanager
+def theme_cache_scope():
+    global _scope_depth
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    _scope_depth += 1
+    try:
+        yield
+    finally:
+        _scope_depth -= 1
+        if _scope_depth == 0:
+            _scope_cache.clear()
+
+
+def within_theme_cache_scope(func):
+    """Decorator form of theme_cache_scope() for one render or dialog build."""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        with theme_cache_scope():
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
+def _scope_key(cfg, kind, *args):
+    """A cache key for plain settings stores; None disables caching.
+
+    Draft or preview settings override ``value`` and are never cached.
+    """
+    if not _scope_depth or threading.current_thread() is not threading.main_thread():
+        return None
+    if not isinstance(cfg, QSettings) or _overrides_value(type(cfg)):
+        return None
+    return (kind, cfg.fileName(), int(cfg.format().value), args)
+
+
+@lru_cache(maxsize=32)
+def _overrides_value(cls) -> bool:
+    return any(
+        "value" in vars(k) for k in cls.__mro__ if k is not QSettings and issubclass(k, QSettings)
+    )
+
+
+def _copy_snapshot(snapshot: ThemeSnapshot) -> ThemeSnapshot:
+    # Callers may edit the palette dicts; never hand out the cached ones.
+    return replace(
+        snapshot,
+        accent_color=QColor(snapshot.accent_color),
+        text_palette=dict(snapshot.text_palette),
+        panel_palette=dict(snapshot.panel_palette),
+        ui_palette=dict(snapshot.ui_palette),
+        shape_tokens=dict(snapshot.shape_tokens),
+        dialog_metrics=dict(snapshot.dialog_metrics),
+        border_tokens=dict(snapshot.border_tokens),
+    )
 
 
 @dataclass(frozen=True)
@@ -329,7 +398,39 @@ def build_theme_snapshot(
     persist_opacity: bool = False,
 ) -> ThemeSnapshot:
     cfg = _resolve_settings(settings)
+    key = None
+    if not persist_opacity:
+        key = _scope_key(
+            cfg, "snapshot", theme_color, text_theme, panel_base_color, opacity_factor, input_bg
+        )
+        cached = _scope_cache.get(key) if key is not None else None
+        if cached is not None:
+            return _copy_snapshot(cached)
+    snapshot = _build_theme_snapshot_uncached(
+        cfg,
+        theme_color=theme_color,
+        text_theme=text_theme,
+        panel_base_color=panel_base_color,
+        opacity_factor=opacity_factor,
+        input_bg=input_bg,
+        persist_opacity=persist_opacity,
+    )
+    if key is not None:
+        _scope_cache[key] = snapshot
+        return _copy_snapshot(snapshot)
+    return snapshot
 
+
+def _build_theme_snapshot_uncached(
+    cfg,
+    *,
+    theme_color,
+    text_theme,
+    panel_base_color,
+    opacity_factor,
+    input_bg,
+    persist_opacity,
+) -> ThemeSnapshot:
     requested_theme = str(theme_color or cfg.value("theme_color", "#4da6ff") or "#4da6ff")
     requested_text_theme = str(text_theme or cfg.value("text_theme", "dark") or "dark")
     requested_panel_base = str(
@@ -552,6 +653,44 @@ def build_modal_state_tokens(theme_color: str, surface_bg: str) -> dict[str, str
 
 
 def build_dialog_base_tokens(
+    settings=None,
+    *,
+    snapshot: ThemeSnapshot | None = None,
+    theme_color: str | None = None,
+    text_theme: str | None = None,
+    panel_base_color: str | None = None,
+    input_bg: str | None = None,
+    opacity_factor: float | None = None,
+) -> dict[str, str]:
+    key = None
+    if snapshot is None:
+        key = _scope_key(
+            _resolve_settings(settings),
+            "dialog_base",
+            theme_color,
+            text_theme,
+            panel_base_color,
+            input_bg,
+            opacity_factor,
+        )
+        cached = _scope_cache.get(key) if key is not None else None
+        if cached is not None:
+            return dict(cached)
+    tokens = _build_dialog_base_tokens_uncached(
+        settings,
+        snapshot=snapshot,
+        theme_color=theme_color,
+        text_theme=text_theme,
+        panel_base_color=panel_base_color,
+        input_bg=input_bg,
+        opacity_factor=opacity_factor,
+    )
+    if key is not None:
+        _scope_cache[key] = dict(tokens)
+    return tokens
+
+
+def _build_dialog_base_tokens_uncached(
     settings=None,
     *,
     snapshot: ThemeSnapshot | None = None,
@@ -864,6 +1003,17 @@ def build_dialog_metric_tokens(
     apply_overrides: bool = True,
 ) -> dict[str, int]:
     cfg = _resolve_settings(settings)
+    key = _scope_key(cfg, "dialog_metrics", apply_overrides)
+    cached = _scope_cache.get(key) if key is not None else None
+    if cached is not None:
+        return dict(cached)
+    metrics = _build_dialog_metric_tokens_uncached(cfg, apply_overrides=apply_overrides)
+    if key is not None:
+        _scope_cache[key] = dict(metrics)
+    return metrics
+
+
+def _build_dialog_metric_tokens_uncached(cfg, *, apply_overrides: bool) -> dict[str, int]:
     metrics = get_dialog_metric_defaults(cfg)
     overrides = {}
     if apply_overrides:

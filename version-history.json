@@ -31346,6 +31346,30 @@
         "locales/zh-TW.json": "13e6bd2a9ecf4d19b5d8c1973c3aa3472db274e639ba271d7649bbefb56fe16d",
         "locales/zh.json": "154087c5dfb93e9bfec81bec55e217ffd1813460232bb871fcba95e02263ba23"
       }
+    },
+    {
+      "id": "responsiveness-theme-cache-20261117",
+      "created_at": "2026-11-17T20:17:31.750137+09:00",
+      "kind": "change",
+      "previous_version": "5.6.0",
+      "version": "5.6.0",
+      "summary": "Share theme work within one render or dialog build; skip the full redraw when an edit dialog closes without any database change",
+      "files": [
+        "calendar_app/infrastructure/db/database_unified.py",
+        "calendar_app/presentation/dialogs/dialog_router.py",
+        "calendar_app/presentation/dialogs/task_dialog_unified.py",
+        "calendar_app/presentation/main_window/calendar_view_actions.py",
+        "calendar_app/shared/theme_snapshot.py",
+        "tests/test_responsiveness_caches.py"
+      ],
+      "scoped_hashes": {
+        "calendar_app/infrastructure/db/database_unified.py": "e09bfc1c0a89db17b08564c2c9c9262ceb08ce7dc0029f1f3484e3b115dabb9c",
+        "calendar_app/presentation/dialogs/dialog_router.py": "216053e3d037b7e52a7b623339d9c2732445a2a102e609578afd869539b9fe5a",
+        "calendar_app/presentation/dialogs/task_dialog_unified.py": "8e1c2e14fc2d09dd8fd6326374bdfc587f9d1cd819f0abc33315245cdc06c9df",
+        "calendar_app/presentation/main_window/calendar_view_actions.py": "8027bebc98d5d6d2d4424370219e194c84ecc2ed043121a05c64e7ab8196b409",
+        "calendar_app/shared/theme_snapshot.py": "9756ff7f730388f223822295ec789b10f896ae90a37306e07e3c5114540ea752",
+        "tests/test_responsiveness_caches.py": "293115ae3104124ab253abaf544e999766e774bc0005f712286dae74e0281424"
+      }
     }
   ],
   "observed_inputs": {
@@ -31729,7 +31753,7 @@
     "calendar_app/infrastructure/db/checklist_repository.py": "555db09667a0a7325356d44fc9d95d36fb06cfab8c7ac1a4d688428999319a56",
     "calendar_app/infrastructure/db/checklist_template_repo.py": "0a46c6c8bbd1e0bb255ea749d333f1aba02885bed46b0c81d3421f8b224f55a4",
     "calendar_app/infrastructure/db/common_repo.py": "188751c9a50ad5102bf654daa72b9c683f503091b506fb444dc10df76d2adfc4",
-    "calendar_app/infrastructure/db/database_unified.py": "e159fd7e0e80c991d5f6973bb6765afa1a86018fa94eaeeab21db98065f2563e",
+    "calendar_app/infrastructure/db/database_unified.py": "e09bfc1c0a89db17b08564c2c9c9262ceb08ce7dc0029f1f3484e3b115dabb9c",
     "calendar_app/infrastructure/db/db_backup.py": "52c0318f6ffd516345f9f7972543401f4186eb9064ce1b00ec5324b593ed522a",
     "calendar_app/infrastructure/db/db_repository.py": "8a9faec97d51be4a46e411c614c4e4af9dec84bc6e08d667da8c67c7e36fd4cb",
     "calendar_app/infrastructure/db/db_repository_unified.py": "111bfbbf3f203195d5dfa15222d821b9d2eef043c04f8a75e8459e445bb6a35f",
@@ -31805,7 +31829,7 @@
     "calendar_app/presentation/dialogs/dialog_editor_styles.py": "731ac09be133a43f93b5ddffdc71d8d0d8a01d1584bed032755b0ed239a28cc5",
     "calendar_app/presentation/dialogs/dialog_emoji.py": "b91fec67aeb0e2aa5a34b5a598f372979affe269be27b3ca98bd09f0df1920c1",
     "calendar_app/presentation/dialogs/dialog_lifetime.py": "cf9c0c062bf58476a12edacb3c817dd126e16d3719d8929213b47e3414ec40e4",
-    "calendar_app/presentation/dialogs/dialog_router.py": "5d7022bc5fc4b1d9dcee832f7e4bcf37acf3d5729ae9d1af1fa9146a581e87de",
+    "calendar_app/presentation/dialogs/dialog_router.py": "216053e3d037b7e52a7b623339d9c2732445a2a102e609578afd869539b9fe5a",
     "calendar_app/presentation/dialogs/dialog_shadow.py": "4b90503c5d9983ecc5aeb2d29a4227b34c7bd9884070c38fd3d63e9d78fd808e",
     "calendar_app/presentation/dialogs/dialog_styles.py": "a8d053453ec2f5607e2943c38f633ae1cdcb3aeb6f27b7d31ed8156fb7d455cc",
     "calendar_app/presentation/dialogs/dialog_token_editor_dialog.py": "c1a819416dc44fdd733571bf687794288f66f7eea548b932170d3df421ec1977",
@@ -31832,7 +31856,7 @@
     "calendar_app/presentation/dialogs/sync_feedback.py": "cbc39c0d3595d91c72f3a2de54d4e9cc031f9f9980023e6f108601769a73b92d",
     "calendar_app/presentation/dialogs/sync_recovery.py": "eac2881b66c496faec9878ed76f66c3bf9cfd84032ed361079d1514054c6d39f",
     "calendar_app/presentation/dialogs/task_dialog_base.py": "70cdb0cd1e578743de25c8ab5fbb041e8b536de57a06f6f8dde9195b138d2fcc",
-    "calendar_app/presentation/dialogs/task_dialog_unified.py": "02d59cb166ca1a82ad5bce9d85820b1eaa8f23e71ea5c62dd02fe07ea3265103",
+    "calendar_app/presentation/dialogs/task_dialog_unified.py": "8e1c2e14fc2d09dd8fd6326374bdfc587f9d1cd819f0abc33315245cdc06c9df",
     "calendar_app/presentation/dialogs/time_picker_widget.py": "46548a3b4e677c5e6534eb86162965c97345081a1172a13aab163a26a3be3a66",
     "calendar_app/presentation/dialogs/widget_customization_dialog.py": "bc25bf39c8e376505ade5a35d441b2f9b28e333371299a787d929dca7e36a9b4",
     "calendar_app/presentation/dialogs/widget_desktop_layout_dialog.py": "353bcad7409814880ff0e8984e52d74d79be1a8b1e44e3377e63d2d27258355d",
@@ -31853,7 +31877,7 @@
     "calendar_app/presentation/main_window/caldav_sync_controller.py": "7bfda78e0092c74eefa681939b6ae7928387ef16ed5d2e01575cc65608328680",
     "calendar_app/presentation/main_window/calendar_sync_actions.py": "759d2487e6c7dccce25703e76f0610aa6826987ace87ba9c2a89bc8e5eb569d1",
     "calendar_app/presentation/main_window/calendar_sync_coordinator.py": "30ee0084da5948a93a53dcc1c74cd421552f76488edf27400f0baa7013ddc017",
-    "calendar_app/presentation/main_window/calendar_view_actions.py": "83c9c31327bbc1de543358a7fa62407e80d0c17d7fbebb2c7ea42fdfb83dc3c7",
+    "calendar_app/presentation/main_window/calendar_view_actions.py": "8027bebc98d5d6d2d4424370219e194c84ecc2ed043121a05c64e7ab8196b409",
     "calendar_app/presentation/main_window/desktop_lock.py": "93e44e5bc86048376854cb1498d8f4cffa2e1a9b1966b5568f77918998cd1e48",
     "calendar_app/presentation/main_window/dock_factory.py": "acde5228a3f478c439f7642301893bc0ce926af296cf7d93c78ee6ccb1e4c4e0",
     "calendar_app/presentation/main_window/dock_sections/__init__.py": "0688f515e70c03b3d1803941105f7af956b75f3fa1d5ebea69f39bbcd25a0086",
@@ -32012,7 +32036,7 @@
     "calendar_app/shared/system_theme.py": "dd4eee7e5ccbe60796420a91bbc400579031ac7605b97dc4449d393790f9f2a8",
     "calendar_app/shared/tag_highlighter.py": "6f64485ad8fa30300a94297ac0cf542b91c650257262708e8edd3259bc9868f2",
     "calendar_app/shared/theme_settings.py": "b38067e93683c8f5eb5ba42d30b9702f3e18738e7c5e6ff90970954223dbd5ba",
-    "calendar_app/shared/theme_snapshot.py": "ea0b5e2b902dece8e238d48206e90fcea1aeec8d1a7f4bffd207bed5a72bc339",
+    "calendar_app/shared/theme_snapshot.py": "9756ff7f730388f223822295ec789b10f896ae90a37306e07e3c5114540ea752",
     "calendar_app/shared/typography.py": "63adcdfa802cda91e71ea216cf58a59bc4ac55a0ce442358824252bea9557fa4",
     "calendar_app/shared/ui_tokens.py": "3c01914028faf21a4957de4d3bbd2eb4cdff8bacf3567ffcb57bb0ab9e036c13",
     "calendar_app/shared/value_parsers.py": "2a66cd73e0496e9c5c279184123750288aaae612c4c80b7bbf9565b407b74947",
