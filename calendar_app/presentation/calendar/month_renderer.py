@@ -348,6 +348,12 @@ def _calendar_surface_style(tokens=None, shape=None):
             color: {range_edge};
             font-weight: 700;
         }}
+        /* Today keeps its pill text on a range end: the accent number above
+           would vanish into the accent-filled today pill. */
+        ClickableCell[is_today="true"][create_range_preview="true"][create_range_start="true"] QLabel#dayNumLabel,
+        ClickableCell[is_today="true"][create_range_preview="true"][create_range_end="true"] QLabel#dayNumLabel {{
+            color: {today_text};
+        }}
         /* Dropping an existing task: the days it will cover after the drop... */
         ClickableCell[drag_range_preview="true"] {{
             background-color: {_accent_rgba(0.16, tokens)};

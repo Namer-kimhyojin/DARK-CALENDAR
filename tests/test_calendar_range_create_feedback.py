@@ -324,3 +324,46 @@ def test_task_drop_states_are_painted_inside_the_calendar_surface(host):
     assert differs(copy, move)  # copy reads as a different colour from move
     surface.close()
     surface.deleteLater()
+
+
+def test_today_number_stays_readable_on_a_range_end(host):
+    """Today as a range start/end keeps its pill text, not accent-on-accent."""
+    from PyQt6.QtGui import QPalette
+    from PyQt6.QtWidgets import QFrame
+
+    from calendar_app.presentation.calendar.month_renderer import (
+        _calendar_surface_style,
+        _today_pill_colors,
+    )
+
+    app, _widget = host
+    tokens = {
+        "accent": "#c5a3f5",
+        "bg_main": "#121827",
+        "cell_bg": "#121827",
+        "divider": "#2a3245",
+        "text_primary": "#f4f7fb",
+        "text_inverse": "#121827",
+    }
+    _fill, today_text = _today_pill_colors(tokens)
+    surface = QFrame()
+    surface.setObjectName("calendar_surface")
+    surface.setStyleSheet(_calendar_surface_style(tokens=tokens))
+    labels = []
+    for edge in ("create_range_start", "create_range_end"):
+        cell = ClickableCell(START, parent=surface)
+        day = QLabel("17", cell)
+        day.setObjectName("dayNumLabel")
+        cell.setProperty("is_today", True)
+        cell.setProperty("create_range_preview", True)
+        cell.setProperty(edge, True)
+        labels.append(day)
+    surface.show()
+    app.processEvents()
+
+    for day in labels:
+        day.ensurePolished()
+        text = day.palette().color(QPalette.ColorRole.WindowText)
+        assert text == QColor(today_text)
+    surface.close()
+    surface.deleteLater()
