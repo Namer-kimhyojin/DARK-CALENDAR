@@ -27,14 +27,12 @@ import time
 try:
     from scripts.native_exception_observer import (
         ExceptionObserver,
-        classify_legacy_sip_shutdown,
         classify_rpc,
     )
     from scripts.verify_sqlite_runtime import verify_payload
 except ModuleNotFoundError:
     from native_exception_observer import (
         ExceptionObserver,
-        classify_legacy_sip_shutdown,
         classify_rpc,
     )
     from verify_sqlite_runtime import verify_payload
@@ -42,7 +40,7 @@ except ModuleNotFoundError:
 SETTINGS_KEY = r"Software\kimhyojin\Dark Calendar"
 FIXTURE_NAME = "Native release synthetic persistence fixture"
 FIXTURE_CALENDAR = "native-release-fixture"
-BASELINE_EXE_SHA256 = "1363e829f3c71e4e38222497076237c84fff5875d056ca6f50a7f6067e5100d5"
+BASELINE_EXE_SHA256 = "c4507cf29e00a80dade7b918019ae9bab64ada1296c6d63c694ea36c1baa918c"
 ERROR_PATTERN = re.compile(
     r"Unhandled exception|Traceback \(most recent call last\)|Database startup aborted|"
     r"database disk image is malformed|Database initialization failed|"
@@ -1237,41 +1235,6 @@ def payload_manifest(payload: Path) -> dict:
     }
 
 
-def inspect_closed_legacy_upgrade_fixture(baseline, evidence, engine, database):
-    """Preserve a narrowly identified old failure, then validate its closed DB."""
-    trace = json.loads(
-        (evidence / "native-exception-events.json").read_text(encoding="utf-8", errors="strict")
-    )
-    state = json.loads(
-        (evidence / "failure-process-state.json").read_text(encoding="utf-8", errors="strict")
-    )
-    activities = json.loads(
-        (evidence / "ui-activity.json").read_text(encoding="utf-8", errors="strict")
-    )
-    log = (evidence / "failure-application.log").read_text(encoding="utf-8", errors="strict")
-    check_runtime_log(log, pending=True)
-    faults = [row for row in trace["events"] if row["kind"] == 1 and not row["first_chance"]]
-    if len(faults) != 1:
-        raise RuntimeError("Missing unique historical failure")
-    name = faults[0].get("diagnostic_dump", "")
-    if not re.fullmatch(r"native-second-chance-[0-9]+\.dmp", name):
-        raise RuntimeError("Missing bounded historical dump path")
-    record = classify_legacy_sip_shutdown(
-        trace,
-        state,
-        activities,
-        log,
-        (evidence / name).read_bytes(),
-        sha256(baseline / "DarkCalendar.exe"),
-        sha256(baseline / "_internal/PyQt6/sip.cp313-win_amd64.pyd"),
-    )
-    record["closed_profile_database"] = inspect_database(engine, database, True)
-    record["profile_integrity_check_required"] = False
-    record["upgrade_fixture"] = "consistent closed DB after failed historical interpreter teardown"
-    write_json(evidence / "historical-failure-classification.json", record)
-    return record
-
-
 def run(args, summary: dict) -> None:
     import psutil
 
@@ -1297,7 +1260,7 @@ def run(args, summary: dict) -> None:
     candidate = args.payload.resolve()
     baseline = args.baseline_payload.resolve()
     if sha256(baseline / "DarkCalendar.exe") != BASELINE_EXE_SHA256:
-        raise RuntimeError("Baseline EXE is not the verified public 4.3.3 binary")
+        raise RuntimeError("Baseline EXE is not the verified public 5.5.1 binary")
     native = verify_payload(candidate)
     summary["candidate_sqlite"] = native
     original_manifest = payload_manifest(candidate)
@@ -1313,27 +1276,18 @@ def run(args, summary: dict) -> None:
             default = baseline / "_internal/desk_calendar_default.db"
             shutil.copyfile(default, database)
             seed_fixture(engine, database)
-            try:
-                baseline_record = launch_cycle(
-                    baseline,
-                    profile,
-                    args.evidence / "upgrade-baseline",
-                    version="4.3.3",
-                    sqlite_version="3.50.4",
-                    baseline=True,
-                    fixture=True,
-                )
-            except RuntimeError as original_failure:
-                try:
-                    baseline_record = inspect_closed_legacy_upgrade_fixture(
-                        baseline, args.evidence / "upgrade-baseline", engine, database
-                    )
-                except (OSError, RuntimeError, ValueError, KeyError):
-                    raise original_failure
+            baseline_record = launch_cycle(
+                baseline,
+                profile,
+                args.evidence / "upgrade-baseline",
+                version="5.5.1",
+                sqlite_version="3.54.1",
+                baseline=True,
+                fixture=True,
+            )
             summary["baseline"] = baseline_record
             inspect_database(engine, database, True)
-            if baseline_record["passed"]:
-                baseline_record["rpc_diagnostics"]["database_integrity_confirmed"] = True
+            baseline_record["rpc_diagnostics"]["database_integrity_confirmed"] = True
         for index in range(3):
             record = launch_cycle(
                 candidate,

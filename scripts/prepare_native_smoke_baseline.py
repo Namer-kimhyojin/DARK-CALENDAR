@@ -13,8 +13,8 @@ from urllib.parse import unquote
 from urllib.request import Request, urlopen
 import zipfile
 
-BASELINE_URL = "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v4.3.3/DarkCalendar-4.3.3-x64.msix"
-BASELINE_SHA256 = "ccd82327a4a356555ef68accec20698a4f829a1e3a65d1db5b833279dcc882aa"
+BASELINE_URL = "https://github.com/Namer-kimhyojin/DARK-CALENDAR/releases/download/v5.5.1/DarkCalendar-5.5.1-x64.msix"
+BASELINE_SHA256 = "6e132053ac5601c25c20df1ca616102544069ac9ed8d01d32a8d14ea8ffdaad5"
 
 
 def decoded_member(name: str) -> PurePosixPath:
@@ -86,7 +86,7 @@ def prepare(destination: Path) -> dict:
         if not (payload / "DarkCalendar.exe").is_file():
             raise RuntimeError("Previous public release has no native DarkCalendar.exe")
         receipt = {
-            "version": "4.3.3",
+            "version": "5.5.1",
             "url": BASELINE_URL,
             "archive_sha256": BASELINE_SHA256,
             "files": hashes,
