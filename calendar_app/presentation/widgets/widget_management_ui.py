@@ -189,7 +189,7 @@ class WidgetModeManagementPanel(QWidget):
         details.addWidget(self.catalog)
         row = QHBoxLayout()
         self.customize_button = hub_button(
-            t("widget_hub.customize_mode", "화면·스킨 꾸미기"), self._customize, primary=True
+            t("widget_hub.customize_mode", "꾸미기"), self._customize, primary=True
         )
         row.addWidget(self.customize_button)
         row.addStretch()
@@ -247,7 +247,13 @@ class WidgetModeManagementPanel(QWidget):
             if free
             else t(layout.label_key, layout.label_default)
         )
-        self.surface_name.setText(t(surface.label_key, surface.label_default))
+        self.surface_name.setText(
+            t(
+                "widget_hub.mode_surface",
+                "표면 모양: {name}",
+                name=t(surface.label_key, surface.label_default),
+            )
+        )
         self.catalog.setText(
             t(
                 "widget_hub.mode_catalog",

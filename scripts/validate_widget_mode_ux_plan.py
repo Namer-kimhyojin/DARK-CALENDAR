@@ -121,14 +121,12 @@ def main() -> None:
             for _ in range(3):
                 app.processEvents()
 
-        def create(
-            size=(420, 520), skin="classic_light", layout="stacked", density="standard", count=3
-        ):
+        def create(size=(420, 520), skin="card", layout="stacked", density="standard", count=3):
             host = Host()
             host.current_date = QDate(2026, 10, 1)
             host.settings.values.update(
                 {
-                    "widget_mode_skin": skin,
+                    "widget_mode_surface": skin,
                     "widget_mode_layout": layout,
                     "widget_mode_density": density,
                     "widget_mode_always_top": False,
@@ -280,7 +278,7 @@ def main() -> None:
             "benchmarks": [],
             "benchmark_conditions": {
                 "size": [420, 520],
-                "skin": "classic_light",
+                "skin": "card",
                 "layout": "stacked",
                 "density": "standard",
                 "changed": "Only the first item's title changes; stable identity for other rows.",
@@ -298,7 +296,7 @@ def main() -> None:
         }
         language("ko")
         scenarios = [
-            (f"ko-{w}x{h}", (w, h), "ko", "classic_light", "stacked", "standard", "ready", 3)
+            (f"ko-{w}x{h}", (w, h), "ko", "card", "stacked", "standard", "ready", 3)
             for w, h in ((320, 480), (360, 560), (420, 520), (760, 600))
         ]
         layouts = [layout.layout_id for layout in widget_mode_layouts()]
@@ -321,7 +319,7 @@ def main() -> None:
                     f"locale-{code}",
                     (360, 560),
                     code,
-                    "classic_light",
+                    "card",
                     "stacked",
                     "standard",
                     "ready",
@@ -333,7 +331,7 @@ def main() -> None:
                 f"state-{state}",
                 (420, 520),
                 "ko",
-                "forest_mist",
+                "outline",
                 "stacked",
                 "comfortable",
                 state,
@@ -343,10 +341,10 @@ def main() -> None:
         ]
         scenarios.append(
             (
-                "custom-skin-collapsed",
+                "line-surface-collapsed",
                 (360, 560),
                 "ko",
-                "qa_custom",
+                "line",
                 "stacked",
                 "standard",
                 "ready",
@@ -354,14 +352,14 @@ def main() -> None:
             )
         )
         scenarios.append(
-            ("long-feedback", (320, 480), "ko", "classic_light", "stacked", "standard", "ready", 3)
+            ("long-feedback", (320, 480), "ko", "card", "stacked", "standard", "ready", 3)
         )
         for name, size, code, skin, layout, density, state, count in (
             [] if args.skip_matrix else scenarios
         ):
             language(code)
             host, controller, widget = create(size, skin, layout, density, count)
-            if name == "custom-skin-collapsed":
+            if name == "line-surface-collapsed":
                 widget.week_toggle_btn.click()
                 widget.resize(*size)
             widget.set_data_state(state)

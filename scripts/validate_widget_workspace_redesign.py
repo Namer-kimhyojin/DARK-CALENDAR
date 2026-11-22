@@ -107,7 +107,7 @@ def main():
         for spec in layouts:
             host.settings.values.update(
                 widget_mode_layout=spec.layout_id,
-                widget_mode_skin="studio_porcelain" if spec.searchable else "classic_light",
+                widget_mode_surface="line" if spec.searchable else "card",
             )
             widget.apply_selected_layout(force=True)
             widget.apply_theme()

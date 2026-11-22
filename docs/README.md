@@ -115,4 +115,4 @@ CalDAV 변경분 다운로드·UID 주소 복구, 번역 누락 및 테스트 �
 | [docs\widget_only_mode_ux_plan.md](widget_only_mode_ux_plan.md) | 위젯 전용 모드 UI/UX 개선 계획 및 상태 |
 | [docs\widget_only_mode_ux_results.md](widget_only_mode_ux_results.md) | 위젯 전용 모드 로컬 구현·검증 결과 |
 | [docs\widget_free_layout_results.md](widget_free_layout_results.md) | 위젯 자유 구성·주간 보기 로컬 구현·검증 결과 |
-| [docs\widget_layout_editor_advanced_results.md](widget_layout_editor_advanced_results.md) | WYSIWYG 구성 편집기 로컬 구현·검증 결과 |
+| [docs\widget_layout_editor_advanced_results.md](widget_layout_editor_advanced_results.md) | (기록 보존) 2026-11-22에 제거된 WYSIWYG 구성 편집기의 구현·검증 결과 |

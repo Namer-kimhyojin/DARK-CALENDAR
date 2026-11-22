@@ -163,7 +163,7 @@ class WidgetCustomizationDialog(QDialog):
         tabs.addTab(self._layout_tab(), t("widget_workspace.preferences_view", "화면 형태"))
         tabs.addTab(
             self._appearance_tab(),
-            mnemonic_safe(t("widget_workspace.preferences_style", "스킨·글꼴")),
+            mnemonic_safe(t("widget_workspace.preferences_style", "모양")),
         )
         tabs.addTab(self._visibility_tab(), t("widget_mode.preferences_visibility", "표시 항목"))
         tabs.currentChanged.connect(self._scroll_active_surface)

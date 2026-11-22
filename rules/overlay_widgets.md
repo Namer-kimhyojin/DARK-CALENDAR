@@ -21,14 +21,14 @@
 - 전용 모드 편집은 `controller.ensure_widget()`로 숨긴 창만 준비합니다. 실행·복귀는 기존 coordinator를 통하며 트레이 복원 요청과 현재 창 표시 여부를 함께 읽습니다. 편집기 취소가 모드 진입이나 resume 저장으로 이어지면 안 됩니다.
 - 회귀: `tests/test_widget_management_hub.py`. 화면 검증: `scripts/validate_widget_management.py`. [벤치마킹·사용법·검증](../docs/ux-audit/widget-management-hub-20261101.md).
 
-## 위젯 전용 모드 화면 형태와 스킨
+## 위젯 전용 모드 화면 형태와 표면 모양
 
-- 기존 스킨 6종·배치 5종을 유지하고 `widget_workspace_catalog.py`에서 스킨 10종·형태 6종을 추가 등록합니다. 스킨과 배치는 독립된 기존 설정 키로 저장합니다.
+- 배치는 `stacked`(세로형)·`dashboard`(좌우형)·`work_board`(보드형)·`minimal`(목록형) 4종, 표면 모양은 `card`·`line`·`outline`·`compact` 4종(`widget_mode_surfaces.py`, 설정 `widget_mode_surface`)입니다. 색상은 메인 테마를 따르고 표면 모양은 모서리와 항목 테두리·배경만 바꿉니다. 이전 스킨 16종(`widget_mode_skin`)과 옛 배치 설정은 시작 시 한 번 이관합니다.
 - `WidgetModeLayout`의 `calendar_mode`, `responsive_breakpoint`, `presentation`, `show_overview`, `searchable`은 표시 방식만 정의합니다. `widget_layout_calendar_mode()`, `widget_layout_is_compact()`, `widget_layout_has_columns()`로 UI·필터·크기 복원 판단을 일치시킵니다. 좁은 창에서도 저장된 배치 ID는 유지합니다.
-- `WidgetModeSkin.surface_style`은 기존 `legacy` 또는 `soft|paper|outline|glass|compact`입니다. 색상은 기존 의미 기반 토큰을 따르며 `widget_workspace_styles.py`로 QSS를 합성합니다. 기존 불투명도 적용 경로를 우회하지 않습니다.
+- 표면 모양은 `WidgetModeSurface`(반지름·항목 반지름·항목 배경 `card|transparent`·항목 테두리 `full|bottom`)로 정의하며 `widget_workspace_styles.py`가 QSS에 합성합니다.
 - 보드는 기존 `FreeAgendaPanel`·`AgendaItemWidget`과 원래 controller의 수정·완료·읽기 전용 흐름을 공유합니다. 보드 표시 중 숨겨진 일반 목록의 행을 중복 생성하지 않습니다.
 - 검색은 선택일 캐시에서만 수행하고 입력을 120ms로 모읍니다. 검색어 지우기는 즉시 반영하며, 숨김에서 타이머를 멈춥니다. 검색어를 QSettings에 저장하거나 검색 때문에 새 DB/외부 요청을 만들지 않습니다.
-- 꾸미기는 실제 렌더러의 격리 미리보기·초안·적용/취소 계약을 유지합니다. 새 배치 카드는 표시 항목만 모아 재배치하고 스킨 갤러리는 숨겨진 기존 선택 모델과 동기화합니다. 저장한 자유 구성·프리셋을 삭제하거나 스킨 선택 때문에 기본 배치로 바꾸지 않습니다.
+- 꾸미기는 실제 렌더러의 격리 미리보기·초안·적용/취소 계약을 유지합니다. 새 배치 카드는 표시 항목만 모아 재배치하고 표면 모양 선택과 동기화합니다. 저장한 자유 구성·프리셋을 삭제하거나 표면 모양 선택 때문에 기본 배치로 바꾸지 않습니다.
 - 회귀: `tests/test_widget_workspace_redesign.py`, 기존 widget-mode/free-layout/preset/opacity/geometry 테스트. 화면 검증: `scripts/validate_widget_workspace_redesign.py`. [벤치마킹·사용법](../docs/ux-audit/widget-workspace-redesign-20261101.md).
 
 ## 그래픽 컬렉션
@@ -340,7 +340,7 @@ manager.set_app_data_provider(lambda: {
 })
 ```
 
-## 위젯 전용 모드 스킨
+## 위젯 전용 모드 배치와 표면 모양
 
 ### 위젯 전용 모드 UI / 저장
 
@@ -353,8 +353,8 @@ manager.set_app_data_provider(lambda: {
 - 꾸미기는 `WidgetCustomizationDialog`의 독립 설정 초안과 실제 위젯 렌더링으로 미리 봅니다. 적용 전에는 실제 설정이나 창 좌표를 쓰지 않습니다.
 - 배치와 색상 초안을 각각 초기화하여 색상 변경이 레이아웃의 이전 호환 기본값을 따라 바꾸지 않게 합니다.
 - 전체 글자 크기, 시계/날짜 캘린더/보조 설명 표시는 `widget_mode_font_size`, `widget_mode_show_clock`, 레이아웃별 `widget_mode_calendar_visible_<layout>`, `widget_mode_show_hint`로 저장합니다. `widget_mode_show_week`는 이전 버전 호환용으로 함께 기록합니다. 기존 10~18 설정값은 호환 유지하되 날짜·버튼·캘린더·목록에 공통 타이포그래피 단계로 적용하며, 일정/업무 제목은 본문과 같은 크기에서 굵기로만 구분합니다.
-- 글자/배경 불투명도는 `widget_mode_text_opacity`(20~100), `widget_mode_background_opacity`(0~100)로 독립 저장합니다. 기존 `widget_mode_opacity`는 배경의 기본값으로만 읽으며 글자는 기본 100%입니다.
-- 창 전체의 `windowOpacity`는 1.0을 유지합니다. 글자색과 배경/테두리의 알파를 각기 적용하며 주간 날짜 버튼과 직접 그리는 체크박스 배경도 포함합니다. 조작 아이콘은 계속 표시합니다.
+- 위젯 전용 모드의 글자/배경 불투명도 슬라이더는 2026-11-22에 제거했습니다. 색상은 메인 테마를 따르고 투명도는 메인 창의 `모양` 설정(아래 가독성 보정 포함)을 따릅니다. 이전 `widget_mode_text_opacity`·`widget_mode_background_opacity`·`widget_mode_opacity` 값은 메인 테마 연동 중에는 적용하지 않으며 새로 쓰지도 않습니다.
+- 창 전체의 `windowOpacity`는 1.0을 유지합니다. 조작 아이콘은 항상 표시합니다.
 - 미리보기는 실제 위젯과 같은 알파 렌더링을 체크무늬 배경 위에 합성합니다. 전체 이미지에 불투명도를 다시 곱하지 않으며 취소 시 실제 설정을 변경하지 않습니다.
 - 글꼴과 제목 굵기는 `widget_mode_font_family`, `widget_mode_font_weight`로 저장합니다. 미리보기에도 동일한 글꼴을 적용하며 취소 시 저장하지 않습니다.
 - 툴바 끌기는 `windowHandle().startSystemMove()`로 OS가 창을 옮깁니다. 배율이 다른 모니터 사이에서 Qt 논리 좌표가 연속되지 않아, `move(커서 - 오프셋)` 방식은 경계에서 창이 튀며 마우스 이벤트마다 DPI가 번갈아 바뀌어 멈춤과 크기 증가를 일으켰습니다. 이동 종료(`WM_EXITSIZEMOVE`, 시작 실패 시 마우스 놓기)에서 시작 크기를 복원하고 도착 화면 안으로 맞춘 뒤 가장자리 맞춤과 저장을 한 번만 합니다. 이동은 크기를 바꾸지 않습니다. PyQt6 6.12에서 `nativeEvent` 재정의 안의 `super().nativeEvent()` 호출은 접근 위반으로 종료되므로 `(False, 0)`을 직접 반환합니다.
@@ -363,8 +363,8 @@ manager.set_app_data_provider(lambda: {
 - 조작부, 본문, 하단 상태/크기 조절은 하나의 `unified_surface` 안에 배치합니다. 대시보드/매거진 배치는 폭 640px 미만에서 세로로 전환하되 저장된 배치 선택은 유지합니다.
 - 날짜 선택/오늘/고정/꾸미기는 한 줄 헤더로 통합하고 시계는 하단에 표시합니다. 세로·일정 우선형은 주간 날짜를, 좌우 대시보드·매거진형은 기본으로 펼쳐진 월간 캘린더를 표시합니다. 대시보드형은 달력을 왼쪽, 필터와 목록을 오른쪽에 두며 매거진형은 이를 반대로 배치합니다. 날짜 영역의 접기 상태는 레이아웃마다 독립 저장하고 더 보기 메뉴의 이전/다음 기간도 주간·월간에 맞춰 전환합니다.
 - 날짜 영역을 접으면 달력 위젯만 숨기지 않고 남은 섹션을 한 열로 재배치하고 창 자체를 축소합니다. 펼침/접힘 크기와 화면 좌표는 레이아웃별로 구분해 저장하며 다시 펼칠 때 기존 펼침 크기를 복원합니다.
-- 월간 캘린더는 별도 불투명 패널처럼 보이지 않도록 셀 뷰포트를 투명하게 유지합니다. 요일 머리글과 선택일만 현재 스킨 색상을 낮은 알파로 합성하고, 주말은 고정 빨강 대신 스킨 강조색을 사용하며 글자/배경 불투명도 설정을 각각 따릅니다.
-- 주간 날짜는 큰 타원형 캡슐 대신 작은 카드형 셀을 사용합니다. 기본/오늘/선택/호버/키보드 포커스 상태를 배경, 가는 테두리, 하단 강조선과 글자 굵기로 구분하며 현재 스킨과 글자·배경 불투명도 설정을 그대로 따릅니다.
+- 월간 캘린더는 별도 불투명 패널처럼 보이지 않도록 셀 뷰포트를 투명하게 유지합니다. 요일 머리글과 선택일만 메인 테마 색상을 낮은 알파로 합성하고, 주말은 고정 빨강 대신 테마 강조색을 사용합니다.
+- 주간 날짜는 큰 타원형 캡슐 대신 작은 카드형 셀을 사용합니다. 기본/오늘/선택/호버/키보드 포커스 상태를 배경, 가는 테두리, 하단 강조선과 글자 굵기로 구분하며 메인 테마와 모양 설정의 불투명도를 그대로 따릅니다.
 - 보조 설명 설정은 모든 기본 배치와 미리보기에서 동일하게 동작합니다. 배치 내부 기본값 때문에 사용자가 켠 설정을 다시 숨기지 않습니다.
 - 일정 강조 마커는 카드 위쪽이 아니라 제목 왼쪽 중앙에 맞춥니다. 주요 추가 버튼의 기본/호버/누름 상태는 모두 배경과 대비되는 글자색을 보장합니다.
 - 목록 밀도는 `widget_mode_density=compact|standard|comfortable`로 저장합니다. 글꼴/글자 크기/불투명도/배치 설정은 변경하지 않고 행 여백과 시간 배치만 조절합니다. 빠른 메뉴에서는 즉시 저장, 꾸미기에서는 초안 미리보기 후 적용/취소합니다.
@@ -385,41 +385,35 @@ manager.set_app_data_provider(lambda: {
 - 회귀 검증: `tests/test_widget_mode_ux.py`, `tests/test_unified_widget_mode.py`, `tests/test_widget_mode_coordinator.py`, `tests/test_widget_mode_geometry.py`.
 - 밀도/압축 헤더/타이포그래피 회귀 검증: `tests/test_widget_mode_efficiency.py` (설정 재로드, 초안 취소, 역할별 글자 비율, 큰 글꼴·작은 창 포함).
 
-### 자유 구성 편집
+### 저장한 자유 구성과 내 배치
 
+- 구성 편집기(`WidgetFreeLayoutEditorDialog`)는 2026-11-22에 제거했습니다. 새 자유 구성을 만들거나 고치는 화면은 없지만, 이미 저장한 자유 구성과 `내 배치`는 계속 표시하고 적용·이름 변경·삭제할 수 있습니다. 설정 이관은 작업 중이던 자유 구성을 `이전 자유 구성` 내 배치로 보존합니다.
 - 프리셋은 `widget_mode_layout`에 유지합니다. 표시 방식은 별도 `widget_mode_layout_mode=preset|free`, 자유 구성은 `widget_mode_free_layout`의 version 1 JSON으로 저장합니다. 프리셋 선택은 자유 구성을 삭제하지 않습니다.
-- 모델과 검증: `widget_free_layout.py`. 캔버스 논리 좌표와 요소별 `enabled` / `[x,y,width,height]`, 선택적 8px 정렬 `snap`, `calendar_mode=week|month`를 저장합니다. version 1의 선택 필드 `order`(뒤에서 앞으로)와 요소별 `locked`를 지원하며 이전 파일의 누락값은 기본 순서·잠금 해제로 채웁니다. 알려지지 않은 요소·중복·유효하지 않은 버전/좌표는 거부하고 범위 밖 좌표는 캔버스 안으로 제한합니다. 읽기는 설정을 변경하지 않습니다.
-- 구성 요소는 날짜, 시계, 달력, 통합 목록 필터, 통합 목록, 일정 목록, 업무 목록, 지시·협조 목록입니다. 사용자가 선택하지 않은 요소를 강제로 표시하지 않습니다. 전체 해제와 의도한 겹침도 허용합니다.
-- `WidgetFreeLayoutEditorDialog`는 독립 초안과 실제 네이티브 위젯 렌더링을 사용합니다. 현재 위젯의 항목·선택 날짜·필터·시계 표시를 읽기 전용으로 반영하며 현재 항목이 없으면 빈 목록을 그대로 표시합니다. 캐시가 없는 호출에서만 예시 항목을 사용합니다. 미리보기는 원본 데이터 처리기·DB를 호출하지 않습니다.
-- 미리보기 위에서 선택·드래그 이동·8방향 크기 조절을 합니다. Ctrl·Shift 다중 선택, 빈 영역 드래그 선택, 선택/호버 윤곽, 선택 이름·잠금 배지를 제공합니다. 수치 입력·정렬·간격 맞춤·순서·잠금과 글꼴·스킨·불투명도는 공통 실행 취소/다시 실행 기록을 사용하며 적용 전 실제 설정/창 좌표를 변경하지 않습니다. 잠긴 요소는 이동·크기 조절·Delete 숨기기에서 제외합니다.
-- Alt는 격자·요소 맞춤을 건너뛰며 방향키는 1px, Shift+방향키는 10px 이동합니다. 10~200% 확대와 화면 맞춤은 편집 화면에만 적용합니다. 입력 위의 휠은 편집기 설정 영역을 스크롤합니다.
-- 구성 파일 `.airlayout.json`은 배치·요소 표시·순서·잠금만 저장하며 모양 설정은 포함하지 않습니다. 불러오기는 한 번의 초안 변경으로 기록합니다. 파일 크기 제한과 검증 후 원자적으로 저장하며 설정/원본 파일을 먼저 지우지 않습니다.
-- 사용자 프리셋은 `widget_layout_presets.py`에서 관리합니다. `widget_mode_user_layout_presets`의 version 1 JSON에 `{id,name,layout}` 목록을 저장하고 `widget_mode_user_layout_id`는 선택한 프리셋을 가리킵니다. 기본 grid 배치 레지스트리와 분리하며 각 `layout`은 자유 구성 검증을 통과해야 합니다. 색상·글꼴과 실제 데이터/창 위치는 프리셋에 포함하지 않습니다.
+- 모델과 검증: `widget_free_layout.py`. 캔버스 논리 좌표와 요소별 `enabled` / `[x,y,width,height]`, 선택적 8px 정렬 `snap`, `calendar_mode=week|month`, 선택 필드 `order`와 요소별 `locked`를 읽습니다. 알려지지 않은 요소·중복·유효하지 않은 버전/좌표는 거부하고 범위 밖 좌표는 캔버스 안으로 제한합니다. 읽기는 설정을 변경하지 않습니다.
+- 구성 요소는 날짜, 시계, 달력, 통합 목록 필터, 통합 목록, 일정 목록, 업무 목록, 지시·협조 목록입니다. 사용자가 선택하지 않은 요소를 강제로 표시하지 않습니다.
+- 사용자 프리셋은 `widget_layout_presets.py`에서 관리합니다. `widget_mode_user_layout_presets`의 version 1 JSON에 `{id,name,layout}` 목록을 저장하고 `widget_mode_user_layout_id`는 선택한 프리셋을 가리킵니다. 기본 배치 레지스트리와 분리하며 각 `layout`은 자유 구성 검증을 통과해야 합니다. 색상·글꼴과 실제 데이터/창 위치는 프리셋에 포함하지 않습니다.
 - 이름은 앞뒤 공백을 정리한 1~80자, 대소문자 무시 중복 금지이며 ID는 UUID입니다. 최대 100개, JSON 2MiB를 제한합니다. 읽기·CRUD는 분리된 데이터를 반환하며 손상/미래 버전 읽기는 원본 설정을 덮어쓰지 않습니다.
-- 구성 편집기의 `내 배치`에서 새 저장·선택 프리셋 덮어쓰기·이름 변경·삭제를 합니다. 이 변경도 공통 실행 취소와 적용/취소 흐름에 포함합니다. `preset_id`로 명시적 프리셋 수정 화면을 열면 적용 시 그 프리셋의 배치를 갱신합니다. 새 이름으로 저장하거나 삭제한 경우 원래 프리셋을 다시 만들거나 덮어쓰지 않습니다.
-- 꾸미기의 `내 배치`는 썸네일 목록과 수정·이름 변경·삭제를 제공합니다. 중첩 구성 편집기 적용은 부모 초안에만 반영하고 부모 적용에서 영구 저장합니다. 기본 배치로 전환해도 사용자 프리셋 목록은 유지하며 선택 ID만 해제합니다. 프리셋 삭제는 현재 자유 구성 좌표를 지우지 않습니다.
-- 런타임 `FreeLayoutCanvas`는 저장 좌표의 비율로 배치합니다. 작은 창에서 데이터 요소 내용은 내부 스크롤, 날짜/시계는 글꼴 맞춤으로 표시하며 전체 내용은 도움말/접근성 이름에도 제공합니다. 좁은 창에 여러 열을 배치하면 각 요소의 조작부에 내부 스크롤이 필요할 수 있습니다.
-- 유형별 목록은 기존 캐시·원본 ID·처리기를 공유합니다. 통합 목록 필터는 통합 목록에만 적용합니다. 통합 목록과 유형별 목록을 함께 표시할 수 있으며 원본 데이터 복제나 별도 완료 저장은 하지 않습니다.
-- 자유 구성의 창 좌표·크기는 `free` 키로 분리합니다. 달력 요소의 표시 여부로 창 좌표 키를 바꾸지 않습니다. 꾸미기의 글꼴/색상/달력·시계 표시를 적용해도 명시적으로 프리셋을 선택하기 전에는 자유 구성을 유지합니다.
+- 꾸미기의 `내 배치`는 썸네일 목록과 이름 변경·삭제를 제공합니다. 기본 배치로 전환해도 사용자 프리셋 목록은 유지하며 선택 ID만 해제합니다. 프리셋 삭제는 현재 자유 구성 좌표를 지우지 않습니다.
+- 런타임 `FreeLayoutCanvas`는 저장 좌표의 비율로 배치합니다. 작은 창에서 데이터 요소 내용은 내부 스크롤, 날짜/시계는 글꼴 맞춤으로 표시하며 전체 내용은 도움말/접근성 이름에도 제공합니다.
+- 유형별 목록은 기존 캐시·원본 ID·처리기를 공유합니다. 통합 목록 필터는 통합 목록에만 적용합니다. 원본 데이터 복제나 별도 완료 저장은 하지 않습니다.
+- 자유 구성의 창 좌표·크기는 `free` 키로 분리합니다. 달력 요소의 표시 여부로 창 좌표 키를 바꾸지 않습니다. 꾸미기의 글꼴/달력·시계 표시를 적용해도 명시적으로 프리셋을 선택하기 전에는 자유 구성을 유지합니다.
 - 주간 버튼은 동일 너비이며 요일/날짜를 별도 타이포그래피로 그립니다. 선택일은 은은한 배경과 짧은 강조선, 오늘은 점, 키보드 포커스는 윤곽선으로 구분하며 글자/배경 불투명도를 따릅니다.
-- 회귀: `test_widget_free_layout_model.py`, `test_widget_free_layout_editor.py`, `test_widget_free_layout_runtime.py`, `test_widget_week_strip.py`, `test_widget_layout_editor_canvas.py`, `test_widget_layout_editor_preview.py`, `test_widget_layout_editor_advanced.py`. 화면 검증: `scripts/validate_widget_free_layout.py`, `scripts/validate_widget_layout_editor_advanced.py`.
-- 프리셋 회귀: `test_widget_layout_presets.py`, `test_widget_layout_presets_editor.py`, `test_widget_layout_presets_controller.py`, `test_widget_layout_presets_customization.py`. 화면·임시 INI 재시작 검증: `scripts/validate_widget_layout_presets.py`.
+- 회귀: `test_widget_free_layout_model.py`, `test_widget_free_layout_runtime.py`, `test_widget_week_strip.py`, `test_widget_editor_removal.py`. 화면 검증: `scripts/validate_widget_free_layout.py`.
+- 프리셋 회귀: `test_widget_layout_presets.py`, `test_widget_layout_presets_controller.py`, `test_widget_layout_presets_customization.py`. 화면·임시 INI 재시작 검증: `scripts/validate_widget_layout_presets.py`.
 
-- 스킨 레지스트리: `presentation/widgets/widget_mode_skins.py`
-- 선택 설정: 색상 `QSettings["widget_mode_skin"]`, 배치 `QSettings["widget_mode_layout"]`
-- 색상 스킨은 `WidgetModeSkin`의 `base_theme`과 semantic token override만 정의합니다.
+- 배치 레지스트리: `presentation/widgets/widget_mode_skins.py`(파일 이름은 이전 호환을 위해 유지), 표면 모양: `presentation/widgets/widget_mode_surfaces.py`
+- 선택 설정: 표면 모양 `QSettings["widget_mode_surface"]`, 배치 `QSettings["widget_mode_layout"]`
+- 색상은 메인 테마를 따르며 위젯 전용 모드에서 따로 덮어쓰지 않습니다. 표면 모양은 색을 바꾸지 않습니다.
 - 레이아웃은 `WidgetModeLayout`의 grid 배치표, 권장 크기, 행/열 stretch, 섹션별 UI 밀도를 정의합니다.
-- 색상과 레이아웃 선택은 서로 변경하지 않습니다.
-- 스킨/레이아웃 메뉴는 레지스트리를 순회하므로 새 항목 등록 시 셸이나 컨트롤러를 수정하지 않습니다.
-- 기존 `widget_mode_panel_theme=light|dark` 설정은 클래식 라이트/다크로 자동 호환됩니다.
-- 토큰 합성 순서: 기본 토큰 → light/dark 기반 → 스킨 override → 사용자 강조색 → 투명도.
+- 배치와 표면 모양 선택은 서로 변경하지 않습니다.
+- 배치 메뉴는 레지스트리를 순회하므로 새 배치 등록 시 셸이나 컨트롤러를 수정하지 않습니다.
+- 기존 `widget_mode_panel_theme` 설정은 읽지 않으며 메인 창의 테마를 따릅니다.
+- 토큰 합성 순서: 메인 테마 토큰 → 표면 모양(모서리·항목 모양) → 가독성 보정.
 
 ```python
 from calendar_app.presentation.widgets.widget_mode_skins import (
     WidgetModeLayout,
-    WidgetModeSkin,
     register_widget_mode_layout,
-    register_widget_mode_skin,
 )
 
 register_widget_mode_layout(
@@ -434,16 +428,6 @@ register_widget_mode_layout(
             ("filters", 2, 0, 1, 2),
         ),
         preferred_size=(720, 520),
-    )
-)
-
-register_widget_mode_skin(
-    WidgetModeSkin(
-        "my_skin",
-        "widget_mode.skin_my_skin",
-        "내 스킨",
-        base_theme="dark",
-        token_overrides={"accent": "#65a7ff"},
     )
 )
 ```
