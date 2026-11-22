@@ -45,6 +45,8 @@ def get_widget_mode_surface(key: object) -> WidgetModeSurface:
 
 
 def read_widget_mode_surface(settings) -> str:
+    if settings is None:
+        return DEFAULT_SURFACE
     return _normalise(settings.value(SURFACE_SETTING_KEY, DEFAULT_SURFACE))
 
 

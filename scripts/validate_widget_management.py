@@ -43,7 +43,7 @@ def main():
         host.settings.setValue(
             "panel_base_color", "#f4f6f9" if args.theme == "light" else "#1e1e1e"
         )
-        host.settings.setValue("widget_mode_skin", "studio_porcelain")
+        host.settings.setValue("widget_mode_surface", "line")
         host.settings.setValue("widget_mode_layout", "day_brief")
         coordinator = WidgetModeCoordinator(host)
         coordinator.controller.refresh_data = lambda: None

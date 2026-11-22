@@ -57,7 +57,8 @@ def test_each_preset_can_seed_and_roundtrip_without_replacing_legacy_settings(pr
 def test_corrupt_settings_fall_back_without_writing(raw):
     settings = Settings({FREE_LAYOUT_SETTING_KEY: raw, "widget_mode_layout": "magazine"})
     original = deepcopy(settings.data)
-    assert read_free_layout(settings) == seed_free_layout("magazine")
+    # The retired "magazine" layout is read as its replacement, "dashboard".
+    assert read_free_layout(settings) == seed_free_layout("dashboard")
     assert settings.data == original
 
 

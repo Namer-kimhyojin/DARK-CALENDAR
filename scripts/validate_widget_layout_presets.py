@@ -177,7 +177,7 @@ def main():
             )
             host.settings.clear()
             host.settings.setValue("widget_mode_always_top", False)
-            host.settings.setValue("widget_mode_skin", "classic_light")
+            host.settings.setValue("widget_mode_surface", "card")
             presets.write_layout_presets(host.settings, library)
             controller = UnifiedWidgetController(host)
             with patch("sqlite3.connect", side_effect=AssertionError("QA forbids database access")):

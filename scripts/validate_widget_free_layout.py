@@ -127,7 +127,7 @@ def main() -> None:
                 "directive_rows": [(3, "검토 의견 전달", "pending", "", "2026-10-01")],
             }
             host.settings.values.update(
-                {"widget_mode_always_top": False, "widget_mode_skin": "classic_light"}
+                {"widget_mode_always_top": False, "widget_mode_surface": "card"}
             )
             return host
 
@@ -277,13 +277,13 @@ def main() -> None:
                 )
                 destroy(host, controller, widget)
 
-        for skin in ("classic_light", "classic_dark"):
+        for skin in ("card", "line"):
             for width, height in ((320, 480), (420, 520)):
                 for font_size in (12, 18):
                     host = host_with_data()
                     host.settings.values.update(
                         {
-                            "widget_mode_skin": skin,
+                            "widget_mode_surface": skin,
                             "widget_mode_font_size": font_size,
                             "widget_mode_layout": "stacked",
                         }

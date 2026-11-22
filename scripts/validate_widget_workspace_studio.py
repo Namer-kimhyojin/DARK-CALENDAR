@@ -59,7 +59,7 @@ def main():
             "panel_base_color", "#f4f6f9" if args.theme == "light" else "#1e1e1e"
         )
         host.settings.setValue("widget_mode_layout", "day_brief")
-        host.settings.setValue("widget_mode_skin", "studio_porcelain")
+        host.settings.setValue("widget_mode_surface", "line")
         host.settings.setValue("widget_mode_always_top", False)
         host._latest_calendar_range_data["rows"][0].update(
             calendar_id=1, calendar_name="업무 캘린더"

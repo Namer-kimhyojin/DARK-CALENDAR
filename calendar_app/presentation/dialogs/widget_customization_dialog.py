@@ -693,7 +693,11 @@ class WidgetCustomizationDialog(QDialog):
             t("widget_mode.open_appearance", "모양 설정 열기"), tab
         )
         self.open_appearance_btn.setObjectName("open_appearance_btn")
-        opener = getattr(self.controller.main_window, "open_panel_background_color_dialog", None)
+        opener = getattr(
+            getattr(self.controller, "main_window", None),
+            "open_panel_background_color_dialog",
+            None,
+        )
         if callable(opener):
             self.open_appearance_btn.clicked.connect(lambda _checked=False: opener())
         else:

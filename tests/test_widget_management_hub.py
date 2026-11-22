@@ -312,10 +312,14 @@ def test_mode_overview_is_read_only_and_lifecycle_uses_existing_coordinator(hub)
 
 def test_customization_cancel_without_entering_mode_or_changing_preferences(hub):
     dialog, _, host, coordinator = hub
-    before = _prefs(host)
     from calendar_app.presentation.dialogs.widget_customization_dialog import (
         WidgetCustomizationDialog,
     )
+
+    # Creating the window runs the settings migration once (spec section 5), so the
+    # baseline is taken after it; Cancel itself must add nothing on top.
+    coordinator.controller.ensure_widget()
+    before = _prefs(host)
 
     with patch.object(WidgetCustomizationDialog, "exec", lambda self: self.reject()):
         dialog.mode_panel._customize()

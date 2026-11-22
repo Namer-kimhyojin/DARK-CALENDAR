@@ -662,7 +662,7 @@ def test_widget_menu_deletes_a_directive_while_the_search_box_has_focus(temp_db,
         _pump()
         coordinator.enter("work")
         _pump()
-        coordinator.controller.set_layout("day_brief")
+        coordinator.controller.set_layout("work_board")
         _pump()
         widget = coordinator.controller.widget
         assert not widget.windowFlags() & Qt.WindowType.WindowStaysOnTopHint
