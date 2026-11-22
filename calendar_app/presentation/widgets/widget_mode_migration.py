@@ -277,6 +277,21 @@ def _remember_fingerprint(settings, known: list[str], fingerprint: str) -> bool:
     return _put(settings, PRESERVED_FREE_LAYOUTS_KEY, json.dumps(kept, separators=(",", ":")))
 
 
+def remember_handled_free_layouts(settings, layouts) -> bool:
+    """Mark layouts as handled so the migration never re-adds them as a preserved layout.
+
+    Customization calls this for presets the user deleted, whose layout may still be
+    the working free layout.
+    """
+    changed = False
+    for layout in layouts:
+        known = _read_fingerprints(settings)
+        fingerprint = _layout_fingerprint(layout)
+        if fingerprint not in known:
+            changed |= _remember_fingerprint(settings, known, fingerprint)
+    return changed
+
+
 def _preserve_free_layout(settings, preserved_name: str) -> bool:
     layout = _working_free_layout(settings)
     if layout is None:
@@ -330,4 +345,5 @@ __all__ = [
     "SKIN_SURFACES",
     "classify_user_layout",
     "migrate_widget_mode_settings",
+    "remember_handled_free_layouts",
 ]

@@ -58,6 +58,9 @@ from calendar_app.presentation.widgets.widget_mode_display import (
     display_key,
     read_layout_display,
 )
+from calendar_app.presentation.widgets.widget_mode_migration import (
+    remember_handled_free_layouts,
+)
 from calendar_app.presentation.widgets.widget_mode_skins import (
     get_widget_mode_layout,
     read_widget_mode_layout_id,
@@ -1094,6 +1097,15 @@ class WidgetCustomizationDialog(QDialog):
             self._scale_preview()
         return super().eventFilter(watched, event)
 
+    def _removed_preset_layouts(self, settings):
+        """Layouts of stored presets that the draft library no longer contains."""
+        if USER_LAYOUT_PRESETS_KEY not in self.draft.values:
+            return []
+        kept = {preset["id"] for preset in read_layout_presets(self.draft)}
+        return [
+            preset["layout"] for preset in read_layout_presets(settings) if preset["id"] not in kept
+        ]
+
     def _apply(self):
         allowed = {
             "widget_mode_layout",
@@ -1111,6 +1123,7 @@ class WidgetCustomizationDialog(QDialog):
         }
         settings = self.controller.main_window.settings
         self.controller._save_geometry()
+        removed_layouts = self._removed_preset_layouts(settings)
         for key, value in self.draft.values.items():
             if (
                 key in allowed
@@ -1124,6 +1137,10 @@ class WidgetCustomizationDialog(QDialog):
                 )
             ) and key != "widget_mode_layout":
                 settings.setValue(key, value)
+        if removed_layouts:
+            # A deleted preset's layout may still be the working free layout; without
+            # this the next migration would add it back as "이전 자유 구성".
+            remember_handled_free_layouts(settings, removed_layouts)
         if self._free_active():
             if self._custom_layout_changed:
                 self.controller.apply_free_layout(read_free_layout(self.draft))

@@ -37,7 +37,7 @@
 - 멱등입니다. 값이 다를 때만 쓰므로 같은 설정에 다시 돌리면 아무것도 쓰지 않고 `False`를 돌려줍니다.
 - 옛 키를 지우지 않습니다. 다시 쓰는 키는 `widget_mode_layout` 하나이며 옛 값은 `widget_mode_layout_legacy`에 남깁니다. 옮긴 배치의 창 위치·크기(`unified_widget_geometry_<id>`, `unified_widget_size_<id>`와 각 `_calendar_hidden`)와 달력 접기 상태(`widget_mode_calendar_visible_<id>`)는 새 ID 키로 복사합니다. 1단계 전에 보드형이던 옛 ID(`dashboard`·`magazine`·`month_focus`·`side_planner`)는 자기 접기 키가 없으면 달력을 펼친 상태로 옮깁니다(옛 앱의 기본값, `widget_mode_show_week` 미러를 따르지 않음). 배치별 표시 키는 비어 있을 때만 채웁니다.
 - 예외 안전입니다. 두 호출부 모두 실패를 기록하고 창 생성·복원을 계속합니다. 손상된 `widget_mode_styles.json`(`placements`가 목록이 아니거나 항목이 잘못됨)은 배치 없음으로 보고 이관을 계속합니다. 사용자 배치의 `calendar_mode`가 `auto`이거나 없으면 주간입니다.
-- 작업 중인 자유 구성(`widget_mode_free_layout`)이 내 배치 어느 것과도 같지 않으면 '이전 자유 구성'으로 추가합니다. 추가했거나 이미 내 배치와 같았던 자유 구성의 지문(정렬한 JSON의 SHA-256, 최근 50개, JSON 문자열)을 `widget_mode_preserved_free_layouts`에 남겨, 사용자가 그 항목을 지운 뒤 다시 추가하지 않습니다. 이 키는 작업 공간 `MODE_KEYS`와 `mode_setting_allowed()` 접두어 밖에 있어 프로필 복원이 지우지 않습니다. 다른 자유 구성을 담은 옛 스냅샷을 복원하면 그 구성은 보존합니다.
+- 작업 중인 자유 구성(`widget_mode_free_layout`)이 내 배치 어느 것과도 같지 않으면 '이전 자유 구성'으로 추가합니다. 추가했거나 이미 내 배치와 같았던 자유 구성의 지문(정렬한 JSON의 SHA-256, 최근 50개, JSON 문자열)을 `widget_mode_preserved_free_layouts`에 남겨, 사용자가 그 항목을 지운 뒤 다시 추가하지 않습니다. 꾸미기 적용으로 내 배치가 지워지면 지운 항목의 구성 지문도 같은 키에 남깁니다(`remember_handled_free_layouts()`, 취소하면 남기지 않음). 이 키는 작업 공간 `MODE_KEYS`와 `mode_setting_allowed()` 접두어 밖에 있어 프로필 복원이 지우지 않습니다. 다른 자유 구성을 담은 옛 스냅샷을 복원하면 그 구성은 보존합니다.
 - `widget_mode_show_week`는 이전 버전 호환을 위해 배치별 접기 키와 함께 계속 씁니다(계획서 5절과 다른 구현 판단).
 - `read_widget_mode_surface()`는 `widget_mode_surface`가 비어 있으면 `widget_mode_skin`을 `SKIN_SURFACES`로 읽기만 합니다(쓰지 않음). 첫 창을 만들기 전 위젯 관리자도 이관 뒤와 같은 표면 모양을 보여 줍니다.
 - 회귀: `tests/test_widget_mode_migration.py`, `tests/test_widget_mode_surfaces.py`.

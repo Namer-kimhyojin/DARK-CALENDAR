@@ -23,6 +23,10 @@ from calendar_app.presentation.widgets.widget_layout_presets import (
     update_layout_preset,
     write_layout_presets,
 )
+from calendar_app.presentation.widgets.widget_mode_migration import (
+    PRESERVED_FREE_LAYOUTS_KEY,
+    migrate_widget_mode_settings,
+)
 from tests.test_widget_mode_ux import _APP, workspace  # noqa: F401
 
 
@@ -123,3 +127,61 @@ def test_my_layouts_navigation_reveals_selected_list(library_dialog):
     _APP.processEvents()
     assert dialog.controls_scroll.verticalScrollBar().value() > 0
     assert dialog.user_layout_list.hasFocus()
+
+
+@pytest.fixture
+def applied_preset_dialog(workspace):
+    """Preset P saved and applied (working free layout = P) after the launch migration ran."""
+    host, coordinator, widget = workspace
+    layout = seed_free_layout("dashboard")
+    library, preset_id = create_layout_preset([], "Desk", layout)
+    write_layout_presets(host.settings, library)
+    write_free_layout(host.settings, get_layout_preset(library, preset_id)["layout"])
+    host.settings.setValue(SELECTED_LAYOUT_PRESET_KEY, preset_id)
+    applied = read_free_layout(host.settings)
+    dialog = WidgetCustomizationDialog(coordinator.controller, widget)
+    dialog.show()
+    _APP.processEvents()
+    yield dialog, host, applied
+    dialog.deleteLater()
+    _APP.processEvents()
+
+
+def _fingerprints(settings):
+    return settings.value(PRESERVED_FREE_LAYOUTS_KEY, None)
+
+
+def test_preset_deleted_and_applied_in_customization_is_not_preserved_again(
+    applied_preset_dialog, tmp_path
+):
+    dialog, host, applied = applied_preset_dialog
+    dialog.user_layout_list.setCurrentRow(0)
+    dialog._delete_user_layout(confirmed=True)
+    dialog.apply_btn.click()
+    assert read_layout_presets(host.settings) == []
+    assert read_free_layout(host.settings) == applied
+    migrate_widget_mode_settings(host.settings, user_styles_path=tmp_path / "absent.json")
+    saved = read_layout_presets(host.settings)
+    assert not any(preset["layout"] == applied for preset in saved)
+    assert not any(preset["name"].startswith("이전 자유 구성") for preset in saved)
+
+
+def test_preset_deleted_then_cancelled_records_nothing(applied_preset_dialog):
+    dialog, host, _applied = applied_preset_dialog
+    before_presets = read_layout_presets(host.settings)
+    before = _fingerprints(host.settings)
+    dialog.user_layout_list.setCurrentRow(0)
+    dialog._delete_user_layout(confirmed=True)
+    dialog.cancel_btn.click()
+    assert _fingerprints(host.settings) == before
+    assert read_layout_presets(host.settings) == before_presets
+
+
+def test_apply_without_removing_a_preset_records_nothing(applied_preset_dialog):
+    dialog, host, _applied = applied_preset_dialog
+    before = _fingerprints(host.settings)
+    dialog.user_layout_list.setCurrentRow(0)
+    dialog._rename_user_layout("Renamed desk")
+    dialog.apply_btn.click()
+    assert [preset["name"] for preset in read_layout_presets(host.settings)] == ["Renamed desk"]
+    assert _fingerprints(host.settings) == before

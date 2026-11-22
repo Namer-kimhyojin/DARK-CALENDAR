@@ -31578,6 +31578,22 @@
         "scripts/i18n_pending_review.json": "2fec16ff5007f7a4511b2ab9c6e905e07b2db80bb30469a99422c64975a94dfb",
         "scripts/validate_widget_mode_ux_plan.py": "64046766263f48b72b2d16e80159934cbd97c80f9cb98e6ac4d3a8cd0eca1d20"
       }
+    },
+    {
+      "id": "widget-mode-phase1-final-fixes-20261122-b",
+      "created_at": "2026-11-22T19:49:02.584253+09:00",
+      "kind": "change",
+      "previous_version": "5.6.0",
+      "version": "5.6.0",
+      "summary": "위젯 전용 모드 1단계 최종 검토 수정: 꾸미기에서 지운 내 배치의 구성을 이관이 다시 추가하지 않음",
+      "files": [
+        "calendar_app/presentation/dialogs/widget_customization_dialog.py",
+        "calendar_app/presentation/widgets/widget_mode_migration.py"
+      ],
+      "scoped_hashes": {
+        "calendar_app/presentation/dialogs/widget_customization_dialog.py": "f3065d06b6ac290b56629c368a8de9b4a18382bc60123390e7a1622d9222ce38",
+        "calendar_app/presentation/widgets/widget_mode_migration.py": "590afcedda44b1b65b3031ccc945e48335536084b67a0cea626139beb0f6f849"
+      }
     }
   ],
   "observed_inputs": {
@@ -32066,7 +32082,7 @@
     "calendar_app/presentation/dialogs/task_dialog_base.py": "70cdb0cd1e578743de25c8ab5fbb041e8b536de57a06f6f8dde9195b138d2fcc",
     "calendar_app/presentation/dialogs/task_dialog_unified.py": "8e1c2e14fc2d09dd8fd6326374bdfc587f9d1cd819f0abc33315245cdc06c9df",
     "calendar_app/presentation/dialogs/time_picker_widget.py": "46548a3b4e677c5e6534eb86162965c97345081a1172a13aab163a26a3be3a66",
-    "calendar_app/presentation/dialogs/widget_customization_dialog.py": "54138969e74b1c93474e9fb75837833a063b07b2b9a703e6ca366c5979cbf07f",
+    "calendar_app/presentation/dialogs/widget_customization_dialog.py": "f3065d06b6ac290b56629c368a8de9b4a18382bc60123390e7a1622d9222ce38",
     "calendar_app/presentation/dialogs/widget_desktop_layout_dialog.py": "353bcad7409814880ff0e8984e52d74d79be1a8b1e44e3377e63d2d27258355d",
     "calendar_app/presentation/dialogs/widget_workspace_options_dialog.py": "f93c73d8026e437e9bff441e7467b18f39be15c172f73658637bc470f56e2062",
     "calendar_app/presentation/drag_drop_manager.py": "6caf53a1b0e8509d41899aba34a0eb17e1e5f4e3a72a582752e0ba3dc88ea8a2",
@@ -32318,7 +32334,7 @@
     "version_info.txt": "18b1c102e92f0e0f4bdad72853120cf425ff5eaa0b2876b314cc378a15b8a615",
     "calendar_app/presentation/theme/task_glyphs.py": "708ea49bec53c3ea6828ddeb1fa0231a9124d1abe48970e0a825f949cdb4ef58",
     "calendar_app/presentation/widgets/widget_mode_display.py": "643d593843327b0b469cd70553b7746b914d5474f8fa92daa6e7b088df956658",
-    "calendar_app/presentation/widgets/widget_mode_migration.py": "6fa40ace2ef3408c94b500b9a08840c4d02948046cbcda9f30ccaac46a2fb05b",
+    "calendar_app/presentation/widgets/widget_mode_migration.py": "590afcedda44b1b65b3031ccc945e48335536084b67a0cea626139beb0f6f849",
     "calendar_app/presentation/widgets/widget_mode_surfaces.py": "3a5da808acae9db0f290db0e154d308e849c1413a94f5f3c8c7ad684f9815aba"
   },
   "legacy_event_count": 47,
