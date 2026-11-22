@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -50,6 +51,13 @@ LAYOUT_LEGACY_KEY = "widget_mode_layout_legacy"
 _LAYOUT_KEY = "widget_mode_layout"
 _SKIN_KEY = "widget_mode_skin"
 _USER_LAYOUT_PREFIX = "user_layout_"
+# Before phase 1 these IDs defaulted to a visible calendar instead of following the
+# legacy widget_mode_show_week mirror (widget_mode_visibility.BOARD_CALENDAR_LAYOUT_IDS).
+_LEGACY_BOARD_IDS = frozenset({"dashboard", "magazine", "month_focus", "side_planner"})
+# Fingerprints of working free layouts already preserved or found in the library.
+# Kept outside the workspace MODE_KEYS so a profile restore never drops it.
+PRESERVED_FREE_LAYOUTS_KEY = "widget_mode_preserved_free_layouts"
+_MAX_PRESERVED_FINGERPRINTS = 50
 
 RETIRED_LAYOUTS: dict[str, tuple[str, LayoutDisplay]] = {
     "day_brief": ("stacked", LayoutDisplay("week", True, True)),
@@ -117,7 +125,9 @@ def classify_user_layout(raw: Mapping) -> tuple[str, LayoutDisplay]:
     if raw.get("presentation") == "board":
         new_id = "work_board"
     else:
-        placements = raw.get("placements") or ()
+        placements = raw.get("placements")
+        if not isinstance(placements, (list, tuple)):
+            placements = ()  # a corrupt style file must not abort the migration
         sections = [p for p in placements if isinstance(p, (list, tuple)) and len(p) >= 3]
         if not any(p[0] == "calendar" for p in sections):
             new_id = "minimal"
@@ -125,10 +135,11 @@ def classify_user_layout(raw: Mapping) -> tuple[str, LayoutDisplay]:
             new_id = "dashboard"
         else:
             new_id = "stacked"
-    default = default_layout_display(get_widget_mode_layout(new_id))
     style = raw.get("calendar_mode")
     if style not in ("week", "month"):
-        style = default.calendar_style
+        # The old app resolved "auto" to month only for the built-in dashboard and
+        # magazine IDs, never for a user_layout_* ID.
+        style = "week"
     return new_id, LayoutDisplay(style, bool(raw.get("show_overview")), bool(raw.get("searchable")))
 
 
@@ -172,6 +183,12 @@ def _put_display_if_missing(settings, layout_id: str, display: LayoutDisplay) ->
     return changed
 
 
+def _legacy_calendar_visibility(settings, old: str) -> bool:
+    if old in _LEGACY_BOARD_IDS and settings.value(calendar_visibility_key(old), None) is None:
+        return True
+    return read_widget_calendar_visibility(settings, old)
+
+
 def _migrate_layout(settings, user_styles_path: Path) -> bool:
     old, new_id, display = _resolve(settings, user_styles_path)
     changed = False
@@ -190,7 +207,7 @@ def _migrate_layout(settings, user_styles_path: Path) -> bool:
             value = settings.value(template.format(old), None)
             if value is not None:
                 changed |= _put(settings, template.format(new_id), value)
-        visible = read_widget_calendar_visibility(settings, old)
+        visible = _legacy_calendar_visibility(settings, old)
         changed |= _put(settings, calendar_visibility_key(new_id), visible)
     changed |= _put(settings, _LAYOUT_KEY, new_id)
     return changed
@@ -239,13 +256,38 @@ def _library_is_untouchable(settings, presets: list) -> bool:
         return True
 
 
+def _layout_fingerprint(layout: dict) -> str:
+    canonical = json.dumps(layout, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8", errors="strict")).hexdigest()
+
+
+def _read_fingerprints(settings) -> list[str]:
+    raw = settings.value(PRESERVED_FREE_LAYOUTS_KEY, None)
+    try:
+        values = json.loads(raw) if isinstance(raw, str) else raw
+    except (TypeError, ValueError, RecursionError):
+        return []
+    if not isinstance(values, (list, tuple)):
+        return []
+    return [value for value in values if isinstance(value, str)]
+
+
+def _remember_fingerprint(settings, known: list[str], fingerprint: str) -> bool:
+    kept = (known + [fingerprint])[-_MAX_PRESERVED_FINGERPRINTS:]
+    return _put(settings, PRESERVED_FREE_LAYOUTS_KEY, json.dumps(kept, separators=(",", ":")))
+
+
 def _preserve_free_layout(settings, preserved_name: str) -> bool:
     layout = _working_free_layout(settings)
     if layout is None:
         return False
+    fingerprint = _layout_fingerprint(layout)
+    known = _read_fingerprints(settings)
+    if fingerprint in known:
+        return False  # already handled once; a later deletion of that preset stands
     presets = read_layout_presets(settings)
     if any(preset["layout"] == layout for preset in presets):
-        return False
+        return _remember_fingerprint(settings, known, fingerprint)
     if _library_is_untouchable(settings, presets):
         logger.warning("Saved layout library is unreadable; free layout not preserved")
         return False
@@ -260,6 +302,7 @@ def _preserve_free_layout(settings, preserved_name: str) -> bool:
         name = preserved_name[: MAX_PRESET_NAME_LENGTH - len(suffix)] + suffix
     presets, _ = create_layout_preset(presets, name, layout)
     write_layout_presets(settings, presets)
+    _remember_fingerprint(settings, known, fingerprint)
     return True
 
 
@@ -282,6 +325,7 @@ __all__ = [
     "KEPT_LAYOUT_IDS",
     "LAYOUT_LEGACY_KEY",
     "LEGACY_SKIN_LAYOUTS",
+    "PRESERVED_FREE_LAYOUTS_KEY",
     "RETIRED_LAYOUTS",
     "SKIN_SURFACES",
     "classify_user_layout",

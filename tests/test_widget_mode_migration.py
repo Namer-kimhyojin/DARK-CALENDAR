@@ -9,6 +9,7 @@ from calendar_app.presentation.widgets.widget_free_layout import (
 )
 from calendar_app.presentation.widgets.widget_layout_presets import (
     create_layout_preset,
+    delete_layout_preset,
     read_layout_presets,
     write_layout_presets,
 )
@@ -21,6 +22,9 @@ from calendar_app.presentation.widgets.widget_mode_migration import (
     migrate_widget_mode_settings,
 )
 from calendar_app.presentation.widgets.widget_mode_skins import get_widget_mode_layout
+from calendar_app.presentation.widgets.widget_mode_visibility import (
+    read_widget_calendar_visibility,
+)
 
 
 class Settings:
@@ -81,6 +85,47 @@ def test_geometry_size_and_calendar_visibility_follow_active_layout(missing):
     assert s.value("unified_widget_size_stacked_calendar_hidden") == "S1"
     assert str(s.value("widget_mode_calendar_visible_stacked")).lower() == "true"
     assert s.value("unified_widget_geometry_month_focus") == "G1"
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [("month_focus", "stacked"), ("side_planner", "dashboard"), ("magazine", "dashboard")],
+)
+def test_former_board_layout_keeps_its_calendar_visible_without_a_scoped_key(old, new, missing):
+    # Before phase 1 these IDs defaulted to a visible calendar and ignored the
+    # legacy widget_mode_show_week mirror; the migrated layout must open the same way.
+    s = Settings()
+    s.setValue("widget_mode_layout", old)
+    s.setValue("widget_mode_show_week", False)
+    migrate_widget_mode_settings(s, user_styles_path=missing)
+    assert str(s.value(f"widget_mode_calendar_visible_{new}")).lower() == "true"
+    assert read_widget_calendar_visibility(s, new) is True
+    assert s.value("widget_mode_show_week") is False
+
+
+def test_former_board_layout_keeps_an_explicit_collapsed_calendar(missing):
+    s = Settings()
+    s.setValue("widget_mode_layout", "month_focus")
+    s.setValue("widget_mode_calendar_visible_month_focus", False)
+    migrate_widget_mode_settings(s, user_styles_path=missing)
+    assert read_widget_calendar_visibility(s, "stacked") is False
+
+
+def test_non_board_retired_layout_still_follows_the_legacy_mirror(missing):
+    s = Settings()
+    s.setValue("widget_mode_layout", "day_brief")
+    s.setValue("widget_mode_show_week", False)
+    migrate_widget_mode_settings(s, user_styles_path=missing)
+    assert read_widget_calendar_visibility(s, "stacked") is False
+
+
+def test_dashboard_calendar_visibility_is_unchanged_by_migration(missing):
+    s = Settings()
+    s.setValue("widget_mode_layout", "dashboard")
+    s.setValue("widget_mode_show_week", False)
+    migrate_widget_mode_settings(s, user_styles_path=missing)
+    assert s.value("widget_mode_calendar_visible_dashboard") is None
+    assert read_widget_calendar_visibility(s, "dashboard") is True
 
 
 def test_existing_display_keys_are_not_overwritten(missing):
@@ -231,6 +276,17 @@ def test_classify_user_layout_rules():
     stacked = {"placements": [["calendar", 0, 0, 1, 1], ["agenda", 1, 0, 1, 1]]}
     new_id, display = classify_user_layout(stacked)
     assert new_id == "stacked" and display.calendar_style == "week"
+    # The old app resolved "auto" to month only for the built-in dashboard and
+    # magazine IDs; a user_layout_* ID always resolved it to week.
+    side_by_side = [["calendar", 0, 0, 1, 1], ["agenda", 0, 1, 1, 1]]
+    for raw in (
+        {"placements": side_by_side, "calendar_mode": "auto"},
+        {"placements": side_by_side},
+    ):
+        new_id, display = classify_user_layout(raw)
+        assert new_id == "dashboard" and display.calendar_style == "week"
+    month = classify_user_layout({"placements": side_by_side, "calendar_mode": "month"})
+    assert month[1].calendar_style == "month"
 
 
 def test_user_layout_with_missing_style_file(tmp_path):
@@ -241,6 +297,23 @@ def test_user_layout_with_missing_style_file(tmp_path):
     migrate_widget_mode_settings(s, user_styles_path=bad)
     assert s.value("widget_mode_layout") == "stacked"
     assert bad.read_text(encoding="utf-8", errors="strict") == "{broken"
+
+
+@pytest.mark.parametrize(
+    "placements",
+    [5, 3.5, True, {"calendar": 1}, "calendar", [5, None, ["calendar"], ["calendar", 0]]],
+)
+def test_corrupt_user_layout_placements_do_not_abort_migration(placements, tmp_path):
+    path = _style_file(tmp_path, {"layout_id": "user_layout_bad", "placements": placements})
+    s = Settings()
+    s.setValue("widget_mode_layout", "user_layout_bad")
+    s.setValue("widget_mode_skin", "studio_linen")
+    write_free_layout(s, seed_free_layout("stacked"))
+    migrate_widget_mode_settings(s, user_styles_path=path)
+    assert s.value("widget_mode_layout") == "minimal"
+    assert s.value("widget_mode_layout_legacy") == "user_layout_bad"
+    assert s.value("widget_mode_surface") == "line"
+    assert [p["name"] for p in read_layout_presets(s)] == ["이전 자유 구성"]
 
 
 def test_free_layout_with_taken_name_is_kept_under_numbered_name(missing):
@@ -257,6 +330,59 @@ def test_free_layout_with_taken_name_is_kept_under_numbered_name(missing):
     assert saved[1]["layout"] == json.loads(s.value("widget_mode_free_layout"))
     assert migrate_widget_mode_settings(s, user_styles_path=missing) is False
     assert len(read_layout_presets(s)) == 2
+
+
+def _delete_all_presets(s):
+    presets = read_layout_presets(s)
+    for preset in presets:
+        presets = delete_layout_preset(presets, preset["id"])
+    write_layout_presets(s, presets)
+
+
+def test_deleted_preserved_free_layout_is_not_added_again(missing):
+    s = Settings()
+    write_free_layout(s, seed_free_layout("stacked"))
+    migrate_widget_mode_settings(s, user_styles_path=missing)
+    assert [p["name"] for p in read_layout_presets(s)] == ["이전 자유 구성"]
+    _delete_all_presets(s)
+    assert migrate_widget_mode_settings(s, user_styles_path=missing) is False
+    assert read_layout_presets(s) == []
+
+
+def test_applied_then_deleted_preset_does_not_return_as_preserved_layout(missing):
+    s = Settings()
+    write_free_layout(s, seed_free_layout("dashboard"))
+    applied = json.loads(s.value("widget_mode_free_layout"))
+    presets, _ = create_layout_preset([], "내 배치", applied)
+    write_layout_presets(s, presets)
+    # A launch while the preset is applied: the working layout matches it.
+    migrate_widget_mode_settings(s, user_styles_path=missing)
+    assert [p["name"] for p in read_layout_presets(s)] == ["내 배치"]
+    _delete_all_presets(s)
+    assert migrate_widget_mode_settings(s, user_styles_path=missing) is False
+    assert read_layout_presets(s) == []
+
+
+def test_preserved_fingerprint_list_is_capped(missing):
+    s = Settings()
+    s.setValue(
+        "widget_mode_preserved_free_layouts",
+        json.dumps([f"{index:064x}" for index in range(60)]),
+    )
+    write_free_layout(s, seed_free_layout("stacked"))
+    migrate_widget_mode_settings(s, user_styles_path=missing)
+    stored = json.loads(s.value("widget_mode_preserved_free_layouts"))
+    assert len(stored) == 50
+    assert f"{59:064x}" in stored and f"{0:064x}" not in stored
+
+
+def test_unreadable_fingerprint_list_still_preserves_once(missing):
+    s = Settings()
+    s.setValue("widget_mode_preserved_free_layouts", "{broken")
+    write_free_layout(s, seed_free_layout("stacked"))
+    assert migrate_widget_mode_settings(s, user_styles_path=missing) is True
+    assert len(read_layout_presets(s)) == 1
+    assert migrate_widget_mode_settings(s, user_styles_path=missing) is False
 
 
 class _KeyedSettings(Settings):
@@ -335,3 +461,44 @@ def test_restore_survives_migration_failure(monkeypatch):
     service = SimpleNamespace(settings=settings, owner=SimpleNamespace())
     runtime.WidgetWorkspaceService._restore_mode(service, {"widget_mode_layout": "stacked"})
     assert settings.value("widget_mode_layout") == "stacked"
+
+
+def test_restoring_snapshot_keeps_handled_free_layouts_and_preserves_new_ones(missing):
+    from types import SimpleNamespace
+
+    from calendar_app.presentation.widgets.widget_workspace_runtime import (
+        WidgetWorkspaceService,
+    )
+
+    settings = _KeyedSettings()
+    write_free_layout(settings, seed_free_layout("stacked"))
+    old_layout = settings.value("widget_mode_free_layout")
+    migrate_widget_mode_settings(settings, user_styles_path=missing)
+    _delete_all_presets(settings)
+    service = SimpleNamespace(settings=settings, owner=SimpleNamespace())
+
+    # The same, already handled layout from an old snapshot is not added back.
+    WidgetWorkspaceService._restore_mode(
+        service,
+        {
+            "widget_mode_layout": "stacked",
+            "widget_mode_layout_mode": "free",
+            "widget_mode_free_layout": old_layout,
+        },
+    )
+    assert read_layout_presets(settings) == []
+
+    # A snapshot carrying a different free layout is still preserved.
+    write_free_layout(settings, seed_free_layout("dashboard"))
+    other_layout = settings.value("widget_mode_free_layout")
+    WidgetWorkspaceService._restore_mode(
+        service,
+        {
+            "widget_mode_layout": "stacked",
+            "widget_mode_layout_mode": "free",
+            "widget_mode_free_layout": other_layout,
+        },
+    )
+    saved = read_layout_presets(settings)
+    assert [p["name"] for p in saved] == ["이전 자유 구성"]
+    assert saved[0]["layout"] == json.loads(other_layout)

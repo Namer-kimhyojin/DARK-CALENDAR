@@ -45,9 +45,17 @@ def get_widget_mode_surface(key: object) -> WidgetModeSurface:
 
 
 def read_widget_mode_surface(settings) -> str:
+    """Read the surface; before the migration has run, map the legacy skin (read-only)."""
     if settings is None:
         return DEFAULT_SURFACE
-    return _normalise(settings.value(SURFACE_SETTING_KEY, DEFAULT_SURFACE))
+    raw = settings.value(SURFACE_SETTING_KEY, None)
+    if not str(raw or "").strip():
+        # Local import: the migration module imports this one.
+        from calendar_app.presentation.widgets.widget_mode_migration import SKIN_SURFACES
+
+        skin = str(settings.value("widget_mode_skin", None) or "").strip().lower()
+        raw = SKIN_SURFACES.get(skin, DEFAULT_SURFACE)
+    return _normalise(raw)
 
 
 def write_widget_mode_surface(settings, key: object) -> str:
