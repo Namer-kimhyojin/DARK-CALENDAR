@@ -288,7 +288,7 @@ class WidgetCustomizationDialog(QDialog):
         self.user_layout_empty = QLabel(
             t(
                 "widget_mode.user_layouts_empty",
-                "저장한 배치가 없습니다. 구성 편집에서 프리셋으로 저장하세요.",
+                "저장한 내 배치가 없습니다.",
             ),
             tab,
         )

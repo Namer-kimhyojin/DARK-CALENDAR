@@ -5025,7 +5025,7 @@
     "undone_named": "이전 상태로 되돌렸습니다. “{name}”",
     "untitled": "제목 없음",
     "user_layouts": "내 배치",
-    "user_layouts_empty": "저장한 배치가 없습니다. 구성 편집에서 프리셋으로 저장하세요.",
+    "user_layouts_empty": "저장한 내 배치가 없습니다.",
     "week_toggle": "주간",
     "week_toggle_help": "주간 날짜 표시 / 접기",
     "widget_hint_actions": "날짜를 탭하면 해당 날로 이동합니다",

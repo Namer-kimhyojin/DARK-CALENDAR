@@ -5025,7 +5025,7 @@
     "undone_named": "Previous status restored: “{name}”.",
     "untitled": "Untitled",
     "user_layouts": "My layouts",
-    "user_layouts_empty": "No saved layouts. Save a preset in the layout editor.",
+    "user_layouts_empty": "No saved layouts.",
     "week_toggle": "Week",
     "week_toggle_help": "Show or collapse the week strip",
     "widget_hint_actions": "Tap a day to refocus",
