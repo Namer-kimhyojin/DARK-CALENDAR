@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 
 from PyQt6.QtCore import QSettings
 from PyQt6.QtGui import QColor, QFont, QPalette
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QLabel, QPushButton
 import pytest
 
 from calendar_app.presentation.dialogs.widget_customization_dialog import WidgetCustomizationDialog
@@ -246,13 +246,12 @@ def test_preferences_show_theme_link_and_leave_old_opacity_data_intact(workspace
     host.settings.setValue("widget_mode_text_opacity", 55)
     dialog = WidgetCustomizationDialog(coordinator.controller, widget)
     try:
-        assert not dialog.text_opacity.isEnabled()
-        assert not dialog.background_opacity.isEnabled()
-        assert dialog.text_opacity.value() == 100
-        assert "메인" in dialog.background_opacity.toolTip()
-        before_opacity = dialog.background_opacity.value()
+        assert dialog.findChild(QPushButton, "open_appearance_btn") is not None
+        assert any(
+            label.text() == "색과 투명도는 모양 설정을 따릅니다."
+            for label in dialog.findChildren(QLabel)
+        )
         dialog._sync_appearance_controls()
-        assert dialog.background_opacity.value() == before_opacity
         dialog.reject()
         assert host.settings.value("widget_mode_background_opacity") == 35
         assert host.settings.value("widget_mode_text_opacity") == 55
