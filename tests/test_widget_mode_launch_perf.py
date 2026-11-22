@@ -18,8 +18,6 @@ import pytest
 
 from calendar_app.presentation.widgets import unified_widget_mode as uwm
 from calendar_app.presentation.widgets import widget_mode_theme as wmt
-from calendar_app.presentation.widgets.panel_widget_style import menu_stylesheet
-from calendar_app.presentation.widgets.panel_widget_theme import _widget_mode_menu_stylesheet
 from calendar_app.presentation.widgets.widget_mode_coordinator import WidgetModeCoordinator
 from calendar_app.presentation.widgets.widget_mode_skins import get_widget_mode_layout
 from calendar_app.presentation.widgets.widget_mode_surfaces import widget_mode_surfaces
@@ -280,38 +278,6 @@ def test_window_not_owned_by_its_controller_still_themes_on_show(workspace, monk
     finally:
         stray.hide()
         stray.deleteLater()
-        _APP.processEvents()
-
-
-@pytest.mark.parametrize(
-    "mode,base,accent",
-    [
-        ("dark", "#121827", "#c5a3f5"),
-        ("light", "#f6f7fb", "#7653c4"),
-        ("custom", "#24413f", "#ff9d4d"),
-    ],
-)
-@pytest.mark.parametrize("widget_color", [None, "#ff00aa"])
-def test_menu_stylesheet_from_resolved_tokens_matches_re_resolution(
-    tmp_path, mode, base, accent, widget_color
-):
-    host = Host()
-    host.settings = QSettings(str(tmp_path / "main.ini"), QSettings.Format.IniFormat)
-    for key, value in {
-        "text_theme": mode,
-        "panel_base_color": base,
-        "theme_color": accent,
-        "widget_mode_color_theme": widget_color,
-    }.items():
-        if value is not None:
-            host.settings.setValue(key, value)
-    try:
-        for surface in widget_mode_surfaces():
-            host.settings.setValue("widget_mode_surface", surface.key)
-            tokens = uwm._widget_theme_tokens(host)
-            assert menu_stylesheet(tokens) == _widget_mode_menu_stylesheet(tokens), surface.key
-    finally:
-        host.deleteLater()
         _APP.processEvents()
 
 

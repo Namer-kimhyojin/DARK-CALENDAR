@@ -2134,8 +2134,7 @@ class UnifiedWidgetWindow(QWidget):
             )
         )
         color = tokens.get("text_primary", "#ffffff")
-        # tokens already holds every key menu_stylesheet reads; re-resolving the
-        # theme (as _widget_mode_menu_stylesheet does) gives the same stylesheet.
+        # tokens already holds every key menu_stylesheet reads.
         menu_qss = menu_stylesheet(tokens)
         self.customize_btn.setIcon(_ic(ICON.DISPLAY_STYLE, color=color))
         self.restore_btn.setIcon(_ic(ICON.CALENDAR, color=color))
