@@ -1,6 +1,6 @@
 # 위젯 전용 모드 개선 계획 — 정리·편의성·심미성·통합
 
-> 작성: 2026-11-22 · 상태: 1단계 구현 완료(2–4단계 미착수)
+> 작성: 2026-11-22 · 상태: 1단계 구현 완료, 2–4단계 미착수
 > 범위: 위젯 전용 모드 창(`UnifiedWidgetWindow`)과 꾸미기·구성 편집, 그리고 바탕화면 위젯·위젯 관리자·작업 공간과의 용어·진입점·메뉴 통합. 바탕화면 위젯 자체의 외형 체계는 제외합니다(9장).
 
 ## 1. 목적과 기준
@@ -243,8 +243,9 @@
   - 예외는 `widget_mode_layout` 하나입니다. 남는 4종이 기존 ID를 그대로 쓰므로 같은 키를 4종 ID로 다시 씁니다. 옛 값은 `widget_mode_layout_legacy`에 남깁니다. 이전 버전에서는 4종 중 하나로 열리며, 깨지지는 않습니다(4종 ID가 이전 버전에도 있음).
   - 새 키: `widget_mode_surface`(`card` / `line` / `outline` / `compact`), 그리고 배치마다 `widget_mode_calendar_style_<id>`(`week` / `month`), `widget_mode_show_overview_<id>`, `widget_mode_search_pinned_<id>`.
   - 배치별 키 채우기: 사용 중이던 배치의 값(4.1절 표)이 그 새 ID의 값이 됩니다. 나머지 새 ID는 남는 정의의 기본값을 씁니다(세로형 주간·끔·끔, 좌우형 월간·끔·끔, 보드형 주간·켬·켬). 이미 값이 있으면 덮어쓰지 않습니다.
-  - 작업 중인 자유 구성은 4.1절대로 '이전 자유 구성' 내 배치 항목으로 보존합니다.
+  - 작업 중인 자유 구성은 4.1절대로 '이전 자유 구성' 내 배치 항목으로 보존합니다. 한 번 처리한 자유 구성은 지문(`widget_mode_preserved_free_layouts`)으로 기억해, 사용자가 그 항목을 지운 뒤 다시 추가하지 않습니다.
   - 쓰기를 멈출 옛 키: `widget_mode_panel_theme`, `widget_mode_show_week` 미러, `widget_mode_text_opacity`, `widget_mode_background_opacity`, `widget_mode_opacity`, `widget_mode_color_theme`.
+  - 구현 판단(2026-11-22, 이 계획과 다름): `widget_mode_show_week` 미러는 멈추지 않고 계속 함께 씁니다. 이전 버전으로 되돌렸을 때 그 버전이 읽는 달력 표시 값이 마지막 상태와 맞게 하기 위해서입니다. 새 버전은 배치별 `widget_mode_calendar_visible_<id>`를 먼저 읽습니다.
 - `widget_mode_layout`이 비어 있으면 지금처럼 스킨의 `legacy_layout_id`(`widget_mode_skins.py:216-225`)로 먼저 배치를 정한 뒤 4종 표를 적용합니다.
 - 작업 공간 `MODE_KEYS`(`domain/widget_workspace.py:47-70`)에 새 키를 추가하고 옛 키도 남깁니다. 옛 스냅샷에는 새 키가 없으므로 복원 직후 이관 함수가 채웁니다.
 - 내 배치 JSON(`widget_mode_user_layout_presets`)과 자유 구성 JSON(`widget_mode_free_layout`)의 형식은 바꾸지 않습니다.

@@ -24,12 +24,23 @@
 ## 위젯 전용 모드 화면 형태와 표면 모양
 
 - 배치는 `stacked`(세로형)·`dashboard`(좌우형)·`work_board`(보드형)·`minimal`(목록형) 4종, 표면 모양은 `card`·`line`·`outline`·`compact` 4종(`widget_mode_surfaces.py`, 설정 `widget_mode_surface`)입니다. 색상은 메인 테마를 따르고 표면 모양은 모서리와 항목 테두리·배경만 바꿉니다. 이전 스킨 16종(`widget_mode_skin`)과 옛 배치 설정은 시작 시 한 번 이관합니다.
-- `WidgetModeLayout`의 `calendar_mode`, `responsive_breakpoint`, `presentation`, `show_overview`, `searchable`은 표시 방식만 정의합니다. `widget_layout_calendar_mode()`, `widget_layout_is_compact()`, `widget_layout_has_columns()`로 UI·필터·크기 복원 판단을 일치시킵니다. 좁은 창에서도 저장된 배치 ID는 유지합니다.
+- `WidgetModeLayout`의 `calendar_mode`, `show_overview`, `searchable`은 배치별 표시 설정의 기본값일 뿐입니다. 실제 표시는 배치마다 `widget_mode_calendar_style_<id>`(`week`/`month`)·`widget_mode_show_overview_<id>`·`widget_mode_search_pinned_<id>`가 정하고(`widget_mode_display.py`의 `read_layout_display()`, 꾸미기 ▸ 표시 항목의 '선택한 배치'), 키가 없을 때만 배치 정의를 씁니다. `responsive_breakpoint`, `presentation`은 표시 방식을 정의합니다. `widget_layout_calendar_mode(layout, width, display)`, `widget_layout_is_compact()`, `widget_layout_has_columns()`로 UI·필터·크기 복원 판단을 일치시킵니다. 좁은 창에서도 저장된 배치 ID는 유지합니다.
 - 표면 모양은 `WidgetModeSurface`(반지름·항목 반지름·항목 배경 `card|transparent`·항목 테두리 `full|bottom`)로 정의하며 `widget_workspace_styles.py`가 QSS에 합성합니다.
 - 보드는 기존 `FreeAgendaPanel`·`AgendaItemWidget`과 원래 controller의 수정·완료·읽기 전용 흐름을 공유합니다. 보드 표시 중 숨겨진 일반 목록의 행을 중복 생성하지 않습니다.
 - 검색은 선택일 캐시에서만 수행하고 입력을 120ms로 모읍니다. 검색어 지우기는 즉시 반영하며, 숨김에서 타이머를 멈춥니다. 검색어를 QSettings에 저장하거나 검색 때문에 새 DB/외부 요청을 만들지 않습니다.
 - 꾸미기는 실제 렌더러의 격리 미리보기·초안·적용/취소 계약을 유지합니다. 새 배치 카드는 표시 항목만 모아 재배치하고 표면 모양 선택과 동기화합니다. 저장한 자유 구성·프리셋을 삭제하거나 표면 모양 선택 때문에 기본 배치로 바꾸지 않습니다.
 - 회귀: `tests/test_widget_workspace_redesign.py`, 기존 widget-mode/free-layout/preset/opacity/geometry 테스트. 화면 검증: `scripts/validate_widget_workspace_redesign.py`. [벤치마킹·사용법](../docs/ux-audit/widget-workspace-redesign-20261101.md).
+
+### 설정 이관
+
+- `widget_mode_migration.py`의 `migrate_widget_mode_settings()` 하나가 옛 배치 11종·스킨 16종·사용자 배치(`user_layout_*`) 설정을 새 4종 카탈로그로 옮깁니다. 위젯 창을 처음 만들기 전(`UnifiedWidgetController.ensure_widget()`)과 작업 공간 프로필 복원 직후(`WidgetWorkspaceService._restore_mode()`)에 부릅니다.
+- 멱등입니다. 값이 다를 때만 쓰므로 같은 설정에 다시 돌리면 아무것도 쓰지 않고 `False`를 돌려줍니다.
+- 옛 키를 지우지 않습니다. 다시 쓰는 키는 `widget_mode_layout` 하나이며 옛 값은 `widget_mode_layout_legacy`에 남깁니다. 옮긴 배치의 창 위치·크기(`unified_widget_geometry_<id>`, `unified_widget_size_<id>`와 각 `_calendar_hidden`)와 달력 접기 상태(`widget_mode_calendar_visible_<id>`)는 새 ID 키로 복사합니다. 1단계 전에 보드형이던 옛 ID(`dashboard`·`magazine`·`month_focus`·`side_planner`)는 자기 접기 키가 없으면 달력을 펼친 상태로 옮깁니다(옛 앱의 기본값, `widget_mode_show_week` 미러를 따르지 않음). 배치별 표시 키는 비어 있을 때만 채웁니다.
+- 예외 안전입니다. 두 호출부 모두 실패를 기록하고 창 생성·복원을 계속합니다. 손상된 `widget_mode_styles.json`(`placements`가 목록이 아니거나 항목이 잘못됨)은 배치 없음으로 보고 이관을 계속합니다. 사용자 배치의 `calendar_mode`가 `auto`이거나 없으면 주간입니다.
+- 작업 중인 자유 구성(`widget_mode_free_layout`)이 내 배치 어느 것과도 같지 않으면 '이전 자유 구성'으로 추가합니다. 추가했거나 이미 내 배치와 같았던 자유 구성의 지문(정렬한 JSON의 SHA-256, 최근 50개, JSON 문자열)을 `widget_mode_preserved_free_layouts`에 남겨, 사용자가 그 항목을 지운 뒤 다시 추가하지 않습니다. 이 키는 작업 공간 `MODE_KEYS`와 `mode_setting_allowed()` 접두어 밖에 있어 프로필 복원이 지우지 않습니다. 다른 자유 구성을 담은 옛 스냅샷을 복원하면 그 구성은 보존합니다.
+- `widget_mode_show_week`는 이전 버전 호환을 위해 배치별 접기 키와 함께 계속 씁니다(계획서 5절과 다른 구현 판단).
+- `read_widget_mode_surface()`는 `widget_mode_surface`가 비어 있으면 `widget_mode_skin`을 `SKIN_SURFACES`로 읽기만 합니다(쓰지 않음). 첫 창을 만들기 전 위젯 관리자도 이관 뒤와 같은 표면 모양을 보여 줍니다.
+- 회귀: `tests/test_widget_mode_migration.py`, `tests/test_widget_mode_surfaces.py`.
 
 ## 그래픽 컬렉션
 
@@ -360,8 +371,8 @@ manager.set_app_data_provider(lambda: {
 - 툴바 끌기는 `windowHandle().startSystemMove()`로 OS가 창을 옮깁니다. 배율이 다른 모니터 사이에서 Qt 논리 좌표가 연속되지 않아, `move(커서 - 오프셋)` 방식은 경계에서 창이 튀며 마우스 이벤트마다 DPI가 번갈아 바뀌어 멈춤과 크기 증가를 일으켰습니다. 이동 종료(`WM_EXITSIZEMOVE`, 시작 실패 시 마우스 놓기)에서 시작 크기를 복원하고 도착 화면 안으로 맞춘 뒤 가장자리 맞춤과 저장을 한 번만 합니다. 이동은 크기를 바꾸지 않습니다. PyQt6 6.12에서 `nativeEvent` 재정의 안의 `super().nativeEvent()` 호출은 접근 위반으로 종료되므로 `(False, 0)`을 직접 반환합니다.
 - 메인 테마 연동 색은 `harden_widget_readability()`가 위젯용으로 보정합니다. 바탕 불투명도 최소 95%, 불투명 표면 단계, 배경화면과 무관한 글자 대비 하한을 지킵니다([테마 계약](theme_token_completion_process.md#widget-only-mode-readability-contract)).
 - 42칸 월 캘린더는 처음 쓸 때(`month_calendar` 속성) 만들고, 그 전에 받은 크기·테마·선택 날짜는 저장했다가 생성 시 적용합니다. 주간 표시 중에는 월 그리드 렌더를 미룹니다. 테마 토큰은 `apply_theme` 한 번마다 `controller._theme_tokens`에 저장해 완료 체크박스 그리기에 재사용합니다. 회귀 검증: `tests/test_widget_mode_launch_perf.py`.
-- 조작부, 본문, 하단 상태/크기 조절은 하나의 `unified_surface` 안에 배치합니다. 대시보드/매거진 배치는 폭 640px 미만에서 세로로 전환하되 저장된 배치 선택은 유지합니다.
-- 날짜 선택/오늘/고정/꾸미기는 한 줄 헤더로 통합하고 시계는 하단에 표시합니다. 세로·일정 우선형은 주간 날짜를, 좌우 대시보드·매거진형은 기본으로 펼쳐진 월간 캘린더를 표시합니다. 대시보드형은 달력을 왼쪽, 필터와 목록을 오른쪽에 두며 매거진형은 이를 반대로 배치합니다. 날짜 영역의 접기 상태는 레이아웃마다 독립 저장하고 더 보기 메뉴의 이전/다음 기간도 주간·월간에 맞춰 전환합니다.
+- 조작부, 본문, 하단 상태/크기 조절은 하나의 `unified_surface` 안에 배치합니다. 열이 둘인 좌우형(`dashboard`)은 폭 640px 미만에서 세로로 전환하되 저장된 배치 선택은 유지합니다.
+- 날짜 선택/오늘/고정/꾸미기는 한 줄 헤더로 통합하고 시계는 하단에 표시합니다. 배치는 4종입니다. 세로형(`stacked`)은 달력·필터·목록을 위에서 아래로, 좌우형(`dashboard`)은 달력을 왼쪽에 필터와 목록을 오른쪽에, 보드형(`work_board`)은 달력 아래에 일정·업무 보드를 두고, 목록형(`minimal`)은 달력 없이 필터와 목록만 둡니다. 기본 달력 형태는 세로형·보드형 주간, 좌우형 월간이며 배치별 `widget_mode_calendar_style_<id>`로 바꿉니다. 날짜 영역의 접기 상태는 레이아웃마다 독립 저장하고 더 보기 메뉴의 이전/다음 기간도 주간·월간에 맞춰 전환합니다.
 - 날짜 영역을 접으면 달력 위젯만 숨기지 않고 남은 섹션을 한 열로 재배치하고 창 자체를 축소합니다. 펼침/접힘 크기와 화면 좌표는 레이아웃별로 구분해 저장하며 다시 펼칠 때 기존 펼침 크기를 복원합니다.
 - 월간 캘린더는 별도 불투명 패널처럼 보이지 않도록 셀 뷰포트를 투명하게 유지합니다. 요일 머리글과 선택일만 메인 테마 색상을 낮은 알파로 합성하고, 주말은 고정 빨강 대신 테마 강조색을 사용합니다.
 - 주간 날짜는 큰 타원형 캡슐 대신 작은 카드형 셀을 사용합니다. 기본/오늘/선택/호버/키보드 포커스 상태를 배경, 가는 테두리, 하단 강조선과 글자 굵기로 구분하며 메인 테마와 모양 설정의 불투명도를 그대로 따릅니다.
