@@ -310,22 +310,15 @@ def test_mode_overview_is_read_only_and_lifecycle_uses_existing_coordinator(hub)
     assert not host.settings.value("widget_mode_resume", type=bool)
 
 
-@pytest.mark.parametrize("free", [False, True])
-def test_editors_cancel_without_entering_mode_or_changing_preferences(hub, free):
+def test_customization_cancel_without_entering_mode_or_changing_preferences(hub):
     dialog, _, host, coordinator = hub
-    if free:
-        host.settings.setValue("widget_mode_layout_mode", "free")
     before = _prefs(host)
     from calendar_app.presentation.dialogs.widget_customization_dialog import (
         WidgetCustomizationDialog,
     )
-    from calendar_app.presentation.dialogs.widget_free_layout_editor import (
-        WidgetFreeLayoutEditorDialog,
-    )
 
-    cls = WidgetFreeLayoutEditorDialog if free else WidgetCustomizationDialog
-    with patch.object(cls, "exec", lambda self: self.reject()):
-        (dialog.mode_panel._edit_free if free else dialog.mode_panel._customize)()
+    with patch.object(WidgetCustomizationDialog, "exec", lambda self: self.reject()):
+        dialog.mode_panel._customize()
     assert coordinator.state is WidgetModeState.CLOSED
     assert host.isVisible() and not coordinator.controller.is_visible()
     assert _prefs(host) == before

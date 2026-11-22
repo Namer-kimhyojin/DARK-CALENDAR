@@ -17,7 +17,6 @@ from calendar_app.infrastructure.db import checklist_template_repo as repo
 from calendar_app.infrastructure.i18n import i18n, t
 from calendar_app.presentation.dialogs import checklist_manager_dialog_advanced as checklist_ui
 from calendar_app.presentation.dialogs import directive_dialog, management_dialogs
-from calendar_app.presentation.dialogs import widget_style_editor_dialog as style_editor
 from calendar_app.presentation.widgets import overlay_base
 from calendar_app.presentation.widgets.overlay_template_validation import (
     validate_widget_template,
@@ -397,64 +396,5 @@ def test_directive_init_error_is_translated(app, monkeypatch):
             "dialog.directive.msg_init_error",
             "지시사항 다이얼로그 초기화 중 오류가 발생했습니다.",
         ) in calls
-    finally:
-        dialog.deleteLater()
-
-
-# --- L12: empty widget style name -------------------------------------------------------
-
-
-@pytest.mark.parametrize("tab, name", [(0, ""), (0, "   "), (1, "")])
-def test_empty_style_name_shows_a_translated_message(app, monkeypatch, tab, name):
-    create_skin = Mock()
-    create_layout = Mock()
-    monkeypatch.setattr(style_editor, "create_user_widget_skin", create_skin)
-    monkeypatch.setattr(style_editor, "create_user_widget_layout", create_layout)
-    dialog = style_editor.WidgetStyleEditorDialog()
-    try:
-        dialog.tabs.setCurrentIndex(tab)
-        (dialog.skin_name if tab == 0 else dialog.layout_name).setText(name)
-        english = {"widget_mode.editor_name_required": "Enter a name."}
-        with (
-            patch.dict(i18n.translations, english),
-            patch.object(style_editor.QMessageBox, "warning") as warning,
-        ):
-            dialog._save()
-
-        assert warning.call_args.args[2] == "Enter a name."
-        create_skin.assert_not_called()
-        create_layout.assert_not_called()
-        assert dialog.result() == 0
-    finally:
-        dialog.deleteLater()
-
-
-def test_empty_style_name_message_defaults_to_korean_not_the_model_error(app, monkeypatch):
-    monkeypatch.setattr(style_editor, "create_user_widget_skin", Mock())
-    dialog = style_editor.WidgetStyleEditorDialog()
-    try:
-        with patch.object(style_editor.QMessageBox, "warning") as warning:
-            dialog._save()
-        message = warning.call_args.args[2]
-        assert message == t("widget_mode.editor_name_required", "이름을 입력하세요.")
-        assert "required" not in message
-    finally:
-        dialog.deleteLater()
-
-
-def test_other_style_save_errors_lead_with_a_translated_message(app, monkeypatch):
-    monkeypatch.setattr(
-        style_editor, "create_user_widget_skin", Mock(side_effect=OSError("disk full"))
-    )
-    dialog = style_editor.WidgetStyleEditorDialog()
-    try:
-        dialog.skin_name.setText("Mine")
-        with patch.object(style_editor.QMessageBox, "warning") as warning:
-            dialog._save()
-        first_line, detail = warning.call_args.args[2].split("\n", 1)
-        assert first_line == t(
-            "widget_mode.save_failed", "저장하지 못했습니다. 다시 시도해 주세요."
-        )
-        assert detail == "disk full"
     finally:
         dialog.deleteLater()

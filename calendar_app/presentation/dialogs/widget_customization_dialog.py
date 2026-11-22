@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Transactional widget preferences with a real, isolated widget preview."""
 
-from types import SimpleNamespace
-
 from PyQt6.QtCore import QCoreApplication, QDate, QEvent, QSize, Qt, QTimer
 from PyQt6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
@@ -185,20 +183,9 @@ class WidgetCustomizationDialog(QDialog):
         )
         note.setWordWrap(True)
         preview_column.addWidget(note)
-        self.free_layout_btn = QPushButton(t("widget_mode.free_layout_edit", "구성 편집…"), self)
-        self.free_layout_btn.setObjectName("ghost_btn")
-        self.free_layout_btn.setToolTip(
-            t(
-                "widget_mode.free_layout_transition_help",
-                "현재 꾸미기 초안은 취소하고 구성 편집기를 엽니다.",
-            )
-        )
-        self.free_layout_btn.setAccessibleDescription(self.free_layout_btn.toolTip())
-        self.free_layout_btn.clicked.connect(self._open_free_layout_editor)
         footer, apply_btn, cancel_btn = build_dialog_footer(
             ok_label=t("common.apply", "적용"),
             cancel_label=t("common.cancel", "취소"),
-            extra_left_widget=self.free_layout_btn,
         )
         root.addLayout(footer)
         self.apply_btn = apply_btn
@@ -309,7 +296,6 @@ class WidgetCustomizationDialog(QDialog):
         layout.addWidget(self.user_layout_empty)
         actions = QHBoxLayout()
         for attribute, key, text, callback in (
-            ("preset_edit_btn", "preset_edit", "배치 수정…", self._edit_user_layout),
             ("preset_rename_btn", "preset_rename", "이름 변경…", self._rename_user_layout),
             ("preset_delete_btn", "preset_delete", "삭제", self._delete_user_layout),
         ):
@@ -383,7 +369,7 @@ class WidgetCustomizationDialog(QDialog):
 
     def _update_preset_actions(self):
         enabled = self._selected_user_layout() is not None
-        for button in (self.preset_edit_btn, self.preset_rename_btn, self.preset_delete_btn):
+        for button in (self.preset_rename_btn, self.preset_delete_btn):
             button.setEnabled(enabled)
 
     def _clear_builtin_selection(self):
@@ -495,38 +481,6 @@ class WidgetCustomizationDialog(QDialog):
         )
         self.draft.setValue(SELECTED_LAYOUT_PRESET_KEY, "")
         self._reload_user_layouts()
-
-    def _edit_user_layout(self):
-        from calendar_app.presentation.dialogs.widget_free_layout_editor import (
-            WidgetFreeLayoutEditorDialog,
-        )
-
-        preset = self._selected_user_layout()
-        if preset is None:
-            return
-        before = dict(self.draft.values)
-        child_controller = SimpleNamespace(
-            main_window=SimpleNamespace(settings=self.draft),
-            widget=self.controller.widget,
-            _current_date=getattr(self.controller, "_current_date", QDate.currentDate),
-            apply_free_layout=lambda data: write_free_layout(self.draft, data),
-        )
-        editor = WidgetFreeLayoutEditorDialog(child_controller, self, preset_id=preset["id"])
-        try:
-            accepted = editor.exec() == QDialog.DialogCode.Accepted
-        finally:
-            editor.close()
-            editor.deleteLater()
-        if not accepted:
-            self.draft.values = before
-            return
-        self._layout_changed = False
-        self._custom_layout_changed = True
-        self._clear_builtin_selection()
-        self._reload_user_layouts()
-        self._sync_visibility_controls()
-        self._sync_appearance_controls()
-        self._refresh_preview()
 
     def _linked_background_opacity(self) -> int:
         """Show what the widget uses: main opacity, but never below its readability floor."""
@@ -1146,7 +1100,3 @@ class WidgetCustomizationDialog(QDialog):
         if hasattr(settings, "sync"):
             settings.sync()
         self.accept()
-
-    def _open_free_layout_editor(self):
-        self.reject()
-        QTimer.singleShot(0, self.controller.open_free_layout_editor)

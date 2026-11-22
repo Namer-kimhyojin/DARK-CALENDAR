@@ -25,7 +25,6 @@ sys.path.insert(0, str(ROOT))
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", default="final")
-    parser.add_argument("--skip-editor", action="store_true")
     args = parser.parse_args()
     os.environ["QT_QPA_PLATFORM"] = "windows" if sys.platform == "win32" else "offscreen"
     scale = os.environ.get("QT_SCALE_FACTOR", "1")
@@ -60,9 +59,6 @@ def main() -> None:
             from tests.test_widget_mode_ux import Host
 
             from calendar_app.infrastructure import i18n as translations
-            from calendar_app.presentation.dialogs.widget_free_layout_editor import (
-                WidgetFreeLayoutEditorDialog,
-            )
             from calendar_app.presentation.widgets import widget_free_layout as model
             from calendar_app.presentation.widgets.unified_widget_mode import (
                 AgendaItemWidget,
@@ -413,137 +409,6 @@ def main() -> None:
         )
         capture("restart-free-restored", widget, {"expected_geometry": restart_geometry})
         destroy(fresh_host, controller, widget)
-
-        if not args.skip_editor:
-            host = host_with_data()
-            controller, widget = create(host, (760, 600))
-            before_settings = copy.deepcopy(host.settings.values)
-            before_geometry = widget.geometry()
-            editor = WidgetFreeLayoutEditorDialog(controller, widget)
-            editor.show()
-            settle()
-            canvas = editor.canvas
-            canvas.select_block("date")
-            editor.snap_checkbox.setChecked(False)
-            editor.guides_checkbox.setChecked(False)
-            initial = canvas.block_rect("date")
-            origin = initial.center()
-            QTest.mousePress(canvas, Qt.MouseButton.LeftButton, pos=origin)
-            QTest.mouseMove(canvas, origin + QPoint(5, 1))
-            QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=origin + QPoint(5, 1))
-            settle()
-            moved = canvas.block_rect("date")
-            check(
-                "editor_native_drag_exact_unsnapped",
-                moved.topLeft() == initial.topLeft() + QPoint(5, 1),
-                {"initial": list(initial.getRect()), "after": list(moved.getRect())},
-            )
-            origin = moved.bottomRight() - QPoint(5, 5)
-            QTest.mousePress(canvas, Qt.MouseButton.LeftButton, pos=origin)
-            QTest.mouseMove(canvas, origin + QPoint(31, 17))
-            QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=origin + QPoint(31, 17))
-            settle()
-            resized = canvas.block_rect("date")
-            check(
-                "editor_native_corner_resize",
-                resized.width() == moved.width() + 31 and resized.height() == moved.height() + 17,
-                {"before": list(moved.getRect()), "after": list(resized.getRect())},
-            )
-            before_numeric = canvas.block_rect("date")
-            editor.preferences_tabs.setCurrentIndex(1)
-            editor.rect_spins["x"].setValue(before_numeric.x() + 11)
-            settle()
-            check(
-                "editor_numeric_position", canvas.block_rect("date").x() == before_numeric.x() + 11
-            )
-            numeric = copy.deepcopy(editor.draft)
-            canvas.setFocus()
-            QTest.keyClick(canvas, Qt.Key.Key_Z, Qt.KeyboardModifier.ControlModifier)
-            settle()
-            check("editor_keyboard_undo", canvas.block_rect("date") == before_numeric)
-            editor.redo_btn.click()
-            settle()
-            check("editor_redo", editor.draft == numeric)
-            old_x = canvas.block_rect("date").x()
-            QTest.keyClick(canvas, Qt.Key.Key_Right)
-            settle()
-            check("editor_keyboard_one_pixel_nudge", canvas.block_rect("date").x() == old_x + 1)
-            editor.snap_checkbox.setChecked(True)
-            origin = canvas.block_rect("date").center()
-            QTest.mousePress(canvas, Qt.MouseButton.LeftButton, pos=origin)
-            QTest.mouseMove(canvas, origin + QPoint(19, 13))
-            QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=origin + QPoint(19, 13))
-            settle()
-            snapped = canvas.block_rect("date")
-            check(
-                "editor_optional_snap",
-                snapped.x() % 8 == 0 and snapped.y() % 8 == 0,
-                list(snapped.getRect()),
-            )
-            origin = snapped.center()
-            QTest.mousePress(
-                canvas, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.AltModifier, origin
-            )
-            QTest.mouseMove(canvas, origin + QPoint(3, 5))
-            QTest.mouseRelease(
-                canvas,
-                Qt.MouseButton.LeftButton,
-                Qt.KeyboardModifier.AltModifier,
-                origin + QPoint(3, 5),
-            )
-            settle()
-            check(
-                "editor_alt_bypasses_snap",
-                canvas.block_rect("date").topLeft() == snapped.topLeft() + QPoint(3, 5),
-            )
-            editor.canvas_width.setValue(1800)
-            editor.canvas_height.setValue(1600)
-            editor.preferences_tabs.setCurrentIndex(2)
-            settle()
-            check(
-                "editor_large_canvas_scrolls",
-                editor.canvas_scroll.horizontalScrollBar().maximum() > 0
-                and editor.canvas_scroll.verticalScrollBar().maximum() > 0,
-            )
-            capture("editor-gestures", editor, {"draft": copy.deepcopy(editor.draft)})
-            check(
-                "editor_gestures_never_persist_before_apply",
-                host.settings.values == before_settings and widget.geometry() == before_geometry,
-            )
-            editor.cancel_btn.click()
-            settle()
-            check(
-                "editor_cancel_preserves_settings_and_geometry",
-                host.settings.values == before_settings and widget.geometry() == before_geometry,
-            )
-            editor.deleteLater()
-            settle()
-            editor = WidgetFreeLayoutEditorDialog(controller, widget)
-            editor.show()
-            editor.canvas.select_block("date")
-            editor.snap_checkbox.setChecked(False)
-            editor.rect_spins["x"].setValue(43)
-            editor.rect_spins["y"].setValue(31)
-            editor.component_checks["agenda"].setChecked(False)
-            editor.component_checks["work"].setChecked(True)
-            editor.calendar_mode_combo.setCurrentIndex(editor.calendar_mode_combo.findData("month"))
-            editor.preferences_tabs.setCurrentIndex(2)
-            expected = copy.deepcopy(editor.draft)
-            capture("editor-before-apply", editor, {"draft": expected})
-            editor.apply_btn.click()
-            settle()
-            check(
-                "editor_apply_uses_persisted_free_mode",
-                widget._free_layout_active and model.read_free_layout(host.settings) == expected,
-            )
-            check(
-                "editor_month_selection_reaches_live_calendar",
-                widget.cal_grid.display_mode == "month",
-            )
-            capture("editor-applied-runtime", widget)
-            editor.deleteLater()
-            settle()
-            destroy(host, controller, widget)
 
         report_path = output / "observations.json"
         report_path.write_text(

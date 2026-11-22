@@ -173,18 +173,6 @@ def test_settings_reload_and_theme_change_keep_free_coordinates(workspace):
     flush()
 
 
-def test_editor_cancel_does_not_change_settings_or_live_mode(workspace):
-    host, coordinator, widget = workspace
-    before = deepcopy(host.settings.values)
-    with patch(
-        "calendar_app.presentation.dialogs.widget_free_layout_editor.WidgetFreeLayoutEditorDialog"
-    ) as dialog:
-        dialog.return_value.exec.return_value = 0
-        coordinator.controller.open_free_layout_editor()
-    assert host.settings.values == before
-    assert not widget._free_layout_active
-
-
 def test_free_date_uses_existing_date_dialog_without_new_global_shortcuts(workspace):
     _, _, widget = workspace
     _, runtime = enable(workspace)

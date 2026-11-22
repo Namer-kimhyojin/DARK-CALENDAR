@@ -597,10 +597,6 @@ class WindowShellActionsMixin:
             auto_hide.setChecked(shelf.auto_hide)
             auto_hide.setEnabled(not suppressed)
 
-    def _ensure_widget_mode_controller(self):
-        """Compatibility entry point backed by the unified coordinator."""
-        return self._ensure_widget_mode_coordinator()
-
     def _ensure_widget_mode_coordinator(self):
         coordinator = getattr(self, "_widget_mode_coordinator", None)
         if coordinator is None:
@@ -623,18 +619,6 @@ class WindowShellActionsMixin:
     def toggle_widget_mode_panel(self):
         # Use unified widget instead of separate panels per new requirement
         self.toggle_unified_widget()
-
-    def open_schedule_widget_panel(self):
-        controller = self._ensure_widget_mode_controller()
-        controller.enter_widget_mode(show_schedule=True, show_work=False)
-
-    def open_work_widget_panel(self):
-        controller = self._ensure_widget_mode_controller()
-        controller.enter_widget_mode(show_schedule=False, show_work=True)
-
-    def open_all_widget_panels(self):
-        controller = self._ensure_widget_mode_controller()
-        controller.enter_widget_mode(show_schedule=True, show_work=True)
 
     def stop_widget_mode(self):
         controller = getattr(self, "_widget_mode_coordinator", None)

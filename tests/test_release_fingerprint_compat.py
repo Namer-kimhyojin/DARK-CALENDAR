@@ -70,7 +70,6 @@ def make_archive_fixture(tmp_path):
     modules = {
         "calendar_app.bootstrap",
         "calendar_app.presentation.widgets.unified_widget_mode",
-        "calendar_app.presentation.dialogs.widget_free_layout_editor",
         "calendar_app.presentation.dialogs.widget_customization_dialog",
         "calendar_app.presentation.widgets.widget_layout_presets",
     }
@@ -114,7 +113,7 @@ def test_exact_verifier_process_serializes_real_314_slice_constants(tmp_path):
     assert with_loader.returncode == 0, with_loader.stderr
     report = json.loads(arguments[-1].read_text(encoding="utf-8", errors="strict"))
     assert report["failures"] == []
-    assert report["compiled_modules_checked"] == 5
+    assert report["compiled_modules_checked"] == 4
     assert arguments[0].read_bytes() == original
 
 

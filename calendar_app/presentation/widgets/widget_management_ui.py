@@ -191,11 +191,7 @@ class WidgetModeManagementPanel(QWidget):
         self.customize_button = hub_button(
             t("widget_hub.customize_mode", "화면·스킨 꾸미기"), self._customize, primary=True
         )
-        self.free_button = hub_button(
-            t("widget_hub.free_editor", "자유 구성 편집"), self._edit_free
-        )
         row.addWidget(self.customize_button)
-        row.addWidget(self.free_button)
         row.addStretch()
         details.addLayout(row)
         layout.addWidget(summary)
@@ -287,7 +283,7 @@ class WidgetModeManagementPanel(QWidget):
         available = coordinator is not None or callable(
             getattr(self.owner, "_ensure_widget_mode_coordinator", None)
         )
-        for button in (self.enter_button, self.customize_button, self.free_button):
+        for button in (self.enter_button, self.customize_button):
             button.setEnabled(available)
 
     def _enter(self):
@@ -315,21 +311,6 @@ class WidgetModeManagementPanel(QWidget):
         controller = coordinator.controller
         controller.ensure_widget()
         dialog = WidgetCustomizationDialog(controller, self.window())
-        dialog.exec()
-        dialog.deleteLater()
-        self.refresh()
-
-    def _edit_free(self):
-        from calendar_app.presentation.dialogs.widget_free_layout_editor import (
-            WidgetFreeLayoutEditorDialog,
-        )
-
-        coordinator = self._coordinator(create=True)
-        if coordinator is None:
-            return
-        controller = coordinator.controller
-        controller.ensure_widget()
-        dialog = WidgetFreeLayoutEditorDialog(controller, parent=self.window())
         dialog.exec()
         dialog.deleteLater()
         self.refresh()

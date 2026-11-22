@@ -2850,9 +2850,6 @@ class UnifiedWidgetWindow(QWidget):
         refresh_action = menu.addAction(t("widget_mode.menu_refresh", "새로고침"))
         menu.addSection(t("widget_mode.menu_view", "보기 설정"))
         menu.addAction(t("widget_mode.customize", "꾸미기"), self.open_customization)
-        menu.addAction(
-            t("widget_mode.free_layout_edit", "구성 편집…"), self.controller.open_free_layout_editor
-        )
         density_menu = menu.addMenu(t("widget_mode.density", "목록 밀도"))
         current_density = read_widget_density(self.controller.main_window.settings).key
         for density in DENSITIES:
@@ -2912,7 +2909,6 @@ class UnifiedWidgetWindow(QWidget):
                 lambda _checked=False, selected=skin.skin_id: self.controller.set_skin(selected)
             )
 
-        editor_action = menu.addAction(t("widget_mode.editor_title", "위젯 스타일 만들기"))
         menu.addSection(t("widget_mode.menu_window", "창 관리"))
         menu.addAction(t("widget.placement.title", "위치·크기 조정"), self._open_placement_dialog)
         placement_lock = menu.addAction(t("widget.placement.lock", "위치·크기 고정"))
@@ -2933,18 +2929,7 @@ class UnifiedWidgetWindow(QWidget):
             widget_menu = menu.addMenu(t("widget_mode.desktop_widgets", "바탕화면 위젯 관리"))
             manager.build_widgets_menu(widget_menu, menu_qss)
         selected = menu.exec(global_pos)
-        if selected == editor_action:
-            from calendar_app.presentation.dialogs.widget_style_editor_dialog import (
-                WidgetStyleEditorDialog,
-            )
-
-            editor = WidgetStyleEditorDialog(self)
-            if editor.exec():
-                if editor.created_kind == "skin":
-                    self.controller.set_skin(editor.created_id)
-                elif editor.created_kind == "layout":
-                    self.controller.set_layout(editor.created_id)
-        elif selected == directive_management_action:
+        if selected == directive_management_action:
             self.controller.open_work_management("directive")
         elif selected == work_management_action:
             self.controller.open_work_management("schedule")
@@ -3648,15 +3633,6 @@ class UnifiedWidgetController:
         self._restore_geometry()
         self.widget._style_signature = None
         self.widget.apply_theme()
-
-    def open_free_layout_editor(self, preset_id=None):
-        from calendar_app.presentation.dialogs.widget_free_layout_editor import (
-            WidgetFreeLayoutEditorDialog,
-        )
-
-        editor = WidgetFreeLayoutEditorDialog(self, parent=self.widget, preset_id=preset_id)
-        editor.exec()
-        editor.deleteLater()
 
     def apply_layout_preset(self, preset_id):
         from calendar_app.presentation.widgets.widget_layout_presets import (

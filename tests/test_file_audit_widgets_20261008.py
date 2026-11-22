@@ -24,7 +24,6 @@ from calendar_app.presentation.widgets.overlay_color_utils import _parse_rgba
 from calendar_app.presentation.widgets.overlay_manager import OverlayWidgetManager
 from calendar_app.presentation.widgets.overlay_stopwatch import OverlayStopwatchWidget
 from calendar_app.presentation.widgets.overlay_text import OverlayTextWidget
-from calendar_app.presentation.widgets.widget_mode_skins import load_user_widget_styles
 from calendar_app.presentation.widgets.widget_mode_typography import read_widget_typography
 from calendar_app.shared.typography import DEFAULT_FONT_PT
 
@@ -168,14 +167,6 @@ def test_keydeck_large_numeric_settings_recover(value):
     result = normalize_deck({"unit": value, "pages": [{"keys": [{"w": value}]}]})
     assert result["unit"] == 68
     assert result["pages"][0]["keys"][0]["w"] == 1.0
-
-
-@pytest.mark.parametrize("field", ["skins", "layouts"])
-@pytest.mark.parametrize("value", [None, 17])
-def test_user_style_bad_collection_does_not_break_import(tmp_path, field, value):
-    path = tmp_path / "styles.json"
-    path.write_text(json.dumps({field: value}), encoding="utf-8", errors="strict")
-    assert load_user_widget_styles(path) == (0, 0)
 
 
 def test_typography_nonfinite_setting_uses_default(owner):

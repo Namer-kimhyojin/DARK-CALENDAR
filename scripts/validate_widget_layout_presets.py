@@ -23,7 +23,6 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", default="final")
     parser.add_argument("--skip-ui", action="store_true")
-    parser.add_argument("--verify-explicit-edit", action="store_true")
     args = parser.parse_args()
     os.environ["QT_QPA_PLATFORM"] = "windows" if sys.platform == "win32" else "offscreen"
     scale = os.environ.get("QT_SCALE_FACTOR", "1")
@@ -59,9 +58,6 @@ def main():
             from calendar_app.infrastructure import i18n as translations
             from calendar_app.presentation.dialogs.widget_customization_dialog import (
                 WidgetCustomizationDialog,
-            )
-            from calendar_app.presentation.dialogs.widget_free_layout_editor import (
-                WidgetFreeLayoutEditorDialog,
             )
             from calendar_app.presentation.widgets import widget_layout_presets as presets
             from calendar_app.presentation.widgets.unified_widget_mode import (
@@ -190,13 +186,6 @@ def main():
                 settle()
             return host, controller
 
-        def editor_for(controller, preset_id=None):
-            editor = WidgetFreeLayoutEditorDialog(controller, preset_id=preset_id)
-            editor.move(app.primaryScreen().availableGeometry().topLeft() + QPoint(10, 10))
-            editor.show()
-            settle()
-            return editor
-
         def capture(name, editor):
             settle()
             editor.grab().save(str(output / f"{name}.png"))
@@ -242,100 +231,13 @@ def main():
             settle()
 
         if not args.skip_ui:
-            if args.verify_explicit_edit:
-                host, controller = make()
-                controller.apply_layout_preset(first_id)
-                editor = editor_for(controller, first_id)
-                editor.canvas.select_block("date")
-                editor.rect_spins["x"].setValue(editor.rect_spins["x"].value() + 5)
-                expected = copy.deepcopy(editor.draft)
-                editor.apply_btn.click()
-                settle()
-                host.settings.sync()
-                restart_settings = QSettings(host.settings.fileName(), QSettings.Format.IniFormat)
-                check(
-                    "explicit_preset_edit_apply_overwrites_without_update_button",
-                    presets.get_layout_preset(
-                        presets.read_layout_presets(restart_settings), first_id
-                    )["layout"]
-                    == expected
-                    and controller.widget._free_runtime.data == expected
-                    and restart_settings.value(presets.SELECTED_LAYOUT_PRESET_KEY) == first_id,
-                )
-                editor.deleteLater()
-                close(host, controller)
-                report["summary"] = {
-                    "checks": len(report["checks"]),
-                    "failed": sum(not item["passed"] for item in report["checks"]),
-                    "screenshots": 0,
-                }
-                (output / "explicit-edit-observations.json").write_text(
-                    json.dumps(report, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                    errors="strict",
-                )
-                logging.shutdown()
-                print(json.dumps({"output": str(output), **report["summary"]}))
-                if report["summary"]["failed"]:
-                    raise SystemExit(1)
-                return
             host, controller = make()
             check(
                 "controller_applies_persistent_user_preset",
                 controller.apply_layout_preset(first_id) is not False
                 and read_free_layout(host.settings) == first,
             )
-            original_geometry = controller.widget.geometry()
             before = snapshot(host.settings)
-            editor = editor_for(controller, first_id)
-            editor.preferences_tabs.setCurrentIndex(editor.presets_tab_index)
-            check(
-                "constructor_preset_is_detached_draft",
-                editor.draft == first
-                and editor.selected_preset_id == first_id
-                and snapshot(host.settings) == before,
-            )
-            with patch.object(presets, "uuid4", return_value=UUID(int=3)):
-                new_id = editor.save_as_preset("QA 새 배치")
-            check(
-                "save_as_staged_library_only",
-                len(editor.presets) == 3 and snapshot(host.settings) == before,
-            )
-            editor.undo_btn.click()
-            check(
-                "save_as_undo", len(editor.presets) == 2 and editor.selected_preset_id == first_id
-            )
-            editor.redo_btn.click()
-            check("save_as_redo", len(editor.presets) == 3 and editor.selected_preset_id == new_id)
-            editor.canvas.select_block("date")
-            editor.rect_spins["x"].setValue(editor.rect_spins["x"].value() + 5)
-            editor.preset_update_btn.click()
-            check(
-                "overwrite_updates_selected_draft_only",
-                presets.get_layout_preset(editor.presets, new_id)["layout"] == editor.draft
-                and snapshot(host.settings) == before,
-            )
-            editor.rename_selected_preset("QA 저장한 집중 배치")
-            check(
-                "rename_updates_draft_name",
-                presets.get_layout_preset(editor.presets, new_id)["name"] == "QA 저장한 집중 배치",
-            )
-            staged = copy.deepcopy(editor.presets)
-            try:
-                editor.rename_selected_preset(library[0]["name"])
-                rejected = False
-            except ValueError:
-                rejected = True
-            check("duplicate_editor_rename_atomic", rejected and editor.presets == staged)
-            capture("ko-selected-preset-editor", editor)
-            editor.reject()
-            editor.deleteLater()
-            settle()
-            check(
-                "editor_all_crud_cancel_preserves_ini_and_geometry",
-                snapshot(host.settings) == before
-                and controller.widget.geometry() == original_geometry,
-            )
 
             customization = WidgetCustomizationDialog(controller)
             customization.move(app.primaryScreen().availableGeometry().topLeft() + QPoint(10, 10))
@@ -352,16 +254,14 @@ def main():
             settle()
             check("korean_customization_cancel_isolated", snapshot(host.settings) == before)
 
-            editor = editor_for(controller, first_id)
-            editor.preferences_tabs.setCurrentIndex(editor.presets_tab_index)
-            with patch.object(presets, "uuid4", return_value=UUID(int=3)):
-                new_id = editor.save_as_preset("QA 저장한 집중 배치")
-            editor.canvas.select_block("date")
-            editor.rect_spins["x"].setValue(editor.rect_spins["x"].value() + 5)
-            editor.update_selected_preset()
-            applied_layout = copy.deepcopy(editor.draft)
-            applied_library = copy.deepcopy(editor.presets)
-            editor.apply_btn.click()
+            applied_layout = copy.deepcopy(first)
+            date_block = next(block for block in applied_layout["blocks"] if block["id"] == "date")
+            date_block["rect"][0] += 5
+            applied_library, new_id = presets.create_layout_preset(
+                presets.read_layout_presets(host.settings), "QA 저장한 집중 배치", applied_layout
+            )
+            presets.write_layout_presets(host.settings, applied_library)
+            controller.apply_layout_preset(new_id)
             settle()
             check(
                 "apply_persists_library_selected_and_live_layout",
@@ -371,7 +271,6 @@ def main():
             )
             host_path = host.settings.fileName()
             saved_geometry = list(controller.widget.geometry().getRect())
-            editor.deleteLater()
             close(host, controller)
 
             host = Host()
@@ -401,32 +300,6 @@ def main():
             )
             controller.apply_layout_preset(new_id)
             settle()
-            before_geometry = controller.widget.geometry()
-            editor = editor_for(controller, new_id)
-            editor.preferences_tabs.setCurrentIndex(editor.presets_tab_index)
-            editor.delete_selected_preset()
-            check(
-                "selected_delete_keeps_draft_and_live_geometry",
-                editor.draft == applied_layout and controller.widget.geometry() == before_geometry,
-            )
-            editor.undo()
-            check(
-                "delete_undo_restores_selected_entry",
-                editor.selected_preset_id == new_id
-                and presets.get_layout_preset(editor.presets, new_id) is not None,
-            )
-            editor.redo()
-            editor.apply_btn.click()
-            settle()
-            check(
-                "delete_apply_preserves_live_geometry_and_layout",
-                host.settings.value(presets.SELECTED_LAYOUT_PRESET_KEY) == ""
-                and presets.get_layout_preset(presets.read_layout_presets(host.settings), new_id)
-                is None
-                and controller.widget.geometry() == before_geometry
-                and controller.widget._free_runtime.data == applied_layout,
-            )
-            editor.deleteLater()
             before = snapshot(host.settings)
             check(
                 "unknown_controller_preset_does_not_mutate",
@@ -458,15 +331,6 @@ def main():
             host, controller = make("de")
             controller.apply_layout_preset(second_id)
             before = snapshot(host.settings)
-            editor = editor_for(controller, second_id)
-            editor.preferences_tabs.setCurrentIndex(editor.presets_tab_index)
-            editor.fit_btn.click()
-            capture("de-selected-preset-editor", editor)
-            editor.reject()
-            editor.deleteLater()
-            settle()
-            check("german_editor_cancel_isolated", snapshot(host.settings) == before)
-
             customization = WidgetCustomizationDialog(controller)
             customization.move(app.primaryScreen().availableGeometry().topLeft() + QPoint(10, 10))
             customization.show()
@@ -491,30 +355,12 @@ def main():
                         button.mapTo(viewport, QPoint(button.width() - 2, button.height() - 2))
                     )
                     for button in (
-                        customization.preset_edit_btn,
                         customization.preset_rename_btn,
                         customization.preset_delete_btn,
                     )
                 ),
             )
 
-            def accept_child(child):
-                child.canvas.select_block("date")
-                child.rect_spins["x"].setValue(child.rect_spins["x"].value() + 5)
-                child.update_selected_preset()
-                child._apply()
-                return child.DialogCode.Accepted
-
-            with patch.object(WidgetFreeLayoutEditorDialog, "exec", accept_child):
-                customization._edit_user_layout()
-            check(
-                "nested_editor_apply_only_parent_draft",
-                presets.get_layout_preset(
-                    presets.read_layout_presets(customization.draft), first_id
-                )["layout"]
-                != first
-                and snapshot(host.settings) == before,
-            )
             customization._rename_user_layout("QA 부모 초안 배치")
             check(
                 "customization_rename_is_staged",
@@ -536,7 +382,7 @@ def main():
             customization.reject()
             customization.deleteLater()
             settle()
-            check("parent_cancel_discards_child_crud", snapshot(host.settings) == before)
+            check("parent_cancel_discards_staged_crud", snapshot(host.settings) == before)
 
             customization = WidgetCustomizationDialog(controller)
             customization.move(app.primaryScreen().availableGeometry().topLeft() + QPoint(10, 10))

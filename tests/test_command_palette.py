@@ -141,6 +141,20 @@ class CommandPaletteTests(TemporaryDatabaseTestCase):
         self.assertIn("task:1", result_ids)
         self.assertIn("directive:1", result_ids)
 
+    def test_palette_has_single_widget_mode_command(self):
+        host = _PaletteHost()
+        palette = CommandPalette(parent=host)
+        ids = {entry["id"] for entry in palette._commands}
+        self.assertIn("toggle_widget_mode_panel", ids)
+        for retired in (
+            "open_schedule_widget_panel",
+            "open_work_widget_panel",
+            "open_all_widget_panels",
+        ):
+            self.assertNotIn(retired, ids)
+        palette.deleteLater()
+        host.deleteLater()
+
     def test_palette_command_prefix_filters_to_commands(self):
         host = _PaletteHost()
         self.addCleanup(host.close)

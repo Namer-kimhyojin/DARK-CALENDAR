@@ -212,7 +212,6 @@ def test_every_palette_command_title_is_looked_up_through_t(host):
             "shortcut.entries.lock_mode.label",
             "shortcut.entries.monitor_right.label",
             "labels.widget_manager",
-            "widget_mode.open_all",
             "palette.theme_system",
             "dialog.font.title",
         ):

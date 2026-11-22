@@ -82,7 +82,6 @@ def verify(source: Path, payload: Path, *, metadata_source: Path | None = None):
     required = {
         "calendar_app.bootstrap",
         "calendar_app.presentation.widgets.unified_widget_mode",
-        "calendar_app.presentation.dialogs.widget_free_layout_editor",
         "calendar_app.presentation.dialogs.widget_customization_dialog",
         "calendar_app.presentation.widgets.widget_layout_presets",
     }

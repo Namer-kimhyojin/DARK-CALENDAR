@@ -91,7 +91,7 @@ def test_duplicate_name_rejected_and_builtin_selection_clears_user_id(library_di
     dialog.layout_buttons["minimal"].click()
     assert dialog.draft.value(SELECTED_LAYOUT_PRESET_KEY) == ""
     assert dialog.user_layout_list.currentItem() is None
-    assert not dialog.preset_edit_btn.isEnabled()
+    assert not dialog.preset_rename_btn.isEnabled()
 
 
 def test_delete_confirmation_names_preset_and_defaults_to_cancel(library_dialog):
@@ -113,45 +113,3 @@ def test_my_layouts_navigation_reveals_selected_list(library_dialog):
     _APP.processEvents()
     assert dialog.controls_scroll.verticalScrollBar().value() > 0
     assert dialog.user_layout_list.hasFocus()
-
-
-@pytest.mark.parametrize("accepted", [False, True])
-def test_child_editor_apply_stays_in_parent_draft_and_cancel_restores_it(library_dialog, accepted):
-    dialog, host, controller, first_id, _second_id = library_dialog
-    dialog.user_layout_list.setCurrentRow(0)
-    source_before = deepcopy(host.settings.values)
-    parent_before = deepcopy(dialog.draft.values)
-    changed = read_free_layout(dialog.draft)
-    changed["canvas"] = [1000, 700]
-
-    def make_editor(child_controller, parent, *, preset_id):
-        assert child_controller.main_window.settings is dialog.draft
-        assert child_controller.widget is controller.widget
-        assert parent is dialog and preset_id == first_id
-
-        def finish():
-            child_controller.apply_free_layout(changed)
-            write_layout_presets(
-                dialog.draft,
-                update_layout_preset(read_layout_presets(dialog.draft), first_id, changed),
-            )
-            return QDialog.DialogCode.Accepted if accepted else QDialog.DialogCode.Rejected
-
-        return Mock(exec=finish)
-
-    with patch(
-        "calendar_app.presentation.dialogs.widget_free_layout_editor.WidgetFreeLayoutEditorDialog",
-        side_effect=make_editor,
-    ):
-        dialog._edit_user_layout()
-    assert host.settings.values == source_before
-    if accepted:
-        assert read_free_layout(dialog.draft)["canvas"] == [1000, 700]
-        assert get_layout_preset(read_layout_presets(dialog.draft), first_id)["layout"][
-            "canvas"
-        ] == [1000, 700]
-        dialog._apply()
-        assert read_free_layout(host.settings)["canvas"] == [1000, 700]
-        assert USER_LAYOUT_PRESETS_KEY in host.settings.values
-    else:
-        assert dialog.draft.values == parent_before
