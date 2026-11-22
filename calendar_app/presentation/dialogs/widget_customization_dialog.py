@@ -615,7 +615,7 @@ class WidgetCustomizationDialog(QDialog):
         self.surface_gallery.setIconSize(QSize(150, 74))
         self.surface_gallery.setGridSize(QSize(172, 112))
         self.surface_gallery.setWordWrap(True)
-        self.surface_gallery.setFixedHeight(128)
+        self.surface_gallery.setFixedHeight(2 * 112 + 2 * self.surface_gallery.frameWidth() + 8)
         self.surface_gallery.setMinimumWidth(0)
         self.surface_gallery.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.surface_gallery.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)

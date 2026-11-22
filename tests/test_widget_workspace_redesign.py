@@ -219,3 +219,23 @@ def test_card_surface_item_border_uses_card_border_token():
     assert "1px solid #00bb02" in rule and "#aa0001" not in rule
     outline = workspace_styles(tokens, get_widget_mode_surface("outline"))
     assert "1px solid #aa0001" in outline[outline.index("QFrame#agenda_item_task") :]
+
+
+@pytest.mark.parametrize("width", [700, 760, 940, 1280])
+def test_surface_gallery_shows_all_cards_without_scrolling(workspace, width):
+    _, coordinator, widget = workspace
+    dialog = WidgetCustomizationDialog(coordinator.controller, widget)
+    dialog.resize(width, 680)
+    dialog.show()
+    dialog.preferences_tabs.setCurrentIndex(1)
+    for _ in range(5):
+        _APP.processEvents()
+    gallery = dialog.surface_gallery
+    assert gallery.count() == 4
+    viewport = gallery.viewport().rect()
+    for index in range(4):
+        assert viewport.contains(gallery.visualItemRect(gallery.item(index))), (width, index)
+    assert gallery.verticalScrollBar().maximum() == 0
+    dialog.reject()
+    dialog.deleteLater()
+    _APP.sendPostedEvents(None, QEvent.Type.DeferredDelete)
