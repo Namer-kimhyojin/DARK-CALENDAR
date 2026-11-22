@@ -123,11 +123,6 @@ def test_preview_and_apply_keep_legacy_values_while_transparency_follows_main(wo
     host.settings.setValue("last_opacity", 128)
     host.settings.setValue("last_opacity_unit", "byte")
     dialog = WidgetCustomizationDialog(coordinator.controller, widget)
-    assert dialog.text_opacity.value() == 100
-    # Main opacity 50% is shown as the widget's effective readability floor.
-    assert dialog.background_opacity.value() == round(WIDGET_SHELL_MIN_ALPHA * 100 / 255)
-    assert not dialog.background_opacity.isEnabled()
-    assert not dialog.text_opacity.isEnabled()
     assert host.settings.value(TEXT_OPACITY_KEY) is None
     assert host.settings.value(BACKGROUND_OPACITY_KEY) is None
     dialog.reject()

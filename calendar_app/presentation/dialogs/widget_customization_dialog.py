@@ -20,7 +20,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
-    QSlider,
     QSpinBox,
     QTabWidget,
     QToolButton,
@@ -52,10 +51,12 @@ from calendar_app.presentation.widgets.widget_mode_density import (
     DENSITY_KEY,
     read_widget_density,
 )
-from calendar_app.presentation.widgets.widget_mode_opacity import (
-    BACKGROUND_OPACITY_KEY,
-    TEXT_OPACITY_KEY,
-    read_widget_opacities,
+from calendar_app.presentation.widgets.widget_mode_display import (
+    CALENDAR_STYLE_PREFIX,
+    SEARCH_PINNED_PREFIX,
+    SHOW_OVERVIEW_PREFIX,
+    display_key,
+    read_layout_display,
 )
 from calendar_app.presentation.widgets.widget_mode_skins import (
     get_widget_mode_layout,
@@ -68,7 +69,6 @@ from calendar_app.presentation.widgets.widget_mode_surfaces import (
     widget_mode_surfaces,
 )
 from calendar_app.presentation.widgets.widget_mode_theme import (
-    WIDGET_SHELL_MIN_ALPHA,
     main_widget_mode_tokens,
 )
 from calendar_app.presentation.widgets.widget_mode_typography import read_widget_typography
@@ -78,7 +78,6 @@ from calendar_app.presentation.widgets.widget_mode_visibility import (
 )
 from calendar_app.shared.color_utils import composite_color, parse_css_color
 from calendar_app.shared.qt_helpers import mnemonic_safe
-from calendar_app.shared.theme_snapshot import build_theme_snapshot
 
 
 class _DraftSettings:
@@ -199,8 +198,6 @@ class WidgetCustomizationDialog(QDialog):
             self.font_family,
             self.font_size,
             self.font_weight,
-            self.text_opacity,
-            self.background_opacity,
             self.density_combo,
         ):
             control.installEventFilter(self)
@@ -395,6 +392,7 @@ class WidgetCustomizationDialog(QDialog):
         self._refresh_preview()
 
     def _sync_visibility_controls(self):
+        self._sync_display_controls()
         for attribute, block_id, default in (
             ("calendar_visibility_checkbox", "calendar", "true"),
             ("clock_visibility_checkbox", "clock", "true"),
@@ -485,13 +483,6 @@ class WidgetCustomizationDialog(QDialog):
         self.draft.setValue(SELECTED_LAYOUT_PRESET_KEY, "")
         self._reload_user_layouts()
 
-    def _linked_background_opacity(self) -> int:
-        """Show what the widget uses: main opacity, but never below its readability floor."""
-        return max(
-            round(build_theme_snapshot(self.draft).opacity_factor * 100),
-            round(WIDGET_SHELL_MIN_ALPHA * 100 / 255),
-        )
-
     def _sync_appearance_controls(self):
         for control, setter, value in (
             (
@@ -520,18 +511,10 @@ class WidgetCustomizationDialog(QDialog):
                 self.font_weight.setCurrentIndex,
                 self.font_weight.findData(self._font_weight_preference()),
             ),
-            (self.text_opacity, self.text_opacity.setValue, 100),
-            (
-                self.background_opacity,
-                self.background_opacity.setValue,
-                self._linked_background_opacity(),
-            ),
         ):
             blocked = control.blockSignals(True)
             setter(value)
             control.blockSignals(blocked)
-            if hasattr(control, "_percentage_label"):
-                control._percentage_label.setText(f"{value}%")
         self._sync_surface_gallery()
 
     def _show_all_layouts(self):
@@ -615,7 +598,8 @@ class WidgetCustomizationDialog(QDialog):
         self.surface_gallery.setIconSize(QSize(150, 74))
         self.surface_gallery.setGridSize(QSize(172, 112))
         self.surface_gallery.setWordWrap(True)
-        self.surface_gallery.setFixedHeight(2 * 112 + 2 * self.surface_gallery.frameWidth() + 8)
+        self.surface_gallery.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.surface_gallery.installEventFilter(self)
         self.surface_gallery.setMinimumWidth(0)
         self.surface_gallery.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.surface_gallery.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -626,6 +610,7 @@ class WidgetCustomizationDialog(QDialog):
             item.setData(Qt.ItemDataRole.UserRole, surface.key)
             item.setToolTip(item.text())
             self.surface_gallery.addItem(item)
+        self._fit_surface_gallery_height()
         self._sync_surface_gallery()
         self.surface_gallery.currentItemChanged.connect(
             lambda item, _old: (
@@ -698,46 +683,22 @@ class WidgetCustomizationDialog(QDialog):
             lambda: self._change("widget_mode_font_weight", self.font_weight.currentData())
         )
         form.addRow(t("widget_mode.font_weight", "제목 굵기"), self.font_weight)
-        text_opacity, background_opacity = read_widget_opacities(self.draft)
-        self.text_opacity = self._opacity_control(
-            tab,
-            form,
-            TEXT_OPACITY_KEY,
-            t("widget_mode.text_opacity", "글자 불투명도"),
-            text_opacity,
-            20,
+        surface_help = QLabel(
+            t("widget_mode.surface_help", "색과 투명도는 모양 설정을 따릅니다."), tab
         )
-        self.background_opacity = self._opacity_control(
-            tab,
-            form,
-            BACKGROUND_OPACITY_KEY,
-            t("widget_mode.background_opacity", "배경 불투명도"),
-            background_opacity,
-            0,
+        surface_help.setWordWrap(True)
+        surface_help.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        form.addRow(surface_help)
+        self.open_appearance_btn = QPushButton(
+            t("widget_mode.open_appearance", "모양 설정 열기"), tab
         )
-        linked_opacity = self._linked_background_opacity()
-        for control, value in ((self.text_opacity, 100), (self.background_opacity, linked_opacity)):
-            blocked = control.blockSignals(True)
-            control.setValue(value)
-            control.blockSignals(blocked)
-            control._percentage_label.setText(f"{value}%")
-            control.setEnabled(False)
-            control.setToolTip(
-                t(
-                    "widget_mode.main_theme_opacity_help",
-                    "메인 화면의 모양 설정에서 투명도를 변경합니다.",
-                )
-            )
-        opacity_help = QLabel(
-            t(
-                "widget_mode.main_theme_opacity_help",
-                "메인 화면의 모양 설정에서 투명도를 변경합니다.",
-            ),
-            tab,
-        )
-        opacity_help.setWordWrap(True)
-        opacity_help.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
-        form.addRow(opacity_help)
+        self.open_appearance_btn.setObjectName("open_appearance_btn")
+        opener = getattr(self.controller.main_window, "open_panel_background_color_dialog", None)
+        if callable(opener):
+            self.open_appearance_btn.clicked.connect(lambda _checked=False: opener())
+        else:
+            self.open_appearance_btn.hide()
+        form.addRow(self.open_appearance_btn)
         return tab
 
     def _surface_icon(self, surface):
@@ -755,16 +716,45 @@ class WidgetCustomizationDialog(QDialog):
         painter.drawRoundedRect(1, 1, 148, 72, radius, radius)
         painter.setBrush(css_to_qcolor(accent))
         painter.drawRoundedRect(10, 10, 35, 5, 2, 2)
+        item_radius = surface.item_radius
+        outline = css_to_qcolor(accent)
+        outline.setAlpha(150)
+        soft_outline = css_to_qcolor(accent)
+        soft_outline.setAlpha(60)
         for row in range(3):
-            painter.setBrush(css_to_qcolor(fill))
-            painter.drawRoundedRect(10, 23 + row * 14, 130, 11, 3, 3)
+            top = 23 + row * 14
+            if surface.item_background == "card":
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(css_to_qcolor(fill))
+                painter.drawRoundedRect(10, top, 130, 11, item_radius, item_radius)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            if surface.item_border == "full":
+                painter.setPen(outline if surface.item_background != "card" else soft_outline)
+                painter.drawRoundedRect(10, top, 130, 11, item_radius, item_radius)
+            else:
+                painter.setPen(outline)
+                painter.drawLine(10, top + 12, 140, top + 12)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(css_to_qcolor(accent))
-            painter.drawRoundedRect(14, 27 + row * 14, 55 + row * 12, 3, 1, 1)
+            painter.drawRoundedRect(14, top + 4, 55 + row * 12, 3, 1, 1)
         painter.end()
         icon = QIcon()
         for mode in (QIcon.Mode.Normal, QIcon.Mode.Active, QIcon.Mode.Selected):
             icon.addPixmap(image, mode)
         return icon
+
+    def _fit_surface_gallery_height(self, viewport_width: int | None = None) -> None:
+        """Size the gallery to the rows its current width needs so no card is clipped."""
+        gallery = self.surface_gallery
+        frame = gallery.frameWidth()
+        if viewport_width is None:
+            viewport_width = gallery.width() - 2 * frame
+        grid = gallery.gridSize()
+        columns = max(1, viewport_width // max(1, grid.width()))
+        rows = -(-gallery.count() // columns)
+        height = rows * grid.height() + 2 * frame + 8
+        if gallery.height() != height:
+            gallery.setFixedHeight(height)
 
     def _sync_surface_gallery(self, *_):
         if not hasattr(self, "surface_gallery"):
@@ -787,28 +777,83 @@ class WidgetCustomizationDialog(QDialog):
                 self.surface_gallery.currentItem(), QListWidget.ScrollHint.PositionAtCenter
             )
 
-    def _opacity_control(self, parent, form, key, title, value, minimum):
+    def _build_display_group(self, tab, form):
+        title = QLabel(t("widget_mode.display_group", "선택한 배치"), tab)
+        title_font = title.font()
+        title_font.setBold(True)
+        title.setFont(title_font)
+        form.addWidget(title)
         row = QHBoxLayout()
-        label = QLabel(title, parent)
-        percent = QLabel(f"{value}%", parent)
-        row.addWidget(label)
-        row.addStretch(1)
-        row.addWidget(percent)
-        slider = QSlider(Qt.Orientation.Horizontal, parent)
-        slider._percentage_label = percent
-        slider.setRange(minimum, 100)
-        slider.setValue(value)
-        slider.setAccessibleName(title)
-        label.setBuddy(slider)
-        slider.valueChanged.connect(lambda value: percent.setText(f"{value}%"))
-        slider.valueChanged.connect(lambda value: self._change(key, value))
-        form.addRow(row)
-        form.addRow(slider)
-        return slider
+        self.calendar_style_label = QLabel(t("widget_mode.calendar_style", "달력 형태"), tab)
+        row.addWidget(self.calendar_style_label)
+        self.calendar_style_combo = QComboBox(tab)
+        self.calendar_style_combo.addItem(t("widget_mode.week_toggle", "주간"), "week")
+        self.calendar_style_combo.addItem(t("widget_mode.month_toggle", "월간"), "month")
+        self.calendar_style_combo.setAccessibleName(t("widget_mode.calendar_style", "달력 형태"))
+        self.calendar_style_label.setBuddy(self.calendar_style_combo)
+        row.addWidget(self.calendar_style_combo, 1)
+        form.addLayout(row)
+        self.show_overview_checkbox = QCheckBox(t("widget_mode.show_overview", "요약 줄 표시"), tab)
+        form.addWidget(self.show_overview_checkbox)
+        self.search_pinned_checkbox = QCheckBox(
+            t("widget_mode.search_pinned", "검색창 항상 표시"), tab
+        )
+        form.addWidget(self.search_pinned_checkbox)
+        scope_help = QLabel(t("widget_mode.display_scope_help", "선택한 배치에만 적용됩니다."), tab)
+        scope_help.setWordWrap(True)
+        form.addWidget(scope_help)
+        self.calendar_style_combo.currentIndexChanged.connect(
+            lambda: self._change_display(
+                CALENDAR_STYLE_PREFIX, self.calendar_style_combo.currentData()
+            )
+        )
+        self.show_overview_checkbox.toggled.connect(
+            lambda value: self._change_display(SHOW_OVERVIEW_PREFIX, value)
+        )
+        self.search_pinned_checkbox.toggled.connect(
+            lambda value: self._change_display(SEARCH_PINNED_PREFIX, value)
+        )
+        self._sync_display_controls()
+
+    def _change_display(self, prefix, value):
+        if self._building:
+            return
+        self.draft.setValue(display_key(prefix, read_widget_mode_layout_id(self.draft)), value)
+        self._refresh_preview()
+
+    def _sync_display_controls(self):
+        if not hasattr(self, "calendar_style_combo"):
+            return
+        layout_id = read_widget_mode_layout_id(self.draft)
+        display = read_layout_display(self.draft, get_widget_mode_layout(layout_id))
+        for control, setter, value in (
+            (
+                self.calendar_style_combo,
+                self.calendar_style_combo.setCurrentIndex,
+                self.calendar_style_combo.findData(display.calendar_style),
+            ),
+            (
+                self.show_overview_checkbox,
+                self.show_overview_checkbox.setChecked,
+                display.show_overview,
+            ),
+            (
+                self.search_pinned_checkbox,
+                self.search_pinned_checkbox.setChecked,
+                display.search_pinned,
+            ),
+        ):
+            blocked = control.blockSignals(True)
+            setter(value)
+            control.blockSignals(blocked)
+        show_style = layout_id != "minimal" and not self._free_active()
+        self.calendar_style_label.setVisible(show_style)
+        self.calendar_style_combo.setVisible(show_style)
 
     def _visibility_tab(self):
         tab = QWidget(self)
         form = QVBoxLayout(tab)
+        self._build_display_group(tab, form)
         form.addWidget(QLabel(t("widget_mode.density", "목록 밀도"), tab))
         self.density_combo = QComboBox(tab)
         for density in DENSITIES:
@@ -1048,8 +1093,10 @@ class WidgetCustomizationDialog(QDialog):
             # Clicks, popup lists and keyboard arrows still change the value normally.
             QCoreApplication.sendEvent(self.controls_scroll.viewport(), event)
             return True
+        if watched is getattr(self, "surface_gallery", None) and event.type() == QEvent.Type.Resize:
+            self._fit_surface_gallery_height(event.size().width() - 2 * watched.frameWidth())
         if (
-            watched is self.preview_label
+            watched is getattr(self, "preview_label", None)
             and event.type() == QEvent.Type.Resize
             and hasattr(self, "_preview_pixmap")
         ):
@@ -1063,8 +1110,6 @@ class WidgetCustomizationDialog(QDialog):
             "widget_mode_font_size",
             "widget_mode_font_family",
             "widget_mode_font_weight",
-            TEXT_OPACITY_KEY,
-            BACKGROUND_OPACITY_KEY,
             DENSITY_KEY,
             "widget_mode_show_clock",
             "widget_mode_show_week",
@@ -1077,7 +1122,15 @@ class WidgetCustomizationDialog(QDialog):
         self.controller._save_geometry()
         for key, value in self.draft.values.items():
             if (
-                key in allowed or key.startswith("widget_mode_calendar_visible_")
+                key in allowed
+                or key.startswith(
+                    (
+                        "widget_mode_calendar_visible_",
+                        CALENDAR_STYLE_PREFIX,
+                        SHOW_OVERVIEW_PREFIX,
+                        SEARCH_PINNED_PREFIX,
+                    )
+                )
             ) and key != "widget_mode_layout":
                 settings.setValue(key, value)
         if self._free_active():

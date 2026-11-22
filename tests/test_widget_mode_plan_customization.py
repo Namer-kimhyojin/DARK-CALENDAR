@@ -43,8 +43,6 @@ def _control_value(control):
         ("font_size", 1),
         ("font_size.lineEdit", 1),
         ("font_weight", 1),
-        ("text_opacity", 1),
-        ("background_opacity", 1),
         ("density_combo", 2),
     ],
 )
