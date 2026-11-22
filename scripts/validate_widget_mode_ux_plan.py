@@ -409,7 +409,6 @@ def main() -> None:
                     layout_overlaps = []
                     if index == 0:
                         candidates = dict(dialog.layout_buttons)
-                        candidates["all_layouts"] = dialog.all_layouts_btn
                         layout_controls = {
                             key: geometry(dialog, control)
                             for key, control in candidates.items()

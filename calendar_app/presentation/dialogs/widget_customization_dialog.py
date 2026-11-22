@@ -113,7 +113,7 @@ class _WrappedTextPage(QWidget):
         self._refresh_minimum_height(event.size().width())
 
     def event(self, event):
-        # Rows are added or revealed (e.g. "show all layouts") without a resize.
+        # Rows are added or revealed (e.g. the saved-layout list) without a resize.
         if event.type() == QEvent.Type.LayoutRequest:
             self._refresh_minimum_height(self.width())
         return super().event(event)
@@ -142,7 +142,7 @@ class WidgetCustomizationDialog(QDialog):
             + " "
             + t(
                 "widget_mode.main_theme_note",
-                "색상과 투명도는 메인 테마와 연동됩니다. 스킨은 모양과 장식을 바꿉니다.",
+                "색과 투명도는 앱의 모양 설정을 따르고, 표면 모양은 모서리와 항목 테두리만 바꿉니다.",
             ),
             self,
         )
@@ -198,6 +198,7 @@ class WidgetCustomizationDialog(QDialog):
             self.font_family,
             self.font_size,
             self.font_weight,
+            self.calendar_style_combo,
             self.density_combo,
         ):
             control.installEventFilter(self)
@@ -237,8 +238,6 @@ class WidgetCustomizationDialog(QDialog):
         self.my_layouts_btn.clicked.connect(self._show_user_layouts)
         layout.addWidget(self.my_layouts_btn)
         layout.addWidget(QLabel(t("widget_mode.preset_builtin", "기본 배치"), tab))
-        recommended = {"minimal", "agenda_first", "dashboard"}
-        recommended.update({"day_brief", "side_planner", "work_board"})
         for spec in widget_mode_layouts():
             button = QToolButton(tab)
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
@@ -263,7 +262,6 @@ class WidgetCustomizationDialog(QDialog):
             card_height = max(minimum_height, button.sizeHint().height() - frame_extra)
             button.setStyleSheet(self._layout_card_style(minimum_width, card_height))
             button.setChecked(spec.layout_id == current and not custom_id)
-            button.setVisible(spec.layout_id in recommended or spec.layout_id == current)
             button.clicked.connect(
                 lambda _checked=False, key=spec.layout_id: self._change("widget_mode_layout", key)
             )
@@ -272,11 +270,6 @@ class WidgetCustomizationDialog(QDialog):
         cards = self._layout_card_grid = QGridLayout()
         layout.addLayout(cards)
         self._reflow_layout_cards()
-        more = self.all_layouts_btn = QPushButton(
-            t("widget_mode.all_layouts", "전체 배치 보기"), tab
-        )
-        more.clicked.connect(self._show_all_layouts)
-        layout.addWidget(more)
         layout.addWidget(QLabel(t("widget_mode.user_layouts", "내 배치"), tab))
         self.user_layout_list = QListWidget(tab)
         self.user_layout_list.setAccessibleName(t("widget_mode.preset_select", "저장한 배치 선택"))
@@ -473,6 +466,9 @@ class WidgetCustomizationDialog(QDialog):
                 self,
             )
             message.setTextFormat(Qt.TextFormat.PlainText)
+            message.button(QMessageBox.StandardButton.Yes).setText(
+                t("widget_mode.preset_delete", "삭제")
+            )
             message.setDefaultButton(QMessageBox.StandardButton.Cancel)
             apply_common_dialog_style(message)
             if message.exec() != QMessageBox.StandardButton.Yes:
@@ -517,13 +513,6 @@ class WidgetCustomizationDialog(QDialog):
             control.blockSignals(blocked)
         self._sync_surface_gallery()
 
-    def _show_all_layouts(self):
-        for button in self.layout_buttons.values():
-            button.show()
-        self.all_layouts_btn.hide()
-        self._reflow_layout_cards()
-        self.layout_buttons[read_widget_mode_layout_id(self.draft)].setFocus()
-
     @staticmethod
     def _layout_card_style(width: int, height: int, *, max_height: int | None = None) -> str:
         return (
@@ -540,9 +529,7 @@ class WidgetCustomizationDialog(QDialog):
         columns = (
             1 if any(button.minimumWidth() > 190 for button in self.layout_buttons.values()) else 2
         )
-        for index, button in enumerate(
-            button for button in self.layout_buttons.values() if not button.isHidden()
-        ):
+        for index, button in enumerate(self.layout_buttons.values()):
             grid.addWidget(button, index // columns, index % columns)
 
     def _font_weight_preference(self):

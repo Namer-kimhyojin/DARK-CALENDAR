@@ -171,7 +171,8 @@ class WidgetModeManagementPanel(QWidget):
             hub_label(
                 t(
                     "widget_hub.mode_desc",
-                    "위젯 전용 모드는 메인 화면을 대신하는 작은 작업 공간입니다. 화면 형태와 스킨을 조합하고 필요한 정보만 표시하세요.",
+                    "위젯 전용 모드는 메인 화면을 대신하는 작은 작업 공간입니다. "
+                    "배치와 표면 모양을 고르고 표시 항목을 조절합니다.",
                 )
             )
         )

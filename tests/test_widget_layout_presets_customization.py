@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 from PyQt6.QtWidgets import QDialog, QMessageBox
 import pytest
 
+from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.widget_customization_dialog import WidgetCustomizationDialog
 from calendar_app.presentation.widgets.widget_free_layout import (
     read_free_layout,
@@ -103,12 +104,21 @@ def test_delete_confirmation_names_preset_and_defaults_to_cancel(library_dialog)
     message = dialog.findChildren(QMessageBox)[-1]
     assert "Desk" in message.text()
     assert message.standardButton(message.defaultButton()) == QMessageBox.StandardButton.Cancel
+    # The confirming button names the destructive verb instead of a generic "예".
+    confirm = message.button(QMessageBox.StandardButton.Yes)
+    assert confirm.text() == t("widget_mode.preset_delete", "삭제")
     assert read_layout_presets(dialog.draft) == before
     assert dialog.draft.value(SELECTED_LAYOUT_PRESET_KEY) == first_id
 
 
 def test_my_layouts_navigation_reveals_selected_list(library_dialog):
     dialog, _host, _controller, _first_id, _second_id = library_dialog
+    # Short enough that the saved-layout list starts below the fold (the four
+    # layout cards are always shown, without the former disclosure button).
+    dialog.resize(940, 460)
+    for _ in range(3):
+        _APP.processEvents()
+    assert dialog.controls_scroll.verticalScrollBar().maximum() > 0
     dialog.my_layouts_btn.click()
     _APP.processEvents()
     assert dialog.controls_scroll.verticalScrollBar().value() > 0

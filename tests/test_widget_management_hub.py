@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 from PyQt6.QtCore import QEvent, QPoint, QSettings, Qt
 from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QDialog, QMenu, QPushButton, QWidget
+from PyQt6.QtWidgets import QDialog, QLabel, QMenu, QPushButton, QWidget
 import pytest
 
 from calendar_app.infrastructure.i18n import t
@@ -308,6 +308,23 @@ def test_mode_overview_is_read_only_and_lifecycle_uses_existing_coordinator(hub)
     dialog.mode_panel._return_main()
     assert coordinator.state is WidgetModeState.CLOSED and host.isVisible()
     assert not host.settings.value("widget_mode_resume", type=bool)
+
+
+def test_mode_overview_shows_the_legacy_skin_surface_before_the_first_window(hub):
+    dialog, _, host, coordinator = hub
+    host.settings.setValue("widget_mode_skin", "studio_linen")
+    before = _prefs(host)
+    dialog.mode_panel.refresh()
+    assert coordinator.controller.widget is None
+    assert t("widget_mode.surface_line", "구분선") in dialog.mode_panel.surface_name.text()
+    assert _prefs(host) == before
+
+
+def test_mode_overview_does_not_use_the_retired_skin_wording(hub):
+    dialog = hub[0]
+    dialog.tabs.setCurrentIndex(1)
+    texts = [label.text() for label in dialog.mode_panel.findChildren(QLabel)]
+    assert texts and not any("스킨" in text for text in texts)
 
 
 def test_customization_cancel_without_entering_mode_or_changing_preferences(hub):
