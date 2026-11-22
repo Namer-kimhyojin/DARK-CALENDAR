@@ -3,6 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from calendar_app.presentation.widgets import widget_mode_skins as skins_module
 from calendar_app.presentation.widgets.widget_mode_skins import (
     WIDGET_MODE_LAYOUT_SETTING_KEY,
     WIDGET_MODE_SKIN_SETTING_KEY,
@@ -40,9 +41,7 @@ class WidgetModeSkinTests(unittest.TestCase):
     def test_builtin_layouts_cover_distinct_compositions(self):
         layout_ids = {layout.layout_id for layout in widget_mode_layouts()}
 
-        self.assertTrue(
-            {"stacked", "dashboard", "agenda_first", "magazine", "minimal"} <= layout_ids
-        )
+        self.assertEqual({"stacked", "dashboard", "work_board", "minimal"}, layout_ids)
         self.assertEqual((720, 520), get_widget_mode_layout("dashboard").preferred_size)
         self.assertNotIn(
             "calendar",
@@ -56,19 +55,10 @@ class WidgetModeSkinTests(unittest.TestCase):
                 "dashboard"
             ).placements
         }
-        magazine = {
-            section: (row, column, row_span, column_span)
-            for section, row, column, row_span, column_span in get_widget_mode_layout(
-                "magazine"
-            ).placements
-        }
 
         self.assertEqual((1, 0, 2, 1), dashboard["calendar"])
         self.assertEqual(1, dashboard["filters"][1])
         self.assertEqual(1, dashboard["agenda"][1])
-        self.assertEqual((1, 1, 2, 1), magazine["calendar"])
-        self.assertEqual(0, magazine["filters"][1])
-        self.assertEqual(0, magazine["agenda"][1])
 
     def test_builtin_skins_have_stable_unique_ids(self):
         skin_ids = [skin.skin_id for skin in widget_mode_skins()]
@@ -114,10 +104,10 @@ class WidgetModeSkinTests(unittest.TestCase):
     def test_writing_layout_does_not_change_skin(self):
         settings = _FakeSettings({WIDGET_MODE_SKIN_SETTING_KEY: "forest_mist"})
 
-        write_widget_mode_layout_id(settings, "magazine")
+        write_widget_mode_layout_id(settings, "work_board")
 
         self.assertEqual("forest_mist", read_widget_mode_skin_id(settings))
-        self.assertEqual("magazine", read_widget_mode_layout_id(settings))
+        self.assertEqual("work_board", read_widget_mode_layout_id(settings))
 
     def test_registered_extension_is_discoverable_without_ui_changes(self):
         skin = WidgetModeSkin(
@@ -143,6 +133,8 @@ class WidgetModeSkinTests(unittest.TestCase):
             placements=(("hero", 0, 0, 1, 1), ("agenda", 1, 0, 1, 1)),
         )
         register_widget_mode_layout(layout, replace=True)
+        self.addCleanup(skins_module._LAYOUTS.pop, layout.layout_id, None)
+        self.addCleanup(skins_module._SKINS.pop, "test_layout_skin", None)
         skin = WidgetModeSkin(
             "test_layout_skin",
             "widget_mode.skin_test_layout",

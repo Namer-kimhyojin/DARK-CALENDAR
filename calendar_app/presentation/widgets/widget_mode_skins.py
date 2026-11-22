@@ -15,10 +15,14 @@ import logging
 from pathlib import Path
 import re
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from calendar_app.app_paths import get_app_data_dir
 from calendar_app.presentation.widgets.widget_workspace_catalog import register_workspace_presets
+
+if TYPE_CHECKING:
+    from calendar_app.presentation.widgets.widget_mode_display import LayoutDisplay
 
 logger = logging.getLogger(__name__)
 
@@ -148,12 +152,20 @@ def get_widget_mode_layout(layout_id: object) -> WidgetModeLayout:
     return _LAYOUTS.get(normalized, _LAYOUTS[DEFAULT_WIDGET_MODE_LAYOUT_ID])
 
 
-def widget_layout_calendar_mode(layout: WidgetModeLayout, width: int | None = None) -> str:
+def widget_layout_calendar_mode(
+    layout: WidgetModeLayout,
+    width: int | None = None,
+    display: LayoutDisplay | None = None,
+) -> str:
+    if display is not None:
+        if display.search_pinned and width is not None and width < 520:
+            return "week"
+        return display.calendar_style
     if layout.searchable and width is not None and width < 520:
         return "week"
     if layout.calendar_mode != "auto":
         return layout.calendar_mode
-    return "month" if layout.layout_id in {"dashboard", "magazine"} else "week"
+    return "month" if layout.layout_id == "dashboard" else "week"
 
 
 def widget_layout_has_columns(layout: WidgetModeLayout) -> bool:
@@ -369,7 +381,7 @@ def _register_builtin_layouts() -> None:
         WidgetModeLayout(
             "stacked",
             "widget_mode.layout_stacked",
-            "세로 집중형",
+            "세로형",
             placements=(
                 ("hero", 0, 0, 1, 1),
                 ("calendar", 1, 0, 1, 1),
@@ -381,7 +393,7 @@ def _register_builtin_layouts() -> None:
         WidgetModeLayout(
             "dashboard",
             "widget_mode.layout_dashboard",
-            "좌우 대시보드형",
+            "좌우형",
             placements=(
                 ("hero", 0, 0, 1, 2),
                 ("calendar", 1, 0, 2, 1),
@@ -401,49 +413,31 @@ def _register_builtin_layouts() -> None:
             agenda_spacing=10,
         ),
         WidgetModeLayout(
-            "agenda_first",
-            "widget_mode.layout_agenda_first",
-            "일정 우선형",
+            "work_board",
+            "widget_mode.layout_work_board",
+            "보드형",
             placements=(
                 ("hero", 0, 0, 1, 1),
-                ("filters", 1, 0, 1, 1),
-                ("agenda", 2, 0, 1, 1),
-                ("calendar", 3, 0, 1, 1),
+                ("calendar", 1, 0, 1, 1),
+                ("filters", 2, 0, 1, 1),
+                ("agenda", 3, 0, 1, 1),
             ),
-            preferred_size=(410, 650),
-            row_stretches=((2, 1),),
-            hero_margins=(14, 13, 14, 13),
-            hero_spacing=9,
-            calendar_cell_size=(42, 48),
-            calendar_margins=(10, 10, 10, 10),
-            agenda_margins=(10, 10, 10, 10),
-        ),
-        WidgetModeLayout(
-            "magazine",
-            "widget_mode.layout_magazine",
-            "매거진 보드형",
-            placements=(
-                ("hero", 0, 0, 1, 2),
-                ("filters", 1, 0, 1, 1),
-                ("agenda", 2, 0, 1, 1),
-                ("calendar", 1, 1, 2, 1),
-            ),
-            preferred_size=(740, 540),
-            row_stretches=((2, 1),),
-            column_stretches=((0, 3), (1, 2)),
-            hero_margins=(18, 14, 18, 14),
-            hero_spacing=9,
-            calendar_cell_size=(40, 50),
-            calendar_spacing=5,
-            calendar_margins=(12, 12, 12, 12),
-            filter_margins=(12, 9, 12, 9),
-            agenda_margins=(16, 14, 16, 14),
-            agenda_spacing=10,
+            preferred_size=(1080, 700),
+            row_stretches=((3, 1),),
+            column_stretches=((0, 1),),
+            calendar_cell_size=(42, 44),
+            calendar_spacing=4,
+            spacing=10,
+            calendar_mode="week",
+            responsive_breakpoint=0,
+            presentation="board",
+            show_overview=True,
+            searchable=True,
         ),
         WidgetModeLayout(
             "minimal",
             "widget_mode.layout_minimal",
-            "미니멀 리스트형",
+            "목록형",
             placements=(
                 ("hero", 0, 0, 1, 1),
                 ("filters", 1, 0, 1, 1),
@@ -508,7 +502,7 @@ def _register_builtin_skins() -> None:
             "widget_mode.skin_forest_mist",
             "포레스트 미스트",
             base_theme="dark",
-            legacy_layout_id="agenda_first",
+            legacy_layout_id="stacked",
             token_overrides={
                 "accent": "#62d29f",
                 "accent_deep": "#8ce4bb",
@@ -530,7 +524,7 @@ def _register_builtin_skins() -> None:
             "sunset_glow",
             "widget_mode.skin_sunset_glow",
             "선셋 글로우",
-            legacy_layout_id="magazine",
+            legacy_layout_id="dashboard",
             token_overrides={
                 "accent": "#e46f51",
                 "accent_deep": "#9d3f2c",

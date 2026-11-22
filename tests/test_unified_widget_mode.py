@@ -458,11 +458,11 @@ class UnifiedWidgetModeTests(unittest.TestCase):
         self.controller = uwm.UnifiedWidgetController(self.host)
         widget = uwm.UnifiedWidgetWindow(self.controller)
         self.controller.widget = widget
-        self.controller.set_layout("magazine")
+        self.controller.set_layout("work_board")
 
         self.controller.set_skin("forest_mist")
 
-        self.assertEqual("magazine", widget.active_layout_id())
+        self.assertEqual("work_board", widget.active_layout_id())
         self.assertEqual("forest_mist", self.host.settings.value("widget_mode_skin"))
 
 

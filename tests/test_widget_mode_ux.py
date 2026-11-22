@@ -399,7 +399,7 @@ def test_real_right_panel_refresh_publishes_widget_cache_while_host_hidden(works
     host.directive_frame.deleteLater()
 
 
-@pytest.mark.parametrize("layout", ["dashboard", "magazine"])
+@pytest.mark.parametrize("layout", ["dashboard"])
 def test_narrow_multicolumn_layout_reflows_without_changing_preference(workspace, layout):
     host, coordinator, widget = workspace
     coordinator.controller.set_layout(layout)
@@ -483,8 +483,9 @@ def test_customization_keeps_calendar_visibility_independent_per_layout(workspac
     dialog.calendar_visibility_checkbox.setChecked(False)
     assert dialog.preview.cal_grid.isHidden()
 
-    dialog._change("widget_mode_layout", "magazine")
-    assert dialog.calendar_visibility_checkbox.isChecked()
+    dialog._change("widget_mode_layout", "stacked")
+    assert not dialog.calendar_visibility_checkbox.isChecked()
+    dialog.calendar_visibility_checkbox.setChecked(True)
     assert not dialog.preview.cal_grid.isHidden()
 
     dialog._change("widget_mode_layout", "dashboard")

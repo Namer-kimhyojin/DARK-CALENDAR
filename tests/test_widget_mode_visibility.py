@@ -24,16 +24,17 @@ def test_board_layouts_default_to_visible_even_when_legacy_week_was_hidden():
     settings = _Settings({LEGACY_CALENDAR_VISIBILITY_KEY: False})
 
     assert read_widget_calendar_visibility(settings, "dashboard") is True
-    assert read_widget_calendar_visibility(settings, "magazine") is True
+    assert read_widget_calendar_visibility(settings, "work_board") is False
     assert read_widget_calendar_visibility(settings, "stacked") is False
 
 
 def test_scoped_visibility_overrides_default_and_other_layouts():
     settings = _Settings()
+    write_widget_calendar_visibility(settings, "stacked", True)
     write_widget_calendar_visibility(settings, "dashboard", False)
 
     assert read_widget_calendar_visibility(settings, "dashboard") is False
-    assert read_widget_calendar_visibility(settings, "magazine") is True
+    assert read_widget_calendar_visibility(settings, "stacked") is True
     assert settings.values[calendar_visibility_key("dashboard")] is False
     assert settings.values[LEGACY_CALENDAR_VISIBILITY_KEY] is False
 

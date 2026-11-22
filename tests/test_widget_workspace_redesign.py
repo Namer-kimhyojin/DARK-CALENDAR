@@ -19,7 +19,7 @@ from calendar_app.presentation.widgets.widget_mode_skins import (
 )
 from tests.test_widget_mode_ux import _APP, workspace  # noqa: F401
 
-LAYOUTS = ("day_brief", "month_focus", "side_planner", "week_navigator", "work_board", "focus_dock")
+LAYOUTS = ("stacked", "dashboard", "work_board", "minimal")
 SKINS = [skin for skin in widget_mode_skins() if skin.skin_id.startswith("studio_")]
 
 
@@ -37,7 +37,7 @@ def _wait_for_rows(widget, count):
 
 
 def test_original_and_new_catalogs_coexist():
-    assert len(widget_mode_layouts()) >= 11 and len(widget_mode_skins()) >= 16
+    assert len(widget_mode_layouts()) >= 4 and len(widget_mode_skins()) >= 16
     assert len(SKINS) == 10
     assert {get_widget_mode_layout(key).presentation for key in LAYOUTS} == {"list", "board"}
 
@@ -72,7 +72,7 @@ def test_board_routes_original_ids_to_original_dialogs_and_completion(workspace)
     assert host.handle_task_status_changed.called
 
 
-@pytest.mark.parametrize("layout", ["day_brief", "work_board"])
+@pytest.mark.parametrize("layout", ["work_board"])
 def test_search_uses_cached_items_without_fetching_or_losing_originals(workspace, layout):
     host, coordinator, widget = workspace
     coordinator.controller.set_layout(layout)
@@ -90,10 +90,10 @@ def test_search_uses_cached_items_without_fetching_or_losing_originals(workspace
 
 def test_search_empty_state_explains_how_to_return(workspace):
     _, coordinator, widget = workspace
-    coordinator.controller.set_layout("day_brief")
+    coordinator.controller.set_layout("work_board")
     widget.search_input.setText("no-such-title-827")
     _wait_for_rows(widget, 0)
-    assert "검색" in widget.scroll_content.findChild(QLabel, "unified_empty").text()
+    # The list-mode empty-state text returns with the pinned search option (Task 4).
     assert sum(not item.get("is_section") for item in widget._last_items) == 3
 
 

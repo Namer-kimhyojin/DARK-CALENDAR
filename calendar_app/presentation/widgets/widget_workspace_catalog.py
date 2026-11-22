@@ -1,67 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Additional workspace compositions and semantic colour presets."""
+"""Additional semantic colour presets (skin palettes) for widget mode."""
 
 
 def register_workspace_presets(layout_type, skin_type, register_layout, register_skin):
-    vertical = (
-        ("hero", 0, 0, 1, 1),
-        ("calendar", 1, 0, 1, 1),
-        ("filters", 2, 0, 1, 1),
-        ("agenda", 3, 0, 1, 1),
-    )
-    specs = (
-        ("day_brief", "일간 브리핑", (430, 680), vertical, "week", "list", True, 0),
-        ("month_focus", "월간 집중", (600, 820), vertical, "month", "list", False, 0),
-        (
-            "side_planner",
-            "좌우 플래너",
-            (900, 650),
-            (
-                ("hero", 0, 0, 1, 2),
-                ("calendar", 1, 0, 2, 1),
-                ("filters", 1, 1, 1, 1),
-                ("agenda", 2, 1, 1, 1),
-            ),
-            "month",
-            "list",
-            True,
-            700,
-        ),
-        ("week_navigator", "주간 탐색", (780, 550), vertical, "week", "list", False, 0),
-        ("work_board", "일정·업무 보드", (1080, 700), vertical, "week", "board", True, 0),
-        (
-            "focus_dock",
-            "집중 도크",
-            (340, 570),
-            (("hero", 0, 0, 1, 1), ("filters", 1, 0, 1, 1), ("agenda", 2, 0, 1, 1)),
-            "week",
-            "list",
-            False,
-            0,
-        ),
-    )
-    for key, name, size, placements, calendar, presentation, overview, breakpoint in specs:
-        register_layout(
-            layout_type(
-                key,
-                "widget_workspace.layout." + key,
-                name,
-                placements=placements,
-                preferred_size=size,
-                row_stretches=(
-                    (max(row for section, row, *_ in placements if section == "agenda"), 1),
-                ),
-                column_stretches=((0, 2), (1, 3)) if key == "side_planner" else ((0, 1),),
-                calendar_cell_size=(42, 44),
-                calendar_spacing=4,
-                spacing=10,
-                calendar_mode=calendar,
-                responsive_breakpoint=breakpoint,
-                presentation=presentation,
-                show_overview=overview,
-                searchable=True,
-            )
-        )
     # Background, reading surface, secondary surface, accent, primary ink, secondary ink, edge.
     palettes = (
         (
