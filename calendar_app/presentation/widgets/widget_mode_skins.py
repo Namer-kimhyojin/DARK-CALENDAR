@@ -1,32 +1,22 @@
 # -*- coding: utf-8 -*-
-"""Extensible skin registry for widget-only mode.
-
-Skins are presentation presets: they select a light/dark foundation and then
-override semantic widget tokens. Registering a skin here is enough for every
-widget-mode skin menu to discover it.
-"""
+"""Layout registry for widget-only mode."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import json
 import logging
 from pathlib import Path
-from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from calendar_app.app_paths import get_app_data_dir
-from calendar_app.presentation.widgets.widget_workspace_catalog import register_workspace_presets
 
 if TYPE_CHECKING:
     from calendar_app.presentation.widgets.widget_mode_display import LayoutDisplay
 
 logger = logging.getLogger(__name__)
 
-WIDGET_MODE_SKIN_SETTING_KEY = "widget_mode_skin"
 WIDGET_MODE_LAYOUT_SETTING_KEY = "widget_mode_layout"
-DEFAULT_WIDGET_MODE_SKIN_ID = "classic_light"
 DEFAULT_WIDGET_MODE_LAYOUT_ID = "stacked"
 
 
@@ -98,36 +88,6 @@ class WidgetModeLayout:
             object.__setattr__(self, field_name, tuple(getattr(self, field_name)))
 
 
-@dataclass(frozen=True, slots=True)
-class WidgetModeSkin:
-    skin_id: str
-    label_key: str
-    label_default: str
-    base_theme: str = "light"
-    legacy_layout_id: str = DEFAULT_WIDGET_MODE_LAYOUT_ID
-    token_overrides: Mapping[str, str] = field(default_factory=dict)
-    surface_style: str = "legacy"
-
-    def __post_init__(self) -> None:
-        normalized_id = str(self.skin_id or "").strip().lower()
-        if self.surface_style not in {"legacy", "soft", "paper", "outline", "glass", "compact"}:
-            raise ValueError("invalid workspace surface style")
-        if not normalized_id or not normalized_id.replace("_", "").isalnum():
-            raise ValueError("skin_id must contain only letters, numbers, and underscores")
-        normalized_theme = str(self.base_theme or "light").strip().lower()
-        if normalized_theme not in {"light", "dark"}:
-            raise ValueError("base_theme must be 'light' or 'dark'")
-        object.__setattr__(self, "skin_id", normalized_id)
-        object.__setattr__(self, "base_theme", normalized_theme)
-        object.__setattr__(
-            self,
-            "legacy_layout_id",
-            str(self.legacy_layout_id or "stacked").strip().lower(),
-        )
-        object.__setattr__(self, "token_overrides", MappingProxyType(dict(self.token_overrides)))
-
-
-_SKINS: dict[str, WidgetModeSkin] = {}
 _LAYOUTS: dict[str, WidgetModeLayout] = {}
 USER_STYLES_PATH = get_app_data_dir() / "widget_mode_styles.json"
 
@@ -173,63 +133,33 @@ def widget_layout_is_compact(layout: WidgetModeLayout, width: int) -> bool:
     return widget_layout_has_columns(layout) and width < (layout.responsive_breakpoint or 640)
 
 
-def register_widget_mode_skin(skin: WidgetModeSkin, *, replace: bool = False) -> None:
-    """Register a skin for automatic discovery by widget-mode UIs."""
-    if not isinstance(skin, WidgetModeSkin):
-        raise TypeError("skin must be a WidgetModeSkin")
-    if skin.legacy_layout_id not in _LAYOUTS:
-        raise ValueError(f"unknown legacy widget-mode layout: {skin.legacy_layout_id}")
-    if skin.skin_id in _SKINS and not replace:
-        raise ValueError(f"widget-mode skin already registered: {skin.skin_id}")
-    _SKINS[skin.skin_id] = skin
-
-
-def widget_mode_skins() -> tuple[WidgetModeSkin, ...]:
-    return tuple(_SKINS.values())
-
-
-def get_widget_mode_skin(skin_id: object) -> WidgetModeSkin:
-    normalized = str(skin_id or "").strip().lower()
-    return _SKINS.get(normalized, _SKINS[DEFAULT_WIDGET_MODE_SKIN_ID])
-
-
-def read_widget_mode_skin_id(settings) -> str:
-    """Read the selected skin, falling back to the legacy light/dark setting."""
-    raw = settings.value(WIDGET_MODE_SKIN_SETTING_KEY, None) if settings is not None else None
-    normalized = str(raw or "").strip().lower()
-    if normalized in _SKINS:
-        return normalized
-
-    legacy = (
-        str(settings.value("widget_mode_panel_theme", "light") or "light").strip().lower()
-        if settings is not None
-        else "light"
-    )
-    return "classic_dark" if legacy == "dark" else DEFAULT_WIDGET_MODE_SKIN_ID
-
-
-def write_widget_mode_skin_id(settings, skin_id: object) -> str:
-    skin = get_widget_mode_skin(skin_id)
-    if settings is not None:
-        if settings.value(WIDGET_MODE_LAYOUT_SETTING_KEY, None) in (None, ""):
-            settings.setValue(WIDGET_MODE_LAYOUT_SETTING_KEY, read_widget_mode_layout_id(settings))
-        settings.setValue(WIDGET_MODE_SKIN_SETTING_KEY, skin.skin_id)
-        # Keep old code and older app versions visually compatible.
-        settings.setValue("widget_mode_panel_theme", skin.base_theme)
-    return skin.skin_id
-
-
 def read_widget_mode_layout_id(settings) -> str:
+    """Read the selected layout; map retired layout and legacy skin values to the four kept ones.
+
+    This only reads. The one-time migration is what rewrites stored settings.
+    """
+    from calendar_app.presentation.widgets.widget_mode_migration import (
+        LEGACY_SKIN_LAYOUTS,
+        RETIRED_LAYOUTS,
+    )
+
     raw = settings.value(WIDGET_MODE_LAYOUT_SETTING_KEY, None) if settings is not None else None
     normalized = str(raw or "").strip().lower()
     if normalized in _LAYOUTS:
         return normalized
-    skin = get_widget_mode_skin(read_widget_mode_skin_id(settings))
-    return (
-        skin.legacy_layout_id
-        if skin.legacy_layout_id in _LAYOUTS
-        else DEFAULT_WIDGET_MODE_LAYOUT_ID
+    if normalized in RETIRED_LAYOUTS:
+        return RETIRED_LAYOUTS[normalized][0]
+    skin = (
+        str(settings.value("widget_mode_skin", None) or "").strip().lower()
+        if settings is not None
+        else ""
     )
+    legacy = LEGACY_SKIN_LAYOUTS.get(skin, DEFAULT_WIDGET_MODE_LAYOUT_ID)
+    if legacy in _LAYOUTS:
+        return legacy
+    if legacy in RETIRED_LAYOUTS:
+        return RETIRED_LAYOUTS[legacy][0]
+    return DEFAULT_WIDGET_MODE_LAYOUT_ID
 
 
 def write_widget_mode_layout_id(settings, layout_id: object) -> str:
@@ -237,12 +167,6 @@ def write_widget_mode_layout_id(settings, layout_id: object) -> str:
     if settings is not None:
         settings.setValue(WIDGET_MODE_LAYOUT_SETTING_KEY, layout.layout_id)
     return layout.layout_id
-
-
-def apply_widget_mode_skin(tokens: Mapping[str, str], skin_id: object) -> dict[str, str]:
-    updated = dict(tokens)
-    updated.update(get_widget_mode_skin(skin_id).token_overrides)
-    return updated
 
 
 def _read_user_style_document(path: Path) -> dict[str, object]:
@@ -347,145 +271,16 @@ def _register_builtin_layouts() -> None:
         register_widget_mode_layout(layout)
 
 
-def _register_builtin_skins() -> None:
-    builtins = (
-        WidgetModeSkin(
-            "classic_light",
-            "widget_mode.skin_classic_light",
-            "클래식 라이트",
-        ),
-        WidgetModeSkin(
-            "classic_dark",
-            "widget_mode.skin_classic_dark",
-            "클래식 다크",
-            base_theme="dark",
-        ),
-        WidgetModeSkin(
-            "midnight_blue",
-            "widget_mode.skin_midnight_blue",
-            "미드나이트 블루",
-            base_theme="dark",
-            legacy_layout_id="dashboard",
-            token_overrides={
-                "accent": "#65a7ff",
-                "accent_deep": "#9ac7ff",
-                "panel_bg_start": "rgba(8, 18, 38, 248)",
-                "panel_bg_mid": "rgba(12, 27, 54, 246)",
-                "panel_bg_end": "rgba(17, 36, 66, 244)",
-                "panel_bg": "rgba(9, 21, 43, 242)",
-                "surface_bg": "rgba(14, 31, 57, 222)",
-                "surface_alt": "rgba(20, 42, 73, 206)",
-                "section_bg": "rgba(18, 39, 70, 190)",
-                "section_bg_alt": "rgba(27, 54, 91, 226)",
-                "card_bg": "rgba(17, 37, 66, 206)",
-                "hero_bg": "rgba(101, 167, 255, 30)",
-                "hero_bg_strong": "rgba(101, 167, 255, 58)",
-                "hero_border": "rgba(101, 167, 255, 128)",
-            },
-        ),
-        WidgetModeSkin(
-            "forest_mist",
-            "widget_mode.skin_forest_mist",
-            "포레스트 미스트",
-            base_theme="dark",
-            legacy_layout_id="stacked",
-            token_overrides={
-                "accent": "#62d29f",
-                "accent_deep": "#8ce4bb",
-                "panel_bg_start": "rgba(9, 30, 27, 248)",
-                "panel_bg_mid": "rgba(13, 42, 36, 244)",
-                "panel_bg_end": "rgba(19, 50, 42, 242)",
-                "panel_bg": "rgba(10, 32, 28, 242)",
-                "surface_bg": "rgba(15, 45, 38, 218)",
-                "surface_alt": "rgba(24, 58, 49, 202)",
-                "section_bg": "rgba(18, 50, 42, 186)",
-                "section_bg_alt": "rgba(29, 70, 58, 220)",
-                "card_bg": "rgba(18, 48, 41, 200)",
-                "hero_bg": "rgba(98, 210, 159, 28)",
-                "hero_bg_strong": "rgba(98, 210, 159, 54)",
-                "hero_border": "rgba(98, 210, 159, 120)",
-            },
-        ),
-        WidgetModeSkin(
-            "sunset_glow",
-            "widget_mode.skin_sunset_glow",
-            "선셋 글로우",
-            legacy_layout_id="dashboard",
-            token_overrides={
-                "accent": "#e46f51",
-                "accent_deep": "#9d3f2c",
-                "panel_bg_start": "rgba(255, 246, 235, 248)",
-                "panel_bg_mid": "rgba(252, 235, 222, 244)",
-                "panel_bg_end": "rgba(247, 224, 217, 246)",
-                "panel_bg": "rgba(251, 237, 225, 242)",
-                "surface_bg": "rgba(255, 249, 241, 226)",
-                "surface_alt": "rgba(247, 227, 215, 208)",
-                "section_bg": "rgba(255, 250, 244, 232)",
-                "section_bg_alt": "rgba(247, 222, 207, 220)",
-                "card_bg": "rgba(255, 252, 247, 238)",
-                "text_primary": "#4e302c",
-                "text_secondary": "#77554d",
-                "text_faint": "#a1786e",
-                "calendar_text": "#563833",
-                "calendar_muted": "#9b746c",
-                "card_text_primary": "#4e302c",
-                "card_text_secondary": "#806058",
-            },
-        ),
-        WidgetModeSkin(
-            "lavender_dream",
-            "widget_mode.skin_lavender_dream",
-            "라벤더 드림",
-            legacy_layout_id="minimal",
-            token_overrides={
-                "accent": "#8266cc",
-                "accent_deep": "#574095",
-                "panel_bg_start": "rgba(246, 243, 255, 248)",
-                "panel_bg_mid": "rgba(236, 231, 250, 244)",
-                "panel_bg_end": "rgba(229, 225, 247, 246)",
-                "panel_bg": "rgba(238, 234, 250, 242)",
-                "surface_bg": "rgba(250, 248, 255, 226)",
-                "surface_alt": "rgba(231, 225, 247, 208)",
-                "section_bg": "rgba(251, 249, 255, 232)",
-                "section_bg_alt": "rgba(226, 217, 246, 220)",
-                "card_bg": "rgba(252, 251, 255, 238)",
-                "text_primary": "#39304f",
-                "text_secondary": "#645a78",
-                "text_faint": "#9187a4",
-                "calendar_text": "#44385d",
-                "calendar_muted": "#817792",
-                "card_text_primary": "#39304f",
-                "card_text_secondary": "#6d637f",
-            },
-        ),
-    )
-    for skin in builtins:
-        register_widget_mode_skin(skin)
-
-
 _register_builtin_layouts()
-_register_builtin_skins()
-register_workspace_presets(
-    WidgetModeLayout, WidgetModeSkin, register_widget_mode_layout, register_widget_mode_skin
-)
 
 
 __all__ = [
-    "DEFAULT_WIDGET_MODE_SKIN_ID",
     "DEFAULT_WIDGET_MODE_LAYOUT_ID",
-    "WIDGET_MODE_SKIN_SETTING_KEY",
     "WIDGET_MODE_LAYOUT_SETTING_KEY",
-    "WidgetModeSkin",
     "WidgetModeLayout",
-    "apply_widget_mode_skin",
-    "get_widget_mode_skin",
     "get_widget_mode_layout",
-    "read_widget_mode_skin_id",
     "read_widget_mode_layout_id",
-    "register_widget_mode_skin",
     "register_widget_mode_layout",
     "widget_mode_layouts",
-    "widget_mode_skins",
-    "write_widget_mode_skin_id",
     "write_widget_mode_layout_id",
 ]

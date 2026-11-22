@@ -1,47 +1,36 @@
 # -*- coding: utf-8 -*-
 """Semantic styles for widget-only navigation, summaries and surface treatments."""
 
-from calendar_app.presentation.widgets.panel_widget_style import int_token
+from calendar_app.presentation.widgets.widget_mode_surfaces import WidgetModeSurface
 
 
-def workspace_styles(tokens, skin):
+def workspace_styles(tokens, surface: WidgetModeSurface) -> str:
     ink, secondary = tokens["text_primary"], tokens["text_secondary"]
-    surface, alternate = tokens["section_bg"], tokens["section_bg_alt"]
+    fill, alternate = tokens["section_bg"], tokens["section_bg_alt"]
     edge, accent = tokens["panel_border"], tokens["accent"]
     css = f"""
-        QLineEdit#workspace_search {{ background: {surface}; color: {ink};
+        QLineEdit#workspace_search {{ background: {fill}; color: {ink};
             border: 1px solid {edge}; border-radius: 8px; padding: 8px 10px; }}
         QLineEdit#workspace_search:focus {{ border: 2px solid {accent}; }}
         QFrame#workspace_overview, QFrame#workspace_board {{ background: transparent; border: none; }}
-        QToolButton#workspace_metric {{ background: {surface}; color: {secondary};
+        QToolButton#workspace_metric {{ background: {fill}; color: {secondary};
             border: 1px solid {edge}; border-radius: 9px; padding: 10px 8px; font-weight: 600; }}
         QToolButton#workspace_metric:checked, QToolButton#workspace_metric:hover {{
             background: {alternate}; color: {ink}; border: 1px solid {accent}; }}
-        QFrame#unified_container[widgetLayout] QFrame#unified_agenda_section[workspaceLane="true"] {{ background: {surface};
+        QFrame#unified_container[widgetLayout] QFrame#unified_agenda_section[workspaceLane="true"] {{ background: {fill};
             border: 1px solid {edge}; border-radius: 12px; padding: 8px; }}
     """
-    if skin.surface_style == "legacy":
-        return css
-    radius, item_radius = {
-        "soft": (10, 8),
-        "paper": (6, 2),
-        "outline": (10, 6),
-        "glass": (10, 8),
-        "compact": (8, 4),
-    }[skin.surface_style]
-    radius = int_token(skin.token_overrides, "widget_surface_radius", radius)
-    item_radius = int_token(skin.token_overrides, "widget_entry_radius", item_radius)
-    item_bg = "transparent" if skin.surface_style in {"outline", "paper"} else tokens["card_bg"]
+    item_bg = "transparent" if surface.item_background == "transparent" else tokens["card_bg"]
     item_border = (
-        f"border: 1px solid {edge};"
-        if skin.surface_style != "paper"
-        else f"border: none; border-bottom: 1px solid {edge};"
+        f"border: none; border-bottom: 1px solid {edge};"
+        if surface.item_border == "bottom"
+        else f"border: 1px solid {edge};"
     )
     return (
         css
         + f"""
-        QFrame#unified_surface {{ border-radius: {radius}px; }}
+        QFrame#unified_surface {{ border-radius: {surface.radius}px; }}
         QFrame#agenda_item_task, QFrame#agenda_item_schedule {{
-            background: {item_bg}; {item_border} border-radius: {item_radius}px; }}
+            background: {item_bg}; {item_border} border-radius: {surface.item_radius}px; }}
     """
     )

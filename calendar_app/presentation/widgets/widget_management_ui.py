@@ -182,10 +182,10 @@ class WidgetModeManagementPanel(QWidget):
         details.setSpacing(12)
         details.addWidget(hub_label(t("widget_hub.current_setup", "현재 화면 구성"), "hubEyebrow"))
         self.layout_name = hub_label("", "hubTitle")
-        self.skin_name = hub_label("")
+        self.surface_name = hub_label("")
         self.catalog = hub_label("")
         details.addWidget(self.layout_name)
-        details.addWidget(self.skin_name)
+        details.addWidget(self.surface_name)
         details.addWidget(self.catalog)
         row = QHBoxLayout()
         self.customize_button = hub_button(
@@ -227,16 +227,18 @@ class WidgetModeManagementPanel(QWidget):
     def refresh(self):
         from calendar_app.presentation.widgets.widget_mode_skins import (
             get_widget_mode_layout,
-            get_widget_mode_skin,
             read_widget_mode_layout_id,
-            read_widget_mode_skin_id,
             widget_mode_layouts,
-            widget_mode_skins,
+        )
+        from calendar_app.presentation.widgets.widget_mode_surfaces import (
+            get_widget_mode_surface,
+            read_widget_mode_surface,
+            widget_mode_surfaces,
         )
 
         settings = getattr(self.owner, "settings", None)
         layout = get_widget_mode_layout(read_widget_mode_layout_id(settings))
-        skin = get_widget_mode_skin(read_widget_mode_skin_id(settings))
+        surface = get_widget_mode_surface(read_widget_mode_surface(settings))
         free = (
             settings is not None and settings.value("widget_mode_layout_mode", "preset") == "free"
         )
@@ -245,16 +247,12 @@ class WidgetModeManagementPanel(QWidget):
             if free
             else t(layout.label_key, layout.label_default)
         )
-        self.skin_name.setText(
-            t("widget_hub.skin_value", "스킨 · {skin}").format(
-                skin=t(skin.label_key, skin.label_default)
-            )
-        )
+        self.surface_name.setText(t(surface.label_key, surface.label_default))
         self.catalog.setText(
             t(
-                "widget_hub.catalog",
-                "화면 형태 {layouts}종 · 스킨 {skins}종 · 저장한 자유 구성 지원",
-            ).format(layouts=len(widget_mode_layouts()), skins=len(widget_mode_skins()))
+                "widget_hub.mode_catalog",
+                "배치 {layouts}종 · 표면 모양 {surfaces}종",
+            ).format(layouts=len(widget_mode_layouts()), surfaces=len(widget_mode_surfaces()))
         )
         coordinator = self._coordinator()
         active = coordinator is not None and coordinator.is_widget_mode_active()

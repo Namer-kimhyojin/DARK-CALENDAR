@@ -19,12 +19,12 @@ from calendar_app.presentation.widgets.widget_mode_display import (
 from calendar_app.presentation.widgets.widget_mode_skins import (
     get_widget_mode_layout,
     widget_mode_layouts,
-    widget_mode_skins,
 )
+from calendar_app.presentation.widgets.widget_mode_surfaces import widget_mode_surfaces
 from tests.test_widget_mode_ux import _APP, workspace  # noqa: F401
 
 LAYOUTS = ("stacked", "dashboard", "work_board", "minimal")
-SKINS = [skin for skin in widget_mode_skins() if skin.skin_id.startswith("studio_")]
+SURFACES = [surface.key for surface in widget_mode_surfaces()]
 
 
 def _wait_for_rows(widget, count):
@@ -41,8 +41,7 @@ def _wait_for_rows(widget, count):
 
 
 def test_original_and_new_catalogs_coexist():
-    assert len(widget_mode_layouts()) >= 4 and len(widget_mode_skins()) >= 16
-    assert len(SKINS) == 10
+    assert len(widget_mode_layouts()) == 4 and len(widget_mode_surfaces()) == 4
     assert {get_widget_mode_layout(key).presentation for key in LAYOUTS} == {"list", "board"}
 
 
@@ -124,10 +123,12 @@ def test_summary_buttons_filter_and_board_reverts_to_legacy_list(workspace):
     assert len(widget._agenda_rows) == 1
 
 
-@pytest.mark.parametrize("skin", SKINS, ids=lambda skin: skin.skin_id)
-def test_new_skins_keep_text_and_selected_day_readable(workspace, skin):
+@pytest.mark.parametrize("surface", SURFACES)
+@pytest.mark.parametrize("text_theme", ["light", "dark"])
+def test_surfaces_keep_contrast_floor(workspace, surface, text_theme):
     host, coordinator, widget = workspace
-    coordinator.controller.set_skin(skin.skin_id)
+    host.settings.setValue("text_theme", text_theme)
+    coordinator.controller.set_surface(surface)
     tokens = _widget_theme_tokens(host)
     background = css_to_qcolor(tokens["panel_bg"])
     for role in ("text_primary", "text_secondary"):
@@ -146,15 +147,15 @@ def test_gallery_and_layout_changes_cancel_without_persisting(workspace):
     host, coordinator, widget = workspace
     original = dict(host.settings.values)
     dialog = WidgetCustomizationDialog(coordinator.controller, widget)
-    assert dialog.skin_gallery.count() >= 16
+    assert dialog.surface_gallery.count() == 4
     item = next(
-        dialog.skin_gallery.item(index)
-        for index in range(dialog.skin_gallery.count())
-        if str(dialog.skin_gallery.item(index).data(Qt.ItemDataRole.UserRole)).startswith("studio_")
+        dialog.surface_gallery.item(index)
+        for index in range(dialog.surface_gallery.count())
+        if dialog.surface_gallery.item(index).data(Qt.ItemDataRole.UserRole) == "line"
     )
-    dialog.skin_gallery.setCurrentItem(item)
+    dialog.surface_gallery.setCurrentItem(item)
     dialog.layout_buttons["work_board"].click()
-    assert dialog.draft.value("widget_mode_skin").startswith("studio_")
+    assert dialog.draft.value("widget_mode_surface") == "line"
     dialog.reject()
     dialog.deleteLater()
     _APP.sendPostedEvents(None, QEvent.Type.DeferredDelete)
@@ -172,3 +173,28 @@ def test_free_composition_disables_builtin_board_without_changing_saved_layout(w
     assert not widget._workspace_board_active
     assert widget._workspace_board.isHidden()
     assert host.settings.value("widget_mode_layout") == "work_board"
+
+
+def test_surface_changes_item_border_style(workspace):
+    host, coordinator, widget = workspace
+    coordinator.controller.set_surface("line")
+    assert "border-bottom: 1px solid" in widget.styleSheet()
+    coordinator.controller.set_surface("outline")
+    assert "border-bottom: 1px solid" not in widget.styleSheet()
+    assert host.settings.value("widget_mode_surface") == "outline"
+
+
+def test_customization_gallery_offers_four_surfaces_and_cancel_keeps_setting(workspace):
+    host, coordinator, widget = workspace
+    dialog = WidgetCustomizationDialog(coordinator.controller, widget)
+    keys = [
+        dialog.surface_gallery.item(index).data(Qt.ItemDataRole.UserRole)
+        for index in range(dialog.surface_gallery.count())
+    ]
+    assert keys == ["card", "line", "outline", "compact"]
+    dialog.surface_gallery.setCurrentItem(dialog.surface_gallery.item(2))
+    assert dialog.draft.value("widget_mode_surface") == "outline"
+    dialog.reject()
+    dialog.deleteLater()
+    _APP.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    assert host.settings.value("widget_mode_surface") is None

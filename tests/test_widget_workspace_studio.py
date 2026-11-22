@@ -116,7 +116,7 @@ def test_profiles_restore_combination_style_position_and_preserve_content_and_ca
     clock._apply_and_resize()
     clock.move(75, 110)
     manager.hide_instance(ids[1])
-    host.settings.setValue("widget_mode_skin", "studio_porcelain")
+    host.settings.setValue("widget_mode_surface", "line")
     host.settings.setValue("widget_mode_user_layout_presets", "existing custom catalog")
     host.settings.setValue("widget_mode_resume", False)
     profile = service.save_profile("업무용")
@@ -421,26 +421,26 @@ def test_workspace_settings_restart_restores_saved_stack_and_motion_policy(studi
     restored.shutdown()
 
 
-def test_profile_restores_live_mode_geometry_and_skin_without_losing_custom_layouts(studio):
+def test_profile_restores_live_mode_geometry_and_surface_without_losing_custom_layouts(studio):
     host, _, service, _ = studio
     coordinator = host._widget_mode_coordinator
     coordinator.enter()
     controller = coordinator.controller
-    controller.set_layout("day_brief")
-    controller.set_skin("studio_porcelain")
+    controller.set_layout("dashboard")
+    controller.set_surface("line")
     window = controller.widget
     window.resize(650, 600)
     window.move(40, 50)
     _APP.processEvents()
     expected = window.geometry()
     profile = service.save_profile("화면 구성")
-    controller.set_layout("month_focus")
-    controller.set_skin("studio_midnight")
+    controller.set_layout("minimal")
+    controller.set_surface("compact")
     window.move(300, 150)
     service.apply_profile(profile)
     assert coordinator.state is WidgetModeState.ACTIVE and not host.isVisible()
-    assert window.active_layout_id() == "day_brief"
-    assert host.settings.value("widget_mode_skin") == "studio_porcelain"
+    assert window.active_layout_id() == "dashboard"
+    assert host.settings.value("widget_mode_surface") == "line"
     assert window.geometry().topLeft() == expected.topLeft()
     assert window.size() == expected.size()
 

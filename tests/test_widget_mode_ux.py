@@ -444,8 +444,8 @@ def test_customization_preview_rescales_when_controls_take_more_width(workspace)
     pixmap = dialog.preview_label.pixmap()
     assert pixmap.width() / pixmap.devicePixelRatio() <= dialog.preview_label.width()
     controls = dialog.findChild(QScrollArea)
-    assert dialog.skin_combo.parentWidget().width() <= controls.viewport().width()
-    assert dialog.skin_combo.geometry().right() < dialog.skin_combo.parentWidget().width()
+    assert dialog.surface_combo.parentWidget().width() <= controls.viewport().width()
+    assert dialog.surface_combo.geometry().right() < dialog.surface_combo.parentWidget().width()
     dialog.close()
     dialog.deleteLater()
 
@@ -551,7 +551,7 @@ def test_customization_cancel_has_no_settings_or_geometry_side_effects(workspace
     geometry = widget.geometry()
     dialog = WidgetCustomizationDialog(coordinator.controller, widget)
     dialog._change("widget_mode_layout", "dashboard")
-    dialog._change("widget_mode_skin", "classic_dark")
+    dialog._change("widget_mode_surface", "outline")
     dialog._change("widget_mode_font_size", 16)
     dialog._change("widget_mode_font_family", "Arial")
     dialog._change("widget_mode_font_weight", 700)
@@ -567,13 +567,13 @@ def test_customization_apply_and_fresh_controller_restore(workspace):
     host, coordinator, widget = workspace
     dialog = WidgetCustomizationDialog(coordinator.controller, widget)
     dialog._change("widget_mode_layout", "minimal")
-    dialog._change("widget_mode_skin", "classic_dark")
+    dialog._change("widget_mode_surface", "outline")
     dialog._change("widget_mode_show_clock", False)
     dialog._change("widget_mode_font_size", 15)
     dialog._apply()
     assert widget.active_layout_id() == "minimal"
     assert not widget.clock_label.isVisible()
-    assert host.settings.value("widget_mode_skin") == "classic_dark"
+    assert host.settings.value("widget_mode_surface") == "outline"
     assert host.settings.value("widget_mode_font_size") == 15
     widget.set_filter("work")
     coordinator.close_for_shutdown()
@@ -587,11 +587,11 @@ def test_customization_apply_and_fresh_controller_restore(workspace):
     dialog.deleteLater()
 
 
-def test_color_preview_does_not_change_layout_without_an_explicit_saved_layout(workspace):
+def test_surface_preview_does_not_change_layout_without_an_explicit_saved_layout(workspace):
     host, coordinator, widget = workspace
     host.settings.values.pop("widget_mode_layout", None)
     dialog = WidgetCustomizationDialog(coordinator.controller, widget)
-    dialog._change("widget_mode_skin", "midnight_blue")
+    dialog._change("widget_mode_surface", "line")
     assert dialog.preview.active_layout_id() == "stacked"
     dialog._apply()
     assert widget.active_layout_id() == "stacked"

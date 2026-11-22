@@ -378,18 +378,16 @@ class UnifiedWidgetModeTests(unittest.TestCase):
         actions[0].click()
         self.assertEqual("all", widget._active_filter)
 
-    def test_set_skin_persists_and_rethemes_visible_widget(self):
+    def test_set_surface_persists_and_rethemes_visible_widget(self):
         self.controller = uwm.UnifiedWidgetController(self.host)
         self.controller.widget = uwm.UnifiedWidgetWindow(self.controller)
         before = self.controller.widget._style_signature
 
-        self.controller.set_skin("midnight_blue")
+        self.controller.set_surface("line")
 
-        self.assertEqual("midnight_blue", self.host.settings.value("widget_mode_skin"))
-        self.assertEqual("dark", self.host.settings.value("widget_mode_panel_theme"))
-        self.assertEqual("stacked", self.host.settings.value("widget_mode_layout"))
+        self.assertEqual("line", self.host.settings.value("widget_mode_surface"))
         self.assertEqual("stacked", self.controller.widget.active_layout_id())
-        self.assertEqual(before, self.controller.widget._style_signature)
+        self.assertNotEqual(before, self.controller.widget._style_signature)
 
     def test_layout_skins_rearrange_existing_sections_without_recreating_them(self):
         self.controller = uwm.UnifiedWidgetController(self.host)
@@ -454,16 +452,16 @@ class UnifiedWidgetModeTests(unittest.TestCase):
         self.assertEqual(123, widget.x())
         self.assertEqual(145, widget.y())
 
-    def test_color_skin_change_keeps_explicit_layout(self):
+    def test_surface_change_keeps_explicit_layout(self):
         self.controller = uwm.UnifiedWidgetController(self.host)
         widget = uwm.UnifiedWidgetWindow(self.controller)
         self.controller.widget = widget
         self.controller.set_layout("work_board")
 
-        self.controller.set_skin("forest_mist")
+        self.controller.set_surface("compact")
 
         self.assertEqual("work_board", widget.active_layout_id())
-        self.assertEqual("forest_mist", self.host.settings.value("widget_mode_skin"))
+        self.assertEqual("compact", self.host.settings.value("widget_mode_surface"))
 
 
 if __name__ == "__main__":

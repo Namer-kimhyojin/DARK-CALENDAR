@@ -60,9 +60,12 @@ from calendar_app.presentation.widgets.widget_mode_opacity import (
 from calendar_app.presentation.widgets.widget_mode_skins import (
     get_widget_mode_layout,
     read_widget_mode_layout_id,
-    read_widget_mode_skin_id,
     widget_mode_layouts,
-    widget_mode_skins,
+)
+from calendar_app.presentation.widgets.widget_mode_surfaces import (
+    SURFACE_SETTING_KEY,
+    read_widget_mode_surface,
+    widget_mode_surfaces,
 )
 from calendar_app.presentation.widgets.widget_mode_theme import (
     WIDGET_SHELL_MIN_ALPHA,
@@ -123,7 +126,7 @@ class WidgetCustomizationDialog(QDialog):
         self.controller = controller
         self.draft = _DraftSettings(controller.main_window.settings)
         self.draft.setValue("widget_mode_layout", read_widget_mode_layout_id(self.draft))
-        self.draft.setValue("widget_mode_skin", read_widget_mode_skin_id(self.draft))
+        self.draft.setValue(SURFACE_SETTING_KEY, read_widget_mode_surface(self.draft))
         self._building = True
         self._layout_changed = False
         self._custom_layout_changed = False
@@ -164,7 +167,7 @@ class WidgetCustomizationDialog(QDialog):
             mnemonic_safe(t("widget_workspace.preferences_style", "스킨·글꼴")),
         )
         tabs.addTab(self._visibility_tab(), t("widget_mode.preferences_visibility", "표시 항목"))
-        tabs.currentChanged.connect(self._scroll_active_skin)
+        tabs.currentChanged.connect(self._scroll_active_surface)
 
         self.preview_frame = QWidget(self)
         preview_column = QVBoxLayout(self.preview_frame)
@@ -192,7 +195,7 @@ class WidgetCustomizationDialog(QDialog):
         self.cancel_btn = cancel_btn
         self._wheel_controls = []
         for control in (
-            self.skin_combo,
+            self.surface_combo,
             self.font_family,
             self.font_size,
             self.font_weight,
@@ -492,9 +495,9 @@ class WidgetCustomizationDialog(QDialog):
     def _sync_appearance_controls(self):
         for control, setter, value in (
             (
-                self.skin_combo,
-                self.skin_combo.setCurrentIndex,
-                self.skin_combo.findData(read_widget_mode_skin_id(self.draft)),
+                self.surface_combo,
+                self.surface_combo.setCurrentIndex,
+                self.surface_combo.findData(read_widget_mode_surface(self.draft)),
             ),
             (
                 self.font_family,
@@ -529,7 +532,7 @@ class WidgetCustomizationDialog(QDialog):
             control.blockSignals(blocked)
             if hasattr(control, "_percentage_label"):
                 control._percentage_label.setText(f"{value}%")
-        self._sync_skin_gallery()
+        self._sync_surface_gallery()
 
     def _show_all_layouts(self):
         for button in self.layout_buttons.values():
@@ -589,56 +592,52 @@ class WidgetCustomizationDialog(QDialog):
         form = QFormLayout(tab)
         form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapAllRows)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-        self.skin_combo = QComboBox(tab)
-        for skin in widget_mode_skins():
+        self.surface_combo = QComboBox(tab)
+        for surface in widget_mode_surfaces():
             swatch = QPixmap(20, 20)
             swatch.fill(QColor(main_widget_mode_tokens(self.draft)["accent"]))
-            self.skin_combo.addItem(
-                QIcon(swatch), t(skin.label_key, skin.label_default), skin.skin_id
+            self.surface_combo.addItem(
+                QIcon(swatch), t(surface.label_key, surface.label_default), surface.key
             )
-        self.skin_combo.setCurrentIndex(
-            self.skin_combo.findData(read_widget_mode_skin_id(self.draft))
+        self.surface_combo.setCurrentIndex(
+            self.surface_combo.findData(read_widget_mode_surface(self.draft))
         )
-        self.skin_combo.setAccessibleName(
-            t("widget_mode.style_shape_skin", "모양 스킨 · 메인 테마 연동")
+        self.surface_combo.setAccessibleName(t("widget_mode.surface_title", "표면 모양"))
+        self.surface_combo.currentIndexChanged.connect(
+            lambda: self._change(SURFACE_SETTING_KEY, self.surface_combo.currentData())
         )
-        self.skin_combo.currentIndexChanged.connect(
-            lambda: self._change("widget_mode_skin", self.skin_combo.currentData())
-        )
-        self.skin_combo.hide()
-        self.skin_gallery = QListWidget(tab)
-        self.skin_gallery.setAccessibleName(
-            t("widget_workspace.skin_gallery", "스킨 미리보기 갤러리")
-        )
-        self.skin_gallery.setViewMode(QListWidget.ViewMode.IconMode)
-        self.skin_gallery.setMovement(QListWidget.Movement.Static)
-        self.skin_gallery.setResizeMode(QListWidget.ResizeMode.Adjust)
-        self.skin_gallery.setIconSize(QSize(150, 74))
-        self.skin_gallery.setGridSize(QSize(172, 112))
-        self.skin_gallery.setWordWrap(True)
-        self.skin_gallery.setFixedHeight(260)
-        self.skin_gallery.setMinimumWidth(0)
-        self.skin_gallery.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
-        self.skin_gallery.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        for skin in widget_mode_skins():
-            item = QListWidgetItem(self._skin_icon(skin), t(skin.label_key, skin.label_default))
-            item.setData(Qt.ItemDataRole.UserRole, skin.skin_id)
+        self.surface_combo.hide()
+        self.surface_gallery = QListWidget(tab)
+        self.surface_gallery.setAccessibleName(t("widget_mode.surface_title", "표면 모양"))
+        self.surface_gallery.setViewMode(QListWidget.ViewMode.IconMode)
+        self.surface_gallery.setMovement(QListWidget.Movement.Static)
+        self.surface_gallery.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self.surface_gallery.setIconSize(QSize(150, 74))
+        self.surface_gallery.setGridSize(QSize(172, 112))
+        self.surface_gallery.setWordWrap(True)
+        self.surface_gallery.setFixedHeight(128)
+        self.surface_gallery.setMinimumWidth(0)
+        self.surface_gallery.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        self.surface_gallery.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        for surface in widget_mode_surfaces():
+            item = QListWidgetItem(
+                self._surface_icon(surface), t(surface.label_key, surface.label_default)
+            )
+            item.setData(Qt.ItemDataRole.UserRole, surface.key)
             item.setToolTip(item.text())
-            self.skin_gallery.addItem(item)
-        self._sync_skin_gallery()
-        self.skin_gallery.currentItemChanged.connect(
+            self.surface_gallery.addItem(item)
+        self._sync_surface_gallery()
+        self.surface_gallery.currentItemChanged.connect(
             lambda item, _old: (
-                self.skin_combo.setCurrentIndex(
-                    self.skin_combo.findData(item.data(Qt.ItemDataRole.UserRole))
+                self.surface_combo.setCurrentIndex(
+                    self.surface_combo.findData(item.data(Qt.ItemDataRole.UserRole))
                 )
                 if item is not None
                 else None
             )
         )
-        self.skin_combo.currentIndexChanged.connect(self._sync_skin_gallery)
-        form.addRow(
-            t("widget_mode.style_shape_skin", "모양 스킨 · 메인 테마 연동"), self.skin_gallery
-        )
+        self.surface_combo.currentIndexChanged.connect(self._sync_surface_gallery)
+        form.addRow(t("widget_mode.surface_title", "표면 모양"), self.surface_gallery)
         self.font_family = QFontComboBox(tab)
         self.font_family.setCurrentFont(
             QFont(
@@ -741,23 +740,23 @@ class WidgetCustomizationDialog(QDialog):
         form.addRow(opacity_help)
         return tab
 
-    def _skin_icon(self, skin):
+    def _surface_icon(self, surface):
         from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor
 
         values = main_widget_mode_tokens(self.draft)
-        background, surface, accent = values["panel_bg"], values["section_bg"], values["accent"]
+        background, fill, accent = values["panel_bg"], values["section_bg"], values["accent"]
         image = QPixmap(150, 74)
         image.fill(Qt.GlobalColor.transparent)
         painter = QPainter(image)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(css_to_qcolor(background))
-        radius = {"paper": 3, "outline": 7, "glass": 16, "compact": 5}.get(skin.surface_style, 10)
+        radius = surface.radius
         painter.drawRoundedRect(1, 1, 148, 72, radius, radius)
         painter.setBrush(css_to_qcolor(accent))
         painter.drawRoundedRect(10, 10, 35, 5, 2, 2)
         for row in range(3):
-            painter.setBrush(css_to_qcolor(surface))
+            painter.setBrush(css_to_qcolor(fill))
             painter.drawRoundedRect(10, 23 + row * 14, 130, 11, 3, 3)
             painter.setBrush(css_to_qcolor(accent))
             painter.drawRoundedRect(14, 27 + row * 14, 55 + row * 12, 3, 1, 1)
@@ -767,25 +766,25 @@ class WidgetCustomizationDialog(QDialog):
             icon.addPixmap(image, mode)
         return icon
 
-    def _sync_skin_gallery(self, *_):
-        if not hasattr(self, "skin_gallery"):
+    def _sync_surface_gallery(self, *_):
+        if not hasattr(self, "surface_gallery"):
             return
-        selected = self.skin_combo.currentData()
-        blocked = self.skin_gallery.blockSignals(True)
-        for index in range(self.skin_gallery.count()):
-            item = self.skin_gallery.item(index)
+        selected = self.surface_combo.currentData()
+        blocked = self.surface_gallery.blockSignals(True)
+        for index in range(self.surface_gallery.count()):
+            item = self.surface_gallery.item(index)
             if item.data(Qt.ItemDataRole.UserRole) == selected:
-                self.skin_gallery.setCurrentItem(item)
+                self.surface_gallery.setCurrentItem(item)
                 break
-        self.skin_gallery.blockSignals(blocked)
+        self.surface_gallery.blockSignals(blocked)
 
-    def _scroll_active_skin(self, *_):
+    def _scroll_active_surface(self, *_):
         if (
             self.preferences_tabs.currentIndex() == 1
-            and self.skin_gallery.currentItem() is not None
+            and self.surface_gallery.currentItem() is not None
         ):
-            self.skin_gallery.scrollToItem(
-                self.skin_gallery.currentItem(), QListWidget.ScrollHint.PositionAtCenter
+            self.surface_gallery.scrollToItem(
+                self.surface_gallery.currentItem(), QListWidget.ScrollHint.PositionAtCenter
             )
 
     def _opacity_control(self, parent, form, key, title, value, minimum):
@@ -1060,7 +1059,7 @@ class WidgetCustomizationDialog(QDialog):
     def _apply(self):
         allowed = {
             "widget_mode_layout",
-            "widget_mode_skin",
+            SURFACE_SETTING_KEY,
             "widget_mode_font_size",
             "widget_mode_font_family",
             "widget_mode_font_weight",

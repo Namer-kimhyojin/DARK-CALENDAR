@@ -48,6 +48,7 @@ MODE_KEYS = frozenset(
     {
         "widget_mode_layout",
         "widget_mode_skin",
+        "widget_mode_surface",
         "widget_mode_layout_mode",
         "widget_mode_free_layout",
         "widget_mode_user_layout_id",

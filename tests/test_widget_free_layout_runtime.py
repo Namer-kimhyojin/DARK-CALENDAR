@@ -159,7 +159,7 @@ def test_settings_reload_and_theme_change_keep_free_coordinates(workspace):
     host, _, widget = workspace
     controller, _ = enable(workspace)
     stored = deepcopy(read_free_layout(host.settings))
-    controller.set_skin("classic_dark")
+    controller.set_surface("outline")
     flush()
     assert read_free_layout(host.settings) == stored
     fresh = UnifiedWidgetController(host)

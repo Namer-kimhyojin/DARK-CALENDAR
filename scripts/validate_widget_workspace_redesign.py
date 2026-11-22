@@ -61,10 +61,8 @@ def main():
             UnifiedWidgetController,
             UnifiedWidgetWindow,
         )
-        from calendar_app.presentation.widgets.widget_mode_skins import (
-            widget_mode_layouts,
-            widget_mode_skins,
-        )
+        from calendar_app.presentation.widgets.widget_mode_skins import widget_mode_layouts
+        from calendar_app.presentation.widgets.widget_mode_surfaces import widget_mode_surfaces
 
         host = Host()
         host.settings.values.update(language="ko", widget_mode_always_top=False)
@@ -118,7 +116,7 @@ def main():
             for _ in range(3):
                 app.processEvents()
             widget.grab().save(str(out / (spec.layout_id + ".png")))
-        skins = widget_mode_skins()
+        skins = widget_mode_surfaces()
         board = QPixmap(1480, ((len(skins) + 3) // 4) * 520 + 50)
         board.fill(QColor("#142131"))
         painter = QPainter(board)
@@ -128,8 +126,8 @@ def main():
         painter.drawText(20, 30, "위젯 전용 모드 · 실제 렌더링 / 예시 데이터")
         for index, skin in enumerate(skins):
             host.settings.values.update(
-                widget_mode_skin=skin.skin_id,
-                widget_mode_layout="day_brief" if args.phase == "after" else "stacked",
+                widget_mode_surface=skin.key,
+                widget_mode_layout="stacked",
             )
             widget.apply_selected_layout(force=True)
             widget.apply_theme()

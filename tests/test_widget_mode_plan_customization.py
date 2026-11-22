@@ -37,7 +37,7 @@ def _control_value(control):
 @pytest.mark.parametrize(
     "control_name,tab_index",
     [
-        ("skin_combo", 1),
+        ("surface_combo", 1),
         ("font_family", 1),
         ("font_family.lineEdit", 1),
         ("font_size", 1),
@@ -119,7 +119,7 @@ def test_calendar_label_describes_all_periods_and_layout_specific_scope(preferen
     assert "주간" not in checkbox.text()
     assert checkbox.accessibleDescription()
     for control in (
-        preferences.skin_combo,
+        preferences.surface_combo,
         preferences.font_family,
         preferences.font_size,
         preferences.font_weight,

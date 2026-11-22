@@ -1,25 +1,15 @@
 # -*- coding: utf-8 -*-
-from pathlib import Path
-import tempfile
 import unittest
 
 from calendar_app.presentation.widgets import widget_mode_skins as skins_module
 from calendar_app.presentation.widgets.widget_mode_skins import (
     WIDGET_MODE_LAYOUT_SETTING_KEY,
-    WIDGET_MODE_SKIN_SETTING_KEY,
     WidgetModeLayout,
-    WidgetModeSkin,
-    apply_widget_mode_skin,
     get_widget_mode_layout,
-    get_widget_mode_skin,
     read_widget_mode_layout_id,
-    read_widget_mode_skin_id,
     register_widget_mode_layout,
-    register_widget_mode_skin,
     widget_mode_layouts,
-    widget_mode_skins,
     write_widget_mode_layout_id,
-    write_widget_mode_skin_id,
 )
 
 
@@ -34,7 +24,7 @@ class _FakeSettings:
         self.values[key] = value
 
 
-class WidgetModeSkinTests(unittest.TestCase):
+class WidgetModeLayoutTests(unittest.TestCase):
     def test_builtin_layouts_cover_distinct_compositions(self):
         layout_ids = {layout.layout_id for layout in widget_mode_layouts()}
 
@@ -57,72 +47,39 @@ class WidgetModeSkinTests(unittest.TestCase):
         self.assertEqual(1, dashboard["filters"][1])
         self.assertEqual(1, dashboard["agenda"][1])
 
-    def test_builtin_skins_have_stable_unique_ids(self):
-        skin_ids = [skin.skin_id for skin in widget_mode_skins()]
+    def test_legacy_skin_value_maps_to_a_kept_layout_without_writing(self):
+        settings = _FakeSettings({"widget_mode_skin": "midnight_blue"})
 
-        self.assertEqual(len(skin_ids), len(set(skin_ids)))
-        self.assertGreaterEqual(len(skin_ids), 6)
-        self.assertIn("classic_light", skin_ids)
-        self.assertIn("classic_dark", skin_ids)
-        self.assertIn("midnight_blue", skin_ids)
+        self.assertEqual("dashboard", read_widget_mode_layout_id(settings))
+        self.assertEqual({"widget_mode_skin": "midnight_blue"}, settings.values)
 
-    def test_missing_skin_uses_legacy_dark_setting(self):
-        settings = _FakeSettings({"widget_mode_panel_theme": "dark"})
+    def test_legacy_skin_with_retired_layout_maps_to_the_kept_one(self):
+        settings = _FakeSettings({"widget_mode_skin": "forest_mist"})
 
-        self.assertEqual("classic_dark", read_widget_mode_skin_id(settings))
+        self.assertEqual("stacked", read_widget_mode_layout_id(settings))
 
-    def test_unknown_saved_skin_falls_back_safely(self):
+    def test_retired_saved_layout_maps_to_a_kept_layout(self):
+        settings = _FakeSettings({WIDGET_MODE_LAYOUT_SETTING_KEY: "side_planner"})
+
+        self.assertEqual("dashboard", read_widget_mode_layout_id(settings))
+
+    def test_unknown_values_fall_back_to_the_default_layout(self):
         settings = _FakeSettings(
-            {WIDGET_MODE_SKIN_SETTING_KEY: "removed_skin", "widget_mode_panel_theme": "light"}
+            {WIDGET_MODE_LAYOUT_SETTING_KEY: "nope", "widget_mode_skin": "removed_skin"}
         )
 
-        self.assertEqual("classic_light", read_widget_mode_skin_id(settings))
-        self.assertEqual("classic_light", get_widget_mode_skin("removed_skin").skin_id)
+        self.assertEqual("stacked", read_widget_mode_layout_id(settings))
+        self.assertEqual("stacked", read_widget_mode_layout_id(None))
 
-    def test_writing_skin_keeps_legacy_theme_compatible(self):
-        settings = _FakeSettings()
-
-        written = write_widget_mode_skin_id(settings, "forest_mist")
-
-        self.assertEqual("forest_mist", written)
-        self.assertEqual("forest_mist", settings.values[WIDGET_MODE_SKIN_SETTING_KEY])
-        self.assertEqual("dark", settings.values["widget_mode_panel_theme"])
-        self.assertEqual("stacked", settings.values[WIDGET_MODE_LAYOUT_SETTING_KEY])
-
-    def test_legacy_skin_layout_is_migrated_then_color_and_layout_are_independent(self):
-        settings = _FakeSettings({WIDGET_MODE_SKIN_SETTING_KEY: "midnight_blue"})
-
-        self.assertEqual("dashboard", read_widget_mode_layout_id(settings))
-        write_widget_mode_skin_id(settings, "lavender_dream")
-
-        self.assertEqual("dashboard", read_widget_mode_layout_id(settings))
-        self.assertEqual("lavender_dream", read_widget_mode_skin_id(settings))
-
-    def test_writing_layout_does_not_change_skin(self):
-        settings = _FakeSettings({WIDGET_MODE_SKIN_SETTING_KEY: "forest_mist"})
+    def test_writing_layout_does_not_touch_other_settings(self):
+        settings = _FakeSettings({"widget_mode_surface": "line"})
 
         write_widget_mode_layout_id(settings, "work_board")
 
-        self.assertEqual("forest_mist", read_widget_mode_skin_id(settings))
+        self.assertEqual("line", settings.values["widget_mode_surface"])
         self.assertEqual("work_board", read_widget_mode_layout_id(settings))
 
-    def test_registered_extension_is_discoverable_without_ui_changes(self):
-        skin = WidgetModeSkin(
-            "test_extension_skin",
-            "widget_mode.skin_test_extension",
-            "Test Extension",
-            token_overrides={"accent": "#123456"},
-        )
-        register_widget_mode_skin(skin, replace=True)
-
-        self.assertIs(skin, get_widget_mode_skin("test_extension_skin"))
-        self.assertIn(skin, widget_mode_skins())
-        self.assertEqual(
-            "#123456",
-            apply_widget_mode_skin({"accent": "#ffffff"}, skin.skin_id)["accent"],
-        )
-
-    def test_registered_layout_can_be_referenced_by_a_skin(self):
+    def test_registered_layout_is_discoverable(self):
         layout = WidgetModeLayout(
             "test_extension_layout",
             "widget_mode.layout_test_extension",
@@ -131,27 +88,9 @@ class WidgetModeSkinTests(unittest.TestCase):
         )
         register_widget_mode_layout(layout, replace=True)
         self.addCleanup(skins_module._LAYOUTS.pop, layout.layout_id, None)
-        self.addCleanup(skins_module._SKINS.pop, "test_layout_skin", None)
-        skin = WidgetModeSkin(
-            "test_layout_skin",
-            "widget_mode.skin_test_layout",
-            "Test Layout Skin",
-            legacy_layout_id=layout.layout_id,
-        )
-        register_widget_mode_skin(skin, replace=True)
 
-        self.assertEqual(layout.layout_id, get_widget_mode_skin(skin.skin_id).legacy_layout_id)
-
-    def test_skin_definition_copies_and_freezes_token_overrides(self):
-        source = {"accent": "#abcdef"}
-        skin = WidgetModeSkin(
-            "immutable_skin", "skin.immutable", "Immutable", token_overrides=source
-        )
-        source["accent"] = "#000000"
-
-        self.assertEqual("#abcdef", skin.token_overrides["accent"])
-        with self.assertRaises(TypeError):
-            skin.token_overrides["accent"] = "#111111"
+        self.assertIs(layout, get_widget_mode_layout("test_extension_layout"))
+        self.assertIn(layout, widget_mode_layouts())
 
 
 if __name__ == "__main__":

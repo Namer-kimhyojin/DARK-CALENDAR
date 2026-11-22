@@ -21,10 +21,8 @@ from calendar_app.presentation.widgets import widget_mode_theme as wmt
 from calendar_app.presentation.widgets.panel_widget_style import menu_stylesheet
 from calendar_app.presentation.widgets.panel_widget_theme import _widget_mode_menu_stylesheet
 from calendar_app.presentation.widgets.widget_mode_coordinator import WidgetModeCoordinator
-from calendar_app.presentation.widgets.widget_mode_skins import (
-    get_widget_mode_layout,
-    widget_mode_skins,
-)
+from calendar_app.presentation.widgets.widget_mode_skins import get_widget_mode_layout
+from calendar_app.presentation.widgets.widget_mode_surfaces import widget_mode_surfaces
 from tests.test_widget_mode_ux import _APP, Host, workspace  # noqa: F401
 
 
@@ -308,10 +306,10 @@ def test_menu_stylesheet_from_resolved_tokens_matches_re_resolution(
         if value is not None:
             host.settings.setValue(key, value)
     try:
-        for skin in widget_mode_skins():
-            host.settings.setValue("widget_mode_skin", skin.skin_id)
+        for surface in widget_mode_surfaces():
+            host.settings.setValue("widget_mode_surface", surface.key)
             tokens = uwm._widget_theme_tokens(host)
-            assert menu_stylesheet(tokens) == _widget_mode_menu_stylesheet(tokens), skin.skin_id
+            assert menu_stylesheet(tokens) == _widget_mode_menu_stylesheet(tokens), surface.key
     finally:
         host.deleteLater()
         _APP.processEvents()

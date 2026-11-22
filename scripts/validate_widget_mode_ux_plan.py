@@ -104,21 +104,7 @@ def main() -> None:
             UnifiedWidgetController,
             UnifiedWidgetWindow,
         )
-        from calendar_app.presentation.widgets.widget_mode_skins import (
-            WidgetModeSkin,
-            register_widget_mode_skin,
-            widget_mode_layouts,
-        )
-
-        register_widget_mode_skin(
-            WidgetModeSkin(
-                "qa_custom",
-                "widget_mode.qa_custom",
-                "QA custom",
-                base_theme="dark",
-                token_overrides={"accent": "#86b7ff", "text_primary": "#f0f4ff"},
-            )
-        )
+        from calendar_app.presentation.widgets.widget_mode_skins import widget_mode_layouts
 
         en = json.loads((ROOT / "locales/en.json").read_text(encoding="utf-8", errors="strict"))
 

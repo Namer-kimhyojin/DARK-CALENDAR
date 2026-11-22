@@ -18,7 +18,7 @@ from calendar_app.presentation.widgets.widget_mode_coordinator import (
     WidgetModeCoordinator,
     WidgetModeState,
 )
-from calendar_app.presentation.widgets.widget_mode_skins import widget_mode_skins
+from calendar_app.presentation.widgets.widget_mode_surfaces import widget_mode_surfaces
 from calendar_app.presentation.widgets.widget_mode_theme import WIDGET_SHELL_MIN_ALPHA
 from calendar_app.shared.color_utils import contrast_ratio
 from calendar_app.shared.system_theme import set_runtime_system_text_theme
@@ -91,7 +91,7 @@ def assert_widget_reads_like_main(tokens, main):
     ],
 )
 @pytest.mark.parametrize("opacity", [0, 128, 255])
-def test_every_skin_reuses_main_roles_and_keeps_saved_widget_identity(
+def test_every_surface_reuses_main_roles_and_keeps_saved_widget_identity(
     tmp_path, mode, base, accent, opacity
 ):
     app = QApplication.instance() or QApplication([])
@@ -112,8 +112,8 @@ def test_every_skin_reuses_main_roles_and_keeps_saved_widget_identity(
     }.items():
         host.settings.setValue(key, value)
     try:
-        for skin in widget_mode_skins():
-            host.settings.setValue("widget_mode_skin", skin.skin_id)
+        for surface in widget_mode_surfaces():
+            host.settings.setValue("widget_mode_surface", surface.key)
             before = {key: host.settings.value(key) for key in host.settings.allKeys()}
             expected = get_ui_tokens(host.settings)
             tokens = _widget_theme_tokens(host)
@@ -134,7 +134,7 @@ def test_every_skin_reuses_main_roles_and_keeps_saved_widget_identity(
                     "accent": tokens["accent"],
                     "opacity": tokens["_main_opacity"],
                     "matching_main_roles": {key: tokens[key] for key in ROLE_MAP},
-                    "skins_checked": [skin.skin_id for skin in widget_mode_skins()],
+                    "surfaces_checked": [surface.key for surface in widget_mode_surfaces()],
                     "individual_widget_colors_preserved": {
                         "background": host.settings.value("oi_sample_bg_color"),
                         "text": host.settings.value("oi_sample_font_color"),
@@ -276,7 +276,7 @@ def test_auto_mode_uses_effective_main_family_without_rewriting_stored_colors():
             "appearance_family_light_base": "#f6f7fb",
             "appearance_family_dark_accent": "#c5a3f5",
             "appearance_family_light_accent": "#7653c4",
-            "widget_mode_skin": "classic_dark",
+            "widget_mode_surface": "line",
         }
     )
     before = dict(host.settings.values)

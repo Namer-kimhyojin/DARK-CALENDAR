@@ -62,8 +62,6 @@ from calendar_app.presentation.widgets.panel_widget_style import (
     menu_stylesheet,
 )
 from calendar_app.presentation.widgets.panel_widget_theme import (
-    _apply_configured_widget_color,
-    _apply_registered_widget_mode_skin,
     _resolve_widget_mode_tokens,
 )
 from calendar_app.presentation.widgets.schedule_info import _is_all_day as _schedule_is_all_day
@@ -89,16 +87,18 @@ from calendar_app.presentation.widgets.widget_mode_opacity import (
 )
 from calendar_app.presentation.widgets.widget_mode_skins import (
     get_widget_mode_layout,
-    get_widget_mode_skin,
     read_widget_mode_layout_id,
-    read_widget_mode_skin_id,
     widget_layout_calendar_mode,
     widget_layout_has_columns,
     widget_layout_is_compact,
     widget_mode_layouts,
-    widget_mode_skins,
     write_widget_mode_layout_id,
-    write_widget_mode_skin_id,
+)
+from calendar_app.presentation.widgets.widget_mode_surfaces import (
+    get_widget_mode_surface,
+    read_widget_mode_surface,
+    widget_mode_surfaces,
+    write_widget_mode_surface,
 )
 from calendar_app.presentation.widgets.widget_mode_typography import (
     read_widget_typography,
@@ -130,10 +130,7 @@ def _safe_text(value) -> str:
 
 
 def _widget_theme_tokens(host: QWidget) -> dict[str, str]:
-    tokens = _resolve_widget_mode_tokens(app=host)
-    settings = getattr(host, "settings", None)
-    tokens = _apply_registered_widget_mode_skin(tokens, settings)
-    return _apply_configured_widget_color(tokens, settings)
+    return _resolve_widget_mode_tokens(app=host)
 
 
 def _relative_widget_day(date: QDate) -> str:
@@ -2039,7 +2036,7 @@ class UnifiedWidgetWindow(QWidget):
         # every apply_theme (show, refresh_data, refresh_theme) keeps them current.
         self.controller._theme_tokens = tokens
         settings = self.controller.main_window.settings
-        workspace_skin = get_widget_mode_skin(read_widget_mode_skin_id(settings))
+        workspace_surface = get_widget_mode_surface(read_widget_mode_surface(settings))
         opacities = (
             (100, 100)
             if tokens.get("_main_theme_linked") == "true"
@@ -2058,7 +2055,7 @@ class UnifiedWidgetWindow(QWidget):
             weight,
             typography,
             read_widget_density(settings).key,
-            workspace_skin.surface_style,
+            workspace_surface.key,
             opacities,
         )
         if signature == self._style_signature:
@@ -2131,7 +2128,7 @@ class UnifiedWidgetWindow(QWidget):
             QCheckBox#agenda_complete {{ background: transparent; border: none; }}
             QCheckBox::indicator {{ width: 20px; height: 20px; }}
         """
-                + workspace_styles(tokens, workspace_skin),
+                + workspace_styles(tokens, workspace_surface),
                 *opacities,
             )
         )
@@ -2899,14 +2896,14 @@ class UnifiedWidgetWindow(QWidget):
                     )
                 )
 
-        skin_menu = menu.addMenu(t("widget_mode.style_shape_skin", "모양 스킨 · 메인 테마 연동"))
-        current_skin = read_widget_mode_skin_id(self.controller.main_window.settings)
-        for skin in widget_mode_skins():
-            action = skin_menu.addAction(t(skin.label_key, skin.label_default))
+        surface_menu = menu.addMenu(t("widget_mode.surface_title", "표면 모양"))
+        current_surface = read_widget_mode_surface(self.controller.main_window.settings)
+        for surface in widget_mode_surfaces():
+            action = surface_menu.addAction(t(surface.label_key, surface.label_default))
             action.setCheckable(True)
-            action.setChecked(current_skin == skin.skin_id)
+            action.setChecked(current_surface == surface.key)
             action.triggered.connect(
-                lambda _checked=False, selected=skin.skin_id: self.controller.set_skin(selected)
+                lambda _checked=False, selected=surface.key: self.controller.set_surface(selected)
             )
 
         menu.addSection(t("widget_mode.menu_window", "창 관리"))
@@ -3590,8 +3587,8 @@ class UnifiedWidgetController:
                 height = max(360, height - 170)
         return QSize(width, height)
 
-    def set_skin(self, skin_id: str) -> None:
-        write_widget_mode_skin_id(self.main_window.settings, skin_id)
+    def set_surface(self, key: str) -> None:
+        write_widget_mode_surface(self.main_window.settings, key)
         if self.widget is not None:
             self.widget._style_signature = None
             self.widget.apply_theme()
