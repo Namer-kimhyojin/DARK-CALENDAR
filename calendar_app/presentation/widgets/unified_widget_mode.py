@@ -81,6 +81,7 @@ from calendar_app.presentation.widgets.widget_mode_geometry import (
     restore_rect,
     serialize_geometry,
 )
+from calendar_app.presentation.widgets.widget_mode_migration import migrate_widget_mode_settings
 from calendar_app.presentation.widgets.widget_mode_opacity import (
     apply_widget_opacity,
     read_widget_opacities,
@@ -3060,6 +3061,13 @@ class UnifiedWidgetController:
     def ensure_widget(self):
         """Create the workspace for editing without entering or resuming widget mode."""
         if self.widget is None:
+            try:
+                migrate_widget_mode_settings(
+                    self.main_window.settings,
+                    preserved_name=t("widget_mode.preserved_free_layout", "이전 자유 구성"),
+                )
+            except Exception:
+                logger.exception("Widget mode settings migration failed; continuing")
             self.widget = UnifiedWidgetWindow(self)
             self._restore_geometry()
         return self.widget

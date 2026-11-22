@@ -186,6 +186,7 @@ def test_surface_changes_item_border_style(workspace):
 
 def test_customization_gallery_offers_four_surfaces_and_cancel_keeps_setting(workspace):
     host, coordinator, widget = workspace
+    surface_before = host.settings.value("widget_mode_surface")
     dialog = WidgetCustomizationDialog(coordinator.controller, widget)
     keys = [
         dialog.surface_gallery.item(index).data(Qt.ItemDataRole.UserRole)
@@ -197,7 +198,7 @@ def test_customization_gallery_offers_four_surfaces_and_cancel_keeps_setting(wor
     dialog.reject()
     dialog.deleteLater()
     _APP.sendPostedEvents(None, QEvent.Type.DeferredDelete)
-    assert host.settings.value("widget_mode_surface") is None
+    assert host.settings.value("widget_mode_surface") == surface_before
 
 
 def test_card_surface_item_border_uses_card_border_token():

@@ -24,6 +24,8 @@ from calendar_app.domain.widget_workspace import (
     validate_snapshot,
     validate_state,
 )
+from calendar_app.infrastructure.i18n import t
+from calendar_app.presentation.widgets.widget_mode_migration import migrate_widget_mode_settings
 
 logger = logging.getLogger(__name__)
 _KEEP_SCOPE = object()
@@ -313,6 +315,13 @@ class WidgetWorkspaceService(QObject):
                 self.settings.remove(key)
         for key, value in mode.items():
             self.settings.setValue(key, decode_setting(value))
+        try:
+            migrate_widget_mode_settings(
+                self.settings,
+                preserved_name=t("widget_mode.preserved_free_layout", "이전 자유 구성"),
+            )
+        except Exception:
+            logger.exception("Widget mode settings migration failed; continuing restore")
         coordinator = getattr(self.owner, "_widget_mode_coordinator", None)
         controller = coordinator.controller if coordinator is not None else None
         if controller is not None and controller.widget is not None:

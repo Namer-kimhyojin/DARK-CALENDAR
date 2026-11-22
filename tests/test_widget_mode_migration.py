@@ -257,3 +257,81 @@ def test_free_layout_with_taken_name_is_kept_under_numbered_name(missing):
     assert saved[1]["layout"] == json.loads(s.value("widget_mode_free_layout"))
     assert migrate_widget_mode_settings(s, user_styles_path=missing) is False
     assert len(read_layout_presets(s)) == 2
+
+
+class _KeyedSettings(Settings):
+    def allKeys(self):
+        return list(self.values)
+
+    def remove(self, key):
+        self.values.pop(key, None)
+
+
+def test_ensure_widget_migrates_before_first_layout():
+    from calendar_app.presentation.widgets.unified_widget_mode import UnifiedWidgetController
+    from tests.test_widget_mode_ux import _APP, Host  # noqa: F401
+
+    host = Host()
+    host.settings.setValue("widget_mode_layout", "side_planner")
+    controller = UnifiedWidgetController(host)
+    window = controller.ensure_widget()
+    try:
+        assert window.active_layout_id() == "dashboard"
+        assert window.workspace_overview.isVisibleTo(window)
+    finally:
+        window.deleteLater()
+        host.deleteLater()
+
+
+def test_ensure_widget_survives_migration_failure(monkeypatch):
+    from calendar_app.presentation.widgets import unified_widget_mode
+    from calendar_app.presentation.widgets.unified_widget_mode import UnifiedWidgetController
+    from tests.test_widget_mode_ux import _APP, Host  # noqa: F401
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("migration failed")
+
+    monkeypatch.setattr(unified_widget_mode, "migrate_widget_mode_settings", boom)
+    host = Host()
+    window = UnifiedWidgetController(host).ensure_widget()
+    try:
+        assert window is not None
+    finally:
+        window.deleteLater()
+        host.deleteLater()
+
+
+def test_restoring_old_snapshot_migrates_layout():  # Review Focus 3
+    from types import SimpleNamespace
+
+    from calendar_app.presentation.widgets.widget_workspace_runtime import (
+        WidgetWorkspaceService,
+    )
+
+    settings = _KeyedSettings()
+    settings.setValue("widget_mode_layout", "dashboard")
+    settings.setValue("widget_mode_calendar_style_dashboard", "week")
+    service = SimpleNamespace(settings=settings, owner=SimpleNamespace())
+    WidgetWorkspaceService._restore_mode(
+        service, {"widget_mode_layout": "month_focus", "widget_mode_skin": "studio_linen"}
+    )
+    assert settings.value("widget_mode_layout") == "stacked"
+    assert settings.value("widget_mode_calendar_style_stacked") == "month"
+    assert settings.value("widget_mode_surface") == "line"
+    # The stale per-layout key was dropped by the restore, then refilled with the default.
+    assert settings.value("widget_mode_calendar_style_dashboard") != "week"
+
+
+def test_restore_survives_migration_failure(monkeypatch):
+    from types import SimpleNamespace
+
+    from calendar_app.presentation.widgets import widget_workspace_runtime as runtime
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("migration failed")
+
+    monkeypatch.setattr(runtime, "migrate_widget_mode_settings", boom)
+    settings = _KeyedSettings()
+    service = SimpleNamespace(settings=settings, owner=SimpleNamespace())
+    runtime.WidgetWorkspaceService._restore_mode(service, {"widget_mode_layout": "stacked"})
+    assert settings.value("widget_mode_layout") == "stacked"

@@ -49,6 +49,7 @@ MODE_KEYS = frozenset(
         "widget_mode_layout",
         "widget_mode_skin",
         "widget_mode_surface",
+        "widget_mode_layout_legacy",
         "widget_mode_layout_mode",
         "widget_mode_free_layout",
         "widget_mode_user_layout_id",
@@ -76,6 +77,9 @@ def mode_setting_allowed(key):
         key in MODE_KEYS
         or key.startswith("widget_mode_calendar_visible_")
         or key.startswith("widget_mode_geometry_")
+        or key.startswith("widget_mode_calendar_style_")
+        or key.startswith("widget_mode_show_overview_")
+        or key.startswith("widget_mode_search_pinned_")
         or key.startswith("unified_widget_geometry_")
         or key.startswith("unified_widget_size")
         or key == "unified_widget_pos"

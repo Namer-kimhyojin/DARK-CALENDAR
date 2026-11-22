@@ -177,3 +177,13 @@ def test_state_saved_by_writer_fits_the_readers_storage_budget():
     ]
     with pytest.raises(ValueError, match="storage budget"):
         validate_state(state)
+
+
+def test_new_keys_are_captured_by_workspace():
+    from calendar_app.domain.widget_workspace import mode_setting_allowed
+
+    assert mode_setting_allowed("widget_mode_surface")
+    assert mode_setting_allowed("widget_mode_layout_legacy")
+    assert mode_setting_allowed("widget_mode_search_pinned_dashboard")
+    assert mode_setting_allowed("widget_mode_show_overview_stacked")
+    assert mode_setting_allowed("widget_mode_calendar_style_minimal")
