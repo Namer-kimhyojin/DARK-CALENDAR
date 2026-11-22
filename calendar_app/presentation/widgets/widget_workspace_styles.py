@@ -21,10 +21,12 @@ def workspace_styles(tokens, surface: WidgetModeSurface) -> str:
             border: 1px solid {edge}; border-radius: 12px; padding: 8px; }}
     """
     item_bg = "transparent" if surface.item_background == "transparent" else tokens["card_bg"]
+    # The card surface is today's look: items keep the soft card border.
+    item_edge = tokens.get("card_border", edge) if surface.key == "card" else edge
     item_border = (
         f"border: none; border-bottom: 1px solid {edge};"
         if surface.item_border == "bottom"
-        else f"border: 1px solid {edge};"
+        else f"border: 1px solid {item_edge};"
     )
     return (
         css

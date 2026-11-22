@@ -198,3 +198,24 @@ def test_customization_gallery_offers_four_surfaces_and_cancel_keeps_setting(wor
     dialog.deleteLater()
     _APP.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     assert host.settings.value("widget_mode_surface") is None
+
+
+def test_card_surface_item_border_uses_card_border_token():
+    from calendar_app.presentation.widgets.widget_mode_surfaces import get_widget_mode_surface
+    from calendar_app.presentation.widgets.widget_workspace_styles import workspace_styles
+
+    tokens = {
+        "text_primary": "#111111",
+        "text_secondary": "#222222",
+        "section_bg": "#333333",
+        "section_bg_alt": "#444444",
+        "panel_border": "#aa0001",
+        "card_border": "#00bb02",
+        "accent": "#555555",
+        "card_bg": "#666666",
+    }
+    card = workspace_styles(tokens, get_widget_mode_surface("card"))
+    rule = card[card.index("QFrame#agenda_item_task") :]
+    assert "1px solid #00bb02" in rule and "#aa0001" not in rule
+    outline = workspace_styles(tokens, get_widget_mode_surface("outline"))
+    assert "1px solid #aa0001" in outline[outline.index("QFrame#agenda_item_task") :]
