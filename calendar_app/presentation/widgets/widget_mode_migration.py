@@ -14,6 +14,7 @@ from calendar_app.presentation.widgets.widget_free_layout import (
 )
 from calendar_app.presentation.widgets.widget_layout_presets import (
     MAX_LAYOUT_PRESETS,
+    MAX_PRESET_NAME_LENGTH,
     USER_LAYOUT_PRESETS_KEY,
     create_layout_preset,
     read_layout_presets,
@@ -251,9 +252,13 @@ def _preserve_free_layout(settings, preserved_name: str) -> bool:
     if len(presets) >= MAX_LAYOUT_PRESETS:
         logger.warning("Saved layout library is full; free layout not preserved")
         return False
-    if any(preset["name"].casefold() == preserved_name.casefold() for preset in presets):
-        return False
-    presets, _ = create_layout_preset(presets, preserved_name, layout)
+    taken = {preset["name"].casefold() for preset in presets}
+    name, number = preserved_name, 1
+    while name.casefold() in taken:
+        number += 1
+        suffix = f" {number}"
+        name = preserved_name[: MAX_PRESET_NAME_LENGTH - len(suffix)] + suffix
+    presets, _ = create_layout_preset(presets, name, layout)
     write_layout_presets(settings, presets)
     return True
 

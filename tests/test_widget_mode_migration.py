@@ -141,7 +141,7 @@ def test_unsaved_free_layout_is_preserved_once(missing):
     migrate_widget_mode_settings(s, user_styles_path=missing)
     presets = read_layout_presets(s)
     assert [p["name"] for p in presets] == ["이전 자유 구성"]
-    migrate_widget_mode_settings(s, user_styles_path=missing)
+    assert migrate_widget_mode_settings(s, user_styles_path=missing) is False
     assert len(read_layout_presets(s)) == 1
     assert s.value("widget_mode_layout_mode") == "free"
 
@@ -241,3 +241,19 @@ def test_user_layout_with_missing_style_file(tmp_path):
     migrate_widget_mode_settings(s, user_styles_path=bad)
     assert s.value("widget_mode_layout") == "stacked"
     assert bad.read_text(encoding="utf-8", errors="strict") == "{broken"
+
+
+def test_free_layout_with_taken_name_is_kept_under_numbered_name(missing):
+    s = Settings()
+    layout_a = seed_free_layout("stacked")
+    layout_b = seed_free_layout("dashboard")
+    assert layout_a != layout_b
+    presets, _ = create_layout_preset([], "이전 자유 구성", layout_a)
+    write_layout_presets(s, presets)
+    write_free_layout(s, layout_b)
+    assert migrate_widget_mode_settings(s, user_styles_path=missing) is True
+    saved = read_layout_presets(s)
+    assert [p["name"] for p in saved] == ["이전 자유 구성", "이전 자유 구성 2"]
+    assert saved[1]["layout"] == json.loads(s.value("widget_mode_free_layout"))
+    assert migrate_widget_mode_settings(s, user_styles_path=missing) is False
+    assert len(read_layout_presets(s)) == 2
