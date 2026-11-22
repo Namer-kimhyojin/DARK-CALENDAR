@@ -6,6 +6,7 @@
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.6.0 | 2026-11-22T18:45:38.234193+09:00 | change | 위젯 전용 모드 1단계 회귀 수정: 꾸미기 창의 main_window 없는 컨트롤러 허용, 표면 설정 None 허용, 검증 스크립트 표면 키 전환 | `widget-mode-phase1-cleanup-20261122-fix1` |
 | 5.6.0 | 2026-11-22T18:24:31.302236+09:00 | change | 위젯 전용 모드 1단계: 배치 4종·표면 4종, 편집기·스타일 만들기·투명도 슬라이더 제거, 설정 이관 | `widget-mode-phase1-cleanup-20261122` |
 | 5.6.0 | 2026-11-17T23:13:41.156623+09:00 | change | Add the 5.6.0 release checklist and notes | `release-5.6.0-docs-20261117` |
 | 5.6.0 | 2026-11-17T20:17:31.750137+09:00 | change | Share theme work within one render or dialog build; skip the full redraw when an edit dialog closes without any database change | `responsiveness-theme-cache-20261117` |

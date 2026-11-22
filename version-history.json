@@ -31492,6 +31492,30 @@
         "scripts/validate_widget_workspace_redesign.py": "4adca254d7f06b6aad5edc84b24f9b8f3cb7bfa7ef34fd05c074ab1ee20fa7da",
         "scripts/verify_release_runtime.py": "5225d6b451146bc6fb4d147e676a12111fc93c9af230434e611106dc7d8ba4f0"
       }
+    },
+    {
+      "id": "widget-mode-phase1-cleanup-20261122-fix1",
+      "created_at": "2026-11-22T18:45:38.234193+09:00",
+      "kind": "change",
+      "previous_version": "5.6.0",
+      "version": "5.6.0",
+      "summary": "위젯 전용 모드 1단계 회귀 수정: 꾸미기 창의 main_window 없는 컨트롤러 허용, 표면 설정 None 허용, 검증 스크립트 표면 키 전환",
+      "files": [
+        "calendar_app/presentation/dialogs/widget_customization_dialog.py",
+        "calendar_app/presentation/widgets/widget_mode_surfaces.py",
+        "scripts/validate_widget_free_layout.py",
+        "scripts/validate_widget_layout_presets.py",
+        "scripts/validate_widget_management.py",
+        "scripts/validate_widget_workspace_studio.py"
+      ],
+      "scoped_hashes": {
+        "calendar_app/presentation/dialogs/widget_customization_dialog.py": "c90dcc4a3d9b4c034fda1e2b608ceef62c1f68f53f8ba55b572ef477f1a12746",
+        "calendar_app/presentation/widgets/widget_mode_surfaces.py": "885a6152f35d1b8d73cf567a120abcc4058383940b6e04faa249a1d37668ad14",
+        "scripts/validate_widget_free_layout.py": "3814d196c5880addfaee6f8d5e1803cccc9a25af6a007504635f3ea978fef786",
+        "scripts/validate_widget_layout_presets.py": "00fce190b4dcfe8a012299501f6693ee3bfd3de9afd9d5eb964b65b1dcdf6b0b",
+        "scripts/validate_widget_management.py": "4a6f101a3ab58b8cc2f9c63ba44c507b85901a8624e2df29eb22849b0885a684",
+        "scripts/validate_widget_workspace_studio.py": "a914a707641eb40cb8b0a269b52ff984f339b08e6ea5c12c8cbb2081b7edcd57"
+      }
     }
   ],
   "observed_inputs": {
@@ -31980,7 +32004,7 @@
     "calendar_app/presentation/dialogs/task_dialog_base.py": "70cdb0cd1e578743de25c8ab5fbb041e8b536de57a06f6f8dde9195b138d2fcc",
     "calendar_app/presentation/dialogs/task_dialog_unified.py": "8e1c2e14fc2d09dd8fd6326374bdfc587f9d1cd819f0abc33315245cdc06c9df",
     "calendar_app/presentation/dialogs/time_picker_widget.py": "46548a3b4e677c5e6534eb86162965c97345081a1172a13aab163a26a3be3a66",
-    "calendar_app/presentation/dialogs/widget_customization_dialog.py": "c08ba0c5510f30dd3a04fd5dd0e5bd5b4e803c9e38c624f8a7d6b73452c9d995",
+    "calendar_app/presentation/dialogs/widget_customization_dialog.py": "c90dcc4a3d9b4c034fda1e2b608ceef62c1f68f53f8ba55b572ef477f1a12746",
     "calendar_app/presentation/dialogs/widget_desktop_layout_dialog.py": "353bcad7409814880ff0e8984e52d74d79be1a8b1e44e3377e63d2d27258355d",
     "calendar_app/presentation/dialogs/widget_workspace_options_dialog.py": "f93c73d8026e437e9bff441e7467b18f39be15c172f73658637bc470f56e2062",
     "calendar_app/presentation/drag_drop_manager.py": "6caf53a1b0e8509d41899aba34a0eb17e1e5f4e3a72a582752e0ba3dc88ea8a2",
@@ -32219,13 +32243,13 @@
     "scripts/validate_datecard_animations.py": "e4906e8ee3987b9e922fcf6cc819bf2e5a3c420602acd12b04bb8b52584f5304",
     "scripts/validate_i18n_ui.py": "af9a203e5e9da809b870d143e59c79ae92540d1a36642572533bdd0cf3d4f297",
     "scripts/validate_weather_premium.py": "9e18f3abeed4f8abf55c6656f1554801a7427f6100c631203091fd4249bfaeaa",
-    "scripts/validate_widget_free_layout.py": "b5166281a4f166069559fd0be4eabd49d2259507c4f440acf2a46feb0539076e",
+    "scripts/validate_widget_free_layout.py": "3814d196c5880addfaee6f8d5e1803cccc9a25af6a007504635f3ea978fef786",
     "scripts/validate_widget_graphic_collections.py": "3c00a5f4f24fa3b1a0e5c4af375d6654077d590c0d2744b5e659ce03db17a195",
-    "scripts/validate_widget_layout_presets.py": "f360125a0c8a96f597017818654594fb0647487107d81930a3ded32799f642d6",
-    "scripts/validate_widget_management.py": "920eb206831ac030f3f95b82ea717160000ec81240b53c16b309e15fd4164130",
+    "scripts/validate_widget_layout_presets.py": "00fce190b4dcfe8a012299501f6693ee3bfd3de9afd9d5eb964b65b1dcdf6b0b",
+    "scripts/validate_widget_management.py": "4a6f101a3ab58b8cc2f9c63ba44c507b85901a8624e2df29eb22849b0885a684",
     "scripts/validate_widget_mode_ux_plan.py": "b0f5e52da79b189970da7edb7658e08ca49647eb65d96a4017f2cfc4eba095ca",
     "scripts/validate_widget_workspace_redesign.py": "4adca254d7f06b6aad5edc84b24f9b8f3cb7bfa7ef34fd05c074ab1ee20fa7da",
-    "scripts/validate_widget_workspace_studio.py": "e3d1877919ecb7266ab2395fb11ccdefd189977b3d468e7ec8930c3c7d502d51",
+    "scripts/validate_widget_workspace_studio.py": "a914a707641eb40cb8b0a269b52ff984f339b08e6ea5c12c8cbb2081b7edcd57",
     "scripts/verify_release_runtime.py": "5225d6b451146bc6fb4d147e676a12111fc93c9af230434e611106dc7d8ba4f0",
     "scripts/verify_sqlite_runtime.py": "35f149eafda0dee38dd9dd2d69133d46e8c0fe2af721ab113f1f10c08619c1d7",
     "Standalone.spec": "9f47035061604025c59b9ecbe1a53e3963c9543b257e0165ff1f93aa3106b5b2",
@@ -32233,7 +32257,7 @@
     "calendar_app/presentation/theme/task_glyphs.py": "708ea49bec53c3ea6828ddeb1fa0231a9124d1abe48970e0a825f949cdb4ef58",
     "calendar_app/presentation/widgets/widget_mode_display.py": "643d593843327b0b469cd70553b7746b914d5474f8fa92daa6e7b088df956658",
     "calendar_app/presentation/widgets/widget_mode_migration.py": "fccf540d499d3e1a7475c48504a6e3e3045373b2cc12870174902dfd4d73edd8",
-    "calendar_app/presentation/widgets/widget_mode_surfaces.py": "b8db4c0080eed7ff5343ac2c19981404342deb228e603610fa51556326723c6c"
+    "calendar_app/presentation/widgets/widget_mode_surfaces.py": "885a6152f35d1b8d73cf567a120abcc4058383940b6e04faa249a1d37668ad14"
   },
   "legacy_event_count": 47,
   "release": {
