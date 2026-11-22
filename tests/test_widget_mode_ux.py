@@ -16,6 +16,10 @@ from calendar_app.presentation.widgets.widget_mode_coordinator import (
     WidgetModeCoordinator,
     WidgetModeState,
 )
+from calendar_app.presentation.widgets.widget_mode_display import (
+    LayoutDisplay,
+    write_layout_display,
+)
 
 
 class Settings:
@@ -656,3 +660,21 @@ def test_widget_list_does_not_silently_truncate_work(workspace):
         )
         == 16
     )
+
+
+def test_display_options_drive_overview_search_and_calendar(workspace):
+    host, coordinator, widget = workspace
+    settings = host.settings
+    settings.setValue("widget_mode_layout", "stacked")
+    write_layout_display(settings, "stacked", LayoutDisplay("month", True, True))
+    widget.resize(600, 700)
+    widget.apply_selected_layout(force=True)
+    _APP.processEvents()
+    assert widget.workspace_overview.isVisibleTo(widget)
+    assert widget.search_input.isVisibleTo(widget)
+    assert widget.cal_grid.display_mode == "month"
+
+
+def test_view_button_is_gone(workspace):
+    _host, _coordinator, widget = workspace
+    assert not hasattr(widget, "view_btn")

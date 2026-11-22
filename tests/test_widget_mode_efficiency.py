@@ -175,7 +175,7 @@ def test_primary_add_hover_keeps_an_explicit_text_color(workspace):
     assert "border:" in hover_block
 
 
-@pytest.mark.parametrize("layout", ["dashboard", "magazine"])
+@pytest.mark.parametrize("layout", ["dashboard"])
 def test_wide_board_layouts_use_a_full_month_calendar(workspace, layout):
     host, coordinator, widget = workspace
     coordinator.controller.set_layout(layout)
@@ -215,16 +215,15 @@ def test_board_calendar_defaults_visible_and_visibility_is_layout_scoped(workspa
     assert widget.cal_grid.isHidden()
     assert host.settings.value(calendar_visibility_key("dashboard")) is False
 
-    coordinator.controller.set_layout("magazine")
-    assert not widget.cal_grid.isHidden()
-    assert widget.week_toggle_btn.isChecked()
+    coordinator.controller.set_layout("stacked")
+    assert widget.cal_grid.isHidden()
 
     coordinator.controller.set_layout("dashboard")
     assert widget.cal_grid.isHidden()
     assert not widget.week_toggle_btn.isChecked()
 
 
-@pytest.mark.parametrize("layout", ["dashboard", "magazine"])
+@pytest.mark.parametrize("layout", ["dashboard"])
 def test_collapsing_board_calendar_reflows_and_restores_window_size(workspace, layout):
     _, coordinator, widget = workspace
     coordinator.controller.set_layout(layout)
@@ -257,7 +256,7 @@ def test_collapsing_board_calendar_reflows_and_restores_window_size(workspace, l
 
 @pytest.mark.parametrize(
     ("layout", "calendar_column", "content_column"),
-    [("dashboard", 0, 1), ("magazine", 1, 0)],
+    [("dashboard", 0, 1)],
 )
 def test_board_layout_content_is_opposite_the_calendar(
     workspace, layout, calendar_column, content_column

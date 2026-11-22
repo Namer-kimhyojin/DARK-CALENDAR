@@ -12,6 +12,10 @@ from calendar_app.presentation.dialogs.widget_customization_dialog import Widget
 from calendar_app.presentation.widgets.panel_widget_style import css_to_qcolor
 from calendar_app.presentation.widgets.unified_widget_mode import _widget_theme_tokens
 from calendar_app.presentation.widgets.widget_graphics import contrast_ratio
+from calendar_app.presentation.widgets.widget_mode_display import (
+    LayoutDisplay,
+    write_layout_display,
+)
 from calendar_app.presentation.widgets.widget_mode_skins import (
     get_widget_mode_layout,
     widget_mode_layouts,
@@ -88,12 +92,23 @@ def test_search_uses_cached_items_without_fetching_or_losing_originals(workspace
         assert len(rows) == 3
 
 
-def test_search_empty_state_explains_how_to_return(workspace):
+def test_board_search_with_no_match_keeps_original_items_cached(workspace):
     _, coordinator, widget = workspace
     coordinator.controller.set_layout("work_board")
     widget.search_input.setText("no-such-title-827")
     _wait_for_rows(widget, 0)
-    # The list-mode empty-state text returns with the pinned search option (Task 4).
+    assert sum(not item.get("is_section") for item in widget._last_items) == 3
+
+
+def test_list_empty_state_explains_how_to_return_when_search_is_pinned(workspace):
+    host, coordinator, widget = workspace
+    write_layout_display(host.settings, "stacked", LayoutDisplay("week", False, True))
+    coordinator.controller.set_layout("stacked")
+    widget.apply_selected_layout(force=True)
+    assert not widget.search_input.isHidden()
+    widget.search_input.setText("no-such-title-827")
+    _wait_for_rows(widget, 0)
+    assert "검색" in widget.scroll_content.findChild(QLabel, "unified_empty").text()
     assert sum(not item.get("is_section") for item in widget._last_items) == 3
 
 

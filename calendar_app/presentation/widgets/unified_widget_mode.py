@@ -73,6 +73,7 @@ from calendar_app.presentation.widgets.widget_mode_density import (
     DENSITY_KEY,
     read_widget_density,
 )
+from calendar_app.presentation.widgets.widget_mode_display import read_layout_display
 from calendar_app.presentation.widgets.widget_mode_geometry import (
     best_available_geometry,
     clamp_rect,
@@ -1502,14 +1503,6 @@ class UnifiedWidgetWindow(QWidget):
         self._search_timer.setInterval(120)
         self._search_timer.timeout.connect(lambda: self.update_agenda(self._last_items))
         self.search_input.textChanged.connect(self._workspace_search_changed)
-        self.view_btn = self._button(t("widget_workspace.view", "보기"), lambda: None)
-        self.view_btn.setProperty("compactControl", True)
-        self.view_btn.setIconSize(QSize(16, 16))
-        self.view_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.view_menu = QMenu(self.view_btn)
-        self.view_menu.aboutToShow.connect(self._fill_workspace_views)
-        self.view_btn.setMenu(self.view_menu)
-        self.toolbar.layout().insertWidget(self.toolbar.layout().count() - 1, self.view_btn)
 
     def _workspace_search_changed(self, text):
         if text.strip():
@@ -1518,16 +1511,6 @@ class UnifiedWidgetWindow(QWidget):
             self._search_timer.stop()
             self.update_agenda(self._last_items)
 
-    def _fill_workspace_views(self):
-        self.view_menu.clear()
-        for spec in sorted(widget_mode_layouts(), key=lambda value: not value.searchable):
-            action = self.view_menu.addAction(t(spec.label_key, spec.label_default))
-            action.setCheckable(True)
-            action.setChecked(self.active_layout_id() == spec.layout_id)
-            action.triggered.connect(
-                lambda _checked=False, key=spec.layout_id: self.controller.set_layout(key)
-            )
-
     def _configure_workspace(self, spec, *, free=False):
         from calendar_app.presentation.widgets.widget_workspace_ui import WorkspaceBoard
 
@@ -1535,8 +1518,9 @@ class UnifiedWidgetWindow(QWidget):
         if board != self._workspace_board_active:
             self._last_render_key = None
         self._workspace_board_active = board
-        self.workspace_overview.setVisible(not free and spec.show_overview)
-        self.search_input.setVisible(not free and spec.searchable)
+        display = read_layout_display(self.controller.main_window.settings, spec)
+        self.workspace_overview.setVisible(not free and display.show_overview)
+        self.search_input.setVisible(not free and display.search_pinned)
         if board and self._workspace_board is None:
             self._workspace_board = WorkspaceBoard(self)
             self.agenda_layout.addWidget(self._workspace_board, 1)
@@ -1954,7 +1938,8 @@ class UnifiedWidgetWindow(QWidget):
             spacing=layout_spec.calendar_spacing,
             margins=layout_spec.calendar_margins,
         )
-        calendar_mode = widget_layout_calendar_mode(layout_spec, target_width)
+        display = read_layout_display(settings, layout_spec)
+        calendar_mode = widget_layout_calendar_mode(layout_spec, target_width, display)
         self.cal_grid.set_display_mode(calendar_mode)
         if not calendar_visible:
             self.cal_grid.hide()
@@ -1982,7 +1967,7 @@ class UnifiedWidgetWindow(QWidget):
         self.hero.setVisible(
             not self.eyebrow_label.isHidden()
             or not self.hint_label.isHidden()
-            or layout_spec.show_overview
+            or display.show_overview
         )
 
         self._active_layout_id = layout_spec.layout_id
@@ -2155,8 +2140,6 @@ class UnifiedWidgetWindow(QWidget):
         # theme (as _widget_mode_menu_stylesheet does) gives the same stylesheet.
         menu_qss = menu_stylesheet(tokens)
         self.customize_btn.setIcon(_ic(ICON.DISPLAY_STYLE, color=color))
-        self.view_btn.setIcon(_ic(ICON.VIEW_MONTHLY, color=color))
-        self.view_menu.setStyleSheet(menu_qss)
         self.restore_btn.setIcon(_ic(ICON.CALENDAR, color=color))
         self.pin_btn.setIcon(_ic(ICON.ALWAYS_ON_TOP, color=color))
         for button in (self.restore_btn, self.customize_btn, self.pin_btn):
@@ -2205,10 +2188,7 @@ class UnifiedWidgetWindow(QWidget):
 
     def _update_toolbar_labels(self) -> None:
         """Measure real translated labels before exposing the wider toolbar."""
-        self.view_btn.setVisible(self.width() >= 380)
-        buttons = (self.restore_btn, self.customize_btn, self.pin_btn) + (
-            (self.view_btn,) if not self.view_btn.isHidden() else ()
-        )
+        buttons = (self.restore_btn, self.customize_btn, self.pin_btn)
         label_widths = [
             button.fontMetrics().horizontalAdvance(button.text()) + 40 for button in buttons
         ]
@@ -2234,7 +2214,6 @@ class UnifiedWidgetWindow(QWidget):
             self.today_btn,
             self.pin_btn,
             self.customize_btn,
-            self.view_btn,
             self.more_btn,
         ]
         controls += self.cal_grid.findChildren(QToolButton)
@@ -2430,9 +2409,6 @@ class UnifiedWidgetWindow(QWidget):
             self.timer.start(self._ms_until_next_clock_tick())
 
     def _refresh_locale_texts(self) -> None:
-        self.view_btn.setText(t("widget_workspace.view", "보기"))
-        self.view_btn.setToolTip(self.view_btn.text())
-        self.view_btn.setAccessibleName(self.view_btn.text())
         self.search_input.setPlaceholderText(
             t("widget_workspace.search", "선택한 날짜에서 검색 · Ctrl+F")
         )
@@ -3013,8 +2989,11 @@ class UnifiedWidgetWindow(QWidget):
         compact = widget_layout_is_compact(
             get_widget_mode_layout(self._active_layout_id), self.width()
         )
+        layout_spec = get_widget_mode_layout(self._active_layout_id)
         calendar_mode = widget_layout_calendar_mode(
-            get_widget_mode_layout(self._active_layout_id), self.width()
+            layout_spec,
+            self.width(),
+            read_layout_display(self.controller.main_window.settings, layout_spec),
         )
         if (
             not self._free_layout_active
