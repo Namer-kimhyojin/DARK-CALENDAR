@@ -197,6 +197,13 @@
       "language": "en",
       "kind": "research_only",
       "ai_text": "unknown"
+    },
+    "techtools-launchpad": {
+      "name": "TechTools Launchpad",
+      "destination_url": "https://techtools.cz/tools/launchpad/",
+      "language": "en",
+      "kind": "listing",
+      "ai_text": "allowed"
     }
   },
   "events": [
@@ -3501,6 +3508,27 @@
         "summary": "공식 신규 등록 양식은 공개 PAD XML URL만 받음. 공개 검색에 기존 제품 결과 없음. docs 파일 검색에서 PAD XML을 찾지 못함. 설치 배포 경로 및 내부 중복 미확인. 접수 없음."
       },
       "recorded_at": "2026-11-13T18:30:34.723070+00:00"
+    },
+    {
+      "id": "pack:aircal-20261119-techtools-launchpad-desktop-planning:0:466b81c1ffaa",
+      "channel_id": "techtools-launchpad",
+      "kind": "publication",
+      "observed_on": "2026-11-19",
+      "data": {
+        "artifact_id": "aircal-20261119-techtools-launchpad-desktop-planning",
+        "campaign_id": "aircal-20261119-techtools-launchpad-desktop-planning",
+        "state": "submitted",
+        "language": "en",
+        "title": "Air Calendar",
+        "url": "https://techtools.cz/tools/launchpad/?tool=11282"
+      },
+      "evidence": {
+        "url": "https://techtools.cz/tools/launchpad/?tool=11282",
+        "summary": "Published; anonymous page shows approved text, but provider lowercased the case-sensitive homepage path and its link returns 404. No self-service edit/delete.",
+        "checked_on": "2026-11-19",
+        "source_pack": "C:\\Users\\aplus\\OpenBot\\Agents\\agent-e0aa8d4c-e117-487c-892d-48e973ee8d72\\promotion-20261119\\pack2\\campaign.json"
+      },
+      "recorded_at": "2026-11-19T08:11:59.120490+00:00"
     }
   ]
 }
