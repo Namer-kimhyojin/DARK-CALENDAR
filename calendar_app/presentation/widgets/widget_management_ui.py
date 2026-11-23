@@ -261,6 +261,12 @@ class WidgetModeManagementPanel(QWidget):
                 "배치 {layouts}종 · 표면 모양 {surfaces}종",
             ).format(layouts=len(widget_mode_layouts()), surfaces=len(widget_mode_surfaces()))
         )
+        from calendar_app.presentation.widgets.widget_mode_skins import (
+            LAYOUT_SELECTION_ENABLED,
+        )
+
+        self.layout_name.setVisible(LAYOUT_SELECTION_ENABLED)
+        self.catalog.setVisible(LAYOUT_SELECTION_ENABLED)
         coordinator = self._coordinator()
         active = coordinator is not None and coordinator.is_widget_mode_active()
         visible = active and coordinator.controller.is_visible()

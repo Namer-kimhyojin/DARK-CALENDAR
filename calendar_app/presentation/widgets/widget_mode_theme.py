@@ -15,9 +15,13 @@ from calendar_app.shared.color_utils import (
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
 from calendar_app.shared.ui_tokens import get_ui_tokens
 
-# The widget floats over arbitrary wallpaper, so its shell keeps a high floor of
-# opacity and every reading color is checked against the worst backdrop.
+# The widget floats over arbitrary wallpaper. At full main-window opacity the
+# shell is near-opaque (WIDGET_SHELL_MIN_ALPHA) and every reading color meets the
+# table below against the worst backdrop. A translucent main window makes the
+# shell follow its opacity, down to the lowest alpha at which body text still
+# reads at WCAG AA (4.5:1) over a black and a white wallpaper.
 WIDGET_SHELL_MIN_ALPHA = 242
+WIDGET_TRANSLUCENT_TEXT_CONTRAST = 4.5
 WIDGET_TEXT_MIN_CONTRAST = {
     "text_primary": 7.0,
     "card_text_primary": 7.0,
@@ -217,34 +221,41 @@ def _harden_widget_readability_uncached(tokens: dict[str, str], base_color: str)
         # Dark themes rise toward white; light themes deepen toward ink.
         return _mix(base, white, amount) if dark else _mix(base, ink, amount)
 
-    shell_alpha = WIDGET_SHELL_MIN_ALPHA
+    card = lift(0.06) if dark else _mix(base, white, 0.72)
+    alt = lift(0.04) if dark else _mix(base, white, 0.45)
+    button = lift(0.09) if dark else _mix(base, white, 0.60)
+    shell_alpha = widget_shell_alpha(_main_opacity(tokens), (base, card, alt, button), ink)
+    translucent = shell_alpha < WIDGET_SHELL_MIN_ALPHA
     for key in _SHELL_KEYS:
         current = parse_css_color(tokens.get(key, ""), _hex(base))
         hardened[key] = (
             f"rgba({current.red()}, {current.green()}, {current.blue()}, "
-            f"{max(shell_alpha, current.alpha())})"
+            f"{shell_alpha if translucent else max(shell_alpha, current.alpha())})"
         )
     # A faint diagonal tint gives the flat shell depth without hurting contrast.
-    hardened["panel_bg_start"] = f"rgba({_rgb(_mix(base, accent, 0.06))}, {shell_alpha + 4})"
+    edge_alpha = min(255, shell_alpha + 4)
+    hardened["panel_bg_start"] = f"rgba({_rgb(_mix(base, accent, 0.06))}, {edge_alpha})"
     hardened["panel_bg_end"] = (
-        f"rgba({_rgb(_mix(base, black if dark else white, 0.10))}, {shell_alpha + 4})"
+        f"rgba({_rgb(_mix(base, black if dark else white, 0.10))}, {edge_alpha})"
     )
 
-    card = lift(0.06) if dark else _mix(base, white, 0.72)
-    alt = lift(0.04) if dark else _mix(base, white, 0.45)
-    button = lift(0.09) if dark else _mix(base, white, 0.60)
+    def surface(color: QColor) -> str:
+        # Rows and buttons share the shell's translucency so they do not read as
+        # solid blocks on a see-through window.
+        return f"rgba({_rgb(color)}, {shell_alpha})" if translucent else _hex(color)
+
     button_hover = lift(0.15) if dark else lift(0.07)
     chip = _mix(base, accent, 0.26 if dark else 0.16)
     border = lift(0.16 if dark else 0.14)
     border_strong = lift(0.24 if dark else 0.22)
     hardened.update(
-        section_bg=_hex(card),
-        card_bg=_hex(card),
-        surface_alt=_hex(alt),
+        section_bg=surface(card),
+        card_bg=surface(card),
+        surface_alt=surface(alt),
         section_bg_alt=_hex(button_hover),
         card_hover=_hex(button_hover),
         card_pressed=_hex(lift(0.18) if dark else lift(0.10)),
-        button_bg=_hex(button),
+        button_bg=surface(button),
         button_hover=_hex(button_hover),
         chip_bg=_hex(chip),
         chip_border=_hex(_mix(chip, accent, 0.65)),
@@ -253,7 +264,7 @@ def _harden_widget_readability_uncached(tokens: dict[str, str], base_color: str)
         hero_bg=_hex(_mix(base, accent, 0.12 if dark else 0.08)),
         hero_bg_strong=_hex(_mix(base, accent, 0.22 if dark else 0.14)),
         hero_border=_hex(_mix(base, accent, 0.70)),
-        input_bg=_hex(card),
+        input_bg=surface(card),
         card_border=_hex(border),
         section_border=_hex(border_strong),
         section_border_soft=_hex(border),
@@ -267,12 +278,17 @@ def _harden_widget_readability_uncached(tokens: dict[str, str], base_color: str)
         scroll_thumb_hover=_hex(accent),
     )
 
-    # Worst case: the near-opaque shell over a black or a white wallpaper.
+    # Worst case: the shell over a black or a white wallpaper.
     shell = parse_css_color(hardened["panel_bg"], _hex(base))
     backdrops = [composite_color(shell, black), composite_color(shell, white)]
-    text_surfaces = backdrops + [card, alt, button]
+    text_surfaces = list(backdrops)
+    for color in (card, alt, button):
+        layer = parse_css_color(surface(color), _hex(color))
+        text_surfaces += [composite_color(layer, wall) for wall in (black, white)]
     for key, minimum in WIDGET_TEXT_MIN_CONTRAST.items():
         if key in hardened:
+            if translucent:
+                minimum = min(minimum, WIDGET_TRANSLUCENT_TEXT_CONTRAST)
             hardened[key] = _readable(hardened[key], text_surfaces, minimum, ink)
     # Accent-colored text sits on the shell and on the selected-chip tint.
     accent_text = _readable(accent, backdrops + [chip, card], 4.5, ink)
@@ -286,6 +302,37 @@ def _harden_widget_readability_uncached(tokens: dict[str, str], base_color: str)
     hover_bg = parse_css_color(hardened.get("button_primary_hover_bg", _hex(accent)), _hex(accent))
     hardened["button_primary_hover_text"] = contrasting_text_color(hover_bg, surface=base)
     return hardened
+
+
+def _main_opacity(tokens: dict[str, str]) -> float:
+    try:
+        return max(0.0, min(1.0, float(tokens.get("_main_opacity", "1"))))
+    except (TypeError, ValueError):
+        return 1.0
+
+
+def widget_shell_alpha(opacity: float, surfaces, ink: QColor) -> int:
+    """Shell alpha for the main window's opacity, never below the readable floor.
+
+    The floor is the lowest alpha at which ``ink`` keeps 4.5:1 on every surface
+    composited over a black and over a white wallpaper.
+    """
+    wanted = max(0, min(WIDGET_SHELL_MIN_ALPHA, round(float(opacity) * 255)))
+    if wanted >= WIDGET_SHELL_MIN_ALPHA:
+        return WIDGET_SHELL_MIN_ALPHA
+    walls = (QColor("#000000"), QColor("#ffffff"))
+    for alpha in range(wanted, WIDGET_SHELL_MIN_ALPHA, 2):
+        if all(
+            contrast_ratio(
+                ink,
+                composite_color(QColor(color.red(), color.green(), color.blue(), alpha), wall),
+            )
+            >= WIDGET_TRANSLUCENT_TEXT_CONTRAST
+            for color in surfaces
+            for wall in walls
+        ):
+            return alpha
+    return WIDGET_SHELL_MIN_ALPHA
 
 
 def _rgb(color: QColor) -> str:

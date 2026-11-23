@@ -61,7 +61,11 @@ def test_missing_preset_does_not_modify_live_widget_or_settings(workspace):
     assert widget.geometry() == geometry
 
 
-def test_user_layout_menu_marks_only_matching_saved_configuration(workspace):
+def test_user_layout_menu_marks_only_matching_saved_configuration(workspace, monkeypatch):
+    from calendar_app.presentation.widgets import widget_mode_skins
+
+    # The 배치 menu exists only while layout selection is enabled (hidden for now).
+    monkeypatch.setattr(widget_mode_skins, "LAYOUT_SELECTION_ENABLED", True)
     host, coordinator, widget = workspace
     preset_id, _layout = _save_preset(host.settings)
     coordinator.controller.apply_layout_preset(preset_id)

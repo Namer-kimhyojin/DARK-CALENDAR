@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "During a full lock, clicks reach the desktop under the calendar. Rest the pointer on the corner badge for a moment to make it clickable.",
     "lock_mode": "🔒 โหมดล็อกเดสก์ท็อป",
     "magnet_mode": "สลับโหมดแม่เหล็ก",
+    "manage_menu": "Manage",
+    "new_menu": "New",
     "next_day": "▶ วันถัดไป",
     "opacity": "ความทึบ",
     "opacity_down": "ลดความทึบ",
@@ -3135,12 +3137,17 @@
     "restore": "คืนค่าตำแหน่ง/ขนาด",
     "routine_manager": "ตัวจัดการกิจวัตร",
     "routine_settings": "การตั้งค่ากิจวัตร",
+    "save_layout_preset": "Save layout preset...",
+    "settings_menu": "Settings",
     "show_hide": "แสดง/ซ่อน โอเวอร์เลย์",
+    "show_hide_window": "Show/hide window",
     "sync_google": "ซิงค์ Google Calendar",
+    "sync_menu": "Sync",
     "today": "ไปที่วันนี้",
     "topbar": "แสดง/ซ่อน แถบด้านบน",
     "view_options": "มุมมองและหน้าต่าง",
-    "view_toggle": "สลับรายสัปดาห์/รายเดือน"
+    "view_toggle": "สลับรายสัปดาห์/รายเดือน",
+    "widget_mode": "Widget-only mode"
   },
   "view_mode": {
     "monthly": "รายเดือน",

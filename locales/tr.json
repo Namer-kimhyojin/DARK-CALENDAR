@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "During a full lock, clicks reach the desktop under the calendar. Rest the pointer on the corner badge for a moment to make it clickable.",
     "lock_mode": "🔒 Masaüstü Kilitleme Modu",
     "magnet_mode": "Mıknatıs Modunu Aç/Kapat",
+    "manage_menu": "Manage",
+    "new_menu": "New",
     "next_day": "▶ Sonraki Gün",
     "opacity": "Opaklık",
     "opacity_down": "Opaklığı Azalt",
@@ -3135,12 +3137,17 @@
     "restore": "Pencere Konumunu/Boyutunu Geri Yükle",
     "routine_manager": "Rutin Yöneticisi",
     "routine_settings": "Rutin Ayarları",
+    "save_layout_preset": "Save layout preset...",
+    "settings_menu": "Settings",
     "show_hide": "Kaplamayı Göster/Gizle",
+    "show_hide_window": "Show/hide window",
     "sync_google": "Google Takvim'i Senkronize Et",
+    "sync_menu": "Sync",
     "today": "Bugüne Git",
     "topbar": "Üst Çubuğu Göster/Gizle",
     "view_options": "Görünüm ve Pencere",
-    "view_toggle": "Haftalık/Aylık Geçiş"
+    "view_toggle": "Haftalık/Aylık Geçiş",
+    "widget_mode": "Widget-only mode"
   },
   "view_mode": {
     "monthly": "Aylık",

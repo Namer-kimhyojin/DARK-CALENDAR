@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "During a full lock, clicks reach the desktop under the calendar. Rest the pointer on the corner badge for a moment to make it clickable.",
     "lock_mode": "🔒 Desktop-Sperrmodus",
     "magnet_mode": "Magnetmodus umschalten",
+    "manage_menu": "Manage",
+    "new_menu": "New",
     "next_day": "▶ Nächster Tag",
     "opacity": "Deckkraft",
     "opacity_down": "Deckkraft verringern",
@@ -3135,12 +3137,17 @@
     "restore": "Fensterposition/-größe zurücksetzen",
     "routine_manager": "Routineaufgaben verwalten",
     "routine_settings": "Einstellungen für Routineaufgaben",
+    "save_layout_preset": "Save layout preset...",
+    "settings_menu": "Settings",
     "show_hide": "Overlay ein-/ausblenden",
+    "show_hide_window": "Show/hide window",
     "sync_google": "Google Kalender synchronisieren",
+    "sync_menu": "Sync",
     "today": "Zum heutigen Tag",
     "topbar": "Obere Leiste ein-/ausblenden",
     "view_options": "Ansicht und Fenster",
-    "view_toggle": "Zwischen Woche und Monat wechseln"
+    "view_toggle": "Zwischen Woche und Monat wechseln",
+    "widget_mode": "Widget-only mode"
   },
   "view_mode": {
     "monthly": "Monat",

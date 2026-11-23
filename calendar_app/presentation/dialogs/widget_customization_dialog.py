@@ -169,6 +169,14 @@ class WidgetCustomizationDialog(QDialog):
             mnemonic_safe(t("widget_workspace.preferences_style", "모양")),
         )
         tabs.addTab(self._visibility_tab(), t("widget_mode.preferences_visibility", "표시 항목"))
+        from calendar_app.presentation.widgets.widget_mode_skins import (
+            LAYOUT_SELECTION_ENABLED,
+        )
+
+        if not LAYOUT_SELECTION_ENABLED:
+            # Built (its controls keep the draft consistent) but not offered.
+            tabs.setTabVisible(0, False)
+            tabs.setCurrentIndex(1)
         tabs.currentChanged.connect(self._scroll_active_surface)
 
         self.preview_frame = QWidget(self)
@@ -639,6 +647,11 @@ class WidgetCustomizationDialog(QDialog):
         self.font_dropdown_btn.setObjectName("font_dropdown_btn")
         self.font_dropdown_btn.setArrowType(Qt.ArrowType.DownArrow)
         self.font_dropdown_btn.setFixedSize(38, 36)
+        # The dialog's shared QToolButton min-width would widen it (to 48px) once the
+        # tab is polished; this tab is now the first one shown.
+        self.font_dropdown_btn.setStyleSheet(
+            "QToolButton#font_dropdown_btn { min-width: 36px; max-width: 36px; padding: 0; }"
+        )
         self.font_dropdown_btn.setToolTip(t("widget_mode.font_dropdown", "글꼴 목록 열기"))
         self.font_dropdown_btn.setAccessibleName(self.font_dropdown_btn.toolTip())
         self.font_dropdown_btn.clicked.connect(self.font_family.showPopup)

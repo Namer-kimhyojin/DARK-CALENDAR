@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "During a full lock, clicks reach the desktop under the calendar. Rest the pointer on the corner badge for a moment to make it clickable.",
     "lock_mode": "切换锁定模式",
     "magnet_mode": "切换磁吸模式",
+    "manage_menu": "Manage",
+    "new_menu": "New",
     "next_day": "▶ 后一天",
     "opacity": "窗口不透明度",
     "opacity_down": "降低不透明度",
@@ -3135,12 +3137,17 @@
     "restore": "恢复窗口位置/大小",
     "routine_manager": "例行任务管理器",
     "routine_settings": "例行任务设置",
+    "save_layout_preset": "Save layout preset...",
+    "settings_menu": "Settings",
     "show_hide": "显示/隐藏窗口",
+    "show_hide_window": "Show/hide window",
     "sync_google": "同步 Google 日历",
+    "sync_menu": "Sync",
     "today": "回到今天",
     "topbar": "显示/隐藏顶栏",
     "view_options": "视图与窗口",
-    "view_toggle": "切换每周/每月"
+    "view_toggle": "切换每周/每月",
+    "widget_mode": "Widget-only mode"
   },
   "view_mode": {
     "monthly": "每月",

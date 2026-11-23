@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "During a full lock, clicks reach the desktop under the calendar. Rest the pointer on the corner badge for a moment to make it clickable.",
     "lock_mode": "🔒 وضع قفل سطح المكتب",
     "magnet_mode": "تبديل وضع المغناطيس",
+    "manage_menu": "Manage",
+    "new_menu": "New",
     "next_day": "▶ اليوم التالي",
     "opacity": "العتامة",
     "opacity_down": "تقليل العتامة",
@@ -3135,12 +3137,17 @@
     "restore": "استعادة موضع النافذة وحجمها",
     "routine_manager": "مدير الروتين",
     "routine_settings": "إعدادات الروتين",
+    "save_layout_preset": "Save layout preset...",
+    "settings_menu": "Settings",
     "show_hide": "إظهار/إخفاء التراكب",
+    "show_hide_window": "Show/hide window",
     "sync_google": "مزامنة تقويم Google",
+    "sync_menu": "Sync",
     "today": "الانتقال إلى اليوم",
     "topbar": "إظهار/إخفاء الشريط العلوي",
     "view_options": "العرض والنافذة",
-    "view_toggle": "تبديل أسبوعي/شهري"
+    "view_toggle": "تبديل أسبوعي/شهري",
+    "widget_mode": "Widget-only mode"
   },
   "view_mode": {
     "monthly": "شهري",

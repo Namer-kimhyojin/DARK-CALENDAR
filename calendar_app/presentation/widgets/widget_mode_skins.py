@@ -100,6 +100,12 @@ def register_widget_mode_layout(layout: WidgetModeLayout, *, replace: bool = Fal
     _LAYOUTS[layout.layout_id] = layout
 
 
+# Choosing a layout is hidden for now (2026-11-23, user request): the saved
+# layout keeps working, but the 화면 형태 tab, the 더 보기 ▸ 배치 menu and the
+# widget manager's layout line are not shown. Set True to bring them back.
+LAYOUT_SELECTION_ENABLED = False
+
+
 def widget_mode_layouts() -> tuple[WidgetModeLayout, ...]:
     return tuple(_LAYOUTS.values())
 

@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "During a full lock, clicks reach the desktop under the calendar. Rest the pointer on the corner badge for a moment to make it clickable.",
     "lock_mode": "🔒 Mode Kunci Desktop",
     "magnet_mode": "Alihkan Mode Magnet",
+    "manage_menu": "Manage",
+    "new_menu": "New",
     "next_day": "▶ Hari Berikutnya",
     "opacity": "Opasitas",
     "opacity_down": "Turunkan Opasitas",
@@ -3135,12 +3137,17 @@
     "restore": "Pulihkan Posisi/Ukuran Jendela",
     "routine_manager": "Manajer Rutinitas",
     "routine_settings": "Pengaturan Rutinitas",
+    "save_layout_preset": "Save layout preset...",
+    "settings_menu": "Settings",
     "show_hide": "Tampilkan/Sembunyikan Overlay",
+    "show_hide_window": "Show/hide window",
     "sync_google": "Sinkronkan Google Calendar",
+    "sync_menu": "Sync",
     "today": "Ke Hari Ini",
     "topbar": "Tampilkan/Sembunyikan Bilah Atas",
     "view_options": "Tampilan dan Jendela",
-    "view_toggle": "Ganti Mingguan/Bulanan"
+    "view_toggle": "Ganti Mingguan/Bulanan",
+    "widget_mode": "Widget-only mode"
   },
   "view_mode": {
     "monthly": "Bulanan",

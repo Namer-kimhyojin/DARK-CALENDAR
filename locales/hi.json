@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "During a full lock, clicks reach the desktop under the calendar. Rest the pointer on the corner badge for a moment to make it clickable.",
     "lock_mode": "🔒 डेस्कटॉप लॉक मोड",
     "magnet_mode": "मैग्नेट मोड टॉगल करें",
+    "manage_menu": "Manage",
+    "new_menu": "New",
     "next_day": "▶ अगला दिन",
     "opacity": "अपारदर्शिता",
     "opacity_down": "अपारदर्शिता कम करें",
@@ -3135,12 +3137,17 @@
     "restore": "विंडो स्थिति/आकार बहाल करें",
     "routine_manager": "रूटीन प्रबंधक",
     "routine_settings": "रूटीन सेटिंग्स",
+    "save_layout_preset": "Save layout preset...",
+    "settings_menu": "Settings",
     "show_hide": "ओवरले दिखाएं/छिपाएं",
+    "show_hide_window": "Show/hide window",
     "sync_google": "Google कैलेंडर सिंक करें",
+    "sync_menu": "Sync",
     "today": "आज पर जाएं",
     "topbar": "टॉप बार दिखाएं/छिपाएं",
     "view_options": "दृश्य और विंडो",
-    "view_toggle": "साप्ताहिक/मासिक बदलें"
+    "view_toggle": "साप्ताहिक/मासिक बदलें",
+    "widget_mode": "Widget-only mode"
   },
   "view_mode": {
     "monthly": "मासिक",

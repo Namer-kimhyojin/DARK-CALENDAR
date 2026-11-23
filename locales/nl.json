@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "During a full lock, clicks reach the desktop under the calendar. Rest the pointer on the corner badge for a moment to make it clickable.",
     "lock_mode": "🔒 Bureaubladvergrendeling",
     "magnet_mode": "Magneetmodus aan/uit",
+    "manage_menu": "Manage",
+    "new_menu": "New",
     "next_day": "▶ Volgende dag",
     "opacity": "Dekking",
     "opacity_down": "Dekking verlagen",
@@ -3135,12 +3137,17 @@
     "restore": "Vensterpositie/-grootte herstellen",
     "routine_manager": "Routinetaken beheren",
     "routine_settings": "Instellingen routinetaken",
+    "save_layout_preset": "Save layout preset...",
+    "settings_menu": "Settings",
     "show_hide": "Overlay tonen/verbergen",
+    "show_hide_window": "Show/hide window",
     "sync_google": "Google Agenda synchroniseren",
+    "sync_menu": "Sync",
     "today": "Naar vandaag",
     "topbar": "Bovenbalk tonen/verbergen",
     "view_options": "Weergave en venster",
-    "view_toggle": "Wisselen tussen week en maand"
+    "view_toggle": "Wisselen tussen week en maand",
+    "widget_mode": "Widget-only mode"
   },
   "view_mode": {
     "monthly": "Maandelijks",

@@ -204,37 +204,38 @@ def init_tray_icon(app):
 
     from calendar_app.infrastructure.i18n import t
 
-    # --- 1. View & Window Area ---
-    _create_action(app, t("tray.show_hide"), app.toggle_overlay, "show_hide", tray_menu).setIcon(
-        _ic(ICON.HIDE)
-    )
-    view_menu = QMenu(_se(t("tray.view_options", "화면 및 창")), tray_menu)
-    view_menu.setIcon(_ic(ICON.SCREEN_MGMT))
-    view_menu.setStyleSheet(style)
+    # Tray layout (2026-11-23): what you reach for from the taskbar comes first,
+    # then tools and windows, then sync and settings, then exit.
+    #   창 표시/숨기기 · 위젯 전용 모드
+    #   새로 만들기 ▸ · 오늘 날짜로 이동
+    #   집중 및 잠금 ▸ · 화면 및 창 ▸ · 관리 ▸
+    #   동기화 ▸ · 설정 ▸
+    #   종료
+    def submenu(label, icon_key):
+        menu = QMenu(_se(label), tray_menu)
+        menu.setIcon(_ic(icon_key))
+        menu.setStyleSheet(style)
+        return menu
+
     _create_action(
         app,
-        t("menu.auto_hide_topbar", "상단 바 자동 숨기기"),
-        app.toggle_top_bar,
-        "topbar",
-        view_menu,
-    ).setIcon(_ic(ICON.TOOLBAR))
-    _create_action(
-        app, t("tray.calendar_topbar"), app.toggle_calendar_toolbar, "cal_toolbar", view_menu
-    ).setIcon(_ic(ICON.TOOLBAR))
-    _create_action(
-        app, t("tray.fullscreen"), app.toggle_fullscreen, "fullscreen", view_menu
-    ).setIcon(_ic(ICON.FULLSCREEN))
-    _create_action(
-        app, t("tray.restore"), app.restore_window_to_safe_area, "restore_pos", view_menu
-    ).setIcon(_ic(ICON.RESET_POS))
-    tray_menu.addMenu(view_menu)
+        t("tray.show_hide_window", "창 표시/숨기기"),
+        app.toggle_overlay,
+        "show_hide",
+        tray_menu,
+    ).setIcon(_ic(ICON.HIDE))
+    if hasattr(app, "toggle_widget_mode_panel"):
+        _create_action(
+            app,
+            t("tray.widget_mode", "위젯 전용 모드"),
+            app.toggle_widget_mode_panel,
+            "widget_mode",
+            tray_menu,
+        ).setIcon(_ic(ICON.WIDGET_DATECARD))
 
     tray_menu.addSeparator()
 
-    # --- 2. Registration & Management ---
-    add_menu = QMenu(_se(t("tray.add_schedule")), tray_menu)
-    add_menu.setIcon(_ic(ICON.ADD))
-    add_menu.setStyleSheet(style)
+    add_menu = submenu(t("tray.new_menu", "새로 만들기"), ICON.ADD)
     _create_action(
         app, t("tray.add_schedule"), app.open_task_dialog, "new_schedule", add_menu
     ).setIcon(_ic(ICON.EDIT))
@@ -245,59 +246,9 @@ def init_tray_icon(app):
         app, t("tray.add_directive"), app.open_directive_dialog, "new_directive", add_menu
     ).setIcon(_ic(ICON.DIRECTIVE))
     tray_menu.addMenu(add_menu)
-
-    mgr_menu = QMenu(_se(t("tray.presets")), tray_menu)
-    mgr_menu.setIcon(_ic(ICON.SETTINGS))
-    mgr_menu.setStyleSheet(style)
-    # Routine Manager (Tabs)
-    _create_action(
-        app,
-        t("tray.routine_manager"),
-        lambda: app.open_work_management_dialog(start_tab="schedule"),
-        None,
-        mgr_menu,
-    ).setIcon(_ic(ICON.ALL_SCHEDULES))
-    # Routine Settings (Dialog)
-    _create_action(
-        app,
-        t("tray.routine_settings", "일반업무 설정"),
-        app.open_routine_management_dialog,
-        "routine_mgr",
-        mgr_menu,
-    ).setIcon(_ic(ICON.SETTINGS))
-    # Checklist Manager
-    _create_action(
-        app, t("tray.checklist_manager"), app.open_checklist_manager, "checklist", mgr_menu
-    ).setIcon(_ic(ICON.CHECKLIST))
-    # Layout Presets
-    _create_action(
-        app,
-        t("tray.presets"),
-        lambda: app.preset_manager._save_with_prompt() if hasattr(app, "preset_manager") else None,
-        "save_layout",
-        mgr_menu,
-    ).setIcon(_ic(ICON.SAVE))
-    tray_menu.addMenu(mgr_menu)
-
-    tray_menu.addSeparator()
-
-    # --- 3. Navigation & Calendar Control ---
-    nav_menu = QMenu(_se(t("tray.today")), tray_menu)
-    nav_menu.setIcon(_ic(ICON.VIEW_CALENDAR))
-    nav_menu.setStyleSheet(style)
-    _create_action(app, t("tray.today"), app.jump_to_today, "today", nav_menu).setIcon(
+    _create_action(app, t("tray.today"), app.jump_to_today, "today", tray_menu).setIcon(
         _ic(ICON.GOTO_TODAY)
     )
-    _create_action(app, t("tray.prev_day"), app.prev_day, "prev_day", nav_menu).setIcon(
-        _ic(ICON.NAV_PREV)
-    )
-    _create_action(app, t("tray.next_day"), app.next_day, "next_day", nav_menu).setIcon(
-        _ic(ICON.NAV_NEXT)
-    )
-    _create_action(app, t("tray.view_toggle"), app.toggle_view_mode, None, nav_menu).setIcon(
-        _ic(ICON.VIEW_MONTHLY)
-    )
-    tray_menu.addMenu(nav_menu)
 
     tray_menu.addSeparator()
 
@@ -397,34 +348,26 @@ def init_tray_icon(app):
     act_magnet.setIcon(_ic(ICON.MAGNET))
     tray_menu.addMenu(focus_menu)
 
-    tray_menu.addSeparator()
-
-    # --- 5. Service & Sync ---
-    act_gsync = _create_action(
-        app,
-        t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"),
-        app.sync_calendars,
-        None,
-        tray_menu,
-    )
-    act_gsync.setIcon(_ic(ICON.SYNC))
-    act_gissues = _create_action(
-        app,
-        t("sync_unified.issues", "전체 동기화 문제"),
-        app.open_calendar_sync_issues,
-        None,
-        tray_menu,
-    )
-    act_gissues.setIcon(_ic(ICON.WARNING))
+    # --- 화면 및 창 (투명도 포함) ---
+    view_menu = submenu(t("tray.view_options", "화면 및 창"), ICON.SCREEN_MGMT)
     _create_action(
         app,
-        t("sync_ui.hub_title", "캘린더 · 계정 및 동기화"),
-        app.open_calendar_sync_hub,
-        None,
-        tray_menu,
-    )
-
-    opacity_menu = tray_menu.addMenu(_se(t("tray.opacity")))
+        t("menu.auto_hide_topbar", "상단 바 자동 숨기기"),
+        app.toggle_top_bar,
+        "topbar",
+        view_menu,
+    ).setIcon(_ic(ICON.TOOLBAR))
+    _create_action(
+        app, t("tray.calendar_topbar"), app.toggle_calendar_toolbar, "cal_toolbar", view_menu
+    ).setIcon(_ic(ICON.TOOLBAR))
+    _create_action(
+        app, t("tray.fullscreen"), app.toggle_fullscreen, "fullscreen", view_menu
+    ).setIcon(_ic(ICON.FULLSCREEN))
+    _create_action(
+        app, t("tray.restore"), app.restore_window_to_safe_area, "restore_pos", view_menu
+    ).setIcon(_ic(ICON.RESET_POS))
+    view_menu.addSeparator()
+    opacity_menu = view_menu.addMenu(_se(t("tray.opacity")))
     opacity_menu.setIcon(_ic(ICON.OPACITY))
     opacity_menu.setStyleSheet(style)
     for label, value in [
@@ -440,7 +383,7 @@ def init_tray_icon(app):
             None,
             opacity_menu,
         )
-
+    opacity_menu.addSeparator()
     opacity_step = opacity_percent_to_byte(10)
     opacity_floor = opacity_percent_to_byte(20)
     act_op_up = _create_action(
@@ -459,23 +402,79 @@ def init_tray_icon(app):
         opacity_menu,
     )
     act_op_dn.setIcon(_ic(ICON.OPACITY_DOWN))
+    tray_menu.addMenu(view_menu)
+
+    # --- 관리 ---
+    mgr_menu = submenu(t("tray.manage_menu", "관리"), ICON.ALL_SCHEDULES)
+    _create_action(
+        app,
+        t("tray.routine_manager"),
+        lambda: app.open_work_management_dialog(start_tab="schedule"),
+        None,
+        mgr_menu,
+    ).setIcon(_ic(ICON.ALL_SCHEDULES))
+    _create_action(
+        app,
+        t("tray.routine_settings", "일반업무 설정"),
+        app.open_routine_management_dialog,
+        "routine_mgr",
+        mgr_menu,
+    ).setIcon(_ic(ICON.SETTINGS))
+    _create_action(
+        app, t("tray.checklist_manager"), app.open_checklist_manager, "checklist", mgr_menu
+    ).setIcon(_ic(ICON.CHECKLIST))
+    mgr_menu.addSeparator()
+    _create_action(
+        app,
+        t("tray.save_layout_preset", "레이아웃 프리셋 저장..."),
+        lambda: app.preset_manager._save_with_prompt() if hasattr(app, "preset_manager") else None,
+        "save_layout",
+        mgr_menu,
+    ).setIcon(_ic(ICON.SAVE))
+    tray_menu.addMenu(mgr_menu)
 
     tray_menu.addSeparator()
-    act_lang = _create_action(
-        app, t("menu.language"), app.open_language_settings_dialog, None, tray_menu
-    )
-    act_lang.setIcon(_ic(ICON.LOCALE_MGMT))
-    act_theme = _create_action(
+
+    # --- 동기화 ---
+    sync_menu = submenu(t("tray.sync_menu", "동기화"), ICON.SYNC)
+    _create_action(
+        app,
+        t("sync_unified.sync_all", "연결된 모든 캘린더 동기화"),
+        app.sync_calendars,
+        None,
+        sync_menu,
+    ).setIcon(_ic(ICON.SYNC))
+    _create_action(
+        app,
+        t("sync_unified.issues", "전체 동기화 문제"),
+        app.open_calendar_sync_issues,
+        None,
+        sync_menu,
+    ).setIcon(_ic(ICON.WARNING))
+    sync_menu.addSeparator()
+    _create_action(
+        app,
+        t("sync_ui.hub_title", "캘린더 · 계정 및 동기화"),
+        app.open_calendar_sync_hub,
+        None,
+        sync_menu,
+    ).setIcon(_ic(ICON.SYNC_SETTINGS))
+    tray_menu.addMenu(sync_menu)
+
+    # --- 설정 ---
+    settings_menu = submenu(t("tray.settings_menu", "설정"), ICON.SETTINGS)
+    _create_action(
         app,
         t("menu.ui_theme_open", "UI 테마 지정..."),
         app.open_panel_background_color_dialog,
         None,
-        tray_menu,
-    )
-    act_theme.setIcon(_ic(ICON.COLOR_PICKER))
-
-    # Autostart (Checkable)
-    _create_tray_autostart_action(app, tray_menu)
+        settings_menu,
+    ).setIcon(_ic(ICON.COLOR_PICKER))
+    _create_action(
+        app, t("menu.language"), app.open_language_settings_dialog, None, settings_menu
+    ).setIcon(_ic(ICON.LOCALE_MGMT))
+    _create_tray_autostart_action(app, settings_menu)
+    tray_menu.addMenu(settings_menu)
 
     tray_menu.addSeparator()
     act_exit = _create_action(app, t("tray.exit"), app.request_app_exit, None, tray_menu)

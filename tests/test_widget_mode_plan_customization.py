@@ -13,6 +13,7 @@ import pytest
 
 from calendar_app.infrastructure.i18n import t
 from calendar_app.presentation.dialogs.widget_customization_dialog import WidgetCustomizationDialog
+from calendar_app.presentation.widgets import widget_mode_skins
 from tests.test_widget_mode_ux import _APP, workspace  # noqa: F401
 
 
@@ -125,7 +126,11 @@ def _close(dialog):
 
 
 @pytest.mark.parametrize("layout_id", _LAYOUT_IDS)
-def test_all_four_layout_cards_are_always_shown_without_a_disclosure(workspace, layout_id):
+def test_all_four_layout_cards_are_always_shown_without_a_disclosure(
+    workspace, layout_id, monkeypatch
+):
+    # Layout selection is hidden for now; these cover the cards when it is on.
+    monkeypatch.setattr(widget_mode_skins, "LAYOUT_SELECTION_ENABLED", True)
     dialog = _open_preferences(workspace, layout_id)
     try:
         assert tuple(dialog.layout_buttons) == _LAYOUT_IDS
@@ -153,7 +158,9 @@ def test_calendar_label_describes_all_periods_and_layout_specific_scope(preferen
 
 
 @pytest.mark.parametrize("layout_id", ["stacked", "dashboard"])
-def test_four_layout_cards_never_overlap_at_short_dialog_height(workspace, layout_id):
+def test_four_layout_cards_never_overlap_at_short_dialog_height(workspace, layout_id, monkeypatch):
+    # Layout selection is hidden for now; these cover the cards when it is on.
+    monkeypatch.setattr(widget_mode_skins, "LAYOUT_SELECTION_ENABLED", True)
     dialog = _open_preferences(workspace, layout_id)
     try:
         dialog.resize(940, 520)
@@ -205,3 +212,13 @@ def test_layout_cards_size_for_long_translated_labels(workspace):
         assert button.minimumHeight() >= button.fontMetrics().height() + 54
     dialog.reject()
     dialog.deleteLater()
+
+
+def test_layout_selection_is_hidden_while_disabled(workspace):
+    dialog = _open_preferences(workspace, "stacked")
+    try:
+        assert not widget_mode_skins.LAYOUT_SELECTION_ENABLED
+        assert not dialog.preferences_tabs.isTabVisible(0)
+        assert dialog.preferences_tabs.currentIndex() == 1
+    finally:
+        _close(dialog)

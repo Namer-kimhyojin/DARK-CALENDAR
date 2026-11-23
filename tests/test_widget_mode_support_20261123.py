@@ -285,3 +285,27 @@ def test_large_clock_shows_time_and_date_above_content(window):
     assert not widget.clock_hero.isVisibleTo(widget)
     assert widget.clock_label.isVisibleTo(widget)
     assert "/" in widget.clock_label.text()  # date beside the small clock
+
+
+# ----- right-click / 더 보기 menu (A안) ------------------------------------------
+def test_widget_menu_keeps_only_items_the_toolbar_lacks(window, monkeypatch):
+    from PyQt6.QtWidgets import QMenu
+
+    _host, _controller, widget = window
+    captured = {}
+
+    def fake_exec(menu, *_args):
+        captured["top"] = [a.text() for a in menu.actions() if not a.isSeparator()]
+        window_menu = next(a.menu() for a in menu.actions() if a.menu() is not None)
+        captured["window"] = [a.text() for a in window_menu.actions() if not a.isSeparator()]
+        return None
+
+    monkeypatch.setattr(QMenu, "exec", fake_exec)
+    widget._open_menu(widget.mapToGlobal(QPoint(10, 10)))
+    top = captured["top"]
+    assert len(top) <= 7
+    for gone in ("날짜 선택", "오늘", "이전 주", "다음 주", "꾸미기", "메인 화면으로", "목록 밀도"):
+        assert gone not in top
+    assert "트레이로 숨기기" in top
+    assert "화면 안으로 이동" in captured["window"]
+    assert "위치·크기 조정" in captured["window"]

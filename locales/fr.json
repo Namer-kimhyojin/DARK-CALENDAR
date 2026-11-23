@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "During a full lock, clicks reach the desktop under the calendar. Rest the pointer on the corner badge for a moment to make it clickable.",
     "lock_mode": "🔒 Mode verrouillage du bureau",
     "magnet_mode": "Activer/désactiver le mode aimant",
+    "manage_menu": "Manage",
+    "new_menu": "New",
     "next_day": "▶ Jour suivant",
     "opacity": "Opacité",
     "opacity_down": "Diminuer l'opacité",
@@ -3135,12 +3137,17 @@
     "restore": "Restaurer la position/taille de la fenêtre",
     "routine_manager": "Gestionnaire de routines",
     "routine_settings": "Paramètres des routines",
+    "save_layout_preset": "Save layout preset...",
+    "settings_menu": "Settings",
     "show_hide": "Afficher/Masquer la superposition",
+    "show_hide_window": "Show/hide window",
     "sync_google": "Synchroniser Google Agenda",
+    "sync_menu": "Sync",
     "today": "Aller à aujourd'hui",
     "topbar": "Afficher/Masquer la barre",
     "view_options": "Vue et fenêtre",
-    "view_toggle": "Basculer semaine/mois"
+    "view_toggle": "Basculer semaine/mois",
+    "widget_mode": "Widget-only mode"
   },
   "view_mode": {
     "monthly": "Mois",

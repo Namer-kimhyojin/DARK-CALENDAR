@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "During a full lock, clicks reach the desktop under the calendar. Rest the pointer on the corner badge for a moment to make it clickable.",
     "lock_mode": "ロックモード切替",
     "magnet_mode": "マグネットモード切替",
+    "manage_menu": "Manage",
+    "new_menu": "New",
     "next_day": "▶ 翌日",
     "opacity": "不透明度",
     "opacity_down": "不透明度を下げる",
@@ -3135,12 +3137,17 @@
     "restore": "ウィンドウ位置/サイズを復元",
     "routine_manager": "ルーティン管理",
     "routine_settings": "ルーティン設定",
+    "save_layout_preset": "Save layout preset...",
+    "settings_menu": "Settings",
     "show_hide": "ウィンドウの表示/非表示",
+    "show_hide_window": "Show/hide window",
     "sync_google": "Google カレンダー同期",
+    "sync_menu": "Sync",
     "today": "今日へ",
     "topbar": "トップバーの表示/非表示",
     "view_options": "表示とウィンドウ",
-    "view_toggle": "週/月表示を切り替え"
+    "view_toggle": "週/月表示を切り替え",
+    "widget_mode": "Widget-only mode"
   },
   "view_mode": {
     "monthly": "月表示",

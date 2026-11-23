@@ -104,7 +104,6 @@ from calendar_app.presentation.widgets.widget_mode_skins import (
 from calendar_app.presentation.widgets.widget_mode_surfaces import (
     get_widget_mode_surface,
     read_widget_mode_surface,
-    widget_mode_surfaces,
     write_widget_mode_surface,
 )
 from calendar_app.presentation.widgets.widget_mode_typography import (
@@ -3104,62 +3103,104 @@ class UnifiedWidgetWindow(QWidget):
         self._open_menu(event.globalPos())
 
     def _open_menu(self, global_pos) -> None:
+        """Right-click / 더 보기 menu (2026-11-23 A안).
+
+        Only what the toolbar does not already offer: date moves, 꾸미기 and
+        메인 화면으로 live on the toolbar; density and surface live in 꾸미기;
+        desktop widgets live in 위젯 관리자. Window placement is one submenu.
+        """
         tokens = _widget_theme_tokens(self.controller.main_window)
         menu_qss = menu_stylesheet(tokens)
+        icon_color = tokens.get("text_primary")
         menu = QMenu(self)
         menu.setStyleSheet(menu_qss)
+
+        directive_management_action = menu.addAction(
+            _ic(ICON.DIRECTIVE, color=icon_color), t("menu.directive_status", "지시·협조 관리")
+        )
+        work_management_action = menu.addAction(
+            _ic(ICON.ALL_SCHEDULES, color=icon_color), t("menu.work_management", "전체 업무 관리")
+        )
+        refresh_action = menu.addAction(
+            _ic(ICON.REFRESH, color=icon_color), t("widget_mode.menu_refresh", "새로고침")
+        )
+        self._add_layout_menu(menu)
+        menu.addSeparator()
+
+        window_menu = menu.addMenu(
+            _ic(ICON.SCREEN_MGMT, color=icon_color), t("widget_mode.menu_window", "창 관리")
+        )
+        window_menu.setStyleSheet(menu_qss)
+        window_menu.addAction(
+            t("widget.placement.title", "위치·크기 조정"), self._open_placement_dialog
+        )
+        placement_lock = window_menu.addAction(t("widget.placement.lock", "위치·크기 고정"))
+        placement_lock.setCheckable(True)
+        placement_lock.setChecked(self.placement_is_locked())
+        placement_lock.toggled.connect(self._set_placement_locked)
+        undo_placement = window_menu.addAction(
+            t("widget.placement.undo", "최근 배치 되돌리기"), self._undo_placement
+        )
+        undo_placement.setEnabled(
+            self._last_placement is not None and self._last_placement[0] == self.active_layout_id()
+        )
+        recover_action = window_menu.addAction(
+            t("widget_mode.recover_position", "화면 안으로 이동")
+        )
+        screens = QApplication.screens()
+        if len(screens) > 1:
+            monitor_menu = window_menu.addMenu(
+                _ic(ICON.NEXT_MONITOR, color=icon_color),
+                t("widget_mode.move_to_monitor", "다른 모니터로 이동"),
+            )
+            monitor_menu.setStyleSheet(menu_qss)
+            current_screen = self.screen()
+            for index, screen in enumerate(screens, start=1):
+                size = screen.geometry().size()
+                label = t("widget_mode.monitor_label", "모니터 {index} ({width}×{height})").format(
+                    index=index, width=size.width(), height=size.height()
+                )
+                if screen is QApplication.primaryScreen():
+                    label += " · " + t("widget_mode.monitor_primary", "주 모니터")
+                action = monitor_menu.addAction(label)
+                action.setCheckable(True)
+                action.setChecked(screen is current_screen)
+                action.triggered.connect(
+                    lambda _checked=False, target=screen: self.controller.move_to_screen(target)
+                )
+        hide_action = menu.addAction(
+            _ic(ICON.HIDE, color=icon_color), t("widget_mode.hide_tray", "트레이로 숨기기")
+        )
+
         open_manager = getattr(self.controller.main_window, "open_widget_manager", None)
         if callable(open_manager):
-            menu.addAction(t("widget_manager.title", "위젯 관리자"), open_manager)
             menu.addSeparator()
-        menu.addSection(t("widget_mode.menu_date", "날짜 이동"))
-        menu.addAction(t("widget_mode.pick_date", "날짜 선택"), self._pick_date)
-        menu.addAction(
-            t("widget_mode.today", "오늘"),
-            lambda: self.controller.set_target_date(QDate.currentDate()),
-        )
-        monthly = self.cal_grid.display_mode == "month"
-        previous_week = menu.addAction(
-            t("widget_mode.month_prev", "이전 달")
-            if monthly
-            else t("widget_mode.previous_week", "이전 주")
-        )
-        previous_week.triggered.connect(
-            lambda: self.controller.set_target_date(
-                self.controller._current_date().addMonths(-1)
-                if monthly
-                else self.controller._current_date().addDays(-7)
+            menu.addAction(
+                _ic(ICON.WIDGET_MGR, color=icon_color),
+                t("widget_manager.title", "위젯 관리자"),
+                open_manager,
             )
-        )
-        next_week = menu.addAction(
-            t("widget_mode.month_next", "다음 달")
-            if monthly
-            else t("widget_mode.next_week", "다음 주")
-        )
-        next_week.triggered.connect(
-            lambda: self.controller.set_target_date(
-                self.controller._current_date().addMonths(1)
-                if monthly
-                else self.controller._current_date().addDays(7)
-            )
-        )
-        menu.addSection(t("widget_mode.menu_work", "업무 관리"))
+        selected = menu.exec(global_pos)
+        if selected == directive_management_action:
+            self.controller.open_work_management("directive")
+        elif selected == work_management_action:
+            self.controller.open_work_management("schedule")
+        elif selected == refresh_action:
+            self.controller.force_refresh()
+        elif selected == hide_action:
+            self.controller.hide_to_tray()
+        elif selected == recover_action:
+            self.controller._handle_screen_change()
 
-        directive_management_action = menu.addAction(t("menu.directive_status", "지시·협조 관리"))
-        work_management_action = menu.addAction(t("menu.work_management", "전체 업무 관리"))
-        refresh_action = menu.addAction(t("widget_mode.menu_refresh", "새로고침"))
-        menu.addSection(t("widget_mode.menu_view", "보기 설정"))
-        menu.addAction(t("widget_mode.customize", "꾸미기"), self.open_customization)
-        density_menu = menu.addMenu(t("widget_mode.density", "목록 밀도"))
-        current_density = read_widget_density(self.controller.main_window.settings).key
-        for density in DENSITIES:
-            action = density_menu.addAction(t(f"widget_mode.density_{density.key}", density.label))
-            action.setCheckable(True)
-            action.setChecked(density.key == current_density)
-            action.triggered.connect(lambda checked=False, key=density.key: self.set_density(key))
+    def _add_layout_menu(self, menu: QMenu) -> None:
+        """배치 ▸ quick switch, only while layout selection is enabled."""
+        from calendar_app.presentation.widgets.widget_mode_skins import LAYOUT_SELECTION_ENABLED
 
+        if not LAYOUT_SELECTION_ENABLED:
+            return
         layout_menu = menu.addMenu(t("widget_mode.preferences_layout", "배치"))
-        current_layout = read_widget_mode_layout_id(self.controller.main_window.settings)
+        settings = self.controller.main_window.settings
+        current_layout = read_widget_mode_layout_id(settings)
         for layout_spec in widget_mode_layouts():
             action = layout_menu.addAction(t(layout_spec.label_key, layout_spec.label_default))
             action.setCheckable(True)
@@ -3177,7 +3218,6 @@ class UnifiedWidgetWindow(QWidget):
             read_layout_presets,
         )
 
-        settings = self.controller.main_window.settings
         custom_presets = read_layout_presets(settings)
         if custom_presets:
             layout_menu.addSection(t("widget_mode.user_layouts", "내 배치"))
@@ -3198,67 +3238,6 @@ class UnifiedWidgetWindow(QWidget):
                         self.controller.apply_layout_preset(selected)
                     )
                 )
-
-        surface_menu = menu.addMenu(t("widget_mode.surface_title", "표면 모양"))
-        current_surface = read_widget_mode_surface(self.controller.main_window.settings)
-        for surface in widget_mode_surfaces():
-            action = surface_menu.addAction(t(surface.label_key, surface.label_default))
-            action.setCheckable(True)
-            action.setChecked(current_surface == surface.key)
-            action.triggered.connect(
-                lambda _checked=False, selected=surface.key: self.controller.set_surface(selected)
-            )
-
-        menu.addSection(t("widget_mode.menu_window", "창 관리"))
-        menu.addAction(t("widget.placement.title", "위치·크기 조정"), self._open_placement_dialog)
-        placement_lock = menu.addAction(t("widget.placement.lock", "위치·크기 고정"))
-        placement_lock.setCheckable(True)
-        placement_lock.setChecked(self.placement_is_locked())
-        placement_lock.toggled.connect(self._set_placement_locked)
-        undo_placement = menu.addAction(
-            t("widget.placement.undo", "최근 배치 되돌리기"), self._undo_placement
-        )
-        undo_placement.setEnabled(
-            self._last_placement is not None and self._last_placement[0] == self.active_layout_id()
-        )
-        close_action = menu.addAction(t("widget_mode.return_main", "메인 화면으로"))
-        hide_action = menu.addAction(t("widget_mode.hide_tray", "트레이로 숨기기"))
-        recover_action = menu.addAction(t("widget_mode.recover_position", "화면 안으로 이동"))
-        screens = QApplication.screens()
-        if len(screens) > 1:
-            monitor_menu = menu.addMenu(t("widget_mode.move_to_monitor", "다른 모니터로 이동"))
-            monitor_menu.setIcon(_ic(ICON.NEXT_MONITOR, color=tokens.get("text_primary")))
-            current_screen = self.screen()
-            for index, screen in enumerate(screens, start=1):
-                size = screen.geometry().size()
-                label = t("widget_mode.monitor_label", "모니터 {index} ({width}×{height})").format(
-                    index=index, width=size.width(), height=size.height()
-                )
-                if screen is QApplication.primaryScreen():
-                    label += " · " + t("widget_mode.monitor_primary", "주 모니터")
-                action = monitor_menu.addAction(label)
-                action.setCheckable(True)
-                action.setChecked(screen is current_screen)
-                action.triggered.connect(
-                    lambda _checked=False, target=screen: self.controller.move_to_screen(target)
-                )
-        manager = getattr(self.controller.main_window, "overlay_manager", None)
-        if manager is not None:
-            widget_menu = menu.addMenu(t("widget_mode.desktop_widgets", "바탕화면 위젯 관리"))
-            manager.build_widgets_menu(widget_menu, menu_qss)
-        selected = menu.exec(global_pos)
-        if selected == directive_management_action:
-            self.controller.open_work_management("directive")
-        elif selected == work_management_action:
-            self.controller.open_work_management("schedule")
-        elif selected == refresh_action:
-            self.controller.force_refresh()
-        elif selected == close_action:
-            self.controller.return_to_main()
-        elif selected == hide_action:
-            self.controller.hide_to_tray()
-        elif selected == recover_action:
-            self.controller._handle_screen_change()
 
     def set_data_state(self, state):
         if state != self._data_state:

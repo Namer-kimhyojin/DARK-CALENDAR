@@ -379,7 +379,8 @@ def test_widget_workspace_more_menu_offers_direct_manager_entry(hub):
     with patch.object(QMenu, "exec", return_value=None):
         widget._open_menu(QPoint())
     menus = widget.findChildren(QMenu, options=Qt.FindChildOption.FindDirectChildrenOnly)
-    actions = menus[-1].actions()
-    assert actions[0].text() == t("widget_manager.title", "위젯 관리자")
-    actions[0].trigger()
+    # The manager entry closes the menu (2026-11-23 A안: last group).
+    actions = [action for action in menus[-1].actions() if not action.isSeparator()]
+    assert actions[-1].text() == t("widget_manager.title", "위젯 관리자")
+    actions[-1].trigger()
     host.open_widget_manager.assert_called_once()

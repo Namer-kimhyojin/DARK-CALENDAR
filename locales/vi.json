@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "During a full lock, clicks reach the desktop under the calendar. Rest the pointer on the corner badge for a moment to make it clickable.",
     "lock_mode": "🔒 Chế độ khóa màn hình nền",
     "magnet_mode": "Bật/tắt chế độ nam châm",
+    "manage_menu": "Manage",
+    "new_menu": "New",
     "next_day": "▶ Ngày tiếp theo",
     "opacity": "Độ mờ đục",
     "opacity_down": "Giảm độ mờ đục",
@@ -3135,12 +3137,17 @@
     "restore": "Khôi phục vị trí/kích thước cửa sổ",
     "routine_manager": "Quản lý việc thường lệ",
     "routine_settings": "Cài đặt việc thường lệ",
+    "save_layout_preset": "Save layout preset...",
+    "settings_menu": "Settings",
     "show_hide": "Hiện/ẩn lớp phủ",
+    "show_hide_window": "Show/hide window",
     "sync_google": "Đồng bộ Google Calendar",
+    "sync_menu": "Sync",
     "today": "Đến hôm nay",
     "topbar": "Hiện/ẩn thanh trên",
     "view_options": "Hiển thị và cửa sổ",
-    "view_toggle": "Chuyển tuần/tháng"
+    "view_toggle": "Chuyển tuần/tháng",
+    "widget_mode": "Widget-only mode"
   },
   "view_mode": {
     "monthly": "Xem tháng",

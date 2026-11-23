@@ -201,12 +201,12 @@ def test_more_menu_groups_and_retains_management_actions(workspace):
 
     with patch("calendar_app.presentation.widgets.unified_widget_mode.QMenu.exec", new=execute):
         widget._open_menu(QPoint())
-    groups = [t(f"widget_mode.menu_{name}") for name in ("date", "work", "view", "window")]
-    assert [captured.index(group) for group in groups] == sorted(
-        captured.index(group) for group in groups
-    )
-    assert t("widget_mode.customize") in captured
-    assert t("menu.work_management") in captured
+    # Work actions first, then the 창 관리 submenu; toolbar duplicates are gone.
+    work = captured.index(t("menu.work_management"))
+    window = captured.index(t("widget_mode.menu_window"))
+    assert work < window
+    assert t("widget_mode.customize") not in captured
+    assert t("widget_mode.pick_date") not in captured
 
 
 def test_failed_completion_restores_check_and_keeps_focus(workspace):

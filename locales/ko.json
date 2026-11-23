@@ -3120,6 +3120,8 @@
     "lock_click_through_hint": "완전 고정 중에는 클릭이 달력 아래 바탕화면으로 전달됩니다. 오른쪽 아래 배지에 마우스를 잠시 올려 두면 다시 누를 수 있습니다.",
     "lock_mode": "바탕화면 고정",
     "magnet_mode": "자석 모드 토글",
+    "manage_menu": "관리",
+    "new_menu": "새로 만들기",
     "next_day": "▶ 다음 날짜",
     "opacity": "투명도",
     "opacity_down": "투명도 내리기",
@@ -3135,12 +3137,17 @@
     "restore": "창 위치/크기 복원",
     "routine_manager": "일반업무 관리자",
     "routine_settings": "일반업무 설정",
+    "save_layout_preset": "레이아웃 프리셋 저장...",
+    "settings_menu": "설정",
     "show_hide": "오버레이 표시/숨기기",
+    "show_hide_window": "창 표시/숨기기",
     "sync_google": "구글 캘린더 동기화",
+    "sync_menu": "동기화",
     "today": "오늘 날짜로 이동",
     "topbar": "상단바 표시/숨기기",
     "view_options": "화면 및 창",
-    "view_toggle": "주간/월간 보기 전환"
+    "view_toggle": "주간/월간 보기 전환",
+    "widget_mode": "위젯 전용 모드"
   },
   "view_mode": {
     "monthly": "월간보기",
