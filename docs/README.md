@@ -75,6 +75,8 @@ CalDAV 변경분 다운로드·UID 주소 복구, 번역 누락 및 테스트 �
 | [글자·컨트롤·모달 크기 가이드](design/typography-and-sizing.md) | 공통 글자 역할·크기·배율 기준 |
 | [터치 중심 루프 믹서](ux-audit/loop-mixer-touch-20261106.md) | 현재 6트랙 루프 믹서 위젯 사용 순서·검증 |
 | [KeyDeck 루프덱 안내](ux-audit/keydeck-loopdeck-20261106.md) | 이전 4트랙 루프덱 기록(현재는 루프 믹서) |
+| [5.8.0 배포 확인표](release-5.8.0-checklist.md) | 2026-11-23 5.8.0 GitHub·Store 배포 확인 기록 |
+| [5.8.0 배포 노트](release-5.8.0-notes.md) | 5.8.0 사용자 변경 안내 |
 | [5.7.0 배포 확인표](release-5.7.0-checklist.md) | 2026-11-22 5.7.0 GitHub·Store 배포 확인 기록 |
 | [5.7.0 배포 노트](release-5.7.0-notes.md) | 5.7.0 사용자 변경 안내 |
 | [5.6.0 배포 확인표](release-5.6.0-checklist.md) | 2026-11-17 5.6.0 GitHub·Store 배포 확인 기록 |
