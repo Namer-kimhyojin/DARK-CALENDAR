@@ -69,25 +69,28 @@ def assert_widget_reads_like_main(tokens, main):
     shell = css_to_qcolor(tokens["panel_bg"])
     base = css_to_qcolor(main["bg_main"])
     assert shell.getRgb()[:3] == base.getRgb()[:3]
-    # A translucent main window makes the widget translucent too, but never so far
-    # that text drops below WCAG AA on a black or a white wallpaper.
-    translucent = shell.alpha() < WIDGET_SHELL_MIN_ALPHA
-    if not translucent:
-        assert float(tokens["_main_opacity"]) * 255 >= WIDGET_SHELL_MIN_ALPHA - 1
-    backdrops = [_over(tokens["panel_bg"], wall) for wall in ("#000000", "#ffffff")]
-    for role, minimum in TEXT_FLOORS.items():
-        floor = min(minimum, 4.5) if translucent else minimum
-        for backdrop in backdrops:
-            ink = _over(tokens[role], backdrop)
-            assert contrast_ratio(ink.name(), backdrop.name()) >= floor - 0.05, (
-                role,
-                tokens[role],
-            )
-    for surface in ("card_bg", "button_bg", "surface_alt"):
-        for backdrop in backdrops:
-            layer = _over(tokens[surface], backdrop)
-            ink = _over(tokens["text_secondary"], layer)
-            assert contrast_ratio(ink.name(), layer.name()) >= (4.5 if translucent else 5.5) - 0.05
+    # The widget is exactly as translucent as the main window's background
+    # (user decision 2026-11-23); text contrast is guaranteed only when opaque.
+    main_alpha = css_to_qcolor(main["bg_main"]).alpha()
+    if main_alpha >= WIDGET_SHELL_MIN_ALPHA:
+        assert shell.alpha() >= WIDGET_SHELL_MIN_ALPHA
+        backdrops = [_over(tokens["panel_bg"], wall) for wall in ("#000000", "#ffffff")]
+        for role, minimum in TEXT_FLOORS.items():
+            for backdrop in backdrops:
+                ink = _over(tokens[role], backdrop)
+                assert contrast_ratio(ink.name(), backdrop.name()) >= minimum - 0.05, (
+                    role,
+                    tokens[role],
+                )
+        for surface in ("card_bg", "button_bg", "surface_alt"):
+            for backdrop in backdrops:
+                layer = _over(tokens[surface], backdrop)
+                ink = _over(tokens["text_secondary"], layer)
+                assert contrast_ratio(ink.name(), layer.name()) >= 5.45
+    else:
+        assert shell.alpha() == main_alpha
+        for surface in ("card_bg", "button_bg", "surface_alt"):
+            assert css_to_qcolor(tokens[surface]).alpha() == main_alpha
     # The selected day tile stays visible on the opaque shell.
     assert css_to_qcolor(tokens["hero_bg_strong"]).getRgb()[:3] != shell.getRgb()[:3]
 

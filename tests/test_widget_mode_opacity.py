@@ -81,10 +81,10 @@ def test_actual_render_uses_main_alpha_and_preserves_unused_legacy_mode_values(w
     host.settings.setValue("last_opacity", 0)
     coordinator.controller.refresh_theme()
     _APP.processEvents()
-    # The widget follows a translucent main window, but a fully transparent one
-    # must not make the widget's reading surface disappear (readable floor).
+    # The widget is exactly as translucent as the main window (user decision
+    # 2026-11-23): a faded main window fades the widget the same way.
     faded = _render(widget).pixelColor(5, widget.height() // 2).alpha()
-    assert 120 <= faded < WIDGET_SHELL_MIN_ALPHA
+    assert faded < WIDGET_SHELL_MIN_ALPHA
     assert host.settings.value(TEXT_OPACITY_KEY) == 20
     assert host.settings.value(BACKGROUND_OPACITY_KEY) == 0
     assert widget.windowOpacity() == 1.0

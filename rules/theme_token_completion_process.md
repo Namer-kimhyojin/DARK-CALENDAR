@@ -91,18 +91,18 @@ floats over arbitrary wallpaper, so `widget_mode_theme.harden_widget_readability
 reading roles. Do not compare widget reading roles to main-window roles for equality.
 
 - The shell keeps the main base RGB. At full main-window opacity its alpha is at least
-  `WIDGET_SHELL_MIN_ALPHA` (242). Since 2026-11-23 a translucent main window makes the shell
-  follow its opacity (`widget_shell_alpha()`), down to the lowest alpha at which body ink keeps
-  4.5:1 on the shell and the row/button surfaces over a black and a white wallpaper (about 65%
-  for dark bases, 53% for light). Lower main opacity stops at that floor.
+  `WIDGET_SHELL_MIN_ALPHA` (242). Otherwise it takes the main window's own `bg_main` alpha
+  exactly (`widget_shell_alpha()`, user decision 2026-11-23), which already follows the main
+  opacity curve (a 90% setting is about 78% alpha). There is no readability floor: at low
+  opacity the widget fades exactly like the main window.
 - Rows, buttons and inputs use a ladder derived from the base color (dark: toward white,
   light: toward ink); while translucent they take the shell's alpha so they do not read as solid
   blocks. The selected chip and day tile stay an opaque accent tint so selection never depends
   on translucency.
 - Text roles meet contrast floors against the shell over black and over white wallpaper:
   primary 7:1, secondary and button text 5.5:1, muted/faint, accent text and weekend labels
-  4.5:1. While translucent every floor is capped at 4.5:1 (WCAG AA), so secondary text can turn
-  as strong as primary text at the lowest opacities. Colors keep their hue and move toward white
+  4.5:1. While translucent the floors are a best-effort 4.5:1 target (text moves toward ink as
+  far as it helps), not a guarantee; secondary text can turn as strong as primary text. Colors keep their hue and move toward white
   (dark) or ink (light) only as needed.
 - Accent and input-border identity roles remain identical to the main theme.
 

@@ -18,8 +18,8 @@ from calendar_app.shared.ui_tokens import get_ui_tokens
 # The widget floats over arbitrary wallpaper. At full main-window opacity the
 # shell is near-opaque (WIDGET_SHELL_MIN_ALPHA) and every reading color meets the
 # table below against the worst backdrop. A translucent main window makes the
-# shell follow its opacity, down to the lowest alpha at which body text still
-# reads at WCAG AA (4.5:1) over a black and a white wallpaper.
+# shell exactly as translucent as the main background; text then aims for
+# WCAG AA (4.5:1) but cannot be guaranteed on every wallpaper.
 WIDGET_SHELL_MIN_ALPHA = 242
 WIDGET_TRANSLUCENT_TEXT_CONTRAST = 4.5
 WIDGET_TEXT_MIN_CONTRAST = {
@@ -224,7 +224,7 @@ def _harden_widget_readability_uncached(tokens: dict[str, str], base_color: str)
     card = lift(0.06) if dark else _mix(base, white, 0.72)
     alt = lift(0.04) if dark else _mix(base, white, 0.45)
     button = lift(0.09) if dark else _mix(base, white, 0.60)
-    shell_alpha = widget_shell_alpha(_main_opacity(tokens), (base, card, alt, button), ink)
+    shell_alpha = widget_shell_alpha(tokens, base)
     translucent = shell_alpha < WIDGET_SHELL_MIN_ALPHA
     for key in _SHELL_KEYS:
         current = parse_css_color(tokens.get(key, ""), _hex(base))
@@ -304,35 +304,17 @@ def _harden_widget_readability_uncached(tokens: dict[str, str], base_color: str)
     return hardened
 
 
-def _main_opacity(tokens: dict[str, str]) -> float:
-    try:
-        return max(0.0, min(1.0, float(tokens.get("_main_opacity", "1"))))
-    except (TypeError, ValueError):
-        return 1.0
+def widget_shell_alpha(tokens: dict[str, str], base: QColor) -> int:
+    """The widget shell uses the main window's own background alpha.
 
-
-def widget_shell_alpha(opacity: float, surfaces, ink: QColor) -> int:
-    """Shell alpha for the main window's opacity, never below the readable floor.
-
-    The floor is the lowest alpha at which ``ink`` keeps 4.5:1 on every surface
-    composited over a black and over a white wallpaper.
+    ``panel_bg`` arrives as the main window's ``bg_main``, whose alpha already
+    reflects the main opacity curve (90% setting -> about 78% alpha). Since
+    2026-11-23 (user decision) the widget matches it exactly at every level, with
+    no readability floor; text colors are still pushed toward ink as far as they
+    help. A near-opaque main window keeps the near-opaque shell.
     """
-    wanted = max(0, min(WIDGET_SHELL_MIN_ALPHA, round(float(opacity) * 255)))
-    if wanted >= WIDGET_SHELL_MIN_ALPHA:
-        return WIDGET_SHELL_MIN_ALPHA
-    walls = (QColor("#000000"), QColor("#ffffff"))
-    for alpha in range(wanted, WIDGET_SHELL_MIN_ALPHA, 2):
-        if all(
-            contrast_ratio(
-                ink,
-                composite_color(QColor(color.red(), color.green(), color.blue(), alpha), wall),
-            )
-            >= WIDGET_TRANSLUCENT_TEXT_CONTRAST
-            for color in surfaces
-            for wall in walls
-        ):
-            return alpha
-    return WIDGET_SHELL_MIN_ALPHA
+    alpha = parse_css_color(tokens.get("panel_bg", ""), _hex(base)).alpha()
+    return WIDGET_SHELL_MIN_ALPHA if alpha >= WIDGET_SHELL_MIN_ALPHA else alpha
 
 
 def _rgb(color: QColor) -> str:

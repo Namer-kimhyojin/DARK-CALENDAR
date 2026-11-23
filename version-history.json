@@ -32483,6 +32483,20 @@
       "scoped_hashes": {
         "calendar_app/domain/widget_workspace.py": "1acb3c3b9983df167889545093b52e5545d6ad1cbf3966a185a9bd0389b9dcfd"
       }
+    },
+    {
+      "id": "widget-opacity-match-main-20261123",
+      "created_at": "2026-11-23T11:07:35.405863+09:00",
+      "kind": "change",
+      "previous_version": "5.7.0",
+      "version": "5.7.0",
+      "summary": "위젯 전용 모드 바탕 투명도를 메인 창 실제 바탕 알파와 정확히 일치(가독성 하한 제거)",
+      "files": [
+        "calendar_app/presentation/widgets/widget_mode_theme.py"
+      ],
+      "scoped_hashes": {
+        "calendar_app/presentation/widgets/widget_mode_theme.py": "7eb7a43d4407963146fd825004ac6f4f35941e784c23a914fae9d009fe2e0fc2"
+      }
     }
   ],
   "observed_inputs": {
@@ -33107,7 +33121,7 @@
     "calendar_app/presentation/widgets/widget_mode_geometry.py": "33e36e6ab029bf644cc43c7d15b72e9f8224d9bdf3b63dce543ca64dcd43e146",
     "calendar_app/presentation/widgets/widget_mode_opacity.py": "5be74e7559d4f2237fe17f872443c81046ad831770dd88a848e98d7f81ceec79",
     "calendar_app/presentation/widgets/widget_mode_skins.py": "5b04c048cb836e70ea30aa118af50bda7ca9f6b70d01897063bb92711694384e",
-    "calendar_app/presentation/widgets/widget_mode_theme.py": "541ef5a173b94bb987fab9fa48a52b79553610d932cf304ccc4724ede1fa4eb9",
+    "calendar_app/presentation/widgets/widget_mode_theme.py": "7eb7a43d4407963146fd825004ac6f4f35941e784c23a914fae9d009fe2e0fc2",
     "calendar_app/presentation/widgets/widget_mode_typography.py": "fea4bf995ec60d731547847d1bbf4a77006dd7161e0c3bf6831d2770cb626944",
     "calendar_app/presentation/widgets/widget_mode_visibility.py": "415ad3968c84aa6633ec3d40893ca9c0ecfaad97d8dfb0084b3e412ff5f60702",
     "calendar_app/presentation/widgets/widget_placement.py": "6ca946a2ab897f1bdf5957501b5dcde0e121b0ce40bdb583fa1df1764377d7fe",
