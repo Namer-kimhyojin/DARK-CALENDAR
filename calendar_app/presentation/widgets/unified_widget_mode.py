@@ -27,7 +27,6 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
-    QCalendarWidget,
     QCheckBox,
     QDialog,
     QFrame,
@@ -66,6 +65,13 @@ from calendar_app.presentation.widgets.panel_widget_theme import (
 )
 from calendar_app.presentation.widgets.schedule_info import _is_all_day as _schedule_is_all_day
 from calendar_app.presentation.widgets.week_day_button import ModernWeekDayButton
+from calendar_app.presentation.widgets.widget_mode_clock import (
+    ClockOptions,
+    format_clock_date,
+    format_clock_time,
+    ms_until_next_tick,
+    read_clock_options,
+)
 from calendar_app.presentation.widgets.widget_mode_density import (
     DENSITIES,
     DENSITY_KEY,
@@ -706,6 +712,7 @@ class _CompactMonthCalendar(QWidget):
     """Transparent six-week month grid using the widget's semantic tokens."""
 
     dateClicked = pyqtSignal(QDate)
+    titleClicked = pyqtSignal()
 
     def __init__(self, parent=None, *, defer_render: bool = False):
         super().__init__(parent)
@@ -740,6 +747,10 @@ class _CompactMonthCalendar(QWidget):
         self.month_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.month_label.setMinimumWidth(110)
         self.month_label.setFixedHeight(30)
+        # The title opens the year/month picker, the fastest way to jump far.
+        self.month_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.month_label.setToolTip(t("widget_mode.picker_open_help", "눌러서 연도·월 선택"))
+        self.month_label.installEventFilter(self)
         navigation.addWidget(self.month_label)
         navigation.addStretch(1)
         self.next_btn = QToolButton(self)
@@ -913,6 +924,16 @@ class _CompactMonthCalendar(QWidget):
             self._sync_nav_arrows()
         super().changeEvent(event)
 
+    def eventFilter(self, watched, event) -> bool:
+        if (
+            watched is self.month_label
+            and event.type() == QEvent.Type.MouseButtonRelease
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+            self.titleClicked.emit()
+            return True
+        return super().eventFilter(watched, event)
+
     def _navigate_month(self, delta: int) -> None:
         self.dateClicked.emit(self._selected_date.addMonths(int(delta)))
 
@@ -958,6 +979,7 @@ class _CompactMonthCalendar(QWidget):
 
 class CompactCalendarGrid(QWidget):
     dateClicked = pyqtSignal(QDate)
+    titleClicked = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1002,6 +1024,7 @@ class CompactCalendarGrid(QWidget):
         if self._month_calendar is None:
             month = _CompactMonthCalendar(self, defer_render=True)
             month.dateClicked.connect(self.dateClicked)
+            month.titleClicked.connect(self.titleClicked)
             month.hide()
             # Appended after the week strip, as when it was built eagerly.
             self._root_layout.addWidget(month, 1)
@@ -1143,6 +1166,81 @@ class CompactCalendarGrid(QWidget):
             button.setStyleSheet(self._button_stylesheet(day, today, selected))
 
 
+class _EdgeResizeHandle(QWidget):
+    """Invisible strip on a window edge that starts an OS resize from that edge.
+
+    The OS resize loop (``startSystemResize``) keeps the window steady across
+    monitors with different scaling, like the toolbar move. Without a native
+    handle (offscreen tests) the strip resizes the window itself.
+    """
+
+    THICKNESS = 6
+    _CURSORS = {
+        Qt.Edge.LeftEdge: Qt.CursorShape.SizeHorCursor,
+        Qt.Edge.RightEdge: Qt.CursorShape.SizeHorCursor,
+        Qt.Edge.TopEdge: Qt.CursorShape.SizeVerCursor,
+        Qt.Edge.BottomEdge: Qt.CursorShape.SizeVerCursor,
+    }
+
+    def __init__(self, window: "UnifiedWidgetWindow", edges: Qt.Edge):
+        super().__init__(window)
+        self._window = window
+        self.edges = edges
+        self._origin = None
+        self._rect_origin = None
+        self.setObjectName("unified_edge_resize")
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+        self.setCursor(self._cursor_for(edges))
+
+    @classmethod
+    def _cursor_for(cls, edges: Qt.Edge) -> Qt.CursorShape:
+        if edges in cls._CURSORS:
+            return cls._CURSORS[edges]
+        diagonal = (Qt.Edge.LeftEdge | Qt.Edge.TopEdge, Qt.Edge.RightEdge | Qt.Edge.BottomEdge)
+        return (
+            Qt.CursorShape.SizeFDiagCursor if edges in diagonal else Qt.CursorShape.SizeBDiagCursor
+        )
+
+    def mousePressEvent(self, event):
+        if event.button() != Qt.MouseButton.LeftButton or self._window.placement_is_locked():
+            super().mousePressEvent(event)
+            return
+        self._window._begin_placement_edit()
+        if self._window._try_start_system_resize(self.edges):
+            event.accept()
+            return
+        self._origin = event.globalPosition().toPoint()
+        self._rect_origin = QRect(self._window.geometry())
+        event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self._origin is None or self._rect_origin is None:
+            super().mouseMoveEvent(event)
+            return
+        delta = event.globalPosition().toPoint() - self._origin
+        rect = QRect(self._rect_origin)
+        minimum = self._window.minimumSize()
+        if self.edges & Qt.Edge.LeftEdge:
+            rect.setLeft(min(rect.left() + delta.x(), rect.right() - minimum.width() + 1))
+        if self.edges & Qt.Edge.RightEdge:
+            rect.setRight(max(rect.right() + delta.x(), rect.left() + minimum.width() - 1))
+        if self.edges & Qt.Edge.TopEdge:
+            rect.setTop(min(rect.top() + delta.y(), rect.bottom() - minimum.height() + 1))
+        if self.edges & Qt.Edge.BottomEdge:
+            rect.setBottom(max(rect.bottom() + delta.y(), rect.top() + minimum.height() - 1))
+        self._window.setGeometry(rect)
+        event.accept()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self._origin is not None:
+            self._origin = None
+            self._rect_origin = None
+            self._window._finish_placement_edit()
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+
 class UnifiedWidgetWindow(QWidget):
     def __init__(self, controller):
         super().__init__(None)
@@ -1182,6 +1280,10 @@ class UnifiedWidgetWindow(QWidget):
         self._placement_press_global = None
         self._system_move_active = False
         self._system_move_alt = False
+        self._system_resize_active = False
+        self._edge_handles: list[_EdgeResizeHandle] = []
+        self._date_picker_popup = None
+        self._clock_options = read_clock_options(settings)
         self._feedback_timer = QTimer(self)
         self._feedback_timer.setSingleShot(True)
         self._feedback_timer.timeout.connect(self._expire_feedback)
@@ -1241,11 +1343,26 @@ class UnifiedWidgetWindow(QWidget):
             t("widget_mode.customize", "꾸미기"), self.open_customization
         )
         bar.addWidget(self.customize_btn)
-        self.more_btn = self._button("⋯", self._show_more_menu)
-        self.more_btn.setAccessibleName(t("widget_mode.more", "더 보기"))
-        self.more_btn.setToolTip(self.more_btn.accessibleName())
+        self.more_btn = self._button("", self._show_more_menu)
+        self.more_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         bar.addWidget(self.more_btn)
         surface_layout.addWidget(self.toolbar)
+
+        # Large clock option: a time + date block under the toolbar (moves the window too).
+        self.clock_hero = QFrame(self)
+        self.clock_hero.setObjectName("unified_clock_hero")
+        clock_hero_layout = QVBoxLayout(self.clock_hero)
+        clock_hero_layout.setContentsMargins(2, 2, 2, 6)
+        clock_hero_layout.setSpacing(0)
+        self.clock_big_label = QLabel("", self.clock_hero)
+        self.clock_big_label.setObjectName("unified_clock_big")
+        self.clock_date_label = QLabel("", self.clock_hero)
+        self.clock_date_label.setObjectName("unified_clock_date")
+        clock_hero_layout.addWidget(self.clock_big_label)
+        clock_hero_layout.addWidget(self.clock_date_label)
+        self.clock_hero.installEventFilter(self)
+        self.clock_hero.hide()
+        surface_layout.addWidget(self.clock_hero)
 
         self.container = QFrame(self)
         self.container.setObjectName("unified_container")
@@ -1284,22 +1401,15 @@ class UnifiedWidgetWindow(QWidget):
         actions.setSpacing(6)
         self.hero_layout.addLayout(actions)
 
-        self.previous_week_btn = self._button(
-            "‹",
-            lambda: self.controller.set_target_date(self.controller._current_date().addDays(-7)),
-        )
-        self.previous_week_btn.setToolTip(t("widget_mode.previous_week", "이전 주"))
-        self.previous_week_btn.setAccessibleName(self.previous_week_btn.toolTip())
+        self.previous_week_btn = self._button("", lambda: self._step_period(-1))
+        self.previous_week_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         actions.addWidget(self.previous_week_btn)
         self.date_picker_btn = self._button(
             t("widget_mode.pick_date", "날짜 선택"), self._pick_date
         )
         actions.addWidget(self.date_picker_btn)
-        self.next_week_btn = self._button(
-            "›", lambda: self.controller.set_target_date(self.controller._current_date().addDays(7))
-        )
-        self.next_week_btn.setToolTip(t("widget_mode.next_week", "다음 주"))
-        self.next_week_btn.setAccessibleName(self.next_week_btn.toolTip())
+        self.next_week_btn = self._button("", lambda: self._step_period(1))
+        self.next_week_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         actions.addWidget(self.next_week_btn)
         actions.addStretch(1)
 
@@ -1332,6 +1442,7 @@ class UnifiedWidgetWindow(QWidget):
 
         self.cal_grid = CompactCalendarGrid(self)
         self.cal_grid.dateClicked.connect(self.controller.set_target_date)
+        self.cal_grid.titleClicked.connect(self._pick_date)
 
         self.filter_section = QFrame(self.container)
         self.filter_section.setObjectName("unified_filter_section")
@@ -1461,17 +1572,30 @@ class UnifiedWidgetWindow(QWidget):
         self.feedback_label.hide()
         surface_layout.addWidget(self.feedback_label)
         # Reuse existing routes/controls while removing the separate hero/navigation rows.
-        bar.insertWidget(1, self.date_picker_btn)
-        bar.insertWidget(3, self.today_btn)
+        # Toolbar: [main] [prev] [date] [next] ... [today] [pin] [customize] [more]
+        bar.insertWidget(1, self.previous_week_btn)
+        bar.insertWidget(2, self.date_picker_btn)
+        bar.insertWidget(3, self.next_week_btn)
+        bar.insertWidget(5, self.today_btn)
         self.date_picker_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.date_picker_btn.setMinimumWidth(0)
-        self.date_picker_btn.setArrowType(Qt.ArrowType.DownArrow)
         self.date_picker_btn.setProperty("datePicker", True)
-        for button in (self.restore_btn, self.pin_btn, self.customize_btn, self.more_btn):
+        self.today_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        for button in (
+            self.restore_btn,
+            self.pin_btn,
+            self.customize_btn,
+            self.more_btn,
+            self.previous_week_btn,
+            self.next_week_btn,
+            self.today_btn,
+        ):
             button.setProperty("compactControl", True)
         self.date_label.hide()
-        self.previous_week_btn.hide()
-        self.next_week_btn.hide()
+        self._apply_button_help()
+        # Leave empty toolbar space to grab: the date button no longer takes it all.
+        self.date_picker_btn.setMaximumWidth(240)
+        self._build_edge_handles()
         self.apply_selected_layout(resize_to_layout=True)
         self.apply_theme()
         self._sync_filter_buttons()
@@ -1537,6 +1661,86 @@ class UnifiedWidgetWindow(QWidget):
         button.setMinimumHeight(32)
         button.clicked.connect(callback)
         return button
+
+    def _period_is_month(self) -> bool:
+        return not self.cal_grid.isHidden() and self.cal_grid.display_mode == "month"
+
+    def _step_period(self, delta: int) -> None:
+        """Move by the period the calendar shows: a month in month view, else a week."""
+        current = self.controller._current_date()
+        if self._period_is_month():
+            target = current.addMonths(int(delta))
+        else:
+            target = current.addDays(7 * int(delta))
+        self.controller.set_target_date(target)
+
+    def _sync_period_buttons(self) -> None:
+        if self._period_is_month():
+            previous = t("widget_mode.month_prev", "이전 달")
+            following = t("widget_mode.month_next", "다음 달")
+        else:
+            previous = t("widget_mode.previous_week", "이전 주")
+            following = t("widget_mode.next_week", "다음 주")
+        for button, label in ((self.previous_week_btn, previous), (self.next_week_btn, following)):
+            button.setToolTip(label)
+            button.setAccessibleName(label)
+
+    def _apply_button_help(self) -> None:
+        """Icon buttons keep a short accessible name and a tooltip that says what they do."""
+        widget_key = next(
+            (entry["key"] for entry in SHORTCUTS if entry["id"] == "widget_mode"), "F12"
+        )
+        helps = (
+            (
+                self.restore_btn,
+                t("widget_mode.return_main", "메인 화면으로"),
+                t("widget_mode.return_main_help", "메인 화면으로 돌아갑니다 ({key})").format(
+                    key=widget_key
+                ),
+            ),
+            (
+                self.pin_btn,
+                t("widget_mode.pin", "항상 위"),
+                t("widget_mode.pin_help", "다른 창보다 항상 위에 표시합니다"),
+            ),
+            (
+                self.customize_btn,
+                t("widget_mode.customize", "꾸미기"),
+                t("widget_mode.customize_help", "배치·표면 모양·시계·글꼴을 바꿉니다"),
+            ),
+            (
+                self.more_btn,
+                t("widget_mode.more", "더 보기"),
+                t(
+                    "widget_mode.more_help",
+                    "날짜 이동·업무 관리·창 위치와 모니터 설정 (창을 오른쪽 클릭해도 열립니다)",
+                ),
+            ),
+            (
+                self.date_picker_btn,
+                t("widget_mode.pick_date", "날짜 선택"),
+                t(
+                    "widget_mode.pick_date_help",
+                    "날짜를 고릅니다. 제목을 누르면 연도·월을 바로 선택합니다",
+                ),
+            ),
+            (
+                self.today_btn,
+                t("widget_mode.today", "오늘"),
+                t("widget_mode.today_help", "오늘 날짜로 돌아갑니다"),
+            ),
+            (
+                self.undo_btn,
+                t("widget_mode.undo", "실행 취소"),
+                t("widget_mode.undo_help", "방금 바꾼 완료 상태를 되돌립니다"),
+            ),
+        )
+        for button, name, help_text in helps:
+            button.setAccessibleName(name)
+            button.setAccessibleDescription(help_text)
+            # The tooltip names an icon-only button first, then says what it does.
+            button.setToolTip(f"{name} — {help_text}")
+        self._sync_period_buttons()
 
     def _toggle_pin(self):
         self.controller.set_always_top(self.pin_btn.isChecked())
@@ -1610,17 +1814,21 @@ class UnifiedWidgetWindow(QWidget):
             )
             menu.exec(self.add_btn.mapToGlobal(self.add_btn.rect().bottomLeft()))
 
-    def _pick_date(self):
-        dialog = QDialog(self)
-        dialog.setWindowTitle(t("widget_mode.pick_date", "날짜 선택"))
-        layout = QVBoxLayout(dialog)
-        calendar = QCalendarWidget(dialog)
-        calendar.setSelectedDate(self.controller._current_date())
-        layout.addWidget(calendar)
-        calendar.clicked.connect(
-            lambda date: (self.controller.set_target_date(date), dialog.accept())
+    def _pick_date(self, anchor=None):
+        """Open the year/month/day picker under the date button (or ``anchor``)."""
+        from calendar_app.presentation.widgets.widget_date_picker import WidgetDatePickerPopup
+
+        # Button signals pass their ``checked`` flag here; only a widget is an anchor.
+        if not isinstance(anchor, QWidget) or not anchor.isVisible():
+            anchor = self.date_picker_btn if self.date_picker_btn.isVisible() else self.toolbar
+        popup = WidgetDatePickerPopup(
+            self.controller._current_date(), _widget_theme_tokens(self.controller.main_window), self
         )
-        dialog.exec()
+        popup.setFont(self.font())
+        popup.dateSelected.connect(self.controller.set_target_date)
+        self._date_picker_popup = popup
+        popup.popup_below(anchor)
+        return popup
 
     def open_customization(self):
         from calendar_app.presentation.dialogs.widget_customization_dialog import (
@@ -1635,7 +1843,7 @@ class UnifiedWidgetWindow(QWidget):
         self._open_menu(self.more_btn.mapToGlobal(self.more_btn.rect().bottomLeft()))
 
     def eventFilter(self, watched, event):
-        if watched is self.toolbar:
+        if watched is self.toolbar or watched is self.clock_hero:
             if self.placement_is_locked():
                 return super().eventFilter(watched, event)
             if (
@@ -1697,6 +1905,56 @@ class UnifiedWidgetWindow(QWidget):
                 return True
         return super().eventFilter(watched, event)
 
+    def _build_edge_handles(self) -> None:
+        edges = (
+            Qt.Edge.LeftEdge,
+            Qt.Edge.RightEdge,
+            Qt.Edge.TopEdge,
+            Qt.Edge.BottomEdge,
+            Qt.Edge.LeftEdge | Qt.Edge.TopEdge,
+            Qt.Edge.RightEdge | Qt.Edge.TopEdge,
+            Qt.Edge.LeftEdge | Qt.Edge.BottomEdge,
+            Qt.Edge.RightEdge | Qt.Edge.BottomEdge,
+        )
+        self._edge_handles = [_EdgeResizeHandle(self, edge) for edge in edges]
+        self._layout_edge_handles()
+        self._sync_edge_handles()
+
+    def _layout_edge_handles(self) -> None:
+        size = _EdgeResizeHandle.THICKNESS
+        corner = size * 2
+        width, height = self.width(), self.height()
+        for handle in self._edge_handles:
+            edges = handle.edges
+            left = bool(edges & Qt.Edge.LeftEdge)
+            right = bool(edges & Qt.Edge.RightEdge)
+            top = bool(edges & Qt.Edge.TopEdge)
+            bottom = bool(edges & Qt.Edge.BottomEdge)
+            if (left or right) and (top or bottom):
+                x = 0 if left else width - corner
+                y = 0 if top else height - corner
+                handle.setGeometry(x, y, corner, corner)
+            elif left or right:
+                handle.setGeometry(0 if left else width - size, corner, size, height - corner * 2)
+            else:
+                handle.setGeometry(corner, 0 if top else height - size, width - corner * 2, size)
+            handle.raise_()
+
+    def _sync_edge_handles(self) -> None:
+        locked = self.placement_is_locked()
+        for handle in self._edge_handles:
+            handle.setVisible(not locked)
+
+    def _try_start_system_resize(self, edges) -> bool:
+        try:
+            handle = self.windowHandle()
+            started = handle is not None and bool(handle.startSystemResize(edges))
+        except RuntimeError:
+            return False
+        if started:
+            self._system_resize_active = True
+        return started
+
     def _try_start_system_move(self) -> bool:
         try:
             handle = self.windowHandle()
@@ -1706,7 +1964,7 @@ class UnifiedWidgetWindow(QWidget):
             return False
 
     def nativeEvent(self, event_type, message):
-        if self._system_move_active and sys.platform == "win32":
+        if (self._system_move_active or self._system_resize_active) and sys.platform == "win32":
             with contextlib.suppress(Exception):
                 if bytes(event_type) == b"windows_generic_MSG":
                     import ctypes.wintypes
@@ -1722,6 +1980,9 @@ class UnifiedWidgetWindow(QWidget):
     def _complete_system_move(self) -> None:
         if self._system_move_active:
             self._complete_placement_move(snap=not self._system_move_alt)
+        elif self._system_resize_active:
+            self._system_resize_active = False
+            self._finish_placement_edit()
 
     def _complete_placement_move(self, *, snap: bool) -> None:
         """Settle a toolbar move: keep size, fit the destination screen, snap, save."""
@@ -1764,6 +2025,7 @@ class UnifiedWidgetWindow(QWidget):
         self._cancel_placement_edit()
         self.controller.main_window.settings.setValue("widget_mode_placement_locked", bool(locked))
         self.size_grip.setEnabled(not locked)
+        self._sync_edge_handles()
         self.toolbar.setCursor(
             Qt.CursorShape.ArrowCursor if locked else Qt.CursorShape.OpenHandCursor
         )
@@ -1775,6 +2037,8 @@ class UnifiedWidgetWindow(QWidget):
         state = self._placement_origin
         self._placement_origin = None
         if state is not None and state[1] != self.geometry():
+            # The user placed the window: this screen is now its home.
+            self.controller._displaced_home = None
             self._last_placement = state
             self.controller.save_position(self.pos())
             self.controller.save_size(self.size())
@@ -1786,6 +2050,7 @@ class UnifiedWidgetWindow(QWidget):
         self._placement_drag_active = False
         self._system_move_active = False
         self._system_move_alt = False
+        self._system_resize_active = False
         self.toolbar.setCursor(Qt.CursorShape.OpenHandCursor)
         self.size_grip.cancel_edit()
         if (
@@ -1941,6 +2206,7 @@ class UnifiedWidgetWindow(QWidget):
         self.cal_grid.set_display_mode(calendar_mode)
         if not calendar_visible:
             self.cal_grid.hide()
+        self._sync_period_buttons()
         self.week_toggle_btn.setChecked(calendar_visible)
         self.week_toggle_btn.setVisible(calendar_supported)
         calendar_action = (
@@ -1955,9 +2221,11 @@ class UnifiedWidgetWindow(QWidget):
             layout_spec.show_eyebrow and layout_spec.layout_id.startswith("user_layout_")
         )
         self.status_chip.hide()
-        self.clock_label.setVisible(
-            str(settings.value("widget_mode_show_clock", "true")).lower() == "true"
-        )
+        self._clock_options = read_clock_options(settings)
+        show_clock = str(settings.value("widget_mode_show_clock", "true")).lower() == "true"
+        self.clock_label.setVisible(show_clock and not self._clock_options.large)
+        self.clock_hero.setVisible(show_clock and self._clock_options.large)
+        self.update_time()
         self.hint_label.setVisible(
             str(settings.value("widget_mode_show_hint", "false")).lower() == "true"
         )
@@ -1986,6 +2254,7 @@ class UnifiedWidgetWindow(QWidget):
                 self.container_layout.removeWidget(section)
                 section.hide()
             self.footer_layout.removeWidget(self.clock_label)
+            self.clock_hero.hide()
             for index in range(8):
                 self.container_layout.setRowStretch(index, 0)
                 self.container_layout.setColumnStretch(index, 0)
@@ -2089,6 +2358,11 @@ class UnifiedWidgetWindow(QWidget):
             QLabel#unified_section {{ letter-spacing: 0; font-size: {typography.section:.1f}pt; font-weight: 600;
                 color: {tokens["text_secondary"]}; }}
             QLabel#unified_clock {{ font-size: {typography.control:.1f}pt; font-weight: 500; letter-spacing: 0; }}
+            QFrame#unified_clock_hero {{ background: transparent; border: none; }}
+            QLabel#unified_clock_big {{ color: {tokens["text_primary"]}; background: transparent;
+                font-size: {max(22.0, typography.date * 2.4):.1f}pt; font-weight: 600; letter-spacing: 0; }}
+            QLabel#unified_clock_date {{ color: {tokens["text_secondary"]}; background: transparent;
+                font-size: {typography.secondary:.1f}pt; }}
             QLabel#unified_empty {{ font-size: {typography.body:.1f}pt; }}
             QToolButton#unified_action_btn, QToolButton#unified_filter_btn,
             QToolButton#unified_filter_compact, QToolButton#unified_footer_toggle,
@@ -2136,13 +2410,27 @@ class UnifiedWidgetWindow(QWidget):
         color = tokens.get("text_primary", "#ffffff")
         # tokens already holds every key menu_stylesheet reads.
         menu_qss = menu_stylesheet(tokens)
-        self.customize_btn.setIcon(_ic(ICON.DISPLAY_STYLE, color=color))
-        self.restore_btn.setIcon(_ic(ICON.CALENDAR, color=color))
-        self.pin_btn.setIcon(_ic(ICON.ALWAYS_ON_TOP, color=color))
-        for button in (self.restore_btn, self.customize_btn, self.pin_btn):
+        secondary = tokens.get("text_secondary", color)
+        rtl = self.isRightToLeft()
+        for button, key, tint in (
+            (self.customize_btn, ICON.DISPLAY_STYLE, color),
+            (self.restore_btn, ICON.CALENDAR, color),
+            (self.pin_btn, ICON.ALWAYS_ON_TOP, color),
+            (self.more_btn, ICON.MORE, color),
+            (self.date_picker_btn, ICON.VIEW_MONTHLY, secondary),
+            (self.today_btn, ICON.GOTO_TODAY, color),
+            (self.previous_week_btn, ICON.NAV_NEXT if rtl else ICON.NAV_PREV, color),
+            (self.next_week_btn, ICON.NAV_PREV if rtl else ICON.NAV_NEXT, color),
+            (self.week_toggle_btn, ICON.VIEW_CALENDAR, color),
+            (self.completed_btn, ICON.STATUS_COMPLETED, secondary),
+            (self.undo_btn, ICON.UNDO, color),
+        ):
+            button.setIcon(_ic(key, color=tint))
             button.setIconSize(QSize(16, 16))
+        # The palette glyph is cropped at 16px; it keeps its own size.
         self.customize_btn.setIconSize(QSize(18, 18))
-        self.more_btn.setFixedWidth(32)
+        for button in (self.more_btn, self.previous_week_btn, self.next_week_btn):
+            button.setFixedWidth(32)
         self._update_toolbar_labels()
         self.compact_filter_menu.setStyleSheet(menu_qss)
         self.setWindowOpacity(1.0)
@@ -2185,7 +2473,7 @@ class UnifiedWidgetWindow(QWidget):
 
     def _update_toolbar_labels(self) -> None:
         """Measure real translated labels before exposing the wider toolbar."""
-        buttons = (self.restore_btn, self.customize_btn, self.pin_btn)
+        buttons = (self.restore_btn, self.customize_btn, self.pin_btn, self.today_btn)
         label_widths = [
             button.fontMetrics().horizontalAdvance(button.text()) + 40 for button in buttons
         ]
@@ -2193,7 +2481,8 @@ class UnifiedWidgetWindow(QWidget):
             110,
             self.date_picker_btn.fontMetrics().horizontalAdvance(self.date_picker_btn.text()) + 38,
         )
-        required = sum(label_widths) + date_width + self.today_btn.sizeHint().width() + 70
+        # +64 for the previous/next icon buttons beside the date.
+        required = sum(label_widths) + date_width + 70 + 64
         wide = self.width() >= max(560, required)
         for button, label_width in zip(buttons, label_widths, strict=True):
             button.setToolButtonStyle(
@@ -2207,7 +2496,9 @@ class UnifiedWidgetWindow(QWidget):
     def _update_tab_order(self) -> None:
         controls = [
             self.restore_btn,
+            self.previous_week_btn,
             self.date_picker_btn,
+            self.next_week_btn,
             self.today_btn,
             self.pin_btn,
             self.customize_btn,
@@ -2397,9 +2688,7 @@ class UnifiedWidgetWindow(QWidget):
         self.timer.timeout.connect(self.update_time)
 
     def _ms_until_next_clock_tick(self) -> int:
-        current = QTime.currentTime()
-        remaining = 60000 - (current.msecsSinceStartOfDay() % 60000)
-        return max(1000, int(remaining or 60000))
+        return ms_until_next_tick(QTime.currentTime(), self._clock_options)
 
     def _schedule_next_clock_tick(self) -> None:
         if self.isVisible():
@@ -2414,7 +2703,7 @@ class UnifiedWidgetWindow(QWidget):
         )
         self.eyebrow_label.setText(t("widget_mode.hero_eyebrow", "집중 위젯"))
         self.today_btn.setText(t("widget_mode.today", "오늘"))
-        self.today_btn.setToolTip(t("widget_mode.today", "오늘"))
+        self._apply_button_help()
         self._sync_filter_buttons()
         self.completed_btn.setText(t("widget_mode.show_completed", "완료 포함"))
         self.completed_btn.setToolTip(
@@ -2784,10 +3073,24 @@ class UnifiedWidgetWindow(QWidget):
         self.controller.notify_hidden()
 
     def update_time(self) -> None:
-        current_text = QTime.currentTime().toString("HH:mm")
+        options: ClockOptions = self._clock_options
+        now = QTime.currentTime()
+        today = QDate.currentDate()
+        time_text = format_clock_time(now, options)
+        if options.large and not self._free_layout_active:
+            if self.clock_big_label.text() != time_text:
+                self.clock_big_label.setText(time_text)
+            date_text = format_clock_date(today, options) if options.show_date else ""
+            if self.clock_date_label.text() != date_text:
+                self.clock_date_label.setText(date_text)
+            self.clock_date_label.setVisible(bool(date_text))
+        current_text = (
+            f"{format_clock_date(today, ClockOptions(size='small'))}  {time_text}"
+            if options.show_date and not options.large
+            else time_text
+        )
         if self.clock_label.text() != current_text:
             self.clock_label.setText(current_text)
-        today = QDate.currentDate()
         if today != self._last_today and self.isVisible():
             follow_today = self.controller._current_date() == self._last_today
             self._last_today = today
@@ -2921,6 +3224,24 @@ class UnifiedWidgetWindow(QWidget):
         close_action = menu.addAction(t("widget_mode.return_main", "메인 화면으로"))
         hide_action = menu.addAction(t("widget_mode.hide_tray", "트레이로 숨기기"))
         recover_action = menu.addAction(t("widget_mode.recover_position", "화면 안으로 이동"))
+        screens = QApplication.screens()
+        if len(screens) > 1:
+            monitor_menu = menu.addMenu(t("widget_mode.move_to_monitor", "다른 모니터로 이동"))
+            monitor_menu.setIcon(_ic(ICON.NEXT_MONITOR, color=tokens.get("text_primary")))
+            current_screen = self.screen()
+            for index, screen in enumerate(screens, start=1):
+                size = screen.geometry().size()
+                label = t("widget_mode.monitor_label", "모니터 {index} ({width}×{height})").format(
+                    index=index, width=size.width(), height=size.height()
+                )
+                if screen is QApplication.primaryScreen():
+                    label += " · " + t("widget_mode.monitor_primary", "주 모니터")
+                action = monitor_menu.addAction(label)
+                action.setCheckable(True)
+                action.setChecked(screen is current_screen)
+                action.triggered.connect(
+                    lambda _checked=False, target=screen: self.controller.move_to_screen(target)
+                )
         manager = getattr(self.controller.main_window, "overlay_manager", None)
         if manager is not None:
             widget_menu = menu.addMenu(t("widget_mode.desktop_widgets", "바탕화면 위젯 관리"))
@@ -2968,6 +3289,8 @@ class UnifiedWidgetWindow(QWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        if self._edge_handles:
+            self._layout_edge_handles()
         compact = widget_layout_is_compact(
             get_widget_mode_layout(self._active_layout_id), self.width()
         )
@@ -3010,10 +3333,25 @@ class UnifiedWidgetController:
         self._load_timer = QTimer(main_window)
         self._load_timer.setSingleShot(True)
         self._load_timer.timeout.connect(self._loading_delayed)
+        # Screen name whose saved position is kept while that monitor is unplugged;
+        # the window returns there when it comes back (None = on its home screen).
+        self._displaced_home: str | None = None
+        self._screen_return_timer = QTimer(main_window)
+        self._screen_return_timer.setSingleShot(True)
+        self._screen_return_timer.setInterval(800)  # let Windows finish laying out screens
+        self._screen_return_timer.timeout.connect(self._return_to_home_screen)
         app = QApplication.instance()
         if app is not None:
             app.screenRemoved.connect(self._handle_screen_change)
+            app.screenAdded.connect(self._handle_screen_added)
+            for screen in app.screens():
+                self._watch_screen(screen)
             main_window.destroyed.connect(self._disconnect_screen_change)
+
+    def _watch_screen(self, screen) -> None:
+        # Resolution, scaling or taskbar changes shrink the usable area in place.
+        with contextlib.suppress(TypeError, RuntimeError):
+            screen.availableGeometryChanged.connect(self._handle_screen_area_change)
 
     def _disconnect_screen_change(self, *_args) -> None:
         app = QApplication.instance()
@@ -3022,6 +3360,11 @@ class UnifiedWidgetController:
         # Already disconnected, or the application is shutting down.
         with contextlib.suppress(TypeError, RuntimeError):
             app.screenRemoved.disconnect(self._handle_screen_change)
+        with contextlib.suppress(TypeError, RuntimeError):
+            app.screenAdded.disconnect(self._handle_screen_added)
+        for screen in app.screens():
+            with contextlib.suppress(TypeError, RuntimeError):
+                screen.availableGeometryChanged.disconnect(self._handle_screen_area_change)
 
     def _current_date(self) -> QDate:
         target = getattr(self.main_window, "current_date", None)
@@ -3463,6 +3806,9 @@ class UnifiedWidgetController:
     def _save_geometry(self, *, size_override: QSize | None = None) -> None:
         if self.widget is None or self._restoring_geometry:
             return
+        if self._displaced_home is not None:
+            # Keep the home monitor's position until the user places the window.
+            return
         screen = self.widget.screen()
         if screen is None:
             screen_info = best_available_geometry(
@@ -3540,20 +3886,81 @@ class UnifiedWidgetController:
         finally:
             self._restoring_geometry = False
 
+    def _saved_screen_name(self) -> str:
+        if self.widget is None:
+            return ""
+        layout_id = self.widget.active_layout_id()
+        payload = deserialize_geometry(
+            self.main_window.settings.value(
+                geometry_key(
+                    self._geometry_layout_id(
+                        layout_id, self._calendar_visible_for_layout(layout_id)
+                    )
+                )
+            )
+        )
+        return str(payload.get("screen") or "") if payload else ""
+
     def _handle_screen_change(self, _screen=None) -> None:
         if not self.is_visible():
             return
+        # The removed screen can still be listed while its signal is delivered.
+        screens = [screen for screen in QApplication.screens() if screen is not _screen]
+        home = self._saved_screen_name()
+        if _screen is not None and home and home not in {screen.name() for screen in screens}:
+            # A monitor was unplugged: show the window on a remaining screen but
+            # keep its saved place so reconnecting brings it back.
+            self._displaced_home = home
+        self._fit_widget_on_screen(screens)
+
+    def _fit_widget_on_screen(self, screens=None) -> None:
         screen_info = best_available_geometry(
-            QApplication.screens(), point=self.widget.frameGeometry().center()
+            QApplication.screens() if screens is None else screens,
+            point=self.widget.frameGeometry().center(),
         )
         if screen_info is None:
             return
         available, _screen_name = screen_info
-        self._restoring_geometry = True
-        try:
-            self.widget.setGeometry(clamp_rect(self.widget.geometry(), available))
-        finally:
-            self._restoring_geometry = False
+        fitted = clamp_rect(self.widget.geometry(), available)
+        if fitted != self.widget.geometry():
+            self._restoring_geometry = True
+            try:
+                self.widget.setGeometry(fitted)
+            finally:
+                self._restoring_geometry = False
+        self._save_geometry()
+
+    def _handle_screen_added(self, screen) -> None:
+        self._watch_screen(screen)
+        if self._displaced_home is not None:
+            self._screen_return_timer.start()
+
+    def _handle_screen_area_change(self, _area=None) -> None:
+        if self.is_visible():
+            self._fit_widget_on_screen()
+
+    def _return_to_home_screen(self) -> None:
+        home = self._displaced_home
+        if home is None or not self.is_visible():
+            return
+        if home not in {screen.name() for screen in QApplication.screens()}:
+            return
+        self._displaced_home = None
+        self._restore_geometry()
+
+    def move_to_screen(self, screen) -> None:
+        """Move the window to ``screen`` keeping its relative place and size, then save."""
+        if self.widget is None or screen is None:
+            return
+        current = self.widget.screen()
+        source = current.availableGeometry() if current is not None else screen.availableGeometry()
+        payload = deserialize_geometry(
+            serialize_geometry(self.widget.geometry(), source, current.name() if current else "")
+        )
+        if payload is None:
+            return
+        self._displaced_home = None
+        self.widget.setGeometry(restore_rect(payload, screen.availableGeometry()))
         self._save_geometry()
 
     def _calendar_visible_for_layout(self, layout_id: str) -> bool:

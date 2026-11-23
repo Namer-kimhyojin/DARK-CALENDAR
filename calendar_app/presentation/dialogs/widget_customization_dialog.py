@@ -203,6 +203,8 @@ class WidgetCustomizationDialog(QDialog):
             self.font_weight,
             self.calendar_style_combo,
             self.density_combo,
+            self.clock_format_combo,
+            self.clock_size_combo,
         ):
             control.installEventFilter(self)
             self._wheel_controls.append(control)
@@ -916,8 +918,73 @@ class WidgetCustomizationDialog(QDialog):
             if key == "widget_mode_show_clock":
                 self.clock_visibility_checkbox = checkbox
             form.addWidget(checkbox)
+            if key == "widget_mode_show_clock":
+                self._build_clock_options(tab, form)
         form.addStretch(1)
         return tab
+
+    def _build_clock_options(self, tab, form) -> None:
+        """Clock format, seconds, size and date line, indented under '시계 표시'."""
+        from calendar_app.presentation.widgets.widget_mode_clock import (
+            CLOCK_DATE_KEY,
+            CLOCK_FORMAT_KEY,
+            CLOCK_SECONDS_KEY,
+            CLOCK_SIZE_KEY,
+            read_clock_options,
+        )
+
+        options = read_clock_options(self.draft)
+        box = QWidget(tab)
+        grid = QGridLayout(box)
+        grid.setContentsMargins(24, 0, 0, 4)
+        grid.setHorizontalSpacing(8)
+        grid.setVerticalSpacing(6)
+
+        self.clock_format_combo = QComboBox(box)
+        self.clock_format_combo.addItem(t("widget_mode.clock_24h", "24시간 (14:05)"), "24h")
+        self.clock_format_combo.addItem(t("widget_mode.clock_12h", "12시간 (오후 2:05)"), "12h")
+        self.clock_format_combo.setCurrentIndex(
+            self.clock_format_combo.findData(options.hour_format)
+        )
+        self.clock_format_combo.currentIndexChanged.connect(
+            lambda: self._change(CLOCK_FORMAT_KEY, self.clock_format_combo.currentData())
+        )
+        self.clock_size_combo = QComboBox(box)
+        self.clock_size_combo.addItem(t("widget_mode.clock_small", "작게 (아래쪽)"), "small")
+        self.clock_size_combo.addItem(t("widget_mode.clock_large", "크게 (위쪽)"), "large")
+        self.clock_size_combo.setCurrentIndex(self.clock_size_combo.findData(options.size))
+        self.clock_size_combo.currentIndexChanged.connect(
+            lambda: self._change(CLOCK_SIZE_KEY, self.clock_size_combo.currentData())
+        )
+        format_label = QLabel(t("widget_mode.clock_format", "시간 형식"), box)
+        size_label = QLabel(t("widget_mode.clock_size", "크기"), box)
+        format_label.setBuddy(self.clock_format_combo)
+        size_label.setBuddy(self.clock_size_combo)
+        self.clock_format_combo.setAccessibleName(format_label.text())
+        self.clock_size_combo.setAccessibleName(t("widget_mode.clock_size_name", "시계 크기"))
+        self.clock_seconds_checkbox = QCheckBox(t("widget_mode.clock_seconds", "초 표시"), box)
+        self.clock_seconds_checkbox.setChecked(options.seconds)
+        self.clock_seconds_checkbox.toggled.connect(
+            lambda value: self._change(CLOCK_SECONDS_KEY, bool(value))
+        )
+        self.clock_date_checkbox = QCheckBox(
+            t("widget_mode.clock_show_date", "날짜 함께 표시"), box
+        )
+        self.clock_date_checkbox.setChecked(options.show_date)
+        self.clock_date_checkbox.toggled.connect(
+            lambda value: self._change(CLOCK_DATE_KEY, bool(value))
+        )
+        grid.addWidget(format_label, 0, 0)
+        grid.addWidget(self.clock_format_combo, 0, 1)
+        grid.addWidget(size_label, 1, 0)
+        grid.addWidget(self.clock_size_combo, 1, 1)
+        grid.addWidget(self.clock_seconds_checkbox, 2, 0, 1, 2)
+        grid.addWidget(self.clock_date_checkbox, 3, 0, 1, 2)
+        grid.setColumnStretch(1, 1)
+        self.clock_options_box = box
+        box.setEnabled(self.clock_visibility_checkbox.isChecked())
+        self.clock_visibility_checkbox.toggled.connect(box.setEnabled)
+        form.addWidget(box)
 
     def _build_preview(self):
         from calendar_app.presentation.widgets.unified_widget_mode import (
@@ -1115,6 +1182,10 @@ class WidgetCustomizationDialog(QDialog):
             "widget_mode_font_weight",
             DENSITY_KEY,
             "widget_mode_show_clock",
+            "widget_mode_clock_format",
+            "widget_mode_clock_seconds",
+            "widget_mode_clock_size",
+            "widget_mode_clock_show_date",
             "widget_mode_show_week",
             "widget_mode_show_hint",
             "widget_mode_show_completed",

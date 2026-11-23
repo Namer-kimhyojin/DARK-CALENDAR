@@ -202,6 +202,8 @@ class _IconKeys:
     GLOBE: str = "globe"
     PEOPLE: str = "people"
     VALIDATE: str = "validate"
+    MORE: str = "more"
+    UNDO: str = "undo"
 
 
 ICON = _IconKeys()
@@ -334,6 +336,8 @@ ICON_MAPPING: dict[str, tuple[str, str, str]] = {
     ICON.REPEAT: ("fa6s.repeat", "", "반복"),
     ICON.CHECK: ("fa6s.check", "", "체크 표시"),
     ICON.CLOSE: ("fa6s.xmark", "", "닫기"),
+    ICON.MORE: ("fa6s.ellipsis", "", "더 보기 메뉴"),
+    ICON.UNDO: ("fa6s.rotate-left", "", "실행 취소"),
     # ── 위젯 개별 아이콘 ──────────────────────────────────────────────────
     ICON.WIDGET_CLOCK: ("mdi6.clock-digital", "", "디지털 시계 위젯"),
     ICON.WIDGET_WEATHER: ("fa6s.cloud-sun", "", "날씨 위젯"),
