@@ -79,6 +79,18 @@ from calendar_app.presentation.widgets.widget_mode_visibility import (
     read_widget_calendar_visibility,
     write_widget_calendar_visibility,
 )
+from calendar_app.presentation.widgets.widget_saved_layouts import (
+    SAVED_SETUPS_KEY,
+    SELECTED_SETUP_KEY,
+    add_setup,
+    capture_setup,
+    delete_setup,
+    find_setup,
+    read_saved_setups,
+    rename_setup,
+    write_saved_setups,
+    write_setup_options,
+)
 from calendar_app.shared.color_utils import composite_color, parse_css_color
 from calendar_app.shared.qt_helpers import mnemonic_safe
 
@@ -163,7 +175,7 @@ class WidgetCustomizationDialog(QDialog):
         tabs.tabBar().setUsesScrollButtons(True)
         controls.setWidget(tabs)
         body.addWidget(controls, 1)
-        tabs.addTab(self._layout_tab(), t("widget_workspace.preferences_view", "화면 형태"))
+        tabs.addTab(self._layout_tab(), t("widget_mode.tab_layout", "배치"))
         tabs.addTab(
             self._appearance_tab(),
             mnemonic_safe(t("widget_workspace.preferences_style", "모양")),
@@ -239,30 +251,54 @@ class WidgetCustomizationDialog(QDialog):
                 self.preview_label.setMinimumHeight(220)
             self.resize(min(940, available.width() - 40), min(680, available.height() - 40))
 
+    @staticmethod
+    def _layout_purpose(layout_id):
+        return {
+            "stacked": t("widget_mode.layout_purpose_stacked", "달력 위 · 목록 아래"),
+            "dashboard": t("widget_mode.layout_purpose_dashboard", "달력 왼쪽 · 목록 오른쪽"),
+            "work_board": t("widget_mode.layout_purpose_work_board", "일정·업무를 열로 나눔"),
+            "minimal": t("widget_mode.layout_purpose_minimal", "목록만 · 가장 작게"),
+        }.get(layout_id, "")
+
     def _layout_tab(self):
+        """배치 tab: pick a layout, set that layout's options, save it as 내 배치.
+
+        Hovering a card previews it; clicking selects it. The options right
+        under the cards always belong to the selected layout.
+        """
         tab = _WrappedTextPage(self)
         layout = QVBoxLayout(tab)
         self.layout_group = QButtonGroup(self)
         self.layout_buttons = {}
+        self._hover_restore = None
         current = read_widget_mode_layout_id(self.draft)
         custom_id = str(self.draft.value(SELECTED_LAYOUT_PRESET_KEY, "") or "")
-        self.my_layouts_btn = QPushButton(t("widget_mode.user_layouts", "내 배치"), tab)
-        self.my_layouts_btn.setObjectName("ghost_btn")
-        self.my_layouts_btn.clicked.connect(self._show_user_layouts)
-        layout.addWidget(self.my_layouts_btn)
-        layout.addWidget(QLabel(t("widget_mode.preset_builtin", "기본 배치"), tab))
-        for spec in widget_mode_layouts():
+        layout.addWidget(self._section_title(t("widget_mode.preset_builtin", "기본 배치"), tab))
+        for index, spec in enumerate(widget_mode_layouts()):
+            if spec.layout_id.startswith("user_layout_"):
+                continue
             button = QToolButton(tab)
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
             label = t(spec.label_key, spec.label_default)
-            button.setText(mnemonic_safe(label))
+            purpose = self._layout_purpose(spec.layout_id)
+            button.setText(mnemonic_safe(label) + (f"\n{purpose}" if purpose else ""))
             button.setAccessibleName(label)
+            button.setAccessibleDescription(purpose)
+            button.setToolTip(
+                t(
+                    "widget_mode.layout_card_tip", "{name} — {purpose}. 위젯 창에서 Ctrl+{number}"
+                ).format(name=label, purpose=purpose, number=index + 1)
+            )
             button.setIcon(self._layout_icon(spec))
             button.setIconSize(QSize(90, 42))
             button.setCheckable(True)
             button.ensurePolished()
-            minimum_width = max(160, button.fontMetrics().horizontalAdvance(button.text()) + 28)
-            minimum_height = max(76, button.fontMetrics().height() + 54)
+            text_width = max(
+                button.fontMetrics().horizontalAdvance(line) for line in button.text().split("\n")
+            )
+            minimum_width = max(160, text_width + 28)
+            lines = button.text().count("\n") + 1
+            minimum_height = max(76, button.fontMetrics().height() * lines + 54)
             # The dialog stylesheet caps every QToolButton at 32px; measure the
             # icon+label card once with that cap lifted, then pin min and max
             # to the same content height. A max below the size hint made grid
@@ -276,14 +312,21 @@ class WidgetCustomizationDialog(QDialog):
             button.setStyleSheet(self._layout_card_style(minimum_width, card_height))
             button.setChecked(spec.layout_id == current and not custom_id)
             button.clicked.connect(
-                lambda _checked=False, key=spec.layout_id: self._change("widget_mode_layout", key)
+                lambda _checked=False, key=spec.layout_id: self._pick_layout_card(key)
             )
+            button.setProperty("layoutId", spec.layout_id)
+            button.installEventFilter(self)
             self.layout_group.addButton(button)
             self.layout_buttons[spec.layout_id] = button
         cards = self._layout_card_grid = QGridLayout()
         layout.addLayout(cards)
         self._reflow_layout_cards()
-        layout.addWidget(QLabel(t("widget_mode.user_layouts", "내 배치"), tab))
+
+        layout.addSpacing(8)
+        self._build_display_group(tab, layout)
+
+        layout.addSpacing(8)
+        layout.addWidget(self._section_title(t("widget_mode.user_layouts", "내 배치"), tab))
         self.user_layout_list = QListWidget(tab)
         self.user_layout_list.setAccessibleName(t("widget_mode.preset_select", "저장한 배치 선택"))
         self.user_layout_list.setIconSize(QSize(72, 48))
@@ -293,32 +336,77 @@ class WidgetCustomizationDialog(QDialog):
         layout.addWidget(self.user_layout_list)
         self.user_layout_empty = QLabel(
             t(
-                "widget_mode.user_layouts_empty",
-                "저장한 내 배치가 없습니다.",
+                "widget_mode.user_layouts_empty_hint",
+                "자주 쓰는 배치와 옵션을 이름을 붙여 저장하면 위젯 창에서 Ctrl+5~9로 바로 바꿀 수 있습니다.",
             ),
             tab,
         )
         self.user_layout_empty.setWordWrap(True)
         layout.addWidget(self.user_layout_empty)
         actions = QHBoxLayout()
-        for attribute, key, text, callback in (
-            ("preset_rename_btn", "preset_rename", "이름 변경…", self._rename_user_layout),
-            ("preset_delete_btn", "preset_delete", "삭제", self._delete_user_layout),
+        for attribute, key, text, callback, name in (
+            (
+                "preset_save_btn",
+                "preset_save",
+                "현재 설정 저장…",
+                self._save_current_setup,
+                "ghost_btn",
+            ),
+            (
+                "preset_rename_btn",
+                "preset_rename",
+                "이름 변경…",
+                self._rename_user_layout,
+                "ghost_btn",
+            ),
+            ("preset_delete_btn", "preset_delete", "삭제", self._delete_user_layout, "danger_btn"),
         ):
             button = QPushButton(t(f"widget_mode.{key}", text), tab)
-            button.setObjectName("danger_btn" if key == "preset_delete" else "ghost_btn")
+            button.setObjectName(name)
             button.clicked.connect(lambda _checked=False, action=callback: action())
             setattr(self, attribute, button)
             actions.addWidget(button)
+        actions.addStretch(1)
         layout.addLayout(actions)
-        note = QLabel(
-            t("widget_mode.preset_draft_note", "프리셋 변경도 적용을 눌러야 저장됩니다."), tab
-        )
-        note.setWordWrap(True)
-        layout.addWidget(note)
         self._reload_user_layouts()
         layout.addStretch(1)
         return tab
+
+    def _section_title(self, text, parent):
+        label = QLabel(text, parent)
+        font = label.font()
+        font.setBold(True)
+        label.setFont(font)
+        return label
+
+    def _pick_layout_card(self, layout_id):
+        # A click ends any hover preview: keep what was clicked.
+        self._hover_restore = None
+        self._change("widget_mode_layout", layout_id)
+
+    def _preview_hovered_layout(self, layout_id):
+        if self._building or getattr(self, "_rendering", False):
+            return
+        if self._hover_restore is None:
+            self._hover_restore = (
+                self.draft.value("widget_mode_layout", None),
+                self.draft.value(FREE_LAYOUT_MODE_KEY, None),
+            )
+        self.draft.values["widget_mode_layout"] = layout_id
+        self.draft.values[FREE_LAYOUT_MODE_KEY] = "preset"
+        self._refresh_preview()
+
+    def _end_layout_hover(self):
+        restore = self._hover_restore
+        if restore is None:
+            return
+        self._hover_restore = None
+        for key, value in zip(("widget_mode_layout", FREE_LAYOUT_MODE_KEY), restore, strict=True):
+            if value is None:
+                self.draft.values.pop(key, None)
+            else:
+                self.draft.values[key] = value
+        self._refresh_preview()
 
     def _user_layout_icon(self, data):
         tokens = main_widget_mode_tokens(self.draft)
@@ -342,24 +430,49 @@ class WidgetCustomizationDialog(QDialog):
         return QIcon(pixmap)
 
     def _reload_user_layouts(self):
+        """내 배치: saved setups first, then older free-layout presets."""
+        selected_setup = str(self.draft.value(SELECTED_SETUP_KEY, "") or "")
         selected = str(self.draft.value(SELECTED_LAYOUT_PRESET_KEY, "") or "")
+        setups = read_saved_setups(self.draft)
         library = read_layout_presets(self.draft)
+        builtin_count = len(self.layout_buttons)
         self.user_layout_list.blockSignals(True)
         self.user_layout_list.clear()
+        for index, setup in enumerate(setups):
+            spec = get_widget_mode_layout(setup["layout_id"])
+            style = (
+                t("widget_mode.month_toggle", "월간")
+                if setup["calendar_style"] == "month"
+                else t("widget_mode.week_toggle", "주간")
+            )
+            detail = t(spec.label_key, spec.label_default)
+            if setup["layout_id"] != "minimal":
+                detail += f" · {style}"
+            number = builtin_count + index + 1
+            if number <= 9:
+                detail += f" · Ctrl+{number}"
+            item = QListWidgetItem(self._layout_icon(spec), f"{setup['name']}\n{detail}")
+            item.setData(Qt.ItemDataRole.UserRole, setup["id"])
+            item.setData(Qt.ItemDataRole.UserRole + 1, "setup")
+            item.setToolTip(setup["name"])
+            self.user_layout_list.addItem(item)
+            if setup["id"] == selected_setup and not self._free_active():
+                self.user_layout_list.setCurrentItem(item)
         for preset in library:
             width, height = preset["layout"]["canvas"]
             item = QListWidgetItem(
                 self._user_layout_icon(preset["layout"]), f"{preset['name']}\n{width} × {height}px"
             )
             item.setData(Qt.ItemDataRole.UserRole, preset["id"])
+            item.setData(Qt.ItemDataRole.UserRole + 1, "preset")
             item.setToolTip(preset["name"])
             self.user_layout_list.addItem(item)
             if preset["id"] == selected:
                 self.user_layout_list.setCurrentItem(item)
         self.user_layout_list.blockSignals(False)
-        self.user_layout_empty.setVisible(not library)
-        self.user_layout_list.setVisible(bool(library))
-        self.my_layouts_btn.setVisible(bool(library))
+        has_items = bool(setups or library)
+        self.user_layout_empty.setVisible(not has_items)
+        self.user_layout_list.setVisible(has_items)
         self._update_preset_actions()
 
     def _show_user_layouts(self):
@@ -369,14 +482,26 @@ class WidgetCustomizationDialog(QDialog):
 
     def _selected_user_layout(self):
         item = self.user_layout_list.currentItem()
+        if item is None or item.data(Qt.ItemDataRole.UserRole + 1) != "preset":
+            return None
         return get_layout_preset(
-            read_layout_presets(self.draft), item.data(Qt.ItemDataRole.UserRole) if item else ""
+            read_layout_presets(self.draft), item.data(Qt.ItemDataRole.UserRole)
         )
 
+    def _selected_setup(self):
+        item = self.user_layout_list.currentItem()
+        if item is None or item.data(Qt.ItemDataRole.UserRole + 1) != "setup":
+            return None
+        return find_setup(read_saved_setups(self.draft), item.data(Qt.ItemDataRole.UserRole))
+
     def _update_preset_actions(self):
-        enabled = self._selected_user_layout() is not None
+        selected = self._selected_user_layout() is not None or self._selected_setup() is not None
+        has_items = self.user_layout_list.count() > 0
         for button in (self.preset_rename_btn, self.preset_delete_btn):
-            button.setEnabled(enabled)
+            button.setEnabled(selected)
+            button.setVisible(has_items)
+        # A free layout has no built-in options to capture.
+        self.preset_save_btn.setEnabled(not self._free_active())
 
     def _clear_builtin_selection(self):
         self.layout_group.setExclusive(False)
@@ -386,16 +511,58 @@ class WidgetCustomizationDialog(QDialog):
 
     def _select_user_layout(self, _item=None, _previous=None):
         self._update_preset_actions()
+        if self._building:
+            return
+        setup = self._selected_setup()
+        if setup is not None:
+            write_setup_options(self.draft, setup)
+            self.draft.setValue("widget_mode_layout", setup["layout_id"])
+            self.draft.setValue(FREE_LAYOUT_MODE_KEY, "preset")
+            self.draft.setValue(SELECTED_LAYOUT_PRESET_KEY, "")
+            self.draft.setValue(SELECTED_SETUP_KEY, setup["id"])
+            self._layout_changed = True
+            self._custom_layout_changed = False
+            button = self.layout_buttons.get(setup["layout_id"])
+            if button is not None:
+                button.setChecked(True)
+            self._sync_visibility_controls()
+            self._update_preset_actions()
+            self._refresh_preview()
+            return
         preset = self._selected_user_layout()
-        if preset is None or self._building:
+        if preset is None:
             return
         write_free_layout(self.draft, preset["layout"])
         self.draft.setValue(SELECTED_LAYOUT_PRESET_KEY, preset["id"])
+        self.draft.setValue(SELECTED_SETUP_KEY, "")
         self._layout_changed = False
         self._custom_layout_changed = True
         self._clear_builtin_selection()
         self._sync_visibility_controls()
+        self._update_preset_actions()
         self._refresh_preview()
+
+    def _save_current_setup(self, name=None):
+        if self._free_active():
+            return
+        layout_id = read_widget_mode_layout_id(self.draft)
+        if name is None:
+            spec = get_widget_mode_layout(layout_id)
+            name = self._prompt_preset_name(
+                t(spec.label_key, spec.label_default),
+                title=t("widget_mode.preset_save", "현재 설정 저장…"),
+            )
+            if name is None:
+                return
+        try:
+            setup = capture_setup(self.draft, name, layout_id)
+            setups = add_setup(read_saved_setups(self.draft), setup)
+        except ValueError:
+            self._preset_error(invalid_name=True)
+            return
+        write_saved_setups(self.draft, setups)
+        self.draft.setValue(SELECTED_SETUP_KEY, setup["id"])
+        self._reload_user_layouts()
 
     def _sync_visibility_controls(self):
         self._sync_display_controls()
@@ -421,9 +588,9 @@ class WidgetCustomizationDialog(QDialog):
             checkbox.setChecked(visible)
             checkbox.blockSignals(blocked)
 
-    def _prompt_preset_name(self, current):
+    def _prompt_preset_name(self, current, title=None):
         dialog = QInputDialog(self)
-        dialog.setWindowTitle(t("widget_mode.preset_rename", "이름 변경…"))
+        dialog.setWindowTitle(title or t("widget_mode.preset_rename", "이름 변경…"))
         dialog.setLabelText(t("widget_mode.preset_name", "배치 이름"))
         dialog.setTextValue(current)
         apply_common_dialog_style(dialog)
@@ -446,6 +613,19 @@ class WidgetCustomizationDialog(QDialog):
         message.exec()
 
     def _rename_user_layout(self, name=None):
+        setup = self._selected_setup()
+        if setup is not None:
+            name = self._prompt_preset_name(setup["name"]) if name is None else name
+            if name is None:
+                return
+            try:
+                setups = rename_setup(read_saved_setups(self.draft), setup["id"], name)
+            except ValueError:
+                self._preset_error(invalid_name=True)
+                return
+            write_saved_setups(self.draft, setups)
+            self._reload_user_layouts()
+            return
         preset = self._selected_user_layout()
         if preset is None:
             return
@@ -463,6 +643,14 @@ class WidgetCustomizationDialog(QDialog):
         self._reload_user_layouts()
 
     def _delete_user_layout(self, *, confirmed=False):
+        setup = self._selected_setup()
+        if setup is not None:
+            if not confirmed and not self._confirm_delete(setup["name"]):
+                return
+            write_saved_setups(self.draft, delete_setup(read_saved_setups(self.draft), setup["id"]))
+            self.draft.setValue(SELECTED_SETUP_KEY, "")
+            self._reload_user_layouts()
+            return
         preset = self._selected_user_layout()
         if preset is None:
             return
@@ -491,6 +679,22 @@ class WidgetCustomizationDialog(QDialog):
         )
         self.draft.setValue(SELECTED_LAYOUT_PRESET_KEY, "")
         self._reload_user_layouts()
+
+    def _confirm_delete(self, name):
+        message = QMessageBox(
+            QMessageBox.Icon.Question,
+            self.windowTitle(),
+            t("widget_mode.preset_delete_confirm", "“{name}” 배치를 삭제할까요?", name=name),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            self,
+        )
+        message.setTextFormat(Qt.TextFormat.PlainText)
+        message.button(QMessageBox.StandardButton.Yes).setText(
+            t("widget_mode.preset_delete", "삭제")
+        )
+        message.setDefaultButton(QMessageBox.StandardButton.Cancel)
+        apply_common_dialog_style(message)
+        return message.exec() == QMessageBox.StandardButton.Yes
 
     def _sync_appearance_controls(self):
         for control, setter, value in (
@@ -787,11 +991,10 @@ class WidgetCustomizationDialog(QDialog):
             )
 
     def _build_display_group(self, tab, form):
-        title = QLabel(t("widget_mode.display_group", "선택한 배치"), tab)
-        title_font = title.font()
-        title_font.setBold(True)
-        title.setFont(title_font)
-        form.addWidget(title)
+        self.display_group_title = self._section_title(
+            t("widget_mode.display_group", "선택한 배치"), tab
+        )
+        form.addWidget(self.display_group_title)
         row = QHBoxLayout()
         self.calendar_style_label = QLabel(t("widget_mode.calendar_style", "달력 형태"), tab)
         row.addWidget(self.calendar_style_label)
@@ -808,6 +1011,21 @@ class WidgetCustomizationDialog(QDialog):
             t("widget_mode.search_pinned", "검색창 항상 표시"), tab
         )
         form.addWidget(self.search_pinned_checkbox)
+        checkbox = QCheckBox(t("widget_mode.show_calendar", "달력 표시"), tab)
+        checkbox.setChecked(
+            self._free_block_enabled("calendar")
+            if self._free_active()
+            else read_widget_calendar_visibility(self.draft, read_widget_mode_layout_id(self.draft))
+        )
+        checkbox.toggled.connect(self._change_calendar_visibility)
+        calendar_help = t(
+            "widget_mode.calendar_visibility_help",
+            "선택한 배치의 달력만 접거나 펼칩니다. 다른 배치의 설정은 유지됩니다.",
+        )
+        checkbox.setToolTip(calendar_help)
+        checkbox.setAccessibleDescription(calendar_help)
+        self.calendar_visibility_checkbox = checkbox
+        form.addWidget(checkbox)
         scope_help = QLabel(t("widget_mode.display_scope_help", "선택한 배치에만 적용됩니다."), tab)
         scope_help.setWordWrap(True)
         form.addWidget(scope_help)
@@ -855,6 +1073,15 @@ class WidgetCustomizationDialog(QDialog):
             blocked = control.blockSignals(True)
             setter(value)
             control.blockSignals(blocked)
+        if hasattr(self, "display_group_title"):
+            spec = get_widget_mode_layout(layout_id)
+            self.display_group_title.setText(
+                t("widget_mode.free_layout", "자유 구성")
+                if self._free_active()
+                else t("widget_mode.layout_options", "{name} 옵션").format(
+                    name=t(spec.label_key, spec.label_default)
+                )
+            )
         show_style = layout_id != "minimal" and not self._free_active()
         self.calendar_style_label.setVisible(show_style)
         self.calendar_style_combo.setVisible(show_style)
@@ -862,7 +1089,12 @@ class WidgetCustomizationDialog(QDialog):
     def _visibility_tab(self):
         tab = QWidget(self)
         form = QVBoxLayout(tab)
-        self._build_display_group(tab, form)
+        from calendar_app.presentation.widgets.widget_mode_skins import (
+            LAYOUT_SELECTION_ENABLED,
+        )
+
+        if not LAYOUT_SELECTION_ENABLED:
+            self._build_display_group(tab, form)
         form.addWidget(QLabel(t("widget_mode.density", "목록 밀도"), tab))
         self.density_combo = QComboBox(tab)
         for density in DENSITIES:
@@ -885,11 +1117,6 @@ class WidgetCustomizationDialog(QDialog):
         form.addWidget(help_label)
         for key, label, default in (
             ("widget_mode_show_clock", t("widget_mode.show_clock", "시계 표시"), "true"),
-            (
-                "widget_mode_show_week",
-                t("widget_mode.show_calendar", "달력 표시"),
-                "true",
-            ),
             ("widget_mode_show_hint", t("widget_mode.show_hint", "보조 설명 표시"), "false"),
             (
                 "widget_mode_show_completed",
@@ -1023,6 +1250,7 @@ class WidgetCustomizationDialog(QDialog):
     def _change(self, key, value):
         self.draft.setValue(key, value)
         if key == "widget_mode_layout" and not self._building:
+            self.draft.setValue(SELECTED_SETUP_KEY, "")
             self._layout_changed = True
             self._custom_layout_changed = False
             self.draft.setValue(FREE_LAYOUT_MODE_KEY, "preset")
@@ -1162,6 +1390,12 @@ class WidgetCustomizationDialog(QDialog):
             self._scale_preview()
 
     def eventFilter(self, watched, event):
+        layout_id = watched.property("layoutId") if isinstance(watched, QToolButton) else None
+        if layout_id and watched in getattr(self, "layout_buttons", {}).values():
+            if event.type() == QEvent.Type.Enter:
+                self._preview_hovered_layout(layout_id)
+            elif event.type() == QEvent.Type.Leave:
+                self._end_layout_hover()
         if event.type() == QEvent.Type.Wheel and watched in getattr(self, "_wheel_controls", ()):
             # Route scrolling explicitly because the tab container may consume it.
             # Clicks, popup lists and keyboard arrows still change the value normally.
@@ -1204,6 +1438,8 @@ class WidgetCustomizationDialog(QDialog):
             "widget_mode_show_completed",
             USER_LAYOUT_PRESETS_KEY,
             SELECTED_LAYOUT_PRESET_KEY,
+            SAVED_SETUPS_KEY,
+            SELECTED_SETUP_KEY,
         }
         settings = self.controller.main_window.settings
         self.controller._save_geometry()

@@ -296,7 +296,9 @@ def test_widget_menu_keeps_only_items_the_toolbar_lacks(window, monkeypatch):
 
     def fake_exec(menu, *_args):
         captured["top"] = [a.text() for a in menu.actions() if not a.isSeparator()]
-        window_menu = next(a.menu() for a in menu.actions() if a.menu() is not None)
+        window_menu = next(
+            a.menu() for a in menu.actions() if a.menu() is not None and a.text() == "창 관리"
+        )
         captured["window"] = [a.text() for a in window_menu.actions() if not a.isSeparator()]
         return None
 
@@ -309,3 +311,90 @@ def test_widget_menu_keeps_only_items_the_toolbar_lacks(window, monkeypatch):
     assert "트레이로 숨기기" in top
     assert "화면 안으로 이동" in captured["window"]
     assert "위치·크기 조정" in captured["window"]
+
+
+# ----- saved layout setups, Ctrl+1-9, hover preview -----------------------------
+def test_saved_setup_round_trip_and_apply(window):
+    from calendar_app.presentation.widgets.widget_saved_layouts import (
+        SELECTED_SETUP_KEY,
+        add_setup,
+        capture_setup,
+        read_saved_setups,
+        write_saved_setups,
+    )
+
+    host, controller, widget = window
+    write_layout_display(host.settings, "dashboard", LayoutDisplay("week", True, True))
+    setup = capture_setup(host.settings, "업무 대시보드", "dashboard")
+    write_saved_setups(host.settings, add_setup([], setup))
+    write_layout_display(host.settings, "dashboard", LayoutDisplay("month", False, False))
+    assert [item["name"] for item in read_saved_setups(host.settings)] == ["업무 대시보드"]
+    choices = controller.layout_choices()
+    assert [kind for kind, *_ in choices][:5] == ["layout"] * 4 + ["setup"]
+    widget._apply_layout_shortcut(4)  # Ctrl+5
+    assert host.settings.value("widget_mode_layout") == "dashboard"
+    assert host.settings.value(SELECTED_SETUP_KEY) == setup["id"]
+    assert host.settings.value("widget_mode_calendar_style_dashboard") == "week"
+    assert widget.feedback_label.text().endswith("업무 대시보드")
+    widget._apply_layout_shortcut(0)  # Ctrl+1
+    assert host.settings.value("widget_mode_layout") == "stacked"
+    assert host.settings.value(SELECTED_SETUP_KEY) == ""
+
+
+def test_malformed_saved_setups_are_skipped_not_dropped():
+    from calendar_app.presentation.widgets.widget_saved_layouts import read_saved_setups
+
+    settings = Settings()
+    good = {"id": "setup_" + "a" * 32, "name": "좋음", "layout_id": "stacked"}
+    settings.setValue(
+        "widget_mode_saved_setups",
+        '{"version":1,"setups":[{"id":"x"},' + __import__("json").dumps(good) + "]}",
+    )
+    assert [item["name"] for item in read_saved_setups(settings)] == ["좋음"]
+
+
+def test_dialog_layout_tab_holds_options_and_saves_setup(window):
+    from calendar_app.presentation.dialogs.widget_customization_dialog import (
+        WidgetCustomizationDialog,
+    )
+    from calendar_app.presentation.widgets.widget_saved_layouts import read_saved_setups
+
+    host, controller, widget = window
+    dialog = WidgetCustomizationDialog(controller, widget)
+    try:
+        layout_tab = dialog.preferences_tabs.widget(0)
+        assert dialog.preferences_tabs.tabText(0) == "배치"
+        assert layout_tab.isAncestorOf(dialog.calendar_style_combo)
+        assert layout_tab.isAncestorOf(dialog.calendar_visibility_checkbox)
+        assert not dialog.user_layout_list.isVisibleTo(dialog)
+        assert dialog.user_layout_empty.isVisibleTo(dialog)
+        assert not dialog.preset_rename_btn.isVisibleTo(dialog)
+        dialog.layout_buttons["dashboard"].click()
+        assert "좌우형" in dialog.display_group_title.text()
+        dialog._save_current_setup("넓은 화면")
+        assert dialog.user_layout_list.count() == 1
+        assert read_saved_setups(host.settings) == []  # draft only until 적용
+        dialog._apply()
+        assert [item["name"] for item in read_saved_setups(host.settings)] == ["넓은 화면"]
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+
+
+def test_hovering_a_layout_card_previews_then_restores(window):
+    from calendar_app.presentation.dialogs.widget_customization_dialog import (
+        WidgetCustomizationDialog,
+    )
+
+    _host, controller, widget = window
+    dialog = WidgetCustomizationDialog(controller, widget)
+    try:
+        before = dialog.draft.value("widget_mode_layout")
+        card = dialog.layout_buttons["minimal"]
+        dialog.eventFilter(card, QEvent(QEvent.Type.Enter))
+        assert dialog.preview.active_layout_id() == "minimal"
+        dialog.eventFilter(card, QEvent(QEvent.Type.Leave))
+        assert dialog.draft.value("widget_mode_layout") == before
+    finally:
+        dialog.close()
+        dialog.deleteLater()

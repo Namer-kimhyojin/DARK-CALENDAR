@@ -80,13 +80,17 @@ def test_user_layout_menu_marks_only_matching_saved_configuration(workspace, mon
 
     with patch("PyQt6.QtWidgets.QMenu.exec", execute):
         widget._open_menu(QPoint(0, 0))
-    selected = next(action for action in captured if action.text() == "나의 자유 배치")
+    selected = next(
+        action for action in captured if action.text().split(chr(9))[0] == "나의 자유 배치"
+    )
     assert selected.isChecked()
     coordinator.controller.set_layout("stacked")
     captured.clear()
     with patch("PyQt6.QtWidgets.QMenu.exec", execute):
         widget._open_menu(QPoint(0, 0))
-    selected = next(action for action in captured if action.text() == "나의 자유 배치")
+    selected = next(
+        action for action in captured if action.text().split(chr(9))[0] == "나의 자유 배치"
+    )
     assert not selected.isChecked()
     selected.trigger()
     assert host.settings.value(SELECTED_LAYOUT_PRESET_KEY) == preset_id

@@ -32437,6 +32437,52 @@
       "scoped_hashes": {
         "calendar_app/presentation/widgets/unified_widget_mode.py": "b9e305bad5f2c712e645c1a298da8702f98812b1da21e991f1d571a9e4ab8707"
       }
+    },
+    {
+      "id": "widget-layout-selection-restored-20261123",
+      "created_at": "2026-11-23T10:27:14.230971+09:00",
+      "kind": "change",
+      "previous_version": "5.7.0",
+      "version": "5.7.0",
+      "summary": "위젯 전용 모드 배치 선택(화면 형태 탭·더 보기 배치 메뉴·위젯 관리자 배치 줄) 다시 표시",
+      "files": [
+        "calendar_app/presentation/widgets/widget_mode_skins.py"
+      ],
+      "scoped_hashes": {
+        "calendar_app/presentation/widgets/widget_mode_skins.py": "5b04c048cb836e70ea30aa118af50bda7ca9f6b70d01897063bb92711694384e"
+      }
+    },
+    {
+      "id": "widget-layout-redesign-20261123",
+      "created_at": "2026-11-23T10:50:28.195683+09:00",
+      "kind": "change",
+      "previous_version": "5.7.0",
+      "version": "5.7.0",
+      "summary": "위젯 배치 재구성: 배치 탭(용도 설명·마우스 올림 미리보기·배치별 옵션 통합), 내 배치 현재 설정 저장, Ctrl+1~9 배치 전환",
+      "files": [
+        "calendar_app/presentation/dialogs/widget_customization_dialog.py",
+        "calendar_app/presentation/widgets/unified_widget_mode.py",
+        "calendar_app/presentation/widgets/widget_saved_layouts.py"
+      ],
+      "scoped_hashes": {
+        "calendar_app/presentation/dialogs/widget_customization_dialog.py": "29c3d732bc4c8fc3048d9aac0331fd6c2189139f562e0606f9c9b62d8cd72d4d",
+        "calendar_app/presentation/widgets/unified_widget_mode.py": "9c79398ff830a814d23584e62f7cf722c59e556b85b818a7e7726fd0ce2b9fda",
+        "calendar_app/presentation/widgets/widget_saved_layouts.py": "0b747fe42b37d24aab731ef19244e8509852bdca45ab85639096ab50c21ced41"
+      }
+    },
+    {
+      "id": "widget-workspace-saved-setup-key-20261123",
+      "created_at": "2026-11-23T10:51:22.175218+09:00",
+      "kind": "change",
+      "previous_version": "5.7.0",
+      "version": "5.7.0",
+      "summary": "작업 공간 스냅샷에 선택한 내 배치(저장한 설정) 포함",
+      "files": [
+        "calendar_app/domain/widget_workspace.py"
+      ],
+      "scoped_hashes": {
+        "calendar_app/domain/widget_workspace.py": "1acb3c3b9983df167889545093b52e5545d6ad1cbf3966a185a9bd0389b9dcfd"
+      }
     }
   ],
   "observed_inputs": {
@@ -32796,7 +32842,7 @@
     "calendar_app/domain/task_constants.py": "081fccfa33a6421ece51d7eb4b37a401d1f94157b058cfcd32f56df13b18a305",
     "calendar_app/domain/task_status_view.py": "c4f68139d5ede658d5e7ed5482b62c0ab4835b128da5e11198824f54355c259c",
     "calendar_app/domain/task_validation.py": "ee1056c9deaf5a67f351e67290401adec8667a72f237ff8cdbb1048b6ef8fbe7",
-    "calendar_app/domain/widget_workspace.py": "6efb0aecf06f73967d2ffe33e8f829719e12b49fa483f95dae92f17ddd051a1d",
+    "calendar_app/domain/widget_workspace.py": "1acb3c3b9983df167889545093b52e5545d6ad1cbf3966a185a9bd0389b9dcfd",
     "calendar_app/infrastructure/__init__.py": "0249aef5808d43e78e2acf34fbedaf67132290e867102e1255e88252e5100e38",
     "calendar_app/infrastructure/caldav_sync/__init__.py": "2a91c7d4731a4d2af6481af557e29c388fbf1cd8f16230281ec7bc1a3a03c031",
     "calendar_app/infrastructure/caldav_sync/client.py": "2fda668d28e1bcca1c294112bd2cb628f82f83718872aa8d0eae73a6d72936f2",
@@ -32925,7 +32971,7 @@
     "calendar_app/presentation/dialogs/task_dialog_base.py": "70cdb0cd1e578743de25c8ab5fbb041e8b536de57a06f6f8dde9195b138d2fcc",
     "calendar_app/presentation/dialogs/task_dialog_unified.py": "8e1c2e14fc2d09dd8fd6326374bdfc587f9d1cd819f0abc33315245cdc06c9df",
     "calendar_app/presentation/dialogs/time_picker_widget.py": "46548a3b4e677c5e6534eb86162965c97345081a1172a13aab163a26a3be3a66",
-    "calendar_app/presentation/dialogs/widget_customization_dialog.py": "e94e5ec0a5789fccad812e2a6b8342524fbdd4aa861f8707e1be68afa02f6ca7",
+    "calendar_app/presentation/dialogs/widget_customization_dialog.py": "29c3d732bc4c8fc3048d9aac0331fd6c2189139f562e0606f9c9b62d8cd72d4d",
     "calendar_app/presentation/dialogs/widget_desktop_layout_dialog.py": "353bcad7409814880ff0e8984e52d74d79be1a8b1e44e3377e63d2d27258355d",
     "calendar_app/presentation/dialogs/widget_workspace_options_dialog.py": "f93c73d8026e437e9bff441e7467b18f39be15c172f73658637bc470f56e2062",
     "calendar_app/presentation/drag_drop_manager.py": "6caf53a1b0e8509d41899aba34a0eb17e1e5f4e3a72a582752e0ba3dc88ea8a2",
@@ -33037,7 +33083,7 @@
     "calendar_app/presentation/widgets/panel_widget_theme.py": "9fd1a51627433b0fc9127025c90ebf223eb5502c32120491acf40c4376aac701",
     "calendar_app/presentation/widgets/schedule_info.py": "4e052cda8a56981aeb23ceeea8ecfcccb179d2f7b2449274ba9140550934b8c7",
     "calendar_app/presentation/widgets/ui_components.py": "949ca600f9705849a0ff0ac706a4c6743ff882e2016c87ec5a33f08040a3bf1d",
-    "calendar_app/presentation/widgets/unified_widget_mode.py": "b9e305bad5f2c712e645c1a298da8702f98812b1da21e991f1d571a9e4ab8707",
+    "calendar_app/presentation/widgets/unified_widget_mode.py": "9c79398ff830a814d23584e62f7cf722c59e556b85b818a7e7726fd0ce2b9fda",
     "calendar_app/presentation/widgets/weather_asset_packs.py": "38458fb172f0439b5a63abdca88f2ecd23ef33b91d5ca72f56fdc24981251852",
     "calendar_app/presentation/widgets/weather_design_dialog.py": "d471499fee1033a6f50483641b539486f7e9abd2612346c5bd430a9d1f502627",
     "calendar_app/presentation/widgets/weather_designs.py": "d4ec3fb2d3acc3d68469116c2da0457eab1c8cef4b8449f0ca754cf5ba590307",
@@ -33060,7 +33106,7 @@
     "calendar_app/presentation/widgets/widget_mode_density.py": "428bb64738c46999a114a86f38c7cae4ac947cb54f232c3222fc711ef67dcde4",
     "calendar_app/presentation/widgets/widget_mode_geometry.py": "33e36e6ab029bf644cc43c7d15b72e9f8224d9bdf3b63dce543ca64dcd43e146",
     "calendar_app/presentation/widgets/widget_mode_opacity.py": "5be74e7559d4f2237fe17f872443c81046ad831770dd88a848e98d7f81ceec79",
-    "calendar_app/presentation/widgets/widget_mode_skins.py": "f5cfef374ee367118d7a3c8b0391a3c238521a7ce8380363a50dde8aaa4f2715",
+    "calendar_app/presentation/widgets/widget_mode_skins.py": "5b04c048cb836e70ea30aa118af50bda7ca9f6b70d01897063bb92711694384e",
     "calendar_app/presentation/widgets/widget_mode_theme.py": "541ef5a173b94bb987fab9fa48a52b79553610d932cf304ccc4724ede1fa4eb9",
     "calendar_app/presentation/widgets/widget_mode_typography.py": "fea4bf995ec60d731547847d1bbf4a77006dd7161e0c3bf6831d2770cb626944",
     "calendar_app/presentation/widgets/widget_mode_visibility.py": "415ad3968c84aa6633ec3d40893ca9c0ecfaad97d8dfb0084b3e412ff5f60702",
@@ -33180,7 +33226,8 @@
     "calendar_app/presentation/widgets/widget_mode_migration.py": "590afcedda44b1b65b3031ccc945e48335536084b67a0cea626139beb0f6f849",
     "calendar_app/presentation/widgets/widget_mode_surfaces.py": "3a5da808acae9db0f290db0e154d308e849c1413a94f5f3c8c7ad684f9815aba",
     "calendar_app/presentation/widgets/widget_date_picker.py": "be9711281e7392fca92426fded9dcdb9a9b7673da1d9065c2c1c7f5c865c776e",
-    "calendar_app/presentation/widgets/widget_mode_clock.py": "923264cababd45b6516b441477f4a57619676a48b8fb9d72683a2a75e959c4c9"
+    "calendar_app/presentation/widgets/widget_mode_clock.py": "923264cababd45b6516b441477f4a57619676a48b8fb9d72683a2a75e959c4c9",
+    "calendar_app/presentation/widgets/widget_saved_layouts.py": "0b747fe42b37d24aab731ef19244e8509852bdca45ab85639096ab50c21ced41"
   },
   "legacy_event_count": 47,
   "release": {

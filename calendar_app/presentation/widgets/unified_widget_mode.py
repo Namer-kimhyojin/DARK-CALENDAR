@@ -1289,6 +1289,30 @@ class UnifiedWidgetWindow(QWidget):
 
         self._build_ui()
         self._setup_refresh_timer()
+        self._install_layout_shortcuts()
+
+    def _install_layout_shortcuts(self) -> None:
+        """Ctrl+1-9 switch layouts in the order of the 더 보기 > 배치 menu."""
+        from PyQt6.QtGui import QShortcut
+
+        self._layout_shortcuts = []
+        for number in range(1, 10):
+            shortcut = QShortcut(QKeySequence(f"Ctrl+{number}"), self)
+            shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+            shortcut.activated.connect(lambda index=number - 1: self._apply_layout_shortcut(index))
+            self._layout_shortcuts.append(shortcut)
+
+    def _apply_layout_shortcut(self, index: int) -> None:
+        from calendar_app.presentation.widgets.widget_mode_skins import LAYOUT_SELECTION_ENABLED
+
+        if not LAYOUT_SELECTION_ENABLED:
+            return
+        choices = self.controller.layout_choices()
+        if not 0 <= index < len(choices):
+            return
+        kind, choice_id, label = choices[index]
+        if self.controller.apply_layout_choice(kind, choice_id):
+            self.show_feedback(t("widget_mode.layout_switched", "배치: {name}").format(name=label))
 
     def _main_window_key_handler(self, event):
         """F12 and show/hide reach this window only while the hidden main window cannot."""
@@ -3193,51 +3217,73 @@ class UnifiedWidgetWindow(QWidget):
             self.controller._handle_screen_change()
 
     def _add_layout_menu(self, menu: QMenu) -> None:
-        """배치 ▸ quick switch, only while layout selection is enabled."""
+        """배치 > quick switch (Ctrl+1-9), only while layout selection is enabled."""
+        from calendar_app.presentation.widgets.widget_layout_presets import (
+            SELECTED_LAYOUT_PRESET_KEY,
+            get_layout_preset,
+            read_layout_presets,
+        )
         from calendar_app.presentation.widgets.widget_mode_skins import LAYOUT_SELECTION_ENABLED
+        from calendar_app.presentation.widgets.widget_saved_layouts import (
+            SELECTED_SETUP_KEY,
+            find_setup,
+            read_saved_setups,
+            setup_matches,
+        )
 
         if not LAYOUT_SELECTION_ENABLED:
             return
-        layout_menu = menu.addMenu(t("widget_mode.preferences_layout", "배치"))
         settings = self.controller.main_window.settings
+        layout_menu = menu.addMenu(t("widget_mode.preferences_layout", "배치"))
         current_layout = read_widget_mode_layout_id(settings)
-        for layout_spec in widget_mode_layouts():
-            action = layout_menu.addAction(t(layout_spec.label_key, layout_spec.label_default))
-            action.setCheckable(True)
-            action.setChecked(
-                not self._free_layout_active and current_layout == layout_spec.layout_id
-            )
-            action.triggered.connect(
-                lambda _checked=False, selected=layout_spec.layout_id: self.controller.set_layout(
-                    selected
-                )
-            )
-
-        from calendar_app.presentation.widgets.widget_layout_presets import (
-            SELECTED_LAYOUT_PRESET_KEY,
-            read_layout_presets,
+        selected_setup = find_setup(
+            read_saved_setups(settings), str(settings.value(SELECTED_SETUP_KEY, "") or "")
         )
-
-        custom_presets = read_layout_presets(settings)
-        if custom_presets:
-            layout_menu.addSection(t("widget_mode.user_layouts", "내 배치"))
+        if selected_setup is not None and not setup_matches(
+            settings, selected_setup, current_layout
+        ):
+            selected_setup = None
+        active_preset = str(settings.value(SELECTED_LAYOUT_PRESET_KEY, "") or "")
+        presets = read_layout_presets(settings)
+        working = None
+        if self._free_layout_active:
             from calendar_app.presentation.widgets.widget_free_layout import read_free_layout
 
-            active_id = str(settings.value(SELECTED_LAYOUT_PRESET_KEY, "") or "")
-            active_layout = read_free_layout(settings) if self._free_layout_active else None
-            for preset in custom_presets:
-                action = layout_menu.addAction(preset["name"])
-                action.setCheckable(True)
-                action.setChecked(
+            working = read_free_layout(settings)
+        section_added = False
+        for index, (kind, choice_id, label) in enumerate(self.controller.layout_choices()):
+            if kind != "layout" and not section_added:
+                layout_menu.addSection(t("widget_mode.user_layouts", "내 배치"))
+                section_added = True
+            text = f"{label}\tCtrl+{index + 1}" if index < 9 else label
+            action = layout_menu.addAction(text)
+            action.setCheckable(True)
+            if kind == "layout":
+                checked = (
+                    not self._free_layout_active
+                    and selected_setup is None
+                    and current_layout == choice_id
+                )
+            elif kind == "setup":
+                checked = (
+                    not self._free_layout_active
+                    and selected_setup is not None
+                    and selected_setup["id"] == choice_id
+                )
+            else:
+                preset = get_layout_preset(presets, choice_id)
+                checked = bool(
                     self._free_layout_active
-                    and active_id == preset["id"]
-                    and active_layout == preset["layout"]
+                    and preset is not None
+                    and active_preset == choice_id
+                    and working == preset["layout"]
                 )
-                action.triggered.connect(
-                    lambda _checked=False, selected=preset["id"]: (
-                        self.controller.apply_layout_preset(selected)
-                    )
+            action.setChecked(checked)
+            action.triggered.connect(
+                lambda _checked=False, k=kind, c=choice_id: self.controller.apply_layout_choice(
+                    k, c
                 )
+            )
 
     def set_data_state(self, state):
         if state != self._data_state:
@@ -4023,6 +4069,67 @@ class UnifiedWidgetController:
         self._restore_geometry()
         self.widget._style_signature = None
         self.widget.apply_theme()
+
+    def apply_saved_setup(self, setup_id: str) -> bool:
+        """Switch to a saved layout setup: its layout plus its display options."""
+        from calendar_app.presentation.widgets.widget_saved_layouts import (
+            SELECTED_SETUP_KEY,
+            find_setup,
+            read_saved_setups,
+            write_setup_options,
+        )
+
+        settings = self.main_window.settings
+        setup = find_setup(read_saved_setups(settings), setup_id)
+        if setup is None:
+            return False
+        self._save_geometry()
+        write_setup_options(settings, setup)
+        same_layout = (
+            read_widget_mode_layout_id(settings) == setup["layout_id"]
+            and self.widget is not None
+            and not self.widget._free_layout_active
+        )
+        if same_layout:
+            self._restoring_geometry = True
+            try:
+                self.widget.apply_selected_layout(resize_to_layout=True, force=True)
+            finally:
+                self._restoring_geometry = False
+            self._restore_geometry()
+        else:
+            self.set_layout(setup["layout_id"])
+        settings.setValue(SELECTED_SETUP_KEY, setup["id"])
+        return True
+
+    def layout_choices(self) -> list[tuple[str, str, str]]:
+        """Ordered (kind, id, label) for the 배치 menu and Ctrl+1-9.
+
+        Built-in layouts first, then saved setups, then older free-layout presets.
+        """
+        from calendar_app.presentation.widgets.widget_layout_presets import read_layout_presets
+        from calendar_app.presentation.widgets.widget_saved_layouts import read_saved_setups
+
+        settings = self.main_window.settings
+        choices = [
+            ("layout", spec.layout_id, t(spec.label_key, spec.label_default))
+            for spec in widget_mode_layouts()
+            if not spec.layout_id.startswith("user_layout_")
+        ]
+        choices += [("setup", item["id"], item["name"]) for item in read_saved_setups(settings)]
+        choices += [("preset", item["id"], item["name"]) for item in read_layout_presets(settings)]
+        return choices
+
+    def apply_layout_choice(self, kind: str, choice_id: str) -> bool:
+        if kind == "layout":
+            from calendar_app.presentation.widgets.widget_saved_layouts import SELECTED_SETUP_KEY
+
+            self.set_layout(choice_id)
+            self.main_window.settings.setValue(SELECTED_SETUP_KEY, "")
+            return True
+        if kind == "setup":
+            return self.apply_saved_setup(choice_id)
+        return bool(self.apply_layout_preset(choice_id))
 
     def apply_layout_preset(self, preset_id):
         from calendar_app.presentation.widgets.widget_layout_presets import (

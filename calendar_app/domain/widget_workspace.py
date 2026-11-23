@@ -53,6 +53,7 @@ MODE_KEYS = frozenset(
         "widget_mode_layout_mode",
         "widget_mode_free_layout",
         "widget_mode_user_layout_id",
+        "widget_mode_saved_setup_id",
         "widget_mode_filter",
         "widget_mode_font_size",
         "widget_mode_font_family",

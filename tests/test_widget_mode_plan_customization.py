@@ -208,16 +208,28 @@ def test_layout_cards_size_for_long_translated_labels(workspace):
     with patch.object(module, "t", side_effect=long_labels):
         dialog = WidgetCustomizationDialog(coordinator.controller, widget)
     for button in dialog.layout_buttons.values():
-        assert button.minimumWidth() >= button.fontMetrics().horizontalAdvance(button.text()) + 28
-        assert button.minimumHeight() >= button.fontMetrics().height() + 54
+        # Cards hold the name and a purpose line; each line must fit.
+        lines = button.text().split(chr(10))
+        widest = max(button.fontMetrics().horizontalAdvance(line) for line in lines)
+        assert button.minimumWidth() >= widest + 28
+        assert button.minimumHeight() >= button.fontMetrics().height() * len(lines) + 54
     dialog.reject()
     dialog.deleteLater()
 
 
-def test_layout_selection_is_hidden_while_disabled(workspace):
+def test_layout_tab_is_offered_when_enabled(workspace):
     dialog = _open_preferences(workspace, "stacked")
     try:
-        assert not widget_mode_skins.LAYOUT_SELECTION_ENABLED
+        assert widget_mode_skins.LAYOUT_SELECTION_ENABLED
+        assert dialog.preferences_tabs.isTabVisible(0)
+    finally:
+        _close(dialog)
+
+
+def test_layout_selection_is_hidden_while_disabled(workspace, monkeypatch):
+    monkeypatch.setattr(widget_mode_skins, "LAYOUT_SELECTION_ENABLED", False)
+    dialog = _open_preferences(workspace, "stacked")
+    try:
         assert not dialog.preferences_tabs.isTabVisible(0)
         assert dialog.preferences_tabs.currentIndex() == 1
     finally:

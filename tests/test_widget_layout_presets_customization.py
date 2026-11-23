@@ -123,7 +123,7 @@ def test_my_layouts_navigation_reveals_selected_list(library_dialog):
     for _ in range(3):
         _APP.processEvents()
     assert dialog.controls_scroll.verticalScrollBar().maximum() > 0
-    dialog.my_layouts_btn.click()
+    dialog._show_user_layouts()
     _APP.processEvents()
     assert dialog.controls_scroll.verticalScrollBar().value() > 0
     assert dialog.user_layout_list.hasFocus()
