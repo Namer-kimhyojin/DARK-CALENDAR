@@ -94,6 +94,22 @@ def _scope_key(cfg, kind, *args):
     return (kind, cfg.fileName(), int(cfg.format().value), args)
 
 
+def cached_in_scope(kind, build, *args, settings=None):
+    """Return ``build(cfg)`` once per theme_cache_scope for this settings store and args.
+
+    Outside a scope, or for draft settings, it simply calls ``build``. A dict
+    result is copied so callers can edit it.
+    """
+    cfg = _resolve_settings(settings)
+    key = _scope_key(cfg, kind, *args)
+    if key is None:
+        return build(cfg)
+    if key not in _scope_cache:
+        _scope_cache[key] = build(cfg)
+    value = _scope_cache[key]
+    return dict(value) if isinstance(value, dict) else value
+
+
 @lru_cache(maxsize=32)
 def _overrides_value(cls) -> bool:
     return any(

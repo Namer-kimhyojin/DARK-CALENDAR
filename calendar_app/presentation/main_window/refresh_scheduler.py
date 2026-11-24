@@ -163,15 +163,19 @@ class RefreshSchedulerMixin:
                 notify_data_consumers,
             )
             return
-        if pending["left"]:
-            self.load_left_panel(force=False)
-            self._panel_dirty["left"] = False
-        if pending["center"]:
-            self.load_center_panel(force=False)
-            self._panel_dirty["center"] = False
-        if pending["right"]:
-            self.load_right_panel(force=False)
-            self._panel_dirty["right"] = False
+        from calendar_app.shared.theme_snapshot import theme_cache_scope
+
+        # One scope for the whole flush: the panels share one theme read.
+        with theme_cache_scope():
+            if pending["left"]:
+                self.load_left_panel(force=False)
+                self._panel_dirty["left"] = False
+            if pending["center"]:
+                self.load_center_panel(force=False)
+                self._panel_dirty["center"] = False
+            if pending["right"]:
+                self.load_right_panel(force=False)
+                self._panel_dirty["right"] = False
 
         # Proxy synchronization: trigger unified widget refresh if any operational data changed
         if notify_data_consumers and (pending["left"] or pending["center"] or pending["right"]):

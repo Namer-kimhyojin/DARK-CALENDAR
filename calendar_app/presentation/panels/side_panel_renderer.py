@@ -307,8 +307,13 @@ def _color_rgba(color_hex, alpha=255, fallback="#4da6ff"):
 
 def _panel_text_palette() -> dict:
     """Return panel text palette dict (primary/secondary/muted/accent)."""
-    text_theme, _ = get_text_theme_and_panel_base()
-    return derive_text_palette(str(text_theme), get_theme_color())
+    from calendar_app.shared.theme_snapshot import cached_in_scope
+
+    def build(cfg):
+        text_theme, _ = get_text_theme_and_panel_base(cfg)
+        return derive_text_palette(str(text_theme), get_theme_color(cfg))
+
+    return cached_in_scope("panel_text_palette", build)
 
 
 def _panel_text_color() -> str:

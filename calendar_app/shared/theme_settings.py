@@ -135,28 +135,33 @@ def get_opacity_factor(settings=None, default=200, persist_normalized=False):
     return max(_WALLPAPER_OPACITY_FLOOR, min(1.0, normalized / 255.0))
 
 
+def _effective_appearance(settings, default_theme_color):
+    """(text_theme, panel_base, accent), read once per theme_cache_scope."""
+    # Imported here: theme_snapshot imports this module.
+    from calendar_app.shared.theme_snapshot import cached_in_scope
+
+    def build(cfg):
+        return resolve_effective_appearance(
+            cfg,
+            text_theme=str(cfg.value("text_theme", "dark") or "dark"),
+            panel_base_color=str(cfg.value("panel_base_color", "#1c1c1c") or "#1c1c1c"),
+            theme_color=str(cfg.value("theme_color", default_theme_color) or default_theme_color),
+        )
+
+    return cached_in_scope(
+        "effective_appearance", build, default_theme_color, settings=_get_settings(settings)
+    )
+
+
 def get_text_theme_and_panel_base(settings=None):
     """Return the effective text theme and panel base from app settings."""
-    cfg = _get_settings(settings)
-    text_theme, panel_base, _ = resolve_effective_appearance(
-        cfg,
-        text_theme=str(cfg.value("text_theme", "dark") or "dark"),
-        panel_base_color=str(cfg.value("panel_base_color", "#1c1c1c") or "#1c1c1c"),
-        theme_color=str(cfg.value("theme_color", "#4da6ff") or "#4da6ff"),
-    )
+    text_theme, panel_base, _ = _effective_appearance(settings, "#4da6ff")
     return text_theme, panel_base
 
 
 def get_theme_color(settings=None, default="#4da6ff"):
     """Return the effective theme accent color from app settings."""
-    cfg = _get_settings(settings)
-    _, _, accent = resolve_effective_appearance(
-        cfg,
-        text_theme=str(cfg.value("text_theme", "dark") or "dark"),
-        panel_base_color=str(cfg.value("panel_base_color", "#1c1c1c") or "#1c1c1c"),
-        theme_color=str(cfg.value("theme_color", default) or default),
-    )
-    return accent
+    return _effective_appearance(settings, default)[2]
 
 
 def get_theme_palette_inputs(settings=None, persist_opacity=False):

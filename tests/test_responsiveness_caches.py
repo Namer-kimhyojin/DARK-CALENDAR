@@ -103,6 +103,82 @@ class ThemeCacheScopeTests(unittest.TestCase):
             )
 
 
+class EffectiveAppearanceScopeTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls._app = QApplication.instance() or QApplication([])
+
+    def setUp(self):
+        self._dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self._dir.cleanup)
+        self.ini = str(Path(self._dir.name) / "settings.ini")
+        self.settings = QSettings(self.ini, QSettings.Format.IniFormat)
+        self.settings.setValue("theme_color", "#3366cc")
+
+    def _count_resolves(self):
+        from calendar_app.shared import theme_settings
+
+        original = theme_settings.resolve_effective_appearance
+        calls = []
+
+        def counting(*args, **kwargs):
+            calls.append(1)
+            return original(*args, **kwargs)
+
+        patcher = patch.object(theme_settings, "resolve_effective_appearance", counting)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return calls
+
+    def test_theme_color_and_text_theme_resolve_once_per_scope(self):
+        from calendar_app.shared.theme_settings import (
+            get_text_theme_and_panel_base,
+            get_theme_color,
+        )
+
+        calls = self._count_resolves()
+        with theme_snapshot.theme_cache_scope():
+            for _ in range(5):
+                accent = get_theme_color(self.settings)
+                get_text_theme_and_panel_base(self.settings)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(accent.lower(), "#3366cc")
+
+        get_theme_color(self.settings)
+        get_theme_color(self.settings)
+        self.assertEqual(len(calls), 3)
+
+    def test_theme_color_change_is_seen_after_the_scope_ends(self):
+        from calendar_app.shared.theme_settings import get_theme_color
+
+        with theme_snapshot.theme_cache_scope():
+            get_theme_color(self.settings)
+        self.settings.setValue("theme_color", "#cc3366")
+        with theme_snapshot.theme_cache_scope():
+            self.assertEqual(get_theme_color(self.settings).lower(), "#cc3366")
+
+    def test_draft_settings_are_resolved_every_time(self):
+        from calendar_app.shared.theme_settings import get_theme_color
+
+        calls = self._count_resolves()
+        draft = _DraftSettings(self.ini, QSettings.Format.IniFormat)
+        with theme_snapshot.theme_cache_scope():
+            get_theme_color(draft)
+            get_theme_color(draft)
+        self.assertEqual(len(calls), 2)
+
+    def test_cached_dicts_are_copies(self):
+        with theme_snapshot.theme_cache_scope():
+            first = theme_snapshot.cached_in_scope(
+                "probe", lambda _cfg: {"a": 1}, settings=self.settings
+            )
+            first["a"] = 2
+            second = theme_snapshot.cached_in_scope(
+                "probe", lambda _cfg: {"a": 3}, settings=self.settings
+            )
+        self.assertEqual(second, {"a": 1})
+
+
 class ChangeMarkerTests(TemporaryDatabaseTestCase):
     def test_marker_moves_on_own_and_other_connection_writes(self):
         manager = database_unified.db_manager
