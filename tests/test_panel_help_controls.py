@@ -104,6 +104,33 @@ class PanelHelpControlTests(unittest.TestCase):
         self.assertTrue(all(btn.width() == 28 and btn.height() == 28 for btn in buttons))
         self.assertTrue(all(btn.accessibleName() for btn in buttons))
 
+    def test_rerendered_title_bar_replaces_the_old_one(self):
+        from PyQt6.QtCore import QCoreApplication, QEvent
+        from PyQt6.QtWidgets import QDockWidget
+
+        from calendar_app.presentation.panels.side_panel_renderer import _install_dock_title_bar
+
+        host = QMainWindow()
+        self.addCleanup(host.close)
+        dock = QDockWidget(host)
+        dock.setTitleBarWidget(QWidget())
+        for _ in range(4):
+            title_bar = DockTitleBar("Routine", add_handler=lambda: None)
+            _install_dock_title_bar(dock, title_bar)
+        QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+
+        self.assertIs(title_bar, dock.titleBarWidget())
+        self.assertIs(dock, title_bar._dock())
+        self.assertEqual([title_bar], dock.findChildren(DockTitleBar))
+        self.assertEqual(
+            [],
+            [
+                w
+                for w in dock.findChildren(QWidget)
+                if w.parent() is dock and w is not title_bar and type(w) is QWidget
+            ],
+        )
+
     def test_panel_empty_state_offers_primary_action(self):
         host = QWidget()
         self.addCleanup(host.close)

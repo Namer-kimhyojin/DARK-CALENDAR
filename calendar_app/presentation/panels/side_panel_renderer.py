@@ -815,6 +815,19 @@ class DockTitleBar(QWidget):
             dock.setFloating(not dock.isFloating())
 
 
+def _install_dock_title_bar(dock, title_bar):
+    """Put ``title_bar`` on ``dock`` and delete the title bar it replaces.
+
+    QDockWidget.setTitleBarWidget does not delete the previous widget, so every
+    panel render used to leave a hidden title bar, its buttons and menu behind.
+    """
+    old = dock.titleBarWidget()
+    dock.setTitleBarWidget(title_bar)
+    title_bar.bind_dock(dock)
+    if old is not None and old is not title_bar:
+        old.deleteLater()
+
+
 def create_panel(
     app,
     title_text,
@@ -1867,8 +1880,7 @@ def load_left_panel(app):
     if selected_mode:
         new_panel.setMinimumWidth(216)
     apply_dialog_title(app.left_dock, panel_title)
-    app.left_dock.setTitleBarWidget(title_bar)
-    title_bar.bind_dock(app.left_dock)
+    _install_dock_title_bar(app.left_dock, title_bar)
     new_layout = QVBoxLayout()
     new_layout.setContentsMargins(0, 0, 0, 0)
     new_layout.addWidget(new_panel)
@@ -2355,8 +2367,7 @@ def load_right_panel(app):
         add_handler=lambda: app.open_routine_add_dialog(),
         manage_handler=lambda: app.open_work_management_dialog(start_tab="routine"),
     )
-    app.routine_dock.setTitleBarWidget(title_bar_1)
-    title_bar_1.bind_dock(app.routine_dock)
+    _install_dock_title_bar(app.routine_dock, title_bar_1)
 
     panel_2, title_bar_2 = create_panel(
         app,
@@ -2365,8 +2376,7 @@ def load_right_panel(app):
         add_handler=lambda: app.open_directive_dialog(),
         manage_handler=lambda: app.open_work_management_dialog(start_tab="directive"),
     )
-    app.directive_dock.setTitleBarWidget(title_bar_2)
-    title_bar_2.bind_dock(app.directive_dock)
+    _install_dock_title_bar(app.directive_dock, title_bar_2)
 
     lay1 = QVBoxLayout()
     lay1.setContentsMargins(0, 0, 0, 0)
