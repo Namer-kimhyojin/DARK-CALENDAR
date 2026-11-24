@@ -487,6 +487,8 @@ class ThemeContractTests(unittest.TestCase):
 
         self.assertIn("background-color: rgba(8,18,28,230);", surface_qss)
         self.assertIn("border-radius: 13px;", surface_qss)
+        # Same outline as the calendar surface: it is what separates the panels.
+        self.assertIn("border: 1px solid rgba(255,255,255,12);", surface_qss)
         self.assertIn("border-radius: 9px;", toolbar_qss)
         self.assertIn("background-color: rgba(40,50,60,180);", toolbar_qss)
         self.assertIn("background-color: rgba(10,20,30,220);", menu_qss)

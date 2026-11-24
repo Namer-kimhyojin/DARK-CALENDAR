@@ -347,16 +347,18 @@ def _localized_weekday_short(qd: QDate) -> str:
 
 def _panel_surface_style(tokens=None, shape=None):
     pal = _panel_palette()
+    semantic = _semantic_tokens(tokens)
     if tokens:
-        semantic = _semantic_tokens(tokens)
         pal.update({"surface_bg": semantic.get("bg_main", pal["surface_bg"])})
     shape = dict(shape or _shape_tokens())
     surface_radius = int(shape.get("panel_surface_radius", 0))
+    # The gaps between docks share the panels' surface, so this outline is what
+    # separates one panel from the next; the calendar surface draws the same one.
     return f"""
         QFrame#panel_surface {{
             background-color: {pal["surface_bg"]};
             border-radius: {surface_radius}px;
-            border: none;
+            border: 1px solid {semantic.get("divider", "rgba(255,255,255,0.08)")};
         }}
     """
 
