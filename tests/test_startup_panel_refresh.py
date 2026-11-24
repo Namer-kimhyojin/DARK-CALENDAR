@@ -12,7 +12,7 @@ import inspect
 from unittest.mock import Mock
 
 from PyQt6.QtCore import QDate, QObject
-from PyQt6.QtWidgets import QApplication, QFrame
+from PyQt6.QtWidgets import QApplication, QFrame, QWidget
 import pytest
 
 from calendar_app.presentation.main_window import app_initializer, ui_builder
@@ -190,6 +190,51 @@ def test_center_signature_tracks_calendar_frame_height(host):
     assert host._build_center_render_signature() == before
     host.center_frame.resize(640, 22)
     assert host._build_center_render_signature() != before
+
+
+class _CalendarHost(RefreshSchedulerMixin, CalendarViewActionsMixin, QObject):
+    """The real load_center_panel; only the calendar render itself is counted."""
+
+    def __init__(self):
+        super().__init__()
+        self.settings = None
+        self.selected_task_ids = set()
+        self.current_date = QDate(2026, 11, 15)
+        self.window = QWidget()
+        self.center_frame = QFrame(self.window)
+        self.window.resize(640, 480)
+
+
+def test_calendar_is_built_once_when_first_shown_not_while_hidden(monkeypatch):
+    from calendar_app.presentation.calendar import month_renderer
+    from calendar_app.presentation.panels import side_panel_renderer
+
+    heights = []
+    monkeypatch.setattr(
+        month_renderer, "render_calendar", lambda app: heights.append(app.center_frame.height())
+    )
+    monkeypatch.setattr(side_panel_renderer, "left_panel_mode", lambda _app: "today")
+    host = _CalendarHost()
+    try:
+        host.load_center_panel()  # construction, window not shown yet
+        host.load_center_panel(force=False)  # a startup flush
+        assert heights == []
+        assert host._center_panel_render_deferred is True
+
+        host.window.show()
+        _APP.processEvents()
+        assert len(heights) == 1
+        assert host._center_panel_render_deferred is False
+
+        # Once shown, later renders run normally even while the window is hidden.
+        host.window.hide()
+        host.load_center_panel()
+        assert len(heights) == 2
+    finally:
+        host.window.close()
+        host.window.deleteLater()
+        host.deleteLater()
+        _APP.processEvents()
 
 
 @pytest.mark.parametrize(

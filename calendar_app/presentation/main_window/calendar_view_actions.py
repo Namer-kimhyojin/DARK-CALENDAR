@@ -27,6 +27,28 @@ def _show_only_layout_children(frame):
             child.setVisible(layout is not None and layout.indexOf(child) >= 0)
 
 
+class _CenterPanelFirstShowWatch(QObject):
+    """Builds the calendar when its frame is first shown, at its real height."""
+
+    def __init__(self, host, parent):
+        super().__init__(parent)
+        self._host = host
+
+    def eventFilter(self, obj, event):  # noqa: N802
+        host = self._host
+        if event.type() == QEvent.Type.Show and not getattr(host, "_center_panel_shown", False):
+            host._center_panel_shown = True
+            obj.removeEventFilter(self)
+            if getattr(host, "_center_panel_render_deferred", False) and not getattr(
+                host, "_is_shutting_down", False
+            ):
+                try:
+                    host.load_center_panel(force=True)
+                except Exception:
+                    logger.exception("Deferred calendar render failed")
+        return False
+
+
 class _RightPanelShowWatch(QObject):
     """Builds a deferred right panel when one of its frames is shown."""
 
@@ -195,6 +217,19 @@ class CalendarViewActionsMixin:
         if hasattr(self, "refresh_widget_mode_panels"):
             self.refresh_widget_mode_panels(schedule=False, work=True)
 
+    def _center_panel_render_can_wait(self):
+        """True until the calendar frame is shown for the first time."""
+        if getattr(self, "_center_panel_shown", False) or getattr(self, "_is_shutting_down", False):
+            return False
+        frame = getattr(self, "center_frame", None)
+        if frame is None or frame.isVisible():
+            self._center_panel_shown = True
+            return False
+        if getattr(self, "_center_panel_show_watch", None) is None:
+            self._center_panel_show_watch = _CenterPanelFirstShowWatch(self, frame)
+            frame.installEventFilter(self._center_panel_show_watch)
+        return True
+
     def _right_panel_render_can_wait(self):
         """True while widget-only mode is active and neither right-panel frame is visible."""
         if getattr(self, "_is_shutting_down", False):
@@ -322,6 +357,14 @@ class CalendarViewActionsMixin:
             left_panel_mode,
             selected_schedule_date,
         )
+
+        if self._center_panel_render_can_wait():
+            # Rows are sized from the frame height, which is only real once the
+            # window is shown: startup used to build the calendar twice for nothing.
+            self._center_panel_render_deferred = True
+            return
+        force = force or bool(getattr(self, "_center_panel_render_deferred", False))
+        self._center_panel_render_deferred = False
 
         selected_date = (
             selected_schedule_date(self) if left_panel_mode(self) == "selected" else None
