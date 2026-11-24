@@ -865,7 +865,11 @@ class WindowShellActionsMixin:
         self.search_debounce_timer.start()
 
     def _exec_search_refresh(self):
-        self.schedule_panel_refresh(left=True, center=True, right=True)
+        # Search changes no data: the render signatures carry the query, so only
+        # panels whose filter actually changed rebuild, and widget data stays put.
+        self.schedule_panel_refresh(
+            left=True, center=True, right=True, notify_data_consumers=False, mark_dirty=False
+        )
 
     # ------------------------------------------------------------------ #
     # 입력 유틸

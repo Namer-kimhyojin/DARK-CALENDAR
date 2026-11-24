@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from PyQt6.QtCore import QDate, QEvent, QSize, Qt
+from PyQt6.QtCore import QDate, QEvent, QObject, QSize, Qt
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -35,6 +35,26 @@ from calendar_app.shared.icon_map import icon as _ic
 from calendar_app.shared.icon_map import strip_leading_emoji as _se
 from calendar_app.shared.theme_snapshot import build_theme_snapshot
 from calendar_app.shared.typography import get_typography_scale
+
+
+class _SearchTypingHold(QObject):
+    """Keep the search debounce waiting while a key or IME composition is in progress.
+
+    A Korean IME commits a syllable only when the next one starts, so commits
+    arrive further apart than the debounce. Without this hold every syllable
+    rebuilt all panels mid-word and typing stuttered.
+    """
+
+    def __init__(self, owner, edit):
+        super().__init__(edit)
+        self._owner = owner
+
+    def eventFilter(self, _obj, event):
+        if event.type() in (QEvent.Type.KeyPress, QEvent.Type.InputMethod):
+            timer = getattr(self._owner, "search_debounce_timer", None)
+            if timer is not None and timer.isActive():
+                timer.start()
+        return False
 
 
 class _TopBarFrame(QFrame):
@@ -458,6 +478,7 @@ def setup_top_bar(self, _size, _theme, _ta):
     self.search_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     self.search_edit.setStyleSheet(runtime_styles["search"])
     self.search_edit.textChanged.connect(self.handle_search_changed)
+    self.search_edit.installEventFilter(_SearchTypingHold(self, self.search_edit))
     top_bar.insertWidget(
         search_position, self.search_edit, 1, alignment=Qt.AlignmentFlag.AlignVCenter
     )

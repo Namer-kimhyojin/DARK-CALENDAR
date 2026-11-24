@@ -96,6 +96,35 @@ def test_responsive_bar_keeps_actions_and_search_inside_window(navigation_host):
     assert {key: host.settings.value(key) for key in host.settings.allKeys()} == original
 
 
+def test_ime_composition_holds_search_refresh_until_typing_pauses(navigation_host):
+    from PyQt6.QtCore import QTimer
+    from PyQt6.QtGui import QInputMethodEvent
+    from PyQt6.QtTest import QTest
+
+    host, app = navigation_host
+    host.search_debounce_timer = QTimer(host)
+    host.search_debounce_timer.setSingleShot(True)
+    host.search_debounce_timer.setInterval(300)
+
+    # Idle: composing must not start a refresh by itself.
+    app.sendEvent(host.search_edit, QInputMethodEvent("ㅎ", []))
+    assert not host.search_debounce_timer.isActive()
+
+    # A committed syllable started the wait; the next syllable's jamo restarts it.
+    host.search_debounce_timer.start()
+    QTest.qWait(200)
+    app.sendEvent(host.search_edit, QInputMethodEvent("ㅇ", []))
+    assert host.search_debounce_timer.remainingTime() > 250
+
+
+def test_search_refresh_is_presentation_only():
+    host = Mock()
+    WindowShellActionsMixin._exec_search_refresh(host)
+    host.schedule_panel_refresh.assert_called_once_with(
+        left=True, center=True, right=True, notify_data_consumers=False, mark_dirty=False
+    )
+
+
 def test_feather_brandmark_and_wordmark_hide_as_one_compact_group(navigation_host):
     host, app = navigation_host
     group = host.top_bar_frame.findChild(QWidget, "app_brand_group")
