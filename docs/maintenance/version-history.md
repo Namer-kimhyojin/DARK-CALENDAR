@@ -2,10 +2,12 @@
 
 제품 버전은 배포 단위로 결정한다. 변경 기록·Git/CI 빌드·공개·Store·설치 상태는 별도이며 변경 기록만으로 버전을 올리지 않는다.
 
-기준 버전: `3.8.1` · 현재 제품 버전: **`5.8.0`**
+기준 버전: `3.8.1` · 현재 제품 버전: **`5.8.5`**
 
 | 버전 | 일시(KST) | 유형 | 변경 내용 | 이벤트 ID |
 |---|---|---|---|---|
+| 5.8.5 | 2026-11-25T09:05:16.386936+09:00 | release | Patch: smoother Korean search typing, dock title bar leak fix, fewer settings reads per refresh, side panel outlines, faster startup | `release-5.8.5` |
+| 5.8.0 | 2026-11-25T09:05:04.697521+09:00 | change | Korean search typing no longer rebuilds panels mid-word; dock title bar leak fixed; theme settings read once per refresh; side panels outlined; calendar built once at startup | `change-20261125-search-panels-startup` |
 | 5.8.0 | 2026-11-23T11:15:37.732168+09:00 | release | 위젯 전용 모드 지원 개선(연·월 날짜 선택, 가장자리 크기 조절, 다중 모니터 복귀·이동, 아이콘·툴팁, 시계 옵션), 투명도 메인 연동, 메뉴·트레이 정리, 배치 탭 재구성과 내 배치 저장·Ctrl+1~9 전환, 미공개 5.7.0 내용 포함 | `release-5.8.0` |
 | 5.7.0 | 2026-11-23T11:15:26.859682+09:00 | change | 위젯 전용 모드·트레이·배치 재구성 새 번역 키(ko/en, 다른 언어 영어 임시값·검토 대기) | `widget-mode-locales-20261123` |
 | 5.7.0 | 2026-11-23T11:07:35.405863+09:00 | change | 위젯 전용 모드 바탕 투명도를 메인 창 실제 바탕 알파와 정확히 일치(가독성 하한 제거) | `widget-opacity-match-main-20261123` |
